@@ -1,0 +1,464 @@
+[
+  {
+    "id": "tif",
+    "name": "TIF Districts",
+    "level": "City",
+    "zoneKey": "tif",
+    "summary": "Tax Increment Financing captures growth in property tax revenue within designated districts and reinvests it into local improvements like infrastructure, streetscaping, and building rehabilitation.",
+    "whoQualifies": "Businesses and property owners within a designated TIF district boundary. Both existing businesses seeking improvements and new developments qualify.",
+    "benefits": [
+      "Up to $250,000 for building rehabilitation",
+      "Infrastructure improvements (streets, sidewalks, utilities)",
+      "Environmental remediation funding",
+      "Job training assistance"
+    ],
+    "howToApply": [
+      "Verify your property is within a TIF district",
+      "Contact the City of Chicago Department of Planning and Development",
+      "Submit a TIF application with project description and budget",
+      "City reviews and approves eligible projects"
+    ],
+    "requiredDocs": [
+      "Proof of property ownership or lease",
+      "Detailed project plan and budget",
+      "Contractor bids (minimum 2)",
+      "Building permits (if applicable)"
+    ],
+    "contact": "City of Chicago DPD: (312) 744-4190",
+    "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html"
+  },
+  {
+    "id": "federalOZ",
+    "name": "Federal Opportunity Zones",
+    "level": "Federal",
+    "zoneKey": "federalOZ",
+    "summary": "Created by the 2017 Tax Cuts and Jobs Act, Opportunity Zones offer significant tax benefits to investors who invest capital gains into designated low-income census tracts.",
+    "whoQualifies": "Investors with capital gains who invest through a Qualified Opportunity Fund (QOF) in businesses or real estate within the zone. Business owners can attract OZ investment.",
+    "benefits": [
+      "Defer capital gains taxes until 2026",
+      "10% reduction on deferred gains (if held 5+ years)",
+      "Zero capital gains tax on new OZ investment profits (if held 10+ years)"
+    ],
+    "howToApply": [
+      "Invest capital gains into a Qualified Opportunity Fund (QOF) within 180 days",
+      "QOF must hold at least 90% of assets in OZ property",
+      "File IRS Form 8996 annually",
+      "Work with a tax advisor familiar with OZ regulations"
+    ],
+    "requiredDocs": [
+      "IRS Form 8949 (capital gains documentation)",
+      "IRS Form 8996 (Qualified Opportunity Fund compliance)",
+      "Investment records and QOF documentation",
+      "Property records within the Opportunity Zone"
+    ],
+    "contact": "IRS Opportunity Zone resources or local CDFI",
+    "url": "https://www.irs.gov/credits-deductions/businesses/opportunity-zones"
+  },
+  {
+    "id": "illinoisOZ",
+    "name": "Illinois Opportunity Zones",
+    "level": "State",
+    "zoneKey": "illinoisOZ",
+    "summary": "Illinois supplements the federal program with additional state-level tax incentives for investments in designated Opportunity Zones, making the combined benefits even more attractive.",
+    "whoQualifies": "Same as Federal OZ — investors deploying capital gains through QOFs in Illinois-designated zones.",
+    "benefits": [
+      "State income tax deduction on OZ investment income",
+      "Stacks with federal OZ benefits",
+      "Additional state incentives for affordable housing projects"
+    ],
+    "howToApply": [
+      "Follow federal QOF requirements",
+      "File Illinois state tax forms with OZ investment documentation",
+      "Contact Illinois DCEO for state-specific programs"
+    ],
+    "requiredDocs": [
+      "Federal QOF certification",
+      "Illinois income tax returns",
+      "Investment documentation",
+      "Property/business records in OZ census tracts"
+    ],
+    "contact": "Illinois DCEO: (217) 782-7500",
+    "url": "https://dceo.illinois.gov/opportunityzones.html"
+  },
+  {
+    "id": "enterprise",
+    "name": "Enterprise Zones",
+    "level": "State",
+    "zoneKey": "enterprise",
+    "summary": "Illinois Enterprise Zones offer state tax incentives to stimulate economic growth in economically depressed areas, including sales tax exemptions and investment tax credits.",
+    "whoQualifies": "Businesses located within an Enterprise Zone that make qualifying investments in machinery, equipment, or building materials.",
+    "benefits": [
+      "6.25% state sales tax exemption on building materials",
+      "0.5% state investment tax credit",
+      "Utility tax exemption",
+      "Potential property tax abatement"
+    ],
+    "howToApply": [
+      "Confirm your business is within an Enterprise Zone",
+      "Apply to the local Enterprise Zone Administrator",
+      "Submit investment plan and job creation projections",
+      "Receive certification for tax benefits"
+    ],
+    "requiredDocs": [
+      "Enterprise Zone application",
+      "Business plan with investment details",
+      "Job creation/retention projections",
+      "Proof of location within the zone"
+    ],
+    "contact": "City of Chicago Enterprise Zone Office",
+    "url": "https://dceo.illinois.gov/expandrelocate/incentives/enterprisezone.html"
+  },
+  {
+    "id": "sbif",
+    "name": "Small Business Improvement Fund (SBIF)",
+    "level": "City",
+    "zoneKey": "tif",
+    "summary": "SBIF provides grants to small businesses and property owners for permanent building improvements using TIF funds. One of the most direct funding sources for small businesses.",
+    "whoQualifies": "Small businesses in eligible TIF districts with 1-4 story commercial or mixed-use buildings. Tenants and property owners both qualify.",
+    "benefits": [
+      "Grants up to $150,000 per building",
+      "Covers permanent improvements: HVAC, plumbing, electrical, roofing, fire suppression",
+      "Reimbursement-based (complete work, then get paid)",
+      "Can combine with other TIF incentives"
+    ],
+    "howToApply": [
+      "Attend a mandatory SBIF orientation session",
+      "Submit application during open enrollment period",
+      "Get approved contractor bids for eligible improvements",
+      "Complete improvements, submit invoices for reimbursement"
+    ],
+    "requiredDocs": [
+      "Completed SBIF application",
+      "Proof of property ownership or lease (minimum 5 years remaining)",
+      "Two contractor bids for proposed work",
+      "Building permits",
+      "W-9 form",
+      "Certificate of insurance"
+    ],
+    "contact": "SomerCor (SBIF Administrator): (312) 360-3384",
+    "url": "https://somercor.com/sbif/"
+  },
+  {
+    "id": "edge",
+    "name": "EDGE Tax Credit",
+    "level": "State",
+    "zoneKey": "edge",
+    "summary": "The Economic Development for a Growing Economy (EDGE) program provides income tax credits to businesses that create or retain jobs in Illinois.",
+    "whoQualifies": "Businesses making capital investments and creating/retaining jobs in Illinois. 100% zones offer the maximum credit rate.",
+    "benefits": [
+      "Income tax credits equal to 25-100% of state income tax withholdings",
+      "100% credit in designated zones (like parts of SSA #50)",
+      "Credits available for up to 10 years",
+      "Retention credits for companies considering relocation"
+    ],
+    "howToApply": [
+      "Submit EDGE application to Illinois DCEO",
+      "Demonstrate job creation or retention plan",
+      "Negotiate agreement terms with DCEO",
+      "Meet annual reporting requirements"
+    ],
+    "requiredDocs": [
+      "EDGE application",
+      "Business financial statements",
+      "Job creation/retention projections",
+      "Capital investment documentation"
+    ],
+    "contact": "Illinois DCEO: (217) 782-7500",
+    "url": "https://dceo.illinois.gov/expandrelocate/incentives/edgetaxcredit.html"
+  },
+  {
+    "id": "rev",
+    "name": "REV Illinois",
+    "level": "State",
+    "zoneKey": "rev",
+    "summary": "REV Illinois (Reimagining Energy and Vehicles) provides tax credits for businesses in the electric vehicle and renewable energy supply chain.",
+    "whoQualifies": "Businesses in EV manufacturing, battery production, renewable energy, or related supply chain operations in designated bonus zones.",
+    "benefits": [
+      "Income tax credits for qualified investments",
+      "Bonus incentives in 100% designated zones",
+      "Training and workforce development support",
+      "Priority consideration for related infrastructure"
+    ],
+    "howToApply": [
+      "Contact Illinois DCEO about REV program eligibility",
+      "Submit application with business and investment plan",
+      "Demonstrate connection to EV/clean energy supply chain"
+    ],
+    "requiredDocs": [
+      "REV Illinois application",
+      "Business plan showing EV/clean energy connection",
+      "Investment and job creation projections"
+    ],
+    "contact": "Illinois DCEO: (217) 782-7500",
+    "url": "https://dceo.illinois.gov/aboutdceo/reportstopublications/rev-illinois-act.html"
+  },
+  {
+    "id": "micro",
+    "name": "MICRO Program",
+    "level": "State",
+    "zoneKey": "micro",
+    "summary": "The MICRO (Manufacturing Illinois Chips for Real Opportunity) program supports semiconductor and microchip-related businesses with tax incentives.",
+    "whoQualifies": "Businesses involved in semiconductor manufacturing, packaging, testing, or supply chain operations in designated 100% zones.",
+    "benefits": [
+      "Tax credits for qualifying investments",
+      "100% credit in designated bonus zones",
+      "Workforce training support",
+      "Infrastructure development assistance"
+    ],
+    "howToApply": [
+      "Contact Illinois DCEO for program details",
+      "Submit application demonstrating semiconductor industry connection",
+      "Provide investment and employment plans"
+    ],
+    "requiredDocs": [
+      "MICRO program application",
+      "Business description and semiconductor connection",
+      "Investment and hiring projections"
+    ],
+    "contact": "Illinois DCEO: (217) 782-7500",
+    "url": "https://dceo.illinois.gov/"
+  },
+  {
+    "id": "dataCenter",
+    "name": "Data Center Tax Incentive",
+    "level": "State",
+    "zoneKey": "dataCenter",
+    "summary": "Illinois offers sales tax exemptions and other incentives for data center operations in designated bonus zones to attract tech infrastructure investment.",
+    "whoQualifies": "Data center operators and technology companies establishing or expanding data center facilities in designated zones.",
+    "benefits": [
+      "Sales tax exemption on qualifying equipment",
+      "Bonus incentives in designated zones",
+      "Utility tax considerations",
+      "Extended benefit periods for large investments"
+    ],
+    "howToApply": [
+      "Contact Illinois DCEO about data center incentives",
+      "Submit application with facility plans",
+      "Demonstrate qualifying investment levels"
+    ],
+    "requiredDocs": [
+      "Data center incentive application",
+      "Facility plans and equipment lists",
+      "Investment projections"
+    ],
+    "contact": "Illinois DCEO: (217) 782-7500",
+    "url": "https://dceo.illinois.gov/"
+  },
+  {
+    "id": "ssa",
+    "name": "Special Service Area (SSA #50)",
+    "level": "City",
+    "zoneKey": "ssa",
+    "summary": "SSA #50 is a localized tax district that funds enhanced services for the Calumet Heights and Avalon Park business corridors, managed by the Southeast Chicago Chamber of Commerce.",
+    "whoQualifies": "All commercial properties within SSA #50 boundaries automatically participate and benefit from enhanced services.",
+    "benefits": [
+      "Streetscaping and beautification",
+      "Business marketing and promotion",
+      "Safety and maintenance programs",
+      "Facade improvement assistance",
+      "Business networking and technical assistance"
+    ],
+    "howToApply": [
+      "You're automatically included if your business is in SSA #50",
+      "Contact SECCC for available programs and assistance",
+      "Attend SECCC events and meetings for opportunities"
+    ],
+    "requiredDocs": [
+      "No application needed — benefits are automatic",
+      "Contact SECCC for specific program requirements"
+    ],
+    "contact": "Southeast Chicago Chamber of Commerce: (773) 721-1999",
+    "url": "https://www.secchicago.org/"
+  },
+  {
+    "id": "tripleBenefit",
+    "name": "Triple Benefit Zone",
+    "level": "City",
+    "zoneKey": "tripleBenefit",
+    "summary": "Areas where three or more incentive programs overlap, offering businesses the most concentrated combination of tax benefits and development incentives.",
+    "whoQualifies": "Businesses located in areas where TIF, Opportunity Zone, and Enterprise Zone designations all overlap.",
+    "benefits": [
+      "Stack TIF grants with OZ tax deferrals",
+      "Combine Enterprise Zone sales tax exemptions",
+      "Maximum total incentive value across all programs",
+      "Priority for development and investment"
+    ],
+    "howToApply": [
+      "Apply separately to each qualifying program",
+      "Work with SECCC or a business advisor to coordinate applications",
+      "A single location can qualify for multiple programs simultaneously"
+    ],
+    "requiredDocs": [
+      "Documentation for each individual program",
+      "Proof of location within overlapping zones"
+    ],
+    "contact": "SECCC: (773) 721-1999 or City of Chicago DPD: (312) 744-4190",
+    "url": "https://www.secchicago.org/"
+  },
+  {
+    "id": "highUnemployment",
+    "name": "High Unemployment Zone",
+    "level": "City",
+    "zoneKey": "highUnemployment",
+    "summary": "Areas with unemployment rates above the city average qualify for additional workforce development incentives and hiring tax credits.",
+    "whoQualifies": "Businesses in designated high-unemployment areas that hire local residents, especially from the surrounding community.",
+    "benefits": [
+      "Work Opportunity Tax Credit (WOTC) for hiring from target groups",
+      "State and federal workforce training grants",
+      "Priority for workforce development programs",
+      "Potential additional hiring incentives"
+    ],
+    "howToApply": [
+      "Pre-screen new hires using IRS Form 8850",
+      "File within 28 days of hire start date",
+      "Contact Illinois Department of Employment Security"
+    ],
+    "requiredDocs": [
+      "IRS Form 8850 (pre-screening notice)",
+      "ETA Form 9061 or 9062",
+      "Employee hiring records",
+      "Proof of residence for local hiring programs"
+    ],
+    "contact": "Illinois DES: (800) 247-4984",
+    "url": "https://ides.illinois.gov/"
+  },
+  {
+    "id": "class7a",
+    "name": "Cook County Class 7a Property Tax Incentive",
+    "level": "County",
+    "zoneKey": "",
+    "summary": "Cook County reduces property tax assessments for small commercial projects to encourage new construction, substantial rehabilitation, or reoccupancy of abandoned commercial buildings.",
+    "whoQualifies": "Commercial property owners or developers with total project costs under $2 million. Covers new construction, substantial rehab, or reoccupancy of abandoned commercial property in Cook County.",
+    "benefits": [
+      "Property assessed at 10% (vs. standard 25%) for years 1-10",
+      "15% in year 11, 20% in year 12",
+      "12-year incentive period, renewable",
+      "Significant annual property tax savings"
+    ],
+    "howToApply": [
+      "Contact your alderman's office for a municipal support letter",
+      "File application with the Cook County Assessor's Office",
+      "Submit project plans and cost documentation",
+      "Assessor reviews and approves classification"
+    ],
+    "requiredDocs": [
+      "Municipal resolution of support from alderman/city council",
+      "Project plans and cost estimates (under $2M)",
+      "Proof of property ownership",
+      "Building permits or renovation plans"
+    ],
+    "contact": "Cook County Assessor: (312) 443-7550",
+    "url": "https://www.cookcountyil.gov/service/property-tax-incentives"
+  },
+  {
+    "id": "catalystGrant",
+    "name": "Cook County Catalyst Grant",
+    "level": "County",
+    "zoneKey": "",
+    "summary": "The Catalyst Grant provides up to $100,000 to established small businesses in Cook County for equipment, facilities, and hiring — funded through ARPA dollars.",
+    "whoQualifies": "For-profit businesses in Cook County with at least 1 full-time employee besides owner, annual revenue between $500K and $10M, and demonstrated growth in net income and employee count.",
+    "benefits": [
+      "Up to $100,000 grant per business",
+      "Covers equipment (machinery, computers, POS systems)",
+      "Covers facilities (renovations, energy efficiency, EV charging)",
+      "Covers people (salaries for new hires, recruitment costs)"
+    ],
+    "howToApply": [
+      "Watch for application windows at cookcountysmallbiz.org",
+      "Submit application with business financials and growth plan",
+      "Must demonstrate revenue growth and job creation",
+      "Awards announced after review period"
+    ],
+    "requiredDocs": [
+      "Business financial statements (2 years)",
+      "Proof of Cook County location",
+      "Employee records showing growth",
+      "Detailed use-of-funds plan"
+    ],
+    "contact": "Cook County Bureau of Economic Development: (312) 603-1000",
+    "url": "https://cookcountysmallbiz.org/catalystgrant/"
+  },
+  {
+    "id": "cpace",
+    "name": "Cook County C-PACE (Clean Energy Financing)",
+    "level": "County",
+    "zoneKey": "",
+    "summary": "C-PACE provides up to 100% upfront financing from private capital for energy efficiency, renewable energy, and water conservation improvements to commercial buildings, repaid through property tax bills.",
+    "whoQualifies": "Commercial property owners in Cook County including office buildings, retail, industrial, multi-family (5+ units), hotels, and nonprofits.",
+    "benefits": [
+      "Up to 100% upfront financing — no large out-of-pocket costs",
+      "Loan terms up to 30 years (matching useful life of improvements)",
+      "Repaid as a line item on property tax bill",
+      "Covers HVAC, lighting, solar, insulation, water systems"
+    ],
+    "howToApply": [
+      "Contact a C-PACE capital provider through the county program",
+      "Get an energy audit or project assessment",
+      "Submit application with project plans and financing terms",
+      "County approves the special assessment"
+    ],
+    "requiredDocs": [
+      "Property ownership documentation",
+      "Energy audit or project assessment",
+      "Contractor bids for proposed improvements",
+      "Financing terms from C-PACE capital provider"
+    ],
+    "contact": "Cook County C-PACE Program: (312) 603-1000",
+    "url": "https://www.cookcountyil.gov/service/clean-energy-cpace-program"
+  },
+  {
+    "id": "smallBizSource",
+    "name": "Cook County Small Business Source",
+    "level": "County",
+    "zoneKey": "",
+    "summary": "Free one-on-one business advising through 13 Business Support Organizations and 30+ referral partners. No cost, no eligibility requirements beyond being in Cook County.",
+    "whoQualifies": "Any small business in Cook County. No revenue requirements, no industry restrictions. Available immediately at no cost.",
+    "benefits": [
+      "Free one-on-one business advising",
+      "Business plan development assistance",
+      "Help accessing new customers and markets",
+      "Grant and loan application assistance",
+      "Government contracting readiness assessment"
+    ],
+    "howToApply": [
+      "Visit cookcountysmallbiz.org and request an advisor",
+      "Get matched with a Business Support Organization",
+      "Schedule free advising sessions",
+      "No application fee or eligibility requirements"
+    ],
+    "requiredDocs": [
+      "No formal documents required to get started",
+      "Bring any existing business plans or financials to advising sessions"
+    ],
+    "contact": "Cook County Small Business Source: cookcountysmallbiz.org",
+    "url": "https://cookcountysmallbiz.org/"
+  },
+  {
+    "id": "landBank",
+    "name": "Cook County Land Bank Authority",
+    "level": "County",
+    "zoneKey": "",
+    "summary": "The CCLBA acquires and returns vacant, abandoned, and tax-delinquent properties to productive use. Businesses can purchase commercial and industrial properties from the Land Bank's inventory.",
+    "whoQualifies": "Prospective and existing business owners seeking commercial or industrial space. Properties are sold through periodic application cycles via the PubliCity portal.",
+    "benefits": [
+      "Access to below-market commercial and industrial properties",
+      "Vacant lots available for new construction",
+      "Properties cleared of back taxes and liens",
+      "Supports expansion into underutilized areas"
+    ],
+    "howToApply": [
+      "Browse available properties at the CCLBA PubliCity portal",
+      "Submit initial application during open enrollment",
+      "Submit offer application with development plans",
+      "Awards announced after review"
+    ],
+    "requiredDocs": [
+      "Business plan or development proposal",
+      "Proof of financing or financial capacity",
+      "Timeline for property development",
+      "Proof of identity and business registration"
+    ],
+    "contact": "CCLBA: (312) 603-8015 | Info@CookCountyLandBank.org",
+    "url": "http://www.cookcountylandbank.org/"
+  }
+]

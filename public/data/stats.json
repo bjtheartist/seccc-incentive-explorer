@@ -1,0 +1,40 @@
+{
+  "totalBusinesses": 360,
+  "totalCategories": 69,
+  "zipCodes": ["60617", "60619", "60649"],
+  "diversityIndex": 0.91,
+  "zoneCoverage": {
+    "tif": { "count": 293, "pct": 81.4, "label": "TIF District" },
+    "federalOZ": { "count": 178, "pct": 49.4, "label": "Federal Opportunity Zone" },
+    "illinoisOZ": { "count": 178, "pct": 49.4, "label": "Illinois Opportunity Zone" },
+    "enterprise": { "count": 166, "pct": 46.1, "label": "Enterprise Zone" },
+    "edge": { "count": 9, "pct": 2.5, "label": "EDGE 100% Zone" },
+    "rev": { "count": 9, "pct": 2.5, "label": "REV Illinois Bonus Zone" },
+    "micro": { "count": 9, "pct": 2.5, "label": "MICRO 100% Zone" },
+    "dataCenter": { "count": 9, "pct": 2.5, "label": "Data Center Bonus Zone" },
+    "ssa": { "count": 314, "pct": 87.2, "label": "Special Service Area" },
+    "tripleBenefit": { "count": 5, "pct": 1.4, "label": "Triple Benefit Zone" },
+    "highUnemployment": { "count": 9, "pct": 2.5, "label": "High Unemployment Zone" }
+  },
+  "stackingDistribution": {
+    "0": 10,
+    "1": 5,
+    "2": 86,
+    "3": 110,
+    "4": 105,
+    "5": 35,
+    "8": 4,
+    "9": 5
+  },
+  "sbif": {
+    "localProjects": 100,
+    "citywideProjects": 2145,
+    "localShare": 4.7
+  },
+  "corridors": {
+    "stonyIsland": "79th to 94th on S Stony Island Ave",
+    "southChicago": "75th to 87th on S So. Chicago Ave",
+    "e87th": "Dobson to Chappel on E 87th St",
+    "e79th": "Greenwood to Paxton on E 79th St"
+  }
+}
