@@ -4,13 +4,6 @@ import { AddressSearch } from "@/components/lookup/AddressSearch";
 import { motion } from "framer-motion";
 import Link from "next/link";
 
-const STATS = [
-  { value: "360", label: "Businesses Mapped" },
-  { value: "81.4%", label: "In TIF Districts" },
-  { value: "49.4%", label: "In Opportunity Zones" },
-  { value: "17", label: "Incentive Programs" },
-];
-
 export default function Home() {
   return (
     <div>
@@ -82,26 +75,6 @@ export default function Home() {
             </div>
           </motion.div>
 
-          {/* Stats Bar */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1, delay: 1.2 }}
-            className="mt-16 pt-8 border-t border-white/10"
-          >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-              {STATS.map((stat, i) => (
-                <div key={i}>
-                  <div className="font-mono-bureau text-2xl md:text-3xl text-white/80 font-medium tabular-nums">
-                    {stat.value}
-                  </div>
-                  <div className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-white/30 mt-1">
-                    {stat.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </motion.div>
         </div>
       </section>
 
