@@ -45,24 +45,6 @@ export function Footer() {
               <li className="font-mono-bureau text-[11px] tracking-wide">
                 Chicago Incentive Explorer
               </li>
-              <li>
-                <a
-                  href="tel:7737211999"
-                  className="font-mono-bureau text-[11px] tracking-wide hover:text-white/80 transition-colors"
-                >
-                  (773) 721-1999
-                </a>
-              </li>
-              <li>
-                <a
-                  href="https://www.secchicago.org/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-mono-bureau text-[11px] tracking-wide hover:text-white/80 transition-colors"
-                >
-                  www.secchicago.org
-                </a>
-              </li>
             </ul>
           </div>
         </div>
