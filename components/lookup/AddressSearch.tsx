@@ -8,7 +8,7 @@ import {
   findBusinessByName,
   businessToLookupResult,
 } from "@/lib/business-lookup";
-import { checkZones } from "@/lib/zone-check";
+import { checkZones, enrichEmployment } from "@/lib/zone-check";
 import type { Business, LookupResult, Program } from "@/lib/types";
 
 const SAMPLE_PROMPTS = [
@@ -85,7 +85,8 @@ export function AddressSearch() {
       try {
         if (directBusiness) {
           await new Promise((r) => setTimeout(r, 600));
-          setResult(businessToLookupResult(directBusiness));
+          const lookupResult = businessToLookupResult(directBusiness);
+          setResult(await enrichEmployment(lookupResult));
           setLoading(false);
           return;
         }
@@ -93,7 +94,8 @@ export function AddressSearch() {
         const addrMatch = findBusinessByAddress(q, businesses);
         if (addrMatch) {
           await new Promise((r) => setTimeout(r, 600));
-          setResult(businessToLookupResult(addrMatch));
+          const lookupResult = businessToLookupResult(addrMatch);
+          setResult(await enrichEmployment(lookupResult));
           setLoading(false);
           return;
         }
@@ -101,7 +103,8 @@ export function AddressSearch() {
         const nameMatches = findBusinessByName(q, businesses);
         if (nameMatches.length === 1) {
           await new Promise((r) => setTimeout(r, 600));
-          setResult(businessToLookupResult(nameMatches[0]));
+          const lookupResult = businessToLookupResult(nameMatches[0]);
+          setResult(await enrichEmployment(lookupResult));
           setLoading(false);
           return;
         }

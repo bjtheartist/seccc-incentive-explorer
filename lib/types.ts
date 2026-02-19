@@ -56,7 +56,13 @@ export interface LookupResult {
   lat: number;
   lon: number;
   zones: Record<string, boolean>;
+  zoneNames: Record<string, string>; // e.g. { tif: "Stony Island Ave...", ssa: "Calumet Hts/Avalon" }
   incentiveCount: number;
+  employment?: {
+    censusTract: string;
+    unemploymentRate: string; // e.g. "34.3%"
+    population: number;
+  };
 }
 
 /* ── Pre-Qualification Survey ── */

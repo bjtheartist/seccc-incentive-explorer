@@ -88,13 +88,32 @@ export function findBusinessByName(
 
 /**
  * Build a lookup result from a matched business.
+ * Extracts zone names (tifName, ssaName, etc.) and employment data
+ * from the business record's zones object.
  */
 export function businessToLookupResult(biz: Business): LookupResult {
   const zones: Record<string, boolean> = {};
+  const zoneNames: Record<string, string> = {};
+
   for (const [key, val] of Object.entries(biz.zones)) {
     if (typeof val === "boolean") {
       zones[key] = val;
+    } else if (typeof val === "string" && key.endsWith("Name")) {
+      // Map e.g. "tifName" -> zoneNames["tif"]
+      const baseKey = key.replace(/Name$/, "");
+      zoneNames[baseKey] = val;
     }
+  }
+
+  // Extract employment data from high-unemployment zone name metadata.
+  // The business record stores the census tract name in highUnemploymentName.
+  let employment: LookupResult["employment"] = undefined;
+  if (zones.highUnemployment && zoneNames.highUnemployment) {
+    employment = {
+      censusTract: zoneNames.highUnemployment,
+      unemploymentRate: "",  // Rate not stored in business JSON; will be enriched by zone-check if needed
+      population: 0,
+    };
   }
 
   return {
@@ -104,6 +123,8 @@ export function businessToLookupResult(biz: Business): LookupResult {
     lat: biz.lat ?? 0,
     lon: biz.lon ?? 0,
     zones,
+    zoneNames,
     incentiveCount: biz.incentiveCount,
+    employment,
   };
 }
