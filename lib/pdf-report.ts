@@ -1,6 +1,5 @@
 import { jsPDF } from "jspdf";
 import { ZONE_KEYS, ZONE_LABELS, ZONE_COLORS } from "./constants";
-import { INDUSTRIES } from "./industries-data";
 import type { LookupResult, Program } from "./types";
 
 /* ── Brand Colors ── */
@@ -106,10 +105,6 @@ export function generateReport(
     (p) => !p.zoneKey && !eligiblePrograms.find((ep) => ep.id === p.id)
   );
 
-  const sectorInfo = result.sector
-    ? INDUSTRIES.find((ind) => ind.id === result.sector)
-    : null;
-
   /* ── PAGE 1: COVER ── */
   // Full navy background
   fillRect(doc, 0, 0, W, H, NAVY);
@@ -161,13 +156,6 @@ export function generateReport(
     doc.setFontSize(8);
     setColor(doc, "#FFFFFF50");
     doc.text(result.business.category.toUpperCase(), MARGIN, coverY);
-    coverY += 8;
-  }
-
-  if (sectorInfo) {
-    doc.setFontSize(8);
-    setColor(doc, "#FFFFFF50");
-    doc.text(`SECTOR: ${sectorInfo.name.toUpperCase()}`, MARGIN, coverY);
     coverY += 8;
   }
 

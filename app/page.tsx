@@ -67,12 +67,18 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.8 }}
           >
             <AddressSearch />
-            <div className="mt-4 text-center">
+            <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-6">
+              <Link
+                href="/locate"
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-white/50 hover:text-white transition-all"
+              >
+                Find the Best Location for Your Business &rarr;
+              </Link>
               <Link
                 href="/qualify"
-                className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-white/40 hover:text-white transition-colors"
+                className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-white/30 hover:text-white/60 transition-colors"
               >
-                Not sure what you qualify for? Take the survey &rarr;
+                Or take the survey &rarr;
               </Link>
             </div>
           </motion.div>
@@ -160,7 +166,7 @@ export default function Home() {
                 transition={{ duration: 0.5, delay: i * 0.04 }}
               >
                 <Link
-                  href={`/programs?industry=${industry.id}`}
+                  href={`/locate`}
                   className="group block bg-white border border-[#0C1B33]/8 rounded-xl p-5 hover:shadow-md hover:border-[#2563EB]/20 transition-all"
                 >
                   <div className="flex items-start gap-3">
@@ -201,10 +207,10 @@ export default function Home() {
 
           <div className="mt-8 text-center">
             <Link
-              href="/qualify"
+              href="/locate"
               className="inline-flex items-center gap-2 font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-[#2563EB]/60 hover:text-[#2563EB] transition-colors"
             >
-              Not sure which industry fits? Take the survey &rarr;
+              Find the best location for your sector &rarr;
             </Link>
           </div>
         </div>

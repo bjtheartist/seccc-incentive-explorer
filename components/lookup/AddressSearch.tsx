@@ -43,10 +43,6 @@ export function AddressSearch() {
   const [error, setError] = useState("");
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0]);
 
-  const handleSectorChange = useCallback((sector: string) => {
-    setResult((prev) => prev ? { ...prev, sector } : prev);
-  }, []);
-
   useEffect(() => {
     fetch("/data/businesses.json")
       .then((r) => r.json())
@@ -235,7 +231,7 @@ export function AddressSearch() {
       {/* Results */}
       {result && (
         <div className="mt-10">
-          <IncentiveReport result={result} programs={programs} onSectorChange={handleSectorChange} />
+          <IncentiveReport result={result} programs={programs} />
         </div>
       )}
     </div>
