@@ -1,6 +1,6 @@
 import * as turf from "@turf/turf";
 import { ZONE_KEYS } from "./constants";
-import type { LookupResult } from "./types";
+import type { LookupResult, CityZoning } from "./types";
 import type { FeatureCollection, Feature, Polygon, MultiPolygon } from "geojson";
 
 const zoneFileMap: Record<string, string> = {
@@ -84,6 +84,20 @@ export async function checkZones(
     })
   );
 
+  // Fetch city zoning classification in parallel (non-blocking)
+  let cityZoning: CityZoning | undefined;
+  try {
+    const zRes = await fetch(`/api/zoning?lat=${lat}&lon=${lon}`);
+    if (zRes.ok) {
+      const zData = await zRes.json();
+      if (zData.zoneClass) {
+        cityZoning = { zoneClass: zData.zoneClass, zoneType: zData.zoneType };
+      }
+    }
+  } catch {
+    // Non-critical — skip if unavailable
+  }
+
   return {
     matched: false,
     address: "",
@@ -92,6 +106,7 @@ export async function checkZones(
     zones,
     zoneNames,
     incentiveCount,
+    cityZoning,
     employment,
   };
 }

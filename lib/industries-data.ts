@@ -137,6 +137,69 @@ export const INDUSTRIES: Industry[] = [
     topPrograms: ["tif", "ssa", "sbif", "smallBizSource"],
     keywords: ["arts", "entertainment", "gallery", "studio", "music", "theater"],
   },
+  {
+    id: "hairBeauty",
+    name: "Hair Care & Beauty",
+    icon: "💇",
+    description:
+      "Hair salons, barbershops, nail studios, spas, esthetics, and beauty supply stores.",
+    topPrograms: ["sbif", "tif", "ssa", "catalystGrant", "smallBizSource"],
+    keywords: ["hair", "salon", "barbershop", "nails", "spa", "beauty", "esthetics", "braids", "locs"],
+  },
+  {
+    id: "clothing",
+    name: "Clothing & Apparel",
+    icon: "👗",
+    description:
+      "Boutiques, fashion retail, tailoring, alterations, screen printing, and apparel brands.",
+    topPrograms: ["sbif", "tif", "ssa", "catalystGrant", "smallBizSource"],
+    keywords: ["clothing", "apparel", "boutique", "fashion", "tailor", "screen print", "retail"],
+  },
+  {
+    id: "autoServices",
+    name: "Auto Services",
+    icon: "🔧",
+    description:
+      "Auto repair, detailing, car wash, tire shops, and vehicle maintenance services.",
+    topPrograms: ["enterprise", "sbif", "tif", "ssa", "smallBizSource"],
+    keywords: ["auto", "car", "mechanic", "repair", "detailing", "tire", "car wash"],
+  },
+  {
+    id: "childcare",
+    name: "Childcare & Education",
+    icon: "🎓",
+    description:
+      "Daycare centers, tutoring services, after-school programs, and educational training.",
+    topPrograms: ["sbif", "tif", "catalystGrant", "smallBizSource", "cpace"],
+    keywords: ["childcare", "daycare", "tutoring", "education", "after school", "training"],
+  },
+  {
+    id: "fitness",
+    name: "Fitness & Recreation",
+    icon: "🏋️",
+    description:
+      "Gyms, yoga studios, martial arts schools, dance studios, and recreation centers.",
+    topPrograms: ["sbif", "tif", "ssa", "catalystGrant", "smallBizSource"],
+    keywords: ["gym", "fitness", "yoga", "martial arts", "dance", "recreation", "boxing"],
+  },
+  {
+    id: "homeServices",
+    name: "Home Services",
+    icon: "🏠",
+    description:
+      "Cleaning services, landscaping, pest control, handyman, moving, and home maintenance.",
+    topPrograms: ["enterprise", "catalystGrant", "smallBizSource", "ssa"],
+    keywords: ["cleaning", "landscaping", "pest control", "handyman", "moving", "home services"],
+  },
+  {
+    id: "petServices",
+    name: "Pet Services",
+    icon: "🐾",
+    description:
+      "Pet grooming, boarding, veterinary clinics, pet supply stores, and dog walking.",
+    topPrograms: ["sbif", "tif", "ssa", "catalystGrant", "smallBizSource"],
+    keywords: ["pet", "grooming", "boarding", "veterinary", "dog", "cat", "pet supply"],
+  },
 ];
 
 // Helper: get an industry by ID
