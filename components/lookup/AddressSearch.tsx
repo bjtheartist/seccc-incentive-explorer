@@ -8,8 +8,16 @@ import {
   findBusinessByName,
   businessToLookupResult,
 } from "@/lib/business-lookup";
-import { checkZones } from "@/lib/zone-check";
+import { checkZones, enrichEmployment } from "@/lib/zone-check";
 import type { Business, LookupResult, Program } from "@/lib/types";
+
+const SAMPLE_PROMPTS = [
+  { label: "Justice of the Pies", type: "business" },
+  { label: "2404 E 79th St", type: "address" },
+  { label: "8100 S Stony Island Ave", type: "address" },
+  { label: "Caribbean Jerk Joint", type: "business" },
+  { label: "A New Day Mental Wellness Center", type: "business" },
+];
 
 const LOADING_MESSAGES = [
   "Scanning 11 incentive zone layers...",
@@ -77,7 +85,8 @@ export function AddressSearch() {
       try {
         if (directBusiness) {
           await new Promise((r) => setTimeout(r, 600));
-          setResult(businessToLookupResult(directBusiness));
+          const lookupResult = businessToLookupResult(directBusiness);
+          setResult(await enrichEmployment(lookupResult));
           setLoading(false);
           return;
         }
@@ -85,7 +94,8 @@ export function AddressSearch() {
         const addrMatch = findBusinessByAddress(q, businesses);
         if (addrMatch) {
           await new Promise((r) => setTimeout(r, 600));
-          setResult(businessToLookupResult(addrMatch));
+          const lookupResult = businessToLookupResult(addrMatch);
+          setResult(await enrichEmployment(lookupResult));
           setLoading(false);
           return;
         }
@@ -93,7 +103,8 @@ export function AddressSearch() {
         const nameMatches = findBusinessByName(q, businesses);
         if (nameMatches.length === 1) {
           await new Promise((r) => setTimeout(r, 600));
-          setResult(businessToLookupResult(nameMatches[0]));
+          const lookupResult = businessToLookupResult(nameMatches[0]);
+          setResult(await enrichEmployment(lookupResult));
           setLoading(false);
           return;
         }
@@ -149,6 +160,27 @@ export function AddressSearch() {
             <ArrowRight className="w-4 h-4" />
           </button>
         </div>
+
+        {/* Sample Search Prompts */}
+        {!query && !result && !loading && (
+          <div className="flex flex-wrap gap-2 mt-3 justify-center">
+            <span className="font-mono-bureau text-[10px] tracking-[0.1em] uppercase text-white/30 self-center mr-1">
+              Try:
+            </span>
+            {SAMPLE_PROMPTS.map((prompt) => (
+              <button
+                key={prompt.label}
+                onClick={() => {
+                  setQuery(prompt.label);
+                  handleLookup(prompt.label);
+                }}
+                className="px-3 py-1.5 text-[11px] font-mono-bureau tracking-wide text-white/50 bg-white/8 border border-white/10 rounded-full hover:bg-white/15 hover:text-white/70 hover:border-white/20 transition-all cursor-pointer"
+              >
+                {prompt.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Autocomplete Suggestions */}
         {suggestions.length > 0 && !result && (

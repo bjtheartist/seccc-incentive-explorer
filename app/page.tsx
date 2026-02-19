@@ -3,6 +3,8 @@
 import { AddressSearch } from "@/components/lookup/AddressSearch";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { INDUSTRIES } from "@/lib/industries-data";
+import { PROGRAMS } from "@/lib/survey-engine";
 
 export default function Home() {
   return (
@@ -113,6 +115,98 @@ export default function Home() {
               <source src="/howto.mp4" type="video/mp4" />
             </video>
           </motion.div>
+        </div>
+      </section>
+
+      {/* Industries / Sectors */}
+      <section className="py-24 px-6 bg-[#FAF9F6]">
+        <div className="container mx-auto max-w-5xl">
+          <div className="flex items-center gap-4 mb-6">
+            <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/30">
+              01
+            </span>
+            <div className="accent-bar" />
+            <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/50">
+              Industries
+            </span>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="mb-12"
+          >
+            <h2 className="font-editorial text-3xl md:text-4xl text-[#0C1B33] mb-4">
+              Incentives by
+              <br />
+              <span className="text-[#0C1B33]/40">Industry</span>
+            </h2>
+            <p className="text-sm text-[#0C1B33]/50 leading-relaxed max-w-xl">
+              Different industries qualify for different incentive programs.
+              Find your sector below to see which programs are most relevant
+              to your business.
+            </p>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            {INDUSTRIES.map((industry, i) => (
+              <motion.div
+                key={industry.id}
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.04 }}
+              >
+                <Link
+                  href={`/programs?industry=${industry.id}`}
+                  className="group block bg-white border border-[#0C1B33]/8 rounded-xl p-5 hover:shadow-md hover:border-[#2563EB]/20 transition-all"
+                >
+                  <div className="flex items-start gap-3">
+                    <span className="text-2xl leading-none">{industry.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-medium text-[#0C1B33] group-hover:text-[#2563EB] transition-colors">
+                        {industry.name}
+                      </h3>
+                      <p className="text-[11px] text-[#0C1B33]/40 mt-1 leading-relaxed line-clamp-2">
+                        {industry.description}
+                      </p>
+                      <div className="flex items-center gap-2 mt-3">
+                        <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#2563EB]/60">
+                          {industry.topPrograms.length} programs
+                        </span>
+                        <div className="flex gap-1">
+                          {industry.topPrograms.slice(0, 3).map((pid) => (
+                            <span
+                              key={pid}
+                              className="font-mono-bureau text-[8px] tracking-wide px-1.5 py-0.5 rounded bg-[#0C1B33]/5 text-[#0C1B33]/40"
+                            >
+                              {PROGRAMS[pid]?.short || pid}
+                            </span>
+                          ))}
+                          {industry.topPrograms.length > 3 && (
+                            <span className="font-mono-bureau text-[8px] text-[#0C1B33]/30">
+                              +{industry.topPrograms.length - 3}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="mt-8 text-center">
+            <Link
+              href="/qualify"
+              className="inline-flex items-center gap-2 font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-[#2563EB]/60 hover:text-[#2563EB] transition-colors"
+            >
+              Not sure which industry fits? Take the survey &rarr;
+            </Link>
+          </div>
         </div>
       </section>
 
