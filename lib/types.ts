@@ -49,6 +49,11 @@ export interface Stats {
   corridors: Record<string, string>;
 }
 
+export interface CityZoning {
+  zoneClass: string; // e.g. "C1-2", "M1-2", "RS-3"
+  zoneType: string | null; // e.g. "Commercial", "Manufacturing"
+}
+
 export interface LookupResult {
   matched: boolean;
   business?: Business;
@@ -58,6 +63,8 @@ export interface LookupResult {
   zones: Record<string, boolean>;
   zoneNames: Record<string, string>; // e.g. { tif: "Stony Island Ave...", ssa: "Calumet Hts/Avalon" }
   incentiveCount: number;
+  cityZoning?: CityZoning;
+  sector?: string; // user-selected business sector ID
   employment?: {
     censusTract: string;
     unemploymentRate: string; // e.g. "34.3%"

@@ -29,6 +29,7 @@ const LOADING_MESSAGES = [
   "This part usually impresses people...",
   "Crunching the numbers the city doesn't want you to know...",
   "Your tax dollars at work (literally)...",
+  "Looking up city zoning classification...",
   "Almost there — pulling program details...",
 ];
 
@@ -41,6 +42,10 @@ export function AddressSearch() {
   const [suggestions, setSuggestions] = useState<Business[]>([]);
   const [error, setError] = useState("");
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0]);
+
+  const handleSectorChange = useCallback((sector: string) => {
+    setResult((prev) => prev ? { ...prev, sector } : prev);
+  }, []);
 
   useEffect(() => {
     fetch("/data/businesses.json")
@@ -230,7 +235,7 @@ export function AddressSearch() {
       {/* Results */}
       {result && (
         <div className="mt-10">
-          <IncentiveReport result={result} programs={programs} />
+          <IncentiveReport result={result} programs={programs} onSectorChange={handleSectorChange} />
         </div>
       )}
     </div>
