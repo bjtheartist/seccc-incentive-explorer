@@ -1,21 +1,38 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ExternalLink,
   FileText,
   Phone,
   ChevronDown,
   ChevronUp,
+  X,
 } from "lucide-react";
 import type { Program } from "@/lib/types";
 import { ZONE_COLORS } from "@/lib/constants";
+import { INDUSTRIES, getIndustryById } from "@/lib/industries-data";
 
 const LEVELS = ["All", "Federal", "State", "County", "City"] as const;
 
 export default function ProgramsPage() {
+  return (
+    <Suspense>
+      <ProgramsContent />
+    </Suspense>
+  );
+}
+
+function ProgramsContent() {
+  const searchParams = useSearchParams();
+  const industryParam = searchParams.get("industry");
+
   const [programs, setPrograms] = useState<Program[]>([]);
   const [filter, setFilter] = useState<string>("All");
+  const [industryFilter, setIndustryFilter] = useState<string>(
+    industryParam || ""
+  );
 
   useEffect(() => {
     fetch("/data/programs.json")
@@ -23,10 +40,21 @@ export default function ProgramsPage() {
       .then(setPrograms);
   }, []);
 
-  const filtered =
-    filter === "All"
-      ? programs
-      : programs.filter((p) => p.level === filter);
+  // Sync URL param on mount
+  useEffect(() => {
+    if (industryParam) setIndustryFilter(industryParam);
+  }, [industryParam]);
+
+  const selectedIndustry = industryFilter
+    ? getIndustryById(industryFilter)
+    : null;
+
+  const filtered = programs.filter((p) => {
+    const matchesLevel = filter === "All" || p.level === filter;
+    const matchesIndustry =
+      !selectedIndustry || selectedIndustry.topPrograms.includes(p.id);
+    return matchesLevel && matchesIndustry;
+  });
 
   return (
     <div className="min-h-screen">
@@ -45,14 +73,51 @@ export default function ProgramsPage() {
             Incentive Programs
           </h1>
           <p className="text-white/50 text-base max-w-xl">
-            {programs.length} programs available to Chicago businesses
-            across federal, state, county, and city levels.
+            {selectedIndustry
+              ? `${filtered.length} programs relevant to ${selectedIndustry.name} businesses.`
+              : `${programs.length} programs available to Chicago businesses across federal, state, county, and city levels.`}
           </p>
         </div>
       </div>
 
       <div className="container mx-auto max-w-4xl px-6 py-10 bg-[#FAF9F6]">
-        {/* Filter Tabs */}
+        {/* Industry Filter */}
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/35">
+              Filter by industry
+            </span>
+            {selectedIndustry && (
+              <button
+                onClick={() => setIndustryFilter("")}
+                className="font-mono-bureau text-[9px] tracking-[0.1em] uppercase text-[#2563EB]/60 hover:text-[#2563EB] transition-colors flex items-center gap-1"
+              >
+                <X className="w-3 h-3" />
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {INDUSTRIES.map((ind) => (
+              <button
+                key={ind.id}
+                onClick={() =>
+                  setIndustryFilter(industryFilter === ind.id ? "" : ind.id)
+                }
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-mono-bureau tracking-wide transition-all ${
+                  industryFilter === ind.id
+                    ? "bg-[#2563EB] text-white shadow-sm"
+                    : "bg-white border border-[#0C1B33]/10 text-[#0C1B33]/50 hover:border-[#2563EB]/30 hover:text-[#0C1B33]/70"
+                }`}
+              >
+                <span>{ind.icon}</span>
+                {ind.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Level Filter Tabs */}
         <div className="flex gap-0 border border-[#0C1B33]/10 mb-8 overflow-x-auto">
           {LEVELS.map((level) => {
             const count =
