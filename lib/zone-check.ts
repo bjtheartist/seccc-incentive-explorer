@@ -84,19 +84,28 @@ export async function checkZones(
     })
   );
 
-  // Fetch city zoning classification in parallel (non-blocking)
+  // Fetch city zoning classification (non-blocking, with retry)
   let cityZoning: CityZoning | undefined;
-  try {
-    const zRes = await fetch(`/api/zoning?lat=${lat}&lon=${lon}`);
-    if (zRes.ok) {
-      const zData = await zRes.json();
-      if (zData.zoneClass) {
-        cityZoning = { zoneClass: zData.zoneClass, zoneType: zData.zoneType };
+  const fetchZoning = async (attempt = 0): Promise<void> => {
+    try {
+      const zRes = await fetch(`/api/zoning?lat=${lat}&lon=${lon}`, {
+        signal: AbortSignal.timeout(12000),
+      });
+      if (zRes.ok) {
+        const zData = await zRes.json();
+        if (zData.zoneClass) {
+          cityZoning = { zoneClass: zData.zoneClass, zoneType: zData.zoneType };
+        }
       }
+    } catch {
+      if (attempt < 1) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return fetchZoning(attempt + 1);
+      }
+      // Non-critical — skip if unavailable after retry
     }
-  } catch {
-    // Non-critical — skip if unavailable
-  }
+  };
+  await fetchZoning();
 
   return {
     matched: false,
