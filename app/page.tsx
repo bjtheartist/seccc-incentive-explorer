@@ -3,8 +3,7 @@
 import { AddressSearch } from "@/components/lookup/AddressSearch";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { INDUSTRIES } from "@/lib/industries-data";
-import { PROGRAMS } from "@/lib/survey-engine";
+import { Search, MapPin, ArrowRight, ClipboardCheck } from "lucide-react";
 
 export default function Home() {
   return (
@@ -55,28 +54,129 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.6 }}
             className="text-white/50 text-base md:text-lg max-w-xl mb-12 leading-relaxed"
           >
-            Discover what your Chicago business qualifies for. We cross-reference
-            11 incentive zone layers — from TIF districts to Opportunity Zones —
-            to show you every program available at your address.
+            Whether you&rsquo;re auditing incentives at your current location or
+            searching for the best place to set up shop &mdash; we&rsquo;ve got you covered.
           </motion.p>
 
-          {/* Search */}
+          {/* Two-Path Selection */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.8 }}
+            className="grid md:grid-cols-2 gap-4 max-w-3xl"
           >
-            <AddressSearch />
-            <div className="mt-4 text-center">
-              <Link
-                href="/qualify"
-                className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-white/40 hover:text-white transition-colors"
-              >
-                Not sure what you qualify for? Take the survey &rarr;
-              </Link>
-            </div>
+            {/* Path 1: Audit Your Incentives */}
+            <Link
+              href="#audit"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById("audit")?.scrollIntoView({ behavior: "smooth" });
+              }}
+              className="group relative border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] rounded-2xl p-6 transition-all hover:border-[#2563EB]/40 hover:shadow-lg hover:shadow-blue-500/10"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-[#2563EB]/20 flex items-center justify-center">
+                  <ClipboardCheck className="w-5 h-5 text-[#2563EB]" />
+                </div>
+                <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-white/30">
+                  Path 01
+                </span>
+              </div>
+              <h3 className="font-editorial text-xl text-white mb-2 group-hover:text-[#93b4f8] transition-colors">
+                Audit Your Incentives
+              </h3>
+              <p className="text-[12px] text-white/40 leading-relaxed mb-4">
+                Enter your address or business name to discover which of
+                Chicago&rsquo;s 11 incentive zone layers you qualify for.
+                Get a full PDF report.
+              </p>
+              <div className="flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB]/70 group-hover:text-[#2563EB] transition-colors">
+                Search Now
+                <ArrowRight className="w-3.5 h-3.5" />
+              </div>
+            </Link>
+
+            {/* Path 2: Find Best Location */}
+            <Link
+              href="/locate"
+              className="group relative border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] rounded-2xl p-6 transition-all hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10"
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                  <MapPin className="w-5 h-5 text-emerald-400" />
+                </div>
+                <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-white/30">
+                  Path 02
+                </span>
+              </div>
+              <h3 className="font-editorial text-xl text-white mb-2 group-hover:text-emerald-300 transition-colors">
+                Find the Best Location
+              </h3>
+              <p className="text-[12px] text-white/40 leading-relaxed mb-4">
+                Select your business sector and type to see the best areas
+                in Southeast Chicago based on zoning ordinances and incentive overlap.
+              </p>
+              <div className="flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-emerald-500/70 group-hover:text-emerald-400 transition-colors">
+                Explore Locations
+                <ArrowRight className="w-3.5 h-3.5" />
+              </div>
+            </Link>
           </motion.div>
 
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 1.2 }}
+            className="mt-6 text-center"
+          >
+            <Link
+              href="/qualify"
+              className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-white/30 hover:text-white/60 transition-colors"
+            >
+              Or take the pre-qualification survey &rarr;
+            </Link>
+          </motion.div>
+        </div>
+      </section>
+
+      {/* Audit Section — Address Search */}
+      <section id="audit" className="relative overflow-hidden bg-[#0C1B33] py-24 px-6">
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0C1B33] via-[#0f2240] to-[#0C1B33]" />
+        <div className="relative z-10 container mx-auto max-w-3xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-10"
+          >
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <div className="w-8 h-0.5 bg-[#2563EB]" />
+              <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-white/40">
+                Audit Your Incentives
+              </span>
+              <div className="w-8 h-0.5 bg-[#2563EB]" />
+            </div>
+            <h2 className="font-editorial text-3xl md:text-4xl text-white mb-4">
+              What Does Your
+              <br />
+              <span className="text-white/40">Address Qualify For?</span>
+            </h2>
+            <p className="text-sm text-white/40 leading-relaxed max-w-md mx-auto">
+              We cross-reference 11 incentive zone layers &mdash; from TIF
+              districts to Opportunity Zones &mdash; to show you every program
+              available at your location.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            <AddressSearch />
+          </motion.div>
         </div>
       </section>
 
@@ -115,98 +215,6 @@ export default function Home() {
               <source src="/howto.mp4" type="video/mp4" />
             </video>
           </motion.div>
-        </div>
-      </section>
-
-      {/* Industries / Sectors */}
-      <section className="py-24 px-6 bg-[#FAF9F6]">
-        <div className="container mx-auto max-w-5xl">
-          <div className="flex items-center gap-4 mb-6">
-            <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/30">
-              01
-            </span>
-            <div className="accent-bar" />
-            <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/50">
-              Industries
-            </span>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="mb-12"
-          >
-            <h2 className="font-editorial text-3xl md:text-4xl text-[#0C1B33] mb-4">
-              Incentives by
-              <br />
-              <span className="text-[#0C1B33]/40">Industry</span>
-            </h2>
-            <p className="text-sm text-[#0C1B33]/50 leading-relaxed max-w-xl">
-              Different industries qualify for different incentive programs.
-              Find your sector below to see which programs are most relevant
-              to your business.
-            </p>
-          </motion.div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {INDUSTRIES.map((industry, i) => (
-              <motion.div
-                key={industry.id}
-                initial={{ opacity: 0, y: 15 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.04 }}
-              >
-                <Link
-                  href={`/programs?industry=${industry.id}`}
-                  className="group block bg-white border border-[#0C1B33]/8 rounded-xl p-5 hover:shadow-md hover:border-[#2563EB]/20 transition-all"
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="text-2xl leading-none">{industry.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-medium text-[#0C1B33] group-hover:text-[#2563EB] transition-colors">
-                        {industry.name}
-                      </h3>
-                      <p className="text-[11px] text-[#0C1B33]/40 mt-1 leading-relaxed line-clamp-2">
-                        {industry.description}
-                      </p>
-                      <div className="flex items-center gap-2 mt-3">
-                        <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#2563EB]/60">
-                          {industry.topPrograms.length} programs
-                        </span>
-                        <div className="flex gap-1">
-                          {industry.topPrograms.slice(0, 3).map((pid) => (
-                            <span
-                              key={pid}
-                              className="font-mono-bureau text-[8px] tracking-wide px-1.5 py-0.5 rounded bg-[#0C1B33]/5 text-[#0C1B33]/40"
-                            >
-                              {PROGRAMS[pid]?.short || pid}
-                            </span>
-                          ))}
-                          {industry.topPrograms.length > 3 && (
-                            <span className="font-mono-bureau text-[8px] text-[#0C1B33]/30">
-                              +{industry.topPrograms.length - 3}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </Link>
-              </motion.div>
-            ))}
-          </div>
-
-          <div className="mt-8 text-center">
-            <Link
-              href="/qualify"
-              className="inline-flex items-center gap-2 font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-[#2563EB]/60 hover:text-[#2563EB] transition-colors"
-            >
-              Not sure which industry fits? Take the survey &rarr;
-            </Link>
-          </div>
         </div>
       </section>
 

@@ -1,6 +1,5 @@
 import { jsPDF } from "jspdf";
 import { ZONE_KEYS, ZONE_LABELS, ZONE_COLORS } from "./constants";
-import { INDUSTRIES } from "./industries-data";
 import type { LookupResult, Program } from "./types";
 
 /* ── Brand Colors ── */
@@ -106,10 +105,6 @@ export function generateReport(
     (p) => !p.zoneKey && !eligiblePrograms.find((ep) => ep.id === p.id)
   );
 
-  const sectorInfo = result.sector
-    ? INDUSTRIES.find((ind) => ind.id === result.sector)
-    : null;
-
   /* ── PAGE 1: COVER ── */
   // Full navy background
   fillRect(doc, 0, 0, W, H, NAVY);
@@ -161,13 +156,6 @@ export function generateReport(
     doc.setFontSize(8);
     setColor(doc, "#FFFFFF50");
     doc.text(result.business.category.toUpperCase(), MARGIN, coverY);
-    coverY += 8;
-  }
-
-  if (sectorInfo) {
-    doc.setFontSize(8);
-    setColor(doc, "#FFFFFF50");
-    doc.text(`SECTOR: ${sectorInfo.name.toUpperCase()}`, MARGIN, coverY);
     coverY += 8;
   }
 
@@ -331,6 +319,45 @@ export function generateReport(
       y += 5;
     }
   }
+
+  /* ── COOK COUNTY ASSESSOR — Property Valuation ── */
+  y += 8;
+  y = checkPage(doc, y, 40);
+  drawAccentBar(doc, MARGIN, y);
+  y += 6;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  setColor(doc, NAVY);
+  doc.text("Cook County Property Valuation", MARGIN, y);
+  y += 6;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  setColor(doc, MEDIUM_GRAY);
+  y += wrapText(
+    doc,
+    "The Cook County Assessor\u2019s Office determines the assessed value of commercial properties for tax purposes. " +
+    "Understanding your property\u2019s valuation can help you estimate tax incentive savings and appeal assessments.",
+    MARGIN,
+    y,
+    CONTENT_W,
+    4
+  );
+  y += 4;
+
+  fillRect(doc, MARGIN, y, CONTENT_W, 20, "#F5F3FF");
+  fillRect(doc, MARGIN, y, 3, 20, "#7C3AED");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  setColor(doc, "#7C3AED");
+  doc.text("HOW COMMERCIAL PROPERTIES ARE VALUED", MARGIN + 10, y + 7);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  setColor(doc, NAVY);
+  doc.text("cookcountyassessoril.gov/commercial/how-commercial-properties-are-valued", MARGIN + 10, y + 13);
+  doc.setFontSize(7);
+  setColor(doc, BLUE);
+  doc.text("https://www.cookcountyassessoril.gov", MARGIN + 10, y + 18);
+  y += 26;
 
   /* ── PAGES 3+: DETAILED PROGRAM BREAKDOWNS ── */
   const detailedPrograms = [...eligiblePrograms, ...countyPrograms];

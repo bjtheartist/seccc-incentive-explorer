@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/s
 
 const NAV_ITEMS = [
   { href: "/", label: "Home" },
+  { href: "/locate", label: "Find Location" },
   { href: "/map", label: "Map" },
   { href: "/programs", label: "Programs" },
   { href: "/faq", label: "FAQ" },
