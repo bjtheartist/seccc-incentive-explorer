@@ -67,12 +67,37 @@ function buildZoningColorExpression(): mapboxgl.Expression {
 /**
  * Load zone GeoJSON: DB API first (city-wide), static file fallback (SSA #50).
  */
+/** Chicago bounding box — reject data outside this range (bad projections). */
+const CHI_BOUNDS = { minLon: -88.0, maxLon: -87.4, minLat: 41.6, maxLat: 42.1 };
+
+function isFeatureInChicago(feature: GeoJSON.Feature): boolean {
+  try {
+    const geom = feature.geometry;
+    if (!geom || !("coordinates" in geom)) return false;
+    const coords = JSON.stringify(geom.coordinates);
+    // Quick scan: extract a few numbers and check range
+    const nums = coords.match(/-?\d+\.\d+/g);
+    if (!nums || nums.length < 2) return false;
+    // Check first coordinate pair (lon, lat)
+    const lon = parseFloat(nums[0]);
+    const lat = parseFloat(nums[1]);
+    return lon >= CHI_BOUNDS.minLon && lon <= CHI_BOUNDS.maxLon &&
+           lat >= CHI_BOUNDS.minLat && lat <= CHI_BOUNDS.maxLat;
+  } catch {
+    return false;
+  }
+}
+
 async function fetchZoneGeoJSON(key: string): Promise<GeoJSON.FeatureCollection | null> {
   try {
     const res = await fetch(`/api/zones/geojson/${key}`);
     if (res.ok) {
       const data = await res.json();
-      if (data?.features?.length > 0) return data;
+      if (data?.features?.length > 0) {
+        // Validate coordinates are in Chicago range (catches bad projections in DB)
+        if (isFeatureInChicago(data.features[0])) return data;
+        console.warn(`[MapView] DB data for "${key}" has out-of-range coordinates, falling back to static file`);
+      }
     }
   } catch {
     // Fall through to static
