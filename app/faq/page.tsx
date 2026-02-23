@@ -159,20 +159,52 @@ export default function FAQPage() {
           ))}
         </div>
 
-        {/* CTA — blue section */}
-        <div className="mt-16 border border-[#0C1B33]/10 p-8 bg-[#EFF3FB] text-center">
-          <h2 className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/50 mb-3">
-            Still have questions?
-          </h2>
-          <p className="text-sm text-[#0C1B33]/50 mb-6">
-            Need help finding incentives for your Chicago business?
-          </p>
-          <a
-            href="tel:7737211999"
-            className="inline-flex items-center gap-3 bg-[#0C1B33] text-white px-8 py-3 font-mono-bureau text-[10px] tracking-[0.2em] uppercase hover:bg-[#1E3054] transition-colors"
-          >
-            Call (773) 721-1999
-          </a>
+        {/* CTA — Still have questions */}
+        <div className="mt-16 border border-[#0C1B33]/10 p-6 md:p-10 bg-[#EFF3FB]">
+          <div className="text-center mb-8">
+            <h2 className="font-editorial text-2xl md:text-3xl text-[#0C1B33]/90 mb-3">
+              Still have questions?
+            </h2>
+            <p className="text-sm text-[#0C1B33]/50 max-w-md mx-auto">
+              Our team at the South East Chicago Chamber of Commerce is here to help you navigate incentive programs and find the right fit for your business.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-4 max-w-lg mx-auto">
+            {/* Schedule CTA — primary */}
+            <a
+              href="https://calendly.com/seccc"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col items-center gap-2 bg-[#2563EB] text-white px-6 py-4 hover:bg-[#1d4ed8] transition-colors text-center"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5" />
+              </svg>
+              <span className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase">
+                Schedule a Consultation
+              </span>
+              <span className="text-[11px] text-white/60">
+                Book a free 30-min session
+              </span>
+            </a>
+
+            {/* Call CTA — secondary */}
+            <a
+              href="tel:7737211999"
+              className="flex flex-col items-center gap-2 bg-[#0C1B33] text-white px-6 py-4 hover:bg-[#1E3054] transition-colors text-center"
+            >
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z" />
+              </svg>
+              <span className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase">
+                Call Us Directly
+              </span>
+              <span className="text-[11px] text-white/60">
+                (773) 721-1999
+              </span>
+            </a>
+          </div>
         </div>
       </div>
     </div>
