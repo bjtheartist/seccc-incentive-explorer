@@ -5,15 +5,10 @@
   "diversityIndex": 0.91,
   "zoneCoverage": {
     "tif": { "count": 293, "pct": 81.4, "label": "TIF District" },
-    "federalOZ": { "count": 178, "pct": 49.4, "label": "Federal Opportunity Zone" },
-    "illinoisOZ": { "count": 178, "pct": 49.4, "label": "Illinois Opportunity Zone" },
+    "federalOZ": { "count": 178, "pct": 49.4, "label": "Opportunity Zone (Federal & State)" },
     "enterprise": { "count": 166, "pct": 46.1, "label": "Enterprise Zone" },
-    "edge": { "count": 9, "pct": 2.5, "label": "EDGE 100% Zone" },
-    "rev": { "count": 9, "pct": 2.5, "label": "REV Illinois Bonus Zone" },
-    "micro": { "count": 9, "pct": 2.5, "label": "MICRO 100% Zone" },
-    "dataCenter": { "count": 9, "pct": 2.5, "label": "Data Center Bonus Zone" },
+    "stateIncentiveZones": { "count": 9, "pct": 2.5, "label": "State Incentive Zone" },
     "ssa": { "count": 314, "pct": 87.2, "label": "Special Service Area" },
-    "tripleBenefit": { "count": 5, "pct": 1.4, "label": "Triple Benefit Zone" },
     "highUnemployment": { "count": 9, "pct": 2.5, "label": "High Unemployment Zone" }
   },
   "stackingDistribution": {

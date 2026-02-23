@@ -1,3 +1,4 @@
+@import "https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";

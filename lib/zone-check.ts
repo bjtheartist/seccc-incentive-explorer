@@ -1,20 +1,22 @@
 import * as turf from "@turf/turf";
 import { ZONE_KEYS } from "./constants";
-import type { LookupResult, CityZoning } from "./types";
+import type { LookupResult, CityZoning, CensusData, ZoneCheckResult } from "./types";
 import type { FeatureCollection, Feature, Polygon, MultiPolygon } from "geojson";
 
 const zoneFileMap: Record<string, string> = {
   tif: "/data/zones/tif-districts.geojson",
   federalOZ: "/data/zones/federal-oz.geojson",
-  illinoisOZ: "/data/zones/illinois-oz.geojson",
   enterprise: "/data/zones/enterprise-zones.geojson",
-  edge: "/data/zones/edge-zones.geojson",
-  rev: "/data/zones/rev-zones.geojson",
-  micro: "/data/zones/micro-zones.geojson",
-  dataCenter: "/data/zones/data-center-zones.geojson",
+  stateIncentiveZones: "/data/zones/edge-zones.geojson",
   ssa: "/data/zones/special-service-areas.geojson",
-  tripleBenefit: "/data/zones/triple-benefit-zones.geojson",
   highUnemployment: "/data/zones/high-unemployment.geojson",
+  industrialCorridors: "/data/zones/industrial-corridors.geojson",
+  microMarketRecovery: "/data/zones/micro-market-recovery.geojson",
+  nof: "/data/zones/nof-projects.geojson",
+  nmtcEligible: "/data/zones/nmtc-eligible.geojson",
+  qct: "/data/zones/qct.geojson",
+  landmarkDistricts: "/data/zones/landmark-districts.geojson",
+  nrhpDistricts: "/data/zones/nrhp-districts.geojson",
 };
 
 // Cache loaded GeoJSON in memory
@@ -29,14 +31,67 @@ async function loadZone(key: string): Promise<FeatureCollection> {
 }
 
 /**
- * Check which incentive zones a lat/lon point falls within.
- * Uses Turf.js booleanPointInPolygon against clipped GeoJSON layers.
- * Also extracts zone names and employment data from feature properties.
+ * Try DB-first zone check via /api/zones/check endpoint.
+ * Returns null if the API is unavailable (falls through to Turf.js).
  */
-export async function checkZones(
+async function checkZonesDB(
   lat: number,
   lon: number
-): Promise<LookupResult> {
+): Promise<{ zones: Record<string, boolean>; zoneNames: Record<string, string>; incentiveCount: number } | null> {
+  try {
+    const res = await fetch(`/api/zones/check?lat=${lat}&lon=${lon}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) return null;
+
+    const results: ZoneCheckResult[] = await res.json();
+    if (!Array.isArray(results)) return null;
+
+    const zones: Record<string, boolean> = {};
+    const zoneNames: Record<string, string> = {};
+    let incentiveCount = 0;
+
+    // Initialize all zones as false
+    for (const key of ZONE_KEYS) {
+      zones[key] = false;
+    }
+
+    // Mark matching zones as true
+    for (const r of results) {
+      zones[r.key] = true;
+      if (r.name) zoneNames[r.key] = r.name;
+      incentiveCount++;
+    }
+
+    return { zones, zoneNames, incentiveCount };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Try DB-first census lookup via /api/census endpoint.
+ */
+async function getCensusDB(lat: number, lon: number): Promise<CensusData | null> {
+  try {
+    const res = await fetch(`/api/census?lat=${lat}&lon=${lon}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Turf.js fallback — check zones using client-side GeoJSON point-in-polygon.
+ */
+async function checkZonesTurf(
+  lat: number,
+  lon: number
+): Promise<{ zones: Record<string, boolean>; zoneNames: Record<string, string>; incentiveCount: number; employment?: LookupResult["employment"] }> {
   const pt = turf.point([lon, lat]);
   const zones: Record<string, boolean> = {};
   const zoneNames: Record<string, string> = {};
@@ -53,16 +108,12 @@ export async function checkZones(
             inZone = true;
             const props = feature.properties || {};
 
-            // Extract zone name from feature properties
             if (props.name) {
               zoneNames[key] = props.name;
             }
 
-            // Extract employment data from high-unemployment zone.
-            // In the GeoJSON export, "Census Tract ID" holds the unemployment
-            // rate and "Area" holds the population.
             if (key === "highUnemployment") {
-              const rate = props["Census Tract ID"]; // e.g. "34.3%"
+              const rate = props["Census Tract ID"];
               const pop = parseInt(props["Area"], 10);
               if (rate) {
                 employment = {
@@ -84,28 +135,43 @@ export async function checkZones(
     })
   );
 
-  // Fetch city zoning classification (non-blocking, with retry)
-  let cityZoning: CityZoning | undefined;
-  const fetchZoning = async (attempt = 0): Promise<void> => {
-    try {
-      const zRes = await fetch(`/api/zoning?lat=${lat}&lon=${lon}`, {
-        signal: AbortSignal.timeout(12000),
-      });
-      if (zRes.ok) {
-        const zData = await zRes.json();
-        if (zData.zoneClass) {
-          cityZoning = { zoneClass: zData.zoneClass, zoneType: zData.zoneType };
-        }
-      }
-    } catch {
-      if (attempt < 1) {
-        await new Promise((r) => setTimeout(r, 1500));
-        return fetchZoning(attempt + 1);
-      }
-      // Non-critical — skip if unavailable after retry
-    }
-  };
-  await fetchZoning();
+  return { zones, zoneNames, incentiveCount, employment };
+}
+
+/**
+ * Check which incentive zones a lat/lon point falls within.
+ *
+ * Strategy: DB-first via PostGIS, with Turf.js fallback.
+ * Also fetches census data and city zoning classification.
+ */
+export async function checkZones(
+  lat: number,
+  lon: number
+): Promise<LookupResult> {
+  // Try DB first, fallback to Turf.js
+  let zones: Record<string, boolean>;
+  let zoneNames: Record<string, string>;
+  let incentiveCount: number;
+  let employment: LookupResult["employment"] = undefined;
+
+  const dbResult = await checkZonesDB(lat, lon);
+  if (dbResult) {
+    zones = dbResult.zones;
+    zoneNames = dbResult.zoneNames;
+    incentiveCount = dbResult.incentiveCount;
+  } else {
+    const turfResult = await checkZonesTurf(lat, lon);
+    zones = turfResult.zones;
+    zoneNames = turfResult.zoneNames;
+    incentiveCount = turfResult.incentiveCount;
+    employment = turfResult.employment;
+  }
+
+  // Fetch census data and city zoning in parallel
+  const [census, cityZoning] = await Promise.all([
+    getCensusDB(lat, lon),
+    fetchCityZoning(lat, lon),
+  ]);
 
   return {
     matched: false,
@@ -115,9 +181,36 @@ export async function checkZones(
     zones,
     zoneNames,
     incentiveCount,
-    cityZoning,
+    cityZoning: cityZoning ?? undefined,
     employment,
+    census: census ?? undefined,
   };
+}
+
+/**
+ * Fetch city zoning classification (non-blocking, with retry).
+ */
+async function fetchCityZoning(lat: number, lon: number): Promise<CityZoning | null> {
+  const attempt = async (n: number): Promise<CityZoning | null> => {
+    try {
+      const zRes = await fetch(`/api/zoning?lat=${lat}&lon=${lon}`, {
+        signal: AbortSignal.timeout(12000),
+      });
+      if (zRes.ok) {
+        const zData = await zRes.json();
+        if (zData.zoneClass) {
+          return { zoneClass: zData.zoneClass, zoneType: zData.zoneType };
+        }
+      }
+    } catch {
+      if (n < 1) {
+        await new Promise((r) => setTimeout(r, 1500));
+        return attempt(n + 1);
+      }
+    }
+    return null;
+  };
+  return attempt(0);
 }
 
 /**
@@ -129,7 +222,6 @@ export async function enrichEmployment(
   result: LookupResult
 ): Promise<LookupResult> {
   if (!result.zones.highUnemployment || result.lat === 0) return result;
-  // Already has rate data
   if (result.employment?.unemploymentRate) return result;
 
   try {

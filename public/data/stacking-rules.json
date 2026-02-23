@@ -1,0 +1,178 @@
+[
+  {
+    "id": "tif-sbif-can",
+    "programId": "tif",
+    "otherProgramId": "sbif",
+    "relationship": "can",
+    "scope": "same_property",
+    "conditionsJson": null,
+    "reason": "SBIF grants are funded through TIF dollars — they are designed to stack.",
+    "authoritySource": "City of Chicago DCD SBIF Program Guidelines",
+    "confidence": "high",
+    "lastVerifiedAt": "2025-12-01"
+  },
+  {
+    "id": "federalOZ-illinoisOZ-can",
+    "programId": "federalOZ",
+    "otherProgramId": "illinoisOZ",
+    "relationship": "can",
+    "scope": "same_project",
+    "conditionsJson": null,
+    "reason": "Illinois OZ supplements the federal program — stacking is the intended design.",
+    "authoritySource": "Illinois DCEO Opportunity Zone Guidelines",
+    "confidence": "high",
+    "lastVerifiedAt": "2025-11-15"
+  },
+  {
+    "id": "tif-federalOZ-can",
+    "programId": "tif",
+    "otherProgramId": "federalOZ",
+    "relationship": "can",
+    "scope": "same_property",
+    "conditionsJson": null,
+    "reason": "TIF grants and OZ tax benefits address different cost categories and can be combined.",
+    "authoritySource": "City of Chicago DCD guidance",
+    "confidence": "high",
+    "lastVerifiedAt": "2025-11-15"
+  },
+  {
+    "id": "tif-enterprise-can",
+    "programId": "tif",
+    "otherProgramId": "enterprise",
+    "relationship": "can",
+    "scope": "same_property",
+    "conditionsJson": null,
+    "reason": "TIF grants and Enterprise Zone tax exemptions address different benefit types.",
+    "authoritySource": "City of Chicago DCD / Illinois DCEO",
+    "confidence": "high",
+    "lastVerifiedAt": "2025-12-01"
+  },
+  {
+    "id": "enterprise-federalOZ-can",
+    "programId": "enterprise",
+    "otherProgramId": "federalOZ",
+    "relationship": "can",
+    "scope": "same_property",
+    "conditionsJson": null,
+    "reason": "Enterprise Zone sales tax exemptions and OZ capital gains benefits are complementary.",
+    "authoritySource": "Illinois DCEO",
+    "confidence": "high",
+    "lastVerifiedAt": "2025-11-15"
+  },
+  {
+    "id": "sbif-class7a-conditional",
+    "programId": "sbif",
+    "otherProgramId": "class7a",
+    "relationship": "conditional",
+    "scope": "same_property",
+    "conditionsJson": {
+      "allowed_if": ["Different cost categories (SBIF for building improvements, Class 7a for property tax reduction)"],
+      "blocked_if": ["Same costs cannot be double-counted"]
+    },
+    "reason": "SBIF covers building improvements while Class 7a reduces property taxes — generally compatible but confirm with DCD.",
+    "authoritySource": "SomerCor SBIF guidelines / Cook County Assessor",
+    "confidence": "medium",
+    "lastVerifiedAt": "2025-10-01"
+  },
+  {
+    "id": "tif-cpace-conditional",
+    "programId": "tif",
+    "otherProgramId": "cpace",
+    "relationship": "conditional",
+    "scope": "same_costs",
+    "conditionsJson": {
+      "allowed_if": ["Different improvement categories"],
+      "blocked_if": ["Same improvement costs cannot receive both TIF reimbursement and C-PACE financing"]
+    },
+    "reason": "TIF and C-PACE can apply to the same property but generally not the same improvement costs.",
+    "authoritySource": "City of Chicago DCD / Cook County C-PACE guidelines",
+    "confidence": "medium",
+    "lastVerifiedAt": "2025-10-01"
+  },
+  {
+    "id": "edge-rev-cannot",
+    "programId": "edge",
+    "otherProgramId": "rev",
+    "relationship": "cannot",
+    "scope": "same_project",
+    "conditionsJson": null,
+    "reason": "EDGE and REV are separate DCEO programs — a business generally applies to one or the other based on industry.",
+    "authoritySource": "Illinois DCEO",
+    "confidence": "medium",
+    "lastVerifiedAt": "2025-11-01"
+  },
+  {
+    "id": "edge-micro-cannot",
+    "programId": "edge",
+    "otherProgramId": "micro",
+    "relationship": "cannot",
+    "scope": "same_project",
+    "conditionsJson": null,
+    "reason": "EDGE and MICRO are separate DCEO programs — a business generally applies to one based on industry.",
+    "authoritySource": "Illinois DCEO",
+    "confidence": "medium",
+    "lastVerifiedAt": "2025-11-01"
+  },
+  {
+    "id": "smallBizSource-any-can",
+    "programId": "smallBizSource",
+    "otherProgramId": "tif",
+    "relationship": "can",
+    "scope": "general",
+    "conditionsJson": null,
+    "reason": "Small Business Source advising is free and complements any other program — advisors help with applications.",
+    "authoritySource": "Cook County Small Business Source",
+    "confidence": "high",
+    "lastVerifiedAt": "2025-12-01"
+  },
+  {
+    "id": "smallBizSource-sbif-can",
+    "programId": "smallBizSource",
+    "otherProgramId": "sbif",
+    "relationship": "can",
+    "scope": "general",
+    "conditionsJson": null,
+    "reason": "SBS advisors help businesses navigate SBIF applications.",
+    "authoritySource": "Cook County Small Business Source",
+    "confidence": "high",
+    "lastVerifiedAt": "2025-12-01"
+  },
+  {
+    "id": "catalystGrant-sbif-can",
+    "programId": "catalystGrant",
+    "otherProgramId": "sbif",
+    "relationship": "can",
+    "scope": "same_property",
+    "conditionsJson": {
+      "allowed_if": ["Different expense categories (Catalyst for equipment/hiring, SBIF for building improvements)"]
+    },
+    "reason": "Catalyst covers equipment and hiring; SBIF covers building improvements — different categories.",
+    "authoritySource": "Cook County Bureau of Economic Development",
+    "confidence": "medium",
+    "lastVerifiedAt": "2025-09-01"
+  },
+  {
+    "id": "highUnemployment-edge-can",
+    "programId": "highUnemployment",
+    "otherProgramId": "edge",
+    "relationship": "can",
+    "scope": "same_project",
+    "conditionsJson": null,
+    "reason": "WOTC hiring credits and EDGE income tax credits address different benefit types.",
+    "authoritySource": "IRS / Illinois DCEO",
+    "confidence": "high",
+    "lastVerifiedAt": "2025-10-01"
+  },
+  {
+    "id": "ssa-tif-can",
+    "programId": "ssa",
+    "otherProgramId": "tif",
+    "relationship": "can",
+    "scope": "same_property",
+    "conditionsJson": null,
+    "reason": "SSA provides automatic services; TIF provides project-based grants — fully complementary.",
+    "authoritySource": "SECCC / City of Chicago DCD",
+    "confidence": "high",
+    "lastVerifiedAt": "2025-12-01"
+  }
+]

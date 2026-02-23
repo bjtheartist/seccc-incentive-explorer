@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
 
   // Source 2: Socrata SODA API (fallback, with retry)
   try {
-    const sodaUrl = `https://data.cityofchicago.org/resource/7cra-3bfp.json?$where=within_circle(the_geom,${lat},${lon},10)&$limit=1`;
+    const sodaUrl = `https://data.cityofchicago.org/resource/dj47-wfun.json?$where=within_circle(the_geom,${lat},${lon},10)&$limit=1`;
     const res = await fetchWithRetry(sodaUrl, {
       headers: { Accept: "application/json" },
     });
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
 
   // Source 3: Chicago Data Portal GeoJSON endpoint (second fallback)
   try {
-    const geoUrl = `https://data.cityofchicago.org/resource/7cra-3bfp.geojson?$where=intersects(the_geom,'POINT(${lon} ${lat})')&$limit=1`;
+    const geoUrl = `https://data.cityofchicago.org/resource/dj47-wfun.geojson?$where=intersects(the_geom,'POINT(${lon} ${lat})')&$limit=1`;
     const res = await fetchWithRetry(geoUrl, {
       headers: { Accept: "application/json" },
     });

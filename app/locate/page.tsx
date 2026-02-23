@@ -64,7 +64,7 @@ const AREA_ZONES: { name: string; desc: string; zonings: string[]; incentives: s
     name: "Opportunity Zone Census Tracts",
     desc: "Federal and Illinois Opportunity Zone overlap areas. Best for investors, developers, and capital-intensive projects.",
     zonings: ["B3", "C1", "C2", "M1"],
-    incentives: ["federalOZ", "illinoisOZ", "tif", "tripleBenefit"],
+    incentives: ["federalOZ", "tif", "stateIncentiveZones"],
   },
 ];
 

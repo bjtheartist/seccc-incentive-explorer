@@ -81,6 +81,38 @@ function ProgramsContent() {
       </div>
 
       <div className="container mx-auto max-w-4xl px-6 py-10 bg-[#FAF9F6]">
+        {/* Definitions: Incentive Zones vs Programs */}
+        <div className="mb-10 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="border border-[#2563EB]/15 bg-[#EFF3FB] p-5">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-2">
+              Definition
+            </div>
+            <h3 className="text-sm font-semibold text-[#0C1B33] mb-2">Incentive Zones</h3>
+            <p className="text-[12px] text-[#0C1B33]/55 leading-relaxed">
+              Incentive zones are <strong>geographic designations</strong> drawn
+              by federal, state, or city agencies on census tracts or
+              neighborhood boundaries. Being <em>inside</em> a zone is the
+              first eligibility gate — it determines which programs you can
+              access. A single address can fall within multiple overlapping
+              zones (e.g., TIF + Opportunity Zone + Enterprise Zone).
+            </p>
+          </div>
+          <div className="border border-[#059669]/15 bg-[#f0fdf4] p-5">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#059669]/50 mb-2">
+              Definition
+            </div>
+            <h3 className="text-sm font-semibold text-[#0C1B33] mb-2">Incentive Programs</h3>
+            <p className="text-[12px] text-[#0C1B33]/55 leading-relaxed">
+              Programs are the <strong>actual benefits</strong> — grants, tax
+              credits, financing, and technical assistance — administered by a
+              government agency. Each program has its own application process,
+              eligibility criteria, and deadlines. Some programs require zone
+              membership; others (like Cook County programs) are available
+              county-wide regardless of zone status.
+            </p>
+          </div>
+        </div>
+
         {/* Industry Filter */}
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-3">

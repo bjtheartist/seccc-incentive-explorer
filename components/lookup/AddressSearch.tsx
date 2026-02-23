@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Search, ArrowRight } from "lucide-react";
 import { IncentiveReport } from "./IncentiveReport";
 import {
@@ -34,6 +35,7 @@ const LOADING_MESSAGES = [
 ];
 
 export function AddressSearch() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<LookupResult | null>(null);
@@ -44,9 +46,12 @@ export function AddressSearch() {
   const [loadingMsg, setLoadingMsg] = useState(LOADING_MESSAGES[0]);
 
   useEffect(() => {
-    fetch("/data/businesses.json")
-      .then((r) => r.json())
-      .then(setBusinesses);
+    // Try API first, fallback to static files
+    fetch("/api/businesses")
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .catch(() => fetch("/data/businesses.json").then((r) => r.json()))
+      .then(setBusinesses)
+      .catch(() => {});
     fetch("/data/programs.json")
       .then((r) => r.json())
       .then(setPrograms);
@@ -73,6 +78,19 @@ export function AddressSearch() {
     setSuggestions(nameMatches);
   }, [query, businesses]);
 
+  /** Navigate to instant report with lat/lon/addr */
+  const navigateToReport = useCallback(
+    (lat: number, lon: number, addr: string) => {
+      const params = new URLSearchParams();
+      params.set("instant", "true");
+      params.set("lat", lat.toFixed(5));
+      params.set("lon", lon.toFixed(5));
+      if (addr) params.set("addr", addr);
+      router.push(`/report?${params.toString()}`);
+    },
+    [router]
+  );
+
   const handleLookup = useCallback(
     async (searchQuery?: string, directBusiness?: Business) => {
       const q = searchQuery ?? query;
@@ -85,6 +103,10 @@ export function AddressSearch() {
 
       try {
         if (directBusiness) {
+          if (directBusiness.lat && directBusiness.lon) {
+            navigateToReport(directBusiness.lat, directBusiness.lon, directBusiness.address);
+            return;
+          }
           await new Promise((r) => setTimeout(r, 600));
           const lookupResult = businessToLookupResult(directBusiness);
           setResult(await enrichEmployment(lookupResult));
@@ -94,6 +116,10 @@ export function AddressSearch() {
 
         const addrMatch = findBusinessByAddress(q, businesses);
         if (addrMatch) {
+          if (addrMatch.lat && addrMatch.lon) {
+            navigateToReport(addrMatch.lat, addrMatch.lon, addrMatch.address);
+            return;
+          }
           await new Promise((r) => setTimeout(r, 600));
           const lookupResult = businessToLookupResult(addrMatch);
           setResult(await enrichEmployment(lookupResult));
@@ -103,8 +129,13 @@ export function AddressSearch() {
 
         const nameMatches = findBusinessByName(q, businesses);
         if (nameMatches.length === 1) {
+          const match = nameMatches[0];
+          if (match.lat && match.lon) {
+            navigateToReport(match.lat, match.lon, match.address);
+            return;
+          }
           await new Promise((r) => setTimeout(r, 600));
-          const lookupResult = businessToLookupResult(nameMatches[0]);
+          const lookupResult = businessToLookupResult(match);
           setResult(await enrichEmployment(lookupResult));
           setLoading(false);
           return;
@@ -122,18 +153,15 @@ export function AddressSearch() {
         }
 
         const geo = await res.json();
-        const zoneResult = await checkZones(geo.lat, geo.lon);
-        setResult({
-          ...zoneResult,
-          address: geo.displayName || q,
-        });
+        // Navigate to instant report with geocoded coordinates
+        navigateToReport(geo.lat, geo.lon, geo.displayName || q);
       } catch {
         setError("Something went wrong. Please try again.");
       } finally {
         setLoading(false);
       }
     },
-    [query, businesses]
+    [query, businesses, navigateToReport]
   );
 
   return (

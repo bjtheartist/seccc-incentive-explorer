@@ -58,11 +58,47 @@ const FAQ_ITEMS = [
   },
   {
     q: "How accurate is this tool?",
-    a: "Our tool uses the same geographic zone data published by the City of Chicago and State of Illinois. For the 360 businesses in our directory, zone membership is pre-computed and instant. For new addresses, we use Turf.js point-in-polygon analysis against official zone boundaries. While this is highly accurate, we recommend confirming eligibility directly with each program administrator before applying.",
+    a: "Our tool uses the same geographic zone data published by the City of Chicago and State of Illinois. We use Turf.js point-in-polygon analysis against official zone boundaries to determine which incentive zones apply to any address. While this is highly accurate, we recommend confirming eligibility directly with each program administrator before applying.",
   },
   {
     q: "Where does the data come from?",
-    a: "Business data comes from the Chicago business directory (360 mapped businesses). Incentive zone boundaries come from official City of Chicago and State of Illinois KML/GeoJSON data. SBIF project data comes from the City of Chicago open data portal. All zone boundaries are verified against official sources.",
+    a: "Incentive zone boundaries come from official City of Chicago and State of Illinois KML/GeoJSON data. SBIF project data comes from the City of Chicago open data portal. Census data is sourced from the American Community Survey (ACS 5-Year estimates). All zone boundaries are verified against official sources.",
+  },
+  {
+    q: "What is the difference between an incentive zone and a program?",
+    a: "An incentive zone is a geographic designation — a boundary on the map drawn by a government agency. Being inside a zone is the first eligibility gate. A program is the actual benefit (grant, tax credit, financing) that you apply for. Some programs require you to be in a specific zone (e.g., SBIF requires a TIF district). Others, like Cook County's Catalyst Grant, are available county-wide regardless of zone status.",
+  },
+  {
+    q: "What is the Neighborhood Opportunity Fund (NOF)?",
+    a: "The NOF provides grants up to $250,000 for small projects and up to $1.5 million for large catalytic projects on Chicago's South, Southwest, and West Sides. Funded by downtown development fees, it targets commercial and industrial projects that create jobs and fill community needs in underinvested neighborhoods.",
+  },
+  {
+    q: "What are New Markets Tax Credits (NMTC)?",
+    a: "NMTC is a federal program that provides a 39% tax credit over 7 years to investors who make qualified equity investments through Community Development Entities (CDEs) in low-income census tracts. It's typically used for larger projects ($5M+) and can be combined with Historic Tax Credits and Opportunity Zone benefits.",
+  },
+  {
+    q: "What are Qualified Census Tracts (QCTs)?",
+    a: "QCTs are HUD-designated census tracts where 50% or more of households earn below 60% of area median income. For developers, the key benefit is a 30% boost to Low-Income Housing Tax Credit (LIHTC) eligible basis, making affordable housing projects more financially viable in these areas.",
+  },
+  {
+    q: "What is the Federal Historic Tax Credit?",
+    a: "Properties in National Register Historic Districts qualify for a 20% federal income tax credit on certified rehabilitation costs — with no cap. The rehabilitation must follow the Secretary of the Interior's Standards, and the building must be income-producing (commercial, rental, industrial). This is one of the most valuable credits available for historic building projects.",
+  },
+  {
+    q: "What are Industrial Corridors and why do they matter?",
+    a: "Chicago's Industrial Corridor system preserves designated areas for manufacturing, logistics, and industrial uses through zoning protections. This prevents residential conversion and protects existing businesses from displacement. If you're a manufacturer or logistics company, locating in a corridor gives you zoning certainty and access to infrastructure priorities.",
+  },
+  {
+    q: "What is the Micro Market Recovery Program?",
+    a: "The Micro Market Recovery Program targets high-vacancy commercial corridors with storefront improvement grants, technical assistance, and marketing support. It's designed to activate empty storefronts and revitalize neighborhood commercial streets across Chicago.",
+  },
+  {
+    q: "What is the Cook County Class 7a incentive?",
+    a: "Class 7a reduces property tax assessments from 25% to 10% for 10 years (then 15% in year 11, 20% in year 12) for qualifying small commercial projects under $2 million. It covers new construction, substantial rehabilitation, or reoccupancy of abandoned commercial buildings in Cook County.",
+  },
+  {
+    q: "What is C-PACE financing?",
+    a: "Cook County C-PACE (Commercial Property Assessed Clean Energy) provides up to 100% upfront financing for energy efficiency, renewable energy, and water conservation improvements to commercial buildings. The loan is repaid through your property tax bill over terms up to 30 years, matching the useful life of the improvements. No large out-of-pocket costs required.",
   },
 ];
 

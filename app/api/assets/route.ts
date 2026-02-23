@@ -1,0 +1,63 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getSQL } from "@/lib/db";
+
+/**
+ * GET /api/assets?type=edo,bso
+ *
+ * Returns community assets (EDOs, BSOs, universities, libraries).
+ * Optional type filter (comma-separated).
+ */
+
+// Static fallback data (from MapView.tsx EDO_BSO_POINTS)
+const STATIC_ASSETS = [
+  { id: "seccc", name: "Southeast Chicago Chamber of Commerce (SECCC)", type: "EDO", address: "8751 S Houston Ave, Chicago, IL 60617", lat: 41.7395, lon: -87.5687 },
+  { id: "cni", name: "Chicago Neighborhood Initiatives (CNI)", type: "EDO", address: "11045 S Michigan Ave, Chicago, IL 60628", lat: 41.7254, lon: -87.6037 },
+  { id: "sbs", name: "Cook County Small Business Source", type: "BSO", address: "69 W Washington St, Chicago, IL 60602", lat: 41.8397, lon: -87.6252 },
+  { id: "sbdc", name: "Illinois SBDC at Women's Business Development Center", type: "BSO", address: "8 S Michigan Ave #400, Chicago, IL 60603", lat: 41.8768, lon: -87.6278 },
+  { id: "somercor", name: "SomerCor 504 (SBA Lender)", type: "BSO", address: "2 E 8th St, Chicago, IL 60605", lat: 41.7528, lon: -87.5839 },
+  { id: "fscdc", name: "Far South Community Development Corp", type: "EDO", address: "34 E 75th St, Chicago, IL 60619", lat: 41.7495, lon: -87.6048 },
+];
+
+export async function GET(request: NextRequest) {
+  const typeParam = request.nextUrl.searchParams.get("type");
+  const types = typeParam ? typeParam.split(",").map((t) => t.trim().toUpperCase()) : null;
+
+  const sql = getSQL();
+  if (!sql) {
+    const filtered = types
+      ? STATIC_ASSETS.filter((a) => types.includes(a.type))
+      : STATIC_ASSETS;
+    return NextResponse.json(filtered, {
+      headers: { "Cache-Control": "public, max-age=86400" },
+    });
+  }
+
+  try {
+    let rows;
+    if (types && types.length > 0) {
+      rows = await sql`
+        SELECT id, name, type, address, lat, lon
+        FROM community_assets
+        WHERE UPPER(type) = ANY(${types})
+        ORDER BY type, name
+      `;
+    } else {
+      rows = await sql`
+        SELECT id, name, type, address, lat, lon
+        FROM community_assets
+        ORDER BY type, name
+      `;
+    }
+
+    return NextResponse.json(rows, {
+      headers: { "Cache-Control": "public, max-age=86400" },
+    });
+  } catch {
+    const filtered = types
+      ? STATIC_ASSETS.filter((a) => types.includes(a.type))
+      : STATIC_ASSETS;
+    return NextResponse.json(filtered, {
+      headers: { "Cache-Control": "public, max-age=86400" },
+    });
+  }
+}

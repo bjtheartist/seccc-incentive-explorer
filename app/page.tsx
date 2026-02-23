@@ -65,13 +65,9 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.8 }}
             className="grid md:grid-cols-2 gap-4 max-w-3xl"
           >
-            {/* Path 1: Audit Your Incentives */}
+            {/* Path 1: Generate Your Report */}
             <Link
-              href="#audit"
-              onClick={(e) => {
-                e.preventDefault();
-                document.getElementById("audit")?.scrollIntoView({ behavior: "smooth" });
-              }}
+              href="/report"
               className="group relative border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] rounded-2xl p-6 transition-all hover:border-[#2563EB]/40 hover:shadow-lg hover:shadow-blue-500/10"
             >
               <div className="flex items-center gap-3 mb-4">
@@ -83,15 +79,14 @@ export default function Home() {
                 </span>
               </div>
               <h3 className="font-editorial text-xl text-white mb-2 group-hover:text-[#93b4f8] transition-colors">
-                Audit Your Incentives
+                Generate Your Report
               </h3>
               <p className="text-[12px] text-white/40 leading-relaxed mb-4">
-                Enter your address or business name to discover which of
-                Chicago&rsquo;s 11 incentive zone layers you qualify for.
-                Get a full PDF report.
+                Enter your address to get an instant executive summary of every
+                incentive program at your location &mdash; with a full PDF report.
               </p>
               <div className="flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB]/70 group-hover:text-[#2563EB] transition-colors">
-                Search Now
+                Generate Report
                 <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </Link>
@@ -130,10 +125,10 @@ export default function Home() {
             className="mt-6 text-center"
           >
             <Link
-              href="/qualify"
+              href="/report"
               className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-white/30 hover:text-white/60 transition-colors"
             >
-              Or take the pre-qualification survey &rarr;
+              Or explore all report types &rarr;
             </Link>
           </motion.div>
         </div>
@@ -153,7 +148,7 @@ export default function Home() {
             <div className="flex items-center justify-center gap-4 mb-6">
               <div className="w-8 h-0.5 bg-[#2563EB]" />
               <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-white/40">
-                Audit Your Incentives
+                Check Your Address, Get Your Report
               </span>
               <div className="w-8 h-0.5 bg-[#2563EB]" />
             </div>

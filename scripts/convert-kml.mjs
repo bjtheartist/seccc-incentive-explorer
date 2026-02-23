@@ -3,16 +3,28 @@
  * Convert KML incentive zone files to GeoJSON, clipped to SSA #50 bounding box.
  * Usage: node scripts/convert-kml.mjs
  */
-import { readFileSync, writeFileSync, mkdirSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "fs";
 import { DOMParser } from "xmldom";
 import * as tj from "@tmcw/togeojson";
 import * as turf from "@turf/turf";
+import { resolve } from "path";
 
 // SSA #50 bounding box (Calumet Heights / Avalon Park area)
 const SSA50_BBOX = [-87.615, 41.718, -87.540, 41.770];
 const bboxPoly = turf.bboxPolygon(SSA50_BBOX);
 
-const KML_DIR = "/Users/billyndizeye/Downloads/Maps/2026/January";
+// Default to data/raw/kml/ (staging folder), fall back to legacy path
+const RAW_KML = resolve(process.cwd(), "data/raw/kml");
+const LEGACY_KML = "/Users/billyndizeye/Downloads/Maps/2026/January";
+
+function dirHasKML(dir) {
+  try {
+    return existsSync(dir) && readdirSync(dir).some((f) => f.endsWith(".kml"));
+  } catch { return false; }
+}
+
+const KML_DIR = dirHasKML(RAW_KML) ? RAW_KML : LEGACY_KML;
+console.log(`Reading KML files from: ${KML_DIR}`);
 
 const KML_FILES = [
   { file: "Chicago_TIF_Districts.kml", output: "tif-districts.geojson", name: "TIF Districts" },

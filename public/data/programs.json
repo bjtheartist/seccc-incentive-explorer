@@ -14,7 +14,7 @@
     ],
     "howToApply": [
       "Verify your property is within a TIF district",
-      "Contact the City of Chicago Department of Planning and Development",
+      "Contact the City of Chicago Department of Community Development",
       "Submit a TIF application with project description and budget",
       "City reviews and approves eligible projects"
     ],
@@ -24,8 +24,24 @@
       "Contractor bids (minimum 2)",
       "Building permits (if applicable)"
     ],
-    "contact": "City of Chicago DPD: (312) 744-4190",
-    "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html"
+    "contact": "City of Chicago DCD: (312) 744-4190",
+    "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html",
+    "contacts": [
+      {
+        "agency": "City of Chicago Department of Community Development",
+        "abbreviation": "DCD",
+        "phone": "(312) 744-4190",
+        "url": "https://www.chicago.gov/city/en/depts/dcd.html"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Property must be within a designated TIF district", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Commercial or mixed-use property", "verifiedBy": "survey", "required": true },
+      { "criterion": "investmentSize", "description": "Project must involve qualifying improvements", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2025-12-01",
+    "benefitRange": "Up to $250,000",
+    "fastestConfirmingStep": "Call DCD at (312) 744-4190 to confirm TIF eligibility"
   },
   {
     "id": "federalOZ",
@@ -52,13 +68,36 @@
       "Property records within the Opportunity Zone"
     ],
     "contact": "IRS Opportunity Zone resources or local CDFI",
-    "url": "https://www.irs.gov/credits-deductions/businesses/opportunity-zones"
+    "url": "https://www.irs.gov/credits-deductions/businesses/opportunity-zones",
+    "contacts": [
+      {
+        "agency": "Internal Revenue Service",
+        "abbreviation": "IRS",
+        "phone": "(800) 829-1040",
+        "url": "https://www.irs.gov/credits-deductions/businesses/opportunity-zones"
+      },
+      {
+        "agency": "Chicago Neighborhood Initiatives",
+        "abbreviation": "CNI",
+        "phone": "(773) 840-2605",
+        "url": "https://www.cnigroup.org/",
+        "role": "Local CDFI / OZ Fund"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Investment must be in a designated Opportunity Zone census tract", "verifiedBy": "location", "required": true },
+      { "criterion": "investmentSize", "description": "Must invest capital gains through a Qualified Opportunity Fund", "verifiedBy": "manual", "required": true },
+      { "criterion": "industry", "description": "Most industries qualify except sin businesses (golf, gambling, liquor stores)", "verifiedBy": "survey", "required": false }
+    ],
+    "lastVerifiedAt": "2025-11-15",
+    "benefitRange": "Tax deferral + 0% gains after 10 years",
+    "fastestConfirmingStep": "Consult a tax advisor about QOF eligibility"
   },
   {
     "id": "illinoisOZ",
     "name": "Illinois Opportunity Zones",
     "level": "State",
-    "zoneKey": "illinoisOZ",
+    "zoneKey": "federalOZ",
     "summary": "Illinois supplements the federal program with additional state-level tax incentives for investments in designated Opportunity Zones, making the combined benefits even more attractive.",
     "whoQualifies": "Same as Federal OZ — investors deploying capital gains through QOFs in Illinois-designated zones.",
     "benefits": [
@@ -78,7 +117,22 @@
       "Property/business records in OZ census tracts"
     ],
     "contact": "Illinois DCEO: (217) 782-7500",
-    "url": "https://dceo.illinois.gov/opportunityzones.html"
+    "url": "https://dceo.illinois.gov/opportunityzones.html",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "(217) 782-7500",
+        "url": "https://dceo.illinois.gov/opportunityzones.html"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Investment must be in an Illinois-designated Opportunity Zone", "verifiedBy": "location", "required": true },
+      { "criterion": "investmentSize", "description": "Must invest through a Qualified Opportunity Fund", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2025-11-15",
+    "benefitRange": "State income tax deduction (stacks with federal)",
+    "fastestConfirmingStep": "Call DCEO at (217) 782-7500"
   },
   {
     "id": "enterprise",
@@ -106,7 +160,28 @@
       "Proof of location within the zone"
     ],
     "contact": "City of Chicago Enterprise Zone Office",
-    "url": "https://dceo.illinois.gov/expandrelocate/incentives/enterprisezone.html"
+    "url": "https://dceo.illinois.gov/expandrelocate/incentives/enterprisezone.html",
+    "contacts": [
+      {
+        "agency": "City of Chicago Department of Community Development",
+        "abbreviation": "DCD",
+        "phone": "(312) 744-4190",
+        "role": "Enterprise Zone Administrator"
+      },
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "(217) 782-7500",
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/enterprisezone.html"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Business must be within an Enterprise Zone boundary", "verifiedBy": "location", "required": true },
+      { "criterion": "investmentSize", "description": "Must make qualifying investment in machinery, equipment, or building materials", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2025-12-01",
+    "benefitRange": "6.25% sales tax exemption + 0.5% investment credit",
+    "fastestConfirmingStep": "Call DCD at (312) 744-4190 to confirm Enterprise Zone status"
   },
   {
     "id": "sbif",
@@ -136,13 +211,35 @@
       "Certificate of insurance"
     ],
     "contact": "SomerCor (SBIF Administrator): (312) 360-3384",
-    "url": "https://somercor.com/sbif/"
+    "url": "https://somercor.com/sbif/",
+    "contacts": [
+      {
+        "agency": "SomerCor 504",
+        "abbreviation": "SomerCor",
+        "phone": "(312) 360-3384",
+        "url": "https://somercor.com/sbif/",
+        "role": "SBIF Administrator"
+      },
+      {
+        "agency": "City of Chicago Department of Community Development",
+        "abbreviation": "DCD",
+        "phone": "(312) 744-4190"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Property must be in an eligible TIF district", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "1-4 story commercial or mixed-use building", "verifiedBy": "survey", "required": true },
+      { "criterion": "investmentSize", "description": "Permanent building improvements (HVAC, plumbing, electrical, etc.)", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2025-12-01",
+    "benefitRange": "Up to $150,000",
+    "fastestConfirmingStep": "Call SomerCor at (312) 360-3384 for next orientation date"
   },
   {
     "id": "edge",
     "name": "EDGE Tax Credit",
     "level": "State",
-    "zoneKey": "edge",
+    "zoneKey": "stateIncentiveZones",
     "summary": "The Economic Development for a Growing Economy (EDGE) program provides income tax credits to businesses that create or retain jobs in Illinois.",
     "whoQualifies": "Businesses making capital investments and creating/retaining jobs in Illinois. 100% zones offer the maximum credit rate.",
     "benefits": [
@@ -164,13 +261,29 @@
       "Capital investment documentation"
     ],
     "contact": "Illinois DCEO: (217) 782-7500",
-    "url": "https://dceo.illinois.gov/expandrelocate/incentives/edgetaxcredit.html"
+    "url": "https://dceo.illinois.gov/expandrelocate/incentives/edgetaxcredit.html",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "(217) 782-7500",
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/edgetaxcredit.html"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Business in Illinois; 100% zones offer maximum credit", "verifiedBy": "location", "required": false },
+      { "criterion": "industry", "description": "Most industries qualify; focus on job creation", "verifiedBy": "survey", "required": false },
+      { "criterion": "investmentSize", "description": "Must create or retain jobs and make capital investment", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2025-11-01",
+    "benefitRange": "25-100% income tax credit for up to 10 years",
+    "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about EDGE eligibility"
   },
   {
     "id": "rev",
     "name": "REV Illinois",
     "level": "State",
-    "zoneKey": "rev",
+    "zoneKey": "stateIncentiveZones",
     "summary": "REV Illinois (Reimagining Energy and Vehicles) provides tax credits for businesses in the electric vehicle and renewable energy supply chain.",
     "whoQualifies": "Businesses in EV manufacturing, battery production, renewable energy, or related supply chain operations in designated bonus zones.",
     "benefits": [
@@ -190,13 +303,28 @@
       "Investment and job creation projections"
     ],
     "contact": "Illinois DCEO: (217) 782-7500",
-    "url": "https://dceo.illinois.gov/aboutdceo/reportstopublications/rev-illinois-act.html"
+    "url": "https://dceo.illinois.gov/aboutdceo/reportstopublications/rev-illinois-act.html",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "(217) 782-7500",
+        "url": "https://dceo.illinois.gov/aboutdceo/reportstopublications/rev-illinois-act.html"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Bonus zones offer enhanced credits", "verifiedBy": "location", "required": false },
+      { "criterion": "industry", "description": "Must be in EV, battery, renewable energy, or related supply chain", "verifiedBy": "survey", "required": true }
+    ],
+    "lastVerifiedAt": "2025-11-01",
+    "benefitRange": "Tax credits (bonus in 100% zones)",
+    "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about REV eligibility"
   },
   {
     "id": "micro",
     "name": "MICRO Program",
     "level": "State",
-    "zoneKey": "micro",
+    "zoneKey": "stateIncentiveZones",
     "summary": "The MICRO (Manufacturing Illinois Chips for Real Opportunity) program supports semiconductor and microchip-related businesses with tax incentives.",
     "whoQualifies": "Businesses involved in semiconductor manufacturing, packaging, testing, or supply chain operations in designated 100% zones.",
     "benefits": [
@@ -216,13 +344,28 @@
       "Investment and hiring projections"
     ],
     "contact": "Illinois DCEO: (217) 782-7500",
-    "url": "https://dceo.illinois.gov/"
+    "url": "https://dceo.illinois.gov/",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "(217) 782-7500",
+        "url": "https://dceo.illinois.gov/"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "100% zones offer maximum credit", "verifiedBy": "location", "required": false },
+      { "criterion": "industry", "description": "Must be in semiconductor manufacturing, packaging, testing, or supply chain", "verifiedBy": "survey", "required": true }
+    ],
+    "lastVerifiedAt": "2025-11-01",
+    "benefitRange": "Tax credits (100% in bonus zones)",
+    "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about MICRO eligibility"
   },
   {
     "id": "dataCenter",
     "name": "Data Center Tax Incentive",
     "level": "State",
-    "zoneKey": "dataCenter",
+    "zoneKey": "stateIncentiveZones",
     "summary": "Illinois offers sales tax exemptions and other incentives for data center operations in designated bonus zones to attract tech infrastructure investment.",
     "whoQualifies": "Data center operators and technology companies establishing or expanding data center facilities in designated zones.",
     "benefits": [
@@ -242,7 +385,22 @@
       "Investment projections"
     ],
     "contact": "Illinois DCEO: (217) 782-7500",
-    "url": "https://dceo.illinois.gov/"
+    "url": "https://dceo.illinois.gov/",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Commerce and Economic Opportunity",
+        "abbreviation": "DCEO",
+        "phone": "(217) 782-7500",
+        "url": "https://dceo.illinois.gov/"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Designated zones offer bonus incentives", "verifiedBy": "location", "required": false },
+      { "criterion": "industry", "description": "Must be a data center operation or tech infrastructure", "verifiedBy": "survey", "required": true }
+    ],
+    "lastVerifiedAt": "2025-11-01",
+    "benefitRange": "Sales tax exemption on equipment",
+    "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about data center incentives"
   },
   {
     "id": "ssa",
@@ -268,32 +426,21 @@
       "Contact SECCC for specific program requirements"
     ],
     "contact": "Southeast Chicago Chamber of Commerce: (773) 721-1999",
-    "url": "https://www.secchicago.org/"
-  },
-  {
-    "id": "tripleBenefit",
-    "name": "Triple Benefit Zone",
-    "level": "City",
-    "zoneKey": "tripleBenefit",
-    "summary": "Areas where three or more incentive programs overlap, offering businesses the most concentrated combination of tax benefits and development incentives.",
-    "whoQualifies": "Businesses located in areas where TIF, Opportunity Zone, and Enterprise Zone designations all overlap.",
-    "benefits": [
-      "Stack TIF grants with OZ tax deferrals",
-      "Combine Enterprise Zone sales tax exemptions",
-      "Maximum total incentive value across all programs",
-      "Priority for development and investment"
+    "url": "https://www.secchicago.org/",
+    "contacts": [
+      {
+        "agency": "Southeast Chicago Chamber of Commerce",
+        "abbreviation": "SECCC",
+        "phone": "(773) 721-1999",
+        "url": "https://www.secchicago.org/"
+      }
     ],
-    "howToApply": [
-      "Apply separately to each qualifying program",
-      "Work with SECCC or a business advisor to coordinate applications",
-      "A single location can qualify for multiple programs simultaneously"
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Commercial property must be within SSA #50 boundaries", "verifiedBy": "location", "required": true }
     ],
-    "requiredDocs": [
-      "Documentation for each individual program",
-      "Proof of location within overlapping zones"
-    ],
-    "contact": "SECCC: (773) 721-1999 or City of Chicago DPD: (312) 744-4190",
-    "url": "https://www.secchicago.org/"
+    "lastVerifiedAt": "2025-12-01",
+    "benefitRange": "Free services (streetscaping, marketing, safety)",
+    "fastestConfirmingStep": "Call SECCC at (773) 721-1999"
   },
   {
     "id": "highUnemployment",
@@ -320,7 +467,22 @@
       "Proof of residence for local hiring programs"
     ],
     "contact": "Illinois DES: (800) 247-4984",
-    "url": "https://ides.illinois.gov/"
+    "url": "https://ides.illinois.gov/",
+    "contacts": [
+      {
+        "agency": "Illinois Department of Employment Security",
+        "abbreviation": "IDES",
+        "phone": "(800) 247-4984",
+        "url": "https://ides.illinois.gov/"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Business must be in a high-unemployment census tract", "verifiedBy": "location", "required": true },
+      { "criterion": "industry", "description": "Must hire local residents to claim tax credits", "verifiedBy": "manual", "required": false }
+    ],
+    "lastVerifiedAt": "2025-10-01",
+    "benefitRange": "WOTC up to $9,600 per hire",
+    "fastestConfirmingStep": "Call IDES at (800) 247-4984"
   },
   {
     "id": "class7a",
@@ -348,7 +510,23 @@
       "Building permits or renovation plans"
     ],
     "contact": "Cook County Assessor: (312) 443-7550",
-    "url": "https://www.cookcountyil.gov/service/property-tax-incentives"
+    "url": "https://www.cookcountyil.gov/service/property-tax-incentives",
+    "contacts": [
+      {
+        "agency": "Cook County Assessor's Office",
+        "abbreviation": "CCAO",
+        "phone": "(312) 443-7550",
+        "url": "https://www.cookcountyil.gov/service/property-tax-incentives"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Property must be in Cook County", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Commercial property — new construction, rehab, or reoccupancy", "verifiedBy": "survey", "required": true },
+      { "criterion": "investmentSize", "description": "Total project costs under $2 million", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2025-10-01",
+    "benefitRange": "10% assessment (vs. 25%) for 10 years",
+    "fastestConfirmingStep": "Call Cook County Assessor at (312) 443-7550"
   },
   {
     "id": "catalystGrant",
@@ -376,7 +554,22 @@
       "Detailed use-of-funds plan"
     ],
     "contact": "Cook County Bureau of Economic Development: (312) 603-1000",
-    "url": "https://cookcountysmallbiz.org/catalystgrant/"
+    "url": "https://cookcountysmallbiz.org/catalystgrant/",
+    "contacts": [
+      {
+        "agency": "Cook County Bureau of Economic Development",
+        "abbreviation": "CCBED",
+        "phone": "(312) 603-1000",
+        "url": "https://cookcountysmallbiz.org/catalystgrant/"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Business must be in Cook County", "verifiedBy": "location", "required": true },
+      { "criterion": "investmentSize", "description": "Annual revenue between $500K and $10M with demonstrated growth", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2025-09-01",
+    "benefitRange": "Up to $100,000",
+    "fastestConfirmingStep": "Check cookcountysmallbiz.org for application windows"
   },
   {
     "id": "cpace",
@@ -404,7 +597,23 @@
       "Financing terms from C-PACE capital provider"
     ],
     "contact": "Cook County C-PACE Program: (312) 603-1000",
-    "url": "https://www.cookcountyil.gov/service/clean-energy-cpace-program"
+    "url": "https://www.cookcountyil.gov/service/clean-energy-cpace-program",
+    "contacts": [
+      {
+        "agency": "Cook County C-PACE Program",
+        "abbreviation": "C-PACE",
+        "phone": "(312) 603-1000",
+        "url": "https://www.cookcountyil.gov/service/clean-energy-cpace-program"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Commercial property in Cook County", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Commercial property owner (office, retail, industrial, multi-family 5+)", "verifiedBy": "survey", "required": true },
+      { "criterion": "industry", "description": "Project must involve energy efficiency, renewable energy, or water conservation", "verifiedBy": "survey", "required": true }
+    ],
+    "lastVerifiedAt": "2025-10-01",
+    "benefitRange": "Up to 100% project financing (30-year terms)",
+    "fastestConfirmingStep": "Call (312) 603-1000 about C-PACE eligibility"
   },
   {
     "id": "smallBizSource",
@@ -431,7 +640,21 @@
       "Bring any existing business plans or financials to advising sessions"
     ],
     "contact": "Cook County Small Business Source: cookcountysmallbiz.org",
-    "url": "https://cookcountysmallbiz.org/"
+    "url": "https://cookcountysmallbiz.org/",
+    "contacts": [
+      {
+        "agency": "Cook County Small Business Source",
+        "abbreviation": "SBS",
+        "phone": "",
+        "url": "https://cookcountysmallbiz.org/"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Business in Cook County", "verifiedBy": "location", "required": true }
+    ],
+    "lastVerifiedAt": "2025-12-01",
+    "benefitRange": "Free advising (no cost)",
+    "fastestConfirmingStep": "Visit cookcountysmallbiz.org to request an advisor"
   },
   {
     "id": "landBank",
@@ -459,6 +682,347 @@
       "Proof of identity and business registration"
     ],
     "contact": "CCLBA: (312) 603-8015 | Info@CookCountyLandBank.org",
-    "url": "http://www.cookcountylandbank.org/"
+    "url": "http://www.cookcountylandbank.org/",
+    "contacts": [
+      {
+        "agency": "Cook County Land Bank Authority",
+        "abbreviation": "CCLBA",
+        "phone": "(312) 603-8015",
+        "email": "Info@CookCountyLandBank.org",
+        "url": "http://www.cookcountylandbank.org/"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Properties are in Cook County", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Seeking commercial or industrial space", "verifiedBy": "survey", "required": false }
+    ],
+    "lastVerifiedAt": "2025-10-01",
+    "benefitRange": "Below-market property acquisition",
+    "fastestConfirmingStep": "Call CCLBA at (312) 603-8015 or email Info@CookCountyLandBank.org"
+  },
+  {
+    "id": "nof",
+    "name": "Neighborhood Opportunity Fund (NOF)",
+    "level": "City",
+    "zoneKey": "nof",
+    "summary": "The Neighborhood Opportunity Fund provides grants for commercial and industrial projects in underinvested neighborhoods on Chicago's South, Southwest, and West Sides, funded by downtown development fees.",
+    "whoQualifies": "Businesses and developers proposing commercial or industrial projects in eligible areas. Projects must create jobs or provide needed services in the community.",
+    "benefits": [
+      "Grants up to $250,000 for small projects",
+      "Grants up to $1.5 million for large catalytic projects",
+      "Covers construction, renovation, and equipment costs",
+      "Priority for businesses serving the local community"
+    ],
+    "howToApply": [
+      "Check if your project is in an eligible NOF area",
+      "Submit application through the City of Chicago DCD portal",
+      "Provide project plans, budget, and community impact statement",
+      "City reviews and awards grants on a rolling basis"
+    ],
+    "requiredDocs": [
+      "Completed NOF application",
+      "Project budget and timeline",
+      "Proof of property ownership or lease agreement",
+      "Business plan showing community impact",
+      "Contractor bids for construction/renovation"
+    ],
+    "contact": "City of Chicago DCD: (312) 744-4190",
+    "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/nof.html",
+    "contacts": [
+      {
+        "agency": "City of Chicago Department of Community Development",
+        "abbreviation": "DCD",
+        "phone": "(312) 744-4190",
+        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/nof.html"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Project must be in an eligible South, Southwest, or West Side community", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Commercial or industrial project", "verifiedBy": "survey", "required": true },
+      { "criterion": "investmentSize", "description": "Must demonstrate community impact and job creation", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2025-12-01",
+    "benefitRange": "$250K (small) to $1.5M (catalytic)",
+    "fastestConfirmingStep": "Call DCD at (312) 744-4190 about NOF eligibility"
+  },
+  {
+    "id": "nmtcEligible",
+    "name": "New Markets Tax Credits (NMTC)",
+    "level": "Federal",
+    "zoneKey": "nmtcEligible",
+    "summary": "The New Markets Tax Credit program incentivizes private investment in low-income communities by offering a 39% federal tax credit on qualified equity investments made through Community Development Entities (CDEs).",
+    "whoQualifies": "Investors who make Qualified Equity Investments (QEIs) through certified CDEs in eligible census tracts. Business owners can attract NMTC-backed financing for large projects ($5M+).",
+    "benefits": [
+      "39% federal income tax credit claimed over 7 years (5% years 1-3, 6% years 4-7)",
+      "Below-market-rate financing for qualified projects",
+      "Can be combined with other tax credits (historic, OZ)",
+      "Covers real estate, equipment, and business operations"
+    ],
+    "howToApply": [
+      "Connect with a certified Community Development Entity (CDE)",
+      "CDE applies for NMTC allocation from the CDFI Fund",
+      "Business submits project details to the CDE for underwriting",
+      "CDE structures the investment and deploys NMTC capital"
+    ],
+    "requiredDocs": [
+      "Detailed project plan and business financials",
+      "Proof that project is in an eligible census tract",
+      "Community impact analysis",
+      "Legal and financial structuring documents"
+    ],
+    "contact": "CDFI Fund: (202) 653-0300",
+    "url": "https://www.cdfifund.gov/programs-training/programs/new-markets-tax-credit",
+    "contacts": [
+      {
+        "agency": "Community Development Financial Institutions Fund",
+        "abbreviation": "CDFI Fund",
+        "phone": "(202) 653-0300",
+        "url": "https://www.cdfifund.gov/programs-training/programs/new-markets-tax-credit"
+      },
+      {
+        "agency": "Chicago Neighborhood Initiatives",
+        "abbreviation": "CNI",
+        "phone": "(773) 840-2605",
+        "url": "https://www.cnigroup.org/",
+        "role": "Local CDE"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Project must be in an NMTC-eligible low-income census tract", "verifiedBy": "location", "required": true },
+      { "criterion": "investmentSize", "description": "Projects typically $5M+; must attract qualified equity investment through a CDE", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2025-11-01",
+    "benefitRange": "39% tax credit over 7 years",
+    "fastestConfirmingStep": "Contact a local CDE like CNI at (773) 840-2605"
+  },
+  {
+    "id": "qct",
+    "name": "Qualified Census Tract (QCT) — LIHTC Boost",
+    "level": "Federal",
+    "zoneKey": "qct",
+    "summary": "HUD-designated Qualified Census Tracts boost Low-Income Housing Tax Credits (LIHTC) by 30%, making affordable housing development more financially viable in these areas.",
+    "whoQualifies": "Developers and investors building or substantially rehabilitating affordable rental housing in QCT-designated census tracts. 50%+ of households must earn below 60% of area median income.",
+    "benefits": [
+      "130% boost on LIHTC eligible basis (30% more tax credits)",
+      "Makes affordable housing projects more financially viable",
+      "Attracts private investment to low-income communities",
+      "Can combine with other housing incentives"
+    ],
+    "howToApply": [
+      "Confirm the project site is in a HUD-designated QCT",
+      "Apply for LIHTC allocation through Illinois Housing Development Authority (IHDA)",
+      "Submit project plans demonstrating affordable housing compliance",
+      "IHDA reviews and awards tax credit allocations"
+    ],
+    "requiredDocs": [
+      "LIHTC application through IHDA",
+      "Architectural plans and construction budget",
+      "Market study and financial pro forma",
+      "Proof of site control in a QCT",
+      "Environmental and zoning compliance documentation"
+    ],
+    "contact": "Illinois Housing Development Authority: (312) 836-5200",
+    "url": "https://www.huduser.gov/portal/datasets/qct.html",
+    "contacts": [
+      {
+        "agency": "Illinois Housing Development Authority",
+        "abbreviation": "IHDA",
+        "phone": "(312) 836-5200",
+        "url": "https://www.ihda.org/"
+      },
+      {
+        "agency": "U.S. Department of Housing and Urban Development",
+        "abbreviation": "HUD",
+        "phone": "(800) 955-2232",
+        "url": "https://www.huduser.gov/portal/datasets/qct.html"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Project must be in a HUD-designated Qualified Census Tract", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Affordable rental housing development or substantial rehabilitation", "verifiedBy": "survey", "required": true },
+      { "criterion": "investmentSize", "description": "Must comply with LIHTC income and rent restrictions", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2025-11-01",
+    "benefitRange": "130% LIHTC basis boost (30% more credits)",
+    "fastestConfirmingStep": "Call IHDA at (312) 836-5200 about QCT LIHTC allocation"
+  },
+  {
+    "id": "landmarkDistricts",
+    "name": "Chicago Landmark District Incentives",
+    "level": "City",
+    "zoneKey": "landmarkDistricts",
+    "summary": "Properties in Chicago Landmark Districts may access local preservation incentives including the Class L property tax incentive, which reduces assessments for certified historic rehabilitations.",
+    "whoQualifies": "Property owners in Chicago-designated landmark districts who are rehabilitating historically significant buildings. Both commercial and residential properties may qualify.",
+    "benefits": [
+      "Class L property tax reduction (assessment reduced to 10% for 10 years)",
+      "Technical assistance from the Commission on Chicago Landmarks",
+      "Access to preservation grants and revolving loan funds",
+      "Enhanced property values in protected historic corridors"
+    ],
+    "howToApply": [
+      "Verify your property is in a Chicago Landmark District",
+      "Contact the Commission on Chicago Landmarks for guidance",
+      "Submit a permit application for rehabilitation work",
+      "Apply for Class L assessment through Cook County Assessor"
+    ],
+    "requiredDocs": [
+      "Permit application for proposed rehabilitation",
+      "Architectural plans consistent with landmark standards",
+      "Proof of property ownership",
+      "Class L application through Cook County Assessor"
+    ],
+    "contact": "Commission on Chicago Landmarks: (312) 744-3200",
+    "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/landmark.html",
+    "contacts": [
+      {
+        "agency": "Commission on Chicago Landmarks",
+        "abbreviation": "CCL",
+        "phone": "(312) 744-3200",
+        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/landmark.html"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Property must be in a Chicago-designated Landmark District", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Historically significant building undergoing rehabilitation", "verifiedBy": "survey", "required": true }
+    ],
+    "lastVerifiedAt": "2025-11-01",
+    "benefitRange": "Class L: 10% assessment for 10 years",
+    "fastestConfirmingStep": "Call Commission on Chicago Landmarks at (312) 744-3200"
+  },
+  {
+    "id": "nrhpDistricts",
+    "name": "Federal Historic Tax Credit (HTC)",
+    "level": "Federal",
+    "zoneKey": "nrhpDistricts",
+    "summary": "Properties in National Register Historic Districts qualify for a 20% federal tax credit on certified rehabilitation costs, one of the most valuable credits available for historic building projects.",
+    "whoQualifies": "Owners of income-producing buildings listed on or contributing to a National Register Historic District. Rehabilitation must follow the Secretary of the Interior's Standards.",
+    "benefits": [
+      "20% federal income tax credit on qualified rehabilitation expenditures",
+      "Can be combined with NMTC, OZ, and state credits",
+      "No cap on credit amount",
+      "Credit claimed over 5 years (4% per year)"
+    ],
+    "howToApply": [
+      "Confirm your building is listed on or contributes to a National Register district",
+      "Submit Part 1 application (historic significance) to NPS via Illinois SHPO",
+      "Submit Part 2 application (description of rehabilitation work)",
+      "Complete rehabilitation and submit Part 3 (certification of completed work)"
+    ],
+    "requiredDocs": [
+      "NPS Historic Preservation Certification Application (Parts 1-3)",
+      "Photographs documenting existing conditions",
+      "Architectural plans for proposed rehabilitation",
+      "Cost documentation for qualified rehabilitation expenditures"
+    ],
+    "contact": "Illinois SHPO: (217) 785-4512",
+    "url": "https://www.nps.gov/subjects/taxincentives/index.htm",
+    "contacts": [
+      {
+        "agency": "Illinois State Historic Preservation Office",
+        "abbreviation": "SHPO",
+        "phone": "(217) 785-4512",
+        "url": "https://www.illinois.gov/historic-preservation"
+      },
+      {
+        "agency": "National Park Service — Technical Preservation Services",
+        "abbreviation": "NPS",
+        "phone": "(202) 513-7270",
+        "url": "https://www.nps.gov/subjects/taxincentives/index.htm"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Building must be listed on or contribute to a National Register Historic District", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Income-producing building (commercial, rental residential, industrial)", "verifiedBy": "survey", "required": true },
+      { "criterion": "investmentSize", "description": "Rehabilitation must exceed adjusted basis of the building or $5,000", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2025-11-01",
+    "benefitRange": "20% federal tax credit (no cap)",
+    "fastestConfirmingStep": "Call Illinois SHPO at (217) 785-4512 to confirm historic status"
+  },
+  {
+    "id": "microMarketRecovery",
+    "name": "Micro Market Recovery Program",
+    "level": "City",
+    "zoneKey": "microMarketRecovery",
+    "summary": "A City of Chicago program targeting commercial vacancy along specific corridors, providing grants and technical assistance for storefront improvements to revitalize neighborhood commercial streets.",
+    "whoQualifies": "Small business owners and property owners on designated commercial corridors with high vacancy rates. Focused on activating empty storefronts.",
+    "benefits": [
+      "Storefront improvement grants (design, signage, facades)",
+      "Technical assistance for business planning",
+      "Marketing support for corridor revitalization",
+      "Connection to other city incentive programs"
+    ],
+    "howToApply": [
+      "Check if your property is on a designated Micro Market corridor",
+      "Contact the City of Chicago DCD or local delegate agency",
+      "Submit application with storefront improvement plans",
+      "Receive approval and complete improvements"
+    ],
+    "requiredDocs": [
+      "Application form from delegate agency",
+      "Photos of existing storefront conditions",
+      "Design plans for proposed improvements",
+      "Proof of property ownership or lease"
+    ],
+    "contact": "City of Chicago DCD: (312) 744-4190",
+    "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/micro_market_recoveryprogram.html",
+    "contacts": [
+      {
+        "agency": "City of Chicago Department of Community Development",
+        "abbreviation": "DCD",
+        "phone": "(312) 744-4190",
+        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/micro_market_recoveryprogram.html"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Property must be on a designated Micro Market Recovery corridor", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Commercial storefront in need of improvement", "verifiedBy": "survey", "required": true }
+    ],
+    "lastVerifiedAt": "2025-10-01",
+    "benefitRange": "Storefront grants + technical assistance",
+    "fastestConfirmingStep": "Call DCD at (312) 744-4190 about Micro Market eligibility"
+  },
+  {
+    "id": "industrialCorridors",
+    "name": "Industrial Corridor Protections",
+    "level": "City",
+    "zoneKey": "industrialCorridors",
+    "summary": "Chicago's Industrial Corridor system preserves designated areas for manufacturing, logistics, and industrial uses through zoning protections, preventing conversion to residential and protecting businesses from displacement.",
+    "whoQualifies": "Manufacturing, logistics, industrial, and related businesses located within or looking to locate in a city-designated Industrial Corridor. Zoning protections benefit existing and prospective industrial users.",
+    "benefits": [
+      "Zoning protection against residential conversion",
+      "Access to industrial revenue bonds",
+      "Priority for infrastructure improvements",
+      "Proximity to transportation and freight networks",
+      "Reduced competition from residential development"
+    ],
+    "howToApply": [
+      "Verify your site is within a designated Industrial Corridor",
+      "Contact the City of Chicago Department of Planning and Development",
+      "Work with the local alderman's office for development approvals",
+      "Industrial uses generally align with M-zoning within corridors"
+    ],
+    "requiredDocs": [
+      "Zoning verification from the Department of Planning",
+      "Business plan for industrial or manufacturing operations",
+      "Building permits for new construction or renovations"
+    ],
+    "contact": "City of Chicago DPD: (312) 744-4190",
+    "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/industrial-corridors.html",
+    "contacts": [
+      {
+        "agency": "City of Chicago Department of Planning and Development",
+        "abbreviation": "DPD",
+        "phone": "(312) 744-4190",
+        "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/industrial-corridors.html"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Site must be within a designated Industrial Corridor", "verifiedBy": "location", "required": true },
+      { "criterion": "industry", "description": "Manufacturing, logistics, industrial, or related business use", "verifiedBy": "survey", "required": true }
+    ],
+    "lastVerifiedAt": "2025-10-01",
+    "benefitRange": "Zoning protections + infrastructure priority",
+    "fastestConfirmingStep": "Call DPD at (312) 744-4190 to verify Industrial Corridor status"
   }
 ]

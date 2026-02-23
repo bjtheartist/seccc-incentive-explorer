@@ -21,9 +21,10 @@ export function Footer() {
             </h3>
             <ul className="space-y-3">
               {[
+                { href: "/report", label: "Generate Report" },
                 { href: "/programs", label: "Incentive Programs" },
-                { href: "/insights", label: "Data Insights" },
-                { href: "/map", label: "Zone Map" },
+                { href: "/map", label: "Explorer Map" },
+                { href: "/locate", label: "Find Best Location" },
                 { href: "/faq", label: "FAQ" },
               ].map((link) => (
                 <li key={link.href}>
@@ -53,6 +54,9 @@ export function Footer() {
           Chicago Incentive Explorer &middot;
           Data sourced from City of Chicago, State of Illinois &amp; Federal
           programs
+        </div>
+        <div className="font-mono-bureau text-[8px] tracking-[0.1em] text-white/15 text-center mt-2">
+          Data verified as of Dec 2025 &middot; v0.1.0
         </div>
       </div>
     </footer>

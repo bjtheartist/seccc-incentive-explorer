@@ -1,3 +1,6 @@
+import MapShell from "@/components/map/MapShell";
+import IncentiveGlance from "@/components/map/IncentiveGlance";
+
 export default function MapPage() {
   return (
     <div className="min-h-screen">
@@ -16,36 +19,40 @@ export default function MapPage() {
             Chicago Incentive Map
           </h1>
           <p className="text-white/50 text-base max-w-xl">
-            Interactive map of Chicago businesses and incentive zone boundaries.
+            Explore 11 incentive zones, community assets, zoning, and neighborhood data across Chicago. Search any address or business to check zone eligibility.
           </p>
         </div>
       </div>
 
       {/* Warm off-white body */}
       <div className="container mx-auto max-w-6xl px-6 py-10 bg-[#FAF9F6]">
-        <div className="border border-[#0C1B33]/10 overflow-hidden">
-          <iframe
-            src="https://www.google.com/maps/d/embed?mid=1rUGMDOPqBmPmaZe2-fnyfIlfiMPG7XA&ehbc=2E312F&noprof=1"
-            width="100%"
-            height="600"
-            style={{ border: 0, minHeight: "400px" }}
-            allowFullScreen
-            loading="lazy"
-            title="Chicago Incentive Zones Map"
-          />
+        <div className="flex items-center gap-4 mb-6">
+          <div className="accent-bar" />
+          <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/40">
+            Interactive Explorer
+          </span>
         </div>
+        <h2 className="font-editorial text-2xl md:text-3xl text-[#0C1B33]/90 mb-6">
+          Chicago Incentive Zones
+        </h2>
+
+        <div className="border border-[#0C1B33]/10 overflow-hidden">
+          <MapShell />
+        </div>
+
+        <IncentiveGlance />
 
         <div className="mt-6 grid md:grid-cols-3 gap-0 border border-[#0C1B33]/10 bg-white">
           {[
             {
               num: "01",
-              title: "Map Layers",
-              desc: "Toggle layers in the map to see different incentive zones, business locations, and corridor boundaries.",
+              title: "Toggle Layers",
+              desc: "Use the legend to show or hide incentive zones, transit stops, schools, parks, and other community assets.",
             },
             {
               num: "02",
-              title: "Click a Business",
-              desc: "Click any business pin to see its name, address, category, and which incentive zones it falls within.",
+              title: "Click & Right-Click",
+              desc: "Click any zone or point of interest for details. Right-click anywhere for the Chicago zoning classification.",
             },
             {
               num: "03",
