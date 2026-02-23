@@ -1035,8 +1035,26 @@ export default function MapView() {
     []
   );
 
+  /* ── Detect mobile for layout ───────── */
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 768px)");
+    setIsMobile(mq.matches);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
+
+  // On mobile, default legend closed and snapshot closed
+  useEffect(() => {
+    if (isMobile) {
+      setLegendOpen(false);
+      setSnapshotOpen(false);
+    }
+  }, [isMobile]);
+
   return (
-    <div className="relative w-full" style={{ height: 650 }}>
+    <div className="relative w-full h-[calc(100vh-180px)] md:h-[650px]">
       {/* Map container */}
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
@@ -1066,30 +1084,52 @@ export default function MapView() {
       {/* Legend toggle button */}
       <button
         onClick={() => setLegendOpen((o) => !o)}
-        className="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
+        className="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-2 md:py-1.5 font-mono-bureau text-[11px] md:text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
       >
         {legendOpen ? "Hide Legend" : "Show Legend"}
       </button>
 
-      {/* Right-click hint */}
-      <div className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40">
+      {/* Interaction hint */}
+      <div className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[9px] md:text-[9px] tracking-[0.1em] text-[#0C1B33]/40 hidden md:block">
         Click anywhere for area data &middot; Right-click for zoning
       </div>
+      <div className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.1em] text-[#0C1B33]/40 md:hidden">
+        Tap anywhere for area data
+      </div>
+
+      {/* Mobile backdrop overlay for panels */}
+      {(legendOpen || snapshotOpen) && (
+        <div
+          className="absolute inset-0 z-[15] bg-black/20 md:hidden"
+          onClick={() => { setLegendOpen(false); setSnapshotOpen(false); }}
+        />
+      )}
 
       {/* ── LEFT: Zone Layer Legend ──────────── */}
       {legendOpen && (
-        <div className="absolute top-12 left-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 w-72 max-h-[560px] overflow-y-auto">
+        <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-3 md:right-auto z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[560px] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
+          {/* Mobile drag handle + close */}
+          <div className="md:hidden flex flex-col items-center pt-2 pb-1">
+            <div className="w-10 h-1 bg-[#0C1B33]/15 rounded-full mb-2" />
+            <button
+              onClick={() => setLegendOpen(false)}
+              className="absolute top-3 right-3 text-[#0C1B33]/40 hover:text-[#0C1B33]/70 text-lg leading-none"
+            >
+              &times;
+            </button>
+          </div>
+
           {/* Presets */}
-          <div className="px-4 pt-4 pb-3">
+          <div className="px-4 pt-2 md:pt-4 pb-3">
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-2">
               Quick Presets
             </div>
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1.5 md:gap-1">
               {MAP_PRESETS.map((preset) => (
                 <button
                   key={preset.id}
                   onClick={() => applyPreset(preset.id)}
-                  className={`px-2 py-1 font-mono-bureau text-[8px] tracking-[0.08em] uppercase border transition-colors ${
+                  className={`px-2.5 py-1.5 md:px-2 md:py-1 font-mono-bureau text-[10px] md:text-[8px] tracking-[0.08em] uppercase border transition-colors ${
                     activePreset === preset.id
                       ? "bg-[#2563EB] text-white border-[#2563EB]"
                       : "bg-white text-[#0C1B33]/50 border-[#0C1B33]/12 hover:border-[#2563EB]/40 hover:text-[#2563EB]"
@@ -1102,13 +1142,13 @@ export default function MapView() {
             {/* Inspect Zoning button */}
             <button
               onClick={() => setInspectMode((v) => !v)}
-              className={`mt-2 w-full px-2 py-1.5 font-mono-bureau text-[8px] tracking-[0.1em] uppercase border transition-colors ${
+              className={`mt-2 w-full px-2 py-2 md:py-1.5 font-mono-bureau text-[10px] md:text-[8px] tracking-[0.1em] uppercase border transition-colors ${
                 inspectMode
                   ? "bg-[#059669] text-white border-[#059669]"
                   : "bg-white text-[#059669]/60 border-[#059669]/20 hover:border-[#059669]/40 hover:text-[#059669]"
               }`}
             >
-              {inspectMode ? "Exit Inspect Zoning" : "Inspect Zoning (click)"}
+              {inspectMode ? "Exit Inspect Zoning" : "Inspect Zoning (tap)"}
             </button>
           </div>
 
@@ -1123,7 +1163,7 @@ export default function MapView() {
             <div className="space-y-0.5">
               {ZONE_KEYS_SORTED.map((key) => (
                 <div key={key}>
-                  <label className="flex items-center gap-2.5 py-1 cursor-pointer group">
+                  <label className="flex items-center gap-2.5 py-2 md:py-1 cursor-pointer group">
                     <input
                       type="checkbox"
                       checked={zoneVisible[key]}
@@ -1131,7 +1171,7 @@ export default function MapView() {
                       className="sr-only"
                     />
                     <span
-                      className="w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors"
+                      className="w-5 h-5 md:w-3.5 md:h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors"
                       style={{
                         borderColor: ZONE_COLORS[key],
                         backgroundColor: zoneVisible[key]
@@ -1141,13 +1181,13 @@ export default function MapView() {
                     >
                       {zoneVisible[key] && (
                         <span
-                          className="w-2 h-2 block"
+                          className="w-3 h-3 md:w-2 md:h-2 block"
                           style={{ backgroundColor: ZONE_COLORS[key] }}
                         />
                       )}
                     </span>
                     <span
-                      className="text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight flex-1"
+                      className="text-[13px] md:text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight flex-1"
                       onClick={(e) => {
                         e.preventDefault();
                         setExpandedZone(expandedZone === key ? null : key);
@@ -1356,14 +1396,19 @@ export default function MapView() {
 
       {/* ── RIGHT: Area Snapshot Panel ──────── */}
       {snapshotOpen && loaded && (
-        <div className="absolute top-12 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 w-60">
-          <div className="px-4 pt-4 pb-1 flex items-center justify-between">
-            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30">
+        <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-60 max-h-[60vh] md:max-h-none overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
+          {/* Mobile drag handle */}
+          <div className="md:hidden flex flex-col items-center pt-2 pb-1">
+            <div className="w-10 h-1 bg-[#0C1B33]/15 rounded-full" />
+          </div>
+
+          <div className="px-4 pt-2 md:pt-4 pb-1 flex items-center justify-between">
+            <div className="font-mono-bureau text-[10px] md:text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30">
               Area Snapshot
             </div>
             <button
               onClick={() => setSnapshotOpen(false)}
-              className="text-[#0C1B33]/30 hover:text-[#0C1B33]/60 text-[14px] leading-none transition-colors"
+              className="text-[#0C1B33]/30 hover:text-[#0C1B33]/60 text-[18px] md:text-[14px] leading-none transition-colors p-1"
               title="Close"
             >
               &times;
@@ -1507,7 +1552,7 @@ export default function MapView() {
       {!snapshotOpen && loaded && (
         <button
           onClick={() => setSnapshotOpen(true)}
-          className="absolute top-3 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
+          className="absolute top-12 md:top-3 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-2 md:py-1.5 font-mono-bureau text-[11px] md:text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
         >
           Area Snapshot
         </button>
