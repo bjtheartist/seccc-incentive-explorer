@@ -356,7 +356,13 @@ export default function MapView() {
   useEffect(() => {
     if (!containerRef.current) return;
 
-    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+    const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
+    if (!token) {
+      console.error("[MapView] NEXT_PUBLIC_MAPBOX_TOKEN is not set");
+      setLoaded(true); // Show the UI without crashing
+      return;
+    }
+    mapboxgl.accessToken = token;
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
