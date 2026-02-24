@@ -500,7 +500,7 @@ function generateBestLocation(
     {
       label: "Check zone boundaries for specific addresses",
       description:
-        "Use the Chicago Incentive Explorer map to verify that a specific property falls within your target incentive zones.",
+        "Use the Chicago Site Incentive Map map to verify that a specific property falls within your target incentive zones.",
       priority: "high",
     },
     {

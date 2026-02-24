@@ -16,7 +16,7 @@ export default function MapPage() {
             </span>
           </div>
           <h1 className="font-editorial text-4xl md:text-5xl text-white mb-4">
-            Chicago Incentive Map
+            Chicago Site Incentive Map
           </h1>
           <p className="text-white/50 text-base max-w-xl">
             Explore 11 incentive zones, community assets, zoning, and neighborhood data across Chicago. Search any address or business to check zone eligibility.

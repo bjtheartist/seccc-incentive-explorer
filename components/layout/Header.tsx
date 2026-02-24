@@ -29,11 +29,11 @@ export function Header() {
       <div className="container mx-auto px-6 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3 group">
           <div className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/50 border border-[#0C1B33]/20 px-2 py-1 group-hover:text-[#2563EB] group-hover:border-[#2563EB]/40 transition-colors">
-            CHI
+            CSIM
           </div>
           <div className="hidden sm:block">
             <div className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-[#0C1B33]/80">
-              Chicago Incentive Explorer
+              Chicago Site Incentive Map
             </div>
           </div>
         </Link>

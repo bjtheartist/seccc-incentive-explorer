@@ -1,7 +1,7 @@
 import { PreQualSurvey } from "@/components/survey/PreQualSurvey";
 
 export const metadata = {
-  title: "Pre-Qualify | Chicago Incentive Explorer",
+  title: "Pre-Qualify | Chicago Site Incentive Map",
   description:
     "Answer 4 quick questions to discover which Chicago business incentive programs you may qualify for.",
 };

@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&countrycodes=us`,
       {
         headers: {
-          "User-Agent": "SECCC-Incentive-Explorer/1.0",
+          "User-Agent": "Chicago-Site-Incentive-Map/1.0",
         },
       }
     );

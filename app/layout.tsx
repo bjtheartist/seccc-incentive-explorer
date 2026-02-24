@@ -4,7 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "Chicago Incentive Explorer | Discover Business Incentives",
+  title: "Chicago Site Incentive Map | Discover Business Incentives",
   description:
     "Discover what economic incentives your Chicago business qualifies for. Cross-reference 11 incentive zone layers — TIF districts, Opportunity Zones, Enterprise Zones, and more.",
   keywords: [

@@ -180,7 +180,7 @@ export default function IncentiveGlance() {
           <div className="border-t border-[#0C1B33]/8 px-6 py-4 flex items-center justify-between">
             <div>
               <div className="text-[12px] text-[#0C1B33]/70">
-                Chicago Incentive Report
+                Chicago Site Incentive Report
               </div>
               <div className="text-[11px] text-[#0C1B33]/35 mt-0.5">
                 Build a custom report with zoning, incentives, and next steps

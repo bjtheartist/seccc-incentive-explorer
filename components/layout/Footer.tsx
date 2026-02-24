@@ -7,7 +7,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
           <div>
             <div className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-white/50 border border-white/20 px-2 py-1 inline-block mb-4">
-              CHI
+              CSIM
             </div>
             <p className="text-sm text-white/40 leading-relaxed">
               Helping Chicago businesses discover and access economic
@@ -62,7 +62,7 @@ export function Footer() {
         </div>
         <div className="h-px bg-gradient-to-r from-transparent via-white/15 to-transparent mt-10 mb-6" />
         <div className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-white/20 text-center">
-          Chicago Incentive Explorer &middot;
+          Chicago Site Incentive Map &middot;
           Data sourced from City of Chicago, State of Illinois &amp; Federal
           programs
         </div>

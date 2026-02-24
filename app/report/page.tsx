@@ -1168,7 +1168,7 @@ function ReportDisplay({
               </p>
             )}
             <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-white/40 mb-5">
-              Chicago Incentive Explorer
+              Chicago Site Incentive Map
             </p>
             <h1 className="font-editorial text-3xl sm:text-4xl lg:text-[42px] text-white leading-tight mb-3">
               {isInstantMode && report.metadata?.address
