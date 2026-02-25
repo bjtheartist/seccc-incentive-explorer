@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
+import { cached } from "@/lib/redis";
 
 /**
  * GET /api/assets?type=edo,bso
@@ -7,6 +8,10 @@ import { getSQL } from "@/lib/db";
  * Returns community assets (EDOs, BSOs, universities, libraries).
  * Optional type filter (comma-separated).
  */
+
+const CDN_HEADERS = {
+  "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+};
 
 // Static fallback data (from MapView.tsx EDO_BSO_POINTS)
 const STATIC_ASSETS = [
@@ -21,43 +26,40 @@ const STATIC_ASSETS = [
 export async function GET(request: NextRequest) {
   const typeParam = request.nextUrl.searchParams.get("type");
   const types = typeParam ? typeParam.split(",").map((t) => t.trim().toUpperCase()) : null;
+  const typeKey = types ? types.sort().join(",") : "all";
 
   const sql = getSQL();
   if (!sql) {
     const filtered = types
       ? STATIC_ASSETS.filter((a) => types.includes(a.type))
       : STATIC_ASSETS;
-    return NextResponse.json(filtered, {
-      headers: { "Cache-Control": "public, max-age=86400" },
-    });
+    return NextResponse.json(filtered, { headers: CDN_HEADERS });
   }
 
   try {
-    let rows;
-    if (types && types.length > 0) {
-      rows = await sql`
-        SELECT id, name, type, address, lat, lon
-        FROM community_assets
-        WHERE UPPER(type) = ANY(${types})
-        ORDER BY type, name
-      `;
-    } else {
-      rows = await sql`
-        SELECT id, name, type, address, lat, lon
-        FROM community_assets
-        ORDER BY type, name
-      `;
-    }
-
-    return NextResponse.json(rows, {
-      headers: { "Cache-Control": "public, max-age=86400" },
+    const cacheKey = `assets:${typeKey}`;
+    const rows = await cached(cacheKey, 86400, async () => {
+      if (types && types.length > 0) {
+        return await sql`
+          SELECT id, name, type, address, lat, lon
+          FROM community_assets
+          WHERE UPPER(type) = ANY(${types})
+          ORDER BY type, name
+        `;
+      } else {
+        return await sql`
+          SELECT id, name, type, address, lat, lon
+          FROM community_assets
+          ORDER BY type, name
+        `;
+      }
     });
+
+    return NextResponse.json(rows, { headers: CDN_HEADERS });
   } catch {
     const filtered = types
       ? STATIC_ASSETS.filter((a) => types.includes(a.type))
       : STATIC_ASSETS;
-    return NextResponse.json(filtered, {
-      headers: { "Cache-Control": "public, max-age=86400" },
-    });
+    return NextResponse.json(filtered, { headers: CDN_HEADERS });
   }
 }

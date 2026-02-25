@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
+import { cached, roundCoord } from "@/lib/redis";
 
 /**
  * GET /api/census?lat=&lon=
@@ -27,36 +28,42 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const rows = await sql`
-      SELECT tract_id, median_income, median_home_value,
-             population, walk_score
-      FROM census_tracts
-      WHERE ST_Contains(
-        geom::geometry,
-        ST_SetSRID(ST_MakePoint(${parseFloat(lon)}, ${parseFloat(lat)}), 4326)
-      )
-      LIMIT 1
-    `;
+    const rLat = roundCoord(parseFloat(lat));
+    const rLon = roundCoord(parseFloat(lon));
+    const cacheKey = `census:${rLat}:${rLon}`;
 
-    if (rows.length === 0) {
-      return NextResponse.json(null, {
-        headers: { "Cache-Control": "public, max-age=86400" },
-      });
-    }
+    const data = await cached(cacheKey, 604800, async () => {
+      const rows = await sql`
+        SELECT tract_id, median_income, median_home_value,
+               population, walk_score
+        FROM census_tracts
+        WHERE ST_Contains(
+          geom::geometry,
+          ST_SetSRID(ST_MakePoint(${parseFloat(lon)}, ${parseFloat(lat)}), 4326)
+        )
+        LIMIT 1
+      `;
 
-    const r = rows[0] as Record<string, unknown>;
-    return NextResponse.json(
-      {
+      if (rows.length === 0) {
+        return null;
+      }
+
+      const r = rows[0] as Record<string, unknown>;
+      return {
         tractId: r.tract_id,
         medianIncome: r.median_income,
         medianHomeValue: r.median_home_value,
         population: r.population,
         walkScore: r.walk_score,
+      };
+    });
+
+    return NextResponse.json(data, {
+      headers: {
+        "Cache-Control":
+          "public, s-maxage=86400, stale-while-revalidate=3600",
       },
-      {
-        headers: { "Cache-Control": "public, max-age=86400" },
-      }
-    );
+    });
   } catch (err) {
     console.error("census API error:", err);
     return NextResponse.json(

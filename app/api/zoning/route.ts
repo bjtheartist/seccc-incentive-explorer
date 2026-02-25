@@ -1,15 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cached, roundCoord } from "@/lib/redis";
 
 /**
  * Queries the City of Chicago zoning classification at a given lat/lon.
  *
  * Strategy:
- * 1. Chicago ArcGIS MapServer (primary) — with retry
- * 2. Socrata SODA API (fallback) — with retry
- * 3. Chicago Data Portal GeoJSON endpoint (second fallback)
+ * 1. Check Redis cache (if configured)
+ * 2. Chicago ArcGIS MapServer (primary) — with retry
+ * 3. Socrata SODA API (fallback) — with retry
+ * 4. Chicago Data Portal GeoJSON endpoint (second fallback)
  *
  * GET /api/zoning?lat=41.75&lon=-87.58
  */
+
+const CDN_HEADERS = {
+  "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+};
 
 const ZONING_TYPE_MAP: Record<string, string> = {
   R: "Residential",
@@ -72,85 +78,91 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Source 1: Chicago ArcGIS MapServer (primary, with retry)
-  try {
-    const arcgisUrl = new URL(
-      "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/0/query"
-    );
-    arcgisUrl.searchParams.set("geometry", `${lon},${lat}`);
-    arcgisUrl.searchParams.set("geometryType", "esriGeometryPoint");
-    arcgisUrl.searchParams.set("spatialRel", "esriSpatialRelIntersects");
-    arcgisUrl.searchParams.set("outFields", "ZONE_CLASS,ZONE_TYPE");
-    arcgisUrl.searchParams.set("returnGeometry", "false");
-    arcgisUrl.searchParams.set("f", "json");
+  const cacheKey = `zoning:${roundCoord(parseFloat(lat))}:${roundCoord(parseFloat(lon))}`;
 
-    const res = await fetchWithRetry(arcgisUrl.toString(), {});
-    if (res.ok) {
-      const data = await res.json();
-      if (data.features && data.features.length > 0) {
-        const attrs = data.features[0].attributes;
-        const zoneClass = attrs.ZONE_CLASS || attrs.ZONE_TYPE || null;
-        if (zoneClass) {
-          return NextResponse.json({
-            zoneClass,
-            zoneType: deriveZoneType(zoneClass),
-          });
+  const result = await cached<{ zoneClass: string | null; zoneType: string | null }>(cacheKey, 86400, async () => {
+    // Source 1: Chicago ArcGIS MapServer (primary, with retry)
+    try {
+      const arcgisUrl = new URL(
+        "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/0/query"
+      );
+      arcgisUrl.searchParams.set("geometry", `${lon},${lat}`);
+      arcgisUrl.searchParams.set("geometryType", "esriGeometryPoint");
+      arcgisUrl.searchParams.set("spatialRel", "esriSpatialRelIntersects");
+      arcgisUrl.searchParams.set("outFields", "ZONE_CLASS,ZONE_TYPE");
+      arcgisUrl.searchParams.set("returnGeometry", "false");
+      arcgisUrl.searchParams.set("f", "json");
+
+      const res = await fetchWithRetry(arcgisUrl.toString(), {});
+      if (res.ok) {
+        const data = await res.json();
+        if (data.features && data.features.length > 0) {
+          const attrs = data.features[0].attributes;
+          const zoneClass = attrs.ZONE_CLASS || attrs.ZONE_TYPE || null;
+          if (zoneClass) {
+            return {
+              zoneClass,
+              zoneType: deriveZoneType(zoneClass),
+            };
+          }
         }
       }
+    } catch {
+      // Fall through to Socrata backup
     }
-  } catch {
-    // Fall through to Socrata backup
-  }
 
-  // Source 2: Socrata SODA API (fallback, with retry)
-  try {
-    const sodaUrl = `https://data.cityofchicago.org/resource/dj47-wfun.json?$where=within_circle(the_geom,${lat},${lon},10)&$limit=1`;
-    const res = await fetchWithRetry(sodaUrl, {
-      headers: { Accept: "application/json" },
-    });
+    // Source 2: Socrata SODA API (fallback, with retry)
+    try {
+      const sodaUrl = `https://data.cityofchicago.org/resource/dj47-wfun.json?$where=within_circle(the_geom,${lat},${lon},10)&$limit=1`;
+      const res = await fetchWithRetry(sodaUrl, {
+        headers: { Accept: "application/json" },
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.length > 0) {
-        const record = data[0];
-        const zoneClass: string =
-          record.zone_class || record.zone_type || null;
-        if (zoneClass) {
-          return NextResponse.json({
-            zoneClass,
-            zoneType: deriveZoneType(zoneClass),
-          });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const record = data[0];
+          const zoneClass: string =
+            record.zone_class || record.zone_type || null;
+          if (zoneClass) {
+            return {
+              zoneClass,
+              zoneType: deriveZoneType(zoneClass),
+            };
+          }
         }
       }
+    } catch {
+      // Fall through to GeoJSON backup
     }
-  } catch {
-    // Fall through to GeoJSON backup
-  }
 
-  // Source 3: Chicago Data Portal GeoJSON endpoint (second fallback)
-  try {
-    const geoUrl = `https://data.cityofchicago.org/resource/dj47-wfun.geojson?$where=intersects(the_geom,'POINT(${lon} ${lat})')&$limit=1`;
-    const res = await fetchWithRetry(geoUrl, {
-      headers: { Accept: "application/json" },
-    });
+    // Source 3: Chicago Data Portal GeoJSON endpoint (second fallback)
+    try {
+      const geoUrl = `https://data.cityofchicago.org/resource/dj47-wfun.geojson?$where=intersects(the_geom,'POINT(${lon} ${lat})')&$limit=1`;
+      const res = await fetchWithRetry(geoUrl, {
+        headers: { Accept: "application/json" },
+      });
 
-    if (res.ok) {
-      const data = await res.json();
-      if (data.features && data.features.length > 0) {
-        const props = data.features[0].properties;
-        const zoneClass: string =
-          props.zone_class || props.zone_type || null;
-        if (zoneClass) {
-          return NextResponse.json({
-            zoneClass,
-            zoneType: deriveZoneType(zoneClass),
-          });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.features && data.features.length > 0) {
+          const props = data.features[0].properties;
+          const zoneClass: string =
+            props.zone_class || props.zone_type || null;
+          if (zoneClass) {
+            return {
+              zoneClass,
+              zoneType: deriveZoneType(zoneClass),
+            };
+          }
         }
       }
+    } catch {
+      // All sources failed
     }
-  } catch {
-    // All sources failed
-  }
 
-  return NextResponse.json({ zoneClass: null, zoneType: null });
+    return { zoneClass: null, zoneType: null };
+  });
+
+  return NextResponse.json(result, { headers: CDN_HEADERS });
 }

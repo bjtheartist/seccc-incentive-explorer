@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { ZONE_KEYS } from "@/lib/constants";
+import { cached } from "@/lib/redis";
+
+const CDN_HEADERS = {
+  "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400, immutable",
+};
 
 /**
  * GET /api/zones/geojson/:key
@@ -29,32 +34,33 @@ export async function GET(
   }
 
   try {
-    const rows = await sql`
-      SELECT feature_name, feature_properties,
-             ST_AsGeoJSON(geom)::json AS geometry
-      FROM zones
-      WHERE zone_key = ${key}
-    `;
+    const cacheKey = `geojson:${key}`;
+    const fc = await cached(cacheKey, 604800, async () => {
+      const rows = await sql`
+        SELECT feature_name, feature_properties,
+               ST_AsGeoJSON(geom)::json AS geometry
+        FROM zones
+        WHERE zone_key = ${key}
+      `;
 
-    const features = rows.map((r: Record<string, unknown>) => ({
-      type: "Feature" as const,
-      geometry: r.geometry,
-      properties: {
-        ...(typeof r.feature_properties === "string"
-          ? JSON.parse(r.feature_properties)
-          : (r.feature_properties || {})),
-        name: r.feature_name,
-      },
-    }));
+      const features = rows.map((r: Record<string, unknown>) => ({
+        type: "Feature" as const,
+        geometry: r.geometry,
+        properties: {
+          ...(typeof r.feature_properties === "string"
+            ? JSON.parse(r.feature_properties)
+            : (r.feature_properties || {})),
+          name: r.feature_name,
+        },
+      }));
 
-    const fc = {
-      type: "FeatureCollection",
-      features,
-    };
-
-    return NextResponse.json(fc, {
-      headers: { "Cache-Control": "public, max-age=86400" },
+      return {
+        type: "FeatureCollection",
+        features,
+      };
     });
+
+    return NextResponse.json(fc, { headers: CDN_HEADERS });
   } catch (err) {
     console.error("zone geojson API error:", err);
     return NextResponse.json(

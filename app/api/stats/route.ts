@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
+import { cached } from "@/lib/redis";
 
 /**
  * GET /api/stats
@@ -16,23 +17,31 @@ export async function GET(_request: NextRequest) {
   }
 
   try {
-    const rows = await sql`
-      SELECT data FROM stats LIMIT 1
-    `;
+    const data = await cached("stats:all", 3600, async () => {
+      const rows = await sql`
+        SELECT data FROM stats LIMIT 1
+      `;
 
-    if (rows.length === 0) {
+      if (rows.length === 0) {
+        return null;
+      }
+
+      return typeof rows[0].data === "string"
+        ? JSON.parse(rows[0].data)
+        : rows[0].data;
+    });
+
+    if (data === null) {
       return NextResponse.json(
         { error: "No stats data" },
         { status: 404 }
       );
     }
 
-    const data = typeof rows[0].data === "string"
-      ? JSON.parse(rows[0].data)
-      : rows[0].data;
-
     return NextResponse.json(data, {
-      headers: { "Cache-Control": "public, max-age=3600" },
+      headers: {
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600",
+      },
     });
   } catch (err) {
     console.error("stats API error:", err);

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
+import { cached, roundCoord } from "@/lib/redis";
 
 /**
  * GET /api/businesses?search=&lat=&lon=&radius=
@@ -22,65 +23,73 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    let rows;
+    const rLat = lat ? roundCoord(parseFloat(lat)) : "";
+    const rLon = lon ? roundCoord(parseFloat(lon)) : "";
+    const cacheKey = `businesses:${search || ""}:${rLat}:${rLon}:${radius}`;
 
-    if (search) {
-      rows = await sql`
-        SELECT id, name, address, city, state, zip, lat, lon,
-               phone, website, category, incentive_count,
-               zone_data
-        FROM businesses
-        WHERE search_vector @@ plainto_tsquery('english', ${search})
-           OR name ILIKE ${"%" + search + "%"}
-           OR address ILIKE ${"%" + search + "%"}
-        ORDER BY ts_rank(search_vector, plainto_tsquery('english', ${search})) DESC
-        LIMIT 50
-      `;
-    } else if (lat && lon) {
-      const radiusMeters = parseInt(radius, 10) || 1000;
-      rows = await sql`
-        SELECT id, name, address, city, state, zip, lat, lon,
-               phone, website, category, incentive_count,
-               zone_data,
-               ST_Distance(geom, ST_SetSRID(ST_MakePoint(${parseFloat(lon)}, ${parseFloat(lat)}), 4326)::geography) AS distance_m
-        FROM businesses
-        WHERE ST_DWithin(
-          geom,
-          ST_SetSRID(ST_MakePoint(${parseFloat(lon)}, ${parseFloat(lat)}), 4326)::geography,
-          ${radiusMeters}
-        )
-        ORDER BY distance_m
-        LIMIT 50
-      `;
-    } else {
-      rows = await sql`
-        SELECT id, name, address, city, state, zip, lat, lon,
-               phone, website, category, incentive_count,
-               zone_data
-        FROM businesses
-        ORDER BY name
-        LIMIT 500
-      `;
-    }
+    const businesses = await cached(cacheKey, 3600, async () => {
+      let rows;
 
-    const businesses = rows.map((r: Record<string, unknown>) => ({
-      id: r.id,
-      name: r.name,
-      address: r.address,
-      city: r.city,
-      state: r.state,
-      zip: r.zip,
-      lat: r.lat,
-      lon: r.lon,
-      phone: r.phone || "",
-      website: r.website || "",
-      category: r.category || "",
-      incentiveCount: r.incentive_count || 0,
-      zones: typeof r.zone_data === "string" ? JSON.parse(r.zone_data) : (r.zone_data || {}),
-    }));
+      if (search) {
+        rows = await sql`
+          SELECT id, name, address, city, state, zip, lat, lon,
+                 phone, website, category, incentive_count,
+                 zone_data
+          FROM businesses
+          WHERE search_vector @@ plainto_tsquery('english', ${search})
+             OR name ILIKE ${"%" + search + "%"}
+             OR address ILIKE ${"%" + search + "%"}
+          ORDER BY ts_rank(search_vector, plainto_tsquery('english', ${search})) DESC
+          LIMIT 50
+        `;
+      } else if (lat && lon) {
+        const radiusMeters = parseInt(radius, 10) || 1000;
+        rows = await sql`
+          SELECT id, name, address, city, state, zip, lat, lon,
+                 phone, website, category, incentive_count,
+                 zone_data,
+                 ST_Distance(geom, ST_SetSRID(ST_MakePoint(${parseFloat(lon)}, ${parseFloat(lat)}), 4326)::geography) AS distance_m
+          FROM businesses
+          WHERE ST_DWithin(
+            geom,
+            ST_SetSRID(ST_MakePoint(${parseFloat(lon)}, ${parseFloat(lat)}), 4326)::geography,
+            ${radiusMeters}
+          )
+          ORDER BY distance_m
+          LIMIT 50
+        `;
+      } else {
+        rows = await sql`
+          SELECT id, name, address, city, state, zip, lat, lon,
+                 phone, website, category, incentive_count,
+                 zone_data
+          FROM businesses
+          ORDER BY name
+          LIMIT 500
+        `;
+      }
+
+      return rows.map((r: Record<string, unknown>) => ({
+        id: r.id,
+        name: r.name,
+        address: r.address,
+        city: r.city,
+        state: r.state,
+        zip: r.zip,
+        lat: r.lat,
+        lon: r.lon,
+        phone: r.phone || "",
+        website: r.website || "",
+        category: r.category || "",
+        incentiveCount: r.incentive_count || 0,
+        zones: typeof r.zone_data === "string" ? JSON.parse(r.zone_data) : (r.zone_data || {}),
+      }));
+    });
 
     return NextResponse.json(businesses, {
-      headers: { "Cache-Control": "public, max-age=3600" },
+      headers: {
+        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600",
+      },
     });
   } catch (err) {
     console.error("businesses API error:", err);

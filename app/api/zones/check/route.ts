@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
+import { cached, roundCoord } from "@/lib/redis";
 
 /**
  * GET /api/zones/check?lat=&lon=
@@ -27,22 +28,31 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const rows = await sql`
-      SELECT zone_key, feature_name
-      FROM zones
-      WHERE ST_Contains(
-        geom::geometry,
-        ST_SetSRID(ST_MakePoint(${parseFloat(lon)}, ${parseFloat(lat)}), 4326)
-      )
-    `;
+    const rLat = roundCoord(parseFloat(lat));
+    const rLon = roundCoord(parseFloat(lon));
+    const cacheKey = `zones:check:${rLat}:${rLon}`;
 
-    const results = rows.map((r: Record<string, unknown>) => ({
-      key: r.zone_key,
-      name: r.feature_name || "",
-    }));
+    const results = await cached(cacheKey, 86400, async () => {
+      const rows = await sql`
+        SELECT zone_key, feature_name
+        FROM zones
+        WHERE ST_Contains(
+          geom::geometry,
+          ST_SetSRID(ST_MakePoint(${parseFloat(lon)}, ${parseFloat(lat)}), 4326)
+        )
+      `;
+
+      return rows.map((r: Record<string, unknown>) => ({
+        key: r.zone_key,
+        name: r.feature_name || "",
+      }));
+    });
 
     return NextResponse.json(results, {
-      headers: { "Cache-Control": "public, max-age=3600" },
+      headers: {
+        "Cache-Control":
+          "public, s-maxage=86400, stale-while-revalidate=3600",
+      },
     });
   } catch (err) {
     console.error("zone check API error:", err);

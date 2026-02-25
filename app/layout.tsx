@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 
 export const metadata: Metadata = {
   title: "Chicago Site Incentive Map | Discover Business Incentives",
@@ -30,6 +31,7 @@ export default function RootLayout({
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   );
