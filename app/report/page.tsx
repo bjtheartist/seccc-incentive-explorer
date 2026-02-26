@@ -153,21 +153,46 @@ function ReportWizardPage() {
   }, []);
 
   // Load zone data when address has lat/lon
+  // Uses the API first, then falls back to client-side Turf.js if the API fails.
   useEffect(() => {
     if (!wizardState.lat || !wizardState.lon) return;
-    fetch(`/api/zones/check?lat=${wizardState.lat}&lon=${wizardState.lon}`)
-      .then((r) => r.json())
-      .then((data) => {
-        // The API returns { zoneKey: boolean, ... } and optionally { zoneNames: { ... } }
-        // Handle both flat format and structured format
-        if (data.zones) {
-          setZones(data.zones);
-          if (data.zoneNames) setZoneNames(data.zoneNames);
-        } else {
-          setZones(data);
+    const lat = wizardState.lat;
+    const lon = wizardState.lon;
+
+    (async () => {
+      try {
+        const res = await fetch(`/api/zones/check?lat=${lat}&lon=${lon}`);
+        if (res.ok) {
+          const data = await res.json();
+          // The API returns an array of { key, name } objects.
+          if (Array.isArray(data)) {
+            const zoneMap: Record<string, boolean> = {};
+            const nameMap: Record<string, string> = {};
+            for (const item of data) {
+              if (item.key) {
+                zoneMap[item.key] = true;
+                if (item.name) nameMap[item.key] = item.name;
+              }
+            }
+            setZones(zoneMap);
+            setZoneNames(nameMap);
+            return;
+          } else if (data.zones) {
+            setZones(data.zones);
+            if (data.zoneNames) setZoneNames(data.zoneNames);
+            return;
+          }
         }
-      })
-      .catch(() => {});
+        // API failed or returned unexpected format — fall through to Turf.js
+        throw new Error("API unavailable");
+      } catch {
+        // Fallback: use client-side Turf.js zone check
+        const { checkZones } = await import("@/lib/zone-check");
+        const result = await checkZones(lat, lon);
+        setZones(result.zones);
+        setZoneNames(result.zoneNames);
+      }
+    })();
   }, [wizardState.lat, wizardState.lon]);
 
   // Load census + zoning data when address has lat/lon
