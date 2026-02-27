@@ -1182,11 +1182,11 @@ function ReportDisplay({
   return (
     <motion.div {...fadeIn}>
       {/* ── Outer wrapper: off-white background ── */}
-      <div className="bg-[#F5F5F0] py-4 sm:py-8 px-2 sm:px-6 print:bg-white print:p-0">
+      <div className="report-document bg-[#F5F5F0] py-4 sm:py-8 px-2 sm:px-6 print:bg-white print:p-0">
         {/* ── Document ── */}
         <div className="mx-auto max-w-[850px] bg-white shadow-xl print:shadow-none">
           {/* ── Cover / Header Bar ── */}
-          <div className="bg-[#0C1B33] px-5 sm:px-12 md:px-16 pt-12 pb-10">
+          <div className="report-cover bg-[#0C1B33] px-5 sm:px-12 md:px-16 pt-12 pb-10">
             {isInstantMode && (
               <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-[#2563EB] mb-2">
                 Instant Report
@@ -1209,7 +1209,7 @@ function ReportDisplay({
           </div>
 
           {/* ── Metadata Row ── */}
-          <div className="px-5 sm:px-12 md:px-16 py-5 border-b border-[#0C1B33]/8 flex flex-wrap gap-x-5 sm:gap-x-8 gap-y-3">
+          <div className="report-meta px-5 sm:px-12 md:px-16 py-5 border-b border-[#0C1B33]/8 flex flex-wrap gap-x-5 sm:gap-x-8 gap-y-3">
             <div>
               <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
                 Date
@@ -1271,7 +1271,7 @@ function ReportDisplay({
           </div>
 
           {/* ── Report Body ── */}
-          <div className="px-5 sm:px-12 md:px-16 py-14">
+          <div className="report-body px-5 sm:px-12 md:px-16 py-14">
             {/* ── Executive Summary from Confidence Engine ── */}
             {report.executiveSummary && (
               <ExecutiveSummarySection summary={report.executiveSummary} />
@@ -1303,7 +1303,7 @@ function ReportDisplay({
                   sectionColors[sectionIdx % sectionColors.length];
 
                 return (
-                  <div key={sectionIdx} className="mb-12">
+                  <div key={sectionIdx} className="report-section mb-12">
                     <div className="flex items-baseline gap-4 mb-4">
                       <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
                         {sectionNumber}
@@ -1319,34 +1319,83 @@ function ReportDisplay({
                         {section.items.map((item, itemIdx) => (
                           <div
                             key={itemIdx}
-                            className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4 py-3.5 first:pt-0"
+                            className="report-item py-4 first:pt-0"
                           >
-                            {/* Left: color dot + label */}
-                            <div className="flex items-start gap-3 flex-1 min-w-0">
-                              <div
-                                className="w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0"
-                                style={{
-                                  backgroundColor:
-                                    item.color || sectionColor,
-                                }}
-                              />
-                              <div className="min-w-0">
-                                <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold block">
-                                  {item.label}
-                                </span>
-                                {item.detail && (
-                                  <span className="text-[#0C1B33]/40 text-[11px] sm:text-[12px] leading-relaxed block mt-0.5">
-                                    {item.detail}
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
+                              {/* Left: color dot + label */}
+                              <div className="flex items-start gap-3 flex-1 min-w-0">
+                                <div
+                                  className="w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0"
+                                  style={{
+                                    backgroundColor:
+                                      item.color || sectionColor,
+                                  }}
+                                />
+                                <div className="min-w-0">
+                                  <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold block">
+                                    {item.label}
+                                    {item.level && (
+                                      <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 ml-2 font-normal">
+                                        {item.level}
+                                      </span>
+                                    )}
                                   </span>
-                                )}
+                                  {item.detail && (
+                                    <span className="text-[#0C1B33]/40 text-[11px] sm:text-[12px] leading-relaxed block mt-0.5">
+                                      {item.detail}
+                                    </span>
+                                  )}
+                                </div>
                               </div>
+
+                              {/* Right: value — below on mobile, beside on desktop */}
+                              {item.value && (
+                                <span className="font-mono-bureau text-[10px] sm:text-[11px] tracking-[0.05em] text-[#0C1B33]/60 flex-shrink-0 sm:text-right pl-8 sm:pl-0 pt-0.5">
+                                  {item.value}
+                                </span>
+                              )}
                             </div>
 
-                            {/* Right: value — below on mobile, beside on desktop */}
-                            {item.value && (
-                              <span className="font-mono-bureau text-[10px] sm:text-[11px] tracking-[0.05em] text-[#0C1B33]/60 flex-shrink-0 sm:text-right pl-8 sm:pl-0 pt-0.5">
-                                {item.value}
-                              </span>
+                            {/* Eligibility & URL — shown for program items */}
+                            {(item.whoQualifies || item.eligibilityRules || item.url) && (
+                              <div className="report-eligibility ml-[22px] sm:ml-[22px] mt-2.5 pl-4 border-l-2 border-[#0C1B33]/6 space-y-2">
+                                {item.whoQualifies && (
+                                  <div>
+                                    <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-0.5">
+                                      Who Qualifies
+                                    </span>
+                                    <span className="text-[#0C1B33]/55 text-[11px] sm:text-[12px] leading-relaxed block">
+                                      {item.whoQualifies}
+                                    </span>
+                                  </div>
+                                )}
+                                {item.eligibilityRules && item.eligibilityRules.length > 0 && (
+                                  <div>
+                                    <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-1">
+                                      Requirements
+                                    </span>
+                                    <ul className="space-y-0.5">
+                                      {item.eligibilityRules.map((rule, rIdx) => (
+                                        <li key={rIdx} className="flex items-start gap-2 text-[11px] sm:text-[12px] text-[#0C1B33]/50 leading-relaxed">
+                                          <span className="text-[#0C1B33]/20 mt-0.5 flex-shrink-0">{rule.required ? "Required:" : "Optional:"}</span>
+                                          <span>{rule.description}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                                {item.url && (
+                                  <a
+                                    href={item.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1.5 text-[11px] text-[#2563EB] hover:text-[#1d4ed8] transition-colors font-mono-bureau tracking-wide print-url"
+                                  >
+                                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                    More information
+                                  </a>
+                                )}
+                              </div>
                             )}
                           </div>
                         ))}
@@ -1411,7 +1460,7 @@ function ReportDisplay({
               )}
 
             {/* ── Footer ── */}
-            <div className="mt-16 pt-6 border-t border-dashed border-[#0C1B33]/15">
+            <div className="report-footer mt-16 pt-6 border-t border-dashed border-[#0C1B33]/15">
               <p className="text-[#0C1B33]/35 text-[12px] leading-relaxed mb-2">
                 This report was generated on {formattedDate} by Chicago
                 Incentive Explorer.
@@ -1425,7 +1474,7 @@ function ReportDisplay({
         </div>
 
         {/* ── Action Buttons (outside the document) ── */}
-        <div className="mx-auto max-w-[850px] flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 print:hidden">
+        <div className="report-actions mx-auto max-w-[850px] flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 print:hidden">
           <button
             onClick={handlePrint}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"

@@ -40,6 +40,10 @@ export interface ReportItem {
   detail?: string;
   programId?: string;
   color?: string;
+  whoQualifies?: string;
+  eligibilityRules?: { description: string; required: boolean }[];
+  url?: string;
+  level?: string;
 }
 
 export interface GeneratedReport {
@@ -256,9 +260,16 @@ function generateLocationIncentives(
       items: zoneBased.map((p) => ({
         label: p.name,
         value: p.benefitRange || "Contact for details",
-        detail: p.fastestConfirmingStep || p.summary,
+        detail: p.summary,
         programId: p.id,
         color: getProgramColor(p),
+        whoQualifies: p.whoQualifies,
+        eligibilityRules: p.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
+          description: r.description,
+          required: r.required,
+        })),
+        url: p.url,
+        level: p.level,
       })),
     });
   }
@@ -273,6 +284,13 @@ function generateLocationIncentives(
         detail: p.summary,
         programId: p.id,
         color: getProgramColor(p),
+        whoQualifies: p.whoQualifies,
+        eligibilityRules: p.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
+          description: r.description,
+          required: r.required,
+        })),
+        url: p.url,
+        level: p.level,
       })),
     });
   }
@@ -586,6 +604,13 @@ function generateProgramExplorer(
         detail: p.summary,
         programId: p.id,
         color: getProgramColor(p),
+        whoQualifies: p.whoQualifies,
+        eligibilityRules: p.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
+          description: r.description,
+          required: r.required,
+        })),
+        url: p.url,
+        level: p.level,
       })),
     });
   }

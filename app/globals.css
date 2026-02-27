@@ -207,3 +207,146 @@
   background: rgba(37, 99, 235, 0.15);
   color: var(--navy);
 }
+
+/* ═══════════════════════════════════════════
+   PRINT STYLES — REPORT PAGE
+   ═══════════════════════════════════════════ */
+
+.report-document {
+  /* Marker class for print targeting — no runtime styles */
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 0.6in 0.5in 0.7in 0.5in;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    background: white !important;
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+
+  nav, footer {
+    display: none !important;
+  }
+
+  .bureau-noise::before {
+    display: none !important;
+  }
+
+  /* Report wrapper */
+  .report-document {
+    background: white !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .report-document > div {
+    box-shadow: none !important;
+    max-width: 100% !important;
+  }
+
+  /* Cover header */
+  .report-cover {
+    padding: 28pt 32pt 24pt 32pt !important;
+  }
+
+  /* Metadata row */
+  .report-meta {
+    padding: 12pt 32pt !important;
+  }
+
+  /* Report body */
+  .report-body {
+    padding: 24pt 32pt !important;
+  }
+
+  /* Section headers — avoid orphaned headings */
+  .font-editorial {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  h2 {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  hr {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+
+  /* Report sections — keep header + first items together */
+  .report-section {
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+
+  /* Individual items — don't break mid-item */
+  .report-item {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Eligibility detail blocks */
+  .report-eligibility {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Print URLs as visible text */
+  .print-url::after {
+    content: " (" attr(href) ")";
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8pt;
+    color: #0C1B33;
+    opacity: 0.5;
+    word-break: break-all;
+  }
+
+  .print-url svg {
+    display: none !important;
+  }
+
+  .print-url {
+    color: #0C1B33 !important;
+    text-decoration: none !important;
+  }
+
+  /* Zoning map */
+  .mapboxgl-map {
+    max-height: 250px !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Action buttons — hide */
+  .report-actions {
+    display: none !important;
+  }
+
+  /* Color dots */
+  .rounded-full {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Tighten spacing */
+  .report-section {
+    margin-bottom: 20pt !important;
+  }
+
+  .report-footer {
+    page-break-before: avoid;
+    margin-top: 24pt !important;
+    padding-top: 12pt !important;
+  }
+}
