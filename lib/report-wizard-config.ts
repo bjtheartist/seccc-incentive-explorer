@@ -251,6 +251,19 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
     options: INCENTIVE_INTEREST_OPTIONS,
   },
   {
+    id: "li-budget",
+    title: "What is your estimated project budget?",
+    subtitle:
+      "Optional — helps us estimate dollar amounts for each incentive. Skip if you prefer not to share.",
+    appliesTo: ["location-incentives"],
+    inputType: "single",
+    stateKey: "budgetRange",
+    options: [
+      ...BUDGET_RANGE_OPTIONS,
+      { id: "skip", label: "Skip this step" },
+    ],
+  },
+  {
     id: "li-review",
     title: "Review & Generate",
     subtitle:

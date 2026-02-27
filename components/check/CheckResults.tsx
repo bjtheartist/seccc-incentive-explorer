@@ -3,10 +3,12 @@
 import { useState, useEffect } from "react";
 import { MapPin, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { ZONE_KEYS, ZONE_LABELS, ZONE_COLORS } from "@/lib/constants";
-import { runConfidenceEngine, computeTopActions } from "@/lib/confidence-engine";
+import { runConfidenceEngine, computeTopActions, computeStackingNarrative } from "@/lib/confidence-engine";
+import type { StackingNarrative } from "@/lib/confidence-engine";
 import { TopActionsStrip } from "./TopActionsStrip";
 import { ProgramResultCard } from "./ProgramResultCard";
 import type { Program, SurveyAnswers, ProgramCheckResult, TopAction, CityZoning, CensusData } from "@/lib/types";
+import { censusNarrative } from "@/lib/census-narrative";
 
 interface CheckResultsProps {
   address: string;
@@ -39,6 +41,7 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
   const [census, setCensus] = useState<CensusData | undefined>();
   const [copied, setCopied] = useState(false);
   const [showNotApplicable, setShowNotApplicable] = useState(false);
+  const [stackingNarrative, setStackingNarrative] = useState<StackingNarrative | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,11 +87,15 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
         const results = runConfidenceEngine(allPrograms, zoneMap, nameMap, survey);
         const actions = computeTopActions(results);
 
+        // Compute stacking narrative
+        const narrative = computeStackingNarrative(zoneMap, nameMap);
+
         setZones(zoneMap);
         setZoneNames(nameMap);
         setZoneCount(count);
         setPrograms(results);
         setTopActions(actions);
+        setStackingNarrative(narrative);
         if (censusRes) setCensus(censusRes);
         if (zoningRes?.zoneClass) setCityZoning(zoningRes);
       } catch (err) {
@@ -197,6 +204,47 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
         </div>
       )}
 
+      {/* Zone Power Score */}
+      {stackingNarrative && zoneCount > 0 && (
+        <div className="mb-6 p-4 bg-gradient-to-br from-[#2563EB]/[0.04] to-[#7C3AED]/[0.03] border border-[#2563EB]/10 rounded-lg">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="w-8 h-8 bg-[#2563EB]/10 rounded-full flex items-center justify-center">
+              <span className="font-editorial text-[16px] text-[#2563EB] font-bold">{zoneCount}</span>
+            </div>
+            <div>
+              <span className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB]/70 block">
+                Zone Power Score
+              </span>
+              <span className="font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/30">
+                {stackingNarrative.percentileLabel} of Chicago locations
+              </span>
+            </div>
+          </div>
+          <p className="text-[12px] text-[#0C1B33]/55 leading-relaxed mb-3">
+            {stackingNarrative.narrative}
+          </p>
+
+          {/* Zone combination cards */}
+          {stackingNarrative.combinations.length > 0 && (
+            <div className="space-y-2">
+              {stackingNarrative.combinations.slice(0, 3).map((combo, i) => (
+                <div key={i} className="bg-white border border-[#0C1B33]/6 rounded-lg p-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="font-mono-bureau text-[9px] tracking-[0.1em] uppercase text-emerald-600">
+                      {combo.zones.join(" + ")}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-[#0C1B33]/50 leading-relaxed">
+                    {combo.benefit}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Top Actions */}
       <TopActionsStrip actions={topActions} hasSurvey={!!survey} />
 
@@ -242,48 +290,100 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
         </div>
       )}
 
-      {/* Census data */}
-      {census && (
-        <div className="mt-8 p-4 bg-[#0C1B33]/2 border border-[#0C1B33]/5 rounded-lg">
-          <h4 className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/30 mb-3">
-            Census Tract Data
-          </h4>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {census.medianIncome && (
-              <div>
-                <p className="text-xs text-[#0C1B33]/40">Median Income</p>
-                <p className="text-sm font-medium text-[#0C1B33]/70">
-                  ${census.medianIncome.toLocaleString()}
-                </p>
-              </div>
-            )}
-            {census.medianHomeValue && (
-              <div>
-                <p className="text-xs text-[#0C1B33]/40">Median Home Value</p>
-                <p className="text-sm font-medium text-[#0C1B33]/70">
-                  ${census.medianHomeValue.toLocaleString()}
-                </p>
-              </div>
-            )}
-            {census.population && (
-              <div>
-                <p className="text-xs text-[#0C1B33]/40">Population</p>
-                <p className="text-sm font-medium text-[#0C1B33]/70">
-                  {census.population.toLocaleString()}
-                </p>
-              </div>
-            )}
-            {census.tractId && (
-              <div>
-                <p className="text-xs text-[#0C1B33]/40">Tract ID</p>
-                <p className="text-sm font-medium text-[#0C1B33]/70 font-mono-bureau">
-                  {census.tractId}
-                </p>
-              </div>
-            )}
+      {/* Neighborhood Intelligence */}
+      {census && (() => {
+        const narrative = censusNarrative(census);
+
+        return (
+          <div className="mt-8 space-y-4">
+            <h4 className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/30">
+              Neighborhood Intelligence
+            </h4>
+
+            {/* Why This Location Qualifies */}
+            <div className="p-4 bg-gradient-to-br from-[#2563EB]/[0.03] to-[#7C3AED]/[0.02] border border-[#2563EB]/10 rounded-lg">
+              <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#2563EB]/60 block mb-2">
+                Why This Location Qualifies
+              </span>
+              <p className="text-[12px] text-[#0C1B33]/60 leading-relaxed">
+                {narrative.qualificationNarrative}
+              </p>
+              {narrative.unlockedPrograms.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {narrative.unlockedPrograms.map((prog) => (
+                    <span key={prog} className="inline-flex items-center px-2 py-0.5 text-[9px] font-mono-bureau tracking-[0.05em] bg-emerald-50 border border-emerald-200/50 text-emerald-700 rounded-sm">
+                      {prog}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Interpreted Census Stats */}
+            <div className="grid gap-3 sm:grid-cols-2">
+              {narrative.incomeNarrative && (
+                <div className="p-4 bg-[#0C1B33]/[0.02] border border-[#0C1B33]/5 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30">
+                      Median Income
+                    </span>
+                    {narrative.incomePercentOfMetro != null && (
+                      <span className={`font-mono-bureau text-[9px] tracking-[0.1em] px-1.5 py-0.5 rounded-sm ${
+                        narrative.isLikelyQCT
+                          ? "bg-emerald-50 text-emerald-600 border border-emerald-200/50"
+                          : narrative.isLMI
+                            ? "bg-amber-50 text-amber-600 border border-amber-200/50"
+                            : "bg-[#0C1B33]/5 text-[#0C1B33]/40"
+                      }`}>
+                        {narrative.incomePercentOfMetro}% of metro
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[12px] text-[#0C1B33]/55 leading-relaxed">
+                    {narrative.incomeNarrative}
+                  </p>
+                </div>
+              )}
+
+              {narrative.homeValueNarrative && (
+                <div className="p-4 bg-[#0C1B33]/[0.02] border border-[#0C1B33]/5 rounded-lg">
+                  <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 block mb-2">
+                    Property Values
+                  </span>
+                  <p className="text-[12px] text-[#0C1B33]/55 leading-relaxed">
+                    {narrative.homeValueNarrative}
+                  </p>
+                </div>
+              )}
+
+              {narrative.populationNarrative && (
+                <div className="p-4 bg-[#0C1B33]/[0.02] border border-[#0C1B33]/5 rounded-lg">
+                  <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 block mb-2">
+                    Population
+                  </span>
+                  <p className="text-[12px] text-[#0C1B33]/55 leading-relaxed">
+                    {narrative.populationNarrative}
+                  </p>
+                </div>
+              )}
+
+              {census.tractId && (
+                <div className="p-4 bg-[#0C1B33]/[0.02] border border-[#0C1B33]/5 rounded-lg">
+                  <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 block mb-2">
+                    Census Tract
+                  </span>
+                  <p className="text-sm font-medium text-[#0C1B33]/70 font-mono-bureau">
+                    {census.tractId}
+                  </p>
+                  <p className="text-[11px] text-[#0C1B33]/35 mt-1">
+                    American Community Survey (ACS 5-Year Estimates)
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

@@ -285,6 +285,122 @@ export function computeTopActions(
   return actions.slice(0, 3);
 }
 
+// ─── Stacking Narrative ─────────────────────────────────────────────
+
+export interface StackingNarrative {
+  zoneCount: number;
+  totalZones: number;
+  percentileLabel: string;
+  narrative: string;
+  combinations: {
+    zones: string[];
+    benefit: string;
+    relationship: "can" | "conditional";
+  }[];
+}
+
+/**
+ * Chicago stacking distribution (from Stats.stackingDistribution).
+ * Hardcoded percentile thresholds based on 360+ businesses analyzed.
+ */
+const STACKING_PERCENTILES: Record<number, number> = {
+  0: 95, 1: 78, 2: 55, 3: 35, 4: 18, 5: 8, 6: 4, 7: 2, 8: 1, 9: 1, 10: 1, 11: 1,
+};
+
+/** Well-known beneficial zone combinations. */
+const ZONE_COMBOS: { zones: string[]; benefit: string }[] = [
+  { zones: ["federalOZ", "enterprise"], benefit: "Stack capital gains deferral with sales/utility tax exemptions — combined savings of ~20-25%" },
+  { zones: ["tif", "sbif"], benefit: "TIF funds public improvements while SBIF reimburses up to 50% of your renovation costs" },
+  { zones: ["federalOZ", "nmtcEligible"], benefit: "Layer Opportunity Zone capital gains benefits with 39% NMTC credits over 7 years" },
+  { zones: ["tif", "enterprise"], benefit: "TIF rehabilitation funding plus Enterprise Zone tax exemptions reduce both property and operating costs" },
+  { zones: ["nrhpDistricts", "tif"], benefit: "20% Federal Historic Tax Credit plus TIF funding for certified rehabilitation projects" },
+  { zones: ["enterprise", "highUnemployment"], benefit: "Enterprise Zone exemptions plus WOTC credits for hiring in high-unemployment areas" },
+  { zones: ["federalOZ", "illinoisOZ"], benefit: "Federal and state Opportunity Zone benefits stack — defer and reduce capital gains at both levels" },
+  { zones: ["tif", "highUnemployment"], benefit: "TIF funding for improvements plus workforce development credits for local hiring" },
+];
+
+/**
+ * Compute a stacking narrative for a given set of active zones.
+ * Explains what the zone overlap means in plain language.
+ */
+export function computeStackingNarrative(
+  zones: Record<string, boolean>,
+  zoneNames: Record<string, string>,
+): StackingNarrative {
+  const ZONE_LABELS_LOCAL: Record<string, string> = {
+    federalOZ: "Federal Opportunity Zone",
+    illinoisOZ: "Illinois Opportunity Zone",
+    tif: "TIF District",
+    sbif: "SBIF",
+    enterprise: "Enterprise Zone",
+    edge: "EDGE",
+    rev: "REV Illinois",
+    micro: "MICRO",
+    dataCenter: "Data Center Zone",
+    cpace: "C-PACE Eligible",
+    class7a: "Class 7a/b",
+    landBank: "Land Bank",
+    highUnemployment: "High Unemployment Zone",
+    catalystGrant: "Catalyst Grant",
+    nmtcEligible: "NMTC Eligible",
+    nrhpDistricts: "National Register Historic District",
+    landmarkDistricts: "Chicago Landmark District",
+    smallBizSource: "Small Business Source",
+    workforceInvest: "Workforce Investment",
+    ssa: "Special Service Area",
+  };
+
+  const activeZones = Object.entries(zones).filter(([, v]) => v).map(([k]) => k);
+  const zoneCount = activeZones.length;
+  const totalZones = 11; // standard zone count
+
+  const percentile = STACKING_PERCENTILES[Math.min(zoneCount, 11)] || 1;
+  const percentileLabel = percentile <= 10
+    ? `top ${percentile}%`
+    : percentile <= 25
+      ? `top quarter`
+      : percentile <= 50
+        ? `above average`
+        : `below average`;
+
+  // Find matching combinations
+  const combinations: StackingNarrative["combinations"] = [];
+  for (const combo of ZONE_COMBOS) {
+    if (combo.zones.every((z) => activeZones.includes(z))) {
+      combinations.push({
+        zones: combo.zones.map((z) => zoneNames[z] || ZONE_LABELS_LOCAL[z] || z),
+        benefit: combo.benefit,
+        relationship: "can",
+      });
+    }
+  }
+
+  // Build narrative
+  let narrative: string;
+  if (zoneCount === 0) {
+    narrative = "This location is not within any mapped incentive zones. County-wide programs may still apply.";
+  } else if (zoneCount <= 2) {
+    const names = activeZones.map((z) => zoneNames[z] || ZONE_LABELS_LOCAL[z] || z).join(" and ");
+    narrative = `Your location is in ${names}. While the zone overlap is limited, you still qualify for targeted programs designed for this area.`;
+  } else if (zoneCount <= 4) {
+    narrative = `With ${zoneCount} overlapping zones, your location is in the ${percentileLabel} of Chicago locations for incentive density. This overlap means multiple programs can be combined to reduce your total project cost.`;
+  } else {
+    narrative = `Your ${zoneCount}-zone overlap puts you in the ${percentileLabel} of all Chicago locations. This exceptional density means you can stack incentives across federal, state, and local programs — a rare combination that can dramatically reduce costs.`;
+  }
+
+  if (combinations.length > 0) {
+    narrative += ` We identified ${combinations.length} beneficial zone combination${combinations.length !== 1 ? "s" : ""} at your location.`;
+  }
+
+  return {
+    zoneCount,
+    totalZones,
+    percentileLabel,
+    narrative,
+    combinations,
+  };
+}
+
 /** Build a plain-language paragraph explaining why the top programs matter. */
 function buildWhyParagraph(
   topResults: ProgramCheckResult[],

@@ -2,6 +2,7 @@ import type { Program, ExecutiveSummary } from "./types";
 import { ZONE_LABELS, ZONE_COLORS } from "./constants";
 import { INDUSTRIES, getIndustryById } from "./industries-data";
 import { generateExecutiveSummary } from "./confidence-engine";
+import { censusNarrative } from "./census-narrative";
 
 // ─── Local Types ────────────────────────────────────────────────────
 
@@ -46,6 +47,25 @@ export interface ReportItem {
   level?: string;
 }
 
+export interface BenefitEstimate {
+  programId: string;
+  programName: string;
+  estimatedValue: number;
+  label: string;
+  color?: string;
+}
+
+export interface ActionRoadmapItem {
+  tier: "do-this-week" | "start-gathering" | "worth-exploring";
+  programId?: string;
+  programName?: string;
+  label: string;
+  description: string;
+  contact?: { agency: string; phone?: string; email?: string; role?: string };
+  callScript?: string;
+  documents?: string[];
+}
+
 export interface GeneratedReport {
   title: string;
   subtitle: string;
@@ -71,6 +91,13 @@ export interface GeneratedReport {
     zoneType?: string;
   };
   executiveSummary?: ExecutiveSummary;
+  benefitEstimates?: {
+    total: number;
+    totalFormatted: string;
+    budgetRange: string;
+    items: BenefitEstimate[];
+  };
+  actionRoadmap?: ActionRoadmapItem[];
 }
 
 // ─── Budget Median Mapping ──────────────────────────────────────────
@@ -81,6 +108,12 @@ const BUDGET_MEDIANS: Record<string, number> = {
   "$500K-$2M": 1_000_000,
   "$2M-$10M": 5_000_000,
   "Over $10M": 15_000_000,
+  // Wizard step option IDs (kebab-case) mapped to same values
+  "under-100k": 50_000,
+  "100k-500k": 300_000,
+  "500k-2m": 1_000_000,
+  "2m-10m": 5_000_000,
+  "over-10m": 15_000_000,
 };
 
 /**
@@ -112,7 +145,7 @@ const CREDIT_PERCENTAGES: Record<string, { pct: number; label: string }> = {
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
-function formatDollars(amount: number): string {
+export function formatDollars(amount: number): string {
   if (amount >= 1_000_000) {
     return `$${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`;
   }
@@ -295,33 +328,120 @@ function generateLocationIncentives(
     });
   }
 
-  // Section 3: Next Steps
+  // ── Benefit Estimates ──────────────────────────────────────────────
+  const allEligible = [...zoneBased, ...countyWide];
+  let benefitEstimates: GeneratedReport["benefitEstimates"] | undefined;
+
+  if (state.budgetRange) {
+    const budgetMedian = BUDGET_MEDIANS[state.budgetRange];
+    if (budgetMedian) {
+      let totalEstimate = 0;
+      const items: BenefitEstimate[] = [];
+
+      for (const p of allEligible) {
+        const creditInfo = CREDIT_PERCENTAGES[p.id];
+        if (!creditInfo || creditInfo.pct === 0) continue;
+        const raw = budgetMedian * creditInfo.pct;
+        const capped = p.id === "sbif" ? Math.min(raw, 150_000) : raw;
+        totalEstimate += capped;
+        items.push({
+          programId: p.id,
+          programName: p.name,
+          estimatedValue: capped,
+          label: creditInfo.label,
+          color: getProgramColor(p),
+        });
+      }
+
+      if (items.length > 0) {
+        benefitEstimates = {
+          total: totalEstimate,
+          totalFormatted: formatDollars(totalEstimate),
+          budgetRange: state.budgetRange,
+          items,
+        };
+      }
+    }
+  }
+
+  // ── Action Roadmap ───────────────────────────────────────────────
+  const actionRoadmap: ActionRoadmapItem[] = [];
+  const topPrograms = zoneBased.slice(0, 2);
+
+  // Tier 1: "Do This Week" — top 2 programs with full contact + call script
+  for (const p of topPrograms) {
+    const contact = p.contacts?.[0];
+    const addressDisplay = state.address || "my address";
+    const zoneName = p.zoneKey ? (zoneNames?.[p.zoneKey] || ZONE_LABELS[p.zoneKey] || p.zoneKey) : "";
+    const callScript = contact
+      ? `"Hi, I'm at ${addressDisplay}${zoneName ? ` in ${zoneName}` : ""}. I'd like to learn about ${p.name} for my ${getIndustryName(state.industry).toLowerCase()} business."`
+      : undefined;
+
+    actionRoadmap.push({
+      tier: "do-this-week",
+      programId: p.id,
+      programName: p.name,
+      label: p.fastestConfirmingStep || `Contact ${contact?.agency || "program administrator"} about ${p.name}`,
+      description: p.summary,
+      contact: contact ? { agency: contact.agency, phone: contact.phone, email: contact.email, role: contact.role } : undefined,
+      callScript,
+    });
+  }
+
+  // Tier 2: "Start Gathering" — deduplicated required docs from all eligible programs
+  const allDocs = new Set<string>();
+  for (const p of allEligible) {
+    for (const doc of p.requiredDocs) {
+      allDocs.add(doc);
+    }
+  }
+  if (allDocs.size > 0) {
+    actionRoadmap.push({
+      tier: "start-gathering",
+      label: "Gather required documents",
+      description: `You'll need ${allDocs.size} documents across your eligible programs. Start collecting these now to speed up applications.`,
+      documents: Array.from(allDocs),
+    });
+  }
+
+  // Tier 3: "Worth Exploring" — remaining programs beyond top 2
+  const lowerPriority = [...zoneBased.slice(2), ...countyWide].slice(0, 3);
+  for (const p of lowerPriority) {
+    const contact = p.contacts?.[0];
+    actionRoadmap.push({
+      tier: "worth-exploring",
+      programId: p.id,
+      programName: p.name,
+      label: `Explore ${p.name}`,
+      description: p.summary,
+      contact: contact ? { agency: contact.agency, phone: contact.phone, email: contact.email, role: contact.role } : undefined,
+    });
+  }
+
+  // Section 3: Next Steps (kept for backward compatibility but enriched)
   sections.push({
     title: "Next Steps",
-    items: [
-      {
-        label: "Verify zone eligibility",
-        value: "Confirm your address falls within each zone boundary",
-        detail:
-          "Zone boundaries can shift. Verify with the administering agency before applying.",
-      },
-      {
-        label: "Gather required documents",
-        value: "Prepare proof of ownership, project plans, and budgets",
-        detail:
-          "Most programs require property documentation, project descriptions, and cost estimates.",
-      },
-      {
-        label: "Contact program administrators",
-        value: "Reach out to confirm current availability and deadlines",
-        detail:
-          "Program funding can be limited. Early contact increases your chances.",
-      },
-    ],
+    items: topPrograms.length > 0
+      ? topPrograms.map((p) => {
+          const contact = p.contacts?.[0];
+          return {
+            label: p.fastestConfirmingStep || `Contact ${contact?.agency || "program administrator"}`,
+            value: contact?.phone ? `Call ${contact.phone}` : (contact?.email || "See program details"),
+            detail: `${p.name} — ${p.summary}`,
+            programId: p.id,
+            color: getProgramColor(p),
+          };
+        })
+      : [
+          {
+            label: "Book free business advising",
+            value: "Schedule a free session to review all options",
+            detail: "Cook County Small Business Source or SECCC can help you navigate program applications.",
+          },
+        ],
   });
 
-  // Recommended actions: top 3 programs + always book advising
-  const topPrograms = zoneBased.slice(0, 2);
+  // Recommended actions
   const recommendedActions: GeneratedReport["recommendedActions"] = topPrograms.map(
     (p) => ({
       label: `Apply for ${p.name}`,
@@ -339,7 +459,6 @@ function generateLocationIncentives(
     priority: "medium",
   });
 
-  // If there is room, add a third program
   if (topPrograms.length < 2 && countyWide.length > 0) {
     recommendedActions.splice(recommendedActions.length - 1, 0, {
       label: `Explore ${countyWide[0].name}`,
@@ -355,12 +474,16 @@ function generateLocationIncentives(
         (activeNames.length > 4 ? `, and ${activeNames.length - 4} more` : "")
       : "no specific incentive zones";
 
+  const dollarSummary = benefitEstimates
+    ? ` Based on a ${state.budgetRange} budget, we estimate ~${benefitEstimates.totalFormatted} in total potential incentives.`
+    : "";
+
   return {
     title: `Incentive Report for ${addressDisplay}`,
     subtitle: `Location-based analysis for ${getIndustryName(state.industry)}`,
     reportType: "location-incentives",
     generatedAt: new Date().toISOString(),
-    summary: `Your location at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} (${zoneList}). You may qualify for ${zoneBased.length + countyWide.length} programs with ${benefitSummary}. Review each program below to understand requirements and next steps.`,
+    summary: `Your location at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} (${zoneList}). You may qualify for ${zoneBased.length + countyWide.length} programs with ${benefitSummary}.${dollarSummary} Review each program below to understand requirements and next steps.`,
     sections,
     recommendedActions: recommendedActions.slice(0, 4),
     metadata: {
@@ -368,7 +491,10 @@ function generateLocationIncentives(
       lat: state.lat ?? undefined,
       lon: state.lon ?? undefined,
       industry: getIndustryName(state.industry),
+      budgetRange: state.budgetRange || undefined,
     },
+    benefitEstimates,
+    actionRoadmap,
   };
 }
 
@@ -958,18 +1084,41 @@ export function generateReportData(
       });
     }
     if (census?.medianIncome != null) {
+      const narrative = censusNarrative({
+        tractId: census.tractId || "",
+        medianIncome: census.medianIncome,
+        medianHomeValue: census.medianHomeValue ?? null,
+        population: census.population ?? null,
+        walkScore: census.walkScore ?? null,
+      });
       contextItems.push({
         label: "Median Household Income",
         value: `$${census.medianIncome.toLocaleString()}`,
-        detail: "Census tract estimate (ACS 5-Year) — used to determine HUD low-income eligibility and program thresholds",
-        color: "#2563EB",
+        detail: narrative.incomeNarrative || "Census tract estimate (ACS 5-Year)",
+        color: narrative.isLikelyQCT ? "#059669" : "#2563EB",
       });
+      // Add qualification context
+      if (narrative.qualificationNarrative && (narrative.isLikelyQCT || narrative.isLMI)) {
+        contextItems.push({
+          label: "Neighborhood Qualification",
+          value: narrative.isLikelyQCT ? "Qualified Census Tract" : "Low-to-Moderate Income",
+          detail: narrative.qualificationNarrative,
+          color: "#059669",
+        });
+      }
     }
     if (census?.medianHomeValue != null) {
+      const homeNarrative = censusNarrative({
+        tractId: census.tractId || "",
+        medianIncome: census.medianIncome ?? null,
+        medianHomeValue: census.medianHomeValue,
+        population: census.population ?? null,
+        walkScore: census.walkScore ?? null,
+      });
       contextItems.push({
         label: "Median Home Value",
         value: `$${census.medianHomeValue.toLocaleString()}`,
-        detail: "Census tract estimate (ACS 5-Year) — reflects area property values and investment activity",
+        detail: homeNarrative.homeValueNarrative || "Census tract estimate (ACS 5-Year) — reflects area property values and investment activity",
         color: "#7C3AED",
       });
     }
