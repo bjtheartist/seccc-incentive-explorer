@@ -1182,11 +1182,11 @@ function ReportDisplay({
   return (
     <motion.div {...fadeIn}>
       {/* ── Outer wrapper: off-white background ── */}
-      <div className="bg-[#F5F5F0] py-8 px-4 sm:px-6 print:bg-white print:p-0">
+      <div className="bg-[#F5F5F0] py-4 sm:py-8 px-2 sm:px-6 print:bg-white print:p-0">
         {/* ── Document ── */}
         <div className="mx-auto max-w-[850px] bg-white shadow-xl print:shadow-none">
           {/* ── Cover / Header Bar ── */}
-          <div className="bg-[#0C1B33] px-12 sm:px-16 pt-12 pb-10">
+          <div className="bg-[#0C1B33] px-5 sm:px-12 md:px-16 pt-12 pb-10">
             {isInstantMode && (
               <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-[#2563EB] mb-2">
                 Instant Report
@@ -1209,7 +1209,7 @@ function ReportDisplay({
           </div>
 
           {/* ── Metadata Row ── */}
-          <div className="px-12 sm:px-16 py-5 border-b border-[#0C1B33]/8 flex flex-wrap gap-x-8 gap-y-2">
+          <div className="px-5 sm:px-12 md:px-16 py-5 border-b border-[#0C1B33]/8 flex flex-wrap gap-x-5 sm:gap-x-8 gap-y-3">
             <div>
               <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
                 Date
@@ -1262,7 +1262,7 @@ function ReportDisplay({
           </div>
 
           {/* ── Zoning Map ── */}
-          <div className="px-12 sm:px-16 pt-8">
+          <div className="px-5 sm:px-12 md:px-16 pt-8">
             <ReportZoningMap
               lat={report.metadata?.lat}
               lon={report.metadata?.lon}
@@ -1271,7 +1271,7 @@ function ReportDisplay({
           </div>
 
           {/* ── Report Body ── */}
-          <div className="px-12 sm:px-16 py-14">
+          <div className="px-5 sm:px-12 md:px-16 py-14">
             {/* ── Executive Summary from Confidence Engine ── */}
             {report.executiveSummary && (
               <ExecutiveSummarySection summary={report.executiveSummary} />
@@ -1281,7 +1281,7 @@ function ReportDisplay({
             {report.summary && (
               <div className="mb-12">
                 <div className="flex items-baseline gap-4 mb-4">
-                  <span className="font-editorial text-[40px] leading-none text-[#0C1B33]/8">
+                  <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
                     01
                   </span>
                   <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]">
@@ -1305,7 +1305,7 @@ function ReportDisplay({
                 return (
                   <div key={sectionIdx} className="mb-12">
                     <div className="flex items-baseline gap-4 mb-4">
-                      <span className="font-editorial text-[40px] leading-none text-[#0C1B33]/8">
+                      <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
                         {sectionNumber}
                       </span>
                       <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]">
@@ -1319,7 +1319,7 @@ function ReportDisplay({
                         {section.items.map((item, itemIdx) => (
                           <div
                             key={itemIdx}
-                            className="flex items-start justify-between gap-4 py-3.5 first:pt-0"
+                            className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4 py-3.5 first:pt-0"
                           >
                             {/* Left: color dot + label */}
                             <div className="flex items-start gap-3 flex-1 min-w-0">
@@ -1331,20 +1331,20 @@ function ReportDisplay({
                                 }}
                               />
                               <div className="min-w-0">
-                                <span className="text-[#0C1B33] text-[14px] font-semibold block">
+                                <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold block">
                                   {item.label}
                                 </span>
                                 {item.detail && (
-                                  <span className="text-[#0C1B33]/40 text-[12px] leading-relaxed block mt-0.5">
+                                  <span className="text-[#0C1B33]/40 text-[11px] sm:text-[12px] leading-relaxed block mt-0.5">
                                     {item.detail}
                                   </span>
                                 )}
                               </div>
                             </div>
 
-                            {/* Right: value */}
+                            {/* Right: value — below on mobile, beside on desktop */}
                             {item.value && (
-                              <span className="font-mono-bureau text-[11px] tracking-[0.05em] text-[#0C1B33]/60 flex-shrink-0 text-right pt-0.5">
+                              <span className="font-mono-bureau text-[10px] sm:text-[11px] tracking-[0.05em] text-[#0C1B33]/60 flex-shrink-0 sm:text-right pl-8 sm:pl-0 pt-0.5">
                                 {item.value}
                               </span>
                             )}
@@ -1361,7 +1361,7 @@ function ReportDisplay({
               report.recommendedActions.length > 0 && (
                 <div className="mb-12">
                   <div className="flex items-baseline gap-4 mb-4">
-                    <span className="font-editorial text-[40px] leading-none text-[#0C1B33]/8">
+                    <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
                       {String(
                         (report.sections?.length || 0) + sectionOffset + 1
                       ).padStart(2, "0")}
@@ -1381,14 +1381,14 @@ function ReportDisplay({
                       return (
                         <div key={actionIdx} className="flex items-start gap-4">
                           {/* Number */}
-                          <span className="font-editorial text-[22px] leading-none text-[#0C1B33]/15 flex-shrink-0 w-7 text-right pt-0.5">
+                          <span className="font-editorial text-[18px] sm:text-[22px] leading-none text-[#0C1B33]/15 flex-shrink-0 w-6 sm:w-7 text-right pt-0.5">
                             {actionIdx + 1}.
                           </span>
 
                           {/* Content */}
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-3 mb-1 flex-wrap">
-                              <span className="text-[#0C1B33] text-[14px] font-semibold">
+                            <div className="flex items-start sm:items-center gap-2 sm:gap-3 mb-1 flex-wrap">
+                              <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold">
                                 {action.label}
                               </span>
                               <span
