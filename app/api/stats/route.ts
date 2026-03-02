@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
-import { cached } from "@/lib/redis";
+import { memCached } from "@/lib/redis";
 
 /**
  * GET /api/stats
@@ -17,7 +17,7 @@ export async function GET(_request: NextRequest) {
   }
 
   try {
-    const data = await cached("stats:all", 3600, async () => {
+    const data = await memCached("stats:all", 86400, async () => {
       const rows = await sql`
         SELECT data FROM stats LIMIT 1
       `;
@@ -40,7 +40,7 @@ export async function GET(_request: NextRequest) {
 
     return NextResponse.json(data, {
       headers: {
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600",
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
       },
     });
   } catch (err) {

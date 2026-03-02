@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ZONE_COLORS, ZONE_KEYS } from "@/lib/constants";
+import { cachedFetch } from "@/lib/fetch-cache";
 
 interface ZoneStat {
   count: number;
@@ -28,21 +29,18 @@ export default function IncentiveGlance() {
       return;
     }
     try {
-      // Try API first, fallback to static
-      const res = await fetch("/api/stats");
-      if (res.ok) {
-        const data: StatsData = await res.json();
-        setStats(data);
-        setOpen(true);
-        return;
-      }
+      const data = await cachedFetch<StatsData>("/api/stats");
+      setStats(data);
+      setOpen(true);
+      return;
     } catch {
       // Fall through to static
     }
-    const res = await fetch("/data/stats.json");
-    const data: StatsData = await res.json();
-    setStats(data);
-    setOpen(true);
+    try {
+      const data = await cachedFetch<StatsData>("/data/stats.json");
+      setStats(data);
+      setOpen(true);
+    } catch { /* ignore */ }
   };
 
   /* Top 9 zones by coverage */

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { ZONE_KEYS } from "@/lib/constants";
-import { cached } from "@/lib/redis";
+import { memCached } from "@/lib/redis";
 
 const CDN_HEADERS = {
   "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400, immutable",
@@ -35,7 +35,7 @@ export async function GET(
 
   try {
     const cacheKey = `geojson:${key}`;
-    const fc = await cached(cacheKey, 604800, async () => {
+    const fc = await memCached(cacheKey, 2592000, async () => {
       const rows = await sql`
         SELECT feature_name, feature_properties,
                ST_AsGeoJSON(geom)::json AS geometry

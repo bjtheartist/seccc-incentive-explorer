@@ -14,7 +14,7 @@ import { cached, roundCoord } from "@/lib/redis";
  */
 
 const CDN_HEADERS = {
-  "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+  "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
 };
 
 const ZONING_TYPE_MAP: Record<string, string> = {
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
 
   const cacheKey = `zoning:${roundCoord(parseFloat(lat))}:${roundCoord(parseFloat(lon))}`;
 
-  const result = await cached<{ zoneClass: string | null; zoneType: string | null }>(cacheKey, 86400, async () => {
+  const result = await cached<{ zoneClass: string | null; zoneType: string | null }>(cacheKey, 604800, async () => {
     // Source 1: Chicago ArcGIS MapServer (primary, with retry)
     try {
       const arcgisUrl = new URL(

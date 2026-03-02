@@ -79,10 +79,10 @@ export const REPORT_TYPE_OPTIONS: ReportTypeOption[] = [
   },
   {
     id: "best-location",
-    title: "Find the Best Location",
+    title: "Evaluate a Site",
     subtitle:
-      "You are looking for the optimal place to locate your business based on incentives.",
-    icon: "🗺️",
+      "You have a specific property or site and want to assess its development feasibility and incentive potential.",
+    icon: "🏢",
   },
   {
     id: "program-explorer",
@@ -273,65 +273,96 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
     stateKey: "reportType", // review step reads multiple fields; stateKey is nominal
   },
 
-  // ── best-location flow ────────────────────────────────────────────
+  // ── best-location flow (Site Evaluation) ─────────────────────────
 
   {
-    id: "bl-industry",
-    title: "What industry or sector are you in?",
+    id: "bl-address",
+    title: "What is the site address?",
     subtitle:
-      "We will focus on locations with the strongest incentive match for your sector.",
+      "Enter the property address so we can pull parcel data, zoning, and incentive zone coverage.",
+    appliesTo: ["best-location"],
+    inputType: "address",
+    stateKey: "address",
+  },
+  {
+    id: "bl-project-type",
+    title: "What are you considering for this site?",
+    subtitle: "Select the development scenario you are evaluating.",
     appliesTo: ["best-location"],
     inputType: "single",
-    stateKey: "industry",
-    options: INDUSTRY_OPTIONS,
+    stateKey: "projectType",
+    options: [
+      {
+        id: "acquisition",
+        label: "Acquire & hold",
+        description:
+          "Purchasing the property for an existing or planned business operation.",
+      },
+      {
+        id: "rehab",
+        label: "Rehabilitation / renovation",
+        description:
+          "Renovating or adaptively reusing an existing structure.",
+      },
+      {
+        id: "new-construction",
+        label: "New construction",
+        description:
+          "Ground-up development on a vacant or cleared site.",
+      },
+      {
+        id: "mixed-use-conversion",
+        label: "Mixed-use conversion",
+        description:
+          "Converting a single-use property to mixed commercial/residential.",
+      },
+    ],
   },
   {
     id: "bl-priorities",
-    title: "What matters most to you?",
-    subtitle: "Select all the factors that are important for your ideal location.",
+    title: "What matters most for this site?",
+    subtitle: "Select the factors that will drive your go/no-go decision.",
     appliesTo: ["best-location"],
     inputType: "multi",
     stateKey: "locationPriorities",
     options: [
       {
-        id: "low-property-costs",
-        label: "Low property costs",
-        description: "Affordable lease rates or purchase prices.",
+        id: "tax-incentive-value",
+        label: "Tax incentive value",
+        description: "Maximizing tax credits, abatements, and assessment reductions.",
       },
       {
-        id: "transit-access",
-        label: "Transit access",
-        description: "Proximity to CTA, Metra, or major bus routes.",
+        id: "zoning-compatibility",
+        label: "Zoning compatibility",
+        description: "Whether current zoning supports the intended use without variance.",
       },
       {
-        id: "foot-traffic",
-        label: "Foot traffic",
-        description: "High pedestrian volume for customer-facing businesses.",
+        id: "property-condition",
+        label: "Property condition / age",
+        description: "Building age, deferred maintenance, or renovation scope.",
       },
       {
-        id: "skilled-workforce",
-        label: "Skilled workforce",
-        description: "Access to trained employees in your industry.",
+        id: "assessed-value",
+        label: "Assessed value / carrying cost",
+        description: "Current tax burden relative to development potential.",
       },
       {
-        id: "incentive-density",
-        label: "Incentive density",
-        description:
-          "Areas where multiple incentive zones overlap for maximum benefit stacking.",
+        id: "neighborhood-demand",
+        label: "Neighborhood demand",
+        description: "Income levels, population density, and market activity.",
       },
       {
-        id: "industrial-zoning",
-        label: "Industrial zoning",
-        description:
-          "Locations zoned for manufacturing, warehousing, or industrial use.",
+        id: "grant-eligibility",
+        label: "Grant eligibility",
+        description: "Access to TIF, SBIF, NOF, or other direct funding programs.",
       },
     ],
   },
   {
     id: "bl-budget",
-    title: "What is your budget range?",
+    title: "What is your estimated project budget?",
     subtitle:
-      "This helps us match you with programs that fit your investment level.",
+      "Helps us calculate potential incentive savings relative to your investment.",
     appliesTo: ["best-location"],
     inputType: "single",
     stateKey: "budgetRange",
@@ -341,7 +372,7 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
     id: "bl-review",
     title: "Review & Generate",
     subtitle:
-      "Confirm your selections below and generate your location recommendation report.",
+      "Confirm your selections below and generate your site feasibility report.",
     appliesTo: ["best-location"],
     inputType: "review",
     stateKey: "reportType",

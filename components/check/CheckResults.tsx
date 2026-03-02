@@ -7,8 +7,9 @@ import { runConfidenceEngine, computeTopActions, computeStackingNarrative } from
 import type { StackingNarrative } from "@/lib/confidence-engine";
 import { TopActionsStrip } from "./TopActionsStrip";
 import { ProgramResultCard } from "./ProgramResultCard";
-import type { Program, SurveyAnswers, ProgramCheckResult, TopAction, CityZoning, CensusData } from "@/lib/types";
+import type { Program, SurveyAnswers, ProgramCheckResult, TopAction, CityZoning, CensusData, ParcelData } from "@/lib/types";
 import { censusNarrative } from "@/lib/census-narrative";
+import { cachedFetch } from "@/lib/fetch-cache";
 
 interface CheckResultsProps {
   address: string;
@@ -39,6 +40,7 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
   const [topActions, setTopActions] = useState<TopAction[]>([]);
   const [cityZoning, setCityZoning] = useState<CityZoning | undefined>();
   const [census, setCensus] = useState<CensusData | undefined>();
+  const [parcel, setParcel] = useState<ParcelData | undefined>();
   const [copied, setCopied] = useState(false);
   const [showNotApplicable, setShowNotApplicable] = useState(false);
   const [stackingNarrative, setStackingNarrative] = useState<StackingNarrative | null>(null);
@@ -52,18 +54,16 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
     async function fetchResults() {
       try {
         // Fetch zone check, programs, census, and zoning in parallel
-        const [zoneRes, programsRes, censusRes, zoningRes] = await Promise.all([
-          fetch(`/api/zones/check?lat=${lat}&lon=${lon}`).then((r) =>
-            r.ok ? r.json() : []
-          ),
-          fetch("/api/programs")
-            .then((r) => (r.ok ? r.json() : Promise.reject()))
-            .catch(() => fetch("/data/programs.json").then((r) => r.json())),
-          fetch(`/api/census?lat=${lat}&lon=${lon}`)
-            .then((r) => (r.ok ? r.json() : null))
+        const [zoneRes, programsRes, censusRes, zoningRes, parcelRes] = await Promise.all([
+          cachedFetch<ZoneCheckResult[]>(`/api/zones/check?lat=${lat}&lon=${lon}`)
+            .catch(() => [] as ZoneCheckResult[]),
+          cachedFetch<Program[]>("/api/programs")
+            .catch(() => cachedFetch<Program[]>("/data/programs.json")),
+          cachedFetch<CensusData>(`/api/census?lat=${lat}&lon=${lon}`)
             .catch(() => null),
-          fetch(`/api/zoning?lat=${lat}&lon=${lon}`)
-            .then((r) => (r.ok ? r.json() : null))
+          cachedFetch<CityZoning>(`/api/zoning?lat=${lat}&lon=${lon}`)
+            .catch(() => null),
+          cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`)
             .catch(() => null),
         ]);
 
@@ -82,9 +82,10 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
           count++;
         }
 
-        // Run confidence engine
+        // Run confidence engine (with parcel data for scoring boosts)
         const allPrograms: Program[] = programsRes;
-        const results = runConfidenceEngine(allPrograms, zoneMap, nameMap, survey);
+        const parcelData = parcelRes ?? undefined;
+        const results = runConfidenceEngine(allPrograms, zoneMap, nameMap, survey, parcelData);
         const actions = computeTopActions(results);
 
         // Compute stacking narrative
@@ -98,6 +99,7 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
         setStackingNarrative(narrative);
         if (censusRes) setCensus(censusRes);
         if (zoningRes?.zoneClass) setCityZoning(zoningRes);
+        if (parcelRes) setParcel(parcelRes);
       } catch (err) {
         console.error("CheckResults fetch error:", err);
       } finally {
@@ -285,6 +287,116 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
               {notApplicablePrograms.map((result) => (
                 <ProgramResultCard key={result.programId} result={result} />
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Property Details */}
+      {parcel && parcel.pin && (
+        <div className="mt-8 space-y-4">
+          <h4 className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/30">
+            Property Details
+          </h4>
+
+          <div className="grid gap-3 sm:grid-cols-2">
+            {/* PIN */}
+            <div className="p-4 bg-[#0C1B33]/[0.02] border border-[#0C1B33]/5 rounded-lg">
+              <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 block mb-2">
+                Property PIN
+              </span>
+              <a
+                href={`https://www.cookcountyassessoril.gov/pin/${parcel.pin}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-[#2563EB] hover:underline font-mono-bureau"
+              >
+                {parcel.pin}
+              </a>
+            </div>
+
+            {/* Building Class */}
+            <div className="p-4 bg-[#0C1B33]/[0.02] border border-[#0C1B33]/5 rounded-lg">
+              <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 block mb-2">
+                Building Class
+              </span>
+              <p className="text-sm font-medium text-[#0C1B33]/70 font-mono-bureau">
+                {parcel.classCode}
+              </p>
+              <p className="text-[11px] text-[#0C1B33]/35 mt-1">
+                {parcel.classDescription}
+              </p>
+            </div>
+
+            {/* Tax Code + Township */}
+            {(parcel.taxCode || parcel.township) && (
+              <div className="p-4 bg-[#0C1B33]/[0.02] border border-[#0C1B33]/5 rounded-lg">
+                <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 block mb-2">
+                  Tax Code / Township
+                </span>
+                <p className="text-sm font-medium text-[#0C1B33]/70 font-mono-bureau">
+                  {[parcel.taxCode, parcel.township].filter(Boolean).join(" · ")}
+                </p>
+              </div>
+            )}
+
+            {/* Lot / Building Size */}
+            {(parcel.landSqft || parcel.bldgSqft) && (
+              <div className="p-4 bg-[#0C1B33]/[0.02] border border-[#0C1B33]/5 rounded-lg">
+                <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 block mb-2">
+                  Lot / Building Size
+                </span>
+                <p className="text-sm font-medium text-[#0C1B33]/70 font-mono-bureau">
+                  {parcel.landSqft ? `${parcel.landSqft.toLocaleString()} sq ft lot` : ""}
+                  {parcel.landSqft && parcel.bldgSqft ? " · " : ""}
+                  {parcel.bldgSqft ? `${parcel.bldgSqft.toLocaleString()} sq ft bldg` : ""}
+                </p>
+                {parcel.bldgAge != null && (
+                  <p className="text-[11px] text-[#0C1B33]/35 mt-1">
+                    Building age: {parcel.bldgAge} years
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Assessed Values */}
+            {parcel.totalValue && (
+              <div className="p-4 bg-[#0C1B33]/[0.02] border border-[#0C1B33]/5 rounded-lg sm:col-span-2">
+                <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 block mb-2">
+                  Assessed Value
+                </span>
+                <p className="text-sm font-medium text-[#0C1B33]/70 font-mono-bureau">
+                  {parcel.totalValue} total
+                </p>
+                {(parcel.landValue || parcel.bldgValue) && (
+                  <p className="text-[11px] text-[#0C1B33]/35 mt-1">
+                    {parcel.landValue ? `Land: ${parcel.landValue}` : ""}
+                    {parcel.landValue && parcel.bldgValue ? " · " : ""}
+                    {parcel.bldgValue ? `Building: ${parcel.bldgValue}` : ""}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Property type badges */}
+          {(parcel.isCommercial || parcel.isIndustrial || parcel.isVacant) && (
+            <div className="flex flex-wrap gap-1.5">
+              {parcel.isCommercial && (
+                <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-mono-bureau tracking-[0.05em] bg-blue-50 border border-blue-200/50 text-blue-700 rounded-sm">
+                  Commercial
+                </span>
+              )}
+              {parcel.isIndustrial && (
+                <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-mono-bureau tracking-[0.05em] bg-amber-50 border border-amber-200/50 text-amber-700 rounded-sm">
+                  Industrial
+                </span>
+              )}
+              {parcel.isVacant && (
+                <span className="inline-flex items-center px-2 py-0.5 text-[9px] font-mono-bureau tracking-[0.05em] bg-red-50 border border-red-200/50 text-red-700 rounded-sm">
+                  Vacant
+                </span>
+              )}
             </div>
           )}
         </div>

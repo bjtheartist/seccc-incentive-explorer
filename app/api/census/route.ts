@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
-import { cached, roundCoord } from "@/lib/redis";
+import { memCached, roundCoord } from "@/lib/redis";
 
 /**
  * GET /api/census?lat=&lon=
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const rLon = roundCoord(parseFloat(lon));
     const cacheKey = `census:${rLat}:${rLon}`;
 
-    const data = await cached(cacheKey, 604800, async () => {
+    const data = await memCached(cacheKey, 2592000, async () => {
       const rows = await sql`
         SELECT tract_id, median_income, median_home_value,
                population, walk_score
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(data, {
       headers: {
         "Cache-Control":
-          "public, s-maxage=86400, stale-while-revalidate=3600",
+          "public, s-maxage=2592000, stale-while-revalidate=86400",
       },
     });
   } catch (err) {

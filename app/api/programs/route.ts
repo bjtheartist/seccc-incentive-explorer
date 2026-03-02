@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { ProgramSchema, safeParseArray } from "@/lib/schemas";
-import { cached } from "@/lib/redis";
+import { memCached } from "@/lib/redis";
 
 /**
  * GET /api/programs
@@ -19,7 +19,7 @@ export async function GET() {
   }
 
   try {
-    const validated = await cached("programs:all", 3600, async () => {
+    const validated = await memCached("programs:all", 86400, async () => {
       const rows = await sql`
         SELECT
           id, name, level, zone_key, summary, who_qualifies,
@@ -61,7 +61,7 @@ export async function GET() {
 
     return NextResponse.json(validated, {
       headers: {
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600",
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
       },
     });
   } catch (err) {

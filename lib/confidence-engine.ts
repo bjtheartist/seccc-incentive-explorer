@@ -6,6 +6,7 @@ import type {
   TopAction,
   ProgramContact,
   ExecutiveSummary,
+  ParcelData,
 } from "./types";
 
 /**
@@ -147,7 +148,8 @@ function computeConfidence(
   program: Program,
   zones: Record<string, boolean>,
   zoneNames: Record<string, string>,
-  survey?: SurveyAnswers
+  survey?: SurveyAnswers,
+  parcel?: ParcelData
 ): ProgramCheckResult {
   const locationMatch = checkLocationMatch(program, zones);
   const locationRequired = (program.eligibilityRules || []).some(
@@ -199,7 +201,22 @@ function computeConfidence(
     staleNote = " (data not recently verified)";
   }
 
-  const whyOneLine = generateWhyOneLine(program, confidence, zones, zoneNames) + staleNote;
+  let whyOneLine = generateWhyOneLine(program, confidence, zones, zoneNames) + staleNote;
+
+  // Parcel-based scoring boosts (additive)
+  if (parcel) {
+    if (program.id === "class7a" && parcel.isCommercial && confidence === "worth_exploring") {
+      confidence = "may_qualify";
+      whyOneLine = `Property class ${parcel.classCode} (${parcel.classDescription}) may be eligible for Class 7a assessment reduction.`;
+    }
+    if (program.id === "landBank" && parcel.isVacant && confidence === "worth_exploring") {
+      confidence = "may_qualify";
+      whyOneLine = "Parcel classified as vacant land — potential Land Bank acquisition candidate.";
+    }
+    if ((program.id === "tif" || program.id === "sbif") && parcel.totalValue) {
+      whyOneLine += ` Assessed value: ${parcel.totalValue}.`;
+    }
+  }
 
   return {
     programId: program.id,
@@ -230,10 +247,11 @@ export function runConfidenceEngine(
   programs: Program[],
   zones: Record<string, boolean>,
   zoneNames: Record<string, string>,
-  survey?: SurveyAnswers
+  survey?: SurveyAnswers,
+  parcel?: ParcelData
 ): ProgramCheckResult[] {
   return programs
-    .map((p) => computeConfidence(p, zones, zoneNames, survey))
+    .map((p) => computeConfidence(p, zones, zoneNames, survey, parcel))
     .sort((a, b) => CONFIDENCE_ORDER[a.confidence] - CONFIDENCE_ORDER[b.confidence]);
 }
 

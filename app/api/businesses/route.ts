@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
     const rLon = lon ? roundCoord(parseFloat(lon)) : "";
     const cacheKey = `businesses:${search || ""}:${rLat}:${rLon}:${radius}`;
 
-    const businesses = await cached(cacheKey, 3600, async () => {
+    const businesses = await cached(cacheKey, 43200, async () => {
       let rows;
 
       if (search) {
@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(businesses, {
       headers: {
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600",
+        "Cache-Control": "public, s-maxage=43200, stale-while-revalidate=3600",
       },
     });
   } catch (err) {

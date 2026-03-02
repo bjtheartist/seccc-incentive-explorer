@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
-import { cached, roundCoord } from "@/lib/redis";
+import { memCached, roundCoord } from "@/lib/redis";
 
 /**
  * GET /api/zones/check?lat=&lon=
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     const rLon = roundCoord(parseFloat(lon));
     const cacheKey = `zones:check:${rLat}:${rLon}`;
 
-    const results = await cached(cacheKey, 86400, async () => {
+    const results = await memCached(cacheKey, 604800, async () => {
       const rows = await sql`
         SELECT zone_key, feature_name
         FROM zones
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(results, {
       headers: {
         "Cache-Control":
-          "public, s-maxage=86400, stale-while-revalidate=3600",
+          "public, s-maxage=604800, stale-while-revalidate=86400",
       },
     });
   } catch (err) {

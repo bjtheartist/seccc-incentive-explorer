@@ -1,4 +1,5 @@
-import type { Program, ExecutiveSummary } from "./types";
+import type { Program, ExecutiveSummary, ParcelData } from "./types";
+import { isClass7aEligible } from "./parcel-classes";
 import { ZONE_LABELS, ZONE_COLORS } from "./constants";
 import { INDUSTRIES, getIndustryById } from "./industries-data";
 import { generateExecutiveSummary } from "./confidence-engine";
@@ -501,177 +502,332 @@ function generateLocationIncentives(
 function generateBestLocation(
   state: WizardState,
   programs: Program[],
+  zones?: Record<string, boolean>,
+  zoneNames?: Record<string, string>,
+  parcel?: ParcelData,
 ): GeneratedReport {
-  const industryId = state.industry;
-  const industryName = getIndustryName(industryId);
-  const industry = getIndustryById(industryId);
+  const projectType = state.projectType || "acquisition";
+  const projectLabels: Record<string, string> = {
+    "acquisition": "Acquisition & Hold",
+    "rehab": "Rehabilitation / Renovation",
+    "new-construction": "New Construction",
+    "mixed-use-conversion": "Mixed-Use Conversion",
+  };
+  const projectLabel = projectLabels[projectType] || projectType;
+  const address = state.address || "Selected Site";
 
-  // Determine which programs are most relevant for this industry
-  const relevantPrograms = industry
-    ? programs.filter((p) => industry.topPrograms.includes(p.id) || industry.topPrograms.includes(p.zoneKey))
+  const activeZones = zones
+    ? Object.entries(zones).filter(([, v]) => v).map(([k]) => k)
+    : [];
+  const zoneCount = activeZones.length;
+
+  // Filter programs to those available at this site
+  const sitePrograms = zones
+    ? programs.filter((p) => !p.zoneKey || zones[p.zoneKey])
     : programs;
-
-  // Identify zones that unlock the most relevant programs
-  const zoneScores: Record<string, { programs: Program[]; score: number }> = {};
-  for (const p of relevantPrograms) {
-    const key = p.zoneKey || "countywide";
-    if (!zoneScores[key]) zoneScores[key] = { programs: [], score: 0 };
-    zoneScores[key].programs.push(p);
-    zoneScores[key].score += 1;
-    // Bonus score for programs with explicit benefit ranges
-    if (p.benefitRange) zoneScores[key].score += 0.5;
-  }
-
-  const rankedZones = Object.entries(zoneScores)
-    .filter(([key]) => key !== "countywide")
-    .sort(([, a], [, b]) => b.score - a.score);
 
   const sections: ReportSection[] = [];
 
-  // Section 1: Top Incentive Zones for this industry
-  sections.push({
-    title: `Top Incentive Zones for ${industryName}`,
-    items: rankedZones.slice(0, 6).map(([zoneKey, data]) => ({
-      label: ZONE_LABELS[zoneKey] || zoneKey,
-      value: `Unlocks ${data.programs.length} program${data.programs.length !== 1 ? "s" : ""}`,
-      detail: data.programs.map((p) => `${p.name}${p.benefitRange ? ` (${p.benefitRange})` : ""}`).join("; "),
-      color: ZONE_COLORS[zoneKey] || "#2563EB",
-    })),
-  });
-
-  // Section 2: Priority Factors Analysis
-  const priorities = state.locationPriorities || [];
-  const priorityMapping: Record<string, { zone: string; detail: string }> = {
-    "tax-savings": {
-      zone: "Enterprise Zone + Opportunity Zone overlap",
-      detail:
-        "Areas with both Enterprise Zone and Opportunity Zone designation offer stacked property tax reductions, sales tax exemptions, and capital gains benefits.",
-    },
-    "workforce-access": {
-      zone: "High Unemployment Zones",
-      detail:
-        "Locations in high-unemployment census tracts qualify for WOTC credits and workforce training subsidies that offset hiring costs.",
-    },
-    "property-cost": {
-      zone: "Chicago Land Bank areas",
-      detail:
-        "City-owned vacant lots and buildings available at below-market prices through the Chicago Land Bank Authority.",
-    },
-    "foot-traffic": {
-      zone: "Special Service Areas (SSAs)",
-      detail:
-        "SSA districts invest in streetscaping, marketing, and safety improvements that drive foot traffic to local businesses.",
-    },
-    "renovation-support": {
-      zone: "TIF Districts + SBIF eligible areas",
-      detail:
-        "TIF and SBIF provide direct grants and reimbursements for building rehabilitation and storefront improvements.",
-    },
-    "transit-access": {
-      zone: "TOD-eligible corridors",
-      detail:
-        "Transit-oriented development zones near CTA stations often overlap with TIF districts and Opportunity Zones.",
-    },
-    "growth-potential": {
-      zone: "Triple Benefit Zones",
-      detail:
-        "Areas qualifying for TIF, Enterprise Zone, and Opportunity Zone benefits simultaneously offer the highest stacking potential.",
-    },
-  };
-
-  if (priorities.length > 0) {
+  // Section 1: Property Profile (from parcel data)
+  if (parcel && parcel.pin) {
+    const propertyItems: ReportItem[] = [
+      {
+        label: "Property PIN",
+        value: parcel.pin,
+        detail: `Cook County Assessor record — cookcountyassessoril.gov/pin/${parcel.pin}`,
+        url: `https://www.cookcountyassessoril.gov/pin/${parcel.pin}`,
+        color: "#7C3AED",
+      },
+      {
+        label: "Building Classification",
+        value: `${parcel.classCode} — ${parcel.classDescription}`,
+        detail: parcel.isVacant
+          ? "Vacant land — eligible for new construction or Land Bank programs"
+          : parcel.isCommercial
+            ? "Commercial property — may qualify for Class 7a assessment reduction"
+            : parcel.isIndustrial
+              ? "Industrial property — eligible for industrial development incentives"
+              : "Residential property classification",
+        color: parcel.isCommercial ? "#2563EB" : parcel.isIndustrial ? "#D97706" : "#0C1B33",
+      },
+    ];
+    if (parcel.totalValue) {
+      propertyItems.push({
+        label: "Assessed Value",
+        value: parcel.totalValue,
+        detail: [
+          parcel.landValue && `Land: ${parcel.landValue}`,
+          parcel.bldgValue && `Building: ${parcel.bldgValue}`,
+        ].filter(Boolean).join(" · "),
+        color: "#059669",
+      });
+    }
+    if (parcel.landSqft || parcel.bldgSqft) {
+      propertyItems.push({
+        label: "Site Dimensions",
+        value: [
+          parcel.landSqft && `${parcel.landSqft.toLocaleString()} sq ft lot`,
+          parcel.bldgSqft && `${parcel.bldgSqft.toLocaleString()} sq ft bldg`,
+        ].filter(Boolean).join(" · "),
+        detail: parcel.bldgAge != null ? `Building age: ${parcel.bldgAge} years` : undefined,
+        color: "#0C1B33",
+      });
+    }
+    if (parcel.taxCode || parcel.township) {
+      propertyItems.push({
+        label: "Tax Code / Township",
+        value: [parcel.taxCode, parcel.township].filter(Boolean).join(" · "),
+        color: "#0C1B33",
+      });
+    }
     sections.push({
-      title: "Priority Factors Analysis",
-      items: priorities.map((p) => {
-        const mapping = priorityMapping[p];
+      title: "Property Profile",
+      items: propertyItems,
+    });
+  }
+
+  // Section 2: Incentive Zone Coverage
+  if (zoneCount > 0) {
+    sections.push({
+      title: `Incentive Zone Coverage (${zoneCount} zones)`,
+      items: activeZones.map((key) => {
+        const matchingPrograms = programs.filter((p) => p.zoneKey === key);
         return {
-          label: p.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()),
-          value: mapping?.zone || "Multiple zones applicable",
-          detail: mapping?.detail || "Consider locations that overlap with relevant incentive zones.",
+          label: ZONE_LABELS[key] || key,
+          value: zoneNames?.[key] || (matchingPrograms.length > 0
+            ? `${matchingPrograms.length} program${matchingPrograms.length !== 1 ? "s" : ""}`
+            : "Active"),
+          detail: matchingPrograms.map((p) =>
+            `${p.name}${p.benefitRange ? ` (${p.benefitRange})` : ""}`
+          ).join("; ") || undefined,
+          color: ZONE_COLORS[key] || "#2563EB",
         };
       }),
     });
   }
 
-  // Section 3: Recommended Neighborhoods
-  // These are realistic South/Southeast Chicago neighborhoods that tend to overlap with incentive zones
-  const neighborhoods = [
-    {
-      label: "South Chicago (83rd-93rd & Commercial)",
-      value: "High stacking potential — TIF + Enterprise + Opportunity Zone",
-      detail:
-        "Multiple overlapping zones, active SSA, proximity to steel corridor redevelopment. Strong fit for manufacturing, retail, and services.",
-    },
-    {
-      label: "Pullman (111th & Cottage Grove)",
-      value: "Historic district + Enterprise Zone + TIF",
-      detail:
-        "National historic landmark district with federal and state historic tax credits, plus Enterprise Zone exemptions.",
-    },
-    {
-      label: "Avalon Park / Calumet Heights",
-      value: "SSA #50 + TIF + Opportunity Zone",
-      detail:
-        "Active Special Service Area with business improvement investments, combined with TIF and OZ benefits.",
-    },
-    {
-      label: "East Side / Hegewisch",
-      value: "Industrial corridor + Enterprise Zone",
-      detail:
-        "Industrial corridor protections combined with Enterprise Zone benefits. Ideal for manufacturing, logistics, and trades.",
-    },
-    {
-      label: "Roseland (Michigan Ave corridor)",
-      value: "Micro Market Recovery + TIF + High Unemployment",
-      detail:
-        "Storefront improvement grants plus TIF funding. High-unemployment designation unlocks workforce credits.",
-    },
-  ];
+  // Section 3: Feasibility Assessment by scenario
+  const feasibilityItems: ReportItem[] = [];
+
+  if (projectType === "rehab" || projectType === "mixed-use-conversion") {
+    if (parcel?.bldgAge != null && parcel.bldgAge >= 50 && activeZones.includes("nrhpDistricts")) {
+      feasibilityItems.push({
+        label: "Historic Tax Credit potential",
+        value: "Strong — 50+ year building in historic district",
+        detail: "Building age and National Register district status may qualify for 20% Federal Historic Tax Credit on certified rehabilitation.",
+        color: "#059669",
+      });
+    } else if (parcel?.bldgAge != null && parcel.bldgAge >= 50) {
+      feasibilityItems.push({
+        label: "Historic Tax Credit potential",
+        value: "Possible — building is 50+ years old",
+        detail: "Building age may qualify for historic designation. Check if individual listing or district expansion is feasible.",
+        color: "#D97706",
+      });
+    }
+    if (activeZones.includes("tif") || activeZones.includes("sbif")) {
+      feasibilityItems.push({
+        label: "Renovation funding",
+        value: "TIF/SBIF eligible",
+        detail: "This site is in a TIF district and/or SBIF-eligible area — rehabilitation costs may be partially reimbursed (SBIF: up to 50%, max $150K).",
+        color: "#059669",
+      });
+    }
+  }
+
+  if (projectType === "new-construction" || projectType === "acquisition") {
+    if (parcel?.isVacant) {
+      feasibilityItems.push({
+        label: "Vacant land status",
+        value: "Confirmed vacant parcel",
+        detail: "Parcel classified as vacant land. May qualify for Land Bank acquisition or reduced-price city sale programs.",
+        color: "#2563EB",
+      });
+    }
+    if (parcel?.isCommercial && isClass7aEligible(parcel.classCode)) {
+      feasibilityItems.push({
+        label: "Class 7a eligibility",
+        value: "Potentially eligible",
+        detail: `Property class ${parcel.classCode} may qualify for Class 7a assessment reduction (10% of market value for 12 years for commercial/industrial rehab).`,
+        color: "#059669",
+      });
+    }
+  }
+
+  if (activeZones.includes("federalOZ")) {
+    feasibilityItems.push({
+      label: "Opportunity Zone",
+      value: "Active Federal OZ",
+      detail: "Qualified Opportunity Fund investment at this site can defer and reduce capital gains taxes. 10-year hold eliminates gains on appreciation.",
+      color: "#059669",
+    });
+  }
+  if (activeZones.includes("enterprise")) {
+    feasibilityItems.push({
+      label: "Enterprise Zone",
+      value: "Active",
+      detail: "Sales tax exemption on building materials, utility tax exemption, and investment tax credits available for this site.",
+      color: "#059669",
+    });
+  }
+
+  if (feasibilityItems.length === 0) {
+    feasibilityItems.push({
+      label: "Baseline feasibility",
+      value: `${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} active`,
+      detail: `This site has ${zoneCount > 0 ? "incentive coverage that can offset project costs" : "limited zone coverage — county-wide programs may still apply"}.`,
+      color: zoneCount > 0 ? "#2563EB" : "#D97706",
+    });
+  }
 
   sections.push({
-    title: "Recommended Neighborhoods",
-    items: neighborhoods,
+    title: `${projectLabel} Feasibility`,
+    items: feasibilityItems,
   });
 
+  // Section 4: Available Programs at this site
+  if (sitePrograms.length > 0) {
+    sections.push({
+      title: `Programs Available at This Site (${sitePrograms.length})`,
+      items: sitePrograms.slice(0, 8).map((p) => ({
+        label: p.name,
+        value: p.benefitRange || "Contact for details",
+        detail: p.summary,
+        programId: p.id,
+        level: p.level,
+        color: ZONE_COLORS[p.zoneKey] || "#2563EB",
+      })),
+    });
+  }
+
+  // Section 5: Decision Factors
+  const priorities = state.locationPriorities || [];
+  if (priorities.length > 0) {
+    const priorityAssessments: Record<string, (p: ParcelData | undefined, z: string[]) => ReportItem> = {
+      "tax-incentive-value": (p, z) => ({
+        label: "Tax Incentive Value",
+        value: z.length >= 3 ? "High" : z.length >= 1 ? "Moderate" : "Limited",
+        detail: `${z.length} incentive zone${z.length !== 1 ? "s" : ""} at this site.${p?.isCommercial ? " Commercial classification may unlock additional property tax incentives." : ""}`,
+        color: z.length >= 3 ? "#059669" : z.length >= 1 ? "#D97706" : "#EF4444",
+      }),
+      "zoning-compatibility": (_p, _z) => ({
+        label: "Zoning Compatibility",
+        value: "Check city zoning",
+        detail: "Verify that the current city zoning classification supports your intended use. See Location Context section for the zoning code.",
+        color: "#2563EB",
+      }),
+      "property-condition": (p) => ({
+        label: "Property Condition",
+        value: p?.bldgAge != null ? `${p.bldgAge}-year-old building` : "No building data",
+        detail: p?.bldgAge != null
+          ? p.bldgAge >= 50
+            ? "Older structure — factor in renovation costs, but may qualify for historic tax credits."
+            : p.bldgAge >= 20
+              ? "Moderate age — assess mechanical systems and envelope condition."
+              : "Relatively new construction — lower renovation risk."
+          : "Building age not available in parcel records. Inspect the site to assess condition.",
+        color: p?.bldgAge != null ? (p.bldgAge >= 50 ? "#D97706" : "#059669") : "#0C1B33",
+      }),
+      "assessed-value": (p) => ({
+        label: "Assessed Value / Carrying Cost",
+        value: p?.totalValue || "Not available",
+        detail: p?.totalValue
+          ? `Current assessed value sets the baseline property tax burden. ${p.landValue ? `Land portion: ${p.landValue}.` : ""}`
+          : "Assessed value not available in parcel records.",
+        color: p?.totalValue ? "#059669" : "#0C1B33",
+      }),
+      "neighborhood-demand": () => ({
+        label: "Neighborhood Demand",
+        value: "See census data",
+        detail: "Review the median income, home values, and population data in the Location Context section to gauge local market demand.",
+        color: "#2563EB",
+      }),
+      "grant-eligibility": (_p, z) => ({
+        label: "Grant Eligibility",
+        value: (z.includes("tif") || z.includes("sbif"))
+          ? "TIF/SBIF eligible"
+          : z.includes("microMarketRecovery")
+            ? "Micro Market eligible"
+            : "Limited direct grants",
+        detail: (z.includes("tif") || z.includes("sbif"))
+          ? "This site qualifies for TIF funding and/or SBIF grant reimbursement for eligible improvements."
+          : "No direct grant programs identified at this location. Consider county-wide programs.",
+        color: (z.includes("tif") || z.includes("sbif")) ? "#059669" : "#D97706",
+      }),
+    };
+
+    sections.push({
+      title: "Decision Factors",
+      items: priorities.map((p) => {
+        const assessor = priorityAssessments[p];
+        if (assessor) return assessor(parcel, activeZones);
+        return {
+          label: p.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase()),
+          value: "Evaluate on-site",
+          detail: "This factor requires on-site inspection or additional research.",
+        };
+      }),
+    });
+  }
+
   // Recommended actions
-  const recommendedActions: GeneratedReport["recommendedActions"] = [
-    {
-      label: "Tour top-ranked zones in person",
-      description:
-        "Visit the recommended neighborhoods to assess commercial space availability, foot traffic, and neighborhood character.",
+  const recommendedActions: GeneratedReport["recommendedActions"] = [];
+  if (parcel?.pin) {
+    recommendedActions.push({
+      label: "Review full Assessor record",
+      description: `Look up PIN ${parcel.pin} on the Cook County Assessor website for tax history, exemptions, and appeal status.`,
       priority: "high",
-    },
-    {
-      label: "Check zone boundaries for specific addresses",
-      description:
-        "Use the Chicago Site Incentive Map map to verify that a specific property falls within your target incentive zones.",
+    });
+  }
+  if (zoneCount > 0) {
+    recommendedActions.push({
+      label: "Confirm zone boundaries on the map",
+      description: "Use the Chicago Incentive Explorer map to visually verify that the parcel falls within the listed incentive zones.",
       priority: "high",
-    },
-    {
-      label: "Compare lease costs across zones",
-      description:
-        "Request commercial real estate listings in each recommended area to compare baseline costs before applying incentive savings.",
-      priority: "medium",
-    },
-    {
-      label: "Book free business advising",
-      description:
-        "Schedule a session with SECCC or Small Business Source to discuss location strategy and program eligibility.",
-      priority: "medium",
-    },
-  ];
+    });
+  }
+  if (projectType === "rehab" && parcel?.bldgAge != null && parcel.bldgAge >= 50) {
+    recommendedActions.push({
+      label: "Check historic designation eligibility",
+      description: "Contact the Illinois SHPO to determine if the building qualifies for the National Register and federal Historic Tax Credit.",
+      priority: "high",
+    });
+  }
+  recommendedActions.push({
+    label: "Schedule a site visit",
+    description: "Walk the property and surrounding blocks to assess physical condition, access, visibility, and neighborhood character.",
+    priority: "medium",
+  });
+  recommendedActions.push({
+    label: "Book free business advising",
+    description: "Schedule a session with SECCC or Small Business Source to review this site evaluation and discuss next steps.",
+    priority: "medium",
+  });
+
+  // Summary
+  const summaryParts: string[] = [];
+  if (parcel?.pin) {
+    summaryParts.push(`PIN ${parcel.pin} (${parcel.classDescription})`);
+  }
+  summaryParts.push(`${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} active at this site`);
+  summaryParts.push(`${sitePrograms.length} program${sitePrograms.length !== 1 ? "s" : ""} available`);
+  if (parcel?.totalValue) {
+    summaryParts.push(`assessed at ${parcel.totalValue}`);
+  }
 
   return {
-    title: `Best Location Report for ${industryName}`,
-    subtitle: `Zone analysis and neighborhood recommendations`,
+    title: `Site Evaluation — ${address}`,
+    subtitle: `${projectLabel} feasibility analysis`,
     reportType: "best-location",
     generatedAt: new Date().toISOString(),
-    summary: `For a ${industryName.toLowerCase()} business, we identified ${rankedZones.length} incentive zone type${rankedZones.length !== 1 ? "s" : ""} that offer relevant programs. The highest-value areas combine multiple overlapping zones for maximum benefit stacking. ${priorities.length > 0 ? `Your priorities (${priorities.slice(0, 3).map((p) => p.replace(/-/g, " ")).join(", ")}) align best with the neighborhoods listed below.` : "Review the recommended neighborhoods below for areas with the strongest incentive coverage."}`,
+    summary: `${summaryParts.join(". ")}. ${projectType === "rehab" && parcel?.bldgAge != null && parcel.bldgAge >= 50 ? "The building's age may unlock historic tax credits. " : ""}${zoneCount >= 3 ? "Strong incentive density at this location offers significant cost-offset potential." : zoneCount >= 1 ? "Moderate incentive coverage — review available programs for applicable benefits." : "Limited incentive zone coverage — county-wide programs may still apply."}`,
     sections,
     recommendedActions,
     metadata: {
-      industry: industryName,
-      projectType: state.projectType,
+      address: state.address,
+      lat: state.lat ?? undefined,
+      lon: state.lon ?? undefined,
+      projectType,
     },
   };
 }
@@ -1036,6 +1192,7 @@ export function generateReportData(
   zoneNames?: Record<string, string>,
   census?: ReportCensusData,
   cityZoning?: ReportZoningData,
+  parcel?: ParcelData,
 ): GeneratedReport {
   const reportType = state.reportType || "location-incentives";
 
@@ -1047,7 +1204,7 @@ export function generateReportData(
       break;
 
     case "best-location":
-      report = generateBestLocation(state, programs);
+      report = generateBestLocation(state, programs, zones, zoneNames, parcel);
       break;
 
     case "program-explorer":
@@ -1065,7 +1222,7 @@ export function generateReportData(
   }
 
   // Attach census + zoning data to metadata for address-based reports
-  if (reportType === "location-incentives" || reportType === "developer-analysis") {
+  if (reportType === "location-incentives" || reportType === "developer-analysis" || reportType === "best-location") {
     if (census?.medianIncome != null) report.metadata.medianIncome = census.medianIncome;
     if (census?.medianHomeValue != null) report.metadata.medianHomeValue = census.medianHomeValue;
     if (cityZoning?.zoneClass) report.metadata.zoneClass = cityZoning.zoneClass;
@@ -1131,16 +1288,105 @@ export function generateReportData(
       });
     }
 
+    // Parcel data items
+    if (parcel && parcel.pin) {
+      contextItems.push({
+        label: "Property PIN",
+        value: parcel.pin,
+        detail: `View full record at cookcountyassessoril.gov/pin/${parcel.pin}`,
+        url: `https://www.cookcountyassessoril.gov/pin/${parcel.pin}`,
+        color: "#7C3AED",
+      });
+      contextItems.push({
+        label: "Building Classification",
+        value: `${parcel.classCode} — ${parcel.classDescription}`,
+        detail: isClass7aEligible(parcel.classCode)
+          ? "This property class may be eligible for Class 7a/7b assessment reduction"
+          : "Standard property classification for tax assessment purposes",
+        color: parcel.isCommercial ? "#2563EB" : parcel.isIndustrial ? "#D97706" : "#0C1B33",
+      });
+      if (parcel.totalValue) {
+        contextItems.push({
+          label: "Assessed Value",
+          value: parcel.totalValue,
+          detail: [
+            parcel.landValue ? `Land: ${parcel.landValue}` : null,
+            parcel.bldgValue ? `Building: ${parcel.bldgValue}` : null,
+          ].filter(Boolean).join(" · ") || "Cook County Assessor certified value",
+          color: "#059669",
+        });
+      }
+      if (parcel.landSqft || parcel.bldgSqft) {
+        contextItems.push({
+          label: "Lot / Building Size",
+          value: [
+            parcel.landSqft ? `${parcel.landSqft.toLocaleString()} sq ft lot` : null,
+            parcel.bldgSqft ? `${parcel.bldgSqft.toLocaleString()} sq ft bldg` : null,
+          ].filter(Boolean).join(" · "),
+          detail: parcel.bldgAge != null ? `Building age: ${parcel.bldgAge} years` : undefined,
+          color: "#0C1B33",
+        });
+      }
+    }
+
     if (contextItems.length > 0) {
       report.sections.unshift({
         title: "Location Context",
         items: contextItems,
       });
     }
+
+    // For developer-analysis, add a dedicated Property Analysis subsection
+    if (reportType === "developer-analysis" && parcel && parcel.pin) {
+      const propertyItems: ReportItem[] = [
+        {
+          label: "Property PIN",
+          value: parcel.pin,
+          url: `https://www.cookcountyassessoril.gov/pin/${parcel.pin}`,
+          color: "#7C3AED",
+        },
+        {
+          label: "Building Class",
+          value: `${parcel.classCode} — ${parcel.classDescription}`,
+          detail: parcel.isCommercial ? "Commercial property" : parcel.isIndustrial ? "Industrial property" : parcel.isVacant ? "Vacant land" : "Residential property",
+          color: "#2563EB",
+        },
+      ];
+      if (parcel.totalValue) {
+        propertyItems.push({
+          label: "Total Assessed Value",
+          value: parcel.totalValue,
+          detail: [parcel.landValue && `Land: ${parcel.landValue}`, parcel.bldgValue && `Building: ${parcel.bldgValue}`].filter(Boolean).join(" · "),
+          color: "#059669",
+        });
+      }
+      if (parcel.taxCode || parcel.township) {
+        propertyItems.push({
+          label: "Tax Code / Township",
+          value: [parcel.taxCode, parcel.township].filter(Boolean).join(" · "),
+          color: "#0C1B33",
+        });
+      }
+      if (isClass7aEligible(parcel.classCode)) {
+        propertyItems.push({
+          label: "Class 7a Eligibility",
+          value: "Potentially eligible",
+          detail: `Property class ${parcel.classCode} may qualify for reduced assessment (10% of market value for commercial/industrial rehab)`,
+          color: "#059669",
+        });
+      }
+
+      // Insert after Location Context
+      const locCtxIdx = report.sections.findIndex((s) => s.title === "Location Context");
+      report.sections.splice(locCtxIdx + 1, 0, {
+        title: "Property Analysis",
+        items: propertyItems,
+      });
+    }
   }
 
   // Attach executive summary for address-based reports when zone data is available
-  if (zones && zoneNames && (reportType === "location-incentives" || reportType === "developer-analysis")) {
+  if (zones && zoneNames && (reportType === "location-incentives" || reportType === "developer-analysis" || reportType === "best-location")) {
     report.executiveSummary = generateExecutiveSummary(programs, zones, zoneNames);
   }
 

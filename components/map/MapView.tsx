@@ -4,8 +4,9 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_KEYS_SORTED, ZONE_META, ZONE_TILESET_IDS, ZONE_DESCRIPTIONS, ZONE_LEARN_MORE, ZONING_CATEGORIES, ZONING_CODE_DESCRIPTIONS, describeZoneClass } from "@/lib/constants";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
-import type { Program, ProgramCheckResult } from "@/lib/types";
+import type { Program, ProgramCheckResult, ParcelData } from "@/lib/types";
 import MapSearch from "./MapSearch";
+import { cachedFetch } from "@/lib/fetch-cache";
 
 /* ── Zone file mapping (static fallback for keys without DB data) ───── */
 const ZONE_FILES: Record<string, string> = {
@@ -88,16 +89,21 @@ function isFeatureInChicago(feature: GeoJSON.Feature): boolean {
   }
 }
 
+/** Module-level cache so toggling layers on/off/on is instant. */
+const zoneGeoJSONCache = new Map<string, GeoJSON.FeatureCollection>();
+
 async function fetchZoneGeoJSON(key: string): Promise<GeoJSON.FeatureCollection | null> {
+  const cached = zoneGeoJSONCache.get(key);
+  if (cached) return cached;
+
   try {
-    const res = await fetch(`/api/zones/geojson/${key}`);
-    if (res.ok) {
-      const data = await res.json();
-      if (data?.features?.length > 0) {
-        // Validate coordinates are in Chicago range (catches bad projections in DB)
-        if (isFeatureInChicago(data.features[0])) return data;
-        console.warn(`[MapView] DB data for "${key}" has out-of-range coordinates, falling back to static file`);
+    const data = await cachedFetch<GeoJSON.FeatureCollection>(`/api/zones/geojson/${key}`);
+    if (data?.features?.length > 0) {
+      if (isFeatureInChicago(data.features[0])) {
+        zoneGeoJSONCache.set(key, data);
+        return data;
       }
+      console.warn(`[MapView] DB data for "${key}" has out-of-range coordinates, falling back to static file`);
     }
   } catch {
     // Fall through to static
@@ -106,8 +112,11 @@ async function fetchZoneGeoJSON(key: string): Promise<GeoJSON.FeatureCollection 
   const file = ZONE_FILES[key];
   if (!file) return null;
   try {
-    const res = await fetch(`/data/zones/${file}`);
-    if (res.ok) return res.json();
+    const data = await cachedFetch<GeoJSON.FeatureCollection>(`/data/zones/${file}`);
+    if (data) {
+      zoneGeoJSONCache.set(key, data);
+      return data;
+    }
   } catch {
     // No data available
   }
@@ -179,6 +188,9 @@ interface AreaStats {
   medianHomePrice: string;
   medianIncome: string;
   walkScore: number;
+  parcelPin?: string;
+  parcelClass?: string;
+  parcelValue?: string;
 }
 
 const DEFAULT_STATS: AreaStats = {
@@ -225,8 +237,7 @@ export default function MapView() {
 
   // Load programs for snapshot
   useEffect(() => {
-    fetch("/data/programs.json")
-      .then((r) => r.json())
+    cachedFetch<Program[]>("/data/programs.json")
       .then(setAllPrograms)
       .catch(() => {});
   }, []);
@@ -290,22 +301,30 @@ export default function MapView() {
   const loadCensusForPoint = useCallback(async (lat: number, lon: number, label?: string) => {
     if (label) setSnapshotLabel(label);
     try {
-      const res = await fetch(`/api/census?lat=${lat}&lon=${lon}`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data) {
-          setAreaStats({
-            medianHomePrice: data.medianHomeValue
-              ? `$${data.medianHomeValue.toLocaleString()}`
-              : DEFAULT_STATS.medianHomePrice,
-            medianIncome: data.medianIncome
-              ? `$${data.medianIncome.toLocaleString()}`
-              : DEFAULT_STATS.medianIncome,
-            walkScore: data.walkScore ?? DEFAULT_STATS.walkScore,
-          });
-          if (!label && data.tractId) {
-            setSnapshotLabel(`Tract ${data.tractId}`);
-          }
+      const [data, parcelData] = await Promise.all([
+        cachedFetch<{
+          medianHomeValue?: number;
+          medianIncome?: number;
+          walkScore?: number;
+          tractId?: string;
+        }>(`/api/census?lat=${lat}&lon=${lon}`).catch(() => null),
+        cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).catch(() => null),
+      ]);
+      if (data) {
+        setAreaStats({
+          medianHomePrice: data.medianHomeValue
+            ? `$${data.medianHomeValue.toLocaleString()}`
+            : DEFAULT_STATS.medianHomePrice,
+          medianIncome: data.medianIncome
+            ? `$${data.medianIncome.toLocaleString()}`
+            : DEFAULT_STATS.medianIncome,
+          walkScore: data.walkScore ?? DEFAULT_STATS.walkScore,
+          parcelPin: parcelData?.pin || undefined,
+          parcelClass: parcelData?.classCode || undefined,
+          parcelValue: parcelData?.totalValue || undefined,
+        });
+        if (!label && data.tractId) {
+          setSnapshotLabel(`Tract ${data.tractId}`);
         }
       }
     } catch {
@@ -317,26 +336,27 @@ export default function MapView() {
   const loadCensusRef = useRef(loadCensusForPoint);
   loadCensusRef.current = loadCensusForPoint;
 
-  // Handle click for location zones + top programs
+  // Handle click for location zones + top programs (with parcel boost)
   const handleMapClick = useCallback(
     async (lat: number, lon: number) => {
       setLastClickLat(lat);
       setLastClickLon(lon);
       setCopiedLink(false);
       try {
-        const res = await fetch(`/api/zones/check?lat=${lat}&lon=${lon}`);
-        if (res.ok) {
-          const data = await res.json();
-          const zones = data.zones || data;
-          const zoneNames = data.zoneNames || {};
-          setLocationZones(zones);
-          // Compute top 3 programs client-side
-          if (allPrograms.length > 0) {
-            const results = runConfidenceEngine(allPrograms, zones, zoneNames);
-            setSnapshotPrograms(
-              results.filter((r) => r.confidence !== "not_applicable").slice(0, 3)
-            );
-          }
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const [data, parcelData]: [any, ParcelData | null] = await Promise.all([
+          cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`),
+          cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).catch(() => null),
+        ]);
+        const zones = data.zones || data;
+        const zoneNames = data.zoneNames || {};
+        setLocationZones(zones);
+        // Compute top 3 programs client-side (with parcel boost)
+        if (allPrograms.length > 0) {
+          const results = runConfidenceEngine(allPrograms, zones, zoneNames, undefined, parcelData ?? undefined);
+          setSnapshotPrograms(
+            results.filter((r) => r.confidence !== "not_applicable").slice(0, 3)
+          );
         }
       } catch {
         // Keep defaults
@@ -381,10 +401,9 @@ export default function MapView() {
     map.on("load", async () => {
       /* ── Community Areas base layer (77 neighborhoods) ── */
       try {
-        const caRes = await fetch(COMMUNITY_AREAS_URL);
-        if (caRes.ok) {
-          const caData = await caRes.json();
-          map.addSource("community-areas", { type: "geojson", data: caData });
+        const caData = await cachedFetch(COMMUNITY_AREAS_URL);
+        if (caData) {
+          map.addSource("community-areas", { type: "geojson", data: caData as GeoJSON.FeatureCollection });
 
           // Outline boundaries
           map.addLayer({
@@ -708,10 +727,9 @@ export default function MapView() {
 
       /* ── Chicago Zoning Districts — per-category layers (on top of incentive zones) ── */
       try {
-        const zoningRes = await fetch(CHICAGO_ZONING_URL);
-        if (zoningRes.ok) {
-          const zoningData = await zoningRes.json();
-          map.addSource("chicago-zoning", { type: "geojson", data: zoningData, generateId: true });
+        const zoningData = await cachedFetch(CHICAGO_ZONING_URL);
+        if (zoningData) {
+          map.addSource("chicago-zoning", { type: "geojson", data: zoningData as GeoJSON.FeatureCollection, generateId: true });
 
           // Create a separate fill + outline layer per zoning category
           for (const cat of ZONING_CATEGORIES) {
@@ -838,9 +856,9 @@ export default function MapView() {
 
       if (next && !map.getSource(`poi-${key}`)) {
         const cfg = POI_LAYERS[key];
-        fetch(cfg.url)
-          .then((r) => r.json())
-          .then((raw) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        cachedFetch<any>(cfg.url)
+          .then((raw: any) => {
             if (!mapRef.current) return;
             const data =
               cfg.format === "json"
@@ -933,10 +951,9 @@ export default function MapView() {
     const inspectHandler = async (e: mapboxgl.MapMouseEvent) => {
       setZoningInfo("Loading...");
       try {
-        const res = await fetch(
+        const data = await cachedFetch<{ zoneClass?: string }>(
           `/api/zoning?lat=${e.lngLat.lat}&lon=${e.lngLat.lng}`
         );
-        const data = await res.json();
         if (data.zoneClass) {
           const desc = describeZoneClass(data.zoneClass);
           setZoningInfo(`${data.zoneClass} — ${desc}`);
@@ -970,10 +987,9 @@ export default function MapView() {
     const handler = async (e: mapboxgl.MapMouseEvent) => {
       setZoningInfo("Loading...");
       try {
-        const res = await fetch(
+        const data = await cachedFetch<{ zoneClass?: string }>(
           `/api/zoning?lat=${e.lngLat.lat}&lon=${e.lngLat.lng}`
         );
-        const data = await res.json();
         if (data.zoneClass) {
           const desc = describeZoneClass(data.zoneClass);
           setZoningInfo(`${data.zoneClass} — ${desc}`);
@@ -1479,6 +1495,30 @@ export default function MapView() {
               </p>
             </div>
           </div>
+
+          {/* Parcel info */}
+          {areaStats.parcelPin && (
+            <>
+              <div className="mx-4 h-px bg-[#0C1B33]/8" />
+              <div className="px-4 py-3">
+                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-1">
+                  Parcel
+                </div>
+                <div className="text-[12px] text-[#0C1B33]/80">
+                  <a
+                    href={`https://www.cookcountyassessoril.gov/pin/${areaStats.parcelPin}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#2563EB] hover:underline"
+                  >
+                    {areaStats.parcelPin}
+                  </a>
+                  {areaStats.parcelClass && <span className="text-[#0C1B33]/50"> · Class {areaStats.parcelClass}</span>}
+                  {areaStats.parcelValue && <span className="text-[#0C1B33]/50"> · {areaStats.parcelValue}</span>}
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Zoning info */}
           {zoningInfo && (

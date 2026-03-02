@@ -106,6 +106,7 @@ export interface CheckResult {
   topActions: TopAction[];
   cityZoning?: CityZoning;
   census?: CensusData;
+  parcel?: ParcelData;
   timestamp: string;
 }
 
@@ -143,6 +144,25 @@ export interface CensusData {
   walkScore: number | null;
 }
 
+export interface ParcelData {
+  pin: string;              // 14-digit Cook County PIN
+  address: string;          // Street address from parcel record
+  classCode: string;        // e.g. "5-17", "2-11"
+  classDescription: string; // "One-story commercial building"
+  taxCode: string;
+  township: string;
+  landSqft: number | null;
+  bldgSqft: number | null;
+  bldgAge: number | null;
+  landValue: string | null;
+  bldgValue: string | null;
+  totalValue: string | null;
+  parcelType: number | null; // 1 = condo
+  isCommercial: boolean;
+  isIndustrial: boolean;
+  isVacant: boolean;
+}
+
 export interface LookupResult {
   matched: boolean;
   business?: Business;
@@ -160,6 +180,7 @@ export interface LookupResult {
     population: number;
   };
   census?: CensusData;
+  parcel?: ParcelData;
 }
 
 export interface ZoneCheckResult {

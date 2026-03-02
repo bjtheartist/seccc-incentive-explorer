@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
   try {
     const cacheKey = `stacking:${programId || "all"}`;
 
-    const validated = await cached(cacheKey, 3600, async () => {
+    const validated = await cached(cacheKey, 86400, async () => {
       let rows;
       if (programId) {
         rows = await sql`
@@ -62,7 +62,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json(validated, {
       headers: {
-        "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=600",
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
       },
     });
   } catch (err) {

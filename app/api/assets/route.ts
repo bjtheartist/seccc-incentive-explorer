@@ -10,7 +10,7 @@ import { cached } from "@/lib/redis";
  */
 
 const CDN_HEADERS = {
-  "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+  "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
 };
 
 // Static fallback data (from MapView.tsx EDO_BSO_POINTS)
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const cacheKey = `assets:${typeKey}`;
-    const rows = await cached(cacheKey, 86400, async () => {
+    const rows = await cached(cacheKey, 604800, async () => {
       if (types && types.length > 0) {
         return await sql`
           SELECT id, name, type, address, lat, lon

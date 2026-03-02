@@ -11,6 +11,7 @@ import {
 } from "@/lib/business-lookup";
 import { checkZones, enrichEmployment } from "@/lib/zone-check";
 import type { Business, LookupResult, Program } from "@/lib/types";
+import { cachedFetch } from "@/lib/fetch-cache";
 
 const SAMPLE_PROMPTS = [
   { label: "Justice of the Pies", type: "business" },
@@ -47,13 +48,11 @@ export function AddressSearch() {
 
   useEffect(() => {
     // Try API first, fallback to static files
-    fetch("/api/businesses")
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .catch(() => fetch("/data/businesses.json").then((r) => r.json()))
+    cachedFetch<Business[]>("/api/businesses")
+      .catch(() => cachedFetch<Business[]>("/data/businesses.json"))
       .then(setBusinesses)
       .catch(() => {});
-    fetch("/data/programs.json")
-      .then((r) => r.json())
+    cachedFetch<Program[]>("/data/programs.json")
       .then(setPrograms);
   }, []);
 
@@ -141,18 +140,18 @@ export function AddressSearch() {
           return;
         }
 
-        const res = await fetch(
-          `/api/geocode?address=${encodeURIComponent(q)}`
-        );
-        if (!res.ok) {
+        let geo;
+        try {
+          geo = await cachedFetch<{ lat: number; lon: number; displayName?: string }>(
+            `/api/geocode?address=${encodeURIComponent(q)}`
+          );
+        } catch {
           setError(
             "Address not found. Try entering a street address in the SSA #50 area."
           );
           setLoading(false);
           return;
         }
-
-        const geo = await res.json();
         // Navigate to instant report with geocoded coordinates
         navigateToReport(geo.lat, geo.lon, geo.displayName || q);
       } catch {

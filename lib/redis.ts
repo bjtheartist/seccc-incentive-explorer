@@ -58,6 +58,68 @@ export async function cached<T>(
   return result;
 }
 
+// ─── Process-Level Memory Cache (Layer 4) ─────────────────────────────
+
+interface MemEntry {
+  data: unknown;
+  expiresAt: number;
+}
+
+const MEM_MAX_ENTRIES = 200;
+const memStore = new Map<string, MemEntry>();
+
+/** Clamp memory TTL to 60s–300s, targeting 10% of the Redis TTL. */
+function memTTL(redisTTLSeconds: number): number {
+  return Math.min(300, Math.max(60, Math.round(redisTTLSeconds * 0.1)));
+}
+
+/** Lazy eviction: drop expired entries when we exceed capacity. */
+function memEvict(): void {
+  if (memStore.size <= MEM_MAX_ENTRIES) return;
+  const now = Date.now();
+  for (const [k, v] of memStore) {
+    if (v.expiresAt <= now) memStore.delete(k);
+  }
+  // If still over cap, remove oldest entries
+  if (memStore.size > MEM_MAX_ENTRIES) {
+    const excess = memStore.size - MEM_MAX_ENTRIES;
+    const keys = memStore.keys();
+    for (let i = 0; i < excess; i++) {
+      const next = keys.next();
+      if (!next.done) memStore.delete(next.value);
+    }
+  }
+}
+
+/**
+ * Process-level memory cache that sits in front of Redis.
+ * Avoids a Redis roundtrip for recently fetched data within the same
+ * serverless function instance.
+ *
+ * Falls through to `cached()` (Redis) on miss.
+ */
+export async function memCached<T>(
+  key: string,
+  redisTTLSeconds: number,
+  fn: () => Promise<T>
+): Promise<T> {
+  const now = Date.now();
+  const hit = memStore.get(key);
+  if (hit && hit.expiresAt > now) {
+    return hit.data as T;
+  }
+
+  // Fall through to Redis-backed cached()
+  const result = await cached<T>(key, redisTTLSeconds, fn);
+
+  // Store in memory
+  const mTTL = memTTL(redisTTLSeconds);
+  memStore.set(key, { data: result, expiresAt: now + mTTL * 1000 });
+  memEvict();
+
+  return result;
+}
+
 /**
  * Round a coordinate to a fixed number of decimal places.
  * Useful for normalizing lat/lon in cache keys.

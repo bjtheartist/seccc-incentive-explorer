@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { cached } from "@/lib/redis";
 
 const CDN_HEADERS = {
-  "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+  "Cache-Control": "public, s-maxage=2592000, stale-while-revalidate=86400",
 };
 
 export async function GET(request: NextRequest) {
