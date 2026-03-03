@@ -2410,8 +2410,71 @@ function ReportDisplay({
               </div>
             )}
 
+            {/* ── Government Resources ── */}
+            <div className="mt-16 pt-8 border-t border-[#0C1B33]/8">
+              <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-5">
+                Government Resources
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                <div>
+                  <p className="text-[#0C1B33]/70 text-[13px] font-semibold mb-1">City of Chicago</p>
+                  <p className="text-[#0C1B33]/40 text-[12px] leading-relaxed mb-1.5">
+                    Dept. of Planning &amp; Development
+                  </p>
+                  <p className="text-[#0C1B33]/40 text-[11px] leading-relaxed">
+                    <a href="tel:+13127444190" className="hover:text-[#0C1B33] transition-colors print-url">(312) 744-4190</a>
+                  </p>
+                  <a
+                    href="https://www.chicago.gov/city/en/depts/dcd.html"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-[#0C1B33]/35 hover:text-[#0C1B33] transition-colors font-mono-bureau tracking-wide mt-1 print-url"
+                  >
+                    <ExternalLink className="w-2.5 h-2.5" />
+                    chicago.gov/dcd
+                  </a>
+                </div>
+                <div>
+                  <p className="text-[#0C1B33]/70 text-[13px] font-semibold mb-1">Cook County</p>
+                  <p className="text-[#0C1B33]/40 text-[12px] leading-relaxed mb-1.5">
+                    Bureau of Economic Development
+                  </p>
+                  <p className="text-[#0C1B33]/40 text-[11px] leading-relaxed">
+                    <a href="tel:+13126033070" className="hover:text-[#0C1B33] transition-colors print-url">(312) 603-3070</a>
+                  </p>
+                  <a
+                    href="https://www.cookcountyil.gov/service/economic-development"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-[#0C1B33]/35 hover:text-[#0C1B33] transition-colors font-mono-bureau tracking-wide mt-1 print-url"
+                  >
+                    <ExternalLink className="w-2.5 h-2.5" />
+                    cookcountyil.gov
+                  </a>
+                </div>
+                <div>
+                  <p className="text-[#0C1B33]/70 text-[13px] font-semibold mb-1">State of Illinois</p>
+                  <p className="text-[#0C1B33]/40 text-[12px] leading-relaxed mb-1.5">
+                    Dept. of Commerce &amp; Economic Opportunity
+                  </p>
+                  <p className="text-[#0C1B33]/40 text-[11px] leading-relaxed">
+                    <a href="tel:+12178146732" className="hover:text-[#0C1B33] transition-colors print-url">(217) 814-6732</a>
+                  </p>
+                  <a
+                    href="https://dceo.illinois.gov"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-[11px] text-[#0C1B33]/35 hover:text-[#0C1B33] transition-colors font-mono-bureau tracking-wide mt-1 print-url"
+                  >
+                    <ExternalLink className="w-2.5 h-2.5" />
+                    dceo.illinois.gov
+                  </a>
+                </div>
+              </div>
+            </div>
+
             {/* ── Footer ── */}
-            <div className="report-footer mt-16 pt-6 border-t border-dashed border-[#0C1B33]/15">
+            <div className="report-footer mt-8 pt-6 border-t border-dashed border-[#0C1B33]/15">
               <p className="text-[#0C1B33]/35 text-[12px] leading-relaxed mb-2">
                 This report was generated on {formattedDate} by Chicago
                 Incentive Explorer.
