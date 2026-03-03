@@ -1,4 +1,4 @@
-import type { Program, ExecutiveSummary, ParcelData } from "./types";
+import type { Program, ExecutiveSummary, ParcelData, DistrictData } from "./types";
 import { isClass7aEligible } from "./parcel-classes";
 import { ZONE_LABELS, ZONE_COLORS } from "./constants";
 import { INDUSTRIES, getIndustryById } from "./industries-data";
@@ -1193,6 +1193,7 @@ export function generateReportData(
   census?: ReportCensusData,
   cityZoning?: ReportZoningData,
   parcel?: ParcelData,
+  districts?: DistrictData,
 ): GeneratedReport {
   const reportType = state.reportType || "location-incentives";
 
@@ -1329,6 +1330,24 @@ export function generateReportData(
       }
     }
 
+    // District data items
+    if (districts) {
+      const districtParts: string[] = [];
+      if (districts.ward) districtParts.push(`Ward ${districts.ward}`);
+      if (districts.commissionerDistrict) districtParts.push(`Commissioner Dist. ${districts.commissionerDistrict}`);
+      if (districts.congressionalDistrict) districtParts.push(`IL-${districts.congressionalDistrict}`);
+      if (districts.stateHouseDistrict) districtParts.push(`State Rep Dist. ${districts.stateHouseDistrict}`);
+      if (districts.stateSenateDistrict) districtParts.push(`State Senate Dist. ${districts.stateSenateDistrict}`);
+      if (districtParts.length > 0) {
+        contextItems.push({
+          label: "Political Districts",
+          value: districtParts.slice(0, 2).join(" · "),
+          detail: districtParts.length > 2 ? districtParts.slice(2).join(" · ") : undefined,
+          color: "#D97706",
+        });
+      }
+    }
+
     if (contextItems.length > 0) {
       report.sections.unshift({
         title: "Location Context",
@@ -1374,6 +1393,21 @@ export function generateReportData(
           detail: `Property class ${parcel.classCode} may qualify for reduced assessment (10% of market value for commercial/industrial rehab)`,
           color: "#059669",
         });
+      }
+      if (districts) {
+        const parts: string[] = [];
+        if (districts.ward) parts.push(`Ward ${districts.ward}`);
+        if (districts.commissionerDistrict) parts.push(`Commissioner Dist. ${districts.commissionerDistrict}`);
+        if (districts.congressionalDistrict) parts.push(`IL-${districts.congressionalDistrict}`);
+        if (districts.stateHouseDistrict) parts.push(`State Rep Dist. ${districts.stateHouseDistrict}`);
+        if (districts.stateSenateDistrict) parts.push(`State Senate Dist. ${districts.stateSenateDistrict}`);
+        if (parts.length > 0) {
+          propertyItems.push({
+            label: "Political Districts",
+            value: parts.join(" · "),
+            color: "#D97706",
+          });
+        }
       }
 
       // Insert after Location Context

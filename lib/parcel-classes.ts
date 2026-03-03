@@ -93,6 +93,14 @@ export function describeClassCode(code: string): string {
   }
 }
 
+/** Return a human-readable label for Cook County parcel type codes. */
+export function describeParcelType(type: number): string {
+  switch (type) {
+    case 1: return "Condo";
+    default: return "Standard";
+  }
+}
+
 /** Code starts with "5" — commercial / mixed-use. */
 export function isCommercialClass(code: string): boolean {
   return code.startsWith("5");

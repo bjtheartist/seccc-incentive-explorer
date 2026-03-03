@@ -4,7 +4,8 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_KEYS_SORTED, ZONE_META, ZONE_TILESET_IDS, ZONE_DESCRIPTIONS, ZONE_LEARN_MORE, ZONING_CATEGORIES, ZONING_CODE_DESCRIPTIONS, describeZoneClass } from "@/lib/constants";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
-import type { Program, ProgramCheckResult, ParcelData } from "@/lib/types";
+import { describeClassCode, describeParcelType, CLASS_CODE_MAP } from "@/lib/parcel-classes";
+import type { Program, ProgramCheckResult, ParcelData, DistrictData } from "@/lib/types";
 import MapSearch from "./MapSearch";
 import { cachedFetch } from "@/lib/fetch-cache";
 
@@ -44,6 +45,13 @@ const COMMUNITY_AREAS_URL = "https://data.cityofchicago.org/resource/igwz-8jzy.g
 
 /** Chicago zoning districts GeoJSON endpoint (Data Portal). */
 const CHICAGO_ZONING_URL = "https://data.cityofchicago.org/resource/dj47-wfun.geojson?$limit=50000";
+
+/** Empty GeoJSON FeatureCollection used as initial/cleared parcel data. */
+const EMPTY_FC: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
+
+/** Cook County ArcGIS parcels endpoint (Layer 44). */
+const PARCELS_QUERY_BASE =
+  "https://gis.cookcountyil.gov/traditional/rest/services/cookVwrDynmc/MapServer/44/query";
 
 function buildZoningColorExpression(): mapboxgl.Expression {
   const zoneClassProp: mapboxgl.Expression = ["get", "zone_class"];
@@ -190,7 +198,13 @@ interface AreaStats {
   walkScore: number;
   parcelPin?: string;
   parcelClass?: string;
+  parcelClassDescription?: string;
   parcelValue?: string;
+  parcelTaxCode?: string;
+  parcelTownship?: string;
+  parcelType?: string;
+  districts?: DistrictData;
+  districtsLoading?: boolean;
 }
 
 const DEFAULT_STATS: AreaStats = {
@@ -216,6 +230,7 @@ export default function MapView() {
   const [legendOpen, setLegendOpen] = useState(true);
   const [snapshotOpen, setSnapshotOpen] = useState(true);
   const [zoningRefOpen, setZoningRefOpen] = useState(false);
+  const [classRefOpen, setClassRefOpen] = useState(false);
   const [zoningInfo, setZoningInfo] = useState<string | null>(null);
   const [areaStats, setAreaStats] = useState<AreaStats>(DEFAULT_STATS);
   const [snapshotLabel, setSnapshotLabel] = useState("Chicago (default)");
@@ -234,6 +249,9 @@ export default function MapView() {
   const [lastClickLon, setLastClickLon] = useState<number | null>(null);
   const [allPrograms, setAllPrograms] = useState<Program[]>([]);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [parcelsVisible, setParcelsVisible] = useState(false);
+  const parcelsAbortRef = useRef<AbortController | null>(null);
+  const parcelsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load programs for snapshot
   useEffect(() => {
@@ -321,11 +339,27 @@ export default function MapView() {
           walkScore: data.walkScore ?? DEFAULT_STATS.walkScore,
           parcelPin: parcelData?.pin || undefined,
           parcelClass: parcelData?.classCode || undefined,
+          parcelClassDescription: parcelData?.classDescription || undefined,
           parcelValue: parcelData?.totalValue || undefined,
+          parcelTaxCode: parcelData?.taxCode || undefined,
+          parcelTownship: parcelData?.township || undefined,
+          parcelType: parcelData?.parcelType != null
+            ? describeParcelType(parcelData.parcelType)
+            : undefined,
+          districtsLoading: true,
         });
         if (!label && data.tractId) {
           setSnapshotLabel(`Tract ${data.tractId}`);
         }
+
+        // Async non-blocking fetch for political districts
+        cachedFetch<DistrictData>(`/api/districts?lat=${lat}&lon=${lon}`)
+          .then((districts) => {
+            setAreaStats((prev) => ({ ...prev, districts, districtsLoading: false }));
+          })
+          .catch(() => {
+            setAreaStats((prev) => ({ ...prev, districtsLoading: false }));
+          });
       }
     } catch {
       // Keep defaults
@@ -687,6 +721,11 @@ export default function MapView() {
         }
 
         /* Resolve community area name for Area Snapshot label + zoom to neighborhood */
+        // Skip community-area zoom if the click landed on a parcel
+        const clickedParcel = map.getLayer("parcels-fill")
+          ? map.queryRenderedFeatures(e.point, { layers: ["parcels-fill"] }).length > 0
+          : false;
+
         let areaLabel: string | undefined;
         if (map.getLayer("community-areas-fill")) {
           const caFeats = map.queryRenderedFeatures(e.point, {
@@ -699,19 +738,21 @@ export default function MapView() {
                 .toLowerCase()
                 .replace(/\b\w/g, (c: string) => c.toUpperCase());
 
-              // Zoom to the community area boundary
-              const geometry = caFeats[0].geometry;
-              if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
-                const coords =
-                  geometry.type === "Polygon"
-                    ? geometry.coordinates.flat()
-                    : geometry.coordinates.flat(2);
-                if (coords.length > 0) {
-                  const bounds = new mapboxgl.LngLatBounds();
-                  for (const c of coords) {
-                    bounds.extend(c as [number, number]);
+              // Zoom to the community area boundary (skip when clicking a parcel or already at parcel zoom)
+              if (!clickedParcel && map.getZoom() < 15) {
+                const geometry = caFeats[0].geometry;
+                if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
+                  const coords =
+                    geometry.type === "Polygon"
+                      ? geometry.coordinates.flat()
+                      : geometry.coordinates.flat(2);
+                  if (coords.length > 0) {
+                    const bounds = new mapboxgl.LngLatBounds();
+                    for (const c of coords) {
+                      bounds.extend(c as [number, number]);
+                    }
+                    map.fitBounds(bounds, { padding: 60, duration: 1200, maxZoom: 14.5 });
                   }
-                  map.fitBounds(bounds, { padding: 60, duration: 1200, maxZoom: 14.5 });
                 }
               }
             }
@@ -818,6 +859,80 @@ export default function MapView() {
       } catch {
         // Zoning districts layer is optional
       }
+
+      /* ── Parcel boundary layer (Cook County ArcGIS) ── */
+      map.addSource("parcels", { type: "geojson", data: EMPTY_FC, generateId: true });
+
+      map.addLayer({
+        id: "parcels-fill",
+        type: "fill",
+        source: "parcels",
+        layout: { visibility: "none" },
+        paint: {
+          "fill-color": "#7C3AED",
+          "fill-opacity": [
+            "case",
+            ["boolean", ["feature-state", "hover"], false],
+            0.15,
+            0,
+          ],
+        },
+      });
+
+      map.addLayer({
+        id: "parcels-line",
+        type: "line",
+        source: "parcels",
+        layout: { visibility: "none" },
+        paint: {
+          "line-color": "#7C3AED",
+          "line-width": 0.8,
+          "line-opacity": 0.5,
+        },
+      });
+
+      // Parcel hover
+      let hoveredParcelId: number | null = null;
+      map.on("mousemove", "parcels-fill", (e) => {
+        if (!e.features?.length) return;
+        if (hoveredParcelId !== null) {
+          map.setFeatureState({ source: "parcels", id: hoveredParcelId }, { hover: false });
+        }
+        hoveredParcelId = e.features[0].id as number;
+        map.setFeatureState({ source: "parcels", id: hoveredParcelId }, { hover: true });
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", "parcels-fill", () => {
+        if (hoveredParcelId !== null) {
+          map.setFeatureState({ source: "parcels", id: hoveredParcelId }, { hover: false });
+          hoveredParcelId = null;
+        }
+        map.getCanvas().style.cursor = "";
+      });
+
+      // Parcel click popup
+      map.on("click", "parcels-fill", (e) => {
+        if (!e.features?.length) return;
+        const p = e.features[0].properties || {};
+        const pin = p.PIN14 || "";
+        const bldg = p.BLDGClass || "";
+        const classDesc = bldg ? describeClassCode(bldg) : "";
+        const val = p.TotalValue ? `$${Number(p.TotalValue).toLocaleString()}` : "";
+        const addr = p.Address || "";
+        new mapboxgl.Popup({ maxWidth: "280px", className: "bureau-popup" })
+          .setLngLat(e.lngLat)
+          .setHTML(
+            `<div style="font-family:Inter,sans-serif">
+              <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#7C3AED;margin-bottom:4px;font-weight:500">Parcel</div>
+              ${pin ? `<div style="font-size:14px;font-weight:600;color:#0C1B33"><a href="https://www.cookcountyassessoril.gov/pin/${pin}" target="_blank" rel="noopener noreferrer" style="color:#2563EB;text-decoration:underline">${pin}</a></div>` : ""}
+              ${addr ? `<div style="font-size:12px;color:#5A6478;margin-top:3px">${addr}</div>` : ""}
+              ${bldg ? `<div style="font-size:11px;color:#5A6478;margin-top:2px">Class: ${bldg}</div>` : ""}
+              ${classDesc ? `<div style="font-size:10px;color:#5A6478;margin-top:1px;font-style:italic">${classDesc}</div>` : ""}
+              ${val ? `<div style="font-size:11px;color:#5A6478;margin-top:2px">Assessed: ${val}</div>` : ""}
+            </div>`
+          )
+          .addTo(map);
+      });
 
       setLoaded(true);
     });
@@ -1075,8 +1190,89 @@ export default function MapView() {
     }
   }, [isMobile]);
 
+  /* ── Dynamic parcel boundary loading ─── */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+
+    // Set layer visibility
+    const vis = parcelsVisible ? "visible" : "none";
+    if (map.getLayer("parcels-fill")) map.setLayoutProperty("parcels-fill", "visibility", vis);
+    if (map.getLayer("parcels-line")) map.setLayoutProperty("parcels-line", "visibility", vis);
+
+    if (!parcelsVisible) {
+      // Clear data when hidden
+      const src = map.getSource("parcels") as mapboxgl.GeoJSONSource | undefined;
+      if (src) src.setData(EMPTY_FC);
+      return;
+    }
+
+    const fetchParcels = () => {
+      if (parcelsTimerRef.current) clearTimeout(parcelsTimerRef.current);
+      parcelsTimerRef.current = setTimeout(() => {
+        const m = mapRef.current;
+        if (!m) return;
+        const zoom = m.getZoom();
+        const src = m.getSource("parcels") as mapboxgl.GeoJSONSource | undefined;
+        if (!src) return;
+
+        if (zoom < 15) {
+          src.setData(EMPTY_FC);
+          return;
+        }
+
+        // Cancel previous in-flight request
+        if (parcelsAbortRef.current) parcelsAbortRef.current.abort();
+        const controller = new AbortController();
+        parcelsAbortRef.current = controller;
+
+        const bounds = m.getBounds();
+        if (!bounds) return;
+        const geometry = JSON.stringify({
+          xmin: bounds.getWest(),
+          ymin: bounds.getSouth(),
+          xmax: bounds.getEast(),
+          ymax: bounds.getNorth(),
+          spatialReference: { wkid: 4326 },
+        });
+
+        const params = new URLSearchParams({
+          geometry,
+          geometryType: "esriGeometryEnvelope",
+          spatialRel: "esriSpatialRelIntersects",
+          outFields: "PIN14,BLDGClass,TotalValue,Address",
+          returnGeometry: "true",
+          outSR: "4326",
+          f: "geojson",
+        });
+
+        fetch(`${PARCELS_QUERY_BASE}?${params}`, { signal: controller.signal })
+          .then((res) => res.json())
+          .then((data: GeoJSON.FeatureCollection) => {
+            if (data?.type === "FeatureCollection" && data.features) {
+              src.setData(data);
+            }
+          })
+          .catch((err) => {
+            if (err.name !== "AbortError") console.warn("[Parcels] fetch error:", err);
+          });
+      }, 300);
+    };
+
+    // Initial fetch
+    fetchParcels();
+
+    // Fetch on every moveend
+    map.on("moveend", fetchParcels);
+    return () => {
+      map.off("moveend", fetchParcels);
+      if (parcelsTimerRef.current) clearTimeout(parcelsTimerRef.current);
+      if (parcelsAbortRef.current) parcelsAbortRef.current.abort();
+    };
+  }, [parcelsVisible, loaded]);
+
   return (
-    <div className="relative w-full h-[calc(100vh-180px)] md:h-[650px]">
+    <div className="relative w-full h-[calc(100vh-180px)] md:h-[calc(100vh-220px)] min-h-[500px]">
       {/* Map container */}
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
@@ -1129,7 +1325,7 @@ export default function MapView() {
 
       {/* ── LEFT: Zone Layer Legend ──────────── */}
       {legendOpen && (
-        <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-3 md:right-auto z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[560px] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
+        <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-3 md:right-auto z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100vh-280px)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
           {/* Mobile drag handle + close */}
           <div className="md:hidden flex flex-col items-center pt-2 pb-1">
             <div className="w-10 h-1 bg-[#0C1B33]/15 rounded-full mb-2" />
@@ -1413,12 +1609,98 @@ export default function MapView() {
             </div>
           </div>
 
+          {/* Divider */}
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+
+          {/* Parcels & Property */}
+          <div className="px-4 pt-3 pb-3">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-3">
+              Parcels &amp; Property
+            </div>
+            <label className="flex items-center gap-2.5 py-1 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={parcelsVisible}
+                onChange={() => setParcelsVisible((v) => !v)}
+                className="sr-only"
+              />
+              <span
+                className="w-3.5 h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors"
+                style={{
+                  borderColor: "#7C3AED",
+                  backgroundColor: parcelsVisible ? "#7C3AED30" : "transparent",
+                }}
+              >
+                {parcelsVisible && (
+                  <span className="w-2 h-2 block" style={{ backgroundColor: "#7C3AED" }} />
+                )}
+              </span>
+              <span className="text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight">
+                Parcels
+              </span>
+            </label>
+            <p className="text-[9px] text-[#0C1B33]/35 mt-1 ml-6">
+              Lot boundaries visible at zoom 15+
+            </p>
+
+            {/* Collapsible class code reference */}
+            <button
+              onClick={() => setClassRefOpen((v) => !v)}
+              className="flex items-center gap-1.5 mt-3 mb-1 font-mono-bureau text-[8px] tracking-[0.12em] uppercase text-[#7C3AED]/50 hover:text-[#7C3AED] transition-colors"
+            >
+              <svg
+                className={`w-2.5 h-2.5 transition-transform ${classRefOpen ? "rotate-90" : ""}`}
+                viewBox="0 0 6 10" fill="currentColor"
+              >
+                <path d="M1 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" fill="none" />
+              </svg>
+              What do the classes mean?
+            </button>
+            {classRefOpen && (
+              <div className="mt-1 space-y-2.5 max-h-64 overflow-y-auto pr-1">
+                {[
+                  { label: "Vacant Land", prefix: "1-", color: "#94A3B8" },
+                  { label: "Residential", prefix: "2-", color: "#059669" },
+                  { label: "Multi-Unit (7+)", prefix: "3-", color: "#2563EB" },
+                  { label: "Commercial", prefix: "5-", color: "#D97706" },
+                  { label: "Industrial", prefix: "6-", color: "#DC2626" },
+                ].map((group) => {
+                  const codes = Object.entries(CLASS_CODE_MAP).filter(
+                    ([code]) => code.startsWith(group.prefix)
+                  );
+                  if (codes.length === 0) return null;
+                  return (
+                    <div key={group.prefix}>
+                      <div
+                        className="text-[9px] font-semibold mb-0.5"
+                        style={{ color: group.color }}
+                      >
+                        {group.label}
+                      </div>
+                      {codes.map(([code, desc]) => (
+                        <div
+                          key={code}
+                          className="text-[9px] text-[#0C1B33]/50 leading-relaxed"
+                        >
+                          <span className="font-mono-bureau text-[8px] text-[#0C1B33]/70">
+                            {code}
+                          </span>{" "}
+                          — {desc}
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
         </div>
       )}
 
       {/* ── RIGHT: Area Snapshot Panel ──────── */}
       {snapshotOpen && loaded && (
-        <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-60 max-h-[60vh] md:max-h-none overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
+        <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
           {/* Mobile drag handle */}
           <div className="md:hidden flex flex-col items-center pt-2 pb-1">
             <div className="w-10 h-1 bg-[#0C1B33]/15 rounded-full" />
@@ -1516,6 +1798,67 @@ export default function MapView() {
                   {areaStats.parcelClass && <span className="text-[#0C1B33]/50"> · Class {areaStats.parcelClass}</span>}
                   {areaStats.parcelValue && <span className="text-[#0C1B33]/50"> · {areaStats.parcelValue}</span>}
                 </div>
+                {areaStats.parcelClassDescription && (
+                  <div className="text-[10px] text-[#0C1B33]/40 mt-0.5 italic">
+                    {areaStats.parcelClassDescription}
+                  </div>
+                )}
+                {/* Tax Code, Township, Parcel Type row */}
+                {(areaStats.parcelTaxCode || areaStats.parcelTownship || areaStats.parcelType) && (
+                  <div className="flex gap-3 mt-1.5 font-mono-bureau text-[9px] text-[#0C1B33]/50">
+                    {areaStats.parcelTaxCode && <span>Tax Code {areaStats.parcelTaxCode}</span>}
+                    {areaStats.parcelTownship && <span>{areaStats.parcelTownship}</span>}
+                    {areaStats.parcelType && <span>{areaStats.parcelType}</span>}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* Districts */}
+          {(areaStats.districts || areaStats.districtsLoading) && (
+            <>
+              <div className="mx-4 h-px bg-[#0C1B33]/8" />
+              <div className="px-4 py-3">
+                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#D97706]/50 mb-1.5">
+                  Districts
+                </div>
+                {areaStats.districtsLoading && !areaStats.districts ? (
+                  <div className="text-[10px] text-[#0C1B33]/40 italic">Loading districts...</div>
+                ) : areaStats.districts ? (
+                  <div className="space-y-0.5">
+                    {areaStats.districts.ward && (
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-[#0C1B33]/50">Ward</span>
+                        <span className="font-mono-bureau text-[#0C1B33]/80">{areaStats.districts.ward}</span>
+                      </div>
+                    )}
+                    {areaStats.districts.commissionerDistrict && (
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-[#0C1B33]/50">Commissioner</span>
+                        <span className="font-mono-bureau text-[#0C1B33]/80">Dist. {areaStats.districts.commissionerDistrict}</span>
+                      </div>
+                    )}
+                    {areaStats.districts.congressionalDistrict && (
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-[#0C1B33]/50">Congressional</span>
+                        <span className="font-mono-bureau text-[#0C1B33]/80">IL-{areaStats.districts.congressionalDistrict}</span>
+                      </div>
+                    )}
+                    {areaStats.districts.stateHouseDistrict && (
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-[#0C1B33]/50">State Rep</span>
+                        <span className="font-mono-bureau text-[#0C1B33]/80">Dist. {areaStats.districts.stateHouseDistrict}</span>
+                      </div>
+                    )}
+                    {areaStats.districts.stateSenateDistrict && (
+                      <div className="flex justify-between text-[10px]">
+                        <span className="text-[#0C1B33]/50">State Senate</span>
+                        <span className="font-mono-bureau text-[#0C1B33]/80">Dist. {areaStats.districts.stateSenateDistrict}</span>
+                      </div>
+                    )}
+                  </div>
+                ) : null}
               </div>
             </>
           )}
@@ -1543,13 +1886,13 @@ export default function MapView() {
                 </div>
                 <div className="space-y-1.5">
                   {snapshotPrograms.map((r) => (
-                    <div key={r.programId} className="flex items-center justify-between">
-                      <span className="text-[10px] text-[#0C1B33]/70 truncate flex-1 mr-2">
+                    <div key={r.programId}>
+                      <div className="text-[10px] text-[#0C1B33]/70 leading-snug">
                         {r.program.name}
-                      </span>
-                      <span className="font-mono-bureau text-[8px] text-[#0C1B33]/40 flex-shrink-0">
+                      </div>
+                      <div className="font-mono-bureau text-[8px] text-[#0C1B33]/40 mt-0.5">
                         {r.benefitRange}
-                      </span>
+                      </div>
                     </div>
                   ))}
                 </div>

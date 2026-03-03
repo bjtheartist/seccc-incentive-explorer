@@ -25,21 +25,24 @@ export default function MapPage() {
       </div>
 
       {/* Warm off-white body */}
-      <div className="container mx-auto max-w-6xl px-3 md:px-6 py-6 md:py-10 bg-[#FAF9F6]">
-        <div className="flex items-center gap-4 mb-6">
-          <div className="accent-bar" />
-          <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/40">
-            Interactive Explorer
-          </span>
+      <div className="px-3 md:px-6 py-6 md:py-10 bg-[#FAF9F6]">
+        <div className="max-w-6xl mx-auto">
+          <div className="flex items-center gap-4 mb-6">
+            <div className="accent-bar" />
+            <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/40">
+              Interactive Explorer
+            </span>
+          </div>
+          <h2 className="font-editorial text-2xl md:text-3xl text-[#0C1B33]/90 mb-6">
+            Chicago Incentive Zones
+          </h2>
         </div>
-        <h2 className="font-editorial text-2xl md:text-3xl text-[#0C1B33]/90 mb-6">
-          Chicago Incentive Zones
-        </h2>
 
         <div className="border border-[#0C1B33]/10 overflow-hidden">
           <MapShell />
         </div>
 
+        <div className="max-w-6xl mx-auto">
         <IncentiveGlance />
 
         <div className="mt-6 grid md:grid-cols-3 gap-0 border border-[#0C1B33]/10 bg-white">
@@ -71,6 +74,7 @@ export default function MapPage() {
               <p className="text-sm text-[#0C1B33]/50 leading-relaxed">{item.desc}</p>
             </div>
           ))}
+        </div>
         </div>
       </div>
     </div>

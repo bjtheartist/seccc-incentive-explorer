@@ -163,6 +163,14 @@ export interface ParcelData {
   isVacant: boolean;
 }
 
+export interface DistrictData {
+  ward: string | null;
+  congressionalDistrict: string | null;
+  stateHouseDistrict: string | null;
+  stateSenateDistrict: string | null;
+  commissionerDistrict: string | null;
+}
+
 export interface LookupResult {
   matched: boolean;
   business?: Business;
