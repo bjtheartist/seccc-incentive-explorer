@@ -79,7 +79,7 @@ export default function Home() {
                 </span>
               </div>
               <h3 className="font-editorial text-xl text-white mb-2 group-hover:text-[#93b4f8] transition-colors">
-                Incentive Analysis
+                Site Incentive Analysis
               </h3>
               <p className="text-[12px] text-white/40 leading-relaxed mb-4">
                 Enter your address to get an instant executive summary of every
@@ -105,7 +105,7 @@ export default function Home() {
                 </span>
               </div>
               <h3 className="font-editorial text-xl text-white mb-2 group-hover:text-emerald-300 transition-colors">
-                Development Feasibility
+                Development Feasibility Assessment
               </h3>
               <p className="text-[12px] text-white/40 leading-relaxed mb-4">
                 See which areas of Chicago are best suited for your specific
