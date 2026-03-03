@@ -24,7 +24,7 @@ export function Footer() {
                 { href: "/report", label: "Generate Report" },
                 { href: "/programs", label: "Incentive Programs" },
                 { href: "/map", label: "Explorer Map" },
-                { href: "/locate", label: "Find Best Location" },
+                { href: "/locate", label: "Development Feasibility" },
                 { href: "/faq", label: "FAQ" },
               ].map((link) => (
                 <li key={link.href}>

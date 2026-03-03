@@ -91,7 +91,7 @@ export default function Home() {
               </div>
             </Link>
 
-            {/* Path 2: Find Best Location */}
+            {/* Path 2: Development Feasibility */}
             <Link
               href="/locate"
               className="group relative border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] rounded-2xl p-6 transition-all hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10"
@@ -105,14 +105,14 @@ export default function Home() {
                 </span>
               </div>
               <h3 className="font-editorial text-xl text-white mb-2 group-hover:text-emerald-300 transition-colors">
-                Find the Best Location
+                Development Feasibility
               </h3>
               <p className="text-[12px] text-white/40 leading-relaxed mb-4">
-                Select your business sector and type to see the best areas
-                in Southeast Chicago based on zoning ordinances and incentive overlap.
+                See which areas of Chicago are best suited for your specific
+                needs based on zoning, incentive overlap, and neighborhood data.
               </p>
               <div className="flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-emerald-500/70 group-hover:text-emerald-400 transition-colors">
-                Explore Locations
+                Assess Locations
                 <ArrowRight className="w-3.5 h-3.5" />
               </div>
             </Link>
