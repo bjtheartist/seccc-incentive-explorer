@@ -65,7 +65,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.8 }}
             className="grid md:grid-cols-2 gap-4 max-w-3xl"
           >
-            {/* Path 1: Generate Your Report */}
+            {/* Path 1: Incentive Analysis */}
             <Link
               href="/report"
               className="group relative border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] rounded-2xl p-6 transition-all hover:border-[#2563EB]/40 hover:shadow-lg hover:shadow-blue-500/10"
@@ -79,7 +79,7 @@ export default function Home() {
                 </span>
               </div>
               <h3 className="font-editorial text-xl text-white mb-2 group-hover:text-[#93b4f8] transition-colors">
-                Generate Your Report
+                Incentive Analysis
               </h3>
               <p className="text-[12px] text-white/40 leading-relaxed mb-4">
                 Enter your address to get an instant executive summary of every
