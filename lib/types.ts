@@ -86,6 +86,7 @@ export interface ProgramCheckResult {
   benefitRange: string;
   fastestStep: string;
   notVerified: string[];
+  matchedRules: string[];
 }
 
 export interface TopAction {
@@ -245,6 +246,8 @@ export interface ExecutiveSummary {
     confidence: EligibilityConfidence;
     confidenceLabel: string;
     benefitRange: string;
+    whyOneLine?: string;
+    notVerified?: string[];
   }[];
   topActions: TopAction[];
   zoneCount: number;

@@ -116,6 +116,11 @@ export function encodeWizardState(state: WizardState): string {
   if (state.benefitTypes.length > 0) params.set("bt", btoa(JSON.stringify(state.benefitTypes)));
   if (state.creditsToAnalyze.length > 0) params.set("cta", btoa(JSON.stringify(state.creditsToAnalyze)));
 
+  // Comparison address
+  if (state.compareAddress) params.set("caddr", state.compareAddress);
+  if (state.compareLat != null) params.set("clat", state.compareLat.toFixed(5));
+  if (state.compareLon != null) params.set("clon", state.compareLon.toFixed(5));
+
   return params.toString();
 }
 
@@ -162,6 +167,14 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
   state.governmentLevels = decodeArray("gl");
   state.benefitTypes = decodeArray("bt");
   state.creditsToAnalyze = decodeArray("cta");
+
+  // Comparison address
+  const caddr = params.get("caddr");
+  if (caddr) state.compareAddress = caddr;
+  const clat = params.get("clat");
+  const clon = params.get("clon");
+  if (clat) state.compareLat = parseFloat(clat);
+  if (clon) state.compareLon = parseFloat(clon);
 
   return state;
 }

@@ -158,6 +158,7 @@ function computeConfidence(
 
   let confidence: EligibilityConfidence;
   let notVerified: string[] = [];
+  let matchedRules: string[] = [];
 
   if (locationRequired && !locationMatch) {
     confidence = "not_applicable";
@@ -167,6 +168,7 @@ function computeConfidence(
   } else if (survey && Object.keys(survey).length > 0) {
     const surveyResult = checkSurveyConfirmation(program, survey);
     notVerified = surveyResult.unverified;
+    matchedRules = surveyResult.matchedRules;
 
     if (locationMatch && surveyResult.confirmed) {
       confidence = "appears_eligible";
@@ -227,6 +229,7 @@ function computeConfidence(
     benefitRange: program.benefitRange || "Contact for details",
     fastestStep: program.fastestConfirmingStep || "Contact program administrator",
     notVerified,
+    matchedRules,
   };
 }
 
@@ -457,8 +460,9 @@ export function generateExecutiveSummary(
   zones: Record<string, boolean>,
   zoneNames: Record<string, string>,
   survey?: SurveyAnswers,
+  precomputedResults?: ProgramCheckResult[],
 ): ExecutiveSummary {
-  const results = runConfidenceEngine(programs, zones, zoneNames, survey);
+  const results = precomputedResults || runConfidenceEngine(programs, zones, zoneNames, survey);
   const topActions = computeTopActions(results);
 
   const zoneCount = Object.values(zones).filter(Boolean).length;
@@ -473,6 +477,8 @@ export function generateExecutiveSummary(
     confidence: r.confidence,
     confidenceLabel: r.confidenceLabel,
     benefitRange: r.benefitRange,
+    whyOneLine: r.whyOneLine,
+    notVerified: r.notVerified,
   }));
 
   const whyTheseMatter = buildWhyParagraph(topResults, zoneCount);

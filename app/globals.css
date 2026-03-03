@@ -349,4 +349,16 @@
     margin-top: 24pt !important;
     padding-top: 12pt !important;
   }
+
+  /* Force accordion content visible when printing */
+  [data-slot="accordion-content"] {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Hide chevron in print */
+  [data-slot="accordion-trigger"] svg {
+    display: none !important;
+  }
 }

@@ -2,7 +2,9 @@ import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule,
 import { isClass7aEligible } from "./parcel-classes";
 import { ZONE_LABELS, ZONE_DESCRIPTIONS, describeZoneClass } from "./constants";
 import { getIndustryById } from "./industries-data";
-import { generateExecutiveSummary, computeStackingNarrative } from "./confidence-engine";
+import { generateExecutiveSummary, computeStackingNarrative, runConfidenceEngine, isStaleProgramData } from "./confidence-engine";
+import type { EligibilityConfidence, ProgramCheckResult } from "./types";
+import { ZONE_LEARN_MORE } from "./constants";
 import { censusNarrative, CHICAGO_MEDIANS } from "./census-narrative";
 
 // ─── Local Types ────────────────────────────────────────────────────
@@ -47,6 +49,22 @@ export interface ReportItem {
   eligibilityRules?: { description: string; required: boolean }[];
   url?: string;
   level?: string;
+  confidenceLevel?: EligibilityConfidence;
+  confidenceLabel?: string;
+  whyOneLine?: string;
+  notVerified?: string[];
+  matchedRules?: string[];
+  lastVerifiedAt?: string | null;
+  isStale?: boolean;
+  sourceLabel?: string;
+  sourceUrl?: string;
+}
+
+export interface DataSourceCitation {
+  id: string;
+  label: string;
+  description: string;
+  url?: string;
 }
 
 export interface BenefitEstimate {
@@ -134,6 +152,7 @@ export interface GeneratedReport {
     bsos: { name: string; address: string }[];
     narrative: string;
   };
+  dataSources?: DataSourceCitation[];
 }
 
 // ─── Budget Median Mapping ──────────────────────────────────────────
@@ -269,6 +288,44 @@ function countActiveZones(zones?: Record<string, boolean>): number {
   return Object.values(zones).filter(Boolean).length;
 }
 
+
+// ─── Data Source Citations ──────────────────────────────────────────
+
+const DATA_SOURCES: Record<string, DataSourceCitation> = {
+  census: {
+    id: "census",
+    label: "U.S. Census Bureau",
+    description: "2022 American Community Survey 5-Year Estimates — median income, home value, population, and demographic indicators.",
+    url: "https://data.census.gov",
+  },
+  zones: {
+    id: "zones",
+    label: "City of Chicago & Illinois DCEO",
+    description: "Incentive zone boundaries including TIF districts, Enterprise Zones, Opportunity Zones, and state incentive areas.",
+    url: "https://data.cityofchicago.org",
+  },
+  zoning: {
+    id: "zoning",
+    label: "Chicago ArcGIS MapServer",
+    description: "Real-time zoning classification data from the City of Chicago GIS system.",
+    url: "https://gisapps.chicago.gov/arcgis/rest/services",
+  },
+  parcel: {
+    id: "parcel",
+    label: "Cook County Assessor",
+    description: "Property assessment records including PINs, class codes, assessed values, and building characteristics.",
+    url: "https://www.cookcountyassessoril.gov",
+  },
+};
+
+function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
+  const sources: DataSourceCitation[] = [];
+  if (ctx.census) sources.push(DATA_SOURCES.census);
+  if (ctx.zones) sources.push(DATA_SOURCES.zones);
+  if (ctx.cityZoning) sources.push(DATA_SOURCES.zoning);
+  if (ctx.parcel) sources.push(DATA_SOURCES.parcel);
+  return sources;
+}
 
 // ─── Builder Functions (Pyramid Principle) ──────────────────────────
 
@@ -497,12 +554,20 @@ function generateLocationIncentives(
     return aZone - bZone;
   });
 
+  // ── Confidence engine (run once, reuse for exec summary) ──
+  const confidenceResults = zones
+    ? runConfidenceEngine(programs, zones, zoneNames || {}, undefined, ctx.parcel)
+    : [];
+  const confidenceMap = new Map<string, ProgramCheckResult>();
+  for (const r of confidenceResults) confidenceMap.set(r.programId, r);
+
   // ── Builder outputs ──
   const verdict = computeVerdict(zones, programs, ctx);
   const marketContext = buildMarketContext(ctx, zones);
   const eligibleIds = allEligible.map((p) => p.id);
   const stackingAnalysis = buildStackingAnalysis(zones, zoneNames, eligibleIds, ctx.stackingRules);
   const communityAssetsData = buildCommunityAssets(ctx.communityAssets);
+  const dataSources = collectDataSources(ctx);
 
   // ── Sections: Overview → Market → Stacking → Programs → Documents → Support → Next Steps ──
   const sections: ReportSection[] = [];
@@ -562,19 +627,31 @@ function generateLocationIncentives(
     sections.push({
       title: "Eligible Incentive Programs",
       description: "Programs matched to your location and profile, ordered by eligibility confidence.",
-      items: mergedPrograms.map((p) => ({
-        label: p.name,
-        value: p.benefitRange || "Contact for details",
-        detail: p.summary,
-        programId: p.id,
-        whoQualifies: p.whoQualifies,
-        eligibilityRules: p.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
-          description: r.description,
-          required: r.required,
-        })),
-        url: p.url,
-        level: p.level,
-      })),
+      items: mergedPrograms.map((p) => {
+        const cr = confidenceMap.get(p.id);
+        return {
+          label: p.name,
+          value: p.benefitRange || "Contact for details",
+          detail: p.summary,
+          programId: p.id,
+          whoQualifies: p.whoQualifies,
+          eligibilityRules: p.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
+            description: r.description,
+            required: r.required,
+          })),
+          url: p.url,
+          level: p.level,
+          confidenceLevel: cr?.confidence,
+          confidenceLabel: cr?.confidenceLabel,
+          whyOneLine: cr?.whyOneLine,
+          notVerified: cr?.notVerified,
+          matchedRules: cr?.matchedRules,
+          lastVerifiedAt: p.lastVerifiedAt,
+          isStale: isStaleProgramData(p),
+          sourceLabel: p.zoneKey ? (ZONE_LABELS[p.zoneKey] || p.zoneKey) : undefined,
+          sourceUrl: p.zoneKey ? ZONE_LEARN_MORE[p.zoneKey] : undefined,
+        };
+      }),
     });
   }
 
@@ -763,6 +840,7 @@ function generateLocationIncentives(
     marketContext,
     stackingAnalysis,
     communityAssets: communityAssetsData,
+    dataSources,
   };
 }
 
@@ -792,11 +870,19 @@ function generateBestLocation(
     ? programs.filter((p) => !p.zoneKey || zones[p.zoneKey])
     : programs;
 
+  // ── Confidence engine ──
+  const confidenceResults = zones
+    ? runConfidenceEngine(programs, zones, zoneNames || {}, undefined, ctx.parcel)
+    : [];
+  const confidenceMap = new Map<string, ProgramCheckResult>();
+  for (const r of confidenceResults) confidenceMap.set(r.programId, r);
+
   // ── Builder outputs ──
   const verdict = computeVerdict(zones, programs, ctx);
   const marketContext = buildMarketContext(ctx, zones);
   const eligibleIds = sitePrograms.map((p) => p.id);
   const stackingAnalysis = buildStackingAnalysis(zones, zoneNames, eligibleIds, ctx.stackingRules);
+  const dataSources = collectDataSources(ctx);
 
   const sections: ReportSection[] = [];
 
@@ -1019,14 +1105,24 @@ function generateBestLocation(
     sections.push({
       title: `Available Programs (${sitePrograms.length})`,
       description: "Programs matched to this site, ordered by relevance to your project type.",
-      items: sitePrograms.slice(0, 8).map((p) => ({
-        label: p.name,
-        value: p.benefitRange || "Contact for details",
-        detail: p.summary,
-        programId: p.id,
-        level: p.level,
-        
-      })),
+      items: sitePrograms.slice(0, 8).map((p) => {
+        const cr = confidenceMap.get(p.id);
+        return {
+          label: p.name,
+          value: p.benefitRange || "Contact for details",
+          detail: p.summary,
+          programId: p.id,
+          level: p.level,
+          confidenceLevel: cr?.confidence,
+          confidenceLabel: cr?.confidenceLabel,
+          whyOneLine: cr?.whyOneLine,
+          notVerified: cr?.notVerified,
+          matchedRules: cr?.matchedRules,
+          lastVerifiedAt: p.lastVerifiedAt,
+          isStale: isStaleProgramData(p),
+          sourceUrl: p.zoneKey ? ZONE_LEARN_MORE[p.zoneKey] : undefined,
+        };
+      }),
     });
   }
 
@@ -1184,6 +1280,7 @@ function generateBestLocation(
     marketContext,
     stackingAnalysis,
     actionRoadmap: actionRoadmap.length > 0 ? actionRoadmap : undefined,
+    dataSources,
   };
 }
 
@@ -1756,7 +1853,9 @@ export function generateReportData(
 
   // Attach executive summary for address-based reports when zone data is available
   if (zones && zoneNames && (reportType === "location-incentives" || reportType === "developer-analysis" || reportType === "best-location")) {
-    report.executiveSummary = generateExecutiveSummary(programs, zones, zoneNames);
+    // Run confidence engine once for exec summary (lightweight — it's already cached in location-incentives)
+    const execResults = runConfidenceEngine(programs, zones, zoneNames, undefined, ctx.parcel);
+    report.executiveSummary = generateExecutiveSummary(programs, zones, zoneNames, undefined, execResults);
   }
 
   return report;

@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import { ZONE_KEYS, ZONE_LABELS, ZONE_COLORS } from "./constants";
 import type { LookupResult, Program } from "./types";
-import type { GeneratedReport } from "./report-engine";
+import type { GeneratedReport, DataSourceCitation } from "./report-engine";
 
 /* ── Brand Colors ── */
 const NAVY = "#0C1B33";
@@ -782,6 +782,41 @@ export function generateReportPdf(report: GeneratedReport): void {
     });
   }
 
+  /* ── DATA SOURCES ── */
+  if (report.dataSources && report.dataSources.length > 0) {
+    y += 8;
+    y = checkPage(doc, y, 50);
+    if (y > H - 60) { doc.addPage(); y = MARGIN + 10; }
+    drawAccentBar(doc, MARGIN, y);
+    y += 6;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    setColor(doc, NAVY);
+    doc.text("Data Sources", MARGIN, y);
+    y += 8;
+
+    for (const src of report.dataSources) {
+      y = checkPage(doc, y, 16);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      setColor(doc, NAVY);
+      doc.text(src.label, MARGIN + 4, y);
+      y += 4;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      setColor(doc, LIGHT_GRAY);
+      y += wrapText(doc, src.description, MARGIN + 4, y, CONTENT_W - 8, 3.5);
+      if (src.url) {
+        y += 1;
+        setColor(doc, BLUE);
+        doc.setFontSize(6);
+        doc.text(src.url, MARGIN + 4, y);
+        y += 4;
+      }
+      y += 3;
+    }
+  }
+
   // SECCC Contact block
   y += 8;
   y = checkPage(doc, y, 40);
@@ -798,12 +833,37 @@ export function generateReportPdf(report: GeneratedReport): void {
   doc.text("Web: www.secchicago.org", MARGIN + 10, y + 26);
   doc.text("Serving the 7th, 8th, and 10th Wards of Chicago", MARGIN + 10, y + 32);
 
+  /* ── PAGE HEADERS & FOOTERS ── */
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    // Footer: page number on all pages
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    setColor(doc, LIGHT_GRAY);
+    const pageText = `Page ${i} of ${totalPages}`;
+    const pageTextW = doc.getTextWidth(pageText);
+    doc.text(pageText, W - MARGIN - pageTextW, H - 8);
+    // Footer: date on left (pages 2+)
+    if (i >= 2) {
+      doc.text(dateStr, MARGIN, H - 8);
+    }
+    // Header on pages 2+
+    if (i >= 2) {
+      doc.setFontSize(6);
+      setColor(doc, "#D8DDE6");
+      doc.text("Chicago Site Incentive Map", MARGIN, MARGIN - 2);
+      drawLine(doc, MARGIN, MARGIN, W - MARGIN, "#E5E7EB");
+    }
+  }
+
   doc.setFontSize(7);
   setColor(doc, LIGHT_GRAY);
+  doc.setPage(totalPages);
   doc.text(
     `Report generated ${dateStr} by Chicago Site Incentive Map. Data is informational and not a guarantee of eligibility.`,
     MARGIN,
-    H - 10
+    H - 14
   );
 
   /* ── SAVE ── */

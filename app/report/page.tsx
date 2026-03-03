@@ -35,9 +35,17 @@ import type {
   WizardStepConfig,
 } from "@/lib/report-wizard-config";
 import { generateReportData } from "@/lib/report-engine";
-import type { GeneratedReport, ReportCensusData, ReportZoningData, ActionRoadmapItem } from "@/lib/report-engine";
+import type { GeneratedReport, ReportCensusData, ReportZoningData, ActionRoadmapItem, DataSourceCitation } from "@/lib/report-engine";
 import { formatDollars } from "@/lib/report-engine";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
+import { generateReportPdf } from "@/lib/pdf-report";
+import {
+  Accordion,
+  AccordionItem,
+  AccordionTrigger,
+  AccordionContent,
+} from "@/components/ui/accordion";
+import type { EligibilityConfidence } from "@/lib/types";
 import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { cachedFetch } from "@/lib/fetch-cache";
@@ -135,6 +143,18 @@ function ReportWizardPage() {
   // Report state
   const [report, setReport] = useState<GeneratedReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Comparison state
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareReport, setCompareReport] = useState<GeneratedReport | null>(null);
+  const [compareAddressInput, setCompareAddressInput] = useState("");
+  const [compareGeocoding, setCompareGeocoding] = useState(false);
+  const [compareGeoResult, setCompareGeoResult] = useState<{ lat: number; lon: number; display_name: string } | null>(null);
+  const [compareZones, setCompareZones] = useState<Record<string, boolean> | null>(null);
+  const [compareZoneNames, setCompareZoneNames] = useState<Record<string, string> | null>(null);
+  const [compareCensus, setCompareCensus] = useState<ReportCensusData | null>(null);
+  const [compareZoning, setCompareZoning] = useState<ReportZoningData | null>(null);
+  const [compareParcel, setCompareParcel] = useState<ParcelData | null>(null);
 
   // Data state
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -240,6 +260,59 @@ function ReportWizardPage() {
       cachedFetch<Stats>("/data/stats.json").then((d) => { if (d) setAreaStats(d); }).catch(() => {});
     });
   }, []);
+
+  // ── Comparison data fetching ──
+  useEffect(() => {
+    if (!compareGeoResult) return;
+    const { lat, lon } = compareGeoResult;
+    (async () => {
+      try {
+        const data = await cachedFetch<
+          { key: string; name: string }[] | { zones: Record<string, boolean>; zoneNames?: Record<string, string> }
+        >(`/api/zones/check?lat=${lat}&lon=${lon}`);
+        if (Array.isArray(data)) {
+          const zoneMap: Record<string, boolean> = {};
+          const nameMap: Record<string, string> = {};
+          for (const item of data) { if (item.key) { zoneMap[item.key] = true; if (item.name) nameMap[item.key] = item.name; } }
+          setCompareZones(zoneMap);
+          setCompareZoneNames(nameMap);
+        } else if ('zones' in data && data.zones) {
+          setCompareZones(data.zones);
+          if (data.zoneNames) setCompareZoneNames(data.zoneNames);
+        } else { throw new Error("API unavailable"); }
+      } catch {
+        const { checkZones } = await import("@/lib/zone-check");
+        const result = await checkZones(lat, lon);
+        setCompareZones(result.zones);
+        setCompareZoneNames(result.zoneNames);
+      }
+    })();
+    cachedFetch(`/api/census?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareCensus(d as ReportCensusData); }).catch(() => {});
+    cachedFetch(`/api/zoning?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareZoning(d as ReportZoningData); }).catch(() => {});
+    cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareParcel(d); }).catch(() => {});
+  }, [compareGeoResult]);
+
+  // Generate comparison report once compare data is ready
+  useEffect(() => {
+    if (!compareGeoResult || !compareZones || programs.length === 0) return;
+    const timer = setTimeout(() => {
+      const compareState: WizardState = {
+        ...wizardState,
+        address: compareGeoResult.display_name,
+        lat: compareGeoResult.lat,
+        lon: compareGeoResult.lon,
+      };
+      const generated = generateReportData(compareState, programs, {
+        zones: compareZones ?? undefined,
+        zoneNames: compareZoneNames ?? undefined,
+        census: compareCensus ?? undefined,
+        cityZoning: compareZoning ?? undefined,
+        parcel: compareParcel ?? undefined,
+      });
+      setCompareReport(generated);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [compareGeoResult, compareZones, compareZoneNames, compareCensus, compareZoning, compareParcel, programs, wizardState]);
 
   // Instant mode: auto-generate report once programs + zones are loaded
   // Small delay gives census/zoning APIs time to resolve alongside zones
@@ -423,6 +496,28 @@ function ReportWizardPage() {
     setDirection(1);
   }, []);
 
+  const handleCompareGeocode = useCallback(async () => {
+    if (!compareAddressInput.trim()) return;
+    setCompareGeocoding(true);
+    try {
+      const data = await cachedFetch<{ lat: number; lon: number; displayName?: string; display_name?: string }>(
+        `/api/geocode?address=${encodeURIComponent(compareAddressInput.trim())}`
+      );
+      if (!data.lat || !data.lon) throw new Error("Address not found");
+      setCompareGeoResult({ lat: data.lat, lon: data.lon, display_name: data.displayName || data.display_name || compareAddressInput.trim() });
+      setWizardState((prev) => ({
+        ...prev,
+        compareAddress: data.display_name || compareAddressInput.trim(),
+        compareLat: data.lat,
+        compareLon: data.lon,
+      }));
+    } catch {
+      setCompareGeoResult(null);
+    } finally {
+      setCompareGeocoding(false);
+    }
+  }, [compareAddressInput]);
+
   // ── Report Generation ────────────────────────────────────────────
 
   const handleGenerateReport = useCallback(async () => {
@@ -498,6 +593,19 @@ function ReportWizardPage() {
 
   // ── If report is generated, show report display ──────────────────
 
+  if (report && compareReport) {
+    return (
+      <div className="min-h-screen">
+        <ComparisonDisplay
+          reportA={report}
+          reportB={compareReport}
+          onStartOver={handleStartOver}
+          wizardState={wizardState}
+        />
+      </div>
+    );
+  }
+
   if (report) {
     return (
       <div className="min-h-screen">
@@ -507,6 +615,13 @@ function ReportWizardPage() {
           onRefine={handleRefine}
           isInstantMode={isInstantMode}
           wizardState={wizardState}
+          onCompare={() => setCompareMode(true)}
+          compareMode={compareMode}
+          compareAddressInput={compareAddressInput}
+          setCompareAddressInput={setCompareAddressInput}
+          compareGeocoding={compareGeocoding}
+          onCompareGeocode={handleCompareGeocode}
+          compareGeoResult={compareGeoResult}
         />
       </div>
     );
@@ -1198,8 +1313,15 @@ function ExecutiveSummarySection({
                     <span className="text-[14px] font-semibold text-[#0C1B33]">
                       {prog.name}
                     </span>
-                    <span className={`font-mono-bureau text-[8px] tracking-[0.1em] uppercase px-2 py-0.5 border ${badge.bg} ${badge.text} ${badge.border}`}>
-                      {prog.confidenceLabel}
+                    <span className="relative group/badge">
+                      <span className={`font-mono-bureau text-[8px] tracking-[0.1em] uppercase px-2 py-0.5 border cursor-help ${badge.bg} ${badge.text} ${badge.border}`}>
+                        {prog.confidenceLabel}
+                      </span>
+                      {prog.whyOneLine && (
+                        <span className="invisible group-hover/badge:visible absolute left-0 top-full mt-1 z-10 bg-white border border-[#0C1B33]/10 shadow-md px-3 py-2 text-[11px] text-[#0C1B33]/60 leading-relaxed w-64 font-sans normal-case tracking-normal">
+                          {prog.whyOneLine}
+                        </span>
+                      )}
                     </span>
                     {prog.benefitRange && (
                       <span className="font-mono-bureau text-[11px] text-[#0C1B33]/40">
@@ -1479,6 +1601,183 @@ function ComparisonBar({ label, locationFormatted, cityFormatted, pct }: {
   );
 }
 
+// ─── Freshness Badge ─────────────────────────────────────────────────
+
+function FreshnessBadge({ lastVerifiedAt, isStale }: { lastVerifiedAt: string | null; isStale?: boolean }) {
+  if (!lastVerifiedAt) return null;
+  const d = new Date(lastVerifiedAt);
+  const label = d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+  return (
+    <span className={`font-mono-bureau text-[8px] tracking-[0.1em] uppercase ${isStale ? "text-[#0C1B33]/25" : "text-[#0C1B33]/35"}`}>
+      {isStale ? `Unverified since ${label}` : `Verified ${label}`}
+    </span>
+  );
+}
+
+// ─── Comparison Summary ─────────────────────────────────────────────
+
+function ComparisonSummary({
+  reportA,
+  reportB,
+}: {
+  reportA: GeneratedReport;
+  reportB: GeneratedReport;
+}) {
+  const countZones = (r: GeneratedReport) =>
+    r.sections?.reduce((n, s) => n + (s.items?.length || 0), 0) || 0;
+  const countPrograms = (r: GeneratedReport) =>
+    r.sections?.reduce(
+      (n, s) => n + (s.items?.filter((i) => i.programId).length || 0),
+      0
+    ) || 0;
+  const totalValue = (r: GeneratedReport) =>
+    r.benefitEstimates?.total || 0;
+
+  const metrics = [
+    {
+      label: "Verdict",
+      a: reportA.verdict?.signal || "—",
+      b: reportB.verdict?.signal || "—",
+    },
+    {
+      label: "Zones",
+      a: String(countZones(reportA)),
+      b: String(countZones(reportB)),
+    },
+    {
+      label: "Programs",
+      a: String(countPrograms(reportA)),
+      b: String(countPrograms(reportB)),
+    },
+    {
+      label: "Est. Value",
+      a: totalValue(reportA) > 0 ? formatDollars(totalValue(reportA)) : "—",
+      b: totalValue(reportB) > 0 ? formatDollars(totalValue(reportB)) : "—",
+    },
+  ];
+
+  const betterSide = (m: { a: string; b: string; label: string }) => {
+    if (m.label === "Verdict") {
+      const order = ["strong", "moderate", "limited", "none"];
+      const ia = order.indexOf(m.a);
+      const ib = order.indexOf(m.b);
+      if (ia >= 0 && ib >= 0 && ia !== ib) return ia < ib ? "a" : "b";
+      return null;
+    }
+    const na = parseInt(m.a.replace(/[^0-9]/g, ""), 10);
+    const nb = parseInt(m.b.replace(/[^0-9]/g, ""), 10);
+    if (!isNaN(na) && !isNaN(nb) && na !== nb) return na > nb ? "a" : "b";
+    return null;
+  };
+
+  return (
+    <div className="bg-white border border-[#0C1B33]/8 mb-6">
+      <div className="px-6 py-4 border-b border-[#0C1B33]/8">
+        <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30">
+          Side-by-Side Comparison
+        </span>
+      </div>
+      <div className="grid grid-cols-[1fr_1fr_1fr] text-center">
+        {/* Header row */}
+        <div className="px-4 py-3 border-b border-[#0C1B33]/6 font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30">
+          Metric
+        </div>
+        <div className="px-4 py-3 border-b border-l border-[#0C1B33]/6 font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/50">
+          {reportA.title?.replace("Incentive Report: ", "").slice(0, 30) || "Address A"}
+        </div>
+        <div className="px-4 py-3 border-b border-l border-[#0C1B33]/6 font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/50">
+          {reportB.title?.replace("Incentive Report: ", "").slice(0, 30) || "Address B"}
+        </div>
+        {/* Metric rows */}
+        {metrics.map((m) => {
+          const better = betterSide(m);
+          return (
+            <div key={m.label} className="contents">
+              <div className="px-4 py-3 border-b border-[#0C1B33]/4 font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/40 text-left">
+                {m.label}
+              </div>
+              <div
+                className={`px-4 py-3 border-b border-l border-[#0C1B33]/4 font-editorial text-[18px] text-[#0C1B33]/70 ${
+                  better === "a" ? "border-l-2 border-l-[#0C1B33]/20" : ""
+                }`}
+              >
+                {m.a}
+              </div>
+              <div
+                className={`px-4 py-3 border-b border-l border-[#0C1B33]/4 font-editorial text-[18px] text-[#0C1B33]/70 ${
+                  better === "b" ? "border-l-2 border-l-[#0C1B33]/20" : ""
+                }`}
+              >
+                {m.b}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ─── Comparison Display ─────────────────────────────────────────────
+
+function ComparisonDisplay({
+  reportA,
+  reportB,
+  onStartOver,
+  wizardState: reportWizardState,
+}: {
+  reportA: GeneratedReport;
+  reportB: GeneratedReport;
+  onStartOver: () => void;
+  wizardState?: WizardState;
+}) {
+  return (
+    <div className="bg-[#FAF9F6] min-h-screen py-10 px-4">
+      <div className="mx-auto max-w-[1600px]">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="flex items-center justify-center gap-4 mb-3">
+            <div className="accent-bar" />
+            <span className="font-mono-bureau text-[9px] tracking-[0.3em] uppercase text-[#0C1B33]/25">
+              Location Comparison
+            </span>
+            <div className="accent-bar" />
+          </div>
+          <h1 className="font-editorial text-2xl sm:text-3xl text-[#0C1B33] mb-4">
+            Side-by-Side Analysis
+          </h1>
+          <button
+            onClick={onStartOver}
+            className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/40 hover:text-[#0C1B33] transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-3 h-3" />
+            Start Over
+          </button>
+        </div>
+
+        {/* Summary card */}
+        <div className="mx-auto max-w-[850px] mb-8">
+          <ComparisonSummary reportA={reportA} reportB={reportB} />
+        </div>
+
+        {/* Two reports side by side */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <ReportDisplay
+            report={reportA}
+            onStartOver={onStartOver}
+            compact
+          />
+          <ReportDisplay
+            report={reportB}
+            onStartOver={onStartOver}
+            compact
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Report Display ──────────────────────────────────────────────────
 
 function ReportDisplay({
@@ -1487,12 +1786,28 @@ function ReportDisplay({
   onRefine,
   isInstantMode,
   wizardState: reportWizardState,
+  compact,
+  onCompare,
+  compareMode,
+  compareAddressInput,
+  setCompareAddressInput,
+  compareGeocoding,
+  onCompareGeocode,
+  compareGeoResult,
 }: {
   report: GeneratedReport;
   onStartOver: () => void;
   onRefine?: () => void;
   isInstantMode?: boolean;
   wizardState?: WizardState;
+  compact?: boolean;
+  onCompare?: () => void;
+  compareMode?: boolean;
+  compareAddressInput?: string;
+  setCompareAddressInput?: (v: string) => void;
+  compareGeocoding?: boolean;
+  onCompareGeocode?: () => void;
+  compareGeoResult?: { lat: number; lon: number; display_name: string } | null;
 }) {
   const [linkCopied, setLinkCopied] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
@@ -1500,8 +1815,28 @@ function ReportDisplay({
     report.executiveSummary?.whyTheseMatter || ""
   );
 
+  // ── TOC ──
+  const sectionToAnchor = (title: string) =>
+    title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+  const tocEntries = useMemo(() => {
+    const entries: { label: string; anchor: string }[] = [];
+    if (report.verdict) entries.push({ label: "Verdict", anchor: "verdict" });
+    if (report.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
+    if (report.benefitEstimates && report.benefitEstimates.items.length > 0) entries.push({ label: "Benefit Estimates", anchor: "benefit-estimates" });
+    if (report.sections) {
+      for (const s of report.sections) {
+        entries.push({ label: s.title, anchor: sectionToAnchor(s.title) });
+      }
+    }
+    if (report.actionRoadmap && report.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
+    if (report.recommendedActions && report.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
+    if (report.dataSources && report.dataSources.length > 0) entries.push({ label: "Data Sources", anchor: "data-sources" });
+    return entries;
+  }, [report]);
+
   const handlePrint = () => {
-    window.print();
+    generateReportPdf(report);
   };
 
   const handleShareReport = useCallback(() => {
@@ -1548,11 +1883,11 @@ function ReportDisplay({
   return (
     <motion.div {...fadeIn}>
       {/* ── Outer wrapper: off-white background ── */}
-      <div className="report-document bg-[#F5F5F0] py-4 sm:py-8 px-2 sm:px-6 print:bg-white print:p-0">
+      <div className={`report-document ${compact ? "bg-transparent py-0 px-0" : "bg-[#F5F5F0] py-4 sm:py-8 px-2 sm:px-6"} print:bg-white print:p-0`}>
         {/* ── Document ── */}
-        <div className="mx-auto max-w-[850px] bg-white shadow-xl print:shadow-none">
+        <div className={`mx-auto ${compact ? "max-w-none" : "max-w-[850px]"} bg-white shadow-xl print:shadow-none`}>
           {/* ── Cover / Header Bar ── */}
-          <div className="report-cover bg-[#0C1B33] px-5 sm:px-12 md:px-16 pt-12 pb-10">
+          <div className={`report-cover bg-[#0C1B33] ${compact ? "px-4 pt-6 pb-5" : "px-5 sm:px-12 md:px-16 pt-12 pb-10"}`}>
             {isInstantMode && (
               <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-white/50 mb-2">
                 Instant Report
@@ -1561,7 +1896,7 @@ function ReportDisplay({
             <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-white/40 mb-5">
               Chicago Site Incentive Map
             </p>
-            <h1 className="font-editorial text-3xl sm:text-4xl lg:text-[42px] text-white leading-tight mb-3">
+            <h1 className={`font-editorial ${compact ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl lg:text-[42px]"} text-white leading-tight mb-3`}>
               {isInstantMode && report.metadata?.address
                 ? `Instant Report — ${report.metadata.address}`
                 : report.title}
@@ -1575,7 +1910,7 @@ function ReportDisplay({
           </div>
 
           {/* ── Metadata Row ── */}
-          <div className="report-meta px-5 sm:px-12 md:px-16 py-5 border-b border-[#0C1B33]/8 flex flex-wrap gap-x-5 sm:gap-x-8 gap-y-3">
+          <div className={`report-meta ${compact ? "px-4 py-3" : "px-5 sm:px-12 md:px-16 py-5"} border-b border-[#0C1B33]/8 flex flex-wrap gap-x-5 sm:gap-x-8 gap-y-3`}>
             <div>
               <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
                 Date
@@ -1627,6 +1962,31 @@ function ReportDisplay({
             )}
           </div>
 
+          {/* ── Table of Contents ── */}
+          {tocEntries.length > 0 && (
+            <nav className="px-5 sm:px-12 md:px-16 pt-8 pb-2">
+              <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/25 block mb-3">
+                Contents
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1">
+                {tocEntries.map((entry, i) => (
+                  <a
+                    key={entry.anchor}
+                    href={`#${entry.anchor}`}
+                    className="flex items-baseline gap-2 group py-0.5"
+                  >
+                    <span className="font-mono-bureau text-[9px] text-[#0C1B33]/15 w-5 text-right flex-shrink-0">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="font-mono-bureau text-[10px] tracking-[0.05em] text-[#0C1B33]/45 group-hover:text-[#0C1B33] transition-colors">
+                      {entry.label}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </nav>
+          )}
+
           {/* ── Zoning Map ── */}
           <div className="px-5 sm:px-12 md:px-16 pt-8">
             <ReportZoningMap
@@ -1637,7 +1997,7 @@ function ReportDisplay({
           </div>
 
           {/* ── Report Body ── */}
-          <div className="report-body px-5 sm:px-12 md:px-16 py-14">
+          <div className={`report-body ${compact ? "px-4 py-8" : "px-5 sm:px-12 md:px-16 py-14"}`}>
             {/* ── Overview text ── */}
             {report.summary && (
               <div className="mb-12">
@@ -1649,23 +2009,29 @@ function ReportDisplay({
 
             {/* ── Verdict Card ── */}
             {report.verdict && (
-              <VerdictCard verdict={report.verdict} />
+              <div id="verdict">
+                <VerdictCard verdict={report.verdict} />
+              </div>
             )}
 
             {/* ── Executive Summary from Confidence Engine ── */}
             {report.executiveSummary && (
-              <ExecutiveSummarySection
-                summary={report.executiveSummary}
-                isEditing={isEditingSummary}
-                editedText={editedSummaryText}
-                onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
-                onTextChange={setEditedSummaryText}
-              />
+              <div id="executive-summary">
+                <ExecutiveSummarySection
+                  summary={report.executiveSummary}
+                  isEditing={isEditingSummary}
+                  editedText={editedSummaryText}
+                  onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
+                  onTextChange={setEditedSummaryText}
+                />
+              </div>
             )}
 
             {/* ── Benefit Estimator ── */}
             {report.benefitEstimates && report.benefitEstimates.items.length > 0 && (
-              <BenefitEstimatorSection estimates={report.benefitEstimates} />
+              <div id="benefit-estimates">
+                <BenefitEstimatorSection estimates={report.benefitEstimates} />
+              </div>
             )}
 
             {/* ── Content Sections ── */}
@@ -1674,7 +2040,7 @@ function ReportDisplay({
                 const sectionNumber = String(sectionIdx + sectionOffset + 1).padStart(2, "0");
 
                 return (
-                  <div key={sectionIdx} className="report-section mb-14">
+                  <div key={sectionIdx} id={sectionToAnchor(section.title)} className="report-section mb-14">
                     <div className="flex items-baseline gap-4 mb-4">
                       <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
                         {sectionNumber}
@@ -1850,46 +2216,91 @@ function ReportDisplay({
                               )}
                             </div>
 
-                            {/* Eligibility & URL — shown for program items */}
-                            {(item.whoQualifies || item.eligibilityRules || item.url) && (
-                              <div className="report-eligibility mt-2.5 pl-4 border-l border-[#0C1B33]/8 space-y-2">
-                                {item.whoQualifies && (
-                                  <div>
-                                    <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-0.5">
-                                      Who Qualifies
-                                    </span>
-                                    <span className="text-[#0C1B33]/45 text-[11px] sm:text-[12px] leading-relaxed block">
-                                      {item.whoQualifies}
-                                    </span>
-                                  </div>
-                                )}
-                                {item.eligibilityRules && item.eligibilityRules.length > 0 && (
-                                  <div>
-                                    <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
-                                      Requirements
-                                    </span>
-                                    <ul className="space-y-0.5">
-                                      {item.eligibilityRules.map((rule, rIdx) => (
-                                        <li key={rIdx} className="flex items-start gap-2 text-[11px] sm:text-[12px] text-[#0C1B33]/40 leading-relaxed">
-                                          <span className="text-[#0C1B33]/20 mt-0.5 flex-shrink-0">{rule.required ? "Required:" : "Optional:"}</span>
-                                          <span>{rule.description}</span>
-                                        </li>
-                                      ))}
-                                    </ul>
-                                  </div>
-                                )}
-                                {item.url && (
-                                  <a
-                                    href={item.url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 text-[11px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors font-mono-bureau tracking-wide print-url"
-                                  >
-                                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                                    More information
-                                  </a>
-                                )}
-                              </div>
+                            {/* Eligibility & URL — collapsible accordion for program items */}
+                            {(item.whoQualifies || item.eligibilityRules || item.url || item.whyOneLine) && (
+                              <Accordion type="single" collapsible className="mt-1.5">
+                                <AccordionItem value="eligibility" className="border-none">
+                                  <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
+                                    {item.confidenceLabel || "Eligibility Details"}
+                                  </AccordionTrigger>
+                                  <AccordionContent className="report-eligibility pl-4 border-l border-[#0C1B33]/8 space-y-2">
+                                    {item.whyOneLine && (
+                                      <p className="text-[#0C1B33]/50 text-[12px] leading-relaxed italic">
+                                        {item.whyOneLine}
+                                      </p>
+                                    )}
+                                    {item.matchedRules && item.matchedRules.length > 0 && (
+                                      <div>
+                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
+                                          Confirmed
+                                        </span>
+                                        <ul className="space-y-0.5">
+                                          {item.matchedRules.map((rule, rIdx) => (
+                                            <li key={rIdx} className="text-[11px] text-[#0C1B33]/50 leading-relaxed flex items-start gap-1.5">
+                                              <span className="text-[#0C1B33]/25 flex-shrink-0">+</span>
+                                              <span>{rule}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {item.notVerified && item.notVerified.length > 0 && (
+                                      <div>
+                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/20 block mb-1">
+                                          Not Yet Verified
+                                        </span>
+                                        <ul className="space-y-0.5">
+                                          {item.notVerified.map((nv, nvIdx) => (
+                                            <li key={nvIdx} className="text-[11px] text-[#0C1B33]/30 leading-relaxed flex items-start gap-1.5">
+                                              <span className="text-[#0C1B33]/15 flex-shrink-0">?</span>
+                                              <span>{nv}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {item.whoQualifies && (
+                                      <div>
+                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-0.5">
+                                          Who Qualifies
+                                        </span>
+                                        <span className="text-[#0C1B33]/45 text-[11px] leading-relaxed block">
+                                          {item.whoQualifies}
+                                        </span>
+                                      </div>
+                                    )}
+                                    {item.eligibilityRules && item.eligibilityRules.length > 0 && (
+                                      <div>
+                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
+                                          Requirements
+                                        </span>
+                                        <ul className="space-y-0.5">
+                                          {item.eligibilityRules.map((rule, rIdx) => (
+                                            <li key={rIdx} className="flex items-start gap-2 text-[11px] text-[#0C1B33]/40 leading-relaxed">
+                                              <span className="text-[#0C1B33]/20 mt-0.5 flex-shrink-0">{rule.required ? "Required:" : "Optional:"}</span>
+                                              <span>{rule.description}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                    {item.url && (
+                                      <a
+                                        href={item.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 text-[11px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors font-mono-bureau tracking-wide print-url"
+                                      >
+                                        <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                        More information
+                                      </a>
+                                    )}
+                                    {item.lastVerifiedAt && (
+                                      <FreshnessBadge lastVerifiedAt={item.lastVerifiedAt} isStale={item.isStale} />
+                                    )}
+                                  </AccordionContent>
+                                </AccordionItem>
+                              </Accordion>
                             )}
                           </div>
                         ))}
@@ -1901,13 +2312,15 @@ function ReportDisplay({
 
             {/* ── Your Next Steps (action roadmap) ── */}
             {report.actionRoadmap && report.actionRoadmap.length > 0 && (
-              <ActionRoadmapSection items={report.actionRoadmap} />
+              <div id="action-roadmap">
+                <ActionRoadmapSection items={report.actionRoadmap} />
+              </div>
             )}
 
             {/* ── Recommended Actions ── */}
             {report.recommendedActions &&
               report.recommendedActions.length > 0 && (
-                <div className="mb-12">
+                <div id="recommended-actions" className="mb-12">
                   <div className="flex items-baseline gap-4 mb-4">
                     <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
                       {String(
@@ -1958,6 +2371,45 @@ function ReportDisplay({
                 </div>
               )}
 
+            {/* ── Data Sources ── */}
+            {report.dataSources && report.dataSources.length > 0 && (
+              <div id="data-sources" className="mb-12">
+                <div className="flex items-baseline gap-4 mb-4">
+                  <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
+                    {String(
+                      (report.sections?.length || 0) + sectionOffset + (report.recommendedActions && report.recommendedActions.length > 0 ? 2 : 1)
+                    ).padStart(2, "0")}
+                  </span>
+                  <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]">
+                    Data Sources
+                  </h2>
+                </div>
+                <hr className="border-[#0C1B33]/8 mb-5" />
+                <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed mb-5 max-w-prose">
+                  This report draws on the following data sources to verify eligibility and provide location context.
+                </p>
+                <ul className="space-y-3">
+                  {report.dataSources.map((src) => (
+                    <li key={src.id} className="text-[13px] leading-relaxed">
+                      <span className="text-[#0C1B33]/70 font-semibold">{src.label}</span>
+                      <span className="text-[#0C1B33]/40"> — {src.description}</span>
+                      {src.url && (
+                        <a
+                          href={src.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 ml-2 text-[11px] text-[#0C1B33]/40 hover:text-[#0C1B33] transition-colors font-mono-bureau tracking-wide print-url"
+                        >
+                          <ExternalLink className="w-2.5 h-2.5" />
+                          Link
+                        </a>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* ── Footer ── */}
             <div className="report-footer mt-16 pt-6 border-t border-dashed border-[#0C1B33]/15">
               <p className="text-[#0C1B33]/35 text-[12px] leading-relaxed mb-2">
@@ -1973,48 +2425,103 @@ function ReportDisplay({
         </div>
 
         {/* ── Action Buttons (outside the document) ── */}
-        <div className="report-actions mx-auto max-w-[850px] flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 print:hidden">
-          <button
-            onClick={handlePrint}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 transition-colors cursor-pointer shadow-md"
-          >
-            <Printer className="w-3.5 h-3.5" />
-            Download PDF
-          </button>
-          {reportWizardState && (
+        <div className={`report-actions mx-auto max-w-[850px] print:hidden mt-8 ${compact ? "hidden" : ""}`}>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
-              onClick={handleShareReport}
+              onClick={handlePrint}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 transition-colors cursor-pointer shadow-md"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              Download PDF
+            </button>
+            {reportWizardState && (
+              <button
+                onClick={handleShareReport}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
+              >
+                {linkCopied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    Link Copied!
+                  </>
+                ) : (
+                  <>
+                    <Link2 className="w-3.5 h-3.5" />
+                    Share Report
+                  </>
+                )}
+              </button>
+            )}
+            {!compact && onCompare && !compareMode && (
+              <button
+                onClick={onCompare}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
+              >
+                <MapPin className="w-3.5 h-3.5" />
+                Compare Another Address
+              </button>
+            )}
+            {isInstantMode && onRefine && (
+              <button
+                onClick={onRefine}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
+              >
+                <ArrowRight className="w-3.5 h-3.5" />
+                Refine This Report
+              </button>
+            )}
+            <button
+              onClick={onStartOver}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
             >
-              {linkCopied ? (
-                <>
-                  <Check className="w-3.5 h-3.5" />
-                  Link Copied!
-                </>
-              ) : (
-                <>
-                  <Link2 className="w-3.5 h-3.5" />
-                  Share Report
-                </>
-              )}
+              <RotateCcw className="w-3.5 h-3.5" />
+              {isInstantMode ? "New Search" : "Start Over"}
             </button>
+          </div>
+
+          {/* Compare address input */}
+          {compareMode && !compareGeoResult && (
+            <div className="mt-5 mx-auto max-w-md">
+              <label className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-2">
+                Enter a second address to compare
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={compareAddressInput || ""}
+                  onChange={(e) => setCompareAddressInput?.(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") onCompareGeocode?.(); }}
+                  placeholder="e.g. 200 N LaSalle St, Chicago"
+                  className="flex-1 px-4 py-3 bg-white border border-[#0C1B33]/15 text-[13px] text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#0C1B33]/30 font-mono-bureau"
+                />
+                <button
+                  onClick={onCompareGeocode}
+                  disabled={compareGeocoding || !compareAddressInput?.trim()}
+                  className="px-5 py-3 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase hover:bg-[#0C1B33]/80 transition-colors disabled:opacity-30 cursor-pointer"
+                >
+                  {compareGeocoding ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Search className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </div>
+            </div>
           )}
-          {isInstantMode && onRefine && (
-            <button
-              onClick={onRefine}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
-            >
-              <ArrowRight className="w-3.5 h-3.5" />
-              Refine This Report
-            </button>
+
+          {/* Compare loading state */}
+          {compareMode && compareGeoResult && !compareGeoResult && (
+            <div className="mt-5 text-center">
+              <div className="flex gap-1.5 justify-center mb-2">
+                <div className="w-1.5 h-1.5 bg-[#0C1B33]/20 rounded-full animate-pulse" />
+                <div className="w-1.5 h-1.5 bg-[#0C1B33]/20 rounded-full animate-pulse" style={{ animationDelay: "0.2s" }} />
+                <div className="w-1.5 h-1.5 bg-[#0C1B33]/20 rounded-full animate-pulse" style={{ animationDelay: "0.4s" }} />
+              </div>
+              <p className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/30">
+                Generating comparison report...
+              </p>
+            </div>
           )}
-          <button
-            onClick={onStartOver}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            {isInstantMode ? "New Search" : "Start Over"}
-          </button>
         </div>
       </div>
     </motion.div>

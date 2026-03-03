@@ -47,6 +47,9 @@ export interface WizardState {
   benefitTypes: string[];
   projectType: string;
   creditsToAnalyze: string[];
+  compareAddress?: string;
+  compareLat?: number | null;
+  compareLon?: number | null;
 }
 
 // ─── Initial State ──────────────────────────────────────────────────
