@@ -14,13 +14,11 @@ import {
   RotateCcw,
   Printer,
   AlertCircle,
-  Sparkles,
   Phone,
   ExternalLink,
   Calendar,
   DollarSign,
   Mail,
-  ClipboardList,
   Link2,
 } from "lucide-react";
 import {
@@ -40,7 +38,7 @@ import { generateReportData } from "@/lib/report-engine";
 import type { GeneratedReport, ReportCensusData, ReportZoningData, ActionRoadmapItem } from "@/lib/report-engine";
 import { formatDollars } from "@/lib/report-engine";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
-import type { Program, ExecutiveSummary, ParcelData, DistrictData } from "@/lib/types";
+import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { cachedFetch } from "@/lib/fetch-cache";
 
@@ -69,11 +67,11 @@ const fadeIn = {
 // ─── Confidence badge color mapping ──────────────────────────────────
 
 const CONFIDENCE_BADGE: Record<string, { bg: string; text: string; border: string }> = {
-  appears_eligible: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
-  location_eligible: { bg: "bg-emerald-50", text: "text-emerald-600", border: "border-emerald-200" },
-  may_qualify: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-200" },
-  worth_exploring: { bg: "bg-[#0C1B33]/5", text: "text-[#0C1B33]/50", border: "border-[#0C1B33]/10" },
-  not_applicable: { bg: "bg-red-50", text: "text-red-500", border: "border-red-200" },
+  appears_eligible: { bg: "bg-[#0C1B33]/[0.04]", text: "text-[#0C1B33]/70", border: "border-[#0C1B33]/12" },
+  location_eligible: { bg: "bg-[#0C1B33]/[0.04]", text: "text-[#0C1B33]/60", border: "border-[#0C1B33]/10" },
+  may_qualify: { bg: "bg-[#0C1B33]/[0.03]", text: "text-[#0C1B33]/50", border: "border-[#0C1B33]/8" },
+  worth_exploring: { bg: "bg-[#0C1B33]/[0.02]", text: "text-[#0C1B33]/35", border: "border-[#0C1B33]/6" },
+  not_applicable: { bg: "bg-[#0C1B33]/[0.02]", text: "text-[#0C1B33]/30", border: "border-[#0C1B33]/5" },
 };
 
 // ─── Wrapper with Suspense ───────────────────────────────────────────
@@ -146,6 +144,9 @@ function ReportWizardPage() {
   const [cityZoning, setCityZoning] = useState<ReportZoningData | null>(null);
   const [parcelData, setParcelData] = useState<ParcelData | null>(null);
   const [districtsData, setDistrictsData] = useState<DistrictData | null>(null);
+  const [stackingRules, setStackingRules] = useState<StackingRule[] | null>(null);
+  const [communityAssets, setCommunityAssets] = useState<CommunityAsset[] | null>(null);
+  const [areaStats, setAreaStats] = useState<Stats | null>(null);
 
   // Address / geocode state
   const [addressInput, setAddressInput] = useState(instantAddr);
@@ -226,6 +227,20 @@ function ReportWizardPage() {
       .catch(() => {});
   }, [wizardState.lat, wizardState.lon]);
 
+  // Load stacking rules + community assets when address has lat/lon
+  useEffect(() => {
+    if (!wizardState.lat || !wizardState.lon) return;
+    cachedFetch<StackingRule[]>("/api/stacking").then((d) => { if (d) setStackingRules(d); }).catch(() => {});
+    cachedFetch<CommunityAsset[]>(`/api/assets?type=edo,bso`).then((d) => { if (d) setCommunityAssets(d); }).catch(() => {});
+  }, [wizardState.lat, wizardState.lon]);
+
+  // Load area stats on mount (no lat/lon dependency)
+  useEffect(() => {
+    cachedFetch<Stats>("/api/stats").then((d) => { if (d) setAreaStats(d); }).catch(() => {
+      cachedFetch<Stats>("/data/stats.json").then((d) => { if (d) setAreaStats(d); }).catch(() => {});
+    });
+  }, []);
+
   // Instant mode: auto-generate report once programs + zones are loaded
   // Small delay gives census/zoning APIs time to resolve alongside zones
   useEffect(() => {
@@ -235,16 +250,17 @@ function ReportWizardPage() {
     const timer = setTimeout(() => {
       setIsGenerating(true);
       try {
-        const generated = generateReportData(
-          wizardState,
-          programs,
-          zones ?? undefined,
-          zoneNames ?? undefined,
-          censusData ?? undefined,
-          cityZoning ?? undefined,
-          parcelData ?? undefined,
-          districtsData ?? undefined,
-        );
+        const generated = generateReportData(wizardState, programs, {
+          zones: zones ?? undefined,
+          zoneNames: zoneNames ?? undefined,
+          census: censusData ?? undefined,
+          cityZoning: cityZoning ?? undefined,
+          parcel: parcelData ?? undefined,
+          districts: districtsData ?? undefined,
+          stackingRules: stackingRules ?? undefined,
+          communityAssets: communityAssets ?? undefined,
+          stats: areaStats ?? undefined,
+        });
         setReport(generated);
       } catch {
         // Stay on loading
@@ -254,7 +270,7 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, wizardState]);
+  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats, wizardState]);
 
   // Share mode: auto-generate report once programs + zones are loaded
   const [shareAutoGenerated, setShareAutoGenerated] = useState(false);
@@ -267,16 +283,17 @@ function ReportWizardPage() {
     const timer = setTimeout(() => {
       setIsGenerating(true);
       try {
-        const generated = generateReportData(
-          wizardState,
-          programs,
-          zones ?? undefined,
-          zoneNames ?? undefined,
-          censusData ?? undefined,
-          cityZoning ?? undefined,
-          parcelData ?? undefined,
-          districtsData ?? undefined,
-        );
+        const generated = generateReportData(wizardState, programs, {
+          zones: zones ?? undefined,
+          zoneNames: zoneNames ?? undefined,
+          census: censusData ?? undefined,
+          cityZoning: cityZoning ?? undefined,
+          parcel: parcelData ?? undefined,
+          districts: districtsData ?? undefined,
+          stackingRules: stackingRules ?? undefined,
+          communityAssets: communityAssets ?? undefined,
+          stats: areaStats ?? undefined,
+        });
         setReport(generated);
         setShareAutoGenerated(true);
       } catch {
@@ -286,7 +303,7 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isShareMode, shareAutoGenerated, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, wizardState]);
+  }, [isShareMode, shareAutoGenerated, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats, wizardState]);
 
   // Derive steps based on report type
   const steps = useMemo<WizardStepConfig[]>(() => {
@@ -411,22 +428,24 @@ function ReportWizardPage() {
   const handleGenerateReport = useCallback(async () => {
     setIsGenerating(true);
     try {
-      const generated = generateReportData(
-        wizardState,
-        programs,
-        zones ?? undefined,
-        zoneNames ?? undefined,
-        censusData ?? undefined,
-        cityZoning ?? undefined,
-        parcelData ?? undefined,
-      );
+      const generated = generateReportData(wizardState, programs, {
+        zones: zones ?? undefined,
+        zoneNames: zoneNames ?? undefined,
+        census: censusData ?? undefined,
+        cityZoning: cityZoning ?? undefined,
+        parcel: parcelData ?? undefined,
+        districts: districtsData ?? undefined,
+        stackingRules: stackingRules ?? undefined,
+        communityAssets: communityAssets ?? undefined,
+        stats: areaStats ?? undefined,
+      });
       setReport(generated);
     } catch {
       // If generation fails, stay on review step
     } finally {
       setIsGenerating(false);
     }
-  }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData]);
+  }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats]);
 
   // ── Value Change Handlers ────────────────────────────────────────
 
@@ -1092,88 +1111,149 @@ function ReviewStep({
   );
 }
 
+// ─── Verdict Card Component ─────────────────────────────────────────
+
+function VerdictCard({ verdict }: { verdict: NonNullable<GeneratedReport["verdict"]> }) {
+  const signalLabel = verdict.signal === "strong" ? "Strong Coverage" : verdict.signal === "moderate" ? "Moderate Coverage" : "Limited Coverage";
+
+  return (
+    <div className="mb-12">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="w-2 h-2 rounded-full bg-[#0C1B33]" />
+        <span className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/40">
+          {signalLabel}
+        </span>
+      </div>
+      <h3 className="font-editorial text-[22px] sm:text-[26px] text-[#0C1B33] leading-snug mb-2">
+        {verdict.headline}
+      </h3>
+      <p className="text-[#0C1B33]/45 text-[14px] leading-relaxed mb-5 max-w-prose">
+        {verdict.subheadline}
+      </p>
+      {verdict.topReasons.length > 0 && (
+        <div className="border-l border-[#0C1B33]/10 pl-5 space-y-2">
+          {verdict.topReasons.map((reason, i) => (
+            <p key={i} className="text-[13px] text-[#0C1B33]/50 leading-relaxed">
+              {reason}
+            </p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Executive Summary Component ─────────────────────────────────────
 
 function ExecutiveSummarySection({
   summary,
+  isEditing,
+  editedText,
+  onToggleEdit,
+  onTextChange,
 }: {
   summary: ExecutiveSummary;
+  isEditing: boolean;
+  editedText: string;
+  onToggleEdit: () => void;
+  onTextChange: (text: string) => void;
 }) {
   const actionIcons: Record<string, typeof Phone> = {
     call: Phone,
-    check: ExternalLink,
+    email: Mail,
     book: Calendar,
   };
 
   return (
-    <div className="bg-[#EFF3FB]/50 border border-[#2563EB]/10 p-6 sm:p-8 mb-10">
+    <div className="border border-[#0C1B33]/8 p-6 sm:p-8 mb-10">
       {/* Header */}
-      <div className="flex items-center gap-3 mb-5">
-        <Sparkles className="w-4 h-4 text-[#2563EB]" />
-        <span className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#2563EB]">
+      <div className="flex items-center justify-between mb-5">
+        <span className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/50">
           Executive Summary
         </span>
+        <button
+          onClick={onToggleEdit}
+          className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 hover:text-[#0C1B33]/60 transition-colors cursor-pointer print:hidden"
+        >
+          {isEditing ? "Done" : "Edit"}
+        </button>
       </div>
 
-      {/* Top 3 Programs */}
+      {/* Top Programs — bullet points */}
       {summary.topPrograms.length > 0 && (
         <div className="mb-6">
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-3">
             Top Programs for Your Location
           </span>
-          <div className="space-y-2">
+          <ul className="space-y-2">
             {summary.topPrograms.map((prog) => {
               const badge = CONFIDENCE_BADGE[prog.confidence] || CONFIDENCE_BADGE.worth_exploring;
               return (
-                <div
+                <li
                   key={prog.programId}
-                  className="flex items-center justify-between bg-white border border-[#0C1B33]/8 px-4 py-3"
+                  className="flex items-baseline gap-3"
                 >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-[14px] font-semibold text-[#0C1B33] truncate">
+                  <span className="text-[#0C1B33]/20 flex-shrink-0 text-[10px]">&bull;</span>
+                  <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5 min-w-0">
+                    <span className="text-[14px] font-semibold text-[#0C1B33]">
                       {prog.name}
                     </span>
-                    <span className={`flex-shrink-0 font-mono-bureau text-[8px] tracking-[0.1em] uppercase px-2 py-0.5 border ${badge.bg} ${badge.text} ${badge.border}`}>
+                    <span className={`font-mono-bureau text-[8px] tracking-[0.1em] uppercase px-2 py-0.5 border ${badge.bg} ${badge.text} ${badge.border}`}>
                       {prog.confidenceLabel}
                     </span>
+                    {prog.benefitRange && (
+                      <span className="font-mono-bureau text-[11px] text-[#0C1B33]/40">
+                        {prog.benefitRange}
+                      </span>
+                    )}
                   </div>
-                  <span className="font-mono-bureau text-[11px] text-[#0C1B33]/50 flex-shrink-0 ml-3">
-                    {prog.benefitRange}
-                  </span>
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </div>
       )}
 
-      {/* Top Actions Strip */}
+      {/* Top Actions — only show action-type icons */}
       {summary.topActions.length > 0 && (
         <div className="mb-6">
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-3">
             Best Next Steps
           </span>
-          <div className="flex flex-wrap gap-2">
+          <ul className="space-y-1.5">
             {summary.topActions.map((action, i) => {
-              const Icon = actionIcons[action.type] || ExternalLink;
+              const Icon = actionIcons[action.type];
               return (
-                <div
+                <li
                   key={i}
-                  className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-[#0C1B33]/10 text-[12px] text-[#0C1B33]/70"
+                  className="flex items-center gap-2.5 text-[13px] text-[#0C1B33]/60"
                 >
-                  <Icon className="w-3 h-3 text-[#2563EB]" />
+                  {Icon ? (
+                    <Icon className="w-3 h-3 text-[#0C1B33]/30 flex-shrink-0" />
+                  ) : (
+                    <span className="text-[#0C1B33]/15 flex-shrink-0 text-[10px]">&bull;</span>
+                  )}
                   {action.label}
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </div>
       )}
 
-      {/* Why These Matter paragraph */}
-      <p className="text-[#0C1B33]/60 text-[14px] leading-[1.7]">
-        {summary.whyTheseMatter}
-      </p>
+      {/* Why These Matter — editable */}
+      {isEditing ? (
+        <textarea
+          value={editedText}
+          onChange={(e) => onTextChange(e.target.value)}
+          className="w-full text-[#0C1B33]/60 text-[14px] leading-[1.7] bg-[#0C1B33]/[0.02] border border-[#0C1B33]/10 p-3 resize-y min-h-[80px] focus:outline-none focus:border-[#0C1B33]/20"
+          rows={4}
+        />
+      ) : (
+        <p className="text-[#0C1B33]/60 text-[14px] leading-[1.7]">
+          {editedText || summary.whyTheseMatter}
+        </p>
+      )}
     </div>
   );
 }
@@ -1186,48 +1266,42 @@ function BenefitEstimatorSection({
   estimates: NonNullable<GeneratedReport["benefitEstimates"]>;
 }) {
   return (
-    <div className="bg-gradient-to-br from-emerald-50 to-[#EFF3FB] border border-emerald-200/60 p-6 sm:p-8 mb-10">
+    <div className="border border-[#0C1B33]/8 p-6 sm:p-8 mb-10">
       <div className="flex items-center gap-3 mb-5">
-        <DollarSign className="w-5 h-5 text-emerald-600" />
-        <span className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-emerald-700">
-          Your Estimated Incentive Value
+        <DollarSign className="w-5 h-5 text-[#0C1B33]/30" />
+        <span className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/50">
+          Estimated Incentive Value
         </span>
       </div>
 
       {/* Big total */}
       <div className="mb-6">
-        <span className="font-editorial text-4xl sm:text-5xl text-emerald-700 leading-tight block">
+        <span className="font-editorial text-4xl sm:text-5xl text-[#0C1B33] leading-tight block">
           ~{estimates.totalFormatted}
         </span>
-        <span className="font-mono-bureau text-[10px] tracking-[0.1em] text-emerald-600/60 mt-1 block">
+        <span className="font-mono-bureau text-[10px] tracking-[0.1em] text-[#0C1B33]/35 mt-1 block">
           Total estimated incentives based on {estimates.budgetRange} budget
         </span>
       </div>
 
       {/* Per-program breakdown */}
-      <div className="space-y-2">
+      <div className="space-y-0 divide-y divide-[#0C1B33]/6">
         {estimates.items.map((item) => (
           <div
             key={item.programId}
-            className="flex items-center justify-between bg-white/70 border border-emerald-100 px-4 py-2.5"
+            className="flex items-center justify-between py-3 first:pt-0"
           >
-            <div className="flex items-center gap-2.5 min-w-0">
-              <div
-                className="w-2 h-2 rounded-full flex-shrink-0"
-                style={{ backgroundColor: item.color || "#059669" }}
-              />
-              <span className="text-[13px] text-[#0C1B33]/80 truncate">
-                {item.programName}
-              </span>
-            </div>
-            <span className="font-mono-bureau text-[12px] font-semibold text-emerald-700 flex-shrink-0 ml-3">
+            <span className="text-[13px] text-[#0C1B33]/70 truncate">
+              {item.programName}
+            </span>
+            <span className="font-mono-bureau text-[12px] font-semibold text-[#0C1B33] flex-shrink-0 ml-3">
               ~{formatDollars(item.estimatedValue)}
             </span>
           </div>
         ))}
       </div>
 
-      <p className="text-[11px] text-emerald-600/50 mt-4 leading-relaxed">
+      <p className="text-[11px] text-[#0C1B33]/30 mt-5 leading-relaxed">
         Estimates are based on program percentages applied to your budget midpoint.
         Actual values depend on eligibility verification and program-specific caps.
       </p>
@@ -1243,39 +1317,40 @@ function ActionRoadmapSection({
   items: ActionRoadmapItem[];
 }) {
   const doThisWeek = items.filter((i) => i.tier === "do-this-week");
-  const startGathering = items.filter((i) => i.tier === "start-gathering");
   const worthExploring = items.filter((i) => i.tier === "worth-exploring");
 
   return (
     <div className="mb-10">
-      <div className="flex items-center gap-3 mb-5">
-        <ClipboardList className="w-4 h-4 text-[#2563EB]" />
-        <span className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#2563EB]">
-          What to Do Monday Morning
+      <div className="mb-6">
+        <span className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/50 block mb-1">
+          Your Next Steps
         </span>
+        <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed max-w-prose">
+          Prioritized actions to move forward with your eligible programs.
+        </p>
       </div>
 
       {/* Tier 1: Do This Week */}
       {doThisWeek.length > 0 && (
-        <div className="mb-6">
-          <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-emerald-600 block mb-3">
+        <div className="mb-8">
+          <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/40 block mb-3">
             Do This Week
           </span>
-          <div className="space-y-3">
+          <div className="space-y-4">
             {doThisWeek.map((item, i) => (
               <div
                 key={i}
-                className="bg-white border border-emerald-200/50 p-4 sm:p-5"
+                className="border border-[#0C1B33]/8 p-5"
               >
                 <div className="flex items-start gap-3 mb-2">
-                  <div className="w-6 h-6 bg-emerald-100 text-emerald-700 flex items-center justify-center flex-shrink-0 text-[11px] font-semibold">
-                    {i + 1}
-                  </div>
+                  <span className="font-mono-bureau text-[11px] text-[#0C1B33]/30 flex-shrink-0 w-5 text-right pt-0.5">
+                    {i + 1}.
+                  </span>
                   <div className="flex-1 min-w-0">
                     <span className="text-[14px] font-semibold text-[#0C1B33] block">
                       {item.label}
                     </span>
-                    <span className="text-[12px] text-[#0C1B33]/45 block mt-0.5">
+                    <span className="text-[12px] text-[#0C1B33]/40 block mt-0.5">
                       {item.description}
                     </span>
                   </div>
@@ -1283,18 +1358,18 @@ function ActionRoadmapSection({
 
                 {/* Contact card */}
                 {item.contact && (
-                  <div className="ml-9 mt-3 bg-[#0C1B33]/[0.02] border border-[#0C1B33]/6 p-3 space-y-1.5">
-                    <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 block">
+                  <div className="ml-8 mt-3 border-l border-[#0C1B33]/8 pl-4 space-y-1.5">
+                    <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/25 block">
                       {item.contact.role || "Contact"}
                     </span>
-                    <span className="text-[13px] text-[#0C1B33]/70 font-medium block">
+                    <span className="text-[13px] text-[#0C1B33]/60 font-medium block">
                       {item.contact.agency}
                     </span>
                     <div className="flex flex-wrap gap-3">
                       {item.contact.phone && (
                         <a
                           href={`tel:${item.contact.phone}`}
-                          className="inline-flex items-center gap-1.5 text-[12px] text-[#2563EB] hover:text-[#1d4ed8]"
+                          className="inline-flex items-center gap-1.5 text-[12px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors"
                         >
                           <Phone className="w-3 h-3" />
                           {item.contact.phone}
@@ -1303,7 +1378,7 @@ function ActionRoadmapSection({
                       {item.contact.email && (
                         <a
                           href={`mailto:${item.contact.email}`}
-                          className="inline-flex items-center gap-1.5 text-[12px] text-[#2563EB] hover:text-[#1d4ed8]"
+                          className="inline-flex items-center gap-1.5 text-[12px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors"
                         >
                           <Mail className="w-3 h-3" />
                           {item.contact.email}
@@ -1315,11 +1390,11 @@ function ActionRoadmapSection({
 
                 {/* Call script */}
                 {item.callScript && (
-                  <div className="ml-9 mt-2 bg-blue-50/50 border border-blue-100 p-3">
-                    <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-blue-500/60 block mb-1">
+                  <div className="ml-8 mt-3 border-l border-[#0C1B33]/8 pl-4">
+                    <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
                       What to say
                     </span>
-                    <p className="text-[12px] text-blue-900/70 italic leading-relaxed">
+                    <p className="text-[12px] text-[#0C1B33]/50 italic leading-relaxed">
                       {item.callScript}
                     </p>
                   </div>
@@ -1330,61 +1405,30 @@ function ActionRoadmapSection({
         </div>
       )}
 
-      {/* Tier 2: Start Gathering */}
-      {startGathering.length > 0 && (
-        <div className="mb-6">
-          <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-amber-600 block mb-3">
-            Start Gathering
-          </span>
-          {startGathering.map((item, i) => (
-            <div
-              key={i}
-              className="bg-white border border-amber-200/40 p-4 sm:p-5"
-            >
-              <span className="text-[13px] text-[#0C1B33]/70 block mb-2">
-                {item.description}
-              </span>
-              {item.documents && item.documents.length > 0 && (
-                <div className="flex flex-wrap gap-1.5">
-                  {item.documents.map((doc, di) => (
-                    <span
-                      key={di}
-                      className="inline-flex items-center px-2.5 py-1 text-[10px] font-mono-bureau tracking-[0.05em] bg-amber-50 border border-amber-200/40 text-amber-800/70"
-                    >
-                      {doc}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* Tier 3: Worth Exploring */}
+      {/* Tier 2: Worth Exploring */}
       {worthExploring.length > 0 && (
         <div>
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-3">
             Worth Exploring
           </span>
-          <div className="space-y-2">
+          <div className="space-y-0 divide-y divide-[#0C1B33]/6">
             {worthExploring.map((item, i) => (
               <div
                 key={i}
-                className="bg-white border border-[#0C1B33]/6 p-4 flex items-start justify-between gap-3"
+                className="py-4 first:pt-0 flex items-start justify-between gap-3"
               >
                 <div className="min-w-0">
-                  <span className="text-[13px] text-[#0C1B33]/70 font-medium block">
+                  <span className="text-[13px] text-[#0C1B33]/60 font-medium block">
                     {item.programName || item.label}
                   </span>
-                  <span className="text-[11px] text-[#0C1B33]/40 block mt-0.5">
+                  <span className="text-[11px] text-[#0C1B33]/35 block mt-0.5">
                     {item.description}
                   </span>
                 </div>
                 {item.contact?.phone && (
                   <a
                     href={`tel:${item.contact.phone}`}
-                    className="flex items-center gap-1 text-[10px] font-mono-bureau text-[#2563EB] flex-shrink-0"
+                    className="flex items-center gap-1 text-[10px] font-mono-bureau text-[#0C1B33]/40 hover:text-[#0C1B33] transition-colors flex-shrink-0"
                   >
                     <Phone className="w-3 h-3" />
                     {item.contact.phone}
@@ -1395,6 +1439,42 @@ function ActionRoadmapSection({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Market Comparison Bar ───────────────────────────────────────────
+
+function ComparisonBar({ label, locationFormatted, cityFormatted, pct }: {
+  label: string;
+  locationFormatted: string;
+  cityFormatted: string;
+  pct: number;
+}) {
+  const barWidth = Math.min(pct, 200); // cap visual at 200%
+  const cityBarWidth = 100; // city is always the baseline
+  return (
+    <div className="py-4 first:pt-0">
+      <div className="flex items-baseline justify-between mb-2">
+        <span className="text-[#0C1B33] text-[13px] font-semibold">{label}</span>
+        <span className="font-mono-bureau text-[10px] text-[#0C1B33]/40">{pct}% of city median</span>
+      </div>
+      <div className="space-y-1.5">
+        <div className="flex items-center gap-3">
+          <span className="font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/35 w-14 text-right flex-shrink-0">Location</span>
+          <div className="flex-1 bg-[#0C1B33]/[0.04] h-5 relative">
+            <div className="h-full bg-[#0C1B33]/15 transition-all" style={{ width: `${Math.min(barWidth, 100)}%` }} />
+          </div>
+          <span className="font-mono-bureau text-[11px] text-[#0C1B33]/70 w-20 flex-shrink-0">{locationFormatted}</span>
+        </div>
+        <div className="flex items-center gap-3">
+          <span className="font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/25 w-14 text-right flex-shrink-0">City</span>
+          <div className="flex-1 bg-[#0C1B33]/[0.04] h-5 relative">
+            <div className="h-full bg-[#0C1B33]/[0.06] transition-all" style={{ width: `${cityBarWidth}%` }} />
+          </div>
+          <span className="font-mono-bureau text-[11px] text-[#0C1B33]/40 w-20 flex-shrink-0">{cityFormatted}</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1415,6 +1495,10 @@ function ReportDisplay({
   wizardState?: WizardState;
 }) {
   const [linkCopied, setLinkCopied] = useState(false);
+  const [isEditingSummary, setIsEditingSummary] = useState(false);
+  const [editedSummaryText, setEditedSummaryText] = useState(
+    report.executiveSummary?.whyTheseMatter || ""
+  );
 
   const handlePrint = () => {
     window.print();
@@ -1433,26 +1517,17 @@ function ReportDisplay({
   const priorityBadge: Record<string, { label: string; classes: string }> = {
     high: {
       label: "High Priority",
-      classes: "bg-[#2563EB]/10 text-[#2563EB] border border-[#2563EB]/20",
+      classes: "bg-[#0C1B33]/[0.06] text-[#0C1B33]/60 border border-[#0C1B33]/10",
     },
     medium: {
       label: "Medium",
-      classes: "bg-[#0C1B33]/5 text-[#0C1B33]/50 border border-[#0C1B33]/10",
+      classes: "bg-[#0C1B33]/[0.03] text-[#0C1B33]/40 border border-[#0C1B33]/8",
     },
     low: {
       label: "Low",
-      classes: "bg-[#0C1B33]/[0.03] text-[#0C1B33]/30 border border-[#0C1B33]/5",
+      classes: "bg-[#0C1B33]/[0.02] text-[#0C1B33]/30 border border-[#0C1B33]/5",
     },
   };
-
-  const sectionColors = [
-    "#2563EB",
-    "#0D9488",
-    "#7C3AED",
-    "#D97706",
-    "#DC2626",
-    "#059669",
-  ];
 
   const formattedDate = new Date(report.generatedAt).toLocaleDateString(
     "en-US",
@@ -1460,8 +1535,8 @@ function ReportDisplay({
   );
 
   const reportTypeLabels: Record<string, string> = {
-    "location-incentives": "Location Incentive Report",
-    "best-location": "Site Evaluation Report",
+    "location-incentives": "Site Incentive Analysis",
+    "best-location": "Development Feasibility Assessment",
     "program-explorer": "Program Explorer Report",
     "developer-analysis": "Developer Analysis Report",
   };
@@ -1479,7 +1554,7 @@ function ReportDisplay({
           {/* ── Cover / Header Bar ── */}
           <div className="report-cover bg-[#0C1B33] px-5 sm:px-12 md:px-16 pt-12 pb-10">
             {isInstantMode && (
-              <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-[#2563EB] mb-2">
+              <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-white/50 mb-2">
                 Instant Report
               </p>
             )}
@@ -1496,7 +1571,7 @@ function ReportDisplay({
                 {report.subtitle}
               </p>
             )}
-            <div className="w-10 h-[3px] bg-[#2563EB]" />
+            <div className="w-10 h-[3px] bg-white/30" />
           </div>
 
           {/* ── Metadata Row ── */}
@@ -1563,48 +1638,43 @@ function ReportDisplay({
 
           {/* ── Report Body ── */}
           <div className="report-body px-5 sm:px-12 md:px-16 py-14">
-            {/* ── Executive Summary from Confidence Engine ── */}
-            {report.executiveSummary && (
-              <ExecutiveSummarySection summary={report.executiveSummary} />
-            )}
-
-            {/* ── Benefit Estimator ("Your Dollar Amount") ── */}
-            {report.benefitEstimates && report.benefitEstimates.items.length > 0 && (
-              <BenefitEstimatorSection estimates={report.benefitEstimates} />
-            )}
-
-            {/* ── Action Roadmap ("What to Do Monday Morning") ── */}
-            {report.actionRoadmap && report.actionRoadmap.length > 0 && (
-              <ActionRoadmapSection items={report.actionRoadmap} />
-            )}
-
-            {/* ── Text Summary (Section 01) ── */}
+            {/* ── Overview text ── */}
             {report.summary && (
               <div className="mb-12">
-                <div className="flex items-baseline gap-4 mb-4">
-                  <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
-                    01
-                  </span>
-                  <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]">
-                    Overview
-                  </h2>
-                </div>
-                <hr className="border-[#0C1B33]/8 mb-5" />
-                <p className="text-[#0C1B33]/70 text-[15px] leading-[1.8] max-w-prose">
+                <p className="text-[#0C1B33]/60 text-[15px] leading-[1.8] max-w-prose">
                   {report.summary}
                 </p>
               </div>
+            )}
+
+            {/* ── Verdict Card ── */}
+            {report.verdict && (
+              <VerdictCard verdict={report.verdict} />
+            )}
+
+            {/* ── Executive Summary from Confidence Engine ── */}
+            {report.executiveSummary && (
+              <ExecutiveSummarySection
+                summary={report.executiveSummary}
+                isEditing={isEditingSummary}
+                editedText={editedSummaryText}
+                onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
+                onTextChange={setEditedSummaryText}
+              />
+            )}
+
+            {/* ── Benefit Estimator ── */}
+            {report.benefitEstimates && report.benefitEstimates.items.length > 0 && (
+              <BenefitEstimatorSection estimates={report.benefitEstimates} />
             )}
 
             {/* ── Content Sections ── */}
             {report.sections &&
               report.sections.map((section, sectionIdx) => {
                 const sectionNumber = String(sectionIdx + sectionOffset + 1).padStart(2, "0");
-                const sectionColor =
-                  sectionColors[sectionIdx % sectionColors.length];
 
                 return (
-                  <div key={sectionIdx} className="report-section mb-12">
+                  <div key={sectionIdx} className="report-section mb-14">
                     <div className="flex items-baseline gap-4 mb-4">
                       <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
                         {sectionNumber}
@@ -1614,6 +1684,121 @@ function ReportDisplay({
                       </h2>
                     </div>
                     <hr className="border-[#0C1B33]/8 mb-5" />
+                    {section.description && (
+                      <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed mb-6 max-w-prose">
+                        {section.description}
+                      </p>
+                    )}
+
+                    {/* Market Analysis comparison bars */}
+                    {section.title === "Market Analysis" && report.marketContext?.comparisons && (
+                      <div className="space-y-0 divide-y divide-[#0C1B33]/5 mb-6">
+                        {report.marketContext.comparisons.income && (
+                          <ComparisonBar
+                            label="Median Household Income"
+                            locationFormatted={`$${report.marketContext.comparisons.income.location.toLocaleString()}`}
+                            cityFormatted={`$${report.marketContext.comparisons.income.city.toLocaleString()}`}
+                            pct={report.marketContext.comparisons.income.pct}
+                          />
+                        )}
+                        {report.marketContext.comparisons.homeValue && (
+                          <ComparisonBar
+                            label="Median Home Value"
+                            locationFormatted={`$${report.marketContext.comparisons.homeValue.location.toLocaleString()}`}
+                            cityFormatted={`$${report.marketContext.comparisons.homeValue.city.toLocaleString()}`}
+                            pct={report.marketContext.comparisons.homeValue.pct}
+                          />
+                        )}
+                        {report.marketContext.comparisons.population && (
+                          <ComparisonBar
+                            label="Tract Population"
+                            locationFormatted={report.marketContext.comparisons.population.location.toLocaleString()}
+                            cityFormatted={`${report.marketContext.comparisons.population.city.toLocaleString()} avg`}
+                            pct={report.marketContext.comparisons.population.pct}
+                          />
+                        )}
+                        {report.marketContext.comparisons.walkScore && (
+                          <ComparisonBar
+                            label="Walk Score"
+                            locationFormatted={`${report.marketContext.comparisons.walkScore.location}/100`}
+                            cityFormatted={`${report.marketContext.comparisons.walkScore.city}/100`}
+                            pct={report.marketContext.comparisons.walkScore.pct}
+                          />
+                        )}
+                      </div>
+                    )}
+
+                    {/* Stacking section: visual table + density bar */}
+                    {section.title === "Incentive Density & Stacking" && report.stackingAnalysis && (
+                      <div className="mb-8">
+                        {/* Density visual */}
+                        <div className="mb-6">
+                          <div className="flex items-baseline justify-between mb-2">
+                            <span className="text-[#0C1B33] text-[13px] font-semibold">Zone Overlap</span>
+                            <span className="font-mono-bureau text-[10px] text-[#0C1B33]/40">
+                              {report.stackingAnalysis.zoneCount} zones &middot; {report.stackingAnalysis.percentileLabel}
+                            </span>
+                          </div>
+                          <div className="h-6 bg-[#0C1B33]/[0.04] relative w-full">
+                            <div
+                              className="h-full bg-[#0C1B33]/12 transition-all"
+                              style={{ width: `${Math.min(report.stackingAnalysis.zoneCount * 10, 100)}%` }}
+                            />
+                            {/* Tick marks at 25%, 50%, 75% */}
+                            {[25, 50, 75].map((tick) => (
+                              <div key={tick} className="absolute top-0 bottom-0 w-px bg-[#0C1B33]/8" style={{ left: `${tick}%` }} />
+                            ))}
+                          </div>
+                          <div className="flex justify-between mt-1">
+                            <span className="font-mono-bureau text-[8px] text-[#0C1B33]/20">0</span>
+                            <span className="font-mono-bureau text-[8px] text-[#0C1B33]/20">10+ zones</span>
+                          </div>
+                        </div>
+
+                        {/* Stacking rules table */}
+                        {(report.stackingAnalysis.combinations.length > 0 || report.stackingAnalysis.rules.length > 0) && (
+                          <div className="border border-[#0C1B33]/8 overflow-hidden">
+                            <table className="w-full text-[12px]">
+                              <thead>
+                                <tr className="bg-[#0C1B33]/[0.03]">
+                                  <th className="text-left font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/40 px-4 py-2.5">Combination</th>
+                                  <th className="text-left font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/40 px-4 py-2.5 w-24">Status</th>
+                                  <th className="text-left font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/40 px-4 py-2.5 hidden sm:table-cell">Benefit / Note</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-[#0C1B33]/5">
+                                {report.stackingAnalysis.combinations.map((combo, ci) => (
+                                  <tr key={`combo-${ci}`}>
+                                    <td className="px-4 py-3 text-[#0C1B33]/70 font-medium">{combo.zones.join(" + ")}</td>
+                                    <td className="px-4 py-3">
+                                      <span className="font-mono-bureau text-[9px] tracking-[0.1em] uppercase text-[#0C1B33]/50 bg-[#0C1B33]/[0.04] px-2 py-0.5">
+                                        Can stack
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-[#0C1B33]/40 hidden sm:table-cell">{combo.benefit}</td>
+                                  </tr>
+                                ))}
+                                {report.stackingAnalysis.rules.map((rule, ri) => (
+                                  <tr key={`rule-${ri}`}>
+                                    <td className="px-4 py-3 text-[#0C1B33]/70 font-medium">{rule.programA} + {rule.programB}</td>
+                                    <td className="px-4 py-3">
+                                      <span className={`font-mono-bureau text-[9px] tracking-[0.1em] uppercase px-2 py-0.5 ${
+                                        rule.relationship === "can" ? "text-[#0C1B33]/50 bg-[#0C1B33]/[0.04]" :
+                                        rule.relationship === "cannot" ? "text-[#0C1B33]/30 bg-[#0C1B33]/[0.02] line-through" :
+                                        "text-[#0C1B33]/40 bg-[#0C1B33]/[0.03]"
+                                      }`}>
+                                        {rule.relationship === "can" ? "Can stack" : rule.relationship === "cannot" ? "Cannot stack" : "Conditional"}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-[#0C1B33]/40 hidden sm:table-cell">{rule.reason}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
 
                     {section.items && section.items.length > 0 && (
                       <div className="space-y-0 divide-y divide-[#0C1B33]/5">
@@ -1623,35 +1808,43 @@ function ReportDisplay({
                             className="report-item py-4 first:pt-0"
                           >
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
-                              {/* Left: color dot + label */}
-                              <div className="flex items-start gap-3 flex-1 min-w-0">
-                                <div
-                                  className="w-2.5 h-2.5 rounded-full mt-1 flex-shrink-0"
-                                  style={{
-                                    backgroundColor:
-                                      item.color || sectionColor,
-                                  }}
-                                />
-                                <div className="min-w-0">
-                                  <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold block">
-                                    {item.label}
-                                    {item.level && (
-                                      <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 ml-2 font-normal">
-                                        {item.level}
-                                      </span>
-                                    )}
-                                  </span>
-                                  {item.detail && (
-                                    <span className="text-[#0C1B33]/40 text-[11px] sm:text-[12px] leading-relaxed block mt-0.5">
-                                      {item.detail}
+                              {/* Left: label */}
+                              <div className="flex-1 min-w-0">
+                                <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold block">
+                                  {item.label}
+                                  {item.level && (
+                                    <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/25 ml-2 font-normal">
+                                      {item.level}
                                     </span>
                                   )}
-                                </div>
+                                </span>
+                                {item.detail && section.title === "Required Documents" ? (
+                                  <ul className="mt-2 space-y-1.5">
+                                    {item.detail.split("\n").map((line, li) => {
+                                      const [docName, programs] = line.split(" — ");
+                                      return (
+                                        <li key={li} className="flex items-start gap-2 text-[11px] sm:text-[12px] leading-relaxed">
+                                          <span className="text-[#0C1B33]/15 mt-0.5 flex-shrink-0">&bull;</span>
+                                          <span className="text-[#0C1B33]/55">
+                                            {docName}
+                                            {programs && (
+                                              <span className="text-[#0C1B33]/25 ml-1.5">— {programs}</span>
+                                            )}
+                                          </span>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                ) : item.detail ? (
+                                  <span className="text-[#0C1B33]/40 text-[11px] sm:text-[12px] leading-relaxed block mt-0.5">
+                                    {item.detail}
+                                  </span>
+                                ) : null}
                               </div>
 
-                              {/* Right: value — below on mobile, beside on desktop */}
+                              {/* Right: value */}
                               {item.value && (
-                                <span className="font-mono-bureau text-[10px] sm:text-[11px] tracking-[0.05em] text-[#0C1B33]/60 flex-shrink-0 sm:text-right pl-8 sm:pl-0 pt-0.5">
+                                <span className="font-mono-bureau text-[10px] sm:text-[11px] tracking-[0.05em] text-[#0C1B33]/50 flex-shrink-0 sm:text-right pt-0.5">
                                   {item.value}
                                 </span>
                               )}
@@ -1659,25 +1852,25 @@ function ReportDisplay({
 
                             {/* Eligibility & URL — shown for program items */}
                             {(item.whoQualifies || item.eligibilityRules || item.url) && (
-                              <div className="report-eligibility ml-[22px] sm:ml-[22px] mt-2.5 pl-4 border-l-2 border-[#0C1B33]/6 space-y-2">
+                              <div className="report-eligibility mt-2.5 pl-4 border-l border-[#0C1B33]/8 space-y-2">
                                 {item.whoQualifies && (
                                   <div>
-                                    <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-0.5">
+                                    <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-0.5">
                                       Who Qualifies
                                     </span>
-                                    <span className="text-[#0C1B33]/55 text-[11px] sm:text-[12px] leading-relaxed block">
+                                    <span className="text-[#0C1B33]/45 text-[11px] sm:text-[12px] leading-relaxed block">
                                       {item.whoQualifies}
                                     </span>
                                   </div>
                                 )}
                                 {item.eligibilityRules && item.eligibilityRules.length > 0 && (
                                   <div>
-                                    <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-1">
+                                    <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
                                       Requirements
                                     </span>
                                     <ul className="space-y-0.5">
                                       {item.eligibilityRules.map((rule, rIdx) => (
-                                        <li key={rIdx} className="flex items-start gap-2 text-[11px] sm:text-[12px] text-[#0C1B33]/50 leading-relaxed">
+                                        <li key={rIdx} className="flex items-start gap-2 text-[11px] sm:text-[12px] text-[#0C1B33]/40 leading-relaxed">
                                           <span className="text-[#0C1B33]/20 mt-0.5 flex-shrink-0">{rule.required ? "Required:" : "Optional:"}</span>
                                           <span>{rule.description}</span>
                                         </li>
@@ -1690,7 +1883,7 @@ function ReportDisplay({
                                     href={item.url}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1.5 text-[11px] text-[#2563EB] hover:text-[#1d4ed8] transition-colors font-mono-bureau tracking-wide print-url"
+                                    className="inline-flex items-center gap-1.5 text-[11px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors font-mono-bureau tracking-wide print-url"
                                   >
                                     <ExternalLink className="w-3 h-3 flex-shrink-0" />
                                     More information
@@ -1705,6 +1898,11 @@ function ReportDisplay({
                   </div>
                 );
               })}
+
+            {/* ── Your Next Steps (action roadmap) ── */}
+            {report.actionRoadmap && report.actionRoadmap.length > 0 && (
+              <ActionRoadmapSection items={report.actionRoadmap} />
+            )}
 
             {/* ── Recommended Actions ── */}
             {report.recommendedActions &&
@@ -1778,7 +1976,7 @@ function ReportDisplay({
         <div className="report-actions mx-auto max-w-[850px] flex flex-col sm:flex-row items-center justify-center gap-3 mt-8 print:hidden">
           <button
             onClick={handlePrint}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 transition-colors cursor-pointer shadow-md"
           >
             <Printer className="w-3.5 h-3.5" />
             Download PDF
@@ -1786,7 +1984,7 @@ function ReportDisplay({
           {reportWizardState && (
             <button
               onClick={handleShareReport}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-emerald-300 text-emerald-700 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-emerald-50 transition-colors cursor-pointer shadow-md"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
             >
               {linkCopied ? (
                 <>
@@ -1804,7 +2002,7 @@ function ReportDisplay({
           {isInstantMode && onRefine && (
             <button
               onClick={onRefine}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#EFF3FB] transition-colors cursor-pointer shadow-md"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
             >
               <ArrowRight className="w-3.5 h-3.5" />
               Refine This Report

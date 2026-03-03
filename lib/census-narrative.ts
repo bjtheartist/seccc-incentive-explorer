@@ -7,14 +7,19 @@
 
 import type { CensusData } from "./types";
 
-// Chicago metro median household income (ACS 5-year, approx)
-const CHICAGO_METRO_MEDIAN_INCOME = 65_000;
+// ── Chicago City Medians (ACS 5-Year estimates, approx) ──
+export const CHICAGO_MEDIANS = {
+  income: 65_000,
+  homeValue: 275_000,
+  populationPerTract: 3_500,
+  walkScore: 65,
+} as const;
 
 // QCT threshold: 60% of Area Median Income
-const QCT_INCOME_THRESHOLD = CHICAGO_METRO_MEDIAN_INCOME * 0.6; // ~$39,000
+const QCT_INCOME_THRESHOLD = CHICAGO_MEDIANS.income * 0.6; // ~$39,000
 
 // LMI threshold: 80% of Area Median Income
-const LMI_INCOME_THRESHOLD = CHICAGO_METRO_MEDIAN_INCOME * 0.8; // ~$52,000
+const LMI_INCOME_THRESHOLD = CHICAGO_MEDIANS.income * 0.8; // ~$52,000
 
 export interface CensusNarrativeResult {
   /** Plain-language interpretation of income data */
@@ -52,19 +57,19 @@ export function censusNarrative(census: CensusData): CensusNarrativeResult {
 
   // Income analysis
   if (census.medianIncome != null) {
-    const pct = Math.round((census.medianIncome / CHICAGO_METRO_MEDIAN_INCOME) * 100);
+    const pct = Math.round((census.medianIncome / CHICAGO_MEDIANS.income) * 100);
     result.incomePercentOfMetro = pct;
     result.isLikelyQCT = census.medianIncome < QCT_INCOME_THRESHOLD;
     result.isLMI = census.medianIncome < LMI_INCOME_THRESHOLD;
 
     if (result.isLikelyQCT) {
-      result.incomeNarrative = `$${census.medianIncome.toLocaleString()} — ${pct}% of the Chicago metro median ($${CHICAGO_METRO_MEDIAN_INCOME.toLocaleString()}). This qualifies the area as a Qualified Census Tract (QCT), unlocking enhanced NMTC and LIHTC credits.`;
+      result.incomeNarrative = `$${census.medianIncome.toLocaleString()} — ${pct}% of the Chicago metro median ($${CHICAGO_MEDIANS.income.toLocaleString()}). This qualifies the area as a Qualified Census Tract (QCT), unlocking enhanced NMTC and LIHTC credits.`;
       result.unlockedPrograms.push("NMTC (enhanced)", "LIHTC (130% basis boost)");
     } else if (result.isLMI) {
       result.incomeNarrative = `$${census.medianIncome.toLocaleString()} — ${pct}% of the Chicago metro median. This is a low-to-moderate income area, qualifying for many place-based incentive programs.`;
       result.unlockedPrograms.push("CDBG-eligible area", "SBA HUBZone potential");
     } else {
-      result.incomeNarrative = `$${census.medianIncome.toLocaleString()} — ${pct}% of the Chicago metro median ($${CHICAGO_METRO_MEDIAN_INCOME.toLocaleString()}). Income levels are near or above the metro average.`;
+      result.incomeNarrative = `$${census.medianIncome.toLocaleString()} — ${pct}% of the Chicago metro median ($${CHICAGO_MEDIANS.income.toLocaleString()}). Income levels are near or above the metro average.`;
     }
   }
 

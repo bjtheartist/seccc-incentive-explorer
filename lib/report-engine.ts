@@ -1,9 +1,9 @@
-import type { Program, ExecutiveSummary, ParcelData, DistrictData } from "./types";
+import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats } from "./types";
 import { isClass7aEligible } from "./parcel-classes";
-import { ZONE_LABELS, ZONE_COLORS } from "./constants";
-import { INDUSTRIES, getIndustryById } from "./industries-data";
-import { generateExecutiveSummary } from "./confidence-engine";
-import { censusNarrative } from "./census-narrative";
+import { ZONE_LABELS, ZONE_DESCRIPTIONS, describeZoneClass } from "./constants";
+import { getIndustryById } from "./industries-data";
+import { generateExecutiveSummary, computeStackingNarrative } from "./confidence-engine";
+import { censusNarrative, CHICAGO_MEDIANS } from "./census-narrative";
 
 // ─── Local Types ────────────────────────────────────────────────────
 
@@ -33,6 +33,7 @@ interface WizardState {
 
 export interface ReportSection {
   title: string;
+  description?: string;
   items: ReportItem[];
 }
 
@@ -99,6 +100,40 @@ export interface GeneratedReport {
     items: BenefitEstimate[];
   };
   actionRoadmap?: ActionRoadmapItem[];
+  verdict?: {
+    signal: "strong" | "moderate" | "limited";
+    headline: string;
+    subheadline: string;
+    topReasons: string[];
+  };
+  marketContext?: {
+    incomeNarrative: string;
+    homeValueNarrative: string;
+    populationNarrative: string;
+    walkabilityNarrative: string;
+    zoneCoverageNarrative: string;
+    qualificationNarrative: string;
+    isQCT: boolean;
+    isLMI: boolean;
+    comparisons: {
+      income?: { location: number; city: number; pct: number };
+      homeValue?: { location: number; city: number; pct: number };
+      population?: { location: number; city: number; pct: number };
+      walkScore?: { location: number; city: number; pct: number };
+    };
+  };
+  stackingAnalysis?: {
+    narrative: string;
+    percentileLabel: string;
+    zoneCount: number;
+    combinations: { zones: string[]; benefit: string }[];
+    rules: { programA: string; programB: string; relationship: string; reason: string }[];
+  };
+  communityAssets?: {
+    edos: { name: string; address: string }[];
+    bsos: { name: string; address: string }[];
+    narrative: string;
+  };
 }
 
 // ─── Budget Median Mapping ──────────────────────────────────────────
@@ -227,13 +262,6 @@ function groupByLevel(
 }
 
 /**
- * Get the display color for a program (from zone colors or a default).
- */
-function getProgramColor(program: Program): string {
-  return ZONE_COLORS[program.zoneKey] || "#2563EB";
-}
-
-/**
  * Count how many active zones the user is in.
  */
 function countActiveZones(zones?: Record<string, boolean>): number {
@@ -241,17 +269,204 @@ function countActiveZones(zones?: Record<string, boolean>): number {
   return Object.values(zones).filter(Boolean).length;
 }
 
+
+// ─── Builder Functions (Pyramid Principle) ──────────────────────────
+
 /**
- * Get names of active zones.
+ * Compute a verdict signal from zone count, program count, QCT/LMI status.
  */
-function getActiveZoneNames(
-  zones?: Record<string, boolean>,
-  zoneNames?: Record<string, string>,
-): string[] {
-  if (!zones) return [];
-  return Object.entries(zones)
-    .filter(([, active]) => active)
-    .map(([key]) => zoneNames?.[key] || ZONE_LABELS[key] || key);
+function computeVerdict(
+  zones: Record<string, boolean> | undefined,
+  programs: Program[],
+  ctx: ReportContext,
+): GeneratedReport["verdict"] {
+  const zoneCount = zones ? Object.values(zones).filter(Boolean).length : 0;
+  const eligible = zones
+    ? programs.filter((p) => !p.zoneKey || zones[p.zoneKey])
+    : programs.filter((p) => !p.zoneKey);
+  const programCount = eligible.length;
+
+  const censusResult = ctx.census?.medianIncome != null
+    ? censusNarrative({
+        tractId: ctx.census.tractId || "",
+        medianIncome: ctx.census.medianIncome,
+        medianHomeValue: ctx.census.medianHomeValue ?? null,
+        population: ctx.census.population ?? null,
+        walkScore: ctx.census.walkScore ?? null,
+      })
+    : null;
+  const isQCT = censusResult?.isLikelyQCT || !!(zones?.qct);
+  const isLMI = censusResult?.isLMI || false;
+
+  const stacking = zones ? computeStackingNarrative(zones, ctx.zoneNames || {}) : null;
+  const comboCount = stacking?.combinations.length || 0;
+
+  let signal: "strong" | "moderate" | "limited";
+  if (zoneCount >= 4 && programCount >= 5) signal = "strong";
+  else if (zoneCount >= 2 && programCount >= 3) signal = "moderate";
+  else signal = "limited";
+
+  const headline =
+    signal === "strong"
+      ? "This location has strong incentive coverage"
+      : signal === "moderate"
+        ? "This location has moderate incentive coverage"
+        : "This location has limited incentive coverage";
+
+  const subheadline =
+    signal === "strong"
+      ? "Multiple overlapping zones create significant cost-offset opportunities."
+      : signal === "moderate"
+        ? "Several programs apply here — review eligibility to maximize benefits."
+        : "Fewer zone-based programs, but county-wide options may still apply.";
+
+  const topReasons: string[] = [];
+  topReasons.push(`${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} at this location`);
+  topReasons.push(`${programCount} program${programCount !== 1 ? "s" : ""} potentially available`);
+  if (comboCount > 0) topReasons.push(`${comboCount} beneficial stacking combination${comboCount !== 1 ? "s" : ""} identified`);
+  if (isQCT) topReasons.push("Located in a Qualified Census Tract — enhanced federal credits");
+  if (isLMI && !isQCT) topReasons.push("Low-to-moderate income area — qualifies for place-based programs");
+
+  return { signal, headline, subheadline, topReasons: topReasons.slice(0, 5) };
+}
+
+/**
+ * Build market context narratives from census data + walkability + zone coverage.
+ */
+function buildMarketContext(
+  ctx: ReportContext,
+  zones: Record<string, boolean> | undefined,
+): GeneratedReport["marketContext"] {
+  if (!ctx.census?.medianIncome) return undefined;
+
+  const cn = censusNarrative({
+    tractId: ctx.census.tractId || "",
+    medianIncome: ctx.census.medianIncome,
+    medianHomeValue: ctx.census.medianHomeValue ?? null,
+    population: ctx.census.population ?? null,
+    walkScore: ctx.census.walkScore ?? null,
+  });
+
+  const walkScore = ctx.census.walkScore;
+  let walkabilityNarrative = "Walkability data not available for this location.";
+  if (walkScore != null) {
+    if (walkScore >= 70) walkabilityNarrative = `Walk Score ${walkScore}/100 — a walkable area with good foot traffic potential for customer-facing businesses.`;
+    else if (walkScore >= 50) walkabilityNarrative = `Walk Score ${walkScore}/100 — somewhat walkable; some errands can be accomplished on foot.`;
+    else walkabilityNarrative = `Walk Score ${walkScore}/100 — car-dependent area; consider drive-in or destination-based business models.`;
+  }
+
+  const zoneCount = zones ? Object.values(zones).filter(Boolean).length : 0;
+  let zoneCoverageNarrative: string;
+  if (zoneCount >= 4) zoneCoverageNarrative = `With ${zoneCount} active incentive zones, this location is in a high-coverage area — established programs target this neighborhood for investment.`;
+  else if (zoneCount >= 2) zoneCoverageNarrative = `${zoneCount} incentive zones overlap at this location, providing moderate program coverage.`;
+  else if (zoneCount === 1) zoneCoverageNarrative = "One incentive zone covers this location. County-wide programs supplement zone-based options.";
+  else zoneCoverageNarrative = "No incentive zones overlap at this location. County-wide programs may still apply.";
+
+  // Build comparison data (location vs city)
+  const comparisons: NonNullable<GeneratedReport["marketContext"]>["comparisons"] = {};
+  if (ctx.census.medianIncome != null) {
+    comparisons.income = {
+      location: ctx.census.medianIncome,
+      city: CHICAGO_MEDIANS.income,
+      pct: Math.round((ctx.census.medianIncome / CHICAGO_MEDIANS.income) * 100),
+    };
+  }
+  if (ctx.census.medianHomeValue != null) {
+    comparisons.homeValue = {
+      location: ctx.census.medianHomeValue,
+      city: CHICAGO_MEDIANS.homeValue,
+      pct: Math.round((ctx.census.medianHomeValue / CHICAGO_MEDIANS.homeValue) * 100),
+    };
+  }
+  if (ctx.census.population != null) {
+    comparisons.population = {
+      location: ctx.census.population,
+      city: CHICAGO_MEDIANS.populationPerTract,
+      pct: Math.round((ctx.census.population / CHICAGO_MEDIANS.populationPerTract) * 100),
+    };
+  }
+  if (walkScore != null) {
+    comparisons.walkScore = {
+      location: walkScore,
+      city: CHICAGO_MEDIANS.walkScore,
+      pct: Math.round((walkScore / CHICAGO_MEDIANS.walkScore) * 100),
+    };
+  }
+
+  return {
+    incomeNarrative: cn.incomeNarrative || "Income data not available.",
+    homeValueNarrative: cn.homeValueNarrative || "Home value data not available.",
+    populationNarrative: cn.populationNarrative || "Population data not available.",
+    walkabilityNarrative,
+    zoneCoverageNarrative,
+    qualificationNarrative: cn.qualificationNarrative,
+    isQCT: cn.isLikelyQCT,
+    isLMI: cn.isLMI,
+    comparisons,
+  };
+}
+
+/**
+ * Build stacking analysis from computeStackingNarrative + real stacking rules.
+ */
+function buildStackingAnalysis(
+  zones: Record<string, boolean> | undefined,
+  zoneNames: Record<string, string> | undefined,
+  eligibleProgramIds: string[],
+  stackingRules?: StackingRule[],
+): GeneratedReport["stackingAnalysis"] {
+  if (!zones) return undefined;
+
+  const stacking = computeStackingNarrative(zones, zoneNames || {});
+
+  const combinations = stacking.combinations.map((c) => ({
+    zones: c.zones,
+    benefit: c.benefit,
+  }));
+
+  // Filter stacking rules to only those between eligible programs
+  const rules: GeneratedReport["stackingAnalysis"] extends undefined ? never : NonNullable<GeneratedReport["stackingAnalysis"]>["rules"] = [];
+  if (stackingRules) {
+    for (const rule of stackingRules) {
+      if (eligibleProgramIds.includes(rule.programId) && eligibleProgramIds.includes(rule.otherProgramId)) {
+        rules.push({
+          programA: rule.programId,
+          programB: rule.otherProgramId,
+          relationship: rule.relationship,
+          reason: rule.reason,
+        });
+      }
+    }
+  }
+
+  return {
+    narrative: stacking.narrative,
+    percentileLabel: stacking.percentileLabel,
+    zoneCount: stacking.zoneCount,
+    combinations,
+    rules,
+  };
+}
+
+/**
+ * Build community assets section from EDOs/BSOs.
+ */
+function buildCommunityAssets(
+  assets?: CommunityAsset[],
+): GeneratedReport["communityAssets"] {
+  if (!assets || assets.length === 0) return undefined;
+
+  const edos = assets.filter((a) => a.type === "EDO").map((a) => ({ name: a.name, address: a.address }));
+  const bsos = assets.filter((a) => a.type === "BSO").map((a) => ({ name: a.name, address: a.address }));
+
+  if (edos.length === 0 && bsos.length === 0) return undefined;
+
+  const parts: string[] = [];
+  if (edos.length > 0) parts.push(`${edos.length} economic development organization${edos.length !== 1 ? "s" : ""}`);
+  if (bsos.length > 0) parts.push(`${bsos.length} business support organization${bsos.length !== 1 ? "s" : ""}`);
+  const narrative = `${parts.join(" and ")} serve your area and can provide free advising, application assistance, and connections to funding.`;
+
+  return { edos, bsos, narrative };
 }
 
 // ─── Report Generators ──────────────────────────────────────────────
@@ -259,9 +474,9 @@ function getActiveZoneNames(
 function generateLocationIncentives(
   state: WizardState,
   programs: Program[],
-  zones?: Record<string, boolean>,
-  zoneNames?: Record<string, string>,
+  ctx: ReportContext = {},
 ): GeneratedReport {
+  const { zones, zoneNames } = ctx;
   const eligible = filterByZones(programs, zones);
   const industryRelevant = state.industry
     ? eligible.filter((p) => isProgramRelevantToIndustry(p, state.industry))
@@ -272,31 +487,86 @@ function generateLocationIncentives(
   const countyWide = industryRelevant.filter((p) => !p.zoneKey);
 
   const zoneCount = countActiveZones(zones);
-  const activeNames = getActiveZoneNames(zones, zoneNames);
 
-  // Build benefit estimate summary
-  const benefitDescriptions = zoneBased
-    .filter((p) => p.benefitRange)
-    .map((p) => p.benefitRange!)
-    .slice(0, 3);
+  // ── Merge all eligible programs, sorted by zone-match first ──
+  const allEligible = [...zoneBased, ...countyWide];
+  // Sort: zone-based first (lower index = higher confidence proxy), then county-wide
+  const mergedPrograms = [...allEligible].sort((a, b) => {
+    const aZone = a.zoneKey && zones?.[a.zoneKey] ? 0 : 1;
+    const bZone = b.zoneKey && zones?.[b.zoneKey] ? 0 : 1;
+    return aZone - bZone;
+  });
 
-  const benefitSummary =
-    benefitDescriptions.length > 0
-      ? `potential benefits including ${benefitDescriptions.join(", ")}`
-      : "various potential benefits";
+  // ── Builder outputs ──
+  const verdict = computeVerdict(zones, programs, ctx);
+  const marketContext = buildMarketContext(ctx, zones);
+  const eligibleIds = allEligible.map((p) => p.id);
+  const stackingAnalysis = buildStackingAnalysis(zones, zoneNames, eligibleIds, ctx.stackingRules);
+  const communityAssetsData = buildCommunityAssets(ctx.communityAssets);
 
+  // ── Sections: Overview → Market → Stacking → Programs → Documents → Support → Next Steps ──
   const sections: ReportSection[] = [];
 
-  // Section 1: Eligible Zone-Based Programs
-  if (zoneBased.length > 0) {
+  // §01 Market Analysis
+  if (marketContext) {
+    const cmp = marketContext.comparisons;
+    const marketItems: ReportItem[] = [];
+    if (marketContext.incomeNarrative) {
+      const vs = cmp.income ? ` (${cmp.income.pct}% of city median $${cmp.income.city.toLocaleString()})` : "";
+      marketItems.push({ label: "Median Household Income", value: ctx.census?.medianIncome != null ? `$${ctx.census.medianIncome.toLocaleString()}` : "N/A", detail: `${marketContext.incomeNarrative}${vs}` });
+    }
+    if (marketContext.homeValueNarrative) {
+      const vs = cmp.homeValue ? ` (${cmp.homeValue.pct}% of city median $${cmp.homeValue.city.toLocaleString()})` : "";
+      marketItems.push({ label: "Median Home Value", value: ctx.census?.medianHomeValue != null ? `$${ctx.census.medianHomeValue.toLocaleString()}` : "N/A", detail: `${marketContext.homeValueNarrative}${vs}` });
+    }
+    if (marketContext.populationNarrative) {
+      const vs = cmp.population ? ` (${cmp.population.pct}% of city avg ${cmp.population.city.toLocaleString()} per tract)` : "";
+      marketItems.push({ label: "Population", value: ctx.census?.population != null ? ctx.census.population.toLocaleString() : "N/A", detail: `${marketContext.populationNarrative}${vs}` });
+    }
+    {
+      const vs = cmp.walkScore ? ` (city avg: ${cmp.walkScore.city})` : "";
+      marketItems.push({ label: "Walkability", value: ctx.census?.walkScore != null ? `${ctx.census.walkScore}/100` : "N/A", detail: `${marketContext.walkabilityNarrative}${vs}` });
+    }
+    marketItems.push({ label: "Zone Coverage", value: `${zoneCount} zone${zoneCount !== 1 ? "s" : ""}`, detail: marketContext.zoneCoverageNarrative });
+    if (marketContext.qualificationNarrative && (marketContext.isQCT || marketContext.isLMI)) {
+      marketItems.push({ label: "Neighborhood Qualification", value: marketContext.isQCT ? "Qualified Census Tract" : "Low-to-Moderate Income", detail: marketContext.qualificationNarrative });
+    }
     sections.push({
-      title: "Eligible Zone-Based Programs",
-      items: zoneBased.map((p) => ({
+      title: "Market Analysis",
+      description: "How this location compares to Chicago city medians across key economic and demographic indicators.",
+      items: marketItems,
+    });
+  }
+
+  // §02 Incentive Density & Stacking
+  if (stackingAnalysis) {
+    const stackingItems: ReportItem[] = [];
+    stackingItems.push({ label: "Incentive Density", value: stackingAnalysis.percentileLabel, detail: stackingAnalysis.narrative });
+    for (const combo of stackingAnalysis.combinations) {
+      stackingItems.push({ label: combo.zones.join(" + "), value: "Can stack", detail: combo.benefit });
+    }
+    for (const rule of stackingAnalysis.rules) {
+      stackingItems.push({ label: `${rule.programA} + ${rule.programB}`, value: rule.relationship === "can" ? "Can stack" : rule.relationship === "cannot" ? "Cannot stack" : "Conditional", detail: rule.reason });
+    }
+    if (stackingItems.length > 0) {
+      sections.push({
+        title: "Incentive Density & Stacking",
+        description: "How your overlapping incentive zones compare to other Chicago locations and which programs can be combined.",
+        items: stackingItems,
+      });
+    }
+  }
+
+  // §03 Eligible Incentive Programs — merged, sorted by confidence
+  if (mergedPrograms.length > 0) {
+    sections.push({
+      title: "Eligible Incentive Programs",
+      description: "Programs matched to your location and profile, ordered by eligibility confidence.",
+      items: mergedPrograms.map((p) => ({
         label: p.name,
         value: p.benefitRange || "Contact for details",
         detail: p.summary,
         programId: p.id,
-        color: getProgramColor(p),
         whoQualifies: p.whoQualifies,
         eligibilityRules: p.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
           description: r.description,
@@ -308,29 +578,63 @@ function generateLocationIncentives(
     });
   }
 
-  // Section 2: County-Wide Programs
-  if (countyWide.length > 0) {
+  // §04 Required Documents (categorized, with program attribution) — inserted before Support Network
+  {
+    // Build a map: document → { category, programs[] }
+    const docMap: Record<string, { category: string; programs: Set<string> }> = {};
+    for (const p of allEligible) {
+      for (const doc of p.requiredDocs) {
+        let category = "General";
+        const dl = doc.toLowerCase();
+        if (dl.includes("tax") || dl.includes("financial") || dl.includes("bank") || dl.includes("revenue") || dl.includes("income") || dl.includes("profit")) category = "Financial & Tax";
+        else if (dl.includes("license") || dl.includes("permit") || dl.includes("certificate") || dl.includes("registration") || dl.includes("incorporation") || dl.includes("articles")) category = "Business Registration";
+        else if (dl.includes("lease") || dl.includes("deed") || dl.includes("property") || dl.includes("title") || dl.includes("survey") || dl.includes("parcel")) category = "Property & Site";
+        else if (dl.includes("plan") || dl.includes("proposal") || dl.includes("scope") || dl.includes("budget") || dl.includes("estimate") || dl.includes("project")) category = "Project Plans";
+        else if (dl.includes("employee") || dl.includes("payroll") || dl.includes("workforce") || dl.includes("hire") || dl.includes("job")) category = "Workforce";
+        else if (dl.includes("insurance") || dl.includes("bond")) category = "Insurance & Compliance";
+        if (!docMap[doc]) docMap[doc] = { category, programs: new Set() };
+        docMap[doc].programs.add(p.name);
+      }
+    }
+    // Group by category
+    const grouped: Record<string, { doc: string; programs: string[] }[]> = {};
+    for (const [doc, { category, programs }] of Object.entries(docMap)) {
+      if (!grouped[category]) grouped[category] = [];
+      grouped[category].push({ doc, programs: Array.from(programs) });
+    }
+    const categoryEntries = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
+    if (categoryEntries.length > 0) {
+      const docItems: ReportItem[] = categoryEntries.map(([cat, docs]) => ({
+        label: cat,
+        value: `${docs.length} document${docs.length !== 1 ? "s" : ""}`,
+        detail: docs.map((d) => `${d.doc} — ${d.programs.join(", ")}`).join("\n"),
+      }));
+      sections.push({
+        title: "Required Documents",
+        description: `${Object.keys(docMap).length} documents across your eligible programs, organized by category. Each document lists which program(s) require it.`,
+        items: docItems,
+      });
+    }
+  }
+
+  // §05 Your Support Network
+  if (communityAssetsData) {
+    const assetItems: ReportItem[] = [];
+    assetItems.push({ label: "Community Support", value: `${communityAssetsData.edos.length + communityAssetsData.bsos.length} organizations`, detail: communityAssetsData.narrative });
+    for (const edo of communityAssetsData.edos) {
+      assetItems.push({ label: edo.name, value: "EDO", detail: edo.address });
+    }
+    for (const bso of communityAssetsData.bsos) {
+      assetItems.push({ label: bso.name, value: "BSO", detail: bso.address });
+    }
     sections.push({
-      title: "County-Wide Programs",
-      items: countyWide.map((p) => ({
-        label: p.name,
-        value: p.benefitRange || "Contact for details",
-        detail: p.summary,
-        programId: p.id,
-        color: getProgramColor(p),
-        whoQualifies: p.whoQualifies,
-        eligibilityRules: p.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
-          description: r.description,
-          required: r.required,
-        })),
-        url: p.url,
-        level: p.level,
-      })),
+      title: "Your Support Network",
+      description: "Local organizations that provide free advising and application assistance.",
+      items: assetItems,
     });
   }
 
   // ── Benefit Estimates ──────────────────────────────────────────────
-  const allEligible = [...zoneBased, ...countyWide];
   let benefitEstimates: GeneratedReport["benefitEstimates"] | undefined;
 
   if (state.budgetRange) {
@@ -350,7 +654,7 @@ function generateLocationIncentives(
           programName: p.name,
           estimatedValue: capped,
           label: creditInfo.label,
-          color: getProgramColor(p),
+          
         });
       }
 
@@ -365,7 +669,7 @@ function generateLocationIncentives(
     }
   }
 
-  // ── Action Roadmap ───────────────────────────────────────────────
+  // ── Action Roadmap ("Your Next Steps") ──────────────────────────
   const actionRoadmap: ActionRoadmapItem[] = [];
   const topPrograms = zoneBased.slice(0, 2);
 
@@ -375,7 +679,7 @@ function generateLocationIncentives(
     const addressDisplay = state.address || "my address";
     const zoneName = p.zoneKey ? (zoneNames?.[p.zoneKey] || ZONE_LABELS[p.zoneKey] || p.zoneKey) : "";
     const callScript = contact
-      ? `"Hi, I'm at ${addressDisplay}${zoneName ? ` in ${zoneName}` : ""}. I'd like to learn about ${p.name} for my ${getIndustryName(state.industry).toLowerCase()} business."`
+      ? `"Hi, I'm at ${addressDisplay}${zoneName ? ` in ${zoneName}` : ""}. I'd like to learn about ${p.name} for my ${getIndustryName(state.industry).toLowerCase()}${getIndustryName(state.industry).toLowerCase().includes("business") ? "" : " business"}."`
       : undefined;
 
     actionRoadmap.push({
@@ -386,22 +690,6 @@ function generateLocationIncentives(
       description: p.summary,
       contact: contact ? { agency: contact.agency, phone: contact.phone, email: contact.email, role: contact.role } : undefined,
       callScript,
-    });
-  }
-
-  // Tier 2: "Start Gathering" — deduplicated required docs from all eligible programs
-  const allDocs = new Set<string>();
-  for (const p of allEligible) {
-    for (const doc of p.requiredDocs) {
-      allDocs.add(doc);
-    }
-  }
-  if (allDocs.size > 0) {
-    actionRoadmap.push({
-      tier: "start-gathering",
-      label: "Gather required documents",
-      description: `You'll need ${allDocs.size} documents across your eligible programs. Start collecting these now to speed up applications.`,
-      documents: Array.from(allDocs),
     });
   }
 
@@ -418,29 +706,6 @@ function generateLocationIncentives(
       contact: contact ? { agency: contact.agency, phone: contact.phone, email: contact.email, role: contact.role } : undefined,
     });
   }
-
-  // Section 3: Next Steps (kept for backward compatibility but enriched)
-  sections.push({
-    title: "Next Steps",
-    items: topPrograms.length > 0
-      ? topPrograms.map((p) => {
-          const contact = p.contacts?.[0];
-          return {
-            label: p.fastestConfirmingStep || `Contact ${contact?.agency || "program administrator"}`,
-            value: contact?.phone ? `Call ${contact.phone}` : (contact?.email || "See program details"),
-            detail: `${p.name} — ${p.summary}`,
-            programId: p.id,
-            color: getProgramColor(p),
-          };
-        })
-      : [
-          {
-            label: "Book free business advising",
-            value: "Schedule a free session to review all options",
-            detail: "Cook County Small Business Source or SECCC can help you navigate program applications.",
-          },
-        ],
-  });
 
   // Recommended actions
   const recommendedActions: GeneratedReport["recommendedActions"] = topPrograms.map(
@@ -469,22 +734,20 @@ function generateLocationIncentives(
   }
 
   const addressDisplay = state.address || "your location";
-  const zoneList =
-    activeNames.length > 0
-      ? activeNames.slice(0, 4).join(", ") +
-        (activeNames.length > 4 ? `, and ${activeNames.length - 4} more` : "")
-      : "no specific incentive zones";
+  const stackingContext = stackingAnalysis
+    ? ` Your ${stackingAnalysis.zoneCount}-zone overlap places you in the ${stackingAnalysis.percentileLabel} of Chicago locations for incentive density.`
+    : "";
 
   const dollarSummary = benefitEstimates
     ? ` Based on a ${state.budgetRange} budget, we estimate ~${benefitEstimates.totalFormatted} in total potential incentives.`
     : "";
 
   return {
-    title: `Incentive Report for ${addressDisplay}`,
+    title: `Site Incentive Analysis — ${addressDisplay}`,
     subtitle: `Location-based analysis for ${getIndustryName(state.industry)}`,
     reportType: "location-incentives",
     generatedAt: new Date().toISOString(),
-    summary: `Your location at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} (${zoneList}). You may qualify for ${zoneBased.length + countyWide.length} programs with ${benefitSummary}.${dollarSummary} Review each program below to understand requirements and next steps.`,
+    summary: `${verdict?.headline || "Incentive analysis complete"}. Your address at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}, qualifying for ${mergedPrograms.length} programs.${stackingContext}${dollarSummary} The sections below are organized from key findings to detailed evidence.`,
     sections,
     recommendedActions: recommendedActions.slice(0, 4),
     metadata: {
@@ -496,16 +759,19 @@ function generateLocationIncentives(
     },
     benefitEstimates,
     actionRoadmap,
+    verdict,
+    marketContext,
+    stackingAnalysis,
+    communityAssets: communityAssetsData,
   };
 }
 
 function generateBestLocation(
   state: WizardState,
   programs: Program[],
-  zones?: Record<string, boolean>,
-  zoneNames?: Record<string, string>,
-  parcel?: ParcelData,
+  ctx: ReportContext = {},
 ): GeneratedReport {
+  const { zones, zoneNames, parcel, cityZoning } = ctx;
   const projectType = state.projectType || "acquisition";
   const projectLabels: Record<string, string> = {
     "acquisition": "Acquisition & Hold",
@@ -526,9 +792,15 @@ function generateBestLocation(
     ? programs.filter((p) => !p.zoneKey || zones[p.zoneKey])
     : programs;
 
+  // ── Builder outputs ──
+  const verdict = computeVerdict(zones, programs, ctx);
+  const marketContext = buildMarketContext(ctx, zones);
+  const eligibleIds = sitePrograms.map((p) => p.id);
+  const stackingAnalysis = buildStackingAnalysis(zones, zoneNames, eligibleIds, ctx.stackingRules);
+
   const sections: ReportSection[] = [];
 
-  // Section 1: Property Profile (from parcel data)
+  // §01 Site Description & Property Profile
   if (parcel && parcel.pin) {
     const propertyItems: ReportItem[] = [
       {
@@ -536,7 +808,6 @@ function generateBestLocation(
         value: parcel.pin,
         detail: `Cook County Assessor record — cookcountyassessoril.gov/pin/${parcel.pin}`,
         url: `https://www.cookcountyassessoril.gov/pin/${parcel.pin}`,
-        color: "#7C3AED",
       },
       {
         label: "Building Classification",
@@ -548,7 +819,6 @@ function generateBestLocation(
             : parcel.isIndustrial
               ? "Industrial property — eligible for industrial development incentives"
               : "Residential property classification",
-        color: parcel.isCommercial ? "#2563EB" : parcel.isIndustrial ? "#D97706" : "#0C1B33",
       },
     ];
     if (parcel.totalValue) {
@@ -559,7 +829,6 @@ function generateBestLocation(
           parcel.landValue && `Land: ${parcel.landValue}`,
           parcel.bldgValue && `Building: ${parcel.bldgValue}`,
         ].filter(Boolean).join(" · "),
-        color: "#059669",
       });
     }
     if (parcel.landSqft || parcel.bldgSqft) {
@@ -570,43 +839,105 @@ function generateBestLocation(
           parcel.bldgSqft && `${parcel.bldgSqft.toLocaleString()} sq ft bldg`,
         ].filter(Boolean).join(" · "),
         detail: parcel.bldgAge != null ? `Building age: ${parcel.bldgAge} years` : undefined,
-        color: "#0C1B33",
       });
     }
     if (parcel.taxCode || parcel.township) {
       propertyItems.push({
         label: "Tax Code / Township",
         value: [parcel.taxCode, parcel.township].filter(Boolean).join(" · "),
-        color: "#0C1B33",
       });
     }
     sections.push({
-      title: "Property Profile",
+      title: "Site Description & Property Profile",
+      description: "Property data from Cook County Assessor records for due diligence and application reference.",
       items: propertyItems,
     });
   }
 
-  // Section 2: Incentive Zone Coverage
-  if (zoneCount > 0) {
+  // §02 Zoning & Regulatory Review
+  if (cityZoning?.zoneClass) {
+    const zoningItems: ReportItem[] = [
+      {
+        label: "City Zoning Classification",
+        value: cityZoning.zoneClass,
+        detail: `${describeZoneClass(cityZoning.zoneClass)}${cityZoning.zoneType ? ` — ${cityZoning.zoneType} zoning` : ""}. Determines permitted land uses, density, and building requirements.`,
+      },
+    ];
+    // Add zone-specific guidance
+    const zoneClass = cityZoning.zoneClass;
+    if (zoneClass.startsWith("RS") || zoneClass.startsWith("RT") || zoneClass.startsWith("RM")) {
+      zoningItems.push({ label: "Use Compatibility", value: "Residential zone", detail: "Commercial uses may require a zoning change or special use permit. Verify compatibility with your intended project type." });
+    } else if (zoneClass.startsWith("C") || zoneClass.startsWith("B")) {
+      zoningItems.push({ label: "Use Compatibility", value: "Commercial zone", detail: "Most business uses are permitted by right. Check specific subcategory for any restrictions on your intended use." });
+    } else if (zoneClass.startsWith("M")) {
+      zoningItems.push({ label: "Use Compatibility", value: "Manufacturing zone", detail: "Manufacturing, warehouse, and some commercial uses are permitted. Retail may be restricted depending on the subcategory." });
+    }
     sections.push({
-      title: `Incentive Zone Coverage (${zoneCount} zones)`,
-      items: activeZones.map((key) => {
-        const matchingPrograms = programs.filter((p) => p.zoneKey === key);
-        return {
-          label: ZONE_LABELS[key] || key,
-          value: zoneNames?.[key] || (matchingPrograms.length > 0
-            ? `${matchingPrograms.length} program${matchingPrograms.length !== 1 ? "s" : ""}`
-            : "Active"),
-          detail: matchingPrograms.map((p) =>
-            `${p.name}${p.benefitRange ? ` (${p.benefitRange})` : ""}`
-          ).join("; ") || undefined,
-          color: ZONE_COLORS[key] || "#2563EB",
-        };
-      }),
+      title: "Zoning & Regulatory Review",
+      description: "City zoning classification and use compatibility for your project type.",
+      items: zoningItems,
     });
   }
 
-  // Section 3: Feasibility Assessment by scenario
+  // §03 Market Analysis
+  if (marketContext) {
+    const cmp = marketContext.comparisons;
+    const marketItems: ReportItem[] = [];
+    if (marketContext.incomeNarrative) {
+      const vs = cmp.income ? ` (${cmp.income.pct}% of city median $${cmp.income.city.toLocaleString()})` : "";
+      marketItems.push({ label: "Median Household Income", value: ctx.census?.medianIncome != null ? `$${ctx.census.medianIncome.toLocaleString()}` : "N/A", detail: `${marketContext.incomeNarrative}${vs}` });
+    }
+    if (marketContext.homeValueNarrative) {
+      const vs = cmp.homeValue ? ` (${cmp.homeValue.pct}% of city median $${cmp.homeValue.city.toLocaleString()})` : "";
+      marketItems.push({ label: "Median Home Value", value: ctx.census?.medianHomeValue != null ? `$${ctx.census.medianHomeValue.toLocaleString()}` : "N/A", detail: `${marketContext.homeValueNarrative}${vs}` });
+    }
+    if (marketContext.populationNarrative) {
+      const vs = cmp.population ? ` (${cmp.population.pct}% of city avg ${cmp.population.city.toLocaleString()} per tract)` : "";
+      marketItems.push({ label: "Population", value: ctx.census?.population != null ? ctx.census.population.toLocaleString() : "N/A", detail: `${marketContext.populationNarrative}${vs}` });
+    }
+    {
+      const vs = cmp.walkScore ? ` (city avg: ${cmp.walkScore.city})` : "";
+      marketItems.push({ label: "Walkability", value: ctx.census?.walkScore != null ? `${ctx.census.walkScore}/100` : "N/A", detail: `${marketContext.walkabilityNarrative}${vs}` });
+    }
+    if (marketContext.qualificationNarrative && (marketContext.isQCT || marketContext.isLMI)) {
+      marketItems.push({ label: "Neighborhood Qualification", value: marketContext.isQCT ? "Qualified Census Tract" : "Low-to-Moderate Income", detail: marketContext.qualificationNarrative });
+    }
+    sections.push({
+      title: "Market Analysis",
+      description: "How this location compares to Chicago city medians across key economic and demographic indicators.",
+      items: marketItems,
+    });
+  }
+
+  // §04 Incentive Zone Coverage & Stacking
+  if (zoneCount > 0) {
+    const zoneItems: ReportItem[] = activeZones.map((key) => {
+      const matchingPrograms = programs.filter((p) => p.zoneKey === key);
+      return {
+        label: ZONE_LABELS[key] || key,
+        value: zoneNames?.[key] || (matchingPrograms.length > 0
+          ? `${matchingPrograms.length} program${matchingPrograms.length !== 1 ? "s" : ""}`
+          : "Active"),
+        detail: (ZONE_DESCRIPTIONS[key] ? ZONE_DESCRIPTIONS[key] + " " : "") + (matchingPrograms.map((p) =>
+          `${p.name}${p.benefitRange ? ` (${p.benefitRange})` : ""}`
+        ).join("; ") || ""),
+      };
+    });
+    // Add stacking info
+    if (stackingAnalysis) {
+      zoneItems.push({ label: "Incentive Density", value: stackingAnalysis.percentileLabel, detail: stackingAnalysis.narrative });
+      for (const combo of stackingAnalysis.combinations) {
+        zoneItems.push({ label: combo.zones.join(" + "), value: "Can stack", detail: combo.benefit });
+      }
+    }
+    sections.push({
+      title: `Incentive Zone Coverage & Stacking (${zoneCount} zones)`,
+      description: "Active incentive zones at this location and how they can be combined.",
+      items: zoneItems,
+    });
+  }
+
+  // §05 Feasibility Assessment
   const feasibilityItems: ReportItem[] = [];
 
   if (projectType === "rehab" || projectType === "mixed-use-conversion") {
@@ -615,14 +946,12 @@ function generateBestLocation(
         label: "Historic Tax Credit potential",
         value: "Strong — 50+ year building in historic district",
         detail: "Building age and National Register district status may qualify for 20% Federal Historic Tax Credit on certified rehabilitation.",
-        color: "#059669",
       });
     } else if (parcel?.bldgAge != null && parcel.bldgAge >= 50) {
       feasibilityItems.push({
         label: "Historic Tax Credit potential",
         value: "Possible — building is 50+ years old",
         detail: "Building age may qualify for historic designation. Check if individual listing or district expansion is feasible.",
-        color: "#D97706",
       });
     }
     if (activeZones.includes("tif") || activeZones.includes("sbif")) {
@@ -630,7 +959,6 @@ function generateBestLocation(
         label: "Renovation funding",
         value: "TIF/SBIF eligible",
         detail: "This site is in a TIF district and/or SBIF-eligible area — rehabilitation costs may be partially reimbursed (SBIF: up to 50%, max $150K).",
-        color: "#059669",
       });
     }
   }
@@ -641,7 +969,6 @@ function generateBestLocation(
         label: "Vacant land status",
         value: "Confirmed vacant parcel",
         detail: "Parcel classified as vacant land. May qualify for Land Bank acquisition or reduced-price city sale programs.",
-        color: "#2563EB",
       });
     }
     if (parcel?.isCommercial && isClass7aEligible(parcel.classCode)) {
@@ -649,7 +976,6 @@ function generateBestLocation(
         label: "Class 7a eligibility",
         value: "Potentially eligible",
         detail: `Property class ${parcel.classCode} may qualify for Class 7a assessment reduction (10% of market value for 12 years for commercial/industrial rehab).`,
-        color: "#059669",
       });
     }
   }
@@ -659,7 +985,6 @@ function generateBestLocation(
       label: "Opportunity Zone",
       value: "Active Federal OZ",
       detail: "Qualified Opportunity Fund investment at this site can defer and reduce capital gains taxes. 10-year hold eliminates gains on appreciation.",
-      color: "#059669",
     });
   }
   if (activeZones.includes("enterprise")) {
@@ -667,8 +992,12 @@ function generateBestLocation(
       label: "Enterprise Zone",
       value: "Active",
       detail: "Sales tax exemption on building materials, utility tax exemption, and investment tax credits available for this site.",
-      color: "#059669",
     });
+  }
+
+  // Risk signals
+  if (verdict?.signal === "limited") {
+    feasibilityItems.push({ label: "Risk Signal", value: "Limited incentive coverage", detail: "Fewer zone-based programs available. County-wide programs and manual eligibility checks recommended." });
   }
 
   if (feasibilityItems.length === 0) {
@@ -676,31 +1005,32 @@ function generateBestLocation(
       label: "Baseline feasibility",
       value: `${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} active`,
       detail: `This site has ${zoneCount > 0 ? "incentive coverage that can offset project costs" : "limited zone coverage — county-wide programs may still apply"}.`,
-      color: zoneCount > 0 ? "#2563EB" : "#D97706",
     });
   }
 
   sections.push({
     title: `${projectLabel} Feasibility`,
+    description: "Assessment of project-specific incentive eligibility, risk signals, and financing opportunities.",
     items: feasibilityItems,
   });
 
-  // Section 4: Available Programs at this site
+  // §06 Available Programs
   if (sitePrograms.length > 0) {
     sections.push({
-      title: `Programs Available at This Site (${sitePrograms.length})`,
+      title: `Available Programs (${sitePrograms.length})`,
+      description: "Programs matched to this site, ordered by relevance to your project type.",
       items: sitePrograms.slice(0, 8).map((p) => ({
         label: p.name,
         value: p.benefitRange || "Contact for details",
         detail: p.summary,
         programId: p.id,
         level: p.level,
-        color: ZONE_COLORS[p.zoneKey] || "#2563EB",
+        
       })),
     });
   }
 
-  // Section 5: Decision Factors
+  // §07 Decision Factors
   const priorities = state.locationPriorities || [];
   if (priorities.length > 0) {
     const priorityAssessments: Record<string, (p: ParcelData | undefined, z: string[]) => ReportItem> = {
@@ -708,13 +1038,12 @@ function generateBestLocation(
         label: "Tax Incentive Value",
         value: z.length >= 3 ? "High" : z.length >= 1 ? "Moderate" : "Limited",
         detail: `${z.length} incentive zone${z.length !== 1 ? "s" : ""} at this site.${p?.isCommercial ? " Commercial classification may unlock additional property tax incentives." : ""}`,
-        color: z.length >= 3 ? "#059669" : z.length >= 1 ? "#D97706" : "#EF4444",
+        
       }),
       "zoning-compatibility": (_p, _z) => ({
         label: "Zoning Compatibility",
         value: "Check city zoning",
-        detail: "Verify that the current city zoning classification supports your intended use. See Location Context section for the zoning code.",
-        color: "#2563EB",
+        detail: "Verify that the current city zoning classification supports your intended use. See Zoning & Regulatory Review section.",
       }),
       "property-condition": (p) => ({
         label: "Property Condition",
@@ -726,7 +1055,7 @@ function generateBestLocation(
               ? "Moderate age — assess mechanical systems and envelope condition."
               : "Relatively new construction — lower renovation risk."
           : "Building age not available in parcel records. Inspect the site to assess condition.",
-        color: p?.bldgAge != null ? (p.bldgAge >= 50 ? "#D97706" : "#059669") : "#0C1B33",
+        
       }),
       "assessed-value": (p) => ({
         label: "Assessed Value / Carrying Cost",
@@ -734,13 +1063,12 @@ function generateBestLocation(
         detail: p?.totalValue
           ? `Current assessed value sets the baseline property tax burden. ${p.landValue ? `Land portion: ${p.landValue}.` : ""}`
           : "Assessed value not available in parcel records.",
-        color: p?.totalValue ? "#059669" : "#0C1B33",
+        
       }),
       "neighborhood-demand": () => ({
         label: "Neighborhood Demand",
-        value: "See census data",
-        detail: "Review the median income, home values, and population data in the Location Context section to gauge local market demand.",
-        color: "#2563EB",
+        value: "See Market Analysis",
+        detail: "Review the median income, home values, and population data in the Market Analysis section to gauge local market demand.",
       }),
       "grant-eligibility": (_p, z) => ({
         label: "Grant Eligibility",
@@ -752,12 +1080,13 @@ function generateBestLocation(
         detail: (z.includes("tif") || z.includes("sbif"))
           ? "This site qualifies for TIF funding and/or SBIF grant reimbursement for eligible improvements."
           : "No direct grant programs identified at this location. Consider county-wide programs.",
-        color: (z.includes("tif") || z.includes("sbif")) ? "#059669" : "#D97706",
+        
       }),
     };
 
     sections.push({
       title: "Decision Factors",
+      description: "Your selected evaluation criteria assessed against site data.",
       items: priorities.map((p) => {
         const assessor = priorityAssessments[p];
         if (assessor) return assessor(parcel, activeZones);
@@ -767,6 +1096,28 @@ function generateBestLocation(
           detail: "This factor requires on-site inspection or additional research.",
         };
       }),
+    });
+  }
+
+  // ── Action Roadmap (new for best-location) ──
+  const actionRoadmap: ActionRoadmapItem[] = [];
+  const topSitePrograms = sitePrograms.filter((p) => p.zoneKey && zones?.[p.zoneKey]).slice(0, 2);
+  for (const p of topSitePrograms) {
+    const contact = p.contacts?.[0];
+    actionRoadmap.push({
+      tier: "do-this-week",
+      programId: p.id,
+      programName: p.name,
+      label: p.fastestConfirmingStep || `Contact ${contact?.agency || "program administrator"} about ${p.name}`,
+      description: p.summary,
+      contact: contact ? { agency: contact.agency, phone: contact.phone, email: contact.email, role: contact.role } : undefined,
+    });
+  }
+  if (parcel?.pin) {
+    actionRoadmap.push({
+      tier: "start-gathering",
+      label: "Pull full Assessor record",
+      description: `Look up PIN ${parcel.pin} on the Cook County Assessor website for tax history, exemptions, and appeal status.`,
     });
   }
 
@@ -816,11 +1167,11 @@ function generateBestLocation(
   }
 
   return {
-    title: `Site Evaluation — ${address}`,
+    title: `Development Feasibility Assessment — ${address}`,
     subtitle: `${projectLabel} feasibility analysis`,
     reportType: "best-location",
     generatedAt: new Date().toISOString(),
-    summary: `${summaryParts.join(". ")}. ${projectType === "rehab" && parcel?.bldgAge != null && parcel.bldgAge >= 50 ? "The building's age may unlock historic tax credits. " : ""}${zoneCount >= 3 ? "Strong incentive density at this location offers significant cost-offset potential." : zoneCount >= 1 ? "Moderate incentive coverage — review available programs for applicable benefits." : "Limited incentive zone coverage — county-wide programs may still apply."}`,
+    summary: `${verdict?.headline || "Site assessment complete"}. ${summaryParts.join(". ")}. ${projectType === "rehab" && parcel?.bldgAge != null && parcel.bldgAge >= 50 ? "The building's age may unlock historic tax credits. " : ""}The sections below are organized from key findings to detailed evidence.`,
     sections,
     recommendedActions,
     metadata: {
@@ -829,6 +1180,10 @@ function generateBestLocation(
       lon: state.lon ?? undefined,
       projectType,
     },
+    verdict,
+    marketContext,
+    stackingAnalysis,
+    actionRoadmap: actionRoadmap.length > 0 ? actionRoadmap : undefined,
   };
 }
 
@@ -885,7 +1240,7 @@ function generateProgramExplorer(
         value: p.benefitRange || "Contact for details",
         detail: p.summary,
         programId: p.id,
-        color: getProgramColor(p),
+        
         whoQualifies: p.whoQualifies,
         eligibilityRules: p.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
           description: r.description,
@@ -985,7 +1340,7 @@ function generateDeveloperAnalysis(
       value: valueDisplay,
       detail: creditInfo?.label || p.summary,
       programId: p.id,
-      color: getProgramColor(p),
+      
     };
   });
 
@@ -994,7 +1349,6 @@ function generateDeveloperAnalysis(
       label: "Combined Stacking Estimate",
       value: formatDollars(totalEstimate),
       detail: `Total estimated value across ${creditPrograms.length} programs based on a ${formatDollars(budgetMedian)} project budget. Actual values depend on eligibility verification and program caps.`,
-      color: "#16A34A",
     });
   }
 
@@ -1015,33 +1369,54 @@ function generateDeveloperAnalysis(
   const allRequiredDocs = new Set<string>();
   const allQualifications: ReportItem[] = [];
 
+  // Build doc → program mapping for attribution
+  const docProgramMap: Record<string, Set<string>> = {};
   for (const p of creditPrograms) {
     for (const doc of p.requiredDocs) {
       allRequiredDocs.add(doc);
+      if (!docProgramMap[doc]) docProgramMap[doc] = new Set();
+      docProgramMap[doc].add(p.name);
     }
     allQualifications.push({
       label: p.name,
       value: p.whoQualifies,
       programId: p.id,
-      color: getProgramColor(p),
+
     });
   }
 
-  // Deduplicated requirements list
+  // Deduplicated requirements list with program attribution
   const requirementItems: ReportItem[] = [
     ...allQualifications,
   ];
 
   if (allRequiredDocs.size > 0) {
-    requirementItems.push({
-      label: "Combined Required Documents",
-      value: `${allRequiredDocs.size} unique documents needed`,
-      detail: Array.from(allRequiredDocs).join("; "),
-    });
+    // Categorize documents
+    const docGrouped: Record<string, { doc: string; programs: string[] }[]> = {};
+    for (const [doc, programs] of Object.entries(docProgramMap)) {
+      let category = "General";
+      const dl = doc.toLowerCase();
+      if (dl.includes("tax") || dl.includes("financial") || dl.includes("bank") || dl.includes("revenue") || dl.includes("income") || dl.includes("profit")) category = "Financial & Tax";
+      else if (dl.includes("license") || dl.includes("permit") || dl.includes("certificate") || dl.includes("registration") || dl.includes("incorporation") || dl.includes("articles")) category = "Business Registration";
+      else if (dl.includes("lease") || dl.includes("deed") || dl.includes("property") || dl.includes("title") || dl.includes("survey") || dl.includes("parcel")) category = "Property & Site";
+      else if (dl.includes("plan") || dl.includes("proposal") || dl.includes("scope") || dl.includes("budget") || dl.includes("estimate") || dl.includes("project")) category = "Project Plans";
+      else if (dl.includes("employee") || dl.includes("payroll") || dl.includes("workforce") || dl.includes("hire") || dl.includes("job")) category = "Workforce";
+      else if (dl.includes("insurance") || dl.includes("bond")) category = "Insurance & Compliance";
+      if (!docGrouped[category]) docGrouped[category] = [];
+      docGrouped[category].push({ doc, programs: Array.from(programs) });
+    }
+    for (const [cat, docs] of Object.entries(docGrouped).sort(([a], [b]) => a.localeCompare(b))) {
+      requirementItems.push({
+        label: cat,
+        value: `${docs.length} document${docs.length !== 1 ? "s" : ""}`,
+        detail: docs.map((d) => `${d.doc} — ${d.programs.join(", ")}`).join("\n"),
+      });
+    }
   }
 
   sections.push({
-    title: "Project Requirements",
+    title: "Required Documents",
+    description: `${allRequiredDocs.size} documents across your eligible programs, organized by category. Each document lists which program(s) require it.`,
     items: requirementItems,
   });
 
@@ -1175,37 +1550,45 @@ export interface ReportZoningData {
 }
 
 /**
+ * Bundled context for report generation — replaces the growing param list.
+ */
+export interface ReportContext {
+  zones?: Record<string, boolean>;
+  zoneNames?: Record<string, string>;
+  census?: ReportCensusData;
+  cityZoning?: ReportZoningData;
+  parcel?: ParcelData;
+  districts?: DistrictData;
+  stackingRules?: StackingRule[];
+  communityAssets?: CommunityAsset[];
+  stats?: Stats;
+}
+
+/**
  * Generate structured report data from wizard answers and program data.
  *
  * @param state    - Wizard answers collected through the report wizard UI
  * @param programs - All available incentive programs
- * @param zones    - Zone membership flags for the user's address (optional)
- * @param zoneNames - Human-readable zone names keyed by zone ID (optional)
- * @param census   - Census data for the address location (optional)
- * @param cityZoning - City zoning classification (optional)
+ * @param ctx      - Contextual data (zones, census, zoning, parcel, districts, stacking, assets, stats)
  * @returns A GeneratedReport object ready for UI rendering or PDF export
  */
 export function generateReportData(
   state: WizardState,
   programs: Program[],
-  zones?: Record<string, boolean>,
-  zoneNames?: Record<string, string>,
-  census?: ReportCensusData,
-  cityZoning?: ReportZoningData,
-  parcel?: ParcelData,
-  districts?: DistrictData,
+  ctx: ReportContext = {},
 ): GeneratedReport {
+  const { zones, zoneNames, census, cityZoning, parcel, districts } = ctx;
   const reportType = state.reportType || "location-incentives";
 
   let report: GeneratedReport;
 
   switch (reportType) {
     case "location-incentives":
-      report = generateLocationIncentives(state, programs, zones, zoneNames);
+      report = generateLocationIncentives(state, programs, ctx);
       break;
 
     case "best-location":
-      report = generateBestLocation(state, programs, zones, zoneNames, parcel);
+      report = generateBestLocation(state, programs, ctx);
       break;
 
     case "program-explorer":
@@ -1229,7 +1612,8 @@ export function generateReportData(
     if (cityZoning?.zoneClass) report.metadata.zoneClass = cityZoning.zoneClass;
     if (cityZoning?.zoneType) report.metadata.zoneType = cityZoning.zoneType;
 
-    // Insert a "Location Context" section at the beginning if we have data
+    // Insert a "Site Profile" section — property, zoning, and district data only
+    // (census/market data lives in Market Analysis to avoid duplication)
     const contextItems: ReportItem[] = [];
     if (cityZoning?.zoneClass) {
       contextItems.push({
@@ -1238,54 +1622,6 @@ export function generateReportData(
         detail: cityZoning.zoneType
           ? `${cityZoning.zoneType} zoning — determines permitted land uses, density, and building requirements at this location`
           : "Determines permitted land uses, density, and building requirements at this location",
-        color: "#059669",
-      });
-    }
-    if (census?.medianIncome != null) {
-      const narrative = censusNarrative({
-        tractId: census.tractId || "",
-        medianIncome: census.medianIncome,
-        medianHomeValue: census.medianHomeValue ?? null,
-        population: census.population ?? null,
-        walkScore: census.walkScore ?? null,
-      });
-      contextItems.push({
-        label: "Median Household Income",
-        value: `$${census.medianIncome.toLocaleString()}`,
-        detail: narrative.incomeNarrative || "Census tract estimate (ACS 5-Year)",
-        color: narrative.isLikelyQCT ? "#059669" : "#2563EB",
-      });
-      // Add qualification context
-      if (narrative.qualificationNarrative && (narrative.isLikelyQCT || narrative.isLMI)) {
-        contextItems.push({
-          label: "Neighborhood Qualification",
-          value: narrative.isLikelyQCT ? "Qualified Census Tract" : "Low-to-Moderate Income",
-          detail: narrative.qualificationNarrative,
-          color: "#059669",
-        });
-      }
-    }
-    if (census?.medianHomeValue != null) {
-      const homeNarrative = censusNarrative({
-        tractId: census.tractId || "",
-        medianIncome: census.medianIncome ?? null,
-        medianHomeValue: census.medianHomeValue,
-        population: census.population ?? null,
-        walkScore: census.walkScore ?? null,
-      });
-      contextItems.push({
-        label: "Median Home Value",
-        value: `$${census.medianHomeValue.toLocaleString()}`,
-        detail: homeNarrative.homeValueNarrative || "Census tract estimate (ACS 5-Year) — reflects area property values and investment activity",
-        color: "#7C3AED",
-      });
-    }
-    if (census?.walkScore != null) {
-      contextItems.push({
-        label: "Walkability Score",
-        value: `${census.walkScore} / 100`,
-        detail: "Based on proximity to amenities and pedestrian infrastructure — higher scores indicate better foot traffic potential",
-        color: "#D97706",
       });
     }
 
@@ -1296,7 +1632,6 @@ export function generateReportData(
         value: parcel.pin,
         detail: `View full record at cookcountyassessoril.gov/pin/${parcel.pin}`,
         url: `https://www.cookcountyassessoril.gov/pin/${parcel.pin}`,
-        color: "#7C3AED",
       });
       contextItems.push({
         label: "Building Classification",
@@ -1304,7 +1639,7 @@ export function generateReportData(
         detail: isClass7aEligible(parcel.classCode)
           ? "This property class may be eligible for Class 7a/7b assessment reduction"
           : "Standard property classification for tax assessment purposes",
-        color: parcel.isCommercial ? "#2563EB" : parcel.isIndustrial ? "#D97706" : "#0C1B33",
+        
       });
       if (parcel.totalValue) {
         contextItems.push({
@@ -1314,7 +1649,6 @@ export function generateReportData(
             parcel.landValue ? `Land: ${parcel.landValue}` : null,
             parcel.bldgValue ? `Building: ${parcel.bldgValue}` : null,
           ].filter(Boolean).join(" · ") || "Cook County Assessor certified value",
-          color: "#059669",
         });
       }
       if (parcel.landSqft || parcel.bldgSqft) {
@@ -1325,7 +1659,6 @@ export function generateReportData(
             parcel.bldgSqft ? `${parcel.bldgSqft.toLocaleString()} sq ft bldg` : null,
           ].filter(Boolean).join(" · "),
           detail: parcel.bldgAge != null ? `Building age: ${parcel.bldgAge} years` : undefined,
-          color: "#0C1B33",
         });
       }
     }
@@ -1343,16 +1676,24 @@ export function generateReportData(
           label: "Political Districts",
           value: districtParts.slice(0, 2).join(" · "),
           detail: districtParts.length > 2 ? districtParts.slice(2).join(" · ") : undefined,
-          color: "#D97706",
         });
       }
     }
 
     if (contextItems.length > 0) {
-      report.sections.unshift({
-        title: "Location Context",
-        items: contextItems,
-      });
+      if (reportType === "location-incentives") {
+        // Prepend as "Site Overview" — first section users see
+        report.sections.unshift({
+          title: "Site Overview",
+          description: "Zoning, property, and district data for this address.",
+          items: contextItems,
+        });
+      } else {
+        report.sections.unshift({
+          title: "Location Context",
+          items: contextItems,
+        });
+      }
     }
 
     // For developer-analysis, add a dedicated Property Analysis subsection
@@ -1362,13 +1703,11 @@ export function generateReportData(
           label: "Property PIN",
           value: parcel.pin,
           url: `https://www.cookcountyassessoril.gov/pin/${parcel.pin}`,
-          color: "#7C3AED",
         },
         {
           label: "Building Class",
           value: `${parcel.classCode} — ${parcel.classDescription}`,
           detail: parcel.isCommercial ? "Commercial property" : parcel.isIndustrial ? "Industrial property" : parcel.isVacant ? "Vacant land" : "Residential property",
-          color: "#2563EB",
         },
       ];
       if (parcel.totalValue) {
@@ -1376,14 +1715,12 @@ export function generateReportData(
           label: "Total Assessed Value",
           value: parcel.totalValue,
           detail: [parcel.landValue && `Land: ${parcel.landValue}`, parcel.bldgValue && `Building: ${parcel.bldgValue}`].filter(Boolean).join(" · "),
-          color: "#059669",
         });
       }
       if (parcel.taxCode || parcel.township) {
         propertyItems.push({
           label: "Tax Code / Township",
           value: [parcel.taxCode, parcel.township].filter(Boolean).join(" · "),
-          color: "#0C1B33",
         });
       }
       if (isClass7aEligible(parcel.classCode)) {
@@ -1391,7 +1728,6 @@ export function generateReportData(
           label: "Class 7a Eligibility",
           value: "Potentially eligible",
           detail: `Property class ${parcel.classCode} may qualify for reduced assessment (10% of market value for commercial/industrial rehab)`,
-          color: "#059669",
         });
       }
       if (districts) {
@@ -1405,13 +1741,12 @@ export function generateReportData(
           propertyItems.push({
             label: "Political Districts",
             value: parts.join(" · "),
-            color: "#D97706",
           });
         }
       }
 
-      // Insert after Location Context
-      const locCtxIdx = report.sections.findIndex((s) => s.title === "Location Context");
+      // Insert after Location Context / Site Profile
+      const locCtxIdx = report.sections.findIndex((s) => s.title === "Location Context" || s.title === "Site Profile" || s.title === "Site Overview");
       report.sections.splice(locCtxIdx + 1, 0, {
         title: "Property Analysis",
         items: propertyItems,
