@@ -6,6 +6,7 @@ import {
   isIndustrialClass,
   isVacantClass,
 } from "@/lib/parcel-classes";
+import { socrataHeaders } from "@/lib/socrata";
 import type { ParcelData } from "@/lib/types";
 
 /**
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest) {
     try {
       const sodaUrl = `https://datacatalog.cookcountyil.gov/resource/nj4t-kc8j.json?$where=within_circle(loc_property_location,${lat},${lon},50)&$limit=1`;
       const res = await fetchWithRetry(sodaUrl, {
-        headers: { Accept: "application/json" },
+        headers: socrataHeaders(),
       });
 
       if (res.ok) {
@@ -154,5 +155,35 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(null, { status: 204 });
   }
 
-  return NextResponse.json(result, { headers: CDN_HEADERS });
+  // Mutable copy for enrichment
+  const enriched: ParcelData = { ...result };
+
+  // Non-blocking Cook County Assessor enrichment
+  if (enriched.pin) {
+    try {
+      const assessorUrl = `https://datacatalog.cookcountyassessor.com/resource/uzyt-m557.json?pin=${enriched.pin}&$limit=1`;
+      const res = await fetch(assessorUrl, {
+        headers: socrataHeaders(),
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.length > 0) {
+          const a = data[0];
+          enriched.assessedLand = a.certified_tot_land != null ? Number(a.certified_tot_land) : null;
+          enriched.assessedBuilding = a.certified_tot_bldg != null ? Number(a.certified_tot_bldg) : null;
+          enriched.assessedTotal =
+            enriched.assessedLand != null && enriched.assessedBuilding != null
+              ? enriched.assessedLand + enriched.assessedBuilding
+              : null;
+          enriched.taxYear = a.tax_year || null;
+          enriched.priorYearTax = a.total_billed != null ? Number(a.total_billed) : null;
+        }
+      }
+    } catch {
+      // Assessment enrichment is non-blocking — failure is fine
+    }
+  }
+
+  return NextResponse.json(enriched, { headers: CDN_HEADERS });
 }

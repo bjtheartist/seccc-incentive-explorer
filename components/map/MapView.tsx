@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
-import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_KEYS_SORTED, ZONE_META, ZONE_TILESET_IDS, ZONE_DESCRIPTIONS, ZONE_LEARN_MORE, ZONING_CATEGORIES, ZONING_CODE_DESCRIPTIONS, describeZoneClass } from "@/lib/constants";
+import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_KEYS_SORTED, ZONE_META, ZONE_TILESET_IDS, ZONE_DESCRIPTIONS, ZONE_LEARN_MORE, ZONING_CATEGORIES, ZONING_CODE_DESCRIPTIONS, describeZoneClass, VACANT_COLORS, VACANT_LABELS } from "@/lib/constants";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { describeClassCode, describeParcelType, CLASS_CODE_MAP } from "@/lib/parcel-classes";
 import type { Program, ProgramCheckResult, ParcelData, DistrictData } from "@/lib/types";
@@ -205,6 +205,12 @@ interface AreaStats {
   parcelType?: string;
   districts?: DistrictData;
   districtsLoading?: boolean;
+  // Assessment enrichment
+  assessedLand?: number | null;
+  assessedBuilding?: number | null;
+  assessedTotal?: number | null;
+  taxYear?: string | null;
+  priorYearTax?: number | null;
 }
 
 const DEFAULT_STATS: AreaStats = {
@@ -252,6 +258,15 @@ export default function MapView() {
   const [parcelsVisible, setParcelsVisible] = useState(false);
   const parcelsAbortRef = useRef<AbortController | null>(null);
   const parcelsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Vacant property layers
+  const [vacantVisible, setVacantVisible] = useState<Record<string, boolean>>({
+    vacantLand: false,
+    vacantBuildings: false,
+  });
+  const [vacantLoaded, setVacantLoaded] = useState(false);
+  const vacantAbortRef = useRef<AbortController | null>(null);
+  const vacantTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load programs for snapshot
   useEffect(() => {
@@ -346,6 +361,11 @@ export default function MapView() {
           parcelType: parcelData?.parcelType != null
             ? describeParcelType(parcelData.parcelType)
             : undefined,
+          assessedLand: parcelData?.assessedLand,
+          assessedBuilding: parcelData?.assessedBuilding,
+          assessedTotal: parcelData?.assessedTotal,
+          taxYear: parcelData?.taxYear,
+          priorYearTax: parcelData?.priorYearTax,
           districtsLoading: true,
         });
         if (!label && data.tractId) {
@@ -934,6 +954,126 @@ export default function MapView() {
           .addTo(map);
       });
 
+      /* ── Vacant Properties layer (clustered GeoJSON) ── */
+      map.addSource("vacant-properties", {
+        type: "geojson",
+        data: EMPTY_FC,
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50,
+      });
+
+      // Cluster circles
+      map.addLayer({
+        id: "vacant-clusters",
+        type: "circle",
+        source: "vacant-properties",
+        filter: ["has", "point_count"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": [
+            "step", ["get", "point_count"],
+            VACANT_COLORS.vacantLand,
+            10, "#B91C1C",
+            50, "#991B1B",
+          ],
+          "circle-radius": [
+            "step", ["get", "point_count"],
+            15, 10, 20, 50, 28,
+          ],
+          "circle-opacity": 0.85,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+
+      // Cluster count labels
+      map.addLayer({
+        id: "vacant-cluster-count",
+        type: "symbol",
+        source: "vacant-properties",
+        filter: ["has", "point_count"],
+        layout: {
+          visibility: "none",
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+          "text-size": 12,
+        },
+        paint: { "text-color": "#ffffff" },
+      });
+
+      // Unclustered points
+      map.addLayer({
+        id: "vacant-unclustered",
+        type: "circle",
+        source: "vacant-properties",
+        filter: ["!", ["has", "point_count"]],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": 7,
+          "circle-color": [
+            "match", ["get", "propertyType"],
+            "vacant_land", VACANT_COLORS.vacantLand,
+            "vacant_building", VACANT_COLORS.vacantBuildings,
+            "vacant_storefront", VACANT_COLORS.vacantBuildings,
+            VACANT_COLORS.vacantLand,
+          ],
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#ffffff",
+          "circle-opacity": 0.9,
+        },
+      });
+
+      // Click handler for unclustered vacant points
+      map.on("click", "vacant-unclustered", (e) => {
+        if (!e.features?.length) return;
+        const p = e.features[0].properties || {};
+        const zoneMatches = typeof p.zoneMatches === "string" ? JSON.parse(p.zoneMatches) : (p.zoneMatches || []);
+        const badges = zoneMatches.map((z: { zoneKey: string; zoneName: string }) =>
+          `<span style="display:inline-block;background:${ZONE_COLORS[z.zoneKey] || '#6B7280'}20;color:${ZONE_COLORS[z.zoneKey] || '#6B7280'};border:1px solid ${ZONE_COLORS[z.zoneKey] || '#6B7280'}40;padding:1px 6px;border-radius:2px;font-size:9px;margin:2px 2px 0 0">${ZONE_LABELS[z.zoneKey] || z.zoneName}</span>`
+        ).join("");
+
+        const addr = p.address || "Unknown Address";
+        const sqft = p.squareFeet ? `${Number(p.squareFeet).toLocaleString()} sq ft` : "";
+        const ward = p.ward ? `Ward ${p.ward}` : "";
+        const meta = [sqft, ward].filter(Boolean).join(" · ");
+
+        new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
+          .setLngLat(e.lngLat)
+          .setHTML(
+            `<div style="font-family:Inter,sans-serif">
+              <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${VACANT_COLORS.vacantLand};margin-bottom:4px;font-weight:500">Vacant Property</div>
+              <div style="font-size:14px;font-weight:600;color:#0C1B33">${addr}</div>
+              ${meta ? `<div style="font-size:11px;color:#5A6478;margin-top:3px">${meta}</div>` : ""}
+              ${badges ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap">${badges}</div>` : ""}
+              ${p.incentiveCount > 0 ? `<div style="font-size:10px;color:#059669;margin-top:6px;font-weight:500">${p.incentiveCount} incentive zone${p.incentiveCount > 1 ? "s" : ""} overlap</div>` : ""}
+              <a href="https://www.cookcountyassessoril.gov/pin/${p.id?.replace("cols-", "")}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">View on Cook County Assessor →</a>
+            </div>`
+          )
+          .addTo(map);
+      });
+
+      // Click on cluster to zoom in
+      map.on("click", "vacant-clusters", (e) => {
+        const features = map.queryRenderedFeatures(e.point, { layers: ["vacant-clusters"] });
+        if (!features.length) return;
+        const clusterId = features[0].properties?.cluster_id;
+        const src = map.getSource("vacant-properties") as mapboxgl.GeoJSONSource;
+        src.getClusterExpansionZoom(clusterId, (err, zoom) => {
+          if (err) return;
+          map.easeTo({
+            center: (features[0].geometry as GeoJSON.Point).coordinates as [number, number],
+            zoom: zoom!,
+          });
+        });
+      });
+
+      // Cursor on hover
+      map.on("mouseenter", "vacant-clusters", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "vacant-clusters", () => { map.getCanvas().style.cursor = ""; });
+      map.on("mouseenter", "vacant-unclustered", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "vacant-unclustered", () => { map.getCanvas().style.cursor = ""; });
+
       setLoaded(true);
     });
 
@@ -1271,6 +1411,78 @@ export default function MapView() {
     };
   }, [parcelsVisible, loaded]);
 
+  /* ── Dynamic vacant property loading ──── */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+
+    const anyVisible = Object.values(vacantVisible).some(Boolean);
+
+    // Set layer visibility
+    const vis = anyVisible ? "visible" : "none";
+    if (map.getLayer("vacant-clusters")) map.setLayoutProperty("vacant-clusters", "visibility", vis);
+    if (map.getLayer("vacant-cluster-count")) map.setLayoutProperty("vacant-cluster-count", "visibility", vis);
+    if (map.getLayer("vacant-unclustered")) map.setLayoutProperty("vacant-unclustered", "visibility", vis);
+
+    if (!anyVisible) {
+      const src = map.getSource("vacant-properties") as mapboxgl.GeoJSONSource | undefined;
+      if (src) src.setData(EMPTY_FC);
+      return;
+    }
+
+    const fetchVacant = () => {
+      if (vacantTimerRef.current) clearTimeout(vacantTimerRef.current);
+      vacantTimerRef.current = setTimeout(() => {
+        const m = mapRef.current;
+        if (!m) return;
+        const zoom = m.getZoom();
+        const src = m.getSource("vacant-properties") as mapboxgl.GeoJSONSource | undefined;
+        if (!src) return;
+
+        if (zoom < 10) {
+          src.setData(EMPTY_FC);
+          return;
+        }
+
+        if (vacantAbortRef.current) vacantAbortRef.current.abort();
+        const controller = new AbortController();
+        vacantAbortRef.current = controller;
+
+        const bounds = m.getBounds();
+        if (!bounds) return;
+
+        const boundsStr = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
+
+        fetch(`/api/vacant?bounds=${boundsStr}&limit=1000`, { signal: controller.signal })
+          .then((res) => res.json())
+          .then((data: GeoJSON.FeatureCollection) => {
+            if (data?.type === "FeatureCollection" && data.features) {
+              // Filter by visible sub-types
+              const filtered = data.features.filter((f) => {
+                const pt = f.properties?.propertyType;
+                if (vacantVisible.vacantLand && (pt === "vacant_land")) return true;
+                if (vacantVisible.vacantBuildings && (pt === "vacant_building" || pt === "vacant_storefront")) return true;
+                return false;
+              });
+              src.setData({ type: "FeatureCollection", features: filtered });
+              if (!vacantLoaded) setVacantLoaded(true);
+            }
+          })
+          .catch((err) => {
+            if (err.name !== "AbortError") console.warn("[Vacant] fetch error:", err);
+          });
+      }, 300);
+    };
+
+    fetchVacant();
+    map.on("moveend", fetchVacant);
+    return () => {
+      map.off("moveend", fetchVacant);
+      if (vacantTimerRef.current) clearTimeout(vacantTimerRef.current);
+      if (vacantAbortRef.current) vacantAbortRef.current.abort();
+    };
+  }, [vacantVisible, loaded, vacantLoaded]);
+
   return (
     <div className="relative w-full h-[calc(100vh-180px)] md:h-[calc(100vh-220px)] min-h-[500px]">
       {/* Map container */}
@@ -1445,6 +1657,55 @@ export default function MapView() {
                 </div>
               ))}
             </div>
+          </div>
+
+          {/* Divider */}
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+
+          {/* Vacant Properties */}
+          <div className="px-4 pt-3 pb-2">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#DC2626]/50 mb-3">
+              Vacant Properties
+            </div>
+            <div className="space-y-0.5">
+              {Object.entries(VACANT_LABELS).map(([key, label]) => (
+                <label
+                  key={key}
+                  className="flex items-center gap-2.5 py-1 cursor-pointer group"
+                >
+                  <input
+                    type="checkbox"
+                    checked={vacantVisible[key]}
+                    onChange={() =>
+                      setVacantVisible((prev) => ({ ...prev, [key]: !prev[key] }))
+                    }
+                    className="sr-only"
+                  />
+                  <span
+                    className="w-3.5 h-3.5 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors"
+                    style={{
+                      borderColor: VACANT_COLORS[key],
+                      backgroundColor: vacantVisible[key]
+                        ? VACANT_COLORS[key] + "30"
+                        : "transparent",
+                    }}
+                  >
+                    {vacantVisible[key] && (
+                      <span
+                        className="w-2 h-2 rounded-full block"
+                        style={{ backgroundColor: VACANT_COLORS[key] }}
+                      />
+                    )}
+                  </span>
+                  <span className="text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight">
+                    {label}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="text-[9px] text-[#0C1B33]/35 mt-1.5 ml-6">
+              City-owned land inventory · Clusters at low zoom
+            </p>
           </div>
 
           {/* Divider */}
@@ -1811,6 +2072,42 @@ export default function MapView() {
                     {areaStats.parcelType && <span>{areaStats.parcelType}</span>}
                   </div>
                 )}
+              </div>
+            </>
+          )}
+
+          {/* Assessment */}
+          {areaStats.assessedTotal != null && (
+            <>
+              <div className="mx-4 h-px bg-[#0C1B33]/8" />
+              <div className="px-4 py-3">
+                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#059669]/50 mb-1.5">
+                  Assessment{areaStats.taxYear ? ` (${areaStats.taxYear})` : ""}
+                </div>
+                <div className="space-y-0.5">
+                  {areaStats.assessedLand != null && (
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-[#0C1B33]/50">Land</span>
+                      <span className="font-mono-bureau text-[#0C1B33]/80">${areaStats.assessedLand.toLocaleString()}</span>
+                    </div>
+                  )}
+                  {areaStats.assessedBuilding != null && (
+                    <div className="flex justify-between text-[10px]">
+                      <span className="text-[#0C1B33]/50">Building</span>
+                      <span className="font-mono-bureau text-[#0C1B33]/80">${areaStats.assessedBuilding.toLocaleString()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between text-[10px] font-medium">
+                    <span className="text-[#0C1B33]/60">Total Assessed</span>
+                    <span className="font-mono-bureau text-[#0C1B33]/90">${areaStats.assessedTotal.toLocaleString()}</span>
+                  </div>
+                  {areaStats.priorYearTax != null && (
+                    <div className="flex justify-between text-[10px] mt-1 pt-1 border-t border-[#0C1B33]/5">
+                      <span className="text-[#0C1B33]/50">Prior Year Tax</span>
+                      <span className="font-mono-bureau text-[#0C1B33]/80">${areaStats.priorYearTax.toLocaleString()}</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
           )}

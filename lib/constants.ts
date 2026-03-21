@@ -186,6 +186,18 @@ export function describeZoneClass(zoneClass: string): string {
   return "Zoning District";
 }
 
+/* ── Vacant Property Layer Constants ─────── */
+
+export const VACANT_COLORS: Record<string, string> = {
+  vacantLand: "#DC2626",       // red
+  vacantBuildings: "#EA580C",  // orange
+};
+
+export const VACANT_LABELS: Record<string, string> = {
+  vacantLand: "City-Owned Vacant Land",
+  vacantBuildings: "Vacant Buildings",
+};
+
 export const SSA50_BBOX = {
   minLon: -87.615,
   minLat: 41.718,

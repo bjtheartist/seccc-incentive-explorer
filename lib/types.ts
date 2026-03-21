@@ -162,6 +162,35 @@ export interface ParcelData {
   isCommercial: boolean;
   isIndustrial: boolean;
   isVacant: boolean;
+  // Cook County Assessor enrichment (optional)
+  assessedLand?: number | null;
+  assessedBuilding?: number | null;
+  assessedTotal?: number | null;
+  taxYear?: string | null;
+  priorYearTax?: number | null;
+}
+
+/* ── Vacant Property ── */
+
+export interface VacantPropertyZoneMatch {
+  zoneKey: string;
+  zoneName: string;
+}
+
+export interface VacantProperty {
+  id: string;
+  source: "cols" | "dpd_vacant" | "violations";
+  address: string;
+  lat: number;
+  lon: number;
+  propertyType: "vacant_land" | "vacant_building" | "vacant_storefront";
+  ward: string | null;
+  communityArea: string | null;
+  zoningClass: string | null;
+  squareFeet: number | null;
+  status: string | null;
+  zoneMatches: VacantPropertyZoneMatch[];
+  incentiveCount: number;
 }
 
 export interface DistrictData {

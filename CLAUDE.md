@@ -52,6 +52,7 @@ npm run lint     # ESLint
 | `/api/stats` | GET | Aggregate stats |
 | `/api/geocode?address=` | GET | Nominatim geocoding proxy |
 | `/api/zoning?lat=&lon=` | GET | Chicago zoning classification |
+| `/api/vacant?bounds=&type=&limit=` | GET | Vacant properties by viewport bounds |
 
 ### Pages
 
@@ -79,6 +80,7 @@ npm run lint     # ESLint
 - `census_tracts` — Census ACS data with tract geometry (median income, home value, population, walk score)
 - `community_assets` — EDOs, BSOs, universities, libraries with point geometry
 - `stats` — single-row JSONB for aggregate stats
+- `vacant_properties` — 18K+ city-owned vacant land with `geography(POINT)`, zone cross-references in JSONB, incentive_count
 
 ### Data Files (public/data/)
 
@@ -118,3 +120,4 @@ All database-dependent features gracefully fall back to static files:
 |----------|----------|-------------|
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Yes | Mapbox GL access token |
 | `DATABASE_URL` | No | Neon Postgres connection string. If empty, app uses static files only. |
+| `SOCRATA_APP_TOKEN` | No | Socrata API app token for 10x rate limits. Free at data.cityofchicago.org. |

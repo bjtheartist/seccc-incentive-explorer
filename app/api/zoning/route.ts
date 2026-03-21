@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cached, roundCoord } from "@/lib/redis";
+import { socrataHeaders } from "@/lib/socrata";
 
 /**
  * Queries the City of Chicago zoning classification at a given lat/lon.
@@ -115,7 +116,7 @@ export async function GET(request: NextRequest) {
     try {
       const sodaUrl = `https://data.cityofchicago.org/resource/dj47-wfun.json?$where=within_circle(the_geom,${lat},${lon},10)&$limit=1`;
       const res = await fetchWithRetry(sodaUrl, {
-        headers: { Accept: "application/json" },
+        headers: socrataHeaders(),
       });
 
       if (res.ok) {
