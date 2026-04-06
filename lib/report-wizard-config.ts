@@ -1,14 +1,10 @@
 // ─── Report Wizard Configuration ────────────────────────────────────
 // Pure TypeScript config/types for the multi-step report wizard.
-// No external library imports — this is a standalone configuration file.
+// Two report types: Site Incentive Analysis & Development Feasibility.
 
 // ─── Core Types ─────────────────────────────────────────────────────
 
-export type ReportType =
-  | "location-incentives"
-  | "best-location"
-  | "program-explorer"
-  | "developer-analysis";
+export type ReportType = "site-incentives" | "dev-feasibility";
 
 export interface ReportTypeOption {
   id: ReportType;
@@ -27,9 +23,9 @@ export interface WizardStepConfig {
   id: string;
   title: string;
   subtitle: string;
-  appliesTo: ReportType[]; // which report types include this step
-  inputType: "report-type" | "address" | "single" | "multi" | "review";
-  stateKey: keyof WizardState; // maps directly to the WizardState property this step writes to
+  appliesTo: ReportType[];
+  inputType: "report-type" | "address" | "neighborhood" | "single" | "multi" | "combobox" | "review";
+  stateKey: keyof WizardState;
   options?: StepOption[];
 }
 
@@ -38,13 +34,9 @@ export interface WizardState {
   address: string;
   lat: number | null;
   lon: number | null;
+  neighborhood: string;
   industry: string;
-  activities: string[];
-  incentiveInterests: string[];
-  locationPriorities: string[];
   budgetRange: string;
-  governmentLevels: string[];
-  benefitTypes: string[];
   projectType: string;
   creditsToAnalyze: string[];
   compareAddress?: string;
@@ -59,13 +51,9 @@ export const INITIAL_WIZARD_STATE: WizardState = {
   address: "",
   lat: null,
   lon: null,
+  neighborhood: "",
   industry: "",
-  activities: [],
-  incentiveInterests: [],
-  locationPriorities: [],
   budgetRange: "",
-  governmentLevels: [],
-  benefitTypes: [],
   projectType: "",
   creditsToAnalyze: [],
 };
@@ -74,32 +62,18 @@ export const INITIAL_WIZARD_STATE: WizardState = {
 
 export const REPORT_TYPE_OPTIONS: ReportTypeOption[] = [
   {
-    id: "location-incentives",
-    title: "Incentives at My Location",
+    id: "site-incentives",
+    title: "Site Incentive Analysis",
     subtitle:
-      "You have or know your address and want to see what incentives apply there.",
-    icon: "📍",
+      "You have a location. See which programs apply, what they\u2019re worth, and who to call.",
+    icon: "\uD83D\uDCCD",
   },
   {
-    id: "best-location",
-    title: "Evaluate a Site",
+    id: "dev-feasibility",
+    title: "Development Feasibility Study",
     subtitle:
-      "You have a specific property or site and want to assess its development feasibility and incentive potential.",
-    icon: "🏢",
-  },
-  {
-    id: "program-explorer",
-    title: "Explore Programs",
-    subtitle:
-      "Understand what programs exist and which ones you might qualify for.",
-    icon: "📋",
-  },
-  {
-    id: "developer-analysis",
-    title: "Development Feasibility",
-    subtitle:
-      "Analyze a site for tax credit stacking and project viability as a developer or investor.",
-    icon: "🏗️",
+      "Evaluate a site or neighborhood for property data, zoning, credit stacking, and financial feasibility.",
+    icon: "\uD83C\uDFD7\uFE0F",
   },
 ];
 
@@ -137,36 +111,91 @@ const BUDGET_RANGE_OPTIONS: StepOption[] = [
   { id: "over-10m", label: "Over $10M" },
 ];
 
-const INCENTIVE_INTEREST_OPTIONS: StepOption[] = [
-  { id: "tif", label: "TIF District" },
-  { id: "federalOZ", label: "Federal Opportunity Zone" },
-  { id: "enterprise", label: "Enterprise Zone" },
-  { id: "stateIncentiveZones", label: "State Incentive Zone (EDGE/REV/MICRO/Data Center)" },
-  { id: "ssa", label: "Special Service Area" },
-  { id: "highUnemployment", label: "High Unemployment Zone" },
-  { id: "industrialCorridors", label: "Industrial Corridor" },
-  { id: "microMarketRecovery", label: "Micro Market Recovery" },
-  { id: "nof", label: "Neighborhood Opportunity Fund" },
-  { id: "nmtcEligible", label: "NMTC Eligible Census Tract" },
-  { id: "qct", label: "Qualified Census Tract (HUD)" },
-  { id: "landmarkDistricts", label: "Chicago Landmark District" },
-  { id: "nrhpDistricts", label: "National Register Historic District" },
+const PROJECT_TYPE_OPTIONS: StepOption[] = [
+  {
+    id: "rehab",
+    label: "Rehabilitation / renovation",
+    description: "Renovating or adaptively reusing an existing structure.",
+  },
+  {
+    id: "new-construction",
+    label: "New construction",
+    description: "Ground-up development on vacant or cleared land.",
+  },
+  {
+    id: "mixed-use",
+    label: "Mixed-use development",
+    description: "Combining residential, commercial, or institutional uses.",
+  },
+  {
+    id: "affordable-housing",
+    label: "Affordable housing",
+    description: "Residential with income-restricted units.",
+  },
+  {
+    id: "vacant-acquisition",
+    label: "Acquire vacant property",
+    description: "Purchasing city-owned or privately held vacant land for development.",
+  },
+];
+
+const CREDIT_OPTIONS: StepOption[] = [
+  {
+    id: "nrhpDistricts",
+    label: "Federal Historic Tax Credit (20%)",
+    description: "20% credit on qualified rehabilitation expenditures for certified historic structures.",
+  },
+  {
+    id: "nmtcEligible",
+    label: "NMTC (39% over 7 years)",
+    description: "New Markets Tax Credit providing 39% of the investment as credits over seven years.",
+  },
+  {
+    id: "federalOZ",
+    label: "Opportunity Zone capital gains",
+    description: "Deferral and potential reduction of capital gains taxes through Qualified Opportunity Fund investment.",
+  },
+  {
+    id: "qct",
+    label: "LIHTC / QCT boost",
+    description: "Low-Income Housing Tax Credits with a 130% basis boost in Qualified Census Tracts.",
+  },
+  {
+    id: "tif",
+    label: "TIF funding",
+    description: "Tax Increment Financing to fund public improvements and eligible project costs.",
+  },
+  {
+    id: "enterprise",
+    label: "Enterprise Zone exemptions",
+    description: "State sales tax exemptions, utility tax exemptions, and investment tax credits.",
+  },
+  {
+    id: "edge",
+    label: "EDGE tax credits",
+    description: "Income tax credits for job creation and retention through the EDGE program.",
+  },
+  {
+    id: "cpace",
+    label: "C-PACE financing",
+    description: "Commercial Property Assessed Clean Energy financing for energy efficiency and renewable energy.",
+  },
+  {
+    id: "class7a",
+    label: "Class 7a property tax reduction",
+    description: "Cook County property tax classification reducing assessment level for qualifying commercial properties.",
+  },
 ];
 
 // ─── Wizard Steps ───────────────────────────────────────────────────
 
 export const WIZARD_STEPS: WizardStepConfig[] = [
-  // ── Step 1: Report type (shared across all flows) ─────────────────
+  // ── Shared: Report type selection ─────────────────────────────────
   {
     id: "report-type",
-    title: "What kind of report do you need?",
-    subtitle: "Choose the analysis that best fits your situation.",
-    appliesTo: [
-      "location-incentives",
-      "best-location",
-      "program-explorer",
-      "developer-analysis",
-    ],
+    title: "What do you need?",
+    subtitle: "Choose the analysis that fits your situation.",
+    appliesTo: ["site-incentives", "dev-feasibility"],
     inputType: "report-type",
     stateKey: "reportType",
     options: REPORT_TYPE_OPTIONS.map((opt) => ({
@@ -176,89 +205,33 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
     })),
   },
 
-  // ── location-incentives flow ──────────────────────────────────────
+  // ── Site Incentive Analysis flow ──────────────────────────────────
 
   {
-    id: "li-address",
-    title: "What is your address?",
-    subtitle:
-      "Enter your business or property address so we can check which incentive zones cover it.",
-    appliesTo: ["location-incentives"],
+    id: "si-address",
+    title: "What\u2019s your address?",
+    subtitle: "We\u2019ll check which incentive zones cover your location.",
+    appliesTo: ["site-incentives"],
     inputType: "address",
     stateKey: "address",
   },
   {
-    id: "li-industry",
-    title: "What industry or sector are you in?",
-    subtitle:
-      "This helps us highlight the programs most relevant to your type of business.",
-    appliesTo: ["location-incentives"],
-    inputType: "single",
+    id: "si-industry",
+    title: "What\u2019s your industry?",
+    subtitle: "Filters programs to your sector and personalizes your action plan.",
+    appliesTo: ["site-incentives"],
+    inputType: "combobox",
     stateKey: "industry",
-    options: INDUSTRY_OPTIONS,
-  },
-  {
-    id: "li-activities",
-    title: "What are you looking to do?",
-    subtitle: "Select all that apply to your plans.",
-    appliesTo: ["location-incentives"],
-    inputType: "multi",
-    stateKey: "activities",
     options: [
-      {
-        id: "expand-renovate",
-        label: "Expand/renovate existing space",
-        description:
-          "Physical improvements to a building you already occupy or own.",
-      },
-      {
-        id: "new-location",
-        label: "Open new location",
-        description:
-          "Moving into a new storefront, office, or facility for the first time.",
-      },
-      {
-        id: "hire-employees",
-        label: "Hire employees",
-        description:
-          "Adding new full-time or part-time positions at your location.",
-      },
-      {
-        id: "invest-capital-gains",
-        label: "Invest capital gains",
-        description:
-          "Deploying realized capital gains into a qualified investment.",
-      },
-      {
-        id: "buy-property",
-        label: "Buy property",
-        description:
-          "Purchasing commercial or industrial real estate.",
-      },
-      {
-        id: "energy-efficiency",
-        label: "Improve energy efficiency",
-        description:
-          "Upgrades such as HVAC, insulation, solar panels, or lighting retrofits.",
-      },
+      ...INDUSTRY_OPTIONS,
+      { id: "skip", label: "Skip \u2014 show all programs" },
     ],
   },
   {
-    id: "li-incentive-interests",
-    title: "Which incentive areas interest you?",
-    subtitle:
-      "Toggle the zone types you want included in your report. We will still show all zones at your address.",
-    appliesTo: ["location-incentives"],
-    inputType: "multi",
-    stateKey: "incentiveInterests",
-    options: INCENTIVE_INTEREST_OPTIONS,
-  },
-  {
-    id: "li-budget",
-    title: "What is your estimated project budget?",
-    subtitle:
-      "Optional — helps us estimate dollar amounts for each incentive. Skip if you prefer not to share.",
-    appliesTo: ["location-incentives"],
+    id: "si-budget",
+    title: "Estimated project budget?",
+    subtitle: "Unlocks dollar estimates for each incentive. Skip if you prefer not to share.",
+    appliesTo: ["site-incentives"],
     inputType: "single",
     stateKey: "budgetRange",
     options: [
@@ -267,387 +240,108 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
     ],
   },
   {
-    id: "li-review",
+    id: "si-review",
     title: "Review & Generate",
-    subtitle:
-      "Confirm your selections below and generate your customized incentive report.",
-    appliesTo: ["location-incentives"],
+    subtitle: "Confirm your selections and generate your incentive report.",
+    appliesTo: ["site-incentives"],
     inputType: "review",
-    stateKey: "reportType", // review step reads multiple fields; stateKey is nominal
+    stateKey: "reportType",
   },
 
-  // ── best-location flow (Site Evaluation) ─────────────────────────
+  // ── Development Feasibility flow ──────────────────────────────────
 
   {
-    id: "bl-address",
-    title: "What is the site address?",
-    subtitle:
-      "Enter the property address so we can pull parcel data, zoning, and incentive zone coverage.",
-    appliesTo: ["best-location"],
-    inputType: "address",
-    stateKey: "address",
-  },
-  {
-    id: "bl-project-type",
-    title: "What are you considering for this site?",
-    subtitle: "Select the development scenario you are evaluating.",
-    appliesTo: ["best-location"],
+    id: "df-project-type",
+    title: "What are you planning?",
+    subtitle: "Shapes the feasibility assessment and determines which credits apply.",
+    appliesTo: ["dev-feasibility"],
     inputType: "single",
     stateKey: "projectType",
-    options: [
-      {
-        id: "acquisition",
-        label: "Acquire & hold",
-        description:
-          "Purchasing the property for an existing or planned business operation.",
-      },
-      {
-        id: "rehab",
-        label: "Rehabilitation / renovation",
-        description:
-          "Renovating or adaptively reusing an existing structure.",
-      },
-      {
-        id: "new-construction",
-        label: "New construction",
-        description:
-          "Ground-up development on a vacant or cleared site.",
-      },
-      {
-        id: "mixed-use-conversion",
-        label: "Mixed-use conversion",
-        description:
-          "Converting a single-use property to mixed commercial/residential.",
-      },
-    ],
+    options: PROJECT_TYPE_OPTIONS,
   },
   {
-    id: "bl-priorities",
-    title: "What matters most for this site?",
-    subtitle: "Select the factors that will drive your go/no-go decision.",
-    appliesTo: ["best-location"],
-    inputType: "multi",
-    stateKey: "locationPriorities",
-    options: [
-      {
-        id: "tax-incentive-value",
-        label: "Tax incentive value",
-        description: "Maximizing tax credits, abatements, and assessment reductions.",
-      },
-      {
-        id: "zoning-compatibility",
-        label: "Zoning compatibility",
-        description: "Whether current zoning supports the intended use without variance.",
-      },
-      {
-        id: "property-condition",
-        label: "Property condition / age",
-        description: "Building age, deferred maintenance, or renovation scope.",
-      },
-      {
-        id: "assessed-value",
-        label: "Assessed value / carrying cost",
-        description: "Current tax burden relative to development potential.",
-      },
-      {
-        id: "neighborhood-demand",
-        label: "Neighborhood demand",
-        description: "Income levels, population density, and market activity.",
-      },
-      {
-        id: "grant-eligibility",
-        label: "Grant eligibility",
-        description: "Access to TIF, SBIF, NOF, or other direct funding programs.",
-      },
-    ],
+    id: "df-location",
+    title: "Where in Chicago?",
+    subtitle: "Pick a neighborhood to explore, or enter a specific address for parcel-level detail.",
+    appliesTo: ["dev-feasibility"],
+    inputType: "neighborhood",
+    stateKey: "neighborhood",
   },
   {
-    id: "bl-budget",
-    title: "What is your estimated project budget?",
-    subtitle:
-      "Helps us calculate potential incentive savings relative to your investment.",
-    appliesTo: ["best-location"],
+    id: "df-budget",
+    title: "Total project cost?",
+    subtitle: "Required for credit stacking calculations \u2014 determines dollar values per program.",
+    appliesTo: ["dev-feasibility"],
     inputType: "single",
     stateKey: "budgetRange",
     options: BUDGET_RANGE_OPTIONS,
   },
   {
-    id: "bl-review",
-    title: "Review & Generate",
-    subtitle:
-      "Confirm your selections below and generate your site feasibility report.",
-    appliesTo: ["best-location"],
-    inputType: "review",
-    stateKey: "reportType",
-  },
-
-  // ── program-explorer flow ─────────────────────────────────────────
-
-  {
-    id: "pe-government-level",
-    title: "Which government levels are you interested in?",
-    subtitle:
-      "Select the levels of government whose programs you want to explore.",
-    appliesTo: ["program-explorer"],
-    inputType: "multi",
-    stateKey: "governmentLevels",
-    options: [
-      {
-        id: "federal",
-        label: "Federal",
-        description: "U.S. government programs such as Opportunity Zones, NMTC, and HTC.",
-      },
-      {
-        id: "state",
-        label: "State",
-        description:
-          "Illinois state programs including Enterprise Zone, EDGE, and REV credits.",
-      },
-      {
-        id: "county",
-        label: "County",
-        description: "Cook County incentives such as property tax classifications.",
-      },
-      {
-        id: "city",
-        label: "City",
-        description:
-          "City of Chicago programs like TIF, SSA, SBIF, and Neighborhood Opportunity Fund.",
-      },
-    ],
-  },
-  {
-    id: "pe-industry",
-    title: "What industry or sector are you in?",
-    subtitle:
-      "We will highlight programs most commonly used by businesses in your sector.",
-    appliesTo: ["program-explorer"],
-    inputType: "single",
-    stateKey: "industry",
-    options: INDUSTRY_OPTIONS,
-  },
-  {
-    id: "pe-benefit-types",
-    title: "What types of benefits are you looking for?",
-    subtitle: "Select all the benefit categories that interest you.",
-    appliesTo: ["program-explorer"],
-    inputType: "multi",
-    stateKey: "benefitTypes",
-    options: [
-      {
-        id: "tax-credits",
-        label: "Tax credits",
-        description: "Dollar-for-dollar reductions in your tax liability.",
-      },
-      {
-        id: "grants",
-        label: "Grants",
-        description: "Non-repayable funds for eligible projects or improvements.",
-      },
-      {
-        id: "financing-loans",
-        label: "Financing/loans",
-        description: "Below-market-rate loans or special financing programs.",
-      },
-      {
-        id: "tax-exemptions",
-        label: "Tax exemptions",
-        description:
-          "Exemptions from sales tax, utility tax, or other specific taxes.",
-      },
-      {
-        id: "technical-assistance",
-        label: "Technical assistance",
-        description:
-          "Free or subsidized consulting, training, and business support services.",
-      },
-      {
-        id: "property-tax-reduction",
-        label: "Property tax reduction",
-        description:
-          "Reduced property tax assessments or abatements for qualifying properties.",
-      },
-    ],
-  },
-  {
-    id: "pe-review",
-    title: "Review & Generate",
-    subtitle:
-      "Confirm your selections below and generate your program exploration report.",
-    appliesTo: ["program-explorer"],
-    inputType: "review",
-    stateKey: "reportType",
-  },
-
-  // ── developer-analysis flow ───────────────────────────────────────
-
-  {
-    id: "da-address",
-    title: "What is the project address?",
-    subtitle:
-      "Enter the site address so we can check zone overlaps and credit eligibility.",
-    appliesTo: ["developer-analysis"],
-    inputType: "address",
-    stateKey: "address",
-  },
-  {
-    id: "da-project-type",
-    title: "What type of project is this?",
-    subtitle: "Select the category that best describes your development.",
-    appliesTo: ["developer-analysis"],
-    inputType: "single",
-    stateKey: "projectType",
-    options: [
-      {
-        id: "new-commercial",
-        label: "New commercial construction",
-        description:
-          "Ground-up construction of office, retail, or mixed commercial space.",
-      },
-      {
-        id: "historic-rehab",
-        label: "Historic rehabilitation",
-        description:
-          "Certified rehabilitation of a historic structure for continued or adaptive use.",
-      },
-      {
-        id: "affordable-housing",
-        label: "Affordable housing",
-        description:
-          "Residential development with income-restricted units meeting affordability thresholds.",
-      },
-      {
-        id: "mixed-use",
-        label: "Mixed-use development",
-        description:
-          "Projects combining residential, commercial, and/or institutional uses.",
-      },
-      {
-        id: "industrial-manufacturing",
-        label: "Industrial/manufacturing facility",
-        description:
-          "New or renovated facilities for manufacturing, warehousing, or industrial operations.",
-      },
-    ],
-  },
-  {
-    id: "da-budget",
-    title: "What is the estimated project budget?",
-    subtitle:
-      "Total project cost helps determine which credits and financing tools are viable.",
-    appliesTo: ["developer-analysis"],
-    inputType: "single",
-    stateKey: "budgetRange",
-    options: BUDGET_RANGE_OPTIONS,
-  },
-  {
-    id: "da-credits",
-    title: "Which credits do you want to analyze?",
-    subtitle:
-      "Select the tax credits and financing mechanisms to include in your stacking analysis.",
-    appliesTo: ["developer-analysis"],
+    id: "df-credits",
+    title: "Which credits do you want to stack?",
+    subtitle: "We\u2019ve pre-selected credits based on zone coverage. Add or remove as needed.",
+    appliesTo: ["dev-feasibility"],
     inputType: "multi",
     stateKey: "creditsToAnalyze",
-    options: [
-      {
-        id: "federal-htc",
-        label: "Federal Historic Tax Credit (20%)",
-        description:
-          "20% credit on qualified rehabilitation expenditures for certified historic structures.",
-      },
-      {
-        id: "nmtc",
-        label: "NMTC (39% over 7 years)",
-        description:
-          "New Markets Tax Credit providing 39% of the investment as credits over seven years.",
-      },
-      {
-        id: "oz-capital-gains",
-        label: "Opportunity Zone capital gains",
-        description:
-          "Deferral and potential reduction of capital gains taxes through Qualified Opportunity Fund investment.",
-      },
-      {
-        id: "lihtc-qct",
-        label: "LIHTC / QCT boost",
-        description:
-          "Low-Income Housing Tax Credits with a 130% basis boost in Qualified Census Tracts.",
-      },
-      {
-        id: "tif-funding",
-        label: "TIF funding",
-        description:
-          "Tax Increment Financing to fund public improvements and eligible project costs.",
-      },
-      {
-        id: "enterprise-zone",
-        label: "Enterprise Zone exemptions",
-        description:
-          "State sales tax exemptions, utility tax exemptions, and investment tax credits.",
-      },
-      {
-        id: "edge-credits",
-        label: "EDGE tax credits",
-        description:
-          "Income tax credits for job creation and retention through the EDGE program.",
-      },
-      {
-        id: "cpace",
-        label: "C-PACE financing",
-        description:
-          "Commercial Property Assessed Clean Energy financing for energy efficiency and renewable energy improvements.",
-      },
-    ],
+    options: CREDIT_OPTIONS,
   },
   {
-    id: "da-review",
+    id: "df-review",
     title: "Review & Generate",
-    subtitle:
-      "Confirm your selections below and generate your development feasibility report.",
-    appliesTo: ["developer-analysis"],
+    subtitle: "Confirm your selections and generate your feasibility report.",
+    appliesTo: ["dev-feasibility"],
     inputType: "review",
     stateKey: "reportType",
   },
 ];
 
+// ─── Credit Auto-Suggestion ─────────────────────────────────────────
+
+const ZONE_TO_CREDITS: Record<string, string[]> = {
+  nrhpDistricts: ["nrhpDistricts"],
+  landmarkDistricts: ["nrhpDistricts"],
+  nmtcEligible: ["nmtcEligible"],
+  federalOZ: ["federalOZ"],
+  qct: ["qct"],
+  tif: ["tif"],
+  enterprise: ["enterprise"],
+  edge: ["edge"],
+};
+
+/** Returns credit IDs to pre-check based on active zones at a location. */
+export function suggestCreditsFromZones(
+  zones: Record<string, boolean>
+): string[] {
+  const suggested = new Set<string>();
+  // Always suggest these (no zone requirement)
+  suggested.add("cpace");
+  suggested.add("class7a");
+
+  for (const [zoneKey, creditIds] of Object.entries(ZONE_TO_CREDITS)) {
+    if (zones[zoneKey]) {
+      for (const id of creditIds) suggested.add(id);
+    }
+  }
+  return Array.from(suggested);
+}
+
 // ─── Helpers ────────────────────────────────────────────────────────
 
-/**
- * Returns the ordered list of wizard steps for a given report type.
- * Always starts with the shared "report-type" step, then the
- * type-specific steps in definition order.
- */
 export function getStepsForReportType(type: ReportType): WizardStepConfig[] {
   return WIZARD_STEPS.filter((step) => step.appliesTo.includes(type));
 }
 
-/**
- * Reads the current value from WizardState for a given step.
- * Address steps return the address string. Single-choice steps return
- * a string. Multi-choice steps return a string[]. The report-type step
- * returns the reportType string (or "").
- */
 export function getStepValue(
   state: WizardState,
   stepId: string,
 ): string | string[] {
   const step = WIZARD_STEPS.find((s) => s.id === stepId);
   if (!step) return "";
-
   const value = state[step.stateKey];
-
-  // Null report type returns empty string for UI convenience
   if (value === null) return "";
-
   return value as string | string[];
 }
 
-/**
- * Returns a new WizardState with the value for the given step updated.
- * For address steps, also accepts an object with { address, lat, lon }
- * via the overloaded signature. For all other steps, pass a string or
- * string[] matching the step's inputType.
- */
 export function setStepValue(
   state: WizardState,
   stepId: string,
@@ -655,53 +349,26 @@ export function setStepValue(
 ): WizardState {
   const step = WIZARD_STEPS.find((s) => s.id === stepId);
   if (!step) return state;
-
-  return {
-    ...state,
-    [step.stateKey]: value,
-  };
+  return { ...state, [step.stateKey]: value };
 }
 
-/**
- * Sets the address fields (address, lat, lon) together.
- * Use this instead of setStepValue for address steps when you
- * have geocoding results.
- */
 export function setAddressValue(
   state: WizardState,
   address: string,
   lat: number | null,
   lon: number | null,
 ): WizardState {
-  return {
-    ...state,
-    address,
-    lat,
-    lon,
-  };
+  return { ...state, address, lat, lon };
 }
 
-/**
- * Returns the total number of steps for a report type (including the
- * shared report-type selection step).
- */
 export function getStepCount(type: ReportType): number {
   return getStepsForReportType(type).length;
 }
 
-/**
- * Returns the zero-based index of a step within its report type flow.
- * Returns -1 if the step is not found for that report type.
- */
 export function getStepIndex(type: ReportType, stepId: string): number {
-  const steps = getStepsForReportType(type);
-  return steps.findIndex((s) => s.id === stepId);
+  return getStepsForReportType(type).findIndex((s) => s.id === stepId);
 }
 
-/**
- * Checks whether a step has a valid value in the current state.
- * Used to determine if the user can proceed to the next step.
- */
 export function isStepComplete(
   state: WizardState,
   stepId: string,
@@ -709,25 +376,27 @@ export function isStepComplete(
   const step = WIZARD_STEPS.find((s) => s.id === stepId);
   if (!step) return false;
 
-  // Review steps are always considered "complete" (they are the final step)
   if (step.inputType === "review") return true;
-
-  // Report type step: must have a selection
   if (step.inputType === "report-type") return state.reportType !== null;
 
-  // Address step: must have a non-empty address and coordinates
+  // Address step: need address + coordinates
   if (step.inputType === "address") {
     return state.address.trim().length > 0 && state.lat !== null && state.lon !== null;
   }
 
+  // Neighborhood step: need either a neighborhood OR a specific address
+  if (step.inputType === "neighborhood") {
+    const hasNeighborhood = state.neighborhood.trim().length > 0;
+    const hasAddress = state.address.trim().length > 0 && state.lat !== null && state.lon !== null;
+    return hasNeighborhood || hasAddress;
+  }
+
   const value = state[step.stateKey];
 
-  // Single-choice: non-empty string
-  if (step.inputType === "single") {
+  if (step.inputType === "single" || step.inputType === "combobox") {
     return typeof value === "string" && value.length > 0;
   }
 
-  // Multi-choice: at least one selection
   if (step.inputType === "multi") {
     return Array.isArray(value) && value.length > 0;
   }
@@ -735,9 +404,6 @@ export function isStepComplete(
   return false;
 }
 
-/**
- * Returns the ReportTypeOption for a given report type id.
- */
 export function getReportTypeOption(
   type: ReportType,
 ): ReportTypeOption | undefined {

@@ -33,6 +33,21 @@ const LOADING_MESSAGES = [
   "Your tax dollars at work (literally)...",
   "Looking up city zoning classification...",
   "Almost there — pulling program details...",
+  "Asking the GIS database nicely...",
+  "Consulting the ancient TIF scrolls...",
+  "Mapping every dollar left on the table...",
+  "Whispering to the Cook County parcel data...",
+  "Checking if your block is secretly a goldmine...",
+  "Reviewing 20+ federal, state, and city programs...",
+  "Doing math so you don't have to...",
+  "Convincing the server this is important...",
+  "Loading incentives faster than City Hall returns calls...",
+  "Cross-checking SBIF project boundaries...",
+  "Verifying census tract employment data...",
+  "Stacking zones like it's a game of Tetris...",
+  "If this were a city meeting, we'd still be on roll call...",
+  "Running the numbers... they're looking good...",
+  "Pulling data from 6 government databases at once...",
 ];
 
 export function AddressSearch() {
@@ -164,28 +179,25 @@ export function AddressSearch() {
   );
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
+    <div className="w-full max-w-[600px] mx-auto">
       {/* Search Form */}
       <div className="relative">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <input
-              type="text"
-              placeholder="Search by business name or address..."
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-              className="w-full h-14 bg-white border border-white/20 text-[#0C1B33] text-base px-5 pl-12 placeholder:text-[#0C1B33]/35 rounded-full focus:outline-none focus:ring-2 focus:ring-[#2563EB]/50 focus:border-transparent shadow-lg transition-all font-mono-bureau text-sm tracking-wide"
-            />
-            <Search className="absolute left-4 top-4.5 w-5 h-5 text-[#0C1B33]/30" />
-          </div>
+        <div className="flex items-center gap-3 bg-black/40 backdrop-blur-2xl border border-white/20 rounded-2xl px-5 py-1.5 focus-within:border-[#2563EB]/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] transition-all">
+          <Search className="w-[18px] h-[18px] text-white/40 shrink-0" />
+          <input
+            type="text"
+            placeholder="Enter address, business name, or ZIP code..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleLookup()}
+            className="flex-1 h-12 bg-transparent text-white text-[15px] placeholder:text-white/30 focus:outline-none font-[inherit]"
+          />
           <button
             onClick={() => handleLookup()}
             disabled={loading || !query.trim()}
-            className="h-14 px-8 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.2em] uppercase flex items-center gap-3 rounded-full hover:bg-[#1d4ed8] hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+            className="h-10 px-6 bg-[#2563EB] text-white font-mono-bureau text-[11px] tracking-[0.1em] uppercase rounded-xl hover:bg-[#1d4ed8] disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
           >
-            Check
-            <ArrowRight className="w-4 h-4" />
+            Check Now
           </button>
         </div>
 
@@ -232,18 +244,35 @@ export function AddressSearch() {
         )}
       </div>
 
-      {/* Loading State */}
+      {/* Loading State — Claude-style thinking */}
       {loading && (
-        <div className="mt-8 text-center">
-          <div className="inline-flex items-center gap-3">
-            <div className="flex gap-1">
-              <div className="w-1.5 h-1.5 bg-white/60 bureau-pulse" style={{ animationDelay: "0s" }} />
-              <div className="w-1.5 h-1.5 bg-white/60 bureau-pulse" style={{ animationDelay: "0.3s" }} />
-              <div className="w-1.5 h-1.5 bg-white/60 bureau-pulse" style={{ animationDelay: "0.6s" }} />
+        <div className="mt-6">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03] backdrop-blur-sm px-5 py-4">
+            {/* Shimmer gradient */}
+            <div
+              className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite]"
+              style={{
+                background: "linear-gradient(90deg, transparent, rgba(37,99,235,0.06), transparent)",
+              }}
+            />
+            <div className="relative flex items-center gap-3">
+              {/* Animated orb */}
+              <div className="relative w-5 h-5 shrink-0">
+                <div className="absolute inset-0 rounded-full bg-[#2563EB]/40 animate-ping" />
+                <div className="absolute inset-0.5 rounded-full bg-[#2563EB]/80" />
+              </div>
+              {/* Rotating text */}
+              <div className="overflow-hidden h-5">
+                <div
+                  key={loadingMsg}
+                  className="animate-[fadeSlideIn_0.4s_ease-out]"
+                >
+                  <span className="font-mono-bureau text-[11px] tracking-wide text-white/50">
+                    {loadingMsg}
+                  </span>
+                </div>
+              </div>
             </div>
-            <span className="font-mono-bureau text-[11px] tracking-wide text-white/50">
-              {loadingMsg}
-            </span>
           </div>
         </div>
       )}

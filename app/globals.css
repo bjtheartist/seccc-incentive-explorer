@@ -202,6 +202,18 @@
   animation: bureau-pulse 2s ease-in-out infinite;
 }
 
+/* Shimmer sweep for loading states */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Fade-slide-in for rotating text */
+@keyframes fadeSlideIn {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
 /* Selection color */
 ::selection {
   background: rgba(37, 99, 235, 0.15);

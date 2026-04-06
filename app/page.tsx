@@ -3,174 +3,84 @@
 import { AddressSearch } from "@/components/lookup/AddressSearch";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Search, MapPin, ArrowRight, ClipboardCheck } from "lucide-react";
 
 export default function Home() {
   return (
     <div>
-      {/* Hero — Chicago map background */}
-      <section className="relative min-h-[85vh] flex items-center overflow-hidden bg-[#0C1B33]">
+      {/* Hero — Full-width map with floating search */}
+      <section className="relative min-h-screen flex flex-col justify-end overflow-hidden bg-[#0C1B33]">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/chicago-map-hero.png')" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#0C1B33]/95 via-[#0C1B33]/70 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0C1B33]/40 via-transparent to-[#0C1B33]/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#0C1B33]/30 via-[#0C1B33]/60 to-[#0C1B33]/[0.97]" />
 
-        <div className="relative z-10 container mx-auto px-6 py-20 max-w-5xl">
-          {/* Eyebrow */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.1 }}
-            className="mb-8"
-          >
-            <div className="flex items-center gap-4 mb-6">
-              <div className="accent-bar-light" />
-              <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-white/40">
-                Chicago Economic Development
-              </span>
-            </div>
-          </motion.div>
+        {/* Top badge */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.3 }}
+          className="absolute top-24 left-1/2 -translate-x-1/2 z-10"
+        >
+          <div className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-black/30 backdrop-blur-xl border border-white/10 rounded-full">
+            <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="font-mono-bureau text-[11px] tracking-[0.1em] text-white/60">
+              11 Incentive Layers Active
+            </span>
+          </div>
+        </motion.div>
 
-          {/* Headline */}
+        {/* Bottom content */}
+        <div className="relative z-10 w-full max-w-[800px] mx-auto px-6 pb-20 text-center">
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="font-editorial text-5xl md:text-7xl lg:text-8xl font-normal text-white leading-[0.95] mb-8"
+            transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="font-editorial text-5xl md:text-6xl lg:text-7xl font-normal text-white leading-[1] mb-4"
           >
-            Chicago
+            Chicago Business
             <br />
-            <span className="text-white/40">Business</span>
-            <br />
-            Incentives
+            <span className="text-[#2563EB]">Incentives</span>
           </motion.h1>
 
-          {/* Subheadline */}
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.6 }}
-            className="text-white/50 text-base md:text-lg max-w-xl mb-12 leading-relaxed"
+            transition={{ duration: 0.8, delay: 0.5 }}
+            className="text-white/45 text-[15px] max-w-[500px] mx-auto mb-8 leading-relaxed"
           >
-            Whether you&rsquo;re auditing incentives at your current location or
-            searching for the best place to set up shop &mdash; we&rsquo;ve got you covered.
+            See every tax credit, grant, and zone program available at your address.
           </motion.p>
 
-          {/* Two-Path Selection */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.8 }}
-            className="grid md:grid-cols-2 gap-4 max-w-3xl"
+            transition={{ duration: 0.8, delay: 0.7 }}
           >
-            {/* Path 1: Incentive Analysis */}
-            <Link
-              href="/report"
-              className="group relative border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] rounded-2xl p-6 transition-all hover:border-[#2563EB]/40 hover:shadow-lg hover:shadow-blue-500/10"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-[#2563EB]/20 flex items-center justify-center">
-                  <ClipboardCheck className="w-5 h-5 text-[#2563EB]" />
-                </div>
-                <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-white/30">
-                  Path 01
-                </span>
-              </div>
-              <h3 className="font-editorial text-xl text-white mb-2 group-hover:text-[#93b4f8] transition-colors">
-                Site Incentive Analysis
-              </h3>
-              <p className="text-[12px] text-white/40 leading-relaxed mb-4">
-                Enter your address to get an instant executive summary of every
-                incentive program at your location &mdash; with a full PDF report.
-              </p>
-              <div className="flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB]/70 group-hover:text-[#2563EB] transition-colors">
-                Generate Report
-                <ArrowRight className="w-3.5 h-3.5" />
-              </div>
-            </Link>
-
-            {/* Path 2: Development Feasibility */}
-            <Link
-              href="/locate"
-              className="group relative border border-white/15 bg-white/[0.06] hover:bg-white/[0.12] rounded-2xl p-6 transition-all hover:border-emerald-500/40 hover:shadow-lg hover:shadow-emerald-500/10"
-            >
-              <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                  <MapPin className="w-5 h-5 text-emerald-400" />
-                </div>
-                <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-white/30">
-                  Path 02
-                </span>
-              </div>
-              <h3 className="font-editorial text-xl text-white mb-2 group-hover:text-emerald-300 transition-colors">
-                Development Feasibility Assessment
-              </h3>
-              <p className="text-[12px] text-white/40 leading-relaxed mb-4">
-                See which areas of Chicago are best suited for your specific
-                needs based on zoning, incentive overlap, and neighborhood data.
-              </p>
-              <div className="flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-emerald-500/70 group-hover:text-emerald-400 transition-colors">
-                Assess Locations
-                <ArrowRight className="w-3.5 h-3.5" />
-              </div>
-            </Link>
+            <AddressSearch />
           </motion.div>
 
+          {/* Nav links below search */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 1.2 }}
-            className="mt-6 text-center"
+            transition={{ duration: 0.6, delay: 1.1 }}
+            className="flex justify-center gap-6 mt-6"
           >
-            <Link
-              href="/report"
-              className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-white/30 hover:text-white/60 transition-colors"
-            >
-              Or explore all report types &rarr;
-            </Link>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Audit Section — Address Search */}
-      <section id="audit" className="relative overflow-hidden bg-[#0C1B33] py-24 px-6">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0C1B33] via-[#0f2240] to-[#0C1B33]" />
-        <div className="relative z-10 container mx-auto max-w-3xl">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8 }}
-            className="text-center mb-10"
-          >
-            <div className="flex items-center justify-center gap-4 mb-6">
-              <div className="w-8 h-0.5 bg-[#2563EB]" />
-              <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-white/40">
-                Check Your Address, Get Your Report
-              </span>
-              <div className="w-8 h-0.5 bg-[#2563EB]" />
-            </div>
-            <h2 className="font-editorial text-3xl md:text-4xl text-white mb-4">
-              What Does Your
-              <br />
-              <span className="text-white/40">Address Qualify For?</span>
-            </h2>
-            <p className="text-sm text-white/40 leading-relaxed max-w-md mx-auto">
-              We cross-reference 11 incentive zone layers &mdash; from TIF
-              districts to Opportunity Zones &mdash; to show you every program
-              available at your location.
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            <AddressSearch />
+            {[
+              { label: "Generate Report", href: "/report" },
+              { label: "Explore Map", href: "/map" },
+              { label: "Pre-Qualify", href: "/qualify" },
+              { label: "Find Location", href: "/locate" },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-[12px] text-white/30 hover:text-white/60 transition-colors border-b border-dashed border-white/15 pb-0.5"
+              >
+                {link.label}
+              </Link>
+            ))}
           </motion.div>
         </div>
       </section>

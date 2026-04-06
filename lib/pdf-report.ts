@@ -78,10 +78,10 @@ function checkPage(doc: jsPDF, y: number, needed: number): number {
    GENERATE PDF
    ══════════════════════════════════════════════════════ */
 
-export function generateReport(
+function _buildReport(
   result: LookupResult,
   programs: Program[]
-): void {
+): { doc: jsPDF; slug: string } {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const programMap = new Map(programs.map((p) => [p.zoneKey, p]));
   const allPrograms = new Map(programs.map((p) => [p.id, p]));
@@ -565,16 +565,33 @@ export function generateReport(
     H - 10
   );
 
-  /* ── SAVE ── */
   const slug = name.replace(/\s+/g, "-").toLowerCase();
+  return { doc, slug };
+}
+
+export function generateReport(
+  result: LookupResult,
+  programs: Program[]
+): void {
+  const { doc, slug } = _buildReport(result, programs);
   doc.save(`chicago-incentive-report-${slug}.pdf`);
+}
+
+/** Return report PDF as base64 string (for email attachment) */
+export function generateReportBase64(
+  result: LookupResult,
+  programs: Program[]
+): { base64: string; filename: string } {
+  const { doc, slug } = _buildReport(result, programs);
+  const base64 = doc.output("datauristring").split(",")[1];
+  return { base64, filename: `chicago-incentive-report-${slug}.pdf` };
 }
 
 /* ══════════════════════════════════════════════════════
    GENERATE ENHANCED PDF from GeneratedReport
    ══════════════════════════════════════════════════════ */
 
-export function generateReportPdf(report: GeneratedReport): void {
+function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const dateStr = new Date(report.generatedAt).toLocaleDateString("en-US", {
     year: "numeric",
@@ -866,7 +883,20 @@ export function generateReportPdf(report: GeneratedReport): void {
     H - 14
   );
 
-  /* ── SAVE ── */
   const slug = address.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
+  return { doc, slug };
+}
+
+export function generateReportPdf(report: GeneratedReport): void {
+  const { doc, slug } = _buildReportPdf(report);
   doc.save(`chicago-incentive-report-${slug}.pdf`);
+}
+
+/** Return enhanced report PDF as base64 string (for email attachment) */
+export function generateReportPdfBase64(
+  report: GeneratedReport
+): { base64: string; filename: string } {
+  const { doc, slug } = _buildReportPdf(report);
+  const base64 = doc.output("datauristring").split(",")[1];
+  return { base64, filename: `chicago-incentive-report-${slug}.pdf` };
 }

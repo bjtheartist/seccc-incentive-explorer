@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { ZONE_KEYS, ZONE_LABELS, ZONE_COLORS } from "@/lib/constants";
 import type { LookupResult, Program } from "@/lib/types";
-import { ChevronDown, FileDown, Layers, MapPin, DollarSign, Building2 } from "lucide-react";
+import { ChevronDown, FileDown, Layers, MapPin, DollarSign, Building2, Mail } from "lucide-react";
+import { EmailReportDialog } from "./EmailReportDialog";
 
 interface ReportPreviewProps {
   result: LookupResult;
@@ -18,6 +19,7 @@ interface ReportPreviewProps {
  */
 export function ReportPreview({ result, programs, onExpand }: ReportPreviewProps) {
   const [expanded, setExpanded] = useState(false);
+  const [emailOpen, setEmailOpen] = useState(false);
 
   const eligibleKeys = ZONE_KEYS.filter((k) => result.zones[k]);
   const programMap = new Map(programs.map((p) => [p.zoneKey, p]));
@@ -224,14 +226,31 @@ export function ReportPreview({ result, programs, onExpand }: ReportPreviewProps
           />
           {expanded ? "Collapse" : "View Full Breakdown"}
         </button>
-        <button
-          onClick={handleDownloadPDF}
-          className="flex items-center gap-1.5 text-[10px] text-[#0C1B33]/40 hover:text-[#0C1B33]/70 font-mono-bureau tracking-[0.1em] uppercase transition-colors"
-        >
-          <FileDown className="w-3 h-3" />
-          PDF
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setEmailOpen(true)}
+            className="flex items-center gap-1.5 text-[10px] text-[#0C1B33]/40 hover:text-[#0C1B33]/70 font-mono-bureau tracking-[0.1em] uppercase transition-colors"
+          >
+            <Mail className="w-3 h-3" />
+            Email
+          </button>
+          <button
+            onClick={handleDownloadPDF}
+            className="flex items-center gap-1.5 text-[10px] text-[#0C1B33]/40 hover:text-[#0C1B33]/70 font-mono-bureau tracking-[0.1em] uppercase transition-colors"
+          >
+            <FileDown className="w-3 h-3" />
+            PDF
+          </button>
+        </div>
       </div>
+
+      {/* Email Dialog */}
+      <EmailReportDialog
+        result={result}
+        programs={programs}
+        open={emailOpen}
+        onClose={() => setEmailOpen(false)}
+      />
     </div>
   );
 }

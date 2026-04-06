@@ -10,6 +10,9 @@ import { censusNarrative, CHICAGO_MEDIANS } from "./census-narrative";
 // ─── Local Types ────────────────────────────────────────────────────
 
 type ReportType =
+  | "site-incentives"
+  | "dev-feasibility"
+  // Legacy types kept for backward compatibility with shared URLs
   | "location-incentives"
   | "best-location"
   | "program-explorer"
@@ -20,15 +23,17 @@ interface WizardState {
   address: string;
   lat: number | null;
   lon: number | null;
+  neighborhood: string;
   industry: string;
-  activities: string[];
-  incentiveInterests: string[];
-  locationPriorities: string[];
   budgetRange: string;
-  governmentLevels: string[];
-  benefitTypes: string[];
   projectType: string;
   creditsToAnalyze: string[];
+  // Legacy fields (kept for backward compat, unused in new flows)
+  activities?: string[];
+  incentiveInterests?: string[];
+  locationPriorities?: string[];
+  governmentLevels?: string[];
+  benefitTypes?: string[];
 }
 
 // ─── Output Types ───────────────────────────────────────────────────
@@ -1675,19 +1680,23 @@ export function generateReportData(
   ctx: ReportContext = {},
 ): GeneratedReport {
   const { zones, zoneNames, census, cityZoning, parcel, districts } = ctx;
-  const reportType = state.reportType || "location-incentives";
+  const reportType = state.reportType || "site-incentives";
 
   let report: GeneratedReport;
 
   switch (reportType) {
+    // New types
+    case "site-incentives":
     case "location-incentives":
       report = generateLocationIncentives(state, programs, ctx);
       break;
 
+    case "dev-feasibility":
     case "best-location":
       report = generateBestLocation(state, programs, ctx);
       break;
 
+    // Legacy types — kept for backward compat with shared URLs
     case "program-explorer":
       report = generateProgramExplorer(state, programs);
       break;
@@ -1696,14 +1705,14 @@ export function generateReportData(
       report = generateDeveloperAnalysis(state, programs);
       break;
 
-    default: {
-      const _exhaustive: never = reportType;
-      throw new Error(`Unknown report type: ${_exhaustive}`);
-    }
+    default:
+      // Fallback to site-incentives for unknown types
+      report = generateLocationIncentives(state, programs, ctx);
+      break;
   }
 
   // Attach census + zoning data to metadata for address-based reports
-  if (reportType === "location-incentives" || reportType === "developer-analysis" || reportType === "best-location") {
+  if (reportType !== "program-explorer") {
     if (census?.medianIncome != null) report.metadata.medianIncome = census.medianIncome;
     if (census?.medianHomeValue != null) report.metadata.medianHomeValue = census.medianHomeValue;
     if (cityZoning?.zoneClass) report.metadata.zoneClass = cityZoning.zoneClass;
@@ -1778,7 +1787,7 @@ export function generateReportData(
     }
 
     if (contextItems.length > 0) {
-      if (reportType === "location-incentives") {
+      if (reportType === "site-incentives" || reportType === "location-incentives") {
         // Prepend as "Site Overview" — first section users see
         report.sections.unshift({
           title: "Site Overview",
@@ -1794,7 +1803,7 @@ export function generateReportData(
     }
 
     // For developer-analysis, add a dedicated Property Analysis subsection
-    if (reportType === "developer-analysis" && parcel && parcel.pin) {
+    if ((reportType === "dev-feasibility" || reportType === "developer-analysis") && parcel && parcel.pin) {
       const propertyItems: ReportItem[] = [
         {
           label: "Property PIN",

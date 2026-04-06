@@ -14,7 +14,6 @@ const CURRENT_VERSION = "1";
 
 /**
  * Encode check state as URL search params.
- * Human-readable lat/lon/addr, with optional survey answers as base64.
  */
 export function encodeCheckState(state: CheckState): string {
   const params = new URLSearchParams();
@@ -34,15 +33,10 @@ export function encodeCheckState(state: CheckState): string {
 
 /**
  * Decode check state from URL search params.
- * Returns null if required params are missing.
  */
 export function decodeCheckState(
   params: URLSearchParams
 ): CheckState | null {
-  // Version check — default to "1" for URLs created before versioning
-  const _version = params.get("v") || "1";
-  // Future: switch on _version for backward-compatible decode changes
-
   const lat = params.get("lat");
   const lon = params.get("lon");
 
@@ -77,6 +71,9 @@ export function decodeCheckState(
 // ─── Wizard State URL Encoding ──────────────────────────────────────
 
 const REPORT_TYPE_SHORT: Record<string, string> = {
+  "site-incentives": "si",
+  "dev-feasibility": "df",
+  // Legacy
   "location-incentives": "li",
   "best-location": "bl",
   "program-explorer": "pe",
@@ -84,19 +81,21 @@ const REPORT_TYPE_SHORT: Record<string, string> = {
 };
 
 const SHORT_TO_REPORT_TYPE: Record<string, ReportType> = {
-  li: "location-incentives",
-  bl: "best-location",
-  pe: "program-explorer",
-  da: "developer-analysis",
+  si: "site-incentives",
+  df: "dev-feasibility",
+  // Legacy shortcuts map to new types
+  li: "site-incentives",
+  bl: "dev-feasibility",
+  pe: "site-incentives",
+  da: "dev-feasibility",
 };
 
 /**
  * Encode wizard state as URL search params for shareable report links.
- * Uses compact keys to keep URLs manageable.
  */
 export function encodeWizardState(state: WizardState): string {
   const params = new URLSearchParams();
-  params.set("wv", "1"); // wizard version
+  params.set("wv", "2"); // wizard version 2
 
   if (state.reportType) {
     params.set("rt", REPORT_TYPE_SHORT[state.reportType] || state.reportType);
@@ -104,16 +103,11 @@ export function encodeWizardState(state: WizardState): string {
   if (state.address) params.set("addr", state.address);
   if (state.lat != null) params.set("lat", state.lat.toFixed(5));
   if (state.lon != null) params.set("lon", state.lon.toFixed(5));
+  if (state.neighborhood) params.set("nbh", state.neighborhood);
   if (state.industry) params.set("ind", state.industry);
   if (state.budgetRange) params.set("bud", state.budgetRange);
   if (state.projectType) params.set("pt", state.projectType);
 
-  // Array fields: base64-encode as JSON
-  if (state.activities.length > 0) params.set("act", btoa(JSON.stringify(state.activities)));
-  if (state.incentiveInterests.length > 0) params.set("ii", btoa(JSON.stringify(state.incentiveInterests)));
-  if (state.locationPriorities.length > 0) params.set("lp", btoa(JSON.stringify(state.locationPriorities)));
-  if (state.governmentLevels.length > 0) params.set("gl", btoa(JSON.stringify(state.governmentLevels)));
-  if (state.benefitTypes.length > 0) params.set("bt", btoa(JSON.stringify(state.benefitTypes)));
   if (state.creditsToAnalyze.length > 0) params.set("cta", btoa(JSON.stringify(state.creditsToAnalyze)));
 
   // Comparison address
@@ -126,7 +120,7 @@ export function encodeWizardState(state: WizardState): string {
 
 /**
  * Decode wizard state from URL search params.
- * Returns null if no wizard params are present.
+ * Handles both v1 (legacy 4-type) and v2 (new 2-type) URLs.
  */
 export function decodeWizardState(params: URLSearchParams): WizardState | null {
   const version = params.get("wv");
@@ -145,6 +139,9 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
   if (lat) state.lat = parseFloat(lat);
   if (lon) state.lon = parseFloat(lon);
 
+  const nbh = params.get("nbh");
+  if (nbh) state.neighborhood = nbh;
+
   const ind = params.get("ind");
   if (ind) state.industry = ind;
 
@@ -161,11 +158,6 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
     try { return JSON.parse(atob(val)); } catch { return []; }
   }
 
-  state.activities = decodeArray("act");
-  state.incentiveInterests = decodeArray("ii");
-  state.locationPriorities = decodeArray("lp");
-  state.governmentLevels = decodeArray("gl");
-  state.benefitTypes = decodeArray("bt");
   state.creditsToAnalyze = decodeArray("cta");
 
   // Comparison address
