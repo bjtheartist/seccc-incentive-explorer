@@ -10,6 +10,8 @@
 
 import { neon } from "@neondatabase/serverless";
 import { socrataHeaders } from "../lib/socrata";
+import { classifyOwner } from "../lib/owner-classify";
+import { CHICAGO_COMMUNITY_AREAS } from "../lib/community-areas";
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 
@@ -24,6 +26,10 @@ const sql = neon(DATABASE_URL);
 // City-Owned Land Inventory — Socrata dataset
 const COLS_DATASET_ID = "aksk-kvfp";
 const COLS_BASE_URL = `https://data.cityofchicago.org/resource/${COLS_DATASET_ID}.json`;
+
+// 311 Service Requests — Vacant/Abandoned Building Complaints
+const SR311_DATASET_ID = "v6vf-nfxy";
+const SR311_BASE_URL = `https://data.cityofchicago.org/resource/${SR311_DATASET_ID}.json`;
 
 interface ColsRecord {
   pin: string;
@@ -40,6 +46,94 @@ interface ColsRecord {
   sq_ft?: string;
   latitude?: string;
   longitude?: string;
+}
+
+/** Cook County Assessor record (taxpayer info). */
+interface AssessorRecord {
+  pin: string;
+  tax_bill_name?: string;
+  taxpayer_name?: string;
+  tax_bill_mailing_address?: string;
+  tax_bill_city?: string;
+  tax_bill_state?: string;
+  tax_bill_zip?: string;
+}
+
+/** Batch-fetch ownership data from Cook County Assessor by PIN. */
+async function fetchOwnershipBatch(
+  pins: string[]
+): Promise<Map<string, { ownerName: string; mailingAddress: string; ownerType: string }>> {
+  const result = new Map<string, { ownerName: string; mailingAddress: string; ownerType: string }>();
+  if (pins.length === 0) return result;
+
+  // Quick connectivity check — if the Assessor API is unreachable, skip entirely
+  console.log("  Testing Cook County Assessor API connectivity...");
+  try {
+    const probe = await fetch(
+      "https://datacatalog.cookcountyassessor.com/resource/uzyt-m557.json?$limit=1",
+      { headers: socrataHeaders(), signal: AbortSignal.timeout(8000) }
+    );
+    if (!probe.ok) {
+      console.log(`  Assessor API returned ${probe.status} — skipping ownership fetch (will use defaults)`);
+      return result;
+    }
+    console.log("  Assessor API reachable — fetching ownership data...");
+  } catch {
+    console.log("  Assessor API unreachable — skipping ownership fetch (will use defaults)");
+    return result;
+  }
+
+  // Query in batches of 50 PINs using Socrata $where IN clause
+  const batchSize = 50;
+  let consecutiveFailures = 0;
+  for (let i = 0; i < pins.length; i += batchSize) {
+    // Stop if too many consecutive failures
+    if (consecutiveFailures >= 5) {
+      console.log("  Too many consecutive failures — stopping ownership fetch");
+      break;
+    }
+
+    const batch = pins.slice(i, i + batchSize);
+    const inClause = batch.map((p) => `'${p}'`).join(",");
+    const url = `https://datacatalog.cookcountyassessor.com/resource/uzyt-m557.json?$where=pin in(${encodeURIComponent(inClause)})&$limit=${batchSize}&$select=pin,tax_bill_name,taxpayer_name,tax_bill_mailing_address,tax_bill_city,tax_bill_state,tax_bill_zip`;
+
+    try {
+      const res = await fetch(url, {
+        headers: socrataHeaders(),
+        signal: AbortSignal.timeout(10000),
+      });
+      if (res.ok) {
+        const data: AssessorRecord[] = await res.json();
+        for (const a of data) {
+          const ownerName = a.tax_bill_name || a.taxpayer_name || "";
+          const mailingParts = [a.tax_bill_mailing_address, a.tax_bill_city, a.tax_bill_state, a.tax_bill_zip].filter(Boolean);
+          const mailingAddress = mailingParts.join(", ");
+          result.set(a.pin, {
+            ownerName,
+            mailingAddress,
+            ownerType: classifyOwner(ownerName, mailingAddress),
+          });
+        }
+        consecutiveFailures = 0;
+      } else {
+        consecutiveFailures++;
+      }
+    } catch {
+      consecutiveFailures++;
+    }
+
+    // Brief pause between batches to respect rate limits
+    if (i + batchSize < pins.length) {
+      await new Promise((r) => setTimeout(r, 100));
+    }
+
+    // Progress logging every 500 PINs
+    if ((i + batchSize) % 500 === 0 || i + batchSize >= pins.length) {
+      console.log(`  Ownership: ${Math.min(i + batchSize, pins.length)}/${pins.length} PINs queried (${result.size} found)`);
+    }
+  }
+
+  return result;
 }
 
 async function fetchAllPages(): Promise<ColsRecord[]> {
@@ -74,6 +168,7 @@ async function fetchAllPages(): Promise<ColsRecord[]> {
 
 function normalizeRecord(r: ColsRecord): {
   id: string;
+  pin: string | null;
   address: string;
   lat: number;
   lon: number;
@@ -81,6 +176,7 @@ function normalizeRecord(r: ColsRecord): {
   communityArea: string | null;
   zoningClass: string | null;
   squareFeet: number | null;
+  managingOrg: string | null;
 } | null {
   const lat = r.latitude ? parseFloat(r.latitude) : NaN;
   const lon = r.longitude ? parseFloat(r.longitude) : NaN;
@@ -96,6 +192,7 @@ function normalizeRecord(r: ColsRecord): {
 
   return {
     id: `cols-${r.pin || `${lat.toFixed(6)}-${lon.toFixed(6)}`}`,
+    pin: r.pin || null,
     address,
     lat,
     lon,
@@ -103,11 +200,179 @@ function normalizeRecord(r: ColsRecord): {
     communityArea: r.community_area_name || null,
     zoningClass: r.zoning_classification || null,
     squareFeet: r.sq_ft ? parseFloat(r.sq_ft) : null,
+    managingOrg: r.managing_organization || null,
   };
 }
 
+// ── 311 Vacant/Abandoned Building Complaints ──
+
+interface Sr311Record {
+  sr_number: string;
+  sr_type: string;
+  status?: string;
+  created_date?: string;
+  street_address?: string;
+  zip_code?: string;
+  ward?: string;
+  community_area?: string;
+  latitude?: string;
+  longitude?: string;
+}
+
+/** Community area number → name lookup */
+function communityAreaName(num: string | undefined): string | null {
+  if (!num) return null;
+  const id = parseInt(num, 10);
+  const ca = CHICAGO_COMMUNITY_AREAS.find((a) => a.id === id);
+  return ca?.name ?? null;
+}
+
+async function fetch311VacantBuildings(): Promise<Sr311Record[]> {
+  const all: Sr311Record[] = [];
+  const pageSize = 1000;
+  let offset = 0;
+
+  console.log("Fetching 311 Vacant/Abandoned Building Complaints...");
+
+  // Only fetch recent open complaints (last 3 years) to keep the dataset relevant
+  const threeYearsAgo = new Date();
+  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
+  const dateFilter = threeYearsAgo.toISOString().split("T")[0];
+
+  while (true) {
+    const where = encodeURIComponent(
+      `sr_type='Vacant/Abandoned Building Complaint' AND created_date>='${dateFilter}T00:00:00'`
+    );
+    const url = `${SR311_BASE_URL}?$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=${encodeURIComponent("created_date DESC")}`;
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        headers: socrataHeaders(),
+        signal: AbortSignal.timeout(120000),
+      });
+    } catch (err) {
+      // Retry once on timeout
+      console.warn(`  Timeout at offset ${offset}, retrying...`);
+      await new Promise((r) => setTimeout(r, 3000));
+      res = await fetch(url, {
+        headers: socrataHeaders(),
+        signal: AbortSignal.timeout(120000),
+      });
+    }
+
+    if (!res.ok) {
+      console.error(`  311 API returned ${res.status} at offset ${offset}`);
+      break;
+    }
+
+    const page: Sr311Record[] = await res.json();
+    if (page.length === 0) break;
+
+    all.push(...page);
+    console.log(`  Fetched ${all.length} records (offset ${offset})...`);
+    offset += pageSize;
+  }
+
+  return all;
+}
+
+/** Deduplicate 311 records by address (keep newest per address). */
+function dedup311ByAddress(records: Sr311Record[]): Sr311Record[] {
+  const seen = new Map<string, Sr311Record>();
+  for (const r of records) {
+    const addr = r.street_address?.trim().toUpperCase();
+    if (!addr) continue;
+    // Records are ordered by created_date DESC, so first occurrence is newest
+    if (!seen.has(addr)) {
+      seen.set(addr, r);
+    }
+  }
+  return Array.from(seen.values());
+}
+
+interface NormalizedVacantBuilding {
+  id: string;
+  address: string;
+  lat: number;
+  lon: number;
+  ward: string | null;
+  communityArea: string | null;
+  zoningClass: string | null;
+  squareFeet: number | null;
+  status: string;
+}
+
+function normalize311Record(r: Sr311Record): NormalizedVacantBuilding | null {
+  const lat = r.latitude ? parseFloat(r.latitude) : NaN;
+  const lon = r.longitude ? parseFloat(r.longitude) : NaN;
+
+  if (isNaN(lat) || isNaN(lon) || lat === 0 || lon === 0) return null;
+  if (lat < 41.6 || lat > 42.1 || lon < -88.0 || lon > -87.4) return null;
+
+  const address = r.street_address?.trim() || "Unknown";
+
+  return {
+    id: `311-${r.sr_number}`,
+    address,
+    lat,
+    lon,
+    ward: r.ward || null,
+    communityArea: communityAreaName(r.community_area),
+    zoningClass: null, // 311 doesn't include zoning
+    squareFeet: null,
+    status: r.status?.toLowerCase() === "open" ? "reported_open" : "reported",
+  };
+}
+
+async function upsert311Batch(records: NormalizedVacantBuilding[]) {
+  if (records.length === 0) return;
+
+  const batchSize = 50;
+  for (let i = 0; i < records.length; i += batchSize) {
+    const batch = records.slice(i, i + batchSize);
+
+    for (const r of batch) {
+      await sql`
+        INSERT INTO vacant_properties (id, source, address, lat, lon, property_type, ward, community_area, zoning_class, square_feet, status, owner_name, owner_mailing_address, owner_type, geom, updated_at)
+        VALUES (
+          ${r.id},
+          'dpd_vacant',
+          ${r.address},
+          ${r.lat},
+          ${r.lon},
+          'vacant_building',
+          ${r.ward},
+          ${r.communityArea},
+          ${r.zoningClass},
+          ${r.squareFeet},
+          ${r.status},
+          ${"Unknown"},
+          ${null},
+          ${"unknown"},
+          ST_MakePoint(${r.lon}, ${r.lat})::geography,
+          NOW()
+        )
+        ON CONFLICT (id) DO UPDATE SET
+          address = EXCLUDED.address,
+          lat = EXCLUDED.lat,
+          lon = EXCLUDED.lon,
+          ward = EXCLUDED.ward,
+          community_area = EXCLUDED.community_area,
+          status = EXCLUDED.status,
+          geom = EXCLUDED.geom,
+          updated_at = NOW()
+      `;
+    }
+
+    if ((i + batchSize) % 200 === 0 || i + batchSize >= records.length) {
+      console.log(`  Upserted ${Math.min(i + batchSize, records.length)}/${records.length}`);
+    }
+  }
+}
+
 async function upsertBatch(
-  records: NonNullable<ReturnType<typeof normalizeRecord>>[]
+  records: NonNullable<ReturnType<typeof normalizeRecord>>[],
+  ownershipMap: Map<string, { ownerName: string; mailingAddress: string; ownerType: string }>
 ) {
   if (records.length === 0) return;
 
@@ -117,8 +382,16 @@ async function upsertBatch(
     const batch = records.slice(i, i + batchSize);
 
     for (const r of batch) {
+      // Ownership: use assessor data if available, else default to city_public
+      // All COLS records are city-owned land — the managing_organization is a city department
+      const ownership = r.pin ? ownershipMap.get(r.pin) : undefined;
+      const ownerName = ownership?.ownerName || (r.managingOrg && r.managingOrg !== "None" ? `City of Chicago — ${r.managingOrg}` : "City of Chicago");
+      const ownerMailingAddress = ownership?.mailingAddress || null;
+      // COLS = City-Owned Land, so always city_public unless assessor says otherwise
+      const ownerType = ownership?.ownerType || "city_public";
+
       await sql`
-        INSERT INTO vacant_properties (id, source, address, lat, lon, property_type, ward, community_area, zoning_class, square_feet, status, geom, updated_at)
+        INSERT INTO vacant_properties (id, source, address, lat, lon, property_type, ward, community_area, zoning_class, square_feet, status, owner_name, owner_mailing_address, owner_type, geom, updated_at)
         VALUES (
           ${r.id},
           'cols',
@@ -131,6 +404,9 @@ async function upsertBatch(
           ${r.zoningClass},
           ${r.squareFeet},
           'city_owned',
+          ${ownerName},
+          ${ownerMailingAddress},
+          ${ownerType},
           ST_MakePoint(${r.lon}, ${r.lat})::geography,
           NOW()
         )
@@ -143,6 +419,9 @@ async function upsertBatch(
           zoning_class = EXCLUDED.zoning_class,
           square_feet = EXCLUDED.square_feet,
           status = EXCLUDED.status,
+          owner_name = EXCLUDED.owner_name,
+          owner_mailing_address = EXCLUDED.owner_mailing_address,
+          owner_type = EXCLUDED.owner_type,
           geom = EXCLUDED.geom,
           updated_at = NOW()
       `;
@@ -192,12 +471,28 @@ async function crossReferenceZones() {
 async function generateStaticFile() {
   console.log("\nGenerating static GeoJSON fallback...");
 
+  // Include both property types: up to 1200 vacant land + up to 800 vacant buildings
+  // so the "Vacant Buildings" toggle has data in the static fallback too
   const rows = await sql`
-    SELECT id, source, address, lat, lon, property_type, ward, community_area,
-           zoning_class, square_feet, status, zone_matches, incentive_count
-    FROM vacant_properties
-    ORDER BY incentive_count DESC
-    LIMIT 2000
+    (
+      SELECT id, source, address, lat, lon, property_type, ward, community_area,
+             zoning_class, square_feet, status, zone_matches, incentive_count,
+             owner_name, owner_type
+      FROM vacant_properties
+      WHERE property_type = 'vacant_land'
+      ORDER BY incentive_count DESC
+      LIMIT 1200
+    )
+    UNION ALL
+    (
+      SELECT id, source, address, lat, lon, property_type, ward, community_area,
+             zoning_class, square_feet, status, zone_matches, incentive_count,
+             owner_name, owner_type
+      FROM vacant_properties
+      WHERE property_type IN ('vacant_building', 'vacant_storefront')
+      ORDER BY incentive_count DESC
+      LIMIT 800
+    )
   `;
 
   const geojson: GeoJSON.FeatureCollection = {
@@ -222,6 +517,8 @@ async function generateStaticFile() {
           ? JSON.parse(r.zone_matches)
           : r.zone_matches,
         incentiveCount: r.incentive_count,
+        ownerName: r.owner_name,
+        ownerType: r.owner_type,
       },
     })),
   };
@@ -242,6 +539,12 @@ async function printSummary() {
     GROUP BY property_type
     ORDER BY cnt DESC
   `;
+  const byOwnerType = await sql`
+    SELECT COALESCE(owner_type, 'unknown') as owner_type, COUNT(*) as cnt
+    FROM vacant_properties
+    GROUP BY owner_type
+    ORDER BY cnt DESC
+  `;
 
   console.log("\n── Sync Summary ──");
   console.log(`Total properties: ${total[0]?.cnt || 0}`);
@@ -250,32 +553,57 @@ async function printSummary() {
   for (const row of byType) {
     console.log(`  ${row.property_type}: ${row.cnt}`);
   }
+  console.log("By owner type:");
+  for (const row of byOwnerType) {
+    console.log(`  ${row.owner_type}: ${row.cnt}`);
+  }
 }
 
 async function main() {
   console.log("=== Vacant Property Sync ===\n");
 
-  // 1. Fetch from Socrata
+  // ── Source 1: City-Owned Land Inventory (vacant land) ──
   const raw = await fetchAllPages();
-  console.log(`\nTotal raw records: ${raw.length}`);
+  console.log(`\nTotal COLS raw records: ${raw.length}`);
 
-  // 2. Normalize
   const normalized = raw
     .map(normalizeRecord)
     .filter((r): r is NonNullable<typeof r> => r !== null);
   console.log(`Valid records with coordinates: ${normalized.length}`);
 
-  // 3. Upsert
-  console.log("\nUpserting into database...");
-  await upsertBatch(normalized);
+  const pinsWithData = normalized.filter((r) => r.pin).map((r) => r.pin!);
+  console.log(`\nFetching ownership data for ${pinsWithData.length} PINs...`);
+  const ownershipMap = await fetchOwnershipBatch(pinsWithData);
+  console.log(`  Got ownership data for ${ownershipMap.size} properties`);
 
-  // 4. Cross-reference zones
+  console.log("\nUpserting COLS (vacant land) into database...");
+  await upsertBatch(normalized, ownershipMap);
+
+  // ── Source 2: 311 Vacant/Abandoned Building Complaints ──
+  const raw311 = await fetch311VacantBuildings();
+  console.log(`\nTotal 311 raw records: ${raw311.length}`);
+
+  const deduped311 = dedup311ByAddress(raw311);
+  console.log(`Unique addresses after dedup: ${deduped311.length}`);
+
+  const normalized311 = deduped311
+    .map(normalize311Record)
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+  console.log(`Valid 311 records with coordinates: ${normalized311.length}`);
+
+  // Remove 311 records that share an address with a COLS record (COLS is authoritative)
+  const colsAddresses = new Set(normalized.map((r) => r.address.trim().toUpperCase()));
+  const filtered311 = normalized311.filter(
+    (r) => !colsAddresses.has(r.address.trim().toUpperCase())
+  );
+  console.log(`After removing COLS duplicates: ${filtered311.length}`);
+
+  console.log("\nUpserting 311 (vacant buildings) into database...");
+  await upsert311Batch(filtered311);
+
+  // ── Cross-reference & export ──
   await crossReferenceZones();
-
-  // 5. Generate static file
   await generateStaticFile();
-
-  // 6. Summary
   await printSummary();
 
   console.log("\nDone!");

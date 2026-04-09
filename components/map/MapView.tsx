@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
 import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_KEYS_SORTED, ZONE_META, ZONE_TILESET_IDS, ZONE_DESCRIPTIONS, ZONE_LEARN_MORE, ZONING_CATEGORIES, ZONING_CODE_DESCRIPTIONS, describeZoneClass, VACANT_COLORS, VACANT_LABELS } from "@/lib/constants";
+import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { describeClassCode, describeParcelType, CLASS_CODE_MAP } from "@/lib/parcel-classes";
 import type { Program, ProgramCheckResult, ParcelData, DistrictData } from "@/lib/types";
@@ -211,6 +212,9 @@ interface AreaStats {
   assessedTotal?: number | null;
   taxYear?: string | null;
   priorYearTax?: number | null;
+  // Ownership
+  ownerName?: string | null;
+  ownerType?: string | null;
 }
 
 const DEFAULT_STATS: AreaStats = {
@@ -267,6 +271,7 @@ export default function MapView() {
   const [vacantLoaded, setVacantLoaded] = useState(false);
   const vacantAbortRef = useRef<AbortController | null>(null);
   const vacantTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [ownerFilter, setOwnerFilter] = useState<OwnerType | "all">("all");
 
   // Load programs for snapshot
   useEffect(() => {
@@ -366,6 +371,8 @@ export default function MapView() {
           assessedTotal: parcelData?.assessedTotal,
           taxYear: parcelData?.taxYear,
           priorYearTax: parcelData?.priorYearTax,
+          ownerName: parcelData?.ownerName,
+          ownerType: parcelData?.ownerType,
           districtsLoading: true,
         });
         if (!label && data.tractId) {
@@ -1038,13 +1045,27 @@ export default function MapView() {
         const ward = p.ward ? `Ward ${p.ward}` : "";
         const meta = [sqft, ward].filter(Boolean).join(" · ");
 
-        new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
+        // Owner info
+        const ownerName = p.ownerName || null;
+        const ownerType = p.ownerType as OwnerType | null;
+        const ownerLabel = ownerType ? (OWNER_TYPE_LABELS[ownerType] || ownerType) : null;
+        const ownerColor = ownerType ? (OWNER_TYPE_COLORS[ownerType] || "#9CA3AF") : "#9CA3AF";
+        const ownerHtml = ownerName
+          ? `<div style="margin-top:6px;padding:6px 8px;background:#F8FAFC;border-radius:4px;border:1px solid #E2E8F0">
+              <div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#64748B;margin-bottom:2px">Owner</div>
+              <div style="font-size:12px;font-weight:600;color:#0C1B33">${ownerName}</div>
+              ${ownerLabel ? `<span style="display:inline-block;margin-top:3px;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${ownerLabel}</span>` : ""}
+            </div>`
+          : "";
+
+        new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" })
           .setLngLat(e.lngLat)
           .setHTML(
             `<div style="font-family:Inter,sans-serif">
               <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${VACANT_COLORS.vacantLand};margin-bottom:4px;font-weight:500">Vacant Property</div>
               <div style="font-size:14px;font-weight:600;color:#0C1B33">${addr}</div>
               ${meta ? `<div style="font-size:11px;color:#5A6478;margin-top:3px">${meta}</div>` : ""}
+              ${ownerHtml}
               ${badges ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap">${badges}</div>` : ""}
               ${p.incentiveCount > 0 ? `<div style="font-size:10px;color:#059669;margin-top:6px;font-weight:500">${p.incentiveCount} incentive zone${p.incentiveCount > 1 ? "s" : ""} overlap</div>` : ""}
               <a href="https://www.cookcountyassessoril.gov/pin/${p.id?.replace("cols-", "")}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">View on Cook County Assessor →</a>
@@ -1453,11 +1474,12 @@ export default function MapView() {
 
         const boundsStr = `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`;
 
-        fetch(`/api/vacant?bounds=${boundsStr}&limit=1000`, { signal: controller.signal })
+        const ownerParam = ownerFilter !== "all" ? `&ownerType=${ownerFilter}` : "";
+        fetch(`/api/vacant?bounds=${boundsStr}&limit=1000${ownerParam}`, { signal: controller.signal })
           .then((res) => res.json())
           .then((data: GeoJSON.FeatureCollection) => {
             if (data?.type === "FeatureCollection" && data.features) {
-              // Filter by visible sub-types
+              // Filter by visible sub-types (client-side for instant toggle)
               const filtered = data.features.filter((f) => {
                 const pt = f.properties?.propertyType;
                 if (vacantVisible.vacantLand && (pt === "vacant_land")) return true;
@@ -1481,7 +1503,7 @@ export default function MapView() {
       if (vacantTimerRef.current) clearTimeout(vacantTimerRef.current);
       if (vacantAbortRef.current) vacantAbortRef.current.abort();
     };
-  }, [vacantVisible, loaded, vacantLoaded]);
+  }, [vacantVisible, loaded, vacantLoaded, ownerFilter]);
 
   return (
     <div className="relative w-full h-[calc(100vh-180px)] md:h-[calc(100vh-220px)] min-h-[500px]">
@@ -1704,8 +1726,29 @@ export default function MapView() {
               ))}
             </div>
             <p className="text-[9px] text-[#0C1B33]/35 mt-1.5 ml-6">
-              City-owned land inventory · Clusters at low zoom
+              City data + 311 reports · Clusters at low zoom
             </p>
+
+            {/* Owner Type Filter */}
+            {Object.values(vacantVisible).some(Boolean) && (
+              <div className="mt-3 ml-6">
+                <label className="block text-[9px] font-mono-bureau tracking-[0.15em] uppercase text-[#0C1B33]/40 mb-1">
+                  Filter by Owner
+                </label>
+                <select
+                  value={ownerFilter}
+                  onChange={(e) => setOwnerFilter(e.target.value as OwnerType | "all")}
+                  className="w-full text-[11px] px-2 py-1.5 rounded border border-[#0C1B33]/15 bg-white text-[#0C1B33] focus:outline-none focus:border-[#2563EB]/50 transition-colors"
+                >
+                  <option value="all">All Owners</option>
+                  {(Object.entries(OWNER_TYPE_LABELS) as [OwnerType, string][])
+                    .filter(([key]) => key !== "unknown")
+                    .map(([key, label]) => (
+                      <option key={key} value={key}>{label}</option>
+                    ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {/* Divider */}
@@ -2108,6 +2151,33 @@ export default function MapView() {
                     </div>
                   )}
                 </div>
+              </div>
+            </>
+          )}
+
+          {/* Ownership */}
+          {areaStats.ownerName && (
+            <>
+              <div className="mx-4 h-px bg-[#0C1B33]/8" />
+              <div className="px-4 py-3">
+                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-1.5">
+                  Property Owner
+                </div>
+                <div className="text-[11px] font-medium text-[#0C1B33]/90 mb-1">
+                  {areaStats.ownerName}
+                </div>
+                {areaStats.ownerType && areaStats.ownerType !== "unknown" && (
+                  <span
+                    className="inline-block text-[9px] font-medium px-2 py-0.5 rounded"
+                    style={{
+                      backgroundColor: (OWNER_TYPE_COLORS[areaStats.ownerType as OwnerType] || "#9CA3AF") + "15",
+                      color: OWNER_TYPE_COLORS[areaStats.ownerType as OwnerType] || "#9CA3AF",
+                      border: `1px solid ${(OWNER_TYPE_COLORS[areaStats.ownerType as OwnerType] || "#9CA3AF")}30`,
+                    }}
+                  >
+                    {OWNER_TYPE_LABELS[areaStats.ownerType as OwnerType] || areaStats.ownerType}
+                  </span>
+                )}
               </div>
             </>
           )}
