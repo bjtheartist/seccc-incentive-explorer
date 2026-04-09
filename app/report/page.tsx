@@ -2450,9 +2450,9 @@ function ReportDisplay({
                         )}
                         {report.marketContext.comparisons.walkScore && (
                           <ComparisonBar
-                            label="Walk Score"
-                            locationFormatted={`${report.marketContext.comparisons.walkScore.location}/100`}
-                            cityFormatted={`${report.marketContext.comparisons.walkScore.city}/100`}
+                            label="EPA Walkability Index"
+                            locationFormatted={`${report.marketContext.comparisons.walkScore.location}/20`}
+                            cityFormatted={`${report.marketContext.comparisons.walkScore.city}/20`}
                             pct={report.marketContext.comparisons.walkScore.pct}
                           />
                         )}

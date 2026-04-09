@@ -12,7 +12,7 @@ export const CHICAGO_MEDIANS = {
   income: 65_000,
   homeValue: 275_000,
   populationPerTract: 3_500,
-  walkScore: 65,
+  walkScore: 11,
 } as const;
 
 // QCT threshold: 60% of Area Median Income

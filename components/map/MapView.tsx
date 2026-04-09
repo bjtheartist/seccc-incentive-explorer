@@ -220,7 +220,7 @@ interface AreaStats {
 const DEFAULT_STATS: AreaStats = {
   medianHomePrice: "$142,000",
   medianIncome: "$38,500",
-  walkScore: 62,
+  walkScore: 11,
 };
 
 export default function MapView() {
@@ -2063,21 +2063,22 @@ export default function MapView() {
 
             <div>
               <div className="flex justify-between items-baseline">
-                <span className="text-[11px] text-[#0C1B33]/60">Walkability</span>
+                <span className="text-[11px] text-[#0C1B33]/60">EPA Walkability Index</span>
                 <div className="flex items-center gap-2">
                   <div className="w-14 h-1.5 bg-[#0C1B33]/10 overflow-hidden">
                     <div
                       className="h-full bg-[#2563EB]"
-                      style={{ width: `${areaStats.walkScore}%` }}
+                      style={{ width: `${(areaStats.walkScore / 20) * 100}%` }}
                     />
                   </div>
                   <span className="font-mono-bureau text-[13px] text-[#0C1B33]/90 font-medium">
-                    {areaStats.walkScore}
+                    {areaStats.walkScore}/20
                   </span>
                 </div>
               </div>
               <p className="text-[9px] text-[#0C1B33]/30 mt-0.5 leading-relaxed">
-                Walkability (0-100) based on proximity to amenities and pedestrian infrastructure.
+                Scores land use diversity, intersection density, and transit proximity.{" "}
+                <a href="https://www.epa.gov/smartgrowth/smart-location-mapping#702702702702702702702702" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#2563EB]/60">EPA Smart Location Database</a>
               </p>
             </div>
           </div>

@@ -410,11 +410,12 @@ function buildMarketContext(
   });
 
   const walkScore = ctx.census.walkScore;
+  const epaAttribution = " (Source: EPA Smart Location Database — scores land use diversity, intersection density, and transit proximity.)";
   let walkabilityNarrative = "Walkability data not available for this location.";
   if (walkScore != null) {
-    if (walkScore >= 70) walkabilityNarrative = `Walk Score ${walkScore}/100 — a walkable area with good foot traffic potential for customer-facing businesses.`;
-    else if (walkScore >= 50) walkabilityNarrative = `Walk Score ${walkScore}/100 — somewhat walkable; some errands can be accomplished on foot.`;
-    else walkabilityNarrative = `Walk Score ${walkScore}/100 — car-dependent area; consider drive-in or destination-based business models.`;
+    if (walkScore >= 15) walkabilityNarrative = `EPA Walkability Index ${walkScore}/20 — highly walkable area with strong pedestrian infrastructure and transit access.${epaAttribution}`;
+    else if (walkScore >= 10) walkabilityNarrative = `EPA Walkability Index ${walkScore}/20 — above average walkability with moderate transit access.${epaAttribution}`;
+    else walkabilityNarrative = `EPA Walkability Index ${walkScore}/20 — car-dependent area; consider drive-in or destination-based business models.${epaAttribution}`;
   }
 
   const zoneCount = zones ? Object.values(zones).filter(Boolean).length : 0;
@@ -594,8 +595,8 @@ function generateLocationIncentives(
       marketItems.push({ label: "Population", value: ctx.census?.population != null ? ctx.census.population.toLocaleString() : "N/A", detail: `${marketContext.populationNarrative}${vs}` });
     }
     {
-      const vs = cmp.walkScore ? ` (city avg: ${cmp.walkScore.city})` : "";
-      marketItems.push({ label: "Walkability", value: ctx.census?.walkScore != null ? `${ctx.census.walkScore}/100` : "N/A", detail: `${marketContext.walkabilityNarrative}${vs}` });
+      const vs = cmp.walkScore ? ` (city avg: ${cmp.walkScore.city}/20)` : "";
+      marketItems.push({ label: "EPA Walkability Index", value: ctx.census?.walkScore != null ? `${ctx.census.walkScore}/20` : "N/A", detail: `${marketContext.walkabilityNarrative}${vs}` });
     }
     marketItems.push({ label: "Zone Coverage", value: `${zoneCount} zone${zoneCount !== 1 ? "s" : ""}`, detail: marketContext.zoneCoverageNarrative });
     if (marketContext.qualificationNarrative && (marketContext.isQCT || marketContext.isLMI)) {
@@ -987,8 +988,8 @@ function generateBestLocation(
       marketItems.push({ label: "Population", value: ctx.census?.population != null ? ctx.census.population.toLocaleString() : "N/A", detail: `${marketContext.populationNarrative}${vs}` });
     }
     {
-      const vs = cmp.walkScore ? ` (city avg: ${cmp.walkScore.city})` : "";
-      marketItems.push({ label: "Walkability", value: ctx.census?.walkScore != null ? `${ctx.census.walkScore}/100` : "N/A", detail: `${marketContext.walkabilityNarrative}${vs}` });
+      const vs = cmp.walkScore ? ` (city avg: ${cmp.walkScore.city}/20)` : "";
+      marketItems.push({ label: "EPA Walkability Index", value: ctx.census?.walkScore != null ? `${ctx.census.walkScore}/20` : "N/A", detail: `${marketContext.walkabilityNarrative}${vs}` });
     }
     if (marketContext.qualificationNarrative && (marketContext.isQCT || marketContext.isLMI)) {
       marketItems.push({ label: "Neighborhood Qualification", value: marketContext.isQCT ? "Qualified Census Tract" : "Low-to-Moderate Income", detail: marketContext.qualificationNarrative });
