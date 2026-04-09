@@ -168,6 +168,10 @@ export interface ParcelData {
   assessedTotal?: number | null;
   taxYear?: string | null;
   priorYearTax?: number | null;
+  // Ownership enrichment
+  ownerName?: string | null;
+  ownerMailingAddress?: string | null;
+  ownerType?: string | null;
 }
 
 /* ── Vacant Property ── */
@@ -191,6 +195,8 @@ export interface VacantProperty {
   status: string | null;
   zoneMatches: VacantPropertyZoneMatch[];
   incentiveCount: number;
+  ownerName: string | null;
+  ownerType: string | null;
 }
 
 export interface DistrictData {
