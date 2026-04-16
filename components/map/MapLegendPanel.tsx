@@ -14,7 +14,6 @@ import {
 } from "@/lib/constants";
 import {
   OWNER_TYPE_LABELS,
-  OWNER_TYPE_COLORS,
   type OwnerType,
 } from "@/lib/owner-classify";
 import { CLASS_CODE_MAP } from "@/lib/parcel-classes";

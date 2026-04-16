@@ -11,9 +11,7 @@ interface MapSnapshotPanelProps {
   zoningInfo: string | null;
   lastClickLat: number | null;
   lastClickLon: number | null;
-  copiedLink: boolean;
   onClose: () => void;
-  onCopyLink: () => void;
   onDrawArea: () => void;
 }
 
@@ -24,9 +22,7 @@ export default function MapSnapshotPanel({
   zoningInfo,
   lastClickLat,
   lastClickLon,
-  copiedLink,
   onClose,
-  onCopyLink,
   onDrawArea,
 }: MapSnapshotPanelProps) {
   return (

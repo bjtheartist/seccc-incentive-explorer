@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
-import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_KEYS_SORTED, ZONE_META, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
+import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_META, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { describeClassCode, describeParcelType } from "@/lib/parcel-classes";
@@ -43,6 +43,7 @@ export default function MapView() {
   const [zoningInfo, setZoningInfo] = useState<string | null>(null);
   const [areaStats, setAreaStats] = useState<AreaStats>(DEFAULT_STATS);
   const [snapshotLabel, setSnapshotLabel] = useState("Chicago (default)");
+  const [copiedLink, setCopiedLink] = useState(false);
   const [expandedZone, setExpandedZone] = useState<string | null>(null);
 
   // Preset state
@@ -57,7 +58,6 @@ export default function MapView() {
   const [lastClickLat, setLastClickLat] = useState<number | null>(null);
   const [lastClickLon, setLastClickLon] = useState<number | null>(null);
   const [allPrograms, setAllPrograms] = useState<Program[]>([]);
-  const [copiedLink, setCopiedLink] = useState(false);
   const [parcelsVisible, setParcelsVisible] = useState(false);
   const parcelsAbortRef = useRef<AbortController | null>(null);
   const parcelsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1444,17 +1444,7 @@ export default function MapView() {
           zoningInfo={zoningInfo}
           lastClickLat={lastClickLat}
           lastClickLon={lastClickLon}
-          copiedLink={copiedLink}
           onClose={() => setSnapshotOpen(false)}
-          onCopyLink={() => {
-            if (lastClickLat && lastClickLon) {
-              const url = `${window.location.origin}/report?instant=true&lat=${lastClickLat.toFixed(5)}&lon=${lastClickLon.toFixed(5)}&addr=${encodeURIComponent(snapshotLabel)}`;
-              navigator.clipboard.writeText(url).then(() => {
-                setCopiedLink(true);
-                setTimeout(() => setCopiedLink(false), 2000);
-              });
-            }
-          }}
           onDrawArea={() => {
             const draw = drawRef.current;
             if (!draw) return;
