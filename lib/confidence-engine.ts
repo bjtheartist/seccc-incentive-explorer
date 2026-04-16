@@ -276,7 +276,7 @@ export function computeTopActions(
     const contact = result.program.contacts?.[0];
     if (contact?.phone) {
       actions.push({
-        label: `Call ${contact.abbreviation} about ${result.program.name}`,
+        label: `Call ${contact.agency || contact.abbreviation} about ${result.program.name}`,
         type: "call",
         programId: result.programId,
         contact,

@@ -40,6 +40,8 @@ function rowsToGeoJSON(rows: any[]): GeoJSON.FeatureCollection {
             ? JSON.parse(r.zone_matches)
             : r.zone_matches,
         incentiveCount: r.incentive_count,
+        ownerName: r.owner_name || null,
+        ownerType: r.owner_type || null,
       },
     })),
   };
@@ -47,30 +49,58 @@ function rowsToGeoJSON(rows: any[]): GeoJSON.FeatureCollection {
 
 export async function GET(request: NextRequest) {
   const boundsParam = request.nextUrl.searchParams.get("bounds");
+  const polygonParam = request.nextUrl.searchParams.get("polygon");
   const typeFilter = request.nextUrl.searchParams.get("type");
   const sourceFilter = request.nextUrl.searchParams.get("source");
+  const ownerTypeFilter = request.nextUrl.searchParams.get("ownerType");
   const limitParam = request.nextUrl.searchParams.get("limit");
-  const limit = Math.min(parseInt(limitParam || "500", 10) || 500, 2000);
 
-  if (!boundsParam) {
+  if (!boundsParam && !polygonParam) {
     return NextResponse.json(
-      { error: "bounds parameter is required (west,south,east,north)" },
+      { error: "bounds or polygon parameter is required" },
       { status: 400 }
     );
   }
 
-  const parts = boundsParam.split(",").map(Number);
-  if (parts.length !== 4 || parts.some(isNaN)) {
-    return NextResponse.json(
-      { error: "bounds must be 4 comma-separated numbers: west,south,east,north" },
-      { status: 400 }
-    );
+  // Validate polygon JSON if provided
+  if (polygonParam) {
+    try {
+      const parsed = JSON.parse(polygonParam);
+      if (parsed.type !== "Polygon" || !Array.isArray(parsed.coordinates)) {
+        return NextResponse.json(
+          { error: "polygon must be a GeoJSON Polygon geometry" },
+          { status: 400 }
+        );
+      }
+    } catch {
+      return NextResponse.json(
+        { error: "polygon must be valid JSON" },
+        { status: 400 }
+      );
+    }
   }
 
-  const [west, south, east, north] = parts;
+  // Polygon mode: no limit (return all matching). Bounds mode: default 500, max 2000.
+  const limit = polygonParam
+    ? 10000
+    : Math.min(parseInt(limitParam || "500", 10) || 500, 2000);
 
-  // Round to 2 decimal places for cache key
-  const cacheKey = `vacant:${roundCoord(west, 2)}:${roundCoord(south, 2)}:${roundCoord(east, 2)}:${roundCoord(north, 2)}:${typeFilter || "all"}:${sourceFilter || "all"}`;
+  let west = 0, south = 0, east = 0, north = 0;
+  if (boundsParam) {
+    const parts = boundsParam.split(",").map(Number);
+    if (parts.length !== 4 || parts.some(isNaN)) {
+      return NextResponse.json(
+        { error: "bounds must be 4 comma-separated numbers: west,south,east,north" },
+        { status: 400 }
+      );
+    }
+    [west, south, east, north] = parts;
+  }
+
+  // Cache key
+  const cacheKey = polygonParam
+    ? `vacant:poly:${polygonParam.length}:${typeFilter || "all"}:${ownerTypeFilter || "all"}`
+    : `vacant:${roundCoord(west, 2)}:${roundCoord(south, 2)}:${roundCoord(east, 2)}:${roundCoord(north, 2)}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}`;
 
   const sql = getSQL();
 
@@ -78,52 +108,105 @@ export async function GET(request: NextRequest) {
     // Try database first
     if (sql) {
       try {
-        // Use tagged template syntax for Neon driver
-        if (typeFilter && sourceFilter) {
-          const rows = await sql`
-            SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                   zoning_class, square_feet, status, zone_matches, incentive_count
-            FROM vacant_properties
-            WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
-              AND property_type = ${typeFilter}
-              AND source = ${sourceFilter}
-            ORDER BY incentive_count DESC
-            LIMIT ${limit}
-          `;
-          return rowsToGeoJSON(rows);
-        } else if (typeFilter) {
-          const rows = await sql`
-            SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                   zoning_class, square_feet, status, zone_matches, incentive_count
-            FROM vacant_properties
-            WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
-              AND property_type = ${typeFilter}
-            ORDER BY incentive_count DESC
-            LIMIT ${limit}
-          `;
-          return rowsToGeoJSON(rows);
-        } else if (sourceFilter) {
-          const rows = await sql`
-            SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                   zoning_class, square_feet, status, zone_matches, incentive_count
-            FROM vacant_properties
-            WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
-              AND source = ${sourceFilter}
-            ORDER BY incentive_count DESC
-            LIMIT ${limit}
-          `;
-          return rowsToGeoJSON(rows);
+        let rows;
+
+        if (polygonParam) {
+          // ── Polygon query mode ──
+          const polygonJson = polygonParam;
+          if (ownerTypeFilter && typeFilter) {
+            rows = await sql`
+              SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                     zoning_class, square_feet, status, zone_matches, incentive_count,
+                     owner_name, owner_type
+              FROM vacant_properties
+              WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${polygonJson}), 4326)::geography)
+                AND property_type = ${typeFilter}
+                AND owner_type = ${ownerTypeFilter}
+              ORDER BY incentive_count DESC
+              LIMIT ${limit}
+            `;
+          } else if (ownerTypeFilter) {
+            rows = await sql`
+              SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                     zoning_class, square_feet, status, zone_matches, incentive_count,
+                     owner_name, owner_type
+              FROM vacant_properties
+              WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${polygonJson}), 4326)::geography)
+                AND owner_type = ${ownerTypeFilter}
+              ORDER BY incentive_count DESC
+              LIMIT ${limit}
+            `;
+          } else if (typeFilter) {
+            rows = await sql`
+              SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                     zoning_class, square_feet, status, zone_matches, incentive_count,
+                     owner_name, owner_type
+              FROM vacant_properties
+              WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${polygonJson}), 4326)::geography)
+                AND property_type = ${typeFilter}
+              ORDER BY incentive_count DESC
+              LIMIT ${limit}
+            `;
+          } else {
+            rows = await sql`
+              SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                     zoning_class, square_feet, status, zone_matches, incentive_count,
+                     owner_name, owner_type
+              FROM vacant_properties
+              WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${polygonJson}), 4326)::geography)
+              ORDER BY incentive_count DESC
+              LIMIT ${limit}
+            `;
+          }
         } else {
-          const rows = await sql`
-            SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                   zoning_class, square_feet, status, zone_matches, incentive_count
-            FROM vacant_properties
-            WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
-            ORDER BY incentive_count DESC
-            LIMIT ${limit}
-          `;
-          return rowsToGeoJSON(rows);
+          // ── Bounds query mode ──
+          if (ownerTypeFilter && typeFilter) {
+            rows = await sql`
+              SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                     zoning_class, square_feet, status, zone_matches, incentive_count,
+                     owner_name, owner_type
+              FROM vacant_properties
+              WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
+                AND property_type = ${typeFilter}
+                AND owner_type = ${ownerTypeFilter}
+              ORDER BY incentive_count DESC
+              LIMIT ${limit}
+            `;
+          } else if (ownerTypeFilter) {
+            rows = await sql`
+              SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                     zoning_class, square_feet, status, zone_matches, incentive_count,
+                     owner_name, owner_type
+              FROM vacant_properties
+              WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
+                AND owner_type = ${ownerTypeFilter}
+              ORDER BY incentive_count DESC
+              LIMIT ${limit}
+            `;
+          } else if (typeFilter) {
+            rows = await sql`
+              SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                     zoning_class, square_feet, status, zone_matches, incentive_count,
+                     owner_name, owner_type
+              FROM vacant_properties
+              WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
+                AND property_type = ${typeFilter}
+              ORDER BY incentive_count DESC
+              LIMIT ${limit}
+            `;
+          } else {
+            rows = await sql`
+              SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                     zoning_class, square_feet, status, zone_matches, incentive_count,
+                     owner_name, owner_type
+              FROM vacant_properties
+              WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
+              ORDER BY incentive_count DESC
+              LIMIT ${limit}
+            `;
+          }
         }
+        return rowsToGeoJSON(rows);
       } catch (err) {
         console.warn("[vacant] DB query failed, falling back to static:", err);
       }
@@ -139,9 +222,13 @@ export async function GET(request: NextRequest) {
       const filtered = data.features.filter((f) => {
         if (f.geometry.type !== "Point") return false;
         const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates;
-        if (lng < west || lng > east || lat < south || lat > north) return false;
+        // For polygon mode without DB, skip spatial filtering (return all)
+        if (!polygonParam) {
+          if (lng < west || lng > east || lat < south || lat > north) return false;
+        }
         if (typeFilter && f.properties?.propertyType !== typeFilter) return false;
         if (sourceFilter && f.properties?.source !== sourceFilter) return false;
+        if (ownerTypeFilter && f.properties?.ownerType !== ownerTypeFilter) return false;
         return true;
       });
 

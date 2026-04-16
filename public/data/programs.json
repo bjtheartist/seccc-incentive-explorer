@@ -1007,7 +1007,7 @@
       "Business plan for industrial or manufacturing operations",
       "Building permits for new construction or renovations"
     ],
-    "contact": "City of Chicago DPD: (312) 744-4190",
+    "contact": "City of Chicago Department of Planning and Development: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/industrial-corridors.html",
     "contacts": [
       {
@@ -1023,6 +1023,6 @@
     ],
     "lastVerifiedAt": "2025-10-01",
     "benefitRange": "Zoning protections + infrastructure priority",
-    "fastestConfirmingStep": "Call DPD at (312) 744-4190 to verify Industrial Corridor status"
+    "fastestConfirmingStep": "Call Department of Planning and Development at (312) 744-4190 to verify Industrial Corridor status"
   }
 ]
