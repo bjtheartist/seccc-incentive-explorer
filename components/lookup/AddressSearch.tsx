@@ -2,14 +2,14 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, ArrowRight } from "lucide-react";
+import { Search } from "lucide-react";
 import { IncentiveReport } from "./IncentiveReport";
 import {
   findBusinessByAddress,
   findBusinessByName,
   businessToLookupResult,
 } from "@/lib/business-lookup";
-import { checkZones, enrichEmployment } from "@/lib/zone-check";
+import { enrichEmployment } from "@/lib/zone-check";
 import type { Business, LookupResult, Program } from "@/lib/types";
 import { cachedFetch } from "@/lib/fetch-cache";
 

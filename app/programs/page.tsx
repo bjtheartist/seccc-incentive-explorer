@@ -40,11 +40,6 @@ function ProgramsContent() {
       .then(setPrograms);
   }, []);
 
-  // Sync URL param on mount
-  useEffect(() => {
-    if (industryParam) setIndustryFilter(industryParam);
-  }, [industryParam]);
-
   const selectedIndustry = industryFilter
     ? getIndustryById(industryFilter)
     : null;

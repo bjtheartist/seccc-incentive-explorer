@@ -53,7 +53,7 @@ async function trimApiCache() {
         await cache.delete(keys[i]);
       }
     }
-  } catch (_) {
+  } catch (_e) {
     // Silently ignore trim errors
   }
 }
@@ -76,7 +76,7 @@ async function cacheFirst(request) {
       cache.put(request, networkResponse.clone());
     }
     return networkResponse;
-  } catch (error) {
+  } catch (_error) {
     // If both cache and network fail, try cache one more time (offline scenario)
     const fallback = await caches.match(request);
     if (fallback) {
@@ -129,7 +129,7 @@ async function staleWhileRevalidate(request) {
         headers: { 'Content-Type': 'application/json' },
       }
     );
-  } catch (_) {
+  } catch (_e2) {
     return new Response(
       JSON.stringify({ error: 'Network request failed and no cached data available' }),
       {
@@ -142,7 +142,7 @@ async function staleWhileRevalidate(request) {
 
 // --- Service Worker lifecycle ---
 
-self.addEventListener('install', (event) => {
+self.addEventListener('install', (_event) => {
   // Activate immediately without waiting for existing clients to close
   self.skipWaiting();
 });

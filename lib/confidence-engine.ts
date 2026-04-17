@@ -4,7 +4,6 @@ import type {
   EligibilityConfidence,
   ProgramCheckResult,
   TopAction,
-  ProgramContact,
   ExecutiveSummary,
   ParcelData,
 } from "./types";

@@ -34,7 +34,7 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
   const [loading, setLoading] = useState(true);
   const [loadingStep, setLoadingStep] = useState(0);
   const [zones, setZones] = useState<Record<string, boolean>>({});
-  const [zoneNames, setZoneNames] = useState<Record<string, string>>({});
+  const [_zoneNames, setZoneNames] = useState<Record<string, string>>({});
   const [zoneCount, setZoneCount] = useState(0);
   const [programs, setPrograms] = useState<ProgramCheckResult[]>([]);
   const [topActions, setTopActions] = useState<TopAction[]>([]);

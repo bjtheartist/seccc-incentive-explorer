@@ -5,7 +5,7 @@ import { ZoneResultCard } from "./ZoneResultCard";
 import { ZONE_KEYS, ZONE_COLORS, ZONE_LABELS } from "@/lib/constants";
 import type { LookupResult, Program } from "@/lib/types";
 import { Building2, MapPin, Copy, Mail, Check, Layers, TrendingDown, Users, FileText, Landmark, ExternalLink, Phone } from "lucide-react";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { EmailReportDialog } from "./EmailReportDialog";
 
 function getUnemploymentColor(rateStr: string): string {
@@ -25,7 +25,7 @@ interface IncentiveReportProps {
 export function IncentiveReport({ result, programs }: IncentiveReportProps) {
   const [copied, setCopied] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
-  const programMap = new Map(programs.map((p) => [p.zoneKey, p]));
+  const programMap = useMemo(() => new Map(programs.map((p) => [p.zoneKey, p])), [programs]);
 
   const buildReportText = useCallback(() => {
     const name = result.business?.name || "Address Lookup";

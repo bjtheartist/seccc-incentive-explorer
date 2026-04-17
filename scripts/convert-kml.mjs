@@ -43,7 +43,7 @@ const KML_FILES = [
 const OUT_DIR = "public/data/zones";
 mkdirSync(OUT_DIR, { recursive: true });
 
-for (const { file, output, name } of KML_FILES) {
+for (const { file, output, name: _name } of KML_FILES) {
   const path = `${KML_DIR}/${file}`;
   console.log(`Processing: ${file}`);
 
@@ -86,7 +86,7 @@ for (const { file, output, name } of KML_FILES) {
             });
           }
         }
-      } catch (e) {
+      } catch (_e) {
         // Some geometries may be invalid; skip
       }
     }

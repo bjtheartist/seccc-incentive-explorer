@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { encodeCheckState, decodeCheckState } from "@/lib/url-state";
+import { decodeCheckState } from "@/lib/url-state";
 
 function CheckRedirect() {
   const searchParams = useSearchParams();

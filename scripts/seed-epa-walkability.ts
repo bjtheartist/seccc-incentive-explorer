@@ -135,7 +135,7 @@ async function updateDatabase(tractScores: Map<string, number>) {
   console.log(`\nUpdating ${tractScores.size} tracts in database...`);
 
   let updated = 0;
-  let notFound = 0;
+  let _notFound = 0;
 
   for (const [tractId, score] of tractScores) {
     const result = await sql`
@@ -145,7 +145,7 @@ async function updateDatabase(tractScores: Map<string, number>) {
     `;
     if (result.length === 0) {
       // neon returns empty array for UPDATE with no RETURNING — check via count
-      notFound++;
+      _notFound++;
     }
     updated++;
     if (updated % 100 === 0) {

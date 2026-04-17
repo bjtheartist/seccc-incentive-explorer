@@ -250,7 +250,7 @@ async function fetch311VacantBuildings(): Promise<Sr311Record[]> {
         headers: socrataHeaders(),
         signal: AbortSignal.timeout(120000),
       });
-    } catch (err) {
+    } catch (_err) {
       // Retry once on timeout
       console.warn(`  Timeout at offset ${offset}, retrying...`);
       await new Promise((r) => setTimeout(r, 3000));

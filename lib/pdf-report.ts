@@ -1,13 +1,12 @@
 import { jsPDF } from "jspdf";
-import { ZONE_KEYS, ZONE_LABELS, ZONE_COLORS } from "./constants";
+import { ZONE_KEYS, ZONE_COLORS } from "./constants";
 import type { LookupResult, Program } from "./types";
-import type { GeneratedReport, DataSourceCitation } from "./report-engine";
+import type { GeneratedReport } from "./report-engine";
 
 /* ── Brand Colors ── */
 const NAVY = "#0C1B33";
 const BLUE = "#2563EB";
 const WHITE = "#FFFFFF";
-const OFF_WHITE = "#FAF9F6";
 const LIGHT_GRAY = "#9CA3AF";
 const MEDIUM_GRAY = "#6B7280";
 const GREEN = "#16A34A";
@@ -84,7 +83,6 @@ function _buildReport(
 ): { doc: jsPDF; slug: string } {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const programMap = new Map(programs.map((p) => [p.zoneKey, p]));
-  const allPrograms = new Map(programs.map((p) => [p.id, p]));
 
   const name = result.business?.name || "Address Lookup";
   const address = result.business

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
-import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_META, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
+import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { describeClassCode, describeParcelType } from "@/lib/parcel-classes";
@@ -15,9 +15,9 @@ import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
 import { cachedFetch } from "@/lib/fetch-cache";
 import {
-  ZONE_FILES, POINT_ZONE_KEYS, isZoneDefaultHidden, HEAVY_COVERAGE_KEYS,
+  POINT_ZONE_KEYS, HEAVY_COVERAGE_KEYS,
   COMMUNITY_AREAS_URL, CHICAGO_ZONING_URL, EMPTY_FC, PARCELS_QUERY_BASE,
-  buildZoningColorExpression, CHI_BOUNDS, isFeatureInChicago, fetchZoneGeoJSON,
+  fetchZoneGeoJSON,
   POI_LAYERS, jsonToGeoJSON, MAP_PRESETS,
   type AreaStats, DEFAULT_STATS,
 } from "./map-helpers";
@@ -43,7 +43,7 @@ export default function MapView() {
   const [zoningInfo, setZoningInfo] = useState<string | null>(null);
   const [areaStats, setAreaStats] = useState<AreaStats>(DEFAULT_STATS);
   const [snapshotLabel, setSnapshotLabel] = useState("Chicago (default)");
-  const [copiedLink, setCopiedLink] = useState(false);
+  const [, setCopiedLink] = useState(false);
   const [expandedZone, setExpandedZone] = useState<string | null>(null);
 
   // Preset state
@@ -191,7 +191,7 @@ export default function MapView() {
 
   // Store loadCensusForPoint in a ref so the map.on("load") closure can use it
   const loadCensusRef = useRef(loadCensusForPoint);
-  loadCensusRef.current = loadCensusForPoint;
+  useEffect(() => { loadCensusRef.current = loadCensusForPoint; }, [loadCensusForPoint]);
 
   // Handle click for location zones + top programs (with parcel boost)
   const handleMapClick = useCallback(
@@ -222,10 +222,11 @@ export default function MapView() {
     [allPrograms]
   );
   const lastClickRef = useRef(handleMapClick);
-  lastClickRef.current = handleMapClick;
+  useEffect(() => { lastClickRef.current = handleMapClick; }, [handleMapClick]);
 
   /* ── Initial census load ──────────────── */
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCensusForPoint(41.744, -87.5775, "Chicago (default)");
   }, [loadCensusForPoint]);
 
@@ -236,7 +237,7 @@ export default function MapView() {
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     if (!token) {
       console.error("[MapView] NEXT_PUBLIC_MAPBOX_TOKEN is not set");
-      setLoaded(true); // Show the UI without crashing
+      setLoaded(true); // eslint-disable-line react-hooks/set-state-in-effect -- Show the UI without crashing
       return;
     }
     mapboxgl.accessToken = token;
@@ -981,6 +982,7 @@ export default function MapView() {
         const cfg = POI_LAYERS[key];
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         cachedFetch<any>(cfg.url)
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           .then((raw: any) => {
             if (!mapRef.current) return;
             const data =
@@ -1184,7 +1186,7 @@ export default function MapView() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
-    setIsMobile(mq.matches);
+    setIsMobile(mq.matches); // eslint-disable-line react-hooks/set-state-in-effect
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
@@ -1193,7 +1195,7 @@ export default function MapView() {
   // On mobile, default legend closed and snapshot closed
   useEffect(() => {
     if (isMobile) {
-      setLegendOpen(false);
+      setLegendOpen(false); // eslint-disable-line react-hooks/set-state-in-effect
       setSnapshotOpen(false);
     }
   }, [isMobile]);

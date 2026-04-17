@@ -15,7 +15,7 @@ export function NotVerifiedSection({ items }: NotVerifiedSectionProps) {
         <AlertTriangle className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
         <div>
           <p className="text-[10px] font-mono-bureau tracking-[0.1em] uppercase text-amber-600 mb-1.5">
-            What we didn't verify
+            What we didn&apos;t verify
           </p>
           <ul className="space-y-1">
             {items.map((item, i) => (

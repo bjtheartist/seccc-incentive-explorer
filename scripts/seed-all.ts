@@ -200,6 +200,7 @@ async function step5_verify() {
     } else {
       console.log("  No zones found at downtown (may be expected for SSA-clipped data)");
     }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (err: any) {
     console.log(`  Spatial query failed: ${err.message}`);
   }

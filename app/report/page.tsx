@@ -35,7 +35,7 @@ import type {
   WizardStepConfig,
 } from "@/lib/report-wizard-config";
 import { generateReportData } from "@/lib/report-engine";
-import type { GeneratedReport, ReportCensusData, ReportZoningData, ActionRoadmapItem, DataSourceCitation } from "@/lib/report-engine";
+import type { GeneratedReport, ReportCensusData, ReportZoningData, ActionRoadmapItem } from "@/lib/report-engine";
 import { formatDollars } from "@/lib/report-engine";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
@@ -45,7 +45,6 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import type { EligibilityConfidence } from "@/lib/types";
 import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { cachedFetch } from "@/lib/fetch-cache";
@@ -2085,7 +2084,7 @@ function ComparisonDisplay({
   reportA,
   reportB,
   onStartOver,
-  wizardState: reportWizardState,
+  wizardState: _reportWizardState,
 }: {
   reportA: GeneratedReport;
   reportB: GeneratedReport;
