@@ -49,8 +49,7 @@ export async function POST(req: NextRequest) {
               </p>
             </div>
             <p style="font-size: 13px; color: #6B7280; margin: 24px 0 0; line-height: 1.5;">
-              Need help? Contact the Southeast Chicago Chamber of Commerce at (773) 721-1999 or visit
-              <a href="https://www.secchicago.org" style="color: #2563EB;">secchicago.org</a>.
+              Need help? Contact Billy at <a href="mailto:billyjoseph243@gmail.com" style="color: #2563EB;">billyjoseph243@gmail.com</a> or (616) 589-5598.
             </p>
           </div>
           <div style="background: #F8FAFC; padding: 16px 24px; text-align: center; border-top: 1px solid #E5E7EB;">
