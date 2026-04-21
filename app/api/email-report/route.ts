@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 
 export async function POST(req: NextRequest) {
   try {
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+    if (!process.env.RESEND_API_KEY) {
       return NextResponse.json(
         { error: "Email service not configured" },
         { status: 503 }
@@ -20,23 +20,15 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const transporter = nodemailer.createTransport({
-      host: "smtp.gmail.com",
-      port: 465,
-      secure: true,
-      auth: {
-        user: process.env.GMAIL_USER,
-        pass: process.env.GMAIL_APP_PASSWORD,
-      },
-    });
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
     const subject = businessName
       ? `Incentive Report — ${businessName}`
       : `Chicago Incentive Report — ${address || "Your Location"}`;
 
-    await transporter.sendMail({
-      from: `"Chicago Incentive Explorer" <${process.env.GMAIL_USER}>`,
-      to: email,
+    await resend.emails.send({
+      from: "Chicago Incentive Explorer <reports@chicagoincentiveexplorer.com>",
+      to: [email],
       subject,
       html: `
         <div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #0C1B33;">
@@ -72,7 +64,6 @@ export async function POST(req: NextRequest) {
         {
           filename: filename || "chicago-incentive-report.pdf",
           content: Buffer.from(pdfBase64, "base64"),
-          contentType: "application/pdf",
         },
       ],
     });

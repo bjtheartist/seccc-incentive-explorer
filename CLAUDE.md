@@ -92,6 +92,7 @@ npm run db:reset     # Migrate + seed (full reset)
 - **Map:** Mapbox GL with 13 zone layers (GeoJSON or vector tiles), search bar overlay
 - **Search:** Fuse.js for fuzzy business name matching
 - **PDF:** jsPDF for report generation (`lib/pdf-report.ts`)
+- **Email:** Resend SDK for transactional report emails with PDF attachments
 - **Validation:** Zod 4 for runtime schema validation (`lib/schemas.ts`)
 - **Caching:** Upstash Redis (optional, graceful degradation)
 
@@ -150,5 +151,4 @@ Zone layers support two rendering paths:
 | `ADMIN_SECRET` | No | Access key for `/admin` control room and `/api/health`. Default: `seccc-control-2026`. |
 | `UPSTASH_REDIS_REST_URL` | No | Upstash Redis URL for server-side response caching. |
 | `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis token. If absent, caching is skipped gracefully. |
-| `GMAIL_USER` | No | Gmail address for sending report emails (e.g. `you@gmail.com`). |
-| `GMAIL_APP_PASSWORD` | No | Gmail App Password (16-char, requires 2-Step Verification). If absent, email feature returns 503. |
+| `RESEND_API_KEY` | No | Resend API key for sending report emails (starts with `re_`). If absent, email feature returns 503. |
