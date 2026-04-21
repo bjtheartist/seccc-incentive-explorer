@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
       : `Chicago Incentive Report — ${address || "Your Location"}`;
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "Chicago Incentive Explorer <onboarding@resend.dev>",
+      from: "Chicago Incentive Explorer <reports@chicagoincentiveexplorer.com>",
       to: [email],
       subject,
       html: `
