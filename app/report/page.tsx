@@ -2196,8 +2196,15 @@ function ReportDisplay({
     return entries;
   }, [report]);
 
+  const [downloadGateOpen, setDownloadGateOpen] = useState(false);
+
   const handlePrint = () => {
+    setDownloadGateOpen(true);
+  };
+
+  const handleDownloadAfterCapture = () => {
     generateReportPdf(report);
+    setDownloadGateOpen(false);
   };
 
   const handleShareReport = useCallback(() => {
@@ -2958,6 +2965,15 @@ function ReportDisplay({
           )}
         </div>
       </div>
+      {/* Download Lead Capture */}
+      {downloadGateOpen && (
+        <DownloadGateModal
+          reportAddress={report.metadata?.address}
+          reportTitle={report.title}
+          onDownload={handleDownloadAfterCapture}
+          onClose={() => setDownloadGateOpen(false)}
+        />
+      )}
       {/* Email Report Dialog */}
       {emailDialogOpen && (
         <EmailReportModal
@@ -3065,6 +3081,128 @@ function EmailReportModal({
               <><Mail className="w-4 h-4" /> Send Report</>
             )}
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Download Gate Modal ──────────────────────────────────────────────
+
+function DownloadGateModal({
+  reportAddress,
+  reportTitle,
+  onDownload,
+  onClose,
+}: {
+  reportAddress?: string;
+  reportTitle?: string;
+  onDownload: () => void;
+  onClose: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [status, setStatus] = useState<"idle" | "saving" | "done">("idle");
+
+  const isValid = name.trim().length > 0 && email.includes("@") && zipCode.trim().length >= 5;
+
+  const handleSubmit = async () => {
+    if (!isValid) return;
+    setStatus("saving");
+
+    try {
+      await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: name.trim(),
+          email: email.trim(),
+          zipCode: zipCode.trim(),
+          reportAddress,
+          reportTitle,
+        }),
+      });
+    } catch {
+      // Still allow download even if lead save fails
+    }
+
+    setStatus("done");
+    onDownload();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 print:hidden">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-white border border-[#0C1B33]/10 shadow-2xl overflow-hidden">
+        <div className="flex items-center justify-between px-6 pt-6 pb-2">
+          <div>
+            <h3 className="text-sm font-medium text-[#0C1B33]">Download Report</h3>
+            <p className="font-mono-bureau text-[10px] text-[#0C1B33]/40 tracking-wide uppercase mt-0.5">
+              Enter your details to download
+            </p>
+          </div>
+          <button onClick={onClose} className="w-7 h-7 flex items-center justify-center hover:bg-[#0C1B33]/5 transition-colors">
+            <span className="text-[#0C1B33]/40 text-lg">&times;</span>
+          </button>
+        </div>
+        <div className="px-6 pb-6 pt-3 space-y-3">
+          <div>
+            <label className="block font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 mb-1.5">
+              Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your name"
+              disabled={status !== "idle"}
+              className="w-full bg-[#FAF9F6] border border-[#0C1B33]/10 px-4 py-2.5 text-sm text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#2563EB]/50 disabled:opacity-50 font-mono-bureau"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="block font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 mb-1.5">
+              Email
+            </label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="name@example.com"
+              disabled={status !== "idle"}
+              className="w-full bg-[#FAF9F6] border border-[#0C1B33]/10 px-4 py-2.5 text-sm text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#2563EB]/50 disabled:opacity-50 font-mono-bureau"
+            />
+          </div>
+          <div>
+            <label className="block font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 mb-1.5">
+              Zip Code
+            </label>
+            <input
+              type="text"
+              value={zipCode}
+              onChange={(e) => setZipCode(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && isValid && status === "idle" && handleSubmit()}
+              placeholder="60617"
+              maxLength={10}
+              disabled={status !== "idle"}
+              className="w-full bg-[#FAF9F6] border border-[#0C1B33]/10 px-4 py-2.5 text-sm text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#2563EB]/50 disabled:opacity-50 font-mono-bureau"
+            />
+          </div>
+          <button
+            onClick={handleSubmit}
+            disabled={!isValid || status !== "idle"}
+            className="w-full flex items-center justify-center gap-2 py-3 mt-1 bg-[#0C1B33] hover:bg-[#0C1B33]/80 disabled:opacity-40 text-white transition-all font-mono-bureau text-[11px] tracking-wide uppercase"
+          >
+            {status === "saving" ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> Preparing...</>
+            ) : (
+              <><Printer className="w-4 h-4" /> Download PDF</>
+            )}
+          </button>
+          <p className="text-[9px] text-[#0C1B33]/30 text-center leading-snug">
+            Your info helps us understand who we&apos;re serving. We won&apos;t spam you.
+          </p>
         </div>
       </div>
     </div>
