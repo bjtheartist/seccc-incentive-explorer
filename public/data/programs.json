@@ -1024,5 +1024,66 @@
     "lastVerifiedAt": "2025-10-01",
     "benefitRange": "Zoning protections + infrastructure priority",
     "fastestConfirmingStep": "Call Department of Planning and Development at (312) 744-4190 to verify Industrial Corridor status"
+  },
+  {
+    "id": "ccsa",
+    "name": "Commercial Corridor Storefront Activation (CCSA)",
+    "level": "City",
+    "zoneKey": "ccsa",
+    "summary": "The City of Chicago is investing $30.5 million across 12 commercial corridors over 3 years through the CCSA program. It provides reimbursable grants for capital improvements to vacant and existing commercial spaces, plus free wraparound technical assistance at no cost to corridor businesses.",
+    "whoQualifies": "Business owners, property owners, or nonprofits in good standing with the State of Illinois and City of Chicago whose physical property is located within an approved CCSA corridor boundary. Applicant must have site control (ownership or permission from property owner).",
+    "benefits": [
+      "Reimbursable grants for capital improvements to storefronts",
+      "Covers vacant and existing commercial spaces",
+      "Free wraparound technical assistance for corridor businesses",
+      "No cost to participate in technical assistance programs",
+      "Grants awarded quarterly on a rolling basis"
+    ],
+    "howToApply": [
+      "Verify your property is within one of the 12 approved CCSA corridor boundaries",
+      "Visit Chicago.gov/CCSA for application details",
+      "Contact Program Administrator Allies for Community Business for grant questions",
+      "Connect with your Corridor Lead Agency for technical assistance",
+      "Submit application — accepted on a rolling basis, awarded quarterly"
+    ],
+    "requiredDocs": [
+      "Proof of business ownership or nonprofit status",
+      "Good standing verification with State of Illinois and City of Chicago",
+      "Proof of site control (ownership or property owner permission)",
+      "Eligible business type verification (see website for excluded types)",
+      "Capital improvement project description and budget"
+    ],
+    "contact": "Allies for Community Business: (312) 275-3000",
+    "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/ccsa.html",
+    "contacts": [
+      {
+        "agency": "Allies for Community Business (Program Administrator)",
+        "abbreviation": "A4CB",
+        "phone": "(312) 275-3000",
+        "email": "granthelp@a4cb.org",
+        "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/ccsa.html"
+      },
+      {
+        "agency": "City of Chicago Department of Planning and Development",
+        "abbreviation": "DPD",
+        "phone": "(312) 744-4190",
+        "url": "https://www.chicago.gov/city/en/depts/dcd.html"
+      },
+      {
+        "agency": "Claretian Associates (South Chicago Corridor Lead)",
+        "abbreviation": "Claretian",
+        "phone": "",
+        "url": ""
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Property must be within one of 12 approved CCSA corridor boundaries", "verifiedBy": "location", "required": true },
+      { "criterion": "businessType", "description": "Business type must be eligible (see website for excluded types)", "verifiedBy": "survey", "required": true },
+      { "criterion": "siteControl", "description": "Applicant must own the property or have permission from the property owner", "verifiedBy": "manual", "required": true },
+      { "criterion": "goodStanding", "description": "Must be in good standing with State of Illinois and City of Chicago", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2026-04-23",
+    "benefitRange": "Reimbursable grants (from $30.5M total fund)",
+    "fastestConfirmingStep": "Contact Allies for Community Business at granthelp@a4cb.org or (312) 275-3000 to confirm corridor eligibility"
   }
 ]

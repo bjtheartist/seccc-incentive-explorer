@@ -21,6 +21,7 @@ export const ZONE_META: Record<string, ZoneMeta> = {
   qct:                 { isPublic: true, defaultVisible: false, sortOrder: 11, group: "federal" },
   landmarkDistricts:   { isPublic: true, defaultVisible: false, sortOrder: 12, group: "historic" },
   nrhpDistricts:       { isPublic: true, defaultVisible: false, sortOrder: 13, group: "historic" },
+  ccsa:                { isPublic: true, defaultVisible: false, sortOrder: 14, group: "city" },
 };
 
 /** Zone keys sorted by display order. */
@@ -35,6 +36,7 @@ export const ZONE_COLORS: Record<string, string> = {
   stateIncentiveZones: "#d97706",
   ssa: "#16a34a",
   highUnemployment: "#ea580c",
+  ccsa: "#e11d48",
   industrialCorridors: "#64748b",
   microMarketRecovery: "#f59e0b",
   nof: "#10b981",
@@ -51,6 +53,7 @@ export const ZONE_LABELS: Record<string, string> = {
   stateIncentiveZones: "State Incentive Zone (EDGE/REV/MICRO/Data Center)",
   ssa: "Special Service Area",
   highUnemployment: "High Unemployment Zone",
+  ccsa: "CCSA Commercial Corridor",
   industrialCorridors: "Industrial Corridor",
   microMarketRecovery: "Micro Market Recovery",
   nof: "Neighborhood Opportunity Fund",
@@ -70,6 +73,7 @@ export const ZONE_DESCRIPTIONS: Record<string, string> = {
   stateIncentiveZones: "Census tracts eligible for Illinois EDGE (job creation credits), REV (EV/clean energy), MICRO (semiconductor), and Data Center tax incentives.",
   ssa: "Locally funded service areas where businesses self-tax to fund streetscaping, marketing, and security improvements.",
   highUnemployment: "Census tracts with unemployment rates significantly above the national average, triggering additional federal eligibility.",
+  ccsa: "$30.5M city program providing reimbursable grants for storefront capital improvements and free technical assistance across 12 commercial corridors. Applications open March 2026, awarded quarterly.",
   industrialCorridors: "City-designated corridors preserved for manufacturing, logistics, and industrial uses with zoning protections.",
   microMarketRecovery: "City program targeting commercial vacancy in specific corridors with grants for storefront improvements.",
   nof: "City grants for commercial and industrial projects in underinvested neighborhoods on Chicago's South and West Sides.",
@@ -87,6 +91,7 @@ export const ZONE_LEARN_MORE: Record<string, string> = {
   stateIncentiveZones: "https://dceo.illinois.gov/expandrelocate/incentives/edgetaxcredit.html",
   ssa: "https://www.chicago.gov/city/en/depts/dcd/provdrs/sba.html",
   highUnemployment: "https://www.bls.gov/lau/",
+  ccsa: "https://www.chicago.gov/city/en/depts/dcd/supp_info/ccsa.html",
   industrialCorridors: "https://www.chicago.gov/city/en/depts/dcd/supp_info/industrial-corridors.html",
   microMarketRecovery: "https://www.chicago.gov/city/en/depts/dcd/provdrs/micro_market_recoveryprogram.html",
   nof: "https://www.chicago.gov/city/en/depts/dcd/provdrs/nof.html",
@@ -218,6 +223,7 @@ export const ZONE_TILESET_IDS: Record<string, string> = {
   stateIncentiveZones: "",
   ssa: "",
   highUnemployment: "",
+  ccsa: "",
   industrialCorridors: "",
   microMarketRecovery: "",
   nof: "",

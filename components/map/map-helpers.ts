@@ -21,6 +21,7 @@ export const ZONE_FILES: Record<string, string> = {
   industrialCorridors: "industrial-corridors.geojson",
   microMarketRecovery: "micro-market-recovery.geojson",
   nof: "nof-projects.geojson",
+  ccsa: "ccsa-corridors.geojson",
   nmtcEligible: "nmtc-eligible.geojson",
   qct: "qct.geojson",
 };

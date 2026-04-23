@@ -1,0 +1,201 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "South Chicago CCSA Corridor",
+        "corridor_lead": "Claretian Associates",
+        "streets": "91st St (Exchange to Houston); 92nd St (Harbor to Exchange); Commercial Ave (89th to 93rd)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.5560, 41.7310], [-87.5350, 41.7310], [-87.5280, 41.7310],
+          [-87.5280, 41.7280], [-87.5350, 41.7280], [-87.5350, 41.7255],
+          [-87.5510, 41.7255], [-87.5510, 41.7230], [-87.5560, 41.7230],
+          [-87.5560, 41.7200], [-87.5510, 41.7200], [-87.5510, 41.7170],
+          [-87.5560, 41.7170], [-87.5560, 41.7310]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "South Shore CCSA Corridor",
+        "corridor_lead": "South Shore Community Development Corp.",
+        "streets": "71st St (Ridgeland to Paxton)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.6150, 41.7660], [-87.5710, 41.7660],
+          [-87.5710, 41.7635], [-87.6150, 41.7635],
+          [-87.6150, 41.7660]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Chatham CCSA Corridor",
+        "corridor_lead": "Greater Chatham Initiative",
+        "streets": "79th St (Vernon to Cottage Grove)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.6290, 41.7510], [-87.6060, 41.7510],
+          [-87.6060, 41.7490], [-87.6290, 41.7490],
+          [-87.6290, 41.7510]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Roseland CCSA Corridor",
+        "corridor_lead": "Endeleo Institute",
+        "streets": "95th St (Halsted to King)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.6460, 41.7220], [-87.6130, 41.7220],
+          [-87.6130, 41.7195], [-87.6460, 41.7195],
+          [-87.6460, 41.7220]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bronzeville CCSA Corridor",
+        "corridor_lead": "It Takes A Village",
+        "streets": "Cottage Grove Ave (43rd to 50th)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.6080, 41.8170], [-87.6050, 41.8170],
+          [-87.6050, 41.8020], [-87.6080, 41.8020],
+          [-87.6080, 41.8170]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Woodlawn CCSA Corridor",
+        "corridor_lead": "Woodlawn Chamber of Commerce",
+        "streets": "63rd St (Drexel to King); Stony Island Ave (Midway Plaisance to 67th)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.6130, 41.7810], [-87.5980, 41.7810],
+          [-87.5980, 41.7790], [-87.6130, 41.7790],
+          [-87.6130, 41.7810]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Pilsen CCSA Corridor",
+        "corridor_lead": "DishRoulette",
+        "streets": "18th St (Ashland to Morgan)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.6690, 41.8580], [-87.6510, 41.8580],
+          [-87.6510, 41.8560], [-87.6690, 41.8560],
+          [-87.6690, 41.8580]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Little Village CCSA Corridor",
+        "corridor_lead": "Latinos Progresando",
+        "streets": "Cermak Rd (Rockwell to Kedzie); California Ave (California Pink Line to 24th)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.6950, 41.8520], [-87.7060, 41.8520],
+          [-87.7060, 41.8480], [-87.6940, 41.8480],
+          [-87.6940, 41.8430], [-87.6910, 41.8430],
+          [-87.6910, 41.8480], [-87.6950, 41.8480],
+          [-87.6950, 41.8520]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Bridgeport CCSA Corridor",
+        "corridor_lead": "Coalition for a Better Chinese American Community",
+        "streets": "Halsted (32nd to 34th Place); Morgan (31st to 35th)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.6490, 41.8380], [-87.6460, 41.8380],
+          [-87.6460, 41.8310], [-87.6490, 41.8310],
+          [-87.6490, 41.8380]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "McKinley Park CCSA Corridor",
+        "corridor_lead": "McKinley Park Development Council",
+        "streets": "35th St (Leavitt to Ashland); Archer Ave (35th/Archer Orange Line to Damen)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.6830, 41.8310], [-87.6660, 41.8310],
+          [-87.6660, 41.8290], [-87.6830, 41.8290],
+          [-87.6830, 41.8310]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "West Garfield Park CCSA Corridor",
+        "corridor_lead": "Bethel New Life",
+        "streets": "Madison St (Keeler to Kenton); Kostner Ave (Madison to Washington)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.7340, 41.8810], [-87.7250, 41.8810],
+          [-87.7250, 41.8790], [-87.7340, 41.8790],
+          [-87.7340, 41.8810]
+        ]]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "name": "Loop CCSA Corridor",
+        "corridor_lead": "Chicago Loop Alliance",
+        "streets": "State St (Randolph to Jackson)"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[
+          [-87.6290, 41.8830], [-87.6270, 41.8830],
+          [-87.6270, 41.8780], [-87.6290, 41.8780],
+          [-87.6290, 41.8830]
+        ]]
+      }
+    }
+  ]
+}
