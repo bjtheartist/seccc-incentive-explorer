@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { ProgramSchema, safeParseArray } from "@/lib/schemas";
 import { memCached } from "@/lib/redis";
+import type { Program } from "@/lib/types";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 /**
  * GET /api/programs
@@ -9,13 +12,20 @@ import { memCached } from "@/lib/redis";
  * Returns all programs with enhanced fields (contacts, eligibility rules, etc.).
  * DB-first with static JSON fallback.
  */
+async function getStaticPrograms(): Promise<Program[]> {
+  const file = join(process.cwd(), "public", "data", "programs.json");
+  const data = JSON.parse(await readFile(file, "utf8")) as Program[];
+  return safeParseArray(ProgramSchema, data, "programs-static") as Program[];
+}
+
 export async function GET() {
   const sql = getSQL();
   if (!sql) {
-    return NextResponse.json(
-      { error: "Database not configured" },
-      { status: 503 }
-    );
+    return NextResponse.json(await getStaticPrograms(), {
+      headers: {
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+      },
+    });
   }
 
   try {
@@ -66,9 +76,10 @@ export async function GET() {
     });
   } catch (err) {
     console.error("programs API error:", err);
-    return NextResponse.json(
-      { error: "Database query failed" },
-      { status: 500 }
-    );
+    return NextResponse.json(await getStaticPrograms(), {
+      headers: {
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+      },
+    });
   }
 }

@@ -1,19 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { memCached } from "@/lib/redis";
+import type { Stats } from "@/lib/types";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 /**
  * GET /api/stats
  *
  * Returns aggregate stats: business counts, zone coverage, stacking distribution.
  */
+async function getStaticStats(): Promise<Stats> {
+  const file = join(process.cwd(), "public", "data", "stats.json");
+  return JSON.parse(await readFile(file, "utf8")) as Stats;
+}
+
 export async function GET(_request: NextRequest) {
   const sql = getSQL();
   if (!sql) {
-    return NextResponse.json(
-      { error: "Database not configured" },
-      { status: 503 }
-    );
+    return NextResponse.json(await getStaticStats(), {
+      headers: {
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+      },
+    });
   }
 
   try {
@@ -45,9 +54,10 @@ export async function GET(_request: NextRequest) {
     });
   } catch (err) {
     console.error("stats API error:", err);
-    return NextResponse.json(
-      { error: "Database query failed" },
-      { status: 500 }
-    );
+    return NextResponse.json(await getStaticStats(), {
+      headers: {
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+      },
+    });
   }
 }

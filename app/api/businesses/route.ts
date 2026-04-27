@@ -1,13 +1,82 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { cached, roundCoord } from "@/lib/redis";
+import type { Business } from "@/lib/types";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 /**
  * GET /api/businesses?search=&lat=&lon=&radius=
  *
  * Business list with optional full-text search or proximity query.
- * Falls through to 503 if DATABASE_URL is not set.
+ * Uses static business data when DATABASE_URL is not set.
  */
+async function getStaticBusinesses(): Promise<Business[]> {
+  const file = join(process.cwd(), "public", "data", "businesses.json");
+  return JSON.parse(await readFile(file, "utf8")) as Business[];
+}
+
+function distanceMeters(aLat: number, aLon: number, bLat: number, bLon: number): number {
+  const earthRadiusMeters = 6371000;
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(bLat - aLat);
+  const dLon = toRad(bLon - aLon);
+  const lat1 = toRad(aLat);
+  const lat2 = toRad(bLat);
+
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+  return 2 * earthRadiusMeters * Math.asin(Math.sqrt(h));
+}
+
+async function getStaticBusinessResults({
+  search,
+  lat,
+  lon,
+  radius,
+}: {
+  search: string | null;
+  lat: string | null;
+  lon: string | null;
+  radius: string;
+}): Promise<Business[]> {
+  const businesses = await getStaticBusinesses();
+
+  if (search) {
+    const q = search.toLowerCase();
+    return businesses
+      .filter(
+        (b) =>
+          b.name.toLowerCase().includes(q) ||
+          b.address.toLowerCase().includes(q) ||
+          b.category.toLowerCase().includes(q) ||
+          b.zip.includes(q)
+      )
+      .slice(0, 50);
+  }
+
+  if (lat && lon) {
+    const qLat = parseFloat(lat);
+    const qLon = parseFloat(lon);
+    const radiusMeters = parseInt(radius, 10) || 1000;
+    if (Number.isFinite(qLat) && Number.isFinite(qLon)) {
+      return businesses
+        .filter((b) => b.lat != null && b.lon != null)
+        .map((b) => ({
+          business: b,
+          distance: distanceMeters(qLat, qLon, b.lat as number, b.lon as number),
+        }))
+        .filter(({ distance }) => distance <= radiusMeters)
+        .sort((a, b) => a.distance - b.distance)
+        .slice(0, 50)
+        .map(({ business }) => business);
+    }
+  }
+
+  return businesses.sort((a, b) => a.name.localeCompare(b.name)).slice(0, 500);
+}
+
 export async function GET(request: NextRequest) {
   const search = request.nextUrl.searchParams.get("search");
   const lat = request.nextUrl.searchParams.get("lat");
@@ -16,10 +85,12 @@ export async function GET(request: NextRequest) {
 
   const sql = getSQL();
   if (!sql) {
-    return NextResponse.json(
-      { error: "Database not configured" },
-      { status: 503 }
-    );
+    const businesses = await getStaticBusinessResults({ search, lat, lon, radius });
+    return NextResponse.json(businesses, {
+      headers: {
+        "Cache-Control": "public, s-maxage=43200, stale-while-revalidate=3600",
+      },
+    });
   }
 
   try {

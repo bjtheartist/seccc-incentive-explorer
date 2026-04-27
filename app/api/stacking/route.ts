@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { StackingRuleSchema, safeParseArray } from "@/lib/schemas";
 import { cached } from "@/lib/redis";
+import type { StackingRule } from "@/lib/types";
+import { readFile } from "fs/promises";
+import { join } from "path";
 
 /**
  * GET /api/stacking?program=tif
@@ -9,15 +12,31 @@ import { cached } from "@/lib/redis";
  * Returns stacking rules for a given program.
  * DB-first with static JSON fallback.
  */
+async function getStaticStackingRules(programId: string | null): Promise<StackingRule[]> {
+  const file = join(process.cwd(), "public", "data", "stacking-rules.json");
+  const data = JSON.parse(await readFile(file, "utf8")) as StackingRule[];
+  const validated = safeParseArray(
+    StackingRuleSchema,
+    data,
+    "stacking-static"
+  ) as StackingRule[];
+
+  if (!programId) return validated;
+  return validated.filter(
+    (rule) => rule.programId === programId || rule.otherProgramId === programId
+  );
+}
+
 export async function GET(request: NextRequest) {
   const programId = request.nextUrl.searchParams.get("program");
 
   const sql = getSQL();
   if (!sql) {
-    return NextResponse.json(
-      { error: "Database not configured" },
-      { status: 503 }
-    );
+    return NextResponse.json(await getStaticStackingRules(programId), {
+      headers: {
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+      },
+    });
   }
 
   try {
@@ -67,9 +86,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     console.error("stacking API error:", err);
-    return NextResponse.json(
-      { error: "Database query failed" },
-      { status: 500 }
-    );
+    return NextResponse.json(await getStaticStackingRules(programId), {
+      headers: {
+        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+      },
+    });
   }
 }

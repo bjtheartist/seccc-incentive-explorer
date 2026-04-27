@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import * as turf from "@turf/turf";
+import { createHash } from "crypto";
 import { getSQL } from "@/lib/db";
 import { cached, roundCoord } from "@/lib/redis";
 
@@ -63,6 +65,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Validate polygon JSON if provided
+  let parsedPolygon: GeoJSON.Polygon | null = null;
   if (polygonParam) {
     try {
       const parsed = JSON.parse(polygonParam);
@@ -72,6 +75,7 @@ export async function GET(request: NextRequest) {
           { status: 400 }
         );
       }
+      parsedPolygon = parsed;
     } catch {
       return NextResponse.json(
         { error: "polygon must be valid JSON" },
@@ -98,9 +102,12 @@ export async function GET(request: NextRequest) {
   }
 
   // Cache key
+  const polygonHash = polygonParam
+    ? createHash("sha256").update(polygonParam).digest("hex").slice(0, 16)
+    : null;
   const cacheKey = polygonParam
-    ? `vacant:poly:${polygonParam.length}:${typeFilter || "all"}:${ownerTypeFilter || "all"}`
-    : `vacant:${roundCoord(west, 2)}:${roundCoord(south, 2)}:${roundCoord(east, 2)}:${roundCoord(north, 2)}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}`;
+    ? `vacant:poly:${polygonHash}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}`
+    : `vacant:${roundCoord(west)}:${roundCoord(south)}:${roundCoord(east)}:${roundCoord(north)}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}`;
 
   const sql = getSQL();
 
@@ -108,104 +115,37 @@ export async function GET(request: NextRequest) {
     // Try database first
     if (sql) {
       try {
-        let rows;
-
         if (polygonParam) {
-          // ── Polygon query mode ──
           const polygonJson = polygonParam;
-          if (ownerTypeFilter && typeFilter) {
-            rows = await sql`
-              SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                     zoning_class, square_feet, status, zone_matches, incentive_count,
-                     owner_name, owner_type
-              FROM vacant_properties
-              WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${polygonJson}), 4326)::geography)
-                AND property_type = ${typeFilter}
-                AND owner_type = ${ownerTypeFilter}
-              ORDER BY incentive_count DESC
-              LIMIT ${limit}
-            `;
-          } else if (ownerTypeFilter) {
-            rows = await sql`
-              SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                     zoning_class, square_feet, status, zone_matches, incentive_count,
-                     owner_name, owner_type
-              FROM vacant_properties
-              WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${polygonJson}), 4326)::geography)
-                AND owner_type = ${ownerTypeFilter}
-              ORDER BY incentive_count DESC
-              LIMIT ${limit}
-            `;
-          } else if (typeFilter) {
-            rows = await sql`
-              SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                     zoning_class, square_feet, status, zone_matches, incentive_count,
-                     owner_name, owner_type
-              FROM vacant_properties
-              WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${polygonJson}), 4326)::geography)
-                AND property_type = ${typeFilter}
-              ORDER BY incentive_count DESC
-              LIMIT ${limit}
-            `;
-          } else {
-            rows = await sql`
-              SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                     zoning_class, square_feet, status, zone_matches, incentive_count,
-                     owner_name, owner_type
-              FROM vacant_properties
-              WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${polygonJson}), 4326)::geography)
-              ORDER BY incentive_count DESC
-              LIMIT ${limit}
-            `;
-          }
-        } else {
-          // ── Bounds query mode ──
-          if (ownerTypeFilter && typeFilter) {
-            rows = await sql`
-              SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                     zoning_class, square_feet, status, zone_matches, incentive_count,
-                     owner_name, owner_type
-              FROM vacant_properties
-              WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
-                AND property_type = ${typeFilter}
-                AND owner_type = ${ownerTypeFilter}
-              ORDER BY incentive_count DESC
-              LIMIT ${limit}
-            `;
-          } else if (ownerTypeFilter) {
-            rows = await sql`
-              SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                     zoning_class, square_feet, status, zone_matches, incentive_count,
-                     owner_name, owner_type
-              FROM vacant_properties
-              WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
-                AND owner_type = ${ownerTypeFilter}
-              ORDER BY incentive_count DESC
-              LIMIT ${limit}
-            `;
-          } else if (typeFilter) {
-            rows = await sql`
-              SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                     zoning_class, square_feet, status, zone_matches, incentive_count,
-                     owner_name, owner_type
-              FROM vacant_properties
-              WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
-                AND property_type = ${typeFilter}
-              ORDER BY incentive_count DESC
-              LIMIT ${limit}
-            `;
-          } else {
-            rows = await sql`
-              SELECT id, source, address, lat, lon, property_type, ward, community_area,
-                     zoning_class, square_feet, status, zone_matches, incentive_count,
-                     owner_name, owner_type
-              FROM vacant_properties
-              WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
-              ORDER BY incentive_count DESC
-              LIMIT ${limit}
-            `;
-          }
+          const rows = await sql`
+            SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                   zoning_class, square_feet, status, zone_matches, incentive_count,
+                   owner_name, owner_type
+            FROM vacant_properties
+            WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${polygonJson}), 4326)::geography)
+              AND (CAST(${typeFilter} AS text) IS NULL OR property_type = ${typeFilter})
+              AND (CAST(${sourceFilter} AS text) IS NULL OR source = ${sourceFilter})
+              AND (CAST(${ownerTypeFilter} AS text) IS NULL OR owner_type = ${ownerTypeFilter})
+            ORDER BY incentive_count DESC
+            LIMIT ${limit}
+          `;
+
+          return rowsToGeoJSON(rows);
         }
+
+        const rows = await sql`
+          SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                 zoning_class, square_feet, status, zone_matches, incentive_count,
+                 owner_name, owner_type
+          FROM vacant_properties
+          WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
+            AND (CAST(${typeFilter} AS text) IS NULL OR property_type = ${typeFilter})
+            AND (CAST(${sourceFilter} AS text) IS NULL OR source = ${sourceFilter})
+            AND (CAST(${ownerTypeFilter} AS text) IS NULL OR owner_type = ${ownerTypeFilter})
+          ORDER BY incentive_count DESC
+          LIMIT ${limit}
+        `;
+
         return rowsToGeoJSON(rows);
       } catch (err) {
         console.warn("[vacant] DB query failed, falling back to static:", err);
@@ -222,8 +162,10 @@ export async function GET(request: NextRequest) {
       const filtered = data.features.filter((f) => {
         if (f.geometry.type !== "Point") return false;
         const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates;
-        // For polygon mode without DB, skip spatial filtering (return all)
-        if (!polygonParam) {
+        if (parsedPolygon) {
+          const point = turf.point([lng, lat]);
+          if (!turf.booleanPointInPolygon(point, parsedPolygon)) return false;
+        } else {
           if (lng < west || lng > east || lat < south || lat > north) return false;
         }
         if (typeFilter && f.properties?.propertyType !== typeFilter) return false;

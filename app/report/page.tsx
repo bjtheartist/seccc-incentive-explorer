@@ -39,6 +39,7 @@ import type { GeneratedReport, ReportCensusData, ReportZoningData, ActionRoadmap
 import { formatDollars } from "@/lib/report-engine";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
+import { normalizeZoneCheckResponse } from "@/lib/zone-response";
 import {
   Accordion,
   AccordionItem,
@@ -182,7 +183,8 @@ function ReportWizardPage() {
 
   // Load programs on mount
   useEffect(() => {
-    cachedFetch<Program[]>("/data/programs.json")
+    cachedFetch<Program[]>("/api/programs")
+      .catch(() => cachedFetch<Program[]>("/data/programs.json"))
       .then(setPrograms)
       .catch(() => {});
   }, []);
@@ -196,29 +198,11 @@ function ReportWizardPage() {
 
     (async () => {
       try {
-        const data = await cachedFetch<
-          { key: string; name: string }[] | { zones: Record<string, boolean>; zoneNames?: Record<string, string> }
-        >(`/api/zones/check?lat=${lat}&lon=${lon}`);
-        // The API returns an array of { key, name } objects.
-        if (Array.isArray(data)) {
-            const zoneMap: Record<string, boolean> = {};
-            const nameMap: Record<string, string> = {};
-            for (const item of data) {
-              if (item.key) {
-                zoneMap[item.key] = true;
-                if (item.name) nameMap[item.key] = item.name;
-              }
-            }
-            setZones(zoneMap);
-            setZoneNames(nameMap);
-            return;
-        } else if ('zones' in data && data.zones) {
-          setZones(data.zones);
-          if (data.zoneNames) setZoneNames(data.zoneNames);
-          return;
-        }
-        // Unexpected format — fall through to Turf.js
-        throw new Error("API unavailable");
+        const data = await cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`);
+        const normalized = normalizeZoneCheckResponse(data);
+        if (!normalized) throw new Error("API unavailable");
+        setZones(normalized.zones);
+        setZoneNames(normalized.zoneNames);
       } catch {
         // Fallback: use client-side Turf.js zone check
         const { checkZones } = await import("@/lib/zone-check");
@@ -266,19 +250,11 @@ function ReportWizardPage() {
     const { lat, lon } = compareGeoResult;
     (async () => {
       try {
-        const data = await cachedFetch<
-          { key: string; name: string }[] | { zones: Record<string, boolean>; zoneNames?: Record<string, string> }
-        >(`/api/zones/check?lat=${lat}&lon=${lon}`);
-        if (Array.isArray(data)) {
-          const zoneMap: Record<string, boolean> = {};
-          const nameMap: Record<string, string> = {};
-          for (const item of data) { if (item.key) { zoneMap[item.key] = true; if (item.name) nameMap[item.key] = item.name; } }
-          setCompareZones(zoneMap);
-          setCompareZoneNames(nameMap);
-        } else if ('zones' in data && data.zones) {
-          setCompareZones(data.zones);
-          if (data.zoneNames) setCompareZoneNames(data.zoneNames);
-        } else { throw new Error("API unavailable"); }
+        const data = await cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`);
+        const normalized = normalizeZoneCheckResponse(data);
+        if (!normalized) throw new Error("API unavailable");
+        setCompareZones(normalized.zones);
+        setCompareZoneNames(normalized.zoneNames);
       } catch {
         const { checkZones } = await import("@/lib/zone-check");
         const result = await checkZones(lat, lon);

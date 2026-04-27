@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-SECCC Incentive Explorer — an interactive tool for Chicago businesses to discover economic incentive programs. Combines geographic zone analysis (13 incentive layers), a pre-qualification survey, business/address search, location recommendations, and an interactive map with search.
+SECCC Incentive Explorer — an interactive tool for Chicago businesses to discover economic incentive programs. Combines geographic zone analysis, a pre-qualification survey, business/address search, location recommendations, report generation, and an interactive map with search.
 
 **Live site:** chicagoincentiveexplorer.com
 
@@ -15,10 +15,12 @@ npm run dev          # Start dev server (port 3000)
 npm run build        # Production build
 npm run lint         # ESLint
 npm run test         # Vitest unit tests
-npm run db:migrate   # Run database migrations
-npm run db:seed      # Seed database from static files
-npm run db:reset     # Migrate + seed (full reset)
+npm run db:migrate   # Run current vacant_properties migration
+npm run db:seed      # Sync vacant property data
+npm run db:reset     # Run vacant migration + vacant sync
 ```
+
+The current package scripts only cover vacant-property database maintenance. A full database migration/seed script is not present in this tree.
 
 ### Testing
 
@@ -41,9 +43,10 @@ npm run db:reset     # Migrate + seed (full reset)
 
 1. **Data pipeline (offline):**
    - `scripts/convert-kml.mjs` — city KML zone files → clipped/simplified GeoJSON in `public/data/zones/` (SSA #50 only)
-   - `scripts/convert-kml-citywide.mjs` — city KML → unclipped GeoJSON in `public/data/zones-citywide/` (full Chicago)
    - `scripts/convert-businesses.mjs` — Google My Business CSV → `public/data/businesses.json` with pre-computed zone memberships
-   - `scripts/seed-db.ts` — seeds Neon database from static files (businesses, programs, zones, stats, community assets)
+   - `scripts/migrate-vacant.ts` — idempotently creates the `vacant_properties` table and indexes
+   - `scripts/sync-vacant-properties.ts` — syncs Chicago vacant land/building data and writes static fallback data
+   - `scripts/seed-epa-walkability.ts` — updates existing census rows with walkability data after census data has been seeded
 
 2. **Runtime lookup (DB-first with static fallback):**
    - `lib/db.ts` — Neon serverless client (`sql` tagged template), lazy-initialized
@@ -70,26 +73,24 @@ npm run db:reset     # Migrate + seed (full reset)
 | `/api/zoning?lat=&lon=` | GET | Chicago zoning classification |
 | `/api/vacant?bounds=&type=&ownerType=&limit=` | GET | Vacant properties by viewport bounds, filterable by owner type |
 | `/api/email-report` | POST | Email PDF report as attachment (requires `RESEND_API_KEY`) |
-| `/api/health?key=<ADMIN_SECRET>` | GET | System health probe — all external deps, DB stats, data freshness (auth required) |
 
 ### Pages
 
 - `/` — Landing with address/business search, hero, video demo, coverage stats
-- `/programs` — Filterable directory of 20+ incentive programs (by government level and industry)
+- `/programs` — Filterable directory of 24 incentive programs (by government level and industry)
 - `/qualify` — 4-step pre-qualification survey → program matches
 - `/locate` — Sector-based location finder with zoning compatibility and area recommendations
 - `/map` — Interactive map with zone layers, search bar, census stats
 - `/check` — Address eligibility check flow
 - `/report` — Report generation page
 - `/faq` — Collapsible FAQ (14 items)
-- `/admin` — Control room (health monitoring, data freshness, service status). Auth via `?key=` or `ADMIN_SECRET` env var. Default key: `seccc-control-2026`
 
 ### Core Libraries
 
 - **Database:** `@neondatabase/serverless` for Neon Postgres + PostGIS
 - **Geospatial:** `@turf/turf` for client-side point-in-polygon fallback, polygon intersection, simplification
 - **UI:** Shadcn (Radix primitives) with "new-york" style, Framer Motion for animations, Tailwind CSS 4
-- **Map:** Mapbox GL with 13 zone layers (GeoJSON or vector tiles), search bar overlay
+- **Map:** Mapbox GL with 14 configured zone layers (GeoJSON or vector tiles), search bar overlay
 - **Search:** Fuse.js for fuzzy business name matching
 - **PDF:** jsPDF for report generation (`lib/pdf-report.ts`)
 - **Email:** Resend SDK for transactional report emails with PDF attachments
@@ -99,7 +100,7 @@ npm run db:reset     # Migrate + seed (full reset)
 ### Database Schema (Neon + PostGIS)
 
 - `businesses` — 360+ businesses with `geography(POINT)`, full-text search vector, zone_data JSONB
-- `programs` — 20+ incentive programs
+- `programs` — 24 incentive programs
 - `zones` — zone features with `geography(GEOMETRY)` + GiST index (one row per feature)
 - `census_tracts` — Census ACS data with tract geometry (median income, home value, population, walk score)
 - `community_assets` — EDOs, BSOs, universities, libraries with point geometry
@@ -109,11 +110,11 @@ npm run db:reset     # Migrate + seed (full reset)
 ### Data Files (public/data/)
 
 - `businesses.json` — businesses with coordinates, categories, and zone membership flags
-- `programs.json` — 20+ incentive program definitions with benefits, application steps, required docs
+- `programs.json` — 24 incentive program definitions with benefits, application steps, required docs
 - `stats.json` — Aggregate coverage statistics
 - `vacant-properties.json` — 18K+ city-owned vacant land parcels
 - `stacking-rules.json` — Incentive program stacking/combinability rules
-- `zones/*.geojson` — 13 GeoJSON zone layer files (TIF, Federal OZ, Illinois OZ, Enterprise, EDGE, REV, MICRO, Data Center, SSA, Triple Benefit, High Unemployment, NMTC-eligible, QCT, landmarks, NRHP, industrial corridors)
+- `zones/*.geojson` — GeoJSON zone layer files for TIF, Opportunity Zones, Enterprise Zones, state incentive zones, SSA, CCSA corridors, high unemployment, NMTC, QCT, historic districts, industrial corridors, NOF projects, and related layers
 
 ### Fallback Strategy
 
@@ -135,7 +136,7 @@ Zone layers support two rendering paths:
 - **Theme:** "Warm Bureau" — off-white (#FAF9F6) background, navy (#0C1B33) foreground, blue (#2563EB) accent
 - **Fonts:** Playfair Display (editorial/display via `.font-editorial`), JetBrains Mono (monospace via `.font-mono-bureau`), Inter (body/sans)
 - **Custom CSS classes:** `.bureau-grid`, `.bureau-noise` (texture overlays), `.accent-bar`, `.accent-bar-light`, `.bureau-pulse`
-- **Zone colors** defined in `lib/constants.ts` (13 layers, each with unique hex color)
+- **Zone colors** defined in `lib/constants.ts` (14 configured layers, each with unique hex color)
 
 ## Industry Data
 
@@ -148,7 +149,6 @@ Zone layers support two rendering paths:
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Yes | Mapbox GL access token |
 | `DATABASE_URL` | No | Neon Postgres connection string. If empty, app uses static files only. |
 | `SOCRATA_APP_TOKEN` | No | Socrata API app token for 10x rate limits. Free at data.cityofchicago.org. |
-| `ADMIN_SECRET` | No | Access key for `/admin` control room and `/api/health`. Default: `seccc-control-2026`. |
 | `UPSTASH_REDIS_REST_URL` | No | Upstash Redis URL for server-side response caching. |
 | `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis token. If absent, caching is skipped gracefully. |
 | `RESEND_API_KEY` | No | Resend API key for sending report emails (starts with `re_`). If absent, email feature returns 503. |

@@ -50,6 +50,12 @@ export default function MapPolygonPanel({
   const vacantBuildingCount = features.filter(
     (f) => f.properties?.propertyType === "vacant_building"
   ).length;
+  const totalZoneMatches = features.reduce((total, f) => {
+    const matches = f.properties?.zoneMatches ?? [];
+    return total + (Array.isArray(matches) ? matches.length : 0);
+  }, 0);
+  const avgZones =
+    features.length > 0 ? (totalZoneMatches / features.length).toFixed(1) : "0";
 
   /* ── Top community area ── */
   const topCommunityArea = useMemo(() => {
@@ -180,25 +186,26 @@ export default function MapPolygonPanel({
   };
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
+    <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-[#FAF9F6] backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-[380px] max-h-[68vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-2xl md:shadow-xl">
       {/* Mobile drag handle */}
-      <div className="md:hidden flex flex-col items-center pt-2 pb-1">
-        <div className="w-10 h-1 bg-[#0C1B33]/15 rounded-full" />
+      <div className="md:hidden flex flex-col items-center pt-2 pb-1 bg-white">
+        <div className="w-10 h-1 bg-[#0C1B33]/15" />
       </div>
 
       {/* ── Branded Header ── */}
-      <div className="px-4 pt-2 md:pt-4 pb-1 flex items-center justify-between">
+      <div className="bg-[#0C1B33] px-5 pt-5 pb-4 flex items-start justify-between">
         <div>
-          <div className="font-mono-bureau text-[10px] md:text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30">
+          <div className="font-mono-bureau text-[9px] tracking-[0.3em] uppercase text-white/35">
             Area Analysis
           </div>
-          <div className="font-editorial text-[14px] md:text-[13px] text-[#0C1B33]/80 leading-tight mt-0.5">
+          <div className="font-editorial text-[24px] text-white leading-tight mt-1">
             Vacancy Report
           </div>
+          <div className="mt-3 h-[3px] w-10 bg-white/25" />
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onClose(); }}
-          className="text-[#0C1B33]/30 hover:text-[#0C1B33]/60 text-[20px] md:text-[16px] leading-none transition-colors p-2 -mr-1"
+          className="text-white/35 hover:text-white text-[22px] leading-none transition-colors p-2 -mr-2 -mt-2"
           title="Close"
         >
           &times;
@@ -206,7 +213,10 @@ export default function MapPolygonPanel({
       </div>
 
       {/* Clear & Redraw */}
-      <div className="px-4 pb-2">
+      <div className="px-5 py-3 bg-white border-b border-[#0C1B33]/8 flex items-center justify-between">
+        <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30">
+          Drawn Area
+        </span>
         <button
           onClick={onClear}
           className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#2563EB] hover:text-[#1d4ed8] transition-colors"
@@ -215,11 +225,9 @@ export default function MapPolygonPanel({
         </button>
       </div>
 
-      <div className="mx-4 h-px bg-[#0C1B33]/8" />
-
       {/* ── Loading state ── */}
       {loading && (
-        <div className="px-4 py-4 flex items-center gap-2">
+        <div className="px-5 py-6 flex items-center gap-2 bg-white">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2563EB] opacity-75" />
             <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2563EB]" />
@@ -235,7 +243,7 @@ export default function MapPolygonPanel({
         <>
           {/* ── Empty state ── */}
           {features.length === 0 && (
-            <div className="px-4 py-6 text-center">
+            <div className="px-5 py-8 text-center bg-white">
               <div className="text-[11px] text-[#0C1B33]/50 mb-1">No vacant properties found</div>
               <div className="text-[10px] text-[#0C1B33]/35">Try drawing a larger area or a different location.</div>
             </div>
@@ -243,8 +251,11 @@ export default function MapPolygonPanel({
 
           {/* ── Narrative Summary ── */}
           {features.length > 0 && narrative && (
-            <div className="px-4 pt-3 pb-2">
-              <p className="text-[11px] text-[#0C1B33]/60 leading-relaxed">
+            <div className="px-5 pt-5 pb-4 bg-white">
+              <div className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/25 mb-2">
+                Executive Snapshot
+              </div>
+              <p className="text-[13px] text-[#0C1B33]/60 leading-relaxed">
                 {narrative}
               </p>
             </div>
@@ -253,45 +264,28 @@ export default function MapPolygonPanel({
           {/* ── At a Glance ── */}
           {features.length > 0 && (
             <>
-              <div className="mx-4 h-px bg-[#0C1B33]/8" />
-              <div className="px-4 pt-3 pb-3 space-y-1.5">
-                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-1.5">
+              <div className="mx-5 h-px bg-[#0C1B33]/8" />
+              <div className="px-5 py-4 bg-white">
+                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-3">
                   At a Glance
                 </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="text-[11px] text-[#0C1B33]/60">
-                    Total Properties
-                  </span>
-                  <span className="font-mono-bureau text-[13px] text-[#0C1B33]/90 font-medium">
-                    {features.length}
-                  </span>
+                <div className="grid grid-cols-2 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
+                  {[
+                    { label: "Properties", value: features.length },
+                    { label: "Vacant Land", value: vacantLandCount },
+                    { label: "Buildings", value: vacantBuildingCount },
+                    { label: "Avg. Zones", value: avgZones },
+                  ].map((stat) => (
+                    <div key={stat.label} className="bg-[#FAF9F6] px-3 py-3">
+                      <div className="font-editorial text-[24px] leading-none text-[#0C1B33]">
+                        {stat.value}
+                      </div>
+                      <div className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/35 mt-2">
+                        {stat.label}
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="text-[11px] text-[#0C1B33]/60">
-                    Vacant Land
-                  </span>
-                  <span className="font-mono-bureau text-[13px] text-[#0C1B33]/90 font-medium">
-                    {vacantLandCount}
-                  </span>
-                </div>
-                <div className="flex justify-between items-baseline">
-                  <span className="text-[11px] text-[#0C1B33]/60">
-                    Vacant Buildings
-                  </span>
-                  <span className="font-mono-bureau text-[13px] text-[#0C1B33]/90 font-medium">
-                    {vacantBuildingCount}
-                  </span>
-                </div>
-                {zoneCounts.length > 0 && (
-                  <div className="flex justify-between items-baseline">
-                    <span className="text-[11px] text-[#0C1B33]/60">
-                      Incentive Zones
-                    </span>
-                    <span className="font-mono-bureau text-[13px] text-[#0C1B33]/90 font-medium">
-                      {zoneCounts.length}
-                    </span>
-                  </div>
-                )}
               </div>
             </>
           )}
@@ -299,8 +293,8 @@ export default function MapPolygonPanel({
           {/* ── Zone Breakdown ── */}
           {zoneCounts.length > 0 && (
             <>
-              <div className="mx-4 h-px bg-[#0C1B33]/8" />
-              <div className="px-4 py-3">
+              <div className="mx-5 h-px bg-[#0C1B33]/8" />
+              <div className="px-5 py-4 bg-white">
                 <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#059669]/50 mb-1.5">
                   Incentive Zones in Area
                 </div>
@@ -338,8 +332,8 @@ export default function MapPolygonPanel({
           {/* ── Ownership Breakdown ── */}
           {ownerCounts.length > 0 && (
             <>
-              <div className="mx-4 h-px bg-[#0C1B33]/8" />
-              <div className="px-4 py-3">
+              <div className="mx-5 h-px bg-[#0C1B33]/8" />
+              <div className="px-5 py-4 bg-white">
                 <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-1.5">
                   Ownership Breakdown
                 </div>
@@ -376,8 +370,8 @@ export default function MapPolygonPanel({
           {/* ── Property List ── */}
           {features.length > 0 && (
             <>
-              <div className="mx-4 h-px bg-[#0C1B33]/8" />
-              <div className="px-4 py-3">
+              <div className="mx-5 h-px bg-[#0C1B33]/8" />
+              <div className="px-5 py-4 bg-white">
                 <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#D97706]/50 mb-0.5">
                   Properties
                 </div>
@@ -395,7 +389,7 @@ export default function MapPolygonPanel({
                     return (
                       <div
                         key={p.address ?? i}
-                        className="text-[10px] leading-snug"
+                        className="text-[10px] leading-snug border-l border-[#0C1B33]/10 pl-3 py-0.5"
                       >
                         <a
                           href={buildReportLink(f)}
@@ -453,8 +447,11 @@ export default function MapPolygonPanel({
           {/* ── Export CSV ── */}
           {features.length > 0 && (
             <>
-              <div className="mx-4 h-px bg-[#0C1B33]/8" />
-              <div className="px-4 py-3 space-y-2">
+              <div className="mx-5 h-px bg-[#0C1B33]/8" />
+              <div className="px-5 py-4 space-y-2 bg-white">
+                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30 mb-2">
+                  Report Actions
+                </div>
                 <button
                   onClick={handleExportCsv}
                   className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-2 px-3 hover:bg-[#1d4ed8] transition-colors"
@@ -466,8 +463,8 @@ export default function MapPolygonPanel({
           )}
 
           {/* ── Follow-Up Resources ── */}
-          <div className="mx-4 h-px bg-[#0C1B33]/8" />
-          <div className="px-4 py-3">
+          <div className="mx-5 h-px bg-[#0C1B33]/8" />
+          <div className="px-5 py-4 bg-white">
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30 mb-1.5">
               Next Steps &amp; Resources
             </div>
@@ -492,8 +489,8 @@ export default function MapPolygonPanel({
           </div>
 
           {/* ── Footer ── */}
-          <div className="mx-4 h-px bg-[#0C1B33]/8" />
-          <div className="px-4 py-3 space-y-2">
+          <div className="mx-5 h-px bg-[#0C1B33]/8" />
+          <div className="px-5 py-4 space-y-2 bg-white">
             <a
               href="/programs"
               className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase border border-[#0C1B33]/15 text-[#0C1B33]/60 py-2 px-3 hover:text-[#0C1B33] hover:border-[#0C1B33]/30 transition-colors"
@@ -503,7 +500,7 @@ export default function MapPolygonPanel({
           </div>
 
           {/* ── Attribution ── */}
-          <div className="px-4 pb-3">
+          <div className="px-5 py-3 bg-[#F5F5F0] border-t border-[#0C1B33]/8">
             <p className="text-[8px] text-[#0C1B33]/25 leading-snug">
               Data: City of Chicago Open Data &amp; Cook County Assessor. Vacancy records may not reflect current conditions. Always verify on-site.
             </p>

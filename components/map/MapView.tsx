@@ -6,6 +6,7 @@ import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIE
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { describeClassCode, describeParcelType } from "@/lib/parcel-classes";
+import { normalizeZoneCheckResponse } from "@/lib/zone-response";
 import type { Program, ProgramCheckResult, ParcelData, DistrictData } from "@/lib/types";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
@@ -81,7 +82,8 @@ export default function MapView() {
 
   // Load programs for snapshot
   useEffect(() => {
-    cachedFetch<Program[]>("/data/programs.json")
+    cachedFetch<Program[]>("/api/programs")
+      .catch(() => cachedFetch<Program[]>("/data/programs.json"))
       .then(setAllPrograms)
       .catch(() => {});
   }, []);
@@ -200,13 +202,14 @@ export default function MapView() {
       setLastClickLon(lon);
       setCopiedLink(false);
       try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const [data, parcelData]: [any, ParcelData | null] = await Promise.all([
+        const [data, parcelData] = await Promise.all([
           cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`),
           cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).catch(() => null),
         ]);
-        const zones = data.zones || data;
-        const zoneNames = data.zoneNames || {};
+        const normalized = normalizeZoneCheckResponse(data);
+        if (!normalized) throw new Error("Unexpected zone check response");
+
+        const { zones, zoneNames } = normalized;
         setLocationZones(zones);
         // Compute top 3 programs client-side (with parcel boost)
         if (allPrograms.length > 0) {
@@ -226,7 +229,6 @@ export default function MapView() {
 
   /* ── Initial census load ──────────────── */
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadCensusForPoint(41.744, -87.5775, "Chicago (default)");
   }, [loadCensusForPoint]);
 
@@ -237,7 +239,7 @@ export default function MapView() {
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     if (!token) {
       console.error("[MapView] NEXT_PUBLIC_MAPBOX_TOKEN is not set");
-      setLoaded(true); // eslint-disable-line react-hooks/set-state-in-effect -- Show the UI without crashing
+      setLoaded(true);
       return;
     }
     mapboxgl.accessToken = token;
@@ -1186,7 +1188,7 @@ export default function MapView() {
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 768px)");
-    setIsMobile(mq.matches); // eslint-disable-line react-hooks/set-state-in-effect
+    setIsMobile(mq.matches);
     const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
@@ -1195,7 +1197,7 @@ export default function MapView() {
   // On mobile, default legend closed and snapshot closed
   useEffect(() => {
     if (isMobile) {
-      setLegendOpen(false); // eslint-disable-line react-hooks/set-state-in-effect
+      setLegendOpen(false);
       setSnapshotOpen(false);
     }
   }, [isMobile]);

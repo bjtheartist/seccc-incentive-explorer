@@ -7,6 +7,7 @@ import { memCached, roundCoord } from "@/lib/redis";
  *
  * Returns census tract data (ACS estimates) for a given lat/lon.
  * Uses PostGIS to find the enclosing census tract.
+ * Returns null when DATABASE_URL is absent so local/static mode can proceed.
  */
 export async function GET(request: NextRequest) {
   const lat = request.nextUrl.searchParams.get("lat");
@@ -21,10 +22,12 @@ export async function GET(request: NextRequest) {
 
   const sql = getSQL();
   if (!sql) {
-    return NextResponse.json(
-      { error: "Database not configured" },
-      { status: 503 }
-    );
+    return NextResponse.json(null, {
+      headers: {
+        "Cache-Control":
+          "public, s-maxage=3600, stale-while-revalidate=86400",
+      },
+    });
   }
 
   try {

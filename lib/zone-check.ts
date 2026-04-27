@@ -1,5 +1,6 @@
 import * as turf from "@turf/turf";
 import { ZONE_KEYS } from "./constants";
+import { normalizeZoneCheckResponse } from "./zone-response";
 import type { LookupResult, CityZoning, CensusData, ZoneCheckResult } from "./types";
 import type { FeatureCollection, Feature, Polygon, MultiPolygon } from "geojson";
 
@@ -13,6 +14,7 @@ const zoneFileMap: Record<string, string> = {
   industrialCorridors: "/data/zones/industrial-corridors.geojson",
   microMarketRecovery: "/data/zones/micro-market-recovery.geojson",
   nof: "/data/zones/nof-projects.geojson",
+  ccsa: "/data/zones/ccsa-corridors.geojson",
   nmtcEligible: "/data/zones/nmtc-eligible.geojson",
   qct: "/data/zones/qct.geojson",
   landmarkDistricts: "/data/zones/landmark-districts.geojson",
@@ -45,25 +47,7 @@ async function checkZonesDB(
     if (!res.ok) return null;
 
     const results: ZoneCheckResult[] = await res.json();
-    if (!Array.isArray(results)) return null;
-
-    const zones: Record<string, boolean> = {};
-    const zoneNames: Record<string, string> = {};
-    let incentiveCount = 0;
-
-    // Initialize all zones as false
-    for (const key of ZONE_KEYS) {
-      zones[key] = false;
-    }
-
-    // Mark matching zones as true
-    for (const r of results) {
-      zones[r.key] = true;
-      if (r.name) zoneNames[r.key] = r.name;
-      incentiveCount++;
-    }
-
-    return { zones, zoneNames, incentiveCount };
+    return normalizeZoneCheckResponse(results);
   } catch {
     return null;
   }

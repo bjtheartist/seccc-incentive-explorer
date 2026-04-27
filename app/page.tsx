@@ -114,7 +114,7 @@ export default function Home() {
               muted
               playsInline
               className="w-full"
-              poster="/howto-poster.png"
+              poster="/chicago-map-hero.png"
             >
               <source src="/howto.webm" type="video/webm" />
               <source src="/howto.mp4" type="video/mp4" />

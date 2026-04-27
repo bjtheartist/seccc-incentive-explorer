@@ -39,6 +39,9 @@ async function migrate() {
       zoning_class TEXT,
       square_feet DOUBLE PRECISION,
       status TEXT,
+      owner_name TEXT,
+      owner_mailing_address TEXT,
+      owner_type TEXT DEFAULT 'unknown',
       zone_matches JSONB DEFAULT '[]',
       incentive_count INTEGER DEFAULT 0,
       geom GEOGRAPHY(POINT, 4326),
@@ -47,11 +50,17 @@ async function migrate() {
     )
   `;
 
+  console.log("3. Ensuring ownership columns...");
+  await sql`ALTER TABLE vacant_properties ADD COLUMN IF NOT EXISTS owner_name TEXT`;
+  await sql`ALTER TABLE vacant_properties ADD COLUMN IF NOT EXISTS owner_mailing_address TEXT`;
+  await sql`ALTER TABLE vacant_properties ADD COLUMN IF NOT EXISTS owner_type TEXT DEFAULT 'unknown'`;
+
   /* ── Indexes ── */
-  console.log("3. Creating indexes...");
+  console.log("4. Creating indexes...");
   await sql`CREATE INDEX IF NOT EXISTS idx_vacant_geom ON vacant_properties USING GIST (geom)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_vacant_source ON vacant_properties (source)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_vacant_type ON vacant_properties (property_type)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_vacant_owner_type ON vacant_properties (owner_type)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_vacant_incentive_count ON vacant_properties (incentive_count DESC)`;
 
   console.log("\nVacant properties migration complete!");

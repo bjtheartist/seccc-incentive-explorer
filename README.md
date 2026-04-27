@@ -1,36 +1,109 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SECCC Incentive Explorer
 
-## Getting Started
+Interactive Chicago business incentive discovery tool for Southeast Chicago. The app helps a business owner, developer, or community partner enter an address, inspect overlapping incentive zones, understand likely program eligibility, and generate a practical report.
 
-First, run the development server:
+Live site: [chicagoincentiveexplorer.com](https://chicagoincentiveexplorer.com)
+
+## What It Does
+
+- Checks an address against Chicago incentive zones such as TIF, Opportunity Zones, Enterprise Zones, SSA, CCSA corridors, NMTC, QCT, historic districts, industrial corridors, and related layers.
+- Generates location-based incentive reports with confidence labels, program explanations, benefit estimates, action steps, parcel context, census context, zoning, and stacking analysis.
+- Provides an interactive Mapbox map for exploring zones, vacant properties, parcel/zoning context, community assets, and neighborhood snapshots.
+- Includes a pre-qualification survey that scores business profile answers against incentive program rules.
+- Offers a program directory filtered by government level and industry.
+- Supports lead capture and optional email delivery for PDF reports.
+
+## Current Data Snapshot
+
+- 24 incentive programs
+- 360 business records
+- 69 business categories
+- Primary ZIP coverage: 60617, 60619, 60649
+- Static GeoJSON/JSON fallback data under `public/data/`
+
+## Main User Flows
+
+- `/` - Landing page with address/business lookup and quick links.
+- `/report` - Report wizard and instant report generation from `lat`, `lon`, and `addr` URL params.
+- `/map` - Interactive incentive map with zone layers, vacant properties, parcels, zoning, presets, and map snapshots.
+- `/programs` - Incentive program directory with level and industry filters.
+- `/qualify` - Four-step pre-qualification survey.
+- `/locate` - Location finder for sector/zoning fit and area recommendations.
+- `/check` - Address eligibility check flow.
+- `/faq` - Public FAQ.
+
+## Architecture
+
+- Framework: Next.js 16 App Router, React 19, TypeScript strict mode.
+- Styling/UI: Tailwind CSS 4, shadcn/Radix primitives, Framer Motion, lucide-react.
+- Mapping/geospatial: Mapbox GL, Mapbox Draw, Turf.js, optional PostGIS via Neon.
+- Data access: DB-first where configured, static-file fallback when `DATABASE_URL` is absent.
+- Caching: optional Upstash Redis plus in-memory GeoJSON caching and HTTP cache headers.
+- Reports: jsPDF generation with optional Resend email delivery.
+- Validation/tests: Zod schemas, Vitest unit tests, Playwright E2E tests.
+
+## Data And Runtime Model
+
+The app is designed to keep working without production services:
+
+- If `DATABASE_URL` is configured, API routes can query Neon/PostGIS for businesses, programs, zones, census data, parcels, stats, assets, stacking rules, and vacant properties.
+- If the DB is unavailable or not configured, user-facing flows fall back to static JSON/GeoJSON in `public/data/`.
+- `/api/zones/check` returns zone membership from PostGIS when available; client-side Turf.js handles static fallback checks.
+- Map zone layers load through `/api/zones/geojson/[key]` first and fall back to `public/data/zones/*.geojson`.
+
+## Key Commands
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run lint
+npm run test
+npm run build
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Database maintenance scripts currently cover vacant-property data:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run db:migrate   # vacant_properties migration
+npm run db:seed      # vacant property sync
+npm run db:reset     # migration + sync
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+These DB scripts require `DATABASE_URL`.
 
-## Learn More
+## Environment Variables
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+NEXT_PUBLIC_MAPBOX_TOKEN=...
+DATABASE_URL=...
+SOCRATA_APP_TOKEN=...
+UPSTASH_REDIS_REST_URL=...
+UPSTASH_REDIS_REST_TOKEN=...
+RESEND_API_KEY=...
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Only `NEXT_PUBLIC_MAPBOX_TOKEN` is required for the interactive map to render. The rest are optional service integrations; the app should degrade gracefully when they are absent.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Important Files
 
-## Deploy on Vercel
+- `app/page.tsx` - landing page and primary lookup entry.
+- `app/report/page.tsx` - report wizard and instant report flow.
+- `components/map/MapView.tsx` - main interactive map implementation.
+- `lib/zone-check.ts` - DB-first and Turf fallback zone checking.
+- `lib/zone-response.ts` - normalized zone API response handling.
+- `lib/confidence-engine.ts` - program eligibility confidence scoring.
+- `lib/report-engine.ts` - report data generation and narrative assembly.
+- `lib/pdf-report.ts` - PDF report rendering.
+- `lib/industries-data.ts` - industry-to-program mapping.
+- `public/data/` - static fallback data.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Testing Notes
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `npm run test` runs Vitest unit tests only.
+- Playwright E2E specs live in `tests/e2e/` and can be run with:
+
+```bash
+npx playwright test
+```
+
+For browser verification of `/map`, make sure `NEXT_PUBLIC_MAPBOX_TOKEN` is set before starting the dev server.
