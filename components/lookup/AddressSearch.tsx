@@ -22,7 +22,7 @@ const SAMPLE_PROMPTS = [
 ];
 
 const LOADING_MESSAGES = [
-  "Scanning 11 incentive zone layers...",
+  "Scanning mapped incentive layers...",
   "Cross-referencing TIF district boundaries...",
   "Checking Opportunity Zone eligibility...",
   "Analyzing Enterprise Zone coverage...",
@@ -35,7 +35,7 @@ const LOADING_MESSAGES = [
   "Almost there — pulling program details...",
   "Asking the GIS database nicely...",
   "Consulting the ancient TIF scrolls...",
-  "Mapping every dollar left on the table...",
+  "Mapping potential incentive opportunities...",
   "Whispering to the Cook County parcel data...",
   "Checking if your block is secretly a goldmine...",
   "Reviewing 20+ federal, state, and city programs...",

@@ -51,9 +51,9 @@
     "summary": "Created by the 2017 Tax Cuts and Jobs Act, Opportunity Zones offer significant tax benefits to investors who invest capital gains into designated low-income census tracts.",
     "whoQualifies": "Investors with capital gains who invest through a Qualified Opportunity Fund (QOF) in businesses or real estate within the zone. Business owners can attract OZ investment.",
     "benefits": [
-      "Defer capital gains taxes until 2026",
-      "10% reduction on deferred gains (if held 5+ years)",
-      "Zero capital gains tax on new OZ investment profits (if held 10+ years)"
+      "Potential capital gains tax deferral or exclusion, depending on investment timing",
+      "Benefits depend on Qualified Opportunity Fund structure and current IRS rules",
+      "Longer holding periods may improve the tax treatment of qualifying investments"
     ],
     "howToApply": [
       "Invest capital gains into a Qualified Opportunity Fund (QOF) within 180 days",
@@ -241,11 +241,11 @@
     "level": "State",
     "zoneKey": "stateIncentiveZones",
     "summary": "The Economic Development for a Growing Economy (EDGE) program provides income tax credits to businesses that create or retain jobs in Illinois.",
-    "whoQualifies": "Businesses making capital investments and creating/retaining jobs in Illinois. 100% zones offer the maximum credit rate.",
+    "whoQualifies": "Businesses making capital investments and creating or retaining jobs in Illinois. Designated incentive areas may receive enhanced consideration.",
     "benefits": [
-      "Income tax credits equal to 25-100% of state income tax withholdings",
-      "100% credit in designated zones (like parts of SSA #50)",
-      "Credits available for up to 10 years",
+      "Negotiated income tax credits tied to job creation or retention",
+      "Enhanced credit levels may be available in designated incentive areas",
+      "Agreement terms vary by project and DCEO approval",
       "Retention credits for companies considering relocation"
     ],
     "howToApply": [
@@ -271,12 +271,12 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Business in Illinois; 100% zones offer maximum credit", "verifiedBy": "location", "required": false },
+      { "criterion": "location", "description": "Business in Illinois; designated incentive areas may receive enhanced consideration", "verifiedBy": "location", "required": false },
       { "criterion": "industry", "description": "Most industries qualify; focus on job creation", "verifiedBy": "survey", "required": false },
       { "criterion": "investmentSize", "description": "Must create or retain jobs and make capital investment", "verifiedBy": "manual", "required": true }
     ],
     "lastVerifiedAt": "2025-11-01",
-    "benefitRange": "25-100% income tax credit for up to 10 years",
+    "benefitRange": "Negotiated income tax credit",
     "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about EDGE eligibility"
   },
   {
@@ -288,7 +288,7 @@
     "whoQualifies": "Businesses in EV manufacturing, battery production, renewable energy, or related supply chain operations in designated bonus zones.",
     "benefits": [
       "Income tax credits for qualified investments",
-      "Bonus incentives in 100% designated zones",
+      "Enhanced incentives may be available in designated areas",
       "Training and workforce development support",
       "Priority consideration for related infrastructure"
     ],
@@ -317,7 +317,7 @@
       { "criterion": "industry", "description": "Must be in EV, battery, renewable energy, or related supply chain", "verifiedBy": "survey", "required": true }
     ],
     "lastVerifiedAt": "2025-11-01",
-    "benefitRange": "Tax credits (bonus in 100% zones)",
+    "benefitRange": "Tax credits with possible location-based enhancements",
     "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about REV eligibility"
   },
   {
@@ -326,10 +326,10 @@
     "level": "State",
     "zoneKey": "stateIncentiveZones",
     "summary": "The MICRO (Manufacturing Illinois Chips for Real Opportunity) program supports semiconductor and microchip-related businesses with tax incentives.",
-    "whoQualifies": "Businesses involved in semiconductor manufacturing, packaging, testing, or supply chain operations in designated 100% zones.",
+    "whoQualifies": "Businesses involved in semiconductor manufacturing, packaging, testing, or supply chain operations. Designated incentive areas may receive enhanced consideration.",
     "benefits": [
       "Tax credits for qualifying investments",
-      "100% credit in designated bonus zones",
+      "Enhanced credits may be available in designated incentive areas",
       "Workforce training support",
       "Infrastructure development assistance"
     ],
@@ -354,11 +354,11 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "100% zones offer maximum credit", "verifiedBy": "location", "required": false },
+      { "criterion": "location", "description": "Designated incentive areas may receive enhanced consideration", "verifiedBy": "location", "required": false },
       { "criterion": "industry", "description": "Must be in semiconductor manufacturing, packaging, testing, or supply chain", "verifiedBy": "survey", "required": true }
     ],
     "lastVerifiedAt": "2025-11-01",
-    "benefitRange": "Tax credits (100% in bonus zones)",
+    "benefitRange": "Tax credits with possible location-based enhancements",
     "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about MICRO eligibility"
   },
   {
@@ -576,10 +576,10 @@
     "name": "Cook County C-PACE (Clean Energy Financing)",
     "level": "County",
     "zoneKey": "",
-    "summary": "C-PACE provides up to 100% upfront financing from private capital for energy efficiency, renewable energy, and water conservation improvements to commercial buildings, repaid through property tax bills.",
+    "summary": "C-PACE provides long-term private financing for eligible energy efficiency, renewable energy, and water conservation improvements to commercial buildings, repaid through property tax bills.",
     "whoQualifies": "Commercial property owners in Cook County including office buildings, retail, industrial, multi-family (5+ units), hotels, and nonprofits.",
     "benefits": [
-      "Up to 100% upfront financing — no large out-of-pocket costs",
+      "Potential upfront financing from participating private capital providers",
       "Loan terms up to 30 years (matching useful life of improvements)",
       "Repaid as a line item on property tax bill",
       "Covers HVAC, lighting, solar, insulation, water systems"
@@ -612,7 +612,7 @@
       { "criterion": "industry", "description": "Project must involve energy efficiency, renewable energy, or water conservation", "verifiedBy": "survey", "required": true }
     ],
     "lastVerifiedAt": "2025-10-01",
-    "benefitRange": "Up to 100% project financing (30-year terms)",
+    "benefitRange": "Long-term project financing",
     "fastestConfirmingStep": "Call (312) 603-1000 about C-PACE eligibility"
   },
   {
@@ -1030,21 +1030,21 @@
     "name": "Commercial Corridor Storefront Activation (CCSA)",
     "level": "City",
     "zoneKey": "ccsa",
-    "summary": "The City of Chicago is investing $30.5 million across 12 commercial corridors over 3 years through the CCSA program. It provides reimbursable grants for capital improvements to vacant and existing commercial spaces, plus free wraparound technical assistance at no cost to corridor businesses.",
+    "summary": "The City of Chicago's CCSA program supports selected commercial corridors through reimbursable capital-improvement assistance and wraparound technical support for corridor businesses.",
     "whoQualifies": "Business owners, property owners, or nonprofits in good standing with the State of Illinois and City of Chicago whose physical property is located within an approved CCSA corridor boundary. Applicant must have site control (ownership or permission from property owner).",
     "benefits": [
       "Reimbursable grants for capital improvements to storefronts",
       "Covers vacant and existing commercial spaces",
       "Free wraparound technical assistance for corridor businesses",
       "No cost to participate in technical assistance programs",
-      "Grants awarded quarterly on a rolling basis"
+      "Application status and award timing vary by corridor and funding round"
     ],
     "howToApply": [
-      "Verify your property is within one of the 12 approved CCSA corridor boundaries",
+      "Verify your property is within a currently approved CCSA corridor boundary",
       "Visit Chicago.gov/CCSA for application details",
       "Contact Program Administrator Allies for Community Business for grant questions",
       "Connect with your Corridor Lead Agency for technical assistance",
-      "Submit application — accepted on a rolling basis, awarded quarterly"
+      "Submit application when the relevant corridor or funding round is open"
     ],
     "requiredDocs": [
       "Proof of business ownership or nonprofit status",
@@ -1077,13 +1077,13 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Property must be within one of 12 approved CCSA corridor boundaries", "verifiedBy": "location", "required": true },
+      { "criterion": "location", "description": "Property must be within a currently approved CCSA corridor boundary", "verifiedBy": "location", "required": true },
       { "criterion": "businessType", "description": "Business type must be eligible (see website for excluded types)", "verifiedBy": "survey", "required": true },
       { "criterion": "siteControl", "description": "Applicant must own the property or have permission from the property owner", "verifiedBy": "manual", "required": true },
       { "criterion": "goodStanding", "description": "Must be in good standing with State of Illinois and City of Chicago", "verifiedBy": "manual", "required": true }
     ],
     "lastVerifiedAt": "2026-04-23",
-    "benefitRange": "Reimbursable grants (from $30.5M total fund)",
+    "benefitRange": "Reimbursable grants; verify current round",
     "fastestConfirmingStep": "Contact Allies for Community Business at granthelp@a4cb.org or (312) 275-3000 to confirm corridor eligibility"
   }
 ]

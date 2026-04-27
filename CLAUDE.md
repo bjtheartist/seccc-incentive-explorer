@@ -44,6 +44,7 @@ The current package scripts only cover vacant-property database maintenance. A f
 1. **Data pipeline (offline):**
    - `scripts/convert-kml.mjs` — city KML zone files → clipped/simplified GeoJSON in `public/data/zones/` (SSA #50 only)
    - `scripts/convert-businesses.mjs` — Google My Business CSV → `public/data/businesses.json` with pre-computed zone memberships
+   - `scripts/seed-census.ts` — fetches 2024 ACS 5-year Cook County tract data, writes `public/data/census-tracts-2024.geojson`, and optionally upserts `census_tracts`
    - `scripts/migrate-vacant.ts` — idempotently creates the `vacant_properties` table and indexes
    - `scripts/sync-vacant-properties.ts` — syncs Chicago vacant land/building data and writes static fallback data
    - `scripts/seed-epa-walkability.ts` — updates existing census rows with walkability data after census data has been seeded
@@ -111,6 +112,7 @@ The current package scripts only cover vacant-property database maintenance. A f
 
 - `businesses.json` — businesses with coordinates, categories, and zone membership flags
 - `programs.json` — 24 incentive program definitions with benefits, application steps, required docs
+- `census-tracts-2024.geojson` — 2024 ACS 5-year Cook County tract fallback joined to Census TIGERweb geometries
 - `stats.json` — Aggregate coverage statistics
 - `vacant-properties.json` — 18K+ city-owned vacant land parcels
 - `stacking-rules.json` — Incentive program stacking/combinability rules

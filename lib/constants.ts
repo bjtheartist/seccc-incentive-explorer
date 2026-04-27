@@ -73,7 +73,7 @@ export const ZONE_DESCRIPTIONS: Record<string, string> = {
   stateIncentiveZones: "Census tracts eligible for Illinois EDGE (job creation credits), REV (EV/clean energy), MICRO (semiconductor), and Data Center tax incentives.",
   ssa: "Locally funded service areas where businesses self-tax to fund streetscaping, marketing, and security improvements.",
   highUnemployment: "Census tracts with unemployment rates significantly above the national average, triggering additional federal eligibility.",
-  ccsa: "$30.5M city program providing reimbursable grants for storefront capital improvements and free technical assistance across 12 commercial corridors. Applications open March 2026, awarded quarterly.",
+  ccsa: "City corridor activation program that may provide reimbursable support for storefront improvements and technical assistance in selected commercial corridors. Application status and eligible corridors should be verified with Chicago DPD.",
   industrialCorridors: "City-designated corridors preserved for manufacturing, logistics, and industrial uses with zoning protections.",
   microMarketRecovery: "City program targeting commercial vacancy in specific corridors with grants for storefront improvements.",
   nof: "City grants for commercial and industrial projects in underinvested neighborhoods on Chicago's South and West Sides.",

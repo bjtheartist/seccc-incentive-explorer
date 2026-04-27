@@ -19,7 +19,7 @@ export default function MapPage() {
             Chicago Site Incentive Map
           </h1>
           <p className="text-white/50 text-base max-w-xl">
-            Explore 11 incentive zones, community assets, zoning, and neighborhood data across Chicago. Search any address or business to check zone eligibility.
+            Explore mapped incentive zones, community assets, zoning, and neighborhood data across Chicago. Search any address or business to check likely eligibility.
           </p>
         </div>
       </div>
@@ -60,7 +60,7 @@ export default function MapPage() {
             {
               num: "03",
               title: "Zone Overlaps",
-              desc: "Areas where multiple zones overlap represent the highest incentive stacking potential for businesses.",
+              desc: "Areas where multiple zones overlap may offer stronger incentive stacking potential for businesses.",
             },
           ].map((item, i) => (
             <div

@@ -2827,8 +2827,9 @@ function ReportDisplay({
                 Incentive Explorer.
               </p>
               <p className="text-[#0C1B33]/25 text-[11px] leading-relaxed">
-                Data verified as of Dec 2025. This is an informational tool
-                &mdash; confirm eligibility with program administrators.
+                Program details, funding rounds, and eligibility rules change over
+                time. This is an informational tool &mdash; confirm eligibility
+                with program administrators.
               </p>
             </div>
           </div>

@@ -63,11 +63,11 @@ export function Footer() {
         <div className="h-px bg-gradient-to-r from-transparent via-white/15 to-transparent mt-10 mb-6" />
         <div className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-white/20 text-center">
           Chicago Site Incentive Map &middot;
-          Data sourced from City of Chicago, State of Illinois &amp; Federal
-          programs
+          Data sourced from public city, county, state, and federal program
+          references
         </div>
         <div className="font-mono-bureau text-[8px] tracking-[0.1em] text-white/15 text-center mt-2">
-          Data verified as of Dec 2025 &middot; v0.1.0
+          Program details change over time &middot; verify with administrators
         </div>
       </div>
     </footer>

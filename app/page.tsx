@@ -25,7 +25,7 @@ export default function Home() {
           <div className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-black/30 backdrop-blur-xl border border-white/10 rounded-full">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="font-mono-bureau text-[11px] tracking-[0.1em] text-white/60">
-              11 Incentive Layers Active
+              Multiple Incentive Layers Active
             </span>
           </div>
         </motion.div>
@@ -49,7 +49,7 @@ export default function Home() {
             transition={{ duration: 0.8, delay: 0.5 }}
             className="text-white/45 text-[15px] max-w-[500px] mx-auto mb-8 leading-relaxed"
           >
-            See every tax credit, grant, and zone program available at your address.
+            See a curated view of tax credits, grants, and zone-based programs that may apply at your address.
           </motion.p>
 
           <motion.div
@@ -178,7 +178,7 @@ export default function Home() {
 
             <div className="grid grid-cols-2 gap-4">
               {[
-                { value: "11", label: "Incentive Zone Layers" },
+                { value: "Multi", label: "Incentive Zone Layers" },
                 { value: "100", label: "SBIF Projects Nearby" },
                 { value: "69", label: "Industry Categories" },
                 { value: "0.91", label: "Diversity Index" },

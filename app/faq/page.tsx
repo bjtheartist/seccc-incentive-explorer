@@ -6,11 +6,11 @@ import { ChevronDown } from "lucide-react";
 const FAQ_ITEMS = [
   {
     q: "What is a TIF District?",
-    a: "A Tax Increment Financing (TIF) district captures growth in property tax revenue within a designated area and reinvests it into local improvements. When property values increase within the TIF district, the extra tax revenue goes toward projects like infrastructure, building rehabilitation, and streetscaping — not into the city's general fund. Over 80% of mapped Chicago businesses are within a TIF district.",
+    a: "A Tax Increment Financing (TIF) district captures growth in property tax revenue within a designated area and reinvests it into local improvements. When property values increase within the TIF district, the extra tax revenue can support projects like infrastructure, building rehabilitation, and streetscaping.",
   },
   {
     q: "What is an Opportunity Zone?",
-    a: "Opportunity Zones are federally designated low-income census tracts where investors can receive significant tax benefits for investing capital gains. If you invest capital gains through a Qualified Opportunity Fund (QOF) and hold the investment for 10+ years, you can pay zero capital gains tax on the new investment profits. About 49% of mapped Chicago businesses are in an Opportunity Zone.",
+    a: "Opportunity Zones are federally designated low-income census tracts where investors may receive tax benefits for investing eligible capital gains through a Qualified Opportunity Fund (QOF). The exact benefit depends on timing, structure, and current federal rules, so investors should confirm with a tax advisor.",
   },
   {
     q: "What is the SBIF program?",
@@ -18,15 +18,15 @@ const FAQ_ITEMS = [
   },
   {
     q: "How do I know if my business qualifies for incentives?",
-    a: "Use the lookup tool on our homepage! Enter your business name or address and we'll instantly check which of 11 incentive zones your business falls within. Each result shows the specific programs you qualify for, what they offer, and how to apply.",
+    a: "Use the lookup tool on our homepage. Enter your business name or address and we will check mapped incentive layers for likely location-based matches. Each result explains which programs may apply, what they generally offer, and what to verify next.",
   },
   {
     q: "Can I qualify for multiple incentive programs at the same time?",
-    a: "Yes! This is called 'incentive stacking' and it's one of the biggest advantages of many Chicago neighborhoods. The average business qualifies for 3-4 programs simultaneously. Some locations qualify for up to 9 overlapping incentives. Each program is applied for separately, and the benefits stack.",
+    a: "Yes. This is often called incentive stacking. Many locations sit inside more than one zone or program area, but each program has its own application, eligible costs, and rules about whether benefits can be combined.",
   },
   {
     q: "What is an Enterprise Zone?",
-    a: "Illinois Enterprise Zones offer state tax incentives to businesses in economically depressed areas. Benefits include a 6.25% state sales tax exemption on building materials, a 0.5% state investment tax credit, and potential utility tax exemptions. About 46% of mapped Chicago businesses are in an Enterprise Zone.",
+    a: "Illinois Enterprise Zones offer state tax incentives to encourage investment in designated areas. Benefits can include building-material sales tax exemptions, investment tax credits, and other tax relief, depending on the project and current program rules.",
   },
   {
     q: "What documents do I typically need to apply for incentives?",
@@ -38,11 +38,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "What is the EDGE Tax Credit?",
-    a: "The Economic Development for a Growing Economy (EDGE) program provides income tax credits to businesses that create or retain jobs in Illinois. In designated 100% zones across Chicago, businesses can receive tax credits equal to 100% of state income tax withholdings for up to 10 years.",
+    a: "The Economic Development for a Growing Economy (EDGE) program provides negotiated income tax credits to businesses that create or retain jobs in Illinois. Some designated areas may qualify for enhanced consideration, but terms are project-specific.",
   },
   {
     q: "What are REV and MICRO zones?",
-    a: "REV Illinois (Reimagining Energy and Vehicles) provides tax credits for businesses in the electric vehicle and renewable energy supply chain. MICRO (Manufacturing Illinois Chips for Real Opportunity) supports semiconductor and microchip-related businesses. Both offer bonus incentives in designated 100% zones.",
+    a: "REV Illinois supports electric vehicle, clean energy, and related supply-chain projects. MICRO supports semiconductor and microchip-related businesses. Both are state programs with location and project criteria that should be confirmed with Illinois DCEO.",
   },
   {
     q: "How can I get help with my application?",
@@ -50,7 +50,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What is a Triple Benefit Zone?",
-    a: "A Triple Benefit Zone is an area where three or more major incentive programs overlap — typically TIF, Opportunity Zone, and Enterprise Zone. Businesses in these areas can stack the maximum combination of tax benefits, grants, and development incentives. These zones represent the highest-value locations for business incentives in Chicago.",
+    a: "A high-overlap incentive area is a location where several major program boundaries intersect, often including TIF, Opportunity Zone, Enterprise Zone, or other place-based layers. These areas can be promising, but the actual value depends on project type, timing, and program rules.",
   },
   {
     q: "Are incentives only for new businesses?",
@@ -58,11 +58,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "How accurate is this tool?",
-    a: "Our tool uses the same geographic zone data published by the City of Chicago and State of Illinois. We use Turf.js point-in-polygon analysis against official zone boundaries to determine which incentive zones apply to any address. While this is highly accurate, we recommend confirming eligibility directly with each program administrator before applying.",
+    a: "The tool uses public geographic datasets and spatial analysis to identify likely zone matches for an address. Boundaries, funding rounds, and eligibility rules can change, so we recommend confirming directly with each program administrator before applying.",
   },
   {
     q: "Where does the data come from?",
-    a: "Incentive zone boundaries come from official City of Chicago and State of Illinois KML/GeoJSON data. SBIF project data comes from the City of Chicago open data portal. Census data is sourced from the American Community Survey (ACS 5-Year estimates). All zone boundaries are verified against official sources.",
+    a: "The tool draws from public city, county, state, and federal sources, including incentive boundary files, Chicago open data, Cook County property records, and American Community Survey 5-Year estimates. Source availability and formats change over time.",
   },
   {
     q: "What is the difference between an incentive zone and a program?",
@@ -70,7 +70,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What is the Neighborhood Opportunity Fund (NOF)?",
-    a: "The NOF provides grants up to $250,000 for small projects and up to $1.5 million for large catalytic projects on Chicago's South, Southwest, and West Sides. Funded by downtown development fees, it targets commercial and industrial projects that create jobs and fill community needs in underinvested neighborhoods.",
+    a: "The NOF provides grant support for qualifying commercial and industrial projects on Chicago's South, Southwest, and West Sides. Award sizes, eligible costs, and application windows vary by funding round, so applicants should verify current guidance with the City.",
   },
   {
     q: "What are New Markets Tax Credits (NMTC)?",
@@ -94,11 +94,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "What is the Cook County Class 7a incentive?",
-    a: "Class 7a reduces property tax assessments from 25% to 10% for 10 years (then 15% in year 11, 20% in year 12) for qualifying small commercial projects under $2 million. It covers new construction, substantial rehabilitation, or reoccupancy of abandoned commercial buildings in Cook County.",
+    a: "Class 7a can reduce the assessment level for qualifying small commercial projects in Cook County. It may apply to new construction, substantial rehabilitation, or reoccupancy of eligible commercial buildings, subject to county approval and current ordinance requirements.",
   },
   {
     q: "What is C-PACE financing?",
-    a: "Cook County C-PACE (Commercial Property Assessed Clean Energy) provides up to 100% upfront financing for energy efficiency, renewable energy, and water conservation improvements to commercial buildings. The loan is repaid through your property tax bill over terms up to 30 years, matching the useful life of the improvements. No large out-of-pocket costs required.",
+    a: "Cook County C-PACE (Commercial Property Assessed Clean Energy) can provide long-term financing for eligible energy efficiency, renewable energy, and water conservation improvements to commercial buildings. Terms depend on the property, project scope, and participating lender.",
   },
 ];
 

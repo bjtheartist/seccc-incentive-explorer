@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
+    "data:acs2024": "npx tsx scripts/seed-census.ts",
     "db:migrate": "npm run db:migrate:vacant",
     "db:migrate:vacant": "npx tsx scripts/migrate-vacant.ts",
     "db:seed": "npm run db:sync:vacant",

@@ -7,7 +7,7 @@ import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 export const metadata: Metadata = {
   title: "Chicago Site Incentive Map | Discover Business Incentives",
   description:
-    "Discover what economic incentives your Chicago business qualifies for. Cross-reference 11 incentive zone layers — TIF districts, Opportunity Zones, Enterprise Zones, and more.",
+    "Discover which economic incentives your Chicago business may qualify for. Cross-reference mapped incentive layers — TIF districts, Opportunity Zones, Enterprise Zones, and more.",
   keywords: [
     "Chicago business incentives",
     "TIF district",

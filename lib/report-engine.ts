@@ -300,7 +300,7 @@ const DATA_SOURCES: Record<string, DataSourceCitation> = {
   census: {
     id: "census",
     label: "U.S. Census Bureau",
-    description: "2022 American Community Survey 5-Year Estimates — median income, home value, population, and demographic indicators.",
+    description: "American Community Survey 5-Year Estimates — median income, home value, population, and demographic indicators.",
     url: "https://data.census.gov",
   },
   zones: {
@@ -1050,7 +1050,7 @@ function generateBestLocation(
       feasibilityItems.push({
         label: "Renovation funding",
         value: "TIF/SBIF eligible",
-        detail: "This site is in a TIF district and/or SBIF-eligible area — rehabilitation costs may be partially reimbursed (SBIF: up to 50%, max $150K).",
+        detail: "This site is in a TIF district and/or SBIF-eligible area — rehabilitation costs may be partially reimbursed. Confirm current caps and open funding rounds before applying.",
       });
     }
   }

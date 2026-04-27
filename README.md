@@ -61,6 +61,12 @@ npm run test
 npm run build
 ```
 
+Offline data refresh scripts:
+
+```bash
+npm run data:acs2024 # fetch 2024 ACS 5-year Cook County tract data and static fallback
+```
+
 Database maintenance scripts currently cover vacant-property data:
 
 ```bash

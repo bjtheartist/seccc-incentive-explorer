@@ -5,7 +5,7 @@ interface StackingScoreProps {
   maxScore?: number;
 }
 
-export function StackingScore({ score, maxScore = 11 }: StackingScoreProps) {
+export function StackingScore({ score, maxScore = 14 }: StackingScoreProps) {
   const pct = Math.round((score / maxScore) * 100);
 
   const getColor = () => {
@@ -48,7 +48,7 @@ export function StackingScore({ score, maxScore = 11 }: StackingScoreProps) {
             {score}
           </span>
           <span className="font-mono-bureau text-[8px] tracking-[0.2em] text-white/30 uppercase">
-            of {maxScore}
+            zones
           </span>
         </div>
       </div>
