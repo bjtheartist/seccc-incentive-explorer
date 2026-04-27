@@ -7,6 +7,11 @@ import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owne
 /** Vacancy follow-up resources */
 const RESOURCES = [
   {
+    name: "CCSA Storefront Activation",
+    desc: "$30.5M in grants for storefront improvements across 12 corridors",
+    url: "https://www.chicago.gov/city/en/depts/dcd/supp_info/ccsa.html",
+  },
+  {
     name: "Cook County Land Bank (CCLBA)",
     desc: "Acquire vacant lots and buildings cleared of back taxes",
     url: "http://www.cookcountylandbank.org/",
@@ -50,12 +55,6 @@ export default function MapPolygonPanel({
   const vacantBuildingCount = features.filter(
     (f) => f.properties?.propertyType === "vacant_building"
   ).length;
-  const totalZoneMatches = features.reduce((total, f) => {
-    const matches = f.properties?.zoneMatches ?? [];
-    return total + (Array.isArray(matches) ? matches.length : 0);
-  }, 0);
-  const avgZones =
-    features.length > 0 ? (totalZoneMatches / features.length).toFixed(1) : "0";
 
   /* ── Top community area ── */
   const topCommunityArea = useMemo(() => {
@@ -167,15 +166,17 @@ export default function MapPolygonPanel({
         .join(",");
     });
 
+    const area = topCommunityArea ? topCommunityArea.toLowerCase().replace(/\s+/g, "-") : "area";
+    const date = new Date().toISOString().slice(0, 10);
     const csv = [header.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = "area-analysis.csv";
+    a.download = `vacancy-report-${area}-${date}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [features]);
+  }, [features, topCommunityArea]);
 
   /** Build report link for a property using its coordinates */
   const buildReportLink = (f: GeoJSON.Feature) => {
@@ -201,7 +202,12 @@ export default function MapPolygonPanel({
           <div className="font-editorial text-[24px] text-white leading-tight mt-1">
             Vacancy Report
           </div>
-          <div className="mt-3 h-[3px] w-10 bg-white/25" />
+          {topCommunityArea && !loading && features.length > 0 && (
+            <div className="font-mono-bureau text-[10px] text-white/50 mt-1.5">
+              {topCommunityArea}
+            </div>
+          )}
+          <div className="mt-3 h-[3px] w-10 bg-[#2563EB]" />
         </div>
         <button
           onClick={(e) => { e.stopPropagation(); onClose(); }}
@@ -227,12 +233,17 @@ export default function MapPolygonPanel({
 
       {/* ── Loading state ── */}
       {loading && (
-        <div className="px-5 py-6 flex items-center gap-2 bg-white">
-          <span className="relative flex h-2 w-2">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#2563EB] opacity-75" />
-            <span className="relative inline-flex rounded-full h-2 w-2 bg-[#2563EB]" />
-          </span>
-          <span className="text-[11px] text-[#0C1B33]/60">
+        <div className="px-5 py-10 flex flex-col items-center gap-3 bg-white">
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="block w-2 h-2 bg-[#2563EB] rounded-full"
+                style={{ animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite` }}
+              />
+            ))}
+          </div>
+          <span className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/40">
             Analyzing area...
           </span>
         </div>
@@ -243,15 +254,15 @@ export default function MapPolygonPanel({
         <>
           {/* ── Empty state ── */}
           {features.length === 0 && (
-            <div className="px-5 py-8 text-center bg-white">
-              <div className="text-[11px] text-[#0C1B33]/50 mb-1">No vacant properties found</div>
-              <div className="text-[10px] text-[#0C1B33]/35">Try drawing a larger area or a different location.</div>
+            <div className="px-5 py-10 text-center bg-white">
+              <div className="font-editorial text-[18px] text-[#0C1B33]/30 mb-2">No properties found</div>
+              <div className="text-[11px] text-[#0C1B33]/40">Try drawing a larger area or a different location.</div>
             </div>
           )}
 
           {/* ── Narrative Summary ── */}
           {features.length > 0 && narrative && (
-            <div className="px-5 pt-5 pb-4 bg-white">
+            <div className="px-5 pt-5 pb-4 bg-white border-b border-[#0C1B33]/8">
               <div className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/25 mb-2">
                 Executive Snapshot
               </div>
@@ -263,31 +274,33 @@ export default function MapPolygonPanel({
 
           {/* ── At a Glance ── */}
           {features.length > 0 && (
-            <>
-              <div className="mx-5 h-px bg-[#0C1B33]/8" />
-              <div className="px-5 py-4 bg-white">
-                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-3">
-                  At a Glance
-                </div>
-                <div className="grid grid-cols-2 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
-                  {[
-                    { label: "Properties", value: features.length },
-                    { label: "Vacant Land", value: vacantLandCount },
-                    { label: "Buildings", value: vacantBuildingCount },
-                    { label: "Avg. Zones", value: avgZones },
-                  ].map((stat) => (
-                    <div key={stat.label} className="bg-[#FAF9F6] px-3 py-3">
-                      <div className="font-editorial text-[24px] leading-none text-[#0C1B33]">
-                        {stat.value}
-                      </div>
-                      <div className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/35 mt-2">
-                        {stat.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+            <div className="px-5 py-4 bg-white">
+              <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-3">
+                At a Glance
               </div>
-            </>
+              <div className="grid grid-cols-3 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
+                {[
+                  { label: "Total", value: features.length },
+                  { label: "Vacant Land", value: vacantLandCount },
+                  { label: "Buildings", value: vacantBuildingCount },
+                ].map((stat) => (
+                  <div key={stat.label} className="bg-[#FAF9F6] px-3 py-3 text-center">
+                    <div className="font-editorial text-[22px] leading-none text-[#0C1B33]">
+                      {stat.value}
+                    </div>
+                    <div className="font-mono-bureau text-[7px] tracking-[0.18em] uppercase text-[#0C1B33]/35 mt-2">
+                      {stat.label}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {zoneCounts.length > 0 && (
+                <div className="mt-2 flex items-center justify-between text-[10px] px-1">
+                  <span className="text-[#0C1B33]/40">Incentive zones covering this area</span>
+                  <span className="font-mono-bureau font-medium text-[#059669]">{zoneCounts.length}</span>
+                </div>
+              )}
+            </div>
           )}
 
           {/* ── Zone Breakdown ── */}
@@ -298,32 +311,41 @@ export default function MapPolygonPanel({
                 <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#059669]/50 mb-1.5">
                   Incentive Zones in Area
                 </div>
-                <div className="text-[9px] text-[#0C1B33]/35 mb-1.5">
+                <div className="text-[9px] text-[#0C1B33]/35 mb-2">
                   Properties covered by each zone
                 </div>
-                <div className="space-y-1">
-                  {zoneCounts.map(({ key, count }) => (
-                    <div
-                      key={key}
-                      className="flex items-center justify-between text-[10px]"
-                    >
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span
-                          className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
-                          style={{
-                            backgroundColor:
-                              ZONE_COLORS[key] ?? "#9CA3AF",
-                          }}
-                        />
-                        <span className="text-[#0C1B33]/70 truncate">
-                          {ZONE_LABELS[key] ?? key}
-                        </span>
+                <div className="space-y-1.5">
+                  {zoneCounts.map(({ key, count }) => {
+                    const pct = features.length > 0 ? Math.round((count / features.length) * 100) : 0;
+                    return (
+                      <div key={key}>
+                        <div className="flex items-center justify-between text-[10px] mb-0.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span
+                              className="inline-block w-2.5 h-2.5 rounded-sm shrink-0"
+                              style={{ backgroundColor: ZONE_COLORS[key] ?? "#9CA3AF" }}
+                            />
+                            <span className="text-[#0C1B33]/70 truncate">
+                              {ZONE_LABELS[key] ?? key}
+                            </span>
+                          </div>
+                          <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0 ml-2">
+                            {count}
+                          </span>
+                        </div>
+                        <div className="h-1 bg-[#0C1B33]/5 rounded-full overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${pct}%`,
+                              backgroundColor: ZONE_COLORS[key] ?? "#9CA3AF",
+                              opacity: 0.6,
+                            }}
+                          />
+                        </div>
                       </div>
-                      <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0 ml-2">
-                        {count}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </>
@@ -334,28 +356,31 @@ export default function MapPolygonPanel({
             <>
               <div className="mx-5 h-px bg-[#0C1B33]/8" />
               <div className="px-5 py-4 bg-white">
-                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-1.5">
+                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-2">
                   Ownership Breakdown
                 </div>
-                <div className="space-y-1">
+                <div className="space-y-1.5">
                   {ownerCounts.map(({ key, count }) => {
-                    const color =
-                      OWNER_TYPE_COLORS[key] ?? "#9CA3AF";
+                    const color = OWNER_TYPE_COLORS[key] ?? "#9CA3AF";
+                    const pct = features.length > 0 ? Math.round((count / features.length) * 100) : 0;
                     return (
                       <div
                         key={key}
                         className="flex items-center justify-between text-[10px]"
                       >
-                        <span
-                          className="inline-block text-[9px] font-medium px-2 py-0.5 rounded"
-                          style={{
-                            backgroundColor: color + "15",
-                            color,
-                            border: `1px solid ${color}30`,
-                          }}
-                        >
-                          {OWNER_TYPE_LABELS[key] ?? key}
-                        </span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="inline-block text-[9px] font-medium px-2 py-0.5 rounded shrink-0"
+                            style={{
+                              backgroundColor: color + "15",
+                              color,
+                              border: `1px solid ${color}30`,
+                            }}
+                          >
+                            {OWNER_TYPE_LABELS[key] ?? key}
+                          </span>
+                          <span className="text-[9px] text-[#0C1B33]/30">{pct}%</span>
+                        </div>
                         <span className="font-mono-bureau text-[#0C1B33]/80 ml-2">
                           {count}
                         </span>
@@ -372,13 +397,18 @@ export default function MapPolygonPanel({
             <>
               <div className="mx-5 h-px bg-[#0C1B33]/8" />
               <div className="px-5 py-4 bg-white">
-                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#D97706]/50 mb-0.5">
-                  Properties
+                <div className="flex items-baseline justify-between mb-0.5">
+                  <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#D97706]/50">
+                    Properties
+                  </div>
+                  <span className="font-mono-bureau text-[9px] text-[#0C1B33]/30">
+                    {features.length} total
+                  </span>
                 </div>
-                <div className="text-[9px] text-[#0C1B33]/35 mb-1.5">
+                <div className="text-[9px] text-[#0C1B33]/35 mb-2">
                   Click an address to generate its incentive report
                 </div>
-                <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
+                <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
                   {features.map((f, i) => {
                     const p = f.properties ?? {};
                     const isLand = p.propertyType === "vacant_land";
@@ -389,13 +419,14 @@ export default function MapPolygonPanel({
                     return (
                       <div
                         key={p.address ?? i}
-                        className="text-[10px] leading-snug border-l border-[#0C1B33]/10 pl-3 py-0.5"
+                        className="text-[10px] leading-snug border-l-2 pl-3 py-1 hover:bg-[#FAF9F6] transition-colors"
+                        style={{ borderColor: isLand ? "#EF4444" : "#F97316" }}
                       >
                         <a
                           href={buildReportLink(f)}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="font-medium text-[#2563EB]/80 hover:text-[#2563EB] truncate block transition-colors"
+                          className="font-medium text-[#0C1B33]/80 hover:text-[#2563EB] truncate block transition-colors"
                           title={`Generate report for ${p.address}`}
                         >
                           {p.address ?? "Unknown Address"}
@@ -404,35 +435,26 @@ export default function MapPolygonPanel({
                           <span
                             className="inline-block text-[8px] font-medium px-1.5 py-px rounded"
                             style={{
-                              backgroundColor: isLand
-                                ? "#EF444415"
-                                : "#F9731615",
+                              backgroundColor: isLand ? "#EF444410" : "#F9731610",
                               color: isLand ? "#EF4444" : "#F97316",
-                              border: `1px solid ${
-                                isLand ? "#EF444430" : "#F9731630"
-                              }`,
                             }}
                           >
                             {isLand ? "Land" : "Building"}
                           </span>
                           {zones.length > 0 && (
                             <span className="text-[8px] text-[#0C1B33]/40 font-mono-bureau">
-                              {zones.length} zone
-                              {zones.length !== 1 ? "s" : ""}
+                              {zones.length} zone{zones.length !== 1 ? "s" : ""}
                             </span>
                           )}
                           {p.ownerType && p.ownerType !== "unknown" && (
                             <span
                               className="inline-block text-[8px] px-1.5 py-px rounded"
                               style={{
-                                backgroundColor: ownerColor + "15",
+                                backgroundColor: ownerColor + "12",
                                 color: ownerColor,
-                                border: `1px solid ${ownerColor}30`,
                               }}
                             >
-                              {OWNER_TYPE_LABELS[
-                                p.ownerType as OwnerType
-                              ] ?? p.ownerType}
+                              {OWNER_TYPE_LABELS[p.ownerType as OwnerType] ?? p.ownerType}
                             </span>
                           )}
                         </div>
@@ -444,19 +466,16 @@ export default function MapPolygonPanel({
             </>
           )}
 
-          {/* ── Export CSV ── */}
+          {/* ── Actions ── */}
           {features.length > 0 && (
             <>
               <div className="mx-5 h-px bg-[#0C1B33]/8" />
-              <div className="px-5 py-4 space-y-2 bg-white">
-                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30 mb-2">
-                  Report Actions
-                </div>
+              <div className="px-5 py-4 bg-white">
                 <button
                   onClick={handleExportCsv}
-                  className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-2 px-3 hover:bg-[#1d4ed8] transition-colors"
+                  className="block w-full text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#0C1B33] text-white py-3 px-3 hover:bg-[#0C1B33]/80 transition-colors"
                 >
-                  Export CSV
+                  Export Full Report (CSV)
                 </button>
               </div>
             </>
@@ -465,23 +484,26 @@ export default function MapPolygonPanel({
           {/* ── Follow-Up Resources ── */}
           <div className="mx-5 h-px bg-[#0C1B33]/8" />
           <div className="px-5 py-4 bg-white">
-            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30 mb-1.5">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30 mb-2">
               Next Steps &amp; Resources
             </div>
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {RESOURCES.map((r) => (
                 <a
                   key={r.name}
                   href={r.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block group"
+                  className="flex items-start gap-2 group"
                 >
-                  <div className="text-[10px] font-medium text-[#2563EB]/70 group-hover:text-[#2563EB] transition-colors">
-                    {r.name}
-                  </div>
-                  <div className="text-[9px] text-[#0C1B33]/40 leading-snug">
-                    {r.desc}
+                  <span className="text-[#2563EB]/40 group-hover:text-[#2563EB] mt-0.5 text-[8px] shrink-0">&#x2192;</span>
+                  <div>
+                    <div className="text-[10px] font-medium text-[#0C1B33]/70 group-hover:text-[#2563EB] transition-colors">
+                      {r.name}
+                    </div>
+                    <div className="text-[9px] text-[#0C1B33]/35 leading-snug">
+                      {r.desc}
+                    </div>
                   </div>
                 </a>
               ))}
@@ -490,17 +512,17 @@ export default function MapPolygonPanel({
 
           {/* ── Footer ── */}
           <div className="mx-5 h-px bg-[#0C1B33]/8" />
-          <div className="px-5 py-4 space-y-2 bg-white">
+          <div className="px-5 py-3 bg-white">
             <a
               href="/programs"
-              className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase border border-[#0C1B33]/15 text-[#0C1B33]/60 py-2 px-3 hover:text-[#0C1B33] hover:border-[#0C1B33]/30 transition-colors"
+              className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase border border-[#0C1B33]/15 text-[#0C1B33]/50 py-2 px-3 hover:text-[#0C1B33] hover:border-[#0C1B33]/30 transition-colors"
             >
               Browse All Programs
             </a>
           </div>
 
           {/* ── Attribution ── */}
-          <div className="px-5 py-3 bg-[#F5F5F0] border-t border-[#0C1B33]/8">
+          <div className="px-5 py-3 bg-[#F5F5F0] border-t border-[#0C1B33]/6">
             <p className="text-[8px] text-[#0C1B33]/25 leading-snug">
               Data: City of Chicago Open Data &amp; Cook County Assessor. Vacancy records may not reflect current conditions. Always verify on-site.
             </p>

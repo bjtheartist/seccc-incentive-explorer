@@ -62,6 +62,7 @@ async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS idx_vacant_type ON vacant_properties (property_type)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_vacant_owner_type ON vacant_properties (owner_type)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_vacant_incentive_count ON vacant_properties (incentive_count DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_vacant_owner_type ON vacant_properties (owner_type)`;
 
   console.log("\nVacant properties migration complete!");
 }

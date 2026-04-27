@@ -6,19 +6,25 @@
 <title>CSIM — Chicago Site Incentive Map</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --navy: #0C1B33;
+    --navy-90: rgba(12, 27, 51, 0.9);
     --navy-80: rgba(12, 27, 51, 0.8);
     --navy-50: rgba(12, 27, 51, 0.5);
     --navy-25: rgba(12, 27, 51, 0.25);
     --navy-10: rgba(12, 27, 51, 0.1);
     --navy-05: rgba(12, 27, 51, 0.05);
     --blue: #2563EB;
+    --blue-dark: #1D4ED8;
+    --blue-light: #EFF6FF;
+    --blue-10: rgba(37, 99, 235, 0.1);
+    --blue-06: rgba(37, 99, 235, 0.06);
     --cream: #FAF9F6;
     --gold: #C8A44E;
     --white: #FFFFFF;
+    --red-accent: #DC2626;
   }
 
   *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
@@ -50,23 +56,25 @@
 
   /* ── HEADER ── */
   .header {
-    padding: 0.45in 0.6in 0;
+    background: var(--navy);
+    padding: 0.3in 0.6in;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
   }
 
   .brand-name {
     font-family: 'Playfair Display', serif;
-    font-size: 11pt;
+    font-size: 12pt;
     font-weight: 700;
     letter-spacing: 0.01em;
+    color: var(--white);
   }
 
   .brand-org {
     font-size: 6.5pt;
     font-weight: 400;
-    color: var(--navy-50);
+    color: rgba(255, 255, 255, 0.5);
     letter-spacing: 0.08em;
     text-transform: uppercase;
     margin-top: 2px;
@@ -75,93 +83,138 @@
   .header-right {
     text-align: right;
     font-size: 7pt;
-    color: var(--navy-50);
+    color: rgba(255, 255, 255, 0.5);
     line-height: 1.6;
   }
 
   .header-right strong {
-    color: var(--navy);
+    color: var(--white);
     font-weight: 600;
   }
 
   /* ── HERO ── */
   .hero {
-    padding: 0.4in 0.6in 0.3in;
+    background: linear-gradient(135deg, var(--blue) 0%, var(--blue-dark) 100%);
+    padding: 0.38in 0.6in 0.32in;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -40%;
+    right: -10%;
+    width: 4in;
+    height: 4in;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
   }
 
   .hero h1 {
     font-family: 'Playfair Display', serif;
-    font-size: 26pt;
+    font-size: 25pt;
     font-weight: 700;
     line-height: 1.15;
-    color: var(--navy);
+    color: var(--white);
     max-width: 5.8in;
-    margin-bottom: 0.16in;
+    margin-bottom: 0.14in;
+    position: relative;
   }
 
   .hero h1 em {
     font-style: italic;
-    color: var(--blue);
+    color: rgba(255, 255, 255, 0.7);
   }
 
   .hero-line {
     width: 0.4in;
     height: 2px;
-    background: var(--navy);
-    margin-bottom: 0.14in;
+    background: rgba(255, 255, 255, 0.3);
+    margin-bottom: 0.12in;
   }
 
   .hero p {
-    font-size: 9pt;
+    font-size: 8.5pt;
     line-height: 1.6;
-    color: var(--navy-80);
-    max-width: 5.8in;
+    color: rgba(255, 255, 255, 0.85);
+    max-width: 6in;
     font-weight: 300;
+    position: relative;
   }
 
   /* ── STATS ── */
   .stats {
     display: flex;
-    gap: 0.4in;
-    padding: 0 0.6in;
-    margin-bottom: 0.28in;
+    gap: 0;
+    margin: 0 0.6in;
+    margin-top: -0.01in;
+    margin-bottom: 0.22in;
+    border-radius: 0 0 6px 6px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(12, 27, 51, 0.08);
   }
 
   .stat {
-    padding: 0.16in 0;
-    border-top: 2px solid var(--navy);
+    flex: 1;
+    padding: 0.16in 0.14in;
+    background: var(--navy);
+    text-align: center;
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .stat:last-child {
+    border-right: none;
+  }
+
+  .stat--highlight {
+    background: var(--red-accent);
   }
 
   .stat-value {
     font-family: 'Playfair Display', serif;
-    font-size: 28pt;
+    font-size: 24pt;
     font-weight: 700;
     line-height: 1;
-    color: var(--navy);
+    color: var(--white);
   }
 
   .stat-label {
-    font-size: 7pt;
+    font-size: 6pt;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--navy-50);
-    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.5);
+    margin-top: 3px;
     font-weight: 400;
+  }
+
+  .stat--highlight .stat-label {
+    color: rgba(255, 255, 255, 0.7);
   }
 
   /* ── FEATURES ── */
   .features {
     padding: 0 0.6in;
-    margin-bottom: 0.24in;
+    margin-bottom: 0.2in;
   }
 
   .section-title {
     font-size: 6.5pt;
     letter-spacing: 0.16em;
     text-transform: uppercase;
-    color: var(--navy-50);
-    font-weight: 500;
-    margin-bottom: 0.14in;
+    color: var(--blue);
+    font-weight: 600;
+    margin-bottom: 0.12in;
+    display: flex;
+    align-items: center;
+    gap: 0.08in;
+  }
+
+  .section-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--blue-10);
   }
 
   .features-grid {
@@ -171,22 +224,27 @@
   }
 
   .feature {
-    padding: 0.1in 0;
+    padding: 0.08in 0;
     border-top: 1px solid var(--navy-05);
     display: flex;
-    gap: 0.12in;
+    gap: 0.1in;
     align-items: flex-start;
   }
 
   .feature-num {
-    font-family: 'Playfair Display', serif;
-    font-size: 14pt;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 8pt;
     font-weight: 700;
-    color: var(--navy-25);
-    line-height: 1;
+    color: var(--white);
+    background: var(--blue);
+    width: 0.18in;
+    height: 0.18in;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
-    width: 0.22in;
-    padding-top: 1px;
+    margin-top: 1px;
   }
 
   .feature-content {}
@@ -200,7 +258,7 @@
   }
 
   .feature-desc {
-    font-size: 7pt;
+    font-size: 6.5pt;
     line-height: 1.45;
     color: var(--navy-50);
     font-weight: 300;
@@ -212,18 +270,18 @@
     grid-template-columns: 1fr 1fr;
     gap: 0.4in;
     padding: 0 0.6in;
-    margin-bottom: 0.2in;
+    margin-bottom: 0.16in;
   }
 
   .diff-list {
     list-style: none;
     display: flex;
     flex-direction: column;
-    gap: 0.07in;
+    gap: 0.06in;
   }
 
   .diff-item {
-    font-size: 7.5pt;
+    font-size: 7pt;
     line-height: 1.5;
     color: var(--navy-80);
     padding-left: 0.14in;
@@ -236,10 +294,10 @@
     position: absolute;
     left: 0;
     top: 5px;
-    width: 4px;
-    height: 4px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
-    background: var(--navy-25);
+    background: var(--blue);
   }
 
   .diff-item strong {
@@ -251,26 +309,26 @@
   .how-steps {
     display: flex;
     flex-direction: column;
-    gap: 0.08in;
+    gap: 0.07in;
   }
 
   .how-step {
     display: flex;
     align-items: baseline;
-    gap: 0.1in;
-    font-size: 7.5pt;
+    gap: 0.08in;
+    font-size: 7pt;
     line-height: 1.5;
     color: var(--navy-80);
     font-weight: 300;
   }
 
   .step-num {
-    font-family: 'Playfair Display', serif;
-    font-size: 10pt;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 7pt;
     font-weight: 700;
-    color: var(--navy-25);
+    color: var(--blue);
     flex-shrink: 0;
-    width: 0.16in;
+    width: 0.14in;
   }
 
   .how-step strong {
@@ -278,21 +336,54 @@
     font-weight: 500;
   }
 
+  /* ── CTA ── */
+  .cta {
+    margin: 0 0.6in;
+    padding: 0.16in 0.24in;
+    background: var(--blue-06);
+    border: 1px solid var(--blue-10);
+    border-radius: 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .cta-text {
+    font-size: 8.5pt;
+    font-weight: 500;
+    color: var(--navy);
+  }
+
+  .cta-text span {
+    font-weight: 300;
+    color: var(--navy-50);
+    font-size: 7pt;
+    display: block;
+    margin-top: 1px;
+  }
+
+  .cta-url {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 9pt;
+    font-weight: 700;
+    color: var(--blue);
+    letter-spacing: -0.01em;
+  }
+
   /* ── FOOTER ── */
   .footer {
     margin-top: auto;
-    padding: 0 0.6in 0.4in;
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
     border-top: 1px solid var(--navy-10);
     margin-left: 0.6in;
     margin-right: 0.6in;
-    padding: 0.14in 0 0.4in;
+    padding: 0.1in 0 0.3in;
   }
 
   .footer-sources {
-    font-size: 6pt;
+    font-size: 5.5pt;
     color: var(--navy-25);
     line-height: 1.6;
   }
@@ -327,7 +418,7 @@
       padding: 0.5in 0;
     }
     .page {
-      box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.12);
     }
   }
 </style>
@@ -339,123 +430,131 @@
   <header class="header">
     <div>
       <div class="brand-name">Chicago Site Incentive Map</div>
-      <div class="brand-org">South East Chicago Chamber of Commerce</div>
+      <div class="brand-org">Every incentive. One address. Instant answers.</div>
     </div>
     <div class="header-right">
-      <strong>csim.seccc.org</strong><br>
-      (773) 721-1999
+      <strong>chicagoincentiveexplorer.com</strong>
     </div>
   </header>
 
-  <!-- HERO -->
+  <!-- 1. PROBLEM -->
   <section class="hero">
-    <h1>Your address determines<br>your incentives.<br><em>Now you can see them all.</em></h1>
+    <h1>The incentives exist.<br>The information <em>doesn't connect.</em></h1>
     <div class="hero-line"></div>
     <p>
-      Chicago businesses sit on top of overlapping economic incentive programs worth millions in tax credits, grants, and development benefits. But eligibility information is scattered across federal, state, county, and city agencies. CSIM cross-references 11 incentive zone layers at any Chicago address and delivers an instant eligibility report.
+      Chicago has over 20 economic incentive programs across four levels of government &mdash; TIF districts, Opportunity Zones, enterprise zones, tax credits, grants, and more. Most business owners have heard of at least some of them. The problem isn't awareness. It's that eligibility rules, zone boundaries, and application steps live in separate databases across separate agencies with no single point of entry. CSIM fixes that.
     </p>
   </section>
 
-  <!-- STATS -->
+  <!-- 2. THE FRAGMENTATION (proof of the problem) -->
   <div class="stats">
-    <div class="stat">
-      <div class="stat-value">11</div>
-      <div class="stat-label">Incentive Zone Layers</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">20+</div>
-      <div class="stat-label">Programs Tracked</div>
-    </div>
     <div class="stat">
       <div class="stat-value">4</div>
       <div class="stat-label">Levels of Government</div>
     </div>
+    <div class="stat">
+      <div class="stat-value">18</div>
+      <div class="stat-label">Separate Zone Layers</div>
+    </div>
+    <div class="stat">
+      <div class="stat-value">20+</div>
+      <div class="stat-label">Programs, None Linked</div>
+    </div>
+    <div class="stat stat--highlight">
+      <div class="stat-value">0</div>
+      <div class="stat-label">Tools That Connect Them</div>
+    </div>
   </div>
 
-  <!-- FEATURES -->
+  <!-- 3. SOLUTION -->
   <section class="features">
-    <div class="section-title">What CSIM Does</div>
+    <div class="section-title">What CSIM Does About It</div>
     <div class="features-grid">
       <div class="feature">
         <div class="feature-num">1</div>
         <div class="feature-content">
-          <div class="feature-title">Instant Incentive Review</div>
-          <div class="feature-desc">Enter any Chicago address and get an instant review of the incentive programs you may be eligible for.</div>
+          <div class="feature-title">One Address, Full Picture</div>
+          <div class="feature-desc">Enter any Chicago address and instantly see every incentive program available at that location &mdash; no more checking agency by agency.</div>
         </div>
       </div>
       <div class="feature">
         <div class="feature-num">2</div>
         <div class="feature-content">
-          <div class="feature-title">Interactive 11-Layer Map</div>
-          <div class="feature-desc">Visualize TIF districts, Opportunity Zones, Enterprise Zones, and 8 more incentive boundaries with toggle controls.</div>
+          <div class="feature-title">18 Layers, One Map</div>
+          <div class="feature-desc">TIF districts, Opportunity Zones, Enterprise Zones, and 15 more zone boundaries visualized together for the first time.</div>
         </div>
       </div>
       <div class="feature">
         <div class="feature-num">3</div>
         <div class="feature-content">
-          <div class="feature-title">Pre-Qualification Survey</div>
-          <div class="feature-desc">Answer four questions about your business to receive personalized program matches ranked by confidence.</div>
+          <div class="feature-title">Personalized Matching</div>
+          <div class="feature-desc">A four-question survey about your business narrows 20+ programs to the ones that actually apply to you, ranked by confidence.</div>
         </div>
       </div>
       <div class="feature">
         <div class="feature-num">4</div>
         <div class="feature-content">
-          <div class="feature-title">Location Finder</div>
-          <div class="feature-desc">Select your sector to discover optimal sites based on zoning compatibility and incentive overlap.</div>
+          <div class="feature-title">Incentive Stacking</div>
+          <div class="feature-desc">See where 3 to 9 programs overlap at a single location &mdash; the combinations no single agency would tell you about.</div>
         </div>
       </div>
       <div class="feature">
         <div class="feature-num">5</div>
         <div class="feature-content">
-          <div class="feature-title">Incentive Stacking</div>
-          <div class="feature-desc">Discover locations where 3 to 9 programs overlap, maximizing total benefit potential.</div>
+          <div class="feature-title">Location Finder</div>
+          <div class="feature-desc">Looking for a site? Select your sector and find locations with the highest incentive overlap and zoning compatibility.</div>
         </div>
       </div>
       <div class="feature">
         <div class="feature-num">6</div>
         <div class="feature-content">
-          <div class="feature-title">Programs Directory</div>
-          <div class="feature-desc">Browse 20+ federal, state, county, and city programs with eligibility, benefits, and contacts.</div>
+          <div class="feature-title">Downloadable Reports</div>
+          <div class="feature-desc">Get a PDF with program details, application steps, and contacts &mdash; ready to hand to your accountant or alderman's office.</div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- TWO COLUMNS -->
+  <!-- 4. HOW IT WORKS + WHY US -->
   <section class="two-col">
-    <div>
-      <div class="section-title">What Makes CSIM Different</div>
-      <ul class="diff-list">
-        <li class="diff-item"><strong>Only tool integrating all 11 Chicago incentive zone layers</strong> in a single view</li>
-        <li class="diff-item"><strong>Incentive stacking visibility</strong> &mdash; reveals every overlapping program at your location</li>
-        <li class="diff-item"><strong>Chicago-specific</strong> &mdash; built for Chicago's unique incentive ecosystem, not a generic national tool</li>
-        <li class="diff-item"><strong>Industry-aware</strong> &mdash; personalized across 20+ sectors from manufacturing to food &amp; beverage</li>
-        <li class="diff-item"><strong>Community-backed</strong> &mdash; created by SECCC, a trusted local partner</li>
-        <li class="diff-item"><strong>Free and accessible</strong> &mdash; no subscription, no paywall</li>
-      </ul>
-    </div>
     <div>
       <div class="section-title">How It Works</div>
       <div class="how-steps">
         <div class="how-step">
-          <div class="step-num">1</div>
-          <span><strong>Enter your address</strong> or search by business name to locate your property on the map</span>
+          <div class="step-num">1.</div>
+          <span><strong>Enter your address</strong> or search by business name to pin your location</span>
         </div>
         <div class="how-step">
-          <div class="step-num">2</div>
-          <span><strong>See your zones</strong> &mdash; CSIM cross-references 11 layers and surfaces every program at your location</span>
+          <div class="step-num">2.</div>
+          <span><strong>See your zones</strong> &mdash; CSIM cross-references 18 layers and surfaces every program at your spot</span>
         </div>
         <div class="how-step">
-          <div class="step-num">3</div>
-          <span><strong>Refine with a survey</strong> &mdash; four questions about your business to get confidence-ranked matches</span>
+          <div class="step-num">3.</div>
+          <span><strong>Take the survey</strong> &mdash; four quick questions to get confidence-ranked matches</span>
         </div>
         <div class="how-step">
-          <div class="step-num">4</div>
-          <span><strong>Get your review</strong> &mdash; a summary of what you may qualify for, with program details and next steps</span>
+          <div class="step-num">4.</div>
+          <span><strong>Download your report</strong> &mdash; a PDF with what you qualify for, how to apply, and who to call</span>
         </div>
       </div>
     </div>
+    <div>
+      <div class="section-title">Why CSIM</div>
+      <ul class="diff-list">
+        <li class="diff-item"><strong>Connects the dots</strong> &mdash; the only tool linking all 18 Chicago incentive zone layers in one view</li>
+        <li class="diff-item"><strong>Chicago-specific</strong> &mdash; built for this city's incentive ecosystem, not a generic national tool</li>
+        <li class="diff-item"><strong>Industry-aware</strong> &mdash; personalized across 20+ sectors from manufacturing to food &amp; beverage</li>
+        <li class="diff-item"><strong>Community-backed</strong> &mdash; created by SECCC, a trusted South Side partner</li>
+        <li class="diff-item"><strong>Free</strong> &mdash; no subscription, no paywall, no login required</li>
+      </ul>
+    </div>
   </section>
+
+  <!-- 5. CTA -->
+  <div class="cta">
+    <div class="cta-text">Look up your address and see what you're eligible for.<br><span>Free. No login. Takes 60 seconds.</span></div>
+    <div class="cta-url">chicagoincentiveexplorer.com</div>
+  </div>
 
   <!-- FOOTER -->
   <footer class="footer">
@@ -463,8 +562,8 @@
       Data sourced from City of Chicago, State of Illinois, U.S. Department of Treasury, and American Community Survey.
     </div>
     <div class="footer-right">
-      <strong>South East Chicago Chamber of Commerce</strong><br>
-      (773) 721-1999
+      <strong>chicagoincentiveexplorer.com</strong><br>
+      (616) 589-5598
     </div>
   </footer>
 

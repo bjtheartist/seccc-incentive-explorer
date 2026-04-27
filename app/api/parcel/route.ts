@@ -7,6 +7,7 @@ import {
   isVacantClass,
 } from "@/lib/parcel-classes";
 import { socrataHeaders } from "@/lib/socrata";
+import { classifyOwner } from "@/lib/owner-classify";
 import type { ParcelData } from "@/lib/types";
 
 /**
@@ -158,7 +159,7 @@ export async function GET(request: NextRequest) {
   // Mutable copy for enrichment
   const enriched: ParcelData = { ...result };
 
-  // Non-blocking Cook County Assessor enrichment
+  // Non-blocking Cook County Assessor enrichment (assessment + ownership)
   if (enriched.pin) {
     try {
       const assessorUrl = `https://datacatalog.cookcountyassessor.com/resource/uzyt-m557.json?pin=${enriched.pin}&$limit=1`;
@@ -178,6 +179,11 @@ export async function GET(request: NextRequest) {
               : null;
           enriched.taxYear = a.tax_year || null;
           enriched.priorYearTax = a.total_billed != null ? Number(a.total_billed) : null;
+          // Ownership data
+          enriched.ownerName = a.tax_bill_name || a.taxpayer_name || null;
+          const mailingParts = [a.tax_bill_mailing_address, a.tax_bill_city, a.tax_bill_state, a.tax_bill_zip].filter(Boolean);
+          enriched.ownerMailingAddress = mailingParts.length > 0 ? mailingParts.join(", ") : null;
+          enriched.ownerType = classifyOwner(enriched.ownerName, enriched.ownerMailingAddress);
         }
       }
     } catch {

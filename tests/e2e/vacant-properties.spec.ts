@@ -97,6 +97,31 @@ test.describe("Vacant Properties - API Tests", () => {
     expect(data.features.length).toBeGreaterThan(0);
     expect(data.features.length).toBeLessThanOrEqual(2000);
   });
+
+  test("vacant properties include ownership fields", async ({ request }) => {
+    const res = await request.get(
+      "/api/vacant?bounds=-87.7,41.7,-87.5,41.8&limit=5"
+    );
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    expect(data.features.length).toBeGreaterThan(0);
+    const feature = data.features[0];
+    expect(feature.properties).toHaveProperty("ownerName");
+    expect(feature.properties).toHaveProperty("ownerType");
+  });
+
+  test("vacant API supports ownerType filter", async ({ request }) => {
+    const res = await request.get(
+      "/api/vacant?bounds=-87.7,41.7,-87.5,41.8&ownerType=city_public&limit=5"
+    );
+    expect(res.status()).toBe(200);
+    const data = await res.json();
+    if (data.features.length > 0) {
+      for (const f of data.features) {
+        expect(f.properties.ownerType).toBe("city_public");
+      }
+    }
+  });
 });
 
 /**
