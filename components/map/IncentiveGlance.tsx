@@ -43,19 +43,19 @@ export default function IncentiveGlance() {
     } catch { /* ignore */ }
   };
 
-  /* Top 9 zones by coverage */
+  /* Primary zones by relative citywide coverage */
   const topZones = stats
     ? ZONE_KEYS.filter((k) => stats.zoneCoverage[k])
         .sort((a, b) => stats.zoneCoverage[b].pct - stats.zoneCoverage[a].pct)
-        .slice(0, 9)
+        .slice(0, 5)
     : [];
 
-  /* Max stacking */
-  const maxStack = stats
-    ? Math.max(
-        ...Object.keys(stats.stackingDistribution).map(Number)
-      )
-    : 0;
+  const coverageLabel = (pct: number) => {
+    if (pct >= 70) return "Broad";
+    if (pct >= 40) return "Common";
+    if (pct >= 15) return "Targeted";
+    return "Limited";
+  };
 
   return (
     <div className="mt-6 border border-[#0C1B33]/10 bg-white">
@@ -88,7 +88,7 @@ export default function IncentiveGlance() {
               Incentives at a Glance
             </h3>
             <p className="text-[11px] text-[#0C1B33]/40 mt-0.5">
-              Coverage stats, zone breakdown, and downloadable report
+              Citywide zone context and custom report tools
             </p>
           </div>
         </div>
@@ -112,16 +112,16 @@ export default function IncentiveGlance() {
           <div className="grid grid-cols-3 gap-0">
             {[
               {
-                label: "Incentive Zones",
-                value: Object.keys(stats.zoneCoverage).length.toString(),
+                label: "Layer Inventory",
+                value: "Curated",
               },
               {
-                label: "Max Zone Stack",
-                value: `${maxStack} layers`,
+                label: "Stacking Potential",
+                value: "Location based",
               },
               {
-                label: "Avg Coverage",
-                value: `${Math.round(Object.values(stats.zoneCoverage).reduce((sum, z) => sum + z.pct, 0) / Math.max(Object.values(stats.zoneCoverage).length, 1))}%`,
+                label: "Coverage Lens",
+                value: "Directional",
               },
             ].map((stat, i) => (
               <div
@@ -141,7 +141,7 @@ export default function IncentiveGlance() {
           {/* Zone coverage bars */}
           <div className="border-t border-[#0C1B33]/8 px-6 py-5">
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/40 mb-4">
-              Zone Coverage — Chicago
+              Common Zone Layers — Chicago
             </div>
             <div className="space-y-2.5">
               {topZones.map((key) => {
@@ -165,8 +165,8 @@ export default function IncentiveGlance() {
                         }}
                       />
                     </div>
-                    <span className="font-mono-bureau text-[11px] text-[#0C1B33]/50 w-10 text-right">
-                      {z.pct}%
+                    <span className="font-mono-bureau text-[10px] tracking-[0.08em] uppercase text-[#0C1B33]/45 w-16 text-right">
+                      {coverageLabel(z.pct)}
                     </span>
                   </div>
                 );
