@@ -1,8 +1,14 @@
 "use client";
 
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useState } from "react";
+import { useSession } from "next-auth/react";
+import { FileText, Loader2, Mail, X } from "lucide-react";
 import { ZONE_COLORS, ZONE_LABELS } from "@/lib/constants";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
+import type { GeneratedReport } from "@/lib/report-engine";
+import type { WizardState } from "@/lib/report-wizard-config";
+import { SaveReportModal } from "@/components/workspace/SaveReportModal";
+import { storePendingReport } from "@/components/workspace/PendingReportSaver";
 
 /** Vacancy follow-up resources */
 const RESOURCES = [
@@ -46,6 +52,9 @@ export default function MapPolygonPanel({
   onClose,
   onClear,
 }: MapPolygonPanelProps) {
+  const { status } = useSession();
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [emailModalOpen, setEmailModalOpen] = useState(false);
   const features = results.features;
 
   /* ── Summary counts ── */
@@ -133,6 +142,153 @@ export default function MapPolygonPanel({
 
     return parts.join(" ");
   }, [features, topCommunityArea, vacantLandCount, vacantBuildingCount, zoneCounts, ownerCounts]);
+
+  const areaReport = useMemo<GeneratedReport>(() => {
+    const areaName = topCommunityArea || "Drawn Area";
+    const zoneItems = zoneCounts.map(({ key, count }) => ({
+      label: ZONE_LABELS[key] || key,
+      value: `${count} propert${count === 1 ? "y" : "ies"}`,
+      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of properties in the drawn area fall within this zone.`,
+    }));
+
+    const ownerItems = ownerCounts.map(({ key, count }) => ({
+      label: OWNER_TYPE_LABELS[key] || key,
+      value: `${count} propert${count === 1 ? "y" : "ies"}`,
+      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of the drawn area vacancy set.`,
+    }));
+
+    const propertyItems = features.slice(0, 20).map((feature) => {
+      const p = feature.properties ?? {};
+      const zones: unknown[] = p.zoneMatches ?? [];
+      return {
+        label: String(p.address || "Unknown Address"),
+        value: p.propertyType === "vacant_land" ? "Vacant land" : "Vacant building",
+        detail: `${zones.length} incentive zone${zones.length !== 1 ? "s" : ""}${p.ownerType ? ` · ${OWNER_TYPE_LABELS[p.ownerType as OwnerType] || p.ownerType}` : ""}`,
+      };
+    });
+
+    return {
+      title: `Vacancy Area Report — ${areaName}`,
+      subtitle: "Drawn-area vacancy overview",
+      reportType: "best-location",
+      generatedAt: new Date().toISOString(),
+      summary:
+        narrative ||
+        `This drawn area contains ${features.length} vacant ${features.length === 1 ? "property" : "properties"}.`,
+      sections: [
+        {
+          title: "Area Snapshot",
+          description: "Summary of vacant properties inside the drawn area.",
+          items: [
+            { label: "Total Properties", value: String(features.length) },
+            { label: "Vacant Land", value: String(vacantLandCount) },
+            { label: "Vacant Buildings", value: String(vacantBuildingCount) },
+            { label: "Community Area", value: topCommunityArea || "Drawn area" },
+          ],
+        },
+        ...(zoneItems.length > 0
+          ? [
+              {
+                title: "Incentive Zones in Area",
+                description: "Zone coverage among properties inside the drawn area.",
+                items: zoneItems,
+              },
+            ]
+          : []),
+        ...(ownerItems.length > 0
+          ? [
+              {
+                title: "Ownership Breakdown",
+                description: "Ownership classification among vacancy records.",
+                items: ownerItems,
+              },
+            ]
+          : []),
+        ...(propertyItems.length > 0
+          ? [
+              {
+                title: "Priority Properties",
+                description:
+                  propertyItems.length < features.length
+                    ? `Showing the first ${propertyItems.length} of ${features.length} properties. Export CSV for the full list.`
+                    : "Properties inside the drawn area.",
+                items: propertyItems,
+              },
+            ]
+          : []),
+      ],
+      recommendedActions: [
+        {
+          label: "Export and review the full property list",
+          description:
+            "Use the CSV to prioritize addresses by ownership, vacancy type, and incentive zone overlap.",
+          priority: "high",
+        },
+        {
+          label: "Verify property status",
+          description:
+            "Vacancy records can lag real conditions. Confirm status through site visits, assessor records, or local partners.",
+          priority: "medium",
+        },
+        {
+          label: "Contact an acquisition or corridor partner",
+          description:
+            "Use the report to start conversations with CCLBA, DPD, CCSA, or a local business support partner.",
+          priority: "medium",
+        },
+      ],
+      metadata: {
+        address: areaName,
+        projectType: "vacant-acquisition",
+      },
+      dataSources: [
+        {
+          id: "chicago-open-data",
+          label: "City of Chicago Open Data",
+          description: "Vacant property and public boundary data.",
+          url: "https://data.cityofchicago.org/",
+        },
+        {
+          id: "cook-county-assessor",
+          label: "Cook County Assessor",
+          description: "Property assessment and ownership context.",
+          url: "https://www.cookcountyassessor.com/",
+        },
+      ],
+    };
+  }, [
+    features,
+    narrative,
+    ownerCounts,
+    topCommunityArea,
+    vacantBuildingCount,
+    vacantLandCount,
+    zoneCounts,
+  ]);
+
+  const areaWizardState = useMemo<WizardState>(() => ({
+    reportType: "dev-feasibility",
+    address: topCommunityArea || "Drawn Area",
+    lat: null,
+    lon: null,
+    neighborhood: topCommunityArea || "",
+    industry: "",
+    budgetRange: "skip",
+    projectType: "vacant-acquisition",
+    creditsToAnalyze: zoneCounts.map(({ key }) => key),
+  }), [topCommunityArea, zoneCounts]);
+
+  const handleSaveReport = useCallback(() => {
+    if (status === "authenticated") {
+      setSaveModalOpen(true);
+      return;
+    }
+
+    storePendingReport({ reportData: areaReport, wizardState: areaWizardState });
+    window.location.assign(
+      `/login?callbackUrl=${encodeURIComponent("/workspace?savePending=1")}`
+    );
+  }, [areaReport, areaWizardState, status]);
 
   /* ── Export CSV ── */
   const handleExportCsv = useCallback(() => {
@@ -471,6 +627,22 @@ export default function MapPolygonPanel({
             <>
               <div className="mx-5 h-px bg-[#0C1B33]/8" />
               <div className="px-5 py-4 bg-white">
+                <div className="grid grid-cols-1 gap-2 mb-2">
+                  <button
+                    onClick={handleSaveReport}
+                    className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-3 px-3 hover:bg-[#1d4ed8] transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    Save Report
+                  </button>
+                  <button
+                    onClick={() => setEmailModalOpen(true)}
+                    className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase border border-[#2563EB]/30 text-[#2563EB] py-3 px-3 hover:bg-[#2563EB]/5 transition-colors"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    Email This to Me
+                  </button>
+                </div>
                 <button
                   onClick={handleExportCsv}
                   className="block w-full text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#0C1B33] text-white py-3 px-3 hover:bg-[#0C1B33]/80 transition-colors"
@@ -529,6 +701,122 @@ export default function MapPolygonPanel({
           </div>
         </>
       )}
+      {saveModalOpen && (
+        <SaveReportModal
+          reportData={areaReport}
+          wizardState={areaWizardState}
+          onClose={() => setSaveModalOpen(false)}
+        />
+      )}
+      {emailModalOpen && (
+        <AreaEmailReportModal
+          report={areaReport}
+          onClose={() => setEmailModalOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function AreaEmailReportModal({
+  report,
+  onClose,
+}: {
+  report: GeneratedReport;
+  onClose: () => void;
+}) {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+  const [error, setError] = useState("");
+
+  const handleSend = async () => {
+    if (!email.includes("@")) return;
+    setStatus("sending");
+    setError("");
+
+    try {
+      const { generateReportPdfBase64 } = await import("@/lib/pdf-report");
+      const { base64, filename } = generateReportPdfBase64(report);
+
+      const res = await fetch("/api/email-report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email,
+          pdfBase64: base64,
+          filename,
+          businessName: report.title,
+          address: report.metadata.address,
+          incentiveCount: report.sections.length,
+        }),
+      });
+
+      if (!res.ok) throw new Error("Could not send email");
+      setStatus("sent");
+      setTimeout(onClose, 1200);
+    } catch (err) {
+      setStatus("error");
+      setError(err instanceof Error ? err.message : "Could not send email");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-md bg-white border border-[#0C1B33]/10 shadow-2xl">
+        <div className="flex items-start justify-between px-6 pt-6 pb-4 border-b border-[#0C1B33]/8">
+          <div>
+            <p className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/60 mb-2">
+              Email Vacancy Report
+            </p>
+            <h3 className="font-editorial text-2xl text-[#0C1B33] leading-tight">
+              Send this area report to yourself.
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-[#0C1B33]/35 hover:text-[#0C1B33] p-1"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="px-6 py-5 space-y-3">
+          <input
+            type="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            placeholder="you@example.com"
+            className="w-full border border-[#0C1B33]/10 px-4 py-3 text-sm text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#2563EB]"
+          />
+          {error && (
+            <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 px-3 py-2">
+              {error}
+            </p>
+          )}
+          {status === "sent" && (
+            <p className="text-[12px] text-green-700 bg-green-50 border border-green-100 px-3 py-2">
+              Sent. Check your inbox.
+            </p>
+          )}
+        </div>
+        <div className="px-6 pb-6 flex flex-col sm:flex-row gap-3 sm:justify-end">
+          <button
+            onClick={onClose}
+            className="px-5 py-3 border border-[#0C1B33]/10 text-[#0C1B33]/50 font-mono-bureau text-[10px] tracking-[0.15em] uppercase hover:border-[#0C1B33]/25"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSend}
+            disabled={!email.includes("@") || status === "sending" || status === "sent"}
+            className="px-5 py-3 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase hover:bg-[#1E3054] disabled:opacity-60 inline-flex items-center justify-center gap-2"
+          >
+            {status === "sending" && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Email This to Me
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
