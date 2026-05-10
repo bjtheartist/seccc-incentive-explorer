@@ -2376,6 +2376,10 @@ export function ReportDisplay({
     "program-explorer": "Program Explorer Report",
     "developer-analysis": "Developer Analysis Report",
   };
+  const isVacancyReport =
+    report.reportType === "dev-feasibility" ||
+    report.reportType === "best-location" ||
+    report.title.toLowerCase().includes("vacancy");
 
   // Section numbering offset: if exec summary exists, content sections start at 02
   const hasExecSummary = !!report.executiveSummary;
@@ -3004,14 +3008,14 @@ export function ReportDisplay({
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
             >
               <FileText className="w-3.5 h-3.5" />
-              Save to Workspace
+              {isVacancyReport ? "Save Report" : "Save to Workspace"}
             </button>
             <button
               onClick={() => setEmailDialogOpen(true)}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"
             >
               <Mail className="w-3.5 h-3.5" />
-              Email Report
+              {isVacancyReport ? "Email This to Me" : "Email Report"}
             </button>
             {reportWizardState && (
               <button
