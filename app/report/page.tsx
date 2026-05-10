@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -49,6 +50,8 @@ import {
 import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { cachedFetch } from "@/lib/fetch-cache";
+import { SaveReportModal } from "@/components/workspace/SaveReportModal";
+import { storePendingReport } from "@/components/workspace/PendingReportSaver";
 
 // ─── Animation Variants ──────────────────────────────────────────────
 
@@ -71,6 +74,64 @@ const fadeIn = {
   animate: { opacity: 1, y: 0 },
   transition: { duration: 0.4, ease: "easeOut" as const },
 };
+
+function getDisplayValueForStep(
+  wizardState: WizardState,
+  step: WizardStepConfig
+): string {
+  const val = step.inputType === "address"
+    ? wizardState.address
+    : getStepValue(wizardState, step.id);
+
+  if (typeof val === "string") {
+    if (
+      (step.inputType === "single" || step.inputType === "combobox") &&
+      step.options
+    ) {
+      const opt = step.options.find((o) => o.id === val);
+      return opt?.label || val;
+    }
+    return val;
+  }
+
+  if (Array.isArray(val)) {
+    if (step.options) {
+      return val
+        .map((v) => {
+          const opt = step.options!.find((o) => o.id === v);
+          return opt?.label || v;
+        })
+        .join(", ");
+    }
+    return val.join(", ");
+  }
+
+  return "";
+}
+
+function getWizardSelectionItems(
+  wizardState: WizardState,
+  steps: WizardStepConfig[]
+): { label: string; value: string }[] {
+  const items: { label: string; value: string }[] = [];
+  const reportTypeOption = REPORT_TYPE_OPTIONS.find(
+    (option) => option.id === wizardState.reportType
+  );
+
+  if (reportTypeOption) {
+    items.push({ label: "Report", value: reportTypeOption.title });
+  }
+
+  for (const step of steps) {
+    if (step.inputType === "report-type" || step.inputType === "review") {
+      continue;
+    }
+    const value = getDisplayValueForStep(wizardState, step);
+    if (value) items.push({ label: step.title, value });
+  }
+
+  return items;
+}
 
 // ─── Confidence badge color mapping ──────────────────────────────────
 
@@ -416,7 +477,7 @@ function ReportWizardPage() {
       });
       setWizardState((prev) => ({
         ...prev,
-        address: data.display_name || addr.trim(),
+        address: data.displayName || data.display_name || addr.trim(),
         lat: data.lat,
         lon: data.lon,
       }));
@@ -489,7 +550,7 @@ function ReportWizardPage() {
       setCompareGeoResult({ lat: data.lat, lon: data.lon, display_name: data.displayName || data.display_name || compareAddressInput.trim() });
       setWizardState((prev) => ({
         ...prev,
-        compareAddress: data.display_name || compareAddressInput.trim(),
+        compareAddress: data.displayName || data.display_name || compareAddressInput.trim(),
         compareLat: data.lat,
         compareLon: data.lon,
       }));
@@ -766,6 +827,11 @@ function ReportWizardPage() {
               </AnimatePresence>
             </div>
 
+            <WizardSelectionSummary
+              wizardState={wizardState}
+              steps={steps}
+            />
+
             {/* Navigation */}
             {currentStep.inputType !== "review" && (
               <div className="flex items-center justify-between mt-10 pt-6 border-t border-[#0C1B33]/6">
@@ -799,6 +865,46 @@ function ReportWizardPage() {
           </div>
         </div>
       </section>
+    </div>
+  );
+}
+
+// ─── Live Selection Summary ──────────────────────────────────────────
+
+function WizardSelectionSummary({
+  wizardState,
+  steps,
+}: {
+  wizardState: WizardState;
+  steps: WizardStepConfig[];
+}) {
+  const items = getWizardSelectionItems(wizardState, steps);
+  if (items.length === 0) return null;
+
+  return (
+    <div className="sticky bottom-4 z-20 mt-10">
+      <div className="bg-white/95 backdrop-blur border border-[#0C1B33]/10 shadow-sm px-4 py-3">
+        <div className="flex flex-wrap items-center gap-2">
+          {items.slice(0, 4).map((item) => (
+            <div
+              key={`${item.label}-${item.value}`}
+              className="min-w-0 max-w-full border border-[#0C1B33]/8 bg-[#FAF9F6] px-3 py-2"
+            >
+              <span className="block font-mono-bureau text-[7px] tracking-[0.22em] uppercase text-[#0C1B33]/25">
+                {item.label}
+              </span>
+              <span className="block text-[12px] text-[#0C1B33]/70 truncate max-w-[220px]">
+                {item.value}
+              </span>
+            </div>
+          ))}
+          {items.length > 4 && (
+            <span className="font-mono-bureau text-[9px] tracking-[0.14em] uppercase text-[#0C1B33]/30 px-2">
+              +{items.length - 4} more
+            </span>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -914,6 +1020,9 @@ function ReportTypeStep({
             </h3>
             <p className="text-[#0C1B33]/40 text-[13px] leading-relaxed">
               {option.subtitle}
+            </p>
+            <p className="mt-3 border-t border-[#0C1B33]/6 pt-3 font-mono-bureau text-[9px] tracking-[0.08em] uppercase leading-relaxed text-[#0C1B33]/35">
+              {option.bestFor}
             </p>
 
             {/* Selection indicator */}
@@ -1080,6 +1189,8 @@ function NeighborhoodStep({
             />
             <button
               onClick={() => onGeocode(addressInput)}
+              aria-label="Verify address"
+              title="Verify address"
               disabled={isGeocoding || !addressInput.trim()}
               className={`absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-colors cursor-pointer ${
                 isGeocoding || !addressInput.trim() ? "text-[#0C1B33]/15" : "text-[#2563EB] hover:text-[#1d4ed8]"
@@ -1091,6 +1202,28 @@ function NeighborhoodStep({
                 <Search className="w-4 h-4" />
               )}
             </button>
+          </div>
+
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
+            <button
+              onClick={() => onGeocode(addressInput)}
+              disabled={isGeocoding || !addressInput.trim()}
+              className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 border font-mono-bureau text-[10px] tracking-[0.14em] uppercase transition-colors ${
+                isGeocoding || !addressInput.trim()
+                  ? "border-[#0C1B33]/8 text-[#0C1B33]/20 cursor-default"
+                  : "border-[#2563EB] bg-[#2563EB] text-white hover:bg-[#1d4ed8] hover:border-[#1d4ed8] cursor-pointer"
+              }`}
+            >
+              {isGeocoding ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Search className="w-3.5 h-3.5" />
+              )}
+              Verify Address
+            </button>
+            <p className="font-mono-bureau text-[9px] text-[#0C1B33]/25 uppercase tracking-[0.15em] leading-relaxed">
+              Verify a specific address to unlock parcel-level detail.
+            </p>
           </div>
 
           {geocodeResult && (
@@ -1162,7 +1295,9 @@ function AddressStep({
           className="w-full bg-white border border-[#0C1B33]/10 px-5 py-4 pr-14 text-[#0C1B33] text-[15px] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#2563EB] transition-colors"
         />
         <button
-          onClick={onGeocode}
+          onClick={() => onGeocode()}
+          aria-label="Verify address"
+          title="Verify address"
           disabled={isGeocoding || !addressInput.trim()}
           className={`absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center transition-colors cursor-pointer ${
             isGeocoding || !addressInput.trim()
@@ -1176,6 +1311,28 @@ function AddressStep({
             <Search className="w-4 h-4" />
           )}
         </button>
+      </div>
+
+      <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-3">
+        <button
+          onClick={() => onGeocode()}
+          disabled={isGeocoding || !addressInput.trim()}
+          className={`inline-flex items-center justify-center gap-2 px-4 py-2.5 border font-mono-bureau text-[10px] tracking-[0.14em] uppercase transition-colors ${
+            isGeocoding || !addressInput.trim()
+              ? "border-[#0C1B33]/8 text-[#0C1B33]/20 cursor-default"
+              : "border-[#2563EB] bg-[#2563EB] text-white hover:bg-[#1d4ed8] hover:border-[#1d4ed8] cursor-pointer"
+          }`}
+        >
+          {isGeocoding ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Search className="w-3.5 h-3.5" />
+          )}
+          Verify Address
+        </button>
+        <p className="font-mono-bureau text-[9px] text-[#0C1B33]/25 uppercase tracking-[0.15em] leading-relaxed">
+          Verify the address to unlock Next.
+        </p>
       </div>
 
       {/* Geocode result */}
@@ -1215,8 +1372,8 @@ function AddressStep({
       )}
 
       {/* Helper text */}
-      <p className="mt-4 font-mono-bureau text-[9px] text-[#0C1B33]/25 uppercase tracking-[0.15em]">
-        Tip: Include street number for best results (e.g. &quot;123 S State St, Chicago&quot;)
+      <p className="mt-4 font-mono-bureau text-[9px] text-[#0C1B33]/25 uppercase tracking-[0.15em] leading-relaxed">
+        Tip: Include street number for best results. Press Enter or verify address to continue.
       </p>
     </div>
   );
@@ -1476,6 +1633,10 @@ function ReviewStep({
   const reportTypeOption = REPORT_TYPE_OPTIONS.find(
     (o) => o.id === wizardState.reportType
   );
+  const generateLabel =
+    wizardState.reportType === "dev-feasibility"
+      ? "Generate Vacancy Report"
+      : "Generate Incentive Report";
 
   return (
     <div>
@@ -1492,38 +1653,17 @@ function ReviewStep({
         </div>
       </div>
 
+      <p className="mb-5 text-sm text-[#0C1B33]/45 leading-relaxed">
+        We&apos;ll use these answers to check incentive zones, zoning, property
+        context, likely programs, and next steps.
+      </p>
+
       {/* Answer summary */}
       <div className="space-y-3 mb-8">
         {steps
           .filter((s) => s.inputType !== "report-type" && s.inputType !== "review")
           .map((step) => {
-            const val = step.inputType === "address"
-              ? wizardState.address
-              : getStepValue(wizardState, step.id);
-
-            let displayValue = "";
-            if (typeof val === "string") {
-              // For single selects, find the option label
-              if ((step.inputType === "single" || step.inputType === "combobox") && step.options) {
-                const opt = step.options.find((o) => o.id === val);
-                displayValue = opt?.label || val;
-              } else {
-                displayValue = val;
-              }
-            } else if (Array.isArray(val)) {
-              // For multi selects, find option labels
-              if (step.options) {
-                displayValue = val
-                  .map((v) => {
-                    const opt = step.options!.find((o) => o.id === v);
-                    return opt?.label || v;
-                  })
-                  .join(", ");
-              } else {
-                displayValue = val.join(", ");
-              }
-            }
-
+            const displayValue = getDisplayValueForStep(wizardState, step);
             if (!displayValue) return null;
 
             return (
@@ -1554,7 +1694,7 @@ function ReviewStep({
         ) : (
           <>
             <FileText className="w-4 h-4" />
-            Generate Report
+            {generateLabel}
           </>
         )}
       </button>
@@ -2116,7 +2256,7 @@ function ComparisonDisplay({
 
 // ─── Report Display ──────────────────────────────────────────────────
 
-function ReportDisplay({
+export function ReportDisplay({
   report,
   onStartOver,
   onRefine,
@@ -2145,9 +2285,11 @@ function ReportDisplay({
   onCompareGeocode?: () => void;
   compareGeoResult?: { lat: number; lon: number; display_name: string } | null;
 }) {
+  const { status } = useSession();
   const [linkCopied, setLinkCopied] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [editedSummaryText, setEditedSummaryText] = useState(
     report.executiveSummary?.whyTheseMatter || ""
   );
@@ -2193,6 +2335,18 @@ function ReportDisplay({
     });
   }, [reportWizardState]);
 
+  const handleSaveReport = useCallback(() => {
+    if (status === "authenticated") {
+      setSaveModalOpen(true);
+      return;
+    }
+
+    storePendingReport({ reportData: report, wizardState: reportWizardState });
+    window.location.assign(
+      `/login?callbackUrl=${encodeURIComponent("/workspace?savePending=1")}`
+    );
+  }, [report, reportWizardState, status]);
+
   const priorityBadge: Record<string, { label: string; classes: string }> = {
     high: {
       label: "High Priority",
@@ -2215,10 +2369,10 @@ function ReportDisplay({
 
   const reportTypeLabels: Record<string, string> = {
     "site-incentives": "Site Incentive Analysis",
-    "dev-feasibility": "Development Feasibility Study",
+    "dev-feasibility": "Vacancy Analysis",
     // Legacy
     "location-incentives": "Site Incentive Analysis",
-    "best-location": "Development Feasibility Study",
+    "best-location": "Vacancy Analysis",
     "program-explorer": "Program Explorer Report",
     "developer-analysis": "Developer Analysis Report",
   };
@@ -2846,6 +3000,13 @@ function ReportDisplay({
               Download PDF
             </button>
             <button
+              onClick={handleSaveReport}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Save to Workspace
+            </button>
+            <button
               onClick={() => setEmailDialogOpen(true)}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"
             >
@@ -2956,6 +3117,13 @@ function ReportDisplay({
         <EmailReportModal
           report={report}
           onClose={() => setEmailDialogOpen(false)}
+        />
+      )}
+      {saveModalOpen && (
+        <SaveReportModal
+          reportData={report}
+          wizardState={reportWizardState}
+          onClose={() => setSaveModalOpen(false)}
         />
       )}
     </motion.div>

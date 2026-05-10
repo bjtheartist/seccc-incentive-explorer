@@ -1,6 +1,6 @@
 // ─── Report Wizard Configuration ────────────────────────────────────
 // Pure TypeScript config/types for the multi-step report wizard.
-// Two report types: Site Incentive Analysis & Development Feasibility.
+// Two report types: Site Incentive Analysis & Vacancy Analysis.
 
 // ─── Core Types ─────────────────────────────────────────────────────
 
@@ -10,6 +10,7 @@ export interface ReportTypeOption {
   id: ReportType;
   title: string;
   subtitle: string;
+  bestFor: string;
   icon: string; // emoji
 }
 
@@ -66,14 +67,18 @@ export const REPORT_TYPE_OPTIONS: ReportTypeOption[] = [
     title: "Site Incentive Analysis",
     subtitle:
       "You have a location. See which programs apply, what they\u2019re worth, and who to call.",
+    bestFor:
+      "Best for business owners with an address, lease, property, or planned investment.",
     icon: "\uD83D\uDCCD",
   },
   {
     id: "dev-feasibility",
-    title: "Development Feasibility Study",
+    title: "Vacancy Analysis",
     subtitle:
-      "Evaluate a site or neighborhood for property data, zoning, credit stacking, and financial feasibility.",
-    icon: "\uD83C\uDFD7\uFE0F",
+      "Evaluate vacant properties or corridors for ownership, zoning, incentive fit, and next steps.",
+    bestFor:
+      "Best for corridor managers, developers, and partners evaluating vacant land or buildings.",
+    icon: "\uD83C\uDFDA\uFE0F",
   },
 ];
 
@@ -193,7 +198,7 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   // ── Shared: Report type selection ─────────────────────────────────
   {
     id: "report-type",
-    title: "What do you need?",
+    title: "What kind of report do you want to generate?",
     subtitle: "Choose the analysis that fits your situation.",
     appliesTo: ["site-incentives", "dev-feasibility"],
     inputType: "report-type",
@@ -248,12 +253,12 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
     stateKey: "reportType",
   },
 
-  // ── Development Feasibility flow ──────────────────────────────────
+  // ── Vacancy Analysis flow ─────────────────────────────────────────
 
   {
     id: "df-project-type",
-    title: "What are you planning?",
-    subtitle: "Shapes the feasibility assessment and determines which credits apply.",
+    title: "What vacancy opportunity are you evaluating?",
+    subtitle: "Shapes the vacancy analysis and determines which credits apply.",
     appliesTo: ["dev-feasibility"],
     inputType: "single",
     stateKey: "projectType",
@@ -270,11 +275,14 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   {
     id: "df-budget",
     title: "Total project cost?",
-    subtitle: "Required for credit stacking calculations \u2014 determines dollar values per program.",
+    subtitle: "Helps estimate credit stacking potential. Skip if you are still early.",
     appliesTo: ["dev-feasibility"],
     inputType: "single",
     stateKey: "budgetRange",
-    options: BUDGET_RANGE_OPTIONS,
+    options: [
+      ...BUDGET_RANGE_OPTIONS,
+      { id: "skip", label: "Still estimating" },
+    ],
   },
   {
     id: "df-credits",
@@ -288,7 +296,7 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   {
     id: "df-review",
     title: "Review & Generate",
-    subtitle: "Confirm your selections and generate your feasibility report.",
+    subtitle: "Confirm your selections and generate your vacancy report.",
     appliesTo: ["dev-feasibility"],
     inputType: "review",
     stateKey: "reportType",

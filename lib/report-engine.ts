@@ -858,13 +858,16 @@ function generateBestLocation(
   const { zones, zoneNames, parcel, cityZoning } = ctx;
   const projectType = state.projectType || "acquisition";
   const projectLabels: Record<string, string> = {
-    "acquisition": "Acquisition & Hold",
+    acquisition: "Acquisition & Hold",
     "rehab": "Rehabilitation / Renovation",
     "new-construction": "New Construction",
-    "mixed-use-conversion": "Mixed-Use Conversion",
+    "mixed-use": "Mixed-Use Development",
+    "mixed-use-conversion": "Mixed-Use Development",
+    "affordable-housing": "Affordable Housing",
+    "vacant-acquisition": "Acquire Vacant Property",
   };
   const projectLabel = projectLabels[projectType] || projectType;
-  const address = state.address || "Selected Site";
+  const address = state.address || state.neighborhood || "Selected Site";
 
   const activeZones = zones
     ? Object.entries(zones).filter(([, v]) => v).map(([k]) => k)
@@ -1029,7 +1032,7 @@ function generateBestLocation(
     });
   }
 
-  // §05 Feasibility Assessment
+  // §05 Vacancy Opportunity Assessment
   const feasibilityItems: ReportItem[] = [];
 
   if (projectType === "rehab" || projectType === "mixed-use-conversion") {
@@ -1055,7 +1058,11 @@ function generateBestLocation(
     }
   }
 
-  if (projectType === "new-construction" || projectType === "acquisition") {
+  if (
+    projectType === "new-construction" ||
+    projectType === "acquisition" ||
+    projectType === "vacant-acquisition"
+  ) {
     if (parcel?.isVacant) {
       feasibilityItems.push({
         label: "Vacant land status",
@@ -1094,15 +1101,15 @@ function generateBestLocation(
 
   if (feasibilityItems.length === 0) {
     feasibilityItems.push({
-      label: "Baseline feasibility",
+      label: "Baseline vacancy fit",
       value: `${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} active`,
       detail: `This site has ${zoneCount > 0 ? "incentive coverage that can offset project costs" : "limited zone coverage — county-wide programs may still apply"}.`,
     });
   }
 
   sections.push({
-    title: `${projectLabel} Feasibility`,
-    description: "Assessment of project-specific incentive eligibility, risk signals, and financing opportunities.",
+    title: `${projectLabel} Vacancy Fit`,
+    description: "Vacancy-focused assessment of incentive eligibility, risk signals, and financing opportunities.",
     items: feasibilityItems,
   });
 
@@ -1269,15 +1276,15 @@ function generateBestLocation(
   }
 
   return {
-    title: `Development Feasibility Assessment — ${address}`,
-    subtitle: `${projectLabel} feasibility analysis`,
+    title: `Vacancy Analysis — ${address}`,
+    subtitle: `${projectLabel} Analysis`,
     reportType: "best-location",
     generatedAt: new Date().toISOString(),
     summary: `${verdict?.headline || "Site assessment complete"}. ${summaryParts.join(". ")}. ${projectType === "rehab" && parcel?.bldgAge != null && parcel.bldgAge >= 50 ? "The building's age may unlock historic tax credits. " : ""}The sections below are organized from key findings to detailed evidence.`,
     sections,
     recommendedActions,
     metadata: {
-      address: state.address,
+      address,
       lat: state.lat ?? undefined,
       lon: state.lon ?? undefined,
       projectType,

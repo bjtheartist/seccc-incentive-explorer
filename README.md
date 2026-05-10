@@ -67,11 +67,12 @@ Offline data refresh scripts:
 npm run data:acs2024 # fetch 2024 ACS 5-year Cook County tract data and static fallback
 ```
 
-Database maintenance scripts currently cover vacant-property data:
+Database maintenance scripts currently cover vacant-property and workspace data:
 
 ```bash
-npm run db:migrate   # vacant_properties migration
+npm run db:migrate   # vacant_properties + workspace/auth migrations
 npm run db:seed      # vacant property sync
+npm run db:migrate:workspace # Google auth + saved reports/workspace tables
 npm run db:reset     # migration + sync
 ```
 
@@ -82,18 +83,23 @@ These DB scripts require `DATABASE_URL`.
 ```bash
 NEXT_PUBLIC_MAPBOX_TOKEN=...
 DATABASE_URL=...
+AUTH_SECRET=...
+NEXTAUTH_URL=...
+GOOGLE_CLIENT_ID=...
+GOOGLE_CLIENT_SECRET=...
 SOCRATA_APP_TOKEN=...
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 RESEND_API_KEY=...
 ```
 
-Only `NEXT_PUBLIC_MAPBOX_TOKEN` is required for the interactive map to render. The rest are optional service integrations; the app should degrade gracefully when they are absent.
+Only `NEXT_PUBLIC_MAPBOX_TOKEN` is required for the interactive map to render. `DATABASE_URL`, `AUTH_SECRET`, and `NEXTAUTH_URL` are required for account login, saved reports, and workspace features. `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` enable Google login. Email/password signup also requires the workspace migration so the `users.password_hash` column exists. The rest are optional service integrations; the app should degrade gracefully when they are absent.
 
 ## Important Files
 
 - `app/page.tsx` - landing page and primary lookup entry.
 - `app/report/page.tsx` - report wizard and instant report flow.
+- `app/workspace/page.tsx` - saved project/report workspace for signed-in users.
 - `components/map/MapView.tsx` - main interactive map implementation.
 - `lib/zone-check.ts` - DB-first and Turf fallback zone checking.
 - `lib/zone-response.ts` - normalized zone API response handling.

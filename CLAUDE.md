@@ -15,12 +15,13 @@ npm run dev          # Start dev server (port 3000)
 npm run build        # Production build
 npm run lint         # ESLint
 npm run test         # Vitest unit tests
-npm run db:migrate   # Run current vacant_properties migration
+npm run db:migrate   # Run vacant_properties + workspace/auth migrations
+npm run db:migrate:workspace # Run Google auth + saved reports/workspace migration
 npm run db:seed      # Sync vacant property data
-npm run db:reset     # Run vacant migration + vacant sync
+npm run db:reset     # Run migrations + vacant sync
 ```
 
-The current package scripts only cover vacant-property database maintenance. A full database migration/seed script is not present in this tree.
+The current package scripts cover vacant-property maintenance plus the business workspace/auth tables. A full seed script for every app table is not present in this tree.
 
 ### Testing
 
@@ -46,6 +47,7 @@ The current package scripts only cover vacant-property database maintenance. A f
    - `scripts/convert-businesses.mjs` — Google My Business CSV → `public/data/businesses.json` with pre-computed zone memberships
    - `scripts/seed-census.ts` — fetches 2024 ACS 5-year Cook County tract data, writes `public/data/census-tracts-2024.geojson`, and optionally upserts `census_tracts`
    - `scripts/migrate-vacant.ts` — idempotently creates the `vacant_properties` table and indexes
+   - `scripts/migrate-workspace.ts` — creates Auth.js, saved report, and business project workspace tables
    - `scripts/sync-vacant-properties.ts` — syncs Chicago vacant land/building data and writes static fallback data
    - `scripts/seed-epa-walkability.ts` — updates existing census rows with walkability data after census data has been seeded
 
@@ -73,6 +75,10 @@ The current package scripts only cover vacant-property database maintenance. A f
 | `/api/geocode?address=` | GET | Nominatim geocoding proxy |
 | `/api/zoning?lat=&lon=` | GET | Chicago zoning classification |
 | `/api/vacant?bounds=&type=&ownerType=&limit=` | GET | Vacant properties by viewport bounds, filterable by owner type |
+| `/api/projects` | GET/POST | Signed-in user's business projects and goal checklists |
+| `/api/projects/[id]` | GET/PATCH | Signed-in user's project detail and checklist updates |
+| `/api/saved-reports` | GET/POST | Signed-in user's saved report snapshots |
+| `/api/saved-reports/[id]` | GET | Signed-in user's saved report snapshot |
 | `/api/email-report` | POST | Email PDF report as attachment (requires `RESEND_API_KEY`) |
 
 ### Pages
@@ -84,6 +90,8 @@ The current package scripts only cover vacant-property database maintenance. A f
 - `/map` — Interactive map with zone layers, search bar, census stats
 - `/check` — Address eligibility check flow
 - `/report` — Report generation page
+- `/workspace` — Signed-in workspace for saved projects and reports
+- `/login` — Google sign-in page for workspace features
 - `/faq` — Collapsible FAQ (14 items)
 
 ### Core Libraries
@@ -95,6 +103,7 @@ The current package scripts only cover vacant-property database maintenance. A f
 - **Search:** Fuse.js for fuzzy business name matching
 - **PDF:** jsPDF for report generation (`lib/pdf-report.ts`)
 - **Email:** Resend SDK for transactional report emails with PDF attachments
+- **Auth:** NextAuth/Auth.js with Google OAuth and Neon-backed sessions
 - **Validation:** Zod 4 for runtime schema validation (`lib/schemas.ts`)
 - **Caching:** Upstash Redis (optional, graceful degradation)
 
@@ -107,6 +116,9 @@ The current package scripts only cover vacant-property database maintenance. A f
 - `community_assets` — EDOs, BSOs, universities, libraries with point geometry
 - `stats` — single-row JSONB for aggregate stats
 - `vacant_properties` — 18K+ city-owned vacant land with `geography(POINT)`, zone cross-references in JSONB, incentive_count, owner_name, owner_type (city_public/out_of_state/corporate_llc/local_private)
+- `users`, `accounts`, `sessions`, `verification_token` — Auth.js tables for Google login
+- `business_projects` — user-owned goal workspaces with checklist JSON
+- `saved_reports` — user-owned report snapshots with wizard state and generated report JSON
 
 ### Data Files (public/data/)
 
@@ -150,6 +162,10 @@ Zone layers support two rendering paths:
 |----------|----------|-------------|
 | `NEXT_PUBLIC_MAPBOX_TOKEN` | Yes | Mapbox GL access token |
 | `DATABASE_URL` | No | Neon Postgres connection string. If empty, app uses static files only. |
+| `AUTH_SECRET` | For login | NextAuth/Auth.js secret for signed sessions. |
+| `NEXTAUTH_URL` | For login | Canonical app URL for OAuth callbacks. |
+| `GOOGLE_CLIENT_ID` | For Google login | Google OAuth client ID. |
+| `GOOGLE_CLIENT_SECRET` | For Google login | Google OAuth client secret. |
 | `SOCRATA_APP_TOKEN` | No | Socrata API app token for 10x rate limits. Free at data.cityofchicago.org. |
 | `UPSTASH_REDIS_REST_URL` | No | Upstash Redis URL for server-side response caching. |
 | `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis token. If absent, caching is skipped gracefully. |

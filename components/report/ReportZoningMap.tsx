@@ -63,11 +63,17 @@ export default function ReportZoningMap({
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
 
   const hasLocation = lat != null && lon != null;
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
 
   useEffect(() => {
+    if (!mapboxToken) {
+      setMapLoaded(true);
+      return;
+    }
+
     if (!containerRef.current) return;
 
-    mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+    mapboxgl.accessToken = mapboxToken;
 
     const map = new mapboxgl.Map({
       container: containerRef.current,
@@ -220,8 +226,33 @@ export default function ReportZoningMap({
       map.remove();
       mapRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [hasLocation, lat, lon, address, mapboxToken]);
+
+  if (!mapboxToken) {
+    return (
+      <div className={`relative w-full ${className}`}>
+        <div className="w-full min-h-[420px] bg-[#F0F1EE] border border-[#0C1B33]/10 flex items-center justify-center px-6">
+          <div className="max-w-sm text-center">
+            <div className="font-mono-bureau text-[9px] tracking-[0.22em] uppercase text-[#2563EB] mb-3">
+              Location Snapshot
+            </div>
+            <div className="font-editorial text-2xl text-[#0C1B33] mb-3">
+              {address || "Selected Chicago location"}
+            </div>
+            {hasLocation && (
+              <div className="font-mono-bureau text-[10px] tracking-[0.08em] text-[#0C1B33]/45">
+                {lat?.toFixed(5)}, {lon?.toFixed(5)}
+              </div>
+            )}
+            <p className="text-sm text-[#0C1B33]/45 leading-relaxed mt-5">
+              Add a Mapbox token to render the zoning map. Report data and
+              saved-report workflows remain available without it.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={`relative w-full ${className}`}>

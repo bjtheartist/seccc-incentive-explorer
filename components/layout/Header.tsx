@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { signOut, useSession } from "next-auth/react";
 import { Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 
@@ -23,6 +24,8 @@ const NAV_ITEMS: NavItem[] = [
 export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { status } = useSession();
+  const signedIn = status === "authenticated";
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#0C1B33]/10 bg-white/95 backdrop-blur-md">
@@ -65,6 +68,33 @@ export function Header() {
               </Link>
             )
           )}
+          {signedIn && (
+            <Link
+              href="/workspace"
+              className={`px-4 py-2 font-mono-bureau text-[10px] tracking-[0.2em] uppercase transition-colors border-b-2 ${
+                pathname.startsWith("/workspace")
+                  ? "text-[#2563EB] border-[#2563EB]"
+                  : "text-[#0C1B33]/40 border-transparent hover:text-[#0C1B33]/80"
+              }`}
+            >
+              Workspace
+            </Link>
+          )}
+          {signedIn ? (
+            <button
+              onClick={() => signOut({ callbackUrl: "/" })}
+              className="px-4 py-2 font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/35 hover:text-[#0C1B33]/70 transition-colors cursor-pointer"
+            >
+              Sign Out
+            </button>
+          ) : (
+            <Link
+              href="/login?callbackUrl=/workspace"
+              className="px-4 py-2 font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/40 hover:text-[#2563EB] transition-colors cursor-pointer"
+            >
+              Sign In
+            </Link>
+          )}
         </nav>
 
         {/* Mobile Nav */}
@@ -105,6 +135,41 @@ export function Header() {
                   {item.label}
                 </Link>
               ))}
+              {signedIn && (
+                <Link
+                  href="/workspace"
+                  onClick={() => setOpen(false)}
+                  className={`py-4 border-b border-[#0C1B33]/5 font-mono-bureau text-[11px] tracking-[0.2em] uppercase flex items-center gap-4 ${
+                    pathname.startsWith("/workspace")
+                      ? "text-[#2563EB]"
+                      : "text-[#0C1B33]/40 hover:text-[#0C1B33]/80"
+                  }`}
+                >
+                  <span className="text-[#0C1B33]/15 text-[10px]">06</span>
+                  Workspace
+                </Link>
+              )}
+              {signedIn ? (
+                <button
+                  onClick={() => {
+                    setOpen(false);
+                    signOut({ callbackUrl: "/" });
+                  }}
+                  className="py-4 border-b border-[#0C1B33]/5 font-mono-bureau text-[11px] tracking-[0.2em] uppercase flex items-center gap-4 text-left text-[#0C1B33]/40 hover:text-[#0C1B33]/80"
+                >
+                  <span className="text-[#0C1B33]/15 text-[10px]">07</span>
+                  Sign Out
+                </button>
+              ) : (
+                <Link
+                  href="/login?callbackUrl=/workspace"
+                  onClick={() => setOpen(false)}
+                  className="py-4 border-b border-[#0C1B33]/5 font-mono-bureau text-[11px] tracking-[0.2em] uppercase flex items-center gap-4 text-left text-[#0C1B33]/40 hover:text-[#0C1B33]/80"
+                >
+                  <span className="text-[#0C1B33]/15 text-[10px]">06</span>
+                  Sign In
+                </Link>
+              )}
             </nav>
           </SheetContent>
         </Sheet>
