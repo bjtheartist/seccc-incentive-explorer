@@ -29,6 +29,9 @@ import {
   setStepValue,
   INITIAL_WIZARD_STATE,
   PROJECT_TYPE_LABELS,
+  PROPOSED_USE_LABELS,
+  PROPOSED_USE_OPTIONS,
+  VACANCY_PROJECT_TYPE_OPTIONS,
   FUNDING_COMMITTED_OPTIONS,
   REMAINING_GAP_OPTIONS,
   TIMELINE_OPTIONS,
@@ -82,16 +85,114 @@ const fadeIn = {
   transition: { duration: 0.4, ease: "easeOut" as const },
 };
 
+type VacancySpreadsheetFeature = {
+  geometry?: {
+    type?: string;
+    coordinates?: unknown;
+  };
+  properties?: Record<string, unknown>;
+};
+
+function toCsvCell(value: unknown): string {
+  return `"${String(value ?? "").replace(/"/g, '""')}"`;
+}
+
+function slugifyFilePart(value: string): string {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "locale";
+}
+
+function zoneMatchesToText(value: unknown): string {
+  if (!Array.isArray(value)) return "";
+  return value
+    .map((zone) => {
+      if (typeof zone === "string") return zone;
+      if (zone && typeof zone === "object" && "zoneKey" in zone) {
+        return String((zone as { zoneKey?: unknown }).zoneKey ?? "");
+      }
+      return "";
+    })
+    .filter(Boolean)
+    .join("; ");
+}
+
+function buildVacancySpreadsheetCsv(features: VacancySpreadsheetFeature[]): string {
+  const header = [
+    "Address",
+    "Property Type",
+    "Ward",
+    "Community Area",
+    "Zoning Class",
+    "Sq Ft",
+    "Owner Name",
+    "Owner Type",
+    "Incentive Count",
+    "Zone Matches",
+  ];
+  const rows = features.map((feature) => {
+    const p = feature.properties ?? {};
+    return [
+      p.address,
+      p.propertyType,
+      p.ward,
+      p.communityArea,
+      p.zoningClass,
+      p.squareFeet,
+      p.ownerName,
+      p.ownerType,
+      p.incentiveCount,
+      zoneMatchesToText(p.zoneMatches),
+    ].map(toCsvCell).join(",");
+  });
+
+  return [header.join(","), ...rows].join("\n");
+}
+
+function downloadCsv(csv: string, filename: string) {
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function buildIncentiveAnalysisUrl(feature: VacancySpreadsheetFeature): string {
+  const properties = feature.properties ?? {};
+  const coords = Array.isArray(feature.geometry?.coordinates)
+    ? feature.geometry.coordinates
+    : [];
+  const lon = Number(coords[0]);
+  const lat = Number(coords[1]);
+  const address = String(properties.address ?? "");
+
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    return `/report?instant=true&lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}&addr=${encodeURIComponent(address)}`;
+  }
+
+  return `/report?addr=${encodeURIComponent(address)}`;
+}
+
 function getDisplayValueForStep(
   wizardState: WizardState,
   step: WizardStepConfig
 ): string {
   if (step.inputType === "project-intake") {
-    return [
-      wizardState.projectType && (PROJECT_TYPE_LABELS[wizardState.projectType] || wizardState.projectType),
-      wizardState.budgetRange && optionLabel([...BUDGET_RANGE_OPTIONS, { id: "skip", label: "Still estimating" }], wizardState.budgetRange),
-      wizardState.timeline && optionLabel(TIMELINE_OPTIONS, wizardState.timeline),
-    ]
+    const isVacancy = wizardState.reportType === "dev-feasibility";
+    return (isVacancy
+      ? [
+        wizardState.projectType && (PROJECT_TYPE_LABELS[wizardState.projectType] || wizardState.projectType),
+        wizardState.proposedUse && (PROPOSED_USE_LABELS[wizardState.proposedUse] || wizardState.proposedUse),
+      ]
+      : [
+        wizardState.projectType && (PROJECT_TYPE_LABELS[wizardState.projectType] || wizardState.projectType),
+        wizardState.budgetRange && optionLabel([...BUDGET_RANGE_OPTIONS, { id: "skip", label: "Still estimating" }], wizardState.budgetRange),
+        wizardState.timeline && optionLabel(TIMELINE_OPTIONS, wizardState.timeline),
+      ])
       .filter(Boolean)
       .join(" · ");
   }
@@ -461,6 +562,7 @@ function ReportWizardPage() {
           (wizardState.address.trim() !== "" && wizardState.lat !== null && wizardState.lon !== null)
         );
       case "project-intake":
+        if (wizardState.reportType === "dev-feasibility") return true;
         return (
           wizardState.projectType !== "" &&
           wizardState.budgetRange !== "" &&
@@ -473,6 +575,9 @@ function ReportWizardPage() {
         return typeof val === "string" && val !== "";
       }
       case "multi": {
+        if (wizardState.reportType === "dev-feasibility" && currentStep.id === "df-documents") {
+          return true;
+        }
         const val = getStepValue(wizardState, currentStep.id);
         return Array.isArray(val) && val.length > 0;
       }
@@ -637,6 +742,13 @@ function ReportWizardPage() {
             : [...arr.filter((v) => v !== "none-yet"), value];
         return setStepValue(prev, stepId, next);
       });
+    },
+    []
+  );
+
+  const handleMultiSetAll = useCallback(
+    (stepId: string, values: string[]) => {
+      setWizardState((prev) => setStepValue(prev, stepId, values));
     },
     []
   );
@@ -819,6 +931,7 @@ function ReportWizardPage() {
                     <ProjectIntakeStep
                       wizardState={wizardState}
                       onChange={handleProjectIntakeChange}
+                      isOptional={wizardState.reportType === "dev-feasibility"}
                     />
                   )}
 
@@ -855,6 +968,7 @@ function ReportWizardPage() {
                         []
                       }
                       onToggle={handleMultiToggle}
+                      onSetAll={handleMultiSetAll}
                     />
                   )}
 
@@ -1427,9 +1541,11 @@ function AddressStep({
 function ProjectIntakeStep({
   wizardState,
   onChange,
+  isOptional = false,
 }: {
   wizardState: WizardState;
   onChange: (key: keyof WizardState, value: string | string[]) => void;
+  isOptional?: boolean;
 }) {
   const toggleNeed = (id: string) => {
     const current = wizardState.supportNeeded || [];
@@ -1441,6 +1557,64 @@ function ProjectIntakeStep({
     onChange("supportNeeded", next);
   };
 
+  if (wizardState.reportType === "dev-feasibility") {
+    return (
+      <div className="space-y-8">
+        <div className="border border-[#0C1B33]/8 bg-white px-4 py-3">
+          <p className="text-[12px] text-[#0C1B33]/45 leading-relaxed">
+            These questions are optional. Answer what you know, or skip ahead if you are still comparing sites.
+          </p>
+        </div>
+
+        <IntakeField
+          label="Project focus"
+          helper="Choose the closest pathway for the vacant property or site."
+          options={VACANCY_PROJECT_TYPE_OPTIONS}
+          value={wizardState.projectType}
+          onSelect={(value) => onChange("projectType", value)}
+        />
+
+        <IntakeField
+          label="What would you like to create?"
+          helper="This helps separate the site activity from the intended end use."
+          options={PROPOSED_USE_OPTIONS}
+          value={wizardState.proposedUse}
+          onSelect={(value) => onChange("proposedUse", value)}
+        />
+
+        <div>
+          <div className="flex items-center justify-between gap-4 mb-3">
+            <label className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/45">
+              What support would be most helpful?
+            </label>
+            <span className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/25">
+              Optional
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {SUPPORT_NEEDED_OPTIONS.map((option) => {
+              const selected = wizardState.supportNeeded.includes(option.id);
+              return (
+                <button
+                  key={option.id}
+                  onClick={() => toggleNeed(option.id)}
+                  className={`inline-flex items-center gap-2 px-3.5 py-2.5 border font-mono-bureau text-[10px] tracking-[0.1em] uppercase transition-colors ${
+                    selected
+                      ? "bg-[#0C1B33] border-[#0C1B33] text-white"
+                      : "bg-white border-[#0C1B33]/10 text-[#0C1B33]/45 hover:border-[#0C1B33]/20"
+                  }`}
+                >
+                  {selected && <Check className="w-3 h-3" />}
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <IntakeField
@@ -1449,7 +1623,7 @@ function ProjectIntakeStep({
         options={Object.entries(PROJECT_TYPE_LABELS).map(([id, label]) => ({ id, label }))}
         value={wizardState.projectType}
         onSelect={(value) => onChange("projectType", value)}
-        required
+        required={!isOptional}
       />
 
       <IntakeField
@@ -1458,7 +1632,7 @@ function ProjectIntakeStep({
         options={[...BUDGET_RANGE_OPTIONS, { id: "skip", label: "Still estimating" }]}
         value={wizardState.budgetRange}
         onSelect={(value) => onChange("budgetRange", value)}
-        required
+        required={!isOptional}
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
@@ -1482,14 +1656,14 @@ function ProjectIntakeStep({
           options={TIMELINE_OPTIONS}
           value={wizardState.timeline}
           onSelect={(value) => onChange("timeline", value)}
-          required
+          required={!isOptional}
         />
         <IntakeField
           label="Own vs. lease"
           options={SITE_CONTROL_OPTIONS}
           value={wizardState.siteControl}
           onSelect={(value) => onChange("siteControl", value)}
-          required
+          required={!isOptional}
         />
       </div>
 
@@ -1503,7 +1677,7 @@ function ProjectIntakeStep({
       <div>
         <div className="flex items-center justify-between gap-4 mb-3">
           <label className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/45">
-            What support do you need?
+            What support would be most helpful?
           </label>
           <span className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/25">
             Select all that apply
@@ -1797,40 +1971,63 @@ function MultiSelectStep({
   options,
   value,
   onToggle,
+  onSetAll,
 }: {
   stepId: string;
   options: { id: string; label: string }[];
   value: string[];
   onToggle: (stepId: string, value: string) => void;
+  onSetAll: (stepId: string, values: string[]) => void;
 }) {
+  const selectableOptions = options.filter((option) => option.id !== "none-yet");
+  const allSelected =
+    selectableOptions.length > 0 &&
+    selectableOptions.every((option) => value.includes(option.id));
+
   return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((option, i) => {
-        const isSelected = value.includes(option.id);
-        return (
-          <motion.button
-            key={option.id}
-            onClick={() => onToggle(stepId, option.id)}
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{
-              duration: 0.25,
-              delay: i * 0.03,
-              ease: "easeOut",
-            }}
-            className={`inline-flex items-center gap-2 px-4 py-2.5 border cursor-pointer transition-all duration-150 font-mono-bureau text-[11px] tracking-[0.08em] uppercase ${
-              isSelected
-                ? "bg-[#2563EB] border-[#2563EB] text-white"
-                : "bg-white border-[#0C1B33]/12 text-[#0C1B33]/50 hover:border-[#0C1B33]/25 hover:text-[#0C1B33]/70"
-            }`}
-          >
-            {isSelected && (
-              <Check className="w-3 h-3" strokeWidth={2.5} />
-            )}
-            {option.label}
-          </motion.button>
-        );
-      })}
+    <div className="space-y-4">
+      {selectableOptions.length > 1 && (
+        <button
+          onClick={() =>
+            onSetAll(
+              stepId,
+              allSelected ? [] : selectableOptions.map((option) => option.id)
+            )
+          }
+          className="inline-flex items-center gap-2 border border-[#0C1B33]/12 bg-white px-3 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/45 transition-colors hover:border-[#2563EB]/30 hover:text-[#2563EB]"
+        >
+          <Check className="w-3 h-3" />
+          {allSelected ? "Clear all" : "Select all"}
+        </button>
+      )}
+      <div className="flex flex-wrap gap-2">
+        {options.map((option, i) => {
+          const isSelected = value.includes(option.id);
+          return (
+            <motion.button
+              key={option.id}
+              onClick={() => onToggle(stepId, option.id)}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{
+                duration: 0.25,
+                delay: i * 0.03,
+                ease: "easeOut",
+              }}
+              className={`inline-flex items-center gap-2 px-4 py-2.5 border cursor-pointer transition-all duration-150 font-mono-bureau text-[11px] tracking-[0.08em] uppercase ${
+                isSelected
+                  ? "bg-[#2563EB] border-[#2563EB] text-white"
+                  : "bg-white border-[#0C1B33]/12 text-[#0C1B33]/50 hover:border-[#0C1B33]/25 hover:text-[#0C1B33]/70"
+              }`}
+            >
+              {isSelected && (
+                <Check className="w-3 h-3" strokeWidth={2.5} />
+              )}
+              {option.label}
+            </motion.button>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -2451,6 +2648,14 @@ export function ReportDisplay({
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
   const [isEditingSummary, setIsEditingSummary] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [isExportingVacancySpreadsheet, setIsExportingVacancySpreadsheet] =
+    useState(false);
+  const [isLoadingVacancySpreadsheet, setIsLoadingVacancySpreadsheet] =
+    useState(false);
+  const [vacancySpreadsheetFeatures, setVacancySpreadsheetFeatures] =
+    useState<VacancySpreadsheetFeature[] | null>(null);
+  const [vacancySpreadsheetError, setVacancySpreadsheetError] =
+    useState<string | null>(null);
   const [editedSummaryText, setEditedSummaryText] = useState(
     report.executiveSummary?.whyTheseMatter || ""
   );
@@ -2540,6 +2745,386 @@ export function ReportDisplay({
     report.reportType === "dev-feasibility" ||
     report.reportType === "best-location" ||
     report.title.toLowerCase().includes("vacancy");
+  const vacancySpreadsheetLocale =
+    isVacancyReport && reportWizardState?.neighborhood
+      ? reportWizardState.neighborhood.trim()
+      : "";
+
+  useEffect(() => {
+    if (!vacancySpreadsheetLocale) {
+      setVacancySpreadsheetFeatures(null);
+      setVacancySpreadsheetError(null);
+      setIsLoadingVacancySpreadsheet(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    async function loadVacancySpreadsheet() {
+      setIsLoadingVacancySpreadsheet(true);
+      setVacancySpreadsheetError(null);
+      try {
+        const res = await fetch(
+          `/api/vacant?communityArea=${encodeURIComponent(vacancySpreadsheetLocale)}&limit=10000`,
+          { signal: controller.signal }
+        );
+        if (!res.ok) throw new Error("Vacancy spreadsheet unavailable");
+
+        const data = (await res.json()) as {
+          features?: VacancySpreadsheetFeature[];
+        };
+        setVacancySpreadsheetFeatures(data.features ?? []);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error("[report] vacancy spreadsheet load failed:", err);
+        setVacancySpreadsheetFeatures(null);
+        setVacancySpreadsheetError("Vacancy spreadsheet could not be loaded.");
+      } finally {
+        setIsLoadingVacancySpreadsheet(false);
+      }
+    }
+
+    loadVacancySpreadsheet();
+
+    return () => controller.abort();
+  }, [vacancySpreadsheetLocale]);
+
+  const handleVacancySpreadsheetExport = useCallback(async () => {
+    if (!vacancySpreadsheetLocale) return;
+
+    setIsExportingVacancySpreadsheet(true);
+    try {
+      let features = vacancySpreadsheetFeatures;
+      if (!features) {
+        const res = await fetch(
+          `/api/vacant?communityArea=${encodeURIComponent(vacancySpreadsheetLocale)}&limit=10000`
+        );
+        if (!res.ok) throw new Error("Vacancy export failed");
+
+        const data = (await res.json()) as {
+          features?: VacancySpreadsheetFeature[];
+        };
+        features = data.features ?? [];
+        setVacancySpreadsheetFeatures(features);
+      }
+
+      downloadCsv(
+        buildVacancySpreadsheetCsv(features),
+        `vacant-properties-${slugifyFilePart(vacancySpreadsheetLocale)}-${new Date().toISOString().slice(0, 10)}.csv`
+      );
+    } catch (err) {
+      console.error("[report] vacancy spreadsheet export failed:", err);
+    } finally {
+      setIsExportingVacancySpreadsheet(false);
+    }
+  }, [vacancySpreadsheetFeatures, vacancySpreadsheetLocale]);
+
+  const vacancySpreadsheetStats = useMemo(() => {
+    const features = vacancySpreadsheetFeatures ?? [];
+    return {
+      total: features.length,
+      land: features.filter((feature) => feature.properties?.propertyType === "vacant_land").length,
+      buildings: features.filter((feature) => feature.properties?.propertyType === "vacant_building").length,
+      cityOwned: features.filter((feature) => feature.properties?.ownerType === "city_public").length,
+    };
+  }, [vacancySpreadsheetFeatures]);
+
+  if (vacancySpreadsheetLocale && !compact) {
+    const features = vacancySpreadsheetFeatures ?? [];
+
+    return (
+      <motion.div {...fadeIn}>
+        <div className="min-h-screen bg-[#F5F5F0] py-4 sm:py-8 px-2 sm:px-6 print:bg-white">
+          <div className="mx-auto max-w-[1180px] bg-white shadow-xl print:shadow-none">
+            <div className="bg-[#0C1B33] px-5 sm:px-12 md:px-16 pt-12 pb-10">
+              <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-white/40 mb-5">
+                Chicago Site Incentive Map
+              </p>
+              <h1 className="font-editorial text-3xl sm:text-4xl lg:text-[42px] text-white leading-tight mb-3">
+                Vacancy Spreadsheet — {vacancySpreadsheetLocale}
+              </h1>
+              <p className="text-white/50 text-[15px] leading-relaxed max-w-xl mb-6">
+                Vacant-property addresses and site context for the selected Chicago community area.
+              </p>
+              <div className="w-10 h-[3px] bg-white/30" />
+            </div>
+
+            <div className="px-5 sm:px-12 md:px-16 py-5 border-b border-[#0C1B33]/8 flex flex-wrap gap-x-8 gap-y-3">
+              <div>
+                <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
+                  Date
+                </span>
+                <span className="text-[#0C1B33] text-[13px]">
+                  {formattedDate}
+                </span>
+              </div>
+              <div>
+                <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
+                  Output
+                </span>
+                <span className="text-[#0C1B33] text-[13px]">
+                  Vacant Property Spreadsheet
+                </span>
+              </div>
+              <div>
+                <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
+                  Locale
+                </span>
+                <span className="text-[#0C1B33] text-[13px]">
+                  {vacancySpreadsheetLocale}
+                </span>
+              </div>
+            </div>
+
+            <div className="px-5 sm:px-12 md:px-16 py-10">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#0C1B33]/8 mb-8">
+                {[
+                  ["Properties", isLoadingVacancySpreadsheet ? "Loading" : vacancySpreadsheetStats.total.toLocaleString()],
+                  ["Vacant land", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.land.toLocaleString()],
+                  ["Buildings", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.buildings.toLocaleString()],
+                  ["City / public", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.cityOwned.toLocaleString()],
+                ].map(([label, value]) => (
+                  <div key={label} className="bg-[#FAF9F6] px-4 py-4">
+                    <span className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/25 block mb-1">
+                      {label}
+                    </span>
+                    <span className="font-mono-bureau text-[17px] text-[#0C1B33]/75">
+                      {value}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5">
+                <div>
+                  <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33] mb-2">
+                    Vacant Property Addresses
+                  </h2>
+                  <p className="text-[#0C1B33]/40 text-[13px] leading-relaxed max-w-2xl">
+                    Download the CSV to share, filter, or continue analysis in a spreadsheet tool.
+                  </p>
+                </div>
+                <button
+                  onClick={handleVacancySpreadsheetExport}
+                  disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet}
+                  className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-6 py-3 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer"
+                >
+                  {isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <FileText className="w-3.5 h-3.5" />
+                  )}
+                  Download CSV
+                </button>
+              </div>
+
+              {vacancySpreadsheetError && (
+                <div className="border border-red-200 bg-red-50 px-4 py-3 text-[13px] text-red-700 mb-5">
+                  {vacancySpreadsheetError}
+                </div>
+              )}
+
+              <div className="border border-[#0C1B33]/8 overflow-x-auto">
+                <table className="w-full min-w-[980px] text-left text-[12px]">
+                  <thead className="bg-[#0C1B33]/[0.03]">
+                    <tr>
+                      {[
+                        "Address",
+                        "Type",
+                        "Ward",
+                        "Community Area",
+                        "Zoning",
+                        "Sq Ft",
+                        "Owner",
+                        "Owner Type",
+                        "Zones",
+                        "Action",
+                      ].map((heading) => (
+                        <th
+                          key={heading}
+                          className="px-3 py-3 font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/35"
+                        >
+                          {heading}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#0C1B33]/5">
+                    {isLoadingVacancySpreadsheet ? (
+                      <tr>
+                        <td colSpan={10} className="px-3 py-8 text-center text-[#0C1B33]/35">
+                          Loading vacant properties...
+                        </td>
+                      </tr>
+                    ) : features.length > 0 ? (
+                      features.map((feature, rowIndex) => {
+                        const property = feature.properties ?? {};
+                        return (
+                          <tr key={`${property.address ?? "property"}-${rowIndex}`} className="hover:bg-[#FAF9F6]">
+                            <td className="px-3 py-3 text-[#0C1B33]/75 font-medium">
+                              {String(property.address ?? "Unknown address")}
+                            </td>
+                            <td className="px-3 py-3 text-[#0C1B33]/50">
+                              {property.propertyType === "vacant_land" ? "Land" : property.propertyType === "vacant_building" ? "Building" : String(property.propertyType ?? "")}
+                            </td>
+                            <td className="px-3 py-3 text-[#0C1B33]/45">
+                              {String(property.ward ?? "")}
+                            </td>
+                            <td className="px-3 py-3 text-[#0C1B33]/45">
+                              {String(property.communityArea ?? "")}
+                            </td>
+                            <td className="px-3 py-3 text-[#0C1B33]/45">
+                              {String(property.zoningClass ?? "")}
+                            </td>
+                            <td className="px-3 py-3 text-[#0C1B33]/45">
+                              {Number(property.squareFeet ?? 0).toLocaleString()}
+                            </td>
+                            <td className="px-3 py-3 text-[#0C1B33]/45 max-w-[220px] truncate">
+                              {String(property.ownerName ?? "")}
+                            </td>
+                            <td className="px-3 py-3 text-[#0C1B33]/45">
+                              {String(property.ownerType ?? "")}
+                            </td>
+                            <td className="px-3 py-3 text-[#0C1B33]/45 max-w-[260px] truncate">
+                              {zoneMatchesToText(property.zoneMatches)}
+                            </td>
+                            <td className="px-3 py-3">
+                              <a
+                                href={buildIncentiveAnalysisUrl(feature)}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1.5 whitespace-nowrap border border-[#2563EB]/25 px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB] transition-colors hover:bg-[#2563EB]/5 hover:border-[#2563EB]/45"
+                              >
+                                <ArrowRight className="w-3 h-3" />
+                                Run Analysis
+                              </a>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    ) : (
+                      <tr>
+                        <td colSpan={10} className="px-3 py-8 text-center text-[#0C1B33]/35">
+                          No vacant properties found for this locale.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div className="mx-auto max-w-[1180px] print:hidden mt-8">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <button
+                onClick={handleVacancySpreadsheetExport}
+                disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer shadow-md"
+              >
+                {isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5" />
+                )}
+                Download CSV
+              </button>
+              <button
+                onClick={handleSaveReport}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
+              >
+                <FileText className="w-3.5 h-3.5" />
+                Save Report
+              </button>
+              <button
+                onClick={() => setEmailDialogOpen(true)}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                Email This to Me
+              </button>
+              {reportWizardState && (
+                <button
+                  onClick={handleShareReport}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
+                >
+                  {linkCopied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      Link Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Link2 className="w-3.5 h-3.5" />
+                      Share Spreadsheet
+                    </>
+                  )}
+                </button>
+              )}
+              {!compact && onCompare && !compareMode && (
+                <button
+                  onClick={onCompare}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  Compare Another Address
+                </button>
+              )}
+              <button
+                onClick={onStartOver}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                New Search
+              </button>
+            </div>
+
+            {compareMode && !compareGeoResult && (
+              <div className="mt-5 mx-auto max-w-md">
+                <label className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-2">
+                  Enter a second address to compare
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={compareAddressInput || ""}
+                    onChange={(e) => setCompareAddressInput?.(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") onCompareGeocode?.(); }}
+                    placeholder="e.g. 200 N LaSalle St, Chicago"
+                    className="flex-1 px-4 py-3 bg-white border border-[#0C1B33]/15 text-[13px] text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#0C1B33]/30 font-mono-bureau"
+                  />
+                  <button
+                    onClick={onCompareGeocode}
+                    disabled={compareGeocoding || !compareAddressInput?.trim()}
+                    className="px-5 py-3 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase hover:bg-[#0C1B33]/80 transition-colors disabled:opacity-30 cursor-pointer"
+                  >
+                    {compareGeocoding ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Search className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+        {emailDialogOpen && (
+          <EmailReportModal
+            report={report}
+            onClose={() => setEmailDialogOpen(false)}
+          />
+        )}
+        {saveModalOpen && (
+          <SaveReportModal
+            reportData={report}
+            wizardState={reportWizardState}
+            onClose={() => setSaveModalOpen(false)}
+          />
+        )}
+      </motion.div>
+    );
+  }
 
   // Section numbering offset: if exec summary exists, content sections start at 02
   const hasExecSummary = !!report.executiveSummary;
@@ -2693,6 +3278,60 @@ export function ReportDisplay({
                 <p className="text-[#0C1B33]/60 text-[15px] leading-[1.8] max-w-prose">
                   {report.summary}
                 </p>
+              </div>
+            )}
+
+            {vacancySpreadsheetLocale && (
+              <div className="mb-12 border border-[#0C1B33]/8 bg-[#FAF9F6] p-5 sm:p-6">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-5">
+                  <div className="min-w-0">
+                    <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30 mb-2">
+                      Vacancy Spreadsheet
+                    </div>
+                    <h2 className="font-editorial text-[24px] text-[#0C1B33] mb-2">
+                      Vacant properties in {vacancySpreadsheetLocale}
+                    </h2>
+                    <p className="text-[#0C1B33]/45 text-[13px] leading-relaxed max-w-prose">
+                      This vacancy report pulls the locale-level property spreadsheet so the analysis can move from summary findings to specific sites that may need review, outreach, or follow-up.
+                    </p>
+                  </div>
+                  <button
+                    onClick={handleVacancySpreadsheetExport}
+                    disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet}
+                    className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-5 py-3 hover:bg-[#0C1B33]/80 disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer"
+                  >
+                    {isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <FileText className="w-3.5 h-3.5" />
+                    )}
+                    Download CSV
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#0C1B33]/8 mt-6">
+                  {[
+                    ["Properties", isLoadingVacancySpreadsheet ? "Loading" : vacancySpreadsheetStats.total.toLocaleString()],
+                    ["Vacant land", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.land.toLocaleString()],
+                    ["Buildings", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.buildings.toLocaleString()],
+                    ["City / public", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.cityOwned.toLocaleString()],
+                  ].map(([label, value]) => (
+                    <div key={label} className="bg-white px-4 py-3">
+                      <span className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/25 block mb-1">
+                        {label}
+                      </span>
+                      <span className="font-mono-bureau text-[16px] text-[#0C1B33]/70">
+                        {value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {vacancySpreadsheetError && (
+                  <p className="mt-4 text-[12px] text-red-600/70">
+                    {vacancySpreadsheetError}
+                  </p>
+                )}
               </div>
             )}
 
@@ -3194,6 +3833,20 @@ export function ReportDisplay({
               <Mail className="w-3.5 h-3.5" />
               {isVacancyReport ? "Email This to Me" : "Email Report"}
             </button>
+            {vacancySpreadsheetLocale && (
+              <button
+                onClick={handleVacancySpreadsheetExport}
+                disabled={isExportingVacancySpreadsheet}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] disabled:opacity-50 disabled:cursor-default transition-colors cursor-pointer shadow-md"
+              >
+                {isExportingVacancySpreadsheet ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileText className="w-3.5 h-3.5" />
+                )}
+                Vacancy Spreadsheet
+              </button>
+            )}
             {reportWizardState && (
               <button
                 onClick={handleShareReport}

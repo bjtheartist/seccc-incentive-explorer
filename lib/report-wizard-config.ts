@@ -39,6 +39,7 @@ export interface WizardState {
   industry: string;
   budgetRange: string;
   projectType: string;
+  proposedUse: string;
   fundingCommitted: string;
   remainingGap: string;
   timeline: string;
@@ -63,6 +64,7 @@ export const INITIAL_WIZARD_STATE: WizardState = {
   industry: "",
   budgetRange: "",
   projectType: "",
+  proposedUse: "",
   fundingCommitted: "",
   remainingGap: "",
   timeline: "",
@@ -188,8 +190,44 @@ const PROJECT_TYPE_OPTIONS: StepOption[] = [
   },
 ];
 
+export const VACANCY_PROJECT_TYPE_OPTIONS: StepOption[] = [
+  {
+    id: "rehab",
+    label: "Rehabilitation / renovation",
+    description: "Reuse or improve an existing vacant building.",
+  },
+  {
+    id: "vacant-acquisition",
+    label: "Purchase or acquire property",
+    description: "Acquire vacant land, a vacant building, or a site under consideration.",
+  },
+  {
+    id: "expansion",
+    label: "Expansion",
+    description: "Grow an existing business, organization, or project into the site.",
+  },
+  {
+    id: "new-construction",
+    label: "New construction",
+    description: "Build a new project on vacant or cleared land.",
+  },
+];
+
+export const PROPOSED_USE_OPTIONS: StepOption[] = [
+  { id: "commercial", label: "Commercial" },
+  { id: "mixed-use", label: "Mixed-use" },
+  { id: "community-cultural", label: "Community / cultural" },
+  { id: "housing", label: "Housing" },
+  { id: "industrial-maker", label: "Industrial / maker space" },
+  { id: "not-sure", label: "Not sure yet" },
+];
+
 export const PROJECT_TYPE_LABELS = Object.fromEntries(
-  PROJECT_TYPE_OPTIONS.map((option) => [option.id, option.label])
+  [...PROJECT_TYPE_OPTIONS, ...VACANCY_PROJECT_TYPE_OPTIONS].map((option) => [option.id, option.label])
+) as Record<string, string>;
+
+export const PROPOSED_USE_LABELS = Object.fromEntries(
+  PROPOSED_USE_OPTIONS.map((option) => [option.id, option.label])
 ) as Record<string, string>;
 
 const CREDIT_OPTIONS: StepOption[] = [
@@ -289,7 +327,6 @@ export const SUPPORT_NEEDED_OPTIONS: StepOption[] = [
   { id: "tax-savings", label: "Tax savings" },
   { id: "financing", label: "Financing" },
   { id: "advising", label: "Advising" },
-  { id: "political-state-support", label: "Political / state support" },
   { id: "not-sure", label: "Not sure" },
 ];
 
@@ -391,8 +428,8 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   },
   {
     id: "df-project-intake",
-    title: "Tell us about the vacancy project",
-    subtitle: "A few scoping answers help tailor the analysis, readiness checklist, and next steps.",
+    title: "What are you considering for this site?",
+    subtitle: "Optional: answer what you know, or skip ahead if you are still exploring.",
     appliesTo: ["dev-feasibility"],
     inputType: "project-intake",
     stateKey: "projectType",
@@ -400,7 +437,7 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   {
     id: "df-documents",
     title: "Which documents do you already have?",
-    subtitle: "Select what is ready today. The report will flag what may still be needed.",
+    subtitle: "Optional: select what is ready today. The report will flag what may still be useful.",
     appliesTo: ["dev-feasibility"],
     inputType: "multi",
     stateKey: "documentsAvailable",
@@ -524,6 +561,7 @@ export function isStepComplete(
   const value = state[step.stateKey];
 
   if (step.inputType === "project-intake") {
+    if (state.reportType === "dev-feasibility") return true;
     return (
       state.projectType.length > 0 &&
       state.budgetRange.length > 0 &&
@@ -537,6 +575,7 @@ export function isStepComplete(
   }
 
   if (step.inputType === "multi") {
+    if (state.reportType === "dev-feasibility" && step.id === "df-documents") return true;
     return Array.isArray(value) && value.length > 0;
   }
 

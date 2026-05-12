@@ -107,6 +107,7 @@ export function encodeWizardState(state: WizardState): string {
   if (state.industry) params.set("ind", state.industry);
   if (state.budgetRange) params.set("bud", state.budgetRange);
   if (state.projectType) params.set("pt", state.projectType);
+  if (state.proposedUse) params.set("pu", state.proposedUse);
   if (state.fundingCommitted) params.set("fc", state.fundingCommitted);
   if (state.remainingGap) params.set("gap", state.remainingGap);
   if (state.timeline) params.set("tl", state.timeline);
@@ -157,6 +158,9 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
 
   const pt = params.get("pt");
   if (pt) state.projectType = pt;
+
+  const pu = params.get("pu");
+  if (pu) state.proposedUse = pu;
 
   const fc = params.get("fc");
   if (fc) state.fundingCommitted = fc;

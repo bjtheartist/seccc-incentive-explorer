@@ -11,6 +11,7 @@ import {
   DOCUMENT_READINESS_OPTIONS,
   FUNDING_COMMITTED_OPTIONS,
   JOBS_IMPACT_OPTIONS,
+  PROPOSED_USE_LABELS,
   PROJECT_TYPE_LABELS,
   REMAINING_GAP_OPTIONS,
   SITE_CONTROL_OPTIONS,
@@ -39,6 +40,7 @@ interface WizardState {
   industry: string;
   budgetRange: string;
   projectType: string;
+  proposedUse: string;
   fundingCommitted: string;
   remainingGap: string;
   timeline: string;
@@ -121,6 +123,7 @@ export interface GeneratedReport {
     industry?: string;
     budgetRange?: string;
     projectType?: string;
+    proposedUse?: string;
     medianIncome?: number;
     medianHomeValue?: number;
     zoneClass?: string;
@@ -247,12 +250,41 @@ function programsRequiringDocument(programs: Program[], docId: string): string[]
 
 function buildProjectIntakeSection(state: WizardState): ReportSection | null {
   const items: ReportItem[] = [];
+  const isVacancy = state.reportType === "dev-feasibility" || state.reportType === "best-location";
+
   if (state.projectType) {
     items.push({
-      label: "Project Type",
+      label: isVacancy ? "Project Focus" : "Project Type",
       value: PROJECT_TYPE_LABELS[state.projectType] || state.projectType,
     });
   }
+  if (state.proposedUse) {
+    items.push({
+      label: "Proposed Use",
+      value: PROPOSED_USE_LABELS[state.proposedUse] || state.proposedUse,
+    });
+  }
+  if (isVacancy) {
+    if (state.supportNeeded.length > 0) {
+      const supportLabels = state.supportNeeded
+        .map((id) => SUPPORT_NEEDED_OPTIONS.find((option) => option.id === id)?.label)
+        .filter((label): label is string => Boolean(label));
+      if (supportLabels.length > 0) {
+        items.push({
+          label: "Support Most Helpful",
+          value: supportLabels.join(", "),
+        });
+      }
+    }
+
+    if (items.length === 0) return null;
+    return {
+      title: "Vacancy Project Intake",
+      description: "Optional scoping answers used to tailor vacancy analysis and next-step language.",
+      items,
+    };
+  }
+
   if (state.budgetRange) {
     items.push({
       label: "Total Project Budget",
@@ -275,10 +307,15 @@ function buildProjectIntakeSection(state: WizardState): ReportSection | null {
     items.push({ label: "Jobs Created or Retained", value: optionLabel(JOBS_IMPACT_OPTIONS, state.jobsImpact) });
   }
   if (state.supportNeeded.length > 0) {
-    items.push({
-      label: "Support Needed",
-      value: state.supportNeeded.map((id) => optionLabel(SUPPORT_NEEDED_OPTIONS, id)).join(", "),
-    });
+    const supportLabels = state.supportNeeded
+      .map((id) => SUPPORT_NEEDED_OPTIONS.find((option) => option.id === id)?.label)
+      .filter((label): label is string => Boolean(label));
+    if (supportLabels.length > 0) {
+      items.push({
+        label: "Support Needed",
+        value: supportLabels.join(", "),
+      });
+    }
   }
 
   if (items.length === 0) return null;
@@ -317,6 +354,7 @@ function buildDocumentReadinessSection(programs: Program[], state: WizardState):
 function hasProjectReadinessContext(state: WizardState): boolean {
   return Boolean(
     state.projectType ||
+      state.proposedUse ||
       state.budgetRange ||
       state.fundingCommitted ||
       state.remainingGap ||
@@ -860,6 +898,7 @@ function generateBestLocation(
   const projectLabels: Record<string, string> = {
     acquisition: "Acquisition & Hold",
     "rehab": "Rehabilitation / Renovation",
+    "expansion": "Expansion",
     "new-construction": "New Construction",
     "mixed-use": "Mixed-Use Development",
     "mixed-use-conversion": "Mixed-Use Development",
@@ -1295,6 +1334,7 @@ function generateBestLocation(
       lon: state.lon ?? undefined,
       projectType,
       budgetRange: state.budgetRange || undefined,
+      proposedUse: state.proposedUse || undefined,
     },
     verdict,
     marketContext,

@@ -8,6 +8,7 @@ import { cached, roundCoord } from "@/lib/redis";
  * Viewport-based vacant property API.
  *
  * GET /api/vacant?bounds=west,south,east,north&type=vacant_land&limit=500
+ * GET /api/vacant?communityArea=Near%20West%20Side
  *
  * Returns GeoJSON FeatureCollection with zone_matches in feature properties.
  * Falls back to static file if DB is unavailable.
@@ -16,6 +17,44 @@ import { cached, roundCoord } from "@/lib/redis";
 const CDN_HEADERS = {
   "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=86400",
 };
+
+type CommunityAreaBoundary = GeoJSON.Feature<
+  GeoJSON.Polygon | GeoJSON.MultiPolygon,
+  GeoJSON.GeoJsonProperties
+>;
+
+function normalizeCommunityAreaName(value: unknown): string {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+async function loadCommunityAreaBoundary(
+  request: NextRequest,
+  communityArea: string
+): Promise<CommunityAreaBoundary | null> {
+  try {
+    const boundaryUrl = new URL("/data/community-areas.geojson", request.nextUrl.origin);
+    const res = await fetch(boundaryUrl.toString());
+    if (!res.ok) return null;
+
+    const data = (await res.json()) as GeoJSON.FeatureCollection;
+    const requested = normalizeCommunityAreaName(communityArea);
+    const feature = data.features.find((f) => {
+      const name = normalizeCommunityAreaName(f.properties?.community);
+      return name === requested;
+    });
+
+    if (
+      !feature ||
+      (feature.geometry.type !== "Polygon" && feature.geometry.type !== "MultiPolygon")
+    ) {
+      return null;
+    }
+
+    return feature as CommunityAreaBoundary;
+  } catch {
+    return null;
+  }
+}
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function rowsToGeoJSON(rows: any[]): GeoJSON.FeatureCollection {
@@ -52,14 +91,16 @@ function rowsToGeoJSON(rows: any[]): GeoJSON.FeatureCollection {
 export async function GET(request: NextRequest) {
   const boundsParam = request.nextUrl.searchParams.get("bounds");
   const polygonParam = request.nextUrl.searchParams.get("polygon");
+  const communityAreaParam =
+    request.nextUrl.searchParams.get("communityArea")?.trim() || null;
   const typeFilter = request.nextUrl.searchParams.get("type");
   const sourceFilter = request.nextUrl.searchParams.get("source");
   const ownerTypeFilter = request.nextUrl.searchParams.get("ownerType");
   const limitParam = request.nextUrl.searchParams.get("limit");
 
-  if (!boundsParam && !polygonParam) {
+  if (!boundsParam && !polygonParam && !communityAreaParam) {
     return NextResponse.json(
-      { error: "bounds or polygon parameter is required" },
+      { error: "bounds, polygon, or communityArea parameter is required" },
       { status: 400 }
     );
   }
@@ -84,8 +125,8 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // Polygon mode: no limit (return all matching). Bounds mode: default 500, max 2000.
-  const limit = polygonParam
+  // Polygon/community mode: higher export cap. Bounds mode: default 500, max 2000.
+  const limit = polygonParam || communityAreaParam
     ? 10000
     : Math.min(parseInt(limitParam || "500", 10) || 500, 2000);
 
@@ -105,16 +146,55 @@ export async function GET(request: NextRequest) {
   const polygonHash = polygonParam
     ? createHash("sha256").update(polygonParam).digest("hex").slice(0, 16)
     : null;
-  const cacheKey = polygonParam
+  const communityHash = communityAreaParam
+    ? createHash("sha256").update(communityAreaParam.toLowerCase()).digest("hex").slice(0, 16)
+    : null;
+  const cacheKey = communityAreaParam
+    ? `vacant:community-boundary:v1:${communityHash}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}`
+    : polygonParam
     ? `vacant:poly:${polygonHash}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}`
     : `vacant:${roundCoord(west)}:${roundCoord(south)}:${roundCoord(east)}:${roundCoord(north)}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}`;
 
   const sql = getSQL();
 
   const result = await cached<GeoJSON.FeatureCollection>(cacheKey, 86400, async () => {
+    const communityAreaBoundary = communityAreaParam
+      ? await loadCommunityAreaBoundary(request, communityAreaParam)
+      : null;
+
     // Try database first
     if (sql) {
       try {
+        if (communityAreaParam) {
+          const rows = communityAreaBoundary
+            ? await sql`
+              SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                     zoning_class, square_feet, status, zone_matches, incentive_count,
+                     owner_name, owner_type
+              FROM vacant_properties
+              WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(communityAreaBoundary.geometry)}), 4326)::geography)
+                AND (CAST(${typeFilter} AS text) IS NULL OR property_type = ${typeFilter})
+                AND (CAST(${sourceFilter} AS text) IS NULL OR source = ${sourceFilter})
+                AND (CAST(${ownerTypeFilter} AS text) IS NULL OR owner_type = ${ownerTypeFilter})
+              ORDER BY incentive_count DESC, address ASC
+              LIMIT ${limit}
+            `
+            : await sql`
+              SELECT id, source, address, lat, lon, property_type, ward, community_area,
+                     zoning_class, square_feet, status, zone_matches, incentive_count,
+                     owner_name, owner_type
+              FROM vacant_properties
+              WHERE lower(community_area) = lower(${communityAreaParam})
+                AND (CAST(${typeFilter} AS text) IS NULL OR property_type = ${typeFilter})
+                AND (CAST(${sourceFilter} AS text) IS NULL OR source = ${sourceFilter})
+                AND (CAST(${ownerTypeFilter} AS text) IS NULL OR owner_type = ${ownerTypeFilter})
+              ORDER BY incentive_count DESC, address ASC
+              LIMIT ${limit}
+            `;
+
+          return rowsToGeoJSON(rows);
+        }
+
         if (polygonParam) {
           const polygonJson = polygonParam;
           const rows = await sql`
@@ -158,14 +238,26 @@ export async function GET(request: NextRequest) {
       const res = await fetch(staticUrl.toString());
       if (!res.ok) return { type: "FeatureCollection" as const, features: [] };
       const data: GeoJSON.FeatureCollection = await res.json();
+      const communityAreaFilter = communityAreaParam?.toLowerCase();
 
       const filtered = data.features.filter((f) => {
         if (f.geometry.type !== "Point") return false;
+
         const [lng, lat] = (f.geometry as GeoJSON.Point).coordinates;
+        if (communityAreaBoundary) {
+          const point = turf.point([lng, lat]);
+          if (!turf.booleanPointInPolygon(point, communityAreaBoundary)) return false;
+        } else if (
+          communityAreaFilter &&
+          String(f.properties?.communityArea ?? "").toLowerCase() !== communityAreaFilter
+        ) {
+          return false;
+        }
+
         if (parsedPolygon) {
           const point = turf.point([lng, lat]);
           if (!turf.booleanPointInPolygon(point, parsedPolygon)) return false;
-        } else {
+        } else if (boundsParam) {
           if (lng < west || lng > east || lat < south || lat > north) return false;
         }
         if (typeFilter && f.properties?.propertyType !== typeFilter) return false;
