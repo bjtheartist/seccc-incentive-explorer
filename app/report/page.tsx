@@ -18,7 +18,6 @@ import {
   Phone,
   ExternalLink,
   Calendar,
-  DollarSign,
   Mail,
   Link2,
 } from "lucide-react";
@@ -29,6 +28,15 @@ import {
   getStepValue,
   setStepValue,
   INITIAL_WIZARD_STATE,
+  PROJECT_TYPE_LABELS,
+  FUNDING_COMMITTED_OPTIONS,
+  REMAINING_GAP_OPTIONS,
+  TIMELINE_OPTIONS,
+  SITE_CONTROL_OPTIONS,
+  JOBS_IMPACT_OPTIONS,
+  SUPPORT_NEEDED_OPTIONS,
+  BUDGET_RANGE_OPTIONS,
+  optionLabel,
 } from "@/lib/report-wizard-config";
 import type {
   ReportType,
@@ -37,7 +45,6 @@ import type {
 } from "@/lib/report-wizard-config";
 import { generateReportData } from "@/lib/report-engine";
 import type { GeneratedReport, ReportCensusData, ReportZoningData, ActionRoadmapItem } from "@/lib/report-engine";
-import { formatDollars } from "@/lib/report-engine";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
 import { normalizeZoneCheckResponse } from "@/lib/zone-response";
@@ -79,6 +86,16 @@ function getDisplayValueForStep(
   wizardState: WizardState,
   step: WizardStepConfig
 ): string {
+  if (step.inputType === "project-intake") {
+    return [
+      wizardState.projectType && (PROJECT_TYPE_LABELS[wizardState.projectType] || wizardState.projectType),
+      wizardState.budgetRange && optionLabel([...BUDGET_RANGE_OPTIONS, { id: "skip", label: "Still estimating" }], wizardState.budgetRange),
+      wizardState.timeline && optionLabel(TIMELINE_OPTIONS, wizardState.timeline),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+  }
+
   const val = step.inputType === "address"
     ? wizardState.address
     : getStepValue(wizardState, step.id);
@@ -204,6 +221,7 @@ function ReportWizardPage() {
   // Report state
   const [report, setReport] = useState<GeneratedReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [hasRefinedInstantReport, setHasRefinedInstantReport] = useState(false);
 
   // Comparison state
   const [compareMode, setCompareMode] = useState(false);
@@ -442,6 +460,13 @@ function ReportWizardPage() {
           wizardState.neighborhood.trim() !== "" ||
           (wizardState.address.trim() !== "" && wizardState.lat !== null && wizardState.lon !== null)
         );
+      case "project-intake":
+        return (
+          wizardState.projectType !== "" &&
+          wizardState.budgetRange !== "" &&
+          wizardState.timeline !== "" &&
+          wizardState.siteControl !== ""
+        );
       case "single":
       case "combobox": {
         const val = getStepValue(wizardState, currentStep.id);
@@ -527,14 +552,16 @@ function ReportWizardPage() {
     setCensusData(null);
     setCityZoning(null);
     setInstantLoading(false);
+    setHasRefinedInstantReport(false);
     // Clear instant mode URL params
     router.replace("/report");
   }, [router]);
 
   const handleRefine = useCallback(() => {
-    // Drop user into wizard at industry step (step index 2 in location-incentives flow)
+    // Drop user into wizard at the first scoping step after the preserved address.
     setReport(null);
     setInstantLoading(false);
+    setHasRefinedInstantReport(true);
     setCurrentStepIndex(2); // industry step
     setDirection(1);
   }, []);
@@ -605,9 +632,18 @@ function ReportWizardPage() {
         const arr = Array.isArray(current) ? current : [];
         const next = arr.includes(value)
           ? arr.filter((v) => v !== value)
-          : [...arr, value];
+          : value === "none-yet"
+            ? ["none-yet"]
+            : [...arr.filter((v) => v !== "none-yet"), value];
         return setStepValue(prev, stepId, next);
       });
+    },
+    []
+  );
+
+  const handleProjectIntakeChange = useCallback(
+    (key: keyof WizardState, value: string | string[]) => {
+      setWizardState((prev) => ({ ...prev, [key]: value }));
     },
     []
   );
@@ -624,7 +660,7 @@ function ReportWizardPage() {
             <div className="w-2 h-2 bg-[#2563EB]/40 rounded-full animate-pulse" style={{ animationDelay: "0.4s" }} />
           </div>
           <p className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-[#0C1B33]/30 mb-2">
-            Generating Instant Report
+            Generating Location Snapshot
           </p>
           {instantAddr && (
             <p className="text-[13px] text-[#0C1B33]/40">{instantAddr}</p>
@@ -656,7 +692,7 @@ function ReportWizardPage() {
           report={report}
           onStartOver={handleStartOver}
           onRefine={handleRefine}
-          isInstantMode={isInstantMode}
+          isInstantMode={isInstantMode && !hasRefinedInstantReport}
           wizardState={wizardState}
           onCompare={() => setCompareMode(true)}
           compareMode={compareMode}
@@ -776,6 +812,13 @@ function ReportWizardPage() {
                           neighborhood: "",
                         }));
                       }}
+                    />
+                  )}
+
+                  {currentStep.inputType === "project-intake" && (
+                    <ProjectIntakeStep
+                      wizardState={wizardState}
+                      onChange={handleProjectIntakeChange}
                     />
                   )}
 
@@ -1379,6 +1422,182 @@ function AddressStep({
   );
 }
 
+// ─── Project Intake Step ─────────────────────────────────────────────
+
+function ProjectIntakeStep({
+  wizardState,
+  onChange,
+}: {
+  wizardState: WizardState;
+  onChange: (key: keyof WizardState, value: string | string[]) => void;
+}) {
+  const toggleNeed = (id: string) => {
+    const current = wizardState.supportNeeded || [];
+    const next = current.includes(id)
+      ? current.filter((value) => value !== id)
+      : id === "not-sure"
+        ? ["not-sure"]
+        : [...current.filter((value) => value !== "not-sure"), id];
+    onChange("supportNeeded", next);
+  };
+
+  return (
+    <div className="space-y-8">
+      <IntakeField
+        label="Project type"
+        helper="Choose the closest project type. You can refine it later."
+        options={Object.entries(PROJECT_TYPE_LABELS).map(([id, label]) => ({ id, label }))}
+        value={wizardState.projectType}
+        onSelect={(value) => onChange("projectType", value)}
+        required
+      />
+
+      <IntakeField
+        label="Total project budget"
+        helper="Use a range if the budget is still being scoped."
+        options={[...BUDGET_RANGE_OPTIONS, { id: "skip", label: "Still estimating" }]}
+        value={wizardState.budgetRange}
+        onSelect={(value) => onChange("budgetRange", value)}
+        required
+      />
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <IntakeField
+          label="Funding already committed"
+          options={FUNDING_COMMITTED_OPTIONS}
+          value={wizardState.fundingCommitted}
+          onSelect={(value) => onChange("fundingCommitted", value)}
+        />
+        <IntakeField
+          label="Remaining funding gap"
+          options={REMAINING_GAP_OPTIONS}
+          value={wizardState.remainingGap}
+          onSelect={(value) => onChange("remainingGap", value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        <IntakeField
+          label="Timeline"
+          options={TIMELINE_OPTIONS}
+          value={wizardState.timeline}
+          onSelect={(value) => onChange("timeline", value)}
+          required
+        />
+        <IntakeField
+          label="Own vs. lease"
+          options={SITE_CONTROL_OPTIONS}
+          value={wizardState.siteControl}
+          onSelect={(value) => onChange("siteControl", value)}
+          required
+        />
+      </div>
+
+      <IntakeField
+        label="Jobs created or retained"
+        options={JOBS_IMPACT_OPTIONS}
+        value={wizardState.jobsImpact}
+        onSelect={(value) => onChange("jobsImpact", value)}
+      />
+
+      <div>
+        <div className="flex items-center justify-between gap-4 mb-3">
+          <label className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/45">
+            What support do you need?
+          </label>
+          <span className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/25">
+            Select all that apply
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {SUPPORT_NEEDED_OPTIONS.map((option) => {
+            const selected = wizardState.supportNeeded.includes(option.id);
+            return (
+              <button
+                key={option.id}
+                onClick={() => toggleNeed(option.id)}
+                className={`inline-flex items-center gap-2 px-3.5 py-2.5 border font-mono-bureau text-[10px] tracking-[0.1em] uppercase transition-colors ${
+                  selected
+                    ? "bg-[#0C1B33] border-[#0C1B33] text-white"
+                    : "bg-white border-[#0C1B33]/10 text-[#0C1B33]/45 hover:border-[#0C1B33]/20"
+                }`}
+              >
+                {selected && <Check className="w-3 h-3" />}
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="border border-[#0C1B33]/8 bg-white px-4 py-3">
+        <p className="text-[12px] text-[#0C1B33]/45 leading-relaxed">
+          These answers help tailor the readiness checklist and next-step language.
+          The report will not estimate award amounts or guarantee funding.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function IntakeField({
+  label,
+  helper,
+  options,
+  value,
+  onSelect,
+  required,
+}: {
+  label: string;
+  helper?: string;
+  options: { id: string; label: string }[];
+  value: string;
+  onSelect: (value: string) => void;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-4 mb-3">
+        <label className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/45">
+          {label}
+        </label>
+        {required && (
+          <span className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#2563EB]/50">
+            Required
+          </span>
+        )}
+      </div>
+      {helper && (
+        <p className="text-[12px] text-[#0C1B33]/35 leading-relaxed mb-3">
+          {helper}
+        </p>
+      )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {options.map((option) => {
+          const selected = value === option.id;
+          return (
+            <button
+              key={option.id}
+              onClick={() => onSelect(option.id)}
+              className={`text-left border px-4 py-3 transition-colors ${
+                selected
+                  ? "bg-[#EFF3FB] border-[#2563EB]/45"
+                  : "bg-white border-[#0C1B33]/8 hover:border-[#0C1B33]/18"
+              }`}
+            >
+              <span className={`font-mono-bureau text-[10px] tracking-[0.08em] uppercase ${
+                selected ? "text-[#0C1B33]" : "text-[#0C1B33]/50"
+              }`}>
+                {option.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Single Select Step ──────────────────────────────────────────────
 
 function SingleSelectStep({
@@ -1856,57 +2075,6 @@ function ExecutiveSummarySection({
   );
 }
 
-// ─── Benefit Estimator Section ────────────────────────────────────────
-
-function BenefitEstimatorSection({
-  estimates,
-}: {
-  estimates: NonNullable<GeneratedReport["benefitEstimates"]>;
-}) {
-  return (
-    <div className="border border-[#0C1B33]/8 p-6 sm:p-8 mb-10">
-      <div className="flex items-center gap-3 mb-5">
-        <DollarSign className="w-5 h-5 text-[#0C1B33]/30" />
-        <span className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/50">
-          Estimated Incentive Value
-        </span>
-      </div>
-
-      {/* Big total */}
-      <div className="mb-6">
-        <span className="font-editorial text-4xl sm:text-5xl text-[#0C1B33] leading-tight block">
-          ~{estimates.totalFormatted}
-        </span>
-        <span className="font-mono-bureau text-[10px] tracking-[0.1em] text-[#0C1B33]/35 mt-1 block">
-          Total estimated incentives based on {estimates.budgetRange} budget
-        </span>
-      </div>
-
-      {/* Per-program breakdown */}
-      <div className="space-y-0 divide-y divide-[#0C1B33]/6">
-        {estimates.items.map((item) => (
-          <div
-            key={item.programId}
-            className="flex items-center justify-between py-3 first:pt-0"
-          >
-            <span className="text-[13px] text-[#0C1B33]/70 truncate">
-              {item.programName}
-            </span>
-            <span className="font-mono-bureau text-[12px] font-semibold text-[#0C1B33] flex-shrink-0 ml-3">
-              ~{formatDollars(item.estimatedValue)}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <p className="text-[11px] text-[#0C1B33]/30 mt-5 leading-relaxed">
-        Estimates are based on program percentages applied to your budget midpoint.
-        Actual values depend on eligibility verification and program-specific caps.
-      </p>
-    </div>
-  );
-}
-
 // ─── Action Roadmap Section ──────────────────────────────────────────
 
 function ActionRoadmapSection({
@@ -2106,8 +2274,6 @@ function ComparisonSummary({
       (n, s) => n + (s.items?.filter((i) => i.programId).length || 0),
       0
     ) || 0;
-  const totalValue = (r: GeneratedReport) =>
-    r.benefitEstimates?.total || 0;
 
   const metrics = [
     {
@@ -2124,11 +2290,6 @@ function ComparisonSummary({
       label: "Programs",
       a: String(countPrograms(reportA)),
       b: String(countPrograms(reportB)),
-    },
-    {
-      label: "Est. Value",
-      a: totalValue(reportA) > 0 ? formatDollars(totalValue(reportA)) : "—",
-      b: totalValue(reportB) > 0 ? formatDollars(totalValue(reportB)) : "—",
     },
   ];
 
@@ -2302,7 +2463,6 @@ export function ReportDisplay({
     const entries: { label: string; anchor: string }[] = [];
     if (report.verdict) entries.push({ label: "Verdict", anchor: "verdict" });
     if (report.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
-    if (report.benefitEstimates && report.benefitEstimates.items.length > 0) entries.push({ label: "Benefit Estimates", anchor: "benefit-estimates" });
     if (report.sections) {
       for (const s of report.sections) {
         entries.push({ label: s.title, anchor: sectionToAnchor(s.title) });
@@ -2395,7 +2555,7 @@ export function ReportDisplay({
           <div className={`report-cover bg-[#0C1B33] ${compact ? "px-4 pt-6 pb-5" : "px-5 sm:px-12 md:px-16 pt-12 pb-10"}`}>
             {isInstantMode && (
               <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-white/50 mb-2">
-                Instant Report
+                Location Snapshot
               </p>
             )}
             <p className="font-mono-bureau text-[9px] tracking-[0.35em] uppercase text-white/40 mb-5">
@@ -2403,7 +2563,7 @@ export function ReportDisplay({
             </p>
             <h1 className={`font-editorial ${compact ? "text-xl sm:text-2xl" : "text-3xl sm:text-4xl lg:text-[42px]"} text-white leading-tight mb-3`}>
               {isInstantMode && report.metadata?.address
-                ? `Instant Report — ${report.metadata.address}`
+                ? `Location Snapshot — ${report.metadata.address}`
                 : report.title}
             </h1>
             {report.subtitle && (
@@ -2413,6 +2573,30 @@ export function ReportDisplay({
             )}
             <div className="w-10 h-[3px] bg-white/30" />
           </div>
+
+          {isInstantMode && !compact && (
+            <div className="px-5 sm:px-12 md:px-16 py-5 border-b border-[#2563EB]/15 bg-[#2563EB]/[0.035]">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <div className="font-mono-bureau text-[9px] tracking-[0.28em] uppercase text-[#2563EB]/70 mb-1.5">
+                    Location-Only Snapshot
+                  </div>
+                  <p className="text-[13px] leading-relaxed text-[#0C1B33]/60 max-w-2xl">
+                    This shows the zones, parcel context, and programs that touch this address. It does not yet account for your project goals, timeline, budget, site control, or document readiness.
+                  </p>
+                </div>
+                {onRefine && (
+                  <button
+                    onClick={onRefine}
+                    className="inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-5 py-3 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-sm"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5" />
+                    Refine with Project Details
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* ── Metadata Row ── */}
           <div className={`report-meta ${compact ? "px-4 py-3" : "px-5 sm:px-12 md:px-16 py-5"} border-b border-[#0C1B33]/8 flex flex-wrap gap-x-5 sm:gap-x-8 gap-y-3`}>
@@ -2529,13 +2713,6 @@ export function ReportDisplay({
                   onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
                   onTextChange={setEditedSummaryText}
                 />
-              </div>
-            )}
-
-            {/* ── Benefit Estimator ── */}
-            {report.benefitEstimates && report.benefitEstimates.items.length > 0 && (
-              <div id="benefit-estimates">
-                <BenefitEstimatorSection estimates={report.benefitEstimates} />
               </div>
             )}
 
@@ -3047,10 +3224,10 @@ export function ReportDisplay({
             {isInstantMode && onRefine && (
               <button
                 onClick={onRefine}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
               >
                 <ArrowRight className="w-3.5 h-3.5" />
-                Refine This Report
+                Refine with Project Details
               </button>
             )}
             <button

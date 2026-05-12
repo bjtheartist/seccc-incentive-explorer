@@ -181,7 +181,7 @@ export default function IncentiveGlance() {
                 Chicago Site Incentive Report
               </div>
               <div className="text-[11px] text-[#0C1B33]/35 mt-0.5">
-                Build a custom report with zoning, incentives, and next steps
+                Start with project goals, readiness, incentives, and next steps
               </div>
             </div>
             <a
@@ -203,7 +203,7 @@ export default function IncentiveGlance() {
                 <line x1="16" y1="13" x2="8" y2="13" />
                 <line x1="16" y1="17" x2="8" y2="17" />
               </svg>
-              Generate Full Report
+              Start Guided Report
             </a>
           </div>
         </div>

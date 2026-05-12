@@ -275,6 +275,13 @@ export default function MapPolygonPanel({
     industry: "",
     budgetRange: "skip",
     projectType: "vacant-acquisition",
+    fundingCommitted: "",
+    remainingGap: "",
+    timeline: "not-sure",
+    siteControl: "evaluating",
+    documentsAvailable: ["none-yet"],
+    jobsImpact: "",
+    supportNeeded: ["not-sure"],
     creditsToAnalyze: zoneCounts.map(({ key }) => key),
   }), [topCommunityArea, zoneCounts]);
 
@@ -562,7 +569,7 @@ export default function MapPolygonPanel({
                   </span>
                 </div>
                 <div className="text-[9px] text-[#0C1B33]/35 mb-2">
-                  Click an address to generate its incentive report
+                  Click an address to generate its location snapshot
                 </div>
                 <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
                   {features.map((f, i) => {
@@ -583,7 +590,7 @@ export default function MapPolygonPanel({
                           target="_blank"
                           rel="noopener noreferrer"
                           className="font-medium text-[#0C1B33]/80 hover:text-[#2563EB] truncate block transition-colors"
-                          title={`Generate report for ${p.address}`}
+                          title={`Generate location snapshot for ${p.address}`}
                         >
                           {p.address ?? "Unknown Address"}
                         </a>

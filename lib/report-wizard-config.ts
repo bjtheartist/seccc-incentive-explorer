@@ -25,7 +25,7 @@ export interface WizardStepConfig {
   title: string;
   subtitle: string;
   appliesTo: ReportType[];
-  inputType: "report-type" | "address" | "neighborhood" | "single" | "multi" | "combobox" | "review";
+  inputType: "report-type" | "address" | "neighborhood" | "project-intake" | "single" | "multi" | "combobox" | "review";
   stateKey: keyof WizardState;
   options?: StepOption[];
 }
@@ -39,6 +39,13 @@ export interface WizardState {
   industry: string;
   budgetRange: string;
   projectType: string;
+  fundingCommitted: string;
+  remainingGap: string;
+  timeline: string;
+  siteControl: string;
+  documentsAvailable: string[];
+  jobsImpact: string;
+  supportNeeded: string[];
   creditsToAnalyze: string[];
   compareAddress?: string;
   compareLat?: number | null;
@@ -56,6 +63,13 @@ export const INITIAL_WIZARD_STATE: WizardState = {
   industry: "",
   budgetRange: "",
   projectType: "",
+  fundingCommitted: "",
+  remainingGap: "",
+  timeline: "",
+  siteControl: "",
+  documentsAvailable: [],
+  jobsImpact: "",
+  supportNeeded: [],
   creditsToAnalyze: [],
 };
 
@@ -66,7 +80,7 @@ export const REPORT_TYPE_OPTIONS: ReportTypeOption[] = [
     id: "site-incentives",
     title: "Site Incentive Analysis",
     subtitle:
-      "You have a location. See which programs apply, what they\u2019re worth, and who to call.",
+      "You have a location. See which programs may apply, how to verify fit, and who to call.",
     bestFor:
       "Best for business owners with an address, lease, property, or planned investment.",
     icon: "\uD83D\uDCCD",
@@ -108,7 +122,7 @@ const INDUSTRY_OPTIONS: StepOption[] = [
   { id: "petServices", label: "Pet Services" },
 ];
 
-const BUDGET_RANGE_OPTIONS: StepOption[] = [
+export const BUDGET_RANGE_OPTIONS: StepOption[] = [
   { id: "under-100k", label: "Under $100K" },
   { id: "100k-500k", label: "$100K\u2013$500K" },
   { id: "500k-2m", label: "$500K\u2013$2M" },
@@ -121,6 +135,31 @@ const PROJECT_TYPE_OPTIONS: StepOption[] = [
     id: "rehab",
     label: "Rehabilitation / renovation",
     description: "Renovating or adaptively reusing an existing structure.",
+  },
+  {
+    id: "expansion",
+    label: "Expansion",
+    description: "Growing into more space, adding capacity, or expanding operations.",
+  },
+  {
+    id: "equipment",
+    label: "Equipment purchase",
+    description: "Buying machinery, fixtures, vehicles, technology, or other equipment.",
+  },
+  {
+    id: "hiring",
+    label: "Hiring / workforce",
+    description: "Creating or retaining jobs, training staff, or building a hiring plan.",
+  },
+  {
+    id: "relocation",
+    label: "Open or relocate",
+    description: "Opening a new location or moving into a new commercial space.",
+  },
+  {
+    id: "energy",
+    label: "Energy / building systems",
+    description: "HVAC, efficiency, solar, water, or other building-system improvements.",
   },
   {
     id: "new-construction",
@@ -142,7 +181,16 @@ const PROJECT_TYPE_OPTIONS: StepOption[] = [
     label: "Acquire vacant property",
     description: "Purchasing city-owned or privately held vacant land for development.",
   },
+  {
+    id: "other",
+    label: "Other / still scoping",
+    description: "Use this if the project is early or does not fit a single category.",
+  },
 ];
+
+export const PROJECT_TYPE_LABELS = Object.fromEntries(
+  PROJECT_TYPE_OPTIONS.map((option) => [option.id, option.label])
+) as Record<string, string>;
 
 const CREDIT_OPTIONS: StepOption[] = [
   {
@@ -192,6 +240,79 @@ const CREDIT_OPTIONS: StepOption[] = [
   },
 ];
 
+export const FUNDING_COMMITTED_OPTIONS: StepOption[] = [
+  { id: "none", label: "None yet" },
+  { id: "under-25", label: "Under 25%" },
+  { id: "25-50", label: "25%–50%" },
+  { id: "50-75", label: "50%–75%" },
+  { id: "over-75", label: "Over 75%" },
+  { id: "not-sure", label: "Not sure" },
+];
+
+export const REMAINING_GAP_OPTIONS: StepOption[] = [
+  { id: "none", label: "No known gap" },
+  { id: "under-50k", label: "Under $50K" },
+  { id: "50k-250k", label: "$50K–$250K" },
+  { id: "250k-1m", label: "$250K–$1M" },
+  { id: "over-1m", label: "Over $1M" },
+  { id: "not-sure", label: "Not sure yet" },
+];
+
+export const TIMELINE_OPTIONS: StepOption[] = [
+  { id: "immediate", label: "Immediate / this month" },
+  { id: "1-3-months", label: "1–3 months" },
+  { id: "3-6-months", label: "3–6 months" },
+  { id: "6-12-months", label: "6–12 months" },
+  { id: "over-12-months", label: "12+ months" },
+  { id: "not-sure", label: "Not sure" },
+];
+
+export const SITE_CONTROL_OPTIONS: StepOption[] = [
+  { id: "own", label: "Own the property" },
+  { id: "lease", label: "Lease the space" },
+  { id: "under-contract", label: "Under contract / LOI" },
+  { id: "evaluating", label: "Still evaluating sites" },
+  { id: "not-sure", label: "Not sure" },
+];
+
+export const JOBS_IMPACT_OPTIONS: StepOption[] = [
+  { id: "none", label: "No jobs planned" },
+  { id: "retain", label: "Retain existing jobs" },
+  { id: "1-5", label: "Create 1–5 jobs" },
+  { id: "6-20", label: "Create 6–20 jobs" },
+  { id: "20-plus", label: "Create 20+ jobs" },
+  { id: "not-sure", label: "Not sure" },
+];
+
+export const SUPPORT_NEEDED_OPTIONS: StepOption[] = [
+  { id: "grant", label: "Grant" },
+  { id: "tax-savings", label: "Tax savings" },
+  { id: "financing", label: "Financing" },
+  { id: "advising", label: "Advising" },
+  { id: "political-state-support", label: "Political / state support" },
+  { id: "not-sure", label: "Not sure" },
+];
+
+export const DOCUMENT_READINESS_OPTIONS: StepOption[] = [
+  { id: "none-yet", label: "None yet / not sure" },
+  { id: "project-budget", label: "Project budget" },
+  { id: "scope-of-work", label: "Scope of work" },
+  { id: "contractor-bids", label: "Contractor bids" },
+  { id: "ownership-or-lease", label: "Proof of ownership or lease" },
+  { id: "permits-drawings", label: "Permits / drawings" },
+  { id: "financial-statements", label: "Financial statements" },
+  { id: "tax-clearance", label: "Tax clearance" },
+  { id: "w9", label: "W-9" },
+  { id: "insurance", label: "Insurance" },
+  { id: "hiring-projections", label: "Hiring projections" },
+  { id: "award-letters", label: "Existing award letters" },
+  { id: "timeline", label: "Timeline" },
+];
+
+export function optionLabel(options: StepOption[], value: string): string {
+  return options.find((option) => option.id === value)?.label || value;
+}
+
 // ─── Wizard Steps ───────────────────────────────────────────────────
 
 export const WIZARD_STEPS: WizardStepConfig[] = [
@@ -233,16 +354,21 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
     ],
   },
   {
-    id: "si-budget",
-    title: "Estimated project budget?",
-    subtitle: "Unlocks dollar estimates for each incentive. Skip if you prefer not to share.",
+    id: "si-project-intake",
+    title: "Tell us about the project",
+    subtitle: "A few scoping answers help move the report from generic eligibility to practical next steps.",
     appliesTo: ["site-incentives"],
-    inputType: "single",
-    stateKey: "budgetRange",
-    options: [
-      ...BUDGET_RANGE_OPTIONS,
-      { id: "skip", label: "Skip this step" },
-    ],
+    inputType: "project-intake",
+    stateKey: "projectType",
+  },
+  {
+    id: "si-documents",
+    title: "Which documents do you already have?",
+    subtitle: "Select what is ready today. The report will flag what may still be needed.",
+    appliesTo: ["site-incentives"],
+    inputType: "multi",
+    stateKey: "documentsAvailable",
+    options: DOCUMENT_READINESS_OPTIONS,
   },
   {
     id: "si-review",
@@ -256,15 +382,6 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   // ── Vacancy Analysis flow ─────────────────────────────────────────
 
   {
-    id: "df-project-type",
-    title: "What vacancy opportunity are you evaluating?",
-    subtitle: "Shapes the vacancy analysis and determines which credits apply.",
-    appliesTo: ["dev-feasibility"],
-    inputType: "single",
-    stateKey: "projectType",
-    options: PROJECT_TYPE_OPTIONS,
-  },
-  {
     id: "df-location",
     title: "Where in Chicago?",
     subtitle: "Pick a neighborhood to explore, or enter a specific address for parcel-level detail.",
@@ -273,21 +390,26 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
     stateKey: "neighborhood",
   },
   {
-    id: "df-budget",
-    title: "Total project cost?",
-    subtitle: "Helps estimate credit stacking potential. Skip if you are still early.",
+    id: "df-project-intake",
+    title: "Tell us about the vacancy project",
+    subtitle: "A few scoping answers help tailor the analysis, readiness checklist, and next steps.",
     appliesTo: ["dev-feasibility"],
-    inputType: "single",
-    stateKey: "budgetRange",
-    options: [
-      ...BUDGET_RANGE_OPTIONS,
-      { id: "skip", label: "Still estimating" },
-    ],
+    inputType: "project-intake",
+    stateKey: "projectType",
+  },
+  {
+    id: "df-documents",
+    title: "Which documents do you already have?",
+    subtitle: "Select what is ready today. The report will flag what may still be needed.",
+    appliesTo: ["dev-feasibility"],
+    inputType: "multi",
+    stateKey: "documentsAvailable",
+    options: DOCUMENT_READINESS_OPTIONS,
   },
   {
     id: "df-credits",
-    title: "Which credits do you want to stack?",
-    subtitle: "We\u2019ve pre-selected credits based on zone coverage. Add or remove as needed.",
+    title: "Which incentive pathways do you want to review?",
+    subtitle: "We\u2019ve pre-selected pathways based on zone coverage. Add or remove as needed.",
     appliesTo: ["dev-feasibility"],
     inputType: "multi",
     stateKey: "creditsToAnalyze",
@@ -400,6 +522,15 @@ export function isStepComplete(
   }
 
   const value = state[step.stateKey];
+
+  if (step.inputType === "project-intake") {
+    return (
+      state.projectType.length > 0 &&
+      state.budgetRange.length > 0 &&
+      state.timeline.length > 0 &&
+      state.siteControl.length > 0
+    );
+  }
 
   if (step.inputType === "single" || step.inputType === "combobox") {
     return typeof value === "string" && value.length > 0;

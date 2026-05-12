@@ -301,7 +301,7 @@ export default function MapSnapshotPanel({
           }
           className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-2 px-3 hover:bg-[#1d4ed8] transition-colors"
         >
-          Generate Report for This Location
+          Generate Location Snapshot
         </a>
         <button
           onClick={onDrawArea}

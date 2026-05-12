@@ -6,6 +6,18 @@ import { generateExecutiveSummary, computeStackingNarrative, runConfidenceEngine
 import type { EligibilityConfidence, ProgramCheckResult } from "./types";
 import { ZONE_LEARN_MORE } from "./constants";
 import { censusNarrative, CHICAGO_MEDIANS } from "./census-narrative";
+import {
+  BUDGET_RANGE_OPTIONS,
+  DOCUMENT_READINESS_OPTIONS,
+  FUNDING_COMMITTED_OPTIONS,
+  JOBS_IMPACT_OPTIONS,
+  PROJECT_TYPE_LABELS,
+  REMAINING_GAP_OPTIONS,
+  SITE_CONTROL_OPTIONS,
+  SUPPORT_NEEDED_OPTIONS,
+  TIMELINE_OPTIONS,
+  optionLabel,
+} from "./report-wizard-config";
 
 // ─── Local Types ────────────────────────────────────────────────────
 
@@ -27,6 +39,13 @@ interface WizardState {
   industry: string;
   budgetRange: string;
   projectType: string;
+  fundingCommitted: string;
+  remainingGap: string;
+  timeline: string;
+  siteControl: string;
+  documentsAvailable: string[];
+  jobsImpact: string;
+  supportNeeded: string[];
   creditsToAnalyze: string[];
   // Legacy fields (kept for backward compat, unused in new flows)
   activities?: string[];
@@ -72,14 +91,6 @@ export interface DataSourceCitation {
   url?: string;
 }
 
-export interface BenefitEstimate {
-  programId: string;
-  programName: string;
-  estimatedValue: number;
-  label: string;
-  color?: string;
-}
-
 export interface ActionRoadmapItem {
   tier: "do-this-week" | "start-gathering" | "worth-exploring";
   programId?: string;
@@ -116,12 +127,6 @@ export interface GeneratedReport {
     zoneType?: string;
   };
   executiveSummary?: ExecutiveSummary;
-  benefitEstimates?: {
-    total: number;
-    totalFormatted: string;
-    budgetRange: string;
-    items: BenefitEstimate[];
-  };
   actionRoadmap?: ActionRoadmapItem[];
   verdict?: {
     signal: "strong" | "moderate" | "limited";
@@ -160,83 +165,15 @@ export interface GeneratedReport {
   dataSources?: DataSourceCitation[];
 }
 
-// ─── Budget Median Mapping ──────────────────────────────────────────
-
-const BUDGET_MEDIANS: Record<string, number> = {
-  "Under $100K": 50_000,
-  "$100K-$500K": 300_000,
-  "$500K-$2M": 1_000_000,
-  "$2M-$10M": 5_000_000,
-  "Over $10M": 15_000_000,
-  // Wizard step option IDs (kebab-case) mapped to same values
-  "under-100k": 50_000,
-  "100k-500k": 300_000,
-  "500k-2m": 1_000_000,
-  "2m-10m": 5_000_000,
-  "over-10m": 15_000_000,
-};
-
-/**
- * Credit percentage assumptions per program type.
- * These are simplified estimates for reporting purposes.
- */
-const CREDIT_PERCENTAGES: Record<string, { pct: number; label: string }> = {
-  federalOZ: { pct: 0.15, label: "~15% effective tax benefit on capital gains" },
-  illinoisOZ: { pct: 0.05, label: "~5% IL state income tax benefit" },
-  tif: { pct: 0.25, label: "Up to 25% of rehab costs" },
-  sbif: { pct: 0.5, label: "Up to 50% of eligible costs (max $150K)" },
-  enterprise: { pct: 0.1, label: "~10% via sales/utility tax exemptions" },
-  edge: { pct: 0.1, label: "~10% income tax credit over agreement term" },
-  rev: { pct: 0.2, label: "Up to 20% income tax credit" },
-  micro: { pct: 0.2, label: "Up to 20% income tax credit" },
-  dataCenter: { pct: 0.1, label: "~10% via sales tax exemptions on equipment" },
-  cpace: { pct: 0.15, label: "~15% savings via long-term PACE financing" },
-  class7a: { pct: 0.35, label: "~35% property tax reduction over 12 years" },
-  landBank: { pct: 0.3, label: "~30% savings on discounted land acquisition" },
-  highUnemployment: { pct: 0.08, label: "~8% via WOTC and workforce credits" },
-  catalystGrant: { pct: 0.2, label: "Up to 20% grant on eligible costs" },
-  nmtcEligible: { pct: 0.39, label: "Up to 39% NMTC over 7 years" },
-  nrhpDistricts: { pct: 0.2, label: "20% Federal Historic Tax Credit" },
-  landmarkDistricts: { pct: 0.1, label: "~10% local preservation incentive" },
-  smallBizSource: { pct: 0, label: "Free advising (no direct credit)" },
-  workforceInvest: { pct: 0.05, label: "~5% via workforce training subsidies" },
-  ssa: { pct: 0.02, label: "~2% via shared marketing/services" },
-};
+const RELATIONSHIP_DEPENDENT_PROGRAMS = new Set([
+  "dceo",
+  "edge",
+  "rev",
+  "micro",
+  "nmtcEligible",
+]);
 
 // ─── Helpers ────────────────────────────────────────────────────────
-
-export function formatDollars(amount: number): string {
-  if (amount >= 1_000_000) {
-    return `$${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`;
-  }
-  if (amount >= 1_000) {
-    return `$${(amount / 1_000).toFixed(0)}K`;
-  }
-  return `$${amount.toFixed(0)}`;
-}
-
-/**
- * Estimate the dollar value of a credit program for a given budget range.
- */
-export function estimateCreditValue(
-  creditId: string,
-  budgetRange: string,
-): string {
-  const median = BUDGET_MEDIANS[budgetRange];
-  if (!median) return "Budget range not specified";
-
-  const creditInfo = CREDIT_PERCENTAGES[creditId];
-  if (!creditInfo || creditInfo.pct === 0) {
-    return creditInfo?.label || "Contact for details";
-  }
-
-  const raw = median * creditInfo.pct;
-  // Cap SBIF at $150K
-  const capped = creditId === "sbif" ? Math.min(raw, 150_000) : raw;
-  const pctDisplay = Math.round(creditInfo.pct * 100);
-
-  return `${pctDisplay}% of ${formatDollars(median)} = ${formatDollars(capped)}`;
-}
 
 function getIndustryName(industryId: string): string {
   const industry = getIndustryById(industryId);
@@ -255,6 +192,140 @@ function isProgramRelevantToIndustry(
   const industry = getIndustryById(industryId);
   if (!industry) return true; // Unknown industry — show everything
   return industry.topPrograms.includes(program.id) || industry.topPrograms.includes(program.zoneKey);
+}
+
+function getProgramFitLabel(
+  program: Program,
+  state: WizardState,
+  zones?: Record<string, boolean>,
+): string {
+  const project = state.projectType || "";
+  const programText = `${program.id} ${program.name} ${program.summary} ${program.benefits?.join(" ")}`.toLowerCase();
+
+  if (RELATIONSHIP_DEPENDENT_PROGRAMS.has(program.id)) return "Project-specific match";
+  if (programText.includes("hire") || programText.includes("workforce") || programText.includes("job")) {
+    return project.includes("hiring") ? "Close match if hiring" : "Not as relevant unless hiring";
+  }
+  if (programText.includes("energy") || programText.includes("pace") || programText.includes("utility")) {
+    return project.includes("energy") ? "Possible match" : "Not as relevant unless energy-related";
+  }
+  if (programText.includes("lease") || programText.includes("owner") || programText.includes("property")) {
+    return "Possible match if site control is clear";
+  }
+  if (program.zoneKey && zones?.[program.zoneKey]) return "Close location match";
+  return "Possible match";
+}
+
+const DOCUMENT_KEYWORDS: Record<string, string[]> = {
+  "project-budget": ["budget", "cost", "estimate"],
+  "scope-of-work": ["scope", "work", "project plan", "proposal"],
+  "contractor-bids": ["bid", "contractor", "quote"],
+  "ownership-or-lease": ["lease", "deed", "ownership", "owner", "property", "title", "site control"],
+  "permits-drawings": ["permit", "drawing", "architect", "plan", "zoning"],
+  "financial-statements": ["financial", "bank", "revenue", "income", "profit", "balance"],
+  "tax-clearance": ["tax clearance", "tax certificate", "tax"],
+  w9: ["w-9", "w9"],
+  insurance: ["insurance", "certificate of insurance", "bond"],
+  "hiring-projections": ["employee", "payroll", "workforce", "hire", "job"],
+  "award-letters": ["award", "commitment", "grant agreement", "letter"],
+  timeline: ["timeline", "schedule"],
+};
+
+function programsRequiringDocument(programs: Program[], docId: string): string[] {
+  const keywords = DOCUMENT_KEYWORDS[docId] || [];
+  if (keywords.length === 0) return [];
+
+  return programs
+    .filter((program) =>
+      program.requiredDocs?.some((doc) => {
+        const normalized = doc.toLowerCase();
+        return keywords.some((keyword) => normalized.includes(keyword));
+      })
+    )
+    .map((program) => program.name);
+}
+
+function buildProjectIntakeSection(state: WizardState): ReportSection | null {
+  const items: ReportItem[] = [];
+  if (state.projectType) {
+    items.push({
+      label: "Project Type",
+      value: PROJECT_TYPE_LABELS[state.projectType] || state.projectType,
+    });
+  }
+  if (state.budgetRange) {
+    items.push({
+      label: "Total Project Budget",
+      value: optionLabel([...BUDGET_RANGE_OPTIONS, { id: "skip", label: "Still estimating" }], state.budgetRange),
+    });
+  }
+  if (state.fundingCommitted) {
+    items.push({ label: "Funding Already Committed", value: optionLabel(FUNDING_COMMITTED_OPTIONS, state.fundingCommitted) });
+  }
+  if (state.remainingGap) {
+    items.push({ label: "Remaining Gap", value: optionLabel(REMAINING_GAP_OPTIONS, state.remainingGap) });
+  }
+  if (state.timeline) {
+    items.push({ label: "Timeline", value: optionLabel(TIMELINE_OPTIONS, state.timeline) });
+  }
+  if (state.siteControl) {
+    items.push({ label: "Own vs. Lease", value: optionLabel(SITE_CONTROL_OPTIONS, state.siteControl) });
+  }
+  if (state.jobsImpact) {
+    items.push({ label: "Jobs Created or Retained", value: optionLabel(JOBS_IMPACT_OPTIONS, state.jobsImpact) });
+  }
+  if (state.supportNeeded.length > 0) {
+    items.push({
+      label: "Support Needed",
+      value: state.supportNeeded.map((id) => optionLabel(SUPPORT_NEEDED_OPTIONS, id)).join(", "),
+    });
+  }
+
+  if (items.length === 0) return null;
+  return {
+    title: "Project Intake",
+    description: "Project-scoping answers used to tailor the screening, readiness checklist, and next steps.",
+    items,
+  };
+}
+
+function buildDocumentReadinessSection(programs: Program[], state: WizardState): ReportSection {
+  const available = new Set(state.documentsAvailable.filter((id) => id !== "none-yet"));
+  const items: ReportItem[] = DOCUMENT_READINESS_OPTIONS
+    .filter((doc) => doc.id !== "none-yet")
+    .map((doc) => {
+      const requiringPrograms = programsRequiringDocument(programs, doc.id);
+      const isReady = available.has(doc.id);
+      return {
+        label: doc.label,
+        value: isReady ? "Ready" : requiringPrograms.length > 0 ? "May be needed" : "Good to have",
+        detail:
+          requiringPrograms.length > 0
+            ? `Commonly requested for: ${requiringPrograms.slice(0, 4).join(", ")}${requiringPrograms.length > 4 ? ` and ${requiringPrograms.length - 4} more` : ""}.`
+            : "No matched program requirement found in the current data, but this can still help during intake or advising.",
+      };
+    });
+
+  return {
+    title: "Document Readiness Checklist",
+    description:
+      "Practical document checklist based on your answers and the programs matched to this project. Marked items are not a guarantee of eligibility; they help prepare the next conversation.",
+    items,
+  };
+}
+
+function hasProjectReadinessContext(state: WizardState): boolean {
+  return Boolean(
+    state.projectType ||
+      state.budgetRange ||
+      state.fundingCommitted ||
+      state.remainingGap ||
+      state.timeline ||
+      state.siteControl ||
+      state.jobsImpact ||
+      state.supportNeeded.length > 0 ||
+      state.documentsAvailable.length > 0
+  );
 }
 
 /**
@@ -577,6 +648,8 @@ function generateLocationIncentives(
 
   // ── Sections: Overview → Market → Stacking → Programs → Documents → Support → Next Steps ──
   const sections: ReportSection[] = [];
+  const projectIntakeSection = buildProjectIntakeSection(state);
+  if (projectIntakeSection) sections.push(projectIntakeSection);
 
   // §01 Market Analysis
   if (marketContext) {
@@ -637,7 +710,7 @@ function generateLocationIncentives(
         const cr = confidenceMap.get(p.id);
         return {
           label: p.name,
-          value: p.benefitRange || "Contact for details",
+          value: getProgramFitLabel(p, state, zones),
           detail: p.summary,
           programId: p.id,
           whoQualifies: p.whoQualifies,
@@ -661,43 +734,9 @@ function generateLocationIncentives(
     });
   }
 
-  // §04 Required Documents (categorized, with program attribution) — inserted before Support Network
-  {
-    // Build a map: document → { category, programs[] }
-    const docMap: Record<string, { category: string; programs: Set<string> }> = {};
-    for (const p of allEligible) {
-      for (const doc of p.requiredDocs) {
-        let category = "General";
-        const dl = doc.toLowerCase();
-        if (dl.includes("tax") || dl.includes("financial") || dl.includes("bank") || dl.includes("revenue") || dl.includes("income") || dl.includes("profit")) category = "Financial & Tax";
-        else if (dl.includes("license") || dl.includes("permit") || dl.includes("certificate") || dl.includes("registration") || dl.includes("incorporation") || dl.includes("articles")) category = "Business Registration";
-        else if (dl.includes("lease") || dl.includes("deed") || dl.includes("property") || dl.includes("title") || dl.includes("survey") || dl.includes("parcel")) category = "Property & Site";
-        else if (dl.includes("plan") || dl.includes("proposal") || dl.includes("scope") || dl.includes("budget") || dl.includes("estimate") || dl.includes("project")) category = "Project Plans";
-        else if (dl.includes("employee") || dl.includes("payroll") || dl.includes("workforce") || dl.includes("hire") || dl.includes("job")) category = "Workforce";
-        else if (dl.includes("insurance") || dl.includes("bond")) category = "Insurance & Compliance";
-        if (!docMap[doc]) docMap[doc] = { category, programs: new Set() };
-        docMap[doc].programs.add(p.name);
-      }
-    }
-    // Group by category
-    const grouped: Record<string, { doc: string; programs: string[] }[]> = {};
-    for (const [doc, { category, programs }] of Object.entries(docMap)) {
-      if (!grouped[category]) grouped[category] = [];
-      grouped[category].push({ doc, programs: Array.from(programs) });
-    }
-    const categoryEntries = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
-    if (categoryEntries.length > 0) {
-      const docItems: ReportItem[] = categoryEntries.map(([cat, docs]) => ({
-        label: cat,
-        value: `${docs.length} document${docs.length !== 1 ? "s" : ""}`,
-        detail: docs.map((d) => `${d.doc} — ${d.programs.join(", ")}`).join("\n"),
-      }));
-      sections.push({
-        title: "Required Documents",
-        description: `${Object.keys(docMap).length} documents across your eligible programs, organized by category. Each document lists which program(s) require it.`,
-        items: docItems,
-      });
-    }
+  // §04 Document Readiness Checklist
+  if (hasProjectReadinessContext(state)) {
+    sections.push(buildDocumentReadinessSection(allEligible, state));
   }
 
   // §05 Your Support Network
@@ -715,41 +754,6 @@ function generateLocationIncentives(
       description: "Local organizations that provide free advising and application assistance.",
       items: assetItems,
     });
-  }
-
-  // ── Benefit Estimates ──────────────────────────────────────────────
-  let benefitEstimates: GeneratedReport["benefitEstimates"] | undefined;
-
-  if (state.budgetRange) {
-    const budgetMedian = BUDGET_MEDIANS[state.budgetRange];
-    if (budgetMedian) {
-      let totalEstimate = 0;
-      const items: BenefitEstimate[] = [];
-
-      for (const p of allEligible) {
-        const creditInfo = CREDIT_PERCENTAGES[p.id];
-        if (!creditInfo || creditInfo.pct === 0) continue;
-        const raw = budgetMedian * creditInfo.pct;
-        const capped = p.id === "sbif" ? Math.min(raw, 150_000) : raw;
-        totalEstimate += capped;
-        items.push({
-          programId: p.id,
-          programName: p.name,
-          estimatedValue: capped,
-          label: creditInfo.label,
-          
-        });
-      }
-
-      if (items.length > 0) {
-        benefitEstimates = {
-          total: totalEstimate,
-          totalFormatted: formatDollars(totalEstimate),
-          budgetRange: state.budgetRange,
-          items,
-        };
-      }
-    }
   }
 
   // ── Action Roadmap ("Your Next Steps") ──────────────────────────
@@ -821,16 +825,12 @@ function generateLocationIncentives(
     ? ` Your ${stackingAnalysis.zoneCount}-zone overlap places you in the ${stackingAnalysis.percentileLabel} of Chicago locations for incentive density.`
     : "";
 
-  const dollarSummary = benefitEstimates
-    ? ` Based on a ${state.budgetRange} budget, we estimate ~${benefitEstimates.totalFormatted} in total potential incentives.`
-    : "";
-
   return {
     title: `Site Incentive Analysis — ${addressDisplay}`,
     subtitle: `Location-based analysis for ${getIndustryName(state.industry)}`,
     reportType: "location-incentives",
     generatedAt: new Date().toISOString(),
-    summary: `${verdict?.headline || "Incentive analysis complete"}. Your address at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}, qualifying for ${mergedPrograms.length} programs.${stackingContext}${dollarSummary} The sections below are organized from key findings to detailed evidence.`,
+    summary: `${verdict?.headline || "Incentive analysis complete"}. Your address at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}, qualifying for ${mergedPrograms.length} programs.${stackingContext} The sections below are organized from key findings to detailed evidence, fit signals, and verification steps.`,
     sections,
     recommendedActions: recommendedActions.slice(0, 4),
     metadata: {
@@ -839,8 +839,8 @@ function generateLocationIncentives(
       lon: state.lon ?? undefined,
       industry: getIndustryName(state.industry),
       budgetRange: state.budgetRange || undefined,
+      projectType: state.projectType || undefined,
     },
-    benefitEstimates,
     actionRoadmap,
     verdict,
     marketContext,
@@ -894,6 +894,8 @@ function generateBestLocation(
   const dataSources = collectDataSources(ctx);
 
   const sections: ReportSection[] = [];
+  const projectIntakeSection = buildProjectIntakeSection(state);
+  if (projectIntakeSection) sections.push(projectIntakeSection);
 
   // §01 Site Description & Property Profile
   if (parcel && parcel.pin) {
@@ -1122,7 +1124,7 @@ function generateBestLocation(
         const cr = confidenceMap.get(p.id);
         return {
           label: p.name,
-          value: p.benefitRange || "Contact for details",
+          value: getProgramFitLabel(p, state, zones),
           detail: p.summary,
           programId: p.id,
           level: p.level,
@@ -1137,6 +1139,10 @@ function generateBestLocation(
         };
       }),
     });
+  }
+
+  if (hasProjectReadinessContext(state)) {
+    sections.push(buildDocumentReadinessSection(sitePrograms, state));
   }
 
   // §07 Decision Factors
@@ -1288,6 +1294,7 @@ function generateBestLocation(
       lat: state.lat ?? undefined,
       lon: state.lon ?? undefined,
       projectType,
+      budgetRange: state.budgetRange || undefined,
     },
     verdict,
     marketContext,
@@ -1421,7 +1428,6 @@ function generateDeveloperAnalysis(
 ): GeneratedReport {
   const creditsToAnalyze = state.creditsToAnalyze || [];
   const budgetRange = state.budgetRange || "";
-  const budgetMedian = BUDGET_MEDIANS[budgetRange] || 0;
   const projectType = state.projectType || "Commercial development";
 
   // Resolve credit IDs to programs
@@ -1431,39 +1437,20 @@ function generateDeveloperAnalysis(
 
   const sections: ReportSection[] = [];
 
-  // Section 1: Credit Stacking Analysis
-  let totalEstimate = 0;
+  // Section 1: Incentive Pathway Review
   const stackingItems: ReportItem[] = creditPrograms.map((p) => {
-    const creditInfo = CREDIT_PERCENTAGES[p.id];
-    const pct = creditInfo?.pct || 0;
-    const estimated = budgetMedian * pct;
-    // Cap SBIF at $150K
-    const capped = p.id === "sbif" ? Math.min(estimated, 150_000) : estimated;
-    totalEstimate += capped;
-
-    const valueDisplay = budgetMedian > 0
-      ? estimateCreditValue(p.id, budgetRange)
-      : (p.benefitRange || "Contact for details");
-
     return {
       label: p.name,
-      value: valueDisplay,
-      detail: creditInfo?.label || p.summary,
+      value: getProgramFitLabel(p, state),
+      detail: p.summary,
       programId: p.id,
       
     };
   });
 
-  if (budgetMedian > 0 && creditPrograms.length > 0) {
-    stackingItems.push({
-      label: "Combined Stacking Estimate",
-      value: formatDollars(totalEstimate),
-      detail: `Total estimated value across ${creditPrograms.length} programs based on a ${formatDollars(budgetMedian)} project budget. Actual values depend on eligibility verification and program caps.`,
-    });
-  }
-
   sections.push({
-    title: "Credit Stacking Analysis",
+    title: "Incentive Pathway Review",
+    description: "Program fit and verification notes. This report does not estimate award amounts or guarantee funding.",
     items: stackingItems.length > 0
       ? stackingItems
       : [
@@ -1581,25 +1568,20 @@ function generateDeveloperAnalysis(
   const recommendedActions: GeneratedReport["recommendedActions"] = [];
 
   if (creditPrograms.length > 0) {
-    // First priority: the program with the highest estimated value
-    const topCredit = creditPrograms.reduce((best, p) => {
-      const bestPct = CREDIT_PERCENTAGES[best.id]?.pct || 0;
-      const currentPct = CREDIT_PERCENTAGES[p.id]?.pct || 0;
-      return currentPct > bestPct ? p : best;
-    });
+    const topCredit = creditPrograms[0];
     recommendedActions.push({
-      label: `Prioritize ${topCredit.name} application`,
+      label: `Verify ${topCredit.name} fit first`,
       description:
         topCredit.fastestConfirmingStep ||
-        `This program offers the highest estimated return. ${topCredit.contact}`,
+        "Confirm eligibility, timing, documentation, and whether pre-approval is required before spending money.",
       priority: "high",
     });
   }
 
   recommendedActions.push({
-    label: "Consult a tax advisor on credit stacking",
+    label: "Consult a tax advisor on incentive compatibility",
     description:
-      "A qualified tax professional can verify that selected credits can legally be stacked on the same project and identify any exclusions.",
+      "A qualified tax professional can verify whether selected credits can be combined on the same project and identify exclusions.",
     priority: "high",
   });
 
@@ -1620,11 +1602,11 @@ function generateDeveloperAnalysis(
   return {
     title: `Developer Analysis: ${projectType}`,
     subtitle: budgetRange
-      ? `Credit stacking analysis for ${budgetRange} project`
-      : "Credit stacking analysis",
+      ? `Incentive pathway review for ${budgetRange} project`
+      : "Incentive pathway review",
     reportType: "developer-analysis",
     generatedAt: new Date().toISOString(),
-    summary: `Analyzing ${creditPrograms.length} incentive program${creditPrograms.length !== 1 ? "s" : ""} for a ${projectType.toLowerCase()} project${budgetRange ? ` with an estimated budget of ${budgetRange}` : ""}. ${totalEstimate > 0 ? `Combined stacking estimate: ${formatDollars(totalEstimate)} in potential incentives. ` : ""}These estimates are preliminary and subject to program-specific caps, eligibility verification, and legal stacking rules.`,
+    summary: `Analyzing ${creditPrograms.length} incentive pathway${creditPrograms.length !== 1 ? "s" : ""} for a ${projectType.toLowerCase()} project${budgetRange ? ` with a project budget range of ${budgetRange}` : ""}. This report identifies fit, sequencing, documentation, and verification needs; it does not estimate award amounts or guarantee funding.`,
     sections,
     recommendedActions,
     metadata: {

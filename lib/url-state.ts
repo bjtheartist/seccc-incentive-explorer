@@ -107,8 +107,15 @@ export function encodeWizardState(state: WizardState): string {
   if (state.industry) params.set("ind", state.industry);
   if (state.budgetRange) params.set("bud", state.budgetRange);
   if (state.projectType) params.set("pt", state.projectType);
+  if (state.fundingCommitted) params.set("fc", state.fundingCommitted);
+  if (state.remainingGap) params.set("gap", state.remainingGap);
+  if (state.timeline) params.set("tl", state.timeline);
+  if (state.siteControl) params.set("sc", state.siteControl);
+  if (state.jobsImpact) params.set("jobs", state.jobsImpact);
 
   if (state.creditsToAnalyze.length > 0) params.set("cta", btoa(JSON.stringify(state.creditsToAnalyze)));
+  if (state.documentsAvailable.length > 0) params.set("docs", btoa(JSON.stringify(state.documentsAvailable)));
+  if (state.supportNeeded.length > 0) params.set("need", btoa(JSON.stringify(state.supportNeeded)));
 
   // Comparison address
   if (state.compareAddress) params.set("caddr", state.compareAddress);
@@ -151,6 +158,21 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
   const pt = params.get("pt");
   if (pt) state.projectType = pt;
 
+  const fc = params.get("fc");
+  if (fc) state.fundingCommitted = fc;
+
+  const gap = params.get("gap");
+  if (gap) state.remainingGap = gap;
+
+  const tl = params.get("tl");
+  if (tl) state.timeline = tl;
+
+  const sc = params.get("sc");
+  if (sc) state.siteControl = sc;
+
+  const jobs = params.get("jobs");
+  if (jobs) state.jobsImpact = jobs;
+
   // Decode array fields
   function decodeArray(key: string): string[] {
     const val = params.get(key);
@@ -159,6 +181,8 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
   }
 
   state.creditsToAnalyze = decodeArray("cta");
+  state.documentsAvailable = decodeArray("docs");
+  state.supportNeeded = decodeArray("need");
 
   // Comparison address
   const caddr = params.get("caddr");
