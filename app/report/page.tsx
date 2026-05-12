@@ -3067,7 +3067,7 @@ export function ReportDisplay({
                   className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"
                 >
                   <MapPin className="w-3.5 h-3.5" />
-                  Compare Another Address
+                  Compare Neighborhoods
                 </button>
               )}
               <button
@@ -3082,7 +3082,7 @@ export function ReportDisplay({
             {compareMode && !compareGeoResult && (
               <div className="mt-5 mx-auto max-w-md">
                 <label className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-2">
-                  Enter a second address to compare
+                  Enter a neighborhood or address to compare
                 </label>
                 <div className="flex gap-2">
                   <input
