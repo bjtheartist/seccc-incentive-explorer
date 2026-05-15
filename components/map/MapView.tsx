@@ -58,6 +58,8 @@ export default function MapView() {
   const [snapshotPrograms, setSnapshotPrograms] = useState<ProgramCheckResult[]>([]);
   const [lastClickLat, setLastClickLat] = useState<number | null>(null);
   const [lastClickLon, setLastClickLon] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isGeneratingSnapshot, setIsGeneratingSnapshot] = useState(false);
   const [allPrograms, setAllPrograms] = useState<Program[]>([]);
   const [parcelsVisible, setParcelsVisible] = useState(false);
   const parcelsAbortRef = useRef<AbortController | null>(null);
@@ -1179,10 +1181,53 @@ export default function MapView() {
       searchMarkerRef.current = marker;
 
       // Update Area Snapshot for the search location
+      setSnapshotOpen(true);
+      lastClickRef.current(result.lat, result.lon);
       loadCensusRef.current(result.lat, result.lon, result.label.split(" — ")[0]);
     },
     []
   );
+
+  const handleGenerateSnapshot = useCallback(async () => {
+    if (isGeneratingSnapshot) return;
+
+    if (lastClickLat !== null && lastClickLon !== null) {
+      const params = new URLSearchParams({
+        instant: "true",
+        lat: lastClickLat.toFixed(5),
+        lon: lastClickLon.toFixed(5),
+        addr: snapshotLabel,
+      });
+      window.location.href = `/report?${params.toString()}`;
+      return;
+    }
+
+    const query = searchQuery.trim();
+    if (!query) {
+      window.location.href = "/report";
+      return;
+    }
+
+    setIsGeneratingSnapshot(true);
+    try {
+      const res = await fetch(`/api/geocode?address=${encodeURIComponent(query)}`);
+      if (!res.ok) throw new Error("Geocode failed");
+      const data = await res.json();
+      if (!data.lat || !data.lon) throw new Error("Address not found");
+
+      const params = new URLSearchParams({
+        instant: "true",
+        lat: Number(data.lat).toFixed(5),
+        lon: Number(data.lon).toFixed(5),
+        addr: data.displayName || data.display_name || query,
+      });
+      window.location.href = `/report?${params.toString()}`;
+    } catch {
+      window.location.href = `/report?addr=${encodeURIComponent(query)}`;
+    } finally {
+      setIsGeneratingSnapshot(false);
+    }
+  }, [isGeneratingSnapshot, lastClickLat, lastClickLon, searchQuery, snapshotLabel]);
 
   /* ── Detect mobile for layout ───────── */
   const [isMobile, setIsMobile] = useState(false);
@@ -1382,7 +1427,12 @@ export default function MapView() {
       )}
 
       {/* Search bar */}
-      {loaded && <MapSearch onResult={handleSearchResult} />}
+      {loaded && (
+        <MapSearch
+          onResult={handleSearchResult}
+          onQueryChange={setSearchQuery}
+        />
+      )}
 
       {/* Legend toggle button */}
       <button
@@ -1446,9 +1496,9 @@ export default function MapView() {
           snapshotLabel={snapshotLabel}
           snapshotPrograms={snapshotPrograms}
           zoningInfo={zoningInfo}
-          lastClickLat={lastClickLat}
-          lastClickLon={lastClickLon}
+          isGeneratingSnapshot={isGeneratingSnapshot}
           onClose={() => setSnapshotOpen(false)}
+          onGenerateSnapshot={handleGenerateSnapshot}
           onDrawArea={() => {
             const draw = drawRef.current;
             if (!draw) return;

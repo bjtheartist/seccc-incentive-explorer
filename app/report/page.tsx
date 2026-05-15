@@ -294,7 +294,8 @@ function ReportWizardPage() {
   const isInstantMode = searchParams.get("instant") === "true";
   const instantLat = searchParams.get("lat") ? parseFloat(searchParams.get("lat")!) : null;
   const instantLon = searchParams.get("lon") ? parseFloat(searchParams.get("lon")!) : null;
-  const instantAddr = searchParams.get("addr") || "";
+  const urlAddress = searchParams.get("addr") || "";
+  const instantAddr = urlAddress;
 
   // Try to hydrate wizard state from URL params
   const urlWizardState = useMemo(() => decodeWizardState(searchParams), [searchParams]);
@@ -310,6 +311,14 @@ function ReportWizardPage() {
         ...INITIAL_WIZARD_STATE,
         reportType: "site-incentives",
         address: instantAddr,
+        lat: instantLat,
+        lon: instantLon,
+      };
+    }
+    if (urlAddress) {
+      return {
+        ...INITIAL_WIZARD_STATE,
+        address: urlAddress,
         lat: instantLat,
         lon: instantLon,
       };
@@ -349,12 +358,16 @@ function ReportWizardPage() {
   const [areaStats, setAreaStats] = useState<Stats | null>(null);
 
   // Address / geocode state
-  const [addressInput, setAddressInput] = useState(instantAddr);
+  const [addressInput, setAddressInput] = useState(
+    urlWizardState?.address || urlAddress
+  );
   const [geocodeResult, setGeocodeResult] = useState<{
     lat: number;
     lon: number;
     display_name: string;
-  } | null>(isInstantMode && instantLat && instantLon ? { lat: instantLat, lon: instantLon, display_name: instantAddr } : null);
+  } | null>(instantLat && instantLon && (urlWizardState?.address || urlAddress)
+    ? { lat: instantLat, lon: instantLon, display_name: urlWizardState?.address || urlAddress }
+    : null);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
 
@@ -536,8 +549,14 @@ function ReportWizardPage() {
   // Derive steps based on report type
   const steps = useMemo<WizardStepConfig[]>(() => {
     if (!wizardState.reportType) return [WIZARD_STEPS[0]]; // just the report-type step
-    return getStepsForReportType(wizardState.reportType);
-  }, [wizardState.reportType]);
+    const baseSteps = getStepsForReportType(wizardState.reportType);
+    if (wizardState.reportType !== "site-incentives" || hasRefinedInstantReport) {
+      return baseSteps;
+    }
+    return baseSteps.filter(
+      (step) => step.id !== "si-project-intake" && step.id !== "si-documents"
+    );
+  }, [hasRefinedInstantReport, wizardState.reportType]);
 
   const currentStep = steps[currentStepIndex];
   const totalSteps = steps.length;
@@ -562,20 +581,15 @@ function ReportWizardPage() {
           (wizardState.address.trim() !== "" && wizardState.lat !== null && wizardState.lon !== null)
         );
       case "project-intake":
-        if (wizardState.reportType === "dev-feasibility") return true;
-        return (
-          wizardState.projectType !== "" &&
-          wizardState.budgetRange !== "" &&
-          wizardState.timeline !== "" &&
-          wizardState.siteControl !== ""
-        );
+        return true;
       case "single":
       case "combobox": {
+        if (currentStep.id === "si-industry") return true;
         const val = getStepValue(wizardState, currentStep.id);
         return typeof val === "string" && val !== "";
       }
       case "multi": {
-        if (wizardState.reportType === "dev-feasibility" && currentStep.id === "df-documents") {
+        if (currentStep.id === "si-documents" || currentStep.id === "df-documents") {
           return true;
         }
         const val = getStepValue(wizardState, currentStep.id);
@@ -931,7 +945,7 @@ function ReportWizardPage() {
                     <ProjectIntakeStep
                       wizardState={wizardState}
                       onChange={handleProjectIntakeChange}
-                      isOptional={wizardState.reportType === "dev-feasibility"}
+                      isOptional
                     />
                   )}
 

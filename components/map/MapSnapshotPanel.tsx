@@ -9,10 +9,10 @@ interface MapSnapshotPanelProps {
   snapshotLabel: string;
   snapshotPrograms: ProgramCheckResult[];
   zoningInfo: string | null;
-  lastClickLat: number | null;
-  lastClickLon: number | null;
+  isGeneratingSnapshot: boolean;
   onClose: () => void;
   onDrawArea: () => void;
+  onGenerateSnapshot: () => void;
 }
 
 export default function MapSnapshotPanel({
@@ -20,10 +20,10 @@ export default function MapSnapshotPanel({
   snapshotLabel,
   snapshotPrograms,
   zoningInfo,
-  lastClickLat,
-  lastClickLon,
+  isGeneratingSnapshot,
   onClose,
   onDrawArea,
+  onGenerateSnapshot,
 }: MapSnapshotPanelProps) {
   return (
     <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
@@ -51,7 +51,7 @@ export default function MapSnapshotPanel({
           {snapshotLabel}
         </div>
         <div className="text-[9px] text-[#0C1B33]/30 mt-0.5 font-mono-bureau tracking-wide">
-          Click map to update
+          Search or click map to update
         </div>
       </div>
 
@@ -293,16 +293,14 @@ export default function MapSnapshotPanel({
       {/* Actions */}
       <div className="mx-4 h-px bg-[#0C1B33]/8" />
       <div className="px-4 py-3 space-y-2">
-        <a
-          href={
-            lastClickLat && lastClickLon
-              ? `/report?instant=true&lat=${lastClickLat.toFixed(5)}&lon=${lastClickLon.toFixed(5)}&addr=${encodeURIComponent(snapshotLabel)}`
-              : "/report"
-          }
-          className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-2 px-3 hover:bg-[#1d4ed8] transition-colors"
+        <button
+          type="button"
+          onClick={onGenerateSnapshot}
+          disabled={isGeneratingSnapshot}
+          className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-2 px-3 hover:bg-[#1d4ed8] disabled:bg-[#2563EB]/45 transition-colors"
         >
-          Generate Location Snapshot
-        </a>
+          {isGeneratingSnapshot ? "Preparing Snapshot" : "Generate Location Snapshot"}
+        </button>
         <button
           onClick={onDrawArea}
           className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase border border-[#0C1B33]/15 text-[#0C1B33]/60 py-2 px-3 hover:text-[#0C1B33] hover:border-[#0C1B33]/30 transition-colors"

@@ -12,9 +12,10 @@ interface SearchResult {
 
 interface MapSearchProps {
   onResult: (result: SearchResult) => void;
+  onQueryChange?: (query: string) => void;
 }
 
-export default function MapSearch({ onResult }: MapSearchProps) {
+export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -87,20 +88,23 @@ export default function MapSearch({ onResult }: MapSearchProps) {
   const handleInput = useCallback(
     (value: string) => {
       setQuery(value);
+      onQueryChange?.(value);
       if (debounceRef.current) clearTimeout(debounceRef.current);
       debounceRef.current = setTimeout(() => doSearch(value), 400);
     },
-    [doSearch]
+    [doSearch, onQueryChange]
   );
 
   const handleSelect = useCallback(
     (result: SearchResult) => {
-      setQuery(result.label.split(" — ")[0]);
+      const selectedLabel = result.label.split(" — ")[0];
+      setQuery(selectedLabel);
+      onQueryChange?.(selectedLabel);
       setOpen(false);
       setResults([]);
       onResult(result);
     },
-    [onResult]
+    [onQueryChange, onResult]
   );
 
   const handleKeyDown = useCallback(
@@ -146,6 +150,7 @@ export default function MapSearch({ onResult }: MapSearchProps) {
           <button
             onClick={() => {
               setQuery("");
+              onQueryChange?.("");
               setResults([]);
               setOpen(false);
             }}

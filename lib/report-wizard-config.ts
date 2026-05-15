@@ -381,7 +381,7 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   {
     id: "si-industry",
     title: "What\u2019s your industry?",
-    subtitle: "Filters programs to your sector and personalizes your action plan.",
+    subtitle: "Optional: add an industry to narrow the report, or continue without it.",
     appliesTo: ["site-incentives"],
     inputType: "combobox",
     stateKey: "industry",
@@ -393,7 +393,7 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   {
     id: "si-project-intake",
     title: "Tell us about the project",
-    subtitle: "A few scoping answers help move the report from generic eligibility to practical next steps.",
+    subtitle: "Optional: a few scoping answers can refine the location snapshot into practical next steps.",
     appliesTo: ["site-incentives"],
     inputType: "project-intake",
     stateKey: "projectType",
@@ -401,7 +401,7 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   {
     id: "si-documents",
     title: "Which documents do you already have?",
-    subtitle: "Select what is ready today. The report will flag what may still be needed.",
+    subtitle: "Optional: select what is ready today. The report will flag what may still be useful.",
     appliesTo: ["site-incentives"],
     inputType: "multi",
     stateKey: "documentsAvailable",
@@ -561,21 +561,17 @@ export function isStepComplete(
   const value = state[step.stateKey];
 
   if (step.inputType === "project-intake") {
-    if (state.reportType === "dev-feasibility") return true;
-    return (
-      state.projectType.length > 0 &&
-      state.budgetRange.length > 0 &&
-      state.timeline.length > 0 &&
-      state.siteControl.length > 0
-    );
+    return true;
   }
+
+  if (step.id === "si-industry") return true;
 
   if (step.inputType === "single" || step.inputType === "combobox") {
     return typeof value === "string" && value.length > 0;
   }
 
   if (step.inputType === "multi") {
-    if (state.reportType === "dev-feasibility" && step.id === "df-documents") return true;
+    if (step.id === "si-documents" || step.id === "df-documents") return true;
     return Array.isArray(value) && value.length > 0;
   }
 
