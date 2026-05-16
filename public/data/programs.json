@@ -404,11 +404,11 @@
   },
   {
     "id": "ssa",
-    "name": "Special Service Area (SSA #50)",
+    "name": "Special Service Area (SSA)",
     "level": "City",
     "zoneKey": "ssa",
-    "summary": "SSA #50 is a localized tax district that funds enhanced services for the Calumet Heights and Avalon Park business corridors, managed by the Southeast Chicago Chamber of Commerce.",
-    "whoQualifies": "All commercial properties within SSA #50 boundaries automatically participate and benefit from enhanced services.",
+    "summary": "Special Service Areas are localized tax districts that fund enhanced services for commercial corridors, such as maintenance, beautification, marketing, safety, and business support. The exact services and administrator depend on the specific SSA covering the address.",
+    "whoQualifies": "Commercial properties within a designated SSA boundary may participate in and benefit from services funded by that SSA. Confirm the detected SSA name, number, and current services with the local SSA service provider or the City of Chicago.",
     "benefits": [
       "Streetscaping and beautification",
       "Business marketing and promotion",
@@ -417,30 +417,30 @@
       "Business networking and technical assistance"
     ],
     "howToApply": [
-      "You're automatically included if your business is in SSA #50",
-      "Contact SECCC for available programs and assistance",
-      "Attend SECCC events and meetings for opportunities"
+      "Confirm the detected SSA name and number for your address",
+      "Identify the current local SSA service provider",
+      "Contact the provider or City of Chicago SSA program staff to verify available services and assistance"
     ],
     "requiredDocs": [
-      "No application needed — benefits are automatic",
-      "Contact SECCC for specific program requirements"
+      "No standard application is typically required for area-wide services",
+      "Specific grants, rebates, or assistance may require provider-specific intake materials"
     ],
-    "contact": "Southeast Chicago Chamber of Commerce: (773) 721-1999",
-    "url": "https://www.secchicago.org/",
+    "contact": "City of Chicago Special Service Area Program",
+    "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/sba.html",
     "contacts": [
       {
-        "agency": "Southeast Chicago Chamber of Commerce",
-        "abbreviation": "SECCC",
-        "phone": "(773) 721-1999",
-        "url": "https://www.secchicago.org/"
+        "agency": "City of Chicago Special Service Area Program",
+        "abbreviation": "SSA",
+        "phone": "",
+        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/sba.html"
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Commercial property must be within SSA #50 boundaries", "verifiedBy": "location", "required": true }
+      { "criterion": "location", "description": "Commercial property must be within a designated Special Service Area boundary", "verifiedBy": "location", "required": true }
     ],
     "lastVerifiedAt": "2025-12-01",
     "benefitRange": "Free services (streetscaping, marketing, safety)",
-    "fastestConfirmingStep": "Call SECCC at (773) 721-1999"
+    "fastestConfirmingStep": "Verify the detected SSA and current service provider"
   },
   {
     "id": "highUnemployment",

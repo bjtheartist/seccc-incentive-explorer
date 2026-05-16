@@ -11,6 +11,7 @@ import type {
 import { getSQL } from "@/lib/db";
 import { memCached, roundCoord } from "@/lib/redis";
 import { ZONE_KEYS } from "@/lib/constants";
+import { featureDisplayName, formatZoneFeatureName, parseZoneProperties } from "@/lib/zone-names";
 
 export const runtime = "nodejs";
 
@@ -46,20 +47,6 @@ async function loadStaticZone(key: string): Promise<FeatureCollection> {
   return data;
 }
 
-function featureName(feature: Feature): string {
-  const props = feature.properties || {};
-  const candidates = [
-    props.name,
-    props.NAME,
-    props.Name,
-    props.display_name,
-    props.description,
-    props.DESCRIPTION,
-  ];
-
-  return candidates.find((value) => typeof value === "string" && value) || "";
-}
-
 async function checkStaticZones(lat: number, lon: number) {
   const point = turf.point([lon, lat]);
   const matches: Array<{ key: string; name: string }> = [];
@@ -77,7 +64,7 @@ async function checkStaticZones(lat: number, lon: number) {
       );
 
       if (match) {
-        matches.push({ key, name: featureName(match) });
+        matches.push({ key, name: featureDisplayName(key, match) });
       }
     })
   );
@@ -114,7 +101,7 @@ export async function GET(request: NextRequest) {
       }
 
       const rows = await sql`
-        SELECT zone_key, feature_name
+        SELECT zone_key, feature_name, feature_properties
         FROM zones
         WHERE ST_Contains(
           geom::geometry,
@@ -124,7 +111,10 @@ export async function GET(request: NextRequest) {
 
       return rows.map((r: Record<string, unknown>) => ({
         key: r.zone_key,
-        name: r.feature_name || "",
+        name: formatZoneFeatureName(String(r.zone_key), {
+          ...parseZoneProperties(r.feature_properties),
+          name: r.feature_name,
+        }),
       }));
     });
 

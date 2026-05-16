@@ -1,6 +1,7 @@
 import * as turf from "@turf/turf";
 import { ZONE_KEYS } from "./constants";
 import { normalizeZoneCheckResponse } from "./zone-response";
+import { featureDisplayName } from "./zone-names";
 import type { LookupResult, CityZoning, CensusData, ZoneCheckResult } from "./types";
 import type { FeatureCollection, Feature, Polygon, MultiPolygon } from "geojson";
 
@@ -90,13 +91,12 @@ async function checkZonesTurf(
         for (const feature of fc.features) {
           if (feature.geometry && turf.booleanPointInPolygon(pt, feature as Feature<Polygon | MultiPolygon>)) {
             inZone = true;
-            const props = feature.properties || {};
 
-            if (props.name) {
-              zoneNames[key] = props.name;
-            }
+            const name = featureDisplayName(key, feature);
+            if (name) zoneNames[key] = name;
 
             if (key === "highUnemployment") {
+              const props = feature.properties || {};
               const rate = props["Census Tract ID"];
               const pop = parseInt(props["Area"], 10);
               if (rate) {
