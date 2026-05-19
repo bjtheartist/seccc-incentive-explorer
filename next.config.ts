@@ -5,6 +5,12 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
+        source: '/data/programs.json',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=0, s-maxage=300, stale-while-revalidate=3600' },
+        ],
+      },
+      {
         source: '/data/:path*.geojson',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=604800, s-maxage=604800, immutable' },

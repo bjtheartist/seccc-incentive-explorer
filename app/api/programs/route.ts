@@ -5,6 +5,9 @@ import { memCached } from "@/lib/redis";
 import type { Program } from "@/lib/types";
 import { readFile } from "fs/promises";
 import { join } from "path";
+import { preferStaticProgramDefinitions } from "@/lib/programs-merge";
+
+const PROGRAMS_CACHE_CONTROL = "public, max-age=0, s-maxage=300, stale-while-revalidate=3600";
 
 /**
  * GET /api/programs
@@ -23,13 +26,14 @@ export async function GET() {
   if (!sql) {
     return NextResponse.json(await getStaticPrograms(), {
       headers: {
-        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+        "Cache-Control": PROGRAMS_CACHE_CONTROL,
       },
     });
   }
 
   try {
-    const validated = await memCached("programs:all", 86400, async () => {
+    const staticPrograms = await getStaticPrograms();
+    const databasePrograms = await memCached("programs:all:v2", 86400, async () => {
       const rows = await sql`
         SELECT
           id, name, level, zone_key, summary, who_qualifies,
@@ -66,19 +70,19 @@ export async function GET() {
         fastestConfirmingStep: r.fastest_confirming_step ?? null,
       }));
 
-      return safeParseArray(ProgramSchema, programs, "programs-api");
+      return safeParseArray(ProgramSchema, programs, "programs-api") as Program[];
     });
 
-    return NextResponse.json(validated, {
+    return NextResponse.json(preferStaticProgramDefinitions(staticPrograms, databasePrograms), {
       headers: {
-        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+        "Cache-Control": PROGRAMS_CACHE_CONTROL,
       },
     });
   } catch (err) {
     console.error("programs API error:", err);
     return NextResponse.json(await getStaticPrograms(), {
       headers: {
-        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+        "Cache-Control": PROGRAMS_CACHE_CONTROL,
       },
     });
   }

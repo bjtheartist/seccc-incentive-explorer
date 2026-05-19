@@ -11,3 +11,5 @@ Fix:
 - Regression tests assert that Go Green Community Fresh Market resolves to `Englewood (SSA #80)` and that the generic SSA program does not contain SSA #50-specific copy.
 
 Guardrail: do not put neighborhood-specific names, service providers, or phone numbers into a citywide program record. If provider-specific CTA language is needed later, add it as a separate lookup keyed by the detected zone feature, not by the generic `ssa` program.
+
+Follow-up: production `/api/programs` can use the optional database and Redis cache before static fallback. If the database seed is older than `public/data/programs.json`, stale rows can override corrected static program copy. The programs API now prefers static definitions for known program ids and only appends DB-only programs. The Redis cache key was versioned from `programs:all` to `programs:all:v2` to bypass older cached rows.
