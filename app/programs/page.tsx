@@ -520,6 +520,9 @@ function programsByLevel(all: Program[], level: ProgramLevel): Program[] {
 }
 
 function CheatSheetSection({ programs }: { programs: Program[] }) {
+  // Active gov-level tab on mobile. Desktop (lg+) shows all 5 columns;
+  // print mode forces all columns visible regardless of tab state.
+  const [activeLevel, setActiveLevel] = useState<ProgramLevel>("City");
   if (programs.length === 0) return null;
   const today = new Date().toISOString().slice(0, 10);
 
@@ -529,12 +532,12 @@ function CheatSheetSection({ programs }: { programs: Program[] }) {
       className="cheat-sheet mb-10 border border-[#0C1B33]/15 bg-white rounded-xl overflow-hidden print:border-0 print:rounded-none print:shadow-none"
     >
       {/* Header strip */}
-      <div className="px-6 py-4 border-b border-[#0C1B33]/10 flex items-center justify-between gap-4 bg-[#FAF9F6] print:bg-white">
-        <div>
+      <div className="px-4 md:px-6 py-4 border-b border-[#0C1B33]/10 flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 bg-[#FAF9F6] print:bg-white">
+        <div className="min-w-0">
           <div className="font-mono-bureau text-[9px] tracking-[0.3em] uppercase text-[#2563EB]/60 mb-1">
             Cheat Sheet
           </div>
-          <h2 className="font-editorial text-xl text-[#0C1B33]">
+          <h2 className="font-editorial text-lg md:text-xl text-[#0C1B33] leading-tight">
             Chicago Incentive Explorer · One-Page Overview
           </h2>
           <p className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/35 mt-1">
@@ -551,7 +554,7 @@ function CheatSheetSection({ programs }: { programs: Program[] }) {
               500,
             );
           }}
-          className="print:hidden shrink-0 inline-flex items-center gap-1.5 bg-[#0C1B33] hover:bg-[#1c2c4a] text-white font-mono-bureau text-[10px] tracking-[0.2em] uppercase px-4 py-2.5 rounded-full transition-colors"
+          className="print:hidden shrink-0 inline-flex items-center justify-center gap-1.5 bg-[#0C1B33] hover:bg-[#1c2c4a] text-white font-mono-bureau text-[10px] tracking-[0.2em] uppercase px-4 py-2.5 rounded-full transition-colors w-full md:w-auto"
         >
           <Printer className="w-3.5 h-3.5" /> Print / Save as PDF
         </button>
@@ -573,16 +576,46 @@ function CheatSheetSection({ programs }: { programs: Program[] }) {
         </div>
       </div>
 
-      {/* 5-column matrix */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-0 border-b border-[#0C1B33]/10 print:grid-cols-5">
+      {/* Mobile-only gov-level tab selector (hidden on desktop and in print) */}
+      <div className="lg:hidden print:hidden flex gap-1 px-3 py-3 border-b border-[#0C1B33]/10 overflow-x-auto">
+        {CHEAT_LEVELS.map((level) => {
+          const total = programs.filter((p) => p.level === level).length;
+          const color = LEVEL_COLORS[level];
+          const active = activeLevel === level;
+          return (
+            <button
+              key={level}
+              onClick={() => setActiveLevel(level)}
+              className="shrink-0 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-3 py-1.5 rounded-full border transition-colors inline-flex items-center gap-1.5"
+              style={{
+                color: active ? "#fff" : color,
+                backgroundColor: active ? color : "transparent",
+                borderColor: active ? color : `${color}40`,
+              }}
+            >
+              {level}
+              <span
+                className="font-mono-bureau text-[9px] tracking-normal"
+                style={{ opacity: 0.7 }}
+              >
+                {total}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 5-column matrix (mobile: only active tab visible; desktop + print: all) */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-0 border-b border-[#0C1B33]/10 print:grid-cols-5">
         {CHEAT_LEVELS.map((level, colIdx) => {
           const programsAtLevel = programsByLevel(programs, level);
           const totalAtLevel = programsAtLevel.length;
           const color = LEVEL_COLORS[level];
+          const visible = activeLevel === level;
           return (
             <div
               key={level}
-              className={`px-4 py-4 ${colIdx > 0 ? "lg:border-l border-[#0C1B33]/8 print:border-l" : ""}`}
+              className={`px-4 py-4 ${colIdx > 0 ? "lg:border-l border-[#0C1B33]/8 print:border-l" : ""} ${visible ? "block" : "hidden"} lg:block print:block`}
             >
               <div className="flex items-baseline justify-between mb-3 pb-2 border-b border-[#0C1B33]/8">
                 <span
