@@ -2427,22 +2427,28 @@
     "name": "Community Development Grant — Small (≤ $250K)",
     "level": "City",
     "zoneKey": "",
-    "summary": "DPD's flagship grant umbrella replacing legacy Small CDG / Chicago Recovery Plan branding. Funds capital projects citywide; not corridor-restricted. Three tiers — this entry covers the Small tier (≤$250K).",
-    "whoQualifies": "Businesses, nonprofits, and developers with capital projects up to $250K. Projects citywide; not limited to specific corridors.",
+    "summary": "DPD's flagship reimbursement grant for capital projects across all 77 Chicago community areas. The Small tier funds projects up to $250,000 and is the most common entry point for small businesses, nonprofits, and community developers. Replaces legacy Small CDG / Chicago Recovery Plan branding.",
+    "whoQualifies": "For-profit small businesses, 501(c)(3) nonprofits, and developers in good standing with the State of Illinois and the City of Chicago, undertaking a qualifying capital project (construction, rehabilitation, build-out, or equipment) at a Chicago address with documented site control. Operating expenses, working capital, and routine maintenance do not qualify.",
     "benefits": [
-      "Up to $250,000 reimbursement grant",
-      "Citywide eligibility",
-      "Reimbursable capital costs"
+      "Reimbursement grant up to $250,000",
+      "Citywide eligibility — no corridor or zone gate",
+      "Covers capital costs: construction, rehab, build-out, equipment, soft costs",
+      "Pairs with NOF, SBIF, and most state/federal incentives (subject to standard stacking limits)"
     ],
     "howToApply": [
-      "Apply via the DPD Submittable portal (English or Spanish)",
-      "Provide project budget and timeline",
-      "Rolling submission"
+      "Apply via the DPD Submittable portal (English or Spanish) on a rolling basis",
+      "Submit a project narrative, itemized budget, timeline, and proof of site control",
+      "DPD reviews quarterly; awardees notified after review",
+      "After award, complete work and submit invoices for reimbursement under the executed grant agreement"
     ],
     "requiredDocs": [
-      "Project budget and scope",
-      "Proof of site control",
-      "Business or nonprofit documentation"
+      "Project narrative + scope of work",
+      "Itemized capital budget with contractor estimates",
+      "Project timeline (completion within program window)",
+      "Proof of site control — deed, lease (≥5 yrs remaining), or owner consent letter",
+      "Entity documentation (business license, 501(c)(3) determination, or developer LLC docs)",
+      "Good-standing verification with State of Illinois and City of Chicago",
+      "W-9, certificate of insurance, and matching-funds documentation (if applicable)"
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
@@ -2452,12 +2458,16 @@
       { "agency": "City of Chicago Department of Planning and Development", "abbreviation": "DPD", "phone": "(312) 744-4190", "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html" }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Project in Chicago", "verifiedBy": "location", "required": true },
-      { "criterion": "investmentSize", "description": "Project cost ≤ $250K", "verifiedBy": "manual", "required": true }
+      { "criterion": "location", "description": "Project located within Chicago city limits (all 77 community areas eligible)", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Capital project: new construction, substantial rehabilitation, build-out, or equipment installation", "verifiedBy": "survey", "required": true },
+      { "criterion": "industry", "description": "For-profit business, 501(c)(3) nonprofit, or developer LLC", "verifiedBy": "survey", "required": true },
+      { "criterion": "investmentSize", "description": "Total project cost up to $250,000 (Small tier)", "verifiedBy": "manual", "required": true },
+      { "criterion": "businessType", "description": "Good standing with State of Illinois and City of Chicago", "verifiedBy": "manual", "required": true }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "Up to $250,000",
+    "lastVerifiedAt": "2026-05-22",
+    "benefitRange": "Up to $250,000 reimbursement",
     "fastestConfirmingStep": "Start the Submittable application or call DPD at (312) 744-4190",
+    "boundaryDisclaimer": "Citywide — eligible anywhere within Chicago city limits. No zone gate, but the project address must be in Chicago.",
     "applicationPortals": [
       { "type": "submittable", "label": "Small Community Development Grant (≤ $250K)", "url": "https://cocdpd.submittable.com/submit/348438/small-community-development-grants-up-to-250-000", "language": "en" },
       { "type": "submittable", "label": "Subvención de Desarrollo Comunitario (hasta $250,000)", "url": "https://cocdpd.submittable.com/submit/354576/subvencion-de-desarrollo-comunitario-hasta-250-000-2026", "language": "es" }
@@ -2468,23 +2478,29 @@
     "name": "Community Development Grant — Medium ($300K – $5M)",
     "level": "City",
     "zoneKey": "",
-    "summary": "DPD Medium-tier grant for capital projects between $300,001 and $5,000,000. Citywide.",
-    "whoQualifies": "Businesses, nonprofits, and developers with capital projects in the $300K-$5M range.",
+    "summary": "DPD Medium-tier reimbursement grant for substantial capital projects with budgets between $300,001 and $5,000,000. Citywide. Commonly used for mid-scale commercial buildouts, anchor nonprofit facilities, and mixed-use neighborhood redevelopment.",
+    "whoQualifies": "For-profit businesses, 501(c)(3) nonprofits, and developers in good standing with the State of Illinois and the City of Chicago, undertaking a capital project at a Chicago address with documented site control. Project must demonstrate community benefit (jobs created/retained, service expansion, or neighborhood impact).",
     "benefits": [
-      "$300,001 – $5,000,000 reimbursement grant",
-      "Citywide eligibility",
-      "Reimbursable capital costs"
+      "Reimbursement grant from $300,001 to $5,000,000",
+      "Citywide eligibility — no corridor or zone gate",
+      "Covers construction, substantial rehabilitation, equipment, soft costs",
+      "Pairs with TIF RDAs, NOF, federal HTC, and most state credits (subject to standard stacking limits)"
     ],
     "howToApply": [
       "Apply via the DPD Submittable portal",
-      "Provide project budget, pro forma, and timeline",
-      "DPD reviews periodically"
+      "Submit project pro forma, financing stack, narrative, and community impact analysis",
+      "DPD reviews periodically; larger awards may require City Council approval",
+      "Reimbursement disbursed against invoices after executed grant agreement"
     ],
     "requiredDocs": [
-      "Project budget and pro forma",
-      "Proof of site control",
-      "Business or nonprofit documentation",
-      "Construction timeline"
+      "Project narrative + community impact statement",
+      "Detailed pro forma including financing stack and source/use",
+      "Itemized capital budget with three contractor bids for major scopes",
+      "Construction timeline with milestones",
+      "Proof of site control — deed, executed lease, or PSA with contingencies cleared",
+      "Entity good-standing documentation",
+      "Match documentation (most Medium awards require matching funds or owner equity)",
+      "W-9, insurance, and any required environmental/zoning approvals"
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
@@ -2494,12 +2510,16 @@
       { "agency": "City of Chicago Department of Planning and Development", "abbreviation": "DPD", "phone": "(312) 744-4190", "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html" }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Project in Chicago", "verifiedBy": "location", "required": true },
-      { "criterion": "investmentSize", "description": "Project cost $300K – $5M", "verifiedBy": "manual", "required": true }
+      { "criterion": "location", "description": "Project located within Chicago city limits", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Capital project: new construction, substantial rehabilitation, or major build-out", "verifiedBy": "survey", "required": true },
+      { "criterion": "industry", "description": "For-profit business, 501(c)(3) nonprofit, or developer LLC", "verifiedBy": "survey", "required": true },
+      { "criterion": "investmentSize", "description": "Total project cost $300,001 – $5,000,000 (Medium tier)", "verifiedBy": "manual", "required": true },
+      { "criterion": "businessType", "description": "Good standing with State of Illinois and City of Chicago", "verifiedBy": "manual", "required": true }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "$300K – $5M",
-    "fastestConfirmingStep": "Start the Submittable application or call DPD at (312) 744-4190",
+    "lastVerifiedAt": "2026-05-22",
+    "benefitRange": "$300K – $5M reimbursement",
+    "fastestConfirmingStep": "Discuss scope with DPD at (312) 744-4190 before applying via Submittable",
+    "boundaryDisclaimer": "Citywide — eligible anywhere within Chicago city limits. No zone gate, but project must be at a Chicago address.",
     "applicationPortals": [
       { "type": "submittable", "label": "Medium Community Development Grant", "url": "https://cocdpd.submittable.com/submit/345760/medium-community-development-grant-application", "language": "en" }
     ]
@@ -2509,23 +2529,30 @@
     "name": "Community Development Grant — Large (> $5M)",
     "level": "City",
     "zoneKey": "",
-    "summary": "DPD Large-tier grant for catalytic capital projects exceeding $5M. Replaces the legacy NOF Large Grant catalytic tier and Recovery Plan large awards.",
-    "whoQualifies": "Developers and nonprofits with catalytic capital projects exceeding $5M.",
+    "summary": "DPD Large-tier reimbursement grant for catalytic capital projects exceeding $5,000,000. Citywide. Replaces the legacy NOF Large Grant catalytic tier and Chicago Recovery Plan large awards. Typically used for anchor development, large mixed-use redevelopment, and projects requiring City Council financial approval.",
+    "whoQualifies": "Developers, large nonprofits, and institutional sponsors in good standing with the State of Illinois and the City of Chicago, undertaking a catalytic capital project at a Chicago address with documented site control and a fully-stacked financing plan. Large awards generally require City Council ordinance, public hearings, and a demonstrated catalytic impact on the surrounding community area.",
     "benefits": [
-      "Grants > $5,000,000",
-      "Citywide; designed for catalytic projects",
-      "Reimbursable capital costs"
+      "Reimbursement grant exceeding $5,000,000",
+      "Citywide eligibility — designed for projects too large for NOF or the Medium CDG tier",
+      "Covers construction, major rehabilitation, equipment, and qualified soft costs",
+      "Stacks with TIF Redevelopment Agreements, federal credits (NMTC, HTC), state credits, and Cook County classifications"
     ],
     "howToApply": [
-      "Apply via the DPD Submittable portal",
-      "Provide project pro forma, financing stack, and community impact analysis",
-      "DPD reviews on rolling basis"
+      "Discuss the project concept with DPD before formal application",
+      "Submit complete pro forma, financing stack, project narrative, and community impact analysis via the DPD Submittable portal",
+      "DPD reviews on a rolling basis; awards typically require City Council ordinance and public hearing",
+      "Execute grant agreement and disburse reimbursement against invoices on completion milestones"
     ],
     "requiredDocs": [
-      "Project pro forma and financing stack",
-      "Site control documentation",
-      "Community impact analysis",
-      "Construction timeline"
+      "Detailed project narrative + catalytic impact analysis",
+      "Full pro forma with sources & uses, debt service schedule, and operating projections",
+      "Itemized capital budget with contractor bids and design documentation",
+      "Project timeline with construction milestones",
+      "Proof of site control with all contingencies cleared",
+      "Entity documentation (developer LLC docs, partnership agreements, nonprofit determination)",
+      "Match documentation (Large awards generally require substantial matching capital)",
+      "Environmental assessments and zoning/landmarks approvals as applicable",
+      "Community engagement record (letters of support, ward briefings)"
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
@@ -2535,12 +2562,16 @@
       { "agency": "City of Chicago Department of Planning and Development", "abbreviation": "DPD", "phone": "(312) 744-4190", "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html" }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Project in Chicago", "verifiedBy": "location", "required": true },
-      { "criterion": "investmentSize", "description": "Project cost > $5M", "verifiedBy": "manual", "required": true }
+      { "criterion": "location", "description": "Project located within Chicago city limits", "verifiedBy": "location", "required": true },
+      { "criterion": "propertyType", "description": "Catalytic capital project: large new construction, major adaptive-reuse, anchor development", "verifiedBy": "survey", "required": true },
+      { "criterion": "industry", "description": "Developer LLC, large 501(c)(3) nonprofit, or institutional sponsor", "verifiedBy": "survey", "required": true },
+      { "criterion": "investmentSize", "description": "Total project cost > $5,000,000 (Large tier)", "verifiedBy": "manual", "required": true },
+      { "criterion": "businessType", "description": "Good standing with State of Illinois and City of Chicago; capacity to manage public-financing compliance", "verifiedBy": "manual", "required": true }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "> $5M (catalytic)",
-    "fastestConfirmingStep": "Discuss project with DPD before applying via Submittable",
+    "lastVerifiedAt": "2026-05-22",
+    "benefitRange": "> $5M reimbursement (catalytic)",
+    "fastestConfirmingStep": "Schedule a project concept meeting with DPD at (312) 744-4190 before submitting",
+    "boundaryDisclaimer": "Citywide — eligible anywhere within Chicago city limits. No zone gate, but Large awards almost always require City Council approval which involves the ward alderperson.",
     "applicationPortals": [
       { "type": "submittable", "label": "Large Community Development Grant", "url": "https://cocdpd.submittable.com/submit/345775/large-community-development-grant-application", "language": "en" }
     ]

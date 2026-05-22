@@ -278,6 +278,9 @@ function isProgramRelevantToIndustry(
   if (!industryId) return true;
   const industry = getIndustryById(industryId);
   if (!industry) return true; // Unknown industry — show everything
+  // Citywide / discovery-only programs (no zone gate) are general-purpose by nature.
+  // Don't industry-filter them out — they stay relevant across sectors.
+  if (!program.zoneKey) return true;
   return industry.topPrograms.includes(program.id) || industry.topPrograms.includes(program.zoneKey);
 }
 

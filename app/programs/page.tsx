@@ -633,8 +633,8 @@ function CheatSheetSection({ programs }: { programs: Program[] }) {
         <div className="flex items-center gap-2">
           <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
           <span>
-            <strong className="text-[#0C1B33]/70">Verify before spending money.</strong>{" "}
-            This is a discovery tool, not legal or tax advice. Check the official source linked on each program page before applying, purchasing materials, or beginning work.
+            <strong className="text-[#0C1B33]/70">Verify with the official source.</strong>{" "}
+            This is a discovery tool — not legal, tax, or eligibility advice. Confirm current requirements with the administering agency before applying, certifying, or relying on any program listed here.
           </span>
         </div>
         <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30">

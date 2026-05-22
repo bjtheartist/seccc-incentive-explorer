@@ -1,19 +1,23 @@
 // Service Worker for SECCC Incentive Explorer
 // Implements cache-first for static data, stale-while-revalidate for API responses
 
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const STATIC_CACHE = `seccc-static-${CACHE_VERSION}`;
 const API_CACHE = `seccc-api-${CACHE_VERSION}`;
 const API_CACHE_MAX_ENTRIES = 100;
 
 // --- Route matchers ---
 
+// Zone GeoJSON files only — large and rarely change. Safe to cache-first.
 function isStaticData(url) {
   const path = url.pathname;
-  return (
-    path.match(/^\/data\/zones\/.*\.geojson$/) ||
-    path.match(/^\/data\/.*\.json$/)
-  );
+  return path.match(/^\/data\/zones\/.*\.geojson$/);
+}
+
+// JSON data files that change frequently — go network-first so edits land immediately.
+function isFreshData(url) {
+  const path = url.pathname;
+  return path.match(/^\/data\/.*\.json$/);
 }
 
 function isApiCacheable(url) {
@@ -82,6 +86,31 @@ async function cacheFirst(request) {
     if (fallback) {
       return fallback;
     }
+    return new Response(
+      JSON.stringify({ error: 'Offline and no cached data available' }),
+      {
+        status: 503,
+        headers: { 'Content-Type': 'application/json' },
+      }
+    );
+  }
+}
+
+/**
+ * Network-first: try network, fall back to cache only when offline.
+ * Use for JSON data that changes between deploys (programs.json, link-health.json, etc.).
+ */
+async function networkFirst(request) {
+  const cache = await caches.open(STATIC_CACHE);
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse.ok) {
+      await cache.put(request, networkResponse.clone());
+    }
+    return networkResponse;
+  } catch (_error) {
+    const cached = await cache.match(request);
+    if (cached) return cached;
     return new Response(
       JSON.stringify({ error: 'Offline and no cached data available' }),
       {
@@ -188,9 +217,15 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache-first for static data files
+  // Cache-first only for large, rarely-changing files (zone GeoJSON)
   if (isStaticData(url)) {
     event.respondWith(cacheFirst(event.request));
+    return;
+  }
+
+  // Network-first for frequently-changing JSON (programs.json, link-health.json, etc.)
+  if (isFreshData(url)) {
+    event.respondWith(networkFirst(event.request));
     return;
   }
 
