@@ -129,7 +129,7 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
 
   return (
     <div
-      className="absolute top-3 left-3 right-3 md:left-auto md:right-3 z-10 md:w-72"
+      className="absolute top-14 left-3 right-3 md:top-3 md:left-auto md:right-3 z-10 md:w-72"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Search input */}

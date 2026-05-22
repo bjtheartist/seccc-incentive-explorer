@@ -1532,7 +1532,7 @@ export default function MapView() {
       {!snapshotOpen && !polygonPanelOpen && loaded && (
         <button
           onClick={() => setSnapshotOpen(true)}
-          className="absolute top-12 md:top-3 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-2 md:py-1.5 font-mono-bureau text-[11px] md:text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
+          className="absolute top-3 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-2 md:py-1.5 font-mono-bureau text-[11px] md:text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
         >
           Location Snapshot
         </button>
@@ -1540,7 +1540,7 @@ export default function MapView() {
 
       {/* Draw mode instruction banner */}
       {drawMode && loaded && (
-        <div className="absolute top-12 left-1/2 -translate-x-1/2 z-20 bg-[#2563EB] text-white px-4 py-2 rounded-b shadow-md text-center">
+        <div className="absolute top-28 md:top-12 left-1/2 -translate-x-1/2 z-20 bg-[#2563EB] text-white px-4 py-2 rounded-b shadow-md text-center">
           <div className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase">
             Click to place points — double-click to finish
           </div>
