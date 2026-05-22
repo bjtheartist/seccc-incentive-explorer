@@ -1,7 +1,7 @@
 // Service Worker for SECCC Incentive Explorer
 // Implements cache-first for static data, stale-while-revalidate for API responses
 
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const STATIC_CACHE = `seccc-static-${CACHE_VERSION}`;
 const API_CACHE = `seccc-api-${CACHE_VERSION}`;
 const API_CACHE_MAX_ENTRIES = 100;

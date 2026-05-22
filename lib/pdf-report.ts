@@ -10,6 +10,7 @@ const WHITE = "#FFFFFF";
 const LIGHT_GRAY = "#9CA3AF";
 const MEDIUM_GRAY = "#6B7280";
 const GREEN = "#16A34A";
+const AMBER = "#D97706";
 
 /* ── Page Dimensions (letter, mm) ── */
 const W = 215.9;
@@ -18,6 +19,25 @@ const MARGIN = 20;
 const CONTENT_W = W - MARGIN * 2;
 
 /* ── Helpers ── */
+
+type ReportPortal = {
+  label?: string;
+  url?: string;
+  type?: string;
+  language?: string;
+};
+
+type ReportVerificationStep = {
+  label?: string;
+  agency?: string;
+  url?: string;
+};
+
+type ReportItemWithProvenance = GeneratedReport["sections"][number]["items"][number] & {
+  applicationPortals?: ReportPortal[];
+  verificationSteps?: ReportVerificationStep[];
+  stale?: boolean;
+};
 
 function hexToRgb(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -62,6 +82,123 @@ function wrapText(
     doc.text(line, x, y + i * lineHeight);
   });
   return lines.length * lineHeight;
+}
+
+function compactUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const path = `${parsed.pathname}${parsed.search}`.replace(/\/$/, "");
+    const display = `${parsed.hostname}${path}`;
+    return display.length > 92 ? `${display.slice(0, 89)}...` : display;
+  } catch {
+    return url.length > 92 ? `${url.slice(0, 89)}...` : url;
+  }
+}
+
+function formatDateLabel(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function hasText(value: unknown): value is string {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
+function drawLinkedWrappedText(
+  doc: jsPDF,
+  text: string,
+  x: number,
+  y: number,
+  maxWidth: number,
+  lineHeight: number,
+  url?: string
+): number {
+  const lines = doc.splitTextToSize(text, maxWidth) as string[];
+  lines.forEach((line: string, i: number) => {
+    if (url && i === 0) {
+      doc.textWithLink(line, x, y + i * lineHeight, { url });
+    } else {
+      doc.text(line, x, y + i * lineHeight);
+    }
+  });
+  return lines.length * lineHeight;
+}
+
+function drawProgramProvenance(
+  doc: jsPDF,
+  item: ReportItemWithProvenance,
+  x: number,
+  y: number,
+  maxWidth: number
+): number {
+  const lines: { text: string; url?: string; color: string }[] = [];
+  const sourceUrl = hasText(item.sourceUrl) ? item.sourceUrl.trim() : undefined;
+  const itemUrl = hasText(item.url) ? item.url.trim() : undefined;
+  const officialUrl = sourceUrl || itemUrl;
+
+  if (officialUrl) {
+    const sourceName = hasText(item.sourceLabel) ? `${item.sourceLabel.trim()} - ` : "";
+    lines.push({
+      text: `Official source: ${sourceName}${compactUrl(officialUrl)}`,
+      url: officialUrl,
+      color: BLUE,
+    });
+  }
+
+  const portal = item.applicationPortals?.find((p) => hasText(p.url));
+  if (portal?.url) {
+    const label = hasText(portal.label) ? portal.label.trim() : "Application portal";
+    const portalCount = item.applicationPortals?.filter((p) => hasText(p.url)).length || 1;
+    const moreCount = Math.max(portalCount - 1, 0);
+    lines.push({
+      text: `Apply: ${label} - ${compactUrl(portal.url)}${moreCount > 0 ? ` (+${moreCount} more)` : ""}`,
+      url: portal.url,
+      color: GREEN,
+    });
+  }
+
+  const nextStep = item.verificationSteps?.find((step) => hasText(step.label) || hasText(step.url));
+  if (nextStep) {
+    const label = hasText(nextStep.label) ? nextStep.label.trim() : "Confirm current requirements";
+    const agency = hasText(nextStep.agency) ? ` (${nextStep.agency.trim()})` : "";
+    const stepUrl = hasText(nextStep.url) ? nextStep.url.trim() : undefined;
+    const moreCount = Math.max((item.verificationSteps?.length || 1) - 1, 0);
+    const stepUrlText = stepUrl ? ` - ${compactUrl(stepUrl)}` : "";
+    const moreText = moreCount > 0 ? ` (+${moreCount} more)` : "";
+    lines.push({
+      text: `Suggested next step: ${label}${agency}${stepUrlText}${moreText}`,
+      url: stepUrl,
+      color: BLUE,
+    });
+  }
+
+  const isStale = item.isStale || item.stale;
+  if (item.lastVerifiedAt || isStale) {
+    lines.push({
+      text: item.lastVerifiedAt
+        ? `${isStale ? "Verify before relying" : "Verified"}: ${formatDateLabel(item.lastVerifiedAt)}`
+        : "Verify before relying: source may be stale",
+      color: isStale ? AMBER : LIGHT_GRAY,
+    });
+  }
+
+  if (lines.length === 0) return y;
+
+  let nextY = y;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(6.5);
+  for (const line of lines) {
+    nextY = checkPage(doc, nextY, 7);
+    setColor(doc, line.color);
+    const used = drawLinkedWrappedText(doc, line.text, x, nextY, maxWidth, 3.2, line.url);
+    nextY += used + 1;
+  }
+  return nextY;
 }
 
 /** Check if we need a new page; if so add one and return reset Y. */
@@ -761,6 +898,18 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
         doc.setFontSize(7);
         setColor(doc, LIGHT_GRAY);
         y += wrapText(doc, item.detail, MARGIN + 6, y, CONTENT_W - 10, 3.5);
+      }
+
+      const provenanceStartY = y + 3;
+      const provenanceEndY = drawProgramProvenance(
+        doc,
+        item as ReportItemWithProvenance,
+        MARGIN + 6,
+        provenanceStartY,
+        CONTENT_W - 10
+      );
+      if (provenanceEndY !== provenanceStartY) {
+        y = provenanceEndY + 3;
       }
       y += 4;
     }

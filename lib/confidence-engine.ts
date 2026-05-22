@@ -53,7 +53,7 @@ function checkLocationMatch(
   program: Program,
   zones: Record<string, boolean>
 ): boolean {
-  if (!program.zoneKey) return true; // No zone requirement (County-level programs)
+  if (!program.zoneKey) return true; // No zone requirement; still not address-confirmed by itself.
   return !!zones[program.zoneKey];
 }
 
@@ -180,11 +180,11 @@ function computeConfidence(
     }
   } else {
     // No survey — location-only assessment
-    if (locationMatch) {
-      confidence = "location_eligible";
-    } else if (!locationRequired && !program.zoneKey) {
-      // County programs with no zone requirement — worth exploring
+    if (!locationRequired && !program.zoneKey) {
+      // No-zone programs may be good next steps, but are not address-confirmed.
       confidence = "worth_exploring";
+    } else if (locationMatch) {
+      confidence = "location_eligible";
     } else {
       confidence = "not_applicable";
     }
@@ -330,7 +330,7 @@ const STACKING_PERCENTILES: Record<number, number> = {
 /** Well-known beneficial zone combinations. */
 const ZONE_COMBOS: { zones: string[]; benefit: string }[] = [
   { zones: ["federalOZ", "enterprise"], benefit: "Stack capital gains deferral with sales/utility tax exemptions — combined savings of ~20-25%" },
-  { zones: ["tif", "sbif"], benefit: "TIF funds public improvements while SBIF reimburses up to 50% of your renovation costs" },
+  { zones: ["tif", "sbif"], benefit: "TIF funds public improvements while SBIF may reimburse up to 90% of eligible renovation costs, subject to property-type caps" },
   { zones: ["federalOZ", "nmtcEligible"], benefit: "Layer Opportunity Zone capital gains benefits with 39% NMTC credits over 7 years" },
   { zones: ["tif", "enterprise"], benefit: "TIF rehabilitation funding plus Enterprise Zone tax exemptions reduce both property and operating costs" },
   { zones: ["nrhpDistricts", "tif"], benefit: "20% Federal Historic Tax Credit plus TIF funding for certified rehabilitation projects" },
@@ -398,7 +398,7 @@ export function computeStackingNarrative(
   // Build narrative
   let narrative: string;
   if (zoneCount === 0) {
-    narrative = "This location is not within any mapped incentive zones. County-wide programs may still apply.";
+    narrative = "This location is not within any mapped incentive zones. Broader non-zone programs may still be worth exploring.";
   } else if (zoneCount <= 2) {
     const names = activeZones.map((z) => zoneNames[z] || ZONE_LABELS_LOCAL[z] || z).join(" and ");
     narrative = `Your location is in ${names}. While the zone overlap is limited, you still qualify for targeted programs designed for this area.`;
@@ -466,8 +466,9 @@ export function generateExecutiveSummary(
 
   const zoneCount = Object.values(zones).filter(Boolean).length;
 
-  // Top 3 programs (excluding not_applicable)
-  const eligible = results.filter((r) => r.confidence !== "not_applicable");
+  // Top 3 address/profile-supported programs. Discovery-only programs stay
+  // visible elsewhere but should not drive the executive-summary claim.
+  const eligible = results.filter((r) => r.confidence !== "not_applicable" && r.confidence !== "worth_exploring");
   const topResults = eligible.slice(0, 3);
 
   const topPrograms = topResults.map((r) => ({

@@ -73,7 +73,10 @@ export async function GET(request: NextRequest) {
         reason: r.reason ?? "",
         authoritySource: r.authority_source ?? "",
         confidence: r.confidence ?? "low",
-        lastVerifiedAt: r.last_verified_at ?? null,
+        lastVerifiedAt:
+          r.last_verified_at instanceof Date
+            ? r.last_verified_at.toISOString().slice(0, 10)
+            : r.last_verified_at ?? null,
       }));
 
       return safeParseArray(StackingRuleSchema, rules, "stacking-api");

@@ -1,17 +1,21 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import {
   ZONE_COLORS,
   ZONE_LABELS,
   ZONE_KEYS_SORTED,
   ZONE_DESCRIPTIONS,
   ZONE_LEARN_MORE,
+  ZONE_META,
+  LEVELS,
+  LEVEL_COLORS,
   ZONING_CATEGORIES,
   ZONING_CODE_DESCRIPTIONS,
   VACANT_COLORS,
   VACANT_LABELS,
 } from "@/lib/constants";
+import type { ProgramLevel } from "@/lib/types";
 import {
   OWNER_TYPE_LABELS,
   type OwnerType,
@@ -121,79 +125,13 @@ export default function MapLegendPanel({
       {/* Divider */}
       <div className="mx-4 h-px bg-[#0C1B33]/8" />
 
-      {/* Incentive Zones */}
-      <div className="px-4 pt-3 pb-2">
-        <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-3">
-          Incentive Zones
-        </div>
-        <div className="space-y-0.5">
-          {ZONE_KEYS_SORTED.map((key) => (
-            <div key={key}>
-              <label className="flex items-center gap-2.5 py-2 md:py-1 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={zoneVisible[key]}
-                  onChange={() => onToggleZone(key)}
-                  className="sr-only"
-                />
-                <span
-                  className="w-5 h-5 md:w-3.5 md:h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors"
-                  style={{
-                    borderColor: ZONE_COLORS[key],
-                    backgroundColor: zoneVisible[key]
-                      ? ZONE_COLORS[key] + "30"
-                      : "transparent",
-                  }}
-                >
-                  {zoneVisible[key] && (
-                    <span
-                      className="w-3 h-3 md:w-2 md:h-2 block"
-                      style={{ backgroundColor: ZONE_COLORS[key] }}
-                    />
-                  )}
-                </span>
-                <span
-                  className="text-[13px] md:text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight flex-1"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onSetExpandedZone(expandedZone === key ? null : key);
-                  }}
-                >
-                  {ZONE_LABELS[key]}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onSetExpandedZone(expandedZone === key ? null : key);
-                  }}
-                  className="text-[9px] text-[#2563EB]/40 hover:text-[#2563EB] transition-colors flex-shrink-0"
-                  title="More info"
-                >
-                  {expandedZone === key ? "−" : "?"}
-                </button>
-              </label>
-              {/* Expanded description */}
-              {expandedZone === key && ZONE_DESCRIPTIONS[key] && (
-                <div className="ml-6 pl-0.5 pb-2 border-l-2 border-[#0C1B33]/5">
-                  <p className="text-[10px] text-[#0C1B33]/50 leading-relaxed mt-1 mb-1.5">
-                    {ZONE_DESCRIPTIONS[key]}
-                  </p>
-                  {ZONE_LEARN_MORE[key] && (
-                    <a
-                      href={ZONE_LEARN_MORE[key]}
-                      target={ZONE_LEARN_MORE[key].startsWith("http") ? "_blank" : undefined}
-                      rel={ZONE_LEARN_MORE[key].startsWith("http") ? "noopener noreferrer" : undefined}
-                      className="font-mono-bureau text-[9px] tracking-wide text-[#2563EB]/70 hover:text-[#2563EB] transition-colors"
-                    >
-                      Learn more &rarr;
-                    </a>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+      {/* Incentive Zones — grouped by gov level */}
+      <ZoneLayerSection
+        zoneVisible={zoneVisible}
+        onToggleZone={onToggleZone}
+        expandedZone={expandedZone}
+        onSetExpandedZone={onSetExpandedZone}
+      />
 
       {/* Divider */}
       <div className="mx-4 h-px bg-[#0C1B33]/8" />
@@ -513,6 +451,163 @@ export default function MapLegendPanel({
         )}
       </div>
 
+    </div>
+  );
+}
+
+/* ── Zone layer section: gov-level grouping + quick filters ───── */
+
+interface ZoneLayerSectionProps {
+  zoneVisible: Record<string, boolean>;
+  onToggleZone: (key: string) => void;
+  expandedZone: string | null;
+  onSetExpandedZone: (key: string | null) => void;
+}
+
+function ZoneLayerSection({
+  zoneVisible,
+  onToggleZone,
+  expandedZone,
+  onSetExpandedZone,
+}: ZoneLayerSectionProps) {
+  const [activeLevel, setActiveLevel] = useState<ProgramLevel | "All">("All");
+
+  const groupedKeys = ZONE_KEYS_SORTED.filter((key) => {
+    if (activeLevel === "All") return true;
+    const meta = ZONE_META[key];
+    if (!meta) return false;
+    const jurisdictions = meta.jurisdictions || [meta.level];
+    return jurisdictions.includes(activeLevel);
+  });
+
+  // For grouped rendering when "All" is selected, organize keys by level
+  const sectionsToRender: { level: ProgramLevel; keys: string[] }[] = [];
+  if (activeLevel === "All") {
+    for (const lvl of LEVELS) {
+      if (lvl === "Utility") continue; // no Utility-level zone layers yet
+      const keys = ZONE_KEYS_SORTED.filter((k) => ZONE_META[k]?.level === lvl);
+      if (keys.length > 0) sectionsToRender.push({ level: lvl, keys });
+    }
+  } else {
+    sectionsToRender.push({ level: activeLevel as ProgramLevel, keys: groupedKeys });
+  }
+
+  return (
+    <div className="px-4 pt-3 pb-2">
+      <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-2">
+        Incentive Zones
+      </div>
+      {/* Gov-level quick filter chips */}
+      <div className="flex flex-wrap gap-1 mb-3">
+        {(["All", ...LEVELS.filter((l) => l !== "Utility")] as const).map((lvl) => {
+          const active = activeLevel === lvl;
+          const color = lvl === "All" ? "#0C1B33" : LEVEL_COLORS[lvl as ProgramLevel];
+          return (
+            <button
+              key={lvl}
+              onClick={() => setActiveLevel(lvl as ProgramLevel | "All")}
+              className="font-mono-bureau text-[8px] tracking-[0.1em] uppercase px-2 py-1 rounded-full border transition-colors"
+              style={{
+                color: active ? "#fff" : color,
+                backgroundColor: active ? color : "transparent",
+                borderColor: active ? color : `${color}40`,
+              }}
+            >
+              {lvl}
+            </button>
+          );
+        })}
+      </div>
+      <div className="space-y-2">
+        {sectionsToRender.map(({ level, keys }) => (
+          <div key={level}>
+            {activeLevel === "All" && (
+              <div
+                className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase mb-1.5 pl-0.5"
+                style={{ color: LEVEL_COLORS[level] }}
+              >
+                {level}
+              </div>
+            )}
+            <div className="space-y-0.5">
+              {keys.map((key) => {
+                const meta = ZONE_META[key];
+                const levelColor = meta ? LEVEL_COLORS[meta.level] : "#6b7280";
+                return (
+                  <div key={key} style={{ borderLeft: `2px solid ${levelColor}`, paddingLeft: 4 }}>
+                    <label className="flex items-center gap-2.5 py-2 md:py-1 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={zoneVisible[key]}
+                        onChange={() => onToggleZone(key)}
+                        className="sr-only"
+                      />
+                      <span
+                        className="w-5 h-5 md:w-3.5 md:h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors"
+                        style={{
+                          borderColor: ZONE_COLORS[key],
+                          backgroundColor: zoneVisible[key]
+                            ? ZONE_COLORS[key] + "30"
+                            : "transparent",
+                        }}
+                      >
+                        {zoneVisible[key] && (
+                          <span
+                            className="w-3 h-3 md:w-2 md:h-2 block"
+                            style={{ backgroundColor: ZONE_COLORS[key] }}
+                          />
+                        )}
+                      </span>
+                      <span
+                        className="text-[13px] md:text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight flex-1"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onSetExpandedZone(expandedZone === key ? null : key);
+                        }}
+                      >
+                        {ZONE_LABELS[key]}
+                      </span>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onSetExpandedZone(expandedZone === key ? null : key);
+                        }}
+                        className="text-[9px] text-[#2563EB]/40 hover:text-[#2563EB] transition-colors flex-shrink-0"
+                        title="More info"
+                      >
+                        {expandedZone === key ? "−" : "?"}
+                      </button>
+                    </label>
+                    {/* Expanded description */}
+                    {expandedZone === key && ZONE_DESCRIPTIONS[key] && (
+                      <div className="ml-6 pl-0.5 pb-2 border-l-2 border-[#0C1B33]/5">
+                        <p className="text-[10px] text-[#0C1B33]/50 leading-relaxed mt-1 mb-1.5">
+                          {ZONE_DESCRIPTIONS[key]}
+                        </p>
+                        {meta?.boundaryDisclaimer && (
+                          <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 leading-relaxed mb-1.5">
+                            {meta.boundaryDisclaimer}
+                          </p>
+                        )}
+                        {ZONE_LEARN_MORE[key] && (
+                          <a
+                            href={ZONE_LEARN_MORE[key]}
+                            target={ZONE_LEARN_MORE[key].startsWith("http") ? "_blank" : undefined}
+                            rel={ZONE_LEARN_MORE[key].startsWith("http") ? "noopener noreferrer" : undefined}
+                            className="font-mono-bureau text-[9px] tracking-wide text-[#2563EB]/70 hover:text-[#2563EB] transition-colors"
+                          >
+                            Learn more &rarr;
+                          </a>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

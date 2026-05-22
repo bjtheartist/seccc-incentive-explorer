@@ -83,7 +83,7 @@ describe("runConfidenceEngine", () => {
     expect(results[0].confidence).toBe("not_applicable");
   });
 
-  it("returns location_eligible for no zone requirement and no survey (always matches)", () => {
+  it("returns worth_exploring for no zone requirement and no survey", () => {
     const programs = [
       makeProgram({
         id: "county-prog",
@@ -92,8 +92,9 @@ describe("runConfidenceEngine", () => {
       }),
     ];
     const results = runConfidenceEngine(programs, {}, ZONE_NAMES);
-    // No zone requirement → locationMatch=true → location_eligible
-    expect(results[0].confidence).toBe("location_eligible");
+    expect(results[0].confidence).toBe("worth_exploring");
+    expect(results[0].whyOneLine).toContain("Available to businesses in Cook County");
+    expect(results[0].whyOneLine).not.toContain("qualifying zone");
   });
 
   it("returns may_qualify for partial survey with location match", () => {

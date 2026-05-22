@@ -65,7 +65,10 @@ export async function GET() {
         url: r.url ?? "",
         contacts: r.contacts ?? [],
         eligibilityRules: r.eligibility_rules ?? [],
-        lastVerifiedAt: r.last_verified_at ?? null,
+        lastVerifiedAt:
+          r.last_verified_at instanceof Date
+            ? r.last_verified_at.toISOString().slice(0, 10)
+            : r.last_verified_at ?? null,
         benefitRange: r.benefit_range ?? null,
         fastestConfirmingStep: r.fastest_confirming_step ?? null,
       }));

@@ -60,6 +60,7 @@ export default function ReportZoningMap({
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [mapError, setMapError] = useState(false);
   const [hoveredZone, setHoveredZone] = useState<string | null>(null);
 
   const hasLocation = lat != null && lon != null;
@@ -75,21 +76,39 @@ export default function ReportZoningMap({
 
     mapboxgl.accessToken = mapboxToken;
 
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      // Light/positron-style basemap — minimal labels, muted tones
-      style: "mapbox://styles/mapbox/light-v11",
-      center: hasLocation ? [lon!, lat!] : [-87.6298, 41.8481],
-      zoom: hasLocation ? 14 : 10.5,
-      scrollZoom: false,
-      dragPan: true,
-      dragRotate: false,
-      pitchWithRotate: false,
-      doubleClickZoom: false,
-      touchZoomRotate: false,
-    });
+    if (!mapboxgl.supported({ failIfMajorPerformanceCaveat: true })) {
+      setMapError(true);
+      setMapLoaded(true);
+      return;
+    }
+
+    let map: mapboxgl.Map;
+    try {
+      map = new mapboxgl.Map({
+        container: containerRef.current,
+        // Light/positron-style basemap — minimal labels, muted tones
+        style: "mapbox://styles/mapbox/light-v11",
+        center: hasLocation ? [lon!, lat!] : [-87.6298, 41.8481],
+        zoom: hasLocation ? 14 : 10.5,
+        scrollZoom: false,
+        dragPan: true,
+        dragRotate: false,
+        pitchWithRotate: false,
+        doubleClickZoom: false,
+        touchZoomRotate: false,
+      });
+    } catch {
+      setMapError(true);
+      setMapLoaded(true);
+      return;
+    }
 
     mapRef.current = map;
+
+    map.on("error", () => {
+      setMapError(true);
+      setMapLoaded(true);
+    });
 
     // Navigation control (zoom only, no compass)
     map.addControl(
@@ -263,8 +282,19 @@ export default function ReportZoningMap({
         style={{ height: 420 }}
       />
 
+      {mapError && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-[#F0F1EE] px-6 text-center">
+          <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/35 mb-2">
+            Zoning map unavailable
+          </span>
+          <p className="text-[12px] text-[#0C1B33]/55 max-w-sm leading-relaxed">
+            The report data still loaded. This browser could not initialize the interactive zoning map.
+          </p>
+        </div>
+      )}
+
       {/* Loading placeholder */}
-      {!mapLoaded && (
+      {!mapLoaded && !mapError && (
         <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#F0F1EE]/90 backdrop-blur-sm">
           <div className="flex items-center gap-1.5 mb-3">
             {[0, 1, 2].map((i) => (

@@ -4,7 +4,7 @@
  * Usage: node scripts/convert-kml.mjs
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from "fs";
-import { DOMParser } from "xmldom";
+import { DOMParser } from "@xmldom/xmldom";
 import * as tj from "@tmcw/togeojson";
 import * as turf from "@turf/turf";
 import { resolve } from "path";

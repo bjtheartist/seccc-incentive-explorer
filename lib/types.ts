@@ -34,6 +34,30 @@ export interface EligibilityRule {
   required: boolean;
 }
 
+/* ── Application portal (Submittable, web form, PDF, etc.) ── */
+
+export interface ApplicationPortal {
+  type: "submittable" | "web" | "pdf" | "email" | "in_person";
+  label: string;
+  url: string;
+  language?: "en" | "es";
+  notes?: string;
+}
+
+/* ── "Next step" — discovery/navigation only, not compliance ── */
+
+export interface VerificationStep {
+  label: string;
+  agency: string;
+  url: string;
+  kind: "certification" | "reporting" | "filing" | "preapproval" | "consent";
+  appliesBefore?: "application" | "purchase" | "construction" | "annual";
+  note?: string;
+}
+
+export type ProgramStatus = "active" | "verify" | "sunset" | "pending";
+export type ProgramLevel = "Federal" | "State" | "County" | "City" | "Utility";
+
 /* ── Stacking rule between two programs ── */
 
 export interface StackingRule {
@@ -52,7 +76,7 @@ export interface StackingRule {
 export interface Program {
   id: string;
   name: string;
-  level: "Federal" | "State" | "County" | "City";
+  level: ProgramLevel;
   zoneKey: string;
   summary: string;
   whoQualifies: string;
@@ -66,6 +90,16 @@ export interface Program {
   lastVerifiedAt?: string | null;
   benefitRange?: string;
   fastestConfirmingStep?: string;
+  // ── Phase 1 (2026-05-21) additions ─────────────────────────────
+  status?: ProgramStatus;
+  sourceUrl?: string;
+  applicationPortals?: ApplicationPortal[];
+  verificationSteps?: VerificationStep[];
+  boundaryDisclaimer?: string;
+  expirationNote?: string;
+  suspensionNote?: string;
+  sunsetWarning?: string;
+  oz2Note?: string;
 }
 
 /* ── Phase 1: Check result types ── */

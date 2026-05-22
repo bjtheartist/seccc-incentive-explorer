@@ -84,6 +84,9 @@ export interface ReportItem {
   isStale?: boolean;
   sourceLabel?: string;
   sourceUrl?: string;
+  applicationPortals?: Program["applicationPortals"];
+  verificationSteps?: Program["verificationSteps"];
+  status?: Program["status"];
 }
 
 export interface DataSourceCitation {
@@ -91,6 +94,14 @@ export interface DataSourceCitation {
   label: string;
   description: string;
   url?: string;
+}
+
+export interface BenefitEstimate {
+  programId: string;
+  programName: string;
+  estimatedValue: number;
+  label: string;
+  color?: string;
 }
 
 export interface ActionRoadmapItem {
@@ -130,6 +141,12 @@ export interface GeneratedReport {
     zoneType?: string;
   };
   executiveSummary?: ExecutiveSummary;
+  benefitEstimates?: {
+    total: number;
+    totalFormatted: string;
+    budgetRange: string;
+    items: BenefitEstimate[];
+  };
   actionRoadmap?: ActionRoadmapItem[];
   verdict?: {
     signal: "strong" | "moderate" | "limited";
@@ -168,15 +185,82 @@ export interface GeneratedReport {
   dataSources?: DataSourceCitation[];
 }
 
-const RELATIONSHIP_DEPENDENT_PROGRAMS = new Set([
-  "dceo",
-  "edge",
-  "rev",
-  "micro",
-  "nmtcEligible",
-]);
+// ─── Budget Median Mapping ──────────────────────────────────────────
+
+const BUDGET_MEDIANS: Record<string, number> = {
+  "Under $100K": 50_000,
+  "$100K-$500K": 300_000,
+  "$500K-$2M": 1_000_000,
+  "$2M-$10M": 5_000_000,
+  "Over $10M": 15_000_000,
+  // Wizard step option IDs (kebab-case) mapped to same values
+  "under-100k": 50_000,
+  "100k-500k": 300_000,
+  "500k-2m": 1_000_000,
+  "2m-10m": 5_000_000,
+  "over-10m": 15_000_000,
+};
+
+/**
+ * Credit percentage assumptions per program type.
+ * These are simplified estimates for reporting purposes.
+ */
+const CREDIT_PERCENTAGES: Record<string, { pct: number; label: string; cap?: number }> = {
+  federalOZ: { pct: 0, label: "Tax deferral/exclusion depends on Qualified Opportunity Fund structure" },
+  illinoisOZ: { pct: 0, label: "Illinois OZ record is a discovery/stacking reference, not a separate state credit" },
+  tif: { pct: 0.25, label: "Up to 25% of rehab costs" },
+  sbif: { pct: 0.9, label: "Up to 90% reimbursement; caps vary by property type", cap: 250_000 },
+  enterprise: { pct: 0.1, label: "~10% via sales/utility tax exemptions" },
+  edge: { pct: 0.1, label: "~10% income tax credit over agreement term" },
+  rev: { pct: 0.2, label: "Up to 20% income tax credit" },
+  micro: { pct: 0.2, label: "Up to 20% income tax credit" },
+  dataCenter: { pct: 0.1, label: "~10% via sales tax exemptions on equipment" },
+  cpace: { pct: 0.15, label: "~15% savings via long-term PACE financing" },
+  class7a: { pct: 0.35, label: "~35% property tax reduction over 12 years" },
+  landBank: { pct: 0.3, label: "~30% savings on discounted land acquisition" },
+  highUnemployment: { pct: 0.08, label: "~8% via WOTC and workforce credits" },
+  catalystGrant: { pct: 0.2, label: "Up to 20% grant on eligible costs" },
+  nmtcEligible: { pct: 0.39, label: "Up to 39% NMTC over 7 years" },
+  nrhpDistricts: { pct: 0.2, label: "20% Federal Historic Tax Credit" },
+  landmarkDistricts: { pct: 0.1, label: "~10% local preservation incentive" },
+  smallBizSource: { pct: 0, label: "Free advising (no direct credit)" },
+  workforceSolutions: { pct: 0, label: "Training/upskilling grant; award size varies by NOFO and project" },
+  ssa: { pct: 0.02, label: "~2% via shared marketing/services" },
+};
 
 // ─── Helpers ────────────────────────────────────────────────────────
+
+export function formatDollars(amount: number): string {
+  if (amount >= 1_000_000) {
+    return `$${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`;
+  }
+  if (amount >= 1_000) {
+    return `$${(amount / 1_000).toFixed(0)}K`;
+  }
+  return `$${amount.toFixed(0)}`;
+}
+
+/**
+ * Estimate the dollar value of a credit program for a given budget range.
+ */
+export function estimateCreditValue(
+  creditId: string,
+  budgetRange: string,
+): string {
+  const median = BUDGET_MEDIANS[budgetRange];
+  if (!median) return "Budget range not specified";
+
+  const creditInfo = CREDIT_PERCENTAGES[creditId];
+  if (!creditInfo || creditInfo.pct === 0) {
+    return creditInfo?.label || "Contact for details";
+  }
+
+  const raw = median * creditInfo.pct;
+  const capped = creditInfo.cap ? Math.min(raw, creditInfo.cap) : raw;
+  const pctDisplay = Math.round(creditInfo.pct * 100);
+
+  return `${pctDisplay}% of ${formatDollars(median)} = ${formatDollars(capped)}`;
+}
 
 function getIndustryName(industryId: string): string {
   const industry = getIndustryById(industryId);
@@ -195,28 +279,6 @@ function isProgramRelevantToIndustry(
   const industry = getIndustryById(industryId);
   if (!industry) return true; // Unknown industry — show everything
   return industry.topPrograms.includes(program.id) || industry.topPrograms.includes(program.zoneKey);
-}
-
-function getProgramFitLabel(
-  program: Program,
-  state: WizardState,
-  zones?: Record<string, boolean>,
-): string {
-  const project = state.projectType || "";
-  const programText = `${program.id} ${program.name} ${program.summary} ${program.benefits?.join(" ")}`.toLowerCase();
-
-  if (RELATIONSHIP_DEPENDENT_PROGRAMS.has(program.id)) return "Project-specific match";
-  if (programText.includes("hire") || programText.includes("workforce") || programText.includes("job")) {
-    return project.includes("hiring") ? "Close match if hiring" : "Not as relevant unless hiring";
-  }
-  if (programText.includes("energy") || programText.includes("pace") || programText.includes("utility")) {
-    return project.includes("energy") ? "Possible match" : "Not as relevant unless energy-related";
-  }
-  if (programText.includes("lease") || programText.includes("owner") || programText.includes("property")) {
-    return "Possible match if site control is clear";
-  }
-  if (program.zoneKey && zones?.[program.zoneKey]) return "Close location match";
-  return "Possible match";
 }
 
 const DOCUMENT_KEYWORDS: Record<string, string[]> = {
@@ -367,16 +429,89 @@ function hasProjectReadinessContext(state: WizardState): boolean {
 }
 
 /**
- * Filter programs by zone eligibility.
+ * Address-confirmed matches are programs tied to a zone this address actually
+ * falls inside. No-zone programs remain useful discovery/navigation items, but
+ * they should not inflate location eligibility counts.
  */
-function filterByZones(
+function hasAddressZoneMatch(
+  program: Program,
+  zones?: Record<string, boolean>,
+): boolean {
+  return !!program.zoneKey && !!zones?.[program.zoneKey];
+}
+
+function filterAddressMatchedPrograms(
   programs: Program[],
   zones?: Record<string, boolean>,
 ): Program[] {
-  if (!zones) return programs;
-  return programs.filter((p) => {
-    if (!p.zoneKey) return true; // Non-zone programs always included
-    return !!zones[p.zoneKey];
+  if (!zones) return [];
+  return programs.filter((p) => hasAddressZoneMatch(p, zones));
+}
+
+function filterDiscoveryPrograms(programs: Program[]): Program[] {
+  return programs.filter((p) => !p.zoneKey);
+}
+
+function confidenceRank(confidence?: EligibilityConfidence): number {
+  switch (confidence) {
+    case "appears_eligible":
+      return 0;
+    case "location_eligible":
+      return 1;
+    case "may_qualify":
+      return 2;
+    case "worth_exploring":
+      return 3;
+    case "not_applicable":
+      return 5;
+    default:
+      return 4;
+  }
+}
+
+function programReportItem(
+  program: Program,
+  confidenceMap?: Map<string, ProgramCheckResult>,
+): ReportItem {
+  const cr = confidenceMap?.get(program.id);
+  return {
+    label: program.name,
+    value: program.benefitRange || "Contact for details",
+    detail: program.summary,
+    programId: program.id,
+    whoQualifies: program.whoQualifies,
+    eligibilityRules: program.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
+      description: r.description,
+      required: r.required,
+    })),
+    url: program.url,
+    level: program.level,
+    confidenceLevel: cr?.confidence,
+    confidenceLabel: cr?.confidenceLabel,
+    whyOneLine: cr?.whyOneLine,
+    notVerified: cr?.notVerified,
+    matchedRules: cr?.matchedRules,
+    lastVerifiedAt: program.lastVerifiedAt,
+    isStale: isStaleProgramData(program),
+    sourceLabel: program.zoneKey ? (ZONE_LABELS[program.zoneKey] || program.zoneKey) : "Official source",
+    sourceUrl: program.sourceUrl || (program.zoneKey ? ZONE_LEARN_MORE[program.zoneKey] : undefined),
+    applicationPortals: program.applicationPortals,
+    verificationSteps: program.verificationSteps,
+    status: program.status,
+  };
+}
+
+function sortProgramItems(
+  programs: Program[],
+  zones?: Record<string, boolean>,
+  confidenceMap?: Map<string, ProgramCheckResult>,
+): Program[] {
+  return [...programs].sort((a, b) => {
+    const zoneDiff = Number(!hasAddressZoneMatch(a, zones)) - Number(!hasAddressZoneMatch(b, zones));
+    if (zoneDiff !== 0) return zoneDiff;
+    const confidenceDiff = confidenceRank(confidenceMap?.get(a.id)?.confidence) - confidenceRank(confidenceMap?.get(b.id)?.confidence);
+    if (confidenceDiff !== 0) return confidenceDiff;
+    return a.name.localeCompare(b.name);
   });
 }
 
@@ -452,9 +587,7 @@ function computeVerdict(
   ctx: ReportContext,
 ): GeneratedReport["verdict"] {
   const zoneCount = zones ? Object.values(zones).filter(Boolean).length : 0;
-  const eligible = zones
-    ? programs.filter((p) => !p.zoneKey || zones[p.zoneKey])
-    : programs.filter((p) => !p.zoneKey);
+  const eligible = filterAddressMatchedPrograms(programs, zones);
   const programCount = eligible.length;
 
   const censusResult = ctx.census?.medianIncome != null
@@ -531,8 +664,8 @@ function buildMarketContext(
   let zoneCoverageNarrative: string;
   if (zoneCount >= 4) zoneCoverageNarrative = `With ${zoneCount} active incentive zones, this location is in a high-coverage area — established programs target this neighborhood for investment.`;
   else if (zoneCount >= 2) zoneCoverageNarrative = `${zoneCount} incentive zones overlap at this location, providing moderate program coverage.`;
-  else if (zoneCount === 1) zoneCoverageNarrative = "One incentive zone covers this location. County-wide programs supplement zone-based options.";
-  else zoneCoverageNarrative = "No incentive zones overlap at this location. County-wide programs may still apply.";
+  else if (zoneCount === 1) zoneCoverageNarrative = "One incentive zone covers this location. Broader non-zone programs supplement zone-based options.";
+  else zoneCoverageNarrative = "No incentive zones overlap at this location. Broader non-zone programs may still be worth exploring.";
 
   // Build comparison data (location vs city)
   const comparisons: NonNullable<GeneratedReport["marketContext"]>["comparisons"] = {};
@@ -649,25 +782,18 @@ function generateLocationIncentives(
   ctx: ReportContext = {},
 ): GeneratedReport {
   const { zones, zoneNames } = ctx;
-  const eligible = filterByZones(programs, zones);
+  const addressMatched = filterAddressMatchedPrograms(programs, zones);
+  const discoveryPrograms = filterDiscoveryPrograms(programs);
+  const eligible = [...addressMatched, ...discoveryPrograms];
   const industryRelevant = state.industry
     ? eligible.filter((p) => isProgramRelevantToIndustry(p, state.industry))
     : eligible;
 
-  // Split into zone-based and county-wide
+  // Split into address-confirmed and discovery-only programs.
   const zoneBased = industryRelevant.filter((p) => p.zoneKey && zones?.[p.zoneKey]);
-  const countyWide = industryRelevant.filter((p) => !p.zoneKey);
+  const discoveryOnly = industryRelevant.filter((p) => !p.zoneKey);
 
   const zoneCount = countActiveZones(zones);
-
-  // ── Merge all eligible programs, sorted by zone-match first ──
-  const allEligible = [...zoneBased, ...countyWide];
-  // Sort: zone-based first (lower index = higher confidence proxy), then county-wide
-  const mergedPrograms = [...allEligible].sort((a, b) => {
-    const aZone = a.zoneKey && zones?.[a.zoneKey] ? 0 : 1;
-    const bZone = b.zoneKey && zones?.[b.zoneKey] ? 0 : 1;
-    return aZone - bZone;
-  });
 
   // ── Confidence engine (run once, reuse for exec summary) ──
   const confidenceResults = zones
@@ -675,11 +801,13 @@ function generateLocationIncentives(
     : [];
   const confidenceMap = new Map<string, ProgramCheckResult>();
   for (const r of confidenceResults) confidenceMap.set(r.programId, r);
+  const confirmedPrograms = sortProgramItems(zoneBased, zones, confidenceMap);
+  const exploratoryPrograms = sortProgramItems(discoveryOnly, zones, confidenceMap);
 
   // ── Builder outputs ──
   const verdict = computeVerdict(zones, programs, ctx);
   const marketContext = buildMarketContext(ctx, zones);
-  const eligibleIds = allEligible.map((p) => p.id);
+  const eligibleIds = confirmedPrograms.map((p) => p.id);
   const stackingAnalysis = buildStackingAnalysis(zones, zoneNames, eligibleIds, ctx.stackingRules);
   const communityAssetsData = buildCommunityAssets(ctx.communityAssets);
   const dataSources = collectDataSources(ctx);
@@ -739,42 +867,64 @@ function generateLocationIncentives(
     }
   }
 
-  // §03 Eligible Incentive Programs — merged, sorted by confidence
-  if (mergedPrograms.length > 0) {
+  // §03 Eligible Incentive Programs — address-confirmed by zone match
+  if (confirmedPrograms.length > 0) {
     sections.push({
       title: "Eligible Incentive Programs",
-      description: "Programs matched to your location and profile, ordered by eligibility confidence.",
-      items: mergedPrograms.map((p) => {
-        const cr = confidenceMap.get(p.id);
-        return {
-          label: p.name,
-          value: getProgramFitLabel(p, state, zones),
-          detail: p.summary,
-          programId: p.id,
-          whoQualifies: p.whoQualifies,
-          eligibilityRules: p.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
-            description: r.description,
-            required: r.required,
-          })),
-          url: p.url,
-          level: p.level,
-          confidenceLevel: cr?.confidence,
-          confidenceLabel: cr?.confidenceLabel,
-          whyOneLine: cr?.whyOneLine,
-          notVerified: cr?.notVerified,
-          matchedRules: cr?.matchedRules,
-          lastVerifiedAt: p.lastVerifiedAt,
-          isStale: isStaleProgramData(p),
-          sourceLabel: p.zoneKey ? (ZONE_LABELS[p.zoneKey] || p.zoneKey) : undefined,
-          sourceUrl: p.zoneKey ? ZONE_LEARN_MORE[p.zoneKey] : undefined,
-        };
-      }),
+      description: "Programs matched to this address through active incentive-zone boundaries, ordered by eligibility confidence.",
+      items: confirmedPrograms.map((p) => programReportItem(p, confidenceMap)),
     });
   }
 
-  // §04 Document Readiness Checklist
+  if (exploratoryPrograms.length > 0) {
+    sections.push({
+      title: "Additional Programs to Explore",
+      description: "Programs not confirmed by this address alone, but useful as official next steps based on your profile.",
+      items: exploratoryPrograms.slice(0, 8).map((p) => programReportItem(p, confidenceMap)),
+    });
+  }
+
+  // §04 Required Documents (categorized, with program attribution) — inserted before Support Network
+  {
+    // Build a map: document → { category, programs[] }
+    const docMap: Record<string, { category: string; programs: Set<string> }> = {};
+    for (const p of confirmedPrograms) {
+      for (const doc of p.requiredDocs) {
+        let category = "General";
+        const dl = doc.toLowerCase();
+        if (dl.includes("tax") || dl.includes("financial") || dl.includes("bank") || dl.includes("revenue") || dl.includes("income") || dl.includes("profit")) category = "Financial & Tax";
+        else if (dl.includes("license") || dl.includes("permit") || dl.includes("certificate") || dl.includes("registration") || dl.includes("incorporation") || dl.includes("articles")) category = "Business Registration";
+        else if (dl.includes("lease") || dl.includes("deed") || dl.includes("property") || dl.includes("title") || dl.includes("survey") || dl.includes("parcel")) category = "Property & Site";
+        else if (dl.includes("plan") || dl.includes("proposal") || dl.includes("scope") || dl.includes("budget") || dl.includes("estimate") || dl.includes("project")) category = "Project Plans";
+        else if (dl.includes("employee") || dl.includes("payroll") || dl.includes("workforce") || dl.includes("hire") || dl.includes("job")) category = "Workforce";
+        else if (dl.includes("insurance") || dl.includes("bond")) category = "Insurance & Compliance";
+        if (!docMap[doc]) docMap[doc] = { category, programs: new Set() };
+        docMap[doc].programs.add(p.name);
+      }
+    }
+    // Group by category
+    const grouped: Record<string, { doc: string; programs: string[] }[]> = {};
+    for (const [doc, { category, programs }] of Object.entries(docMap)) {
+      if (!grouped[category]) grouped[category] = [];
+      grouped[category].push({ doc, programs: Array.from(programs) });
+    }
+    const categoryEntries = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
+    if (categoryEntries.length > 0) {
+      const docItems: ReportItem[] = categoryEntries.map(([cat, docs]) => ({
+        label: cat,
+        value: `${docs.length} document${docs.length !== 1 ? "s" : ""}`,
+        detail: docs.map((d) => `${d.doc} — ${d.programs.join(", ")}`).join("\n"),
+      }));
+      sections.push({
+        title: "Required Documents",
+        description: `${Object.keys(docMap).length} documents across address-confirmed programs, organized by category. Each document lists which program(s) require it.`,
+        items: docItems,
+      });
+    }
+  }
+
   if (hasProjectReadinessContext(state)) {
-    sections.push(buildDocumentReadinessSection(allEligible, state));
+    sections.push(buildDocumentReadinessSection(confirmedPrograms, state));
   }
 
   // §05 Your Support Network
@@ -794,9 +944,44 @@ function generateLocationIncentives(
     });
   }
 
+  // ── Benefit Estimates ──────────────────────────────────────────────
+  let benefitEstimates: GeneratedReport["benefitEstimates"] | undefined;
+
+  if (state.budgetRange) {
+    const budgetMedian = BUDGET_MEDIANS[state.budgetRange];
+    if (budgetMedian) {
+      let totalEstimate = 0;
+      const items: BenefitEstimate[] = [];
+
+      for (const p of confirmedPrograms) {
+        const creditInfo = CREDIT_PERCENTAGES[p.id];
+        if (!creditInfo || creditInfo.pct === 0) continue;
+        const raw = budgetMedian * creditInfo.pct;
+        const capped = creditInfo.cap ? Math.min(raw, creditInfo.cap) : raw;
+        totalEstimate += capped;
+        items.push({
+          programId: p.id,
+          programName: p.name,
+          estimatedValue: capped,
+          label: creditInfo.label,
+          
+        });
+      }
+
+      if (items.length > 0) {
+        benefitEstimates = {
+          total: totalEstimate,
+          totalFormatted: formatDollars(totalEstimate),
+          budgetRange: state.budgetRange,
+          items,
+        };
+      }
+    }
+  }
+
   // ── Action Roadmap ("Your Next Steps") ──────────────────────────
   const actionRoadmap: ActionRoadmapItem[] = [];
-  const topPrograms = zoneBased.slice(0, 2);
+  const topPrograms = confirmedPrograms.slice(0, 2);
 
   // Tier 1: "Do This Week" — top 2 programs with full contact + call script
   for (const p of topPrograms) {
@@ -819,7 +1004,7 @@ function generateLocationIncentives(
   }
 
   // Tier 3: "Worth Exploring" — remaining programs beyond top 2
-  const lowerPriority = [...zoneBased.slice(2), ...countyWide].slice(0, 3);
+  const lowerPriority = [...confirmedPrograms.slice(2), ...exploratoryPrograms].slice(0, 3);
   for (const p of lowerPriority) {
     const contact = p.contacts?.[0];
     actionRoadmap.push({
@@ -850,10 +1035,10 @@ function generateLocationIncentives(
     priority: "medium",
   });
 
-  if (topPrograms.length < 2 && countyWide.length > 0) {
+  if (topPrograms.length < 2 && exploratoryPrograms.length > 0) {
     recommendedActions.splice(recommendedActions.length - 1, 0, {
-      label: `Explore ${countyWide[0].name}`,
-      description: countyWide[0].summary,
+      label: `Explore ${exploratoryPrograms[0].name}`,
+      description: exploratoryPrograms[0].summary,
       priority: "medium",
     });
   }
@@ -862,13 +1047,16 @@ function generateLocationIncentives(
   const stackingContext = stackingAnalysis
     ? ` Your ${stackingAnalysis.zoneCount}-zone overlap places you in the ${stackingAnalysis.percentileLabel} of Chicago locations for incentive density.`
     : "";
+  const dollarSummary = benefitEstimates
+    ? ` Based on a ${state.budgetRange} budget, we estimate ~${benefitEstimates.totalFormatted} in total potential incentives.`
+    : "";
 
   return {
     title: `Site Incentive Analysis — ${addressDisplay}`,
     subtitle: `Location-based analysis for ${getIndustryName(state.industry)}`,
     reportType: "location-incentives",
     generatedAt: new Date().toISOString(),
-    summary: `${verdict?.headline || "Incentive analysis complete"}. Your address at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}, qualifying for ${mergedPrograms.length} programs.${stackingContext} The sections below are organized from key findings to detailed evidence, fit signals, and verification steps.`,
+    summary: `${verdict?.headline || "Incentive analysis complete"}. Your address at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}, matching ${confirmedPrograms.length} address-confirmed program${confirmedPrograms.length !== 1 ? "s" : ""}.${exploratoryPrograms.length > 0 ? ` ${exploratoryPrograms.length} additional program${exploratoryPrograms.length !== 1 ? "s" : ""} appear as discovery next steps.` : ""}${stackingContext}${dollarSummary} The sections below are organized from key findings to detailed evidence.`,
     sections,
     recommendedActions: recommendedActions.slice(0, 4),
     metadata: {
@@ -879,6 +1067,7 @@ function generateLocationIncentives(
       budgetRange: state.budgetRange || undefined,
       projectType: state.projectType || undefined,
     },
+    benefitEstimates,
     actionRoadmap,
     verdict,
     marketContext,
@@ -913,17 +1102,14 @@ function generateBestLocation(
     : [];
   const zoneCount = activeZones.length;
 
-  // Filter programs to those available at this site
-  const sitePrograms = zones
-    ? programs.filter((p) => !p.zoneKey || zones[p.zoneKey])
-    : programs;
-
   // ── Confidence engine ──
   const confidenceResults = zones
     ? runConfidenceEngine(programs, zones, zoneNames || {}, undefined, ctx.parcel)
     : [];
   const confidenceMap = new Map<string, ProgramCheckResult>();
   for (const r of confidenceResults) confidenceMap.set(r.programId, r);
+  const sitePrograms = sortProgramItems(filterAddressMatchedPrograms(programs, zones), zones, confidenceMap);
+  const exploratoryPrograms = sortProgramItems(filterDiscoveryPrograms(programs), zones, confidenceMap);
 
   // ── Builder outputs ──
   const verdict = computeVerdict(zones, programs, ctx);
@@ -1124,7 +1310,7 @@ function generateBestLocation(
     feasibilityItems.push({
       label: "Opportunity Zone",
       value: "Active Federal OZ",
-      detail: "Qualified Opportunity Fund investment at this site can defer and reduce capital gains taxes. 10-year hold eliminates gains on appreciation.",
+      detail: "Qualified Opportunity Fund treatment may be relevant at this site. Confirm OZ 1.0/OZ 2.0 timing and investment structure with an official source or tax advisor.",
     });
   }
   if (activeZones.includes("enterprise")) {
@@ -1137,7 +1323,7 @@ function generateBestLocation(
 
   // Risk signals
   if (verdict?.signal === "limited") {
-    feasibilityItems.push({ label: "Risk Signal", value: "Limited incentive coverage", detail: "Fewer zone-based programs available. County-wide programs and manual eligibility checks recommended." });
+    feasibilityItems.push({ label: "Risk Signal", value: "Limited incentive coverage", detail: "Fewer address-confirmed programs are available. Broader county, state, federal, and utility programs may still be worth exploring." });
   }
 
   if (feasibilityItems.length === 0) {
@@ -1158,25 +1344,16 @@ function generateBestLocation(
   if (sitePrograms.length > 0) {
     sections.push({
       title: `Available Programs (${sitePrograms.length})`,
-      description: "Programs matched to this site, ordered by relevance to your project type.",
-      items: sitePrograms.slice(0, 8).map((p) => {
-        const cr = confidenceMap.get(p.id);
-        return {
-          label: p.name,
-          value: getProgramFitLabel(p, state, zones),
-          detail: p.summary,
-          programId: p.id,
-          level: p.level,
-          confidenceLevel: cr?.confidence,
-          confidenceLabel: cr?.confidenceLabel,
-          whyOneLine: cr?.whyOneLine,
-          notVerified: cr?.notVerified,
-          matchedRules: cr?.matchedRules,
-          lastVerifiedAt: p.lastVerifiedAt,
-          isStale: isStaleProgramData(p),
-          sourceUrl: p.zoneKey ? ZONE_LEARN_MORE[p.zoneKey] : undefined,
-        };
-      }),
+      description: "Programs matched to this site through active incentive-zone boundaries, ordered by confidence.",
+      items: sitePrograms.slice(0, 8).map((p) => programReportItem(p, confidenceMap)),
+    });
+  }
+
+  if (exploratoryPrograms.length > 0) {
+    sections.push({
+      title: "Additional Programs to Explore",
+      description: "Programs not confirmed by this address alone, but useful as official next steps for the project.",
+      items: exploratoryPrograms.slice(0, 8).map((p) => programReportItem(p, confidenceMap)),
     });
   }
 
@@ -1255,7 +1432,7 @@ function generateBestLocation(
 
   // ── Action Roadmap (new for best-location) ──
   const actionRoadmap: ActionRoadmapItem[] = [];
-  const topSitePrograms = sitePrograms.filter((p) => p.zoneKey && zones?.[p.zoneKey]).slice(0, 2);
+  const topSitePrograms = sitePrograms.slice(0, 2);
   for (const p of topSitePrograms) {
     const contact = p.contacts?.[0];
     actionRoadmap.push({
@@ -1263,6 +1440,18 @@ function generateBestLocation(
       programId: p.id,
       programName: p.name,
       label: p.fastestConfirmingStep || `Contact ${contact?.agency || "program administrator"} about ${p.name}`,
+      description: p.summary,
+      contact: contact ? { agency: contact.agency, phone: contact.phone, email: contact.email, role: contact.role } : undefined,
+    });
+  }
+  if (topSitePrograms.length === 0 && exploratoryPrograms.length > 0) {
+    const p = exploratoryPrograms[0];
+    const contact = p.contacts?.[0];
+    actionRoadmap.push({
+      tier: "worth-exploring",
+      programId: p.id,
+      programName: p.name,
+      label: p.fastestConfirmingStep || `Explore ${p.name}`,
       description: p.summary,
       contact: contact ? { agency: contact.agency, phone: contact.phone, email: contact.email, role: contact.role } : undefined,
     });
@@ -1315,7 +1504,10 @@ function generateBestLocation(
     summaryParts.push(`PIN ${parcel.pin} (${parcel.classDescription})`);
   }
   summaryParts.push(`${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} active at this site`);
-  summaryParts.push(`${sitePrograms.length} program${sitePrograms.length !== 1 ? "s" : ""} available`);
+  summaryParts.push(`${sitePrograms.length} address-confirmed program${sitePrograms.length !== 1 ? "s" : ""}`);
+  if (exploratoryPrograms.length > 0) {
+    summaryParts.push(`${exploratoryPrograms.length} additional discovery program${exploratoryPrograms.length !== 1 ? "s" : ""}`);
+  }
   if (parcel?.totalValue) {
     summaryParts.push(`assessed at ${parcel.totalValue}`);
   }
@@ -1382,9 +1574,9 @@ function generateProgramExplorer(
     });
   }
 
-  // Group by level in order: Federal, State, County, City
+  // Group by level in order: Federal, State, County, City, Utility
   const grouped = groupByLevel(filtered);
-  const levelOrder: Array<Program["level"]> = ["Federal", "State", "County", "City"];
+  const levelOrder: Array<Program["level"]> = ["Federal", "State", "County", "City", "Utility"];
 
   const sections: ReportSection[] = [];
   for (const level of levelOrder) {
@@ -1392,20 +1584,7 @@ function generateProgramExplorer(
     if (!levelPrograms || levelPrograms.length === 0) continue;
     sections.push({
       title: `${level}-Level Programs`,
-      items: levelPrograms.map((p) => ({
-        label: p.name,
-        value: p.benefitRange || "Contact for details",
-        detail: p.summary,
-        programId: p.id,
-        
-        whoQualifies: p.whoQualifies,
-        eligibilityRules: p.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
-          description: r.description,
-          required: r.required,
-        })),
-        url: p.url,
-        level: p.level,
-      })),
+      items: levelPrograms.map((p) => programReportItem(p)),
     });
   }
 
@@ -1469,6 +1648,7 @@ function generateDeveloperAnalysis(
   const creditsToAnalyze = state.creditsToAnalyze || [];
   const budgetRange = state.budgetRange || "";
   const projectType = state.projectType || "Commercial development";
+  const budgetMedian = BUDGET_MEDIANS[budgetRange] || 0;
 
   // Resolve credit IDs to programs
   const creditPrograms = creditsToAnalyze
@@ -1479,12 +1659,15 @@ function generateDeveloperAnalysis(
 
   // Section 1: Incentive Pathway Review
   const stackingItems: ReportItem[] = creditPrograms.map((p) => {
+    const creditInfo = CREDIT_PERCENTAGES[p.id];
+    const valueDisplay = budgetMedian > 0
+      ? estimateCreditValue(p.id, budgetRange)
+      : (p.benefitRange || "Contact for details");
+
     return {
-      label: p.name,
-      value: getProgramFitLabel(p, state),
-      detail: p.summary,
-      programId: p.id,
-      
+      ...programReportItem(p),
+      value: valueDisplay,
+      detail: creditInfo?.label || p.summary,
     };
   });
 
@@ -1515,10 +1698,8 @@ function generateDeveloperAnalysis(
       docProgramMap[doc].add(p.name);
     }
     allQualifications.push({
-      label: p.name,
+      ...programReportItem(p),
       value: p.whoQualifies,
-      programId: p.id,
-
     });
   }
 
@@ -1557,16 +1738,16 @@ function generateDeveloperAnalysis(
     items: requirementItems,
   });
 
-  // Section 3: Application Roadmap
-  // Build a chronological roadmap from all selected programs' howToApply steps
+  // Section 3: Navigation Roadmap
+  // Group selected programs' howToApply steps as discovery actions, not a compliance timeline.
   const roadmapPhases: {
     phase: string;
     steps: { program: string; step: string; programId: string }[];
   }[] = [
-    { phase: "Phase 1: Pre-Application (Weeks 1-2)", steps: [] },
-    { phase: "Phase 2: Application Submission (Weeks 3-6)", steps: [] },
-    { phase: "Phase 3: Review & Approval (Weeks 7-12)", steps: [] },
-    { phase: "Phase 4: Compliance & Reporting (Ongoing)", steps: [] },
+    { phase: "Confirm Fit", steps: [] },
+    { phase: "Find Official Source", steps: [] },
+    { phase: "Prepare Materials", steps: [] },
+    { phase: "Contact Administrator", steps: [] },
   ];
 
   for (const p of creditPrograms) {
@@ -1740,6 +1921,7 @@ export function generateReportData(
       report = generateLocationIncentives(state, programs, ctx);
       break;
   }
+  report.reportType = reportType;
 
   // Attach census + zoning data to metadata for address-based reports
   if (reportType !== "program-explorer") {
@@ -1891,7 +2073,7 @@ export function generateReportData(
   }
 
   // Attach executive summary for address-based reports when zone data is available
-  if (zones && zoneNames && (reportType === "location-incentives" || reportType === "developer-analysis" || reportType === "best-location")) {
+  if (zones && zoneNames && reportType !== "program-explorer") {
     // Run confidence engine once for exec summary (lightweight — it's already cached in location-incentives)
     const execResults = runConfidenceEngine(programs, zones, zoneNames, undefined, ctx.parcel);
     report.executiveSummary = generateExecutiveSummary(programs, zones, zoneNames, undefined, execResults);

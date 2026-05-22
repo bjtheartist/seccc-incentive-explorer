@@ -25,6 +25,7 @@ import {
   REPORT_TYPE_OPTIONS,
   WIZARD_STEPS,
   getStepsForReportType,
+  getStepIndex,
   getStepValue,
   setStepValue,
   INITIAL_WIZARD_STATE,
@@ -57,11 +58,26 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats } from "@/lib/types";
+import type {
+  ApplicationPortal,
+  Program,
+  ExecutiveSummary,
+  ParcelData,
+  DistrictData,
+  StackingRule,
+  CommunityAsset,
+  Stats,
+  VerificationStep,
+} from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { cachedFetch } from "@/lib/fetch-cache";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
+
+type ReportNavigationItem = GeneratedReport["sections"][number]["items"][number] & {
+  applicationPortals?: ApplicationPortal[];
+  verificationSteps?: VerificationStep[];
+};
 
 // ─── Animation Variants ──────────────────────────────────────────────
 
@@ -677,13 +693,22 @@ function ReportWizardPage() {
   }, [router]);
 
   const handleRefine = useCallback(() => {
-    // Drop user into wizard at the first scoping step after the preserved address.
+    const refinedState: WizardState = {
+      ...wizardState,
+      reportType: "site-incentives",
+    };
+    const industryStepIndex = getStepIndex("site-incentives", "si-industry");
+
+    setWizardState(refinedState);
     setReport(null);
+    setCompareReport(null);
+    setCompareMode(false);
     setInstantLoading(false);
     setHasRefinedInstantReport(true);
-    setCurrentStepIndex(2); // industry step
+    setCurrentStepIndex(industryStepIndex >= 0 ? industryStepIndex : 1);
     setDirection(1);
-  }, []);
+    window.history.replaceState(null, "", "/report");
+  }, [wizardState]);
 
   const handleCompareGeocode = useCallback(async () => {
     if (!compareAddressInput.trim()) return;
@@ -806,6 +831,7 @@ function ReportWizardPage() {
           reportB={compareReport}
           onStartOver={handleStartOver}
           wizardState={wizardState}
+          programs={programs}
         />
       </div>
     );
@@ -827,6 +853,7 @@ function ReportWizardPage() {
           compareGeocoding={compareGeocoding}
           onCompareGeocode={handleCompareGeocode}
           compareGeoResult={compareGeoResult}
+          programs={programs}
         />
       </div>
     );
@@ -2469,6 +2496,98 @@ function FreshnessBadge({ lastVerifiedAt, isStale }: { lastVerifiedAt: string | 
   );
 }
 
+function ReportNavigationLinks({
+  item,
+  program,
+}: {
+  item: ReportNavigationItem;
+  program?: Program;
+}) {
+  const officialSourceUrl = item.sourceUrl || program?.sourceUrl;
+  const officialSourceLabel = item.sourceLabel
+    ? `${item.sourceLabel} source`
+    : "Official source";
+  const applicationPortals = (item.applicationPortals || program?.applicationPortals || []).filter(
+    (portal) => portal.url,
+  );
+  const verificationSteps = (item.verificationSteps || program?.verificationSteps || []).filter(
+    (step) => step.url,
+  );
+
+  if (!officialSourceUrl && applicationPortals.length === 0 && verificationSteps.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-2 pt-1">
+      {officialSourceUrl && (
+        <a
+          href={officialSourceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-[11px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors font-mono-bureau tracking-wide print-url"
+        >
+          <ExternalLink className="w-3 h-3 flex-shrink-0" />
+          {officialSourceLabel}
+        </a>
+      )}
+
+      {applicationPortals.length > 0 && (
+        <div>
+          <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
+            Application Portals
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {applicationPortals.map((portal) => (
+              <a
+                key={`${portal.label}-${portal.url}`}
+                href={portal.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 border border-[#0C1B33]/10 px-2.5 py-1.5 text-[10px] text-[#0C1B33]/50 hover:text-[#0C1B33] hover:border-[#0C1B33]/20 transition-colors font-mono-bureau tracking-wide"
+                title={portal.notes}
+              >
+                {portal.label}
+                {portal.language && portal.language !== "en" && (
+                  <span className="text-[#0C1B33]/25 uppercase">{portal.language}</span>
+                )}
+                <ExternalLink className="w-3 h-3 flex-shrink-0" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {verificationSteps.length > 0 && (
+        <div>
+          <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
+            Suggested Next Steps
+          </span>
+          <ul className="space-y-1.5">
+            {verificationSteps.map((step) => (
+              <li key={`${step.label}-${step.url}`} className="text-[11px] text-[#0C1B33]/45 leading-relaxed">
+                <a
+                  href={step.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 text-[#0C1B33]/55 hover:text-[#0C1B33] transition-colors"
+                >
+                  {step.label}
+                  <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                </a>
+                <span className="text-[#0C1B33]/30"> — {step.agency}</span>
+                {step.note && (
+                  <span className="block text-[#0C1B33]/35 mt-0.5">{step.note}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Comparison Summary ─────────────────────────────────────────────
 
 function ComparisonSummary({
@@ -2573,11 +2692,13 @@ function ComparisonDisplay({
   reportB,
   onStartOver,
   wizardState: _reportWizardState,
+  programs = [],
 }: {
   reportA: GeneratedReport;
   reportB: GeneratedReport;
   onStartOver: () => void;
   wizardState?: WizardState;
+  programs?: Program[];
 }) {
   return (
     <div className="bg-[#FAF9F6] min-h-screen py-10 px-4">
@@ -2614,11 +2735,13 @@ function ComparisonDisplay({
             report={reportA}
             onStartOver={onStartOver}
             compact
+            programs={programs}
           />
           <ReportDisplay
             report={reportB}
             onStartOver={onStartOver}
             compact
+            programs={programs}
           />
         </div>
       </div>
@@ -2642,6 +2765,7 @@ export function ReportDisplay({
   compareGeocoding,
   onCompareGeocode,
   compareGeoResult,
+  programs = [],
 }: {
   report: GeneratedReport;
   onStartOver: () => void;
@@ -2656,6 +2780,7 @@ export function ReportDisplay({
   compareGeocoding?: boolean;
   onCompareGeocode?: () => void;
   compareGeoResult?: { lat: number; lon: number; display_name: string } | null;
+  programs?: Program[];
 }) {
   const { status } = useSession();
   const [linkCopied, setLinkCopied] = useState(false);
@@ -2672,6 +2797,10 @@ export function ReportDisplay({
     useState<string | null>(null);
   const [editedSummaryText, setEditedSummaryText] = useState(
     report.executiveSummary?.whyTheseMatter || ""
+  );
+  const programById = useMemo(
+    () => new Map(programs.map((program) => [program.id, program])),
+    [programs],
   );
 
   // ── TOC ──
@@ -3503,11 +3632,23 @@ export function ReportDisplay({
 
                     {section.items && section.items.length > 0 && (
                       <div className="space-y-0 divide-y divide-[#0C1B33]/5">
-                        {section.items.map((item, itemIdx) => (
-                          <div
-                            key={itemIdx}
-                            className="report-item py-4 first:pt-0"
-                          >
+                        {section.items.map((item, itemIdx) => {
+                          const reportItem = item as ReportNavigationItem;
+                          const itemProgram = reportItem.programId ? programById.get(reportItem.programId) : undefined;
+                          const hasNavigationLinks = Boolean(
+                            reportItem.sourceUrl ||
+                            itemProgram?.sourceUrl ||
+                            reportItem.applicationPortals?.length ||
+                            itemProgram?.applicationPortals?.length ||
+                            reportItem.verificationSteps?.length ||
+                            itemProgram?.verificationSteps?.length,
+                          );
+
+                          return (
+                            <div
+                              key={itemIdx}
+                              className="report-item py-4 first:pt-0"
+                            >
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
                               {/* Left: label */}
                               <div className="flex-1 min-w-0">
@@ -3552,7 +3693,7 @@ export function ReportDisplay({
                             </div>
 
                             {/* Eligibility & URL — collapsible accordion for program items */}
-                            {(item.whoQualifies || item.eligibilityRules || item.url || item.whyOneLine) && (
+                            {(item.whoQualifies || item.eligibilityRules || item.url || item.whyOneLine || hasNavigationLinks) && (
                               <Accordion type="single" collapsible className="mt-1.5">
                                 <AccordionItem value="eligibility" className="border-none">
                                   <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
@@ -3630,6 +3771,7 @@ export function ReportDisplay({
                                         More information
                                       </a>
                                     )}
+                                    <ReportNavigationLinks item={reportItem} program={itemProgram} />
                                     {item.lastVerifiedAt && (
                                       <FreshnessBadge lastVerifiedAt={item.lastVerifiedAt} isStale={item.isStale} />
                                     )}
@@ -3638,7 +3780,8 @@ export function ReportDisplay({
                               </Accordion>
                             )}
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

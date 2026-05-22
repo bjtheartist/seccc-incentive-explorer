@@ -11,27 +11,6 @@
    Warm off-white + blue alternating tones
    ═══════════════════════════════════════════ */
 
-@font-face {
-  font-family: 'Playfair Display';
-  font-style: normal;
-  font-weight: 400 900;
-  src: url('https://fonts.gstatic.com/s/playfairdisplay/v37/nuFvD-vYSZviVYUb_rj3ij__anPXJzDwcbmjWBN2PKd3vXDXbtXK-F2qC0s.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-style: normal;
-  font-weight: 400 700;
-  src: url('https://fonts.gstatic.com/s/jetbrainsmono/v18/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPVmUsaaDhw.woff2') format('woff2');
-}
-
-@font-face {
-  font-family: 'Inter';
-  font-style: normal;
-  font-weight: 300 700;
-  src: url('https://fonts.gstatic.com/s/inter/v18/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff2') format('woff2');
-}
-
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -226,6 +205,41 @@
 
 .report-document {
   /* Marker class for print targeting — no runtime styles */
+}
+
+/* Cheat-sheet print mode: when body has `.printing-cheat-sheet` class
+   (set by the Print button on /programs), hide everything except #cheat-sheet. */
+@media print {
+  body.printing-cheat-sheet > * {
+    visibility: hidden !important;
+  }
+  body.printing-cheat-sheet #cheat-sheet,
+  body.printing-cheat-sheet #cheat-sheet * {
+    visibility: visible !important;
+  }
+  body.printing-cheat-sheet #cheat-sheet {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    margin: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  body.printing-cheat-sheet #cheat-sheet .print\:hidden {
+    display: none !important;
+  }
+  body.printing-cheat-sheet * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+@page cheat-sheet-page {
+  size: letter landscape;
+  margin: 0.4in;
+}
+body.printing-cheat-sheet #cheat-sheet {
+  page: cheat-sheet-page;
 }
 
 @media print {

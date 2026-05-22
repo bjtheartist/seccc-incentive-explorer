@@ -20,12 +20,36 @@ export const EligibilityRuleSchema = z.object({
   required: z.boolean(),
 });
 
+/* ── Application Portal ───────────────────── */
+
+export const ApplicationPortalSchema = z.object({
+  type: z.enum(["submittable", "web", "pdf", "email", "in_person"]),
+  label: z.string(),
+  url: z.string(),
+  language: z.enum(["en", "es"]).optional(),
+  notes: z.string().optional(),
+});
+
+/* ── Verification / Next-Step ─────────────── */
+
+export const VerificationStepSchema = z.object({
+  label: z.string(),
+  agency: z.string(),
+  url: z.string(),
+  kind: z.enum(["certification", "reporting", "filing", "preapproval", "consent"]),
+  appliesBefore: z.enum(["application", "purchase", "construction", "annual"]).optional(),
+  note: z.string().optional(),
+});
+
 /* ── Program ──────────────────────────────── */
 
 export const ProgramSchema = z.object({
   id: z.string(),
   name: z.string(),
-  level: z.enum(["city", "county", "state", "federal", "City", "County", "State", "Federal"]),
+  level: z.enum([
+    "city", "county", "state", "federal", "utility",
+    "City", "County", "State", "Federal", "Utility",
+  ]),
   zoneKey: z.string().nullable().optional(),
   summary: z.string(),
   whoQualifies: z.string().optional(),
@@ -39,6 +63,16 @@ export const ProgramSchema = z.object({
   lastVerifiedAt: z.string().nullable().optional(),
   benefitRange: z.string().optional(),
   fastestConfirmingStep: z.string().optional(),
+  // ── Phase 1 (2026-05-21) additions ─────────
+  status: z.enum(["active", "verify", "sunset", "pending"]).optional(),
+  sourceUrl: z.string().optional(),
+  applicationPortals: z.array(ApplicationPortalSchema).optional().default([]),
+  verificationSteps: z.array(VerificationStepSchema).optional().default([]),
+  boundaryDisclaimer: z.string().optional(),
+  expirationNote: z.string().optional(),
+  suspensionNote: z.string().optional(),
+  sunsetWarning: z.string().optional(),
+  oz2Note: z.string().optional(),
 });
 
 /* ── Stacking Rule ────────────────────────── */

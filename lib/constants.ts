@@ -1,3 +1,33 @@
+/* ── Gov-level taxonomy ─────────────────────── */
+
+import type { ProgramLevel } from "./types";
+
+export const LEVELS: ProgramLevel[] = [
+  "Federal",
+  "State",
+  "County",
+  "City",
+  "Utility",
+];
+
+/** Display color per gov level. Used by LevelBadge and map legend chips. */
+export const LEVEL_COLORS: Record<ProgramLevel, string> = {
+  Federal: "#1d4ed8", // deep navy-blue
+  State:   "#7c3aed", // IL purple
+  County:  "#16a34a", // green
+  City:    "#d97706", // accent amber
+  Utility: "#0891b2", // teal
+};
+
+/** Short caption used in tooltips. */
+export const LEVEL_DESCRIPTIONS: Record<ProgramLevel, string> = {
+  Federal: "Administered by a U.S. federal agency (IRS, HUD, CDFI Fund, SBA, EDA, Treasury).",
+  State:   "Administered by Illinois (DCEO, IDOR, IHDA) or another state agency.",
+  County:  "Administered by Cook County (Assessor, Bureau of Economic Development, Land Bank).",
+  City:    "Administered by the City of Chicago (DPD, DOH, delegate agencies).",
+  Utility: "Administered by a regulated utility (ComEd, Peoples Gas) — not a government program.",
+};
+
 /* ── Zone metadata ─────────────────────────── */
 
 export interface ZoneMeta {
@@ -5,23 +35,28 @@ export interface ZoneMeta {
   defaultVisible: boolean;
   sortOrder: number;
   group: "city" | "state" | "federal" | "historic" | "census";
+  /** Gov-level taxonomy (Phase 2). One zone layer may serve programs at multiple levels — `jurisdictions` lists them when so. */
+  level: ProgramLevel;
+  jurisdictions?: ProgramLevel[];
+  /** Set when the boundary file is a proxy and should be flagged in the UI. */
+  boundaryDisclaimer?: string;
 }
 
 export const ZONE_META: Record<string, ZoneMeta> = {
-  tif:                 { isPublic: true, defaultVisible: true,  sortOrder: 1,  group: "city" },
-  ssa:                 { isPublic: true, defaultVisible: true,  sortOrder: 2,  group: "city" },
-  enterprise:          { isPublic: true, defaultVisible: true,  sortOrder: 3,  group: "state" },
-  federalOZ:           { isPublic: true, defaultVisible: true,  sortOrder: 4,  group: "federal" },
-  stateIncentiveZones: { isPublic: true, defaultVisible: true,  sortOrder: 5,  group: "state" },
-  nof:                 { isPublic: true, defaultVisible: false, sortOrder: 6,  group: "city" },
-  highUnemployment:    { isPublic: true, defaultVisible: false, sortOrder: 7,  group: "federal" },
-  industrialCorridors: { isPublic: true, defaultVisible: false, sortOrder: 8,  group: "city" },
-  microMarketRecovery: { isPublic: true, defaultVisible: false, sortOrder: 9,  group: "city" },
-  nmtcEligible:        { isPublic: true, defaultVisible: false, sortOrder: 10, group: "federal" },
-  qct:                 { isPublic: true, defaultVisible: false, sortOrder: 11, group: "federal" },
-  landmarkDistricts:   { isPublic: true, defaultVisible: false, sortOrder: 12, group: "historic" },
-  nrhpDistricts:       { isPublic: true, defaultVisible: false, sortOrder: 13, group: "historic" },
-  ccsa:                { isPublic: true, defaultVisible: false, sortOrder: 14, group: "city" },
+  tif:                 { isPublic: true, defaultVisible: true,  sortOrder: 1,  group: "city",     level: "City" },
+  ssa:                 { isPublic: true, defaultVisible: true,  sortOrder: 2,  group: "city",     level: "City" },
+  enterprise:          { isPublic: true, defaultVisible: true,  sortOrder: 3,  group: "state",    level: "State" },
+  federalOZ:           { isPublic: true, defaultVisible: true,  sortOrder: 4,  group: "federal",  level: "Federal", jurisdictions: ["Federal", "State"] },
+  stateIncentiveZones: { isPublic: true, defaultVisible: true,  sortOrder: 5,  group: "state",    level: "State", boundaryDisclaimer: "Proxy boundary — REV / EDGE / MICRO / Data Center programs are project-by-project, not zone-based. The polygon shown is a high-unemployment census-tract approximation." },
+  nof:                 { isPublic: true, defaultVisible: false, sortOrder: 6,  group: "city",     level: "City" },
+  highUnemployment:    { isPublic: true, defaultVisible: false, sortOrder: 7,  group: "federal",  level: "Federal" },
+  industrialCorridors: { isPublic: true, defaultVisible: false, sortOrder: 8,  group: "city",     level: "City" },
+  microMarketRecovery: { isPublic: true, defaultVisible: false, sortOrder: 9,  group: "city",     level: "City" },
+  nmtcEligible:        { isPublic: true, defaultVisible: false, sortOrder: 10, group: "federal",  level: "Federal" },
+  qct:                 { isPublic: true, defaultVisible: false, sortOrder: 11, group: "federal",  level: "Federal" },
+  landmarkDistricts:   { isPublic: true, defaultVisible: false, sortOrder: 12, group: "historic", level: "City", jurisdictions: ["City", "County"] },
+  nrhpDistricts:       { isPublic: true, defaultVisible: false, sortOrder: 13, group: "historic", level: "Federal" },
+  ccsa:                { isPublic: true, defaultVisible: false, sortOrder: 14, group: "city",     level: "City" },
 };
 
 /** Zone keys sorted by display order. */
@@ -68,14 +103,14 @@ export const ZONE_KEYS = Object.keys(ZONE_LABELS);
 /** Short descriptions of what each zone/program means. */
 export const ZONE_DESCRIPTIONS: Record<string, string> = {
   tif: "Tax Increment Financing redirects property-tax growth to fund public improvements in designated districts.",
-  federalOZ: "Federal and state tax incentive that defers and reduces capital gains taxes for investments in low-income census tracts. Illinois adds additional state income tax benefits.",
+  federalOZ: "Federal tax incentive that defers and reduces capital gains taxes for investments in low-income census tracts. Illinois supports OZ projects through DCEO grants and scoring preferences, not a separate state OZ income-tax deduction.",
   enterprise: "State-designated areas offering tax credits, sales tax exemptions, and utility tax exemptions for qualifying businesses.",
   stateIncentiveZones: "Census tracts eligible for Illinois EDGE (job creation credits), REV (EV/clean energy), MICRO (semiconductor), and Data Center tax incentives.",
   ssa: "Locally funded service areas where businesses self-tax to fund streetscaping, marketing, and security improvements.",
   highUnemployment: "Census tracts with unemployment rates significantly above the national average, triggering additional federal eligibility.",
   ccsa: "City corridor activation program that may provide reimbursable support for storefront improvements and technical assistance in selected commercial corridors. Application status and eligible corridors should be verified with Chicago DPD.",
   industrialCorridors: "City-designated corridors preserved for manufacturing, logistics, and industrial uses with zoning protections.",
-  microMarketRecovery: "City program targeting commercial vacancy in specific corridors with grants for storefront improvements.",
+  microMarketRecovery: "Department of Housing program focused on home purchase and rehab assistance in designated Micro Market Recovery areas.",
   nof: "City grants for commercial and industrial projects in underinvested neighborhoods on Chicago's South and West Sides.",
   nmtcEligible: "Census tracts eligible for New Markets Tax Credits, a federal program for investments in low-income communities.",
   qct: "HUD-designated census tracts where 50%+ of households earn below 60% of area median income, boosting LIHTC credits.",
@@ -87,13 +122,13 @@ export const ZONE_DESCRIPTIONS: Record<string, string> = {
 export const ZONE_LEARN_MORE: Record<string, string> = {
   tif: "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html",
   federalOZ: "https://www.irs.gov/credits-deductions/businesses/opportunity-zones",
-  enterprise: "https://dceo.illinois.gov/expandrelocate/incentives/enterprisezone.html",
-  stateIncentiveZones: "https://dceo.illinois.gov/expandrelocate/incentives/edgetaxcredit.html",
+  enterprise: "https://dceo.illinois.gov/expandrelocate/incentives/taxassistance/enterprisezone.html",
+  stateIncentiveZones: "https://dceo.illinois.gov/expandrelocate/incentives/edge.html",
   ssa: "https://www.chicago.gov/city/en/depts/dcd/provdrs/sba.html",
   highUnemployment: "https://www.bls.gov/lau/",
   ccsa: "https://www.chicago.gov/city/en/depts/dcd/supp_info/ccsa.html",
   industrialCorridors: "https://www.chicago.gov/city/en/depts/dcd/supp_info/industrial-corridors.html",
-  microMarketRecovery: "https://www.chicago.gov/city/en/depts/dcd/provdrs/micro_market_recoveryprogram.html",
+  microMarketRecovery: "https://www.chicago.gov/city/en/depts/doh/provdrs/lenders/svcs/micro-market-recovery-program.html",
   nof: "https://www.chicago.gov/city/en/depts/dcd/provdrs/nof.html",
   nmtcEligible: "https://www.cdfifund.gov/programs-training/programs/new-markets-tax-credit",
   qct: "https://www.huduser.gov/portal/datasets/qct.html",

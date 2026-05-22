@@ -1,0 +1,37 @@
+name: Check Submittable links
+
+on:
+  schedule:
+    # 06:30 UTC daily (~1:30 AM Chicago in winter, ~12:30 AM in summer)
+    - cron: "30 6 * * *"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run link check
+        run: node scripts/check-submittable-links.mjs
+      - name: Commit updated health file
+        run: |
+          if git diff --quiet -- public/data/link-health.json; then
+            echo "No changes to link-health.json"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/data/link-health.json
+          git commit -m "chore: refresh Submittable link health [skip ci]"
+          git push
+      - name: Warn on broken portals
+        run: |
+          broken=$(node -e "const d=require('./public/data/link-health.json');process.stdout.write(String(d.totals.broken||0))")
+          if [ "$broken" != "0" ]; then
+            echo "::warning::$broken Submittable portal(s) broken — see public/data/link-health.json"
+          fi

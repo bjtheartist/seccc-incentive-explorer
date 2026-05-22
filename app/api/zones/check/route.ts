@@ -75,8 +75,9 @@ async function checkStaticZones(lat: number, lon: number) {
 /**
  * GET /api/zones/check?lat=&lon=
  *
- * Returns which incentive zones contain the given point.
- * Uses PostGIS ST_Contains for spatial query against all zone geometries.
+ * Returns which incentive zones cover the given point.
+ * Repairs source polygons at query time so one malformed geometry cannot break
+ * the lookup. The data import should still be cleaned upstream.
  */
 export async function GET(request: NextRequest) {
   const lat = request.nextUrl.searchParams.get("lat");
@@ -90,8 +91,18 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const rLat = roundCoord(parseFloat(lat));
-    const rLon = roundCoord(parseFloat(lon));
+    const latNum = parseFloat(lat);
+    const lonNum = parseFloat(lon);
+
+    if (!Number.isFinite(latNum) || !Number.isFinite(lonNum)) {
+      return NextResponse.json(
+        { error: "lat and lon must be valid numbers" },
+        { status: 400 }
+      );
+    }
+
+    const rLat = roundCoord(latNum);
+    const rLon = roundCoord(lonNum);
     const cacheKey = `zones:check:${rLat}:${rLon}`;
     const sql = getSQL();
 
@@ -101,12 +112,13 @@ export async function GET(request: NextRequest) {
       }
 
       const rows = await sql`
-        SELECT zone_key, feature_name, feature_properties
-        FROM zones
-        WHERE ST_Contains(
-          geom::geometry,
-          ST_SetSRID(ST_MakePoint(${parseFloat(lon)}, ${parseFloat(lat)}), 4326)
+        WITH point AS (
+          SELECT ST_SetSRID(ST_MakePoint(${lonNum}, ${latNum}), 4326) AS geom
         )
+        SELECT z.zone_key, z.feature_name, z.feature_properties
+        FROM zones z, point p
+        WHERE z.geom::geometry && p.geom
+          AND ST_Covers(ST_Buffer(z.geom::geometry, 0), p.geom)
       `;
 
       return rows.map((r: Record<string, unknown>) => ({

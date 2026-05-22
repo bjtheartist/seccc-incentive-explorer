@@ -26,6 +26,7 @@
     "@tmcw/togeojson": "^7.1.2",
     "@turf/turf": "^7.3.4",
     "@upstash/redis": "^1.36.2",
+    "@xmldom/xmldom": "0.9.10",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.34.0",
@@ -33,7 +34,7 @@
     "jspdf": "^4.2.0",
     "lucide-react": "^0.563.0",
     "mapbox-gl": "^3.18.1",
-    "next": "16.1.6",
+    "next": "16.2.6",
     "next-auth": "^4.24.14",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
@@ -41,7 +42,6 @@
     "recharts": "^3.7.0",
     "resend": "^6.12.2",
     "tailwind-merge": "^3.4.0",
-    "xmldom": "^0.6.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -52,7 +52,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "16.2.6",
     "playwright": "^1.58.2",
     "puppeteer-core": "^24.37.5",
     "shadcn": "^3.8.4",
