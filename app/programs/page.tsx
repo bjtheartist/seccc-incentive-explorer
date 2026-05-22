@@ -501,26 +501,22 @@ function ProgramCard({
 /* ── Cheat-Sheet (printable at-a-glance matrix) ───────────────── */
 
 const CHEAT_LEVELS: ProgramLevel[] = ["Federal", "State", "County", "City", "Utility"];
-const PROGRAMS_PER_COLUMN = 6;
 
-/** Pick top N programs per level for the cheat-sheet, prioritizing 'active' status. */
-function topProgramsByLevel(
-  all: Program[],
-  level: ProgramLevel,
-  n: number
-): Program[] {
+/** All programs at a given gov level, sorted with 'active' first then by recency. */
+function programsByLevel(all: Program[], level: ProgramLevel): Program[] {
   return all
     .filter((p) => p.level === level)
     .sort((a, b) => {
-      // Active first, then by last verified desc
+      // Active first, then by last verified desc, then by name for stability
       const aActive = (a.status ?? "active") === "active" ? 0 : 1;
       const bActive = (b.status ?? "active") === "active" ? 0 : 1;
       if (aActive !== bActive) return aActive - bActive;
       const aDate = a.lastVerifiedAt ?? "";
       const bDate = b.lastVerifiedAt ?? "";
-      return bDate.localeCompare(aDate);
-    })
-    .slice(0, n);
+      const dateCmp = bDate.localeCompare(aDate);
+      if (dateCmp !== 0) return dateCmp;
+      return a.name.localeCompare(b.name);
+    });
 }
 
 function CheatSheetSection({ programs }: { programs: Program[] }) {
@@ -580,8 +576,8 @@ function CheatSheetSection({ programs }: { programs: Program[] }) {
       {/* 5-column matrix */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-0 border-b border-[#0C1B33]/10 print:grid-cols-5">
         {CHEAT_LEVELS.map((level, colIdx) => {
-          const programsAtLevel = topProgramsByLevel(programs, level, PROGRAMS_PER_COLUMN);
-          const totalAtLevel = programs.filter((p) => p.level === level).length;
+          const programsAtLevel = programsByLevel(programs, level);
+          const totalAtLevel = programsAtLevel.length;
           const color = LEVEL_COLORS[level];
           return (
             <div

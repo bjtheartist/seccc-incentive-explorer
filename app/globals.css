@@ -241,6 +241,13 @@
 body.printing-cheat-sheet #cheat-sheet {
   page: cheat-sheet-page;
 }
+body.printing-cheat-sheet #cheat-sheet ul {
+  page-break-inside: auto;
+}
+body.printing-cheat-sheet #cheat-sheet ul > li {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
 
 @media print {
   @page {
