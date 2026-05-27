@@ -222,6 +222,22 @@ interface Sr311Record {
   longitude?: string;
 }
 
+const SR311_PAGE_SIZE = 1000;
+const SR311_TIMEOUT_MS = 60000;
+const SR311_WINDOW_MONTHS = 3;
+const SR311_SELECT_FIELDS = [
+  "sr_number",
+  "sr_type",
+  "status",
+  "created_date",
+  "street_address",
+  "zip_code",
+  "ward",
+  "community_area",
+  "latitude",
+  "longitude",
+].join(",");
+
 /** Community area number → name lookup */
 function communityAreaName(num: string | undefined): string | null {
   if (!num) return null;
@@ -230,52 +246,99 @@ function communityAreaName(num: string | undefined): string | null {
   return ca?.name ?? null;
 }
 
+function toDateOnly(date: Date): string {
+  return date.toISOString().split("T")[0];
+}
+
+function addMonths(date: Date, months: number): Date {
+  const next = new Date(date);
+  next.setMonth(next.getMonth() + months);
+  return next;
+}
+
+function buildDateWindows(start: Date, end: Date, months: number) {
+  const windows: Array<{ start: Date; end: Date }> = [];
+  let current = new Date(start);
+
+  while (current < end) {
+    const next = addMonths(current, months);
+    windows.push({
+      start: new Date(current),
+      end: next < end ? next : new Date(end),
+    });
+    current = next;
+  }
+
+  return windows;
+}
+
+async function fetch311Page(url: string, label: string): Promise<Sr311Record[]> {
+  const maxAttempts = 3;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: socrataHeaders(),
+        signal: AbortSignal.timeout(SR311_TIMEOUT_MS),
+      });
+
+      if (!res.ok) {
+        throw new Error(`Socrata returned ${res.status}`);
+      }
+
+      return await res.json();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (attempt === maxAttempts) {
+        throw new Error(`${label} failed after ${maxAttempts} attempts: ${message}`);
+      }
+
+      const delayMs = 1500 * attempt;
+      console.warn(`  ${label} attempt ${attempt} failed (${message}); retrying in ${delayMs}ms...`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+
+  return [];
+}
+
 async function fetch311VacantBuildings(): Promise<Sr311Record[]> {
   const all: Sr311Record[] = [];
-  const pageSize = 1000;
-  let offset = 0;
 
   console.log("Fetching 311 Vacant/Abandoned Building Complaints...");
 
   // Only fetch recent open complaints (last 3 years) to keep the dataset relevant
-  const threeYearsAgo = new Date();
-  threeYearsAgo.setFullYear(threeYearsAgo.getFullYear() - 3);
-  const dateFilter = threeYearsAgo.toISOString().split("T")[0];
+  const start = new Date();
+  start.setFullYear(start.getFullYear() - 3);
+  const end = new Date();
+  end.setDate(end.getDate() + 1);
 
-  while (true) {
-    const where = encodeURIComponent(
-      `sr_type='Vacant/Abandoned Building Complaint' AND created_date>='${dateFilter}T00:00:00'`
-    );
-    // Avoid server-side ordering here: Socrata can time out when sorting the
-    // full recent 311 vacant-building set. We sort locally before deduping.
-    const url = `${SR311_BASE_URL}?$where=${where}&$limit=${pageSize}&$offset=${offset}`;
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        headers: socrataHeaders(),
-        signal: AbortSignal.timeout(120000),
-      });
-    } catch (_err) {
-      // Retry once on timeout
-      console.warn(`  Timeout at offset ${offset}, retrying...`);
-      await new Promise((r) => setTimeout(r, 3000));
-      res = await fetch(url, {
-        headers: socrataHeaders(),
-        signal: AbortSignal.timeout(120000),
-      });
+  const windows = buildDateWindows(start, end, SR311_WINDOW_MONTHS);
+
+  for (const window of windows) {
+    const windowStart = `${toDateOnly(window.start)}T00:00:00`;
+    const windowEnd = `${toDateOnly(window.end)}T00:00:00`;
+    let offset = 0;
+
+    while (true) {
+      const where = encodeURIComponent(
+        `sr_type='Vacant/Abandoned Building Complaint' AND created_date>='${windowStart}' AND created_date<'${windowEnd}'`
+      );
+      const select = encodeURIComponent(SR311_SELECT_FIELDS);
+      const url = `${SR311_BASE_URL}?$select=${select}&$where=${where}&$limit=${SR311_PAGE_SIZE}&$offset=${offset}`;
+      const label = `311 ${toDateOnly(window.start)}..${toDateOnly(window.end)} offset ${offset}`;
+      const page = await fetch311Page(url, label);
+
+      if (page.length === 0) break;
+
+      all.push(...page);
+      console.log(
+        `  Fetched ${all.length} records (${toDateOnly(window.start)}..${toDateOnly(window.end)}, offset ${offset})...`
+      );
+
+      if (page.length < SR311_PAGE_SIZE) break;
+      offset += SR311_PAGE_SIZE;
     }
-
-    if (!res.ok) {
-      console.error(`  311 API returned ${res.status} at offset ${offset}`);
-      break;
-    }
-
-    const page: Sr311Record[] = await res.json();
-    if (page.length === 0) break;
-
-    all.push(...page);
-    console.log(`  Fetched ${all.length} records (offset ${offset})...`);
-    offset += pageSize;
   }
 
   return all;
