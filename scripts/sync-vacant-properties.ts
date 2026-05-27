@@ -22,6 +22,9 @@ if (!DATABASE_URL) {
 }
 
 const sql = neon(DATABASE_URL);
+const args = process.argv.slice(2);
+const skipCols = args.includes("--skip-cols");
+const exportOnly = args.includes("--export-only");
 
 // City-Owned Land Inventory — Socrata dataset
 const COLS_DATASET_ID = "aksk-kvfp";
@@ -243,7 +246,9 @@ async function fetch311VacantBuildings(): Promise<Sr311Record[]> {
     const where = encodeURIComponent(
       `sr_type='Vacant/Abandoned Building Complaint' AND created_date>='${dateFilter}T00:00:00'`
     );
-    const url = `${SR311_BASE_URL}?$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=${encodeURIComponent("created_date DESC")}`;
+    // Avoid server-side ordering here: Socrata can time out when sorting the
+    // full recent 311 vacant-building set. We sort locally before deduping.
+    const url = `${SR311_BASE_URL}?$where=${where}&$limit=${pageSize}&$offset=${offset}`;
     let res: Response;
     try {
       res = await fetch(url, {
@@ -279,7 +284,11 @@ async function fetch311VacantBuildings(): Promise<Sr311Record[]> {
 /** Deduplicate 311 records by address (keep newest per address). */
 function dedup311ByAddress(records: Sr311Record[]): Sr311Record[] {
   const seen = new Map<string, Sr311Record>();
-  for (const r of records) {
+  const newestFirst = [...records].sort((a, b) =>
+    String(b.created_date || "").localeCompare(String(a.created_date || ""))
+  );
+
+  for (const r of newestFirst) {
     const addr = r.street_address?.trim().toUpperCase();
     if (!addr) continue;
     // Records are ordered by created_date DESC, so first occurrence is newest
@@ -471,27 +480,51 @@ async function crossReferenceZones() {
 async function generateStaticFile() {
   console.log("\nGenerating static GeoJSON fallback...");
 
-  // Include both property types: up to 1200 vacant land + up to 800 vacant buildings
-  // so the "Vacant Buildings" toggle has data in the static fallback too
+  // Include both property types and avoid making the fallback only a
+  // high-incentive South/West Side sample. The per-community building slice
+  // keeps illustrative North Side test cases available when DB is unavailable.
   const rows = await sql`
-    (
-      SELECT id, source, address, lat, lon, property_type, ward, community_area,
-             zoning_class, square_feet, status, zone_matches, incentive_count,
-             owner_name, owner_type
-      FROM vacant_properties
-      WHERE property_type = 'vacant_land'
-      ORDER BY incentive_count DESC
-      LIMIT 1200
+    WITH selected AS (
+      (
+        SELECT id, source, address, lat, lon, property_type, ward, community_area,
+               zoning_class, square_feet, status, zone_matches, incentive_count,
+               owner_name, owner_type
+        FROM vacant_properties
+        WHERE property_type = 'vacant_land'
+        ORDER BY incentive_count DESC
+        LIMIT 1200
+      )
+      UNION
+      (
+        SELECT id, source, address, lat, lon, property_type, ward, community_area,
+               zoning_class, square_feet, status, zone_matches, incentive_count,
+               owner_name, owner_type
+        FROM vacant_properties
+        WHERE property_type IN ('vacant_building', 'vacant_storefront')
+        ORDER BY incentive_count DESC
+        LIMIT 800
+      )
+      UNION
+      (
+        SELECT id, source, address, lat, lon, property_type, ward, community_area,
+               zoning_class, square_feet, status, zone_matches, incentive_count,
+               owner_name, owner_type
+        FROM (
+          SELECT *,
+                 ROW_NUMBER() OVER (
+                   PARTITION BY COALESCE(community_area, 'Unknown')
+                   ORDER BY updated_at DESC, incentive_count DESC, address ASC
+                 ) AS community_rank
+          FROM vacant_properties
+          WHERE property_type IN ('vacant_building', 'vacant_storefront')
+        ) ranked
+        WHERE community_rank <= 40
+      )
     )
-    UNION ALL
     (
-      SELECT id, source, address, lat, lon, property_type, ward, community_area,
-             zoning_class, square_feet, status, zone_matches, incentive_count,
-             owner_name, owner_type
-      FROM vacant_properties
-      WHERE property_type IN ('vacant_building', 'vacant_storefront')
-      ORDER BY incentive_count DESC
-      LIMIT 800
+      SELECT *
+      FROM selected
+      ORDER BY property_type, incentive_count DESC, community_area, address
     )
   `;
 
@@ -562,22 +595,33 @@ async function printSummary() {
 async function main() {
   console.log("=== Vacant Property Sync ===\n");
 
+  if (exportOnly) {
+    console.log("Export only (--export-only)");
+    await generateStaticFile();
+    await printSummary();
+    console.log("\nDone!");
+    return;
+  }
+
   // ── Source 1: City-Owned Land Inventory (vacant land) ──
-  const raw = await fetchAllPages();
-  console.log(`\nTotal COLS raw records: ${raw.length}`);
+  const raw = skipCols ? [] : await fetchAllPages();
+  if (skipCols) console.log("Skipping City-Owned Land Inventory (--skip-cols)");
+  else console.log(`\nTotal COLS raw records: ${raw.length}`);
 
   const normalized = raw
     .map(normalizeRecord)
     .filter((r): r is NonNullable<typeof r> => r !== null);
-  console.log(`Valid records with coordinates: ${normalized.length}`);
+  if (!skipCols) {
+    console.log(`Valid records with coordinates: ${normalized.length}`);
 
-  const pinsWithData = normalized.filter((r) => r.pin).map((r) => r.pin!);
-  console.log(`\nFetching ownership data for ${pinsWithData.length} PINs...`);
-  const ownershipMap = await fetchOwnershipBatch(pinsWithData);
-  console.log(`  Got ownership data for ${ownershipMap.size} properties`);
+    const pinsWithData = normalized.filter((r) => r.pin).map((r) => r.pin!);
+    console.log(`\nFetching ownership data for ${pinsWithData.length} PINs...`);
+    const ownershipMap = await fetchOwnershipBatch(pinsWithData);
+    console.log(`  Got ownership data for ${ownershipMap.size} properties`);
 
-  console.log("\nUpserting COLS (vacant land) into database...");
-  await upsertBatch(normalized, ownershipMap);
+    console.log("\nUpserting COLS (vacant land) into database...");
+    await upsertBatch(normalized, ownershipMap);
+  }
 
   // ── Source 2: 311 Vacant/Abandoned Building Complaints ──
   const raw311 = await fetch311VacantBuildings();
@@ -592,7 +636,17 @@ async function main() {
   console.log(`Valid 311 records with coordinates: ${normalized311.length}`);
 
   // Remove 311 records that share an address with a COLS record (COLS is authoritative)
-  const colsAddresses = new Set(normalized.map((r) => r.address.trim().toUpperCase()));
+  const colsAddresses = new Set(
+    skipCols
+      ? (
+          await sql`
+            SELECT address
+            FROM vacant_properties
+            WHERE source = 'cols'
+          `
+        ).map((r: { address: string }) => r.address.trim().toUpperCase())
+      : normalized.map((r) => r.address.trim().toUpperCase())
+  );
   const filtered311 = normalized311.filter(
     (r) => !colsAddresses.has(r.address.trim().toUpperCase())
   );
