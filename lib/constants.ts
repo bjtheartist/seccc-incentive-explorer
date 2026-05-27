@@ -196,11 +196,13 @@ export function describeZoneClass(zoneClass: string): string {
 export const VACANT_COLORS: Record<string, string> = {
   vacantLand: "#DC2626",       // red
   vacantBuildings: "#EA580C",  // orange
+  vacantLotReports: "#D97706", // amber
 };
 
 export const VACANT_LABELS: Record<string, string> = {
   vacantLand: "City-Owned Vacant Land",
   vacantBuildings: "Vacant Buildings",
+  vacantLotReports: "Reported Vacant Lot Signals",
 };
 
 export const SSA50_BBOX = {

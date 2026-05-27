@@ -105,6 +105,14 @@ function slugifyFilePart(value: string): string {
     .replace(/^-|-$/g, "") || "locale";
 }
 
+function formatVacancyPropertyType(value: unknown): string {
+  if (value === "vacant_land") return "Land";
+  if (value === "vacant_building") return "Building";
+  if (value === "vacant_storefront") return "Storefront";
+  if (value === "reported_vacant_lot") return "Reported lot signal";
+  return String(value ?? "");
+}
+
 function zoneMatchesToText(value: unknown): string {
   if (!Array.isArray(value)) return "";
   return value
@@ -136,7 +144,7 @@ function buildVacancySpreadsheetCsv(features: VacancySpreadsheetFeature[]): stri
     const p = feature.properties ?? {};
     return [
       p.address,
-      p.propertyType,
+      formatVacancyPropertyType(p.propertyType),
       p.ward,
       p.communityArea,
       p.zoningClass,
@@ -2839,6 +2847,7 @@ export function ReportDisplay({
       total: features.length,
       land: features.filter((feature) => feature.properties?.propertyType === "vacant_land").length,
       buildings: features.filter((feature) => feature.properties?.propertyType === "vacant_building").length,
+      lotSignals: features.filter((feature) => feature.properties?.propertyType === "reported_vacant_lot").length,
       cityOwned: features.filter((feature) => feature.properties?.ownerType === "city_public").length,
     };
   }, [vacancySpreadsheetFeatures]);
@@ -2891,11 +2900,12 @@ export function ReportDisplay({
             </div>
 
             <div className="px-5 sm:px-12 md:px-16 py-10">
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#0C1B33]/8 mb-8">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-px bg-[#0C1B33]/8 mb-8">
                 {[
                   ["Properties", isLoadingVacancySpreadsheet ? "Loading" : vacancySpreadsheetStats.total.toLocaleString()],
                   ["Vacant land", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.land.toLocaleString()],
                   ["Buildings", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.buildings.toLocaleString()],
+                  ["Lot signals", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.lotSignals.toLocaleString()],
                   ["City / public", isLoadingVacancySpreadsheet ? "..." : vacancySpreadsheetStats.cityOwned.toLocaleString()],
                 ].map(([label, value]) => (
                   <div key={label} className="bg-[#FAF9F6] px-4 py-4">
@@ -2979,7 +2989,7 @@ export function ReportDisplay({
                               {String(property.address ?? "Unknown address")}
                             </td>
                             <td className="px-3 py-3 text-[#0C1B33]/50">
-                              {property.propertyType === "vacant_land" ? "Land" : property.propertyType === "vacant_building" ? "Building" : String(property.propertyType ?? "")}
+                              {formatVacancyPropertyType(property.propertyType)}
                             </td>
                             <td className="px-3 py-3 text-[#0C1B33]/45">
                               {String(property.ward ?? "")}

@@ -183,11 +183,11 @@ export interface VacantPropertyZoneMatch {
 
 export interface VacantProperty {
   id: string;
-  source: "cols" | "dpd_vacant" | "violations";
+  source: "cols" | "dpd_vacant" | "311_clean_lot" | "violations";
   address: string;
   lat: number;
   lon: number;
-  propertyType: "vacant_land" | "vacant_building" | "vacant_storefront";
+  propertyType: "vacant_land" | "vacant_building" | "vacant_storefront" | "reported_vacant_lot";
   ward: string | null;
   communityArea: string | null;
   zoningClass: string | null;

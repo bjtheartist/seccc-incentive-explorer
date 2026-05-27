@@ -10,7 +10,9 @@ import { cached, roundCoord } from "@/lib/redis";
  * GET /api/vacant?bounds=west,south,east,north&type=vacant_land&limit=500
  * GET /api/vacant?communityArea=Near%20West%20Side
  *
- * Returns GeoJSON FeatureCollection with zone_matches in feature properties.
+ * Returns GeoJSON FeatureCollection with zone matches in feature properties.
+ * Includes confirmed city-owned vacant land, 311 vacant-building reports, and
+ * softer 311 clean-vacant-lot signals surfaced as reported_vacant_lot.
  * Falls back to static file if DB is unavailable.
  */
 

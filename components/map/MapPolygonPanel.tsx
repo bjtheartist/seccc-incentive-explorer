@@ -39,6 +39,24 @@ const RESOURCES = [
   },
 ];
 
+function vacantPropertyLabel(propertyType: unknown): string {
+  if (propertyType === "vacant_land") return "Vacant land";
+  if (propertyType === "reported_vacant_lot") return "Reported lot signal";
+  return "Vacant building";
+}
+
+function vacantPropertyShortLabel(propertyType: unknown): string {
+  if (propertyType === "vacant_land") return "Land";
+  if (propertyType === "reported_vacant_lot") return "Lot signal";
+  return "Building";
+}
+
+function vacantPropertyColor(propertyType: unknown): string {
+  if (propertyType === "vacant_land") return "#EF4444";
+  if (propertyType === "reported_vacant_lot") return "#D97706";
+  return "#F97316";
+}
+
 interface MapPolygonPanelProps {
   results: GeoJSON.FeatureCollection;
   loading: boolean;
@@ -63,6 +81,9 @@ export default function MapPolygonPanel({
   ).length;
   const vacantBuildingCount = features.filter(
     (f) => f.properties?.propertyType === "vacant_building"
+  ).length;
+  const reportedLotCount = features.filter(
+    (f) => f.properties?.propertyType === "reported_vacant_lot"
   ).length;
 
   /* ── Top community area ── */
@@ -122,7 +143,8 @@ export default function MapPolygonPanel({
     const typeBreak: string[] = [];
     if (vacantLandCount > 0) typeBreak.push(`${vacantLandCount} vacant lot${vacantLandCount !== 1 ? "s" : ""}`);
     if (vacantBuildingCount > 0) typeBreak.push(`${vacantBuildingCount} vacant building${vacantBuildingCount !== 1 ? "s" : ""}`);
-    if (typeBreak.length === 2) {
+    if (reportedLotCount > 0) typeBreak.push(`${reportedLotCount} reported lot signal${reportedLotCount !== 1 ? "s" : ""}`);
+    if (typeBreak.length > 1) {
       parts.push(`That includes ${typeBreak.join(" and ")}.`);
     }
 
@@ -141,7 +163,7 @@ export default function MapPolygonPanel({
     }
 
     return parts.join(" ");
-  }, [features, topCommunityArea, vacantLandCount, vacantBuildingCount, zoneCounts, ownerCounts]);
+  }, [features, topCommunityArea, vacantLandCount, vacantBuildingCount, reportedLotCount, zoneCounts, ownerCounts]);
 
   const areaReport = useMemo<GeneratedReport>(() => {
     const areaName = topCommunityArea || "Drawn Area";
@@ -162,7 +184,7 @@ export default function MapPolygonPanel({
       const zones: unknown[] = p.zoneMatches ?? [];
       return {
         label: String(p.address || "Unknown Address"),
-        value: p.propertyType === "vacant_land" ? "Vacant land" : "Vacant building",
+        value: vacantPropertyLabel(p.propertyType),
         detail: `${zones.length} incentive zone${zones.length !== 1 ? "s" : ""}${p.ownerType ? ` · ${OWNER_TYPE_LABELS[p.ownerType as OwnerType] || p.ownerType}` : ""}`,
       };
     });
@@ -183,6 +205,7 @@ export default function MapPolygonPanel({
             { label: "Total Properties", value: String(features.length) },
             { label: "Vacant Land", value: String(vacantLandCount) },
             { label: "Vacant Buildings", value: String(vacantBuildingCount) },
+            { label: "Reported Lot Signals", value: String(reportedLotCount) },
             { label: "Community Area", value: topCommunityArea || "Drawn area" },
           ],
         },
@@ -260,6 +283,7 @@ export default function MapPolygonPanel({
     features,
     narrative,
     ownerCounts,
+    reportedLotCount,
     topCommunityArea,
     vacantBuildingCount,
     vacantLandCount,
@@ -442,11 +466,12 @@ export default function MapPolygonPanel({
               <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-3">
                 At a Glance
               </div>
-              <div className="grid grid-cols-3 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
+              <div className="grid grid-cols-2 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
                 {[
                   { label: "Total", value: features.length },
                   { label: "Vacant Land", value: vacantLandCount },
                   { label: "Buildings", value: vacantBuildingCount },
+                  { label: "Lot Signals", value: reportedLotCount },
                 ].map((stat) => (
                   <div key={stat.label} className="bg-[#FAF9F6] px-3 py-3 text-center">
                     <div className="font-editorial text-[22px] leading-none text-[#0C1B33]">
@@ -575,7 +600,7 @@ export default function MapPolygonPanel({
                 <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
                   {features.map((f, i) => {
                     const p = f.properties ?? {};
-                    const isLand = p.propertyType === "vacant_land";
+                    const propertyColor = vacantPropertyColor(p.propertyType);
                     const zones: unknown[] = p.zoneMatches ?? [];
                     const ownerColor =
                       OWNER_TYPE_COLORS[p.ownerType as OwnerType] ??
@@ -584,7 +609,7 @@ export default function MapPolygonPanel({
                       <div
                         key={p.address ?? i}
                         className="text-[10px] leading-snug border-l-2 pl-3 py-1 hover:bg-[#FAF9F6] transition-colors"
-                        style={{ borderColor: isLand ? "#EF4444" : "#F97316" }}
+                        style={{ borderColor: propertyColor }}
                       >
                         <a
                           href={buildReportLink(f)}
@@ -599,11 +624,11 @@ export default function MapPolygonPanel({
                           <span
                             className="inline-block text-[8px] font-medium px-1.5 py-px rounded"
                             style={{
-                              backgroundColor: isLand ? "#EF444410" : "#F9731610",
-                              color: isLand ? "#EF4444" : "#F97316",
+                              backgroundColor: propertyColor + "10",
+                              color: propertyColor,
                             }}
                           >
-                            {isLand ? "Land" : "Building"}
+                            {vacantPropertyShortLabel(p.propertyType)}
                           </span>
                           {zones.length > 0 && (
                             <span className="text-[8px] text-[#0C1B33]/40 font-mono-bureau">

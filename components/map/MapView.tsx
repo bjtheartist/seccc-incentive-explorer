@@ -69,6 +69,7 @@ export default function MapView() {
   const [vacantVisible, setVacantVisible] = useState<Record<string, boolean>>({
     vacantLand: false,
     vacantBuildings: false,
+    vacantLotReports: false,
   });
   const [vacantLoaded, setVacantLoaded] = useState(false);
   const vacantAbortRef = useRef<AbortController | null>(null);
@@ -824,6 +825,7 @@ export default function MapView() {
             "vacant_land", VACANT_COLORS.vacantLand,
             "vacant_building", VACANT_COLORS.vacantBuildings,
             "vacant_storefront", VACANT_COLORS.vacantBuildings,
+            "reported_vacant_lot", VACANT_COLORS.vacantLotReports,
             VACANT_COLORS.vacantLand,
           ],
           "circle-stroke-width": 2,
@@ -845,6 +847,25 @@ export default function MapView() {
         const sqft = p.squareFeet ? `${Number(p.squareFeet).toLocaleString()} sq ft` : "";
         const ward = p.ward ? `Ward ${p.ward}` : "";
         const meta = [sqft, ward].filter(Boolean).join(" · ");
+        const propertyType = p.propertyType as string | undefined;
+        const vacantLabel =
+          propertyType === "reported_vacant_lot"
+            ? "Reported Vacant Lot Signal"
+            : propertyType === "vacant_land"
+              ? "City-Owned Vacant Land"
+              : "Vacant Property";
+        const vacantColor =
+          propertyType === "reported_vacant_lot"
+            ? VACANT_COLORS.vacantLotReports
+            : propertyType === "vacant_land"
+              ? VACANT_COLORS.vacantLand
+              : VACANT_COLORS.vacantBuildings;
+        const sourceLabel =
+          p.source === "cols"
+            ? null
+            : p.source === "311_clean_lot"
+              ? "Source: 311 Clean Vacant Lot Request"
+              : "Source: 311 Vacant/Abandoned Building Report";
 
         // Owner info
         const ownerName = p.ownerName || null;
@@ -863,13 +884,13 @@ export default function MapView() {
           .setLngLat(e.lngLat)
           .setHTML(
             `<div style="font-family:Inter,sans-serif">
-              <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${VACANT_COLORS.vacantLand};margin-bottom:4px;font-weight:500">Vacant Property</div>
+              <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${vacantColor};margin-bottom:4px;font-weight:500">${vacantLabel}</div>
               <div style="font-size:14px;font-weight:600;color:#0C1B33">${addr}</div>
               ${meta ? `<div style="font-size:11px;color:#5A6478;margin-top:3px">${meta}</div>` : ""}
               ${ownerHtml}
               ${badges ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap">${badges}</div>` : ""}
               ${p.incentiveCount > 0 ? `<div style="font-size:10px;color:#059669;margin-top:6px;font-weight:500">${p.incentiveCount} incentive zone${p.incentiveCount > 1 ? "s" : ""} overlap</div>` : ""}
-              ${p.source === "cols" ? `<a href="https://www.cookcountyassessoril.gov/pin/${p.id?.replace("cols-", "")}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">View on Cook County Assessor →</a>` : `<span style="display:inline-block;margin-top:8px;font-size:10px;color:#64748B">Source: 311 Report</span>`}
+              ${p.source === "cols" ? `<a href="https://www.cookcountyassessoril.gov/pin/${p.id?.replace("cols-", "")}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">View on Cook County Assessor →</a>` : `<span style="display:inline-block;margin-top:8px;font-size:10px;color:#64748B">${sourceLabel}</span>`}
             </div>`
           )
           .addTo(map);
@@ -1380,6 +1401,7 @@ export default function MapView() {
                 const pt = f.properties?.propertyType;
                 if (vacantVisible.vacantLand && (pt === "vacant_land")) return true;
                 if (vacantVisible.vacantBuildings && (pt === "vacant_building" || pt === "vacant_storefront")) return true;
+                if (vacantVisible.vacantLotReports && pt === "reported_vacant_lot") return true;
                 return false;
               });
               src.setData({ type: "FeatureCollection", features: filtered });

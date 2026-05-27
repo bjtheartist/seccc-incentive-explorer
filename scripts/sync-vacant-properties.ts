@@ -24,15 +24,18 @@ if (!DATABASE_URL) {
 const sql = neon(DATABASE_URL);
 const args = process.argv.slice(2);
 const skipCols = args.includes("--skip-cols");
+const skip311Buildings = args.includes("--skip-311-buildings");
 const exportOnly = args.includes("--export-only");
 
 // City-Owned Land Inventory — Socrata dataset
 const COLS_DATASET_ID = "aksk-kvfp";
 const COLS_BASE_URL = `https://data.cityofchicago.org/resource/${COLS_DATASET_ID}.json`;
 
-// 311 Service Requests — Vacant/Abandoned Building Complaints
+// 311 Service Requests — vacancy-related reports
 const SR311_DATASET_ID = "v6vf-nfxy";
 const SR311_BASE_URL = `https://data.cityofchicago.org/resource/${SR311_DATASET_ID}.json`;
+const SR311_VACANT_BUILDING_TYPE = "Vacant/Abandoned Building Complaint";
+const SR311_CLEAN_VACANT_LOT_TYPE = "Clean Vacant Lot Request";
 
 interface ColsRecord {
   pin: string;
@@ -225,6 +228,8 @@ interface Sr311Record {
 const SR311_PAGE_SIZE = 1000;
 const SR311_TIMEOUT_MS = 60000;
 const SR311_WINDOW_MONTHS = 3;
+const SR311_VACANT_BUILDING_YEARS = 3;
+const SR311_CLEAN_VACANT_LOT_YEARS = 5;
 const SR311_SELECT_FIELDS = [
   "sr_number",
   "sr_type",
@@ -302,14 +307,17 @@ async function fetch311Page(url: string, label: string): Promise<Sr311Record[]> 
   return [];
 }
 
-async function fetch311VacantBuildings(): Promise<Sr311Record[]> {
+async function fetch311RecordsByType(
+  srType: string,
+  label: string,
+  yearsBack: number
+): Promise<Sr311Record[]> {
   const all: Sr311Record[] = [];
 
-  console.log("Fetching 311 Vacant/Abandoned Building Complaints...");
+  console.log(`Fetching 311 ${label} (${yearsBack}-year window)...`);
 
-  // Only fetch recent open complaints (last 3 years) to keep the dataset relevant
   const start = new Date();
-  start.setFullYear(start.getFullYear() - 3);
+  start.setFullYear(start.getFullYear() - yearsBack);
   const end = new Date();
   end.setDate(end.getDate() + 1);
 
@@ -322,12 +330,12 @@ async function fetch311VacantBuildings(): Promise<Sr311Record[]> {
 
     while (true) {
       const where = encodeURIComponent(
-        `sr_type='Vacant/Abandoned Building Complaint' AND created_date>='${windowStart}' AND created_date<'${windowEnd}'`
+        `sr_type='${srType}' AND created_date>='${windowStart}' AND created_date<'${windowEnd}'`
       );
       const select = encodeURIComponent(SR311_SELECT_FIELDS);
       const url = `${SR311_BASE_URL}?$select=${select}&$where=${where}&$limit=${SR311_PAGE_SIZE}&$offset=${offset}`;
-      const label = `311 ${toDateOnly(window.start)}..${toDateOnly(window.end)} offset ${offset}`;
-      const page = await fetch311Page(url, label);
+      const pageLabel = `311 ${label} ${toDateOnly(window.start)}..${toDateOnly(window.end)} offset ${offset}`;
+      const page = await fetch311Page(url, pageLabel);
 
       if (page.length === 0) break;
 
@@ -342,6 +350,22 @@ async function fetch311VacantBuildings(): Promise<Sr311Record[]> {
   }
 
   return all;
+}
+
+async function fetch311VacantBuildings(): Promise<Sr311Record[]> {
+  return fetch311RecordsByType(
+    SR311_VACANT_BUILDING_TYPE,
+    "Vacant/Abandoned Building Complaints",
+    SR311_VACANT_BUILDING_YEARS
+  );
+}
+
+async function fetch311CleanVacantLots(): Promise<Sr311Record[]> {
+  return fetch311RecordsByType(
+    SR311_CLEAN_VACANT_LOT_TYPE,
+    "Clean Vacant Lot Requests",
+    SR311_CLEAN_VACANT_LOT_YEARS
+  );
 }
 
 /** Deduplicate 311 records by address (keep newest per address). */
@@ -374,7 +398,11 @@ interface NormalizedVacantBuilding {
   status: string;
 }
 
-function normalize311Record(r: Sr311Record): NormalizedVacantBuilding | null {
+function normalize311Record(
+  r: Sr311Record,
+  idPrefix = "311",
+  statusPrefix = "reported"
+): NormalizedVacantBuilding | null {
   const lat = r.latitude ? parseFloat(r.latitude) : NaN;
   const lon = r.longitude ? parseFloat(r.longitude) : NaN;
 
@@ -384,7 +412,7 @@ function normalize311Record(r: Sr311Record): NormalizedVacantBuilding | null {
   const address = r.street_address?.trim() || "Unknown";
 
   return {
-    id: `311-${r.sr_number}`,
+    id: `${idPrefix}-${r.sr_number}`,
     address,
     lat,
     lon,
@@ -392,11 +420,15 @@ function normalize311Record(r: Sr311Record): NormalizedVacantBuilding | null {
     communityArea: communityAreaName(r.community_area),
     zoningClass: null, // 311 doesn't include zoning
     squareFeet: null,
-    status: r.status?.toLowerCase() === "open" ? "reported_open" : "reported",
+    status: r.status?.toLowerCase() === "open" ? `${statusPrefix}_open` : statusPrefix,
   };
 }
 
-async function upsert311Batch(records: NormalizedVacantBuilding[]) {
+async function upsert311Batch(
+  records: NormalizedVacantBuilding[],
+  source: "dpd_vacant" | "311_clean_lot",
+  propertyType: "vacant_building" | "reported_vacant_lot"
+) {
   if (records.length === 0) return;
 
   const batchSize = 50;
@@ -408,11 +440,11 @@ async function upsert311Batch(records: NormalizedVacantBuilding[]) {
         INSERT INTO vacant_properties (id, source, address, lat, lon, property_type, ward, community_area, zoning_class, square_feet, status, owner_name, owner_mailing_address, owner_type, geom, updated_at)
         VALUES (
           ${r.id},
-          'dpd_vacant',
+          ${source},
           ${r.address},
           ${r.lat},
           ${r.lon},
-          'vacant_building',
+          ${propertyType},
           ${r.ward},
           ${r.communityArea},
           ${r.zoningClass},
@@ -572,6 +604,16 @@ async function generateStaticFile() {
         SELECT id, source, address, lat, lon, property_type, ward, community_area,
                zoning_class, square_feet, status, zone_matches, incentive_count,
                owner_name, owner_type
+        FROM vacant_properties
+        WHERE property_type = 'reported_vacant_lot'
+        ORDER BY incentive_count DESC
+        LIMIT 800
+      )
+      UNION
+      (
+        SELECT id, source, address, lat, lon, property_type, ward, community_area,
+               zoning_class, square_feet, status, zone_matches, incentive_count,
+               owner_name, owner_type
         FROM (
           SELECT *,
                  ROW_NUMBER() OVER (
@@ -579,7 +621,7 @@ async function generateStaticFile() {
                    ORDER BY updated_at DESC, incentive_count DESC, address ASC
                  ) AS community_rank
           FROM vacant_properties
-          WHERE property_type IN ('vacant_building', 'vacant_storefront')
+          WHERE property_type IN ('vacant_building', 'vacant_storefront', 'reported_vacant_lot')
         ) ranked
         WHERE community_rank <= 40
       )
@@ -686,18 +728,6 @@ async function main() {
     await upsertBatch(normalized, ownershipMap);
   }
 
-  // ── Source 2: 311 Vacant/Abandoned Building Complaints ──
-  const raw311 = await fetch311VacantBuildings();
-  console.log(`\nTotal 311 raw records: ${raw311.length}`);
-
-  const deduped311 = dedup311ByAddress(raw311);
-  console.log(`Unique addresses after dedup: ${deduped311.length}`);
-
-  const normalized311 = deduped311
-    .map(normalize311Record)
-    .filter((r): r is NonNullable<typeof r> => r !== null);
-  console.log(`Valid 311 records with coordinates: ${normalized311.length}`);
-
   // Remove 311 records that share an address with a COLS record (COLS is authoritative)
   const colsAddresses = new Set(
     skipCols
@@ -707,16 +737,75 @@ async function main() {
             FROM vacant_properties
             WHERE source = 'cols'
           `
-        ).map((r: { address: string }) => r.address.trim().toUpperCase())
+        ).map((r) => String(r.address).trim().toUpperCase())
       : normalized.map((r) => r.address.trim().toUpperCase())
   );
-  const filtered311 = normalized311.filter(
-    (r) => !colsAddresses.has(r.address.trim().toUpperCase())
-  );
-  console.log(`After removing COLS duplicates: ${filtered311.length}`);
+  let filtered311: NormalizedVacantBuilding[] = [];
 
-  console.log("\nUpserting 311 (vacant buildings) into database...");
-  await upsert311Batch(filtered311);
+  if (skip311Buildings) {
+    console.log("Skipping 311 vacant building sync (--skip-311-buildings)");
+    filtered311 = (
+      await sql`
+        SELECT address, lat, lon, ward, community_area, zoning_class, square_feet, status
+        FROM vacant_properties
+        WHERE source = 'dpd_vacant'
+      `
+    ).map((r) => ({
+      id: "",
+      address: String(r.address),
+      lat: Number(r.lat),
+      lon: Number(r.lon),
+      ward: r.ward ? String(r.ward) : null,
+      communityArea: r.community_area ? String(r.community_area) : null,
+      zoningClass: r.zoning_class ? String(r.zoning_class) : null,
+      squareFeet: r.square_feet == null ? null : Number(r.square_feet),
+      status: r.status ? String(r.status) : "reported",
+    }));
+  } else {
+    // ── Source 2: 311 Vacant/Abandoned Building Complaints ──
+    const raw311 = await fetch311VacantBuildings();
+    console.log(`\nTotal 311 raw records: ${raw311.length}`);
+
+    const deduped311 = dedup311ByAddress(raw311);
+    console.log(`Unique addresses after dedup: ${deduped311.length}`);
+
+    const normalized311 = deduped311
+      .map((r) => normalize311Record(r))
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    console.log(`Valid 311 records with coordinates: ${normalized311.length}`);
+
+    filtered311 = normalized311.filter(
+      (r) => !colsAddresses.has(r.address.trim().toUpperCase())
+    );
+    console.log(`After removing COLS duplicates: ${filtered311.length}`);
+
+    console.log("\nUpserting 311 (vacant buildings) into database...");
+    await upsert311Batch(filtered311, "dpd_vacant", "vacant_building");
+  }
+
+  // ── Source 3: 311 Clean Vacant Lot Requests ──
+  const rawCleanLots = await fetch311CleanVacantLots();
+  console.log(`\nTotal 311 clean vacant lot raw records: ${rawCleanLots.length}`);
+
+  const dedupedCleanLots = dedup311ByAddress(rawCleanLots);
+  console.log(`Unique clean vacant lot addresses after dedup: ${dedupedCleanLots.length}`);
+
+  const normalizedCleanLots = dedupedCleanLots
+    .map((r) => normalize311Record(r, "311-clean-lot", "reported_lot"))
+    .filter((r): r is NonNullable<typeof r> => r !== null);
+  console.log(`Valid clean vacant lot records with coordinates: ${normalizedCleanLots.length}`);
+
+  const confirmedVacancyAddresses = new Set([
+    ...colsAddresses,
+    ...filtered311.map((r) => r.address.trim().toUpperCase()),
+  ]);
+  const filteredCleanLots = normalizedCleanLots.filter(
+    (r) => !confirmedVacancyAddresses.has(r.address.trim().toUpperCase())
+  );
+  console.log(`After removing confirmed vacancy duplicates: ${filteredCleanLots.length}`);
+
+  console.log("\nUpserting 311 (clean vacant lot signals) into database...");
+  await upsert311Batch(filteredCleanLots, "311_clean_lot", "reported_vacant_lot");
 
   // ── Cross-reference & export ──
   await crossReferenceZones();
