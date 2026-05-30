@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Resend } from "resend";
+import { recordReportEvent } from "@/lib/server-analytics";
 
 export async function POST(req: NextRequest) {
   try {
@@ -10,7 +11,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { email, pdfBase64, filename, businessName, address, incentiveCount } =
+    const { email, pdfBase64, filename, businessName, reportType, address, incentiveCount } =
       await req.json();
 
     if (!email || !pdfBase64) {
@@ -65,6 +66,17 @@ export async function POST(req: NextRequest) {
           content: Buffer.from(pdfBase64, "base64"),
         },
       ],
+    });
+
+    await recordReportEvent("report_emailed", {
+      reportType: typeof reportType === "string" ? reportType : null,
+      source: "email_report_api",
+      address: address || null,
+      metadata: {
+        businessName: businessName || null,
+        filename: filename || null,
+        incentiveCount: typeof incentiveCount === "number" ? incentiveCount : null,
+      },
     });
 
     return NextResponse.json({ success: true });

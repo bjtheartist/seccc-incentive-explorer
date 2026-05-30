@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/current-user";
 import { buildChecklist, isGoalType, type SavedReportSummary } from "@/lib/workspace";
+import { recordReportEvent } from "@/lib/server-analytics";
 
 function toSummary(row: Record<string, unknown>): SavedReportSummary {
   return {
@@ -125,6 +126,19 @@ export async function POST(req: NextRequest) {
     )
     RETURNING id, project_id, title, report_type, address, lat, lon, created_at, updated_at
   `;
+
+  await recordReportEvent("report_saved", {
+    userId,
+    reportType,
+    source: "workspace_save",
+    address: metadata.address || body.address || null,
+    lat: typeof metadata.lat === "number" ? metadata.lat : typeof body.lat === "number" ? body.lat : null,
+    lon: typeof metadata.lon === "number" ? metadata.lon : typeof body.lon === "number" ? body.lon : null,
+    metadata: {
+      projectId,
+      title,
+    },
+  });
 
   return NextResponse.json({ report: toSummary(rows[0] as Record<string, unknown>) }, { status: 201 });
 }

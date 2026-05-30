@@ -22,6 +22,7 @@ import {
   POI_LAYERS, jsonToGeoJSON, MAP_PRESETS,
   type AreaStats, DEFAULT_STATS,
 } from "./map-helpers";
+import { trackEvent } from "@/lib/analytics-events";
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1205,6 +1206,12 @@ export default function MapView() {
       setSnapshotOpen(true);
       lastClickRef.current(result.lat, result.lon);
       loadCensusRef.current(result.lat, result.lon, result.label.split(" — ")[0]);
+      trackEvent("search_performed", {
+        source: "map_search_select",
+        address: result.label,
+        lat: result.lat,
+        lon: result.lon,
+      });
     },
     []
   );
@@ -1218,6 +1225,12 @@ export default function MapView() {
         lat: lastClickLat.toFixed(5),
         lon: lastClickLon.toFixed(5),
         addr: snapshotLabel,
+      });
+      trackEvent("location_snapshot_requested", {
+        source: "map_snapshot_panel",
+        address: snapshotLabel,
+        lat: lastClickLat,
+        lon: lastClickLon,
       });
       window.location.href = `/report?${params.toString()}`;
       return;
@@ -1242,8 +1255,18 @@ export default function MapView() {
         lon: Number(data.lon).toFixed(5),
         addr: data.displayName || data.display_name || query,
       });
+      trackEvent("location_snapshot_requested", {
+        source: "map_snapshot_panel",
+        address: data.displayName || data.display_name || query,
+        lat: Number(data.lat),
+        lon: Number(data.lon),
+      });
       window.location.href = `/report?${params.toString()}`;
     } catch {
+      trackEvent("location_snapshot_requested", {
+        source: "map_snapshot_panel_unverified_address",
+        address: query,
+      });
       window.location.href = `/report?addr=${encodeURIComponent(query)}`;
     } finally {
       setIsGeneratingSnapshot(false);

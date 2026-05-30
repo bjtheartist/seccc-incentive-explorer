@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "Chicago Site Incentive Map | Discover Business Incentives",
@@ -34,6 +35,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
           <ServiceWorkerRegistrar />
+          <Analytics />
         </AuthProvider>
       </body>
     </html>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
+import { recordReportEvent } from "@/lib/server-analytics";
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,6 +33,15 @@ export async function POST(req: NextRequest) {
         VALUES (${name}, ${email}, ${zipCode}, ${reportAddress || null}, ${reportTitle || null})
       `;
     }
+
+    await recordReportEvent("inquiry_submitted", {
+      source: "download_gate",
+      address: reportAddress || null,
+      metadata: {
+        reportTitle: reportTitle || null,
+        zipCode: zipCode || null,
+      },
+    });
 
     return NextResponse.json({ success: true });
   } catch (err) {
