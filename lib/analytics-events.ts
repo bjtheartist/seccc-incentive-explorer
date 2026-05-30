@@ -1,6 +1,7 @@
 export const ANALYTICS_EVENT_TYPES = [
   "search_performed",
   "location_snapshot_requested",
+  "map_mobile_preset_selected",
   "location_snapshot_generated",
   "refined_report_generated",
   "vacancy_report_generated",

@@ -11,7 +11,7 @@ This tracker breaks the mobile/platform work into small PRs so each slice can sh
 
 ## PR 1: Mobile Map Discovery
 
-Status: `In progress`
+Status: `Ready for review`
 
 Goal: Make the map easier to use from a phone after a QR-code scan or address search.
 
@@ -30,6 +30,9 @@ Primary files:
 - `components/map/MapSnapshotPanel.tsx`
 - `components/map/MapSearch.tsx`
 - `components/map/map-helpers.ts`
+- `components/map/MapMobileSheet.tsx`
+- `components/map/map-layer-presets.ts`
+- `docs/mobile-map-qa.md`
 
 Verification:
 
@@ -37,6 +40,13 @@ Verification:
 - `npm run test`
 - `npm run build`
 - Browser smoke test at mobile viewport for `/map`
+
+Current notes:
+
+- Local branch: `feature/mobile-map-discovery`
+- Mobile viewport smoke test confirmed the new bottom-sheet controls render and the desktop legend toggle is hidden on mobile.
+- Desktop `/map` smoke test confirmed the web legend now groups incentive zones by jurisdiction/source bucket.
+- Full map tile verification still needs a valid `NEXT_PUBLIC_MAPBOX_TOKEN` in the local/prod environment.
 
 ## PR 2: Mobile Reports
 

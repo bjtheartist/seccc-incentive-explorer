@@ -3,8 +3,11 @@
 import React from "react";
 import {
   ZONE_COLORS,
+  ZONE_GROUP_LABELS,
+  ZONE_GROUP_ORDER,
   ZONE_LABELS,
   ZONE_KEYS_SORTED,
+  ZONE_META,
   ZONE_DESCRIPTIONS,
   ZONE_LEARN_MORE,
   ZONING_CATEGORIES,
@@ -72,6 +75,20 @@ export default function MapLegendPanel({
   onSetInspectMode,
   onApplyPreset,
 }: MapLegendPanelProps) {
+  const zoneGroups = ZONE_GROUP_ORDER.map((group) => ({
+    group,
+    label: ZONE_GROUP_LABELS[group],
+    keys: ZONE_KEYS_SORTED.filter((key) => ZONE_META[key]?.group === group),
+  })).filter(({ keys }) => keys.length > 0);
+
+  const setZoneBucketVisibility = (keys: string[], shouldShow: boolean) => {
+    keys.forEach((key) => {
+      if (Boolean(zoneVisible[key]) !== shouldShow) {
+        onToggleZone(key);
+      }
+    });
+  };
+
   return (
     <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-3 md:right-auto z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100vh-280px)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
       {/* Mobile drag handle + close */}
@@ -127,71 +144,99 @@ export default function MapLegendPanel({
           Incentive Zones
         </div>
         <div className="space-y-0.5">
-          {ZONE_KEYS_SORTED.map((key) => (
-            <div key={key}>
-              <label className="flex items-center gap-2.5 py-2 md:py-1 cursor-pointer group">
-                <input
-                  type="checkbox"
-                  checked={zoneVisible[key]}
-                  onChange={() => onToggleZone(key)}
-                  className="sr-only"
-                />
-                <span
-                  className="w-5 h-5 md:w-3.5 md:h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors"
-                  style={{
-                    borderColor: ZONE_COLORS[key],
-                    backgroundColor: zoneVisible[key]
-                      ? ZONE_COLORS[key] + "30"
-                      : "transparent",
-                  }}
-                >
-                  {zoneVisible[key] && (
-                    <span
-                      className="w-3 h-3 md:w-2 md:h-2 block"
-                      style={{ backgroundColor: ZONE_COLORS[key] }}
-                    />
-                  )}
-                </span>
-                <span
-                  className="text-[13px] md:text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight flex-1"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onSetExpandedZone(expandedZone === key ? null : key);
-                  }}
-                >
-                  {ZONE_LABELS[key]}
-                </span>
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    onSetExpandedZone(expandedZone === key ? null : key);
-                  }}
-                  className="text-[9px] text-[#2563EB]/40 hover:text-[#2563EB] transition-colors flex-shrink-0"
-                  title="More info"
-                >
-                  {expandedZone === key ? "−" : "?"}
-                </button>
-              </label>
-              {/* Expanded description */}
-              {expandedZone === key && ZONE_DESCRIPTIONS[key] && (
-                <div className="ml-6 pl-0.5 pb-2 border-l-2 border-[#0C1B33]/5">
-                  <p className="text-[10px] text-[#0C1B33]/50 leading-relaxed mt-1 mb-1.5">
-                    {ZONE_DESCRIPTIONS[key]}
-                  </p>
-                  {ZONE_LEARN_MORE[key] && (
-                    <a
-                      href={ZONE_LEARN_MORE[key]}
-                      target={ZONE_LEARN_MORE[key].startsWith("http") ? "_blank" : undefined}
-                      rel={ZONE_LEARN_MORE[key].startsWith("http") ? "noopener noreferrer" : undefined}
-                      className="font-mono-bureau text-[9px] tracking-wide text-[#2563EB]/70 hover:text-[#2563EB] transition-colors"
-                    >
-                      Learn more &rarr;
-                    </a>
-                  )}
+          {zoneGroups.map(({ group, label, keys }) => {
+            const visibleCount = keys.filter((key) => zoneVisible[key]).length;
+            const allVisible = visibleCount === keys.length;
+
+            return (
+              <div key={group} className="pt-1 first:pt-0">
+                <div className="flex items-center justify-between gap-2 py-1">
+                  <div>
+                    <div className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/35">
+                      {label}
+                    </div>
+                    <div className="text-[9px] text-[#0C1B33]/35">
+                      {visibleCount} of {keys.length} visible
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setZoneBucketVisibility(keys, !allVisible)}
+                    className="border border-[#0C1B33]/10 px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.12em] text-[#0C1B33]/45 transition-colors hover:border-[#2563EB]/35 hover:text-[#2563EB]"
+                  >
+                    {allVisible ? "Hide" : "Show"}
+                  </button>
                 </div>
-              )}
-            </div>
-          ))}
+                <div className="space-y-0.5">
+                  {keys.map((key) => (
+                    <div key={key}>
+                      <label className="flex items-center gap-2.5 py-2 md:py-1 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={zoneVisible[key]}
+                          onChange={() => onToggleZone(key)}
+                          className="sr-only"
+                        />
+                        <span
+                          className="w-5 h-5 md:w-3.5 md:h-3.5 border flex-shrink-0 flex items-center justify-center transition-colors"
+                          style={{
+                            borderColor: ZONE_COLORS[key],
+                            backgroundColor: zoneVisible[key]
+                              ? ZONE_COLORS[key] + "30"
+                              : "transparent",
+                          }}
+                        >
+                          {zoneVisible[key] && (
+                            <span
+                              className="w-3 h-3 md:w-2 md:h-2 block"
+                              style={{ backgroundColor: ZONE_COLORS[key] }}
+                            />
+                          )}
+                        </span>
+                        <span
+                          className="text-[13px] md:text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight flex-1"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onSetExpandedZone(expandedZone === key ? null : key);
+                          }}
+                        >
+                          {ZONE_LABELS[key]}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            onSetExpandedZone(expandedZone === key ? null : key);
+                          }}
+                          className="text-[9px] text-[#2563EB]/40 hover:text-[#2563EB] transition-colors flex-shrink-0"
+                          title="More info"
+                        >
+                          {expandedZone === key ? "−" : "?"}
+                        </button>
+                      </label>
+                      {/* Expanded description */}
+                      {expandedZone === key && ZONE_DESCRIPTIONS[key] && (
+                        <div className="ml-6 pl-0.5 pb-2 border-l-2 border-[#0C1B33]/5">
+                          <p className="text-[10px] text-[#0C1B33]/50 leading-relaxed mt-1 mb-1.5">
+                            {ZONE_DESCRIPTIONS[key]}
+                          </p>
+                          {ZONE_LEARN_MORE[key] && (
+                            <a
+                              href={ZONE_LEARN_MORE[key]}
+                              target={ZONE_LEARN_MORE[key].startsWith("http") ? "_blank" : undefined}
+                              rel={ZONE_LEARN_MORE[key].startsWith("http") ? "noopener noreferrer" : undefined}
+                              className="font-mono-bureau text-[9px] tracking-wide text-[#2563EB]/70 hover:text-[#2563EB] transition-colors"
+                            >
+                              Learn more &rarr;
+                            </a>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

@@ -4,8 +4,26 @@ export interface ZoneMeta {
   isPublic: boolean;
   defaultVisible: boolean;
   sortOrder: number;
-  group: "city" | "state" | "federal" | "historic" | "census";
+  group: ZoneGroup;
 }
+
+export type ZoneGroup = "city" | "state" | "federal" | "historic" | "census";
+
+export const ZONE_GROUP_ORDER: ZoneGroup[] = [
+  "city",
+  "state",
+  "federal",
+  "historic",
+  "census",
+];
+
+export const ZONE_GROUP_LABELS: Record<ZoneGroup, string> = {
+  city: "City / Local",
+  state: "State of Illinois",
+  federal: "Federal / Census",
+  historic: "Historic / Preservation",
+  census: "Census Eligibility",
+};
 
 export const ZONE_META: Record<string, ZoneMeta> = {
   tif:                 { isPublic: true, defaultVisible: true,  sortOrder: 1,  group: "city" },

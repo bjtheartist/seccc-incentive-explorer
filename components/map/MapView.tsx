@@ -12,8 +12,10 @@ import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import MapSearch from "./MapSearch";
 import MapLegendPanel from "./MapLegendPanel";
+import MapMobileSheet from "./MapMobileSheet";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
+import type { MobileMapPresetId } from "./map-layer-presets";
 import { cachedFetch } from "@/lib/fetch-cache";
 import {
   POINT_ZONE_KEYS, HEAVY_COVERAGE_KEYS,
@@ -1080,6 +1082,104 @@ export default function MapView() {
     setZoningVisible(updated);
   }, [loaded, zoningVisible]);
 
+  const applyMobilePreset = useCallback(
+    (presetId: MobileMapPresetId) => {
+      if (!mapRef.current || !loaded) return;
+      const map = mapRef.current;
+
+      const setZoneGroupVisibility = (targetZones: Set<string>) => {
+        const updated: Record<string, boolean> = {};
+        for (const key of ZONE_KEYS) {
+          const isVisible = targetZones.has(key);
+          updated[key] = isVisible;
+          const visibility = isVisible ? "visible" : "none";
+          if (map.getLayer(`zone-${key}-fill`)) {
+            map.setLayoutProperty(`zone-${key}-fill`, "visibility", visibility);
+            map.setLayoutProperty(`zone-${key}-line`, "visibility", visibility);
+          }
+        }
+        setZoneVisible(updated);
+      };
+
+      const setZoningGroupVisibility = (isVisible: boolean) => {
+        const visibility = isVisible ? "visible" : "none";
+        const updated: Record<string, boolean> = {};
+        for (const cat of ZONING_CATEGORIES) {
+          updated[cat.key] = isVisible;
+          if (map.getLayer(`zoning-${cat.key}-fill`)) {
+            map.setLayoutProperty(`zoning-${cat.key}-fill`, "visibility", visibility);
+            map.setLayoutProperty(`zoning-${cat.key}-line`, "visibility", visibility);
+          }
+        }
+        setZoningVisible(updated);
+      };
+
+      const setPoiGroupVisibility = (isVisible: boolean) => {
+        for (const key of Object.keys(POI_LAYERS)) {
+          if (poiVisible[key] !== isVisible) {
+            togglePoi(key);
+          }
+        }
+      };
+
+      const setVacancyGroupVisibility = (isVisible: boolean) => {
+        setVacantVisible({
+          vacantLand: isVisible,
+          vacantBuildings: isVisible,
+          vacantLotReports: isVisible,
+        });
+      };
+
+      if (presetId === "incentives") {
+        const locationZoneKeys = locationZones
+          ? Object.entries(locationZones)
+              .filter(([, isMatch]) => isMatch)
+              .map(([key]) => key)
+          : [];
+        const coreZones = ["tif", "ssa", "enterprise", "federalOZ", "nof", "ccsa"];
+        setZoneGroupVisibility(new Set(locationZoneKeys.length > 0 ? locationZoneKeys : coreZones));
+        setZoningGroupVisibility(false);
+        setVacancyGroupVisibility(false);
+        setParcelsVisible(false);
+        setPoiGroupVisibility(false);
+      }
+
+      if (presetId === "vacancy") {
+        setZoneGroupVisibility(new Set());
+        setZoningGroupVisibility(false);
+        setVacancyGroupVisibility(true);
+        setParcelsVisible(true);
+        setPoiGroupVisibility(false);
+      }
+
+      if (presetId === "zoning") {
+        setZoneGroupVisibility(new Set());
+        setZoningGroupVisibility(true);
+        setVacancyGroupVisibility(false);
+        setParcelsVisible(true);
+        setPoiGroupVisibility(false);
+      }
+
+      if (presetId === "community-assets") {
+        setZoneGroupVisibility(new Set());
+        setZoningGroupVisibility(false);
+        setVacancyGroupVisibility(false);
+        setParcelsVisible(false);
+        setPoiGroupVisibility(true);
+      }
+
+      setLegendOpen(false);
+      setSnapshotOpen(false);
+      setActivePreset(presetId);
+      trackEvent("map_mobile_preset_selected", {
+        source: "mobile_map_sheet",
+        address: snapshotLabel,
+        metadata: { preset: presetId },
+      });
+    },
+    [loaded, locationZones, poiVisible, snapshotLabel, togglePoi]
+  );
+
   /* ── Inspect zoning mode cursor ──────── */
   useEffect(() => {
     if (!mapRef.current || !loaded) return;
@@ -1204,6 +1304,7 @@ export default function MapView() {
 
       // Update Area Snapshot for the search location
       setSnapshotOpen(true);
+      setLegendOpen(false);
       lastClickRef.current(result.lat, result.lon);
       loadCensusRef.current(result.lat, result.lon, result.label.split(" — ")[0]);
       trackEvent("search_performed", {
@@ -1446,6 +1547,14 @@ export default function MapView() {
     };
   }, [vacantVisible, loaded, vacantLoaded, ownerFilter]);
 
+  const activeMobilePreset: MobileMapPresetId | null =
+    activePreset === "incentives" ||
+    activePreset === "vacancy" ||
+    activePreset === "zoning" ||
+    activePreset === "community-assets"
+      ? activePreset
+      : null;
+
   return (
     <div className="relative w-full h-[calc(100vh-180px)] md:h-[calc(100vh-220px)] min-h-[500px]">
       {/* Map container */}
@@ -1482,7 +1591,7 @@ export default function MapView() {
       {/* Legend toggle button */}
       <button
         onClick={() => setLegendOpen((o) => !o)}
-        className="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-2 md:py-1.5 font-mono-bureau text-[11px] md:text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
+        className="absolute top-3 left-3 z-10 hidden md:block bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-2 md:py-1.5 font-mono-bureau text-[11px] md:text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
       >
         {legendOpen ? "Hide Legend" : "Show Legend"}
       </button>
@@ -1491,7 +1600,7 @@ export default function MapView() {
       <div className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[9px] md:text-[9px] tracking-[0.1em] text-[#0C1B33]/40 hidden md:block">
         Click anywhere for area data &middot; Right-click for zoning
       </div>
-      <div className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.1em] text-[#0C1B33]/40 md:hidden">
+      <div className="absolute bottom-3 left-3 z-10 hidden bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.1em] text-[#0C1B33]/40 md:hidden">
         Tap anywhere for area data
       </div>
 
@@ -1577,10 +1686,21 @@ export default function MapView() {
       {!snapshotOpen && !polygonPanelOpen && loaded && (
         <button
           onClick={() => setSnapshotOpen(true)}
-          className="absolute top-12 md:top-3 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-2 md:py-1.5 font-mono-bureau text-[11px] md:text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
+          className="absolute top-12 md:top-3 right-3 z-10 hidden md:block bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-2 md:py-1.5 font-mono-bureau text-[11px] md:text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
         >
           Location Snapshot
         </button>
+      )}
+
+      {loaded && isMobile && !legendOpen && !snapshotOpen && !polygonPanelOpen && !drawMode && (
+        <MapMobileSheet
+          activePreset={activeMobilePreset}
+          snapshotLabel={snapshotLabel}
+          isGeneratingSnapshot={isGeneratingSnapshot}
+          onApplyPreset={applyMobilePreset}
+          onGenerateSnapshot={handleGenerateSnapshot}
+          onShowAdvanced={() => setLegendOpen(true)}
+        />
       )}
 
       {/* Draw mode instruction banner */}
