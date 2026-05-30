@@ -94,6 +94,27 @@ type VacancySpreadsheetFeature = {
   properties?: Record<string, unknown>;
 };
 
+type TifFinancialContext = {
+  districtName: string;
+  tifNumber: string;
+  reportYear: number | null;
+  wards?: string | null;
+  expirationDate?: string | null;
+  fundBalance: number | null;
+  currentYearIncrement: number | null;
+  annualExpenditures: number | null;
+  designatedDebtObligations: number | null;
+  designatedProjectCosts: number | null;
+  surplusDeficit: number | null;
+  sourceUrl: string;
+  sourceLabel: string;
+  caution: string;
+};
+
+type TifFinancialResponse =
+  | { matched: true; context: TifFinancialContext }
+  | { matched: false };
+
 function toCsvCell(value: unknown): string {
   return `"${String(value ?? "").replace(/"/g, '""')}"`;
 }
@@ -2545,6 +2566,166 @@ function FreshnessBadge({ lastVerifiedAt, isStale }: { lastVerifiedAt: string | 
   );
 }
 
+function formatReportMoney(value: number | null) {
+  if (value === null || !Number.isFinite(value)) return "Not reported";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function TifFinancialContextCard({ report }: { report: GeneratedReport }) {
+  const lat = report.metadata.lat;
+  const lon = report.metadata.lon;
+  const tifDistrictName = report.metadata.tifDistrictName;
+  const lookupKey = tifDistrictName && lat != null && lon != null ? `${lat}:${lon}:${tifDistrictName}` : null;
+  const [lookupResult, setLookupResult] = useState<{
+    key: string;
+    context: TifFinancialContext | null;
+    failed: boolean;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!lookupKey || lat == null || lon == null) return;
+
+    let cancelled = false;
+
+    cachedFetch<TifFinancialResponse>(
+      `/api/tif-financials?lat=${encodeURIComponent(String(lat))}&lon=${encodeURIComponent(String(lon))}`
+    )
+      .then((data) => {
+        if (cancelled) return;
+        setLookupResult({
+          key: lookupKey,
+          context: data?.matched ? data.context : null,
+          failed: false,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLookupResult({ key: lookupKey, context: null, failed: true });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [lat, lon, lookupKey]);
+
+  if (!tifDistrictName || lat == null || lon == null) return null;
+  const loading = lookupKey !== null && lookupResult?.key !== lookupKey;
+  const context = lookupResult?.key === lookupKey ? lookupResult.context : null;
+  const failed = lookupResult?.key === lookupKey ? lookupResult.failed : false;
+  if (!loading && !context && !failed) return null;
+
+  const designatedTotal =
+    context &&
+    (context.designatedDebtObligations ?? 0) + (context.designatedProjectCosts ?? 0);
+
+  return (
+    <div className="mt-6 border border-[#2563EB]/15 bg-[#EFF3FB]/45 p-5">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+        <div>
+          <div className="font-mono-bureau text-[9px] tracking-[0.22em] uppercase text-[#2563EB]/55 mb-1">
+            TIF District Financial Context
+          </div>
+          <h3 className="font-editorial text-[22px] text-[#0C1B33]">
+            {context?.districtName || tifDistrictName}
+          </h3>
+          <p className="text-[12px] text-[#0C1B33]/45 mt-1 max-w-prose leading-relaxed">
+            Latest reported City financial context for this TIF district. This does not mean funds are available for a specific project.
+          </p>
+        </div>
+        {context?.reportYear && (
+          <span className="font-mono-bureau text-[10px] tracking-[0.12em] uppercase text-[#0C1B33]/40">
+            Report Year {context.reportYear}
+          </span>
+        )}
+      </div>
+
+      {loading && (
+        <div className="flex items-center gap-2 text-[12px] text-[#0C1B33]/45">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Loading TIF financial context...
+        </div>
+      )}
+
+      {failed && (
+        <div className="flex items-start gap-2 text-[12px] text-[#0C1B33]/45">
+          <AlertCircle className="w-3.5 h-3.5 mt-0.5 text-[#0C1B33]/30" />
+          TIF financial context could not be loaded from the City dataset right now.
+        </div>
+      )}
+
+      {context && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-px bg-[#0C1B33]/8 mb-4">
+            {[
+              ["Reported Fund Balance", formatReportMoney(context.fundBalance)],
+              ["Current-Year Increment", formatReportMoney(context.currentYearIncrement)],
+              ["Annual Expenditures", formatReportMoney(context.annualExpenditures)],
+              ["Designated Project Costs", formatReportMoney(context.designatedProjectCosts)],
+              ["Designated Debt / Obligations", formatReportMoney(context.designatedDebtObligations)],
+              ["Reported Surplus / Deficit", formatReportMoney(context.surplusDeficit)],
+            ].map(([label, value]) => (
+              <div key={label} className="bg-white/75 px-4 py-3">
+                <div className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/30 mb-1">
+                  {label}
+                </div>
+                <div className="font-mono-bureau text-[14px] text-[#0C1B33]/70">
+                  {value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-[#0C1B33]/45 mb-4">
+            <div>
+              <span className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/25 block mb-1">
+                District ID
+              </span>
+              {context.tifNumber}
+            </div>
+            {context.wards && (
+              <div>
+                <span className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/25 block mb-1">
+                  Boundary Wards
+                </span>
+                {context.wards}
+              </div>
+            )}
+            {context.expirationDate && (
+              <div>
+                <span className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/25 block mb-1">
+                  District Expiration
+                </span>
+                {context.expirationDate}
+              </div>
+            )}
+          </div>
+
+          <p className="text-[11px] leading-relaxed text-[#0C1B33]/45">
+            {context.caution}
+            {designatedTotal != null && designatedTotal > 0
+              ? ` Latest reported designations total ${formatReportMoney(designatedTotal)} across project costs and debt/obligations.`
+              : ""}
+          </p>
+          <a
+            href={context.sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 mt-3 text-[10px] text-[#2563EB]/70 hover:text-[#2563EB] transition-colors font-mono-bureau tracking-wide"
+          >
+            <ExternalLink className="w-3 h-3 flex-shrink-0" />
+            {context.sourceLabel}
+          </a>
+        </>
+      )}
+    </div>
+  );
+}
+
 // ─── Comparison Summary ─────────────────────────────────────────────
 
 function ComparisonSummary({
@@ -3731,6 +3912,10 @@ export function ReportDisplay({
                           </div>
                         ))}
                       </div>
+                    )}
+
+                    {section.title === "Eligible Incentive Programs" && report.metadata.tifDistrictName && (
+                      <TifFinancialContextCard report={report} />
                     )}
                   </div>
                 );

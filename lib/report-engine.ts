@@ -128,6 +128,7 @@ export interface GeneratedReport {
     medianHomeValue?: number;
     zoneClass?: string;
     zoneType?: string;
+    tifDistrictName?: string;
   };
   executiveSummary?: ExecutiveSummary;
   actionRoadmap?: ActionRoadmapItem[];
@@ -1747,6 +1748,7 @@ export function generateReportData(
     if (census?.medianHomeValue != null) report.metadata.medianHomeValue = census.medianHomeValue;
     if (cityZoning?.zoneClass) report.metadata.zoneClass = cityZoning.zoneClass;
     if (cityZoning?.zoneType) report.metadata.zoneType = cityZoning.zoneType;
+    if (zones?.tif && zoneNames?.tif) report.metadata.tifDistrictName = zoneNames.tif;
 
     // Insert a "Site Profile" section — property, zoning, and district data only
     // (census/market data lives in Market Analysis to avoid duplication)
