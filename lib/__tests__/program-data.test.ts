@@ -12,4 +12,17 @@ describe("program data guardrails", () => {
     expect(serialized).not.toMatch(/SSA\s*#?\s*50/i);
     expect(serialized).not.toMatch(/Calumet Heights|Avalon|SECCC|Southeast Chicago Chamber/i);
   });
+
+  it("keeps Economic Empowerment Centers framed as an organization-facing grant", () => {
+    const eecProgram = (programs as Program[]).find(
+      (program) => program.id === "economicEmpowermentCenters"
+    );
+
+    expect(eecProgram).toBeDefined();
+    expect(eecProgram!.level).toBe("State");
+    expect(eecProgram!.zoneKey).toBe("");
+    expect(eecProgram!.whoQualifies).toMatch(/career education agencies/i);
+    expect(eecProgram!.whoQualifies).toMatch(/nonprofit organizations/i);
+    expect(eecProgram!.benefitRange).toBe("$250,000-$500,000");
+  });
 });

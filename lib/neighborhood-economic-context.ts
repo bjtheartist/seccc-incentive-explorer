@@ -70,11 +70,23 @@ export interface NeighborhoodCorridorMetricInput {
   } | null;
 }
 
+// Chicago ZIP coverage for neighborhood economic context. Most Chicago ZIPs are
+// 606xx, but the citywide artifact (Milestone 3: "606xx, 60707, and 60827")
+// also covers two non-606 Chicago ZIPs: 60707 (Galewood/Elmwood Park edge) and
+// 60827 (Riverdale). Suburban ZIPs like 60201 (Evanston) are intentionally
+// excluded. Keep this in sync with neighborhood_economics_by_zip.json coverage.
+const NON_606_CHICAGO_ZIPS = new Set(["60707", "60827"]);
+
+function isCoveredChicagoZip(zip: string): boolean {
+  return /^606\d{2}$/.test(zip) || NON_606_CHICAGO_ZIPS.has(zip);
+}
+
 export function extractChicagoZipCode(...values: Array<string | null | undefined>): string | null {
   for (const value of values) {
     if (!value) continue;
-    const match = value.match(/\b(606\d{2})\b/);
-    if (match) return match[1];
+    for (const candidate of value.matchAll(/\b(\d{5})\b/g)) {
+      if (isCoveredChicagoZip(candidate[1])) return candidate[1];
+    }
   }
   return null;
 }

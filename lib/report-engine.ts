@@ -916,17 +916,20 @@ function buildNeighborhoodEconomicContextSection(
         ? `annual payroll: ${formatMoneyShort(jobsPayroll.baselineAnnualPayroll)} to ${formatMoneyShort(jobsPayroll.comparisonAnnualPayroll)}`
         : null,
     ].filter(Boolean).join("; ");
+    const benchmarkYears = jobsPayroll.baselineYear && jobsPayroll.comparisonYear
+      ? ` (${jobsPayroll.baselineYear}–${jobsPayroll.comparisonYear})`
+      : "";
     items.push({
       label: "Jobs & Payroll",
-      value: `Measured: jobs ${formatChangeRate(jobsPayroll.employmentGrowthRate)} / payroll ${formatChangeRate(jobsPayroll.payrollGrowthRate)}`,
-      detail: `Census ZIP Business Patterns provides establishment, employment, and annual payroll context for ${geographyLabel} across ${years}. ${details || "The report has a ZBP source record but incomplete values."}`,
+      value: `Benchmark${benchmarkYears}: jobs ${formatChangeRate(jobsPayroll.employmentGrowthRate)} / payroll ${formatChangeRate(jobsPayroll.payrollGrowthRate)}`,
+      detail: `Census ZIP Business Patterns provides establishment, employment, and annual payroll context for ${geographyLabel} across ${years}. ${details || "The report has a ZBP source record but incomplete values."} ZBP is the latest official jobs/payroll benchmark, not a 2024 current-condition figure; read it as a trend benchmark.`,
       sourceLabel: jobsPayroll.sourceLabel || "Census ZIP Business Patterns",
       sourceUrl: DATA_SOURCES.zbp.url,
     });
   } else {
     items.push({
       label: "Jobs & Payroll",
-      value: "Measured when ZBP geography is matched",
+      value: "Benchmark when ZBP geography is matched",
       detail: "Census ZIP Business Patterns can add establishment counts, employment, and annual payroll by ZIP. This report does not yet have a matched ZBP record for the address context.",
       sourceLabel: "Census ZIP Business Patterns",
       sourceUrl: DATA_SOURCES.zbp.url,
