@@ -44,7 +44,7 @@ async function fetchValuationsForPins(
   pins: string[]
 ): Promise<RawValuation[]> {
   const out: RawValuation[] = [];
-  const batchSize = 50;
+  const batchSize = 100;
   const select = "pin,year,certified_land,certified_bldg,certified_tot";
   for (let i = 0; i < pins.length; i += batchSize) {
     const batch = pins.slice(i, i + batchSize);
@@ -62,9 +62,6 @@ async function fetchValuationsForPins(
       }
     } catch {
       // best-effort per batch
-    }
-    if (i + batchSize < pins.length) {
-      await new Promise((r) => setTimeout(r, 100));
     }
   }
   return out;
@@ -115,23 +112,41 @@ export const valuationHistoryAdapter: SourceAdapter<
 
   async upsert(sql: SQL, rows: ParcelValuationRow[]): Promise<number> {
     let written = 0;
-    const batchSize = 50;
+    const batchSize = 500;
     for (let i = 0; i < rows.length; i += batchSize) {
       const batch = rows.slice(i, i + batchSize);
-      for (const r of batch) {
-        await sql`
-          INSERT INTO parcel_valuations (
-            pin, tax_year, assessed_land, assessed_building, assessed_total,
-            source, fetched_at
+      const payload = JSON.stringify(
+        batch.map((r) => ({
+          pin: r.pin,
+          tax_year: r.taxYear,
+          assessed_land: r.assessedLand,
+          assessed_building: r.assessedBuilding,
+          assessed_total: r.assessedTotal,
+          source: r.source,
+        }))
+      );
+
+      await sql`
+        WITH rows AS (
+          SELECT *
+          FROM jsonb_to_recordset(${payload}::jsonb) AS r(
+            pin TEXT,
+            tax_year TEXT,
+            assessed_land BIGINT,
+            assessed_building BIGINT,
+            assessed_total BIGINT,
+            source TEXT
           )
-          VALUES (
-            ${r.pin}, ${r.taxYear}, ${r.assessedLand}, ${r.assessedBuilding},
-            ${r.assessedTotal}, ${r.source}, NOW()
-          )
-          ON CONFLICT (pin, tax_year) DO NOTHING
-        `;
-        written++;
-      }
+        )
+        INSERT INTO parcel_valuations (
+          pin, tax_year, assessed_land, assessed_building, assessed_total,
+          source, fetched_at
+        )
+        SELECT pin, tax_year, assessed_land, assessed_building, assessed_total, source, NOW()
+        FROM rows
+        ON CONFLICT (pin, tax_year) DO NOTHING
+      `;
+      written += batch.length;
     }
     return written;
   },

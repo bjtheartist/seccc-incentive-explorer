@@ -24,8 +24,8 @@ const PERMITS_URL = "https://data.cityofchicago.org/resource/ydr8-5enu.json";
  * within_box(location, north_lat, west_lon, south_lat, east_lon).
  */
 const SE_BBOX = { north: 41.77, west: -87.63, south: 41.65, east: -87.51 };
-/** Only pull reasonably recent permits to keep the backfill bounded. */
-const SINCE_DATE = "2015-01-01";
+/** Only pull recent permits; corridor metrics use a trailing 24-month window. */
+const SINCE_DATE = "2024-01-01";
 
 /** Raw Socrata Building Permits record (subset we use). */
 export interface RawPermit {
@@ -84,15 +84,28 @@ export const permitsAdapter: SourceAdapter<RawPermit, PermitRow> = {
 
   async fetch(_opts: FetchOpts): Promise<RawPermit[]> {
     const all: RawPermit[] = [];
-    const pageSize = 1000;
+    const pageSize = 5000;
     const box = `within_box(location,${SE_BBOX.north},${SE_BBOX.west},${SE_BBOX.south},${SE_BBOX.east})`;
     const where = encodeURIComponent(`${box} AND issue_date>'${SINCE_DATE}'`);
+    const select = [
+      "permit_",
+      "permit_type",
+      "work_description",
+      "issue_date",
+      "reported_cost",
+      "pin_list",
+      "street_number",
+      "street_direction",
+      "street_name",
+      "latitude",
+      "longitude",
+    ].join(",");
 
     for (let offset = 0; ; offset += pageSize) {
-      const url = `${PERMITS_URL}?$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=permit_`;
+      const url = `${PERMITS_URL}?$select=${select}&$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=permit_`;
       const res = await fetch(url, {
         headers: socrataHeaders(),
-        signal: AbortSignal.timeout(30000),
+        signal: AbortSignal.timeout(60000),
       });
       if (!res.ok) break;
       const page: RawPermit[] = await res.json();
@@ -136,19 +149,56 @@ export const permitsAdapter: SourceAdapter<RawPermit, PermitRow> = {
 
   async upsert(sql: SQL, rows: PermitRow[]): Promise<number> {
     let written = 0;
-    for (const r of rows) {
+    const batchSize = 500;
+    for (let i = 0; i < rows.length; i += batchSize) {
+      const batch = rows.slice(i, i + batchSize);
+      const payload = JSON.stringify(
+        batch.map((r) => ({
+          permit_id: r.permitId,
+          pin: r.pin,
+          address: r.address,
+          zip: r.zip,
+          permit_type: r.permitType,
+          work_description: r.workDescription,
+          issue_date: r.issueDate,
+          reported_cost: r.reportedCost,
+          is_demolition: r.isDemolition,
+          lat: r.lat,
+          lon: r.lon,
+          source: r.provenance.source,
+          raw_json: r.provenance.raw_json,
+        }))
+      );
+
       await sql`
+        WITH rows AS (
+          SELECT *
+          FROM jsonb_to_recordset(${payload}::jsonb) AS r(
+            permit_id TEXT,
+            pin TEXT,
+            address TEXT,
+            zip TEXT,
+            permit_type TEXT,
+            work_description TEXT,
+            issue_date DATE,
+            reported_cost BIGINT,
+            is_demolition BOOLEAN,
+            lat DOUBLE PRECISION,
+            lon DOUBLE PRECISION,
+            source TEXT,
+            raw_json JSONB
+          )
+        )
         INSERT INTO building_permits (
           permit_id, pin, address, zip, permit_type, work_description,
           issue_date, reported_cost, is_demolition, lat, lon, geom,
           source, fetched_at, raw_json
         )
-        VALUES (
-          ${r.permitId}, ${r.pin}, ${r.address}, ${r.zip}, ${r.permitType}, ${r.workDescription},
-          ${r.issueDate}, ${r.reportedCost}, ${r.isDemolition}, ${r.lat}, ${r.lon},
-          ST_MakePoint(${r.lon}, ${r.lat})::geography,
-          ${r.provenance.source}, NOW(), ${JSON.stringify(r.provenance.raw_json)}
-        )
+        SELECT
+          permit_id, pin, address, zip, permit_type, work_description,
+          issue_date, reported_cost, is_demolition, lat, lon,
+          ST_MakePoint(lon, lat)::geography, source, NOW(), raw_json
+        FROM rows
         ON CONFLICT (permit_id) DO UPDATE SET
           pin = EXCLUDED.pin,
           address = EXCLUDED.address,
@@ -165,7 +215,7 @@ export const permitsAdapter: SourceAdapter<RawPermit, PermitRow> = {
           fetched_at = NOW(),
           raw_json = EXCLUDED.raw_json
       `;
-      written++;
+      written += batch.length;
     }
     return written;
   },

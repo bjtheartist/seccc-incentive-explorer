@@ -8,6 +8,7 @@ interface SearchResult {
   lon: number;
   label: string;
   type: "business" | "address";
+  zip?: string | null;
 }
 
 interface MapSearchProps {
@@ -50,6 +51,7 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
                   lon: biz.lon,
                   label: `${biz.name} — ${biz.address}`,
                   type: "business",
+                  zip: typeof biz.zip === "string" ? biz.zip : null,
                 });
               }
             }
@@ -69,6 +71,7 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
                 lon: geo.lon,
                 label: geo.displayName || q,
                 type: "address",
+                zip: extractZip(geo.displayName || q),
               });
             }
           }
@@ -199,4 +202,9 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
       )}
     </div>
   );
+}
+
+function extractZip(value: string): string | null {
+  const match = value.match(/\b(606\d{2})\b/);
+  return match?.[1] ?? null;
 }

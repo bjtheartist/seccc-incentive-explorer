@@ -86,21 +86,40 @@ export const businessLicensesAdapter: SourceAdapter<
 
   async fetch({ zips }: FetchOpts): Promise<RawBusinessLicense[]> {
     const all: RawBusinessLicense[] = [];
-    const pageSize = 1000;
-    const zipList = zips.map((z) => `'${z}'`).join(",");
+    const pageSize = 5000;
+    const select = [
+      "id",
+      "license_id",
+      "account_number",
+      "legal_name",
+      "doing_business_as_name",
+      "address",
+      "zip_code",
+      "license_code",
+      "license_description",
+      "application_type",
+      "license_status",
+      "license_start_date",
+      "expiration_date",
+      "date_issued",
+      "latitude",
+      "longitude",
+    ].join(",");
 
-    for (let offset = 0; ; offset += pageSize) {
-      const where = encodeURIComponent(`zip_code in(${zipList})`);
-      const url = `${BUSINESS_LICENSES_URL}?$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=id`;
-      const res = await fetch(url, {
-        headers: socrataHeaders(),
-        signal: AbortSignal.timeout(30000),
-      });
-      if (!res.ok) break;
-      const page: RawBusinessLicense[] = await res.json();
-      if (page.length === 0) break;
-      all.push(...page);
-      if (page.length < pageSize) break;
+    for (const zip of zips) {
+      for (let offset = 0; ; offset += pageSize) {
+        const where = encodeURIComponent(`zip_code='${zip}'`);
+        const url = `${BUSINESS_LICENSES_URL}?$select=${select}&$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=id`;
+        const res = await fetch(url, {
+          headers: socrataHeaders(),
+          signal: AbortSignal.timeout(60000),
+        });
+        if (!res.ok) break;
+        const page: RawBusinessLicense[] = await res.json();
+        if (page.length === 0) break;
+        all.push(...page);
+        if (page.length < pageSize) break;
+      }
     }
 
     return all;
@@ -140,85 +159,95 @@ export const businessLicensesAdapter: SourceAdapter<
 
   async upsert(sql: SQL, rows: BusinessLicenseRow[]): Promise<number> {
     let written = 0;
-    const batchSize = 50;
-    for (let i = 0; i < rows.length; i += batchSize) {
-      const batch = rows.slice(i, i + batchSize);
-      for (const r of batch) {
-        // geom is only set when in-bounds coordinates exist; ST_MakePoint
-        // cannot take NULL args, so split on presence of geo.
-        if (r.lat != null && r.lon != null) {
-          await sql`
-            INSERT INTO business_licenses (
-              license_id, account_number, legal_name, dba_name, address, zip,
-              license_code, license_description, application_type, license_status,
-              license_start_date, expiration_date, date_issued,
-              lat, lon, geom, source, fetched_at, raw_json
-            )
-            VALUES (
-              ${r.licenseId}, ${r.accountNumber}, ${r.legalName}, ${r.dbaName}, ${r.address}, ${r.zip},
-              ${r.licenseCode}, ${r.licenseDescription}, ${r.applicationType}, ${r.licenseStatus},
-              ${r.licenseStartDate}, ${r.expirationDate}, ${r.dateIssued},
-              ${r.lat}, ${r.lon}, ST_MakePoint(${r.lon}, ${r.lat})::geography,
-              ${r.provenance.source}, NOW(), ${JSON.stringify(r.provenance.raw_json)}
-            )
-            ON CONFLICT (license_id) DO UPDATE SET
-              account_number = EXCLUDED.account_number,
-              legal_name = EXCLUDED.legal_name,
-              dba_name = EXCLUDED.dba_name,
-              address = EXCLUDED.address,
-              zip = EXCLUDED.zip,
-              license_code = EXCLUDED.license_code,
-              license_description = EXCLUDED.license_description,
-              application_type = EXCLUDED.application_type,
-              license_status = EXCLUDED.license_status,
-              license_start_date = EXCLUDED.license_start_date,
-              expiration_date = EXCLUDED.expiration_date,
-              date_issued = EXCLUDED.date_issued,
-              lat = EXCLUDED.lat,
-              lon = EXCLUDED.lon,
-              geom = EXCLUDED.geom,
-              source = EXCLUDED.source,
-              fetched_at = NOW(),
-              raw_json = EXCLUDED.raw_json
-          `;
-        } else {
-          await sql`
-            INSERT INTO business_licenses (
-              license_id, account_number, legal_name, dba_name, address, zip,
-              license_code, license_description, application_type, license_status,
-              license_start_date, expiration_date, date_issued,
-              lat, lon, geom, source, fetched_at, raw_json
-            )
-            VALUES (
-              ${r.licenseId}, ${r.accountNumber}, ${r.legalName}, ${r.dbaName}, ${r.address}, ${r.zip},
-              ${r.licenseCode}, ${r.licenseDescription}, ${r.applicationType}, ${r.licenseStatus},
-              ${r.licenseStartDate}, ${r.expirationDate}, ${r.dateIssued},
-              ${r.lat}, ${r.lon}, NULL,
-              ${r.provenance.source}, NOW(), ${JSON.stringify(r.provenance.raw_json)}
-            )
-            ON CONFLICT (license_id) DO UPDATE SET
-              account_number = EXCLUDED.account_number,
-              legal_name = EXCLUDED.legal_name,
-              dba_name = EXCLUDED.dba_name,
-              address = EXCLUDED.address,
-              zip = EXCLUDED.zip,
-              license_code = EXCLUDED.license_code,
-              license_description = EXCLUDED.license_description,
-              application_type = EXCLUDED.application_type,
-              license_status = EXCLUDED.license_status,
-              license_start_date = EXCLUDED.license_start_date,
-              expiration_date = EXCLUDED.expiration_date,
-              date_issued = EXCLUDED.date_issued,
-              lat = EXCLUDED.lat,
-              lon = EXCLUDED.lon,
-              geom = EXCLUDED.geom,
-              source = EXCLUDED.source,
-              fetched_at = NOW(),
-              raw_json = EXCLUDED.raw_json
-          `;
-        }
-        written++;
-      }
+    const uniqueRows = Array.from(
+      new Map(rows.map((row) => [row.licenseId, row])).values()
+    );
+    const batchSize = 500;
+    for (let i = 0; i < uniqueRows.length; i += batchSize) {
+      const batch = uniqueRows.slice(i, i + batchSize);
+      const payload = JSON.stringify(
+        batch.map((r) => ({
+          license_id: r.licenseId,
+          account_number: r.accountNumber,
+          legal_name: r.legalName,
+          dba_name: r.dbaName,
+          address: r.address,
+          zip: r.zip,
+          license_code: r.licenseCode,
+          license_description: r.licenseDescription,
+          application_type: r.applicationType,
+          license_status: r.licenseStatus,
+          license_start_date: r.licenseStartDate,
+          expiration_date: r.expirationDate,
+          date_issued: r.dateIssued,
+          lat: r.lat,
+          lon: r.lon,
+          source: r.provenance.source,
+          raw_json: r.provenance.raw_json,
+        }))
+      );
+
+      await sql`
+        WITH rows AS (
+          SELECT *
+          FROM jsonb_to_recordset(${payload}::jsonb) AS r(
+            license_id TEXT,
+            account_number TEXT,
+            legal_name TEXT,
+            dba_name TEXT,
+            address TEXT,
+            zip TEXT,
+            license_code TEXT,
+            license_description TEXT,
+            application_type TEXT,
+            license_status TEXT,
+            license_start_date DATE,
+            expiration_date DATE,
+            date_issued DATE,
+            lat DOUBLE PRECISION,
+            lon DOUBLE PRECISION,
+            source TEXT,
+            raw_json JSONB
+          )
+        )
+        INSERT INTO business_licenses (
+          license_id, account_number, legal_name, dba_name, address, zip,
+          license_code, license_description, application_type, license_status,
+          license_start_date, expiration_date, date_issued,
+          lat, lon, geom, source, fetched_at, raw_json
+        )
+        SELECT
+          license_id, account_number, legal_name, dba_name, address, zip,
+          license_code, license_description, application_type, license_status,
+          license_start_date, expiration_date, date_issued,
+          lat, lon,
+          CASE
+            WHEN lat IS NOT NULL AND lon IS NOT NULL THEN ST_MakePoint(lon, lat)::geography
+            ELSE NULL
+          END,
+          source, NOW(), raw_json
+        FROM rows
+        ON CONFLICT (license_id) DO UPDATE SET
+          account_number = EXCLUDED.account_number,
+          legal_name = EXCLUDED.legal_name,
+          dba_name = EXCLUDED.dba_name,
+          address = EXCLUDED.address,
+          zip = EXCLUDED.zip,
+          license_code = EXCLUDED.license_code,
+          license_description = EXCLUDED.license_description,
+          application_type = EXCLUDED.application_type,
+          license_status = EXCLUDED.license_status,
+          license_start_date = EXCLUDED.license_start_date,
+          expiration_date = EXCLUDED.expiration_date,
+          date_issued = EXCLUDED.date_issued,
+          lat = EXCLUDED.lat,
+          lon = EXCLUDED.lon,
+          geom = EXCLUDED.geom,
+          source = EXCLUDED.source,
+          fetched_at = NOW(),
+          raw_json = EXCLUDED.raw_json
+      `;
+      written += batch.length;
     }
     return written;
   },

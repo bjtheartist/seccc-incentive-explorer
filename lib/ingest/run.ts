@@ -28,10 +28,17 @@ export async function runIngest<TRaw, TRow>(
   result.fetched = raw.length;
 
   const rows: TRow[] = [];
-  for (const r of raw) {
-    const row = adapter.normalize(r);
-    if (row === null) result.skipped++;
-    else rows.push(row);
+  for (const [index, r] of raw.entries()) {
+    try {
+      const row = adapter.normalize(r);
+      if (row === null) result.skipped++;
+      else rows.push(row);
+    } catch (err) {
+      result.skipped++;
+      result.errors.push(
+        `normalize[${index}]: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
   }
 
   try {

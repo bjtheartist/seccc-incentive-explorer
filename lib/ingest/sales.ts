@@ -48,7 +48,7 @@ async function inScopePins(_zips: string[]): Promise<string[]> {
 
 async function fetchSalesForPins(pins: string[]): Promise<RawSale[]> {
   const out: RawSale[] = [];
-  const batchSize = 50;
+  const batchSize = 100;
   for (let i = 0; i < pins.length; i += batchSize) {
     const batch = pins.slice(i, i + batchSize);
     const inClause = batch.map((p) => `'${p}'`).join(",");
@@ -65,9 +65,6 @@ async function fetchSalesForPins(pins: string[]): Promise<RawSale[]> {
       }
     } catch {
       // best-effort per batch
-    }
-    if (i + batchSize < pins.length) {
-      await new Promise((r) => setTimeout(r, 100));
     }
   }
   return out;
@@ -108,23 +105,47 @@ export const salesAdapter: SourceAdapter<RawSale, ParcelSaleRow> = {
 
   async upsert(sql: SQL, rows: ParcelSaleRow[]): Promise<number> {
     let written = 0;
-    const batchSize = 50;
+    const batchSize = 500;
     for (let i = 0; i < rows.length; i += batchSize) {
       const batch = rows.slice(i, i + batchSize);
-      for (const r of batch) {
-        await sql`
-          INSERT INTO parcel_sales (
-            pin, sale_date, sale_price, deed_type, seller, buyer,
-            document_number, source, fetched_at
+      const payload = JSON.stringify(
+        batch.map((r) => ({
+          pin: r.pin,
+          sale_date: r.saleDate,
+          sale_price: r.salePrice,
+          deed_type: r.deedType,
+          seller: r.seller,
+          buyer: r.buyer,
+          document_number: r.documentNumber,
+          source: r.source,
+        }))
+      );
+
+      await sql`
+        WITH rows AS (
+          SELECT *
+          FROM jsonb_to_recordset(${payload}::jsonb) AS r(
+            pin TEXT,
+            sale_date DATE,
+            sale_price BIGINT,
+            deed_type TEXT,
+            seller TEXT,
+            buyer TEXT,
+            document_number TEXT,
+            source TEXT
           )
-          VALUES (
-            ${r.pin}, ${r.saleDate}, ${r.salePrice}, ${r.deedType},
-            ${r.seller}, ${r.buyer}, ${r.documentNumber}, ${r.source}, NOW()
-          )
-          ON CONFLICT (pin, sale_date, document_number) DO NOTHING
-        `;
-        written++;
-      }
+        )
+        INSERT INTO parcel_sales (
+          pin, sale_date, sale_price, deed_type, seller, buyer,
+          document_number, source, fetched_at
+        )
+        SELECT
+          pin, sale_date, sale_price, deed_type, seller, buyer,
+          document_number, source, NOW()
+        FROM rows
+        ON CONFLICT (pin, sale_date, document_number) DO NOTHING
+      `;
+      written += batch.length;
     }
     return written;
   },

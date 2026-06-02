@@ -1,4 +1,5 @@
 import type { NeighborhoodEconomicContext } from "./report-engine";
+import type { LiveZipAcsContext } from "./census-acs";
 
 export interface NeighborhoodGrowthSignal {
   zip: string;
@@ -200,6 +201,37 @@ export function mergeCorridorMetricIntoNeighborhoodEconomics(
       ...(next.limitations ?? []),
       "Permit and ownership context comes from aggregate corridor metrics and should be used for neighborhood interpretation, not property-level claims.",
     ];
+  }
+
+  return next;
+}
+
+export function mergeLiveAcsIntoNeighborhoodEconomics(
+  base: NeighborhoodEconomicContext | null,
+  zip: string,
+  liveAcs: LiveZipAcsContext | null
+): NeighborhoodEconomicContext | null {
+  if (!base && !liveAcs) return null;
+
+  const next: NeighborhoodEconomicContext = {
+    ...(base ?? { geographyLabel: `ZIP ${zip}` }),
+    limitations: [...(base?.limitations ?? [])],
+  };
+
+  if (liveAcs) {
+    next.spendingPower = {
+      residentSpendingPowerProxy: liveAcs.residentSpendingPowerProxy,
+      medianHouseholdIncome: liveAcs.medianHouseholdIncome,
+      population: liveAcs.population,
+      sourceLabel: liveAcs.sourceLabel,
+    };
+
+    if (!next.limitations?.some((note) => note.includes("live Census ACS"))) {
+      next.limitations = [
+        ...(next.limitations ?? []),
+        "Resident spending-power context is refreshed from live Census ACS ZIP/ZCTA data when available; it remains a purchasing-capacity proxy, not observed local sales.",
+      ];
+    }
   }
 
   return next;

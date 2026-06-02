@@ -82,6 +82,27 @@ Current report role:
 
 The citywide artifact is enough for a first public MVP of `Neighborhood Economic Context` inside incentive reports. It can compare ZIP-level conditions, but it should remain framed as context for incentive strategy rather than a definitive neighborhood ranking.
 
+## Source Freshness Gate
+
+Current-context sources should use 2024 or newer data when that data is available at the geography needed for the report. If a dataset's latest official reference year is older than 2024, it may only be used as a clearly labeled benchmark or trend input, not as a current-condition claim.
+
+Current preferred sources:
+
+- ACS: use 2024 ACS 5-year ZCTA data through the Census API when `CENSUS_API_KEY` is available; otherwise use the local 2024 tract fallback.
+- Chicago business licenses: use the live City of Chicago business-license dataset for 2020 to current license-continuity signals.
+- Chicago building permits: use recent City of Chicago permit records, with the report showing the measured trailing window.
+- Cook County parcels: use current public parcel aggregates only in public reports; keep owner/address rows out of public UI.
+
+Latest-official benchmark sources:
+
+- Census ZIP Business Patterns / County Business Patterns: the current report artifact uses 2020 and 2023 ZBP totals. Census has not published a 2024 ZBP totals file at the official CBP dataset path checked on June 2, 2026. Treat ZBP as the latest official jobs/payroll benchmark, not a 2024 current-condition source, until a newer reference year is published.
+
+Dataset review rule:
+
+- Include in the public report now if the data is 2024+ and supports ZIP/address context without exposing sensitive row-level records.
+- Include as benchmark-only if it is the newest official release but has a pre-2024 reference year.
+- Keep out of the public report if it is national/state/county only, too old for current local context, or would require modeled claims we cannot explain simply.
+
 ## Signal Definitions
 
 ### Business Continuity

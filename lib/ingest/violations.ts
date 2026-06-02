@@ -20,8 +20,8 @@ const VIOLATIONS_URL = "https://data.cityofchicago.org/resource/22u3-xenr.json";
 
 /** Bounding box covering ZIPs 60617/60619/60649 (SE Chicago). */
 const SE_BBOX = { north: 41.77, west: -87.63, south: 41.65, east: -87.51 };
-/** Only pull reasonably recent violations to keep the backfill bounded. */
-const SINCE_DATE = "2015-01-01";
+/** Only pull recent violations to keep the condition backfill bounded. */
+const SINCE_DATE = "2024-01-01";
 
 /** Raw Socrata Building Violations record (subset we use). */
 export interface RawViolation {

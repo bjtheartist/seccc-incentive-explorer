@@ -13,6 +13,9 @@ interface MapSnapshotPanelProps {
   onClose: () => void;
   onDrawArea: () => void;
   onGenerateSnapshot: () => void;
+  onGenerateCorridorReport?: () => void;
+  canGenerateCorridorReport?: boolean;
+  corridorLabel?: string;
 }
 
 export default function MapSnapshotPanel({
@@ -128,6 +131,11 @@ export default function MapSnapshotPanel({
             {areaStats.parcelClassDescription && (
               <div className="text-[10px] text-[#0C1B33]/40 mt-0.5 italic">
                 {areaStats.parcelClassDescription}
+              </div>
+            )}
+            {areaStats.parcelZip && (
+              <div className="font-mono-bureau text-[9px] text-[#0C1B33]/35 mt-1">
+                ZIP {areaStats.parcelZip}
               </div>
             )}
             {/* Tax Code, Township, Parcel Type row */}

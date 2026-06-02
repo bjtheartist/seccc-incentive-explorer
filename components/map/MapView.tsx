@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
@@ -64,6 +64,7 @@ export default function MapView() {
   const [parcelsVisible, setParcelsVisible] = useState(false);
   const parcelsAbortRef = useRef<AbortController | null>(null);
   const parcelsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const supportedCorridorZips = useMemo(() => new Set(["60617", "60619", "60649"]), []);
 
   // Vacant property layers
   const [vacantVisible, setVacantVisible] = useState<Record<string, boolean>>({
@@ -136,7 +137,12 @@ export default function MapView() {
   );
 
   /* ── Fetch area stats for a location ────── */
-  const loadCensusForPoint = useCallback(async (lat: number, lon: number, label?: string) => {
+  const cleanZip = useCallback((zip?: string | null) => {
+    const value = zip?.trim() || "";
+    return /^\d{5}$/.test(value) && value !== "00000" ? value : undefined;
+  }, []);
+
+  const loadCensusForPoint = useCallback(async (lat: number, lon: number, label?: string, zipHint?: string | null) => {
     if (label) setSnapshotLabel(label);
     try {
       const [data, parcelData] = await Promise.all([
@@ -158,6 +164,7 @@ export default function MapView() {
             : DEFAULT_STATS.medianIncome,
           walkScore: data.walkScore ?? DEFAULT_STATS.walkScore,
           parcelPin: parcelData?.pin || undefined,
+          parcelZip: cleanZip(parcelData?.zip) || cleanZip(zipHint),
           parcelClass: parcelData?.classCode || undefined,
           parcelClassDescription: parcelData?.classDescription || undefined,
           parcelValue: parcelData?.totalValue || undefined,
@@ -191,7 +198,7 @@ export default function MapView() {
     } catch {
       // Keep defaults
     }
-  }, []);
+  }, [cleanZip]);
 
   // Store loadCensusForPoint in a ref so the map.on("load") closure can use it
   const loadCensusRef = useRef(loadCensusForPoint);
@@ -1148,7 +1155,7 @@ export default function MapView() {
 
   /* ── Search result handler ─────────────── */
   const handleSearchResult = useCallback(
-    (result: { lat: number; lon: number; label: string }) => {
+    (result: { lat: number; lon: number; label: string; zip?: string | null }) => {
       if (!mapRef.current) return;
       const map = mapRef.current;
 
@@ -1183,7 +1190,7 @@ export default function MapView() {
       // Update Area Snapshot for the search location
       setSnapshotOpen(true);
       lastClickRef.current(result.lat, result.lon);
-      loadCensusRef.current(result.lat, result.lon, result.label.split(" — ")[0]);
+      loadCensusRef.current(result.lat, result.lon, result.label.split(" — ")[0], result.zip);
     },
     []
   );
@@ -1228,6 +1235,13 @@ export default function MapView() {
       setIsGeneratingSnapshot(false);
     }
   }, [isGeneratingSnapshot, lastClickLat, lastClickLon, searchQuery, snapshotLabel]);
+
+  const handleGenerateCorridorReport = useCallback(() => {
+    const zip = areaStats.parcelZip?.trim();
+    if (!zip) return;
+    const params = new URLSearchParams({ corridor: zip });
+    window.location.href = `/report?${params.toString()}`;
+  }, [areaStats.parcelZip]);
 
   /* ── Detect mobile for layout ───────── */
   const [isMobile, setIsMobile] = useState(false);
@@ -1499,6 +1513,11 @@ export default function MapView() {
           isGeneratingSnapshot={isGeneratingSnapshot}
           onClose={() => setSnapshotOpen(false)}
           onGenerateSnapshot={handleGenerateSnapshot}
+          onGenerateCorridorReport={handleGenerateCorridorReport}
+          canGenerateCorridorReport={Boolean(
+            areaStats.parcelZip && supportedCorridorZips.has(areaStats.parcelZip)
+          )}
+          corridorLabel={areaStats.parcelZip ? `ZIP ${areaStats.parcelZip}` : undefined}
           onDrawArea={() => {
             const draw = drawRef.current;
             if (!draw) return;

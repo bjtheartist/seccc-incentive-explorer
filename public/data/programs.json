@@ -1761,6 +1761,73 @@
     "fastestConfirmingStep": "Visit innovate-illinois.com/dceo-incentives for next round timing"
   },
   {
+    "id": "economicEmpowermentCenters",
+    "name": "Economic Empowerment Centers (EEC) Grant Program — Round 2",
+    "level": "State",
+    "zoneKey": "",
+    "summary": "DCEO Office of Economic Equity & Empowerment grant program supporting organizations that deliver tailored business training, mentorship, outreach, and enterprise-building services for underserved businesses and entrepreneurs. Round 2 is open on a rolling basis until funding is exhausted.",
+    "whoQualifies": "Career education agencies and nonprofit organizations, including local development corporations, chambers of commerce, community-based outreach centers, and organizations serving underserved businesses and entrepreneurs.",
+    "benefits": [
+      "$250,000-$500,000 grant awards",
+      "Supports business advising, cohort training, mentorship, outreach, and other enterprise-building services",
+      "Designed to strengthen inclusive business ecosystems in communities facing systemic barriers to entry and growth"
+    ],
+    "howToApply": [
+      "Review the DCEO EEC Round 2 NOFO and application documents",
+      "Confirm the applicant organization is pre-qualified through the State of Illinois grant process",
+      "Prepare organizational documents, project narrative, budget, and required supporting materials",
+      "Submit the application through the DCEO application submission form while funds remain available"
+    ],
+    "requiredDocs": [
+      "Mission statement",
+      "Articles of incorporation",
+      "Organizational chart",
+      "Project location photo and CDFI Map Area documentation, if applicable",
+      "Uniform application and uniform budget",
+      "Mandatory disclosure and conflict of interest disclosure"
+    ],
+    "contact": "DCEO EEC Program: CEO.EECProgram@illinois.gov",
+    "url": "https://dceo.illinois.gov/oe3/econ-empowerment-centers.html",
+    "sourceUrl": "https://dceo.illinois.gov/aboutdceo/grantopportunities/3226-4281.html",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Illinois DCEO Office of Economic Equity & Empowerment",
+        "abbreviation": "DCEO OE3",
+        "phone": "(217) 782-7500",
+        "email": "CEO.EECProgram@illinois.gov",
+        "url": "https://dceo.illinois.gov/oe3/econ-empowerment-centers.html"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Applicant must operate in Illinois and serve eligible Illinois businesses or entrepreneurs", "verifiedBy": "manual", "required": true },
+      { "criterion": "industry", "description": "Applicant must be a career education agency or nonprofit organization delivering business-support services", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2026-06-02",
+    "benefitRange": "$250,000-$500,000",
+    "fastestConfirmingStep": "Review DCEO Grant Opportunity 3226-4281 and email CEO.EECProgram@illinois.gov with program questions",
+    "expirationNote": "Round 2 applications are accepted on a rolling basis until funding is exhausted.",
+    "applicationPortals": [
+      {
+        "type": "web",
+        "label": "DCEO EEC Round 2 application submission form",
+        "url": "https://app.smartsheet.com/b/form/2ba62593649141b284a59825d3cb957e",
+        "language": "en",
+        "notes": "DCEO Grant Opportunity 3226-4281"
+      }
+    ],
+    "verificationSteps": [
+      {
+        "label": "State grant pre-qualification",
+        "agency": "Illinois DCEO / GATA",
+        "url": "https://dceo.illinois.gov/aboutdceo/grantopportunities/learning-library.html",
+        "kind": "preapproval",
+        "appliesBefore": "application",
+        "note": "DCEO notes that entities must be pre-qualified for the application to be considered."
+      }
+    ]
+  },
+  {
     "id": "filmCredit",
     "name": "Illinois Film Production Services Tax Credit",
     "level": "State",

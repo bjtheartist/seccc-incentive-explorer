@@ -8,7 +8,6 @@ import {
   isVacantClass,
 } from "@/lib/parcel-classes";
 import { socrataHeaders } from "@/lib/socrata";
-import { classifyOwner } from "@/lib/owner-classify";
 import type { ParcelData } from "@/lib/types";
 
 /**
@@ -26,6 +25,11 @@ import type { ParcelData } from "@/lib/types";
 const fmtMoney = (v: number | null) =>
   v != null ? `$${Number(v).toLocaleString()}` : null;
 
+const cleanZip = (zip: unknown) => {
+  const value = typeof zip === "string" ? zip.trim() : "";
+  return /^\d{5}$/.test(value) && value !== "00000" ? value : null;
+};
+
 /** Look up the nearest stored parcel within ~50m of the point, or null. */
 async function dbParcel(lat: number, lon: number): Promise<ParcelData | null> {
   const sql = getSQL();
@@ -35,7 +39,7 @@ async function dbParcel(lat: number, lon: number): Promise<ParcelData | null> {
       SELECT pin, address, class_code, class_description, tax_code, township,
              land_sqft, bldg_sqft, bldg_age, land_value, bldg_value, total_value,
              parcel_type, is_commercial, is_industrial, is_vacant,
-             owner_name, owner_mailing_address, owner_type
+             owner_name, owner_mailing_address, owner_type, zip
       FROM parcels
       WHERE geom IS NOT NULL
         AND ST_DWithin(geom, ST_MakePoint(${lon}, ${lat})::geography, 50)
@@ -47,6 +51,7 @@ async function dbParcel(lat: number, lon: number): Promise<ParcelData | null> {
     return {
       pin: r.pin || "",
       address: r.address || "",
+      zip: cleanZip(r.zip),
       classCode: r.class_code || "",
       classDescription: r.class_description || describeClassCode(r.class_code || ""),
       taxCode: r.tax_code || "",
@@ -145,6 +150,7 @@ export async function GET(request: NextRequest) {
           return {
             pin: a.PIN14 || "",
             address: [a.Address, a.City, a.Zip_Code].filter(Boolean).join(", "),
+            zip: cleanZip(a.Zip_Code),
             classCode,
             classDescription: describeClassCode(classCode),
             taxCode: a.TaxCode || "",
@@ -168,7 +174,13 @@ export async function GET(request: NextRequest) {
 
     // Source 3: Socrata Parcel Universe (fallback)
     try {
-      const sodaUrl = `https://datacatalog.cookcountyil.gov/resource/nj4t-kc8j.json?$where=within_circle(loc_property_location,${lat},${lon},50)&$limit=1`;
+      const pointLat = parseFloat(lat!);
+      const pointLon = parseFloat(lon!);
+      const delta = 0.0008; // roughly 50-90m around Chicago, enough for a parcel fallback.
+      const where = encodeURIComponent(
+        `lat between ${pointLat - delta} and ${pointLat + delta} AND lon between ${pointLon - delta} and ${pointLon + delta}`
+      );
+      const sodaUrl = `https://datacatalog.cookcountyil.gov/resource/nj4t-kc8j.json?$where=${where}&$limit=1&$order=year DESC`;
       const res = await fetchWithRetry(sodaUrl, {
         headers: socrataHeaders(),
       });
@@ -180,7 +192,8 @@ export async function GET(request: NextRequest) {
           const classCode = r.class || "";
           return {
             pin: r.pin || "",
-            address: r.prop_address || "",
+            address: r.prop_address || r.address || "",
+            zip: cleanZip(r.zip_code),
             classCode,
             classDescription: describeClassCode(classCode),
             taxCode: r.tax_code || "",
@@ -188,9 +201,9 @@ export async function GET(request: NextRequest) {
             landSqft: r.land_square_footage != null ? Number(r.land_square_footage) : null,
             bldgSqft: r.building_square_footage != null ? Number(r.building_square_footage) : null,
             bldgAge: r.age != null ? Number(r.age) : null,
-            landValue: r.certified_land != null ? `$${Number(r.certified_land).toLocaleString()}` : null,
-            bldgValue: r.certified_building != null ? `$${Number(r.certified_building).toLocaleString()}` : null,
-            totalValue: r.certified_total != null ? `$${Number(r.certified_total).toLocaleString()}` : null,
+            landValue: null,
+            bldgValue: null,
+            totalValue: null,
             parcelType: r.property_type != null ? Number(r.property_type) : null,
             isCommercial: isCommercialClass(classCode),
             isIndustrial: isIndustrialClass(classCode),
@@ -211,11 +224,12 @@ export async function GET(request: NextRequest) {
 
   // Mutable copy for enrichment
   const enriched: ParcelData = { ...result };
+  enriched.zip = cleanZip(enriched.zip);
 
-  // Non-blocking Cook County Assessor enrichment (assessment + ownership)
+  // Non-blocking assessed-value enrichment.
   if (enriched.pin) {
     try {
-      const assessorUrl = `https://datacatalog.cookcountyassessor.com/resource/uzyt-m557.json?pin=${enriched.pin}&$limit=1`;
+      const assessorUrl = `https://datacatalog.cookcountyil.gov/resource/uzyt-m557.json?pin=${enriched.pin}&$limit=1&$order=year DESC`;
       const res = await fetch(assessorUrl, {
         headers: socrataHeaders(),
         signal: AbortSignal.timeout(5000),
@@ -224,19 +238,15 @@ export async function GET(request: NextRequest) {
         const data = await res.json();
         if (data && data.length > 0) {
           const a = data[0];
-          enriched.assessedLand = a.certified_tot_land != null ? Number(a.certified_tot_land) : null;
-          enriched.assessedBuilding = a.certified_tot_bldg != null ? Number(a.certified_tot_bldg) : null;
+          enriched.assessedLand = a.certified_land != null ? Number(a.certified_land) : null;
+          enriched.assessedBuilding = a.certified_bldg != null ? Number(a.certified_bldg) : null;
           enriched.assessedTotal =
-            enriched.assessedLand != null && enriched.assessedBuilding != null
-              ? enriched.assessedLand + enriched.assessedBuilding
-              : null;
-          enriched.taxYear = a.tax_year || null;
-          enriched.priorYearTax = a.total_billed != null ? Number(a.total_billed) : null;
-          // Ownership data
-          enriched.ownerName = a.tax_bill_name || a.taxpayer_name || null;
-          const mailingParts = [a.tax_bill_mailing_address, a.tax_bill_city, a.tax_bill_state, a.tax_bill_zip].filter(Boolean);
-          enriched.ownerMailingAddress = mailingParts.length > 0 ? mailingParts.join(", ") : null;
-          enriched.ownerType = classifyOwner(enriched.ownerName, enriched.ownerMailingAddress);
+            a.certified_tot != null
+              ? Number(a.certified_tot)
+              : enriched.assessedLand != null && enriched.assessedBuilding != null
+                ? enriched.assessedLand + enriched.assessedBuilding
+                : null;
+          enriched.taxYear = a.year || null;
         }
       }
     } catch {

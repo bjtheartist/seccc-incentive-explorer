@@ -191,6 +191,7 @@ export interface AreaStats {
   medianIncome: string;
   walkScore: number;
   parcelPin?: string;
+  parcelZip?: string | null;
   parcelClass?: string;
   parcelClassDescription?: string;
   parcelValue?: string;

@@ -44,6 +44,14 @@ An adapter implements exactly four members:
 - **Adapters own their SQL.** The runner passes the client; it never writes.
 - **Migrations are additive + idempotent** (`CREATE TABLE IF NOT EXISTS`,
   `ADD COLUMN IF NOT EXISTS`). Never alter/drop existing tables or columns.
+- **Fixture against live-shaped rows.** Unit tests should include the upstream
+  field names actually published by the source. For example, Cook County Parcel
+  Universe uses `lat`, `lon`, and `zip_code`; it does not publish owner fields.
+  Owner confidence should come from an explicit ownership source, not inferred
+  from assessed-value rows.
+- **Snapshot tables need snapshot filters.** Historical sources with a `year`
+  column should be filtered to the latest source year before upserting into
+  current-state tables like `parcels`.
 
 ## How to add a new source
 
