@@ -44,6 +44,15 @@ function serialize(r: CorridorRow) {
   };
 }
 
+function isMissingCorridorTableError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code?: unknown }).code === "42P01"
+  );
+}
+
 export async function GET(request: NextRequest) {
   const zip = request.nextUrl.searchParams.get("zip");
 
@@ -93,6 +102,16 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (err) {
+    if (isMissingCorridorTableError(err)) {
+      return NextResponse.json(
+        { corridors: [] },
+        {
+          headers: {
+            "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=300",
+          },
+        }
+      );
+    }
     console.error("corridor API error:", err);
     return NextResponse.json({ error: "Database query failed" }, { status: 500 });
   }

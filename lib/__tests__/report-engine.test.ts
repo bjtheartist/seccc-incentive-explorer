@@ -181,4 +181,109 @@ describe("generateReportData", () => {
     expect(sbifEstimate?.label).toContain("90%");
     expect(sbifEstimate?.estimatedValue).toBeLessThanOrEqual(250_000);
   });
+
+  it("adds neighborhood economic context with measured ZBP and license-continuity signals when provided", () => {
+    const report = generateReportData(
+      makeState(),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        census: {
+          medianIncome: 58000,
+          medianHomeValue: 210000,
+          population: 4200,
+          walkScore: 13,
+          tractId: "17031000100",
+        },
+        neighborhoodEconomics: {
+          geographyLabel: "ZIP 60619",
+          businessContinuity: {
+            baselineYear: 2020,
+            comparisonYear: 2025,
+            baselineActive: 1000,
+            comparisonActive: 920,
+            retained: 620,
+            newSinceBaseline: 300,
+            continuityRate: 0.62,
+          },
+          jobsPayroll: {
+            baselineYear: 2020,
+            comparisonYear: 2023,
+            baselineEstablishments: 420,
+            comparisonEstablishments: 455,
+            baselineEmployment: 3200,
+            comparisonEmployment: 3600,
+            employmentGrowthRate: 0.125,
+            baselineAnnualPayroll: 180000000,
+            comparisonAnnualPayroll: 230000000,
+            payrollGrowthRate: 0.278,
+          },
+          reinvestment: {
+            permitCount: 80,
+            reportedCost: 12500000,
+            windowLabel: "the trailing 24 months",
+          },
+          property: {
+            distinctOwners: 500,
+            assessedValueChangeRate: 0.08,
+          },
+        },
+      },
+    );
+
+    const section = report.sections.find((s) => s.title === "Neighborhood Economic Context");
+    expect(section).toBeDefined();
+    expect(section?.items.find((i) => i.label === "Business Continuity")?.value).toContain("62%");
+    expect(section?.items.find((i) => i.label === "Jobs & Payroll")?.detail).toContain("Census ZIP Business Patterns");
+    expect(section?.items.find((i) => i.label === "Jobs & Payroll")?.value).toContain("jobs +13%");
+    expect(section?.items.find((i) => i.label === "Leakage Signals")?.value).toContain("Modeled");
+    expect(report.dataSources?.map((source) => source.id)).toContain("zbp");
+    expect(report.dataSources?.map((source) => source.id)).toContain("buildingPermits");
+    expect(report.dataSources?.map((source) => source.id)).toContain("assessorValues");
+  });
+
+  it("generates corridor intelligence reports from corridor metrics", () => {
+    const report = generateReportData(
+      makeState({
+        reportType: "corridor-intelligence",
+        neighborhood: "60617",
+        address: "",
+        lat: null,
+        lon: null,
+      }),
+      [makeProgram()],
+      {
+        corridorMetrics: {
+          corridorType: "zip",
+          corridorId: "60617",
+          vacancyRate: 0.12,
+          turnoverRate: 0.08,
+          ownershipHHI: 0.23,
+          localOwnershipShare: 0.41,
+          permitCount: 19,
+          incentiveCoverage: null,
+          healthScore: 64,
+          details: {
+            vacancy: { vacantCount: 120, totalParcels: 1000 },
+            turnover: { openings: 18, closures: 7 },
+            ownershipConcentration: { distinctOwners: 720, topOwnerShare: 0.03, totalParcels: 1000 },
+            ownershipOrigin: { localCount: 280, outsideCount: 400, unknownCount: 320 },
+            permits: { totalReportedCost: 1500000, demolitionCount: 2 },
+          },
+        },
+      },
+    );
+
+    expect(report.reportType).toBe("corridor-intelligence");
+    expect(report.title).toContain("ZIP 60617");
+    expect(report.metadata.corridorLabel).toBe("ZIP 60617");
+    expect(report.subtitle).toContain("Market and resilience signals");
+    expect(report.sections.find((section) => section.title === "Market Signal Summary")?.table?.rows.length).toBeGreaterThan(0);
+    expect(report.sections.map((section) => section.title)).toContain("What The Signals Say");
+    expect(report.sections.map((section) => section.title)).toContain("How To Read This");
+    expect(report.sections.map((section) => section.title)).toContain("What A Funded Version Unlocks");
+    expect(report.sections.map((section) => section.title)).not.toContain("Intervention Buckets");
+    expect(report.recommendedActions).toEqual([]);
+  });
 });

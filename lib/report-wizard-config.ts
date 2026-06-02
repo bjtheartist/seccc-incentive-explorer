@@ -4,7 +4,7 @@
 
 // ─── Core Types ─────────────────────────────────────────────────────
 
-export type ReportType = "site-incentives" | "dev-feasibility";
+export type ReportType = "site-incentives" | "dev-feasibility" | "corridor-intelligence";
 
 export interface ReportTypeOption {
   id: ReportType;
@@ -358,7 +358,7 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
     id: "report-type",
     title: "What kind of report do you want to generate?",
     subtitle: "Choose the analysis that fits your situation.",
-    appliesTo: ["site-incentives", "dev-feasibility"],
+    appliesTo: ["site-incentives", "dev-feasibility", "corridor-intelligence"],
     inputType: "report-type",
     stateKey: "reportType",
     options: REPORT_TYPE_OPTIONS.map((opt) => ({
@@ -457,6 +457,42 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
     title: "Review & Generate",
     subtitle: "Confirm your selections and generate your vacancy report.",
     appliesTo: ["dev-feasibility"],
+    inputType: "review",
+    stateKey: "reportType",
+  },
+
+  // ── Corridor Intelligence flow ───────────────────────────────────
+
+  {
+    id: "ci-corridor",
+    title: "Which corridor geography?",
+    subtitle: "V1 uses ZIP-based corridor metrics while neighborhood and district boundaries are added.",
+    appliesTo: ["corridor-intelligence"],
+    inputType: "single",
+    stateKey: "neighborhood",
+    options: [
+      {
+        id: "60617",
+        label: "60617 — South Chicago / Calumet Area",
+        description: "Good for Southeast corridor resilience and intervention testing.",
+      },
+      {
+        id: "60619",
+        label: "60619 — Chatham / Greater Grand Crossing Area",
+        description: "Good for ownership, vacancy, and business activity comparison.",
+      },
+      {
+        id: "60649",
+        label: "60649 — South Shore / Woodlawn Area",
+        description: "Good for lakefront corridor and commercial district signals.",
+      },
+    ],
+  },
+  {
+    id: "ci-review",
+    title: "Review & Generate",
+    subtitle: "Generate a directional corridor intelligence report.",
+    appliesTo: ["corridor-intelligence"],
     inputType: "review",
     stateKey: "reportType",
   },

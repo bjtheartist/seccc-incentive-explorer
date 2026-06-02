@@ -182,6 +182,7 @@ export interface CensusData {
 export interface ParcelData {
   pin: string;              // 14-digit Cook County PIN
   address: string;          // Street address from parcel record
+  zip?: string | null;      // ZIP code from parcel source when available
   classCode: string;        // e.g. "5-17", "2-11"
   classDescription: string; // "One-story commercial building"
   taxCode: string;

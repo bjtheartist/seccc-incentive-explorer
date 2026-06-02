@@ -48,10 +48,19 @@ import type {
   WizardStepConfig,
 } from "@/lib/report-wizard-config";
 import { generateReportData } from "@/lib/report-engine";
-import type { GeneratedReport, ReportCensusData, ReportZoningData, ActionRoadmapItem } from "@/lib/report-engine";
+import type {
+  GeneratedReport,
+  ReportCensusData,
+  ReportZoningData,
+  ActionRoadmapItem,
+  CorridorMetric,
+  CorridorOwnerCluster,
+  NeighborhoodEconomicContext,
+} from "@/lib/report-engine";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
 import { normalizeZoneCheckResponse } from "@/lib/zone-response";
+import { extractChicagoZipCode } from "@/lib/neighborhood-economic-context";
 import {
   Accordion,
   AccordionItem,
@@ -165,6 +174,13 @@ function buildVacancySpreadsheetCsv(features: VacancySpreadsheetFeature[]): stri
   });
 
   return [header.join(","), ...rows].join("\n");
+}
+
+function buildTableCsv(columns: string[], rows: string[][]): string {
+  return [
+    columns.map(toCsvCell).join(","),
+    ...rows.map((row) => row.map(toCsvCell).join(",")),
+  ].join("\n");
 }
 
 function downloadCsv(csv: string, filename: string) {
@@ -312,15 +328,23 @@ function ReportWizardPage() {
   const instantLon = searchParams.get("lon") ? parseFloat(searchParams.get("lon")!) : null;
   const urlAddress = searchParams.get("addr") || "";
   const instantAddr = urlAddress;
+  const corridorParam = searchParams.get("corridor") || "";
+  const corridorPreviewKey = searchParams.get("preview") || "";
+  const isCorridorPreview = corridorPreviewKey === "corridor-poc";
+  const isCorridorMode = Boolean(corridorParam && isCorridorPreview);
 
   // Try to hydrate wizard state from URL params
   const urlWizardState = useMemo(() => decodeWizardState(searchParams), [searchParams]);
-  const isShareMode = !!urlWizardState?.reportType && !isInstantMode;
+  const shareWizardState =
+    urlWizardState?.reportType === "corridor-intelligence" && !isCorridorPreview
+      ? null
+      : urlWizardState;
+  const isShareMode = !!shareWizardState?.reportType && !isInstantMode;
 
   // Wizard state
   const [wizardState, setWizardState] = useState<WizardState>(() => {
-    if (urlWizardState && !isInstantMode) {
-      return urlWizardState;
+    if (shareWizardState && !isInstantMode) {
+      return shareWizardState;
     }
     if (isInstantMode && instantLat && instantLon) {
       return {
@@ -329,6 +353,13 @@ function ReportWizardPage() {
         address: instantAddr,
         lat: instantLat,
         lon: instantLon,
+      };
+    }
+    if (isCorridorMode) {
+      return {
+        ...INITIAL_WIZARD_STATE,
+        reportType: "corridor-intelligence",
+        neighborhood: corridorParam,
       };
     }
     if (urlAddress) {
@@ -360,6 +391,8 @@ function ReportWizardPage() {
   const [compareCensus, setCompareCensus] = useState<ReportCensusData | null>(null);
   const [compareZoning, setCompareZoning] = useState<ReportZoningData | null>(null);
   const [compareParcel, setCompareParcel] = useState<ParcelData | null>(null);
+  const [compareNeighborhoodEconomics, setCompareNeighborhoodEconomics] = useState<NeighborhoodEconomicContext | null>(null);
+  const [compareNeighborhoodEconomicsZip, setCompareNeighborhoodEconomicsZip] = useState<string | null>(null);
 
   // Data state
   const [programs, setPrograms] = useState<Program[]>([]);
@@ -372,23 +405,50 @@ function ReportWizardPage() {
   const [stackingRules, setStackingRules] = useState<StackingRule[] | null>(null);
   const [communityAssets, setCommunityAssets] = useState<CommunityAsset[] | null>(null);
   const [areaStats, setAreaStats] = useState<Stats | null>(null);
+  const [corridorMetric, setCorridorMetric] = useState<CorridorMetric | null>(null);
+  const [corridorOwnerClusters, setCorridorOwnerClusters] = useState<CorridorOwnerCluster[]>([]);
+  const [corridorLoading, setCorridorLoading] = useState(isCorridorMode);
+  const [neighborhoodEconomics, setNeighborhoodEconomics] = useState<NeighborhoodEconomicContext | null>(null);
+  const [neighborhoodEconomicsZip, setNeighborhoodEconomicsZip] = useState<string | null>(null);
 
   // Address / geocode state
   const [addressInput, setAddressInput] = useState(
-    urlWizardState?.address || urlAddress
+    shareWizardState?.address || urlAddress
   );
   const [geocodeResult, setGeocodeResult] = useState<{
     lat: number;
     lon: number;
     display_name: string;
-  } | null>(instantLat && instantLon && (urlWizardState?.address || urlAddress)
-    ? { lat: instantLat, lon: instantLon, display_name: urlWizardState?.address || urlAddress }
+  } | null>(instantLat && instantLon && (shareWizardState?.address || urlAddress)
+    ? { lat: instantLat, lon: instantLon, display_name: shareWizardState?.address || urlAddress }
     : null);
   const [isGeocoding, setIsGeocoding] = useState(false);
   const [geocodeError, setGeocodeError] = useState<string | null>(null);
 
   // Instant mode state
   const [instantLoading, setInstantLoading] = useState(isInstantMode);
+
+  const reportZip = useMemo(
+    () =>
+      extractChicagoZipCode(
+        wizardState.neighborhood,
+        parcelData?.zip,
+        wizardState.address,
+        geocodeResult?.display_name,
+        addressInput
+      ),
+    [addressInput, geocodeResult?.display_name, parcelData?.zip, wizardState.address, wizardState.neighborhood]
+  );
+
+  const compareZip = useMemo(
+    () =>
+      extractChicagoZipCode(
+        compareParcel?.zip,
+        compareGeoResult?.display_name,
+        compareAddressInput
+      ),
+    [compareAddressInput, compareGeoResult?.display_name, compareParcel?.zip]
+  );
 
   // Load programs on mount
   useEffect(() => {
@@ -453,6 +513,77 @@ function ReportWizardPage() {
     });
   }, []);
 
+  // Load aggregate neighborhood economic context when a ZIP is available.
+  useEffect(() => {
+    if (!reportZip) {
+      setNeighborhoodEconomics(null);
+      setNeighborhoodEconomicsZip(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setNeighborhoodEconomics(null);
+    setNeighborhoodEconomicsZip(null);
+
+    fetch(`/api/neighborhood-economics?zip=${encodeURIComponent(reportZip)}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : null) as Promise<{ neighborhoodEconomics?: NeighborhoodEconomicContext | null } | null>)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setNeighborhoodEconomics(data?.neighborhoodEconomics ?? null);
+        setNeighborhoodEconomicsZip(reportZip);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setNeighborhoodEconomics(null);
+          setNeighborhoodEconomicsZip(reportZip);
+        }
+      });
+
+    return () => controller.abort();
+  }, [reportZip]);
+
+  // Load corridor intelligence metrics when the report is corridor-based.
+  useEffect(() => {
+    if (wizardState.reportType !== "corridor-intelligence" || !wizardState.neighborhood) {
+      setCorridorMetric(null);
+      setCorridorOwnerClusters([]);
+      setCorridorLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    setCorridorLoading(true);
+    Promise.all([
+      fetch(
+        `/api/corridor?zip=${encodeURIComponent(wizardState.neighborhood)}&_=${Date.now()}`,
+        { cache: "no-store", signal: controller.signal }
+      ).then((res) => (res.ok ? res.json() : null) as Promise<{ corridors?: CorridorMetric[] } | null>),
+      fetch(
+        `/api/corridor/owners?zip=${encodeURIComponent(wizardState.neighborhood)}&limit=50&_=${Date.now()}`,
+        { cache: "no-store", signal: controller.signal }
+      ).then((res) => (res.ok ? res.json() : null) as Promise<{ clusters?: CorridorOwnerCluster[] } | null>),
+    ])
+      .then(([metricData, ownerData]) => {
+        if (controller.signal.aborted) return;
+        setCorridorMetric(metricData?.corridors?.[0] ?? null);
+        setCorridorOwnerClusters(ownerData?.clusters ?? []);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setCorridorMetric(null);
+          setCorridorOwnerClusters([]);
+        }
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCorridorLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [wizardState.neighborhood, wizardState.reportType]);
+
   // ── Comparison data fetching ──
   useEffect(() => {
     if (!compareGeoResult) return;
@@ -476,9 +607,41 @@ function ReportWizardPage() {
     cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareParcel(d); }).catch(() => {});
   }, [compareGeoResult]);
 
+  useEffect(() => {
+    if (!compareZip) {
+      setCompareNeighborhoodEconomics(null);
+      setCompareNeighborhoodEconomicsZip(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    setCompareNeighborhoodEconomics(null);
+    setCompareNeighborhoodEconomicsZip(null);
+
+    fetch(`/api/neighborhood-economics?zip=${encodeURIComponent(compareZip)}`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((res) => (res.ok ? res.json() : null) as Promise<{ neighborhoodEconomics?: NeighborhoodEconomicContext | null } | null>)
+      .then((data) => {
+        if (controller.signal.aborted) return;
+        setCompareNeighborhoodEconomics(data?.neighborhoodEconomics ?? null);
+        setCompareNeighborhoodEconomicsZip(compareZip);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setCompareNeighborhoodEconomics(null);
+          setCompareNeighborhoodEconomicsZip(compareZip);
+        }
+      });
+
+    return () => controller.abort();
+  }, [compareZip]);
+
   // Generate comparison report once compare data is ready
   useEffect(() => {
     if (!compareGeoResult || !compareZones || programs.length === 0) return;
+    if (compareZip && compareNeighborhoodEconomicsZip !== compareZip) return;
     const timer = setTimeout(() => {
       const compareState: WizardState = {
         ...wizardState,
@@ -492,17 +655,19 @@ function ReportWizardPage() {
         census: compareCensus ?? undefined,
         cityZoning: compareZoning ?? undefined,
         parcel: compareParcel ?? undefined,
+        neighborhoodEconomics: compareNeighborhoodEconomics ?? undefined,
       });
       setCompareReport(generated);
     }, 400);
     return () => clearTimeout(timer);
-  }, [compareGeoResult, compareZones, compareZoneNames, compareCensus, compareZoning, compareParcel, programs, wizardState]);
+  }, [compareGeoResult, compareZones, compareZoneNames, compareCensus, compareZoning, compareParcel, compareZip, compareNeighborhoodEconomicsZip, compareNeighborhoodEconomics, programs, wizardState]);
 
   // Instant mode: auto-generate report once programs + zones are loaded
   // Small delay gives census/zoning APIs time to resolve alongside zones
   useEffect(() => {
     if (!isInstantMode || !instantLoading) return;
     if (programs.length === 0 || !zones) return;
+    if (reportZip && neighborhoodEconomicsZip !== reportZip) return;
 
     const timer = setTimeout(() => {
       setIsGenerating(true);
@@ -517,6 +682,7 @@ function ReportWizardPage() {
           stackingRules: stackingRules ?? undefined,
           communityAssets: communityAssets ?? undefined,
           stats: areaStats ?? undefined,
+          neighborhoodEconomics: neighborhoodEconomics ?? undefined,
         });
         setReport(generated);
       } catch {
@@ -527,7 +693,32 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats, wizardState]);
+  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
+
+  // Corridor URL mode: auto-generate a corridor report after the metric lookup completes.
+  const [corridorAutoGenerated, setCorridorAutoGenerated] = useState(false);
+  useEffect(() => {
+    if (!isCorridorMode || corridorAutoGenerated) return;
+    if (programs.length === 0 || corridorLoading) return;
+
+    const timer = setTimeout(() => {
+      setIsGenerating(true);
+      try {
+        const generated = generateReportData(wizardState, programs, {
+          corridorMetrics: corridorMetric ?? undefined,
+          corridorOwnerClusters,
+          stats: areaStats ?? undefined,
+        });
+        setReport(generated);
+        setCorridorAutoGenerated(true);
+      } catch {
+        // Stay on loading
+      } finally {
+        setIsGenerating(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [isCorridorMode, corridorAutoGenerated, programs, corridorLoading, corridorMetric, corridorOwnerClusters, areaStats, wizardState]);
 
   // Share mode: auto-generate report once programs + zones are loaded
   const [shareAutoGenerated, setShareAutoGenerated] = useState(false);
@@ -536,6 +727,8 @@ function ReportWizardPage() {
     if (programs.length === 0) return;
     // For address-based reports, wait for zones
     if (!zones && wizardState.lat) return;
+    if (wizardState.reportType === "corridor-intelligence" && corridorLoading) return;
+    if (reportZip && neighborhoodEconomicsZip !== reportZip) return;
 
     const timer = setTimeout(() => {
       setIsGenerating(true);
@@ -550,6 +743,9 @@ function ReportWizardPage() {
           stackingRules: stackingRules ?? undefined,
           communityAssets: communityAssets ?? undefined,
           stats: areaStats ?? undefined,
+          corridorMetrics: corridorMetric ?? undefined,
+          corridorOwnerClusters,
+          neighborhoodEconomics: neighborhoodEconomics ?? undefined,
         });
         setReport(generated);
         setShareAutoGenerated(true);
@@ -560,7 +756,7 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isShareMode, shareAutoGenerated, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats, wizardState]);
+  }, [isShareMode, shareAutoGenerated, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
 
   // Derive steps based on report type
   const steps = useMemo<WizardStepConfig[]>(() => {
@@ -747,6 +943,9 @@ function ReportWizardPage() {
         stackingRules: stackingRules ?? undefined,
         communityAssets: communityAssets ?? undefined,
         stats: areaStats ?? undefined,
+        corridorMetrics: corridorMetric ?? undefined,
+        corridorOwnerClusters,
+        neighborhoodEconomics: neighborhoodEconomics ?? undefined,
       });
       setReport(generated);
     } catch {
@@ -754,7 +953,7 @@ function ReportWizardPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats]);
+  }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics]);
 
   // ── Value Change Handlers ────────────────────────────────────────
 
@@ -801,7 +1000,11 @@ function ReportWizardPage() {
 
   // ── Instant mode loading state ─────────────────────────────────
 
-  if (instantLoading || (isInstantMode && !report && isGenerating)) {
+  if (
+    instantLoading ||
+    (isInstantMode && !report && isGenerating) ||
+    (isCorridorMode && !report && (corridorLoading || isGenerating))
+  ) {
     return (
       <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center">
         <div className="text-center">
@@ -811,10 +1014,12 @@ function ReportWizardPage() {
             <div className="w-2 h-2 bg-[#2563EB]/40 rounded-full animate-pulse" style={{ animationDelay: "0.4s" }} />
           </div>
           <p className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-[#0C1B33]/30 mb-2">
-            Generating Location Snapshot
+            {isCorridorMode ? "Generating Corridor Intelligence" : "Generating Location Snapshot"}
           </p>
-          {instantAddr && (
-            <p className="text-[13px] text-[#0C1B33]/40">{instantAddr}</p>
+          {(isCorridorMode ? corridorParam : instantAddr) && (
+            <p className="text-[13px] text-[#0C1B33]/40">
+              {isCorridorMode ? `ZIP ${corridorParam}` : instantAddr}
+            </p>
           )}
         </div>
       </div>
@@ -2878,6 +3083,7 @@ export function ReportDisplay({
   const reportTypeLabels: Record<string, string> = {
     "site-incentives": "Site Incentive Analysis",
     "dev-feasibility": "Vacancy Analysis",
+    "corridor-intelligence": "Corridor Intelligence",
     // Legacy
     "location-incentives": "Site Incentive Analysis",
     "best-location": "Vacancy Analysis",
@@ -2971,6 +3177,18 @@ export function ReportDisplay({
       cityOwned: features.filter((feature) => feature.properties?.ownerType === "city_public").length,
     };
   }, [vacancySpreadsheetFeatures]);
+  const ownerOperatorSection = useMemo(
+    () => report.sections.find((section) => section.title === "Owner & Operator Map" && section.table),
+    [report.sections],
+  );
+  const handleOwnerOperatorExport = useCallback(() => {
+    if (!ownerOperatorSection?.table) return;
+    const corridorSlug = slugifyFilePart(report.metadata?.corridorLabel || report.metadata?.corridorId || "corridor");
+    downloadCsv(
+      buildTableCsv(ownerOperatorSection.table.columns, ownerOperatorSection.table.rows),
+      `owner-operator-map-${corridorSlug}-${new Date().toISOString().slice(0, 10)}.csv`
+    );
+  }, [ownerOperatorSection, report.metadata?.corridorId, report.metadata?.corridorLabel]);
 
   if (vacancySpreadsheetLocale && !compact) {
     const features = vacancySpreadsheetFeatures ?? [];
@@ -3364,6 +3582,16 @@ export function ReportDisplay({
                 </span>
               </div>
             )}
+            {report.metadata?.corridorLabel && (
+              <div>
+                <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
+                  Geography
+                </span>
+                <span className="text-[#0C1B33] text-[13px]">
+                  {report.metadata.corridorLabel}
+                </span>
+              </div>
+            )}
             {report.metadata?.zoneClass && (
               <div>
                 <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
@@ -3405,13 +3633,15 @@ export function ReportDisplay({
           )}
 
           {/* ── Zoning Map ── */}
-          <div className="px-5 sm:px-12 md:px-16 pt-8">
-            <ReportZoningMap
-              lat={report.metadata?.lat}
-              lon={report.metadata?.lon}
-              address={report.metadata?.address}
-            />
-          </div>
+          {report.metadata?.lat != null && report.metadata?.lon != null && (
+            <div className="px-5 sm:px-12 md:px-16 pt-8">
+              <ReportZoningMap
+                lat={report.metadata.lat}
+                lon={report.metadata.lon}
+                address={report.metadata?.address}
+              />
+            </div>
+          )}
 
           {/* ── Report Body ── */}
           <div className={`report-body ${compact ? "px-4 py-8" : "px-5 sm:px-12 md:px-16 py-14"}`}>
@@ -3514,14 +3744,64 @@ export function ReportDisplay({
                       </h2>
                     </div>
                     <hr className="border-[#0C1B33]/8 mb-5" />
-                    {section.description && (
-                      <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed mb-6 max-w-prose">
-                        {section.description}
-                      </p>
+	                    {section.description && (
+	                      <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed mb-6 max-w-prose">
+	                        {section.description}
+	                      </p>
+	                    )}
+
+                    {section.title === "Owner & Operator Map" && section.table && (
+                      <div className="mb-5">
+                        <button
+                          type="button"
+                          onClick={handleOwnerOperatorExport}
+                          className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-4 py-2.5 hover:bg-[#0C1B33]/80 transition-colors cursor-pointer"
+                        >
+                          <FileText className="w-3.5 h-3.5" />
+                          Download Owner / Operator CSV
+                        </button>
+                      </div>
                     )}
 
-                    {/* Market Analysis comparison bars */}
-                    {section.title === "Market Analysis" && report.marketContext?.comparisons && (
+	                    {section.table && section.table.rows.length > 0 && (
+	                      <div className="border border-[#0C1B33]/8 overflow-x-auto mb-8">
+	                        <table className="w-full min-w-[680px] text-left text-[12px]">
+	                          <thead className="bg-[#0C1B33]/[0.03]">
+	                            <tr>
+	                              {section.table.columns.map((column) => (
+	                                <th
+	                                  key={column}
+	                                  className="px-4 py-3 font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/35"
+	                                >
+	                                  {column}
+	                                </th>
+	                              ))}
+	                            </tr>
+	                          </thead>
+	                          <tbody className="divide-y divide-[#0C1B33]/5">
+	                            {section.table.rows.map((row, rowIndex) => (
+	                              <tr key={rowIndex}>
+	                                {row.map((cell, cellIndex) => (
+	                                  <td
+	                                    key={`${rowIndex}-${cellIndex}`}
+	                                    className={`px-4 py-3 align-top ${
+	                                      cellIndex === 0
+	                                        ? "font-medium text-[#0C1B33]/75"
+	                                        : "text-[#0C1B33]/45"
+	                                    }`}
+	                                  >
+	                                    {cell}
+	                                  </td>
+	                                ))}
+	                              </tr>
+	                            ))}
+	                          </tbody>
+	                        </table>
+	                      </div>
+	                    )}
+
+	                    {/* Neighborhood Economic Context comparison bars */}
+                    {section.title === "Neighborhood Economic Context" && report.marketContext?.comparisons && (
                       <div className="space-y-0 divide-y divide-[#0C1B33]/5 mb-6">
                         {report.marketContext.comparisons.income && (
                           <ComparisonBar

@@ -121,9 +121,11 @@ describe("computeOwnershipConcentration", () => {
     expect(m.topOwnerShare).toBe(0.25);
   });
 
-  it("treats missing owner names as a single (UNKNOWN) bucket", () => {
+  it("excludes missing owner names instead of treating unknown as concentration", () => {
     const m = computeOwnershipConcentration([parcel({}), parcel({ owner_name: "" })]);
-    expect(m.distinctOwners).toBe(1);
+    expect(m.distinctOwners).toBe(0);
+    expect(m.totalParcels).toBe(0);
+    expect(m.hhi).toBe(0);
   });
 });
 
@@ -145,8 +147,8 @@ describe("computeOwnershipOrigin", () => {
     ]);
     expect(m.localCount).toBe(1);
     expect(m.outsideCount).toBe(2);
-    expect(m.localShare).toBeCloseTo(0.2, 10);
-    expect(m.outsideShare).toBeCloseTo(0.4, 10);
+    expect(m.localShare).toBeCloseTo(1 / 3, 10);
+    expect(m.outsideShare).toBeCloseTo(2 / 3, 10);
   });
 });
 

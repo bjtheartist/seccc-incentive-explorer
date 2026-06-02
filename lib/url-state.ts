@@ -73,6 +73,7 @@ export function decodeCheckState(
 const REPORT_TYPE_SHORT: Record<string, string> = {
   "site-incentives": "si",
   "dev-feasibility": "df",
+  "corridor-intelligence": "ci",
   // Legacy
   "location-incentives": "li",
   "best-location": "bl",
@@ -83,6 +84,7 @@ const REPORT_TYPE_SHORT: Record<string, string> = {
 const SHORT_TO_REPORT_TYPE: Record<string, ReportType> = {
   si: "site-incentives",
   df: "dev-feasibility",
+  ci: "corridor-intelligence",
   // Legacy shortcuts map to new types
   li: "site-incentives",
   bl: "dev-feasibility",

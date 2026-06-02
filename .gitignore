@@ -12,6 +12,7 @@
 
 # testing
 /coverage
+/test-results/
 
 # next.js
 /.next/
@@ -23,6 +24,11 @@
 # misc
 .DS_Store
 *.pem
+/.archive/
+/.agents/
+/.claude/
+/.mcp.json
+/skills-lock.json
 
 # debug
 npm-debug.log*
@@ -42,6 +48,15 @@ yarn-error.log*
 # raw / processed data (AirDropped source files — large, not for git)
 /data/raw/
 /data/processed/
+/data/exports/
+!/data/exports/
+!/data/exports/chicago-neighborhood-economics/
+/data/exports/chicago-neighborhood-economics/*
+!/data/exports/chicago-neighborhood-economics/neighborhood_economics_by_zip.json
+!/data/exports/chicago-neighborhood-economics/neighborhood_economics_by_zip.csv
+!/data/exports/southeast-resilience/
+/data/exports/southeast-resilience/*
+!/data/exports/southeast-resilience/neighborhood_growth_signal.json
 
 # typescript
 *.tsbuildinfo

@@ -51,16 +51,14 @@ async function compute() {
 
     /* ── SQL aggregations ──────────────────────────────────────────────
      * parcels: vacancy flag + owner identity/type drive vacancy, ownership
-     *   concentration and local-vs-outside ownership. Parcels carry no `zip`
-     *   column, so we join via business_licenses ZIP centroid is not reliable;
-     *   instead we match on the ZIP embedded in the raw_json address payload.
-     * NOTE: parcels has no first-class `zip` column. We extract it from
-     *   raw_json so the join stays ZIP-keyed. Parcels without a parseable ZIP
-     *   are excluded from that corridor. */
+     *   concentration and local-vs-outside ownership. `zip` is stored from the
+     *   Cook County Parcel Universe `zip_code` field; the raw_json fallback keeps
+     *   older disposable test branches usable after the migration adds the column. */
     const parcels = (await sql`
       SELECT pin, is_vacant, owner_name, owner_type
       FROM parcels
-      WHERE raw_json->>'zip' = ${zip}
+      WHERE zip = ${zip}
+         OR raw_json->>'zip_code' = ${zip}
          OR address ILIKE ${"%" + zip + "%"}
     `) as ParcelRow[];
 
@@ -71,10 +69,19 @@ async function compute() {
     `) as BusinessLicenseRow[];
 
     const permits = (await sql`
-      SELECT issue_date, reported_cost, is_demolition
-      FROM building_permits
-      WHERE zip = ${zip}
-        AND issue_date >= ${windowStart.toISOString().slice(0, 10)}
+      SELECT bp.issue_date, bp.reported_cost, bp.is_demolition
+      FROM building_permits bp
+      JOIN LATERAL (
+        SELECT p.zip
+        FROM parcels p
+        WHERE p.geom IS NOT NULL
+          AND bp.geom IS NOT NULL
+          AND ST_DWithin(p.geom, bp.geom, 200)
+        ORDER BY p.geom <-> bp.geom
+        LIMIT 1
+      ) nearest ON TRUE
+      WHERE nearest.zip = ${zip}
+        AND bp.issue_date >= ${windowStart.toISOString().slice(0, 10)}
     `) as PermitRow[];
 
     /* ── Pure-function metric computation ── */

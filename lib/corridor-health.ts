@@ -194,14 +194,15 @@ export function computeTurnover(
 export function computeOwnershipConcentration(
   parcels: ParcelRow[]
 ): OwnershipConcentrationMetric {
-  const totalParcels = parcels.length;
+  const namedParcels = parcels.filter((p) => (p.owner_name ?? "").trim().length > 0);
+  const totalParcels = namedParcels.length;
   if (totalParcels === 0) {
     return { hhi: 0, topOwnerShare: 0, distinctOwners: 0, totalParcels: 0 };
   }
 
   const counts = new Map<string, number>();
-  for (const p of parcels) {
-    const owner = (p.owner_name ?? "").trim().toUpperCase() || "(UNKNOWN)";
+  for (const p of namedParcels) {
+    const owner = (p.owner_name ?? "").trim().toUpperCase();
     counts.set(owner, (counts.get(owner) ?? 0) + 1);
   }
 
@@ -231,11 +232,15 @@ export function computeOwnershipConcentration(
 const OUTSIDE_TYPES = new Set<string>(["out_of_state", "corporate_llc"]);
 
 export function computeOwnershipOrigin(parcels: ParcelRow[]): OwnershipOriginMetric {
-  const totalParcels = parcels.length;
+  const classifiedParcels = parcels.filter((p) => {
+    const t = (p.owner_type ?? "").toString();
+    return t === "local_private" || OUTSIDE_TYPES.has(t);
+  });
+  const totalParcels = classifiedParcels.length;
   let localCount = 0;
   let outsideCount = 0;
 
-  for (const p of parcels) {
+  for (const p of classifiedParcels) {
     const t = (p.owner_type ?? "").toString();
     if (t === "local_private") localCount += 1;
     else if (OUTSIDE_TYPES.has(t)) outsideCount += 1;
