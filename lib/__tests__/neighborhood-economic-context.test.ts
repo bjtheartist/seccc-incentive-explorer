@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import citywideGrowthSnapshot from "@/data/exports/chicago-neighborhood-economics/neighborhood_economics_by_zip.json";
 import {
   extractChicagoZipCode,
   findGrowthSignalByZip,
@@ -7,6 +8,8 @@ import {
   mergeLiveAcsIntoNeighborhoodEconomics,
   type NeighborhoodGrowthSnapshot,
 } from "@/lib/neighborhood-economic-context";
+
+const citywideSnapshot = citywideGrowthSnapshot as NeighborhoodGrowthSnapshot;
 
 const snapshot: NeighborhoodGrowthSnapshot = {
   source: "socrata",
@@ -58,6 +61,26 @@ describe("extractChicagoZipCode", () => {
 
   it("ignores non-Chicago ZIPs", () => {
     expect(extractChicagoZipCode("Evanston, IL 60201")).toBeNull();
+    expect(extractChicagoZipCode("Oak Park, IL 60302")).toBeNull();
+  });
+
+  it("covers the non-606 Chicago ZIPs in the citywide artifact", () => {
+    // Milestone 3 coverage explicitly includes 60707 and 60827.
+    expect(extractChicagoZipCode("1234 N Harlem Ave, Chicago, IL 60707")).toBe("60707");
+    expect(extractChicagoZipCode(null, "Riverdale, Chicago, Illinois, 60827")).toBe("60827");
+  });
+
+  it("resolves a Chicago ZIP even when a non-ZIP 5-digit token appears first", () => {
+    // Street/parcel numbers should not block the real ZIP later in the string.
+    expect(extractChicagoZipCode("12345 S Halsted St, Chicago, IL 60628")).toBe("60628");
+  });
+
+  it("matches every ZIP present in the citywide artifact", () => {
+    // Drift guard: if a future export adds a ZIP the extractor can't resolve,
+    // that ZIP's economic context would be silently unreachable in reports.
+    for (const zip of citywideSnapshot.zips) {
+      expect(extractChicagoZipCode(`Chicago, IL ${zip}`)).toBe(zip);
+    }
   });
 });
 
