@@ -63,13 +63,13 @@ export function censusNarrative(census: CensusData): CensusNarrativeResult {
     result.isLMI = census.medianIncome < LMI_INCOME_THRESHOLD;
 
     if (result.isLikelyQCT) {
-      result.incomeNarrative = `$${census.medianIncome.toLocaleString()} — ${pct}% of the Chicago metro median ($${CHICAGO_MEDIANS.income.toLocaleString()}). This qualifies the area as a Qualified Census Tract (QCT), unlocking enhanced NMTC and LIHTC credits.`;
-      result.unlockedPrograms.push("NMTC (enhanced)", "LIHTC (130% basis boost)");
+      result.incomeNarrative = `$${census.medianIncome.toLocaleString()} — ${pct}% of the Chicago city median ($${CHICAGO_MEDIANS.income.toLocaleString()}). At this income level the tract likely meets Qualified Census Tract (QCT) income thresholds, which may support enhanced NMTC/LIHTC eligibility — confirm against the current HUD QCT list before relying on it.`;
+      result.unlockedPrograms.push("NMTC (verify)", "LIHTC 130% basis boost (verify)");
     } else if (result.isLMI) {
-      result.incomeNarrative = `$${census.medianIncome.toLocaleString()} — ${pct}% of the Chicago metro median. This is a low-to-moderate income area, qualifying for many place-based incentive programs.`;
-      result.unlockedPrograms.push("CDBG-eligible area", "SBA HUBZone potential");
+      result.incomeNarrative = `$${census.medianIncome.toLocaleString()} — ${pct}% of the Chicago city median. This appears to be a low-to-moderate income area, which may qualify for many place-based incentive programs — verify with the administering agency.`;
+      result.unlockedPrograms.push("CDBG-eligible area (verify)", "SBA HUBZone potential (verify)");
     } else {
-      result.incomeNarrative = `$${census.medianIncome.toLocaleString()} — ${pct}% of the Chicago metro median ($${CHICAGO_MEDIANS.income.toLocaleString()}). Income levels are near or above the metro average.`;
+      result.incomeNarrative = `$${census.medianIncome.toLocaleString()} — ${pct}% of the Chicago city median ($${CHICAGO_MEDIANS.income.toLocaleString()}). Income levels are near or above the city average.`;
     }
   }
 
@@ -98,17 +98,17 @@ export function censusNarrative(census: CensusData): CensusNarrativeResult {
   // Overall qualification narrative
   const reasons: string[] = [];
   if (result.isLikelyQCT) {
-    reasons.push("its median income qualifies it as a Qualified Census Tract (QCT) — a federal designation that unlocks enhanced tax credits");
+    reasons.push("its median income likely meets Qualified Census Tract (QCT) income thresholds — a federal designation that can unlock enhanced tax credits once confirmed on the HUD QCT list");
   }
   if (result.isLMI && !result.isLikelyQCT) {
-    reasons.push("its income levels fall in the low-to-moderate range, making it eligible for place-based federal and state programs");
+    reasons.push("its income levels fall in the low-to-moderate range, which may make it eligible for place-based federal and state programs");
   }
   if (census.medianHomeValue != null && census.medianHomeValue < 150_000) {
-    reasons.push("property values below the city average indicate the area was targeted for public investment");
+    reasons.push("property values below the city average suggest the area has been targeted for public investment");
   }
 
   if (reasons.length > 0) {
-    result.qualificationNarrative = `This neighborhood qualifies for enhanced incentives because ${reasons.join(", and ")}. These conditions are why programs like Opportunity Zones, TIF, and NMTC were established here — to attract private investment and create jobs.`;
+    result.qualificationNarrative = `This neighborhood may qualify for enhanced incentives because ${reasons.join(", and ")}. These are the kinds of conditions that programs like Opportunity Zones, TIF, and NMTC were built around — but final eligibility depends on the official designation lists and administrator review.`;
   } else {
     result.qualificationNarrative = "This area's demographics are near or above city averages. While place-based incentives may be limited, county-wide and state programs still apply.";
   }

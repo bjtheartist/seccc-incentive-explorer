@@ -4,6 +4,7 @@ import {
   extractChicagoZipCode,
   findGrowthSignalByZip,
   growthSignalToNeighborhoodEconomics,
+  mergeAnchorsIntoNeighborhoodEconomics,
   mergeCorridorMetricIntoNeighborhoodEconomics,
   mergeLiveAcsIntoNeighborhoodEconomics,
   type NeighborhoodGrowthSnapshot,
@@ -103,6 +104,48 @@ describe("growthSignalToNeighborhoodEconomics", () => {
     expect(context.property?.vacantParcelCount).toBe(1123);
     expect(context.property?.commercialParcelCount).toBe(913);
     expect(context.limitations?.join(" ")).toContain("not be treated as a verified closure");
+    // Modeled signals derived from spending power + payroll.
+    expect(context.leakage?.estimatedLeakageRate).not.toBeNull();
+    expect(context.multiplier?.localOutputEstimateLow).toBeCloseTo(264217000 * 1.4);
+    expect(context.multiplier?.localOutputEstimateHigh).toBeCloseTo(264217000 * 1.8);
+  });
+
+  it("maps assessed-value aggregates into the property signal", () => {
+    const signal = findGrowthSignalByZip(snapshot, "60619")!;
+    const context = growthSignalToNeighborhoodEconomics(
+      {
+        ...signal,
+        assessedValueBaseline: 1_000_000_000,
+        assessedValueComparison: 1_250_000_000,
+        assessedValueChangeRate: 0.25,
+        assessedValueYearBaseline: 2020,
+        assessedValueYearComparison: 2024,
+      },
+      snapshot
+    );
+    expect(context.property?.assessedValueComparison).toBe(1_250_000_000);
+    expect(context.property?.assessedValueChangeRate).toBeCloseTo(0.25);
+    expect(context.property?.assessedValueYearComparison).toBe(2024);
+    expect(context.property?.sourceLabel).toContain("certified values");
+  });
+
+  it("merges curated anchors and surfaces them as multiplier drivers", () => {
+    const signal = findGrowthSignalByZip(snapshot, "60619")!;
+    const base = growthSignalToNeighborhoodEconomics(signal, snapshot);
+    const context = mergeAnchorsIntoNeighborhoodEconomics(base, [
+      { name: "Small Shop", employmentBand: "1-9", revenueBand: "<500K" },
+      { name: "Regional Hospital", employmentBand: "500+", revenueBand: "20M+", draw: "destination", linkage: "high", continuity: "established" },
+    ]);
+    expect(context?.anchors?.[0]?.name).toBe("Regional Hospital");
+    expect(context?.multiplier?.anchorDrivers?.[0]).toBe("Regional Hospital");
+    expect(context?.limitations?.join(" ")).toContain("Anchor businesses are curated");
+  });
+
+  it("leaves context unchanged when no anchors are curated for the ZIP", () => {
+    const signal = findGrowthSignalByZip(snapshot, "60619")!;
+    const base = growthSignalToNeighborhoodEconomics(signal, snapshot);
+    expect(mergeAnchorsIntoNeighborhoodEconomics(base, [])?.anchors).toBeUndefined();
+    expect(mergeAnchorsIntoNeighborhoodEconomics(base, null)?.anchors).toBeUndefined();
   });
 
   it("merges aggregate corridor permit and ownership metrics into report context", () => {
