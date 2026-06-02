@@ -24,6 +24,7 @@ export const OWNER_TYPE_COLORS: Record<OwnerType, string> = {
 /** Known public/government entity patterns (case-insensitive). */
 const PUBLIC_PATTERNS = [
   /\bcity of chicago\b/i,
+  /\bchicago city of\b/i,
   /\bchicago land\s*bank\b/i,
   /\bcook county\b/i,
   /\bstate of illinois\b/i,
@@ -32,6 +33,7 @@ const PUBLIC_PATTERNS = [
   /\bhousing authority\b/i,
   /\bpark district\b/i,
   /\bboard of education\b/i,
+  /\bboard of ed\b/i,
   /\bchicago transit\b/i,
   /\bchicago public\b/i,
   /\bmetropolitan water\b/i,
@@ -40,6 +42,13 @@ const PUBLIC_PATTERNS = [
   /\bchicago housing\b/i,
   /\burban renewal\b/i,
   /\bredevelopment authority\b/i,
+];
+
+/** Placeholder names that do not identify a usable owner. */
+const UNKNOWN_PATTERNS = [
+  /^taxpayer of$/i,
+  /^unknown$/i,
+  /^not available$/i,
 ];
 
 /** Corporate/LLC entity indicators. */
@@ -96,6 +105,10 @@ export function classifyOwner(
   const addr = (mailingAddress || "").trim();
 
   if (!name && !addr) return "unknown";
+
+  for (const pattern of UNKNOWN_PATTERNS) {
+    if (pattern.test(name)) return "unknown";
+  }
 
   // Check public/government entities first
   for (const pattern of PUBLIC_PATTERNS) {

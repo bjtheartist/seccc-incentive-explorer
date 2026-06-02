@@ -25,6 +25,7 @@ import {
 type ReportType =
   | "site-incentives"
   | "dev-feasibility"
+  | "corridor-intelligence"
   // Legacy types kept for backward compatibility with shared URLs
   | "location-incentives"
   | "best-location"
@@ -62,6 +63,10 @@ interface WizardState {
 export interface ReportSection {
   title: string;
   description?: string;
+  table?: {
+    columns: string[];
+    rows: string[][];
+  };
   items: ReportItem[];
 }
 
@@ -94,6 +99,58 @@ export interface DataSourceCitation {
   label: string;
   description: string;
   url?: string;
+}
+
+export interface NeighborhoodEconomicContext {
+  geographyLabel?: string;
+  businessContinuity?: {
+    baselineYear?: number | null;
+    comparisonYear?: number | null;
+    baselineActive?: number | null;
+    comparisonActive?: number | null;
+    retained?: number | null;
+    newSinceBaseline?: number | null;
+    continuityRate?: number | null;
+    sourceLabel?: string;
+  };
+  jobsPayroll?: {
+    baselineYear?: number | null;
+    comparisonYear?: number | null;
+    baselineEstablishments?: number | null;
+    comparisonEstablishments?: number | null;
+    baselineEmployment?: number | null;
+    comparisonEmployment?: number | null;
+    employmentGrowthRate?: number | null;
+    baselineAnnualPayroll?: number | null;
+    comparisonAnnualPayroll?: number | null;
+    payrollGrowthRate?: number | null;
+    sourceLabel?: string;
+  };
+  spendingPower?: {
+    residentSpendingPowerProxy?: number | null;
+    medianHouseholdIncome?: number | null;
+    population?: number | null;
+    sourceLabel?: string;
+  };
+  reinvestment?: {
+    permitCount?: number | null;
+    reportedCost?: number | null;
+    windowLabel?: string | null;
+    sourceLabel?: string;
+  };
+  property?: {
+    parcelCount?: number | null;
+    vacantParcelCount?: number | null;
+    commercialParcelCount?: number | null;
+    industrialParcelCount?: number | null;
+    distinctOwners?: number | null;
+    localOwnershipShare?: number | null;
+    assessedValueBaseline?: number | null;
+    assessedValueComparison?: number | null;
+    assessedValueChangeRate?: number | null;
+    sourceLabel?: string;
+  };
+  limitations?: string[];
 }
 
 export interface BenefitEstimate {
@@ -139,6 +196,9 @@ export interface GeneratedReport {
     medianHomeValue?: number;
     zoneClass?: string;
     zoneType?: string;
+    corridorType?: string;
+    corridorId?: string;
+    corridorLabel?: string;
   };
   executiveSummary?: ExecutiveSummary;
   benefitEstimates?: {
@@ -568,6 +628,30 @@ const DATA_SOURCES: Record<string, DataSourceCitation> = {
     description: "Property assessment records including PINs, class codes, assessed values, and building characteristics.",
     url: "https://www.cookcountyassessoril.gov",
   },
+  zbp: {
+    id: "zbp",
+    label: "U.S. Census ZIP Business Patterns",
+    description: "ZIP-level establishment, employment, and annual payroll signals for neighborhood economic context.",
+    url: "https://www.census.gov/programs-surveys/cbp/data/datasets.html",
+  },
+  lehdLodes: {
+    id: "lehdLodes",
+    label: "U.S. Census LEHD/LODES",
+    description: "Workplace and resident job-flow data planned for commute, wage-band, and employment context.",
+    url: "https://lehd.ces.census.gov/data/",
+  },
+  buildingPermits: {
+    id: "buildingPermits",
+    label: "City of Chicago Building Permits",
+    description: "Permit activity and reported-cost signals for neighborhood reinvestment context.",
+    url: "https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu",
+  },
+  assessorValues: {
+    id: "assessorValues",
+    label: "Cook County Assessor Open Data",
+    description: "Parcel universe, ownership, assessment, and value-change signals for property context.",
+    url: "https://datacatalog.cookcountyil.gov/",
+  },
 };
 
 function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
@@ -576,6 +660,9 @@ function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
   if (ctx.zones) sources.push(DATA_SOURCES.zones);
   if (ctx.cityZoning) sources.push(DATA_SOURCES.zoning);
   if (ctx.parcel) sources.push(DATA_SOURCES.parcel);
+  if (ctx.neighborhoodEconomics?.jobsPayroll) sources.push(DATA_SOURCES.zbp);
+  if (ctx.neighborhoodEconomics?.reinvestment) sources.push(DATA_SOURCES.buildingPermits);
+  if (ctx.neighborhoodEconomics?.property) sources.push(DATA_SOURCES.assessorValues);
   return sources;
 }
 
@@ -714,6 +801,240 @@ function buildMarketContext(
   };
 }
 
+function formatChangeRate(value?: number | null): string {
+  if (value == null || Number.isNaN(Number(value))) return "Not available";
+  const pct = Math.round(Number(value) * 100);
+  return `${pct >= 0 ? "+" : ""}${pct}%`;
+}
+
+function buildNeighborhoodEconomicContextSection(
+  ctx: ReportContext,
+  zones: Record<string, boolean> | undefined,
+  marketContext?: GeneratedReport["marketContext"],
+): ReportSection | undefined {
+  if (!marketContext && !ctx.neighborhoodEconomics) return undefined;
+
+  const cmp = marketContext?.comparisons ?? {};
+  const items: ReportItem[] = [];
+  const zoneCount = countActiveZones(zones);
+  const economics = ctx.neighborhoodEconomics;
+  const geographyLabel = economics?.geographyLabel || "this neighborhood";
+
+  if (marketContext?.incomeNarrative) {
+    const vs = cmp.income ? ` (${cmp.income.pct}% of city median $${cmp.income.city.toLocaleString()})` : "";
+    items.push({
+      label: "Resident Spending Power",
+      value: ctx.census?.medianIncome != null ? `Measured: $${ctx.census.medianIncome.toLocaleString()} median income` : "Measured: ACS context",
+      detail: `${marketContext.incomeNarrative}${vs}`,
+      sourceLabel: "American Community Survey",
+    });
+  }
+
+  if (marketContext?.homeValueNarrative) {
+    const vs = cmp.homeValue ? ` (${cmp.homeValue.pct}% of city median $${cmp.homeValue.city.toLocaleString()})` : "";
+    items.push({
+      label: "Home Value Context",
+      value: ctx.census?.medianHomeValue != null ? `Measured: $${ctx.census.medianHomeValue.toLocaleString()}` : "Measured: ACS context",
+      detail: `${marketContext.homeValueNarrative}${vs}`,
+      sourceLabel: "American Community Survey",
+    });
+  }
+
+  if (marketContext?.populationNarrative) {
+    const vs = cmp.population ? ` (${cmp.population.pct}% of city avg ${cmp.population.city.toLocaleString()} per tract)` : "";
+    items.push({
+      label: "Population Base",
+      value: ctx.census?.population != null ? `Measured: ${ctx.census.population.toLocaleString()} residents` : "Measured: ACS context",
+      detail: `${marketContext.populationNarrative}${vs}`,
+      sourceLabel: "American Community Survey",
+    });
+  }
+
+  if (marketContext) {
+    const vs = cmp.walkScore ? ` (city avg: ${cmp.walkScore.city}/20)` : "";
+    items.push({
+      label: "Access & Walkability",
+      value: ctx.census?.walkScore != null ? `Measured: ${ctx.census.walkScore}/20` : "Measured: not available",
+      detail: `${marketContext.walkabilityNarrative}${vs}`,
+      sourceLabel: "EPA Smart Location Database",
+    });
+    items.push({
+      label: "Incentive Coverage",
+      value: `Measured: ${zoneCount} zone${zoneCount !== 1 ? "s" : ""}`,
+      detail: marketContext.zoneCoverageNarrative,
+      sourceLabel: "Incentive zone boundary lookup",
+    });
+    if (marketContext.qualificationNarrative && (marketContext.isQCT || marketContext.isLMI)) {
+      items.push({
+        label: "Neighborhood Qualification",
+        value: marketContext.isQCT ? "Measured: Qualified Census Tract" : "Measured: Low-to-Moderate Income",
+        detail: marketContext.qualificationNarrative,
+        sourceLabel: "American Community Survey / HUD qualification logic",
+      });
+    }
+  }
+
+  const continuity = economics?.businessContinuity;
+  if (continuity) {
+    const years = continuity.baselineYear && continuity.comparisonYear
+      ? `${continuity.baselineYear}-${continuity.comparisonYear}`
+      : "measured window";
+    const counts = [
+      continuity.baselineActive != null ? `${formatNumber(continuity.baselineActive)} active at baseline` : null,
+      continuity.comparisonActive != null ? `${formatNumber(continuity.comparisonActive)} active at comparison` : null,
+      continuity.retained != null ? `${formatNumber(continuity.retained)} retained` : null,
+      continuity.newSinceBaseline != null ? `${formatNumber(continuity.newSinceBaseline)} new since baseline` : null,
+    ].filter(Boolean).join("; ");
+    items.push({
+      label: "Business Continuity",
+      value: continuity.continuityRate != null ? `Measured: ${formatRate(continuity.continuityRate)} retained signal` : "Measured: license activity",
+      detail: `Business continuity is calculated from license records across the ${years}. ${counts || "Counts are not available in this report context."} This is a license-based signal, not proof that a specific business closed, moved, or stayed at one exact storefront.`,
+      sourceLabel: continuity.sourceLabel || "Chicago business licenses",
+    });
+  } else {
+    items.push({
+      label: "Business Continuity",
+      value: "Measured when license history is loaded",
+      detail: "The continuity score compares active business-license entities in a baseline year with active entities in a later year. It should be read as a neighborhood-level continuity signal, not a verified closure list.",
+      sourceLabel: "Chicago business licenses",
+    });
+  }
+
+  const jobsPayroll = economics?.jobsPayroll;
+  if (jobsPayroll) {
+    const years = jobsPayroll.baselineYear && jobsPayroll.comparisonYear
+      ? `${jobsPayroll.baselineYear}-${jobsPayroll.comparisonYear}`
+      : "available ZBP years";
+    const details = [
+      jobsPayroll.baselineEstablishments != null || jobsPayroll.comparisonEstablishments != null
+        ? `establishments: ${formatNumber(jobsPayroll.baselineEstablishments)} to ${formatNumber(jobsPayroll.comparisonEstablishments)}`
+        : null,
+      jobsPayroll.baselineEmployment != null || jobsPayroll.comparisonEmployment != null
+        ? `employment: ${formatNumber(jobsPayroll.baselineEmployment)} to ${formatNumber(jobsPayroll.comparisonEmployment)}`
+        : null,
+      jobsPayroll.baselineAnnualPayroll != null || jobsPayroll.comparisonAnnualPayroll != null
+        ? `annual payroll: ${formatMoneyShort(jobsPayroll.baselineAnnualPayroll)} to ${formatMoneyShort(jobsPayroll.comparisonAnnualPayroll)}`
+        : null,
+    ].filter(Boolean).join("; ");
+    items.push({
+      label: "Jobs & Payroll",
+      value: `Measured: jobs ${formatChangeRate(jobsPayroll.employmentGrowthRate)} / payroll ${formatChangeRate(jobsPayroll.payrollGrowthRate)}`,
+      detail: `Census ZIP Business Patterns provides establishment, employment, and annual payroll context for ${geographyLabel} across ${years}. ${details || "The report has a ZBP source record but incomplete values."}`,
+      sourceLabel: jobsPayroll.sourceLabel || "Census ZIP Business Patterns",
+      sourceUrl: DATA_SOURCES.zbp.url,
+    });
+  } else {
+    items.push({
+      label: "Jobs & Payroll",
+      value: "Measured when ZBP geography is matched",
+      detail: "Census ZIP Business Patterns can add establishment counts, employment, and annual payroll by ZIP. This report does not yet have a matched ZBP record for the address context.",
+      sourceLabel: "Census ZIP Business Patterns",
+      sourceUrl: DATA_SOURCES.zbp.url,
+    });
+  }
+
+  const spendingPower = economics?.spendingPower;
+  if (spendingPower?.residentSpendingPowerProxy != null) {
+    items.push({
+      label: "Resident Spending-Power Proxy",
+      value: `Modeled: ${formatMoneyShort(spendingPower.residentSpendingPowerProxy)}`,
+      detail: "This proxy uses resident income and population context to estimate neighborhood purchasing capacity. It does not measure actual sales captured by local businesses.",
+      sourceLabel: spendingPower.sourceLabel || "ACS-derived model",
+    });
+  }
+
+  const reinvestment = economics?.reinvestment;
+  if (reinvestment) {
+    const permitValue = reinvestment.permitCount != null ? `${formatNumber(reinvestment.permitCount)} permits` : "permit count not available";
+    const reportedCost = reinvestment.reportedCost != null ? `${formatMoneyShort(reinvestment.reportedCost)} reported cost` : "reported cost not available";
+    items.push({
+      label: "Reinvestment Signals",
+      value: `Measured: ${permitValue}`,
+      detail: `Building permit activity shows visible reinvestment where permits are filed. Current read: ${reportedCost}${reinvestment.windowLabel ? ` during ${reinvestment.windowLabel}` : ""}. Reported cost is applicant-reported and should be treated as directional.`,
+      sourceLabel: reinvestment.sourceLabel || "City of Chicago Building Permits",
+      sourceUrl: DATA_SOURCES.buildingPermits.url,
+    });
+  } else {
+    items.push({
+      label: "Reinvestment Signals",
+      value: "Measured when permit history is loaded",
+      detail: "Building permits can show where visible reinvestment is happening, including reported project cost and permit volume. This address report is not yet carrying the permit-history signal.",
+      sourceLabel: "City of Chicago Building Permits",
+      sourceUrl: DATA_SOURCES.buildingPermits.url,
+    });
+  }
+
+  const property = economics?.property;
+  if (property) {
+    const ownerSignal = property.distinctOwners != null
+      ? `${formatNumber(property.distinctOwners)} distinct owner records`
+      : property.parcelCount != null
+        ? `${formatNumber(property.parcelCount)} parcels`
+        : "owner count not available";
+    const propertyMix = [
+      property.vacantParcelCount != null ? `${formatNumber(property.vacantParcelCount)} vacant-class parcels` : null,
+      property.commercialParcelCount != null ? `${formatNumber(property.commercialParcelCount)} commercial parcels` : null,
+      property.industrialParcelCount != null ? `${formatNumber(property.industrialParcelCount)} industrial parcels` : null,
+      property.localOwnershipShare != null ? `${formatRate(property.localOwnershipShare)} local/private ownership signal` : null,
+    ].filter(Boolean).join("; ");
+    const valueSignal = property.assessedValueChangeRate != null
+      ? `assessed value ${formatChangeRate(property.assessedValueChangeRate)}`
+      : "value-change rate not available";
+    items.push({
+      label: "Property Ownership / Value Change",
+      value: `Measured: ${ownerSignal}`,
+      detail: `Property context can show ownership fragmentation, parcel mix, sales, and assessed-value movement. Current read: ${propertyMix || valueSignal}. Owner records are public property records and should be used with confidence labels before outreach.`,
+      sourceLabel: property.sourceLabel || "Cook County Assessor / parcel records",
+      sourceUrl: DATA_SOURCES.assessorValues.url,
+    });
+  } else if (ctx.parcel?.totalValue) {
+    items.push({
+      label: "Property Ownership / Value Change",
+      value: "Measured: site-level assessment",
+      detail: `This report includes a site-level assessed value from Cook County, but not neighborhood ownership concentration or historical value-change yet. Current site value: ${ctx.parcel.totalValue}.`,
+      sourceLabel: "Cook County Assessor",
+    });
+  } else {
+    items.push({
+      label: "Property Ownership / Value Change",
+      value: "Measured when assessor history is loaded",
+      detail: "Cook County parcel, sales, and assessed-value history can add ownership and value-change context. Sensitive owner/address-level details should stay out of public reports unless reviewed with partners.",
+      sourceLabel: "Cook County Assessor open data",
+      sourceUrl: DATA_SOURCES.assessorValues.url,
+    });
+  }
+
+  items.push({
+    label: "Leakage Signals",
+    value: "Modeled / needs verification",
+    detail: "Leakage asks where resident or business spending may leave the neighborhood. It should be modeled from spending power, business mix, jobs, and local sales proxies, then verified with partner knowledge before making claims.",
+  });
+  items.push({
+    label: "Multiplier Potential",
+    value: "Modeled / needs verification",
+    detail: "Multiplier potential estimates which assets or project types could increase local economic output. It should be framed as a scenario-planning tool, not a guaranteed job, sales, or tax-revenue impact.",
+  });
+  items.push({
+    label: "Incentive Strategy Implications",
+    value: "Use as context, not eligibility proof",
+    detail: "Economic context can help explain why a project matters, which programs may be worth verifying, and what local conditions support the case. Final incentive strategy still depends on project scope, documents, administrator review, and partner verification.",
+  });
+
+  for (const limitation of economics?.limitations ?? []) {
+    items.push({
+      label: "Limitation",
+      value: "Needs verification",
+      detail: limitation,
+    });
+  }
+
+  return {
+    title: "Neighborhood Economic Context",
+    description: "Market, workforce, property, and spending-power signals for interpreting incentives around this location. Each signal is labeled as measured, modeled, or needing verification.",
+    items,
+  };
+}
+
 /**
  * Build stacking analysis from computeStackingNarrative + real stacking rules.
  */
@@ -820,36 +1141,9 @@ function generateLocationIncentives(
   const projectIntakeSection = buildProjectIntakeSection(state);
   if (projectIntakeSection) sections.push(projectIntakeSection);
 
-  // §01 Market Analysis
-  if (marketContext) {
-    const cmp = marketContext.comparisons;
-    const marketItems: ReportItem[] = [];
-    if (marketContext.incomeNarrative) {
-      const vs = cmp.income ? ` (${cmp.income.pct}% of city median $${cmp.income.city.toLocaleString()})` : "";
-      marketItems.push({ label: "Median Household Income", value: ctx.census?.medianIncome != null ? `$${ctx.census.medianIncome.toLocaleString()}` : "N/A", detail: `${marketContext.incomeNarrative}${vs}` });
-    }
-    if (marketContext.homeValueNarrative) {
-      const vs = cmp.homeValue ? ` (${cmp.homeValue.pct}% of city median $${cmp.homeValue.city.toLocaleString()})` : "";
-      marketItems.push({ label: "Median Home Value", value: ctx.census?.medianHomeValue != null ? `$${ctx.census.medianHomeValue.toLocaleString()}` : "N/A", detail: `${marketContext.homeValueNarrative}${vs}` });
-    }
-    if (marketContext.populationNarrative) {
-      const vs = cmp.population ? ` (${cmp.population.pct}% of city avg ${cmp.population.city.toLocaleString()} per tract)` : "";
-      marketItems.push({ label: "Population", value: ctx.census?.population != null ? ctx.census.population.toLocaleString() : "N/A", detail: `${marketContext.populationNarrative}${vs}` });
-    }
-    {
-      const vs = cmp.walkScore ? ` (city avg: ${cmp.walkScore.city}/20)` : "";
-      marketItems.push({ label: "EPA Walkability Index", value: ctx.census?.walkScore != null ? `${ctx.census.walkScore}/20` : "N/A", detail: `${marketContext.walkabilityNarrative}${vs}` });
-    }
-    marketItems.push({ label: "Zone Coverage", value: `${zoneCount} zone${zoneCount !== 1 ? "s" : ""}`, detail: marketContext.zoneCoverageNarrative });
-    if (marketContext.qualificationNarrative && (marketContext.isQCT || marketContext.isLMI)) {
-      marketItems.push({ label: "Neighborhood Qualification", value: marketContext.isQCT ? "Qualified Census Tract" : "Low-to-Moderate Income", detail: marketContext.qualificationNarrative });
-    }
-    sections.push({
-      title: "Market Analysis",
-      description: "How this location compares to Chicago city medians across key economic and demographic indicators.",
-      items: marketItems,
-    });
-  }
+  // §01 Neighborhood Economic Context
+  const neighborhoodEconomicSection = buildNeighborhoodEconomicContextSection(ctx, zones, marketContext);
+  if (neighborhoodEconomicSection) sections.push(neighborhoodEconomicSection);
 
   // §02 Incentive Density & Stacking
   if (stackingAnalysis) {
@@ -1204,35 +1498,9 @@ function generateBestLocation(
     });
   }
 
-  // §03 Market Analysis
-  if (marketContext) {
-    const cmp = marketContext.comparisons;
-    const marketItems: ReportItem[] = [];
-    if (marketContext.incomeNarrative) {
-      const vs = cmp.income ? ` (${cmp.income.pct}% of city median $${cmp.income.city.toLocaleString()})` : "";
-      marketItems.push({ label: "Median Household Income", value: ctx.census?.medianIncome != null ? `$${ctx.census.medianIncome.toLocaleString()}` : "N/A", detail: `${marketContext.incomeNarrative}${vs}` });
-    }
-    if (marketContext.homeValueNarrative) {
-      const vs = cmp.homeValue ? ` (${cmp.homeValue.pct}% of city median $${cmp.homeValue.city.toLocaleString()})` : "";
-      marketItems.push({ label: "Median Home Value", value: ctx.census?.medianHomeValue != null ? `$${ctx.census.medianHomeValue.toLocaleString()}` : "N/A", detail: `${marketContext.homeValueNarrative}${vs}` });
-    }
-    if (marketContext.populationNarrative) {
-      const vs = cmp.population ? ` (${cmp.population.pct}% of city avg ${cmp.population.city.toLocaleString()} per tract)` : "";
-      marketItems.push({ label: "Population", value: ctx.census?.population != null ? ctx.census.population.toLocaleString() : "N/A", detail: `${marketContext.populationNarrative}${vs}` });
-    }
-    {
-      const vs = cmp.walkScore ? ` (city avg: ${cmp.walkScore.city}/20)` : "";
-      marketItems.push({ label: "EPA Walkability Index", value: ctx.census?.walkScore != null ? `${ctx.census.walkScore}/20` : "N/A", detail: `${marketContext.walkabilityNarrative}${vs}` });
-    }
-    if (marketContext.qualificationNarrative && (marketContext.isQCT || marketContext.isLMI)) {
-      marketItems.push({ label: "Neighborhood Qualification", value: marketContext.isQCT ? "Qualified Census Tract" : "Low-to-Moderate Income", detail: marketContext.qualificationNarrative });
-    }
-    sections.push({
-      title: "Market Analysis",
-      description: "How this location compares to Chicago city medians across key economic and demographic indicators.",
-      items: marketItems,
-    });
-  }
+  // §03 Neighborhood Economic Context
+  const neighborhoodEconomicSection = buildNeighborhoodEconomicContextSection(ctx, zones, marketContext);
+  if (neighborhoodEconomicSection) sections.push(neighborhoodEconomicSection);
 
   // §04 Incentive Zone Coverage & Stacking
   if (zoneCount > 0) {
@@ -1401,8 +1669,8 @@ function generateBestLocation(
       }),
       "neighborhood-demand": () => ({
         label: "Neighborhood Demand",
-        value: "See Market Analysis",
-        detail: "Review the median income, home values, and population data in the Market Analysis section to gauge local market demand.",
+        value: "See Neighborhood Economic Context",
+        detail: "Review the income, home value, population, business-continuity, jobs/payroll, and property-context signals to gauge local market demand.",
       }),
       "grant-eligibility": (_p, z) => ({
         label: "Grant Eligibility",
@@ -1844,6 +2112,460 @@ function generateDeveloperAnalysis(
   };
 }
 
+// ─── Corridor Intelligence Generator ───────────────────────────────
+
+export interface CorridorMetricDetails {
+  vacancy?: {
+    vacantCount?: number | null;
+    totalParcels?: number | null;
+  };
+  turnover?: {
+    openings?: number | null;
+    closures?: number | null;
+    activeLicenses?: number | null;
+    windowMonths?: number | null;
+  };
+  ownershipConcentration?: {
+    knownOwners?: number | null;
+    distinctOwners?: number | null;
+    topOwnerShare?: number | null;
+    totalParcels?: number | null;
+  };
+  ownershipOrigin?: {
+    localCount?: number | null;
+    outsideCount?: number | null;
+    unknownCount?: number | null;
+  };
+  permits?: {
+    count?: number | null;
+    totalReportedCost?: number | null;
+    demolitionCount?: number | null;
+    windowMonths?: number | null;
+  };
+  incentiveCoverage?: {
+    coveredCount?: number | null;
+    totalParcels?: number | null;
+  };
+  windowMonths?: number | null;
+}
+
+export interface CorridorMetric {
+  corridorType: string;
+  corridorId: string;
+  asOf?: string | null;
+  vacancyRate?: number | null;
+  turnoverRate?: number | null;
+  ownershipHHI?: number | null;
+  localOwnershipShare?: number | null;
+  permitCount?: number | null;
+  incentiveCoverage?: number | null;
+  healthScore?: number | null;
+  computedAt?: string | null;
+  details?: CorridorMetricDetails | null;
+}
+
+export interface CorridorOwnerCluster {
+  clusterKey: string;
+  ownerName?: string | null;
+  ownerMailingAddress?: string | null;
+  ownerType?: string | null;
+  parcelCount: number;
+  vacantParcelCount: number;
+  businessCount: number;
+  businessNames: string[];
+  sampleAddresses: string[];
+  latestTransferDate?: string | null;
+  latestBuyerName?: string | null;
+  latestSellerName?: string | null;
+  confidence: string;
+  evidence: string;
+}
+
+function formatRate(value?: number | null): string {
+  if (value == null || Number.isNaN(Number(value))) return "Not available";
+  return `${Math.round(Number(value) * 100)}%`;
+}
+
+function formatNumber(value?: number | null): string {
+  if (value == null || Number.isNaN(Number(value))) return "Not available";
+  return Number(value).toLocaleString();
+}
+
+function formatMoneyShort(value?: number | null): string {
+  if (value == null || Number.isNaN(Number(value))) return "Not available";
+  const n = Number(value);
+  if (Math.abs(n) >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+  if (Math.abs(n) >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (Math.abs(n) >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${Math.round(n).toLocaleString()}`;
+}
+
+function formatCorridorLabel(corridor?: CorridorMetric | null, fallback?: string): string {
+  const id = corridor?.corridorId || fallback || "Selected corridor";
+  return corridor?.corridorType === "zip" || /^\d{5}$/.test(id) ? `ZIP ${id}` : id;
+}
+
+function generateCorridorIntelligence(
+  state: WizardState,
+  programs: Program[],
+  ctx: ReportContext = {},
+): GeneratedReport {
+  const metric = ctx.corridorMetrics;
+  const label = formatCorridorLabel(metric, state.neighborhood);
+  const details = metric?.details ?? {};
+  const vacancy = details.vacancy ?? {};
+  const turnover = details.turnover ?? {};
+  const ownershipConcentration = details.ownershipConcentration ?? {};
+  const ownershipOrigin = details.ownershipOrigin ?? {};
+  const permits = details.permits ?? {};
+  const incentiveCoverage = details.incentiveCoverage ?? {};
+  const ownerClusters = ctx.corridorOwnerClusters ?? [];
+  const hasMetric = Boolean(metric);
+  const healthScore =
+    metric?.healthScore != null ? `${Math.round(Number(metric.healthScore))}/100` : "Not available";
+  const placeBasedPrograms = programs.filter((program) => program.zoneKey).length;
+  const activityWindowMonths = details.windowMonths ?? turnover.windowMonths ?? permits.windowMonths ?? 24;
+  const activityWindowLabel = `Trailing ${activityWindowMonths} months`;
+  const netLicenseCount =
+    turnover.openings != null && turnover.closures != null
+      ? Number(turnover.openings) - Number(turnover.closures)
+      : null;
+  const vacancyRead =
+    vacancy.vacantCount != null && vacancy.totalParcels != null
+      ? `${formatNumber(vacancy.vacantCount)} flagged parcels (${formatRate(metric?.vacancyRate)})`
+      : formatRate(metric?.vacancyRate);
+  const businessMomentumRead =
+    netLicenseCount != null
+      ? `Net ${netLicenseCount >= 0 ? "+" : ""}${formatNumber(netLicenseCount)} licenses`
+      : formatRate(metric?.turnoverRate);
+  const ownershipStructureRead =
+    ownershipConcentration.distinctOwners != null
+      ? `Highly fragmented: ${formatNumber(ownershipConcentration.distinctOwners)} owners`
+      : "Not available";
+  const ownershipStructureBasis = [
+    ownershipConcentration.topOwnerShare != null ? `top owner ~${formatRate(ownershipConcentration.topOwnerShare)}` : null,
+    metric?.ownershipHHI != null ? `HHI ${Number(metric.ownershipHHI).toFixed(4)}` : null,
+  ].filter(Boolean).join("; ") || "Owner counts unavailable";
+  const localOwnershipBasis =
+    ownershipOrigin.localCount != null || ownershipOrigin.outsideCount != null
+      ? `${formatNumber(ownershipOrigin.localCount)} local / ${formatNumber(ownershipOrigin.outsideCount)} outside classified private owner records`
+      : "Ownership origin unavailable";
+  const permitInvestmentRead =
+    permits.totalReportedCost != null
+      ? `${formatMoneyShort(permits.totalReportedCost)} in permitted work`
+      : formatNumber(metric?.permitCount);
+  const permitInvestmentBasis =
+    metric?.permitCount != null
+      ? `${formatNumber(metric.permitCount)} permits, including ${formatNumber(permits.demolitionCount)} demolitions`
+      : "Permit detail unavailable";
+
+  const metricRows = [
+    [
+      "Market Signal Composite",
+      healthScore,
+      "Comparison-only summary",
+      hasMetric
+        ? "Summarizes the readings below for comparison across corridors. It is not a grade of corridor success."
+        : "No computed metric snapshot is available yet.",
+    ],
+    [
+      "Vacancy pressure",
+      vacancyRead,
+      vacancy.vacantCount != null && vacancy.totalParcels != null
+        ? `${formatNumber(vacancy.vacantCount)} / ${formatNumber(vacancy.totalParcels)} parcels`
+        : "Parcel counts unavailable",
+      "Start site verification with the flagged parcel list before drawing conclusions about availability or reuse.",
+    ],
+    [
+      "Business momentum",
+      businessMomentumRead,
+      turnover.openings != null || turnover.closures != null
+        ? `${formatNumber(turnover.openings)} openings vs. ${formatNumber(turnover.closures)} closures; ${activityWindowLabel.toLowerCase()}`
+        : "License counts unavailable",
+      netLicenseCount != null && netLicenseCount > 0
+        ? "Licensing activity is expansionary. The reasons still need local confirmation."
+        : "License activity needs local interpretation before it can explain business conditions.",
+    ],
+    [
+      "Ownership structure",
+      ownershipStructureRead,
+      ownershipConcentration.distinctOwners != null && ownershipConcentration.totalParcels != null
+        ? `${formatNumber(ownershipConcentration.distinctOwners)} distinct owners / ${formatNumber(ownershipConcentration.totalParcels)} owner-linked parcels; ${ownershipStructureBasis}`
+        : "Owner counts unavailable",
+      "Outreach here means many small conversations, not a few key property-control relationships.",
+    ],
+    [
+      "Local ownership share",
+      formatRate(metric?.localOwnershipShare),
+      localOwnershipBasis,
+      "Public and unknown owner records are excluded from this percentage.",
+    ],
+    [
+      "Reinvestment",
+      permitInvestmentRead,
+      `${permitInvestmentBasis}; ${activityWindowLabel.toLowerCase()}`,
+      "Capital is showing up. Compare this against vacancy to see where reinvestment is not reaching.",
+    ],
+    [
+      "Incentive coverage",
+      metric?.incentiveCoverage == null ? "Not yet batch-computed" : formatRate(metric.incentiveCoverage),
+      incentiveCoverage.coveredCount != null && incentiveCoverage.totalParcels != null
+        ? `${formatNumber(incentiveCoverage.coveredCount)} / ${formatNumber(incentiveCoverage.totalParcels)} parcels`
+        : "Spatial overlay not yet computed",
+      `Address-level incentive checks remain available. Corridor coverage needs parcel-to-polygon overlay across ${placeBasedPrograms} place-based program records.`,
+    ],
+  ];
+
+  const sourceRows = [
+    [
+      "Vacancy",
+      "Vacant-property and parcel signals",
+      vacancy.vacantCount != null ? formatNumber(vacancy.vacantCount) : "Not available",
+      "Use as a site-verification list, not proof that every site is available.",
+    ],
+    [
+      "Business activity",
+      "City business license openings and closures",
+      turnover.openings != null || turnover.closures != null
+        ? `${formatNumber(turnover.openings)} openings; ${formatNumber(turnover.closures)} closures`
+        : "Not available",
+      `Openings and closures use the ${activityWindowLabel.toLowerCase()}; informal operating changes may not appear.`,
+    ],
+    [
+      "Ownership",
+      "Cook County parcel ownership and mailing records",
+      ownershipConcentration.distinctOwners != null
+        ? `${formatNumber(ownershipConcentration.distinctOwners)} distinct owners`
+        : "Not available",
+      "Recorded owner and mailing data is a proxy; it does not prove beneficial ownership or owner intent.",
+    ],
+    [
+      "Condition / reinvestment",
+      "Building permits, violations, and 311 condition signals",
+      metric?.permitCount != null ? `${formatNumber(metric.permitCount)} permits` : "Not available",
+      `Permit activity uses the ${activityWindowLabel.toLowerCase()}; reported cost is a signal, not final investment value.`,
+    ],
+    [
+      "Incentives",
+      "Mapped incentive zones and program records",
+      `${placeBasedPrograms} place-based program records`,
+      "Batch corridor coverage needs parcel-to-polygon overlay; address-level checks remain more precise.",
+    ],
+  ];
+
+  const signalItems: ReportItem[] = [
+    {
+      label: "Business activity is the strongest positive read",
+      value: businessMomentumRead,
+      detail:
+        turnover.openings != null && turnover.closures != null
+          ? `${formatNumber(turnover.openings)} new licenses against ${formatNumber(turnover.closures)} closures points to expansionary activity. The data says momentum is present; it does not explain which businesses are thriving or why.`
+          : "Business-license activity is not available yet for this corridor snapshot.",
+    },
+    {
+      label: "Vacancy is visible, but reviewable",
+      value: vacancyRead,
+      detail:
+        vacancy.vacantCount != null && vacancy.totalParcels != null
+          ? `${formatNumber(vacancy.vacantCount)} parcels carry a vacancy signal out of ${formatNumber(vacancy.totalParcels)} total parcels. The next read should be property-level verification, not a corridor-wide assumption.`
+          : "Vacancy parcel counts are not available yet for this corridor snapshot.",
+    },
+    {
+      label: "No single owner appears to control the corridor",
+      value: ownershipStructureRead,
+      detail:
+        ownershipConcentration.distinctOwners != null && ownershipConcentration.totalParcels != null
+          ? `${ownershipStructureBasis}. This is a fragmented property base, which changes the outreach strategy: many owners, many conversations, and fewer obvious anchor relationships.`
+          : "Ownership concentration is not available yet for this corridor snapshot.",
+    },
+    {
+      label: "Reinvestment is already present",
+      value: permitInvestmentRead,
+      detail:
+        metric?.permitCount != null
+          ? `${permitInvestmentBasis}. The useful question is where permitted investment overlaps with vacancy, ownership, and business activity, and where it does not.`
+          : "Permit activity detail is not available yet for this corridor snapshot.",
+    },
+    {
+      label: "Composite score is a comparison aid",
+      value: healthScore,
+      detail: hasMetric
+        ? "The Market Signal Composite summarizes vacancy, license activity, ownership, and reinvestment so corridors can be compared later. It should not be read as a grade."
+        : "No corridor metric snapshot is available yet for this geography.",
+    },
+  ];
+
+  const confidenceItems: ReportItem[] = [
+    {
+      label: "Geography",
+      value: metric?.corridorType === "zip" ? "ZIP-based demo" : "Selected corridor",
+      detail: "ZIP metrics are useful for a funding demonstration. Neighborhood, SSA, ward, and custom corridor boundaries will be more precise for corridor management.",
+    },
+    {
+      label: "Activity window",
+      value: activityWindowLabel,
+      detail: "Business-license and permit metrics use this trailing window unless a source table states otherwise.",
+    },
+    {
+      label: "Ownership",
+      value: "Recorded owner proxy",
+      detail: "Owner classification uses public parcel owner and mailing records. It does not prove beneficial ownership, lease terms, owner intent, or site availability.",
+    },
+    {
+      label: "Unit of measure",
+      value: "Parcels, licenses, owner records, permits",
+      detail: "Vacancy is parcel-based, business momentum is license-based, ownership splits use classified private owner records, and reinvestment is permit-based.",
+    },
+    {
+      label: "Incentive overlay",
+      value: metric?.incentiveCoverage == null ? "Not batch-computed yet" : "Computed",
+      detail: "Address-level incentive checks already work. Corridor-level incentive coverage still needs parcel-to-polygon overlay before it should be treated as a full corridor metric.",
+    },
+  ];
+
+  const ownerOperatorRows = ownerClusters.slice(0, 15).map((cluster) => {
+    const ownerLabel = cluster.ownerName || "Owner record unavailable";
+    const footprint = [
+      `${formatNumber(cluster.parcelCount)} parcel${cluster.parcelCount === 1 ? "" : "s"}`,
+      `${formatNumber(cluster.vacantParcelCount)} vacancy signal${cluster.vacantParcelCount === 1 ? "" : "s"}`,
+      cluster.sampleAddresses.length > 0 ? `sample: ${cluster.sampleAddresses.slice(0, 2).join("; ")}` : null,
+    ].filter(Boolean).join(" | ");
+    const businessLinks =
+      cluster.businessCount > 0
+        ? `${formatNumber(cluster.businessCount)} license match${cluster.businessCount === 1 ? "" : "es"}${cluster.businessNames.length > 0 ? `: ${cluster.businessNames.slice(0, 3).join("; ")}` : ""}`
+        : "No business-license site match found";
+    const transferHint =
+      cluster.latestTransferDate
+        ? `Latest transfer ${cluster.latestTransferDate}${cluster.latestBuyerName ? `; buyer: ${cluster.latestBuyerName}` : ""}`
+        : "No transfer hint in current snapshot";
+
+    return [
+      ownerLabel,
+      cluster.ownerMailingAddress || "Mailing address unavailable",
+      footprint,
+      businessLinks,
+      transferHint,
+      `${cluster.confidence} confidence — ${cluster.evidence || "recorded parcel owner evidence"}`,
+    ];
+  });
+
+  return {
+    title: `Corridor Intelligence Demo — ${label}`,
+    subtitle: "Market and resilience signals for corridor partners",
+    reportType: "corridor-intelligence",
+    generatedAt: new Date().toISOString(),
+    summary: hasMetric
+      ? `${label} shows ${netLicenseCount != null && netLicenseCount > 0 ? "strong business momentum" : "measurable business activity"} and active reinvestment, with vacancy concentrated in a reviewable set of ${formatNumber(vacancy.vacantCount)} flagged parcels and a highly fragmented ownership base. The Market Signal Composite (${healthScore}) summarizes these readings for comparison across corridors; it is not a grade of corridor success. Activity metrics use a ${activityWindowLabel.toLowerCase()} unless noted.`
+      : `${label} does not have a computed corridor metric snapshot yet. This report still shows the intended data structure, but the metrics should be backfilled before using it for decisions.`,
+    sections: [
+      {
+        title: "Market Signal Summary",
+        description: "The numbers in one place. Each row pairs a signal with the plain-language read it supports.",
+        table: {
+          columns: ["Signal", "Current Read", "Data Basis", "Interpretation"],
+          rows: metricRows,
+        },
+        items: [],
+      },
+      {
+        title: "What The Signals Say",
+        description: "A short read of what the current data supports, without turning the report into a recommendation engine.",
+        items: signalItems,
+      },
+      ...(ownerOperatorRows.length > 0
+        ? [
+            {
+              title: "Owner & Operator Map",
+              description:
+                "A first-pass relationship map connecting recorded property-control records to parcels, vacancy signals, business-license site matches, and transfer hints. Treat these as leads with confidence labels, not final ownership claims.",
+              table: {
+                columns: [
+                  "Owner / control record",
+                  "Mailing / control address",
+                  "Property footprint",
+                  "Business site links",
+                  "Transfer hint",
+                  "Confidence / evidence",
+                ],
+                rows: ownerOperatorRows,
+              },
+              items: [
+                {
+                  label: "Why this matters",
+                  value: "The last mile is knowing who to contact",
+                  detail:
+                    "Corridor signals become useful when they resolve to property records, operating businesses, and contactable owner or agent pathways. This section starts that map using conservative public-record matches.",
+                },
+              ],
+            },
+          ]
+        : []),
+      {
+        title: "How To Read This",
+        description: "Source notes, confidence limits, and units of measure for interpreting the corridor snapshot.",
+        table: {
+          columns: ["Domain", "Source / Signal", "Current Value", "Caution"],
+          rows: sourceRows,
+        },
+        items: confidenceItems,
+      },
+      {
+        title: "What A Funded Version Unlocks",
+        description: "This hidden demo shows what is possible with one geography. A funded version would make it reliable across more places and partner workflows.",
+        items: [
+          {
+            label: "What this demo proves",
+            value: "Public data can become corridor intelligence",
+            detail: "Parcel, ownership, business-license, vacancy, permit, and condition signals can be stitched into a coherent market read for a specific geography.",
+          },
+          {
+            label: "What a funded version adds",
+            value: "Scale, precision, refresh, and partner context",
+            detail: "Funding would support citywide backfills, corridor-specific boundaries, parcel-to-incentive overlays, scheduled refreshes, partner corrections, and exportable partner reports.",
+          },
+          {
+            label: "Why this matters",
+            value: "Better targeting before interventions",
+            detail: "The value is not just more data. It is a clearer way to see where vacancy, ownership, churn, reinvestment, and incentive access point to different corridor needs.",
+          },
+        ],
+      },
+    ],
+    recommendedActions: [],
+    metadata: {
+      corridorType: metric?.corridorType || "zip",
+      corridorId: metric?.corridorId || state.neighborhood || undefined,
+      corridorLabel: label,
+    },
+    dataSources: [
+      {
+        id: "corridor-metrics",
+        label: "Corridor metrics",
+        description:
+          "Computed from parcel, vacancy, license, permit, transfer, and condition signals loaded into the platform database.",
+      },
+      {
+        id: "city-business-licenses",
+        label: "City of Chicago business licenses",
+        description: "Used to estimate openings, closures, and business activity patterns.",
+        url: "https://data.cityofchicago.org/Community-Economic-Development/Business-Licenses/r5kz-chrr",
+      },
+      {
+        id: "cook-county-parcels",
+        label: "Cook County parcel and valuation data",
+        description: "Used for parcel counts, ownership patterns, property type, and assessed-value context.",
+        url: "https://datacatalog.cookcountyil.gov/",
+      },
+      {
+        id: "city-permits-conditions",
+        label: "City permits, violations, and 311 signals",
+        description: "Used to understand reinvestment, condition, and vacancy signals.",
+        url: "https://data.cityofchicago.org/",
+      },
+    ],
+  };
+}
+
 // ─── Main Export ─────────────────────────────────────────────────────
 
 /**
@@ -1878,6 +2600,9 @@ export interface ReportContext {
   stackingRules?: StackingRule[];
   communityAssets?: CommunityAsset[];
   stats?: Stats;
+  corridorMetrics?: CorridorMetric | null;
+  corridorOwnerClusters?: CorridorOwnerCluster[];
+  neighborhoodEconomics?: NeighborhoodEconomicContext;
 }
 
 /**
@@ -1910,6 +2635,10 @@ export function generateReportData(
       report = generateBestLocation(state, programs, ctx);
       break;
 
+    case "corridor-intelligence":
+      report = generateCorridorIntelligence(state, programs, ctx);
+      break;
+
     // Legacy types — kept for backward compat with shared URLs
     case "program-explorer":
       report = generateProgramExplorer(state, programs);
@@ -1934,7 +2663,7 @@ export function generateReportData(
     if (cityZoning?.zoneType) report.metadata.zoneType = cityZoning.zoneType;
 
     // Insert a "Site Profile" section — property, zoning, and district data only
-    // (census/market data lives in Market Analysis to avoid duplication)
+    // (census/market data lives in Neighborhood Economic Context to avoid duplication)
     const contextItems: ReportItem[] = [];
     if (cityZoning?.zoneClass) {
       contextItems.push({

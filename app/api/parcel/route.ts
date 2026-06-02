@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cached, roundCoord } from "@/lib/redis";
+import { getSQL } from "@/lib/db";
 import {
   describeClassCode,
   isCommercialClass,
@@ -15,11 +16,59 @@ import type { ParcelData } from "@/lib/types";
  *
  * Strategy:
  * 1. Check Redis cache (if configured)
- * 2. Cook County ArcGIS MapServer Layer 44 (primary) — with retry
- * 3. Socrata Parcel Universe (fallback)
+ * 2. parcels table — nearest stored row within ~50m (if DB configured)
+ * 3. Cook County ArcGIS MapServer Layer 44 — with retry
+ * 4. Socrata Parcel Universe (fallback)
  *
  * GET /api/parcel?lat=41.75&lon=-87.58
  */
+
+const fmtMoney = (v: number | null) =>
+  v != null ? `$${Number(v).toLocaleString()}` : null;
+
+/** Look up the nearest stored parcel within ~50m of the point, or null. */
+async function dbParcel(lat: number, lon: number): Promise<ParcelData | null> {
+  const sql = getSQL();
+  if (!sql) return null;
+  try {
+    const rows = await sql`
+      SELECT pin, address, class_code, class_description, tax_code, township,
+             land_sqft, bldg_sqft, bldg_age, land_value, bldg_value, total_value,
+             parcel_type, is_commercial, is_industrial, is_vacant,
+             owner_name, owner_mailing_address, owner_type
+      FROM parcels
+      WHERE geom IS NOT NULL
+        AND ST_DWithin(geom, ST_MakePoint(${lon}, ${lat})::geography, 50)
+      ORDER BY geom <-> ST_MakePoint(${lon}, ${lat})::geography
+      LIMIT 1
+    `;
+    if (rows.length === 0) return null;
+    const r = rows[0];
+    return {
+      pin: r.pin || "",
+      address: r.address || "",
+      classCode: r.class_code || "",
+      classDescription: r.class_description || describeClassCode(r.class_code || ""),
+      taxCode: r.tax_code || "",
+      township: r.township || "",
+      landSqft: r.land_sqft != null ? Number(r.land_sqft) : null,
+      bldgSqft: r.bldg_sqft != null ? Number(r.bldg_sqft) : null,
+      bldgAge: r.bldg_age != null ? Number(r.bldg_age) : null,
+      landValue: fmtMoney(r.land_value != null ? Number(r.land_value) : null),
+      bldgValue: fmtMoney(r.bldg_value != null ? Number(r.bldg_value) : null),
+      totalValue: fmtMoney(r.total_value != null ? Number(r.total_value) : null),
+      parcelType: r.parcel_type != null ? Number(r.parcel_type) : null,
+      isCommercial: Boolean(r.is_commercial),
+      isIndustrial: Boolean(r.is_industrial),
+      isVacant: Boolean(r.is_vacant),
+      ownerName: r.owner_name ?? null,
+      ownerMailingAddress: r.owner_mailing_address ?? null,
+      ownerType: r.owner_type ?? null,
+    } satisfies ParcelData;
+  } catch {
+    return null;
+  }
+}
 
 const CDN_HEADERS = {
   "Cache-Control": "public, s-maxage=2592000, stale-while-revalidate=86400",
@@ -65,7 +114,11 @@ export async function GET(request: NextRequest) {
   const cacheKey = `parcel:${roundCoord(parseFloat(lat))}:${roundCoord(parseFloat(lon))}`;
 
   const result = await cached<ParcelData | null>(cacheKey, 2592000, async () => {
-    // Source 1: Cook County ArcGIS MapServer Layer 44 (primary)
+    // Source 1: persistent parcels store (DB-first)
+    const stored = await dbParcel(parseFloat(lat!), parseFloat(lon!));
+    if (stored) return stored;
+
+    // Source 2: Cook County ArcGIS MapServer Layer 44
     try {
       const arcgisUrl = new URL(
         "https://gis.cookcountyil.gov/traditional/rest/services/cookVwrDynmc/MapServer/44/query"
@@ -113,7 +166,7 @@ export async function GET(request: NextRequest) {
       // Fall through to Socrata
     }
 
-    // Source 2: Socrata Parcel Universe (fallback)
+    // Source 3: Socrata Parcel Universe (fallback)
     try {
       const sodaUrl = `https://datacatalog.cookcountyil.gov/resource/nj4t-kc8j.json?$where=within_circle(loc_property_location,${lat},${lon},50)&$limit=1`;
       const res = await fetchWithRetry(sodaUrl, {
