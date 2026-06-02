@@ -209,6 +209,21 @@ function buildIncentiveAnalysisUrl(feature: VacancySpreadsheetFeature): string {
   return `/report?addr=${encodeURIComponent(address)}`;
 }
 
+async function fetchNeighborhoodEconomicsForZip(
+  zip: string,
+  signal?: AbortSignal
+): Promise<NeighborhoodEconomicContext | null> {
+  const res = await fetch(`/api/neighborhood-economics?zip=${encodeURIComponent(zip)}`, {
+    cache: "no-store",
+    signal,
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as {
+    neighborhoodEconomics?: NeighborhoodEconomicContext | null;
+  };
+  return data.neighborhoodEconomics ?? null;
+}
+
 function getDisplayValueForStep(
   wizardState: WizardState,
   step: WizardStepConfig
@@ -525,14 +540,10 @@ function ReportWizardPage() {
     setNeighborhoodEconomics(null);
     setNeighborhoodEconomicsZip(null);
 
-    fetch(`/api/neighborhood-economics?zip=${encodeURIComponent(reportZip)}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((res) => (res.ok ? res.json() : null) as Promise<{ neighborhoodEconomics?: NeighborhoodEconomicContext | null } | null>)
+    fetchNeighborhoodEconomicsForZip(reportZip, controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return;
-        setNeighborhoodEconomics(data?.neighborhoodEconomics ?? null);
+        setNeighborhoodEconomics(data);
         setNeighborhoodEconomicsZip(reportZip);
       })
       .catch(() => {
@@ -933,6 +944,13 @@ function ReportWizardPage() {
   const handleGenerateReport = useCallback(async () => {
     setIsGenerating(true);
     try {
+      let economicsForReport = neighborhoodEconomics;
+      if (reportZip && neighborhoodEconomicsZip !== reportZip) {
+        economicsForReport = await fetchNeighborhoodEconomicsForZip(reportZip);
+        setNeighborhoodEconomics(economicsForReport);
+        setNeighborhoodEconomicsZip(reportZip);
+      }
+
       const generated = generateReportData(wizardState, programs, {
         zones: zones ?? undefined,
         zoneNames: zoneNames ?? undefined,
@@ -945,7 +963,7 @@ function ReportWizardPage() {
         stats: areaStats ?? undefined,
         corridorMetrics: corridorMetric ?? undefined,
         corridorOwnerClusters,
-        neighborhoodEconomics: neighborhoodEconomics ?? undefined,
+        neighborhoodEconomics: economicsForReport ?? undefined,
       });
       setReport(generated);
     } catch {
@@ -953,7 +971,7 @@ function ReportWizardPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics]);
+  }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics, neighborhoodEconomicsZip, reportZip]);
 
   // ── Value Change Handlers ────────────────────────────────────────
 
