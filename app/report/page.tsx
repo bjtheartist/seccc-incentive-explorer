@@ -214,7 +214,7 @@ async function fetchNeighborhoodEconomicsForZip(
   signal?: AbortSignal
 ): Promise<NeighborhoodEconomicContext | null> {
   const res = await fetch(`/api/neighborhood-economics?zip=${encodeURIComponent(zip)}`, {
-    cache: "no-store",
+    cache: "default",
     signal,
   });
   if (!res.ok) return null;
@@ -222,6 +222,24 @@ async function fetchNeighborhoodEconomicsForZip(
     neighborhoodEconomics?: NeighborhoodEconomicContext | null;
   };
   return data.neighborhoodEconomics ?? null;
+}
+
+function resolveReportZipFromContext(
+  state: WizardState,
+  context: {
+    addressInput?: string | null;
+    geocodeLabel?: string | null;
+    parcel?: ParcelData | null;
+  }
+): string | null {
+  return extractChicagoZipCode(
+    state.neighborhood,
+    context.parcel?.zip,
+    context.parcel?.address,
+    state.address,
+    context.geocodeLabel,
+    context.addressInput
+  );
 }
 
 function getDisplayValueForStep(
@@ -416,6 +434,7 @@ function ReportWizardPage() {
   const [censusData, setCensusData] = useState<ReportCensusData | null>(null);
   const [cityZoning, setCityZoning] = useState<ReportZoningData | null>(null);
   const [parcelData, setParcelData] = useState<ParcelData | null>(null);
+  const [parcelLookupComplete, setParcelLookupComplete] = useState(false);
   const [districtsData, setDistrictsData] = useState<DistrictData | null>(null);
   const [stackingRules, setStackingRules] = useState<StackingRule[] | null>(null);
   const [communityAssets, setCommunityAssets] = useState<CommunityAsset[] | null>(null);
@@ -445,24 +464,23 @@ function ReportWizardPage() {
 
   const reportZip = useMemo(
     () =>
-      extractChicagoZipCode(
-        wizardState.neighborhood,
-        parcelData?.zip,
-        wizardState.address,
-        geocodeResult?.display_name,
-        addressInput
-      ),
-    [addressInput, geocodeResult?.display_name, parcelData?.zip, wizardState.address, wizardState.neighborhood]
+      resolveReportZipFromContext(wizardState, {
+        addressInput,
+        geocodeLabel: geocodeResult?.display_name,
+        parcel: parcelData,
+      }),
+    [addressInput, geocodeResult?.display_name, parcelData, wizardState]
   );
 
   const compareZip = useMemo(
     () =>
       extractChicagoZipCode(
         compareParcel?.zip,
+        compareParcel?.address,
         compareGeoResult?.display_name,
         compareAddressInput
       ),
-    [compareAddressInput, compareGeoResult?.display_name, compareParcel?.zip]
+    [compareAddressInput, compareGeoResult?.display_name, compareParcel?.address, compareParcel?.zip]
   );
 
   // Load programs on mount
@@ -500,6 +518,8 @@ function ReportWizardPage() {
   // Load census + zoning + parcel data when address has lat/lon
   useEffect(() => {
     if (!wizardState.lat || !wizardState.lon) return;
+    setParcelLookupComplete(false);
+    setParcelData(null);
     cachedFetch(`/api/census?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setCensusData(data as ReportCensusData); })
       .catch(() => {});
@@ -508,7 +528,8 @@ function ReportWizardPage() {
       .catch(() => {});
     cachedFetch<ParcelData>(`/api/parcel?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setParcelData(data); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setParcelLookupComplete(true));
     cachedFetch<DistrictData>(`/api/districts?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setDistrictsData(data); })
       .catch(() => {});
@@ -629,14 +650,10 @@ function ReportWizardPage() {
     setCompareNeighborhoodEconomics(null);
     setCompareNeighborhoodEconomicsZip(null);
 
-    fetch(`/api/neighborhood-economics?zip=${encodeURIComponent(compareZip)}`, {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((res) => (res.ok ? res.json() : null) as Promise<{ neighborhoodEconomics?: NeighborhoodEconomicContext | null } | null>)
+    fetchNeighborhoodEconomicsForZip(compareZip, controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return;
-        setCompareNeighborhoodEconomics(data?.neighborhoodEconomics ?? null);
+        setCompareNeighborhoodEconomics(data);
         setCompareNeighborhoodEconomicsZip(compareZip);
       })
       .catch(() => {
@@ -678,6 +695,7 @@ function ReportWizardPage() {
   useEffect(() => {
     if (!isInstantMode || !instantLoading) return;
     if (programs.length === 0 || !zones) return;
+    if (wizardState.lat && wizardState.lon && !parcelLookupComplete) return;
     if (reportZip && neighborhoodEconomicsZip !== reportZip) return;
 
     const timer = setTimeout(() => {
@@ -704,7 +722,7 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
+  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
 
   // Corridor URL mode: auto-generate a corridor report after the metric lookup completes.
   const [corridorAutoGenerated, setCorridorAutoGenerated] = useState(false);
@@ -738,6 +756,7 @@ function ReportWizardPage() {
     if (programs.length === 0) return;
     // For address-based reports, wait for zones
     if (!zones && wizardState.lat) return;
+    if (wizardState.lat && wizardState.lon && !parcelLookupComplete) return;
     if (wizardState.reportType === "corridor-intelligence" && corridorLoading) return;
     if (reportZip && neighborhoodEconomicsZip !== reportZip) return;
 
@@ -767,7 +786,7 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isShareMode, shareAutoGenerated, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, areaStats, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
+  }, [isShareMode, shareAutoGenerated, programs, zones, zoneNames, censusData, cityZoning, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, areaStats, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
 
   // Derive steps based on report type
   const steps = useMemo<WizardStepConfig[]>(() => {
@@ -893,6 +912,8 @@ function ReportWizardPage() {
     setZoneNames(null);
     setCensusData(null);
     setCityZoning(null);
+    setParcelData(null);
+    setParcelLookupComplete(false);
     setInstantLoading(false);
     setHasRefinedInstantReport(false);
     // Clear instant mode URL params
