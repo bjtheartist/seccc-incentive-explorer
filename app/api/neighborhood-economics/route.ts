@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import citywideGrowthSnapshot from "@/data/exports/chicago-neighborhood-economics/neighborhood_economics_by_zip.json";
 import southeastGrowthSnapshot from "@/data/exports/southeast-resilience/neighborhood_growth_signal.json";
+import { fetchLiveZipAcsContext } from "@/lib/census-acs";
 import { getSQL } from "@/lib/db";
 import {
   findGrowthSignalByZip,
   growthSignalToNeighborhoodEconomics,
   mergeCorridorMetricIntoNeighborhoodEconomics,
+  mergeLiveAcsIntoNeighborhoodEconomics,
   type NeighborhoodCorridorMetricInput,
   type NeighborhoodGrowthSnapshot,
 } from "@/lib/neighborhood-economic-context";
@@ -101,10 +103,14 @@ export async function GET(request: NextRequest) {
   const baseEconomics = signal
     ? growthSignalToNeighborhoodEconomics(signal, snapshot)
     : null;
-  const corridorMetric = await latestCorridorMetric(zip);
-  const neighborhoodEconomics = mergeCorridorMetricIntoNeighborhoodEconomics(
-    baseEconomics,
-    corridorMetric
+  const [corridorMetric, liveAcs] = await Promise.all([
+    latestCorridorMetric(zip),
+    fetchLiveZipAcsContext(zip),
+  ]);
+  const neighborhoodEconomics = mergeLiveAcsIntoNeighborhoodEconomics(
+    mergeCorridorMetricIntoNeighborhoodEconomics(baseEconomics, corridorMetric),
+    zip,
+    liveAcs
   );
 
   return NextResponse.json(
@@ -114,11 +120,12 @@ export async function GET(request: NextRequest) {
       source: snapshot.source,
       artifactSource: sourceLabel,
       corridorMetricAvailable: Boolean(corridorMetric),
+      liveCensusAvailable: Boolean(liveAcs),
       neighborhoodEconomics,
     },
     {
       headers: {
-        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=3600",
+        "Cache-Control": "no-store",
       },
     }
   );

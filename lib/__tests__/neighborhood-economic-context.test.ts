@@ -4,6 +4,7 @@ import {
   findGrowthSignalByZip,
   growthSignalToNeighborhoodEconomics,
   mergeCorridorMetricIntoNeighborhoodEconomics,
+  mergeLiveAcsIntoNeighborhoodEconomics,
   type NeighborhoodGrowthSnapshot,
 } from "@/lib/neighborhood-economic-context";
 
@@ -112,5 +113,42 @@ describe("growthSignalToNeighborhoodEconomics", () => {
     expect(context?.property?.distinctOwners).toBe(1200);
     expect(context?.property?.localOwnershipShare).toBe(0.41);
     expect(context?.limitations?.join(" ")).toContain("aggregate corridor metrics");
+  });
+
+  it("overrides artifact spending-power context with live ACS values", () => {
+    const signal = findGrowthSignalByZip(snapshot, "60619");
+    const base = growthSignalToNeighborhoodEconomics(signal!, snapshot);
+
+    const context = mergeLiveAcsIntoNeighborhoodEconomics(base, "60619", {
+      zip: "60619",
+      population: 103296,
+      households: 43040,
+      medianHouseholdIncome: 58508,
+      employedResidents: 41111,
+      residentSpendingPowerProxy: 2518184320,
+      sourceLabel: "2024 ACS 5-year ZCTA API (live Census)",
+    });
+
+    expect(context?.spendingPower?.population).toBe(103296);
+    expect(context?.spendingPower?.medianHouseholdIncome).toBe(58508);
+    expect(context?.spendingPower?.residentSpendingPowerProxy).toBe(2518184320);
+    expect(context?.spendingPower?.sourceLabel).toBe("2024 ACS 5-year ZCTA API (live Census)");
+    expect(context?.limitations?.join(" ")).toContain("live Census ACS");
+  });
+
+  it("can create a minimal report context from live ACS values only", () => {
+    const context = mergeLiveAcsIntoNeighborhoodEconomics(null, "60601", {
+      zip: "60601",
+      population: 15235,
+      households: 9631,
+      medianHouseholdIncome: 121458,
+      employedResidents: 10081,
+      residentSpendingPowerProxy: 1169761998,
+      sourceLabel: "2024 ACS 5-year ZCTA API (live Census)",
+    });
+
+    expect(context?.geographyLabel).toBe("ZIP 60601");
+    expect(context?.spendingPower?.population).toBe(15235);
+    expect(context?.spendingPower?.sourceLabel).toBe("2024 ACS 5-year ZCTA API (live Census)");
   });
 });
