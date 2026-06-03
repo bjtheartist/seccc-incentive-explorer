@@ -1,10 +1,11 @@
-# Curated anchor businesses (`neighborhood_anchors_by_community_area.json`)
+# Curated local impact anchors (`neighborhood_anchors_by_community_area.json`)
 
-This file lets the Neighborhood Economic Context report **name real anchor
-businesses** (employers, institutions, corridors, hospitals, universities) for a
-location. It is **human-curated and source-cited** — the app never generates
-business names from an LLM or any unverified source. Where a community area has
-no entry, the report simply omits the "Anchor Businesses" row.
+This file lets the Neighborhood Economic Context report **name real local impact
+anchors** (employers, institutions, corridors, hospitals, universities, venues,
+and redevelopment sites) for a location. It is **human-curated and
+source-cited** — the app never generates anchor names from an LLM or any
+unverified source. Where a community area has no entry, the report simply omits
+the "Local Impact Anchors" row.
 
 ## Source of truth → repo
 
@@ -19,6 +20,11 @@ This re-keys the workbook by **community-area number (1–77)** and strips it to
 the fields the public report shows. Re-run whenever a new batch workbook is
 produced. The importer reads only aggregate/anchor-level fields — no owner,
 contact, or mailing-address rows are introduced.
+
+The workbook parser uses the `xlsx` package only as a trusted local build/import
+tool. Do not expose workbook upload or workbook parsing as a public API route or
+user-facing feature without replacing this with a hardened upload pipeline and
+security review.
 
 ## How it reaches a report
 

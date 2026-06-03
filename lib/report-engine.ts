@@ -1108,7 +1108,7 @@ function buildNeighborhoodEconomicContextSection(
     });
     const topWhy = top?.rationale ? ` Why ${top.name} ranks highest: ${top.rationale}` : "";
     items.push({
-      label: "Anchor Businesses",
+      label: "Local Impact Anchors",
       value: `Curated: ${anchors.length} anchor${anchors.length !== 1 ? "s" : ""}${top?.impactTier ? ` (top tier ${top.impactTier})` : ""}`,
       detail: `Local-impact anchors for ${anchorArea}, ranked by a curated 6-dimension impact screen (direct employment/payroll, local hiring, local procurement, foot-traffic/draw, service-gap, community benefit): ${lines.join("; ")}.${topWhy} These are curated, source-cited public records (employers, institutions, corridors) — a diligence screen, not a formal input-output model or verified headcounts. ${top?.validationNeeded ? `Validation needed: ${top.validationNeeded}` : ""}`,
       sourceLabel: "Curated Chicago Local Impact Anchor screen",

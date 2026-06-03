@@ -9,6 +9,10 @@
  * Re-run whenever a new batch workbook is produced. The workbook is the source
  * of truth; this script only re-keys it by community-area number and strips it
  * to the fields the public report shows (no owner/contact rows are introduced).
+ *
+ * Security boundary: this is a trusted local import tool. Do not expose XLSX
+ * upload/parsing through a public API route without a hardened upload pipeline
+ * and security review.
  */
 import * as XLSX from "xlsx";
 import { resolve } from "node:path";
