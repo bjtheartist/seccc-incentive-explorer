@@ -1119,7 +1119,6 @@ function buildNeighborhoodEconomicContextSection(
 function buildLocalImpactAnchorsSection(ctx: ReportContext): ReportSection | undefined {
   const anchors = ctx.neighborhoodEconomics?.anchors;
   if (!anchors || anchors.length === 0) return undefined;
-  const area = ctx.neighborhoodEconomics?.anchorGeography;
 
   const items: ReportItem[] = anchors.map((a) => ({
     label: a.name,
@@ -1131,7 +1130,7 @@ function buildLocalImpactAnchorsSection(ctx: ReportContext): ReportSection | und
 
   return {
     title: "Local Impact Anchors",
-    description: `Named anchor institutions and employers${area ? ` in ${area}` : ""}, ranked by a curated 6-dimension local-impact screen. A diligence tool — not verified headcounts or a formal impact model.`,
+    description: "Local Impact Anchors are institutions, employers, and destination clusters that can shape neighborhood activity. They help point to where jobs, visitors, training pathways, purchasing, partnerships, and local business demand may already be concentrated.",
     items,
   };
 }

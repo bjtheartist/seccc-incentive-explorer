@@ -598,6 +598,9 @@ async function fetchParcelClassAggregates(zips: string[]): Promise<Map<string, P
  * Build a pin→zip map from the parcel universe for the requested ZIPs (latest
  * year). The Assessed Values dataset has no ZIP, so this map bridges it.
  */
+// Keyset (cursor) pagination by pin — indexed range scans, constant-time per
+// page. Deep $offset pagination over the multi-million-row county datasets
+// times out on Socrata, so we never use $offset here.
 async function fetchPinToZip(zips: string[]): Promise<Map<string, string>> {
   const pinToZip = new Map<string, string>();
   const latestYear = await fetchLatestParcelYear(zips);
@@ -605,10 +608,13 @@ async function fetchPinToZip(zips: string[]): Promise<Map<string, string>> {
 
   const zipList = zips.map((zip) => `'${zip}'`).join(",");
   const pageSize = 50000;
-  for (let offset = 0; ; offset += pageSize) {
-    const where = encodeURIComponent(`zip_code in(${zipList}) AND year=${latestYear}`);
+  let lastPin = "";
+  for (;;) {
+    const where = encodeURIComponent(
+      `zip_code in(${zipList}) AND year=${latestYear} AND pin > '${lastPin}'`
+    );
     const select = encodeURIComponent("pin,zip_code");
-    const url = `${PARCEL_UNIVERSE_URL}?$select=${select}&$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=pin`;
+    const url = `${PARCEL_UNIVERSE_URL}?$select=${select}&$where=${where}&$order=pin&$limit=${pageSize}`;
     const rows = await fetchJsonWithRetry<Array<{ pin?: string; zip_code?: string }>>(url);
     if (!rows || rows.length === 0) break;
     for (const row of rows) {
@@ -616,14 +622,16 @@ async function fetchPinToZip(zips: string[]): Promise<Map<string, string>> {
       const zip = row.zip_code?.trim();
       if (pin && zip) pinToZip.set(pin, zip);
     }
-    if (rows.length < pageSize) break;
+    const next = rows[rows.length - 1].pin?.trim();
+    if (!next || next === lastPin || rows.length < pageSize) break;
+    lastPin = next;
   }
   return pinToZip;
 }
 
 /**
  * Sum certified total assessed value per ZIP for a single tax year by streaming
- * the Assessed Values dataset and bucketing via the pin→zip map.
+ * the Assessed Values dataset (keyset by pin) and bucketing via the pin→zip map.
  */
 async function sumAssessedValueByZip(
   year: number,
@@ -631,10 +639,12 @@ async function sumAssessedValueByZip(
 ): Promise<Map<string, number>> {
   const byZip = new Map<string, number>();
   const pageSize = 50000;
-  for (let offset = 0; ; offset += pageSize) {
-    const where = encodeURIComponent(`year=${year} AND certified_tot IS NOT NULL`);
+  let lastPin = "";
+  let scanned = 0;
+  for (;;) {
+    const where = encodeURIComponent(`year=${year} AND pin > '${lastPin}'`);
     const select = encodeURIComponent("pin,certified_tot");
-    const url = `${ASSESSED_VALUES_URL}?$select=${select}&$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=pin`;
+    const url = `${ASSESSED_VALUES_URL}?$select=${select}&$where=${where}&$order=pin&$limit=${pageSize}`;
     const rows = await fetchJsonWithRetry<RawAssessedValueRow[]>(url);
     if (!rows || rows.length === 0) break;
     for (const row of rows) {
@@ -643,12 +653,14 @@ async function sumAssessedValueByZip(
       const zip = pinToZip.get(pin);
       if (!zip) continue;
       const value = Number(row.certified_tot);
-      if (!Number.isFinite(value)) continue;
-      byZip.set(zip, (byZip.get(zip) ?? 0) + value);
+      if (Number.isFinite(value)) byZip.set(zip, (byZip.get(zip) ?? 0) + value);
     }
-    if (rows.length < pageSize) break;
-    if (offset > 0 && offset % (pageSize * 10) === 0) {
-      console.log(`  assessed values ${year}: scanned ${offset + rows.length} rows...`);
+    scanned += rows.length;
+    const next = rows[rows.length - 1].pin?.trim();
+    if (!next || next === lastPin || rows.length < pageSize) break;
+    lastPin = next;
+    if (scanned % (pageSize * 10) === 0) {
+      console.log(`  assessed values ${year}: scanned ${scanned} rows...`);
     }
   }
   return byZip;
@@ -661,17 +673,25 @@ async function fetchAssessedValueAggregates(
 ): Promise<Map<string, AssessedValueAggregate>> {
   const out = new Map<string, AssessedValueAggregate>();
   console.log(`Bridging assessed values (${baselineYear} → ${comparisonYear}) via parcel universe...`);
-  const pinToZip = await fetchPinToZip(zips);
-  if (pinToZip.size === 0) {
-    console.warn("  no pin→zip mapping available; skipping assessed values.");
+
+  let baselineByZip: Map<string, number>;
+  let comparisonByZip: Map<string, number>;
+  try {
+    const pinToZip = await fetchPinToZip(zips);
+    if (pinToZip.size === 0) {
+      console.warn("  no pin→zip mapping available; skipping assessed values.");
+      return out;
+    }
+    console.log(`  pin→zip map: ${pinToZip.size} parcels`);
+    // Sequential (not parallel) to stay within Socrata rate/timeout limits.
+    baselineByZip = await sumAssessedValueByZip(baselineYear, pinToZip);
+    comparisonByZip = await sumAssessedValueByZip(comparisonYear, pinToZip);
+  } catch (err) {
+    // Never abort the whole export if the assessor stream fails — the rest of
+    // the artifact (licenses, ZBP, permits, parcels, ACS) still writes.
+    console.warn(`  assessed-value bridge failed, skipping: ${(err as Error).message}`);
     return out;
   }
-  console.log(`  pin→zip map: ${pinToZip.size} parcels`);
-
-  const [baselineByZip, comparisonByZip] = await Promise.all([
-    sumAssessedValueByZip(baselineYear, pinToZip),
-    sumAssessedValueByZip(comparisonYear, pinToZip),
-  ]);
 
   for (const zip of zips) {
     const baseline = baselineByZip.get(zip) ?? null;
