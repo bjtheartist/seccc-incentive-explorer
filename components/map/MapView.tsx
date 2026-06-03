@@ -344,8 +344,11 @@ export default function MapView() {
         const srcId = `zone-${key}`;
         const tilesetId = ZONE_TILESET_IDS[key];
 
-        // Heavy-coverage layers get reduced opacity so they don't block the whole map
-        const baseOpacity = HEAVY_COVERAGE_KEYS.has(key) ? 0.08 : 0.18;
+        // Heavy-coverage layers get reduced opacity so they don't block the whole
+        // map. On small screens, fills are toned down further (outlines stay) so
+        // the map reads cleanly instead of a saturated wash.
+        const mobileDensity = window.matchMedia("(max-width: 768px)").matches ? 0.55 : 1;
+        const baseOpacity = (HEAVY_COVERAGE_KEYS.has(key) ? 0.08 : 0.18) * mobileDensity;
         const hoverOpacity = HEAVY_COVERAGE_KEYS.has(key) ? 0.2 : 0.4;
 
         if (tilesetId) {
@@ -1413,7 +1416,7 @@ export default function MapView() {
   }, [vacantVisible, loaded, vacantLoaded, ownerFilter]);
 
   return (
-    <div className="relative w-full h-[calc(100dvh-132px)] md:h-[calc(100vh-220px)] min-h-[520px]">
+    <div className="relative w-full h-[calc(100dvh-56px)] md:h-[calc(100vh-220px)] min-h-[520px]">
       {/* Map container */}
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
