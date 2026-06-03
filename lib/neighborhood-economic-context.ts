@@ -3,8 +3,8 @@ import type { LiveZipAcsContext } from "./census-acs";
 import {
   modelNeighborhoodLeakage,
   modelLocalMultiplier,
-  rankAnchors,
-  type CuratedAnchor,
+  rankCommunityAnchors,
+  type CommunityAnchor,
 } from "./neighborhood-economic-models";
 
 export interface NeighborhoodGrowthSignal {
@@ -300,36 +300,44 @@ export function mergeLiveAcsIntoNeighborhoodEconomics(
 }
 
 /**
- * Merge curated anchor businesses (named, public/partner-curated records) into
- * the report context. Ranks them by the 3-factor anchor score and surfaces the
- * top names as multiplier drivers. Never invents businesses: if no curated
- * anchors are supplied for the ZIP, the context is returned unchanged.
+ * Merge curated, community-area-keyed anchor businesses into the report context.
+ * These are human-curated, source-cited public records (employers, institutions,
+ * corridors) ranked by the workbook's 6-dimension impact score — never
+ * model-generated. Surfaces the top anchors as multiplier drivers. If no curated
+ * anchors exist for the area, the context is returned unchanged.
  */
-export function mergeAnchorsIntoNeighborhoodEconomics(
+export function mergeCommunityAnchorsIntoNeighborhoodEconomics(
   base: NeighborhoodEconomicContext | null,
-  anchors: CuratedAnchor[] | null | undefined,
+  anchors: CommunityAnchor[] | null | undefined,
+  communityAreaLabel?: string | null,
   limit = 5
 ): NeighborhoodEconomicContext | null {
-  if (!base) return base ?? null;
-  if (!anchors || anchors.length === 0) return base;
+  if (!anchors || anchors.length === 0) return base ?? null;
 
-  const ranked = rankAnchors(anchors, limit);
-  if (ranked.length === 0) return base;
+  const ranked = rankCommunityAnchors(anchors, limit);
+  if (ranked.length === 0) return base ?? null;
 
-  const next: NeighborhoodEconomicContext = {
-    ...base,
-    limitations: [...(base.limitations ?? [])],
-  };
+  // Anchors are community-area-keyed and may exist even when the ZIP economic
+  // artifact does not cover this address — start from a minimal context so the
+  // anchors still surface.
+  const next: NeighborhoodEconomicContext = base
+    ? { ...base, limitations: [...(base.limitations ?? [])] }
+    : { geographyLabel: communityAreaLabel || undefined, limitations: [] };
 
   next.anchors = ranked.map((a) => ({
     name: a.name,
+    type: a.type,
     category: a.category,
-    anchorScore: a.anchorScore,
-    draw: a.draw,
-    linkage: a.linkage,
-    continuity: a.continuity,
-    note: a.note,
+    totalScore: a.totalScore,
+    impactTier: a.impactTier,
+    confidence: a.confidence,
+    multiplierChannels: a.multiplierChannels,
+    rationale: a.rationale,
+    validationNeeded: a.validationNeeded,
+    leakageCaveat: a.leakageCaveat,
+    sourceUrls: a.sourceUrls,
   }));
+  if (communityAreaLabel) next.anchorGeography = communityAreaLabel;
 
   if (next.multiplier) {
     next.multiplier = {
@@ -341,7 +349,7 @@ export function mergeAnchorsIntoNeighborhoodEconomics(
   if (!next.limitations?.some((note) => note.includes("anchor"))) {
     next.limitations = [
       ...(next.limitations ?? []),
-      "Anchor businesses are curated public/partner records ranked by a modeled score; employment and revenue are banded estimates, not verified headcounts or sales.",
+      "Anchor businesses are curated, source-cited public records scored on a 6-dimension local-impact screen; scores are a diligence tool, not a formal input-output model or verified headcounts.",
     ];
   }
 

@@ -4,6 +4,7 @@ import {
   modelLocalMultiplier,
   scoreAnchor,
   rankAnchors,
+  rankCommunityAnchors,
   MULTIPLIER_LOW,
   MULTIPLIER_HIGH,
 } from "@/lib/neighborhood-economic-models";
@@ -76,5 +77,21 @@ describe("anchor scoring", () => {
     expect(ranked).toHaveLength(2);
     expect(ranked[0].name).toBe("Major Employer");
     expect(ranked[0].anchorScore).toBeGreaterThan(ranked[1].anchorScore);
+  });
+});
+
+describe("rankCommunityAnchors", () => {
+  it("ranks curated workbook anchors by total score and drops nameless rows", () => {
+    const ranked = rankCommunityAnchors(
+      [
+        { name: "Corner Store", totalScore: 52 },
+        { name: "Regional Hospital", totalScore: 88 },
+        { name: "  ", totalScore: 99 },
+        { name: "University", totalScore: 81 },
+      ],
+      2
+    );
+    expect(ranked).toHaveLength(2);
+    expect(ranked.map((a) => a.name)).toEqual(["Regional Hospital", "University"]);
   });
 });

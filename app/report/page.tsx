@@ -60,7 +60,8 @@ import type {
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
 import { normalizeZoneCheckResponse } from "@/lib/zone-response";
-import { extractChicagoZipCode } from "@/lib/neighborhood-economic-context";
+import { extractChicagoZipCode, mergeCommunityAnchorsIntoNeighborhoodEconomics } from "@/lib/neighborhood-economic-context";
+import type { CommunityAnchor } from "@/lib/neighborhood-economic-models";
 import {
   Accordion,
   AccordionItem,
@@ -222,6 +223,41 @@ async function fetchNeighborhoodEconomicsForZip(
     neighborhoodEconomics?: NeighborhoodEconomicContext | null;
   };
   return data.neighborhoodEconomics ?? null;
+}
+
+async function fetchCommunityAnchors(
+  lat: number,
+  lon: number,
+  signal?: AbortSignal
+): Promise<{ communityArea: string | null; anchors: CommunityAnchor[] } | null> {
+  const res = await fetch(`/api/neighborhood-anchors?lat=${lat}&lon=${lon}`, {
+    cache: "default",
+    signal,
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { communityArea?: string | null; anchors?: CommunityAnchor[] };
+  return { communityArea: data.communityArea ?? null, anchors: data.anchors ?? [] };
+}
+
+/**
+ * Fetch ZIP economic context + community-area anchors and merge them, so the
+ * report carries named anchor businesses alongside the aggregate signals.
+ */
+async function fetchEconomicsWithAnchors(
+  zip: string,
+  lat: number | null | undefined,
+  lon: number | null | undefined,
+  signal?: AbortSignal
+): Promise<NeighborhoodEconomicContext | null> {
+  const [economics, anchorData] = await Promise.all([
+    fetchNeighborhoodEconomicsForZip(zip, signal),
+    lat != null && lon != null ? fetchCommunityAnchors(lat, lon, signal) : Promise.resolve(null),
+  ]);
+  return mergeCommunityAnchorsIntoNeighborhoodEconomics(
+    economics,
+    anchorData?.anchors,
+    anchorData?.communityArea
+  );
 }
 
 function resolveReportZipFromContext(
@@ -561,7 +597,7 @@ function ReportWizardPage() {
     setNeighborhoodEconomics(null);
     setNeighborhoodEconomicsZip(null);
 
-    fetchNeighborhoodEconomicsForZip(reportZip, controller.signal)
+    fetchEconomicsWithAnchors(reportZip, wizardState.lat, wizardState.lon, controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return;
         setNeighborhoodEconomics(data);
@@ -575,7 +611,7 @@ function ReportWizardPage() {
       });
 
     return () => controller.abort();
-  }, [reportZip]);
+  }, [reportZip, wizardState.lat, wizardState.lon]);
 
   // Load corridor intelligence metrics when the report is corridor-based.
   useEffect(() => {
@@ -967,7 +1003,7 @@ function ReportWizardPage() {
     try {
       let economicsForReport = neighborhoodEconomics;
       if (reportZip && neighborhoodEconomicsZip !== reportZip) {
-        economicsForReport = await fetchNeighborhoodEconomicsForZip(reportZip);
+        economicsForReport = await fetchEconomicsWithAnchors(reportZip, wizardState.lat, wizardState.lon);
         setNeighborhoodEconomics(economicsForReport);
         setNeighborhoodEconomicsZip(reportZip);
       }
