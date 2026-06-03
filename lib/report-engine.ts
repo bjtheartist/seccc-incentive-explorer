@@ -1029,12 +1029,15 @@ function buildNeighborhoodEconomicContextSection(
       property.localOwnershipShare != null ? `${formatRate(property.localOwnershipShare)} local/private ownership signal` : null,
     ].filter(Boolean).join("; ");
     const headlineValue = property.assessedValueChangeRate != null
-      ? `Measured (${geographyLabel}): assessed value ${formatChangeRate(property.assessedValueChangeRate)}`
-      : `Measured (${geographyLabel}): ${ownerSignal}`;
+      ? `Measured public record (${geographyLabel}): assessed value ${formatChangeRate(property.assessedValueChangeRate)}`
+      : `Measured public record (${geographyLabel}): ${ownerSignal}`;
+    const valueYearSpan = property.assessedValueYearBaseline && property.assessedValueYearComparison
+      ? `between ${property.assessedValueYearBaseline} and ${property.assessedValueYearComparison}`
+      : "over time";
     items.push({
       label: "Property Ownership / Value Change",
       value: headlineValue,
-      detail: `Aggregate property context for ${geographyLabel}: ${propertyMix || "parcel and assessed-value aggregates loaded"}. These are ZIP-level totals and shares from public records — no owner names or addresses are shown. Assessed-value movement is a public property-record signal, not proof of market sale prices.`,
+      detail: `Cook County assessed-value records show how the public property assessment for ${geographyLabel} changed ${valueYearSpan} (${propertyMix || "parcel and assessed-value aggregates"}). This is a useful public-record signal for property context, but it is not the same as sale price, private market value, or owner equity — large changes may reflect reassessment cycles, appeals, property improvements, classification changes, or updated assessor methodology. ZIP-level totals only; no owner names or addresses are shown.`,
       sourceLabel: property.sourceLabel || "Cook County Assessor / parcel records",
       sourceUrl: DATA_SOURCES.assessorValues.url,
       confidenceLabel: "Source",

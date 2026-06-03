@@ -2817,11 +2817,15 @@ function econPct(r?: number | null, signed = true): string | null {
   return `${signed && v >= 0 ? "+" : ""}${v}%`;
 }
 
+// Three consistent provenance labels used across every signal.
+const TAG_PUBLIC = "Measured public record";
+const TAG_BENCHMARK = "Benchmark";
+const TAG_MODELED = "Modeled / needs verification";
+
 const ECON_TAG_STYLE: Record<string, string> = {
-  Measured: "bg-[#0C1B33]/[0.08] text-[#0C1B33]/70",
-  Benchmark: "bg-[#0C1B33]/[0.05] text-[#0C1B33]/55",
-  Modeled: "bg-amber-500/10 text-amber-700",
-  Scenario: "bg-amber-500/10 text-amber-700",
+  [TAG_PUBLIC]: "bg-[#0C1B33]/[0.08] text-[#0C1B33]/70",
+  [TAG_BENCHMARK]: "bg-[#0C1B33]/[0.05] text-[#0C1B33]/55",
+  [TAG_MODELED]: "bg-amber-500/10 text-amber-700",
 };
 
 function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicContext }) {
@@ -2829,7 +2833,7 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
   const bc = economics.businessContinuity;
   if (bc?.continuityRate != null) {
     cards.push({
-      tag: "Measured",
+      tag: TAG_PUBLIC,
       label: "Business Continuity",
       value: econPct(bc.continuityRate, false)!,
       sub: `license retention${bc.baselineYear && bc.comparisonYear ? ` · ${bc.baselineYear}–${bc.comparisonYear}` : ""}`,
@@ -2839,7 +2843,7 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
   const jp = economics.jobsPayroll;
   if (jp && (jp.payrollGrowthRate != null || jp.employmentGrowthRate != null)) {
     cards.push({
-      tag: "Benchmark",
+      tag: TAG_BENCHMARK,
       label: "Jobs & Payroll",
       value: jp.payrollGrowthRate != null ? `${econPct(jp.payrollGrowthRate)} payroll` : `${econPct(jp.employmentGrowthRate)} jobs`,
       sub: `${econPct(jp.employmentGrowthRate) ?? "—"} jobs${jp.baselineYear && jp.comparisonYear ? ` · ${jp.baselineYear}–${jp.comparisonYear}` : ""}`,
@@ -2849,7 +2853,7 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
   const ri = economics.reinvestment;
   if (ri && (ri.reportedCost != null || ri.permitCount != null)) {
     cards.push({
-      tag: "Measured",
+      tag: TAG_PUBLIC,
       label: "Reinvestment",
       value: econMoney(ri.reportedCost) ?? `${ri.permitCount?.toLocaleString()}`,
       sub: `${ri.permitCount?.toLocaleString() ?? "—"} permits${ri.windowLabel ? ` · ${ri.windowLabel.replace("the trailing ", "")}` : ""}`,
@@ -2859,11 +2863,11 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
   const pr = economics.property;
   if (pr) {
     cards.push({
-      tag: "Measured",
-      label: "Property",
-      value: pr.assessedValueChangeRate != null ? `${econPct(pr.assessedValueChangeRate)} value` : pr.parcelCount != null ? pr.parcelCount.toLocaleString() : "—",
-      sub: pr.assessedValueChangeRate != null ? "assessed-value change" : "parcels (ZIP)",
-      tip: "Cook County parcel aggregates for this ZIP — parcel counts and class mix, plus assessed-value change when the assessor export is loaded. Public records only; no owner names or addresses are shown.",
+      tag: TAG_PUBLIC,
+      label: "Property / Value Change",
+      value: pr.assessedValueChangeRate != null ? `${econPct(pr.assessedValueChangeRate)} assessed` : pr.parcelCount != null ? pr.parcelCount.toLocaleString() : "—",
+      sub: pr.assessedValueChangeRate != null ? "assessed-value change (public record)" : "parcels (ZIP)",
+      tip: "Cook County assessed-value records show how the public property assessment changed between the two years — not sale price, private market value, or owner equity. Large changes may reflect reassessment cycles, appeals, property improvements, class changes, or updated assessor methodology. Public records only; no owner names or addresses are shown.",
     });
   }
   // Leakage: we can defensibly estimate locally-servable resident DEMAND, but a
@@ -2872,7 +2876,7 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
   const lk = economics.leakage;
   if (lk?.capturableDemand != null) {
     cards.push({
-      tag: "Modeled",
+      tag: TAG_MODELED,
       label: "Local Retail Demand",
       value: `${econMoney(lk.capturableDemand)}/yr`,
       sub: "resident spend · local capture unverified",
@@ -2882,7 +2886,7 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
   const mp = economics.multiplier;
   if (mp?.localOutputEstimateLow != null && mp.localOutputEstimateHigh != null) {
     cards.push({
-      tag: "Scenario",
+      tag: TAG_MODELED,
       label: "Local Multiplier",
       value: `${econMoney(mp.localOutputEstimateLow)}–${econMoney(mp.localOutputEstimateHigh)}`,
       sub: "modeled local output",
@@ -2898,12 +2902,10 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
           <Tooltip key={c.label}>
             <TooltipTrigger asChild>
               <div className="bg-white p-3.5 flex flex-col gap-1 cursor-help focus:outline-none focus-visible:ring-1 focus-visible:ring-[#0C1B33]/30" tabIndex={0}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/40">{c.label}</span>
-                  <span className={`font-mono-bureau text-[7px] tracking-[0.12em] uppercase px-1.5 py-0.5 ${ECON_TAG_STYLE[c.tag] ?? ""}`}>{c.tag}</span>
-                </div>
+                <span className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/40">{c.label}</span>
                 <span className="text-[#0C1B33] text-[20px] font-semibold leading-tight tabular-nums">{c.value}</span>
                 <span className="text-[#0C1B33]/45 text-[10px] leading-snug">{c.sub}</span>
+                <span className={`font-mono-bureau text-[7px] tracking-[0.12em] uppercase px-1.5 py-0.5 mt-1.5 self-start ${ECON_TAG_STYLE[c.tag] ?? ""}`}>{c.tag}</span>
               </div>
             </TooltipTrigger>
             <TooltipContent side="top" className="max-w-[260px] text-[11px] leading-relaxed">
