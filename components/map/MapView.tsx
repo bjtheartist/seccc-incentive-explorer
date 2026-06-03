@@ -45,6 +45,9 @@ export default function MapView() {
   const [tapForAreaData, setTapForAreaData] = useState(false);
   const tapForAreaDataRef = useRef(false);
   useEffect(() => { tapForAreaDataRef.current = tapForAreaData; }, [tapForAreaData]);
+  // Timestamp when the legend opened, to ignore the iOS post-tap ghost click.
+  const legendOpenedAtRef = useRef(0);
+  useEffect(() => { if (legendOpen) legendOpenedAtRef.current = Date.now(); }, [legendOpen]);
 
   // On-screen debug HUD (only with ?debug=1) — lets a real phone report what
   // actually happens on tap, since touch can't be reproduced in emulation.
@@ -1537,11 +1540,18 @@ export default function MapView() {
         {tapForAreaData ? "Area-data mode on — tap the map" : "Search, or tap ⌖ for area data"}
       </div>
 
-      {/* Mobile backdrop overlay for panels */}
-      {(legendOpen || snapshotOpen) && (
+      {/* Mobile backdrop — legend only. The snapshot is a bottom sheet that must
+          leave the map tappable (a tap inspects a new area in armed mode), so it
+          gets NO scrim. The 350ms guard ignores the synthetic "ghost click" iOS
+          fires right after a tap, which was instantly dismissing the just-opened
+          snapshot (it landed on this scrim before you could see the card). */}
+      {legendOpen && (
         <div
           className="absolute inset-0 z-[15] bg-black/20 md:hidden"
-          onClick={() => { setLegendOpen(false); setSnapshotOpen(false); }}
+          onClick={() => {
+            if (Date.now() - legendOpenedAtRef.current < 350) return;
+            setLegendOpen(false);
+          }}
         />
       )}
 
