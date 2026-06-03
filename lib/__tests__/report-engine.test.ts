@@ -237,7 +237,7 @@ describe("generateReportData", () => {
     expect(section?.items.find((i) => i.label === "Business Continuity")?.value).toContain("62%");
     expect(section?.items.find((i) => i.label === "Jobs & Payroll")?.detail).toContain("Census ZIP Business Patterns");
     expect(section?.items.find((i) => i.label === "Jobs & Payroll")?.value).toContain("jobs +13%");
-    expect(section?.items.find((i) => i.label === "Leakage Signals")?.value).toContain("Modeled");
+    expect(section?.items.find((i) => i.label === "Local Retail Demand")?.value).toContain("Modeled");
     expect(report.dataSources?.map((source) => source.id)).toContain("zbp");
     expect(report.dataSources?.map((source) => source.id)).toContain("buildingPermits");
     expect(report.dataSources?.map((source) => source.id)).toContain("assessorValues");

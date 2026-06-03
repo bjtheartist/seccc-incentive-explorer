@@ -904,7 +904,7 @@ function buildNeighborhoodEconomicContextSection(
     if (marketContext.qualificationNarrative && (marketContext.isQCT || marketContext.isLMI)) {
       items.push({
         label: "Neighborhood Qualification",
-        value: marketContext.isQCT ? "Modeled / verify: likely QCT income range" : "Modeled / verify: likely LMI range",
+        value: marketContext.isQCT ? "Modeled / needs verification: likely QCT income range" : "Modeled / needs verification: likely LMI range",
         detail: marketContext.qualificationNarrative,
         sourceLabel: "ACS income vs. modeled HUD thresholds — verify on the official HUD QCT list",
       });
@@ -924,14 +924,14 @@ function buildNeighborhoodEconomicContextSection(
     ].filter(Boolean).join("; ");
     items.push({
       label: "Business Continuity",
-      value: continuity.continuityRate != null ? `Measured: ${formatRate(continuity.continuityRate)} retained signal` : "Measured: license activity",
+      value: continuity.continuityRate != null ? `Measured public record: ${formatRate(continuity.continuityRate)} retained signal` : "Measured public record: license activity",
       detail: `Business continuity is calculated from license records across the ${years}. ${counts || "Counts are not available in this report context."} This is a license-based signal, not proof that a specific business closed, moved, or stayed at one exact storefront.`,
       sourceLabel: continuity.sourceLabel || "Chicago business licenses",
     });
   } else {
     items.push({
       label: "Business Continuity",
-      value: "Measured when license history is loaded",
+      value: "Measured public record (loads with license history)",
       detail: "The continuity score compares active business-license entities in a baseline year with active entities in a later year. It should be read as a neighborhood-level continuity signal, not a verified closure list.",
       sourceLabel: "Chicago business licenses",
     });
@@ -979,7 +979,7 @@ function buildNeighborhoodEconomicContextSection(
   if (spendingPower?.residentSpendingPowerProxy != null) {
     items.push({
       label: "Resident Spending-Power Proxy",
-      value: `Modeled (${geographyLabel}): ${formatMoneyShort(spendingPower.residentSpendingPowerProxy)}`,
+      value: `Modeled / needs verification (${geographyLabel}): ${formatMoneyShort(spendingPower.residentSpendingPowerProxy)}`,
       detail: `This proxy estimates total annual purchasing capacity across ${geographyLabel} (resident households × income). It is a ZIP-wide figure — not the census-tract income above, and not actual sales captured by local businesses.`,
       sourceLabel: spendingPower.sourceLabel || "ACS-derived model",
     });
@@ -991,7 +991,7 @@ function buildNeighborhoodEconomicContextSection(
     const reportedCost = reinvestment.reportedCost != null ? `${formatMoneyShort(reinvestment.reportedCost)} reported cost` : "reported cost not available";
     items.push({
       label: "Reinvestment Signals",
-      value: `Measured: ${permitValue}`,
+      value: `Measured public record: ${permitValue}`,
       detail: `Building permit activity shows visible reinvestment where permits are filed. Current read for ${geographyLabel}: ${reportedCost}${reinvestment.windowLabel ? ` during ${reinvestment.windowLabel}` : ""}. Reported cost is applicant-reported and should be treated as directional.`,
       sourceLabel: reinvestment.sourceLabel || "City of Chicago Building Permits",
       sourceUrl: DATA_SOURCES.buildingPermits.url,
@@ -1000,7 +1000,7 @@ function buildNeighborhoodEconomicContextSection(
   } else {
     items.push({
       label: "Reinvestment Signals",
-      value: "Measured when permit history is loaded",
+      value: "Measured public record (loads with permit history)",
       detail: "Building permits can show where visible reinvestment is happening, including reported project cost and permit volume. This address report is not yet carrying the permit-history signal.",
       sourceLabel: "City of Chicago Building Permits",
       sourceUrl: DATA_SOURCES.buildingPermits.url,
@@ -1060,22 +1060,21 @@ function buildNeighborhoodEconomicContextSection(
     });
   }
 
+  // Local retail demand: we estimate the defensible demand figure, not a
+  // misleading capture/leakage rate (mirrors the web card).
   const leakage = economics?.leakage;
-  if (leakage?.estimatedLeakageRate != null) {
-    const demandVsCapacity = leakage.capturableDemand != null && leakage.localCapacity != null
-      ? ` Locally-capturable resident demand (~${formatMoneyShort(leakage.capturableDemand)}/yr) vs. modeled local business capacity (~${formatMoneyShort(leakage.localCapacity)}/yr).`
-      : "";
+  if (leakage?.capturableDemand != null) {
     items.push({
-      label: "Leakage Signals",
-      value: `Modeled: ~${formatRate(leakage.estimatedLeakageRate)} est. leakage`,
-      detail: `Leakage estimates how much resident spending likely leaves ${geographyLabel} because local businesses can't capture it.${demandVsCapacity} ${(leakage.assumptions ?? []).join(" ")}`,
-      sourceLabel: leakage.sourceLabel || "Modeled leakage hypothesis",
+      label: "Local Retail Demand",
+      value: `Modeled / needs verification: ${formatMoneyShort(leakage.capturableDemand)}/yr`,
+      detail: `Resident spending that local retail, food, and personal-services businesses in ${geographyLabel} could capture — modeled as ~32% of aggregate resident income (ACS). How much actually stays local vs. leaks out needs retail-category sales data we don't yet have, so we don't publish a capture or leakage rate.`,
+      sourceLabel: leakage.sourceLabel || "Modeled from ACS spending power",
     });
   } else {
     items.push({
-      label: "Leakage Signals",
+      label: "Local Retail Demand",
       value: "Modeled / needs verification",
-      detail: "Leakage asks where resident or business spending may leave the neighborhood. It is modeled from spending power, business mix, jobs, and local sales proxies, then verified with partner knowledge before making claims. This report is missing the spending-power or payroll inputs needed to model it.",
+      detail: "Locally-servable resident demand (and any spending leakage) is modeled from spending power and local business capacity. This report is missing the spending-power inputs needed to model it.",
     });
   }
 
@@ -1086,7 +1085,7 @@ function buildNeighborhoodEconomicContextSection(
       : "";
     items.push({
       label: "Multiplier Potential",
-      value: `Scenario: ${formatMoneyShort(multiplier.localOutputEstimateLow)}–${formatMoneyShort(multiplier.localOutputEstimateHigh)} local output`,
+      value: `Modeled / needs verification: ${formatMoneyShort(multiplier.localOutputEstimateLow)}–${formatMoneyShort(multiplier.localOutputEstimateHigh)} local output`,
       detail: `Estimates the local economic output a neighborhood's businesses support — a function of who employs the most, who generates the most revenue, and who re-spends locally / draws outside demand / stays put.${drivers} ${(multiplier.assumptions ?? []).join(" ")}`,
       sourceLabel: multiplier.sourceLabel || "Scenario-planning estimate",
     });

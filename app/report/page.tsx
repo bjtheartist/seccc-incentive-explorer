@@ -2962,6 +2962,7 @@ const ECON_CARD_LABELS = new Set([
   "Reinvestment Signals",
   "Property Ownership / Value Change",
   "Leakage Signals",
+  "Local Retail Demand",
   "Multiplier Potential",
   "Resident Spending-Power Proxy",
 ]);
