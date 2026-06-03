@@ -170,13 +170,18 @@ export interface NeighborhoodEconomicContext {
   };
   anchors?: Array<{
     name: string;
+    type?: string;
     category?: string;
-    anchorScore?: number;
-    draw?: string;
-    linkage?: string;
-    continuity?: string;
-    note?: string;
+    totalScore?: number | null;
+    impactTier?: string;
+    confidence?: string;
+    multiplierChannels?: string;
+    rationale?: string;
+    validationNeeded?: string;
+    leakageCaveat?: string;
+    sourceUrls?: string[];
   }>;
+  anchorGeography?: string;
   limitations?: string[];
 }
 
@@ -1091,15 +1096,24 @@ function buildNeighborhoodEconomicContextSection(
 
   const anchors = economics?.anchors;
   if (anchors && anchors.length > 0) {
+    const anchorArea = economics?.anchorGeography || geographyLabel;
+    const top = anchors[0];
     const lines = anchors.map((a) => {
-      const traits = [a.draw, a.linkage ? `${a.linkage} local linkage` : null, a.continuity].filter(Boolean).join(", ");
-      return `${a.name}${a.category ? ` (${a.category})` : ""}${traits ? ` — ${traits}` : ""}`;
+      const meta = [
+        a.totalScore != null ? `score ${a.totalScore}` : null,
+        a.impactTier || null,
+        a.confidence ? `${a.confidence} confidence` : null,
+      ].filter(Boolean).join(", ");
+      return `${a.name}${a.type ? ` — ${a.type}` : ""}${meta ? ` [${meta}]` : ""}`;
     });
+    const topWhy = top?.rationale ? ` Why ${top.name} ranks highest: ${top.rationale}` : "";
     items.push({
-      label: "Anchor Businesses",
-      value: `Curated: ${anchors.length} anchor${anchors.length !== 1 ? "s" : ""}`,
-      detail: `Notable businesses anchoring ${geographyLabel}, ranked by a modeled anchor score (employment + revenue + local linkage / outside draw / staying power): ${lines.join("; ")}. These are curated public/partner records — employment and revenue are banded estimates, not verified headcounts or sales.`,
-      sourceLabel: "Curated anchor business records",
+      label: "Local Impact Anchors",
+      value: `Curated: ${anchors.length} anchor${anchors.length !== 1 ? "s" : ""}${top?.impactTier ? ` (top tier ${top.impactTier})` : ""}`,
+      detail: `Local-impact anchors for ${anchorArea}, ranked by a curated 6-dimension impact screen (direct employment/payroll, local hiring, local procurement, foot-traffic/draw, service-gap, community benefit): ${lines.join("; ")}.${topWhy} These are curated, source-cited public records (employers, institutions, corridors) — a diligence screen, not a formal input-output model or verified headcounts. ${top?.validationNeeded ? `Validation needed: ${top.validationNeeded}` : ""}`,
+      sourceLabel: "Curated Chicago Local Impact Anchor screen",
+      sourceUrl: top?.sourceUrls && top.sourceUrls.length > 0 ? top.sourceUrls[0] : undefined,
+      confidenceLabel: "Source",
     });
   }
 

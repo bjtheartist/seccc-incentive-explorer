@@ -4,7 +4,7 @@ import {
   extractChicagoZipCode,
   findGrowthSignalByZip,
   growthSignalToNeighborhoodEconomics,
-  mergeAnchorsIntoNeighborhoodEconomics,
+  mergeCommunityAnchorsIntoNeighborhoodEconomics,
   mergeCorridorMetricIntoNeighborhoodEconomics,
   mergeLiveAcsIntoNeighborhoodEconomics,
   type NeighborhoodGrowthSnapshot,
@@ -129,23 +129,29 @@ describe("growthSignalToNeighborhoodEconomics", () => {
     expect(context.property?.sourceLabel).toContain("certified values");
   });
 
-  it("merges curated anchors and surfaces them as multiplier drivers", () => {
+  it("merges curated community anchors and surfaces them as multiplier drivers", () => {
     const signal = findGrowthSignalByZip(snapshot, "60619")!;
     const base = growthSignalToNeighborhoodEconomics(signal, snapshot);
-    const context = mergeAnchorsIntoNeighborhoodEconomics(base, [
-      { name: "Small Shop", employmentBand: "1-9", revenueBand: "<500K" },
-      { name: "Regional Hospital", employmentBand: "500+", revenueBand: "20M+", draw: "destination", linkage: "high", continuity: "established" },
-    ]);
+    const context = mergeCommunityAnchorsIntoNeighborhoodEconomics(
+      base,
+      [
+        { name: "Corner Store", totalScore: 52, impactTier: "Moderate" },
+        { name: "Regional Hospital", totalScore: 88, impactTier: "High", confidence: "High", rationale: "Largest employer", sourceUrls: ["https://example.org/hospital"] },
+      ],
+      "Greater Grand Crossing"
+    );
     expect(context?.anchors?.[0]?.name).toBe("Regional Hospital");
+    expect(context?.anchors?.[0]?.totalScore).toBe(88);
+    expect(context?.anchorGeography).toBe("Greater Grand Crossing");
     expect(context?.multiplier?.anchorDrivers?.[0]).toBe("Regional Hospital");
     expect(context?.limitations?.join(" ")).toContain("Anchor businesses are curated");
   });
 
-  it("leaves context unchanged when no anchors are curated for the ZIP", () => {
+  it("leaves context unchanged when no anchors are curated for the area", () => {
     const signal = findGrowthSignalByZip(snapshot, "60619")!;
     const base = growthSignalToNeighborhoodEconomics(signal, snapshot);
-    expect(mergeAnchorsIntoNeighborhoodEconomics(base, [])?.anchors).toBeUndefined();
-    expect(mergeAnchorsIntoNeighborhoodEconomics(base, null)?.anchors).toBeUndefined();
+    expect(mergeCommunityAnchorsIntoNeighborhoodEconomics(base, [])?.anchors).toBeUndefined();
+    expect(mergeCommunityAnchorsIntoNeighborhoodEconomics(base, null)?.anchors).toBeUndefined();
   });
 
   it("merges aggregate corridor permit and ownership metrics into report context", () => {

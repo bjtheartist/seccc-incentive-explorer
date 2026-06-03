@@ -142,3 +142,49 @@ export function rankAnchors(anchors: CuratedAnchor[], limit = 5): RankedAnchor[]
     .sort((a, b) => b.anchorScore - a.anchorScore)
     .slice(0, limit);
 }
+
+// ── Curated workbook anchors (community-area-keyed, source-cited) ─────
+// Shape produced by scripts/import-anchor-workbook.ts. These carry a real
+// 6-dimension score (0–100), tier, confidence, rationale, and source URLs —
+// human-curated, never model-generated.
+export interface CommunityAnchorScores {
+  employment: number | null;
+  localHiring: number | null;
+  procurement: number | null;
+  footTraffic: number | null;
+  serviceGap: number | null;
+  communityBenefit: number | null;
+}
+
+export interface CommunityAnchor {
+  name: string;
+  type?: string;
+  category?: string;
+  site?: string;
+  evidenceScale?: string;
+  scores?: CommunityAnchorScores;
+  totalScore: number | null;
+  impactTier?: string;
+  confidence?: string;
+  multiplierChannels?: string;
+  rationale?: string;
+  validationNeeded?: string;
+  leakageCaveat?: string;
+  sourceUrls?: string[];
+}
+
+export interface CommunityAnchorFile {
+  source?: string;
+  scoringDimensions?: Record<string, number>;
+  communityAreaCount?: number;
+  anchorCount?: number;
+  byCommunityArea: Record<string, { communityArea: string; anchors: CommunityAnchor[] }>;
+}
+
+export function rankCommunityAnchors(anchors: CommunityAnchor[], limit = 5): CommunityAnchor[] {
+  return anchors
+    .filter((a) => a && typeof a.name === "string" && a.name.trim().length > 0)
+    .slice()
+    .sort((a, b) => (b.totalScore ?? 0) - (a.totalScore ?? 0))
+    .slice(0, limit);
+}
