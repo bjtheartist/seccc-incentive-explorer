@@ -45,6 +45,9 @@ export default function MapView() {
   const [tapForAreaData, setTapForAreaData] = useState(false);
   const tapForAreaDataRef = useRef(false);
   useEffect(() => { tapForAreaDataRef.current = tapForAreaData; }, [tapForAreaData]);
+  // Timestamp when the legend opened, to ignore the iOS post-tap ghost click.
+  const legendOpenedAtRef = useRef(0);
+  useEffect(() => { if (legendOpen) legendOpenedAtRef.current = Date.now(); }, [legendOpen]);
   const [zoningRefOpen, setZoningRefOpen] = useState(false);
   const [classRefOpen, setClassRefOpen] = useState(false);
   const [zoningInfo, setZoningInfo] = useState<string | null>(null);
@@ -265,6 +268,17 @@ export default function MapView() {
 
     map.addControl(new mapboxgl.NavigationControl(), "bottom-right");
     mapRef.current = map;
+
+    // Keep Mapbox's canvas + tap→location mapping in sync with the container.
+    // On iOS Safari the toolbar show/hide changes 100dvh (and thus the map
+    // height) after init; without a resize, taps over much of the map land on
+    // stale coordinates or stop registering. ResizeObserver covers dvh/layout
+    // changes; visualViewport+orientation cover the toolbar collapse.
+    const handleResize = () => requestAnimationFrame(() => mapRef.current?.resize());
+    const resizeObserver = new ResizeObserver(handleResize);
+    if (containerRef.current) resizeObserver.observe(containerRef.current);
+    window.visualViewport?.addEventListener("resize", handleResize);
+    window.addEventListener("orientationchange", handleResize);
 
     map.on("load", async () => {
       /* ── Community Areas base layer (77 neighborhoods) ── */
@@ -965,6 +979,9 @@ export default function MapView() {
     });
 
     return () => {
+      resizeObserver.disconnect();
+      window.visualViewport?.removeEventListener("resize", handleResize);
+      window.removeEventListener("orientationchange", handleResize);
       map.remove();
       mapRef.current = null;
     };
@@ -1502,11 +1519,18 @@ export default function MapView() {
         {tapForAreaData ? "Area-data mode on — tap the map" : "Search, or tap ⌖ for area data"}
       </div>
 
-      {/* Mobile backdrop overlay for panels */}
-      {(legendOpen || snapshotOpen) && (
+      {/* Mobile backdrop — legend only. The snapshot is a bottom sheet that must
+          leave the map tappable (a tap inspects a new area in armed mode), so it
+          gets NO scrim. The 350ms guard ignores the synthetic "ghost click" iOS
+          fires right after a tap, which was instantly dismissing the just-opened
+          snapshot (it landed on this scrim before you could see the card). */}
+      {legendOpen && (
         <div
           className="absolute inset-0 z-[15] bg-black/20 md:hidden"
-          onClick={() => { setLegendOpen(false); setSnapshotOpen(false); }}
+          onClick={() => {
+            if (Date.now() - legendOpenedAtRef.current < 350) return;
+            setLegendOpen(false);
+          }}
         />
       )}
 
@@ -1621,7 +1645,7 @@ export default function MapView() {
               setSnapshotOpen(false);
             }
           }}
-          className={`absolute bottom-24 right-3 z-10 backdrop-blur border px-3 py-2 md:py-1.5 font-mono-bureau tracking-[0.15em] uppercase transition-colors ${
+          className={`absolute bottom-16 left-3 md:bottom-24 md:right-3 md:left-auto z-10 backdrop-blur border px-3 py-2 md:py-1.5 font-mono-bureau tracking-[0.15em] uppercase transition-colors ${
             drawMode
               ? "bg-[#2563EB] text-white border-[#2563EB]"
               : "bg-white/95 text-[#0C1B33]/70 border-[#0C1B33]/10 hover:text-[#0C1B33]"
@@ -1629,12 +1653,13 @@ export default function MapView() {
         >
           <span className="text-[11px] md:text-[10px]">{drawMode ? "Cancel Draw" : "Draw Area"}</span>
           {!drawMode && (
-            <span className="block text-[8px] opacity-50 tracking-[0.1em] mt-0.5">
+            <span className="hidden md:block text-[8px] opacity-50 tracking-[0.1em] mt-0.5">
               Analyze vacant properties
             </span>
           )}
         </button>
       )}
+
     </div>
   );
 }
