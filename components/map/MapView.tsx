@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
+import { Layers, MapPin } from "lucide-react";
 import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
@@ -1402,7 +1403,7 @@ export default function MapView() {
   }, [vacantVisible, loaded, vacantLoaded, ownerFilter]);
 
   return (
-    <div className="relative w-full h-[calc(100vh-180px)] md:h-[calc(100vh-220px)] min-h-[500px]">
+    <div className="relative w-full h-[calc(100dvh-132px)] md:h-[calc(100vh-220px)] min-h-[520px]">
       {/* Map container */}
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
@@ -1434,13 +1435,37 @@ export default function MapView() {
         />
       )}
 
-      {/* Legend toggle button */}
+      {/* Legend toggle button — desktop text button */}
       <button
         onClick={() => setLegendOpen((o) => !o)}
-        className="absolute top-3 left-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-2 md:py-1.5 font-mono-bureau text-[11px] md:text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
+        className="hidden md:block absolute top-3 left-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
       >
         {legendOpen ? "Hide Legend" : "Show Legend"}
       </button>
+
+      {/* Mobile control cluster — compact icon buttons (top-right) */}
+      {loaded && (
+        <div className="md:hidden absolute top-32 right-3 z-10 flex flex-col gap-2">
+          <button
+            onClick={() => { setLegendOpen((o) => !o); setSnapshotOpen(false); }}
+            aria-label="Map layers"
+            className={`w-11 h-11 flex items-center justify-center rounded-full backdrop-blur border shadow-md transition-colors ${
+              legendOpen ? "bg-[#2563EB] text-white border-[#2563EB]" : "bg-white/95 text-[#0C1B33]/70 border-[#0C1B33]/10"
+            }`}
+          >
+            <Layers className="w-5 h-5" />
+          </button>
+          {!snapshotOpen && (
+            <button
+              onClick={() => { setSnapshotOpen(true); setLegendOpen(false); }}
+              aria-label="Location snapshot"
+              className="w-11 h-11 flex items-center justify-center rounded-full bg-white/95 text-[#0C1B33]/70 border border-[#0C1B33]/10 shadow-md"
+            >
+              <MapPin className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Interaction hint */}
       <div className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[9px] md:text-[9px] tracking-[0.1em] text-[#0C1B33]/40 hidden md:block">
@@ -1528,11 +1553,11 @@ export default function MapView() {
         />
       )}
 
-      {/* Snapshot toggle (when closed) */}
+      {/* Snapshot toggle (when closed) — desktop text button */}
       {!snapshotOpen && !polygonPanelOpen && loaded && (
         <button
           onClick={() => setSnapshotOpen(true)}
-          className="absolute top-3 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-2 md:py-1.5 font-mono-bureau text-[11px] md:text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
+          className="hidden md:block absolute top-3 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
         >
           Location Snapshot
         </button>

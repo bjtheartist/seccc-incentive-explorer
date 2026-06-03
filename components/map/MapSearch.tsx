@@ -129,10 +129,10 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
 
   return (
     <div
-      className="absolute top-14 left-3 right-3 md:top-3 md:left-auto md:right-3 z-10 md:w-72"
+      className="absolute top-16 left-3 right-3 md:top-3 md:left-auto md:right-3 z-10 md:w-72"
       onClick={(e) => e.stopPropagation()}
     >
-      {/* Search input */}
+      {/* Search input — hero on mobile (search-first), compact on desktop */}
       <div className="relative">
         <input
           ref={inputRef}
@@ -141,10 +141,10 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
           onChange={(e) => handleInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setOpen(true)}
-          placeholder="Search address or business..."
-          className="w-full h-9 bg-white/95 backdrop-blur border border-[#0C1B33]/10 text-[#0C1B33] text-[12px] pl-8 pr-8 font-mono-bureau tracking-wide placeholder:text-[#0C1B33]/30 focus:outline-none focus:ring-1 focus:ring-[#2563EB]/40 focus:border-[#2563EB]/40 transition-colors"
+          placeholder="Enter an address to check eligibility…"
+          className="w-full h-12 md:h-9 bg-white md:bg-white/95 backdrop-blur border border-[#0C1B33]/10 text-[#0C1B33] text-[14px] md:text-[12px] pl-10 md:pl-8 pr-9 md:pr-8 rounded-full md:rounded-none shadow-lg md:shadow-none font-mono-bureau tracking-wide placeholder:text-[#0C1B33]/35 placeholder:normal-case focus:outline-none focus:ring-1 focus:ring-[#2563EB]/40 focus:border-[#2563EB]/40 transition-colors"
         />
-        <Search className="absolute left-2.5 top-2.5 w-3.5 h-3.5 text-[#0C1B33]/30" />
+        <Search className="absolute left-3.5 md:left-2.5 top-3.5 md:top-2.5 w-4 h-4 md:w-3.5 md:h-3.5 text-[#0C1B33]/35" />
 
         {query && (
           <button
@@ -154,14 +154,14 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
               setResults([]);
               setOpen(false);
             }}
-            className="absolute right-2.5 top-2.5 text-[#0C1B33]/30 hover:text-[#0C1B33]/60"
+            className="absolute right-3.5 md:right-2.5 top-4 md:top-2.5 text-[#0C1B33]/30 hover:text-[#0C1B33]/60"
           >
-            <X className="w-3.5 h-3.5" />
+            <X className="w-4 h-4 md:w-3.5 md:h-3.5" />
           </button>
         )}
 
         {loading && (
-          <div className="absolute right-2.5 top-3 flex gap-0.5">
+          <div className="absolute right-3.5 md:right-2.5 top-5 md:top-3 flex gap-0.5">
             {[0, 1, 2].map((i) => (
               <span
                 key={i}
