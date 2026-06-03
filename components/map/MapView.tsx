@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import mapboxgl from "mapbox-gl";
-import { Layers, MapPin } from "lucide-react";
+import { Layers, Crosshair } from "lucide-react";
 import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
@@ -40,6 +40,11 @@ export default function MapView() {
   );
   const [legendOpen, setLegendOpen] = useState(true);
   const [snapshotOpen, setSnapshotOpen] = useState(true);
+  // Mobile "tap the map for area data" mode. Off by default so taps pan/explore
+  // and search is the primary path; armed via a toggle (clear active state).
+  const [tapForAreaData, setTapForAreaData] = useState(false);
+  const tapForAreaDataRef = useRef(false);
+  useEffect(() => { tapForAreaDataRef.current = tapForAreaData; }, [tapForAreaData]);
   const [zoningRefOpen, setZoningRefOpen] = useState(false);
   const [classRefOpen, setClassRefOpen] = useState(false);
   const [zoningInfo, setZoningInfo] = useState<string | null>(null);
@@ -549,54 +554,53 @@ export default function MapView() {
           }
         }
 
-        /* Resolve community area name for Area Snapshot label + zoom to neighborhood */
-        // Skip community-area zoom if the click landed on a parcel
-        const clickedParcel = map.getLayer("parcels-fill")
-          ? map.queryRenderedFeatures(e.point, { layers: ["parcels-fill"] }).length > 0
-          : false;
+        /* Area data (label + neighborhood zoom + snapshot card) — gated so the
+           two experiences don't clash: always on desktop (snapshot panel is
+           open); on mobile only when the user has armed "tap for area data"
+           mode, so plain taps pan/explore and search stays the primary path. */
+        const isMobileView = window.matchMedia("(max-width: 768px)").matches;
+        const drawing = drawRef.current?.getMode?.() === "draw_polygon";
+        if (!drawing && (!isMobileView || tapForAreaDataRef.current)) {
+          // Skip community-area zoom if the click landed on a parcel
+          const clickedParcel = map.getLayer("parcels-fill")
+            ? map.queryRenderedFeatures(e.point, { layers: ["parcels-fill"] }).length > 0
+            : false;
 
-        let areaLabel: string | undefined;
-        if (map.getLayer("community-areas-fill")) {
-          const caFeats = map.queryRenderedFeatures(e.point, {
-            layers: ["community-areas-fill"],
-          });
-          if (caFeats.length > 0) {
-            const community = caFeats[0].properties?.community;
-            if (community) {
-              areaLabel = community
-                .toLowerCase()
-                .replace(/\b\w/g, (c: string) => c.toUpperCase());
+          let areaLabel: string | undefined;
+          if (map.getLayer("community-areas-fill")) {
+            const caFeats = map.queryRenderedFeatures(e.point, {
+              layers: ["community-areas-fill"],
+            });
+            if (caFeats.length > 0) {
+              const community = caFeats[0].properties?.community;
+              if (community) {
+                areaLabel = community
+                  .toLowerCase()
+                  .replace(/\b\w/g, (c: string) => c.toUpperCase());
 
-              // Zoom to the community area boundary (skip when clicking a parcel or already at parcel zoom)
-              if (!clickedParcel && map.getZoom() < 15) {
-                const geometry = caFeats[0].geometry;
-                if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
-                  const coords =
-                    geometry.type === "Polygon"
-                      ? geometry.coordinates.flat()
-                      : geometry.coordinates.flat(2);
-                  if (coords.length > 0) {
-                    const bounds = new mapboxgl.LngLatBounds();
-                    for (const c of coords) {
-                      bounds.extend(c as [number, number]);
+                // Zoom to the community area boundary (skip when clicking a parcel or already at parcel zoom)
+                if (!clickedParcel && map.getZoom() < 15) {
+                  const geometry = caFeats[0].geometry;
+                  if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
+                    const coords =
+                      geometry.type === "Polygon"
+                        ? geometry.coordinates.flat()
+                        : geometry.coordinates.flat(2);
+                    if (coords.length > 0) {
+                      const bounds = new mapboxgl.LngLatBounds();
+                      for (const c of coords) {
+                        bounds.extend(c as [number, number]);
+                      }
+                      map.fitBounds(bounds, { padding: 60, duration: 1200, maxZoom: 14.5 });
                     }
-                    map.fitBounds(bounds, { padding: 60, duration: 1200, maxZoom: 14.5 });
                   }
                 }
               }
             }
           }
-        }
 
-        /* Update Area Snapshot census data for clicked point */
-        loadCensusRef.current(e.lngLat.lat, e.lngLat.lng, areaLabel);
-
-        /* Update last click coords for snapshot actions */
-        lastClickRef.current(e.lngLat.lat, e.lngLat.lng);
-
-        /* Reveal the Area Snapshot card on tap — essential on mobile, where it
-           starts closed (otherwise tapping silently updates a hidden panel). */
-        if (drawRef.current?.getMode?.() !== "draw_polygon") {
+          loadCensusRef.current(e.lngLat.lat, e.lngLat.lng, areaLabel);
+          lastClickRef.current(e.lngLat.lat, e.lngLat.lng);
           setSnapshotOpen(true);
         }
       });
@@ -1461,15 +1465,22 @@ export default function MapView() {
           >
             <Layers className="w-5 h-5" />
           </button>
-          {!snapshotOpen && (
-            <button
-              onClick={() => { setSnapshotOpen(true); setLegendOpen(false); }}
-              aria-label="Location snapshot"
-              className="w-11 h-11 flex items-center justify-center rounded-full bg-white/95 text-[#0C1B33]/70 border border-[#0C1B33]/10 shadow-md"
-            >
-              <MapPin className="w-5 h-5" />
-            </button>
-          )}
+          {/* Tap-for-area-data mode toggle — blue when armed */}
+          <button
+            onClick={() => {
+              const next = !tapForAreaData;
+              setTapForAreaData(next);
+              if (next) setLegendOpen(false);
+              else setSnapshotOpen(false);
+            }}
+            aria-label="Tap map for area data"
+            aria-pressed={tapForAreaData}
+            className={`w-11 h-11 flex items-center justify-center rounded-full backdrop-blur border shadow-md transition-colors ${
+              tapForAreaData ? "bg-[#2563EB] text-white border-[#2563EB]" : "bg-white/95 text-[#0C1B33]/70 border-[#0C1B33]/10"
+            }`}
+          >
+            <Crosshair className="w-5 h-5" />
+          </button>
         </div>
       )}
 
@@ -1477,8 +1488,15 @@ export default function MapView() {
       <div className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[9px] md:text-[9px] tracking-[0.1em] text-[#0C1B33]/40 hidden md:block">
         Click anywhere for area data &middot; Right-click for zoning
       </div>
-      <div className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.1em] text-[#0C1B33]/40 md:hidden">
-        Tap anywhere for area data
+      {/* Mobile hint reflects the active mode */}
+      <div
+        className={`absolute bottom-3 left-3 z-10 backdrop-blur border px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.1em] md:hidden transition-colors ${
+          tapForAreaData
+            ? "bg-[#2563EB]/95 text-white border-[#2563EB]"
+            : "bg-white/90 text-[#0C1B33]/45 border-[#0C1B33]/10"
+        }`}
+      >
+        {tapForAreaData ? "Area-data mode on — tap the map" : "Search, or tap ⌖ for area data"}
       </div>
 
       {/* Mobile backdrop overlay for panels */}
