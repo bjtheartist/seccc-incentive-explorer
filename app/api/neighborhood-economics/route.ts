@@ -1,19 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import citywideGrowthSnapshot from "@/data/exports/chicago-neighborhood-economics/neighborhood_economics_by_zip.json";
 import southeastGrowthSnapshot from "@/data/exports/southeast-resilience/neighborhood_growth_signal.json";
+import curatedAnchorsByZip from "@/data/exports/chicago-neighborhood-economics/neighborhood_anchors_by_zip.json";
 import { fetchLiveZipAcsContext } from "@/lib/census-acs";
 import { getSQL } from "@/lib/db";
 import {
   findGrowthSignalByZip,
   growthSignalToNeighborhoodEconomics,
+  mergeAnchorsIntoNeighborhoodEconomics,
   mergeCorridorMetricIntoNeighborhoodEconomics,
   mergeLiveAcsIntoNeighborhoodEconomics,
   type NeighborhoodCorridorMetricInput,
   type NeighborhoodGrowthSnapshot,
 } from "@/lib/neighborhood-economic-context";
+import type { CuratedAnchor } from "@/lib/neighborhood-economic-models";
 
 const citywideSnapshot = citywideGrowthSnapshot as NeighborhoodGrowthSnapshot;
 const southeastSnapshot = southeastGrowthSnapshot as NeighborhoodGrowthSnapshot;
+const anchorsByZip = curatedAnchorsByZip as Record<string, CuratedAnchor[]>;
 
 interface CorridorMetricRow {
   corridor_type: string;
@@ -107,10 +111,14 @@ export async function GET(request: NextRequest) {
     latestCorridorMetric(zip),
     fetchLiveZipAcsContext(zip),
   ]);
-  const neighborhoodEconomics = mergeLiveAcsIntoNeighborhoodEconomics(
-    mergeCorridorMetricIntoNeighborhoodEconomics(baseEconomics, corridorMetric),
-    zip,
-    liveAcs
+  const curatedAnchors = anchorsByZip[zip] ?? null;
+  const neighborhoodEconomics = mergeAnchorsIntoNeighborhoodEconomics(
+    mergeLiveAcsIntoNeighborhoodEconomics(
+      mergeCorridorMetricIntoNeighborhoodEconomics(baseEconomics, corridorMetric),
+      zip,
+      liveAcs
+    ),
+    curatedAnchors
   );
 
   return NextResponse.json(
@@ -121,6 +129,7 @@ export async function GET(request: NextRequest) {
       artifactSource: sourceLabel,
       corridorMetricAvailable: Boolean(corridorMetric),
       liveCensusAvailable: Boolean(liveAcs),
+      anchorCount: curatedAnchors?.length ?? 0,
       neighborhoodEconomics,
     },
     {

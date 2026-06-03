@@ -1,5 +1,11 @@
 import type { NeighborhoodEconomicContext } from "./report-engine";
 import type { LiveZipAcsContext } from "./census-acs";
+import {
+  modelNeighborhoodLeakage,
+  modelLocalMultiplier,
+  rankAnchors,
+  type CuratedAnchor,
+} from "./neighborhood-economic-models";
 
 export interface NeighborhoodGrowthSignal {
   zip: string;
@@ -31,6 +37,11 @@ export interface NeighborhoodGrowthSignal {
   vacantParcelCount?: number | null;
   commercialParcelCount?: number | null;
   industrialParcelCount?: number | null;
+  assessedValueBaseline?: number | null;
+  assessedValueComparison?: number | null;
+  assessedValueChangeRate?: number | null;
+  assessedValueYearBaseline?: number | null;
+  assessedValueYearComparison?: number | null;
   measurementNotes?: string[];
 }
 
@@ -148,15 +159,54 @@ export function growthSignalToNeighborhoodEconomics(
           sourceLabel: "City of Chicago Building Permits aggregate export",
         }
       : undefined,
-    property: signal.parcelCount != null
+    property: signal.parcelCount != null || signal.assessedValueComparison != null
       ? {
-          parcelCount: signal.parcelCount,
+          parcelCount: signal.parcelCount ?? null,
           vacantParcelCount: signal.vacantParcelCount ?? null,
           commercialParcelCount: signal.commercialParcelCount ?? null,
           industrialParcelCount: signal.industrialParcelCount ?? null,
-          sourceLabel: "Cook County Parcel Universe aggregate export",
+          assessedValueBaseline: signal.assessedValueBaseline ?? null,
+          assessedValueComparison: signal.assessedValueComparison ?? null,
+          assessedValueChangeRate: signal.assessedValueChangeRate ?? null,
+          assessedValueYearBaseline: signal.assessedValueYearBaseline ?? null,
+          assessedValueYearComparison: signal.assessedValueYearComparison ?? null,
+          sourceLabel:
+            signal.assessedValueComparison != null
+              ? "Cook County Assessor certified values + Parcel Universe aggregate export"
+              : "Cook County Parcel Universe aggregate export",
         }
       : undefined,
+    leakage: (() => {
+      const result = modelNeighborhoodLeakage({
+        residentSpendingPowerProxy: signal.residentSpendingPowerProxy,
+        localAnnualPayroll: signal.officialAnnualPayrollComparison,
+      });
+      return result
+        ? {
+            estimatedLeakageRate: result.estimatedLeakageRate,
+            capturableDemand: result.capturableDemand,
+            localCapacity: result.localCapacity,
+            assumptions: result.assumptions,
+            sourceLabel: "Modeled from ACS spending power and ZBP payroll",
+          }
+        : undefined;
+    })(),
+    multiplier: (() => {
+      const result = modelLocalMultiplier({
+        localAnnualPayroll: signal.officialAnnualPayrollComparison,
+        localEmployment: signal.officialEmploymentComparison,
+      });
+      return result
+        ? {
+            localOutputEstimateLow: result.localOutputEstimateLow,
+            localOutputEstimateHigh: result.localOutputEstimateHigh,
+            multiplierLow: result.multiplierLow,
+            multiplierHigh: result.multiplierHigh,
+            assumptions: result.assumptions,
+            sourceLabel: "Scenario model on ZBP payroll",
+          }
+        : undefined;
+    })(),
     limitations: [
       "This neighborhood economic context is aggregated by ZIP for the current proof of concept.",
       "Business continuity is based on license records and should not be treated as a verified closure, relocation, or survival claim for any individual business.",
@@ -244,6 +294,55 @@ export function mergeLiveAcsIntoNeighborhoodEconomics(
         "Resident spending-power context is refreshed from live Census ACS ZIP/ZCTA data when available; it remains a purchasing-capacity proxy, not observed local sales.",
       ];
     }
+  }
+
+  return next;
+}
+
+/**
+ * Merge curated anchor businesses (named, public/partner-curated records) into
+ * the report context. Ranks them by the 3-factor anchor score and surfaces the
+ * top names as multiplier drivers. Never invents businesses: if no curated
+ * anchors are supplied for the ZIP, the context is returned unchanged.
+ */
+export function mergeAnchorsIntoNeighborhoodEconomics(
+  base: NeighborhoodEconomicContext | null,
+  anchors: CuratedAnchor[] | null | undefined,
+  limit = 5
+): NeighborhoodEconomicContext | null {
+  if (!base) return base ?? null;
+  if (!anchors || anchors.length === 0) return base;
+
+  const ranked = rankAnchors(anchors, limit);
+  if (ranked.length === 0) return base;
+
+  const next: NeighborhoodEconomicContext = {
+    ...base,
+    limitations: [...(base.limitations ?? [])],
+  };
+
+  next.anchors = ranked.map((a) => ({
+    name: a.name,
+    category: a.category,
+    anchorScore: a.anchorScore,
+    draw: a.draw,
+    linkage: a.linkage,
+    continuity: a.continuity,
+    note: a.note,
+  }));
+
+  if (next.multiplier) {
+    next.multiplier = {
+      ...next.multiplier,
+      anchorDrivers: ranked.map((a) => a.name),
+    };
+  }
+
+  if (!next.limitations?.some((note) => note.includes("anchor"))) {
+    next.limitations = [
+      ...(next.limitations ?? []),
+      "Anchor businesses are curated public/partner records ranked by a modeled score; employment and revenue are banded estimates, not verified headcounts or sales.",
+    ];
   }
 
   return next;

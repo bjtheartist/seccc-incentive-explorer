@@ -148,8 +148,35 @@ export interface NeighborhoodEconomicContext {
     assessedValueBaseline?: number | null;
     assessedValueComparison?: number | null;
     assessedValueChangeRate?: number | null;
+    assessedValueYearBaseline?: number | null;
+    assessedValueYearComparison?: number | null;
     sourceLabel?: string;
   };
+  leakage?: {
+    estimatedLeakageRate?: number | null;
+    capturableDemand?: number | null;
+    localCapacity?: number | null;
+    assumptions?: string[];
+    sourceLabel?: string;
+  };
+  multiplier?: {
+    localOutputEstimateLow?: number | null;
+    localOutputEstimateHigh?: number | null;
+    multiplierLow?: number | null;
+    multiplierHigh?: number | null;
+    anchorDrivers?: string[];
+    assumptions?: string[];
+    sourceLabel?: string;
+  };
+  anchors?: Array<{
+    name: string;
+    category?: string;
+    anchorScore?: number;
+    draw?: string;
+    linkage?: string;
+    continuity?: string;
+    note?: string;
+  }>;
   limitations?: string[];
 }
 
@@ -820,13 +847,17 @@ function buildNeighborhoodEconomicContextSection(
   const economics = ctx.neighborhoodEconomics;
   const geographyLabel = economics?.geographyLabel || "this neighborhood";
 
+  // ACS income/home/population are for the address's CENSUS TRACT. Business,
+  // jobs, permit, parcel, spending-power, leakage, and multiplier figures below
+  // are aggregated for the ZIP. Label each so the two geographies aren't
+  // mistaken for the same place.
   if (marketContext?.incomeNarrative) {
-    const vs = cmp.income ? ` (${cmp.income.pct}% of city median $${cmp.income.city.toLocaleString()})` : "";
     items.push({
-      label: "Resident Spending Power",
-      value: ctx.census?.medianIncome != null ? `Measured: $${ctx.census.medianIncome.toLocaleString()} median income` : "Measured: ACS context",
-      detail: `${marketContext.incomeNarrative}${vs}`,
-      sourceLabel: "American Community Survey",
+      label: "Median Household Income",
+      value: ctx.census?.medianIncome != null ? `Measured (census tract): $${ctx.census.medianIncome.toLocaleString()}` : "Measured: ACS context",
+      // incomeNarrative already states the % of the city median — no extra suffix.
+      detail: marketContext.incomeNarrative,
+      sourceLabel: "American Community Survey (census tract)",
     });
   }
 
@@ -834,9 +865,9 @@ function buildNeighborhoodEconomicContextSection(
     const vs = cmp.homeValue ? ` (${cmp.homeValue.pct}% of city median $${cmp.homeValue.city.toLocaleString()})` : "";
     items.push({
       label: "Home Value Context",
-      value: ctx.census?.medianHomeValue != null ? `Measured: $${ctx.census.medianHomeValue.toLocaleString()}` : "Measured: ACS context",
+      value: ctx.census?.medianHomeValue != null ? `Measured (census tract): $${ctx.census.medianHomeValue.toLocaleString()}` : "Measured: ACS context",
       detail: `${marketContext.homeValueNarrative}${vs}`,
-      sourceLabel: "American Community Survey",
+      sourceLabel: "American Community Survey (census tract)",
     });
   }
 
@@ -844,9 +875,9 @@ function buildNeighborhoodEconomicContextSection(
     const vs = cmp.population ? ` (${cmp.population.pct}% of city avg ${cmp.population.city.toLocaleString()} per tract)` : "";
     items.push({
       label: "Population Base",
-      value: ctx.census?.population != null ? `Measured: ${ctx.census.population.toLocaleString()} residents` : "Measured: ACS context",
+      value: ctx.census?.population != null ? `Measured (census tract): ${ctx.census.population.toLocaleString()} residents` : "Measured: ACS context",
       detail: `${marketContext.populationNarrative}${vs}`,
-      sourceLabel: "American Community Survey",
+      sourceLabel: "American Community Survey (census tract)",
     });
   }
 
@@ -867,9 +898,9 @@ function buildNeighborhoodEconomicContextSection(
     if (marketContext.qualificationNarrative && (marketContext.isQCT || marketContext.isLMI)) {
       items.push({
         label: "Neighborhood Qualification",
-        value: marketContext.isQCT ? "Measured: Qualified Census Tract" : "Measured: Low-to-Moderate Income",
+        value: marketContext.isQCT ? "Modeled / verify: likely QCT income range" : "Modeled / verify: likely LMI range",
         detail: marketContext.qualificationNarrative,
-        sourceLabel: "American Community Survey / HUD qualification logic",
+        sourceLabel: "ACS income vs. modeled HUD thresholds — verify on the official HUD QCT list",
       });
     }
   }
@@ -925,6 +956,7 @@ function buildNeighborhoodEconomicContextSection(
       detail: `Census ZIP Business Patterns provides establishment, employment, and annual payroll context for ${geographyLabel} across ${years}. ${details || "The report has a ZBP source record but incomplete values."} ZBP is the latest official jobs/payroll benchmark, not a 2024 current-condition figure; read it as a trend benchmark.`,
       sourceLabel: jobsPayroll.sourceLabel || "Census ZIP Business Patterns",
       sourceUrl: DATA_SOURCES.zbp.url,
+      confidenceLabel: "Source",
     });
   } else {
     items.push({
@@ -933,6 +965,7 @@ function buildNeighborhoodEconomicContextSection(
       detail: "Census ZIP Business Patterns can add establishment counts, employment, and annual payroll by ZIP. This report does not yet have a matched ZBP record for the address context.",
       sourceLabel: "Census ZIP Business Patterns",
       sourceUrl: DATA_SOURCES.zbp.url,
+      confidenceLabel: "Source",
     });
   }
 
@@ -940,8 +973,8 @@ function buildNeighborhoodEconomicContextSection(
   if (spendingPower?.residentSpendingPowerProxy != null) {
     items.push({
       label: "Resident Spending-Power Proxy",
-      value: `Modeled: ${formatMoneyShort(spendingPower.residentSpendingPowerProxy)}`,
-      detail: "This proxy uses resident income and population context to estimate neighborhood purchasing capacity. It does not measure actual sales captured by local businesses.",
+      value: `Modeled (${geographyLabel}): ${formatMoneyShort(spendingPower.residentSpendingPowerProxy)}`,
+      detail: `This proxy estimates total annual purchasing capacity across ${geographyLabel} (resident households × income). It is a ZIP-wide figure — not the census-tract income above, and not actual sales captured by local businesses.`,
       sourceLabel: spendingPower.sourceLabel || "ACS-derived model",
     });
   }
@@ -953,9 +986,10 @@ function buildNeighborhoodEconomicContextSection(
     items.push({
       label: "Reinvestment Signals",
       value: `Measured: ${permitValue}`,
-      detail: `Building permit activity shows visible reinvestment where permits are filed. Current read: ${reportedCost}${reinvestment.windowLabel ? ` during ${reinvestment.windowLabel}` : ""}. Reported cost is applicant-reported and should be treated as directional.`,
+      detail: `Building permit activity shows visible reinvestment where permits are filed. Current read for ${geographyLabel}: ${reportedCost}${reinvestment.windowLabel ? ` during ${reinvestment.windowLabel}` : ""}. Reported cost is applicant-reported and should be treated as directional.`,
       sourceLabel: reinvestment.sourceLabel || "City of Chicago Building Permits",
       sourceUrl: DATA_SOURCES.buildingPermits.url,
+      confidenceLabel: "Source",
     });
   } else {
     items.push({
@@ -964,6 +998,7 @@ function buildNeighborhoodEconomicContextSection(
       detail: "Building permits can show where visible reinvestment is happening, including reported project cost and permit volume. This address report is not yet carrying the permit-history signal.",
       sourceLabel: "City of Chicago Building Permits",
       sourceUrl: DATA_SOURCES.buildingPermits.url,
+      confidenceLabel: "Source",
     });
   }
 
@@ -973,22 +1008,30 @@ function buildNeighborhoodEconomicContextSection(
       ? `${formatNumber(property.distinctOwners)} distinct owner records`
       : property.parcelCount != null
         ? `${formatNumber(property.parcelCount)} parcels`
-        : "owner count not available";
+        : "parcel context loaded";
+    const valueYears = property.assessedValueYearBaseline && property.assessedValueYearComparison
+      ? ` (${property.assessedValueYearBaseline}→${property.assessedValueYearComparison})`
+      : "";
+    const valueSignal = property.assessedValueComparison != null
+      ? `total certified assessed value${valueYears}: ${property.assessedValueBaseline != null ? `${formatMoneyShort(property.assessedValueBaseline)} → ` : ""}${formatMoneyShort(property.assessedValueComparison)}${property.assessedValueChangeRate != null ? ` (${formatChangeRate(property.assessedValueChangeRate)})` : ""}`
+      : null;
     const propertyMix = [
+      valueSignal,
       property.vacantParcelCount != null ? `${formatNumber(property.vacantParcelCount)} vacant-class parcels` : null,
       property.commercialParcelCount != null ? `${formatNumber(property.commercialParcelCount)} commercial parcels` : null,
       property.industrialParcelCount != null ? `${formatNumber(property.industrialParcelCount)} industrial parcels` : null,
       property.localOwnershipShare != null ? `${formatRate(property.localOwnershipShare)} local/private ownership signal` : null,
     ].filter(Boolean).join("; ");
-    const valueSignal = property.assessedValueChangeRate != null
-      ? `assessed value ${formatChangeRate(property.assessedValueChangeRate)}`
-      : "value-change rate not available";
+    const headlineValue = property.assessedValueChangeRate != null
+      ? `Measured (${geographyLabel}): assessed value ${formatChangeRate(property.assessedValueChangeRate)}`
+      : `Measured (${geographyLabel}): ${ownerSignal}`;
     items.push({
       label: "Property Ownership / Value Change",
-      value: `Measured: ${ownerSignal}`,
-      detail: `Property context can show ownership fragmentation, parcel mix, sales, and assessed-value movement. Current read: ${propertyMix || valueSignal}. Owner records are public property records and should be used with confidence labels before outreach.`,
+      value: headlineValue,
+      detail: `Aggregate property context for ${geographyLabel}: ${propertyMix || "parcel and assessed-value aggregates loaded"}. These are ZIP-level totals and shares from public records — no owner names or addresses are shown. Assessed-value movement is a public property-record signal, not proof of market sale prices.`,
       sourceLabel: property.sourceLabel || "Cook County Assessor / parcel records",
       sourceUrl: DATA_SOURCES.assessorValues.url,
+      confidenceLabel: "Source",
     });
   } else if (ctx.parcel?.totalValue) {
     items.push({
@@ -1004,24 +1047,61 @@ function buildNeighborhoodEconomicContextSection(
       detail: "Cook County parcel, sales, and assessed-value history can add ownership and value-change context. Sensitive owner/address-level details should stay out of public reports unless reviewed with partners.",
       sourceLabel: "Cook County Assessor open data",
       sourceUrl: DATA_SOURCES.assessorValues.url,
+      confidenceLabel: "Source",
     });
   }
 
-  items.push({
-    label: "Leakage Signals",
-    value: "Modeled / needs verification",
-    detail: "Leakage asks where resident or business spending may leave the neighborhood. It should be modeled from spending power, business mix, jobs, and local sales proxies, then verified with partner knowledge before making claims.",
-  });
-  items.push({
-    label: "Multiplier Potential",
-    value: "Modeled / needs verification",
-    detail: "Multiplier potential estimates which assets or project types could increase local economic output. It should be framed as a scenario-planning tool, not a guaranteed job, sales, or tax-revenue impact.",
-  });
-  items.push({
-    label: "Incentive Strategy Implications",
-    value: "Use as context, not eligibility proof",
-    detail: "Economic context can help explain why a project matters, which programs may be worth verifying, and what local conditions support the case. Final incentive strategy still depends on project scope, documents, administrator review, and partner verification.",
-  });
+  const leakage = economics?.leakage;
+  if (leakage?.estimatedLeakageRate != null) {
+    const demandVsCapacity = leakage.capturableDemand != null && leakage.localCapacity != null
+      ? ` Locally-capturable resident demand (~${formatMoneyShort(leakage.capturableDemand)}/yr) vs. modeled local business capacity (~${formatMoneyShort(leakage.localCapacity)}/yr).`
+      : "";
+    items.push({
+      label: "Leakage Signals",
+      value: `Modeled: ~${formatRate(leakage.estimatedLeakageRate)} est. leakage`,
+      detail: `Leakage estimates how much resident spending likely leaves ${geographyLabel} because local businesses can't capture it.${demandVsCapacity} ${(leakage.assumptions ?? []).join(" ")}`,
+      sourceLabel: leakage.sourceLabel || "Modeled leakage hypothesis",
+    });
+  } else {
+    items.push({
+      label: "Leakage Signals",
+      value: "Modeled / needs verification",
+      detail: "Leakage asks where resident or business spending may leave the neighborhood. It is modeled from spending power, business mix, jobs, and local sales proxies, then verified with partner knowledge before making claims. This report is missing the spending-power or payroll inputs needed to model it.",
+    });
+  }
+
+  const multiplier = economics?.multiplier;
+  if (multiplier?.localOutputEstimateLow != null && multiplier.localOutputEstimateHigh != null) {
+    const drivers = multiplier.anchorDrivers && multiplier.anchorDrivers.length > 0
+      ? ` Likely local drivers: ${multiplier.anchorDrivers.join(", ")}.`
+      : "";
+    items.push({
+      label: "Multiplier Potential",
+      value: `Scenario: ${formatMoneyShort(multiplier.localOutputEstimateLow)}–${formatMoneyShort(multiplier.localOutputEstimateHigh)} local output`,
+      detail: `Estimates the local economic output a neighborhood's businesses support — a function of who employs the most, who generates the most revenue, and who re-spends locally / draws outside demand / stays put.${drivers} ${(multiplier.assumptions ?? []).join(" ")}`,
+      sourceLabel: multiplier.sourceLabel || "Scenario-planning estimate",
+    });
+  } else {
+    items.push({
+      label: "Multiplier Potential",
+      value: "Modeled / needs verification",
+      detail: "Multiplier potential estimates which assets or project types could increase local economic output. It should be framed as a scenario-planning tool, not a guaranteed job, sales, or tax-revenue impact.",
+    });
+  }
+
+  const anchors = economics?.anchors;
+  if (anchors && anchors.length > 0) {
+    const lines = anchors.map((a) => {
+      const traits = [a.draw, a.linkage ? `${a.linkage} local linkage` : null, a.continuity].filter(Boolean).join(", ");
+      return `${a.name}${a.category ? ` (${a.category})` : ""}${traits ? ` — ${traits}` : ""}`;
+    });
+    items.push({
+      label: "Anchor Businesses",
+      value: `Curated: ${anchors.length} anchor${anchors.length !== 1 ? "s" : ""}`,
+      detail: `Notable businesses anchoring ${geographyLabel}, ranked by a modeled anchor score (employment + revenue + local linkage / outside draw / staying power): ${lines.join("; ")}. These are curated public/partner records — employment and revenue are banded estimates, not verified headcounts or sales.`,
+      sourceLabel: "Curated anchor business records",
+    });
+  }
 
   for (const limitation of economics?.limitations ?? []) {
     items.push({

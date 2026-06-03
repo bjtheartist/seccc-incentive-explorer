@@ -54,6 +54,8 @@ yarn-error.log*
 /data/exports/chicago-neighborhood-economics/*
 !/data/exports/chicago-neighborhood-economics/neighborhood_economics_by_zip.json
 !/data/exports/chicago-neighborhood-economics/neighborhood_economics_by_zip.csv
+!/data/exports/chicago-neighborhood-economics/neighborhood_anchors_by_zip.json
+!/data/exports/chicago-neighborhood-economics/README-anchors.md
 !/data/exports/southeast-resilience/
 /data/exports/southeast-resilience/*
 !/data/exports/southeast-resilience/neighborhood_growth_signal.json

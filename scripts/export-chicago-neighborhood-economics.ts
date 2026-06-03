@@ -33,6 +33,9 @@ const BUSINESS_LICENSES_URL = "https://data.cityofchicago.org/resource/r5kz-chrr
 const PERMITS_URL = "https://data.cityofchicago.org/resource/ydr8-5enu.json";
 const CHICAGO_ZIP_BOUNDARIES_URL = "https://data.cityofchicago.org/resource/unjd-c2ca.json";
 const PARCEL_UNIVERSE_URL = "https://datacatalog.cookcountyil.gov/resource/nj4t-kc8j.json";
+// Cook County Assessor certified values (PIN-keyed, no ZIP) — bridged to ZIP via
+// the parcel universe's pin→zip_code mapping.
+const ASSESSED_VALUES_URL = "https://datacatalog.cookcountyil.gov/resource/uzyt-m557.json";
 const PERMIT_ZIP_REGION_FIELD = "`:@computed_region_rpca_8um6`";
 
 const DEFAULT_CHICAGO_ZIPS = [
@@ -60,6 +63,20 @@ interface ParcelClassAggregate {
   industrialParcelCount: number;
 }
 
+interface AssessedValueAggregate {
+  zip: string;
+  assessedValueBaseline: number | null;
+  assessedValueComparison: number | null;
+  assessedValueChangeRate: number | null;
+  assessedValueYearBaseline: number;
+  assessedValueYearComparison: number;
+}
+
+interface RawAssessedValueRow {
+  pin?: string;
+  certified_tot?: string;
+}
+
 type CitywideZipEconomicSignal = ZipGrowthSignal & {
   permitCount?: number | null;
   permitReportedCost?: number | null;
@@ -69,6 +86,11 @@ type CitywideZipEconomicSignal = ZipGrowthSignal & {
   vacantParcelCount?: number | null;
   commercialParcelCount?: number | null;
   industrialParcelCount?: number | null;
+  assessedValueBaseline?: number | null;
+  assessedValueComparison?: number | null;
+  assessedValueChangeRate?: number | null;
+  assessedValueYearBaseline?: number | null;
+  assessedValueYearComparison?: number | null;
 };
 
 interface RawPermitAggregateRow {
@@ -572,6 +594,105 @@ async function fetchParcelClassAggregates(zips: string[]): Promise<Map<string, P
   return out;
 }
 
+/**
+ * Build a pin→zip map from the parcel universe for the requested ZIPs (latest
+ * year). The Assessed Values dataset has no ZIP, so this map bridges it.
+ */
+async function fetchPinToZip(zips: string[]): Promise<Map<string, string>> {
+  const pinToZip = new Map<string, string>();
+  const latestYear = await fetchLatestParcelYear(zips);
+  if (!latestYear) return pinToZip;
+
+  const zipList = zips.map((zip) => `'${zip}'`).join(",");
+  const pageSize = 50000;
+  for (let offset = 0; ; offset += pageSize) {
+    const where = encodeURIComponent(`zip_code in(${zipList}) AND year=${latestYear}`);
+    const select = encodeURIComponent("pin,zip_code");
+    const url = `${PARCEL_UNIVERSE_URL}?$select=${select}&$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=pin`;
+    const rows = await fetchJsonWithRetry<Array<{ pin?: string; zip_code?: string }>>(url);
+    if (!rows || rows.length === 0) break;
+    for (const row of rows) {
+      const pin = row.pin?.trim();
+      const zip = row.zip_code?.trim();
+      if (pin && zip) pinToZip.set(pin, zip);
+    }
+    if (rows.length < pageSize) break;
+  }
+  return pinToZip;
+}
+
+/**
+ * Sum certified total assessed value per ZIP for a single tax year by streaming
+ * the Assessed Values dataset and bucketing via the pin→zip map.
+ */
+async function sumAssessedValueByZip(
+  year: number,
+  pinToZip: Map<string, string>
+): Promise<Map<string, number>> {
+  const byZip = new Map<string, number>();
+  const pageSize = 50000;
+  for (let offset = 0; ; offset += pageSize) {
+    const where = encodeURIComponent(`year=${year} AND certified_tot IS NOT NULL`);
+    const select = encodeURIComponent("pin,certified_tot");
+    const url = `${ASSESSED_VALUES_URL}?$select=${select}&$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=pin`;
+    const rows = await fetchJsonWithRetry<RawAssessedValueRow[]>(url);
+    if (!rows || rows.length === 0) break;
+    for (const row of rows) {
+      const pin = row.pin?.trim();
+      if (!pin) continue;
+      const zip = pinToZip.get(pin);
+      if (!zip) continue;
+      const value = Number(row.certified_tot);
+      if (!Number.isFinite(value)) continue;
+      byZip.set(zip, (byZip.get(zip) ?? 0) + value);
+    }
+    if (rows.length < pageSize) break;
+    if (offset > 0 && offset % (pageSize * 10) === 0) {
+      console.log(`  assessed values ${year}: scanned ${offset + rows.length} rows...`);
+    }
+  }
+  return byZip;
+}
+
+async function fetchAssessedValueAggregates(
+  zips: string[],
+  baselineYear: number,
+  comparisonYear: number
+): Promise<Map<string, AssessedValueAggregate>> {
+  const out = new Map<string, AssessedValueAggregate>();
+  console.log(`Bridging assessed values (${baselineYear} → ${comparisonYear}) via parcel universe...`);
+  const pinToZip = await fetchPinToZip(zips);
+  if (pinToZip.size === 0) {
+    console.warn("  no pin→zip mapping available; skipping assessed values.");
+    return out;
+  }
+  console.log(`  pin→zip map: ${pinToZip.size} parcels`);
+
+  const [baselineByZip, comparisonByZip] = await Promise.all([
+    sumAssessedValueByZip(baselineYear, pinToZip),
+    sumAssessedValueByZip(comparisonYear, pinToZip),
+  ]);
+
+  for (const zip of zips) {
+    const baseline = baselineByZip.get(zip) ?? null;
+    const comparison = comparisonByZip.get(zip) ?? null;
+    const changeRate =
+      baseline != null && baseline > 0 && comparison != null
+        ? (comparison - baseline) / baseline
+        : null;
+    if (baseline == null && comparison == null) continue;
+    out.set(zip, {
+      zip,
+      assessedValueBaseline: baseline != null ? Math.round(baseline) : null,
+      assessedValueComparison: comparison != null ? Math.round(comparison) : null,
+      assessedValueChangeRate: changeRate,
+      assessedValueYearBaseline: baselineYear,
+      assessedValueYearComparison: comparisonYear,
+    });
+  }
+  return out;
+}
+
 async function fetchLatestParcelYear(zips: string[]): Promise<string | null> {
   const zipList = zips.map((zip) => `'${zip}'`).join(",");
   const where = encodeURIComponent(`zip_code in(${zipList})`);
@@ -645,6 +766,11 @@ function growthRowToExport(signal: CitywideZipEconomicSignal): Record<string, un
     vacant_parcel_count: signal.vacantParcelCount ?? null,
     commercial_parcel_count: signal.commercialParcelCount ?? null,
     industrial_parcel_count: signal.industrialParcelCount ?? null,
+    assessed_value_baseline: signal.assessedValueBaseline ?? null,
+    assessed_value_comparison: signal.assessedValueComparison ?? null,
+    assessed_value_change_rate: signal.assessedValueChangeRate ?? null,
+    assessed_value_year_baseline: signal.assessedValueYearBaseline ?? null,
+    assessed_value_year_comparison: signal.assessedValueYearComparison ?? null,
     measurement_notes: signal.measurementNotes,
   };
 }
@@ -655,6 +781,8 @@ async function main() {
   const baselineYear = parseYear("baseline", 2020);
   const comparisonYear = parseYear("comparison", 2025);
   const cbpComparisonYear = parseYear("cbp-comparison", 2023);
+  const assessedBaselineYear = parseYear("assessed-baseline", 2020);
+  const assessedComparisonYear = parseYear("assessed-comparison", 2024);
   const permitWindowMonths = Number(argValue("permit-window-months") ?? 24);
   const requestedZips = parseZips();
   const activeZips = await fetchActiveZips();
@@ -668,11 +796,12 @@ async function main() {
 
   const licenseRows = await fetchLicenseRows(zips, baselineYear, comparisonYear);
   const cohorts = buildBusinessCohorts(licenseRows, baselineYear, comparisonYear);
-  const [spendingPower, businessPatterns, permitAggregates, parcelAggregates] = await Promise.all([
+  const [spendingPower, businessPatterns, permitAggregates, parcelAggregates, assessedAggregates] = await Promise.all([
     fetchSpendingPower(zips, licenseRows),
     fetchZipBusinessPatterns(zips, [baselineYear, cbpComparisonYear]),
     fetchPermitAggregates(zips, permitWindowMonths),
     fetchParcelClassAggregates(zips),
+    fetchAssessedValueAggregates(zips, assessedBaselineYear, assessedComparisonYear),
   ]);
   const growth = computeNeighborhoodGrowthSignals(
     cohorts.records,
@@ -683,6 +812,7 @@ async function main() {
   const byZip = growth.zips.map((signal) => {
     const permits = permitAggregates.get(signal.zip);
     const parcels = parcelAggregates.get(signal.zip);
+    const assessed = assessedAggregates.get(signal.zip);
     return {
       ...signal,
       permitCount: permits?.permitCount ?? null,
@@ -693,9 +823,14 @@ async function main() {
       vacantParcelCount: parcels?.vacantParcelCount ?? null,
       commercialParcelCount: parcels?.commercialParcelCount ?? null,
       industrialParcelCount: parcels?.industrialParcelCount ?? null,
+      assessedValueBaseline: assessed?.assessedValueBaseline ?? null,
+      assessedValueComparison: assessed?.assessedValueComparison ?? null,
+      assessedValueChangeRate: assessed?.assessedValueChangeRate ?? null,
+      assessedValueYearBaseline: assessed?.assessedValueYearBaseline ?? null,
+      assessedValueYearComparison: assessed?.assessedValueYearComparison ?? null,
       measurementNotes: [
         ...signal.measurementNotes,
-        "Permit and parcel metrics are aggregate ZIP-level public-data signals and do not expose row-level property or owner records.",
+        "Permit, parcel, and assessed-value metrics are aggregate ZIP-level public-data signals and do not expose row-level property or owner records.",
       ],
     };
   });
