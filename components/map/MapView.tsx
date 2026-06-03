@@ -593,6 +593,12 @@ export default function MapView() {
 
         /* Update last click coords for snapshot actions */
         lastClickRef.current(e.lngLat.lat, e.lngLat.lng);
+
+        /* Reveal the Area Snapshot card on tap — essential on mobile, where it
+           starts closed (otherwise tapping silently updates a hidden panel). */
+        if (drawRef.current?.getMode?.() !== "draw_polygon") {
+          setSnapshotOpen(true);
+        }
       });
 
       /* ── Chicago Zoning Districts — per-category layers (on top of incentive zones) ── */
