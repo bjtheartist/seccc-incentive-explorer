@@ -26,7 +26,7 @@ export default function MapSnapshotPanel({
   onGenerateSnapshot,
 }: MapSnapshotPanelProps) {
   return (
-    <div data-snapshot-panel="1" className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
+    <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
       {/* Mobile drag handle */}
       <div className="md:hidden flex flex-col items-center pt-2 pb-1">
         <div className="w-10 h-1 bg-[#0C1B33]/15 rounded-full" />

@@ -48,25 +48,6 @@ export default function MapView() {
   // Timestamp when the legend opened, to ignore the iOS post-tap ghost click.
   const legendOpenedAtRef = useRef(0);
   useEffect(() => { if (legendOpen) legendOpenedAtRef.current = Date.now(); }, [legendOpen]);
-
-  // On-screen debug HUD (only with ?debug=1) — lets a real phone report what
-  // actually happens on tap, since touch can't be reproduced in emulation.
-  const [debugLog, setDebugLog] = useState<string[]>([]);
-  const [showDebug, setShowDebug] = useState(false);
-  const debugRef = useRef<(s: string) => void>(() => {});
-  useEffect(() => {
-    debugRef.current = (s) => setDebugLog((p) => [`${s}`, ...p].slice(0, 9));
-    try { setShowDebug(new URLSearchParams(window.location.search).has("debug")); } catch {}
-  }, []);
-  useEffect(() => {
-    if (!showDebug || !snapshotOpen) return;
-    const id = requestAnimationFrame(() => {
-      const el = document.querySelector('[data-snapshot-panel="1"]') as HTMLElement | null;
-      const r = el?.getBoundingClientRect();
-      debugRef.current(r ? `panel top=${Math.round(r.top)} bot=${Math.round(r.bottom)} ih=${window.innerHeight}` : "panel NOT MOUNTED");
-    });
-    return () => cancelAnimationFrame(id);
-  }, [snapshotOpen, showDebug]);
   const [zoningRefOpen, setZoningRefOpen] = useState(false);
   const [classRefOpen, setClassRefOpen] = useState(false);
   const [zoningInfo, setZoningInfo] = useState<string | null>(null);
@@ -540,7 +521,6 @@ export default function MapView() {
       });
 
       map.on("click", (e) => {
-        debugRef.current(`CLICK y=${Math.round(e.point.y)} armed=${tapForAreaDataRef.current} mode=${drawRef.current?.getMode?.() ?? "?"}`);
         /* Zone popup */
         const features = map.queryRenderedFeatures(e.point, {
           layers: loadedZoneFillLayers,
@@ -639,7 +619,6 @@ export default function MapView() {
           loadCensusRef.current(e.lngLat.lat, e.lngLat.lng, areaLabel);
           lastClickRef.current(e.lngLat.lat, e.lngLat.lng);
           setSnapshotOpen(true);
-          debugRef.current("→ openSnapshot()");
         }
       });
 
@@ -1681,13 +1660,6 @@ export default function MapView() {
         </button>
       )}
 
-      {/* Debug HUD — only with ?debug=1 */}
-      {showDebug && (
-        <div className="absolute top-28 left-3 z-[9999] bg-black/85 text-[#7CFC9A] text-[10px] leading-tight font-mono p-2 rounded max-w-[85%] pointer-events-none whitespace-pre-wrap">
-          <div className="text-white/60 mb-1">debug · tap the map</div>
-          {debugLog.length === 0 ? <div>…no taps yet</div> : debugLog.map((l, i) => <div key={i}>{l}</div>)}
-        </div>
-      )}
     </div>
   );
 }
