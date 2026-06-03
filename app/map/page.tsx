@@ -4,8 +4,9 @@ import IncentiveGlance from "@/components/map/IncentiveGlance";
 export default function MapPage() {
   return (
     <div className="min-h-screen">
-      {/* Page Header — soft blue */}
-      <div className="relative border-b border-[#0C1B33]/10 overflow-hidden">
+      {/* Page Header — soft blue. Hidden on mobile so the map lands full-screen
+          directly under the nav (controls stay pinned during use). */}
+      <div className="relative border-b border-[#0C1B33]/10 overflow-hidden hidden md:block">
         <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/chicago-map-hero.png')" }} />
         <div className="absolute inset-0 bg-[#0C1B33]/80" />
         <div className="relative z-10 container mx-auto max-w-6xl px-4 md:px-6 py-6 md:py-16">
