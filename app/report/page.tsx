@@ -56,6 +56,8 @@ import type {
   CorridorMetric,
   CorridorOwnerCluster,
   NeighborhoodEconomicContext,
+  ReportSection,
+  ReportItem,
 } from "@/lib/report-engine";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
@@ -68,6 +70,12 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 import type {
   ApplicationPortal,
   Program,
@@ -244,13 +252,15 @@ async function fetchCommunityAnchors(
  * report carries named anchor businesses alongside the aggregate signals.
  */
 async function fetchEconomicsWithAnchors(
-  zip: string,
+  zip: string | null,
   lat: number | null | undefined,
   lon: number | null | undefined,
   signal?: AbortSignal
 ): Promise<NeighborhoodEconomicContext | null> {
+  // Anchors only need lat/lon (community area), so they attach even when no ZIP
+  // economic artifact covers the address.
   const [economics, anchorData] = await Promise.all([
-    fetchNeighborhoodEconomicsForZip(zip, signal),
+    zip ? fetchNeighborhoodEconomicsForZip(zip, signal) : Promise.resolve(null),
     lat != null && lon != null ? fetchCommunityAnchors(lat, lon, signal) : Promise.resolve(null),
   ]);
   return mergeCommunityAnchorsIntoNeighborhoodEconomics(
@@ -498,7 +508,8 @@ function ReportWizardPage() {
   // Instant mode state
   const [instantLoading, setInstantLoading] = useState(isInstantMode);
 
-  const reportZip = useMemo(
+  // ZIP parsed from address/parcel/geocode strings.
+  const stringZip = useMemo(
     () =>
       resolveReportZipFromContext(wizardState, {
         addressInput,
@@ -507,6 +518,31 @@ function ReportWizardPage() {
       }),
     [addressInput, geocodeResult?.display_name, parcelData, wizardState]
   );
+
+  // Fallback: reverse-geocode lat/lon -> ZIP when the address string has none
+  // (e.g. parcel records with a 00000 ZIP). Lets ZIP economic context attach.
+  const [reverseZip, setReverseZip] = useState<string | null>(null);
+  useEffect(() => {
+    if (stringZip) return;
+    const lat = wizardState.lat;
+    const lon = wizardState.lon;
+    if (lat == null || lon == null) {
+      setReverseZip(null);
+      return;
+    }
+    const controller = new AbortController();
+    fetch(`/api/geocode?lat=${lat}&lon=${lon}`, { signal: controller.signal })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (controller.signal.aborted) return;
+        const zip = d?.zip ? extractChicagoZipCode(String(d.zip)) : null;
+        setReverseZip(zip);
+      })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [stringZip, wizardState.lat, wizardState.lon]);
+
+  const reportZip = stringZip ?? reverseZip;
 
   const compareZip = useMemo(
     () =>
@@ -585,9 +621,13 @@ function ReportWizardPage() {
     });
   }, []);
 
-  // Load aggregate neighborhood economic context when a ZIP is available.
+  // Load aggregate ZIP economic context (when a ZIP resolves) + community-area
+  // anchors (whenever lat/lon resolve, independent of ZIP).
   useEffect(() => {
-    if (!reportZip) {
+    const lat = wizardState.lat;
+    const lon = wizardState.lon;
+    const hasLatLon = lat != null && lon != null;
+    if (!reportZip && !hasLatLon) {
       setNeighborhoodEconomics(null);
       setNeighborhoodEconomicsZip(null);
       return;
@@ -597,7 +637,7 @@ function ReportWizardPage() {
     setNeighborhoodEconomics(null);
     setNeighborhoodEconomicsZip(null);
 
-    fetchEconomicsWithAnchors(reportZip, wizardState.lat, wizardState.lon, controller.signal)
+    fetchEconomicsWithAnchors(reportZip, lat, lon, controller.signal)
       .then((data) => {
         if (controller.signal.aborted) return;
         setNeighborhoodEconomics(data);
@@ -2763,6 +2803,166 @@ function ComparisonBar({ label, locationFormatted, cityFormatted, pct }: {
   );
 }
 
+// ── Neighborhood economic signal cards ──────────────────────────────
+function econMoney(n?: number | null): string | null {
+  if (n == null) return null;
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${Math.round(n / 1e3)}K`;
+  return `$${Math.round(n)}`;
+}
+function econPct(r?: number | null, signed = true): string | null {
+  if (r == null) return null;
+  const v = Math.round(r * 100);
+  return `${signed && v >= 0 ? "+" : ""}${v}%`;
+}
+
+const ECON_TAG_STYLE: Record<string, string> = {
+  Measured: "bg-[#0C1B33]/[0.08] text-[#0C1B33]/70",
+  Benchmark: "bg-[#0C1B33]/[0.05] text-[#0C1B33]/55",
+  Modeled: "bg-amber-500/10 text-amber-700",
+  Scenario: "bg-amber-500/10 text-amber-700",
+};
+
+function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicContext }) {
+  const cards: { tag: string; label: string; value: string; sub: string; tip: string }[] = [];
+  const bc = economics.businessContinuity;
+  if (bc?.continuityRate != null) {
+    cards.push({
+      tag: "Measured",
+      label: "Business Continuity",
+      value: econPct(bc.continuityRate, false)!,
+      sub: `license retention${bc.baselineYear && bc.comparisonYear ? ` · ${bc.baselineYear}–${bc.comparisonYear}` : ""}`,
+      tip: "Share of active business-license holders from the baseline year still active in the comparison year (Chicago business-license records). A neighborhood retention signal — not proof any one business closed, moved, or stayed.",
+    });
+  }
+  const jp = economics.jobsPayroll;
+  if (jp && (jp.payrollGrowthRate != null || jp.employmentGrowthRate != null)) {
+    cards.push({
+      tag: "Benchmark",
+      label: "Jobs & Payroll",
+      value: jp.payrollGrowthRate != null ? `${econPct(jp.payrollGrowthRate)} payroll` : `${econPct(jp.employmentGrowthRate)} jobs`,
+      sub: `${econPct(jp.employmentGrowthRate) ?? "—"} jobs${jp.baselineYear && jp.comparisonYear ? ` · ${jp.baselineYear}–${jp.comparisonYear}` : ""}`,
+      tip: "Establishments, employment, and annual payroll for this ZIP from Census ZIP Business Patterns. It's the latest official benchmark (reference years shown), not a current-year reading.",
+    });
+  }
+  const ri = economics.reinvestment;
+  if (ri && (ri.reportedCost != null || ri.permitCount != null)) {
+    cards.push({
+      tag: "Measured",
+      label: "Reinvestment",
+      value: econMoney(ri.reportedCost) ?? `${ri.permitCount?.toLocaleString()}`,
+      sub: `${ri.permitCount?.toLocaleString() ?? "—"} permits${ri.windowLabel ? ` · ${ri.windowLabel.replace("the trailing ", "")}` : ""}`,
+      tip: "Building permits filed in this ZIP over the trailing window, with applicant-reported project cost (City of Chicago Building Permits). Reported cost is directional — it omits unpermitted work and isn't audited.",
+    });
+  }
+  const pr = economics.property;
+  if (pr) {
+    cards.push({
+      tag: "Measured",
+      label: "Property",
+      value: pr.assessedValueChangeRate != null ? `${econPct(pr.assessedValueChangeRate)} value` : pr.parcelCount != null ? pr.parcelCount.toLocaleString() : "—",
+      sub: pr.assessedValueChangeRate != null ? "assessed-value change" : "parcels (ZIP)",
+      tip: "Cook County parcel aggregates for this ZIP — parcel counts and class mix, plus assessed-value change when the assessor export is loaded. Public records only; no owner names or addresses are shown.",
+    });
+  }
+  // Leakage: we can defensibly estimate locally-servable resident DEMAND, but a
+  // true capture/leakage RATE needs retail-category sales we don't yet have — so
+  // we show the demand figure, not a misleading capture percentage.
+  const lk = economics.leakage;
+  if (lk?.capturableDemand != null) {
+    cards.push({
+      tag: "Modeled",
+      label: "Local Retail Demand",
+      value: `${econMoney(lk.capturableDemand)}/yr`,
+      sub: "resident spend · local capture unverified",
+      tip: "Resident spending that local retail, food, and personal-services businesses could capture — modeled as ~32% of aggregate resident income (ACS). How much actually stays local vs. leaks out needs retail-category sales data we don't yet have, so we don't publish a capture/leakage rate.",
+    });
+  }
+  const mp = economics.multiplier;
+  if (mp?.localOutputEstimateLow != null && mp.localOutputEstimateHigh != null) {
+    cards.push({
+      tag: "Scenario",
+      label: "Local Multiplier",
+      value: `${econMoney(mp.localOutputEstimateLow)}–${econMoney(mp.localOutputEstimateHigh)}`,
+      sub: "modeled local output",
+      tip: "Scenario estimate of local economic output supported by neighborhood businesses, applying a 1.4–1.8× multiplier to measured ZIP payroll. A planning tool — not a guaranteed jobs, sales, or tax-revenue forecast.",
+    });
+  }
+  if (cards.length === 0) return null;
+
+  return (
+    <TooltipProvider delayDuration={120}>
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8 mb-6">
+        {cards.map((c) => (
+          <Tooltip key={c.label}>
+            <TooltipTrigger asChild>
+              <div className="bg-white p-3.5 flex flex-col gap-1 cursor-help focus:outline-none focus-visible:ring-1 focus-visible:ring-[#0C1B33]/30" tabIndex={0}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/40">{c.label}</span>
+                  <span className={`font-mono-bureau text-[7px] tracking-[0.12em] uppercase px-1.5 py-0.5 ${ECON_TAG_STYLE[c.tag] ?? ""}`}>{c.tag}</span>
+                </div>
+                <span className="text-[#0C1B33] text-[20px] font-semibold leading-tight tabular-nums">{c.value}</span>
+                <span className="text-[#0C1B33]/45 text-[10px] leading-snug">{c.sub}</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-[260px] text-[11px] leading-relaxed">
+              {c.tip}
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
+    </TooltipProvider>
+  );
+}
+
+function AnchorCards({ anchors }: { anchors: NonNullable<NeighborhoodEconomicContext["anchors"]> }) {
+  if (!anchors || anchors.length === 0) return null;
+  return (
+    <div className="mb-6">
+      <div className="space-y-2">
+        {anchors.map((a) => (
+          <div key={a.name} className="border border-[#0C1B33]/8 p-3">
+            <div className="min-w-0">
+              <div className="text-[#0C1B33] text-[13px] font-semibold leading-tight">{a.name}</div>
+              {a.type && <div className="text-[#0C1B33]/45 text-[10px] mt-0.5">{a.type}</div>}
+            </div>
+            {a.rationale && <p className="text-[#0C1B33]/55 text-[11px] leading-relaxed mt-2 line-clamp-3">{a.rationale}</p>}
+            {a.sourceUrls && a.sourceUrls.length > 0 && (
+              <a href={a.sourceUrls[0]} target="_blank" rel="noopener noreferrer" className="inline-block font-mono-bureau text-[9px] tracking-[0.1em] uppercase text-[#0C1B33]/40 hover:text-[#0C1B33]/70 mt-2">Source ↗</a>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Signals rendered as comparison bars (ACS) or stat cards above — hidden from
+// the flat row list so the economic section reads cleanly.
+const ECON_CARD_LABELS = new Set([
+  "Median Household Income",
+  "Home Value Context",
+  "Population Base",
+  "Access & Walkability",
+  "Business Continuity",
+  "Jobs & Payroll",
+  "Reinvestment Signals",
+  "Property Ownership / Value Change",
+  "Leakage Signals",
+  "Multiplier Potential",
+  "Resident Spending-Power Proxy",
+]);
+
+function visibleSectionItems(section: ReportSection): ReportItem[] {
+  const items = section.items ?? [];
+  if (section.title === "Local Impact Anchors") return []; // rendered as cards
+  if (section.title === "Neighborhood Economic Context") {
+    return items.filter((i) => !ECON_CARD_LABELS.has(i.label));
+  }
+  return items;
+}
+
 // ─── Freshness Badge ─────────────────────────────────────────────────
 
 function FreshnessBadge({ lastVerifiedAt, isStale }: { lastVerifiedAt: string | null; isStale?: boolean }) {
@@ -3913,6 +4113,16 @@ export function ReportDisplay({
                       </div>
                     )}
 
+                    {/* Neighborhood economic signal cards */}
+                    {section.title === "Neighborhood Economic Context" && report.neighborhoodEconomics && (
+                      <EconomicSignalCards economics={report.neighborhoodEconomics} />
+                    )}
+
+                    {/* Local Impact Anchors — dedicated section, card layout */}
+                    {section.title === "Local Impact Anchors" && report.neighborhoodEconomics?.anchors && (
+                      <AnchorCards anchors={report.neighborhoodEconomics.anchors} />
+                    )}
+
                     {/* Stacking section: visual table + density bar */}
                     {section.title === "Incentive Density & Stacking" && report.stackingAnalysis && (
                       <div className="mb-8">
@@ -3985,9 +4195,9 @@ export function ReportDisplay({
                       </div>
                     )}
 
-                    {section.items && section.items.length > 0 && (
+                    {visibleSectionItems(section).length > 0 && (
                       <div className="space-y-0 divide-y divide-[#0C1B33]/5">
-                        {section.items.map((item, itemIdx) => {
+                        {visibleSectionItems(section).map((item, itemIdx) => {
                           const reportItem = item as ReportNavigationItem;
                           const itemProgram = reportItem.programId ? programById.get(reportItem.programId) : undefined;
                           const hasNavigationLinks = Boolean(

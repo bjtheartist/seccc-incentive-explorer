@@ -7,6 +7,34 @@ const CDN_HEADERS = {
 
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address");
+  const latParam = request.nextUrl.searchParams.get("lat");
+  const lonParam = request.nextUrl.searchParams.get("lon");
+
+  // Reverse geocode: lat/lon -> { zip } (used to attach ZIP economic context
+  // when the address string has no parseable ZIP).
+  if (!address && latParam != null && lonParam != null) {
+    const lat = Number(latParam);
+    const lon = Number(lonParam);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+      return NextResponse.json({ error: "Invalid lat/lon" }, { status: 400 });
+    }
+    try {
+      const cacheKey = `revgeo:${lat.toFixed(4)},${lon.toFixed(4)}`;
+      const result = await cached(cacheKey, 2592000, async () => {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&addressdetails=1`,
+          { headers: { "User-Agent": "Chicago-Site-Incentive-Map/1.0" } }
+        );
+        const data = await res.json();
+        const postcode: string | undefined = data?.address?.postcode;
+        const zip = postcode ? (postcode.match(/\b(\d{5})\b/)?.[1] ?? null) : null;
+        return { zip, displayName: data?.display_name ?? null };
+      });
+      return NextResponse.json(result ?? { zip: null }, { headers: CDN_HEADERS });
+    } catch {
+      return NextResponse.json({ zip: null }, { status: 200, headers: CDN_HEADERS });
+    }
+  }
 
   if (!address) {
     return NextResponse.json({ error: "Address is required" }, { status: 400 });

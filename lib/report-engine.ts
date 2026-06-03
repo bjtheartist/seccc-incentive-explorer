@@ -274,6 +274,7 @@ export interface GeneratedReport {
     bsos: { name: string; address: string }[];
     narrative: string;
   };
+  neighborhoodEconomics?: NeighborhoodEconomicContext;
   dataSources?: DataSourceCitation[];
 }
 
@@ -1094,40 +1095,43 @@ function buildNeighborhoodEconomicContextSection(
     });
   }
 
-  const anchors = economics?.anchors;
-  if (anchors && anchors.length > 0) {
-    const anchorArea = economics?.anchorGeography || geographyLabel;
-    const top = anchors[0];
-    const lines = anchors.map((a) => {
-      const meta = [
-        a.totalScore != null ? `score ${a.totalScore}` : null,
-        a.impactTier || null,
-        a.confidence ? `${a.confidence} confidence` : null,
-      ].filter(Boolean).join(", ");
-      return `${a.name}${a.type ? ` — ${a.type}` : ""}${meta ? ` [${meta}]` : ""}`;
-    });
-    const topWhy = top?.rationale ? ` Why ${top.name} ranks highest: ${top.rationale}` : "";
-    items.push({
-      label: "Local Impact Anchors",
-      value: `Curated: ${anchors.length} anchor${anchors.length !== 1 ? "s" : ""}${top?.impactTier ? ` (top tier ${top.impactTier})` : ""}`,
-      detail: `Local-impact anchors for ${anchorArea}, ranked by a curated 6-dimension impact screen (direct employment/payroll, local hiring, local procurement, foot-traffic/draw, service-gap, community benefit): ${lines.join("; ")}.${topWhy} These are curated, source-cited public records (employers, institutions, corridors) — a diligence screen, not a formal input-output model or verified headcounts. ${top?.validationNeeded ? `Validation needed: ${top.validationNeeded}` : ""}`,
-      sourceLabel: "Curated Chicago Local Impact Anchor screen",
-      sourceUrl: top?.sourceUrls && top.sourceUrls.length > 0 ? top.sourceUrls[0] : undefined,
-      confidenceLabel: "Source",
-    });
-  }
-
-  for (const limitation of economics?.limitations ?? []) {
-    items.push({
-      label: "Limitation",
-      value: "Needs verification",
-      detail: limitation,
-    });
-  }
+  // Anchors render in their own dedicated section (buildLocalImpactAnchorsSection).
+  // Limitations are consolidated into a single concise note rather than a stack
+  // of rows; the web report shows it as one footnote.
+  items.push({
+    label: "How to read this",
+    value: "Context, not proof",
+    detail:
+      "Figures are ZIP-level aggregates for context — not address-level proof. License continuity is a neighborhood signal, not a closure list; ZIP Business Patterns is a 2020–2023 benchmark, not current-year; spending power, leakage, and multiplier are modeled estimates to verify with partners.",
+  });
 
   return {
     title: "Neighborhood Economic Context",
-    description: "Market, workforce, property, and spending-power signals for interpreting incentives around this location. Each signal is labeled as measured, modeled, or needing verification.",
+    description: "Market, workforce, property, and spending-power signals for this location — labeled measured, modeled, or benchmark.",
+    items,
+  };
+}
+
+/**
+ * Local Impact Anchors — a dedicated section naming the curated, source-cited
+ * anchor businesses for the community area. Rendered as cards in the web report.
+ */
+function buildLocalImpactAnchorsSection(ctx: ReportContext): ReportSection | undefined {
+  const anchors = ctx.neighborhoodEconomics?.anchors;
+  if (!anchors || anchors.length === 0) return undefined;
+  const area = ctx.neighborhoodEconomics?.anchorGeography;
+
+  const items: ReportItem[] = anchors.map((a) => ({
+    label: a.name,
+    value: [a.totalScore != null ? `Score ${a.totalScore}` : null, a.impactTier].filter(Boolean).join(" · ") || "Anchor",
+    detail: a.rationale || a.type || "",
+    sourceLabel: a.type,
+    sourceUrl: a.sourceUrls && a.sourceUrls.length > 0 ? a.sourceUrls[0] : undefined,
+  }));
+
+  return {
+    title: "Local Impact Anchors",
+    description: `Named anchor institutions and employers${area ? ` in ${area}` : ""}, ranked by a curated 6-dimension local-impact screen. A diligence tool — not verified headcounts or a formal impact model.`,
     items,
   };
 }
@@ -1241,6 +1245,8 @@ function generateLocationIncentives(
   // §01 Neighborhood Economic Context
   const neighborhoodEconomicSection = buildNeighborhoodEconomicContextSection(ctx, zones, marketContext);
   if (neighborhoodEconomicSection) sections.push(neighborhoodEconomicSection);
+  const localImpactAnchorsSection = buildLocalImpactAnchorsSection(ctx);
+  if (localImpactAnchorsSection) sections.push(localImpactAnchorsSection);
 
   // §02 Incentive Density & Stacking
   if (stackingAnalysis) {
@@ -1598,6 +1604,8 @@ function generateBestLocation(
   // §03 Neighborhood Economic Context
   const neighborhoodEconomicSection = buildNeighborhoodEconomicContextSection(ctx, zones, marketContext);
   if (neighborhoodEconomicSection) sections.push(neighborhoodEconomicSection);
+  const localImpactAnchorsSection = buildLocalImpactAnchorsSection(ctx);
+  if (localImpactAnchorsSection) sections.push(localImpactAnchorsSection);
 
   // §04 Incentive Zone Coverage & Stacking
   if (zoneCount > 0) {
@@ -2751,6 +2759,7 @@ export function generateReportData(
       break;
   }
   report.reportType = reportType;
+  if (ctx.neighborhoodEconomics) report.neighborhoodEconomics = ctx.neighborhoodEconomics;
 
   // Attach census + zoning data to metadata for address-based reports
   if (reportType !== "program-explorer") {
