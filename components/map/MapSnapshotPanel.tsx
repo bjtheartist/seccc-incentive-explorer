@@ -47,12 +47,34 @@ export default function MapSnapshotPanel({
 
       {/* Location label */}
       <div className="px-4 pb-3">
-        <div className="text-[11px] font-medium text-[#0C1B33]/80 leading-tight">
+        <div className="text-[13px] md:text-[11px] font-medium text-[#0C1B33]/80 leading-tight">
           {snapshotLabel}
         </div>
         <div className="text-[9px] text-[#0C1B33]/30 mt-0.5 font-mono-bureau tracking-wide">
-          Search or click map to update
+          Search or tap the map to update
         </div>
+      </div>
+
+      {/* Mobile eligibility glance + primary CTA (search-first / conversion-led) */}
+      <div className="md:hidden px-4 pb-3">
+        <div className="flex items-center gap-2 mb-2.5">
+          <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-semibold ${snapshotPrograms.length > 0 ? "bg-[#2563EB]/10 text-[#2563EB]" : "bg-[#0C1B33]/5 text-[#0C1B33]/40"}`}>
+            {snapshotPrograms.length > 0 ? "✓" : "—"}
+          </span>
+          <span className="text-[13px] text-[#0C1B33]/75 leading-tight">
+            {snapshotPrograms.length > 0
+              ? `${snapshotPrograms.length} incentive program${snapshotPrograms.length !== 1 ? "s" : ""} may apply here`
+              : "Checking incentive eligibility…"}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={onGenerateSnapshot}
+          disabled={isGeneratingSnapshot}
+          className="block w-full text-center font-mono-bureau text-[11px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-3.5 rounded-lg shadow-sm hover:bg-[#1d4ed8] disabled:bg-[#2563EB]/45 transition-colors"
+        >
+          {isGeneratingSnapshot ? "Preparing report…" : "Generate report →"}
+        </button>
       </div>
 
       <div className="mx-4 h-px bg-[#0C1B33]/8" />
@@ -297,7 +319,7 @@ export default function MapSnapshotPanel({
           type="button"
           onClick={onGenerateSnapshot}
           disabled={isGeneratingSnapshot}
-          className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-2 px-3 hover:bg-[#1d4ed8] disabled:bg-[#2563EB]/45 transition-colors"
+          className="hidden md:block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-2 px-3 hover:bg-[#1d4ed8] disabled:bg-[#2563EB]/45 transition-colors"
         >
           {isGeneratingSnapshot ? "Preparing Snapshot" : "Generate Location Snapshot"}
         </button>

@@ -8,25 +8,26 @@ export default function MapPage() {
       <div className="relative border-b border-[#0C1B33]/10 overflow-hidden">
         <div className="absolute inset-0 bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/chicago-map-hero.png')" }} />
         <div className="absolute inset-0 bg-[#0C1B33]/80" />
-        <div className="relative z-10 container mx-auto max-w-6xl px-4 md:px-6 py-10 md:py-16">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="relative z-10 container mx-auto max-w-6xl px-4 md:px-6 py-6 md:py-16">
+          <div className="flex items-center gap-4 mb-3 md:mb-6">
             <div className="accent-bar-light" />
             <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-white/40">
               Spatial
             </span>
           </div>
-          <h1 className="font-editorial text-4xl md:text-5xl text-white mb-4">
+          <h1 className="font-editorial text-2xl md:text-5xl text-white mb-2 md:mb-4">
             Chicago Site Incentive Map
           </h1>
-          <p className="text-white/50 text-base max-w-xl">
-            Explore mapped incentive zones, community assets, zoning, and neighborhood data across Chicago. Search any address or business to check likely eligibility.
+          <p className="text-white/50 text-sm md:text-base max-w-xl">
+            Search any address to check likely incentive eligibility — then explore zones, assets, and neighborhood data across Chicago.
           </p>
         </div>
       </div>
 
       {/* Warm off-white body */}
-      <div className="px-3 md:px-6 py-6 md:py-10 bg-[#FAF9F6]">
-        <div className="max-w-6xl mx-auto">
+      <div className="px-0 md:px-6 py-0 md:py-10 bg-[#FAF9F6]">
+        {/* Secondary heading — desktop only; mobile goes straight to a map-first view */}
+        <div className="max-w-6xl mx-auto hidden md:block">
           <div className="flex items-center gap-4 mb-6">
             <div className="accent-bar" />
             <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/40">
@@ -38,11 +39,11 @@ export default function MapPage() {
           </h2>
         </div>
 
-        <div className="border border-[#0C1B33]/10 overflow-hidden">
+        <div className="border-y md:border border-[#0C1B33]/10 overflow-hidden">
           <MapShell />
         </div>
 
-        <div className="max-w-6xl mx-auto">
+        <div className="max-w-6xl mx-auto px-3 md:px-0 pt-6 md:pt-0 pb-6 md:pb-0">
         <IncentiveGlance />
 
         <div className="mt-6 grid md:grid-cols-3 gap-0 border border-[#0C1B33]/10 bg-white">
