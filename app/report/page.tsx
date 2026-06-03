@@ -2927,7 +2927,17 @@ function AnchorCards({ anchors }: { anchors: NonNullable<NeighborhoodEconomicCon
               <div className="text-[#0C1B33] text-[13px] font-semibold leading-tight">{a.name}</div>
               {a.type && <div className="text-[#0C1B33]/45 text-[10px] mt-0.5">{a.type}</div>}
             </div>
-            {a.rationale && <p className="text-[#0C1B33]/55 text-[11px] leading-relaxed mt-2 line-clamp-3">{a.rationale}</p>}
+            {a.rationale && <p className="text-[#0C1B33]/55 text-[11px] leading-relaxed mt-2">{a.rationale}</p>}
+            {a.multiplierChannels && (
+              <div className="mt-3 border-t border-[#0C1B33]/6 pt-2">
+                <div className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/30">
+                  What it may support
+                </div>
+                <p className="text-[#0C1B33]/45 text-[11px] leading-relaxed mt-1">
+                  {a.multiplierChannels}
+                </p>
+              </div>
+            )}
             {a.sourceUrls && a.sourceUrls.length > 0 && (
               <a href={a.sourceUrls[0]} target="_blank" rel="noopener noreferrer" className="inline-block font-mono-bureau text-[9px] tracking-[0.1em] uppercase text-[#0C1B33]/40 hover:text-[#0C1B33]/70 mt-2">Source ↗</a>
             )}
