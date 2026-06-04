@@ -2854,7 +2854,7 @@ const ECON_TAG_STYLE: Record<string, string> = {
 };
 
 function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicContext }) {
-  const cards: { tag: string; label: string; value: string; sub: string; tip: string }[] = [];
+  const cards: { tag: string; label: string; value: string; sub: string; tip: string; formula?: string }[] = [];
   const bc = economics.businessContinuity;
   if (bc?.continuityRate != null) {
     cards.push({
@@ -2915,7 +2915,8 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
       label: "Resident Spending Power",
       value: `${econMoney(lk.capturableDemand)}/yr`,
       sub: "Estimated local retail, food, and service demand",
-      tip: "Residents generate meaningful spending potential that neighborhood businesses could serve. This estimate helps size the local customer base, but actual capture is not yet measured. To calculate leakage, we would need retail-category sales, card-spend, or partner-verified business revenue data.",
+      formula: "= households × median income × 32%",
+      tip: "Formula: households × median household income (ACS 5-year, ZIP level) × 32% — the share of resident income typically spent on locally-servable retail, food, and personal services. This sizes the local customer base; actual capture isn't measured. Calculating true leakage would need retail-category sales, card-spend, or partner-verified business revenue data.",
     });
   }
   const mp = economics.multiplier;
@@ -2946,6 +2947,9 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
                 <span className="font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/40">{c.label}</span>
                 <span className="text-[#0C1B33] text-[20px] font-semibold leading-tight tabular-nums">{c.value}</span>
                 <span className="text-[#0C1B33]/45 text-[10px] leading-snug">{c.sub}</span>
+                {c.formula && (
+                  <span className="font-mono-bureau text-[9px] tracking-[0.02em] text-[#0C1B33]/35 leading-snug mt-0.5">{c.formula}</span>
+                )}
                 <span className={`font-mono-bureau text-[7px] tracking-[0.12em] uppercase px-1.5 py-0.5 mt-1.5 self-start ${ECON_TAG_STYLE[c.tag] ?? ""}`}>{c.tag}</span>
               </div>
             </TooltipTrigger>
