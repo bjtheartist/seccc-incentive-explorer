@@ -7,6 +7,7 @@ import {
   mergeCommunityAnchorsIntoNeighborhoodEconomics,
   mergeCorridorMetricIntoNeighborhoodEconomics,
   mergeLiveAcsIntoNeighborhoodEconomics,
+  mergeTifFinanceIntoNeighborhoodEconomics,
   type NeighborhoodGrowthSnapshot,
 } from "@/lib/neighborhood-economic-context";
 
@@ -222,5 +223,26 @@ describe("growthSignalToNeighborhoodEconomics", () => {
     expect(context?.geographyLabel).toBe("ZIP 60601");
     expect(context?.spendingPower?.population).toBe(15235);
     expect(context?.spendingPower?.sourceLabel).toBe("2024 ACS 5-year ZCTA API (live Census)");
+  });
+
+  it("merges TIF district finance context without implying availability", () => {
+    const signal = findGrowthSignalByZip(snapshot, "60619");
+    const base = growthSignalToNeighborhoodEconomics(signal!, snapshot);
+
+    const context = mergeTifFinanceIntoNeighborhoodEconomics(base, {
+      districtId: "T-087",
+      districtName: "Fullerton/Milwaukee",
+      reportYear: 2024,
+      expirationYear: 2027,
+      fundBalance: 63162041,
+      amountDesignatedProjectCosts: 63011079,
+      sourceLabel: "City of Chicago TIF Annual Report",
+      sourceUrl: "https://data.cityofchicago.org/resource/qm7s-3ctt.json",
+      caution: "District-level City annual report data. Not proof of funding availability.",
+    });
+
+    expect(context?.tifFinance?.districtId).toBe("T-087");
+    expect(context?.tifFinance?.fundBalance).toBe(63162041);
+    expect(context?.limitations?.join(" ")).toContain("do not show available funds");
   });
 });

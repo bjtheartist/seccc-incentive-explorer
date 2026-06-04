@@ -27,6 +27,7 @@ const TTL_RULES: { pattern: RegExp; ttlMs: number }[] = [
   { pattern: /\/api\/zones\/geojson\//, ttlMs: 30 * 60_000 },
   { pattern: /\/data\/zones\//, ttlMs: 30 * 60_000 },
   { pattern: /\/api\/zones\/check/, ttlMs: 10 * 60_000 },
+  { pattern: /\/api\/tif-finance/, ttlMs: 60 * 60_000 },
   { pattern: /\/api\/census/, ttlMs: 30 * 60_000 },
   { pattern: /\/api\/zoning/, ttlMs: 30 * 60_000 },
   { pattern: /\/api\/parcel/, ttlMs: 30 * 60_000 },

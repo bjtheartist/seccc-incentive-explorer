@@ -152,6 +152,27 @@ export interface NeighborhoodEconomicContext {
     assessedValueYearComparison?: number | null;
     sourceLabel?: string;
   };
+  tifFinance?: {
+    districtId?: string | null;
+    districtName?: string | null;
+    reportYear?: number | null;
+    expirationDate?: string | null;
+    expirationYear?: number | null;
+    boundaryWards?: string | null;
+    fundBalance?: number | null;
+    taxAllocationFundBalance?: number | null;
+    propertyTaxIncrementCurrent?: number | null;
+    cashExpenses?: number | null;
+    totalExpenditure?: number | null;
+    netIncome?: number | null;
+    distributionOfSurplus?: number | null;
+    amountDesignatedDebtObligations?: number | null;
+    amountDesignatedProjectCosts?: number | null;
+    surplusDeficit?: number | null;
+    sourceLabel?: string;
+    sourceUrl?: string;
+    caution?: string;
+  };
   leakage?: {
     estimatedLeakageRate?: number | null;
     capturableDemand?: number | null;
@@ -685,6 +706,12 @@ const DATA_SOURCES: Record<string, DataSourceCitation> = {
     description: "Parcel universe, ownership, assessment, and value-change signals for property context.",
     url: "https://datacatalog.cookcountyil.gov/",
   },
+  tifFinance: {
+    id: "tifFinance",
+    label: "City of Chicago TIF Annual Reports",
+    description: "District-level TIF annual report financial context, including reported fund balance and designations.",
+    url: "https://data.cityofchicago.org/Community-Economic-Development/Tax-Increment-Financing-TIF-Annual-Report-Analysis/qm7s-3ctt",
+  },
 };
 
 function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
@@ -696,6 +723,7 @@ function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
   if (ctx.neighborhoodEconomics?.jobsPayroll) sources.push(DATA_SOURCES.zbp);
   if (ctx.neighborhoodEconomics?.reinvestment) sources.push(DATA_SOURCES.buildingPermits);
   if (ctx.neighborhoodEconomics?.property) sources.push(DATA_SOURCES.assessorValues);
+  if (ctx.neighborhoodEconomics?.tifFinance) sources.push(DATA_SOURCES.tifFinance);
   return sources;
 }
 
@@ -1056,6 +1084,43 @@ function buildNeighborhoodEconomicContextSection(
       detail: "Cook County parcel, sales, and assessed-value history can add ownership and value-change context. Sensitive owner/address-level details should stay out of public reports unless reviewed with partners.",
       sourceLabel: "Cook County Assessor open data",
       sourceUrl: DATA_SOURCES.assessorValues.url,
+      confidenceLabel: "Source",
+    });
+  }
+
+  const tifFinance = economics?.tifFinance;
+  if (tifFinance) {
+    const reportYear = tifFinance.reportYear ? `Report year ${tifFinance.reportYear}` : "Latest City annual report";
+    const expiration = tifFinance.expirationYear ? `Expires ${tifFinance.expirationYear}` : "Expiration year not matched";
+    const financeDetails = [
+      tifFinance.propertyTaxIncrementCurrent != null
+        ? `current-year increment ${formatMoneyShort(tifFinance.propertyTaxIncrementCurrent)}`
+        : null,
+      tifFinance.totalExpenditure != null
+        ? `reported annual expenditures ${formatMoneyShort(tifFinance.totalExpenditure)}`
+        : null,
+      tifFinance.amountDesignatedProjectCosts != null
+        ? `reported project-cost designation ${formatMoneyShort(tifFinance.amountDesignatedProjectCosts)}`
+        : null,
+      tifFinance.amountDesignatedDebtObligations != null
+        ? `reported debt/obligation designation ${formatMoneyShort(tifFinance.amountDesignatedDebtObligations)}`
+        : null,
+      tifFinance.surplusDeficit != null
+        ? `reported surplus/deficit ${formatMoneyShort(tifFinance.surplusDeficit)}`
+        : null,
+      tifFinance.distributionOfSurplus != null
+        ? `surplus distribution ${formatMoneyShort(tifFinance.distributionOfSurplus)}`
+        : null,
+    ].filter(Boolean).join("; ");
+
+    items.push({
+      label: "TIF District Funding Overview",
+      value: tifFinance.fundBalance != null
+        ? `Reported district fund balance: ${formatMoneyShort(tifFinance.fundBalance)}`
+        : "TIF boundary matched; finance row not matched",
+      detail: `TIF districts capture growth in property-tax revenue and can support public improvements, redevelopment agreements, SBIF, infrastructure, and other district-approved project costs. This address is inside the ${tifFinance.districtName || tifFinance.districtId || "matched"} TIF district. ${reportYear}; ${expiration}. ${financeDetails || "No annual finance figures were matched for this district."} ${tifFinance.caution || "District-level City annual report data; not proof of funding availability or project approval."}`,
+      sourceLabel: tifFinance.sourceLabel || DATA_SOURCES.tifFinance.label,
+      sourceUrl: tifFinance.sourceUrl || DATA_SOURCES.tifFinance.url,
       confidenceLabel: "Source",
     });
   }

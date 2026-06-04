@@ -62,8 +62,13 @@ import type {
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
 import { normalizeZoneCheckResponse } from "@/lib/zone-response";
-import { extractChicagoZipCode, mergeCommunityAnchorsIntoNeighborhoodEconomics } from "@/lib/neighborhood-economic-context";
+import {
+  extractChicagoZipCode,
+  mergeCommunityAnchorsIntoNeighborhoodEconomics,
+  mergeTifFinanceIntoNeighborhoodEconomics,
+} from "@/lib/neighborhood-economic-context";
 import type { CommunityAnchor } from "@/lib/neighborhood-economic-models";
+import type { TifFinanceContext } from "@/lib/tif-finance";
 import {
   Accordion,
   AccordionItem,
@@ -247,9 +252,24 @@ async function fetchCommunityAnchors(
   return { communityArea: data.communityArea ?? null, anchors: data.anchors ?? [] };
 }
 
+async function fetchTifFinance(
+  lat: number,
+  lon: number,
+  signal?: AbortSignal
+): Promise<TifFinanceContext | null> {
+  const res = await fetch(`/api/tif-finance?lat=${lat}&lon=${lon}`, {
+    cache: "default",
+    signal,
+  });
+  if (!res.ok) return null;
+  const data = (await res.json()) as { tifFinance?: TifFinanceContext | null };
+  return data.tifFinance ?? null;
+}
+
 /**
  * Fetch ZIP economic context + community-area anchors and merge them, so the
- * report carries named anchor businesses alongside the aggregate signals.
+ * report carries named anchor businesses and TIF district finance context
+ * alongside the aggregate signals.
  */
 async function fetchEconomicsWithAnchors(
   zip: string | null,
@@ -258,16 +278,18 @@ async function fetchEconomicsWithAnchors(
   signal?: AbortSignal
 ): Promise<NeighborhoodEconomicContext | null> {
   // Anchors only need lat/lon (community area), so they attach even when no ZIP
-  // economic artifact covers the address.
-  const [economics, anchorData] = await Promise.all([
+  // economic artifact covers the address. TIF finance also only needs lat/lon.
+  const [economics, anchorData, tifFinance] = await Promise.all([
     zip ? fetchNeighborhoodEconomicsForZip(zip, signal) : Promise.resolve(null),
     lat != null && lon != null ? fetchCommunityAnchors(lat, lon, signal) : Promise.resolve(null),
+    lat != null && lon != null ? fetchTifFinance(lat, lon, signal) : Promise.resolve(null),
   ]);
-  return mergeCommunityAnchorsIntoNeighborhoodEconomics(
+  const withAnchors = mergeCommunityAnchorsIntoNeighborhoodEconomics(
     economics,
     anchorData?.anchors,
     anchorData?.communityArea
   );
+  return mergeTifFinanceIntoNeighborhoodEconomics(withAnchors, tifFinance);
 }
 
 function resolveReportZipFromContext(
@@ -2868,6 +2890,16 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
       value: pr.assessedValueChangeRate != null ? `${econPct(pr.assessedValueChangeRate)} assessed` : pr.parcelCount != null ? pr.parcelCount.toLocaleString() : "—",
       sub: pr.assessedValueChangeRate != null ? "assessed-value change (public record)" : "parcels (ZIP)",
       tip: "Cook County assessed-value records show how the public property assessment changed between the two years — not sale price, private market value, or owner equity. Large changes may reflect reassessment cycles, appeals, property improvements, class changes, or updated assessor methodology. Public records only; no owner names or addresses are shown.",
+    });
+  }
+  const tf = economics.tifFinance;
+  if (tf) {
+    cards.push({
+      tag: TAG_PUBLIC,
+      label: "TIF Funding",
+      value: econMoney(tf.fundBalance) ?? "Matched",
+      sub: `${tf.districtName ?? tf.districtId ?? "TIF district"}${tf.reportYear ? ` · ${tf.reportYear}` : ""}`,
+      tip: "Latest reported district-level TIF annual report context from the City of Chicago. This is not available funding, project approval, or money reserved for a property or business.",
     });
   }
   // Leakage: we can defensibly estimate locally-servable resident DEMAND, but a

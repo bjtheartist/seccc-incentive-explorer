@@ -1,5 +1,6 @@
 import type { NeighborhoodEconomicContext } from "./report-engine";
 import type { LiveZipAcsContext } from "./census-acs";
+import type { TifFinanceContext } from "./tif-finance";
 import {
   modelNeighborhoodLeakage,
   modelLocalMultiplier,
@@ -294,6 +295,48 @@ export function mergeLiveAcsIntoNeighborhoodEconomics(
         "Resident spending-power context is refreshed from live Census ACS ZIP/ZCTA data when available; it remains a purchasing-capacity proxy, not observed local sales.",
       ];
     }
+  }
+
+  return next;
+}
+
+export function mergeTifFinanceIntoNeighborhoodEconomics(
+  base: NeighborhoodEconomicContext | null,
+  tifFinance: TifFinanceContext | null | undefined,
+): NeighborhoodEconomicContext | null {
+  if (!tifFinance) return base ?? null;
+
+  const next: NeighborhoodEconomicContext = base
+    ? { ...base, limitations: [...(base.limitations ?? [])] }
+    : { limitations: [] };
+
+  next.tifFinance = {
+    districtId: tifFinance.districtId,
+    districtName: tifFinance.districtName,
+    reportYear: tifFinance.reportYear ?? null,
+    expirationDate: tifFinance.expirationDate ?? null,
+    expirationYear: tifFinance.expirationYear ?? null,
+    boundaryWards: tifFinance.boundaryWards ?? null,
+    fundBalance: tifFinance.fundBalance ?? null,
+    taxAllocationFundBalance: tifFinance.taxAllocationFundBalance ?? null,
+    propertyTaxIncrementCurrent: tifFinance.propertyTaxIncrementCurrent ?? null,
+    cashExpenses: tifFinance.cashExpenses ?? null,
+    totalExpenditure: tifFinance.totalExpenditure ?? null,
+    netIncome: tifFinance.netIncome ?? null,
+    distributionOfSurplus: tifFinance.distributionOfSurplus ?? null,
+    amountDesignatedDebtObligations: tifFinance.amountDesignatedDebtObligations ?? null,
+    amountDesignatedProjectCosts: tifFinance.amountDesignatedProjectCosts ?? null,
+    surplusDeficit: tifFinance.surplusDeficit ?? null,
+    sourceLabel: tifFinance.sourceLabel,
+    sourceUrl: tifFinance.sourceUrl,
+    caution: tifFinance.caution,
+  };
+
+  if (!next.limitations?.some((note) => note.includes("TIF district finance"))) {
+    next.limitations = [
+      ...(next.limitations ?? []),
+      "TIF district finance figures are district-level City annual report values. They do not show available funds for a property, business, or project.",
+    ];
   }
 
   return next;

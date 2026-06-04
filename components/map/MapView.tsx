@@ -16,6 +16,7 @@ import MapLegendPanel from "./MapLegendPanel";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
 import { cachedFetch } from "@/lib/fetch-cache";
+import type { TifFinanceContext } from "@/lib/tif-finance";
 import {
   POINT_ZONE_KEYS, HEAVY_COVERAGE_KEYS,
   COMMUNITY_AREAS_URL, CHICAGO_ZONING_URL, EMPTY_FC, PARCELS_QUERY_BASE,
@@ -65,6 +66,8 @@ export default function MapView() {
 
   // Enhanced Area Snapshot
   const [snapshotPrograms, setSnapshotPrograms] = useState<ProgramCheckResult[]>([]);
+  const [snapshotTifFinance, setSnapshotTifFinance] = useState<TifFinanceContext | null>(null);
+  const [tifFinanceLoading, setTifFinanceLoading] = useState(false);
   const [lastClickLat, setLastClickLat] = useState<number | null>(null);
   const [lastClickLon, setLastClickLon] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -212,16 +215,21 @@ export default function MapView() {
       setLastClickLat(lat);
       setLastClickLon(lon);
       setCopiedLink(false);
+      setTifFinanceLoading(true);
       try {
-        const [data, parcelData] = await Promise.all([
+        const [data, parcelData, tifFinanceData] = await Promise.all([
           cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`),
           cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).catch(() => null),
+          cachedFetch<{ tifFinance?: TifFinanceContext | null }>(
+            `/api/tif-finance?lat=${lat}&lon=${lon}`
+          ).catch(() => null),
         ]);
         const normalized = normalizeZoneCheckResponse(data);
         if (!normalized) throw new Error("Unexpected zone check response");
 
         const { zones, zoneNames } = normalized;
         setLocationZones(zones);
+        setSnapshotTifFinance(tifFinanceData?.tifFinance ?? null);
         // Compute top 3 programs client-side (with parcel boost)
         if (allPrograms.length > 0) {
           const results = runConfidenceEngine(allPrograms, zones, zoneNames, undefined, parcelData ?? undefined);
@@ -230,7 +238,9 @@ export default function MapView() {
           );
         }
       } catch {
-        // Keep defaults
+        setSnapshotTifFinance(null);
+      } finally {
+        setTifFinanceLoading(false);
       }
     },
     [allPrograms]
@@ -1571,6 +1581,8 @@ export default function MapView() {
           areaStats={areaStats}
           snapshotLabel={snapshotLabel}
           snapshotPrograms={snapshotPrograms}
+          snapshotTifFinance={snapshotTifFinance}
+          tifFinanceLoading={tifFinanceLoading}
           zoningInfo={zoningInfo}
           isGeneratingSnapshot={isGeneratingSnapshot}
           onClose={() => setSnapshotOpen(false)}

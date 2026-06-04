@@ -228,6 +228,18 @@ describe("generateReportData", () => {
             distinctOwners: 500,
             assessedValueChangeRate: 0.08,
           },
+          tifFinance: {
+            districtId: "T-087",
+            districtName: "Fullerton/Milwaukee",
+            reportYear: 2024,
+            expirationYear: 2027,
+            fundBalance: 63162041,
+            propertyTaxIncrementCurrent: 21911518,
+            amountDesignatedProjectCosts: 63011079,
+            sourceLabel: "City of Chicago TIF Annual Report",
+            sourceUrl: "https://data.cityofchicago.org/resource/qm7s-3ctt.json",
+            caution: "District-level City annual report data. Not proof of funding availability.",
+          },
         },
       },
     );
@@ -237,10 +249,14 @@ describe("generateReportData", () => {
     expect(section?.items.find((i) => i.label === "Business Continuity")?.value).toContain("62%");
     expect(section?.items.find((i) => i.label === "Jobs & Payroll")?.detail).toContain("Census ZIP Business Patterns");
     expect(section?.items.find((i) => i.label === "Jobs & Payroll")?.value).toContain("jobs +13%");
+    expect(section?.items.find((i) => i.label === "TIF District Funding Overview")?.value).toContain("Reported district fund balance");
+    expect(section?.items.find((i) => i.label === "TIF District Funding Overview")?.detail).toContain("Not proof of funding availability");
+    expect(section?.items.find((i) => i.label === "TIF District Funding Overview")?.detail).toContain("capture growth in property-tax revenue");
     expect(section?.items.find((i) => i.label === "Local Retail Demand")?.value).toContain("Modeled");
     expect(report.dataSources?.map((source) => source.id)).toContain("zbp");
     expect(report.dataSources?.map((source) => source.id)).toContain("buildingPermits");
     expect(report.dataSources?.map((source) => source.id)).toContain("assessorValues");
+    expect(report.dataSources?.map((source) => source.id)).toContain("tifFinance");
   });
 
   it("generates corridor intelligence reports from corridor metrics", () => {
