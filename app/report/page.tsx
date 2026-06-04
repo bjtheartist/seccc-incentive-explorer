@@ -2839,15 +2839,18 @@ function econPct(r?: number | null, signed = true): string | null {
   return `${signed && v >= 0 ? "+" : ""}${v}%`;
 }
 
-// Three consistent provenance labels used across every signal.
+// Provenance labels used across every signal. The two modeled variants share
+// the same amber treatment; the ACS-income variant names its source inline.
 const TAG_PUBLIC = "Measured public record";
 const TAG_BENCHMARK = "Benchmark";
 const TAG_MODELED = "Modeled / needs verification";
+const TAG_MODELED_ACS = "Modeled from ACS income";
 
 const ECON_TAG_STYLE: Record<string, string> = {
   [TAG_PUBLIC]: "bg-[#0C1B33]/[0.08] text-[#0C1B33]/70",
   [TAG_BENCHMARK]: "bg-[#0C1B33]/[0.05] text-[#0C1B33]/55",
   [TAG_MODELED]: "bg-amber-500/10 text-amber-700",
+  [TAG_MODELED_ACS]: "bg-amber-500/10 text-amber-700",
 };
 
 function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicContext }) {
@@ -2908,11 +2911,11 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
   const lk = economics.leakage;
   if (lk?.capturableDemand != null) {
     cards.push({
-      tag: TAG_MODELED,
-      label: "Local Retail Demand",
+      tag: TAG_MODELED_ACS,
+      label: "Resident Spending Power",
       value: `${econMoney(lk.capturableDemand)}/yr`,
-      sub: "resident spend · local capture unverified",
-      tip: "Resident spending that local retail, food, and personal-services businesses could capture — modeled as ~32% of aggregate resident income (ACS). How much actually stays local vs. leaks out needs retail-category sales data we don't yet have, so we don't publish a capture/leakage rate.",
+      sub: "Estimated local retail, food, and service demand",
+      tip: "Residents generate meaningful spending potential that neighborhood businesses could serve. This estimate helps size the local customer base, but actual capture is not yet measured. To calculate leakage, we would need retail-category sales, card-spend, or partner-verified business revenue data.",
     });
   }
   const mp = economics.multiplier;
@@ -2927,10 +2930,16 @@ function EconomicSignalCards({ economics }: { economics: NeighborhoodEconomicCon
   }
   if (cards.length === 0) return null;
 
+  // Cap the grid at 6 tiles for a clean 2×3 layout. Cards are built in priority
+  // order (measured public record first, modeled/unverified last), so slicing
+  // drops the lowest-priority signal — Local Multiplier when all are present —
+  // while still filling to 6 if an earlier measured card is missing.
+  const visibleCards = cards.slice(0, 6);
+
   return (
     <TooltipProvider delayDuration={120}>
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8 mb-6">
-        {cards.map((c) => (
+        {visibleCards.map((c) => (
           <Tooltip key={c.label}>
             <TooltipTrigger asChild>
               <div className="bg-white p-3.5 flex flex-col gap-1 cursor-help focus:outline-none focus-visible:ring-1 focus-visible:ring-[#0C1B33]/30" tabIndex={0}>
