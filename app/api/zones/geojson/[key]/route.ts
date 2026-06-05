@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
+import { readFile } from "fs/promises";
+import path from "path";
 import { getSQL } from "@/lib/db";
 import { ZONE_KEYS } from "@/lib/constants";
 import { memCached } from "@/lib/redis";
@@ -6,6 +8,12 @@ import { memCached } from "@/lib/redis";
 const CDN_HEADERS = {
   "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400, immutable",
 };
+
+async function readStaticZone(fileName: string) {
+  const filePath = path.join(process.cwd(), "public", "data", "zones", fileName);
+  const raw = await readFile(filePath, "utf8");
+  return JSON.parse(raw);
+}
 
 /**
  * GET /api/zones/geojson/:key
@@ -23,6 +31,12 @@ export async function GET(
       { error: `Unknown zone key: ${key}` },
       { status: 400 }
     );
+  }
+
+  if (key === "nof") {
+    return NextResponse.json(await readStaticZone("nof-corridors.geojson"), {
+      headers: CDN_HEADERS,
+    });
   }
 
   const sql = getSQL();

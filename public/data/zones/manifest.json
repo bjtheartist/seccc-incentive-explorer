@@ -137,14 +137,14 @@
     {
       "key": "nof",
       "level": "City",
-      "label": "Neighborhood Opportunity Fund Investment Zone",
-      "transformedFile": "public/data/zones/nof-projects.geojson",
-      "sourceAgency": "City of Chicago — DPD",
-      "sourceUrl": "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home/Apply.html",
-      "fetchedOn": null,
-      "scope": "South/Southwest/West Side eligibility area",
-      "vintage": "post-2024 redrawing",
-      "caveats": "Project sites — verify zone boundary file matches current investment area definition."
+      "label": "Neighborhood Opportunity Fund Eligible and Priority Corridors",
+      "transformedFile": "public/data/zones/nof-corridors.geojson",
+      "sourceAgency": "City of Chicago — DPD / SomerCor NOF lookup app",
+      "sourceUrl": "https://chicago.maps.arcgis.com/apps/instant/lookup/index.html?appid=27d32392f70945c68d2d008a2808ca5c",
+      "fetchedOn": "2026-06-05",
+      "scope": "NOF eligible and priority commercial corridors inside the Qualified Investment Area",
+      "vintage": "2024-11-12 ArcGIS corridor layers",
+      "caveats": "Combined NOF Eligible Corridors and NOF Priority Corridors from the official lookup map. This is a first-pass location screen; DPD/SomerCor make final eligibility determinations."
     },
     {
       "key": "highUnemployment",

@@ -24,7 +24,7 @@ const zoneFileMap: Record<string, string> = {
   highUnemployment: "high-unemployment.geojson",
   industrialCorridors: "industrial-corridors.geojson",
   microMarketRecovery: "micro-market-recovery.geojson",
-  nof: "nof-projects.geojson",
+  nof: "nof-corridors.geojson",
   ccsa: "ccsa-corridors.geojson",
   nmtcEligible: "nmtc-eligible.geojson",
   qct: "qct.geojson",
@@ -72,6 +72,25 @@ async function checkStaticZones(lat: number, lon: number) {
   return matches;
 }
 
+async function checkStaticZone(
+  key: string,
+  lat: number,
+  lon: number
+): Promise<{ key: string; name: string } | null> {
+  const collection = await loadStaticZone(key);
+  const point = turf.point([lon, lat]);
+  const match = collection.features.find(
+    (feature): feature is Feature<Polygon | MultiPolygon> =>
+      Boolean(feature.geometry) &&
+      turf.booleanPointInPolygon(
+        point,
+        feature as Feature<Polygon | MultiPolygon>
+      )
+  );
+
+  return match ? { key, name: featureDisplayName(key, match) } : null;
+}
+
 /**
  * GET /api/zones/check?lat=&lon=
  *
@@ -103,7 +122,7 @@ export async function GET(request: NextRequest) {
 
     const rLat = roundCoord(latNum);
     const rLon = roundCoord(lonNum);
-    const cacheKey = `zones:check:${rLat}:${rLon}`;
+    const cacheKey = `zones:check:v2:${rLat}:${rLon}`;
     const sql = getSQL();
 
     const results = await memCached(cacheKey, 604800, async () => {
@@ -121,13 +140,17 @@ export async function GET(request: NextRequest) {
           AND ST_Covers(ST_Buffer(z.geom::geometry, 0), p.geom)
       `;
 
-      return rows.map((r: Record<string, unknown>) => ({
-        key: r.zone_key,
-        name: formatZoneFeatureName(String(r.zone_key), {
-          ...parseZoneProperties(r.feature_properties),
-          name: r.feature_name,
-        }),
-      }));
+      const dbMatches = rows
+        .filter((r: Record<string, unknown>) => String(r.zone_key) !== "nof")
+        .map((r: Record<string, unknown>) => ({
+          key: r.zone_key,
+          name: formatZoneFeatureName(String(r.zone_key), {
+            ...parseZoneProperties(r.feature_properties),
+            name: r.feature_name,
+          }),
+        }));
+      const nofMatch = await checkStaticZone("nof", latNum, lonNum);
+      return nofMatch ? [...dbMatches, nofMatch] : dbMatches;
     });
 
     return NextResponse.json(results, {

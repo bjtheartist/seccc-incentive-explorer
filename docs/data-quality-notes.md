@@ -26,3 +26,16 @@ Behavior:
 Guardrail: never describe TIF annual-report balances as available funds, remaining funds, grantable dollars, or money reserved for a specific business/property/project. TIF balances may already be restricted, obligated, programmed, subject to surplus decisions, or dependent on DPD/City Council review. Treat this as district-level fiscal context that helps a user ask better questions, not as eligibility proof or a funding commitment.
 
 Follow-up: OIG's TIF dashboard source guide documents additional corrections around mistyped values, inconsistent fund-balance reporting, and expiration-year reconciliation. If the Explorer later adds a full TIF cash-flow dashboard or district comparison tool, add an explicit correction table and QA flags before publishing broader comparisons.
+
+## 2026-06-05: NOF eligibility layer was using awarded projects
+
+Root cause: the `nof` zone key was wired to `public/data/zones/nof-projects.geojson`, which contains six NOF awarded/completed project points. That file is useful context, but it is not the NOF eligibility geography. Because the confidence engine requires `zones.nof` for the NOF program, most addresses on actual eligible corridors were incorrectly treated as not applicable.
+
+Fix:
+- Added `public/data/zones/nof-corridors.geojson`, sourced from the official City/SomerCor ArcGIS NOF lookup app.
+- The new file combines the web map's `NOF Eligible Corridors` layer and `NOF Priority Corridors` layer.
+- Updated static zone lookup, API zone check, and map layer rendering so `zoneKey: "nof"` uses corridor polygons instead of awardee points.
+- Kept `nof-projects.geojson` separate as historical/project context only.
+- The zone-check API now ignores stale DB-backed `nof` rows and supplements `nof` from the static corridor file, so production does not depend on an immediate DB reseed.
+
+Guardrail: do not use awardee/completed-project datasets as eligibility boundaries. NOF reports should say a location is on an eligible or priority corridor only when the address intersects the official corridor polygon layer. Final eligibility still depends on DPD/SomerCor review, project use, site control, zoning, eligible costs, and application requirements.
