@@ -114,6 +114,87 @@ describe("generateReportData", () => {
     expect(report.sections.find((s) => s.title === "Additional Programs to Explore")?.items[0].programId).toBe("global");
   });
 
+  it("prioritizes Cook County discovery programs without treating them as address-confirmed", () => {
+    const federalPrograms = Array.from({ length: 9 }, (_, index) => makeProgram({
+      id: `federal-${index}`,
+      name: `A Federal Discovery ${index}`,
+      level: "Federal",
+      zoneKey: "",
+      eligibilityRules: [],
+    }));
+    const countyProgram = makeProgram({
+      id: "smallBizSource",
+      name: "Cook County Small Business Source",
+      level: "County",
+      zoneKey: "",
+      eligibilityRules: [
+        {
+          criterion: "location",
+          description: "Business in Cook County",
+          verifiedBy: "manual",
+          required: true,
+        },
+      ],
+    });
+    const suburbanOnlyCountyProgram = makeProgram({
+      id: "cookBrownfield",
+      name: "Cook County Brownfield Redevelopment Assistance",
+      level: "County",
+      zoneKey: "",
+      eligibilityRules: [],
+    });
+
+    const report = generateReportData(
+      makeState(),
+      [...federalPrograms, countyProgram, suburbanOnlyCountyProgram],
+      { zones: {}, zoneNames: {} },
+    );
+
+    const additionalSection = report.sections.find((s) => s.title === "Additional Programs to Explore");
+    expect(report.summary).toContain("matching 0 address-confirmed programs");
+    expect(report.sections.find((s) => s.title === "Eligible Incentive Programs")).toBeUndefined();
+    expect(additionalSection?.description).toContain("Cook County tools");
+    expect(additionalSection?.items[0].programId).toBe("smallBizSource");
+    expect(additionalSection?.items.map((item) => item.programId)).not.toContain("cookBrownfield");
+  });
+
+  it("prioritizes Cook County discovery programs in dev-feasibility reports", () => {
+    const federalPrograms = Array.from({ length: 9 }, (_, index) => makeProgram({
+      id: `federal-dev-${index}`,
+      name: `A Federal Dev Discovery ${index}`,
+      level: "Federal",
+      zoneKey: "",
+      eligibilityRules: [],
+    }));
+    const countyProgram = makeProgram({
+      id: "cpace",
+      name: "Cook County C-PACE (Clean Energy Financing)",
+      level: "County",
+      zoneKey: "",
+      eligibilityRules: [
+        {
+          criterion: "location",
+          description: "Commercial property in Cook County",
+          verifiedBy: "manual",
+          required: true,
+        },
+      ],
+    });
+
+    const report = generateReportData(
+      makeState({
+        reportType: "dev-feasibility",
+        projectType: "rehab",
+      }),
+      [...federalPrograms, countyProgram],
+      { zones: {}, zoneNames: {} },
+    );
+
+    const additionalSection = report.sections.find((s) => s.title === "Additional Programs to Explore");
+    expect(additionalSection?.description).toContain("Cook County tools");
+    expect(additionalSection?.items[0].programId).toBe("cpace");
+  });
+
   it("propagates Phase 1 provenance fields onto report items", () => {
     const applicationPortals = [
       {

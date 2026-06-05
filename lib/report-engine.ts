@@ -565,8 +565,34 @@ function filterAddressMatchedPrograms(
   return programs.filter((p) => hasAddressZoneMatch(p, zones));
 }
 
+const COUNTY_EXPLORATORY_PRIORITY: Record<string, number> = {
+  smallBizSource: 0,
+  cpace: 1,
+  class7a: 2,
+  class7b: 3,
+  class7c: 4,
+  class6b: 5,
+  class6bSer: 6,
+  classC: 7,
+  landBank: 8,
+  catalystGrant: 9,
+  ahsap: 10,
+};
+
+const CHICAGO_DISCOVERY_EXCLUDED_COUNTY_PROGRAMS = new Set<string>([
+  "class8",
+  "cookBrownfield",
+]);
+
 function filterDiscoveryPrograms(programs: Program[]): Program[] {
-  return programs.filter((p) => !p.zoneKey);
+  return programs.filter((p) => !p.zoneKey && !CHICAGO_DISCOVERY_EXCLUDED_COUNTY_PROGRAMS.has(p.id));
+}
+
+function countyExploratoryRank(program: Program): number | null {
+  if (program.level !== "County") return null;
+  if (program.zoneKey) return null;
+  if (CHICAGO_DISCOVERY_EXCLUDED_COUNTY_PROGRAMS.has(program.id)) return null;
+  return COUNTY_EXPLORATORY_PRIORITY[program.id] ?? 50;
 }
 
 function confidenceRank(confidence?: EligibilityConfidence): number {
@@ -629,6 +655,23 @@ function sortProgramItems(
     const confidenceDiff = confidenceRank(confidenceMap?.get(a.id)?.confidence) - confidenceRank(confidenceMap?.get(b.id)?.confidence);
     if (confidenceDiff !== 0) return confidenceDiff;
     return a.name.localeCompare(b.name);
+  });
+}
+
+function sortExploratoryProgramItems(
+  programs: Program[],
+  zones?: Record<string, boolean>,
+  confidenceMap?: Map<string, ProgramCheckResult>,
+): Program[] {
+  return sortProgramItems(programs, zones, confidenceMap).sort((a, b) => {
+    const aCountyRank = countyExploratoryRank(a);
+    const bCountyRank = countyExploratoryRank(b);
+    if (aCountyRank != null || bCountyRank != null) {
+      if (aCountyRank == null) return 1;
+      if (bCountyRank == null) return -1;
+      if (aCountyRank !== bCountyRank) return aCountyRank - bCountyRank;
+    }
+    return 0;
   });
 }
 
@@ -1293,7 +1336,7 @@ function generateLocationIncentives(
   const confidenceMap = new Map<string, ProgramCheckResult>();
   for (const r of confidenceResults) confidenceMap.set(r.programId, r);
   const confirmedPrograms = sortProgramItems(zoneBased, zones, confidenceMap);
-  const exploratoryPrograms = sortProgramItems(discoveryOnly, zones, confidenceMap);
+  const exploratoryPrograms = sortExploratoryProgramItems(discoveryOnly, zones, confidenceMap);
 
   // ── Builder outputs ──
   const verdict = computeVerdict(zones, programs, ctx);
@@ -1345,7 +1388,7 @@ function generateLocationIncentives(
   if (exploratoryPrograms.length > 0) {
     sections.push({
       title: "Additional Programs to Explore",
-      description: "Programs not confirmed by this address alone, but useful as official next steps based on your profile.",
+      description: "Programs not confirmed by this address alone, including Cook County tools that may apply countywide but still need project, property, and administrator review.",
       items: exploratoryPrograms.slice(0, 8).map((p) => programReportItem(p, confidenceMap)),
     });
   }
@@ -1575,7 +1618,7 @@ function generateBestLocation(
   const confidenceMap = new Map<string, ProgramCheckResult>();
   for (const r of confidenceResults) confidenceMap.set(r.programId, r);
   const sitePrograms = sortProgramItems(filterAddressMatchedPrograms(programs, zones), zones, confidenceMap);
-  const exploratoryPrograms = sortProgramItems(filterDiscoveryPrograms(programs), zones, confidenceMap);
+  const exploratoryPrograms = sortExploratoryProgramItems(filterDiscoveryPrograms(programs), zones, confidenceMap);
 
   // ── Builder outputs ──
   const verdict = computeVerdict(zones, programs, ctx);
@@ -1794,7 +1837,7 @@ function generateBestLocation(
   if (exploratoryPrograms.length > 0) {
     sections.push({
       title: "Additional Programs to Explore",
-      description: "Programs not confirmed by this address alone, but useful as official next steps for the project.",
+      description: "Programs not confirmed by this address alone, including Cook County tools that may apply countywide but still need project, property, and administrator review.",
       items: exploratoryPrograms.slice(0, 8).map((p) => programReportItem(p, confidenceMap)),
     });
   }
