@@ -98,9 +98,13 @@ const zoneGeoJSONCache = new Map<string, GeoJSON.FeatureCollection>();
 export async function fetchZoneGeoJSON(key: string): Promise<GeoJSON.FeatureCollection | null> {
   const cached = zoneGeoJSONCache.get(key);
   if (cached) return cached;
+  const geojsonUrl =
+    key === "nof"
+      ? "/api/zones/geojson/nof?v=20260605-corridors"
+      : `/api/zones/geojson/${key}`;
 
   try {
-    const data = await cachedFetch<GeoJSON.FeatureCollection>(`/api/zones/geojson/${key}`);
+    const data = await cachedFetch<GeoJSON.FeatureCollection>(geojsonUrl);
     if (data?.features?.length > 0) {
       if (isFeatureInChicago(data.features[0])) {
         zoneGeoJSONCache.set(key, data);
