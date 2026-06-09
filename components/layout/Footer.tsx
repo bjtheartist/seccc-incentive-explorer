@@ -24,7 +24,8 @@ export function Footer() {
                 { href: "/report", label: "Generate Report" },
                 { href: "/programs", label: "Incentive Programs" },
                 { href: "/map", label: "Explorer Map" },
-                { href: "/locate", label: "Vacancy Analysis" },
+                { href: "/locate", label: "Find Location by Sector" },
+                { href: "/report?wv=2&rt=df", label: "Vacancy Report" },
                 { href: "/faq", label: "FAQ" },
               ].map((link) => (
                 <li key={link.href}>

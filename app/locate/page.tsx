@@ -481,19 +481,27 @@ export default function LocatePage() {
           <section className="py-16 px-6 bg-[#0C1B33] text-white">
             <div className="container mx-auto max-w-3xl text-center">
               <h2 className="font-editorial text-2xl md:text-3xl mb-4">
-                Ready to Check a Specific Address?
+                Ready to Review Vacant Properties?
               </h2>
               <p className="text-white/50 text-sm mb-8 max-w-md mx-auto">
-                Use the Incentive Audit to see exactly which programs your address qualifies for,
-                with a downloadable PDF report.
+                Use the vacancy report to pull neighborhood-level vacant property records,
+                incentive context, and a spreadsheet you can review or export.
               </p>
-              <Link
-                href="/"
-                className="inline-flex items-center gap-3 px-8 py-4 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-full font-mono-bureau text-[11px] tracking-[0.15em] uppercase transition-all hover:shadow-lg hover:shadow-blue-500/25"
-              >
-                Audit Your Incentives
-                <ArrowRight className="w-4 h-4" />
-              </Link>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <Link
+                  href="/report?wv=2&rt=df"
+                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-full font-mono-bureau text-[11px] tracking-[0.15em] uppercase transition-all hover:shadow-lg hover:shadow-blue-500/25"
+                >
+                  Run Vacancy Report
+                  <ArrowRight className="w-4 h-4" />
+                </Link>
+                <Link
+                  href="/report"
+                  className="inline-flex items-center justify-center gap-3 px-8 py-4 border border-white/15 hover:border-white/30 text-white/55 hover:text-white rounded-full font-mono-bureau text-[11px] tracking-[0.15em] uppercase transition-all"
+                >
+                  Check an Address
+                </Link>
+              </div>
             </div>
           </section>
         </motion.div>
