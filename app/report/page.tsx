@@ -4291,6 +4291,8 @@ export function ReportDisplay({
                         {visibleSectionItems(section).map((item, itemIdx) => {
                           const reportItem = item as ReportNavigationItem;
                           const itemProgram = reportItem.programId ? programById.get(reportItem.programId) : undefined;
+                          const isSupportNetworkItem = section.title === "Your Support Network";
+                          const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
                           const hasNavigationLinks = Boolean(
                             reportItem.sourceUrl ||
                             itemProgram?.sourceUrl ||
@@ -4309,7 +4311,19 @@ export function ReportDisplay({
                               {/* Left: label */}
                               <div className="flex-1 min-w-0">
                                 <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold block">
-                                  {item.label}
+                                  {supportWebsiteUrl ? (
+                                    <a
+                                      href={supportWebsiteUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1.5 hover:text-[#2F5BEA] transition-colors print-url"
+                                    >
+                                      {item.label}
+                                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                                    </a>
+                                  ) : (
+                                    item.label
+                                  )}
                                   {item.level && (
                                     <span className="font-mono-bureau text-[8px] sm:text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/25 ml-2 font-normal">
                                       {item.level}
@@ -4334,7 +4348,7 @@ export function ReportDisplay({
                                     })}
                                   </ul>
                                 ) : item.detail ? (
-                                  <span className="text-[#0C1B33]/40 text-[11px] sm:text-[12px] leading-relaxed block mt-0.5">
+                                  <span className={`text-[#0C1B33]/40 text-[11px] sm:text-[12px] leading-relaxed block mt-0.5 ${isSupportNetworkItem ? "whitespace-pre-line" : ""}`}>
                                     {item.detail}
                                   </span>
                                 ) : null}
@@ -4349,7 +4363,7 @@ export function ReportDisplay({
                             </div>
 
                             {/* Eligibility & URL — collapsible accordion for program items */}
-                            {(item.whoQualifies || item.eligibilityRules || item.url || item.whyOneLine || hasNavigationLinks) && (
+                            {!isSupportNetworkItem && (item.whoQualifies || item.eligibilityRules || item.url || item.whyOneLine || hasNavigationLinks) && (
                               <Accordion type="single" collapsible className="mt-1.5">
                                 <AccordionItem value="eligibility" className="border-none">
                                   <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
