@@ -1,4 +1,5 @@
 import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats } from "./types";
+import type { LocalBusinessSupportContext, LocalBusinessSupportOrganization } from "./local-business-support";
 import { isClass7aEligible } from "./parcel-classes";
 import { ZONE_LABELS, ZONE_DESCRIPTIONS, describeZoneClass } from "./constants";
 import { getIndustryById } from "./industries-data";
@@ -293,6 +294,16 @@ export interface GeneratedReport {
   communityAssets?: {
     edos: { name: string; address: string }[];
     bsos: { name: string; address: string }[];
+    organizations?: {
+      name: string;
+      type: string;
+      role: string;
+      address?: string;
+      phone?: string;
+      website?: string;
+      detail?: string;
+    }[];
+    communityArea?: string;
     narrative: string;
   };
   neighborhoodEconomics?: NeighborhoodEconomicContext;
@@ -755,6 +766,11 @@ const DATA_SOURCES: Record<string, DataSourceCitation> = {
     description: "District-level TIF annual report financial context, including reported fund balance and designations.",
     url: "https://data.cityofchicago.org/Community-Economic-Development/Tax-Increment-Financing-TIF-Annual-Report-Analysis/qm7s-3ctt",
   },
+  localBusinessSupport: {
+    id: "localBusinessSupport",
+    label: "Chicago Small Business Resource Map",
+    description: "Curated neighborhood-level business support organizations, including NBDC, chamber, SSA, CBC, and CDC/EDO access points.",
+  },
 };
 
 function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
@@ -767,6 +783,12 @@ function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
   if (ctx.neighborhoodEconomics?.reinvestment) sources.push(DATA_SOURCES.buildingPermits);
   if (ctx.neighborhoodEconomics?.property) sources.push(DATA_SOURCES.assessorValues);
   if (ctx.neighborhoodEconomics?.tifFinance) sources.push(DATA_SOURCES.tifFinance);
+  if (ctx.localBusinessSupport?.organizations?.length) {
+    const source = { ...DATA_SOURCES.localBusinessSupport };
+    const firstUrl = ctx.localBusinessSupport.sourceUrls?.[0];
+    if (firstUrl) source.url = firstUrl;
+    sources.push(source);
+  }
   return sources;
 }
 
@@ -1290,9 +1312,61 @@ function buildStackingAnalysis(
 /**
  * Build community assets section from EDOs/BSOs.
  */
+function relationshipLabel(org: LocalBusinessSupportOrganization): string {
+  const labels: Record<string, string> = {
+    primary_access_point: "Primary local access point",
+    secondary_access_point: "Secondary local access point",
+    nbdc_2025: "2025/2026 NBDC",
+    cbc_hub: "CBC regional hub",
+    ssa_provider: "SSA provider",
+  };
+  return org.relationships.map((r) => labels[r] ?? r).slice(0, 2).join(" + ");
+}
+
+function localSupportDetail(org: LocalBusinessSupportOrganization): string {
+  const details = [
+    org.address,
+    org.phone ? `Phone: ${org.phone}` : "",
+    org.supportTypes ? `Support: ${org.supportTypes}` : "",
+    org.serviceGeography ? `Serves: ${org.serviceGeography}` : "",
+    org.currentStatus || org.validationLevel ? `Status: ${[org.currentStatus, org.validationLevel].filter(Boolean).join("; ")}` : "",
+  ].filter(Boolean);
+  return details.join("\n");
+}
+
 function buildCommunityAssets(
   assets?: CommunityAsset[],
+  localSupport?: LocalBusinessSupportContext | null,
 ): GeneratedReport["communityAssets"] {
+  if (localSupport?.organizations?.length) {
+    const organizations = localSupport.organizations.slice(0, 6).map((org) => ({
+      name: org.name,
+      type: org.primaryType || "Business support organization",
+      role: relationshipLabel(org),
+      address: org.address,
+      phone: org.phone,
+      website: org.website,
+      detail: localSupportDetail(org),
+    }));
+
+    const edos = organizations
+      .filter((org) => /edo|cdc|chamber|ssa/i.test(`${org.type} ${org.role}`))
+      .map((org) => ({ name: org.name, address: org.address || "" }));
+    const bsos = organizations
+      .filter((org) => !/edo|cdc|chamber|ssa/i.test(`${org.type} ${org.role}`))
+      .map((org) => ({ name: org.name, address: org.address || "" }));
+
+    const narrative = `${organizations.length} local business-support organization${organizations.length !== 1 ? "s" : ""} are mapped for ${localSupport.communityArea}. These are neighborhood-facing access points from the validated resource map; confirm current capacity, language access, and intake process before referring a business.`;
+
+    return {
+      edos,
+      bsos,
+      organizations,
+      communityArea: localSupport.communityArea,
+      narrative,
+    };
+  }
+
   if (!assets || assets.length === 0) return undefined;
 
   const edos = assets.filter((a) => a.type === "EDO").map((a) => ({ name: a.name, address: a.address }));
@@ -1343,7 +1417,7 @@ function generateLocationIncentives(
   const marketContext = buildMarketContext(ctx, zones);
   const eligibleIds = confirmedPrograms.map((p) => p.id);
   const stackingAnalysis = buildStackingAnalysis(zones, zoneNames, eligibleIds, ctx.stackingRules);
-  const communityAssetsData = buildCommunityAssets(ctx.communityAssets);
+  const communityAssetsData = buildCommunityAssets(ctx.communityAssets, ctx.localBusinessSupport);
   const dataSources = collectDataSources(ctx);
 
   // ── Sections: Overview → Market → Stacking → Programs → Documents → Support → Next Steps ──
@@ -1439,16 +1513,35 @@ function generateLocationIncentives(
   // §05 Your Support Network
   if (communityAssetsData) {
     const assetItems: ReportItem[] = [];
-    assetItems.push({ label: "Community Support", value: `${communityAssetsData.edos.length + communityAssetsData.bsos.length} organizations`, detail: communityAssetsData.narrative });
-    for (const edo of communityAssetsData.edos) {
-      assetItems.push({ label: edo.name, value: "EDO", detail: edo.address });
-    }
-    for (const bso of communityAssetsData.bsos) {
-      assetItems.push({ label: bso.name, value: "BSO", detail: bso.address });
+    assetItems.push({
+      label: communityAssetsData.communityArea ? `Local Support in ${communityAssetsData.communityArea}` : "Community Support",
+      value: `${(communityAssetsData.organizations?.length ?? communityAssetsData.edos.length + communityAssetsData.bsos.length)} organizations`,
+      detail: communityAssetsData.narrative,
+    });
+    if (communityAssetsData.organizations?.length) {
+      for (const org of communityAssetsData.organizations) {
+        assetItems.push({
+          label: org.name,
+          value: org.role,
+          detail: org.detail || org.address,
+          url: org.website,
+          sourceUrl: org.website,
+          sourceLabel: org.phone ? `Phone: ${org.phone}` : undefined,
+        });
+      }
+    } else {
+      for (const edo of communityAssetsData.edos) {
+        assetItems.push({ label: edo.name, value: "EDO", detail: edo.address });
+      }
+      for (const bso of communityAssetsData.bsos) {
+        assetItems.push({ label: bso.name, value: "BSO", detail: bso.address });
+      }
     }
     sections.push({
       title: "Your Support Network",
-      description: "Local organizations that provide free advising and application assistance.",
+      description: communityAssetsData.communityArea
+        ? "Neighborhood-facing organizations that can help business owners interpret programs, prepare questions, and find the right support path."
+        : "Local organizations that provide free advising and application assistance.",
       items: assetItems,
     });
   }
@@ -2813,6 +2906,7 @@ export interface ReportContext {
   districts?: DistrictData;
   stackingRules?: StackingRule[];
   communityAssets?: CommunityAsset[];
+  localBusinessSupport?: LocalBusinessSupportContext | null;
   stats?: Stats;
   corridorMetrics?: CorridorMetric | null;
   corridorOwnerClusters?: CorridorOwnerCluster[];

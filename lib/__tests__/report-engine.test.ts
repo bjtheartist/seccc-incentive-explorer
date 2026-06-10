@@ -195,6 +195,46 @@ describe("generateReportData", () => {
     expect(additionalSection?.items[0].programId).toBe("cpace");
   });
 
+  it("renders neighborhood-specific support organizations when local support context is provided", () => {
+    const report = generateReportData(
+      makeState(),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        localBusinessSupport: {
+          communityAreaNumber: "46",
+          communityArea: "South Chicago",
+          confidence: "High",
+          sourceLabel: "Chicago Small Business Resource Map",
+          sourceUrls: ["https://example.com/source"],
+          organizations: [
+            {
+              name: "Southeast Chicago Chamber of Commerce",
+              primaryType: "NBDC / Chamber",
+              relationships: ["primary_access_point"],
+              address: "8751 S Houston Ave, Chicago, IL 60617",
+              phone: "773-721-1999",
+              website: "https://southeastchgochamber.org",
+              supportTypes: "Licensing; permits; corridor support",
+              serviceGeography: "Southeast Chicago",
+              currentStatus: "Active NBDC 2025/2026",
+              sourceUrls: ["https://example.com/source"],
+            },
+          ],
+        },
+      },
+    );
+
+    const section = report.sections.find((s) => s.title === "Your Support Network");
+    expect(section?.description).toContain("Neighborhood-facing organizations");
+    expect(section?.items[0].label).toBe("Local Support in South Chicago");
+    expect(section?.items[1].label).toBe("Southeast Chicago Chamber of Commerce");
+    expect(section?.items[1].value).toContain("Primary local access point");
+    expect(section?.items[1].detail).toContain("Licensing");
+    expect(report.dataSources?.map((source) => source.id)).toContain("localBusinessSupport");
+  });
+
   it("propagates Phase 1 provenance fields onto report items", () => {
     const applicationPortals = [
       {
