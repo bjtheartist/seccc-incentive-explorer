@@ -18,7 +18,7 @@ import MapPolygonPanel from "./MapPolygonPanel";
 import type { MobileMapPresetId } from "./map-layer-presets";
 import { cachedFetch } from "@/lib/fetch-cache";
 import {
-  POINT_ZONE_KEYS, HEAVY_COVERAGE_KEYS,
+  POINT_ZONE_KEYS, HEAVY_COVERAGE_KEYS, escapeHTML,
   COMMUNITY_AREAS_URL, CHICAGO_ZONING_URL, EMPTY_FC, PARCELS_QUERY_BASE,
   fetchZoneGeoJSON,
   POI_LAYERS, jsonToGeoJSON, MAP_PRESETS,
@@ -511,12 +511,22 @@ export default function MapView() {
           const sourceKey = (features[0].source ?? "").replace("zone-", "");
           const label = ZONE_LABELS[sourceKey] || sourceKey;
           const name = props.name || props.Name || props.NAME || "";
+          const addr = props.address && props.address !== name ? props.address : "";
+          let reportUrl = "";
+          try {
+            const parsed = new URL(props.reportUrl);
+            if (parsed.protocol === "https:" || parsed.protocol === "http:") reportUrl = parsed.href;
+          } catch {
+            // No valid report URL
+          }
           new mapboxgl.Popup({ maxWidth: "260px", className: "bureau-popup" })
             .setLngLat(e.lngLat)
             .setHTML(
               `<div style="font-family:Inter,sans-serif">
                 <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#2563EB;margin-bottom:4px">${label}</div>
-                ${name ? `<div style="font-size:14px;font-weight:600;color:#0C1B33">${name}</div>` : ""}
+                ${name ? `<div style="font-size:14px;font-weight:600;color:#0C1B33">${escapeHTML(name)}</div>` : ""}
+                ${addr ? `<div style="font-size:12px;color:#5A6478;margin-top:2px">${escapeHTML(addr)}</div>` : ""}
+                ${reportUrl ? `<a href="${escapeHTML(reportUrl)}" target="_blank" rel="noopener noreferrer" style="font-size:12px;color:#2563EB;margin-top:4px;display:inline-block">View EPA site record →</a>` : ""}
               </div>`
             )
             .addTo(map);

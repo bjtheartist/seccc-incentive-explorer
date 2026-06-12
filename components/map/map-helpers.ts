@@ -24,10 +24,11 @@ export const ZONE_FILES: Record<string, string> = {
   ccsa: "ccsa-corridors.geojson",
   nmtcEligible: "nmtc-eligible.geojson",
   qct: "qct.geojson",
+  brownfields: "brownfield-sites.geojson",
 };
 
 /** Zone keys that use Point geometry and need circle layers instead of fill/line. */
-export const POINT_ZONE_KEYS = new Set(["nof"]);
+export const POINT_ZONE_KEYS = new Set(["nof", "brownfields"]);
 
 /** Helper: check if a zone should be hidden by default. */
 export function isZoneDefaultHidden(key: string): boolean {
@@ -45,6 +46,16 @@ export const COMMUNITY_AREAS_URL = "https://data.cityofchicago.org/resource/igwz
 
 /** Chicago zoning districts GeoJSON endpoint (Data Portal). */
 export const CHICAGO_ZONING_URL = "https://data.cityofchicago.org/resource/dj47-wfun.geojson?$limit=50000";
+
+/** Escape untrusted strings before interpolating into popup HTML. */
+export function escapeHTML(s: unknown): string {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
 /** Empty GeoJSON FeatureCollection used as initial/cleared data. */
 export const EMPTY_FC: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -218,7 +229,7 @@ export const DEFAULT_STATS: AreaStats = {
 export const MAP_PRESETS: { id: string; label: string; zones: string[] | "location" | "all" }[] = [
   { id: "location", label: "What Applies Here", zones: "location" },
   { id: "common", label: "Common Incentives", zones: ["tif", "federalOZ", "enterprise", "ssa"] },
-  { id: "developer", label: "Developer Stack", zones: ["tif", "federalOZ", "nmtcEligible", "nrhpDistricts", "qct"] },
+  { id: "developer", label: "Developer Stack", zones: ["tif", "federalOZ", "nmtcEligible", "nrhpDistricts", "qct", "brownfields"] },
   { id: "historic", label: "Historic / Preservation", zones: ["landmarkDistricts", "nrhpDistricts", "tif"] },
   { id: "state", label: "State Programs", zones: ["stateIncentiveZones", "enterprise", "federalOZ"] },
   { id: "all", label: "All Layers", zones: "all" },

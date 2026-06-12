@@ -40,6 +40,7 @@ export const ZONE_META: Record<string, ZoneMeta> = {
   landmarkDistricts:   { isPublic: true, defaultVisible: false, sortOrder: 12, group: "historic" },
   nrhpDistricts:       { isPublic: true, defaultVisible: false, sortOrder: 13, group: "historic" },
   ccsa:                { isPublic: true, defaultVisible: false, sortOrder: 14, group: "city" },
+  brownfields:         { isPublic: true, defaultVisible: false, sortOrder: 15, group: "federal" },
 };
 
 /** Zone keys sorted by display order. */
@@ -62,6 +63,7 @@ export const ZONE_COLORS: Record<string, string> = {
   qct: "#ec4899",
   landmarkDistricts: "#a16207",
   nrhpDistricts: "#b45309",
+  brownfields: "#78350f",
 };
 
 export const ZONE_LABELS: Record<string, string> = {
@@ -79,6 +81,7 @@ export const ZONE_LABELS: Record<string, string> = {
   qct: "Qualified Census Tract (HUD)",
   landmarkDistricts: "Chicago Landmark District",
   nrhpDistricts: "National Register Historic District",
+  brownfields: "Brownfield Site (EPA ACRES)",
 };
 
 export const ZONE_KEYS = Object.keys(ZONE_LABELS);
@@ -99,6 +102,7 @@ export const ZONE_DESCRIPTIONS: Record<string, string> = {
   qct: "HUD-designated census tracts where 50%+ of households earn below 60% of area median income, boosting LIHTC credits.",
   landmarkDistricts: "Chicago-designated historic districts where property owners may access local preservation tax incentives.",
   nrhpDistricts: "Federally recognized historic districts qualifying for the 20% federal Historic Tax Credit on certified rehab costs.",
+  brownfields: "Former industrial or commercial properties tracked in EPA's brownfields program (ACRES). Redevelopment may qualify for EPA assessment/cleanup grants and Illinois Site Remediation Program tax credits.",
 };
 
 /** Learn-more URLs for each zone type. */
@@ -117,6 +121,7 @@ export const ZONE_LEARN_MORE: Record<string, string> = {
   qct: "https://www.huduser.gov/portal/datasets/qct.html",
   landmarkDistricts: "https://www.chicago.gov/city/en/depts/dcd/provdrs/landmark.html",
   nrhpDistricts: "https://www.nps.gov/subjects/nationalregister/index.htm",
+  brownfields: "https://www.epa.gov/brownfields",
 };
 
 /* ── Chicago Zoning Code Reference ─────────── */
@@ -251,4 +256,5 @@ export const ZONE_TILESET_IDS: Record<string, string> = {
   qct: "",
   landmarkDistricts: "",
   nrhpDistricts: "",
+  brownfields: "",
 };
