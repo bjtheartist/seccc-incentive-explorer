@@ -12,6 +12,7 @@
     "video:render": "remotion render remotion/index.ts ChicagoIncentiveExplorerDemo out/chicago-incentive-explorer-demo.mp4 --codec=h264 --pixel-format=yuv420p",
     "data:acs2024": "npx tsx scripts/seed-census.ts",
     "data:brownfields": "node scripts/sync-brownfields.mjs",
+    "data:nof": "node scripts/sync-nof.mjs",
     "analytics:snapshot": "npx tsx scripts/analytics-snapshot.ts",
     "db:migrate": "npm run db:migrate:vacant && npm run db:migrate:workspace && npm run db:migrate:analytics",
     "db:migrate:vacant": "npx tsx scripts/migrate-vacant.ts",

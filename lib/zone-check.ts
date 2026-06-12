@@ -14,7 +14,7 @@ const zoneFileMap: Record<string, string> = {
   highUnemployment: "/data/zones/high-unemployment.geojson",
   industrialCorridors: "/data/zones/industrial-corridors.geojson",
   microMarketRecovery: "/data/zones/micro-market-recovery.geojson",
-  nof: "/data/zones/nof-projects.geojson",
+  nof: "/data/zones/nof-corridors.geojson",
   ccsa: "/data/zones/ccsa-corridors.geojson",
   nmtcEligible: "/data/zones/nmtc-eligible.geojson",
   qct: "/data/zones/qct.geojson",

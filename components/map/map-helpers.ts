@@ -20,7 +20,7 @@ export const ZONE_FILES: Record<string, string> = {
   nrhpDistricts: "nrhp-districts.geojson",
   industrialCorridors: "industrial-corridors.geojson",
   microMarketRecovery: "micro-market-recovery.geojson",
-  nof: "nof-projects.geojson",
+  nof: "nof-corridors.geojson",
   ccsa: "ccsa-corridors.geojson",
   nmtcEligible: "nmtc-eligible.geojson",
   qct: "qct.geojson",
@@ -28,7 +28,7 @@ export const ZONE_FILES: Record<string, string> = {
 };
 
 /** Zone keys that use Point geometry and need circle layers instead of fill/line. */
-export const POINT_ZONE_KEYS = new Set(["nof", "brownfields"]);
+export const POINT_ZONE_KEYS = new Set(["brownfields"]);
 
 /** Helper: check if a zone should be hidden by default. */
 export function isZoneDefaultHidden(key: string): boolean {

@@ -97,7 +97,7 @@ export const ZONE_DESCRIPTIONS: Record<string, string> = {
   ccsa: "City corridor activation program that may provide reimbursable support for storefront improvements and technical assistance in selected commercial corridors. Application status and eligible corridors should be verified with Chicago DPD.",
   industrialCorridors: "City-designated corridors preserved for manufacturing, logistics, and industrial uses with zoning protections.",
   microMarketRecovery: "City program targeting commercial vacancy in specific corridors with grants for storefront improvements.",
-  nof: "City grants for commercial and industrial projects in underinvested neighborhoods on Chicago's South and West Sides.",
+  nof: "City grants for commercial projects located on designated eligible corridors in underinvested neighborhoods on Chicago's South and West Sides. Priority corridors qualify for larger awards.",
   nmtcEligible: "Census tracts eligible for New Markets Tax Credits, a federal program for investments in low-income communities.",
   qct: "HUD-designated census tracts where 50%+ of households earn below 60% of area median income, boosting LIHTC credits.",
   landmarkDistricts: "Chicago-designated historic districts where property owners may access local preservation tax incentives.",

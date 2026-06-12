@@ -51,6 +51,7 @@ The current package scripts cover vacant-property maintenance plus the business 
    - `scripts/sync-vacant-properties.ts` — syncs Chicago vacant land/building data and writes static fallback data
    - `scripts/seed-epa-walkability.ts` — updates existing census rows with walkability data after census data has been seeded
    - `scripts/sync-brownfields.mjs` — fetches EPA FRS ACRES brownfield sites for Chicago → `public/data/zones/brownfield-sites.geojson` (`npm run data:brownfields`)
+   - `scripts/sync-nof.mjs` — fetches official NOF eligible/priority corridor polygons from the city's ArcGIS eligibility map → `public/data/zones/nof-corridors.geojson`, and replaces `nof` rows in the zones table unless `--no-db` (`npm run data:nof`)
 
 2. **Runtime lookup (DB-first with static fallback):**
    - `lib/db.ts` — Neon serverless client (`sql` tagged template), lazy-initialized
