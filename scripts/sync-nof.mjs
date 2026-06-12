@@ -30,6 +30,59 @@ const SERVICES = [
 
 const OUT_FILE = resolve(process.cwd(), "public/data/zones/nof-corridors.geojson");
 
+/** City of Chicago street centerlines — used to name each corridor. */
+const CENTERLINE_QUERY_URL =
+  "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Centerline/MapServer/0/query";
+
+const STREET_TYPE_ABBR = {
+  ST: "St", AVE: "Ave", BLVD: "Blvd", RD: "Rd", PL: "Pl", DR: "Dr",
+  PKWY: "Pkwy", CT: "Ct", HWY: "Hwy", TER: "Ter", LN: "Ln", SQ: "Sq",
+};
+
+function formatStreet(preDir, name, type) {
+  const titled = String(name || "")
+    .toLowerCase()
+    .replace(/\b[a-z]/g, (c) => c.toUpperCase());
+  const abbr = STREET_TYPE_ABBR[type] || (type ? type.charAt(0) + type.slice(1).toLowerCase() : "");
+  return [preDir, titled, abbr].filter(Boolean).join(" ");
+}
+
+/**
+ * Name a corridor after the street(s) carrying the most centerline length
+ * inside it. Cross streets only contribute short crossing segments, so the
+ * corridor's main street dominates; a second street is included only when
+ * it carries a comparable share (L-shaped corridors).
+ */
+async function dominantStreets(geometry) {
+  const params = new URLSearchParams({
+    geometry: JSON.stringify({ rings: geometry.coordinates, spatialReference: { wkid: 4326 } }),
+    geometryType: "esriGeometryPolygon",
+    inSR: "4326",
+    spatialRel: "esriSpatialRelIntersects",
+    where: "1=1",
+    outFields: "PRE_DIR,STREET_NAME,STREET_TYPE,LENGTH",
+    returnGeometry: "false",
+    f: "json",
+  });
+  const res = await fetch(CENTERLINE_QUERY_URL, { method: "POST", body: params });
+  if (!res.ok) throw new Error(`Centerline query failed: HTTP ${res.status}`);
+  const data = await res.json();
+  if (data.error) throw new Error(`Centerline query error: ${JSON.stringify(data.error)}`);
+
+  const lengths = new Map();
+  for (const f of data.features ?? []) {
+    const a = f.attributes;
+    if (!a.STREET_NAME) continue;
+    const street = formatStreet(a.PRE_DIR, a.STREET_NAME, a.STREET_TYPE);
+    lengths.set(street, (lengths.get(street) || 0) + (a.LENGTH || 0));
+  }
+  const ranked = [...lengths.entries()].sort((a, b) => b[1] - a[1]);
+  if (ranked.length === 0) return null;
+  const [top, second] = ranked;
+  if (second && second[1] >= top[1] * 0.6) return `${top[0]} / ${second[0]}`;
+  return top[0];
+}
+
 function loadEnvLocal() {
   if (process.env.DATABASE_URL) return;
   const envPath = resolve(process.cwd(), ".env.local");
@@ -63,6 +116,21 @@ async function fetchCorridors({ url, name, corridorType }) {
 
 const results = await Promise.all(SERVICES.map(fetchCorridors));
 const features = results.flat();
+
+console.log(`Naming ${features.length} corridors from street centerlines...`);
+for (const f of features) {
+  const typeLabel = f.properties.corridorType === "priority" ? "Priority Corridor" : "Eligible Corridor";
+  try {
+    const street = await dominantStreets(f.geometry);
+    if (street) {
+      f.properties.street = street;
+      f.properties.name = `${street} (${typeLabel})`;
+    }
+  } catch (err) {
+    console.warn(`  Could not name ${f.properties.name}: ${err.message}`);
+  }
+}
+
 const fc = { type: "FeatureCollection", features };
 writeFileSync(OUT_FILE, JSON.stringify(fc));
 console.log(`Wrote ${features.length} NOF corridor polygons → ${OUT_FILE}`);
