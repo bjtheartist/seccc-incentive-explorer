@@ -243,7 +243,7 @@ export const MAP_PRESETS: MapPreset[] = [
   {
     id: "city",
     label: "City",
-    zones: ["tif", "ssa", "nof", "nofFundedProjects", "ccsa", "industrialCorridors", "microMarketRecovery", "landmarkDistricts"],
+    zones: ["tif", "ssa", "nof", "ccsa", "industrialCorridors", "microMarketRecovery", "landmarkDistricts"],
     zoning: false,
     vacancy: false,
     parcels: false,
