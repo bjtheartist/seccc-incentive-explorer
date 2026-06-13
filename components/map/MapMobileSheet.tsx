@@ -1,6 +1,7 @@
 "use client";
 
-import { Layers, Loader2, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { ChevronDown, ChevronUp, Layers, Loader2 } from "lucide-react";
 import {
   MOBILE_MAP_PRESETS,
   type MobileMapPresetId,
@@ -26,14 +27,21 @@ export default function MapMobileSheet({
   onShowAdvanced,
 }: MapMobileSheetProps) {
   const advancedAction = onShowAdvanced ?? onOpenLegend;
+  const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="md:hidden absolute bottom-0 left-0 right-0 z-20 bg-white/98 backdrop-blur border-t border-[#0C1B33]/10 rounded-t-xl shadow-lg">
-      <div className="flex flex-col items-center pt-2 pb-1">
+    <div className="md:hidden absolute bottom-0 left-0 right-0 z-20 max-h-[72vh] overflow-y-auto bg-white/98 backdrop-blur border-t border-[#0C1B33]/10 rounded-t-xl shadow-lg">
+      <button
+        type="button"
+        onClick={() => setIsExpanded((value) => !value)}
+        className="flex w-full flex-col items-center pt-2 pb-1"
+        aria-expanded={isExpanded}
+        aria-label={isExpanded ? "Minimize map discovery" : "Expand map discovery"}
+      >
         <div className="w-10 h-1 rounded-full bg-[#0C1B33]/15" />
-      </div>
+      </button>
 
-      <div className="px-4 pt-2 pb-4">
+      <div className="px-4 pt-2 pb-3">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50">
@@ -44,19 +52,35 @@ export default function MapMobileSheet({
             </div>
           </div>
 
-          {advancedAction && (
+          <div className="flex flex-shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setIsExpanded((value) => !value)}
+              className="flex h-10 w-10 items-center justify-center border border-[#0C1B33]/12 bg-white text-[#0C1B33]/55 transition-colors hover:border-[#2563EB]/40 hover:text-[#2563EB]"
+              aria-label={isExpanded ? "Minimize quick filters" : "Show quick filters"}
+              title={isExpanded ? "Minimize" : "Quick filters"}
+            >
+              {isExpanded ? (
+                <ChevronDown size={17} strokeWidth={1.8} />
+              ) : (
+                <ChevronUp size={17} strokeWidth={1.8} />
+              )}
+            </button>
+            {advancedAction && (
             <button
               type="button"
               onClick={advancedAction}
-              className="flex h-10 w-10 flex-shrink-0 items-center justify-center border border-[#0C1B33]/12 bg-white text-[#0C1B33]/55 transition-colors hover:border-[#2563EB]/40 hover:text-[#2563EB]"
+              className="flex h-10 w-10 items-center justify-center border border-[#0C1B33]/12 bg-white text-[#0C1B33]/55 transition-colors hover:border-[#2563EB]/40 hover:text-[#2563EB]"
               aria-label={onShowAdvanced ? "Show advanced map controls" : "Open map legend"}
               title={onShowAdvanced ? "Advanced controls" : "Legend"}
             >
               <Layers size={17} strokeWidth={1.8} />
             </button>
-          )}
+            )}
+          </div>
         </div>
 
+        {isExpanded && (
         <div className="mt-3 grid grid-cols-2 gap-2">
           {MOBILE_MAP_PRESETS.map((preset) => {
             const isActive = activePreset === preset.id;
@@ -87,6 +111,7 @@ export default function MapMobileSheet({
             );
           })}
         </div>
+        )}
 
         <button
           type="button"
@@ -94,11 +119,7 @@ export default function MapMobileSheet({
           disabled={isGeneratingSnapshot}
           className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 bg-[#0C1B33] px-4 py-3 font-mono-bureau text-[11px] uppercase tracking-[0.14em] text-white transition-colors hover:bg-[#2563EB] disabled:cursor-not-allowed disabled:bg-[#0C1B33]/45"
         >
-          {isGeneratingSnapshot ? (
-            <Loader2 size={16} strokeWidth={1.8} className="animate-spin" />
-          ) : (
-            <Sparkles size={16} strokeWidth={1.8} />
-          )}
+          {isGeneratingSnapshot && <Loader2 size={16} strokeWidth={1.8} className="animate-spin" />}
           {isGeneratingSnapshot ? "Generating Snapshot" : "Generate Location Snapshot"}
         </button>
       </div>

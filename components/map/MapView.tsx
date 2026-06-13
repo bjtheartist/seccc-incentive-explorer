@@ -1166,6 +1166,9 @@ export default function MapView() {
           if (map.getLayer(`zone-${key}-fill`)) {
             map.setLayoutProperty(`zone-${key}-fill`, "visibility", visibility);
             map.setLayoutProperty(`zone-${key}-line`, "visibility", visibility);
+            if (map.getLayer(`zone-${key}-label`)) {
+              map.setLayoutProperty(`zone-${key}-label`, "visibility", visibility);
+            }
           }
         }
         setZoneVisible(updated);
@@ -1200,25 +1203,58 @@ export default function MapView() {
         });
       };
 
-      if (presetId === "incentives") {
-        const locationZoneKeys = locationZones
-          ? Object.entries(locationZones)
-              .filter(([, isMatch]) => isMatch)
-              .map(([key]) => key)
-          : [];
-        const coreZones = ["tif", "ssa", "enterprise", "federalOZ", "nof", "ccsa"];
-        setZoneGroupVisibility(new Set(locationZoneKeys.length > 0 ? locationZoneKeys : coreZones));
+      if (presetId === "city") {
+        setZoneGroupVisibility(new Set([
+          "tif",
+          "ssa",
+          "nof",
+          "nofFundedProjects",
+          "ccsa",
+          "industrialCorridors",
+          "microMarketRecovery",
+        ]));
         setZoningGroupVisibility(false);
         setVacancyGroupVisibility(false);
         setParcelsVisible(false);
         setPoiGroupVisibility(false);
       }
 
-      if (presetId === "vacancy") {
-        setZoneGroupVisibility(new Set());
+      if (presetId === "state") {
+        setZoneGroupVisibility(new Set([
+          "enterprise",
+          "stateIncentiveZones",
+        ]));
         setZoningGroupVisibility(false);
-        setVacancyGroupVisibility(true);
-        setParcelsVisible(true);
+        setVacancyGroupVisibility(false);
+        setParcelsVisible(false);
+        setPoiGroupVisibility(false);
+      }
+
+      if (presetId === "federal") {
+        setZoneGroupVisibility(new Set([
+          "federalOZ",
+          "highUnemployment",
+          "nmtcEligible",
+          "qct",
+          "nrhpDistricts",
+          "hubzone",
+          "energyCommunities",
+        ]));
+        setZoningGroupVisibility(false);
+        setVacancyGroupVisibility(false);
+        setParcelsVisible(false);
+        setPoiGroupVisibility(false);
+      }
+
+      if (presetId === "environmental") {
+        setZoneGroupVisibility(new Set([
+          "brownfields",
+          "lustSites",
+          "energyCommunities",
+        ]));
+        setZoningGroupVisibility(false);
+        setVacancyGroupVisibility(false);
+        setParcelsVisible(false);
         setPoiGroupVisibility(false);
       }
 
@@ -1230,12 +1266,12 @@ export default function MapView() {
         setPoiGroupVisibility(false);
       }
 
-      if (presetId === "community-assets") {
+      if (presetId === "vacancy") {
         setZoneGroupVisibility(new Set());
         setZoningGroupVisibility(false);
-        setVacancyGroupVisibility(false);
-        setParcelsVisible(false);
-        setPoiGroupVisibility(true);
+        setVacancyGroupVisibility(true);
+        setParcelsVisible(true);
+        setPoiGroupVisibility(false);
       }
 
       setLegendOpen(false);
@@ -1247,7 +1283,7 @@ export default function MapView() {
         metadata: { preset: presetId },
       });
     },
-    [loaded, locationZones, poiVisible, snapshotLabel, togglePoi]
+    [loaded, poiVisible, snapshotLabel, togglePoi]
   );
 
   /* ── Inspect zoning mode cursor ──────── */
@@ -1618,10 +1654,12 @@ export default function MapView() {
   }, [vacantVisible, loaded, vacantLoaded, ownerFilter]);
 
   const activeMobilePreset: MobileMapPresetId | null =
-    activePreset === "incentives" ||
+    activePreset === "city" ||
+    activePreset === "state" ||
+    activePreset === "federal" ||
+    activePreset === "environmental" ||
     activePreset === "vacancy" ||
-    activePreset === "zoning" ||
-    activePreset === "community-assets"
+    activePreset === "zoning"
       ? activePreset
       : null;
 

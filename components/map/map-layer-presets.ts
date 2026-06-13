@@ -1,23 +1,33 @@
 export const MOBILE_MAP_PRESETS = [
   {
-    id: "incentives",
-    label: "Incentives",
-    description: "Show core incentive zones and programs that may apply here.",
+    id: "city",
+    label: "City",
+    description: "TIF, SSA, NOF, CCSA, industrial, and local corridor layers.",
   },
   {
-    id: "vacancy",
-    label: "Vacancy",
-    description: "Surface vacant buildings, lots, and parcel vacancy signals.",
+    id: "state",
+    label: "State",
+    description: "Enterprise Zone, state incentive, and Illinois site layers.",
+  },
+  {
+    id: "federal",
+    label: "Federal",
+    description: "OZ, NMTC, QCT, HUBZone, energy, and federal eligibility.",
+  },
+  {
+    id: "environmental",
+    label: "Environmental",
+    description: "Brownfield, LUST, and energy-community context.",
   },
   {
     id: "zoning",
     label: "Zoning",
-    description: "Focus the map on zoning categories and parcel context.",
+    description: "Zoning categories with parcel boundaries at close zoom.",
   },
   {
-    id: "community-assets",
-    label: "Community Assets",
-    description: "Highlight nearby transit, schools, libraries, and civic anchors.",
+    id: "vacancy",
+    label: "Vacancy",
+    description: "Vacant buildings, lots, reports, and parcel context.",
   },
 ] as const;
 
