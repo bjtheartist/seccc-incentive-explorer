@@ -16,12 +16,32 @@ const CDN_HEADERS = {
 // Static fallback data (from MapView.tsx EDO_BSO_POINTS)
 const STATIC_ASSETS = [
   { id: "seccc", name: "Southeast Chicago Chamber of Commerce (SECCC)", type: "EDO", address: "8751 S Houston Ave, Chicago, IL 60617", lat: 41.7395, lon: -87.5687 },
+  { id: "claretian", name: "Claretian Associates", type: "EDO", address: "3039 E 91st St, Chicago, IL 60617", lat: 41.7298444, lon: -87.5492184 },
   { id: "cni", name: "Chicago Neighborhood Initiatives (CNI)", type: "EDO", address: "11045 S Michigan Ave, Chicago, IL 60628", lat: 41.7254, lon: -87.6037 },
   { id: "sbs", name: "Cook County Small Business Source", type: "BSO", address: "69 W Washington St, Chicago, IL 60602", lat: 41.8397, lon: -87.6252 },
   { id: "sbdc", name: "Illinois SBDC at Women's Business Development Center", type: "BSO", address: "8 S Michigan Ave #400, Chicago, IL 60603", lat: 41.8768, lon: -87.6278 },
   { id: "somercor", name: "SomerCor 504 (SBA Lender)", type: "BSO", address: "2 E 8th St, Chicago, IL 60605", lat: 41.7528, lon: -87.5839 },
   { id: "fscdc", name: "Far South Community Development Corp", type: "EDO", address: "34 E 75th St, Chicago, IL 60619", lat: 41.7495, lon: -87.6048 },
 ];
+
+const REQUIRED_STATIC_ASSET_IDS = new Set(["claretian"]);
+
+type CommunityAssetRow = typeof STATIC_ASSETS[number];
+
+function withRequiredStaticAssets(
+  assets: CommunityAssetRow[],
+  types: string[] | null,
+) {
+  const existingIds = new Set(assets.map((asset) => asset.id));
+  const requiredAssets = STATIC_ASSETS.filter(
+    (asset) =>
+      REQUIRED_STATIC_ASSET_IDS.has(asset.id) &&
+      !existingIds.has(asset.id) &&
+      (!types || types.includes(asset.type)),
+  );
+
+  return [...assets, ...requiredAssets];
+}
 
 export async function GET(request: NextRequest) {
   const typeParam = request.nextUrl.searchParams.get("type");
@@ -55,7 +75,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(rows, { headers: CDN_HEADERS });
+    return NextResponse.json(withRequiredStaticAssets(rows as CommunityAssetRow[], types), { headers: CDN_HEADERS });
   } catch {
     const filtered = types
       ? STATIC_ASSETS.filter((a) => types.includes(a.type))
