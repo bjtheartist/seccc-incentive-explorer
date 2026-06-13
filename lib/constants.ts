@@ -41,6 +41,11 @@ export const ZONE_META: Record<string, ZoneMeta> = {
   nrhpDistricts:       { isPublic: true, defaultVisible: false, sortOrder: 13, group: "historic" },
   ccsa:                { isPublic: true, defaultVisible: false, sortOrder: 14, group: "city" },
   brownfields:         { isPublic: true, defaultVisible: false, sortOrder: 15, group: "federal" },
+  energyCommunities:   { isPublic: true, defaultVisible: false, sortOrder: 16, group: "federal" },
+  hubzone:             { isPublic: true, defaultVisible: false, sortOrder: 17, group: "federal" },
+  lustSites:           { isPublic: true, defaultVisible: false, sortOrder: 18, group: "state" },
+  nofFundedProjects:   { isPublic: true, defaultVisible: false, sortOrder: 19, group: "city" },
+  countyIncentiveParcels: { isPublic: true, defaultVisible: false, sortOrder: 20, group: "city" },
 };
 
 /** Zone keys sorted by display order. */
@@ -64,6 +69,11 @@ export const ZONE_COLORS: Record<string, string> = {
   landmarkDistricts: "#a16207",
   nrhpDistricts: "#b45309",
   brownfields: "#78350f",
+  energyCommunities: "#0d9488",
+  hubzone: "#0e7490",
+  lustSites: "#991b1b",
+  nofFundedProjects: "#047857",
+  countyIncentiveParcels: "#4f46e5",
 };
 
 export const ZONE_LABELS: Record<string, string> = {
@@ -82,6 +92,11 @@ export const ZONE_LABELS: Record<string, string> = {
   landmarkDistricts: "Chicago Landmark District",
   nrhpDistricts: "National Register Historic District",
   brownfields: "Brownfield Site (EPA ACRES)",
+  energyCommunities: "IRA Energy Community",
+  hubzone: "SBA HUBZone",
+  lustSites: "Leaking UST Site (Illinois EPA)",
+  nofFundedProjects: "NOF Funded Project",
+  countyIncentiveParcels: "Cook County Incentive Parcel",
 };
 
 export const ZONE_KEYS = Object.keys(ZONE_LABELS);
@@ -103,6 +118,11 @@ export const ZONE_DESCRIPTIONS: Record<string, string> = {
   landmarkDistricts: "Chicago-designated historic districts where property owners may access local preservation tax incentives.",
   nrhpDistricts: "Federally recognized historic districts qualifying for the 20% federal Historic Tax Credit on certified rehab costs.",
   brownfields: "Former industrial or commercial properties tracked in EPA's brownfields program (ACRES). Redevelopment may qualify for EPA assessment/cleanup grants and Illinois Site Remediation Program tax credits.",
+  energyCommunities: "Clean energy projects located in an IRA energy community earn a 10 percentage point bonus on the federal Investment or Production Tax Credit. The Chicago metro currently qualifies through the fossil fuel employment test, and specific South and West Side tracts also qualify as coal closure communities.",
+  hubzone: "Small businesses with a principal office in a HUBZone (and 35% of employees living in one) can compete for federal contract set-asides and get a 10% price preference in full and open bidding.",
+  lustSites: "Leaking underground storage tank incidents reported to the Illinois EPA, a key environmental due-diligence flag when buying or leasing property. Open incidents may mean unresolved contamination; closed sites have received a No Further Remediation letter.",
+  nofFundedProjects: "Businesses that already won Neighborhood Opportunity Fund grants, with award amounts and addresses. Funded projects near your location show the program actively pays out in your corridor.",
+  countyIncentiveParcels: "Parcels holding a Cook County Assessor incentive classification (6b industrial, 7a/7b commercial, Class 8 distressed-area, Class 9 affordable multifamily, or Class C contamination cleanup) that cuts the assessment level from 25% to as low as 10%.",
 };
 
 /** Learn-more URLs for each zone type. */
@@ -122,6 +142,11 @@ export const ZONE_LEARN_MORE: Record<string, string> = {
   landmarkDistricts: "https://www.chicago.gov/city/en/depts/dcd/provdrs/landmark.html",
   nrhpDistricts: "https://www.nps.gov/subjects/nationalregister/index.htm",
   brownfields: "https://www.epa.gov/brownfields",
+  energyCommunities: "https://arcgis.netl.doe.gov/portal/apps/experiencebuilder/experience/?id=a2ce47d4721a477a8701bd0e08495e1d",
+  hubzone: "https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program",
+  lustSites: "https://epa.illinois.gov/topics/cleanup-programs/lust.html",
+  nofFundedProjects: "https://www.chicago.gov/city/en/depts/dcd/provdrs/nof.html",
+  countyIncentiveParcels: "https://www.cookcountyassessoril.gov/incentives-special-properties",
 };
 
 /* ── Chicago Zoning Code Reference ─────────── */
@@ -257,4 +282,9 @@ export const ZONE_TILESET_IDS: Record<string, string> = {
   landmarkDistricts: "",
   nrhpDistricts: "",
   brownfields: "",
+  energyCommunities: "",
+  hubzone: "",
+  lustSites: "",
+  nofFundedProjects: "",
+  countyIncentiveParcels: "",
 };

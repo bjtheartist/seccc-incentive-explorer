@@ -408,6 +408,8 @@ export default function MapView() {
           });
 
           if (POINT_ZONE_KEYS.has(key)) {
+            // Dense layers (thousands of points) get smaller, lighter circles
+            const dense = data.features.length > 1000;
             // Point geometry → circle + symbol layers
             map.addLayer({
               id: `${srcId}-fill`,
@@ -417,11 +419,11 @@ export default function MapView() {
                 visibility: "none",
               },
               paint: {
-                "circle-radius": 8,
+                "circle-radius": dense ? 4 : 8,
                 "circle-color": ZONE_COLORS[key],
-                "circle-stroke-width": 2,
+                "circle-stroke-width": dense ? 1 : 2,
                 "circle-stroke-color": "#ffffff",
-                "circle-opacity": 0.85,
+                "circle-opacity": dense ? 0.7 : 0.85,
               },
             });
             // Add a dummy line layer ID so toggle logic works (hidden, zero-width)
@@ -640,10 +642,14 @@ export default function MapView() {
         lastClickRef.current(e.lngLat.lat, e.lngLat.lng);
       });
 
-      /* ── Chicago Zoning Districts — per-category layers (on top of incentive zones) ── */
-      try {
-        const zoningData = await cachedFetch(CHICAGO_ZONING_URL);
-        if (zoningData) {
+      /* ── Chicago Zoning Districts — per-category layers (on top of incentive zones) ──
+         Loaded non-blocking: this ~50k-row fetch was gating everything after it
+         (parcels, vacant layers, the `loaded` flag) for 10s+ on first load, which
+         made the vacant toggles appear dead. */
+      cachedFetch(CHICAGO_ZONING_URL).then((zoningData) => {
+        if (zoningData && map.getStyle()) {
+          // Anchor below parcels so z-order matches the original synchronous order
+          const zoningAnchor = map.getLayer("parcels-fill") ? "parcels-fill" : undefined;
           map.addSource("chicago-zoning", { type: "geojson", data: zoningData as GeoJSON.FeatureCollection, generateId: true });
 
           // Create a separate fill + outline layer per zoning category
@@ -674,7 +680,7 @@ export default function MapView() {
                   0.45,
                 ],
               },
-            });
+            }, zoningAnchor);
 
             map.addLayer({
               id: `zoning-${cat.key}-line`,
@@ -687,7 +693,7 @@ export default function MapView() {
                 "line-width": 0.3,
                 "line-opacity": 0.5,
               },
-            });
+            }, zoningAnchor);
           }
 
           // Hover interaction across all zoning fill layers
@@ -730,9 +736,9 @@ export default function MapView() {
             });
           }
         }
-      } catch {
+      }).catch(() => {
         // Zoning districts layer is optional
-      }
+      });
 
       /* ── Parcel boundary layer (Cook County ArcGIS) ── */
       map.addSource("parcels", { type: "geojson", data: EMPTY_FC, generateId: true });

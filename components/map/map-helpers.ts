@@ -26,10 +26,17 @@ export const ZONE_FILES: Record<string, string> = {
   nmtcEligible: "nmtc-eligible.geojson",
   qct: "qct.geojson",
   brownfields: "brownfield-sites.geojson",
+  energyCommunities: "energy-communities.geojson",
+  hubzone: "hubzone.geojson",
+  lustSites: "lust-sites.geojson",
+  nofFundedProjects: "nof-funded-projects.geojson",
+  countyIncentiveParcels: "county-incentive-parcels.geojson",
 };
 
 /** Zone keys that use Point geometry and need circle layers instead of fill/line. */
-export const POINT_ZONE_KEYS = new Set(["brownfields"]);
+export const POINT_ZONE_KEYS = new Set([
+  "brownfields", "lustSites", "nofFundedProjects", "countyIncentiveParcels",
+]);
 
 /** Polygon zone keys that get a text label layer (uses `street` or `name` property). */
 export const LABELED_ZONE_KEYS = new Set(["nof"]);
@@ -43,6 +50,7 @@ export function isZoneDefaultHidden(key: string): boolean {
 export const HEAVY_COVERAGE_KEYS = new Set([
   "nmtcEligible", "qct", "landmarkDistricts", "nrhpDistricts",
   "highUnemployment", "industrialCorridors", "stateIncentiveZones",
+  "energyCommunities", "hubzone",
 ]);
 
 /** Chicago 77 community areas GeoJSON endpoint (Data Portal). */

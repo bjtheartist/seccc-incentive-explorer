@@ -20,6 +20,8 @@ const zoneFileMap: Record<string, string> = {
   qct: "/data/zones/qct.geojson",
   landmarkDistricts: "/data/zones/landmark-districts.geojson",
   nrhpDistricts: "/data/zones/nrhp-districts.geojson",
+  energyCommunities: "/data/zones/energy-communities.geojson",
+  hubzone: "/data/zones/hubzone.geojson",
 };
 
 // Cache loaded GeoJSON in memory

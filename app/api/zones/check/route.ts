@@ -30,6 +30,8 @@ const zoneFileMap: Record<string, string> = {
   qct: "qct.geojson",
   landmarkDistricts: "landmark-districts.geojson",
   nrhpDistricts: "nrhp-districts.geojson",
+  energyCommunities: "energy-communities.geojson",
+  hubzone: "hubzone.geojson",
 };
 
 const zoneCache: Record<string, FeatureCollection> = {};
@@ -53,18 +55,24 @@ async function checkStaticZones(lat: number, lon: number) {
 
   await Promise.all(
     ZONE_KEYS.map(async (key) => {
-      const collection = await loadStaticZone(key);
-      const match = collection.features.find(
-        (feature): feature is Feature<Polygon | MultiPolygon> =>
-          Boolean(feature.geometry) &&
-          turf.booleanPointInPolygon(
-            point,
-            feature as Feature<Polygon | MultiPolygon>
-          )
-      );
+      try {
+        const collection = await loadStaticZone(key);
+        const match = collection.features.find(
+          (feature): feature is Feature<Polygon | MultiPolygon> =>
+            Boolean(feature.geometry) &&
+            feature.geometry.type !== "Point" &&
+            turf.booleanPointInPolygon(
+              point,
+              feature as Feature<Polygon | MultiPolygon>
+            )
+        );
 
-      if (match) {
-        matches.push({ key, name: featureDisplayName(key, match) });
+        if (match) {
+          matches.push({ key, name: featureDisplayName(key, match) });
+        }
+      } catch {
+        // Point-geometry layers and keys without a static file are not
+        // point-in-polygon checkable; skip rather than failing all zones.
       }
     })
   );

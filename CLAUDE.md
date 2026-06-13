@@ -52,6 +52,8 @@ The current package scripts cover vacant-property maintenance plus the business 
    - `scripts/seed-epa-walkability.ts` — updates existing census rows with walkability data after census data has been seeded
    - `scripts/sync-brownfields.mjs` — fetches EPA FRS ACRES brownfield sites for Chicago → `public/data/zones/brownfield-sites.geojson` (`npm run data:brownfields`)
    - `scripts/sync-nof.mjs` — fetches official NOF eligible/priority corridor polygons from the city's ArcGIS eligibility map → `public/data/zones/nof-corridors.geojson`, and replaces `nof` rows in the zones table unless `--no-db` (`npm run data:nof`)
+   - `scripts/sync-transport.mjs` — expressways + freight rail → `public/data/transport-network.geojson` for the Logistics Access panel (`npm run data:transport`)
+   - `scripts/sync-energy-communities.mjs`, `sync-hubzone.mjs`, `sync-lust.mjs`, `sync-nof-projects.mjs`, `sync-county-incentives.mjs` — IRA energy communities (NETL), SBA HUBZone tracts (SBA GeoServer WFS), Illinois EPA leaking UST sites, NOF awarded grants (data portal), and Cook County incentive-classified parcels → corresponding files in `public/data/zones/` (`npm run data:energy` etc.)
 
 2. **Runtime lookup (DB-first with static fallback):**
    - `lib/db.ts` — Neon serverless client (`sql` tagged template), lazy-initialized
