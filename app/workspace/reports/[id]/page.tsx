@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { ReportDisplay } from "@/app/report/page";
+import { ReportDisplay } from "@/components/report/ReportDisplay";
 import type { GeneratedReport } from "@/lib/report-engine";
 import type { WizardState } from "@/lib/report-wizard-config";
 

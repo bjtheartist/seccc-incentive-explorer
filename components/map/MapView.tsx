@@ -16,6 +16,8 @@ import MapLegendPanel from "./MapLegendPanel";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
 import { cachedFetch } from "@/lib/fetch-cache";
+import { getSiteSignals } from "@/lib/site-signals";
+import { getTransportAccess } from "@/lib/transport-access";
 import type { TifFinanceContext } from "@/lib/tif-finance";
 import {
   POINT_ZONE_KEYS, HEAVY_COVERAGE_KEYS,
@@ -129,8 +131,10 @@ export default function MapView() {
             ? Object.entries(locationZones).filter(([, v]) => v).map(([k]) => k)
             : []
         );
-      } else {
+      } else if (Array.isArray(preset.zones)) {
         targetZones = new Set(preset.zones);
+      } else {
+        targetZones = new Set();
       }
 
       const updated: Record<string, boolean> = {};
@@ -143,6 +147,30 @@ export default function MapView() {
         }
       }
       setZoneVisible(updated);
+
+      if (typeof preset.zoning === "boolean") {
+        const zoningUpdated: Record<string, boolean> = {};
+        const vis = preset.zoning ? "visible" : "none";
+        for (const cat of ZONING_CATEGORIES) {
+          zoningUpdated[cat.key] = preset.zoning;
+          if (map.getLayer(`zoning-${cat.key}-fill`)) {
+            map.setLayoutProperty(`zoning-${cat.key}-fill`, "visibility", vis);
+            map.setLayoutProperty(`zoning-${cat.key}-line`, "visibility", vis);
+          }
+        }
+        setZoningVisible(zoningUpdated);
+      }
+
+      if (typeof preset.vacancy === "boolean") {
+        setVacantVisible({
+          vacantLand: preset.vacancy,
+          vacantBuildings: preset.vacancy,
+        });
+      }
+
+      if (typeof preset.parcels === "boolean") {
+        setParcelsVisible(preset.parcels);
+      }
     },
     [loaded, activePreset, locationZones]
   );
@@ -199,6 +227,18 @@ export default function MapView() {
           .catch(() => {
             setAreaStats((prev) => ({ ...prev, districtsLoading: false }));
           });
+
+        getSiteSignals(lat, lon)
+          .then((siteSignals) => {
+            setAreaStats((prev) => ({ ...prev, siteSignals }));
+          })
+          .catch(() => {});
+
+        getTransportAccess(lat, lon)
+          .then((transport) => {
+            setAreaStats((prev) => ({ ...prev, transport }));
+          })
+          .catch(() => {});
       }
     } catch {
       // Keep defaults

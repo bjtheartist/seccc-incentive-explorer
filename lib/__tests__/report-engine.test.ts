@@ -114,6 +114,39 @@ describe("generateReportData", () => {
     expect(report.sections.find((s) => s.title === "Additional Programs to Explore")?.items[0].programId).toBe("global");
   });
 
+  it("adds logistics access and site signals to the Site Overview", () => {
+    const report = generateReportData(
+      makeState(),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        transport: {
+          expressway: { name: "I-90", miles: 1.2 },
+          rail: { name: "NS Chicago Line", miles: 0.3 },
+          midwayMiles: 8.7,
+          ohareMiles: 19.1,
+        },
+        siteSignals: {
+          nofAwardsNearby: 2,
+          incentiveParcelsNearby: 1,
+          brownfield: { name: "Former industrial site", miles: 0.4 },
+          openLustNearby: 1,
+          nearestOpenLust: { name: "Open LUST incident", miles: 0.2 },
+          nearestIncentiveParcel: { name: "Class 7b parcel", miles: 0.1 },
+        },
+      },
+    );
+
+    const siteOverview = report.sections.find((section) => section.title === "Site Overview");
+    expect(siteOverview?.description).toContain("logistics");
+    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.value).toContain("I-90");
+    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.detail).toContain("Straight-line distance only");
+    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.value).toContain("nearby public-data");
+    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.detail).toContain("NOF grants funded within 1/2 mi: 2");
+    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.detail).toContain("verify with DPD");
+  });
+
   it("prioritizes Cook County discovery programs without treating them as address-confirmed", () => {
     const federalPrograms = Array.from({ length: 9 }, (_, index) => makeProgram({
       id: `federal-${index}`,
@@ -232,7 +265,40 @@ describe("generateReportData", () => {
     expect(section?.items[1].label).toBe("Southeast Chicago Chamber of Commerce");
     expect(section?.items[1].value).toContain("Primary local access point");
     expect(section?.items[1].detail).toContain("Licensing");
+    expect(section?.items[1].detail).toContain("Can help with");
     expect(report.dataSources?.map((source) => source.id)).toContain("localBusinessSupport");
+  });
+
+  it("renders useful support-network copy when a mapped organization has thin details", () => {
+    const report = generateReportData(
+      makeState(),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        localBusinessSupport: {
+          communityAreaNumber: "40",
+          communityArea: "Washington Park",
+          confidence: "Medium",
+          sourceLabel: "Chicago Small Business Resource Map",
+          sourceUrls: ["https://example.com/source"],
+          organizations: [
+            {
+              name: "Regional CBC Partner",
+              relationships: ["cbc_hub"],
+              sourceUrls: ["https://example.com/source"],
+            },
+          ],
+        },
+      },
+    );
+
+    const section = report.sections.find((s) => s.title === "Your Support Network");
+    expect(section?.description).toContain("clearer next conversation");
+    expect(section?.items[0].detail).toContain("warm-handoff list");
+    expect(section?.items[1].detail).toContain("regional business navigation");
+    expect(section?.items[1].detail).toContain("Website: not listed");
+    expect(section?.items[1].detail).toContain("Washington Park");
   });
 
   it("propagates Phase 1 provenance fields onto report items", () => {

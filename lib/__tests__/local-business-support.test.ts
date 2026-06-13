@@ -14,6 +14,17 @@ describe("local business support data", () => {
     expect(southChicago.organizations[0].name).toBe("Southeast Chicago Chamber of Commerce");
     expect(southChicago.organizations[0].relationships).toContain("primary_access_point");
   });
+
+  it("enriches duplicate provider names with canonical contact details", () => {
+    const washingtonPark = supportData.byCommunityArea["40"];
+    const qcdc = washingtonPark.organizations.find((org) =>
+      org.name.includes("Quad Communities Development Corporation")
+    );
+
+    expect(qcdc?.website).toBe("https://www.qcdc.org");
+    expect(qcdc?.address).toContain("4210 S. Berkeley");
+    expect(qcdc?.supportTypes).toContain("Commercial corridor development");
+  });
 });
 
 describe("rankLocalBusinessSupport", () => {

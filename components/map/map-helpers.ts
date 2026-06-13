@@ -6,6 +6,8 @@
 import mapboxgl from "mapbox-gl";
 import { ZONE_META, ZONING_CATEGORIES } from "@/lib/constants";
 import type { DistrictData } from "@/lib/types";
+import type { SiteSignals } from "@/lib/site-signals";
+import type { TransportAccess } from "@/lib/transport-access";
 import { cachedFetch } from "@/lib/fetch-cache";
 
 /* ── Zone file mapping (static fallback for keys without DB data) ───── */
@@ -210,6 +212,8 @@ export interface AreaStats {
   priorYearTax?: number | null;
   ownerName?: string | null;
   ownerType?: string | null;
+  siteSignals?: SiteSignals | null;
+  transport?: TransportAccess | null;
 }
 
 export const DEFAULT_STATS: AreaStats = {
@@ -219,11 +223,62 @@ export const DEFAULT_STATS: AreaStats = {
 };
 
 /* ── Map Presets ──────────────────────────── */
-export const MAP_PRESETS: { id: string; label: string; zones: string[] | "location" | "all" }[] = [
-  { id: "location", label: "What Applies Here", zones: "location" },
-  { id: "common", label: "Common Incentives", zones: ["tif", "federalOZ", "enterprise", "ssa"] },
-  { id: "developer", label: "Developer Stack", zones: ["tif", "federalOZ", "nmtcEligible", "nrhpDistricts", "qct"] },
-  { id: "historic", label: "Historic / Preservation", zones: ["landmarkDistricts", "nrhpDistricts", "tif"] },
-  { id: "state", label: "State Programs", zones: ["stateIncentiveZones", "enterprise", "federalOZ"] },
-  { id: "all", label: "All Layers", zones: "all" },
+export interface MapPreset {
+  id: string;
+  label: string;
+  zones?: string[] | "location" | "all";
+  zoning?: boolean;
+  vacancy?: boolean;
+  parcels?: boolean;
+}
+
+export const MAP_PRESETS: MapPreset[] = [
+  {
+    id: "city",
+    label: "City",
+    zones: ["tif", "ssa", "nof", "ccsa", "industrialCorridors", "microMarketRecovery", "landmarkDistricts"],
+    zoning: false,
+    vacancy: false,
+    parcels: false,
+  },
+  {
+    id: "state",
+    label: "State",
+    zones: ["enterprise", "stateIncentiveZones"],
+    zoning: false,
+    vacancy: false,
+    parcels: false,
+  },
+  {
+    id: "federal",
+    label: "Federal",
+    zones: ["federalOZ", "highUnemployment", "nmtcEligible", "qct", "nrhpDistricts"],
+    zoning: false,
+    vacancy: false,
+    parcels: false,
+  },
+  {
+    id: "environmental",
+    label: "Environmental",
+    zones: ["enterprise", "stateIncentiveZones", "industrialCorridors"],
+    zoning: false,
+    vacancy: false,
+    parcels: true,
+  },
+  {
+    id: "zoning",
+    label: "Zoning",
+    zones: [],
+    zoning: true,
+    vacancy: false,
+    parcels: true,
+  },
+  {
+    id: "vacancy",
+    label: "Vacancy",
+    zones: [],
+    zoning: false,
+    vacancy: true,
+    parcels: true,
+  },
 ];

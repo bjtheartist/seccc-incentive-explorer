@@ -1,6 +1,9 @@
 import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats } from "./types";
 import type { LocalBusinessSupportContext, LocalBusinessSupportOrganization } from "./local-business-support";
+import type { SiteSignals } from "./site-signals";
+import type { TransportAccess } from "./transport-access";
 import { isClass7aEligible } from "./parcel-classes";
+import { formatMiles } from "./transport-access";
 import { ZONE_LABELS, ZONE_DESCRIPTIONS, describeZoneClass } from "./constants";
 import { getIndustryById } from "./industries-data";
 import { generateExecutiveSummary, computeStackingNarrative, runConfidenceEngine, isStaleProgramData } from "./confidence-engine";
@@ -1320,15 +1323,22 @@ function relationshipLabel(org: LocalBusinessSupportOrganization): string {
     cbc_hub: "CBC regional hub",
     ssa_provider: "SSA provider",
   };
-  return org.relationships.map((r) => labels[r] ?? r).slice(0, 2).join(" + ");
+  return org.relationships.map((r) => labels[r] ?? r).slice(0, 3).join(" + ");
 }
 
-function localSupportDetail(org: LocalBusinessSupportOrganization): string {
+function localSupportDetail(org: LocalBusinessSupportOrganization, communityArea?: string): string {
+  const inferredSupport = org.relationships.includes("cbc_hub")
+    ? "Can help with: regional business navigation, referrals, and Chicago Business Center support. Confirm the exact intake path before referring a business."
+    : org.relationships.includes("ssa_provider")
+      ? "Can help with: corridor services, local business support, and SSA-related questions. Confirm the current service area before referring a business."
+      : "Can help with: business advising, referrals, and incentive-navigation questions. Confirm current capacity before referring a business.";
+
   const details = [
-    org.address,
+    org.address ? `Address: ${org.address}` : "",
     org.phone ? `Phone: ${org.phone}` : "",
-    org.supportTypes ? `Support: ${org.supportTypes}` : "",
-    org.serviceGeography ? `Serves: ${org.serviceGeography}` : "",
+    org.supportTypes ? `Can help with: ${org.supportTypes}` : inferredSupport,
+    org.serviceGeography ? `Serves: ${org.serviceGeography}` : communityArea ? `Service area: mapped as a support option for ${communityArea}; verify fit before referral.` : "",
+    org.website ? "" : "Website: not listed in the validated source map.",
     org.currentStatus || org.validationLevel ? `Status: ${[org.currentStatus, org.validationLevel].filter(Boolean).join("; ")}` : "",
   ].filter(Boolean);
   return details.join("\n");
@@ -1346,7 +1356,7 @@ function buildCommunityAssets(
       address: org.address,
       phone: org.phone,
       website: org.website,
-      detail: localSupportDetail(org),
+      detail: localSupportDetail(org, localSupport.communityArea),
     }));
 
     const edos = organizations
@@ -1356,7 +1366,7 @@ function buildCommunityAssets(
       .filter((org) => !/edo|cdc|chamber|ssa/i.test(`${org.type} ${org.role}`))
       .map((org) => ({ name: org.name, address: org.address || "" }));
 
-    const narrative = `${organizations.length} local business-support organization${organizations.length !== 1 ? "s" : ""} are mapped for ${localSupport.communityArea}. These are neighborhood-facing access points from the validated resource map; confirm current capacity, language access, and intake process before referring a business.`;
+    const narrative = `${organizations.length} local business-support organization${organizations.length !== 1 ? "s" : ""} are mapped for ${localSupport.communityArea}. Use this as a warm-handoff list: start with the closest neighborhood-facing partner, then confirm current capacity, language access, service area, and intake process before referring a business.`;
 
     return {
       edos,
@@ -1540,7 +1550,7 @@ function generateLocationIncentives(
     sections.push({
       title: "Your Support Network",
       description: communityAssetsData.communityArea
-        ? "Neighborhood-facing organizations that can help business owners interpret programs, prepare questions, and find the right support path."
+        ? "Neighborhood-facing organizations that can help business owners turn the report into a clearer next conversation."
         : "Local organizations that provide free advising and application assistance.",
       items: assetItems,
     });
@@ -2875,6 +2885,60 @@ function generateCorridorIntelligence(
 
 // ─── Main Export ─────────────────────────────────────────────────────
 
+function buildLogisticsAccessItem(transport: TransportAccess): ReportItem {
+  const detailLines = [
+    transport.rail
+      ? `Freight rail: ${transport.rail.name} (${formatMiles(transport.rail.miles)})`
+      : null,
+    `Midway Airport: ${formatMiles(transport.midwayMiles)}`,
+    `O'Hare Airport: ${formatMiles(transport.ohareMiles)}`,
+    "Straight-line distance only; verify travel time, truck access, loading, and site constraints before relying on this for a project decision.",
+  ].filter(Boolean) as string[];
+
+  return {
+    label: "Logistics Access",
+    value: transport.expressway
+      ? `${transport.expressway.name} - ${formatMiles(transport.expressway.miles)}`
+      : "Distances loaded",
+    detail: detailLines.join("\n"),
+  };
+}
+
+function buildSiteSignalsItem(siteSignals: SiteSignals): ReportItem {
+  const lines = [
+    siteSignals.nofAwardsNearby > 0
+      ? `NOF grants funded within 1/2 mi: ${siteSignals.nofAwardsNearby}`
+      : null,
+    siteSignals.incentiveParcelsNearby > 0
+      ? `County incentive parcels within 1/4 mi: ${siteSignals.incentiveParcelsNearby}`
+      : null,
+    siteSignals.brownfield && siteSignals.brownfield.miles < 0.5
+      ? `Nearest brownfield site: ${siteSignals.brownfield.name} (${formatMiles(siteSignals.brownfield.miles)})`
+      : null,
+    siteSignals.openLustNearby > 0
+      ? `Open tank-leak incidents within 1/4 mi: ${siteSignals.openLustNearby}`
+      : null,
+  ].filter(Boolean) as string[];
+
+  const signalCount = [
+    siteSignals.nofAwardsNearby > 0,
+    siteSignals.incentiveParcelsNearby > 0,
+    Boolean(siteSignals.brownfield && siteSignals.brownfield.miles < 0.5),
+    siteSignals.openLustNearby > 0,
+  ].filter(Boolean).length;
+
+  return {
+    label: "Site Signals",
+    value: signalCount > 0
+      ? `${signalCount} nearby public-data signal${signalCount === 1 ? "" : "s"}`
+      : "No nearby signals",
+    detail: [
+      ...(lines.length > 0 ? lines : ["No nearby NOF funding, county incentive parcel, brownfield, or open tank-leak signal was found within the current proximity thresholds."]),
+      "Public-data proximity signals only; verify with DPD, Cook County, IEPA/EPA, or the administering agency before relying on them.",
+    ].join("\n"),
+  };
+}
+
 /**
  * Census data for the report location.
  */
@@ -2911,6 +2975,8 @@ export interface ReportContext {
   corridorMetrics?: CorridorMetric | null;
   corridorOwnerClusters?: CorridorOwnerCluster[];
   neighborhoodEconomics?: NeighborhoodEconomicContext;
+  siteSignals?: SiteSignals | null;
+  transport?: TransportAccess | null;
 }
 
 /**
@@ -3039,12 +3105,20 @@ export function generateReportData(
       }
     }
 
+    if (ctx.transport) {
+      contextItems.push(buildLogisticsAccessItem(ctx.transport));
+    }
+
+    if (ctx.siteSignals) {
+      contextItems.push(buildSiteSignalsItem(ctx.siteSignals));
+    }
+
     if (contextItems.length > 0) {
       if (reportType === "site-incentives" || reportType === "location-incentives") {
         // Prepend as "Site Overview" — first section users see
         report.sections.unshift({
           title: "Site Overview",
-          description: "Zoning, property, and district data for this address.",
+          description: "Zoning, property, district, logistics, and nearby public-data signals for this address.",
           items: contextItems,
         });
       } else {
