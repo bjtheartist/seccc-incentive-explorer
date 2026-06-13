@@ -1215,6 +1215,99 @@
     ]
   },
   {
+    "id": "hubzone",
+    "name": "SBA HUBZone Program",
+    "level": "Federal",
+    "zoneKey": "hubzone",
+    "summary": "Federal contracting program for small businesses located in Historically Underutilized Business Zones. Certified HUBZone firms can compete for set-aside federal contracts and receive a 10% price evaluation preference in full and open competition.",
+    "whoQualifies": "Small businesses, under SBA size standards, with their principal office in a HUBZone and at least 35% of employees living in a HUBZone. Many South and West Side Chicago corridors qualify.",
+    "benefits": [
+      "Access to HUBZone set-aside and sole-source federal contracts",
+      "10% price evaluation preference in full and open federal bidding",
+      "Supports businesses competing for federal procurement opportunities"
+    ],
+    "howToApply": [
+      "Confirm the principal office address is in a HUBZone on SBA's official map",
+      "Verify at least 35% of employees live in HUBZone areas",
+      "Register the business in SAM.gov if not already registered",
+      "Apply for HUBZone certification through SBA at certify.sba.gov",
+      "Once certified, pursue HUBZone set-aside opportunities on SAM.gov"
+    ],
+    "requiredDocs": [
+      "Proof of principal office location, such as a lease or deed",
+      "Employee residency documentation",
+      "SAM.gov registration",
+      "Business formation and ownership documents"
+    ],
+    "contact": "SBA HUBZone Program: hubzone@sba.gov",
+    "url": "https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program",
+    "sourceUrl": "https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "U.S. Small Business Administration",
+        "abbreviation": "SBA",
+        "phone": "(800) 827-5722",
+        "email": "hubzone@sba.gov",
+        "url": "https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Principal office must be located in a HUBZone-designated area", "verifiedBy": "location", "required": true },
+      { "criterion": "employeeResidency", "description": "At least 35% of employees must live in a HUBZone", "verifiedBy": "manual", "required": true },
+      { "criterion": "businessSize", "description": "Must qualify as a small business under SBA size standards", "verifiedBy": "manual", "required": true },
+      { "criterion": "certification", "description": "Requires SBA HUBZone certification before bidding on set-asides; verify current requirements at certify.sba.gov before applying", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2026-06-12",
+    "benefitRange": "Contract set-asides + 10% price preference",
+    "fastestConfirmingStep": "Check the address on SBA's HUBZone map, then confirm certification requirements with SBA"
+  },
+  {
+    "id": "energyCommunityBonus",
+    "name": "IRA Energy Community Tax Credit Bonus",
+    "level": "Federal",
+    "zoneKey": "energyCommunities",
+    "summary": "Clean energy projects located in a designated energy community can earn a 10 percentage point bonus on the federal Investment Tax Credit or a 10% increase to the Production Tax Credit under the Inflation Reduction Act.",
+    "whoQualifies": "Businesses, nonprofits, public entities, and developers placing qualifying clean energy property in service at a location inside a designated energy community. The location signal is only one part of eligibility; project type, timing, ownership, and tax treatment still need review.",
+    "benefits": [
+      "10 percentage point bonus on the Investment Tax Credit",
+      "10% increase to Production Tax Credit values",
+      "May stack with other clean energy credit provisions when the project qualifies"
+    ],
+    "howToApply": [
+      "Confirm the project site is in a designated energy community on the official federal map",
+      "Confirm the project technology and timing qualify for the underlying ITC or PTC",
+      "Document the designation as of the applicable beginning-of-construction or placed-in-service date",
+      "Work with a tax professional to claim the bonus under current IRS guidance"
+    ],
+    "requiredDocs": [
+      "Project location documentation",
+      "Energy community designation evidence for the applicable date",
+      "Underlying ITC or PTC substantiation",
+      "Tax advisor review of current IRS guidance"
+    ],
+    "contact": "Verify with a tax professional; designations are published by DOE and IRS",
+    "url": "https://energycommunities.gov/energy-community-tax-credit-bonus/",
+    "sourceUrl": "https://energycommunities.gov/energy-community-tax-credit-bonus/",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Interagency Working Group on Energy Communities",
+        "abbreviation": "IWG",
+        "phone": "",
+        "url": "https://energycommunities.gov/energy-community-tax-credit-bonus/"
+      }
+    ],
+    "eligibilityRules": [
+      { "criterion": "location", "description": "Project site must be inside a designated energy community", "verifiedBy": "location", "required": true },
+      { "criterion": "projectType", "description": "Project must qualify for the underlying federal ITC or PTC", "verifiedBy": "survey", "required": true },
+      { "criterion": "taxGuidance", "description": "Designations and claiming rules should be verified against current IRS guidance before relying on the bonus", "verifiedBy": "manual", "required": true }
+    ],
+    "lastVerifiedAt": "2026-06-12",
+    "benefitRange": "+10 points on ITC / +10% PTC",
+    "fastestConfirmingStep": "Check the site on the official energy communities map, then confirm project fit with a tax advisor"
+  },
+  {
     "id": "iraCleanElectricity",
     "name": "IRA Clean Electricity Credits (§48E / §45Y) + Low-Income Communities Bonus",
     "level": "Federal",

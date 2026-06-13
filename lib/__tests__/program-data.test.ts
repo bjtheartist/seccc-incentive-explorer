@@ -25,4 +25,21 @@ describe("program data guardrails", () => {
     expect(eecProgram!.whoQualifies).toMatch(/nonprofit organizations/i);
     expect(eecProgram!.benefitRange).toBe("$250,000-$500,000");
   });
+
+  it("keeps restored federal polygon programs wired to reportable zone keys", () => {
+    const hubzone = (programs as Program[]).find((program) => program.id === "hubzone");
+    const energyCommunityBonus = (programs as Program[]).find(
+      (program) => program.id === "energyCommunityBonus"
+    );
+
+    expect(hubzone).toBeDefined();
+    expect(hubzone!.level).toBe("Federal");
+    expect(hubzone!.zoneKey).toBe("hubzone");
+    expect(hubzone!.eligibilityRules?.some((rule) => rule.verifiedBy === "location")).toBe(true);
+
+    expect(energyCommunityBonus).toBeDefined();
+    expect(energyCommunityBonus!.level).toBe("Federal");
+    expect(energyCommunityBonus!.zoneKey).toBe("energyCommunities");
+    expect(energyCommunityBonus!.summary).toMatch(/Investment Tax Credit/i);
+  });
 });

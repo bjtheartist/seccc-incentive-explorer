@@ -4,7 +4,7 @@
  */
 
 import mapboxgl from "mapbox-gl";
-import { ZONE_META, ZONING_CATEGORIES } from "@/lib/constants";
+import { POINT_DATA_ZONE_KEYS, ZONE_META, ZONING_CATEGORIES } from "@/lib/constants";
 import type { DistrictData } from "@/lib/types";
 import type { SiteSignals } from "@/lib/site-signals";
 import type { TransportAccess } from "@/lib/transport-access";
@@ -26,10 +26,16 @@ export const ZONE_FILES: Record<string, string> = {
   ccsa: "ccsa-corridors.geojson",
   nmtcEligible: "nmtc-eligible.geojson",
   qct: "qct.geojson",
+  brownfields: "brownfield-sites.geojson",
+  energyCommunities: "energy-communities.geojson",
+  hubzone: "hubzone.geojson",
+  lustSites: "lust-sites.geojson",
+  nofFundedProjects: "nof-funded-projects.geojson",
+  countyIncentiveParcels: "county-incentive-parcels.geojson",
 };
 
 /** Zone keys that use Point geometry and need circle layers instead of fill/line. */
-export const POINT_ZONE_KEYS = new Set<string>();
+export const POINT_ZONE_KEYS = new Set<string>(POINT_DATA_ZONE_KEYS);
 
 /** Helper: check if a zone should be hidden by default. */
 export function isZoneDefaultHidden(key: string): boolean {
@@ -40,6 +46,7 @@ export function isZoneDefaultHidden(key: string): boolean {
 export const HEAVY_COVERAGE_KEYS = new Set([
   "nmtcEligible", "qct", "landmarkDistricts", "nrhpDistricts",
   "highUnemployment", "industrialCorridors", "stateIncentiveZones",
+  "energyCommunities", "hubzone",
 ]);
 
 /** Chicago 77 community areas GeoJSON endpoint (Data Portal). */
@@ -236,7 +243,7 @@ export const MAP_PRESETS: MapPreset[] = [
   {
     id: "city",
     label: "City",
-    zones: ["tif", "ssa", "nof", "ccsa", "industrialCorridors", "microMarketRecovery", "landmarkDistricts"],
+    zones: ["tif", "ssa", "nof", "nofFundedProjects", "ccsa", "industrialCorridors", "microMarketRecovery", "landmarkDistricts"],
     zoning: false,
     vacancy: false,
     parcels: false,
@@ -244,7 +251,7 @@ export const MAP_PRESETS: MapPreset[] = [
   {
     id: "state",
     label: "State",
-    zones: ["enterprise", "stateIncentiveZones"],
+    zones: ["enterprise", "stateIncentiveZones", "lustSites"],
     zoning: false,
     vacancy: false,
     parcels: false,
@@ -252,7 +259,7 @@ export const MAP_PRESETS: MapPreset[] = [
   {
     id: "federal",
     label: "Federal",
-    zones: ["federalOZ", "highUnemployment", "nmtcEligible", "qct", "nrhpDistricts"],
+    zones: ["federalOZ", "highUnemployment", "nmtcEligible", "qct", "nrhpDistricts", "hubzone", "energyCommunities", "brownfields"],
     zoning: false,
     vacancy: false,
     parcels: false,
@@ -260,7 +267,7 @@ export const MAP_PRESETS: MapPreset[] = [
   {
     id: "environmental",
     label: "Environmental",
-    zones: ["enterprise", "stateIncentiveZones", "industrialCorridors"],
+    zones: ["brownfields", "lustSites", "energyCommunities", "enterprise", "stateIncentiveZones", "industrialCorridors", "countyIncentiveParcels"],
     zoning: false,
     vacancy: false,
     parcels: true,

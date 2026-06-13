@@ -34,7 +34,7 @@ export interface ZoneMeta {
   isPublic: boolean;
   defaultVisible: boolean;
   sortOrder: number;
-  group: "city" | "state" | "federal" | "historic" | "census";
+  group: "city" | "county" | "state" | "federal" | "historic" | "census" | "environmental";
   /** Gov-level taxonomy (Phase 2). One zone layer may serve programs at multiple levels — `jurisdictions` lists them when so. */
   level: ProgramLevel;
   jurisdictions?: ProgramLevel[];
@@ -57,6 +57,12 @@ export const ZONE_META: Record<string, ZoneMeta> = {
   landmarkDistricts:   { isPublic: true, defaultVisible: false, sortOrder: 12, group: "historic", level: "City", jurisdictions: ["City", "County"] },
   nrhpDistricts:       { isPublic: true, defaultVisible: false, sortOrder: 13, group: "historic", level: "Federal" },
   ccsa:                { isPublic: true, defaultVisible: false, sortOrder: 14, group: "city",     level: "City" },
+  brownfields:         { isPublic: true, defaultVisible: false, sortOrder: 15, group: "environmental", level: "Federal" },
+  energyCommunities:   { isPublic: true, defaultVisible: false, sortOrder: 16, group: "federal",  level: "Federal" },
+  hubzone:             { isPublic: true, defaultVisible: false, sortOrder: 17, group: "federal",  level: "Federal" },
+  lustSites:           { isPublic: true, defaultVisible: false, sortOrder: 18, group: "environmental", level: "State" },
+  nofFundedProjects:   { isPublic: true, defaultVisible: false, sortOrder: 19, group: "city",     level: "City" },
+  countyIncentiveParcels: { isPublic: true, defaultVisible: false, sortOrder: 20, group: "county", level: "County" },
 };
 
 /** Zone keys sorted by display order. */
@@ -79,6 +85,12 @@ export const ZONE_COLORS: Record<string, string> = {
   qct: "#ec4899",
   landmarkDistricts: "#a16207",
   nrhpDistricts: "#b45309",
+  brownfields: "#78350f",
+  energyCommunities: "#0d9488",
+  hubzone: "#0e7490",
+  lustSites: "#991b1b",
+  nofFundedProjects: "#047857",
+  countyIncentiveParcels: "#4f46e5",
 };
 
 export const ZONE_LABELS: Record<string, string> = {
@@ -96,9 +108,26 @@ export const ZONE_LABELS: Record<string, string> = {
   qct: "Qualified Census Tract (HUD)",
   landmarkDistricts: "Chicago Landmark District",
   nrhpDistricts: "National Register Historic District",
+  brownfields: "Brownfield Site (EPA ACRES)",
+  energyCommunities: "IRA Energy Community",
+  hubzone: "SBA HUBZone",
+  lustSites: "Leaking UST Site (Illinois EPA)",
+  nofFundedProjects: "Past Grant Winners",
+  countyIncentiveParcels: "Cook County Incentive Parcel",
 };
 
 export const ZONE_KEYS = Object.keys(ZONE_LABELS);
+
+export const POINT_DATA_ZONE_KEYS = [
+  "brownfields",
+  "lustSites",
+  "nofFundedProjects",
+  "countyIncentiveParcels",
+];
+
+export const CHECKABLE_ZONE_KEYS = ZONE_KEYS.filter(
+  (key) => !POINT_DATA_ZONE_KEYS.includes(key)
+);
 
 /** Short descriptions of what each zone/program means. */
 export const ZONE_DESCRIPTIONS: Record<string, string> = {
@@ -116,6 +145,12 @@ export const ZONE_DESCRIPTIONS: Record<string, string> = {
   qct: "HUD-designated census tracts where 50%+ of households earn below 60% of area median income, boosting LIHTC credits.",
   landmarkDistricts: "Chicago-designated historic districts where property owners may access local preservation tax incentives.",
   nrhpDistricts: "Federally recognized historic districts qualifying for the 20% federal Historic Tax Credit on certified rehab costs.",
+  brownfields: "Former industrial or commercial properties tracked in EPA's brownfields program (ACRES). Redevelopment may qualify for EPA assessment/cleanup grants and Illinois Site Remediation Program tax credits.",
+  energyCommunities: "Clean energy projects located in an IRA energy community can receive a 10 percentage point bonus on the federal Investment Tax Credit or a 10% Production Tax Credit boost, subject to IRS rules and project eligibility.",
+  hubzone: "Small businesses with a principal office in a HUBZone, and at least 35% of employees living in one, can compete for federal contract set-asides and receive a 10% price preference in full and open bidding.",
+  lustSites: "Leaking underground storage tank incidents reported to the Illinois EPA, a key environmental due-diligence flag when buying or leasing property. Open incidents may mean unresolved contamination; closed sites have received a No Further Remediation letter.",
+  nofFundedProjects: "Businesses that already won Neighborhood Opportunity Fund grants, with award amounts and addresses. Funded projects near your location show the program has paid out in the corridor.",
+  countyIncentiveParcels: "Parcels holding a Cook County Assessor incentive classification, such as Class 6b, 7a, 7b, 8, 9, or Class C, that can reduce assessed value for eligible projects.",
 };
 
 /** Learn-more URLs for each zone type. */
@@ -134,6 +169,12 @@ export const ZONE_LEARN_MORE: Record<string, string> = {
   qct: "https://www.huduser.gov/portal/datasets/qct.html",
   landmarkDistricts: "https://www.chicago.gov/city/en/depts/dcd/provdrs/landmark.html",
   nrhpDistricts: "https://www.nps.gov/subjects/nationalregister/index.htm",
+  brownfields: "https://www.epa.gov/brownfields",
+  energyCommunities: "https://energycommunities.gov/energy-community-tax-credit-bonus/",
+  hubzone: "https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program",
+  lustSites: "https://epa.illinois.gov/topics/cleanup-programs/lust.html",
+  nofFundedProjects: "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home.html",
+  countyIncentiveParcels: "https://www.cookcountyassessoril.gov/incentives-special-properties",
 };
 
 /* ── Chicago Zoning Code Reference ─────────── */
@@ -266,4 +307,10 @@ export const ZONE_TILESET_IDS: Record<string, string> = {
   qct: "",
   landmarkDistricts: "",
   nrhpDistricts: "",
+  brownfields: "",
+  energyCommunities: "",
+  hubzone: "",
+  lustSites: "",
+  nofFundedProjects: "",
+  countyIncentiveParcels: "",
 };

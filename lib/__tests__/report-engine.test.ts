@@ -489,4 +489,37 @@ describe("generateReportData", () => {
     expect(report.sections.map((section) => section.title)).not.toContain("Intervention Buckets");
     expect(report.recommendedActions).toEqual([]);
   });
+
+  it("flows restored polygon zone programs into report eligibility", () => {
+    const hubzoneProgram = makeProgram({
+      id: "hubzone",
+      name: "SBA HUBZone Program",
+      level: "Federal",
+      zoneKey: "hubzone",
+    });
+    const energyCommunityProgram = makeProgram({
+      id: "energyCommunityBonus",
+      name: "IRA Energy Community Tax Credit Bonus",
+      level: "Federal",
+      zoneKey: "energyCommunities",
+    });
+
+    const report = generateReportData(
+      makeState(),
+      [hubzoneProgram, energyCommunityProgram],
+      {
+        zones: { hubzone: true, energyCommunities: true },
+        zoneNames: {
+          hubzone: "HUBZone Qualified Tract 17031010100",
+          energyCommunities: "MSA Energy Community",
+        },
+      },
+    );
+
+    const eligibleSection = report.sections.find((s) => s.title === "Eligible Incentive Programs");
+    expect(eligibleSection?.items.map((item) => item.programId)).toEqual(
+      expect.arrayContaining(["hubzone", "energyCommunityBonus"])
+    );
+    expect(report.summary).toContain("matching 2 address-confirmed programs");
+  });
 });
