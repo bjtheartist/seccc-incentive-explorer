@@ -4,9 +4,10 @@
  */
 
 import mapboxgl from "mapbox-gl";
-import { ZONE_META, ZONING_CATEGORIES } from "@/lib/constants";
+import { ZONE_META, ZONING_CATEGORIES, POINT_DATA_ZONE_KEYS } from "@/lib/constants";
 import type { DistrictData } from "@/lib/types";
 import type { TransportAccess } from "@/lib/transport-access";
+import type { SiteSignals } from "@/lib/site-signals";
 import { cachedFetch } from "@/lib/fetch-cache";
 
 /* ── Zone file mapping (static fallback for keys without DB data) ───── */
@@ -34,9 +35,7 @@ export const ZONE_FILES: Record<string, string> = {
 };
 
 /** Zone keys that use Point geometry and need circle layers instead of fill/line. */
-export const POINT_ZONE_KEYS = new Set([
-  "brownfields", "lustSites", "nofFundedProjects", "countyIncentiveParcels",
-]);
+export const POINT_ZONE_KEYS = new Set(POINT_DATA_ZONE_KEYS);
 
 /** Polygon zone keys that get a text label layer (uses `street` or `name` property). */
 export const LABELED_ZONE_KEYS = new Set(["nof"]);
@@ -243,6 +242,7 @@ export interface AreaStats {
   ownerName?: string | null;
   ownerType?: string | null;
   transport?: TransportAccess | null;
+  siteSignals?: SiteSignals | null;
 }
 
 export const DEFAULT_STATS: AreaStats = {

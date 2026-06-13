@@ -35,9 +35,24 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Property must be within a designated TIF district", "verifiedBy": "location", "required": true },
-      { "criterion": "propertyType", "description": "Commercial or mixed-use property", "verifiedBy": "survey", "required": true },
-      { "criterion": "investmentSize", "description": "Project must involve qualifying improvements", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Property must be within a designated TIF district",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "propertyType",
+        "description": "Commercial or mixed-use property",
+        "verifiedBy": "survey",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Project must involve qualifying improvements",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-12-01",
     "benefitRange": "Up to $250,000",
@@ -85,9 +100,24 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Investment must be in a designated Opportunity Zone census tract", "verifiedBy": "location", "required": true },
-      { "criterion": "investmentSize", "description": "Must invest capital gains through a Qualified Opportunity Fund", "verifiedBy": "manual", "required": true },
-      { "criterion": "industry", "description": "Most industries qualify except sin businesses (golf, gambling, liquor stores)", "verifiedBy": "survey", "required": false }
+      {
+        "criterion": "location",
+        "description": "Investment must be in a designated Opportunity Zone census tract",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Must invest capital gains through a Qualified Opportunity Fund",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "industry",
+        "description": "Most industries qualify except sin businesses (golf, gambling, liquor stores)",
+        "verifiedBy": "survey",
+        "required": false
+      }
     ],
     "lastVerifiedAt": "2025-11-15",
     "benefitRange": "Tax deferral + 0% gains after 10 years",
@@ -99,7 +129,7 @@
     "level": "State",
     "zoneKey": "federalOZ",
     "summary": "Illinois supplements the federal program with additional state-level tax incentives for investments in designated Opportunity Zones, making the combined benefits even more attractive.",
-    "whoQualifies": "Same as Federal OZ — investors deploying capital gains through QOFs in Illinois-designated zones.",
+    "whoQualifies": "Same as Federal OZ \u2014 investors deploying capital gains through QOFs in Illinois-designated zones.",
     "benefits": [
       "State income tax deduction on OZ investment income",
       "Stacks with federal OZ benefits",
@@ -127,8 +157,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Investment must be in an Illinois-designated Opportunity Zone", "verifiedBy": "location", "required": true },
-      { "criterion": "investmentSize", "description": "Must invest through a Qualified Opportunity Fund", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Investment must be in an Illinois-designated Opportunity Zone",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Must invest through a Qualified Opportunity Fund",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-11-15",
     "benefitRange": "State income tax deduction (stacks with federal)",
@@ -176,8 +216,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Business must be within an Enterprise Zone boundary", "verifiedBy": "location", "required": true },
-      { "criterion": "investmentSize", "description": "Must make qualifying investment in machinery, equipment, or building materials", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Business must be within an Enterprise Zone boundary",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Must make qualifying investment in machinery, equipment, or building materials",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-12-01",
     "benefitRange": "6.25% sales tax exemption + 0.5% investment credit",
@@ -227,9 +277,24 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Property must be in an eligible TIF district", "verifiedBy": "location", "required": true },
-      { "criterion": "propertyType", "description": "1-4 story commercial or mixed-use building", "verifiedBy": "survey", "required": true },
-      { "criterion": "investmentSize", "description": "Permanent building improvements (HVAC, plumbing, electrical, etc.)", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Property must be in an eligible TIF district",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "propertyType",
+        "description": "1-4 story commercial or mixed-use building",
+        "verifiedBy": "survey",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Permanent building improvements (HVAC, plumbing, electrical, etc.)",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-12-01",
     "benefitRange": "Up to $150,000",
@@ -271,9 +336,24 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Business in Illinois; designated incentive areas may receive enhanced consideration", "verifiedBy": "location", "required": false },
-      { "criterion": "industry", "description": "Most industries qualify; focus on job creation", "verifiedBy": "survey", "required": false },
-      { "criterion": "investmentSize", "description": "Must create or retain jobs and make capital investment", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Business in Illinois; designated incentive areas may receive enhanced consideration",
+        "verifiedBy": "location",
+        "required": false
+      },
+      {
+        "criterion": "industry",
+        "description": "Most industries qualify; focus on job creation",
+        "verifiedBy": "survey",
+        "required": false
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Must create or retain jobs and make capital investment",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-11-01",
     "benefitRange": "Negotiated income tax credit",
@@ -313,8 +393,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Bonus zones offer enhanced credits", "verifiedBy": "location", "required": false },
-      { "criterion": "industry", "description": "Must be in EV, battery, renewable energy, or related supply chain", "verifiedBy": "survey", "required": true }
+      {
+        "criterion": "location",
+        "description": "Bonus zones offer enhanced credits",
+        "verifiedBy": "location",
+        "required": false
+      },
+      {
+        "criterion": "industry",
+        "description": "Must be in EV, battery, renewable energy, or related supply chain",
+        "verifiedBy": "survey",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-11-01",
     "benefitRange": "Tax credits with possible location-based enhancements",
@@ -354,8 +444,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Designated incentive areas may receive enhanced consideration", "verifiedBy": "location", "required": false },
-      { "criterion": "industry", "description": "Must be in semiconductor manufacturing, packaging, testing, or supply chain", "verifiedBy": "survey", "required": true }
+      {
+        "criterion": "location",
+        "description": "Designated incentive areas may receive enhanced consideration",
+        "verifiedBy": "location",
+        "required": false
+      },
+      {
+        "criterion": "industry",
+        "description": "Must be in semiconductor manufacturing, packaging, testing, or supply chain",
+        "verifiedBy": "survey",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-11-01",
     "benefitRange": "Tax credits with possible location-based enhancements",
@@ -395,8 +495,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Designated zones offer bonus incentives", "verifiedBy": "location", "required": false },
-      { "criterion": "industry", "description": "Must be a data center operation or tech infrastructure", "verifiedBy": "survey", "required": true }
+      {
+        "criterion": "location",
+        "description": "Designated zones offer bonus incentives",
+        "verifiedBy": "location",
+        "required": false
+      },
+      {
+        "criterion": "industry",
+        "description": "Must be a data center operation or tech infrastructure",
+        "verifiedBy": "survey",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-11-01",
     "benefitRange": "Sales tax exemption on equipment",
@@ -436,7 +546,12 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Commercial property must be within a designated Special Service Area boundary", "verifiedBy": "location", "required": true }
+      {
+        "criterion": "location",
+        "description": "Commercial property must be within a designated Special Service Area boundary",
+        "verifiedBy": "location",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-12-01",
     "benefitRange": "Free services (streetscaping, marketing, safety)",
@@ -477,8 +592,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Business must be in a high-unemployment census tract", "verifiedBy": "location", "required": true },
-      { "criterion": "industry", "description": "Must hire local residents to claim tax credits", "verifiedBy": "manual", "required": false }
+      {
+        "criterion": "location",
+        "description": "Business must be in a high-unemployment census tract",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "industry",
+        "description": "Must hire local residents to claim tax credits",
+        "verifiedBy": "manual",
+        "required": false
+      }
     ],
     "lastVerifiedAt": "2025-10-01",
     "benefitRange": "WOTC up to $9,600 per hire",
@@ -520,9 +645,24 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Property must be in Cook County", "verifiedBy": "location", "required": true },
-      { "criterion": "propertyType", "description": "Commercial property — new construction, rehab, or reoccupancy", "verifiedBy": "survey", "required": true },
-      { "criterion": "investmentSize", "description": "Total project costs under $2 million", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Property must be in Cook County",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "propertyType",
+        "description": "Commercial property \u2014 new construction, rehab, or reoccupancy",
+        "verifiedBy": "survey",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Total project costs under $2 million",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-10-01",
     "benefitRange": "10% assessment (vs. 25%) for 10 years",
@@ -533,7 +673,7 @@
     "name": "Cook County Catalyst Grant",
     "level": "County",
     "zoneKey": "",
-    "summary": "The Catalyst Grant provides up to $100,000 to established small businesses in Cook County for equipment, facilities, and hiring — funded through ARPA dollars.",
+    "summary": "The Catalyst Grant provides up to $100,000 to established small businesses in Cook County for equipment, facilities, and hiring \u2014 funded through ARPA dollars.",
     "whoQualifies": "For-profit businesses in Cook County with at least 1 full-time employee besides owner, annual revenue between $500K and $10M, and demonstrated growth in net income and employee count.",
     "benefits": [
       "Up to $100,000 grant per business",
@@ -564,8 +704,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Business must be in Cook County", "verifiedBy": "location", "required": true },
-      { "criterion": "investmentSize", "description": "Annual revenue between $500K and $10M with demonstrated growth", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Business must be in Cook County",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Annual revenue between $500K and $10M with demonstrated growth",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-09-01",
     "benefitRange": "Up to $100,000",
@@ -607,9 +757,24 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Commercial property in Cook County", "verifiedBy": "location", "required": true },
-      { "criterion": "propertyType", "description": "Commercial property owner (office, retail, industrial, multi-family 5+)", "verifiedBy": "survey", "required": true },
-      { "criterion": "industry", "description": "Project must involve energy efficiency, renewable energy, or water conservation", "verifiedBy": "survey", "required": true }
+      {
+        "criterion": "location",
+        "description": "Commercial property in Cook County",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "propertyType",
+        "description": "Commercial property owner (office, retail, industrial, multi-family 5+)",
+        "verifiedBy": "survey",
+        "required": true
+      },
+      {
+        "criterion": "industry",
+        "description": "Project must involve energy efficiency, renewable energy, or water conservation",
+        "verifiedBy": "survey",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-10-01",
     "benefitRange": "Long-term project financing",
@@ -650,7 +815,12 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Business in Cook County", "verifiedBy": "location", "required": true }
+      {
+        "criterion": "location",
+        "description": "Business in Cook County",
+        "verifiedBy": "location",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-12-01",
     "benefitRange": "Free advising (no cost)",
@@ -693,8 +863,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Properties are in Cook County", "verifiedBy": "location", "required": true },
-      { "criterion": "propertyType", "description": "Seeking commercial or industrial space", "verifiedBy": "survey", "required": false }
+      {
+        "criterion": "location",
+        "description": "Properties are in Cook County",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "propertyType",
+        "description": "Seeking commercial or industrial space",
+        "verifiedBy": "survey",
+        "required": false
+      }
     ],
     "lastVerifiedAt": "2025-10-01",
     "benefitRange": "Below-market property acquisition",
@@ -737,9 +917,24 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Project must be in an eligible South, Southwest, or West Side community", "verifiedBy": "location", "required": true },
-      { "criterion": "propertyType", "description": "Commercial or industrial project", "verifiedBy": "survey", "required": true },
-      { "criterion": "investmentSize", "description": "Must demonstrate community impact and job creation", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Project must be in an eligible South, Southwest, or West Side community",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "propertyType",
+        "description": "Commercial or industrial project",
+        "verifiedBy": "survey",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Must demonstrate community impact and job creation",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-12-01",
     "benefitRange": "$250K (small) to $1.5M (catalytic)",
@@ -788,8 +983,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Project must be in an NMTC-eligible low-income census tract", "verifiedBy": "location", "required": true },
-      { "criterion": "investmentSize", "description": "Projects typically $5M+; must attract qualified equity investment through a CDE", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Project must be in an NMTC-eligible low-income census tract",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Projects typically $5M+; must attract qualified equity investment through a CDE",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-11-01",
     "benefitRange": "39% tax credit over 7 years",
@@ -797,7 +1002,7 @@
   },
   {
     "id": "qct",
-    "name": "Qualified Census Tract (QCT) — LIHTC Boost",
+    "name": "Qualified Census Tract (QCT) \u2014 LIHTC Boost",
     "level": "Federal",
     "zoneKey": "qct",
     "summary": "HUD-designated Qualified Census Tracts boost Low-Income Housing Tax Credits (LIHTC) by 30%, making affordable housing development more financially viable in these areas.",
@@ -838,9 +1043,24 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Project must be in a HUD-designated Qualified Census Tract", "verifiedBy": "location", "required": true },
-      { "criterion": "propertyType", "description": "Affordable rental housing development or substantial rehabilitation", "verifiedBy": "survey", "required": true },
-      { "criterion": "investmentSize", "description": "Must comply with LIHTC income and rent restrictions", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Project must be in a HUD-designated Qualified Census Tract",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "propertyType",
+        "description": "Affordable rental housing development or substantial rehabilitation",
+        "verifiedBy": "survey",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Must comply with LIHTC income and rent restrictions",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-11-01",
     "benefitRange": "130% LIHTC basis boost (30% more credits)",
@@ -882,8 +1102,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Property must be in a Chicago-designated Landmark District", "verifiedBy": "location", "required": true },
-      { "criterion": "propertyType", "description": "Historically significant building undergoing rehabilitation", "verifiedBy": "survey", "required": true }
+      {
+        "criterion": "location",
+        "description": "Property must be in a Chicago-designated Landmark District",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "propertyType",
+        "description": "Historically significant building undergoing rehabilitation",
+        "verifiedBy": "survey",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-11-01",
     "benefitRange": "Class L: 10% assessment for 10 years",
@@ -924,16 +1154,31 @@
         "url": "https://www.illinois.gov/historic-preservation"
       },
       {
-        "agency": "National Park Service — Technical Preservation Services",
+        "agency": "National Park Service \u2014 Technical Preservation Services",
         "abbreviation": "NPS",
         "phone": "(202) 513-7270",
         "url": "https://www.nps.gov/subjects/taxincentives/index.htm"
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Building must be listed on or contribute to a National Register Historic District", "verifiedBy": "location", "required": true },
-      { "criterion": "propertyType", "description": "Income-producing building (commercial, rental residential, industrial)", "verifiedBy": "survey", "required": true },
-      { "criterion": "investmentSize", "description": "Rehabilitation must exceed adjusted basis of the building or $5,000", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Building must be listed on or contribute to a National Register Historic District",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "propertyType",
+        "description": "Income-producing building (commercial, rental residential, industrial)",
+        "verifiedBy": "survey",
+        "required": true
+      },
+      {
+        "criterion": "investmentSize",
+        "description": "Rehabilitation must exceed adjusted basis of the building or $5,000",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-11-01",
     "benefitRange": "20% federal tax credit (no cap)",
@@ -975,8 +1220,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Property must be on a designated Micro Market Recovery corridor", "verifiedBy": "location", "required": true },
-      { "criterion": "propertyType", "description": "Commercial storefront in need of improvement", "verifiedBy": "survey", "required": true }
+      {
+        "criterion": "location",
+        "description": "Property must be on a designated Micro Market Recovery corridor",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "propertyType",
+        "description": "Commercial storefront in need of improvement",
+        "verifiedBy": "survey",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-10-01",
     "benefitRange": "Storefront grants + technical assistance",
@@ -1018,8 +1273,18 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Site must be within a designated Industrial Corridor", "verifiedBy": "location", "required": true },
-      { "criterion": "industry", "description": "Manufacturing, logistics, industrial, or related business use", "verifiedBy": "survey", "required": true }
+      {
+        "criterion": "location",
+        "description": "Site must be within a designated Industrial Corridor",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "industry",
+        "description": "Manufacturing, logistics, industrial, or related business use",
+        "verifiedBy": "survey",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2025-10-01",
     "benefitRange": "Zoning protections + infrastructure priority",
@@ -1077,13 +1342,155 @@
       }
     ],
     "eligibilityRules": [
-      { "criterion": "location", "description": "Property must be within a currently approved CCSA corridor boundary", "verifiedBy": "location", "required": true },
-      { "criterion": "businessType", "description": "Business type must be eligible (see website for excluded types)", "verifiedBy": "survey", "required": true },
-      { "criterion": "siteControl", "description": "Applicant must own the property or have permission from the property owner", "verifiedBy": "manual", "required": true },
-      { "criterion": "goodStanding", "description": "Must be in good standing with State of Illinois and City of Chicago", "verifiedBy": "manual", "required": true }
+      {
+        "criterion": "location",
+        "description": "Property must be within a currently approved CCSA corridor boundary",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "businessType",
+        "description": "Business type must be eligible (see website for excluded types)",
+        "verifiedBy": "survey",
+        "required": true
+      },
+      {
+        "criterion": "siteControl",
+        "description": "Applicant must own the property or have permission from the property owner",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "goodStanding",
+        "description": "Must be in good standing with State of Illinois and City of Chicago",
+        "verifiedBy": "manual",
+        "required": true
+      }
     ],
     "lastVerifiedAt": "2026-04-23",
     "benefitRange": "Reimbursable grants; verify current round",
     "fastestConfirmingStep": "Contact Allies for Community Business at granthelp@a4cb.org or (312) 275-3000 to confirm corridor eligibility"
+  },
+  {
+    "id": "hubzone",
+    "name": "SBA HUBZone Program",
+    "level": "Federal",
+    "zoneKey": "hubzone",
+    "summary": "Federal contracting program for small businesses located in Historically Underutilized Business Zones. Certified HUBZone firms can compete for set-aside federal contracts and receive a 10% price evaluation preference in full and open competition.",
+    "whoQualifies": "Small businesses (per SBA size standards) with their principal office in a HUBZone and at least 35% of employees living in a HUBZone. Much of Chicago's South and West Sides qualify.",
+    "benefits": [
+      "Access to HUBZone set-aside and sole-source federal contracts",
+      "10% price evaluation preference in full and open federal bidding",
+      "Counts toward the government's 3% HUBZone contracting goal, which agencies actively try to meet"
+    ],
+    "howToApply": [
+      "Confirm your principal office address is in a HUBZone on SBA's official map",
+      "Verify at least 35% of your employees live in HUBZone areas",
+      "Register your business in SAM.gov if not already registered",
+      "Apply for HUBZone certification through SBA at certify.sba.gov",
+      "Once certified, pursue HUBZone set-aside opportunities on SAM.gov"
+    ],
+    "requiredDocs": [
+      "Proof of principal office location (lease or deed)",
+      "Employee residency documentation",
+      "SAM.gov registration",
+      "Business formation and ownership documents"
+    ],
+    "contact": "SBA HUBZone Program: hubzone@sba.gov",
+    "url": "https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program",
+    "contacts": [
+      {
+        "agency": "U.S. Small Business Administration",
+        "abbreviation": "SBA",
+        "phone": "(800) 827-5722",
+        "url": "https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "location",
+        "description": "Principal office must be located in a HUBZone-designated area",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "employeeResidency",
+        "description": "At least 35% of employees must live in a HUBZone",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "businessSize",
+        "description": "Must qualify as a small business under SBA size standards",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "certification",
+        "description": "Requires SBA HUBZone certification before bidding on set-asides; verify current requirements at certify.sba.gov before applying",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-06-12",
+    "benefitRange": "Contract set-asides + 10% price preference",
+    "fastestConfirmingStep": "Check your address on SBA's HUBZone map at maps.certify.sba.gov/hubzone/map"
+  },
+  {
+    "id": "energyCommunityBonus",
+    "name": "IRA Energy Community Tax Credit Bonus",
+    "level": "Federal",
+    "zoneKey": "energyCommunities",
+    "summary": "Clean energy projects located in a designated energy community earn a 10 percentage point bonus on the federal Investment Tax Credit or a 10% boost to the Production Tax Credit under the Inflation Reduction Act. The Chicago metro currently qualifies, and some South and West Side tracts also qualify as coal closure communities.",
+    "whoQualifies": "Businesses and developers placing qualifying clean energy property in service (solar, battery storage, EV charging in some cases, and other clean energy technology) at a location inside a designated energy community.",
+    "benefits": [
+      "10 percentage point bonus on the Investment Tax Credit (for example, 30% becomes 40%)",
+      "10% increase to Production Tax Credit values",
+      "Stacks with other ITC bonuses such as the low-income communities allocation"
+    ],
+    "howToApply": [
+      "Confirm the project site is in a designated energy community on DOE's official map",
+      "Confirm the project technology and timing qualify for the underlying ITC or PTC",
+      "Work with a tax professional to claim the bonus on your federal return",
+      "Document the energy community designation as of the applicable date (beginning of construction or placed-in-service, per current IRS guidance)"
+    ],
+    "requiredDocs": [
+      "Project location documentation",
+      "Energy community designation evidence (DOE/NETL map output for the applicable date)",
+      "Standard ITC/PTC substantiation prepared with your tax advisor"
+    ],
+    "contact": "Verify with a tax professional; designations are published by DOE/IRS",
+    "url": "https://energycommunities.gov/energy-community-tax-credit-bonus/",
+    "contacts": [
+      {
+        "agency": "Interagency Working Group on Energy Communities",
+        "abbreviation": "IWG",
+        "phone": "",
+        "url": "https://energycommunities.gov/energy-community-tax-credit-bonus/"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "location",
+        "description": "Project site must be inside a designated energy community (MSA fossil-fuel employment category or coal closure tract)",
+        "verifiedBy": "location",
+        "required": true
+      },
+      {
+        "criterion": "projectType",
+        "description": "Project must qualify for the underlying federal ITC or PTC (solar, storage, and other clean energy property)",
+        "verifiedBy": "survey",
+        "required": true
+      },
+      {
+        "criterion": "taxGuidance",
+        "description": "Designations are re-tested annually and claiming rules follow current IRS guidance; verify with a tax professional before relying on the bonus",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-06-12",
+    "benefitRange": "+10 points on ITC / +10% PTC",
+    "fastestConfirmingStep": "Check the site on DOE's energy communities map, then confirm with your tax advisor"
   }
 ]

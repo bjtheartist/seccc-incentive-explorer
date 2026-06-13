@@ -1,5 +1,5 @@
 import * as turf from "@turf/turf";
-import { ZONE_KEYS } from "./constants";
+import { CHECKABLE_ZONE_KEYS } from "./constants";
 import { normalizeZoneCheckResponse } from "./zone-response";
 import { featureDisplayName } from "./zone-names";
 import type { LookupResult, CityZoning, CensusData, ZoneCheckResult } from "./types";
@@ -86,7 +86,7 @@ async function checkZonesTurf(
   let employment: LookupResult["employment"] = undefined;
 
   await Promise.all(
-    ZONE_KEYS.map(async (key) => {
+    CHECKABLE_ZONE_KEYS.map(async (key) => {
       try {
         const fc = await loadZone(key);
         let inZone = false;

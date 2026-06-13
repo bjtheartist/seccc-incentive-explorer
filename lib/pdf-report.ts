@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import { ZONE_KEYS, ZONE_COLORS } from "./constants";
+import { CHECKABLE_ZONE_KEYS, ZONE_COLORS } from "./constants";
 import type { LookupResult, Program } from "./types";
 import type { GeneratedReport } from "./report-engine";
 
@@ -94,7 +94,7 @@ function _buildReport(
     day: "numeric",
   });
 
-  const eligibleKeys = ZONE_KEYS.filter((k) => result.zones[k]);
+  const eligibleKeys = CHECKABLE_ZONE_KEYS.filter((k) => result.zones[k]);
   const eligiblePrograms = eligibleKeys
     .map((k) => programMap.get(k))
     .filter((p): p is Program => !!p);
@@ -198,7 +198,7 @@ function _buildReport(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(12);
   setColor(doc, "#FFFFFF50");
-  doc.text(`of ${ZONE_KEYS.length} incentive zones`, MARGIN + 12 + doc.getTextWidth(`${result.incentiveCount} `) + 5, coverY + 28);
+  doc.text(`of ${CHECKABLE_ZONE_KEYS.length} incentive zones`, MARGIN + 12 + doc.getTextWidth(`${result.incentiveCount} `) + 5, coverY + 28);
 
   // Footer
   doc.setFontSize(8);

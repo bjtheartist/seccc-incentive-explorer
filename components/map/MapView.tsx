@@ -18,6 +18,7 @@ import MapPolygonPanel from "./MapPolygonPanel";
 import type { MobileMapPresetId } from "./map-layer-presets";
 import { cachedFetch } from "@/lib/fetch-cache";
 import { getTransportAccess } from "@/lib/transport-access";
+import { getSiteSignals } from "@/lib/site-signals";
 import {
   POINT_ZONE_KEYS, LABELED_ZONE_KEYS, ZONE_SUBLAYERS, HEAVY_COVERAGE_KEYS, escapeHTML,
   COMMUNITY_AREAS_URL, CHICAGO_ZONING_URL, EMPTY_FC, PARCELS_QUERY_BASE,
@@ -200,6 +201,13 @@ export default function MapView() {
         getTransportAccess(lat, lon)
           .then((transport) => {
             setAreaStats((prev) => ({ ...prev, transport }));
+          })
+          .catch(() => {});
+
+        // Async non-blocking site signals (brownfields, LUST, NOF awards, incentive parcels)
+        getSiteSignals(lat, lon)
+          .then((siteSignals) => {
+            setAreaStats((prev) => ({ ...prev, siteSignals }));
           })
           .catch(() => {});
       }

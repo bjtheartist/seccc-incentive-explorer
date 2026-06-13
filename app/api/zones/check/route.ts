@@ -10,7 +10,7 @@ import type {
 } from "geojson";
 import { getSQL } from "@/lib/db";
 import { memCached, roundCoord } from "@/lib/redis";
-import { ZONE_KEYS } from "@/lib/constants";
+import { CHECKABLE_ZONE_KEYS } from "@/lib/constants";
 import { featureDisplayName, formatZoneFeatureName, parseZoneProperties } from "@/lib/zone-names";
 
 export const runtime = "nodejs";
@@ -54,7 +54,7 @@ async function checkStaticZones(lat: number, lon: number) {
   const matches: Array<{ key: string; name: string }> = [];
 
   await Promise.all(
-    ZONE_KEYS.map(async (key) => {
+    CHECKABLE_ZONE_KEYS.map(async (key) => {
       try {
         const collection = await loadStaticZone(key);
         const match = collection.features.find(

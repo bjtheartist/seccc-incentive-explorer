@@ -143,6 +143,53 @@ export default function MapSnapshotPanel({
         </>
       )}
 
+      {/* Site signals */}
+      {areaStats.siteSignals && (
+        <>
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 py-3">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#78350F]/60 mb-1.5">
+              Site Signals
+            </div>
+            <div className="space-y-1">
+              {areaStats.siteSignals.nofAwardsNearby > 0 && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50">NOF grants funded within ½ mi</span>
+                  <span className="font-mono-bureau text-[#047857] font-medium shrink-0">{areaStats.siteSignals.nofAwardsNearby}</span>
+                </div>
+              )}
+              {areaStats.siteSignals.incentiveParcelsNearby > 0 && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50">County incentive parcels within ¼ mi</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{areaStats.siteSignals.incentiveParcelsNearby}</span>
+                </div>
+              )}
+              {areaStats.siteSignals.brownfield && areaStats.siteSignals.brownfield.miles < 0.5 && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50 truncate">Brownfield site ({areaStats.siteSignals.brownfield.name})</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{formatMiles(areaStats.siteSignals.brownfield.miles)}</span>
+                </div>
+              )}
+              {areaStats.siteSignals.openLustNearby > 0 && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50">Open tank-leak incidents within ¼ mi</span>
+                  <span className="font-mono-bureau text-[#B91C1C] font-medium shrink-0">{areaStats.siteSignals.openLustNearby}</span>
+                </div>
+              )}
+              {areaStats.siteSignals.nofAwardsNearby === 0 &&
+                areaStats.siteSignals.incentiveParcelsNearby === 0 &&
+                areaStats.siteSignals.openLustNearby === 0 &&
+                (!areaStats.siteSignals.brownfield || areaStats.siteSignals.brownfield.miles >= 0.5) && (
+                <div className="text-[10px] text-[#0C1B33]/40 italic">No nearby signals</div>
+              )}
+            </div>
+            <p className="text-[9px] text-[#0C1B33]/30 mt-1.5 leading-relaxed">
+              Nearby funding precedents and environmental flags from public data. Verify with the administering agencies before relying on them.
+            </p>
+          </div>
+        </>
+      )}
+
       {/* Parcel info */}
       {areaStats.parcelPin && (
         <>

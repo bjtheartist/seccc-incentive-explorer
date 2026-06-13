@@ -101,6 +101,24 @@ export const ZONE_LABELS: Record<string, string> = {
 
 export const ZONE_KEYS = Object.keys(ZONE_LABELS);
 
+/**
+ * Point-data layers (site markers, not geographic zones). They render as
+ * circles on the map and feed proximity signals, but a point can never
+ * contain another point, so they are excluded from eligibility checks and
+ * from "X of N zones" denominators.
+ */
+export const POINT_DATA_ZONE_KEYS = [
+  "brownfields",
+  "lustSites",
+  "nofFundedProjects",
+  "countyIncentiveParcels",
+];
+
+/** Zone keys that participate in point-in-polygon eligibility checks. */
+export const CHECKABLE_ZONE_KEYS = ZONE_KEYS.filter(
+  (k) => !POINT_DATA_ZONE_KEYS.includes(k)
+);
+
 /** Short descriptions of what each zone/program means. */
 export const ZONE_DESCRIPTIONS: Record<string, string> = {
   tif: "Tax Increment Financing redirects property-tax growth to fund public improvements in designated districts.",
