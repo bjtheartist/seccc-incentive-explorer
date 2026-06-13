@@ -19,7 +19,7 @@ import type { MobileMapPresetId } from "./map-layer-presets";
 import { cachedFetch } from "@/lib/fetch-cache";
 import { getTransportAccess } from "@/lib/transport-access";
 import {
-  POINT_ZONE_KEYS, LABELED_ZONE_KEYS, HEAVY_COVERAGE_KEYS, escapeHTML,
+  POINT_ZONE_KEYS, LABELED_ZONE_KEYS, ZONE_SUBLAYERS, HEAVY_COVERAGE_KEYS, escapeHTML,
   COMMUNITY_AREAS_URL, CHICAGO_ZONING_URL, EMPTY_FC, PARCELS_QUERY_BASE,
   fetchZoneGeoJSON,
   POI_LAYERS, jsonToGeoJSON, MAP_PRESETS,
@@ -1036,13 +1036,24 @@ export default function MapView() {
       // Only toggle if layer exists on the map
       if (!map.getLayer(`zone-${key}-fill`)) return;
       const next = !zoneVisible[key];
-      setZoneVisible((prev) => ({ ...prev, [key]: next }));
       const vis = next ? "visible" : "none";
       map.setLayoutProperty(`zone-${key}-fill`, "visibility", vis);
       map.setLayoutProperty(`zone-${key}-line`, "visibility", vis);
       if (map.getLayer(`zone-${key}-label`)) {
         map.setLayoutProperty(`zone-${key}-label`, "visibility", vis);
       }
+      // Turning a parent off also turns off its nested sub-layers
+      const updates: Record<string, boolean> = { [key]: next };
+      if (!next) {
+        for (const subKey of ZONE_SUBLAYERS[key] ?? []) {
+          updates[subKey] = false;
+          if (map.getLayer(`zone-${subKey}-fill`)) {
+            map.setLayoutProperty(`zone-${subKey}-fill`, "visibility", "none");
+            map.setLayoutProperty(`zone-${subKey}-line`, "visibility", "none");
+          }
+        }
+      }
+      setZoneVisible((prev) => ({ ...prev, ...updates }));
       // Manual toggle clears preset highlight
       setActivePreset(null);
     },

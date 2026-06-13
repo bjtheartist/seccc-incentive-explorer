@@ -41,6 +41,19 @@ export const POINT_ZONE_KEYS = new Set([
 /** Polygon zone keys that get a text label layer (uses `street` or `name` property). */
 export const LABELED_ZONE_KEYS = new Set(["nof"]);
 
+/**
+ * Sub-layers nested under a parent zone's legend toggle. They only appear in
+ * the legend while the parent is visible, and turn off with the parent.
+ */
+export const ZONE_SUBLAYERS: Record<string, string[]> = {
+  nof: ["nofFundedProjects"],
+};
+
+/** Reverse lookup: sub-layer key → parent zone key. */
+export const SUBLAYER_PARENT: Record<string, string> = Object.fromEntries(
+  Object.entries(ZONE_SUBLAYERS).flatMap(([parent, kids]) => kids.map((k) => [k, parent]))
+);
+
 /** Helper: check if a zone should be hidden by default. */
 export function isZoneDefaultHidden(key: string): boolean {
   return !ZONE_META[key]?.defaultVisible;

@@ -20,7 +20,7 @@ import {
   type OwnerType,
 } from "@/lib/owner-classify";
 import { CLASS_CODE_MAP } from "@/lib/parcel-classes";
-import { MAP_PRESETS, POI_LAYERS } from "./map-helpers";
+import { MAP_PRESETS, POI_LAYERS, ZONE_SUBLAYERS, SUBLAYER_PARENT } from "./map-helpers";
 
 interface MapLegendPanelProps {
   zoneVisible: Record<string, boolean>;
@@ -78,7 +78,9 @@ export default function MapLegendPanel({
   const zoneGroups = ZONE_GROUP_ORDER.map((group) => ({
     group,
     label: ZONE_GROUP_LABELS[group],
-    keys: ZONE_KEYS_SORTED.filter((key) => ZONE_META[key]?.group === group),
+    keys: ZONE_KEYS_SORTED.filter(
+      (key) => ZONE_META[key]?.group === group && !SUBLAYER_PARENT[key]
+    ),
   })).filter(({ keys }) => keys.length > 0);
 
   const setZoneBucketVisibility = (keys: string[], shouldShow: boolean) => {
@@ -231,6 +233,71 @@ export default function MapLegendPanel({
                           )}
                         </div>
                       )}
+                      {/* Nested sub-layers, shown only while the parent is on */}
+                      {zoneVisible[key] && ZONE_SUBLAYERS[key]?.map((subKey) => (
+                        <div key={subKey} className="ml-6 md:ml-5 border-l-2 border-[#0C1B33]/5 pl-2">
+                          <label className="flex items-center gap-2.5 py-1.5 md:py-1 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={zoneVisible[subKey]}
+                              onChange={() => onToggleZone(subKey)}
+                              className="sr-only"
+                            />
+                            <span
+                              className="w-4 h-4 md:w-3 md:h-3 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors"
+                              style={{
+                                borderColor: ZONE_COLORS[subKey],
+                                backgroundColor: zoneVisible[subKey]
+                                  ? ZONE_COLORS[subKey] + "30"
+                                  : "transparent",
+                              }}
+                            >
+                              {zoneVisible[subKey] && (
+                                <span
+                                  className="w-2 h-2 md:w-1.5 md:h-1.5 rounded-full block"
+                                  style={{ backgroundColor: ZONE_COLORS[subKey] }}
+                                />
+                              )}
+                            </span>
+                            <span
+                              className="text-[12px] md:text-[10px] text-[#0C1B33]/60 group-hover:text-[#0C1B33] transition-colors leading-tight flex-1"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                onSetExpandedZone(expandedZone === subKey ? null : subKey);
+                              }}
+                            >
+                              {ZONE_LABELS[subKey]}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                onSetExpandedZone(expandedZone === subKey ? null : subKey);
+                              }}
+                              className="text-[9px] text-[#2563EB]/40 hover:text-[#2563EB] transition-colors flex-shrink-0"
+                              title="More info"
+                            >
+                              {expandedZone === subKey ? "−" : "?"}
+                            </button>
+                          </label>
+                          {expandedZone === subKey && ZONE_DESCRIPTIONS[subKey] && (
+                            <div className="pb-2">
+                              <p className="text-[10px] text-[#0C1B33]/50 leading-relaxed mt-0.5 mb-1.5">
+                                {ZONE_DESCRIPTIONS[subKey]}
+                              </p>
+                              {ZONE_LEARN_MORE[subKey] && (
+                                <a
+                                  href={ZONE_LEARN_MORE[subKey]}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="font-mono-bureau text-[9px] tracking-wide text-[#2563EB]/70 hover:text-[#2563EB] transition-colors"
+                                >
+                                  Learn more &rarr;
+                                </a>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   ))}
                 </div>

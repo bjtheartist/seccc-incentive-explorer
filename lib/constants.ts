@@ -95,7 +95,7 @@ export const ZONE_LABELS: Record<string, string> = {
   energyCommunities: "IRA Energy Community",
   hubzone: "SBA HUBZone",
   lustSites: "Leaking UST Site (Illinois EPA)",
-  nofFundedProjects: "NOF Funded Project",
+  nofFundedProjects: "Past Grant Winners",
   countyIncentiveParcels: "Cook County Incentive Parcel",
 };
 
