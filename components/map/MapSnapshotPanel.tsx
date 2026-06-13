@@ -1,6 +1,7 @@
 "use client";
 
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
+import { formatMiles } from "@/lib/transport-access";
 import type { AreaStats } from "./map-helpers";
 import type { ProgramCheckResult } from "@/lib/types";
 
@@ -104,6 +105,43 @@ export default function MapSnapshotPanel({
           </p>
         </div>
       </div>
+
+      {/* Logistics access */}
+      {areaStats.transport && (
+        <>
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 py-3">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0E7490]/60 mb-1.5">
+              Logistics Access
+            </div>
+            <div className="space-y-1">
+              {areaStats.transport.expressway && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50 truncate">{areaStats.transport.expressway.name}</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{formatMiles(areaStats.transport.expressway.miles)}</span>
+                </div>
+              )}
+              {areaStats.transport.rail && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50 truncate">Freight rail ({areaStats.transport.rail.name})</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{formatMiles(areaStats.transport.rail.miles)}</span>
+                </div>
+              )}
+              <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                <span className="text-[#0C1B33]/50">Midway Airport</span>
+                <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{formatMiles(areaStats.transport.midwayMiles)}</span>
+              </div>
+              <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                <span className="text-[#0C1B33]/50">O&apos;Hare Airport</span>
+                <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{formatMiles(areaStats.transport.ohareMiles)}</span>
+              </div>
+            </div>
+            <p className="text-[9px] text-[#0C1B33]/30 mt-1.5 leading-relaxed">
+              Straight-line distances to the nearest expressway, freight rail main line, and airports.
+            </p>
+          </div>
+        </>
+      )}
 
       {/* Parcel info */}
       {areaStats.parcelPin && (

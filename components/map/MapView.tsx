@@ -17,8 +17,9 @@ import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
 import type { MobileMapPresetId } from "./map-layer-presets";
 import { cachedFetch } from "@/lib/fetch-cache";
+import { getTransportAccess } from "@/lib/transport-access";
 import {
-  POINT_ZONE_KEYS, HEAVY_COVERAGE_KEYS, escapeHTML,
+  POINT_ZONE_KEYS, LABELED_ZONE_KEYS, HEAVY_COVERAGE_KEYS, escapeHTML,
   COMMUNITY_AREAS_URL, CHICAGO_ZONING_URL, EMPTY_FC, PARCELS_QUERY_BASE,
   fetchZoneGeoJSON,
   POI_LAYERS, jsonToGeoJSON, MAP_PRESETS,
@@ -132,6 +133,9 @@ export default function MapView() {
         if (map.getLayer(`zone-${key}-fill`)) {
           map.setLayoutProperty(`zone-${key}-fill`, "visibility", vis ? "visible" : "none");
           map.setLayoutProperty(`zone-${key}-line`, "visibility", vis ? "visible" : "none");
+          if (map.getLayer(`zone-${key}-label`)) {
+            map.setLayoutProperty(`zone-${key}-label`, "visibility", vis ? "visible" : "none");
+          }
         }
       }
       setZoneVisible(updated);
@@ -191,6 +195,13 @@ export default function MapView() {
           .catch(() => {
             setAreaStats((prev) => ({ ...prev, districtsLoading: false }));
           });
+
+        // Async non-blocking logistics access (expressway/rail/airport distances)
+        getTransportAccess(lat, lon)
+          .then((transport) => {
+            setAreaStats((prev) => ({ ...prev, transport }));
+          })
+          .catch(() => {});
       }
     } catch {
       // Keep defaults
@@ -458,6 +469,27 @@ export default function MapView() {
                 "line-opacity": HEAVY_COVERAGE_KEYS.has(key) ? 0.5 : 0.8,
               },
             });
+
+            if (LABELED_ZONE_KEYS.has(key)) {
+              map.addLayer({
+                id: `${srcId}-label`,
+                type: "symbol",
+                source: srcId,
+                layout: {
+                  visibility: "none",
+                  "text-field": ["coalesce", ["get", "street"], ["get", "name"]],
+                  "text-size": 10,
+                  "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+                  "text-letter-spacing": 0.05,
+                  "text-max-width": 7,
+                },
+                paint: {
+                  "text-color": "#047857",
+                  "text-halo-color": "#ffffff",
+                  "text-halo-width": 1.4,
+                },
+              });
+            }
           }
         }
       });
@@ -1002,6 +1034,9 @@ export default function MapView() {
       const vis = next ? "visible" : "none";
       map.setLayoutProperty(`zone-${key}-fill`, "visibility", vis);
       map.setLayoutProperty(`zone-${key}-line`, "visibility", vis);
+      if (map.getLayer(`zone-${key}-label`)) {
+        map.setLayoutProperty(`zone-${key}-label`, "visibility", vis);
+      }
       // Manual toggle clears preset highlight
       setActivePreset(null);
     },

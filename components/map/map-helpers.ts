@@ -6,6 +6,7 @@
 import mapboxgl from "mapbox-gl";
 import { ZONE_META, ZONING_CATEGORIES } from "@/lib/constants";
 import type { DistrictData } from "@/lib/types";
+import type { TransportAccess } from "@/lib/transport-access";
 import { cachedFetch } from "@/lib/fetch-cache";
 
 /* ── Zone file mapping (static fallback for keys without DB data) ───── */
@@ -29,6 +30,9 @@ export const ZONE_FILES: Record<string, string> = {
 
 /** Zone keys that use Point geometry and need circle layers instead of fill/line. */
 export const POINT_ZONE_KEYS = new Set(["brownfields"]);
+
+/** Polygon zone keys that get a text label layer (uses `street` or `name` property). */
+export const LABELED_ZONE_KEYS = new Set(["nof"]);
 
 /** Helper: check if a zone should be hidden by default. */
 export function isZoneDefaultHidden(key: string): boolean {
@@ -217,6 +221,7 @@ export interface AreaStats {
   priorYearTax?: number | null;
   ownerName?: string | null;
   ownerType?: string | null;
+  transport?: TransportAccess | null;
 }
 
 export const DEFAULT_STATS: AreaStats = {
