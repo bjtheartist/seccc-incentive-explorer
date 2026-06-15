@@ -31,6 +31,51 @@ export default function MapSnapshotPanel({
   onDrawArea,
   onGenerateSnapshot,
 }: MapSnapshotPanelProps) {
+  const tifSection =
+    snapshotTifFinance || tifFinanceLoading ? (
+      <>
+        <div className="mx-4 h-px bg-[#0C1B33]/8" />
+        <div className="px-4 py-3">
+          <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-1.5">
+            TIF Funding Overview
+          </div>
+          {tifFinanceLoading && !snapshotTifFinance ? (
+            <div className="text-[10px] text-[#0C1B33]/40 italic">Loading TIF finance context...</div>
+          ) : snapshotTifFinance ? (
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-medium text-[#0C1B33]/85 leading-snug">
+                {snapshotTifFinance.districtName}
+                {snapshotTifFinance.reportYear && (
+                  <span className="text-[#0C1B33]/40"> · {snapshotTifFinance.reportYear}</span>
+                )}
+              </div>
+              {snapshotTifFinance.fundBalance != null && (
+                <div className="flex justify-between gap-3 text-[10px]">
+                  <span className="text-[#0C1B33]/50">Reported fund balance</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/85">${snapshotTifFinance.fundBalance.toLocaleString()}</span>
+                </div>
+              )}
+              {snapshotTifFinance.amountDesignatedProjectCosts != null && (
+                <div className="flex justify-between gap-3 text-[10px]">
+                  <span className="text-[#0C1B33]/50">Project-cost designation</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/85">${snapshotTifFinance.amountDesignatedProjectCosts.toLocaleString()}</span>
+                </div>
+              )}
+              {snapshotTifFinance.expirationYear && (
+                <div className="flex justify-between gap-3 text-[10px]">
+                  <span className="text-[#0C1B33]/50">District expiration</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/85">{snapshotTifFinance.expirationYear}</span>
+                </div>
+              )}
+              <p className="text-[9px] text-[#0C1B33]/35 leading-relaxed pt-1">
+                District-level City annual report context. This does not show available funds or project approval.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </>
+    ) : null;
+
   return (
     <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
       {/* Mobile drag handle */}
@@ -82,6 +127,8 @@ export default function MapSnapshotPanel({
           {isGeneratingSnapshot ? "Preparing report…" : "Generate report →"}
         </button>
       </div>
+
+      {tifSection && <div className="md:hidden">{tifSection}</div>}
 
       <div className="mx-4 h-px bg-[#0C1B33]/8" />
 
@@ -373,50 +420,7 @@ export default function MapSnapshotPanel({
         </>
       )}
 
-      {/* TIF funding overview */}
-      {(snapshotTifFinance || tifFinanceLoading) && (
-        <>
-          <div className="mx-4 h-px bg-[#0C1B33]/8" />
-          <div className="px-4 py-3">
-            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-1.5">
-              TIF Funding Overview
-            </div>
-            {tifFinanceLoading && !snapshotTifFinance ? (
-              <div className="text-[10px] text-[#0C1B33]/40 italic">Loading TIF finance context...</div>
-            ) : snapshotTifFinance ? (
-              <div className="space-y-1.5">
-                <div className="text-[11px] font-medium text-[#0C1B33]/85 leading-snug">
-                  {snapshotTifFinance.districtName}
-                  {snapshotTifFinance.reportYear && (
-                    <span className="text-[#0C1B33]/40"> · {snapshotTifFinance.reportYear}</span>
-                  )}
-                </div>
-                {snapshotTifFinance.fundBalance != null && (
-                  <div className="flex justify-between gap-3 text-[10px]">
-                    <span className="text-[#0C1B33]/50">Reported fund balance</span>
-                    <span className="font-mono-bureau text-[#0C1B33]/85">${snapshotTifFinance.fundBalance.toLocaleString()}</span>
-                  </div>
-                )}
-                {snapshotTifFinance.amountDesignatedProjectCosts != null && (
-                  <div className="flex justify-between gap-3 text-[10px]">
-                    <span className="text-[#0C1B33]/50">Project-cost designation</span>
-                    <span className="font-mono-bureau text-[#0C1B33]/85">${snapshotTifFinance.amountDesignatedProjectCosts.toLocaleString()}</span>
-                  </div>
-                )}
-                {snapshotTifFinance.expirationYear && (
-                  <div className="flex justify-between gap-3 text-[10px]">
-                    <span className="text-[#0C1B33]/50">District expiration</span>
-                    <span className="font-mono-bureau text-[#0C1B33]/85">{snapshotTifFinance.expirationYear}</span>
-                  </div>
-                )}
-                <p className="text-[9px] text-[#0C1B33]/35 leading-relaxed pt-1">
-                  District-level City annual report context. This does not show available funds or project approval.
-                </p>
-              </div>
-            ) : null}
-          </div>
-        </>
-      )}
+      {tifSection && <div className="hidden md:block">{tifSection}</div>}
 
       {/* Zoning info */}
       {zoningInfo && (
