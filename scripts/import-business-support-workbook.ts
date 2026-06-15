@@ -70,10 +70,20 @@ function value(row: unknown[], index: number): string {
 }
 
 function providerKeyVariants(name: string): string[] {
-  const normalized = normalizeSupportName(name);
-  const variants = new Set<string>([normalized]);
-  const withoutAcronym = name.replace(/\s*\([A-Z0-9&.\s]{2,}\)\s*/g, " ");
-  variants.add(normalizeSupportName(withoutAcronym));
+  const variants = new Set<string>();
+  const seedNames = [
+    name,
+    name.replace(/\s*\([A-Z0-9&.\s]{2,}\)\s*/g, " "),
+    name.replace(/\b(corp)\b\.?/gi, "corporation"),
+    name.replace(/\b(corporation)\b/gi, "corp"),
+    name.replace(/\b(nfp|inc|llc|ltd)\b\.?$/i, " "),
+  ];
+  for (const seed of seedNames) {
+    variants.add(normalizeSupportName(seed));
+    variants.add(normalizeSupportName(seed.replace(/\b(corp)\b\.?/gi, "corporation")));
+    variants.add(normalizeSupportName(seed.replace(/\b(corporation)\b/gi, "corp")));
+    variants.add(normalizeSupportName(seed.replace(/\b(nfp|inc|llc|ltd)\b\.?$/i, " ")));
+  }
   return Array.from(variants).filter(Boolean);
 }
 
@@ -161,9 +171,9 @@ function makeOrganization(
   providerIndex: Map<string, ProviderRecord>,
   fallbackSourceUrls: string[]
 ): LocalBusinessSupportOrganization | null {
-  const normalized = normalizeSupportName(name);
-  if (!normalized) return null;
-  const provider = providerIndex.get(normalized);
+  const variants = providerKeyVariants(name);
+  if (variants.length === 0) return null;
+  const provider = variants.map((variant) => providerIndex.get(variant)).find(Boolean);
   if (provider) {
     return {
       ...provider,

@@ -1,6 +1,6 @@
 {
   "source": "chicago_small_business_resource_map_phase2_validated",
-  "generatedAt": "2026-06-10T15:00:20.314Z",
+  "generatedAt": "2026-06-13T11:34:26.341Z",
   "communityAreaCount": 77,
   "providerCount": 140,
   "byCommunityArea": {
@@ -308,6 +308,32 @@
           ]
         },
         {
+          "id": "P021",
+          "name": "Greater Ravenswood Chamber of Commerce NFP",
+          "primaryType": "NBDC / Chamber",
+          "programSubtype": "Place-Based Generalist",
+          "relationships": [
+            "nbdc_2025",
+            "ssa_provider"
+          ],
+          "officeCommunityArea": "North Center / Lincoln Square",
+          "address": "1770 W. Berteau Ave., Suite 101, Chicago, IL 60613",
+          "phone": "773.975.2088",
+          "website": "https://www.ravenswoodchicago.org",
+          "supportTypes": "Business promotion; networking; corridor marketing",
+          "serviceGeography": "Ravenswood / North Center / Lincoln Square",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
+          "sourceUrls": [
+            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
+            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
+          ]
+        },
+        {
           "id": "P056",
           "name": "Uptown Chamber of Commerce",
           "primaryType": "NBDC / Chamber",
@@ -326,19 +352,6 @@
           "validationLevel": "Verified: 2025/2026 official BACP NBDC list",
           "currentStatus": "Active NBDC 2025/2026",
           "sourceYear": "2025/2026",
-          "sourceUrls": [
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
-          "name": "Greater Ravenswood Chamber of Commerce",
-          "relationships": [
-            "nbdc_2025",
-            "ssa_provider"
-          ],
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
@@ -425,25 +438,14 @@
           ]
         },
         {
-          "name": "Greater Ravenswood Chamber of Commerce",
-          "relationships": [
-            "nbdc_2025",
-            "ssa_provider"
-          ],
-          "sourceUrls": [
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
           "id": "P021",
           "name": "Greater Ravenswood Chamber of Commerce NFP",
           "primaryType": "NBDC / Chamber",
           "programSubtype": "Place-Based Generalist",
           "relationships": [
-            "secondary_access_point"
+            "secondary_access_point",
+            "nbdc_2025",
+            "ssa_provider"
           ],
           "officeCommunityArea": "North Center / Lincoln Square",
           "address": "1770 W. Berteau Ave., Suite 101, Chicago, IL 60613",
@@ -540,6 +542,32 @@
           ]
         },
         {
+          "id": "P021",
+          "name": "Greater Ravenswood Chamber of Commerce NFP",
+          "primaryType": "NBDC / Chamber",
+          "programSubtype": "Place-Based Generalist",
+          "relationships": [
+            "nbdc_2025"
+          ],
+          "officeCommunityArea": "North Center / Lincoln Square",
+          "address": "1770 W. Berteau Ave., Suite 101, Chicago, IL 60613",
+          "phone": "773.975.2088",
+          "website": "https://www.ravenswoodchicago.org",
+          "supportTypes": "Business promotion; networking; corridor marketing",
+          "serviceGeography": "Ravenswood / North Center / Lincoln Square",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
+          "sourceUrls": [
+            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
+            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://www.northcenterchamber.com/",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
+          ]
+        },
+        {
           "id": "P037",
           "name": "North Branch Works",
           "primaryType": "NBDC / Industrial EDO",
@@ -562,19 +590,6 @@
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
             "https://www.northcenterchamber.com/",
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
-          "name": "Greater Ravenswood Chamber of Commerce",
-          "relationships": [
-            "nbdc_2025"
-          ],
-          "sourceUrls": [
-            "https://www.northcenterchamber.com/",
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
             "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
             "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
           ]
@@ -685,6 +700,31 @@
           ]
         },
         {
+          "id": "P021",
+          "name": "Greater Ravenswood Chamber of Commerce NFP",
+          "primaryType": "NBDC / Chamber",
+          "programSubtype": "Place-Based Generalist",
+          "relationships": [
+            "nbdc_2025"
+          ],
+          "officeCommunityArea": "North Center / Lincoln Square",
+          "address": "1770 W. Berteau Ave., Suite 101, Chicago, IL 60613",
+          "phone": "773.975.2088",
+          "website": "https://www.ravenswoodchicago.org",
+          "supportTypes": "Business promotion; networking; corridor marketing",
+          "serviceGeography": "Ravenswood / North Center / Lincoln Square",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
+          "sourceUrls": [
+            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
+            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
+          ]
+        },
+        {
           "id": "P037",
           "name": "North Branch Works",
           "primaryType": "NBDC / Industrial EDO",
@@ -706,18 +746,6 @@
             "https://northbranchworks.org/nbdc/",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
-          "name": "Greater Ravenswood Chamber of Commerce",
-          "relationships": [
-            "nbdc_2025"
-          ],
-          "sourceUrls": [
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
             "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
             "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
           ]
@@ -4742,16 +4770,30 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
+            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
+            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
             "https://loopchicago.com",
             "https://www.chicagolandchamber.org/sbdc/",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -4835,16 +4877,29 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
-            "https://thenspb.org/business-resources/",
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://thenspb.org/business-resources/",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -4942,16 +4997,30 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
+            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
+            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
             "https://chicagochinatown.org/",
             "https://thenspb.org/business-resources/",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -4987,7 +5056,10 @@
           "primaryType": "NBDC / EDO",
           "programSubtype": "Place-Based Generalist",
           "relationships": [
-            "primary_access_point"
+            "primary_access_point",
+            "nbdc_2025",
+            "cbc_hub",
+            "ssa_provider"
           ],
           "officeCommunityArea": "Grand Boulevard / Douglas",
           "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
@@ -5028,31 +5100,6 @@
             "https://thenspb.org/business-resources/",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
-          "name": "Quad Communities Development Corporation (QCDC)",
-          "relationships": [
-            "nbdc_2025",
-            "cbc_hub"
-          ],
-          "sourceUrls": [
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
-          "name": "Quad Communities Development Corp.",
-          "relationships": [
-            "ssa_provider"
-          ],
-          "sourceUrls": [
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
             "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
             "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
           ]
@@ -5114,7 +5161,9 @@
           "primaryType": "NBDC / EDO",
           "programSubtype": "Place-Based Generalist",
           "relationships": [
-            "primary_access_point"
+            "primary_access_point",
+            "nbdc_2025",
+            "cbc_hub"
           ],
           "officeCommunityArea": "Grand Boulevard / Douglas",
           "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
@@ -5157,19 +5206,6 @@
             "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
             "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
-          ]
-        },
-        {
-          "name": "Quad Communities Development Corporation (QCDC)",
-          "relationships": [
-            "nbdc_2025",
-            "cbc_hub"
-          ],
-          "sourceUrls": [
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
           ]
         },
         {
@@ -5300,15 +5336,28 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -5343,7 +5392,10 @@
           "primaryType": "NBDC / EDO",
           "programSubtype": "Place-Based Generalist",
           "relationships": [
-            "primary_access_point"
+            "primary_access_point",
+            "nbdc_2025",
+            "cbc_hub",
+            "ssa_provider"
           ],
           "officeCommunityArea": "Grand Boulevard / Douglas",
           "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
@@ -5407,31 +5459,6 @@
           "validationLevel": "Verified: 2025/2026 official BACP NBDC list",
           "currentStatus": "Active NBDC 2025/2026",
           "sourceYear": "2025/2026",
-          "sourceUrls": [
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
-          "name": "Quad Communities Development Corporation (QCDC)",
-          "relationships": [
-            "nbdc_2025",
-            "cbc_hub"
-          ],
-          "sourceUrls": [
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
-          "name": "Quad Communities Development Corp.",
-          "relationships": [
-            "ssa_provider"
-          ],
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
@@ -5520,30 +5547,31 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation (QCDC)",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "nbdc_2025",
-            "cbc_hub"
-          ],
-          "sourceUrls": [
-            "https://secc-chicago.org/nbdc/",
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
-          "name": "Quad Communities Development Corp.",
-          "relationships": [
+            "cbc_hub",
             "ssa_provider"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
-            "https://secc-chicago.org/nbdc/",
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://secc-chicago.org/nbdc/",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -5700,15 +5728,28 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -5830,16 +5871,30 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
+            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
+            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
             "https://secc-chicago.org/nbdc/",
             "https://polsky.uchicago.edu/polsky-exchange/small-business-development-center/",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -6001,16 +6056,29 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://woodlawnchamberchicago.org",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://woodlawnchamberchicago.org",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -6157,16 +6225,29 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://secc-chicago.org/nbdc/",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://secc-chicago.org/nbdc/",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -6323,16 +6404,30 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
+            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
+            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
             "https://www.greaterchathaminitiative.org/",
             "https://calumetareaindustrial.com/",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -6460,15 +6555,28 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -8257,16 +8365,29 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://chicagochinatown.org/",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://chicagochinatown.org/",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -8517,7 +8638,8 @@
           "relationships": [
             "primary_access_point",
             "nbdc_2025",
-            "cbc_hub"
+            "cbc_hub",
+            "ssa_provider"
           ],
           "officeCommunityArea": "Chicago Lawn",
           "address": "2601 W. 63rd St., Chicago, IL 60629",
@@ -8585,19 +8707,6 @@
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
             "https://greatersouthwest.org/services/business-advising/",
             "https://bync.org/business-services/business-development-center",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
-          "name": "Greater Southwest Development Corp.",
-          "relationships": [
-            "ssa_provider"
-          ],
-          "sourceUrls": [
-            "https://greatersouthwest.org/services/business-advising/",
-            "https://bync.org/business-services/business-development-center",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
             "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
             "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
           ]
@@ -8857,7 +8966,8 @@
           "relationships": [
             "primary_access_point",
             "nbdc_2025",
-            "cbc_hub"
+            "cbc_hub",
+            "ssa_provider"
           ],
           "officeCommunityArea": "Chicago Lawn",
           "address": "2601 W. 63rd St., Chicago, IL 60629",
@@ -8901,19 +9011,6 @@
         },
         {
           "name": "Greater Southwest Chamber of Commerce",
-          "relationships": [
-            "ssa_provider"
-          ],
-          "sourceUrls": [
-            "https://greatersouthwest.org/services/business-advising/",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
-          "name": "Greater Southwest Development Corp.",
           "relationships": [
             "ssa_provider"
           ],
@@ -9080,15 +9177,28 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -9218,15 +9328,28 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -9385,7 +9508,8 @@
           "primaryType": "NBDC / EDO",
           "programSubtype": "Place-Based Generalist",
           "relationships": [
-            "secondary_access_point"
+            "secondary_access_point",
+            "cbc_hub"
           ],
           "officeCommunityArea": "Grand Boulevard / Douglas",
           "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
@@ -9403,19 +9527,6 @@
             "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
             "https://www.greaterchathaminitiative.org/",
             "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
-          ]
-        },
-        {
-          "name": "Quad Communities Development Corporation",
-          "relationships": [
-            "cbc_hub"
-          ],
-          "sourceUrls": [
-            "https://www.greaterchathaminitiative.org/",
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
           ]
         }
       ],
@@ -9631,16 +9742,29 @@
           ]
         },
         {
-          "name": "Quad Communities Development Corporation",
+          "id": "P046",
+          "name": "Quad Communities Development Corporation NFP",
+          "primaryType": "NBDC / EDO",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "cbc_hub"
           ],
+          "officeCommunityArea": "Grand Boulevard / Douglas",
+          "address": "4210 S. Berkeley Ave., Chicago, IL 60653",
+          "phone": "773.268.7232",
+          "website": "https://www.qcdc.org",
+          "supportTypes": "Commercial corridor development; business TA; community/economic development",
+          "serviceGeography": "Bronzeville / Quad Communities",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://greatersouthwest.org/services/business-advising/",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://greatersouthwest.org/services/business-advising/",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         }
       ],
@@ -9885,24 +10009,13 @@
           ]
         },
         {
-          "name": "The Far South Community Development Corp.",
-          "relationships": [
-            "ssa_provider"
-          ],
-          "sourceUrls": [
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
-          ]
-        },
-        {
           "id": "P054",
           "name": "The Far South Community Development Corporation",
           "primaryType": "NBDC / EDO",
           "programSubtype": "Place-Based Generalist; Innovation Specialist; Peer-to-Peer Trainer",
           "relationships": [
-            "secondary_access_point"
+            "secondary_access_point",
+            "ssa_provider"
           ],
           "officeCommunityArea": "Morgan Park / West Pullman",
           "address": "837 W. 115th St., Chicago, IL 60643",
@@ -10398,15 +10511,28 @@
           ]
         },
         {
-          "name": "Greater Ravenswood Chamber of Commerce",
+          "id": "P021",
+          "name": "Greater Ravenswood Chamber of Commerce NFP",
+          "primaryType": "NBDC / Chamber",
+          "programSubtype": "Place-Based Generalist",
           "relationships": [
             "nbdc_2025"
           ],
+          "officeCommunityArea": "North Center / Lincoln Square",
+          "address": "1770 W. Berteau Ave., Suite 101, Chicago, IL 60613",
+          "phone": "773.975.2088",
+          "website": "https://www.ravenswoodchicago.org",
+          "supportTypes": "Business promotion; networking; corridor marketing",
+          "serviceGeography": "Ravenswood / North Center / Lincoln Square",
+          "citywideOrRegional": "No",
+          "validationLevel": "Verified: DPD SSA provider list",
+          "currentStatus": "Active SSA provider 2026",
+          "sourceYear": "2025/2026",
           "sourceUrls": [
             "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
+            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
           ]
         },
         {

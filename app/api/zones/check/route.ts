@@ -10,7 +10,7 @@ import type {
 } from "geojson";
 import { getSQL } from "@/lib/db";
 import { memCached, roundCoord } from "@/lib/redis";
-import { ZONE_KEYS } from "@/lib/constants";
+import { CHECKABLE_ZONE_KEYS } from "@/lib/constants";
 import { featureDisplayName, formatZoneFeatureName, parseZoneProperties } from "@/lib/zone-names";
 
 export const runtime = "nodejs";
@@ -30,6 +30,8 @@ const zoneFileMap: Record<string, string> = {
   qct: "qct.geojson",
   landmarkDistricts: "landmark-districts.geojson",
   nrhpDistricts: "nrhp-districts.geojson",
+  energyCommunities: "energy-communities.geojson",
+  hubzone: "hubzone.geojson",
 };
 
 const zoneCache: Record<string, FeatureCollection> = {};
@@ -52,7 +54,7 @@ async function checkStaticZones(lat: number, lon: number) {
   const matches: Array<{ key: string; name: string }> = [];
 
   await Promise.all(
-    ZONE_KEYS.map(async (key) => {
+    CHECKABLE_ZONE_KEYS.map(async (key) => {
       const collection = await loadStaticZone(key);
       const match = collection.features.find(
         (feature): feature is Feature<Polygon | MultiPolygon> =>
@@ -140,8 +142,9 @@ export async function GET(request: NextRequest) {
           AND ST_Covers(ST_Buffer(z.geom::geometry, 0), p.geom)
       `;
 
+      const staticOnlyKeys = new Set(["nof", "ccsa", "energyCommunities", "hubzone"]);
       const dbMatches = rows
-        .filter((r: Record<string, unknown>) => String(r.zone_key) !== "nof")
+        .filter((r: Record<string, unknown>) => !staticOnlyKeys.has(String(r.zone_key)))
         .map((r: Record<string, unknown>) => ({
           key: r.zone_key,
           name: formatZoneFeatureName(String(r.zone_key), {
@@ -149,8 +152,15 @@ export async function GET(request: NextRequest) {
             name: r.feature_name,
           }),
         }));
-      const nofMatch = await checkStaticZone("nof", latNum, lonNum);
-      return nofMatch ? [...dbMatches, nofMatch] : dbMatches;
+      const staticMatches = (
+        await Promise.all(
+          Array.from(staticOnlyKeys).map((key) =>
+            checkStaticZone(key, latNum, lonNum).catch(() => null)
+          )
+        )
+      ).filter((match): match is { key: string; name: string } => Boolean(match));
+
+      return [...dbMatches, ...staticMatches];
     });
 
     return NextResponse.json(results, {

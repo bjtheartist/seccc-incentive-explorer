@@ -471,8 +471,9 @@ function ZoneLayerSection({
   onSetExpandedZone,
 }: ZoneLayerSectionProps) {
   const [activeLevel, setActiveLevel] = useState<ProgramLevel | "All">("All");
+  const topLevelZoneKeys = ZONE_KEYS_SORTED.filter((key) => key !== "nofFundedProjects");
 
-  const groupedKeys = ZONE_KEYS_SORTED.filter((key) => {
+  const groupedKeys = topLevelZoneKeys.filter((key) => {
     if (activeLevel === "All") return true;
     const meta = ZONE_META[key];
     if (!meta) return false;
@@ -485,7 +486,7 @@ function ZoneLayerSection({
   if (activeLevel === "All") {
     for (const lvl of LEVELS) {
       if (lvl === "Utility") continue; // no Utility-level zone layers yet
-      const keys = ZONE_KEYS_SORTED.filter((k) => ZONE_META[k]?.level === lvl);
+      const keys = topLevelZoneKeys.filter((k) => ZONE_META[k]?.level === lvl);
       if (keys.length > 0) sectionsToRender.push({ level: lvl, keys });
     }
   } else {
@@ -598,6 +599,74 @@ function ZoneLayerSection({
                           >
                             Learn more &rarr;
                           </a>
+                        )}
+                      </div>
+                    )}
+                    {key === "nof" && zoneVisible.nof && (
+                      <div className="ml-6 mt-0.5 mb-1.5 border-l border-[#0C1B33]/8 pl-3">
+                        <label className="flex items-center gap-2 py-1.5 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            checked={zoneVisible.nofFundedProjects}
+                            onChange={() => onToggleZone("nofFundedProjects")}
+                            className="sr-only"
+                          />
+                          <span
+                            className="w-4 h-4 md:w-3 md:h-3 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors"
+                            style={{
+                              borderColor: ZONE_COLORS.nofFundedProjects,
+                              backgroundColor: zoneVisible.nofFundedProjects
+                                ? ZONE_COLORS.nofFundedProjects + "30"
+                                : "transparent",
+                            }}
+                          >
+                            {zoneVisible.nofFundedProjects && (
+                              <span
+                                className="w-2.5 h-2.5 md:w-1.5 md:h-1.5 rounded-full block"
+                                style={{ backgroundColor: ZONE_COLORS.nofFundedProjects }}
+                              />
+                            )}
+                          </span>
+                          <span
+                            className="text-[12px] md:text-[10px] text-[#0C1B33]/55 group-hover:text-[#0C1B33]/75 transition-colors leading-tight flex-1"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              onSetExpandedZone(
+                                expandedZone === "nofFundedProjects" ? null : "nofFundedProjects"
+                              );
+                            }}
+                          >
+                            {ZONE_LABELS.nofFundedProjects}
+                          </span>
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              onSetExpandedZone(
+                                expandedZone === "nofFundedProjects" ? null : "nofFundedProjects"
+                              );
+                            }}
+                            className="text-[9px] text-[#2563EB]/40 hover:text-[#2563EB] transition-colors flex-shrink-0"
+                            title="More info"
+                          >
+                            {expandedZone === "nofFundedProjects" ? "−" : "?"}
+                          </button>
+                        </label>
+                        {expandedZone === "nofFundedProjects" && ZONE_DESCRIPTIONS.nofFundedProjects && (
+                          <div className="ml-5 pl-0.5 pb-2 border-l-2 border-[#0C1B33]/5">
+                            <p className="text-[10px] text-[#0C1B33]/50 leading-relaxed mt-1 mb-1.5">
+                              {ZONE_DESCRIPTIONS.nofFundedProjects}
+                            </p>
+                            {ZONE_LEARN_MORE.nofFundedProjects && (
+                              <a
+                                href={ZONE_LEARN_MORE.nofFundedProjects}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="font-mono-bureau text-[9px] tracking-wide text-[#2563EB]/70 hover:text-[#2563EB] transition-colors"
+                              >
+                                Learn more &rarr;
+                              </a>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
