@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { SiteTrafficTracker } from "@/components/analytics/SiteTrafficTracker";
 import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
@@ -35,6 +36,7 @@ export default function RootLayout({
           <main className="flex-1">{children}</main>
           <Footer />
           <ServiceWorkerRegistrar />
+          <SiteTrafficTracker />
           <Analytics />
         </AuthProvider>
       </body>

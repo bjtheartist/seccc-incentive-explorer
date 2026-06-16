@@ -174,3 +174,5 @@ Zone layers support two rendering paths:
 | `UPSTASH_REDIS_REST_URL` | No | Upstash Redis URL for server-side response caching. |
 | `UPSTASH_REDIS_REST_TOKEN` | No | Upstash Redis token. If absent, caching is skipped gracefully. |
 | `RESEND_API_KEY` | No | Resend API key for sending report emails (starts with `re_`). If absent, email feature returns 503. |
+| `ANALYTICS_ADMIN_PASSWORD` | For private analytics dashboard | Password required for `/admin/analytics`. Sets a signed HTTP-only session cookie. |
+| `ANALYTICS_ADMIN_TOKEN` | For private analytics API | Optional token for direct `/api/admin/analytics` script/API access. |
