@@ -1,6 +1,7 @@
 export type LocalBusinessSupportRelationship =
   | "primary_access_point"
   | "secondary_access_point"
+  | "legal_support"
   | "nbdc_2025"
   | "cbc_hub"
   | "ssa_provider";
@@ -46,6 +47,7 @@ export interface LocalBusinessSupportContext {
 const RELATIONSHIP_WEIGHT: Record<LocalBusinessSupportRelationship, number> = {
   primary_access_point: 100,
   nbdc_2025: 80,
+  legal_support: 75,
   ssa_provider: 70,
   secondary_access_point: 60,
   cbc_hub: 50,
@@ -82,4 +84,13 @@ export function rankLocalBusinessSupport(
       return a.name.localeCompare(b.name);
     })
     .slice(0, limit);
+}
+
+export function mergeCitywideBusinessSupport(
+  organizations: LocalBusinessSupportOrganization[],
+  citywideOrganizations: LocalBusinessSupportOrganization[]
+): LocalBusinessSupportOrganization[] {
+  const existingNames = new Set(organizations.map((org) => normalizeSupportName(org.name)));
+  const additions = citywideOrganizations.filter((org) => !existingNames.has(normalizeSupportName(org.name)));
+  return [...organizations, ...additions];
 }

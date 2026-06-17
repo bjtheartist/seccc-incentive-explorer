@@ -1319,6 +1319,7 @@ function relationshipLabel(org: LocalBusinessSupportOrganization): string {
   const labels: Record<string, string> = {
     primary_access_point: "Primary local access point",
     secondary_access_point: "Secondary local access point",
+    legal_support: "Small business legal support",
     nbdc_2025: "2025/2026 NBDC",
     cbc_hub: "CBC regional hub",
     ssa_provider: "SSA provider",
@@ -1331,6 +1332,8 @@ function localSupportDetail(org: LocalBusinessSupportOrganization, communityArea
     ? "Can help with: regional business navigation, referrals, and Chicago Business Center support. Confirm the exact intake path before referring a business."
     : org.relationships.includes("ssa_provider")
       ? "Can help with: corridor services, local business support, and SSA-related questions. Confirm the current service area before referring a business."
+      : org.relationships.includes("legal_support")
+        ? "Can help with: small-business legal questions, entity formation, contracts, compliance, and referrals. Confirm eligibility and intake requirements before referring a business."
       : "Can help with: business advising, referrals, and incentive-navigation questions. Confirm current capacity before referring a business.";
 
   const details = [

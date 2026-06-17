@@ -1,0 +1,32 @@
+{
+  "source": "partner_resource_updates",
+  "generatedAt": "2026-06-17T19:57:22.848Z",
+  "providerCount": 1,
+  "organizations": [
+    {
+      "id": "PRV-LANE",
+      "name": "Legal Aid for New Entrepreneurs (LANE)",
+      "primaryType": "Legal Aid / Small Business Support",
+      "programSubtype": "Transactional legal support for entrepreneurs and small business owners",
+      "relationships": [
+        "legal_support"
+      ],
+      "officeCommunityArea": "Citywide",
+      "website": "https://lanechicago.org/legal_help",
+      "supportTypes": "Free transactional legal services; entity formation; contracts; employment compliance; intellectual property support",
+      "serviceGeography": "Chicago and Chicagoland entrepreneurs; low-income small business owners",
+      "citywideOrRegional": "Yes",
+      "validationLevel": "Partner-provided resource listing",
+      "currentStatus": "Active resource",
+      "sourceYear": "2026 partner conversation",
+      "sourceUrls": [
+        "https://www.lanechicago.org",
+        "https://lanechicago.org/legal_help"
+      ]
+    }
+  ],
+  "sourceUrls": [
+    "https://www.lanechicago.org",
+    "https://lanechicago.org/legal_help"
+  ]
+}

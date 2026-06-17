@@ -301,6 +301,39 @@ describe("generateReportData", () => {
     expect(section?.items[1].detail).toContain("Washington Park");
   });
 
+  it("renders legal support resources with reader-friendly role copy", () => {
+    const report = generateReportData(
+      makeState(),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        localBusinessSupport: {
+          communityAreaNumber: "46",
+          communityArea: "South Chicago",
+          confidence: "High",
+          sourceLabel: "Chicago Small Business Resource Map",
+          sourceUrls: ["https://example.com/source"],
+          organizations: [
+            {
+              name: "Legal Aid for New Entrepreneurs (LANE)",
+              primaryType: "Legal Aid / Small Business Support",
+              relationships: ["legal_support"],
+              website: "https://lanechicago.org/legal_help",
+              sourceUrls: ["https://www.lanechicago.org"],
+            },
+          ],
+        },
+      },
+    );
+
+    const section = report.sections.find((s) => s.title === "Your Support Network");
+    expect(section?.items[1].label).toBe("Legal Aid for New Entrepreneurs (LANE)");
+    expect(section?.items[1].value).toBe("Small business legal support");
+    expect(section?.items[1].detail).toContain("small-business legal questions");
+    expect(section?.items[1].url).toBe("https://lanechicago.org/legal_help");
+  });
+
   it("propagates Phase 1 provenance fields onto report items", () => {
     const applicationPortals = [
       {

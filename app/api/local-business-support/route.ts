@@ -3,8 +3,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { booleanPointInPolygon, point } from "@turf/turf";
 import type { Feature, MultiPolygon, Polygon } from "geojson";
+import citywideSupportData from "@/data/curated/citywide_business_support_resources.json";
 import supportData from "@/data/exports/chicago-neighborhood-economics/local_business_support_by_community_area.json";
-import { rankLocalBusinessSupport, type LocalBusinessSupportContext } from "@/lib/local-business-support";
+import {
+  mergeCitywideBusinessSupport,
+  rankLocalBusinessSupport,
+  type LocalBusinessSupportContext,
+  type LocalBusinessSupportOrganization,
+} from "@/lib/local-business-support";
 
 interface CommunityAreaProps {
   community?: string;
@@ -20,7 +26,16 @@ interface LocalBusinessSupportFile {
   byCommunityArea: Record<string, LocalBusinessSupportContext>;
 }
 
+interface CitywideBusinessSupportFile {
+  source: string;
+  generatedAt: string;
+  providerCount: number;
+  organizations: LocalBusinessSupportOrganization[];
+  sourceUrls: string[];
+}
+
 const supportFile = supportData as LocalBusinessSupportFile;
+const citywideSupportFile = citywideSupportData as CitywideBusinessSupportFile;
 
 let cachedAreas: Array<Feature<Polygon | MultiPolygon, CommunityAreaProps>> | null = null;
 function communityAreaFeatures() {
@@ -96,7 +111,9 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const organizations = rankLocalBusinessSupport(entry.organizations, 6);
+  const supportPool = mergeCitywideBusinessSupport(entry.organizations, citywideSupportFile.organizations);
+  const organizations = rankLocalBusinessSupport(supportPool, 6);
+  const sourceUrls = Array.from(new Set([...(entry.sourceUrls ?? []), ...citywideSupportFile.sourceUrls]));
 
   return NextResponse.json(
     {
@@ -104,6 +121,7 @@ export async function GET(request: NextRequest) {
       communityArea: entry.communityArea || resolvedName || "",
       organizations,
       organizationCount: organizations.length,
+      sourceUrls,
     },
     {
       headers: {
