@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo, Suspense } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -101,6 +101,7 @@ import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { cachedFetch } from "@/lib/fetch-cache";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
+import { trackEvent } from "@/lib/analytics-events";
 
 type ReportNavigationItem = GeneratedReport["sections"][number]["items"][number] & {
   applicationPortals?: ApplicationPortal[];
@@ -147,6 +148,43 @@ function slugifyFilePart(value: string): string {
     .trim()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "") || "locale";
+}
+
+function extractReportZipCode(report: GeneratedReport): string | null {
+  const address = report.metadata?.address || "";
+  const match = address.match(/\b(606\d{2}|60707|60827)\b/);
+  return match?.[1] ?? null;
+}
+
+function analyticsReportKey(report: GeneratedReport): string {
+  return [
+    report.reportType,
+    report.generatedAt,
+    report.metadata?.address || report.title,
+  ].join("|");
+}
+
+function reportAnalyticsPayload(
+  report: GeneratedReport,
+  source: string,
+  metadata: Record<string, string | number | boolean | null | (string | number | boolean)[]> = {}
+) {
+  const zipCode = extractReportZipCode(report);
+  return {
+    reportType: report.reportType,
+    source,
+    address: report.metadata?.address ?? null,
+    lat: report.metadata?.lat ?? null,
+    lon: report.metadata?.lon ?? null,
+    metadata: {
+      reportKey: analyticsReportKey(report),
+      reportTitle: report.title,
+      zipCode,
+      sectionCount: report.sections?.length ?? 0,
+      actionCount: report.recommendedActions?.length ?? 0,
+      ...metadata,
+    },
+  };
 }
 
 function zoneMatchesToText(value: unknown): string {
@@ -2739,11 +2777,28 @@ function ExecutiveSummarySection({
 
 function ActionRoadmapSection({
   items,
+  report,
 }: {
   items: ActionRoadmapItem[];
+  report: GeneratedReport;
 }) {
   const doThisWeek = items.filter((i) => i.tier === "do-this-week");
   const worthExploring = items.filter((i) => i.tier === "worth-exploring");
+  const trackContactClick = useCallback(
+    (item: ActionRoadmapItem, contactMethod: "phone" | "email") => {
+      trackEvent(
+        "support_resource_clicked",
+        reportAnalyticsPayload(report, "action_roadmap", {
+          organizationName: item.contact?.agency || item.programName || item.label,
+          organizationType: item.contact?.role || "program_contact",
+          contactMethod,
+          programId: item.programId || null,
+          programName: item.programName || null,
+        })
+      );
+    },
+    [report]
+  );
 
   return (
     <div className="mb-10">
@@ -2792,20 +2847,22 @@ function ActionRoadmapSection({
                       {item.contact.agency}
                     </span>
                     <div className="flex flex-wrap gap-3">
-                      {item.contact.phone && (
-                        <a
-                          href={`tel:${item.contact.phone}`}
-                          className="inline-flex items-center gap-1.5 text-[12px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors"
-                        >
+	                      {item.contact.phone && (
+	                        <a
+	                          href={`tel:${item.contact.phone}`}
+	                          onClick={() => trackContactClick(item, "phone")}
+	                          className="inline-flex items-center gap-1.5 text-[12px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors"
+	                        >
                           <Phone className="w-3 h-3" />
                           {item.contact.phone}
                         </a>
                       )}
-                      {item.contact.email && (
-                        <a
-                          href={`mailto:${item.contact.email}`}
-                          className="inline-flex items-center gap-1.5 text-[12px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors"
-                        >
+	                      {item.contact.email && (
+	                        <a
+	                          href={`mailto:${item.contact.email}`}
+	                          onClick={() => trackContactClick(item, "email")}
+	                          className="inline-flex items-center gap-1.5 text-[12px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors"
+	                        >
                           <Mail className="w-3 h-3" />
                           {item.contact.email}
                         </a>
@@ -2851,11 +2908,12 @@ function ActionRoadmapSection({
                     {item.description}
                   </span>
                 </div>
-                {item.contact?.phone && (
-                  <a
-                    href={`tel:${item.contact.phone}`}
-                    className="flex items-center gap-1 text-[10px] font-mono-bureau text-[#0C1B33]/40 hover:text-[#0C1B33] transition-colors flex-shrink-0"
-                  >
+	                {item.contact?.phone && (
+	                  <a
+	                    href={`tel:${item.contact.phone}`}
+	                    onClick={() => trackContactClick(item, "phone")}
+	                    className="flex items-center gap-1 text-[10px] font-mono-bureau text-[#0C1B33]/40 hover:text-[#0C1B33] transition-colors flex-shrink-0"
+	                  >
                     <Phone className="w-3 h-3" />
                     {item.contact.phone}
                   </a>
@@ -3420,6 +3478,7 @@ function ReportDisplay({
     () => new Map(programs.map((program) => [program.id, program])),
     [programs],
   );
+  const viewedSupportKeyRef = useRef<string | null>(null);
 
   // ── TOC ──
   const sectionToAnchor = (title: string) =>
@@ -3440,6 +3499,60 @@ function ReportDisplay({
     return entries;
   }, [report]);
 
+  const supportSection = useMemo(
+    () => report.sections?.find((section) => section.title === "Your Support Network") ?? null,
+    [report.sections]
+  );
+  const supportItems = useMemo(
+    () =>
+      supportSection?.items.filter((item) => item.label !== "Community Support") ??
+      [],
+    [supportSection]
+  );
+
+  useEffect(() => {
+    if (!supportSection || supportItems.length === 0) return;
+    const supportViewKey = `${analyticsReportKey(report)}|support-view`;
+    if (viewedSupportKeyRef.current === supportViewKey) return;
+    viewedSupportKeyRef.current = supportViewKey;
+
+    trackEvent(
+      "support_resource_viewed",
+      reportAnalyticsPayload(report, "report_support_network", {
+        organizationCount: supportItems.length,
+        organizationNames: supportItems.map((item) => item.label),
+      })
+    );
+  }, [report, supportItems, supportSection]);
+
+  const trackSectionLinkClick = useCallback(
+    (section: ReportSection, item: ReportItem) => {
+      if (section.title === "Your Support Network") {
+        trackEvent(
+          "support_resource_clicked",
+          reportAnalyticsPayload(report, "report_support_network", {
+            organizationName: item.label,
+            organizationType: item.value || "local_support",
+            contactMethod: "website",
+          })
+        );
+        return;
+      }
+
+      if (section.title === "Eligible Incentive Programs" || item.programId) {
+        trackEvent(
+          "program_link_clicked",
+          reportAnalyticsPayload(report, "report_program_link", {
+            programId: item.programId || item.label,
+            programName: item.label,
+            programLevel: item.level || null,
+          })
+        );
+      }
+    },
+    [report]
+  );
+
   const [downloadGateOpen, setDownloadGateOpen] = useState(false);
 
   const handlePrint = () => {
@@ -3455,11 +3568,15 @@ function ReportDisplay({
     if (!reportWizardState) return;
     const encoded = encodeWizardState(reportWizardState);
     const url = `${window.location.origin}/report?${encoded}`;
-    navigator.clipboard.writeText(url).then(() => {
-      setLinkCopied(true);
-      setTimeout(() => setLinkCopied(false), 2500);
-    });
-  }, [reportWizardState]);
+	    navigator.clipboard.writeText(url).then(() => {
+	      setLinkCopied(true);
+	      trackEvent(
+	        "share_link_copied",
+	        reportAnalyticsPayload(report, "report_share_link")
+	      );
+	      setTimeout(() => setLinkCopied(false), 2500);
+	    });
+	  }, [report, reportWizardState]);
 
   const handleSaveReport = useCallback(() => {
     if (status === "authenticated") {
@@ -4478,12 +4595,13 @@ function ReportDisplay({
                                       </div>
                                     )}
                                     {item.url && (
-                                      <a
-                                        href={item.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-1.5 text-[11px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors font-mono-bureau tracking-wide print-url"
-                                      >
+	                                      <a
+	                                        href={item.url}
+	                                        target="_blank"
+	                                        rel="noopener noreferrer"
+	                                        onClick={() => trackSectionLinkClick(section, item)}
+	                                        className="inline-flex items-center gap-1.5 text-[11px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors font-mono-bureau tracking-wide print-url"
+	                                      >
                                         <ExternalLink className="w-3 h-3 flex-shrink-0" />
                                         More information
                                       </a>
@@ -4508,7 +4626,7 @@ function ReportDisplay({
             {/* ── Your Next Steps (action roadmap) ── */}
             {report.actionRoadmap && report.actionRoadmap.length > 0 && (
               <div id="action-roadmap">
-                <ActionRoadmapSection items={report.actionRoadmap} />
+                <ActionRoadmapSection items={report.actionRoadmap} report={report} />
               </div>
             )}
 
