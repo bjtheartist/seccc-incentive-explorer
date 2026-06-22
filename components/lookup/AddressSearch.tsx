@@ -182,22 +182,24 @@ export function AddressSearch() {
     <div className="w-full max-w-[600px] mx-auto">
       {/* Search Form */}
       <div className="relative">
-        <div className="flex items-center gap-3 bg-black/40 backdrop-blur-2xl border border-white/20 rounded-2xl px-5 py-1.5 focus-within:border-[#2563EB]/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] transition-all">
-          <Search className="w-[18px] h-[18px] text-white/40 shrink-0" />
-          <input
-            type="text"
-            placeholder="Enter address, business name, or ZIP code..."
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-            className="flex-1 h-12 bg-transparent text-white text-[15px] placeholder:text-white/30 focus:outline-none font-[inherit]"
-          />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-black/40 backdrop-blur-2xl border border-white/20 rounded-2xl px-4 sm:px-5 py-3 sm:py-1.5 focus-within:border-[#2563EB]/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] transition-all">
+          <div className="flex min-w-0 flex-1 items-center gap-3 w-full">
+            <Search className="w-[18px] h-[18px] text-white/40 shrink-0" />
+            <input
+              type="text"
+              placeholder="Enter a Chicago address..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleLookup()}
+              className="flex-1 min-w-0 h-12 bg-transparent text-white text-[15px] placeholder:text-white/30 focus:outline-none font-[inherit]"
+            />
+          </div>
           <button
             onClick={() => handleLookup()}
             disabled={loading || !query.trim()}
-            className="h-10 px-6 bg-[#2563EB] text-white font-mono-bureau text-[11px] tracking-[0.1em] uppercase rounded-xl hover:bg-[#1d4ed8] disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
+            className="h-10 w-full sm:w-auto px-4 sm:px-5 bg-[#2563EB] text-white font-mono-bureau text-[11px] leading-tight tracking-[0.1em] uppercase rounded-xl hover:bg-[#1d4ed8] disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
           >
-            Check Now
+            Generate Free Location Snapshot
           </button>
         </div>
 

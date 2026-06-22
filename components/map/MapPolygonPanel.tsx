@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useCallback, useState } from "react";
+import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { FileText, Loader2, Mail, X } from "lucide-react";
 import { ZONE_COLORS, ZONE_LABELS } from "@/lib/constants";
@@ -693,12 +694,12 @@ export default function MapPolygonPanel({
           {/* ── Footer ── */}
           <div className="mx-5 h-px bg-[#0C1B33]/8" />
           <div className="px-5 py-3 bg-white">
-            <a
+            <Link
               href="/programs"
               className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase border border-[#0C1B33]/15 text-[#0C1B33]/50 py-2 px-3 hover:text-[#0C1B33] hover:border-[#0C1B33]/30 transition-colors"
             >
               Browse All Programs
-            </a>
+            </Link>
           </div>
 
           {/* ── Attribution ── */}

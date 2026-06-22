@@ -36,7 +36,7 @@ export function Header() {
           </div>
           <div className="hidden sm:block">
             <div className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-[#0C1B33]/80">
-              Chicago Site Incentive Map
+              Chicago Incentive Explorer
             </div>
           </div>
         </Link>
