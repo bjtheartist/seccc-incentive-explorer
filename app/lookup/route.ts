@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const MAX_ADDRESS_LENGTH = 260;
+const ALLOWED_SOURCES = new Set(["chrome-extension"]);
 
 type GeocodeResult = {
   lat?: number;
@@ -13,6 +14,11 @@ function cleanAddress(value: string | null): string {
   return (value ?? "").replace(/\s+/g, " ").trim().slice(0, MAX_ADDRESS_LENGTH);
 }
 
+function cleanSource(value: string | null): string | null {
+  const source = (value ?? "").trim().toLowerCase();
+  return ALLOWED_SOURCES.has(source) ? source : null;
+}
+
 function reportUrl(origin: string, params: Record<string, string | number>) {
   const url = new URL("/report", origin);
   for (const [key, value] of Object.entries(params)) {
@@ -21,14 +27,16 @@ function reportUrl(origin: string, params: Record<string, string | number>) {
   return url;
 }
 
-function instantReportUrl(origin: string, address: string, geocode: GeocodeResult) {
+function instantReportUrl(origin: string, address: string, geocode: GeocodeResult, source: string | null) {
   const displayAddress = cleanAddress(geocode.displayName ?? geocode.display_name ?? address);
-  return reportUrl(origin, {
+  const params: Record<string, string | number> = {
     instant: "true",
     lat: Number(geocode.lat).toFixed(5),
     lon: Number(geocode.lon).toFixed(5),
     addr: displayAddress,
-  });
+  };
+  if (source) params.source = source;
+  return reportUrl(origin, params);
 }
 
 async function geocodeAddress(origin: string, address: string): Promise<GeocodeResult | null> {
@@ -47,6 +55,7 @@ export async function GET(request: NextRequest) {
   const address = cleanAddress(
     request.nextUrl.searchParams.get("addr") ?? request.nextUrl.searchParams.get("address")
   );
+  const source = cleanSource(request.nextUrl.searchParams.get("source"));
 
   if (!address) {
     return NextResponse.redirect(new URL("/?lookup=missing-address", request.nextUrl.origin));
@@ -59,16 +68,18 @@ export async function GET(request: NextRequest) {
         reportUrl(request.nextUrl.origin, {
           addr: address,
           lookup: "not-found",
+          ...(source ? { source } : {}),
         })
       );
     }
 
-    return NextResponse.redirect(instantReportUrl(request.nextUrl.origin, address, geocode));
+    return NextResponse.redirect(instantReportUrl(request.nextUrl.origin, address, geocode, source));
   } catch {
     return NextResponse.redirect(
       reportUrl(request.nextUrl.origin, {
         addr: address,
         lookup: "geocode-unavailable",
+        ...(source ? { source } : {}),
       })
     );
   }
