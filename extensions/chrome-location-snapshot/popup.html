@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chicago Incentive Explorer</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="popup-shell">
+      <p class="eyebrow">Chicago Incentive Explorer</p>
+      <h1>Run a location snapshot</h1>
+      <p class="lede">
+        Enter a Chicago address to open the latest incentive, zoning, TIF, NOF, and local support context.
+      </p>
+
+      <form id="lookup-form">
+        <label for="address">Address</label>
+        <input id="address" name="address" type="text" autocomplete="street-address" placeholder="8701 S Bennett Ave" />
+        <button type="submit">Generate Location Snapshot</button>
+      </form>
+
+      <section id="recent-section" class="recent-section" hidden>
+        <p class="recent-heading">Recent</p>
+        <div id="recent-list" class="recent-list"></div>
+      </section>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </main>
+    <script src="popup.js"></script>
+  </body>
+</html>

@@ -62,6 +62,7 @@ export const PRIVATE_CRAWL_PATHS = [
   "/workspace",
   "/workspace/*",
   "/login",
+  "/lookup",
   "/api",
   "/api/*",
   "/quiz/result",
