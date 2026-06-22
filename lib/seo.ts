@@ -1,3 +1,5 @@
+import type { Metadata } from "next";
+
 export const SITE_URL = normalizeSiteUrl(
   process.env.NEXT_PUBLIC_SITE_URL || "https://chicagoincentiveexplorer.com"
 );
@@ -151,5 +153,77 @@ export function buildBreadcrumbJsonLd(pathname: string) {
     "@type": "BreadcrumbList",
     "@id": `${absoluteUrl(normalizedPath)}#breadcrumb`,
     itemListElement,
+  };
+}
+
+/**
+ * Per-page metadata for dynamic SEO pages (program / neighborhood / answer).
+ * Returns canonical + OpenGraph + Twitter wired to the page's own path.
+ */
+export function pageMetadata(opts: {
+  title: string;
+  description: string;
+  path: string;
+  keywords?: string[];
+  ogType?: "website" | "article";
+}): Metadata {
+  const url = absoluteUrl(opts.path);
+  return {
+    title: opts.title,
+    description: opts.description,
+    keywords: opts.keywords ?? DEFAULT_KEYWORDS,
+    alternates: { canonical: url },
+    openGraph: {
+      type: opts.ogType ?? "article",
+      url,
+      siteName: SITE_NAME,
+      title: opts.title,
+      description: opts.description,
+      images: [
+        {
+          url: "/chicago-map-hero.png",
+          width: 1200,
+          height: 630,
+          alt: SITE_NAME,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: opts.title,
+      description: opts.description,
+      images: ["/chicago-map-hero.png"],
+    },
+  };
+}
+
+/** FAQPage JSON-LD from a list of question/answer pairs. */
+export function buildFaqJsonLd(
+  items: { question: string; answer: string }[],
+  id?: string,
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    ...(id ? { "@id": id } : {}),
+    mainEntity: items.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  };
+}
+
+/** Generic BreadcrumbList JSON-LD for dynamic routes (not in PUBLIC_SEO_ROUTES). */
+export function buildTrailJsonLd(crumbs: { name: string; path: string }[]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: crumbs.map((crumb, index) => ({
+      "@type": "ListItem",
+      position: index + 1,
+      name: crumb.name,
+      item: absoluteUrl(crumb.path),
+    })),
   };
 }

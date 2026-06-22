@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import type { AreaStats } from "./map-helpers";
 import type { ProgramCheckResult } from "@/lib/types";
@@ -476,12 +477,12 @@ export default function MapSnapshotPanel({
         >
           Draw Area Analysis
         </button>
-        <a
+        <Link
           href="/programs"
           className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase border border-[#0C1B33]/15 text-[#0C1B33]/60 py-2 px-3 hover:text-[#0C1B33] hover:border-[#0C1B33]/30 transition-colors"
         >
           Browse All Programs
-        </a>
+        </Link>
       </div>
     </div>
   );
