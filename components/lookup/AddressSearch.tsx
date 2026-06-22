@@ -12,6 +12,7 @@ import {
 import { enrichEmployment } from "@/lib/zone-check";
 import type { Business, LookupResult, Program } from "@/lib/types";
 import { cachedFetch } from "@/lib/fetch-cache";
+import { trackEvent } from "@/lib/analytics-events";
 
 const SAMPLE_PROMPTS = [
   { label: "Justice of the Pies", type: "business" },
@@ -50,7 +51,11 @@ const LOADING_MESSAGES = [
   "Pulling data from 6 government databases at once...",
 ];
 
-export function AddressSearch() {
+export function AddressSearch({
+  source = "address_search",
+}: {
+  source?: string;
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -100,9 +105,10 @@ export function AddressSearch() {
       params.set("lat", lat.toFixed(5));
       params.set("lon", lon.toFixed(5));
       if (addr) params.set("addr", addr);
+      if (source) params.set("source", source);
       router.push(`/report?${params.toString()}`);
     },
-    [router]
+    [router, source]
   );
 
   const handleLookup = useCallback(
@@ -114,6 +120,17 @@ export function AddressSearch() {
       setError("");
       setResult(null);
       setSuggestions([]);
+      trackEvent("search_performed", {
+        source,
+        address: q.trim() || directBusiness?.address || null,
+        metadata: {
+          queryType: directBusiness ? "business_suggestion" : "address_or_business",
+        },
+      });
+      trackEvent("location_snapshot_requested", {
+        source,
+        address: q.trim() || directBusiness?.address || null,
+      });
 
       try {
         if (directBusiness) {
@@ -175,7 +192,7 @@ export function AddressSearch() {
         setLoading(false);
       }
     },
-    [query, businesses, navigateToReport]
+    [query, businesses, navigateToReport, source]
   );
 
   return (

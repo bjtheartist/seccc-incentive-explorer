@@ -7,6 +7,7 @@ import {
 describe("analytics events", () => {
   it("accepts known product events", () => {
     expect(isAnalyticsEventType("site_page_viewed")).toBe(true);
+    expect(isAnalyticsEventType("start_page_viewed")).toBe(true);
     expect(isAnalyticsEventType("location_snapshot_generated")).toBe(true);
     expect(isAnalyticsEventType("support_resource_clicked")).toBe(true);
     expect(isAnalyticsEventType("program_link_clicked")).toBe(true);
@@ -91,6 +92,25 @@ describe("analytics events", () => {
         sessionId: "session-123",
         deviceType: "mobile",
         viewportWidth: 390,
+      },
+    });
+    expect(event?.metadata).not.toHaveProperty("nested");
+  });
+
+  it("keeps privacy-safe start page campaign metadata", () => {
+    const event = sanitizeAnalyticsEventPayload("start_page_viewed", {
+      source: "start_page",
+      metadata: {
+        campaign: "one-chicago",
+        nested: { skip: true },
+      } as never,
+    });
+
+    expect(event).toMatchObject({
+      eventType: "start_page_viewed",
+      source: "start_page",
+      metadata: {
+        campaign: "one-chicago",
       },
     });
     expect(event?.metadata).not.toHaveProperty("nested");

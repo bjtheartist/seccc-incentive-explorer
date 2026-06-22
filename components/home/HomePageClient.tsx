@@ -61,7 +61,7 @@ export function HomePageClient() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.7 }}
           >
-            <AddressSearch />
+            <AddressSearch source="homepage" />
           </motion.div>
 
           {/* Nav links below search */}
