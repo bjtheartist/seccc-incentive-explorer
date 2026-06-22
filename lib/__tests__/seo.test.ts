@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   absoluteUrl,
   buildBreadcrumbJsonLd,
+  pageMetadata,
   buildSiteJsonLd,
   normalizePublicPath,
   normalizeSiteUrl,
@@ -76,5 +77,22 @@ describe("seo helpers", () => {
     expect(buildBreadcrumbJsonLd("/admin/analytics")).toBeNull();
     expect(buildBreadcrumbJsonLd("/workspace/reports/123")).toBeNull();
     expect(buildBreadcrumbJsonLd("/quiz/result?score=8")).toBeNull();
+  });
+
+  it("builds route metadata with page-specific canonical and Open Graph URLs", () => {
+    expect(
+      pageMetadata({
+        title: "Incentive Programs",
+        description: "Browse Chicago incentive programs.",
+        path: "/programs",
+        ogType: "website",
+      })
+    ).toMatchObject({
+      alternates: { canonical: "https://chicagoincentiveexplorer.com/programs" },
+      openGraph: {
+        url: "https://chicagoincentiveexplorer.com/programs",
+        type: "website",
+      },
+    });
   });
 });
