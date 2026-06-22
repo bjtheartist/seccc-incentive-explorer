@@ -12,6 +12,7 @@ import {
 import { enrichEmployment } from "@/lib/zone-check";
 import type { Business, LookupResult, Program } from "@/lib/types";
 import { cachedFetch } from "@/lib/fetch-cache";
+import { trackEvent } from "@/lib/analytics-events";
 
 const SAMPLE_PROMPTS = [
   { label: "Justice of the Pies", type: "business" },
@@ -92,7 +93,7 @@ export function AddressSearch() {
     setSuggestions(nameMatches);
   }, [query, businesses]);
 
-  /** Navigate to instant report with lat/lon/addr */
+  /** Navigate to instant report with lat/lon/addr, tagging the landing page for attribution */
   const navigateToReport = useCallback(
     (lat: number, lon: number, addr: string) => {
       const params = new URLSearchParams();
@@ -100,6 +101,10 @@ export function AddressSearch() {
       params.set("lat", lat.toFixed(5));
       params.set("lon", lon.toFixed(5));
       if (addr) params.set("addr", addr);
+      // Attribute the generated snapshot back to the landing page it was launched from.
+      const landingPage =
+        typeof window !== "undefined" ? window.location.pathname : "";
+      if (landingPage) params.set("src", landingPage);
       router.push(`/report?${params.toString()}`);
     },
     [router]
@@ -115,8 +120,28 @@ export function AddressSearch() {
       setResult(null);
       setSuggestions([]);
 
+      // Fire the funnel's entry event for this search action (not per keystroke).
+      const fireSearchPerformed = (
+        resultKind: "business" | "geocoded" | "none",
+        lat?: number | null,
+        lon?: number | null
+      ) => {
+        trackEvent("search_performed", {
+          address: directBusiness?.name ?? q,
+          source: "address_search",
+          lat: lat ?? null,
+          lon: lon ?? null,
+          metadata: {
+            landing_page:
+              typeof window !== "undefined" ? window.location.pathname : "",
+            result_kind: resultKind,
+          },
+        });
+      };
+
       try {
         if (directBusiness) {
+          fireSearchPerformed("business", directBusiness.lat, directBusiness.lon);
           if (directBusiness.lat && directBusiness.lon) {
             navigateToReport(directBusiness.lat, directBusiness.lon, directBusiness.address);
             return;
@@ -130,6 +155,7 @@ export function AddressSearch() {
 
         const addrMatch = findBusinessByAddress(q, businesses);
         if (addrMatch) {
+          fireSearchPerformed("business", addrMatch.lat, addrMatch.lon);
           if (addrMatch.lat && addrMatch.lon) {
             navigateToReport(addrMatch.lat, addrMatch.lon, addrMatch.address);
             return;
@@ -144,6 +170,7 @@ export function AddressSearch() {
         const nameMatches = findBusinessByName(q, businesses);
         if (nameMatches.length === 1) {
           const match = nameMatches[0];
+          fireSearchPerformed("business", match.lat, match.lon);
           if (match.lat && match.lon) {
             navigateToReport(match.lat, match.lon, match.address);
             return;
@@ -161,6 +188,7 @@ export function AddressSearch() {
             `/api/geocode?address=${encodeURIComponent(q)}`
           );
         } catch {
+          fireSearchPerformed("none");
           setError(
             "Address not found. Try entering a street address in the SSA #50 area."
           );
@@ -168,6 +196,7 @@ export function AddressSearch() {
           return;
         }
         // Navigate to instant report with geocoded coordinates
+        fireSearchPerformed("geocoded", geo.lat, geo.lon);
         navigateToReport(geo.lat, geo.lon, geo.displayName || q);
       } catch {
         setError("Something went wrong. Please try again.");
