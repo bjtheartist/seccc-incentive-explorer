@@ -40,6 +40,11 @@ export const metadata: Metadata = {
   creator: ORGANIZATION_NAME,
   publisher: ORGANIZATION_NAME,
   category: "business",
+  verification: {
+    other: {
+      "msvalidate.01": "F730832AA04F41DF10B829D23F06948F",
+    },
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
