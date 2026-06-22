@@ -17,21 +17,54 @@ import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { SiteTrafficTracker } from "@/components/analytics/SiteTrafficTracker";
 import { Analytics } from "@vercel/analytics/next";
+import {
+  DEFAULT_DESCRIPTION,
+  DEFAULT_KEYWORDS,
+  DEFAULT_TITLE,
+  ORGANIZATION_NAME,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo";
+import { StructuredData } from "./seo-structured-data";
 
 export const metadata: Metadata = {
-  title: "Chicago Site Incentive Map | Discover Business Incentives",
-  description:
-    "Discover which economic incentives your Chicago business may qualify for. Cross-reference mapped incentive layers — TIF districts, Opportunity Zones, Enterprise Zones, and more.",
-  keywords: [
-    "Chicago business incentives",
-    "TIF district",
-    "Opportunity Zone",
-    "Enterprise Zone",
-    "Chicago economic development",
-    "small business grants",
-    "SBIF",
-    "incentive stacking",
-  ],
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_NAME,
+  title: {
+    default: DEFAULT_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: DEFAULT_DESCRIPTION,
+  keywords: DEFAULT_KEYWORDS,
+  authors: [{ name: ORGANIZATION_NAME, url: SITE_URL }],
+  creator: ORGANIZATION_NAME,
+  publisher: ORGANIZATION_NAME,
+  category: "business",
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    images: [
+      {
+        url: "/chicago-map-hero.png",
+        width: 1200,
+        height: 630,
+        alt: "Chicago Incentive Explorer map interface",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: DEFAULT_TITLE,
+    description: DEFAULT_DESCRIPTION,
+    images: ["/chicago-map-hero.png"],
+  },
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -44,6 +77,7 @@ export default function RootLayout({
       <body className="antialiased min-h-screen flex flex-col">
         <AuthProvider>
           <Header />
+          <StructuredData />
           <main className="flex-1">{children}</main>
           <Footer />
           <ServiceWorkerRegistrar />
