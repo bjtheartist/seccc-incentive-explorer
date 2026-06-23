@@ -2,6 +2,8 @@ import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule,
 import type { LocalBusinessSupportContext, LocalBusinessSupportOrganization } from "./local-business-support";
 import type { SiteSignals } from "./site-signals";
 import type { TransportAccess } from "./transport-access";
+import { buildLocationContext, publicParcelContext } from "./location-context";
+import type { LocationContext } from "./location-context";
 import { isClass7aEligible } from "./parcel-classes";
 import { formatMiles } from "./transport-access";
 import { ZONE_LABELS, ZONE_DESCRIPTIONS, describeZoneClass } from "./constants";
@@ -310,6 +312,7 @@ export interface GeneratedReport {
     narrative: string;
   };
   neighborhoodEconomics?: NeighborhoodEconomicContext;
+  locationContext?: LocationContext;
   dataSources?: DataSourceCitation[];
 }
 
@@ -774,6 +777,17 @@ const DATA_SOURCES: Record<string, DataSourceCitation> = {
     label: "Chicago Small Business Resource Map",
     description: "Curated neighborhood-level business support organizations, including NBDC, chamber, SSA, CBC, and CDC/EDO access points.",
   },
+  siteSignals: {
+    id: "siteSignals",
+    label: "Public site-signal layers",
+    description: "Nearby NOF funding precedents, county incentive parcels, brownfield sites, and leaking underground storage tank records.",
+    url: "https://data.cityofchicago.org/",
+  },
+  transport: {
+    id: "transport",
+    label: "Transportation and logistics access layer",
+    description: "Straight-line proximity to expressways, freight rail, and Chicago airports for site-context screening.",
+  },
 };
 
 function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
@@ -786,6 +800,8 @@ function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
   if (ctx.neighborhoodEconomics?.reinvestment) sources.push(DATA_SOURCES.buildingPermits);
   if (ctx.neighborhoodEconomics?.property) sources.push(DATA_SOURCES.assessorValues);
   if (ctx.neighborhoodEconomics?.tifFinance) sources.push(DATA_SOURCES.tifFinance);
+  if (ctx.siteSignals) sources.push(DATA_SOURCES.siteSignals);
+  if (ctx.transport) sources.push(DATA_SOURCES.transport);
   if (ctx.localBusinessSupport?.organizations?.length) {
     const source = { ...DATA_SOURCES.localBusinessSupport };
     const firstUrl = ctx.localBusinessSupport.sourceUrls?.[0];
@@ -2904,6 +2920,7 @@ function buildLogisticsAccessItem(transport: TransportAccess): ReportItem {
       ? `${transport.expressway.name} - ${formatMiles(transport.expressway.miles)}`
       : "Distances loaded",
     detail: detailLines.join("\n"),
+    sourceLabel: "Transportation and logistics access layer",
   };
 }
 
@@ -2939,6 +2956,7 @@ function buildSiteSignalsItem(siteSignals: SiteSignals): ReportItem {
       ...(lines.length > 0 ? lines : ["No nearby NOF funding, county incentive parcel, brownfield, or open tank-leak signal was found within the current proximity thresholds."]),
       "Public-data proximity signals only; verify with DPD, Cook County, IEPA/EPA, or the administering agency before relying on them.",
     ].join("\n"),
+    sourceLabel: "Public site-signal layers",
   };
 }
 
@@ -2980,6 +2998,7 @@ export interface ReportContext {
   neighborhoodEconomics?: NeighborhoodEconomicContext;
   siteSignals?: SiteSignals | null;
   transport?: TransportAccess | null;
+  locationContext?: LocationContext;
 }
 
 /**
@@ -2995,7 +3014,12 @@ export function generateReportData(
   programs: Program[],
   ctx: ReportContext = {},
 ): GeneratedReport {
-  const { zones, zoneNames, census, cityZoning, parcel, districts } = ctx;
+  const locationContext = ctx.locationContext ?? buildLocationContext(state, programs, ctx);
+  ctx = { ...ctx, locationContext };
+  const { zones, zoneNames, census } = ctx;
+  const cityZoning = locationContext.geography.cityZoning?.value ?? ctx.cityZoning;
+  const parcel = locationContext.geography.parcel?.value ?? (ctx.parcel ? publicParcelContext(ctx.parcel) : undefined);
+  const districts = locationContext.geography.districts?.value ?? ctx.districts;
   const reportType = state.reportType || "site-incentives";
 
   let report: GeneratedReport;
@@ -3031,7 +3055,12 @@ export function generateReportData(
       break;
   }
   report.reportType = reportType;
-  if (ctx.neighborhoodEconomics) report.neighborhoodEconomics = ctx.neighborhoodEconomics;
+  report.locationContext = locationContext;
+  if (locationContext.neighborhood.economics?.value) {
+    report.neighborhoodEconomics = locationContext.neighborhood.economics.value;
+  } else if (ctx.neighborhoodEconomics) {
+    report.neighborhoodEconomics = ctx.neighborhoodEconomics;
+  }
 
   // Attach census + zoning data to metadata for address-based reports
   if (reportType !== "program-explorer") {
@@ -3108,12 +3137,14 @@ export function generateReportData(
       }
     }
 
-    if (ctx.transport) {
-      contextItems.push(buildLogisticsAccessItem(ctx.transport));
+    const transport = locationContext.site.transport?.value ?? ctx.transport;
+    if (transport) {
+      contextItems.push(buildLogisticsAccessItem(transport));
     }
 
-    if (ctx.siteSignals) {
-      contextItems.push(buildSiteSignalsItem(ctx.siteSignals));
+    const siteSignals = locationContext.site.siteSignals?.value ?? ctx.siteSignals;
+    if (siteSignals) {
+      contextItems.push(buildSiteSignalsItem(siteSignals));
     }
 
     if (contextItems.length > 0) {

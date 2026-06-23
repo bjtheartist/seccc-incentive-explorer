@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import { Layers, Crosshair } from "lucide-react";
 import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
@@ -21,6 +21,10 @@ import { cachedFetch } from "@/lib/fetch-cache";
 import { getSiteSignals } from "@/lib/site-signals";
 import { getTransportAccess } from "@/lib/transport-access";
 import type { TifFinanceContext } from "@/lib/tif-finance";
+import {
+  buildLocationContext,
+  summarizeLocationContextForMap,
+} from "@/lib/location-context";
 import {
   POINT_ZONE_KEYS, HEAVY_COVERAGE_KEYS,
   COMMUNITY_AREAS_URL, CHICAGO_ZONING_URL, EMPTY_FC, PARCELS_QUERY_BASE,
@@ -71,6 +75,8 @@ export default function MapView() {
   // Enhanced Area Snapshot
   const [snapshotPrograms, setSnapshotPrograms] = useState<ProgramCheckResult[]>([]);
   const [snapshotTifFinance, setSnapshotTifFinance] = useState<TifFinanceContext | null>(null);
+  const [locationZoneNames, setLocationZoneNames] = useState<Record<string, string> | null>(null);
+  const [snapshotParcelData, setSnapshotParcelData] = useState<ParcelData | null>(null);
   const [tifFinanceLoading, setTifFinanceLoading] = useState(false);
   const [lastClickLat, setLastClickLat] = useState<number | null>(null);
   const [lastClickLon, setLastClickLon] = useState<number | null>(null);
@@ -272,6 +278,8 @@ export default function MapView() {
 
         const { zones, zoneNames } = normalized;
         setLocationZones(zones);
+        setLocationZoneNames(zoneNames);
+        setSnapshotParcelData(parcelData ?? null);
         setSnapshotTifFinance(tifFinanceData?.tifFinance ?? null);
         // Compute top 3 programs client-side (with parcel boost)
         if (allPrograms.length > 0) {
@@ -281,6 +289,8 @@ export default function MapView() {
           );
         }
       } catch {
+        setLocationZoneNames(null);
+        setSnapshotParcelData(null);
         setSnapshotTifFinance(null);
       } finally {
         setTifFinanceLoading(false);
@@ -288,6 +298,39 @@ export default function MapView() {
     },
     [allPrograms]
   );
+
+  const snapshotContextSummary = useMemo(() => {
+    if (!locationZones) return null;
+    const locationContext = buildLocationContext(
+      {
+        reportType: "site-incentives",
+        address: snapshotLabel,
+        lat: lastClickLat,
+        lon: lastClickLon,
+      },
+      allPrograms,
+      {
+        zones: locationZones,
+        zoneNames: locationZoneNames ?? undefined,
+        parcel: snapshotParcelData ?? undefined,
+        siteSignals: areaStats.siteSignals ?? undefined,
+        transport: areaStats.transport ?? undefined,
+        tifFinance: snapshotTifFinance ?? undefined,
+      }
+    );
+    return summarizeLocationContextForMap(locationContext);
+  }, [
+    allPrograms,
+    areaStats.siteSignals,
+    areaStats.transport,
+    lastClickLat,
+    lastClickLon,
+    locationZoneNames,
+    locationZones,
+    snapshotLabel,
+    snapshotParcelData,
+    snapshotTifFinance,
+  ]);
   const lastClickRef = useRef(handleMapClick);
   useEffect(() => { lastClickRef.current = handleMapClick; }, [handleMapClick]);
 
@@ -1640,6 +1683,7 @@ export default function MapView() {
           snapshotLabel={snapshotLabel}
           snapshotPrograms={snapshotPrograms}
           snapshotTifFinance={snapshotTifFinance}
+          snapshotContextSummary={snapshotContextSummary}
           tifFinanceLoading={tifFinanceLoading}
           zoningInfo={zoningInfo}
           isGeneratingSnapshot={isGeneratingSnapshot}

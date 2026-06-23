@@ -5,6 +5,7 @@ import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owne
 import type { AreaStats } from "./map-helpers";
 import type { ProgramCheckResult } from "@/lib/types";
 import type { TifFinanceContext } from "@/lib/tif-finance";
+import type { LocationContextMapSummary } from "@/lib/location-context";
 import { formatMiles } from "@/lib/transport-access";
 
 interface MapSnapshotPanelProps {
@@ -12,6 +13,7 @@ interface MapSnapshotPanelProps {
   snapshotLabel: string;
   snapshotPrograms: ProgramCheckResult[];
   snapshotTifFinance: TifFinanceContext | null;
+  snapshotContextSummary?: LocationContextMapSummary | null;
   tifFinanceLoading: boolean;
   zoningInfo: string | null;
   isGeneratingSnapshot: boolean;
@@ -25,6 +27,7 @@ export default function MapSnapshotPanel({
   snapshotLabel,
   snapshotPrograms,
   snapshotTifFinance,
+  snapshotContextSummary,
   tifFinanceLoading,
   zoningInfo,
   isGeneratingSnapshot,
@@ -32,40 +35,44 @@ export default function MapSnapshotPanel({
   onDrawArea,
   onGenerateSnapshot,
 }: MapSnapshotPanelProps) {
+  const contextPrograms = snapshotContextSummary?.programs ?? snapshotPrograms;
+  const contextTifFinance = snapshotContextSummary?.tifFinance ?? snapshotTifFinance;
+  const contextTransport = snapshotContextSummary?.transport ?? areaStats.transport;
+  const contextSiteSignals = snapshotContextSummary?.siteSignals ?? areaStats.siteSignals;
   const tifSection =
-    snapshotTifFinance || tifFinanceLoading ? (
+    contextTifFinance || tifFinanceLoading ? (
       <>
         <div className="mx-4 h-px bg-[#0C1B33]/8" />
         <div className="px-4 py-3">
           <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-1.5">
             TIF Funding Overview
           </div>
-          {tifFinanceLoading && !snapshotTifFinance ? (
+          {tifFinanceLoading && !contextTifFinance ? (
             <div className="text-[10px] text-[#0C1B33]/40 italic">Loading TIF finance context...</div>
-          ) : snapshotTifFinance ? (
+          ) : contextTifFinance ? (
             <div className="space-y-1.5">
               <div className="text-[11px] font-medium text-[#0C1B33]/85 leading-snug">
-                {snapshotTifFinance.districtName}
-                {snapshotTifFinance.reportYear && (
-                  <span className="text-[#0C1B33]/40"> · {snapshotTifFinance.reportYear}</span>
+                {contextTifFinance.districtName}
+                {contextTifFinance.reportYear && (
+                  <span className="text-[#0C1B33]/40"> · {contextTifFinance.reportYear}</span>
                 )}
               </div>
-              {snapshotTifFinance.fundBalance != null && (
+              {contextTifFinance.fundBalance != null && (
                 <div className="flex justify-between gap-3 text-[10px]">
                   <span className="text-[#0C1B33]/50">Reported fund balance</span>
-                  <span className="font-mono-bureau text-[#0C1B33]/85">${snapshotTifFinance.fundBalance.toLocaleString()}</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/85">${contextTifFinance.fundBalance.toLocaleString()}</span>
                 </div>
               )}
-              {snapshotTifFinance.amountDesignatedProjectCosts != null && (
+              {contextTifFinance.amountDesignatedProjectCosts != null && (
                 <div className="flex justify-between gap-3 text-[10px]">
                   <span className="text-[#0C1B33]/50">Project-cost designation</span>
-                  <span className="font-mono-bureau text-[#0C1B33]/85">${snapshotTifFinance.amountDesignatedProjectCosts.toLocaleString()}</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/85">${contextTifFinance.amountDesignatedProjectCosts.toLocaleString()}</span>
                 </div>
               )}
-              {snapshotTifFinance.expirationYear && (
+              {contextTifFinance.expirationYear && (
                 <div className="flex justify-between gap-3 text-[10px]">
                   <span className="text-[#0C1B33]/50">District expiration</span>
-                  <span className="font-mono-bureau text-[#0C1B33]/85">{snapshotTifFinance.expirationYear}</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/85">{contextTifFinance.expirationYear}</span>
                 </div>
               )}
               <p className="text-[9px] text-[#0C1B33]/35 leading-relaxed pt-1">
@@ -110,12 +117,12 @@ export default function MapSnapshotPanel({
       {/* Mobile eligibility glance + primary CTA (search-first / conversion-led) */}
       <div className="md:hidden px-4 pb-3">
         <div className="flex items-center gap-2 mb-2.5">
-          <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-semibold ${snapshotPrograms.length > 0 ? "bg-[#2563EB]/10 text-[#2563EB]" : "bg-[#0C1B33]/5 text-[#0C1B33]/40"}`}>
-            {snapshotPrograms.length > 0 ? "✓" : "—"}
+          <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-semibold ${contextPrograms.length > 0 ? "bg-[#2563EB]/10 text-[#2563EB]" : "bg-[#0C1B33]/5 text-[#0C1B33]/40"}`}>
+            {contextPrograms.length > 0 ? "✓" : "—"}
           </span>
           <span className="text-[13px] text-[#0C1B33]/75 leading-tight">
-            {snapshotPrograms.length > 0
-              ? `${snapshotPrograms.length} incentive program${snapshotPrograms.length !== 1 ? "s" : ""} may apply here`
+            {contextPrograms.length > 0
+              ? `${contextPrograms.length} incentive program${contextPrograms.length !== 1 ? "s" : ""} may apply here`
               : "Checking incentive eligibility…"}
           </span>
         </div>
@@ -182,7 +189,7 @@ export default function MapSnapshotPanel({
       </div>
 
       {/* Logistics access */}
-      {areaStats.transport && (
+      {contextTransport && (
         <>
           <div className="mx-4 h-px bg-[#0C1B33]/8" />
           <div className="px-4 py-3">
@@ -190,32 +197,32 @@ export default function MapSnapshotPanel({
               Logistics Access
             </div>
             <div className="space-y-1">
-              {areaStats.transport.expressway && (
+              {contextTransport.expressway && (
                 <div className="flex justify-between items-baseline gap-2 text-[10px]">
-                  <span className="text-[#0C1B33]/50 truncate">{areaStats.transport.expressway.name}</span>
+                  <span className="text-[#0C1B33]/50 truncate">{contextTransport.expressway.name}</span>
                   <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">
-                    {formatMiles(areaStats.transport.expressway.miles)}
+                    {formatMiles(contextTransport.expressway.miles)}
                   </span>
                 </div>
               )}
-              {areaStats.transport.rail && (
+              {contextTransport.rail && (
                 <div className="flex justify-between items-baseline gap-2 text-[10px]">
-                  <span className="text-[#0C1B33]/50 truncate">Freight rail ({areaStats.transport.rail.name})</span>
+                  <span className="text-[#0C1B33]/50 truncate">Freight rail ({contextTransport.rail.name})</span>
                   <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">
-                    {formatMiles(areaStats.transport.rail.miles)}
+                    {formatMiles(contextTransport.rail.miles)}
                   </span>
                 </div>
               )}
               <div className="flex justify-between items-baseline gap-2 text-[10px]">
                 <span className="text-[#0C1B33]/50">Midway Airport</span>
                 <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">
-                  {formatMiles(areaStats.transport.midwayMiles)}
+                  {formatMiles(contextTransport.midwayMiles)}
                 </span>
               </div>
               <div className="flex justify-between items-baseline gap-2 text-[10px]">
                 <span className="text-[#0C1B33]/50">O&apos;Hare Airport</span>
                 <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">
-                  {formatMiles(areaStats.transport.ohareMiles)}
+                  {formatMiles(contextTransport.ohareMiles)}
                 </span>
               </div>
             </div>
@@ -227,7 +234,7 @@ export default function MapSnapshotPanel({
       )}
 
       {/* Site signals */}
-      {areaStats.siteSignals && (
+      {contextSiteSignals && (
         <>
           <div className="mx-4 h-px bg-[#0C1B33]/8" />
           <div className="px-4 py-3">
@@ -235,34 +242,34 @@ export default function MapSnapshotPanel({
               Site Signals
             </div>
             <div className="space-y-1">
-              {areaStats.siteSignals.nofAwardsNearby > 0 && (
+              {contextSiteSignals.nofAwardsNearby > 0 && (
                 <div className="flex justify-between items-baseline gap-2 text-[10px]">
                   <span className="text-[#0C1B33]/50">NOF grants funded within 1/2 mi</span>
-                  <span className="font-mono-bureau text-[#047857] font-medium shrink-0">{areaStats.siteSignals.nofAwardsNearby}</span>
+                  <span className="font-mono-bureau text-[#047857] font-medium shrink-0">{contextSiteSignals.nofAwardsNearby}</span>
                 </div>
               )}
-              {areaStats.siteSignals.incentiveParcelsNearby > 0 && (
+              {contextSiteSignals.incentiveParcelsNearby > 0 && (
                 <div className="flex justify-between items-baseline gap-2 text-[10px]">
                   <span className="text-[#0C1B33]/50">County incentive parcels within 1/4 mi</span>
-                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{areaStats.siteSignals.incentiveParcelsNearby}</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{contextSiteSignals.incentiveParcelsNearby}</span>
                 </div>
               )}
-              {areaStats.siteSignals.brownfield && areaStats.siteSignals.brownfield.miles < 0.5 && (
+              {contextSiteSignals.brownfield && contextSiteSignals.brownfield.miles < 0.5 && (
                 <div className="flex justify-between items-baseline gap-2 text-[10px]">
-                  <span className="text-[#0C1B33]/50 truncate">Brownfield site ({areaStats.siteSignals.brownfield.name})</span>
-                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{formatMiles(areaStats.siteSignals.brownfield.miles)}</span>
+                  <span className="text-[#0C1B33]/50 truncate">Brownfield site ({contextSiteSignals.brownfield.name})</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{formatMiles(contextSiteSignals.brownfield.miles)}</span>
                 </div>
               )}
-              {areaStats.siteSignals.openLustNearby > 0 && (
+              {contextSiteSignals.openLustNearby > 0 && (
                 <div className="flex justify-between items-baseline gap-2 text-[10px]">
                   <span className="text-[#0C1B33]/50">Open tank-leak incidents within 1/4 mi</span>
-                  <span className="font-mono-bureau text-[#B91C1C] font-medium shrink-0">{areaStats.siteSignals.openLustNearby}</span>
+                  <span className="font-mono-bureau text-[#B91C1C] font-medium shrink-0">{contextSiteSignals.openLustNearby}</span>
                 </div>
               )}
-              {areaStats.siteSignals.nofAwardsNearby === 0 &&
-                areaStats.siteSignals.incentiveParcelsNearby === 0 &&
-                areaStats.siteSignals.openLustNearby === 0 &&
-                (!areaStats.siteSignals.brownfield || areaStats.siteSignals.brownfield.miles >= 0.5) && (
+              {contextSiteSignals.nofAwardsNearby === 0 &&
+                contextSiteSignals.incentiveParcelsNearby === 0 &&
+                contextSiteSignals.openLustNearby === 0 &&
+                (!contextSiteSignals.brownfield || contextSiteSignals.brownfield.miles >= 0.5) && (
                   <div className="text-[10px] text-[#0C1B33]/40 italic">No nearby signals</div>
                 )}
             </div>
@@ -437,7 +444,7 @@ export default function MapSnapshotPanel({
       )}
 
       {/* Top 3 Programs Here */}
-      {snapshotPrograms.length > 0 && (
+      {contextPrograms.length > 0 && (
         <>
           <div className="mx-4 h-px bg-[#0C1B33]/8" />
           <div className="px-4 pt-3 pb-2">
@@ -445,7 +452,7 @@ export default function MapSnapshotPanel({
               Top Programs Here
             </div>
             <div className="space-y-1.5">
-              {snapshotPrograms.map((r) => (
+              {contextPrograms.map((r) => (
                 <div key={r.programId}>
                   <div className="text-[10px] text-[#0C1B33]/70 leading-snug">
                     {r.program.name}
