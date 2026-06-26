@@ -182,7 +182,7 @@ export function AddressSearch() {
     <div className="w-full max-w-[600px] mx-auto">
       {/* Search Form */}
       <div className="relative">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-black/40 backdrop-blur-2xl border border-white/20 rounded-2xl px-4 sm:px-5 py-3 sm:py-1.5 focus-within:border-[#2563EB]/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] transition-all">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-black/60 sm:bg-black/40 backdrop-blur-2xl border border-white/25 sm:border-white/20 rounded-2xl px-4 sm:px-5 py-3 sm:py-1.5 focus-within:border-[#2563EB]/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] transition-all">
           <div className="flex min-w-0 flex-1 items-center gap-3 w-full">
             <Search className="w-[18px] h-[18px] text-white/40 shrink-0" />
             <input
@@ -191,15 +191,16 @@ export function AddressSearch() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-              className="flex-1 min-w-0 h-12 bg-transparent text-white text-[15px] placeholder:text-white/30 focus:outline-none font-[inherit]"
+              className="flex-1 min-w-0 h-12 bg-transparent text-white text-[15px] placeholder:text-white/45 sm:placeholder:text-white/30 focus:outline-none font-[inherit]"
             />
           </div>
           <button
             onClick={() => handleLookup()}
             disabled={loading || !query.trim()}
-            className="h-10 w-full sm:w-auto px-4 sm:px-5 bg-[#2563EB] text-white font-mono-bureau text-[11px] leading-tight tracking-[0.1em] uppercase rounded-xl hover:bg-[#1d4ed8] disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
+            className="min-h-10 w-full sm:w-auto px-4 sm:px-5 py-3 sm:py-0 bg-[#2563EB] text-white font-mono-bureau text-[10px] sm:text-[11px] leading-tight tracking-[0.08em] sm:tracking-[0.1em] uppercase rounded-xl hover:bg-[#1d4ed8] disabled:opacity-45 sm:disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0 whitespace-normal"
           >
-            Generate Free Location Snapshot
+            <span className="sm:hidden">Generate Snapshot</span>
+            <span className="hidden sm:inline">Generate Free Location Snapshot</span>
           </button>
         </div>
 
