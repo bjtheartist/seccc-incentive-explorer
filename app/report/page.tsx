@@ -187,6 +187,44 @@ function reportAnalyticsPayload(
   };
 }
 
+const ALLOWED_REPORT_SOURCES = new Set([
+  "homepage",
+  "seo_cta",
+  "start_page",
+  "map",
+  "neighborhood_page",
+  "chrome_extension",
+  "chrome-extension",
+]);
+
+function cleanReportSource(value: string | null): string | null {
+  if (!value) return null;
+  const cleaned = value.toLowerCase().trim().slice(0, 80);
+  return ALLOWED_REPORT_SOURCES.has(cleaned) ? cleaned.replace(/-/g, "_") : null;
+}
+
+function supportOrganizationCount(report: GeneratedReport) {
+  const supportSection = report.sections?.find(
+    (section) => section.title === "Your Support Network",
+  );
+  if (!supportSection) return 0;
+  return supportSection.items.filter((item) => item.label !== "Community Support").length;
+}
+
+function generatedReportEventType(
+  report: GeneratedReport,
+  isInstantMode: boolean,
+  hasRefinedInstantReport: boolean,
+) {
+  if (report.reportType === "dev-feasibility" || report.reportType === "best-location") {
+    return "vacancy_report_generated" as const;
+  }
+  if (isInstantMode && !hasRefinedInstantReport) {
+    return "location_snapshot_generated" as const;
+  }
+  return "refined_report_generated" as const;
+}
+
 function zoneMatchesToText(value: unknown): string {
   if (!Array.isArray(value)) return "";
   return value
@@ -486,6 +524,8 @@ function ReportWizardPage() {
   const instantLon = searchParams.get("lon") ? parseFloat(searchParams.get("lon")!) : null;
   const urlAddress = searchParams.get("addr") || "";
   const instantAddr = urlAddress;
+  // Landing page that launched this snapshot (set by AddressSearch / SEO CTAs).
+  const instantSrc = searchParams.get("src") || "";
   const corridorParam = searchParams.get("corridor") || "";
   const corridorPreviewKey = searchParams.get("preview") || "";
   const isCorridorPreview = corridorPreviewKey === "corridor-poc";
@@ -498,6 +538,12 @@ function ReportWizardPage() {
       ? null
       : urlWizardState;
   const isShareMode = !!shareWizardState?.reportType && !isInstantMode;
+  const reportSource = useMemo(() => {
+    return (
+      cleanReportSource(searchParams.get("source")) ||
+      (isInstantMode ? "instant_report" : isShareMode ? "shared_report" : "report_wizard")
+    );
+  }, [isInstantMode, isShareMode, searchParams]);
 
   // Wizard state
   const [wizardState, setWizardState] = useState<WizardState>(() => {
@@ -537,6 +583,7 @@ function ReportWizardPage() {
   const [report, setReport] = useState<GeneratedReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasRefinedInstantReport, setHasRefinedInstantReport] = useState(false);
+  const generatedReportEventKeyRef = useRef<string | null>(null);
 
   // Comparison state
   const [compareMode, setCompareMode] = useState(false);
@@ -589,6 +636,31 @@ function ReportWizardPage() {
 
   // Instant mode state
   const [instantLoading, setInstantLoading] = useState(isInstantMode);
+  // Guards location_snapshot_generated against duplicate fires on re-render,
+  // keyed to the lat/lon of the snapshot that was successfully generated.
+  const instantSnapshotFiredKeyRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!report) return;
+    const eventType = generatedReportEventType(
+      report,
+      isInstantMode,
+      hasRefinedInstantReport,
+    );
+    const reportEventKey = `${analyticsReportKey(report)}|${eventType}|${reportSource}`;
+    if (generatedReportEventKeyRef.current === reportEventKey) return;
+    generatedReportEventKeyRef.current = reportEventKey;
+
+    trackEvent(
+      eventType,
+      reportAnalyticsPayload(report, reportSource, {
+        entrySource: reportSource,
+        isInstantMode,
+        hasProjectDetails: !isInstantMode || hasRefinedInstantReport,
+        supportOrganizationsSurfaced: supportOrganizationCount(report),
+      }),
+    );
+  }, [hasRefinedInstantReport, isInstantMode, report, reportSource]);
 
   // ZIP parsed from address/parcel/geocode strings.
   const stringZip = useMemo(
@@ -906,6 +978,21 @@ function ReportWizardPage() {
           transport: transportAccess ?? undefined,
         });
         setReport(generated);
+
+        // Funnel completion: the instant snapshot has successfully resolved and
+        // is about to render. Fire once per location, attributing it back to the
+        // landing page that launched the search (the `src` URL param).
+        const snapshotKey = `${wizardState.lat}|${wizardState.lon}`;
+        if (instantSnapshotFiredKeyRef.current !== snapshotKey) {
+          instantSnapshotFiredKeyRef.current = snapshotKey;
+          trackEvent("location_snapshot_generated", {
+            source: "instant",
+            address: wizardState.address || instantAddr || null,
+            lat: wizardState.lat,
+            lon: wizardState.lon,
+            metadata: { landing_page: instantSrc || null },
+          });
+        }
       } catch {
         // Stay on loading
       } finally {
@@ -914,7 +1001,7 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
+  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, instantAddr, instantSrc]);
 
   // Corridor URL mode: auto-generate a corridor report after the metric lookup completes.
   const [corridorAutoGenerated, setCorridorAutoGenerated] = useState(false);
@@ -3509,6 +3596,11 @@ function ReportDisplay({
       [],
     [supportSection]
   );
+  const supportCtaItem = useMemo(
+    () => supportItems.find((item) => item.sourceUrl || item.url) ?? null,
+    [supportItems],
+  );
+  const supportCtaUrl = supportCtaItem?.sourceUrl || supportCtaItem?.url;
 
   useEffect(() => {
     if (!supportSection || supportItems.length === 0) return;
@@ -3553,6 +3645,20 @@ function ReportDisplay({
     [report]
   );
 
+  const trackSupportCtaClick = useCallback(
+    (item: ReportItem) => {
+      trackEvent(
+        "support_resource_clicked",
+        reportAnalyticsPayload(report, "report_support_cta", {
+          organizationName: item.label,
+          organizationType: item.value || "local_support",
+          contactMethod: "website",
+        }),
+      );
+    },
+    [report],
+  );
+
   const [downloadGateOpen, setDownloadGateOpen] = useState(false);
 
   const handlePrint = () => {
@@ -3561,6 +3667,10 @@ function ReportDisplay({
 
   const handleDownloadAfterCapture = () => {
     generateReportPdf(report);
+    trackEvent(
+      "report_pdf_downloaded",
+      reportAnalyticsPayload(report, "report_pdf_download"),
+    );
     setDownloadGateOpen(false);
   };
 
@@ -4136,6 +4246,49 @@ function ReportDisplay({
               </div>
             )}
           </div>
+
+          {supportItems.length > 0 && !compact && (
+            <div className="px-5 sm:px-12 md:px-16 py-5 border-b border-[#0C1B33]/8 bg-[#FAF9F6]">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="min-w-0">
+                  <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/60 mb-1.5">
+                    Local Support Partners
+                  </div>
+                  <h2 className="font-editorial text-[22px] text-[#0C1B33] leading-snug">
+                    {supportItems.length} organization{supportItems.length === 1 ? "" : "s"} surfaced for this location
+                  </h2>
+                  <p className="text-[#0C1B33]/45 text-[13px] leading-relaxed mt-1.5 max-w-2xl">
+                    Use these as a starting point for interpreting programs, preparing questions, or finding the right local support path.
+                  </p>
+                  <p className="font-mono-bureau text-[9px] tracking-[0.08em] text-[#0C1B33]/30 mt-2 truncate">
+                    {supportItems.slice(0, 3).map((item) => item.label).join(" · ")}
+                    {supportItems.length > 3 ? " · more below" : ""}
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row gap-2 md:justify-end">
+                  {supportCtaItem && supportCtaUrl && (
+                    <a
+                      href={supportCtaUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackSupportCtaClick(supportCtaItem)}
+                      className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[9px] tracking-[0.14em] uppercase px-4 py-3 hover:bg-[#0C1B33]/80 transition-colors"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" />
+                      Start with {supportCtaItem.label}
+                    </a>
+                  )}
+                  <a
+                    href="#your-support-network"
+                    className="inline-flex items-center justify-center gap-2 border border-[#0C1B33]/12 bg-white text-[#0C1B33]/55 font-mono-bureau text-[9px] tracking-[0.14em] uppercase px-4 py-3 hover:border-[#0C1B33]/25 hover:text-[#0C1B33] transition-colors"
+                  >
+                    See All Partners
+                    <ArrowRight className="w-3.5 h-3.5" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* ── Table of Contents ── */}
           {tocEntries.length > 0 && (

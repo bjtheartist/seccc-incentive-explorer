@@ -14,6 +14,7 @@ import {
   buildTrailJsonLd,
 } from "@/lib/seo";
 import { ZONE_LABELS } from "@/lib/constants";
+import { getProgramSeoOverride } from "@/lib/program-seo-overrides";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SnapshotCTA } from "@/components/seo/SnapshotCTA";
 import LevelBadge from "@/components/LevelBadge";
@@ -49,9 +50,12 @@ export async function generateMetadata({
     };
   }
 
+  const override = getProgramSeoOverride(program.id);
   return pageMetadata({
-    title: `${program.name} Chicago: Eligibility, Areas & Address Lookup`,
-    description: metaDescription(program.summary),
+    title:
+      override?.title ??
+      `${program.name} Chicago: Eligibility, Areas & Address Lookup`,
+    description: override?.description ?? metaDescription(program.summary),
     path: `/programs/${slug}`,
   });
 }
