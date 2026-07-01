@@ -51,7 +51,11 @@ const LOADING_MESSAGES = [
   "Pulling data from 6 government databases at once...",
 ];
 
-export function AddressSearch() {
+export function AddressSearch({
+  source = "address_search",
+}: {
+  source?: string;
+}) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
@@ -93,7 +97,7 @@ export function AddressSearch() {
     setSuggestions(nameMatches);
   }, [query, businesses]);
 
-  /** Navigate to instant report with lat/lon/addr, tagging the landing page for attribution */
+  /** Navigate to instant report with lat/lon/addr and attribution context */
   const navigateToReport = useCallback(
     (lat: number, lon: number, addr: string) => {
       const params = new URLSearchParams();
@@ -105,9 +109,10 @@ export function AddressSearch() {
       const landingPage =
         typeof window !== "undefined" ? window.location.pathname : "";
       if (landingPage) params.set("src", landingPage);
+      if (source) params.set("source", source);
       router.push(`/report?${params.toString()}`);
     },
-    [router]
+    [router, source]
   );
 
   const handleLookup = useCallback(
@@ -119,6 +124,10 @@ export function AddressSearch() {
       setError("");
       setResult(null);
       setSuggestions([]);
+      trackEvent("location_snapshot_requested", {
+        source,
+        address: q.trim() || directBusiness?.address || null,
+      });
 
       // Fire the funnel's entry event for this search action (not per keystroke).
       const fireSearchPerformed = (
@@ -128,13 +137,14 @@ export function AddressSearch() {
       ) => {
         trackEvent("search_performed", {
           address: directBusiness?.name ?? q,
-          source: "address_search",
+          source,
           lat: lat ?? null,
           lon: lon ?? null,
           metadata: {
             landing_page:
               typeof window !== "undefined" ? window.location.pathname : "",
             result_kind: resultKind,
+            queryType: directBusiness ? "business_suggestion" : "address_or_business",
           },
         });
       };
@@ -204,7 +214,7 @@ export function AddressSearch() {
         setLoading(false);
       }
     },
-    [query, businesses, navigateToReport]
+    [query, businesses, navigateToReport, source]
   );
 
   return (

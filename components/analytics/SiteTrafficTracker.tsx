@@ -27,6 +27,7 @@ function getSessionId() {
 
 function pageLabel(pathname: string) {
   if (pathname === "/") return "Home";
+  if (pathname.startsWith("/start")) return "Start Page";
   if (pathname.startsWith("/map")) return "Explorer Map";
   if (pathname.startsWith("/report")) return "Report Flow";
   if (pathname.startsWith("/programs")) return "Programs";
