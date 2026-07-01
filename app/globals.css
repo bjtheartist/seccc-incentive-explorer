@@ -207,6 +207,19 @@
   /* Marker class for print targeting — no runtime styles */
 }
 
+/* Progressive disclosure: collapsed report sections hide everything except
+   the header row. Content stays in the DOM so #anchors keep working, and
+   print reveals it all (a printed report is always complete). */
+.report-section-collapsed > *:not(.section-head) {
+  display: none;
+}
+
+@media print {
+  .report-section-collapsed > *:not(.section-head) {
+    display: revert !important;
+  }
+}
+
 /* Cheat-sheet print mode: when body has `.printing-cheat-sheet` class
    (set by the Print button on /programs), hide everything except #cheat-sheet. */
 @media print {

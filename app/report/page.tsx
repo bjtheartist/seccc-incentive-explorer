@@ -2651,6 +2651,66 @@ function VerdictCard({ verdict }: { verdict: NonNullable<GeneratedReport["verdic
   );
 }
 
+/**
+ * Compact "who can help" strip under the verdict — elevates the support
+ * network (normally buried mid-report) to the top of the page. Clicks run
+ * through the same support_resource_clicked tracking as the full section.
+ */
+function VerdictPartnerStrip({
+  items,
+  onPartnerClick,
+}: {
+  items: ReportItem[];
+  onPartnerClick: (item: ReportItem) => void;
+}) {
+  if (items.length === 0) return null;
+  const top = items.slice(0, 3);
+
+  return (
+    <div className="mb-12 border border-[#0C1B33]/10 bg-[#EFF3FB]/70 px-5 py-4 print:hidden">
+      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+        <span className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]">
+          Who can help nearby
+        </span>
+        <span className="text-[12px] text-[#0C1B33]/50">
+          {items.length} local support partner{items.length !== 1 ? "s" : ""}{" "}
+          surfaced for this location
+        </span>
+        <a
+          href="#your-support-network"
+          className="ml-auto font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/45 hover:text-[#2563EB] transition-colors"
+        >
+          See all ↓
+        </a>
+      </div>
+      <div className="flex flex-wrap gap-2 mt-3">
+        {top.map((item) =>
+          item.url ? (
+            <a
+              key={item.label}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => onPartnerClick(item)}
+              className="inline-flex items-center gap-1.5 bg-white border border-[#0C1B33]/12 px-3 py-1.5 text-[12px] text-[#0C1B33]/75 hover:border-[#2563EB] hover:text-[#2563EB] transition-colors"
+            >
+              {item.label}
+              <ExternalLink className="w-3 h-3 opacity-40" />
+            </a>
+          ) : (
+            <span
+              key={item.label}
+              className="inline-flex items-center bg-white border border-[#0C1B33]/12 px-3 py-1.5 text-[12px] text-[#0C1B33]/70"
+            >
+              {item.label}
+            </span>
+          ),
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Executive Summary Component ─────────────────────────────────────
 
 function ExecutiveSummarySection({
@@ -3503,6 +3563,34 @@ function ReportDisplay({
     () => report.sections?.find((section) => section.title === "Your Support Network") ?? null,
     [report.sections]
   );
+
+  /* ── Progressive disclosure: long-tail sections collapse by default.
+        Open: the first two sections plus the primary-story sections.
+        Content stays in the DOM (CSS-hidden) so print and #anchors work. ── */
+  const ALWAYS_OPEN_SECTIONS = useMemo(
+    () => new Set(["Eligible Incentive Programs", "Your Support Network"]),
+    []
+  );
+  const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
+  const isSectionOpen = useCallback(
+    (idx: number, title: string) =>
+      expandedSections[idx] ?? (idx < 2 || ALWAYS_OPEN_SECTIONS.has(title)),
+    [expandedSections, ALWAYS_OPEN_SECTIONS]
+  );
+  useEffect(() => {
+    // Auto-expand a collapsed section when a TOC/anchor link targets it.
+    const openFromHash = () => {
+      const hash = window.location.hash.replace(/^#/, "");
+      if (!hash || !report.sections) return;
+      const idx = report.sections.findIndex(
+        (s) => sectionToAnchor(s.title) === hash
+      );
+      if (idx >= 0) setExpandedSections((prev) => ({ ...prev, [idx]: true }));
+    };
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, [report.sections]);
   const supportItems = useMemo(
     () =>
       supportSection?.items.filter((item) => item.label !== "Community Support") ??
@@ -4245,6 +4333,16 @@ function ReportDisplay({
               </div>
             )}
 
+            {/* ── Who can help — support network elevated to the top ── */}
+            {supportSection && supportItems.length > 0 && (
+              <VerdictPartnerStrip
+                items={supportItems}
+                onPartnerClick={(item) =>
+                  trackSectionLinkClick(supportSection, item)
+                }
+              />
+            )}
+
             {/* ── Executive Summary from Confidence Engine ── */}
             {report.executiveSummary && (
               <div id="executive-summary">
@@ -4263,16 +4361,37 @@ function ReportDisplay({
               report.sections.map((section, sectionIdx) => {
                 const sectionNumber = String(sectionIdx + sectionOffset + 1).padStart(2, "0");
 
+                const sectionOpen = isSectionOpen(sectionIdx, section.title);
+
                 return (
-                  <div key={sectionIdx} id={sectionToAnchor(section.title)} className="report-section mb-14">
-                    <div className="flex items-baseline gap-4 mb-4">
+                  <div
+                    key={sectionIdx}
+                    id={sectionToAnchor(section.title)}
+                    className={`report-section ${sectionOpen ? "mb-14" : "report-section-collapsed mb-6"}`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setExpandedSections((prev) => ({
+                          ...prev,
+                          [sectionIdx]: !sectionOpen,
+                        }))
+                      }
+                      aria-expanded={sectionOpen}
+                      className="section-head group flex w-full items-baseline gap-4 mb-4 text-left cursor-pointer print:cursor-auto"
+                    >
                       <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
                         {sectionNumber}
                       </span>
                       <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]">
                         {section.title}
                       </h2>
-                    </div>
+                      <span className="ml-auto font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/30 group-hover:text-[#2563EB] transition-colors print:hidden">
+                        {sectionOpen
+                          ? "Collapse"
+                          : `Expand${section.items?.length ? ` · ${section.items.length}` : ""}`}
+                      </span>
+                    </button>
                     <hr className="border-[#0C1B33]/8 mb-5" />
 	                    {section.description && (
 	                      <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed mb-6 max-w-prose">
