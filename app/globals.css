@@ -193,6 +193,43 @@
   100% { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Homepage: program ticker (marquee) ────────────────────── */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  animation: ticker-scroll 120s linear infinite;
+  will-change: transform;
+}
+
+/* Soft fade at the ticker's edges */
+.ticker-mask {
+  mask-image: linear-gradient(90deg, transparent, black 4%, black 96%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 4%, black 96%, transparent);
+}
+
+/* ── Homepage: slow drift on the hero map ───────────────────── */
+@keyframes hero-drift {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.06) translateY(-1.5%); }
+}
+
+.animate-hero-drift {
+  animation: hero-drift 40s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+/* Respect reduced-motion: freeze decorative animation */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track,
+  .animate-hero-drift,
+  .bureau-pulse {
+    animation: none !important;
+  }
+}
+
 /* Selection color */
 ::selection {
   background: rgba(37, 99, 235, 0.15);
