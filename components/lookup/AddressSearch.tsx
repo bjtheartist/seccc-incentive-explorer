@@ -97,7 +97,7 @@ export function AddressSearch({
     setSuggestions(nameMatches);
   }, [query, businesses]);
 
-  /** Navigate to instant report with lat/lon/addr */
+  /** Navigate to instant report with lat/lon/addr and attribution context */
   const navigateToReport = useCallback(
     (lat: number, lon: number, addr: string) => {
       const params = new URLSearchParams();
@@ -105,6 +105,10 @@ export function AddressSearch({
       params.set("lat", lat.toFixed(5));
       params.set("lon", lon.toFixed(5));
       if (addr) params.set("addr", addr);
+      // Attribute the generated snapshot back to the landing page it was launched from.
+      const landingPage =
+        typeof window !== "undefined" ? window.location.pathname : "";
+      if (landingPage) params.set("src", landingPage);
       if (source) params.set("source", source);
       router.push(`/report?${params.toString()}`);
     },
@@ -120,20 +124,34 @@ export function AddressSearch({
       setError("");
       setResult(null);
       setSuggestions([]);
-      trackEvent("search_performed", {
-        source,
-        address: q.trim() || directBusiness?.address || null,
-        metadata: {
-          queryType: directBusiness ? "business_suggestion" : "address_or_business",
-        },
-      });
       trackEvent("location_snapshot_requested", {
         source,
         address: q.trim() || directBusiness?.address || null,
       });
 
+      // Fire the funnel's entry event for this search action (not per keystroke).
+      const fireSearchPerformed = (
+        resultKind: "business" | "geocoded" | "none",
+        lat?: number | null,
+        lon?: number | null
+      ) => {
+        trackEvent("search_performed", {
+          address: directBusiness?.name ?? q,
+          source,
+          lat: lat ?? null,
+          lon: lon ?? null,
+          metadata: {
+            landing_page:
+              typeof window !== "undefined" ? window.location.pathname : "",
+            result_kind: resultKind,
+            queryType: directBusiness ? "business_suggestion" : "address_or_business",
+          },
+        });
+      };
+
       try {
         if (directBusiness) {
+          fireSearchPerformed("business", directBusiness.lat, directBusiness.lon);
           if (directBusiness.lat && directBusiness.lon) {
             navigateToReport(directBusiness.lat, directBusiness.lon, directBusiness.address);
             return;
@@ -147,6 +165,7 @@ export function AddressSearch({
 
         const addrMatch = findBusinessByAddress(q, businesses);
         if (addrMatch) {
+          fireSearchPerformed("business", addrMatch.lat, addrMatch.lon);
           if (addrMatch.lat && addrMatch.lon) {
             navigateToReport(addrMatch.lat, addrMatch.lon, addrMatch.address);
             return;
@@ -161,6 +180,7 @@ export function AddressSearch({
         const nameMatches = findBusinessByName(q, businesses);
         if (nameMatches.length === 1) {
           const match = nameMatches[0];
+          fireSearchPerformed("business", match.lat, match.lon);
           if (match.lat && match.lon) {
             navigateToReport(match.lat, match.lon, match.address);
             return;
@@ -178,6 +198,7 @@ export function AddressSearch({
             `/api/geocode?address=${encodeURIComponent(q)}`
           );
         } catch {
+          fireSearchPerformed("none");
           setError(
             "Address not found. Try entering a street address in the SSA #50 area."
           );
@@ -185,6 +206,7 @@ export function AddressSearch({
           return;
         }
         // Navigate to instant report with geocoded coordinates
+        fireSearchPerformed("geocoded", geo.lat, geo.lon);
         navigateToReport(geo.lat, geo.lon, geo.displayName || q);
       } catch {
         setError("Something went wrong. Please try again.");
@@ -199,7 +221,7 @@ export function AddressSearch({
     <div className="w-full max-w-[600px] mx-auto">
       {/* Search Form */}
       <div className="relative">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-black/40 backdrop-blur-2xl border border-white/20 rounded-2xl px-4 sm:px-5 py-3 sm:py-1.5 focus-within:border-[#2563EB]/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] transition-all">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-black/60 sm:bg-black/40 backdrop-blur-2xl border border-white/25 sm:border-white/20 rounded-2xl px-4 sm:px-5 py-3 sm:py-1.5 focus-within:border-[#2563EB]/50 focus-within:shadow-[0_0_0_3px_rgba(37,99,235,0.15)] transition-all">
           <div className="flex min-w-0 flex-1 items-center gap-3 w-full">
             <Search className="w-[18px] h-[18px] text-white/40 shrink-0" />
             <input
@@ -208,15 +230,16 @@ export function AddressSearch({
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleLookup()}
-              className="flex-1 min-w-0 h-12 bg-transparent text-white text-[15px] placeholder:text-white/30 focus:outline-none font-[inherit]"
+              className="flex-1 min-w-0 h-12 bg-transparent text-white text-[15px] placeholder:text-white/45 sm:placeholder:text-white/30 focus:outline-none font-[inherit]"
             />
           </div>
           <button
             onClick={() => handleLookup()}
             disabled={loading || !query.trim()}
-            className="h-10 w-full sm:w-auto px-4 sm:px-5 bg-[#2563EB] text-white font-mono-bureau text-[11px] leading-tight tracking-[0.1em] uppercase rounded-xl hover:bg-[#1d4ed8] disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0"
+            className="min-h-10 w-full sm:w-auto px-4 sm:px-5 py-3 sm:py-0 bg-[#2563EB] text-white font-mono-bureau text-[10px] sm:text-[11px] leading-tight tracking-[0.08em] sm:tracking-[0.1em] uppercase rounded-xl hover:bg-[#1d4ed8] disabled:opacity-45 sm:disabled:opacity-30 disabled:cursor-not-allowed transition-all shrink-0 whitespace-normal"
           >
-            Generate Free Location Snapshot
+            <span className="sm:hidden">Generate Snapshot</span>
+            <span className="hidden sm:inline">Generate Free Location Snapshot</span>
           </button>
         </div>
 

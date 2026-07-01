@@ -16,7 +16,6 @@ export const ANALYTICS_EVENT_TYPES = [
   "support_resource_clicked",
   "program_link_clicked",
   "share_link_copied",
-  "start_page_viewed",
   "demo_address_clicked",
 ] as const;
 

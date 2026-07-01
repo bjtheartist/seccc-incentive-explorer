@@ -8,7 +8,7 @@ export function HomePageClient() {
   return (
     <div>
       {/* Hero - Full-width map with floating search */}
-      <section className="relative min-h-[calc(100vh-3.5rem)] md:min-h-screen flex flex-col justify-end overflow-hidden bg-[#0C1B33]">
+      <section className="relative min-h-[calc(100svh-3.5rem)] md:min-h-screen flex flex-col justify-center md:justify-end overflow-hidden bg-[#0C1B33] py-10 md:py-0">
         <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: "url('/chicago-map-hero.png')" }}
@@ -21,7 +21,7 @@ export function HomePageClient() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          className="absolute top-24 left-1/2 -translate-x-1/2 z-10"
+          className="absolute top-24 left-1/2 z-10 hidden -translate-x-1/2 sm:block"
         >
           <div className="inline-flex items-center gap-2.5 px-5 py-2.5 bg-black/30 backdrop-blur-xl border border-white/10 rounded-full">
             <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -32,14 +32,18 @@ export function HomePageClient() {
         </motion.div>
 
         {/* Bottom content */}
-        <div className="relative z-10 w-full max-w-[800px] mx-auto px-6 pb-20 text-center">
+        <div className="relative z-10 w-full max-w-[800px] mx-auto px-4 pb-4 pt-6 text-center sm:px-6 sm:pb-12 sm:pt-12 md:pb-20 md:pt-0">
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 1, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-            className="font-editorial text-5xl md:text-6xl lg:text-7xl font-normal text-white leading-[1] mb-4"
+            className="font-editorial text-[2.45rem] sm:text-5xl md:text-6xl lg:text-7xl font-normal text-white leading-[0.96] sm:leading-[1] mb-3 sm:mb-4 break-words"
           >
-            <span className="sm:hidden">Chicago Incentives</span>
+            <span className="sm:hidden">
+              Chicago
+              <br />
+              Incentives
+            </span>
             <span className="hidden sm:inline">Find Chicago Incentives</span>
             <br />
             <span className="text-[#2563EB]">by Address</span>
@@ -49,7 +53,7 @@ export function HomePageClient() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.5 }}
-            className="text-white/45 text-[15px] max-w-[560px] mx-auto mb-8 leading-relaxed"
+            className="text-white/55 text-[13px] sm:text-[15px] max-w-[560px] mx-auto mb-4 sm:mb-8 leading-relaxed"
           >
             Enter a Chicago address to generate a free location snapshot from
             public data, including TIF, NOF, and SBIF context, vacancy reports,
@@ -69,7 +73,7 @@ export function HomePageClient() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.6, delay: 1.1 }}
-            className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-6"
+            className="flex flex-wrap justify-center gap-4 sm:gap-6 mt-4 sm:mt-6"
           >
             {[
               { label: "Browse Programs", href: "/programs" },

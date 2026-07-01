@@ -76,6 +76,8 @@ describe("generateReportData", () => {
     expect(report.executiveSummary).toBeDefined();
     expect(report.executiveSummary?.zoneCount).toBe(1);
     expect(report.executiveSummary?.topPrograms.map((p) => p.programId)).toContain("tif");
+    expect(report.locationContext?.geography.zones.value).toEqual(["tif"]);
+    expect(report.locationContext?.programs.topMatches.map((p) => p.programId)).toContain("tif");
   });
 
   it("attaches executive summaries to current dev-feasibility reports", () => {
@@ -142,9 +144,16 @@ describe("generateReportData", () => {
     expect(siteOverview?.description).toContain("logistics");
     expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.value).toContain("I-90");
     expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.detail).toContain("Straight-line distance only");
+    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.sourceLabel).toBe("Transportation and logistics access layer");
     expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.value).toContain("nearby public-data");
     expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.detail).toContain("NOF grants funded within 1/2 mi: 2");
     expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.detail).toContain("verify with DPD");
+    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.sourceLabel).toBe("Public site-signal layers");
+    expect(report.locationContext?.site.siteSignals?.kind).toBe("proximity");
+    expect(report.locationContext?.site.transport?.kind).toBe("proximity");
+    expect(report.dataSources?.map((source) => source.id)).toEqual(
+      expect.arrayContaining(["siteSignals", "transport"])
+    );
   });
 
   it("prioritizes Cook County discovery programs without treating them as address-confirmed", () => {
