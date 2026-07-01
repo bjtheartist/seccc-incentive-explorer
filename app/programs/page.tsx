@@ -109,7 +109,7 @@ function ProgramsContent() {
         </div>
       </div>
 
-      <div className="container mx-auto max-w-4xl px-6 py-10 bg-[#FAF9F6]">
+      <div className="programs-page container mx-auto max-w-4xl px-6 py-10 bg-[#FAF9F6]">
         {/* Quiz CTA — public education entry point */}
         <Link
           href="/quiz"
@@ -606,7 +606,7 @@ function CheatSheetSection({ programs }: { programs: Program[] }) {
       </div>
 
       {/* 5-column matrix (mobile: only active tab visible; desktop + print: all) */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-0 border-b border-[#0C1B33]/10 print:grid-cols-5">
+      <div className="cheat-matrix grid grid-cols-1 lg:grid-cols-5 gap-0 border-b border-[#0C1B33]/10 print:grid-cols-5">
         {CHEAT_LEVELS.map((level, colIdx) => {
           const programsAtLevel = programsByLevel(programs, level);
           const totalAtLevel = programsAtLevel.length;
@@ -640,7 +640,8 @@ function CheatSheetSection({ programs }: { programs: Program[] }) {
                       </div>
                     )}
                     {p.fastestConfirmingStep && (
-                      <div className="text-[#0C1B33]/40 text-[10px] italic leading-snug">
+                      // Screen-only: dropped in print so the sheet fits one page
+                      <div className="print:hidden text-[#0C1B33]/40 text-[10px] italic leading-snug">
                         → {p.fastestConfirmingStep}
                       </div>
                     )}

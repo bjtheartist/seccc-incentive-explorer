@@ -32,7 +32,7 @@ export function SnapshotCTA({
           </p>
         )}
         <div className={sub ? "" : "mt-6"}>
-          <AddressSearch />
+          <AddressSearch source="seo_cta" />
         </div>
         <div className="flex justify-center gap-6 mt-6">
           <Link

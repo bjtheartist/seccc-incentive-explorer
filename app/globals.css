@@ -193,6 +193,43 @@
   100% { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Homepage: program ticker (marquee) ────────────────────── */
+@keyframes ticker-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.ticker-track {
+  animation: ticker-scroll 120s linear infinite;
+  will-change: transform;
+}
+
+/* Soft fade at the ticker's edges */
+.ticker-mask {
+  mask-image: linear-gradient(90deg, transparent, black 4%, black 96%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, black 4%, black 96%, transparent);
+}
+
+/* ── Homepage: slow drift on the hero map ───────────────────── */
+@keyframes hero-drift {
+  0% { transform: scale(1) translateY(0); }
+  100% { transform: scale(1.06) translateY(-1.5%); }
+}
+
+.animate-hero-drift {
+  animation: hero-drift 40s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+/* Respect reduced-motion: freeze decorative animation */
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track,
+  .animate-hero-drift,
+  .bureau-pulse {
+    animation: none !important;
+  }
+}
+
 /* Selection color */
 ::selection {
   background: rgba(37, 99, 235, 0.15);
@@ -221,22 +258,36 @@
 }
 
 /* Cheat-sheet print mode: when body has `.printing-cheat-sheet` class
-   (set by the Print button on /programs), hide everything except #cheat-sheet. */
+   (set by the Print button on /programs), print ONLY #cheat-sheet, fitted
+   to a single letter-landscape page.
+
+   Isolation uses display:none (not just visibility) so hidden siblings
+   contribute no layout height — with visibility alone the hidden page
+   body still paginates and the PDF ends in blank trailing pages. */
 @media print {
-  body.printing-cheat-sheet > * {
-    visibility: hidden !important;
+  body.printing-cheat-sheet :is(nav, header, footer) {
+    display: none !important;
   }
-  body.printing-cheat-sheet #cheat-sheet,
-  body.printing-cheat-sheet #cheat-sheet * {
-    visibility: visible !important;
+  /* Hide everything under <main> that is not the sheet, not inside it,
+     and not an ancestor of it (structure-proof via :has). */
+  body.printing-cheat-sheet main *:not(#cheat-sheet):not(#cheat-sheet *):not(:has(#cheat-sheet)) {
+    display: none !important;
+  }
+  /* Ancestors of the sheet: flatten so they add no page height/box */
+  body.printing-cheat-sheet main :has(#cheat-sheet),
+  body.printing-cheat-sheet main {
+    display: block !important;
+    min-height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    max-width: none !important;
+    border: 0 !important;
+    background: white !important;
   }
   body.printing-cheat-sheet #cheat-sheet {
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    width: 100%;
     margin: 0 !important;
     border: 0 !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
   }
   body.printing-cheat-sheet #cheat-sheet .print\:hidden {
@@ -246,20 +297,82 @@
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
+
+  /* ── One-page fit ──
+     On screen the matrix is a 5-column grid (one column per gov level),
+     which wastes print space: the tallest level (County, 17 programs)
+     overflows the page while Utility (1 program) leaves a near-empty
+     column. In print, flow the level sections through balanced CSS
+     columns instead, and densify the type. */
+  body.printing-cheat-sheet #cheat-sheet .cheat-matrix {
+    display: block !important;
+    columns: 5;
+    column-gap: 9pt;
+    column-rule: 1px solid rgba(12, 27, 51, 0.08);
+    padding: 4pt 0 0 0;
+  }
+  body.printing-cheat-sheet #cheat-sheet .cheat-matrix > div {
+    display: block !important;
+    padding: 0 0 4pt 0 !important;
+    border: none !important;
+    break-inside: auto;
+  }
+  /* Level header: keep attached to the first program beneath it */
+  body.printing-cheat-sheet #cheat-sheet .cheat-matrix > div > div:first-child {
+    break-after: avoid;
+    page-break-after: avoid;
+    margin-bottom: 2pt !important;
+    padding-bottom: 1pt !important;
+  }
+  body.printing-cheat-sheet #cheat-sheet .cheat-matrix ul {
+    page-break-inside: auto;
+  }
+  body.printing-cheat-sheet #cheat-sheet .cheat-matrix ul > li {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    font-size: 7.5pt !important;
+    line-height: 1.2 !important;
+    margin-top: 0 !important;
+    margin-bottom: 3pt !important;
+  }
+  body.printing-cheat-sheet #cheat-sheet .cheat-matrix ul > li > div {
+    font-size: 7pt !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0.5pt !important;
+  }
+  body.printing-cheat-sheet #cheat-sheet .cheat-matrix ul > li > div:first-child {
+    font-size: 7.5pt !important;
+  }
+  /* Header + reminder + footer strips: tighten so the program columns get
+     the page height */
+  body.printing-cheat-sheet #cheat-sheet > div {
+    padding-top: 4pt !important;
+    padding-bottom: 4pt !important;
+  }
+  body.printing-cheat-sheet #cheat-sheet > div:nth-child(2) {
+    font-size: 7.5pt !important;
+    line-height: 1.3 !important;
+  }
+  body.printing-cheat-sheet #cheat-sheet h2 {
+    font-size: 12pt !important;
+  }
+  /* Footer strip: never split across pages; drop the duplicate URL span
+     (the URL already prints in the sheet header) */
+  body.printing-cheat-sheet #cheat-sheet > div:last-child {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    font-size: 7pt !important;
+  }
+  body.printing-cheat-sheet #cheat-sheet > div:last-child > span {
+    display: none !important;
+  }
 }
 @page cheat-sheet-page {
   size: letter landscape;
-  margin: 0.4in;
+  margin: 0.35in;
 }
 body.printing-cheat-sheet #cheat-sheet {
   page: cheat-sheet-page;
-}
-body.printing-cheat-sheet #cheat-sheet ul {
-  page-break-inside: auto;
-}
-body.printing-cheat-sheet #cheat-sheet ul > li {
-  page-break-inside: avoid;
-  break-inside: avoid;
 }
 
 @media print {

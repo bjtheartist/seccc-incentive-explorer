@@ -78,8 +78,9 @@ address-first homepage v1, 63+77+26 programmatic pages, context engine
 | #27 | Cheat-sheet true one-pager | The leave-behind artifact |
 | #28 | Homepage growth redesign (Civic Dossier: demo chips, ticker, specimen, SEO hub) | Conversion surface + internal link equity |
 
-**Environment:** `RESEND_API_KEY` restored to Vercel prod+preview (2026-07-01) —
-email-report revives on next deploy. `NEXT_PUBLIC_SITE_URL` set.
+**Environment checklist:** email-report delivery depends on the configured
+Resend environment variable in Vercel, and canonical URLs depend on the public
+site URL setting. Verify both privately before each growth deploy.
 
 ## 5. Audit findings (what was stale, contradictory, or missing)
 
