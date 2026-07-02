@@ -3,6 +3,28 @@ import { ZONE_KEYS, ZONE_COLORS } from "./constants";
 import type { LookupResult, Program } from "./types";
 import type { GeneratedReport } from "./report-engine";
 
+/**
+ * PDF print order elevates "Your Support Network" into the primary story —
+ * right after "Eligible Incentive Programs", or first if that section is
+ * absent — instead of leaving it buried mid-report. Mirrors the report
+ * page's verdict-level partner strip so page and PDF tell one story.
+ */
+export function orderSectionsForPdf(
+  sections: GeneratedReport["sections"],
+): GeneratedReport["sections"] {
+  const ordered = [...sections];
+  const supportIdx = ordered.findIndex(
+    (s) => s.title === "Your Support Network",
+  );
+  if (supportIdx < 0) return ordered;
+  const [support] = ordered.splice(supportIdx, 1);
+  const eligibleIdx = ordered.findIndex(
+    (s) => s.title === "Eligible Incentive Programs",
+  );
+  ordered.splice(eligibleIdx >= 0 ? eligibleIdx + 1 : 0, 0, support);
+  return ordered;
+}
+
 /* ── Brand Colors ── */
 const NAVY = "#0C1B33";
 const BLUE = "#2563EB";
@@ -846,7 +868,7 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
   }
 
   /* ── PAGE 3+: SECTIONS ── */
-  for (const section of report.sections) {
+  for (const section of orderSectionsForPdf(report.sections)) {
     y = checkPage(doc, y, 35);
     if (y > H - 60) { doc.addPage(); y = MARGIN + 10; }
 
