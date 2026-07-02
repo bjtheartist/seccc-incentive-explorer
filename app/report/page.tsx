@@ -4370,7 +4370,7 @@ function ReportDisplay({
                     href="#your-support-network"
                     className="inline-flex items-center justify-center gap-2 border border-[#0C1B33]/12 bg-white text-[#0C1B33]/55 font-mono-bureau text-[9px] tracking-[0.14em] uppercase px-4 py-3 hover:border-[#0C1B33]/25 hover:text-[#0C1B33] transition-colors"
                   >
-                    See All Partners
+                    See All Local Support Organizations
                     <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 </div>
