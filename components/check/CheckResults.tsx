@@ -9,6 +9,7 @@ import { TopActionsStrip } from "./TopActionsStrip";
 import { ProgramResultCard } from "./ProgramResultCard";
 import type { Program, SurveyAnswers, ProgramCheckResult, TopAction, CityZoning, CensusData, ParcelData } from "@/lib/types";
 import { censusNarrative } from "@/lib/census-narrative";
+import { isExpired } from "@/lib/program-gating";
 import { cachedFetch } from "@/lib/fetch-cache";
 
 interface CheckResultsProps {
@@ -82,8 +83,12 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
           count++;
         }
 
-        // Run confidence engine (with parcel data for scoring boosts)
-        const allPrograms: Program[] = programsRes;
+        // Run confidence engine (with parcel data for scoring boosts).
+        // Availability gate: time-expired programs never enter prequalification.
+        const gateDate = new Date();
+        const allPrograms: Program[] = (programsRes as Program[]).filter(
+          (p) => !isExpired(p, gateDate),
+        );
         const parcelData = parcelRes ?? undefined;
         const results = runConfidenceEngine(allPrograms, zoneMap, nameMap, survey, parcelData);
         const actions = computeTopActions(results);

@@ -1,0 +1,393 @@
+{
+ "fetchedAt": "2026-07-02",
+ "source": "https://www.chicago.gov/city/en/sites/small-business-improvement-fund/home/rollout-calendar.html",
+ "method": "manual browser pull (page 403s automated fetchers); calendar page last updated June 4, 2026",
+ "year": 2026,
+ "windows": [
+  {
+   "tifDistrict": "119th/Halsted",
+   "windowStart": "2026-02-01",
+   "windowEnd": "2026-03-02",
+   "opensAt": "2026-02-01T09:00:00-05:00",
+   "closesAt": "2026-03-02T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "47th/Ashland",
+   "windowStart": "2026-02-01",
+   "windowEnd": "2026-03-02",
+   "opensAt": "2026-02-01T09:00:00-05:00",
+   "closesAt": "2026-03-02T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Avalon Park/South Shore",
+   "windowStart": "2026-02-01",
+   "windowEnd": "2026-03-02",
+   "opensAt": "2026-02-01T09:00:00-05:00",
+   "closesAt": "2026-03-02T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Chicago/Central Park",
+   "windowStart": "2026-02-01",
+   "windowEnd": "2026-03-02",
+   "opensAt": "2026-02-01T09:00:00-05:00",
+   "closesAt": "2026-03-02T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Lawrence/Pulaski",
+   "windowStart": "2026-02-01",
+   "windowEnd": "2026-03-02",
+   "opensAt": "2026-02-01T09:00:00-05:00",
+   "closesAt": "2026-03-02T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "47th/King Drive",
+   "windowStart": "2026-03-01",
+   "windowEnd": "2026-03-30",
+   "opensAt": "2026-03-01T09:00:00-05:00",
+   "closesAt": "2026-03-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "63rd/Pulaski",
+   "windowStart": "2026-03-01",
+   "windowEnd": "2026-03-30",
+   "opensAt": "2026-03-01T09:00:00-05:00",
+   "closesAt": "2026-03-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "87th/Cottage Grove",
+   "windowStart": "2026-03-01",
+   "windowEnd": "2026-03-30",
+   "opensAt": "2026-03-01T09:00:00-05:00",
+   "closesAt": "2026-03-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Central West",
+   "windowStart": "2026-03-01",
+   "windowEnd": "2026-03-30",
+   "opensAt": "2026-03-01T09:00:00-05:00",
+   "closesAt": "2026-03-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Ewing Avenue",
+   "windowStart": "2026-03-01",
+   "windowEnd": "2026-03-30",
+   "opensAt": "2026-03-01T09:00:00-05:00",
+   "closesAt": "2026-03-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "79th/Vincennes",
+   "windowStart": "2026-04-01",
+   "windowEnd": "2026-04-30",
+   "opensAt": "2026-04-01T09:00:00-05:00",
+   "closesAt": "2026-04-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Belmont/Central",
+   "windowStart": "2026-04-01",
+   "windowEnd": "2026-04-30",
+   "opensAt": "2026-04-01T09:00:00-05:00",
+   "closesAt": "2026-04-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Foster/Edens",
+   "windowStart": "2026-04-01",
+   "windowEnd": "2026-04-30",
+   "opensAt": "2026-04-01T09:00:00-05:00",
+   "closesAt": "2026-04-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Kennedy/Kimball",
+   "windowStart": "2026-04-01",
+   "windowEnd": "2026-04-30",
+   "opensAt": "2026-04-01T09:00:00-05:00",
+   "closesAt": "2026-04-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Western/Ogden",
+   "windowStart": "2026-04-01",
+   "windowEnd": "2026-04-30",
+   "opensAt": "2026-04-01T09:00:00-05:00",
+   "closesAt": "2026-04-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "35th/Halsted",
+   "windowStart": "2026-05-01",
+   "windowEnd": "2026-05-30",
+   "opensAt": "2026-05-01T09:00:00-05:00",
+   "closesAt": "2026-05-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "47th/State",
+   "windowStart": "2026-05-01",
+   "windowEnd": "2026-05-30",
+   "opensAt": "2026-05-01T09:00:00-05:00",
+   "closesAt": "2026-05-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Bryn Mawr/Broadway",
+   "windowStart": "2026-05-01",
+   "windowEnd": "2026-05-30",
+   "opensAt": "2026-05-01T09:00:00-05:00",
+   "closesAt": "2026-05-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Elston/Armstrong",
+   "windowStart": "2026-05-01",
+   "windowEnd": "2026-05-30",
+   "opensAt": "2026-05-01T09:00:00-05:00",
+   "closesAt": "2026-05-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Ogden/Pulaski",
+   "windowStart": "2026-05-01",
+   "windowEnd": "2026-05-30",
+   "opensAt": "2026-05-01T09:00:00-05:00",
+   "closesAt": "2026-05-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "24th/Michigan",
+   "windowStart": "2026-06-01",
+   "windowEnd": "2026-06-30",
+   "opensAt": "2026-06-01T09:00:00-05:00",
+   "closesAt": "2026-06-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "63rd/Ashland",
+   "windowStart": "2026-06-01",
+   "windowEnd": "2026-06-30",
+   "opensAt": "2026-06-01T09:00:00-05:00",
+   "closesAt": "2026-06-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "79th Street Corridor",
+   "windowStart": "2026-06-01",
+   "windowEnd": "2026-06-30",
+   "opensAt": "2026-06-01T09:00:00-05:00",
+   "closesAt": "2026-06-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Devon/Sheridan",
+   "windowStart": "2026-06-01",
+   "windowEnd": "2026-06-30",
+   "opensAt": "2026-06-01T09:00:00-05:00",
+   "closesAt": "2026-06-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Kinzie Industrial",
+   "windowStart": "2026-06-01",
+   "windowEnd": "2026-06-30",
+   "opensAt": "2026-06-01T09:00:00-05:00",
+   "closesAt": "2026-06-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Archer/Western",
+   "windowStart": "2026-07-01",
+   "windowEnd": "2026-07-30",
+   "opensAt": "2026-07-01T09:00:00-05:00",
+   "closesAt": "2026-07-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Lawrence/Kedzie",
+   "windowStart": "2026-07-01",
+   "windowEnd": "2026-07-30",
+   "opensAt": "2026-07-01T09:00:00-05:00",
+   "closesAt": "2026-07-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Lincoln Avenue",
+   "windowStart": "2026-07-01",
+   "windowEnd": "2026-07-30",
+   "opensAt": "2026-07-01T09:00:00-05:00",
+   "closesAt": "2026-07-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Little Village Industrial",
+   "windowStart": "2026-07-01",
+   "windowEnd": "2026-07-30",
+   "opensAt": "2026-07-01T09:00:00-05:00",
+   "closesAt": "2026-07-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Washington Park",
+   "windowStart": "2026-07-01",
+   "windowEnd": "2026-07-30",
+   "opensAt": "2026-07-01T09:00:00-05:00",
+   "closesAt": "2026-07-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "43rd/Cottage Grove",
+   "windowStart": "2026-08-01",
+   "windowEnd": "2026-08-30",
+   "opensAt": "2026-08-01T09:00:00-05:00",
+   "closesAt": "2026-08-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Clark/Montrose",
+   "windowStart": "2026-08-01",
+   "windowEnd": "2026-08-30",
+   "opensAt": "2026-08-01T09:00:00-05:00",
+   "closesAt": "2026-08-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Goose Island",
+   "windowStart": "2026-08-01",
+   "windowEnd": "2026-08-30",
+   "opensAt": "2026-08-01T09:00:00-05:00",
+   "closesAt": "2026-08-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Northwest Industrial Corridor",
+   "windowStart": "2026-08-01",
+   "windowEnd": "2026-08-30",
+   "opensAt": "2026-08-01T09:00:00-05:00",
+   "closesAt": "2026-08-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "West Woodlawn",
+   "windowStart": "2026-08-01",
+   "windowEnd": "2026-08-30",
+   "opensAt": "2026-08-01T09:00:00-05:00",
+   "closesAt": "2026-08-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "107th/Halsted",
+   "windowStart": "2026-09-01",
+   "windowEnd": "2026-09-30",
+   "opensAt": "2026-09-01T09:00:00-05:00",
+   "closesAt": "2026-09-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Fullerton/Milwaukee",
+   "windowStart": "2026-09-01",
+   "windowEnd": "2026-09-30",
+   "opensAt": "2026-09-01T09:00:00-05:00",
+   "closesAt": "2026-09-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "LaSalle Central",
+   "windowStart": "2026-09-01",
+   "windowEnd": "2026-09-30",
+   "opensAt": "2026-09-01T09:00:00-05:00",
+   "closesAt": "2026-09-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Madison/Austin",
+   "windowStart": "2026-09-01",
+   "windowEnd": "2026-09-30",
+   "opensAt": "2026-09-01T09:00:00-05:00",
+   "closesAt": "2026-09-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Woodlawn",
+   "windowStart": "2026-09-01",
+   "windowEnd": "2026-09-30",
+   "opensAt": "2026-09-01T09:00:00-05:00",
+   "closesAt": "2026-09-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Englewood Neighborhood",
+   "windowStart": "2026-10-01",
+   "windowEnd": "2026-10-30",
+   "opensAt": "2026-10-01T09:00:00-05:00",
+   "closesAt": "2026-10-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Greater Southwest Industrial (East)",
+   "windowStart": "2026-10-01",
+   "windowEnd": "2026-10-30",
+   "opensAt": "2026-10-01T09:00:00-05:00",
+   "closesAt": "2026-10-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "South Chicago",
+   "windowStart": "2026-10-01",
+   "windowEnd": "2026-10-30",
+   "opensAt": "2026-10-01T09:00:00-05:00",
+   "closesAt": "2026-10-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Stevenson/Brighton",
+   "windowStart": "2026-10-01",
+   "windowEnd": "2026-10-30",
+   "opensAt": "2026-10-01T09:00:00-05:00",
+   "closesAt": "2026-10-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Pilsen Industrial Corridor",
+   "windowStart": "2026-10-01",
+   "windowEnd": "2026-10-30",
+   "opensAt": "2026-10-01T09:00:00-05:00",
+   "closesAt": "2026-10-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Lawrence/Broadway",
+   "windowStart": "2026-11-01",
+   "windowEnd": "2026-11-30",
+   "opensAt": "2026-11-01T09:00:00-05:00",
+   "closesAt": "2026-11-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Little Village East",
+   "windowStart": "2026-11-01",
+   "windowEnd": "2026-11-30",
+   "opensAt": "2026-11-01T09:00:00-05:00",
+   "closesAt": "2026-11-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Midwest",
+   "windowStart": "2026-11-01",
+   "windowEnd": "2026-11-30",
+   "opensAt": "2026-11-01T09:00:00-05:00",
+   "closesAt": "2026-11-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Pulaski Corridor",
+   "windowStart": "2026-11-01",
+   "windowEnd": "2026-11-30",
+   "opensAt": "2026-11-01T09:00:00-05:00",
+   "closesAt": "2026-11-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Stockyards SEQ",
+   "windowStart": "2026-11-01",
+   "windowEnd": "2026-11-30",
+   "opensAt": "2026-11-01T09:00:00-05:00",
+   "closesAt": "2026-11-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "111th/Kedzie",
+   "windowStart": "2026-12-01",
+   "windowEnd": "2026-12-30",
+   "opensAt": "2026-12-01T09:00:00-05:00",
+   "closesAt": "2026-12-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Austin Commercial",
+   "windowStart": "2026-12-01",
+   "windowEnd": "2026-12-30",
+   "opensAt": "2026-12-01T09:00:00-05:00",
+   "closesAt": "2026-12-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Bronzeville",
+   "windowStart": "2026-12-01",
+   "windowEnd": "2026-12-30",
+   "opensAt": "2026-12-01T09:00:00-05:00",
+   "closesAt": "2026-12-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Division/Homan",
+   "windowStart": "2026-12-01",
+   "windowEnd": "2026-12-30",
+   "opensAt": "2026-12-01T09:00:00-05:00",
+   "closesAt": "2026-12-30T17:00:00-05:00"
+  },
+  {
+   "tifDistrict": "Touhy/Western",
+   "windowStart": "2026-12-01",
+   "windowEnd": "2026-12-30",
+   "opensAt": "2026-12-01T09:00:00-05:00",
+   "closesAt": "2026-12-30T17:00:00-05:00"
+  }
+ ]
+}

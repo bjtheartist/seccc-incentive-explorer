@@ -1,0 +1,241 @@
+/**
+ * lib/program-gating.ts — pure availability gating for program cards.
+ *
+ * Time-lapsed grants and incentives should stop showing automatically, but
+ * "lapsed" is not one thing. resolveAvailability(program, today) returns one
+ * of four states:
+ *
+ *   'active'         — no gating info on the card, or a future deadline /
+ *                      application window exists (the next one is surfaced
+ *                      via nextWindow). Safe default: absence of gating
+ *                      fields never hides a program.
+ *
+ *   'window-closed'  — the program is real and RECURRING but currently
+ *                      between application windows (SBIF between district
+ *                      windows per public/data/sbif-rollout.json, NOF between
+ *                      quarters, CDG between rounds). Still shown, labeled
+ *                      "Applications currently closed; next window <date |
+ *                      expected>". Recurring programs never silently vanish.
+ *
+ *   'lapsed-notice'  — statutory lapse with realistic revival (card
+ *                      status === "lapsed", e.g. WOTC). Still shown, with the
+ *                      card's existing lapse warning (sunsetWarning).
+ *
+ *   'expired'        — hidden everywhere. Triggered by an explicit expiresOn
+ *                      date in the past, OR oneTime === true with every dated
+ *                      deadlines[] entry in the past (and no future expiresOn).
+ *
+ * No imports from Next.js, the DB, or the network — safe in server
+ * components, client components, scripts, and pure unit tests. The SBIF
+ * district-window matching is shared with lib/deadlines.ts (findSbifWindow)
+ * so the rollout-matching logic lives in exactly one place.
+ */
+
+import type { Program } from "./types";
+import { findSbifWindow, type SbifWindow } from "./deadlines";
+
+// ── Output types ──────────────────────────────────────────────────────────────
+
+export type AvailabilityState =
+  | "active"
+  | "window-closed"
+  | "lapsed-notice"
+  | "expired";
+
+export interface NextWindow {
+  /**
+   * ISO date (YYYY-MM-DD) of the next relevant event — a window opening or a
+   * deadline. Omitted when the program is known to recur but the next window
+   * is not yet scheduled ("expected").
+   */
+  date?: string;
+  /** ISO date the window closes, when known (SBIF district windows). */
+  endDate?: string;
+  /** Human label for the date (from the card's deadlines[] entry or the SBIF district). */
+  label?: string;
+}
+
+export interface ProgramAvailability {
+  state: AvailabilityState;
+  /** The next (or currently open) application window / deadline, when known. */
+  nextWindow?: NextWindow;
+  /** Human-readable status note for 'window-closed' and 'lapsed-notice' (and expiry reason). */
+  note?: string;
+}
+
+export interface ResolveAvailabilityOpts {
+  /**
+   * SBIF rollout windows (public/data/sbif-rollout.json — pass the loaded
+   * windows, e.g. from report-engine's loadSbifRollout). Enables
+   * district-aware gating for the sbif card.
+   */
+  sbifRollout?: SbifWindow[] | null;
+  /** The address's TIF district key/name; paired with sbifRollout. */
+  tifDistrict?: string | null;
+}
+
+// ── Date helpers (day granularity, mirrors lib/deadlines.ts semantics) ────────
+
+function parseDate(s: string | null | undefined): Date | null {
+  if (!s) return null;
+  const d = new Date(s + (s.includes("T") ? "" : "T00:00:00Z"));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/** Whole days from `today` until `dateStr` (negative = past), or null if unparseable. */
+function daysUntil(dateStr: string, today: Date): number | null {
+  const d = parseDate(dateStr);
+  if (!d) return null;
+  return Math.round((d.getTime() - today.getTime()) / 86_400_000);
+}
+
+/** True when `dateStr` is strictly before today (a deadline dated today still counts). */
+function isPastDay(dateStr: string, today: Date): boolean {
+  const days = daysUntil(dateStr, today);
+  return days != null && days < 0;
+}
+
+// ── Resolver ──────────────────────────────────────────────────────────────────
+
+const WINDOW_OPEN_LABEL = /\bopen(s|ed|ing)?\b/i;
+
+/**
+ * Resolve a program card's availability as of `today`.
+ * Pure — inject `new Date()` in production and fixed dates in tests.
+ */
+export function resolveAvailability(
+  program: Program,
+  today: Date,
+  opts: ResolveAvailabilityOpts = {}
+): ProgramAvailability {
+  const dated = (program.deadlines ?? []).filter((d) => daysUntil(d.date, today) != null);
+  const expiresOnPast = program.expiresOn ? isPastDay(program.expiresOn, today) : false;
+  const expiresOnFuture = !!program.expiresOn && !expiresOnPast && parseDate(program.expiresOn) != null;
+
+  // 1) Explicit expiry date in the past — hidden everywhere.
+  if (expiresOnPast) {
+    return {
+      state: "expired",
+      note: `Program availability ended ${program.expiresOn}.`,
+    };
+  }
+
+  // 2) Statutory lapse with realistic revival — shown with the existing lapse warning.
+  if (program.status === "lapsed") {
+    return {
+      state: "lapsed-notice",
+      note:
+        program.sunsetWarning ||
+        "This program's statutory authority has lapsed. Reauthorization is possible — verify current status with the administering agency before relying on it.",
+    };
+  }
+
+  // 3) One-time program whose every dated deadline has passed — expired.
+  //    A future expiresOn is an explicit "valid through" and overrides this
+  //    inference. Requires at least one dated entry (an empty deadlines[]
+  //    never expires a card — safe default).
+  if (
+    program.oneTime === true &&
+    !expiresOnFuture &&
+    dated.length > 0 &&
+    dated.every((d) => isPastDay(d.date, today))
+  ) {
+    const last = dated.map((d) => d.date).sort().at(-1);
+    return {
+      state: "expired",
+      note: `One-time program; final deadline (${last}) has passed.`,
+    };
+  }
+
+  // 4) SBIF district-aware gating: rollout windows are authoritative for the
+  //    address's own TIF district (the card-level deadlines describe other
+  //    districts' months).
+  if (program.id === "sbif" && opts.sbifRollout?.length && opts.tifDistrict) {
+    const win = findSbifWindow(opts.sbifRollout, opts.tifDistrict);
+    if (win) {
+      const daysToStart = daysUntil(win.windowStart, today);
+      const daysToEnd = daysUntil(win.windowEnd, today);
+      if (daysToStart != null && daysToEnd != null) {
+        const nextWindow: NextWindow = {
+          date: win.windowStart,
+          endDate: win.windowEnd,
+          label: `SBIF application window — ${win.tifDistrict}`,
+        };
+        if (daysToStart <= 0 && daysToEnd >= 0) {
+          // Window currently open for this district.
+          return {
+            state: "active",
+            nextWindow,
+            note: `Applications open through ${win.windowEnd} for the ${win.tifDistrict} TIF district.`,
+          };
+        }
+        if (daysToStart > 0) {
+          // Between windows, next one already scheduled.
+          return {
+            state: "window-closed",
+            nextWindow,
+            note: `Applications currently closed for the ${win.tifDistrict} TIF district; next window opens ${win.windowStart}.`,
+          };
+        }
+        // This district's window has ended; the next rollout is not yet published.
+        return {
+          state: "window-closed",
+          note: `Applications currently closed for the ${win.tifDistrict} TIF district; next window expected when the next SBIF rollout calendar is published.`,
+        };
+      }
+    }
+    // District not in the rollout — fall through to the generic date logic.
+  }
+
+  // 5) A future deadline / window exists — active; surface the next one.
+  const futureDates = dated
+    .filter((d) => !isPastDay(d.date, today))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  if (expiresOnFuture) {
+    futureDates.push({ label: "Final availability date", date: program.expiresOn! });
+    futureDates.sort((a, b) => a.date.localeCompare(b.date));
+  }
+  if (futureDates.length > 0) {
+    const next = futureDates[0];
+    return {
+      state: "active",
+      nextWindow: { date: next.date, label: next.label },
+    };
+  }
+
+  // 6) Recurring program with only past dates — between windows.
+  if (program.recurring === true && dated.length > 0) {
+    const latest = [...dated].sort((a, b) => a.date.localeCompare(b.date)).at(-1)!;
+    // If the most recent dated event was a window OPENING (with no dated
+    // close), the window is likely still open — do not mislabel it closed.
+    if (WINDOW_OPEN_LABEL.test(latest.label ?? "")) {
+      return { state: "active" };
+    }
+    return {
+      state: "window-closed",
+      note:
+        "Applications currently closed; next window expected — confirm timing with the administering agency.",
+    };
+  }
+
+  // 7) Default: no gating info (or past dates without oneTime/recurring flags) — active.
+  return { state: "active" };
+}
+
+/** Convenience: true when the program should be hidden everywhere. */
+export function isExpired(
+  program: Program,
+  today: Date,
+  opts?: ResolveAvailabilityOpts
+): boolean {
+  return resolveAvailability(program, today, opts).state === "expired";
+}
+
+/** Convenience: drop expired programs from a list. */
+export function excludeExpiredPrograms<T extends Program>(
+  programs: T[],
+  today: Date,
+  opts?: ResolveAvailabilityOpts
+): T[] {
+  return programs.filter((p) => !isExpired(p, today, opts));
+}

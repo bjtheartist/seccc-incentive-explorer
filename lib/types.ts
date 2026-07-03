@@ -55,8 +55,24 @@ export interface VerificationStep {
   note?: string;
 }
 
-export type ProgramStatus = "active" | "verify" | "sunset" | "pending";
+export type ProgramStatus =
+  | "active"
+  | "current" // used interchangeably with "active" in programs.json
+  | "changed"
+  | "verify"
+  | "sunset"
+  | "pending"
+  | "lapsed"; // statutory authority lapsed but revival is realistic (e.g. WOTC)
 export type ProgramLevel = "Federal" | "State" | "County" | "City" | "Utility";
+
+/* ── Dated application window / deadline entry on a program card ── */
+
+export interface ProgramDeadlineEntry {
+  /** Human label, e.g. "July 2026 window closes" or "Final application deadline". */
+  label?: string;
+  /** ISO date YYYY-MM-DD. */
+  date: string;
+}
 
 /* ── Stacking rule between two programs ── */
 
@@ -100,6 +116,22 @@ export interface Program {
   suspensionNote?: string;
   sunsetWarning?: string;
   oz2Note?: string;
+  // ── Availability gating (2026-07) — see lib/program-gating.ts ──
+  /** Dated application windows/deadlines for this card (used by deadlines + gating). */
+  deadlines?: ProgramDeadlineEntry[];
+  /**
+   * One-shot program (e.g. a disaster declaration). Once every deadlines[]
+   * date has passed (or expiresOn passes), the card is treated as expired
+   * and hidden everywhere.
+   */
+  oneTime?: boolean;
+  /** Hard end-of-availability date (YYYY-MM-DD). Past this date the card is hidden. */
+  expiresOn?: string;
+  /**
+   * Recurring program (annual/quarterly/district rounds). Never auto-hidden;
+   * between windows it is shown with an "applications currently closed" note.
+   */
+  recurring?: boolean;
 }
 
 /* ── Phase 1: Check result types ── */
