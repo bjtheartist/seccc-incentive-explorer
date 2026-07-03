@@ -1,0 +1,7 @@
+{
+  "exportedAt": "2026-07-03T01:51:58.015Z",
+  "sourceUrl": "https://somercor.com/sbif/",
+  "windows": [],
+  "fetchError": "The SBIF rollout calendar page returned HTML but zero windows were parsed — the page is likely JavaScript-rendered and cannot be scraped statically. The sbif-rollout.json file ships with an empty windows[] array pending a manual pull. See manualUpdateNote.",
+  "manualUpdateNote": "Visit https://www.chicago.gov/city/en/sites/small-business-improvement-fund/home/rollout-calendar.html in a browser and copy the calendar table. Update the 'windows' array in this file as [{tifDistrict: string, windowStart: 'YYYY-MM-DD', windowEnd: 'YYYY-MM-DD'}]. Alternatively set SBIF_ROLLOUT_JSON=/path/to/windows.json and re-run this script."
+}
