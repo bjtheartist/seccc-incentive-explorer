@@ -32,7 +32,7 @@ async function dbParcel(lat: number, lon: number): Promise<ParcelData | null> {
   if (!sql) return null;
   try {
     const rows = await sql`
-      SELECT pin, address, class_code, class_description, tax_code, township,
+      SELECT pin, address, zip, class_code, class_description, tax_code, township,
              land_sqft, bldg_sqft, bldg_age, land_value, bldg_value, total_value,
              parcel_type, is_commercial, is_industrial, is_vacant,
              owner_name, owner_mailing_address, owner_type
@@ -47,6 +47,7 @@ async function dbParcel(lat: number, lon: number): Promise<ParcelData | null> {
     return {
       pin: r.pin || "",
       address: r.address || "",
+      zip: r.zip || null,
       classCode: r.class_code || "",
       classDescription: r.class_description || describeClassCode(r.class_code || ""),
       taxCode: r.tax_code || "",

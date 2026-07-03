@@ -30,6 +30,7 @@ async function migrate() {
     CREATE TABLE IF NOT EXISTS parcels (
       pin TEXT PRIMARY KEY,
       address TEXT,
+      zip TEXT,
       class_code TEXT,
       class_description TEXT,
       tax_code TEXT,
@@ -72,9 +73,14 @@ async function migrate() {
     )
   `;
 
+  /* ── Column backfill for tables created before zip existed ── */
+  console.log("3b. Ensuring parcels.zip column...");
+  await sql`ALTER TABLE parcels ADD COLUMN IF NOT EXISTS zip TEXT`;
+
   /* ── Indexes ── */
   console.log("4. Creating indexes...");
   await sql`CREATE INDEX IF NOT EXISTS idx_parcels_geom ON parcels USING GIST (geom)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_parcels_zip ON parcels (zip)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_parcel_valuations_pin ON parcel_valuations (pin)`;
 
   console.log("\nParcels migration complete!");

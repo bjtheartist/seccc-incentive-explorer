@@ -62,7 +62,7 @@ export const serviceRequestsAdapter: SourceAdapter<
 
     for (let offset = 0; ; offset += pageSize) {
       const where = encodeURIComponent(`zip_code in(${zipList})`);
-      const url = `${SR_URL}?$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=sr_number`;
+      const url = `${SR_URL}?$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=:id`;
       const res = await fetch(url, {
         headers: socrataHeaders(),
         signal: AbortSignal.timeout(30000),
