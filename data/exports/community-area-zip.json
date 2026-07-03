@@ -52,6 +52,7 @@
   "51": "60617",
   "52": "60617",
   "53": "60628",
+  "54": "60827",
   "55": "60633",
   "56": "60638",
   "57": "60632",
@@ -76,7 +77,11 @@
   "76": "60656",
   "77": "60660",
   "_meta": {
-    "generatedAt": "2026-07-03T18:42:54.177Z",
-    "method": "centroid point-in-polygon; a community area can span multiple ZIPs — this is the centroid's ZIP only"
+    "generatedAt": "2026-07-03T19:04:49.588Z",
+    "method": "centroid point-in-polygon; a community area can span multiple ZIPs — this is the centroid's ZIP only. Centroids outside every polygon fall back to the nearest polygon within 3km. Manual overrides beat geometry where the nearest polygon misrepresents the area.",
+    "nearestFallbacks": [],
+    "manualOverrides": [
+      "CA 54 (Riverdale) -> 60827 via manual override"
+    ]
   }
 }
