@@ -14,12 +14,20 @@
  *   4. TIF Financial Context item appears in Neighborhood Economic Context
  *      (since we inject tifFinance via neighborhoodEconomics).
  *   5. programs.json iraCleanElectricity deadlines[] includes 2026-07-04.
+ *   6. PDF section ordering does not error.
+ *   7. Availability gating: an expired oneTime fixture is excluded from every
+ *      report section (while a non-expired control fixture appears).
+ *   8. Availability gating: sbif resolves window-closed (with note) for a
+ *      district whose rollout window has passed, and active/next-window for
+ *      an in-window or future-window district.
  */
 
-import { generateReportData } from "@/lib/report-engine";
+import { generateReportData, loadSbifRollout } from "@/lib/report-engine";
 import type { ReportContext } from "@/lib/report-engine";
 import { getProgramsSync } from "@/lib/programs-data";
 import { orderSectionsForPdf } from "@/lib/pdf-report";
+import { resolveAvailability } from "@/lib/program-gating";
+import type { Program } from "@/lib/types";
 
 function assert(condition: boolean, message: string): void {
   if (!condition) {
@@ -151,9 +159,11 @@ async function main() {
   const constructionDeadline = iraDeadlines.find((d) => d.date === "2026-07-04");
   assert(Boolean(constructionDeadline), "iraCleanElectricity has 2026-07-04 construction-start deadline");
   assert(
-    constructionDeadline?.label?.toLowerCase().includes("wind") ||
-    constructionDeadline?.label?.toLowerCase().includes("solar") ||
-    constructionDeadline?.label?.toLowerCase().includes("48e"),
+    Boolean(
+      constructionDeadline?.label?.toLowerCase().includes("wind") ||
+      constructionDeadline?.label?.toLowerCase().includes("solar") ||
+      constructionDeadline?.label?.toLowerCase().includes("48e")
+    ),
     "Construction-start deadline label references wind/solar/48E"
   );
   // Check sunsetWarning is forward-looking
@@ -173,6 +183,94 @@ async function main() {
   console.log(
     `  PDF section order: ${pdfSections.map((s) => s.title).join(" → ")}`
   );
+
+  // Check 7: Availability gating — an expired oneTime fixture never reaches a
+  // report section, while an otherwise-identical non-expired control does
+  // (guards against the check passing because the fixture wouldn't render anyway).
+  const fixtureBase: Program = {
+    id: "expiredFixtureGrant",
+    name: "Expired Fixture Grant",
+    level: "City",
+    zoneKey: "tif", // matches ctx.zones.tif → would render if not gated
+    summary: "Smoke-test fixture verifying expired one-time programs are hidden.",
+    whoQualifies: "Smoke tests only.",
+    benefits: [],
+    howToApply: [],
+    requiredDocs: [],
+    contact: "",
+    url: "",
+    oneTime: true,
+    deadlines: [{ label: "Final application round", date: "2026-01-15" }],
+  };
+  const controlFixture: Program = {
+    ...fixtureBase,
+    id: "controlFixtureGrant",
+    name: "Control Fixture Grant",
+    oneTime: false, // past date without oneTime/expiresOn → stays active
+  };
+  const gatedReport = generateReportData(
+    state,
+    [...programs, fixtureBase, controlFixture],
+    ctx
+  );
+  const sectionHasProgram = (id: string, name: string) =>
+    gatedReport.sections.some((s) =>
+      s.items.some((i) => i.programId === id || i.label === name)
+    );
+  assert(
+    !sectionHasProgram("expiredFixtureGrant", "Expired Fixture Grant"),
+    "Expired oneTime fixture does not appear in any report section"
+  );
+  assert(
+    sectionHasProgram("controlFixtureGrant", "Control Fixture Grant"),
+    "Non-expired control fixture appears in report sections (gate is exclusion, not omission)"
+  );
+
+  // Check 8: SBIF availability against the real rollout calendar.
+  const rollout = loadSbifRollout();
+  assert(Boolean(rollout && rollout.length > 0), "sbif-rollout.json loads with windows");
+  const sbifCard = programs.find((p) => p.id === "sbif");
+  assert(Boolean(sbifCard), "sbif program card exists");
+  const now = new Date();
+  const dayDiff = (iso: string) =>
+    Math.round((new Date(`${iso}T00:00:00Z`).getTime() - now.getTime()) / 86_400_000);
+  const pastWin = rollout!.find((w) => dayDiff(w.windowEnd) < 0);
+  const inWin = rollout!.find((w) => dayDiff(w.windowStart) <= 0 && dayDiff(w.windowEnd) >= 0);
+  const futureWin = rollout!.find((w) => dayDiff(w.windowStart) > 0);
+  let sbifAssertions = 0;
+  if (pastWin) {
+    const a = resolveAvailability(sbifCard!, now, {
+      sbifRollout: rollout,
+      tifDistrict: pastWin.tifDistrict,
+    });
+    assert(
+      a.state === "window-closed" && /applications currently closed/i.test(a.note ?? ""),
+      `sbif shows window-closed note for past-window district (${pastWin.tifDistrict})`
+    );
+    sbifAssertions++;
+  }
+  if (inWin) {
+    const a = resolveAvailability(sbifCard!, now, {
+      sbifRollout: rollout,
+      tifDistrict: inWin.tifDistrict,
+    });
+    assert(
+      a.state === "active" && a.nextWindow?.endDate === inWin.windowEnd,
+      `sbif is active with open window for in-window district (${inWin.tifDistrict})`
+    );
+    sbifAssertions++;
+  } else if (futureWin) {
+    const a = resolveAvailability(sbifCard!, now, {
+      sbifRollout: rollout,
+      tifDistrict: futureWin.tifDistrict,
+    });
+    assert(
+      a.state === "window-closed" && a.nextWindow?.date === futureWin.windowStart,
+      `sbif shows next-window date for future-window district (${futureWin.tifDistrict})`
+    );
+    sbifAssertions++;
+  }
+  assert(sbifAssertions > 0, "At least one SBIF rollout district was assertable");
 
   console.log("\n✓ All smoke checks passed.");
 }

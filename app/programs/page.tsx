@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   ExternalLink,
@@ -13,11 +13,13 @@ import {
   CheckCircle2,
   ArrowRight,
   Printer,
+  CalendarOff,
 } from "lucide-react";
 import Link from "next/link";
 import type { Program, ProgramLevel } from "@/lib/types";
 import { ZONE_COLORS, LEVEL_COLORS } from "@/lib/constants";
 import { INDUSTRIES, getIndustryById } from "@/lib/industries-data";
+import { resolveAvailability, type ProgramAvailability } from "@/lib/program-gating";
 import LevelBadge from "@/components/LevelBadge";
 
 const LEVELS = ["All", "Federal", "State", "County", "City", "Utility"] as const;
@@ -52,8 +54,35 @@ function ProgramsContent() {
   const [industryFilter, setIndustryFilter] = useState<string>(
     industryParam || ""
   );
+  const [showExpired, setShowExpired] = useState(false);
   const [linkHealth, setLinkHealth] = useState<Map<string, "ok" | "broken">>(
     new Map(),
+  );
+
+  // Availability gating: expired programs are hidden by default;
+  // window-closed / lapsed programs stay visible with a status badge.
+  const availabilityById = useMemo(() => {
+    const today = new Date();
+    const m = new Map<string, ProgramAvailability>();
+    for (const p of programs) m.set(p.id, resolveAvailability(p, today));
+    return m;
+  }, [programs]);
+
+  const expiredCount = useMemo(
+    () =>
+      programs.filter((p) => availabilityById.get(p.id)?.state === "expired")
+        .length,
+    [programs, availabilityById],
+  );
+
+  const visiblePrograms = useMemo(
+    () =>
+      showExpired
+        ? programs
+        : programs.filter(
+            (p) => availabilityById.get(p.id)?.state !== "expired",
+          ),
+    [programs, availabilityById, showExpired],
   );
 
   useEffect(() => {
@@ -78,7 +107,7 @@ function ProgramsContent() {
     ? getIndustryById(industryFilter)
     : null;
 
-  const filtered = programs.filter((p) => {
+  const filtered = visiblePrograms.filter((p) => {
     const matchesLevel = filter === "All" || p.level === filter;
     const matchesIndustry =
       !selectedIndustry || selectedIndustry.topPrograms.includes(p.id);
@@ -169,7 +198,7 @@ function ProgramsContent() {
         </div>
 
         {/* Cheat-Sheet: at-a-glance program matrix, designed to print/save as PDF */}
-        <CheatSheetSection programs={programs} />
+        <CheatSheetSection programs={visiblePrograms} />
 
         {/* Industry Filter */}
         <div className="mb-6">
@@ -207,13 +236,28 @@ function ProgramsContent() {
           </div>
         </div>
 
+        {/* Availability toggle — expired programs are hidden by default */}
+        {expiredCount > 0 && (
+          <label className="mb-4 flex items-center gap-2 cursor-pointer select-none w-fit">
+            <input
+              type="checkbox"
+              checked={showExpired}
+              onChange={(e) => setShowExpired(e.target.checked)}
+              className="h-3.5 w-3.5 accent-[#2563EB]"
+            />
+            <span className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/45">
+              Show expired programs ({expiredCount} hidden)
+            </span>
+          </label>
+        )}
+
         {/* Level Filter Tabs */}
         <div className="flex gap-0 border border-[#0C1B33]/10 mb-8 overflow-x-auto">
           {LEVELS.map((level) => {
             const count =
               level === "All"
-                ? programs.length
-                : programs.filter((p) => p.level === level).length;
+                ? visiblePrograms.length
+                : visiblePrograms.filter((p) => p.level === level).length;
             return (
               <button
                 key={level}
@@ -234,7 +278,12 @@ function ProgramsContent() {
         {/* Program Cards */}
         <div className="space-y-3">
           {filtered.map((program) => (
-            <ProgramCard key={program.id} program={program} linkHealth={linkHealth} />
+            <ProgramCard
+              key={program.id}
+              program={program}
+              linkHealth={linkHealth}
+              availability={availabilityById.get(program.id)}
+            />
           ))}
         </div>
       </div>
@@ -245,9 +294,11 @@ function ProgramsContent() {
 function ProgramCard({
   program,
   linkHealth,
+  availability,
 }: {
   program: Program;
   linkHealth: Map<string, "ok" | "broken">;
+  availability?: ProgramAvailability;
 }) {
   const [expanded, setExpanded] = useState(false);
   const color = ZONE_COLORS[program.zoneKey] || "#6b7280";
@@ -299,6 +350,30 @@ function ProgramCard({
                 Watch
               </span>
             )}
+            {availability?.state === "window-closed" && (
+              <span
+                title={availability.note}
+                className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-amber-700 bg-amber-100 inline-flex items-center gap-1"
+              >
+                <CalendarOff className="w-3 h-3" /> Applications closed
+              </span>
+            )}
+            {availability?.state === "lapsed-notice" && (
+              <span
+                title={availability.note}
+                className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-red-700 bg-red-100 inline-flex items-center gap-1"
+              >
+                <AlertTriangle className="w-3 h-3" /> Lapsed
+              </span>
+            )}
+            {availability?.state === "expired" && (
+              <span
+                title={availability.note}
+                className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-slate-500 bg-slate-200"
+              >
+                Expired
+              </span>
+            )}
           </div>
           <p className="text-sm text-[#0C1B33]/50 leading-relaxed">{program.summary}</p>
         </div>
@@ -313,7 +388,20 @@ function ProgramCard({
 
       {expanded && (
         <div className="px-6 pb-6 space-y-5 border-t border-[#0C1B33]/5 pt-5 ml-4">
-          {/* Status banners — sunset / suspension / OZ 2.0 / boundary disclaimer */}
+          {/* Status banners — window status / sunset / suspension / OZ 2.0 / boundary disclaimer */}
+          {(availability?.state === "window-closed" ||
+            availability?.state === "expired") &&
+            availability.note && (
+              <div className="border border-amber-200 bg-amber-50 rounded-lg p-3 flex gap-2.5">
+                <CalendarOff className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[12px] text-amber-800 leading-relaxed">
+                  <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase mr-2">
+                    {availability.state === "expired" ? "Expired" : "Window status"}
+                  </span>
+                  {availability.note}
+                </p>
+              </div>
+            )}
           {program.sunsetWarning && (
             <div className="border border-red-200 bg-red-50 rounded-lg p-3 flex gap-2.5">
               <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />

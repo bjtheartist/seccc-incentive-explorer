@@ -303,6 +303,7 @@
   },
   {
     "id": "sbif",
+    "recurring": true,
     "name": "Small Business Improvement Fund (SBIF)",
     "level": "City",
     "zoneKey": "tif",
@@ -1108,6 +1109,7 @@
   },
   {
     "id": "nof",
+    "recurring": true,
     "name": "Neighborhood Opportunity Fund (NOF)",
     "level": "City",
     "zoneKey": "nof",
@@ -2132,6 +2134,8 @@
   },
   {
     "id": "sbaDisasterEidl",
+    "oneTime": true,
+    "expiresOn": "2027-01-25",
     "name": "SBA Disaster EIDL — Cook County Flood Declaration",
     "level": "Federal",
     "zoneKey": "",
@@ -3754,6 +3758,7 @@
   },
   {
     "id": "cdgSmall",
+    "recurring": true,
     "name": "Community Development Grant — Small (≤ $250K)",
     "level": "City",
     "zoneKey": "",
@@ -3851,6 +3856,7 @@
   },
   {
     "id": "cdgMedium",
+    "recurring": true,
     "name": "Community Development Grant — Medium ($300K – $5M)",
     "level": "City",
     "zoneKey": "",
@@ -4031,6 +4037,7 @@
   },
   {
     "id": "workforceSolutions",
+    "recurring": true,
     "name": "Workforce Solutions Program (formerly TIFWorks)",
     "level": "City",
     "zoneKey": "",

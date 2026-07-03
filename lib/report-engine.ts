@@ -26,6 +26,11 @@ import {
   optionLabel,
 } from "./report-wizard-config";
 import { deadlinesForAddress, type TifFinancialsSlim, type SbifWindow } from "./deadlines";
+import {
+  resolveAvailability,
+  type AvailabilityState,
+  type ResolveAvailabilityOpts,
+} from "./program-gating";
 import { normalizeTifKey } from "./tif-finance";
 
 // ─── Local Types ────────────────────────────────────────────────────
@@ -100,6 +105,10 @@ export interface ReportItem {
   applicationPortals?: Program["applicationPortals"];
   verificationSteps?: Program["verificationSteps"];
   status?: Program["status"];
+  /** Availability gating state (lib/program-gating). 'expired' items never reach a report. */
+  availability?: AvailabilityState;
+  /** Status note rendered for 'window-closed' and 'lapsed-notice' items. */
+  availabilityNote?: string;
 }
 
 export interface DataSourceCitation {
@@ -634,12 +643,23 @@ function confidenceRank(confidence?: EligibilityConfidence): number {
 function programReportItem(
   program: Program,
   confidenceMap?: Map<string, ProgramCheckResult>,
+  gatingOpts?: ResolveAvailabilityOpts,
 ): ReportItem {
   const cr = confidenceMap?.get(program.id);
+  // 'expired' programs are filtered out before sections are built
+  // (generateReportData); here we annotate the surviving states so
+  // 'window-closed' and 'lapsed-notice' render with their note.
+  const availability = resolveAvailability(program, new Date(), gatingOpts);
+  const availabilityNote =
+    availability.state === "window-closed" || availability.state === "lapsed-notice"
+      ? availability.note
+      : undefined;
   return {
     label: program.name,
     value: program.benefitRange || "Contact for details",
-    detail: program.summary,
+    detail: availabilityNote ? `${availabilityNote}\n${program.summary}` : program.summary,
+    availability: availability.state,
+    availabilityNote,
     programId: program.id,
     whoQualifies: program.whoQualifies,
     eligibilityRules: program.eligibilityRules?.map((r: { description: string; required: boolean }) => ({
@@ -1451,8 +1471,10 @@ function loadTifFinancials(): Record<string, TifFinancialsSlim> | null {
 /**
  * Load sbif-rollout.json from the static public data file.
  * Returns null gracefully when the file is empty (fetchError state).
+ * Exported so scripts (smoke-report) and gating callers reuse this single
+ * reader instead of duplicating the JSON load.
  */
-function loadSbifRollout(): SbifWindow[] | null {
+export function loadSbifRollout(): SbifWindow[] | null {
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const raw = require("../public/data/sbif-rollout.json") as {
@@ -1728,6 +1750,16 @@ function generateLocationIncentives(
   const confirmedPrograms = sortProgramItems(zoneBased, zones, confidenceMap);
   const exploratoryPrograms = sortExploratoryProgramItems(discoveryOnly, zones, confidenceMap);
 
+  // ── Static TIF/SBIF context (loaded once; reused by program gating notes,
+  //    the TIF financial enrichment, and the deadlines section below) ──
+  const tifFinancials = loadTifFinancials();
+  const sbifRollout = loadSbifRollout();
+  const tifDistrictId = enrichTifFinancialContext(ctx, tifFinancials);
+  const gatingOpts: ResolveAvailabilityOpts = {
+    sbifRollout,
+    tifDistrict: tifDistrictId,
+  };
+
   // ── Builder outputs ──
   const verdict = computeVerdict(zones, programs, ctx);
   const marketContext = buildMarketContext(ctx, zones);
@@ -1771,7 +1803,7 @@ function generateLocationIncentives(
     sections.push({
       title: "Eligible Incentive Programs",
       description: "Programs matched to this address through active incentive-zone boundaries, ordered by eligibility confidence.",
-      items: confirmedPrograms.map((p) => programReportItem(p, confidenceMap)),
+      items: confirmedPrograms.map((p) => programReportItem(p, confidenceMap, gatingOpts)),
     });
   }
 
@@ -1779,7 +1811,7 @@ function generateLocationIncentives(
     sections.push({
       title: "Additional Programs to Explore",
       description: "Programs not confirmed by this address alone, including Cook County tools that may apply countywide but still need project, property, and administrator review.",
-      items: exploratoryPrograms.slice(0, 8).map((p) => programReportItem(p, confidenceMap)),
+      items: exploratoryPrograms.slice(0, 8).map((p) => programReportItem(p, confidenceMap, gatingOpts)),
     });
   }
 
@@ -1863,15 +1895,9 @@ function generateLocationIncentives(
   }
 
   // §06 TIF Financial Context enrichment + Deadlines + Corridor Context
+  // (tifFinancials / sbifRollout / tifDistrictId are loaded once near the top
+  //  of this function and shared with the program-gating annotations.)
   {
-    const tifFinancials = loadTifFinancials();
-    const sbifRollout = loadSbifRollout();
-
-    // Resolve the TIF district key for this address.
-    // Priority: already-set districtId from ctx.neighborhoodEconomics.tifFinance
-    // Fallback: normalizeTifKey on raw zoneNames["tif"] value.
-    const tifDistrictId = enrichTifFinancialContext(ctx, tifFinancials);
-
     // TIF Financial Context: when in a TIF and tif-financials.json has a record,
     // add an enrichment note to the Neighborhood Economic Context section items.
     // If the section was already built by buildNeighborhoodEconomicContextSection
@@ -3360,6 +3386,16 @@ export function generateReportData(
   programs: Program[],
   ctx: ReportContext = {},
 ): GeneratedReport {
+  // Availability gate: 'expired' programs (past expiresOn, or one-time
+  // programs whose every deadline has passed) are excluded from every report
+  // type — eligible sections, exploratory sections, verdict counts, document
+  // checklists, and the deadlines section. 'window-closed' and
+  // 'lapsed-notice' programs stay in and are annotated by programReportItem.
+  const gatingToday = new Date();
+  programs = programs.filter(
+    (p) => resolveAvailability(p, gatingToday).state !== "expired",
+  );
+
   const locationContext = ctx.locationContext ?? buildLocationContext(state, programs, ctx);
   ctx = { ...ctx, locationContext };
   const { zones, zoneNames, census } = ctx;

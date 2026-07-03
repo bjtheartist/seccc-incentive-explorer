@@ -81,6 +81,31 @@ export interface SbifWindow {
   windowEnd: string;
 }
 
+/**
+ * Find the SBIF rollout window for a TIF district.
+ * Matches by normalized key equality or loose name containment in either
+ * direction ("T-141" vs "Fullerton/Milwaukee" style keys both supported).
+ * Shared by deadlinesForAddress and lib/program-gating so the district
+ * matching logic lives in exactly one place.
+ */
+export function findSbifWindow(
+  rollout: SbifWindow[],
+  tifDistrict: string
+): SbifWindow | null {
+  const normalizedDistrict = tifDistrict.toUpperCase();
+  return (
+    rollout.find((w) => {
+      const wName = w.tifDistrict.toUpperCase();
+      // Exact key match (T-141) or name substring match.
+      return (
+        wName === normalizedDistrict ||
+        wName.includes(normalizedDistrict) ||
+        normalizedDistrict.includes(wName)
+      );
+    }) ?? null
+  );
+}
+
 // ── Output types ──────────────────────────────────────────────────────────────
 
 export type DeadlineKind =
@@ -220,17 +245,7 @@ export function deadlinesForAddress(
   // ── SBIF window for the address's TIF district ────────────────────────────
   let sbifWindow: DeadlineItem | null = null;
   if (tifDistrict && sbifRollout && sbifRollout.length > 0) {
-    // Match by normalized TIF key or loose district name match.
-    const normalizedDistrict = tifDistrict.toUpperCase();
-    const match = sbifRollout.find((w) => {
-      const wName = w.tifDistrict.toUpperCase();
-      // Exact key match (T-141) or name substring match.
-      return (
-        wName === normalizedDistrict ||
-        wName.includes(normalizedDistrict) ||
-        normalizedDistrict.includes(wName)
-      );
-    });
+    const match = findSbifWindow(sbifRollout, tifDistrict);
 
     if (match) {
       const startDate = parseDate(match.windowStart);
