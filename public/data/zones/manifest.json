@@ -1,6 +1,6 @@
 {
-  "$comment": "Provenance manifest for zone GeoJSON layers. Update fetched_on, vintage, and caveats each time a layer is refreshed. Generated 2026-05-21 from audit-2026-05-21-*.md.",
-  "generatedAt": "2026-05-21",
+  "$comment": "Provenance manifest for zone GeoJSON layers. Update fetched_on, vintage, and caveats each time a layer is refreshed. Generated 2026-05-21 from audit-2026-05-21-*.md. Zone layer refresh (roadmap items 1 and 7) applied 2026-07-02.",
+  "generatedAt": "2026-07-02",
   "layers": [
     {
       "key": "tif",
@@ -8,11 +8,14 @@
       "label": "TIF Districts",
       "transformedFile": "public/data/zones/tif-districts.geojson",
       "sourceAgency": "City of Chicago — Department of Planning and Development",
-      "sourceUrl": "https://data.cityofchicago.org/Community-Economic-Development/Boundaries-Tax-Increment-Financing-Districts/dchz-72ji",
-      "fetchedOn": null,
+      "sourceUrl": "https://data.cityofchicago.org/d/eejr-xtfb",
+      "fetchedOn": "2026-07-02",
       "scope": "citywide",
-      "vintage": "pre-2026 (incomplete)",
-      "caveats": "Currently 100 features in file; current active count is 124 (Civic Federation, 2025). 9 districts expired 12/31/2025; 13 more expire 12/31/2026. Refresh required."
+      "vintage": "2026-01-27 (last portal update)",
+      "featureCount": 100,
+      "previousFile": "public/data/zones/tif-districts.geojson.bak",
+      "previousFeatureCount": 100,
+      "caveats": "100 active TIF districts as of portal refresh 2026-01-27 (dataset eejr-xtfb). The 9 districts that expired 12/31/2025 have already been removed from the portal's active dataset and are not in this file. 13 more expire 12/31/2026. The Civic Federation's '124 active' count (2025) was likely measured before the Dec 2025 expirations. Properties refreshed: TIF_Number, District_Name, IND, Type, Use, SBIF, Community_Areas, Wards, Approval_Date, Expiration_Date, Status. Previous dataset ID dchz-72ji is no longer active on the portal."
     },
     {
       "key": "ssa",
@@ -68,11 +71,14 @@
       "label": "HUD Qualified Census Tracts",
       "transformedFile": "public/data/zones/qct.geojson",
       "sourceAgency": "U.S. Department of Housing and Urban Development",
-      "sourceUrl": "https://hudgis-hud.opendata.arcgis.com/datasets/HUD::qualified-census-tracts-2026/about",
-      "fetchedOn": null,
+      "sourceUrl": "https://services.arcgis.com/VTyQ9soqVukalItT/ArcGIS/rest/services/QUALIFIED_CENSUS_TRACTS_2026/FeatureServer/0",
+      "fetchedOn": "2026-07-02",
       "scope": "Cook County",
-      "vintage": "pre-2026 (vintage not embedded)",
-      "caveats": "418 features. HUD publishes new QCT designations annually each January 1. 2026 designations effective 1/1/2026 use 2020 census tract boundaries — refresh from HUD Open Data."
+      "vintage": "2026 designation (effective 1/1/2026, uses 2020 census tract boundaries)",
+      "featureCount": 370,
+      "previousFile": "public/data/zones/qct.geojson.bak",
+      "previousFeatureCount": 418,
+      "caveats": "370 Cook County QCTs for 2026 (down from 418 in 2024 baseline; 62 tracts dropped, 14 added). 246 Chicago city tracts + 124 suburban Cook County tracts. Source: HUD ArcGIS service QUALIFIED_CENSUS_TRACTS_2026 (filter STATE=17 AND COUNTY=031). Refresh annually each January 1 when HUD publishes new designations."
     },
     {
       "key": "nmtcEligible",
@@ -96,7 +102,8 @@
       "fetchedOn": null,
       "scope": "Cook County subset (114 features)",
       "vintage": "n/a",
-      "caveats": "Proxy boundary — REV / EDGE / MICRO / Data Center programs are project-by-project, not zone-based. The 114-feature high-unemployment census-tract overlay is used as an approximation for the 'underserved area' enhanced-credit eligibility. Same file is referenced by edge-zones, rev-zones, micro-zones, data-center-zones."
+      "boundary_basis": "proxy-high-unemployment",
+      "caveats": "Proxy boundary — REV / EDGE / MICRO / Data Center programs are project-by-project, not zone-based. The 114-feature high-unemployment census-tract overlay is used as an approximation for the 'underserved area' enhanced-credit eligibility. Same file is referenced by edge-zones, rev-zones, micro-zones, data-center-zones. See edge-zones-official.geojson for the official DCEO underserved area tract layer (739 Cook County tracts)."
     },
     {
       "key": "ccsa",
@@ -164,11 +171,14 @@
       "label": "Chicago Landmark Districts",
       "transformedFile": "public/data/zones/landmark-districts.geojson",
       "sourceAgency": "City of Chicago — Commission on Chicago Landmarks (DPD-HP)",
-      "sourceUrl": "https://www.chicago.gov/content/dam/city/depts/zlup/Historic_Preservation/Publications/Chicago_Landmarks_Ordinance_2025.pdf",
-      "fetchedOn": null,
+      "sourceUrl": "https://data.cityofchicago.org/d/zidz-sdfj",
+      "fetchedOn": "2026-07-02",
       "scope": "citywide",
-      "vintage": "pre-2025 ordinance",
-      "caveats": "59 features; current count is 62 per 2025 Landmarks Ordinance. Refresh from data.cityofchicago.org."
+      "vintage": "2009 (last portal update to zidz-sdfj)",
+      "featureCount": 59,
+      "previousFile": "public/data/zones/landmark-districts.geojson.bak",
+      "previousFeatureCount": 59,
+      "caveats": "59 features. District names refreshed to match authoritative portal names (data.cityofchicago.org/d/zidz-sdfj). Geometries unchanged; originally sourced from State Plane and reprojected to WGS84 in Feb 2026. The portal's Landmark Districts dataset (zidz-sdfj) has not been updated since 2009 and contains 59 features — the same as our file. The 2025 Landmarks Ordinance PDF cites 62 districts; the 3 additional designations (post-2009) do not appear in any publicly downloadable geospatial dataset and cannot be confirmed or geolocated from official sources. Boundaries for those 3 districts were not added to this file. Next refresh: monitor data.cityofchicago.org/d/zidz-sdfj and the Commission on Chicago Landmarks announcements for updated spatial data."
     },
     {
       "key": "nrhpDistricts",
@@ -204,7 +214,8 @@
       "fetchedOn": null,
       "scope": "shared 114-feature high-unemployment proxy",
       "vintage": "n/a",
-      "caveats": "Same proxy as stateIncentiveZones. REV is project-by-project."
+      "boundary_basis": "proxy-high-unemployment",
+      "caveats": "Same proxy as stateIncentiveZones. REV is project-by-project. See edge-zones-official.geojson for official DCEO underserved area tract layer."
     },
     {
       "key": "edgeZones",
@@ -216,7 +227,8 @@
       "fetchedOn": null,
       "scope": "shared 114-feature high-unemployment proxy",
       "vintage": "n/a",
-      "caveats": "Same proxy as stateIncentiveZones. EDGE underserved-area boost approximated by high-unemployment overlay."
+      "boundary_basis": "proxy-high-unemployment",
+      "caveats": "Same proxy as stateIncentiveZones. EDGE underserved-area boost approximated by high-unemployment overlay. See edge-zones-official.geojson for official DCEO underserved area tract layer (739 Cook County tracts, boundary_basis: official-dceo)."
     },
     {
       "key": "microZones",
@@ -228,7 +240,8 @@
       "fetchedOn": null,
       "scope": "shared 114-feature high-unemployment proxy",
       "vintage": "n/a",
-      "caveats": "Same proxy as stateIncentiveZones. MICRO underserved-area boost approximated by high-unemployment overlay."
+      "boundary_basis": "proxy-high-unemployment",
+      "caveats": "Same proxy as stateIncentiveZones. MICRO underserved-area boost approximated by high-unemployment overlay. See edge-zones-official.geojson for official DCEO underserved area tract layer."
     },
     {
       "key": "dataCenterZones",
@@ -240,7 +253,24 @@
       "fetchedOn": null,
       "scope": "shared 114-feature high-unemployment proxy",
       "vintage": "n/a",
-      "caveats": "Same proxy as stateIncentiveZones. Note: Pritzker announced a 2-year moratorium on new Data Center certifications effective 7/1/2026."
+      "boundary_basis": "proxy-high-unemployment",
+      "caveats": "Same proxy as stateIncentiveZones. Note: Pritzker announced a 2-year moratorium on new Data Center certifications effective 7/1/2026. See edge-zones-official.geojson for official DCEO underserved area tract layer."
+    },
+    {
+      "key": "edgeZonesOfficial",
+      "level": "State",
+      "label": "DCEO Underserved Areas — Official (EDGE / REV / MICRO / Data Center / Apprenticeship)",
+      "transformedFile": "public/data/zones/edge-zones-official.geojson",
+      "sourceAgency": "Illinois DCEO",
+      "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/underservedareas.html",
+      "dataSourceFile": "Underserved Census Tracts 2022-2026.xlsx",
+      "geometrySource": "U.S. Census Bureau TIGER/Web 2024 (tigerWMS_Current, layer 8, Census Tracts)",
+      "fetchedOn": "2026-07-02",
+      "scope": "Cook County — all underserved tracts per DCEO 2026 designation",
+      "vintage": "2022-2026 DCEO designation (expires end of calendar year 2026)",
+      "featureCount": 739,
+      "boundary_basis": "official-dceo",
+      "caveats": "739 Cook County census tracts designated underserved by DCEO for 2026. Joined from DCEO's official Excel spreadsheet (Underserved Census Tracts 2022-2026.xlsx) to Census TIGER 2024 tract geometries. The designation covers tracts meeting at least one of four statutory criteria: (1) poverty rate >= 20%; (2) >= 35% families with children below 130% poverty; (3) >= 20% households receiving SNAP; (4) unemployment >= 120% of national average for 2 consecutive years. The existing edge-zones.geojson proxy (114 features, high-unemployment only) is left in place untouched. This file replaces the proxy for any address lookup requiring official EDGE/REV/MICRO/Data Center/Apprenticeship underserved-area enhanced-credit eligibility. IMPORTANT: The 2022-2026 designation expires at end of 2026; monitor DCEO for the 2027+ list."
     },
     {
       "key": "tripleBenefitZones",
