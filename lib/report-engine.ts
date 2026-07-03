@@ -1692,47 +1692,101 @@ function buildCorridorContextSection(
 
   const label = formatCorridorLabel(metric);
 
+  // Copy reviewed 2026-07-03 (Claude + Codex CLI cross-review): every metric
+  // stays tied to its record source, missing owner data renders as pending
+  // rather than zero, turnover shows direction, and there is no numeric
+  // score — a 100-point number reads as a grade regardless of disclaimers.
+  const d = metric.details ?? null;
+  const windowMonths = d?.windowMonths ?? 24;
+  const ownerDataPending = (d?.ownershipConcentration?.totalParcels ?? 0) === 0;
+  const openings = d?.turnover?.openings ?? null;
+  const closures = d?.turnover?.closures ?? null;
+
+  const concentrationBand = (hhi: number): string => {
+    if (hhi < 0.15) return "Low concentration";
+    if (hhi < 0.25) return "Moderate concentration";
+    return "High concentration";
+  };
+
+  const signalSummary = (): string => {
+    if (openings != null && closures != null && metric.permitCount != null) {
+      if (openings > closures && metric.permitCount > 0) {
+        return "More business openings and permit filings than vacancy flags in recent records";
+      }
+      if (closures > openings) {
+        return "More license closures than openings in recent records";
+      }
+    }
+    return "Mixed public-record signals in recent records";
+  };
+
   const items: ReportItem[] = [
     {
-      label: "Vacancy rate",
-      value: metric.vacancyRate != null ? `${Math.round(metric.vacancyRate * 100)}%` : "Not available",
-      detail: "Share of parcels in this corridor carrying a vacancy flag in public records.",
+      label: "Properties flagged vacant",
+      value:
+        metric.vacancyRate != null
+          ? `${Math.round(metric.vacancyRate * 100)}% of property records`
+          : "Not available",
+      detail: "Share of property records in this ZIP with a public vacancy indicator.",
     },
     {
-      label: "Business turnover",
-      value: metric.turnoverRate != null ? `${Math.round(metric.turnoverRate * 100)}%` : "Not available",
-      detail: "License openings and closures as a share of active licenses in the trailing measurement window.",
+      label: "Business license activity",
+      value:
+        openings != null && closures != null
+          ? `${openings.toLocaleString()} opened / ${closures.toLocaleString()} closed in the last ${windowMonths} months`
+          : metric.turnoverRate != null
+            ? `${Math.round(metric.turnoverRate * 100)}%`
+            : "Not available",
+      detail:
+        "Business licenses recorded as opened or closed in this ZIP, shown separately so the direction is visible.",
     },
     {
       label: "Ownership concentration",
-      value: metric.ownershipHHI != null ? `HHI ${metric.ownershipHHI.toFixed(3)}` : "Not available",
-      detail: "Herfindahl-Hirschman Index of parcel ownership. Higher values indicate more concentrated ownership.",
+      value: ownerDataPending
+        ? "Data pending"
+        : metric.ownershipHHI != null
+          ? concentrationBand(metric.ownershipHHI)
+          : "Not available",
+      detail: ownerDataPending
+        ? "Cook County owner records are not available right now, so this metric is not calculated."
+        : "How spread out private property ownership appears in available assessor records; higher concentration means fewer owners hold a larger share.",
     },
     {
-      label: "Local ownership share",
-      value: metric.localOwnershipShare != null ? `${Math.round(metric.localOwnershipShare * 100)}%` : "Not available",
-      detail: "Share of classified private-owner parcels with a local Illinois mailing address.",
+      label: "Illinois owner mailing addresses",
+      value: ownerDataPending
+        ? "Data pending"
+        : metric.localOwnershipShare != null
+          ? `${Math.round(metric.localOwnershipShare * 100)}% of private-owner records`
+          : "Not available",
+      detail: ownerDataPending
+        ? "Cook County owner records are not available right now, so this metric is not calculated."
+        : "Share of private-owner property records with an Illinois owner mailing address; this does not measure residency or community commitment.",
     },
     {
       label: "Permit activity",
-      value: metric.permitCount != null ? `${metric.permitCount.toLocaleString()} permits` : "Not available",
-      detail: "Building permits filed in the trailing measurement window — a proxy for visible reinvestment.",
+      value:
+        metric.permitCount != null
+          ? `${metric.permitCount.toLocaleString()} permits in the last ${windowMonths} months`
+          : "Not available",
+      detail:
+        "Building permits filed in this ZIP, a signal of permitted property work rather than a complete measure of investment.",
     },
     {
-      label: "Composite",
-      value: metric.healthScore != null ? `${Math.round(metric.healthScore)}/100` : "Not available",
-      detail: "Market Signal Composite summarizing the readings above for comparison across corridors. Not a grade of corridor success.",
+      label: "Signal summary",
+      value: signalSummary(),
+      detail: "A non-scored summary of the public-record signals above for comparison across corridors.",
     },
     {
       label: "Context, not a judgment",
       value: `${label} corridor snapshot`,
-      detail: "These metrics describe observable public-record patterns in this corridor. They are context for decision-making, not a judgment of the community or its residents.",
+      detail:
+        "These metrics describe observable public-record patterns in this ZIP. They support business and lending decisions, but they do not judge the community, its residents, or its future.",
     },
   ];
 
   return {
     title: "Corridor Context",
-    description: `Public-record market signals for the ${label} corridor. Use as context alongside this address's incentive screening.`,
+    description: `Public-record signals for ${label}. Use them alongside the address screening; they are not a rating of the community.`,
     items,
   };
 }
