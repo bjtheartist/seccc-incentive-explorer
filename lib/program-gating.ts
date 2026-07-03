@@ -76,6 +76,11 @@ export interface ResolveAvailabilityOpts {
 
 // ── Date helpers (day granularity, mirrors lib/deadlines.ts semantics) ────────
 
+function chicagoDayUtc(d: Date): Date {
+  const day = d.toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+  return new Date(day + "T00:00:00Z");
+}
+
 function parseDate(s: string | null | undefined): Date | null {
   if (!s) return null;
   const d = new Date(s + (s.includes("T") ? "" : "T00:00:00Z"));
@@ -108,6 +113,7 @@ export function resolveAvailability(
   today: Date,
   opts: ResolveAvailabilityOpts = {}
 ): ProgramAvailability {
+  today = chicagoDayUtc(today);
   const dated = (program.deadlines ?? []).filter((d) => daysUntil(d.date, today) != null);
   const expiresOnPast = program.expiresOn ? isPastDay(program.expiresOn, today) : false;
   const expiresOnFuture = !!program.expiresOn && !expiresOnPast && parseDate(program.expiresOn) != null;

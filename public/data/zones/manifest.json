@@ -13,7 +13,7 @@
       "scope": "citywide",
       "vintage": "2026-01-27 (last portal update)",
       "featureCount": 100,
-      "previousFile": "public/data/zones/tif-districts.geojson.bak",
+      "previousFile": "data/archive/zones/2026-07-02/tif-districts.geojson.bak",
       "previousFeatureCount": 100,
       "caveats": "100 active TIF districts as of portal refresh 2026-01-27 (dataset eejr-xtfb). The 9 districts that expired 12/31/2025 have already been removed from the portal's active dataset and are not in this file. 13 more expire 12/31/2026. The Civic Federation's '124 active' count (2025) was likely measured before the Dec 2025 expirations. Properties refreshed: TIF_Number, District_Name, IND, Type, Use, SBIF, Community_Areas, Wards, Approval_Date, Expiration_Date, Status. Previous dataset ID dchz-72ji is no longer active on the portal."
     },
@@ -76,7 +76,7 @@
       "scope": "Cook County",
       "vintage": "2026 designation (effective 1/1/2026, uses 2020 census tract boundaries)",
       "featureCount": 370,
-      "previousFile": "public/data/zones/qct.geojson.bak",
+      "previousFile": "data/archive/zones/2026-07-02/qct.geojson.bak",
       "previousFeatureCount": 418,
       "caveats": "370 Cook County QCTs for 2026 (down from 418 in 2024 baseline; 62 tracts dropped, 14 added). 246 Chicago city tracts + 124 suburban Cook County tracts. Source: HUD ArcGIS service QUALIFIED_CENSUS_TRACTS_2026 (filter STATE=17 AND COUNTY=031). Refresh annually each January 1 when HUD publishes new designations."
     },
@@ -176,7 +176,7 @@
       "scope": "citywide",
       "vintage": "2009 (last portal update to zidz-sdfj)",
       "featureCount": 59,
-      "previousFile": "public/data/zones/landmark-districts.geojson.bak",
+      "previousFile": "data/archive/zones/2026-07-02/landmark-districts.geojson.bak",
       "previousFeatureCount": 59,
       "caveats": "59 features. District names refreshed to match authoritative portal names (data.cityofchicago.org/d/zidz-sdfj). Geometries unchanged; originally sourced from State Plane and reprojected to WGS84 in Feb 2026. The portal's Landmark Districts dataset (zidz-sdfj) has not been updated since 2009 and contains 59 features — the same as our file. The 2025 Landmarks Ordinance PDF cites 62 districts; the 3 additional designations (post-2009) do not appear in any publicly downloadable geospatial dataset and cannot be confirmed or geolocated from official sources. Boundaries for those 3 districts were not added to this file. Next refresh: monitor data.cityofchicago.org/d/zidz-sdfj and the Commission on Chicago Landmarks announcements for updated spatial data."
     },

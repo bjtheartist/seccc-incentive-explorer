@@ -82,7 +82,15 @@ export function DataPendingRow({ label }: { label: string }) {
  * lib/report-engine.ts (buildNeighborhoodEconomicContext, ~line 1316-1321)
  * so the framing language matches the rest of the product.
  */
-export function ContextNotProofFootnote() {
+export function ContextNotProofFootnote({
+  includeOwnership = true,
+}: {
+  includeOwnership?: boolean;
+}) {
+  const signals = includeOwnership
+    ? "Vacancy, license activity, and ownership rows"
+    : "Vacancy, license activity, and permit rows";
+
   return (
     <div className="rounded-xl border border-[#0C1B33]/10 bg-[#EFF3FB] p-5">
       <p className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/55">
@@ -90,7 +98,7 @@ export function ContextNotProofFootnote() {
       </p>
       <p className="text-[13px] text-[#0C1B33]/60 mt-2 leading-relaxed">
         These figures are ZIP-level aggregates for context — not address-level
-        proof. Vacancy, license activity, and ownership rows describe
+        proof. {signals} describe
         public-record patterns across this ZIP; they are a neighborhood
         signal, not a judgment of the community or its residents. Reported
         permit cost is self-reported on permit applications and should be

@@ -1637,6 +1637,37 @@ function buildDeadlinesSection(
   financials: Record<string, TifFinancialsSlim> | null,
   sbifRollout: SbifWindow[] | null,
 ): ReportSection | undefined {
+  const programById = new Map(programs.map((p) => [p.id, p]));
+
+  function compactSummary(text: string): string {
+    const normalized = text.replace(/\s+/g, " ").trim();
+    const sentence = normalized.match(/^.+?[.!?](?:\s|$)/)?.[0]?.trim();
+    const summary = sentence || normalized;
+    return summary.length > 280 ? `${summary.slice(0, 277).trim()}...` : summary;
+  }
+
+  function buildProgramDeadlineDetail(program: Program, deadlineLabel?: string): string {
+    const portal = program.applicationPortals?.find((p) => p.url);
+    const verificationStep = program.verificationSteps?.find((step) => step.label);
+    const nextStep = program.fastestConfirmingStep
+      ?? (verificationStep
+        ? `${verificationStep.label} with ${verificationStep.agency}`
+        : portal
+        ? `Review ${portal.label} and confirm this address or project fits the current round`
+        : program.contact
+        ? `Contact ${program.contact} to confirm current timing and eligibility`
+        : null);
+    const parts = [
+      deadlineLabel ? `Timing: ${deadlineLabel}.` : null,
+      `Why it matters: ${compactSummary(program.summary)}`,
+      nextStep ? `Next step: ${nextStep}.` : null,
+      program.contact && !nextStep?.includes(program.contact)
+        ? `Contact: ${program.contact}.`
+        : null,
+    ];
+    return parts.filter(Boolean).join("\n");
+  }
+
   // Flatten programs with deadlines[] arrays into ProgramCardSlim entries.
   // Each deadline entry in a program gets its own item so sorting is by date.
   const cardSlims = programs.flatMap((p) => {
@@ -1650,13 +1681,18 @@ function buildDeadlinesSection(
         name: d.label ? `${p.name} — ${d.label}` : p.name,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         deadline: d.date ?? (p as any).deadline ?? null,
-        deadlineNote: null,
+        deadlineNote: buildProgramDeadlineDetail(p, d.label),
       }));
     }
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const flatDeadline = (p as any).deadline as string | null | undefined;
     if (flatDeadline) {
-      return [{ id: p.id, name: p.name, deadline: flatDeadline, deadlineNote: null }];
+      return [{
+        id: p.id,
+        name: p.name,
+        deadline: flatDeadline,
+        deadlineNote: buildProgramDeadlineDetail(p),
+      }];
     }
     return [];
   });
@@ -1687,6 +1723,10 @@ function buildDeadlinesSection(
   if (upcoming.length === 0) return undefined;
 
   const items: ReportItem[] = upcoming.map((item) => {
+    const program = item.programId ? programById.get(item.programId) : undefined;
+    const label = item.kind === "program_deadline"
+      ? item.label.replace(/\s+— application deadline$/, "")
+      : item.label;
     let value = item.date;
     if (item.daysFromToday === 0) value = `Today (${item.date})`;
     else if (item.daysFromToday === 1) value = `Tomorrow (${item.date})`;
@@ -1711,15 +1751,27 @@ function buildDeadlinesSection(
     }
 
     return {
-      label: item.label,
+      label,
       value,
       detail: actSoonNote ?? detail,
+      programId: item.programId,
+      url: program?.url,
+      level: program?.level,
+      whoQualifies: program?.whoQualifies,
+      eligibilityRules: program?.eligibilityRules?.map((r) => ({
+        description: r.description,
+        required: r.required,
+      })),
+      sourceUrl: program?.sourceUrl,
+      applicationPortals: program?.applicationPortals,
+      verificationSteps: program?.verificationSteps,
+      confidenceLabel: item.kind === "program_deadline" ? "Timing & links" : undefined,
     };
   });
 
   return {
     title: "Upcoming Deadlines Near This Address",
-    description: "Program deadlines, SBIF application windows, and TIF expiration alerts relevant to this location, sorted by date.",
+    description: "Upcoming dates that may affect this report. Use each row's notes and official links to confirm timing before applying or starting work.",
     items,
   };
 }

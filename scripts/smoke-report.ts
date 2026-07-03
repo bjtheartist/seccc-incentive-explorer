@@ -128,6 +128,14 @@ async function main() {
     `  Deadlines items (${deadlinesSection?.items.length}):`,
     deadlinesSection?.items.map((i) => `${i.label} → ${i.value}`).join("; ")
   );
+  const programDeadlineWithDetail = deadlinesSection?.items.find(
+    (i) => i.programId && i.detail?.includes("Next step:"),
+  );
+  assert(Boolean(programDeadlineWithDetail), "Program deadline rows include actionable detail");
+  assert(
+    Boolean(programDeadlineWithDetail?.sourceUrl || programDeadlineWithDetail?.url),
+    "Program deadline rows carry source/application links",
+  );
 
   // Check 2b: TIF expiration alert in deadlines (T-021 expires 2027 = within 24 months)
   const tifExpiryItem = deadlinesSection?.items.find(

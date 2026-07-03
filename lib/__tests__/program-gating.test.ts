@@ -72,6 +72,20 @@ describe("resolveAvailability", () => {
     expect(result.note).toContain("2026-05-01");
   });
 
+  it("keeps a oneTime program active through the Chicago deadline day", () => {
+    const result = resolveAvailability(
+      program({
+        id: "sameDayDeadline",
+        oneTime: true,
+        deadlines: [{ label: "Final application deadline", date: "2026-07-04" }],
+      }),
+      new Date("2026-07-04T23:30:00-05:00")
+    );
+
+    expect(result.state).toBe("active");
+    expect(result.nextWindow?.date).toBe("2026-07-04");
+  });
+
   it("returns expired when an explicit expiresOn date is in the past", () => {
     const result = resolveAvailability(
       program({ id: "hardExpiry", expiresOn: "2026-06-30" }),
@@ -142,6 +156,16 @@ describe("resolveAvailability", () => {
       expect(result.nextWindow?.date).toBe("2026-07-01");
       expect(result.nextWindow?.endDate).toBe("2026-07-30");
       expect(result.note).toMatch(/open through 2026-07-30/i);
+    });
+
+    it("keeps an SBIF window active through its Chicago end date", () => {
+      const result = resolveAvailability(sbif, new Date("2026-07-30T23:30:00-05:00"), {
+        sbifRollout: SBIF_ROLLOUT,
+        tifDistrict: "Archer/Western",
+      });
+
+      expect(result.state).toBe("active");
+      expect(result.nextWindow?.endDate).toBe("2026-07-30");
     });
 
     it("falls back to generic card dates when the district is not in the rollout", () => {

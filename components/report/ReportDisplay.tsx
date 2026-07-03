@@ -1759,6 +1759,7 @@ export function ReportDisplay({
                           const reportItem = item as ReportNavigationItem;
                           const itemProgram = reportItem.programId ? programById.get(reportItem.programId) : undefined;
                           const isSupportNetworkItem = section.title === "Your Support Network";
+                          const isDeadlineItem = section.title === "Upcoming Deadlines Near This Address";
                           const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
                           const hasNavigationLinks = Boolean(
                             reportItem.sourceUrl ||
@@ -1815,7 +1816,7 @@ export function ReportDisplay({
                                     })}
                                   </ul>
                                 ) : item.detail ? (
-                                  <span className={`text-[#0C1B33]/40 text-[11px] sm:text-[12px] leading-relaxed block mt-0.5 ${isSupportNetworkItem ? "whitespace-pre-line" : ""}`}>
+                                  <span className={`text-[#0C1B33]/40 text-[11px] sm:text-[12px] leading-relaxed block mt-0.5 ${isSupportNetworkItem || isDeadlineItem ? "whitespace-pre-line" : ""}`}>
                                     {item.detail}
                                   </span>
                                 ) : null}

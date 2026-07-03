@@ -514,7 +514,7 @@ export default async function NeighborhoodIncentivesPage({
             </div>
 
             <div className="mt-4">
-              <ContextNotProofFootnote />
+              <ContextNotProofFootnote includeOwnership={false} />
             </div>
           </div>
         </section>
