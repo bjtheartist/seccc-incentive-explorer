@@ -10,7 +10,7 @@ import {
 
 // ── Shared fixtures ───────────────────────────────────────────────────────────
 
-const TODAY = new Date("2026-07-02T00:00:00Z");
+const TODAY = new Date("2026-07-02T12:00:00Z");
 
 function daysFromToday(days: number): string {
   const d = new Date(TODAY);

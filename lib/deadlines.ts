@@ -29,6 +29,17 @@ export const TIF_EXPIRES_SOON_MONTHS = 24;
 
 // ── Shared date helpers (local to this module) ────────────────────────────────
 
+/**
+ * Normalize a reference date to that calendar day in America/Chicago,
+ * anchored at UTC midnight — matching how date-only deadline strings are
+ * parsed. Prevents off-by-one "Today" labels when local evening crosses
+ * the UTC date line.
+ */
+function chicagoDayUtc(d: Date): Date {
+  const day = d.toLocaleDateString("en-CA", { timeZone: "America/Chicago" });
+  return new Date(day + "T00:00:00Z");
+}
+
 function parseDate(s: string | null | undefined): Date | null {
   if (!s) return null;
   const d = new Date(s + (s.includes("T") ? "" : "T00:00:00Z"));
@@ -167,6 +178,7 @@ export function collectUpcomingDeadlines(
   today: Date,
   windowDays = 90
 ): DeadlineItem[] {
+  today = chicagoDayUtc(today);
   const items: DeadlineItem[] = [];
 
   for (const p of programs) {
@@ -231,9 +243,9 @@ export function deadlinesForAddress(
     tifDistrict,
     tifFinancials,
     sbifRollout,
-    today,
     deadlineWindowDays = 90,
   } = opts;
+  const today = chicagoDayUtc(opts.today);
 
   // ── Program card deadlines ────────────────────────────────────────────────
   const upcomingProgramDeadlines = collectUpcomingDeadlines(

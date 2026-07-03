@@ -968,6 +968,7 @@ function ReportWizardPage() {
           census: censusData ?? undefined,
           cityZoning: cityZoning ?? undefined,
           parcel: parcelData ?? undefined,
+          reportZip: reportZip ?? undefined,
           districts: districtsData ?? undefined,
           stackingRules: stackingRules ?? undefined,
           communityAssets: communityAssets ?? undefined,
@@ -1015,6 +1016,7 @@ function ReportWizardPage() {
         const generated = generateReportData(wizardState, programs, {
           corridorMetrics: corridorMetric ?? undefined,
           corridorOwnerClusters,
+          reportZip: reportZip ?? undefined,
           stats: areaStats ?? undefined,
         });
         setReport(generated);
@@ -1051,6 +1053,7 @@ function ReportWizardPage() {
           census: censusData ?? undefined,
           cityZoning: cityZoning ?? undefined,
           parcel: parcelData ?? undefined,
+          reportZip: reportZip ?? undefined,
           districts: districtsData ?? undefined,
           stackingRules: stackingRules ?? undefined,
           communityAssets: communityAssets ?? undefined,
@@ -1278,6 +1281,7 @@ function ReportWizardPage() {
         census: censusData ?? undefined,
         cityZoning: cityZoning ?? undefined,
         parcel: parcelData ?? undefined,
+          reportZip: reportZip ?? undefined,
         districts: districtsData ?? undefined,
         stackingRules: stackingRules ?? undefined,
         communityAssets: communityAssets ?? undefined,

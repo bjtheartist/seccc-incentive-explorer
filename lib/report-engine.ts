@@ -1520,6 +1520,7 @@ function loadStaticCorridorMetrics(zip: string | null): CorridorMetric | null {
 
 /** Best-effort ZIP for the report address, for ZIP-level corridor metrics. */
 function zipFromContext(ctx: ReportContext): string | null {
+  if (ctx.reportZip && /^\d{5}$/.test(ctx.reportZip)) return ctx.reportZip;
   const parcelZip = (ctx.parcel as { zip?: string | null } | undefined)?.zip;
   if (parcelZip && /^\d{5}$/.test(parcelZip)) return parcelZip;
   const econZip = (ctx.neighborhoodEconomics as { zip?: string | null } | undefined)?.zip;
@@ -3437,6 +3438,8 @@ export interface ReportContext {
   localBusinessSupport?: LocalBusinessSupportContext | null;
   stats?: Stats;
   corridorMetrics?: CorridorMetric | null;
+  /** Report ZIP resolved by the page (geocode/parcel/address) — corridor metrics key. */
+  reportZip?: string | null;
   corridorOwnerClusters?: CorridorOwnerCluster[];
   neighborhoodEconomics?: NeighborhoodEconomicContext;
   siteSignals?: SiteSignals | null;
