@@ -1,0 +1,3011 @@
+{
+  "60601": {
+    "corridorType": "zip",
+    "corridorId": "60601",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0007978117164349213,
+    "turnoverRate": 0.05176812104152006,
+    "ownershipHHI": 0.009513649467578865,
+    "localOwnershipShare": 0.7947247706422018,
+    "permitCount": 1117,
+    "incentiveCoverage": null,
+    "healthScore": 95.2,
+    "computedAt": "2026-07-03T17:23:17.484Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0007978117164349213,
+        "vacantCount": 7,
+        "totalParcels": 8774
+      },
+      "turnover": {
+        "openings": 1096,
+        "closures": 81,
+        "net": 1015,
+        "turnoverRate": 0.05176812104152006
+      },
+      "ownershipConcentration": {
+        "hhi": 0.009513649467578865,
+        "topOwnerShare": 0.07089126966036015,
+        "distinctOwners": 4972,
+        "totalParcels": 8774
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7947247706422018,
+        "outsideShare": 0.20527522935779816,
+        "localCount": 6930,
+        "outsideCount": 1790,
+        "totalParcels": 8720
+      },
+      "permits": {
+        "permitCount": 1117,
+        "totalReportedCost": 2036085850.9900002,
+        "demolitionCount": 1
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 8774
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60602": {
+    "corridorType": "zip",
+    "corridorId": "60602",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.000564334085778781,
+    "turnoverRate": 0.04593196425772065,
+    "ownershipHHI": 0.002181539778546645,
+    "localOwnershipShare": 0.7133938706015891,
+    "permitCount": 700,
+    "incentiveCoverage": null,
+    "healthScore": 93.7,
+    "computedAt": "2026-07-03T17:23:14.423Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.000564334085778781,
+        "vacantCount": 1,
+        "totalParcels": 1772
+      },
+      "turnover": {
+        "openings": 533,
+        "closures": 53,
+        "net": 480,
+        "turnoverRate": 0.04593196425772065
+      },
+      "ownershipConcentration": {
+        "hhi": 0.002181539778546645,
+        "topOwnerShare": 0.0208803611738149,
+        "distinctOwners": 1000,
+        "totalParcels": 1772
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7133938706015891,
+        "outsideShare": 0.2866061293984109,
+        "localCount": 1257,
+        "outsideCount": 505,
+        "totalParcels": 1762
+      },
+      "permits": {
+        "permitCount": 700,
+        "totalReportedCost": 168512564.56,
+        "demolitionCount": 0
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 1772
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60603": {
+    "corridorType": "zip",
+    "corridorId": "60603",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0011129660545353367,
+    "turnoverRate": 0.04106095383830655,
+    "ownershipHHI": 0.002146346055643981,
+    "localOwnershipShare": 0.7073719752391672,
+    "permitCount": 564,
+    "incentiveCoverage": null,
+    "healthScore": 93.3,
+    "computedAt": "2026-07-03T17:23:17.476Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0011129660545353367,
+        "vacantCount": 2,
+        "totalParcels": 1797
+      },
+      "turnover": {
+        "openings": 578,
+        "closures": 66,
+        "net": 512,
+        "turnoverRate": 0.04106095383830655
+      },
+      "ownershipConcentration": {
+        "hhi": 0.002146346055643981,
+        "topOwnerShare": 0.017807456872565387,
+        "distinctOwners": 1001,
+        "totalParcels": 1797
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7073719752391672,
+        "outsideShare": 0.2926280247608329,
+        "localCount": 1257,
+        "outsideCount": 520,
+        "totalParcels": 1777
+      },
+      "permits": {
+        "permitCount": 564,
+        "totalReportedCost": 334071421,
+        "demolitionCount": 0
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 1797
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60604": {
+    "corridorType": "zip",
+    "corridorId": "60604",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.002484472049689441,
+    "turnoverRate": 0.03799873337555415,
+    "ownershipHHI": 0.005584661085606274,
+    "localOwnershipShare": 0.7302798982188295,
+    "permitCount": 299,
+    "incentiveCoverage": null,
+    "healthScore": 93.9,
+    "computedAt": "2026-07-03T17:23:18.045Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.002484472049689441,
+        "vacantCount": 2,
+        "totalParcels": 805
+      },
+      "turnover": {
+        "openings": 329,
+        "closures": 31,
+        "net": 298,
+        "turnoverRate": 0.03799873337555415
+      },
+      "ownershipConcentration": {
+        "hhi": 0.005584661085606274,
+        "topOwnerShare": 0.03229813664596273,
+        "distinctOwners": 437,
+        "totalParcels": 805
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7302798982188295,
+        "outsideShare": 0.2697201017811705,
+        "localCount": 574,
+        "outsideCount": 212,
+        "totalParcels": 786
+      },
+      "permits": {
+        "permitCount": 299,
+        "totalReportedCost": 130678106,
+        "demolitionCount": 0
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 805
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60605": {
+    "corridorType": "zip",
+    "corridorId": "60605",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.004136893569010906,
+    "turnoverRate": 0.061082491469860174,
+    "ownershipHHI": 0.0003313524741153662,
+    "localOwnershipShare": 0.8425462459194777,
+    "permitCount": 726,
+    "incentiveCoverage": null,
+    "healthScore": 95.9,
+    "computedAt": "2026-07-03T17:23:17.492Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.004136893569010906,
+        "vacantCount": 77,
+        "totalParcels": 18613
+      },
+      "turnover": {
+        "openings": 840,
+        "closures": 73,
+        "net": 767,
+        "turnoverRate": 0.061082491469860174
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0003313524741153662,
+        "topOwnerShare": 0.008649868371568259,
+        "distinctOwners": 11190,
+        "totalParcels": 18613
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8425462459194777,
+        "outsideShare": 0.1574537540805223,
+        "localCount": 15486,
+        "outsideCount": 2894,
+        "totalParcels": 18380
+      },
+      "permits": {
+        "permitCount": 726,
+        "totalReportedCost": 233840062.92000002,
+        "demolitionCount": 2
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 18613
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60606": {
+    "corridorType": "zip",
+    "corridorId": "60606",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0019928258270227183,
+    "turnoverRate": 0.05345789541974828,
+    "ownershipHHI": 0.0011317280678084423,
+    "localOwnershipShare": 0.8013698630136986,
+    "permitCount": 2283,
+    "incentiveCoverage": null,
+    "healthScore": 95.6,
+    "computedAt": "2026-07-03T17:23:17.860Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0019928258270227183,
+        "vacantCount": 5,
+        "totalParcels": 2509
+      },
+      "turnover": {
+        "openings": 1163,
+        "closures": 73,
+        "net": 1090,
+        "turnoverRate": 0.05345789541974828
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0011317280678084423,
+        "topOwnerShare": 0.010358565737051793,
+        "distinctOwners": 1479,
+        "totalParcels": 2510
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8013698630136986,
+        "outsideShare": 0.19863013698630136,
+        "localCount": 1989,
+        "outsideCount": 493,
+        "totalParcels": 2482
+      },
+      "permits": {
+        "permitCount": 2283,
+        "totalReportedCost": 846173069.95,
+        "demolitionCount": 0
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 2509
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60607": {
+    "corridorType": "zip",
+    "corridorId": "60607",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.011735745362949393,
+    "turnoverRate": 0.06942643032137195,
+    "ownershipHHI": 0.0007943204292205518,
+    "localOwnershipShare": 0.7914035799107919,
+    "permitCount": 1395,
+    "incentiveCoverage": null,
+    "healthScore": 95.1,
+    "computedAt": "2026-07-03T17:23:19.198Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.011735745362949393,
+        "vacantCount": 205,
+        "totalParcels": 17468
+      },
+      "turnover": {
+        "openings": 1818,
+        "closures": 109,
+        "net": 1709,
+        "turnoverRate": 0.06942643032137195
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0007943204292205518,
+        "topOwnerShare": 0.016889193198676253,
+        "distinctOwners": 10141,
+        "totalParcels": 17526
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7914035799107919,
+        "outsideShare": 0.20859642008920815,
+        "localCount": 13662,
+        "outsideCount": 3601,
+        "totalParcels": 17263
+      },
+      "permits": {
+        "permitCount": 1395,
+        "totalReportedCost": 1150208780.08,
+        "demolitionCount": 19
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 17468
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60608": {
+    "corridorType": "zip",
+    "corridorId": "60608",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.03375617005466801,
+    "turnoverRate": 0.051639673403828135,
+    "ownershipHHI": 0.0006006893699147774,
+    "localOwnershipShare": 0.8656634446397188,
+    "permitCount": 1462,
+    "incentiveCoverage": null,
+    "healthScore": 95.8,
+    "computedAt": "2026-07-03T17:23:19.575Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.03375617005466801,
+        "vacantCount": 636,
+        "totalParcels": 18841
+      },
+      "turnover": {
+        "openings": 1840,
+        "closures": 89,
+        "net": 1751,
+        "turnoverRate": 0.051639673403828135
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0006006893699147774,
+        "topOwnerShare": 0.012409184918067561,
+        "distinctOwners": 13054,
+        "totalParcels": 18857
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8656634446397188,
+        "outsideShare": 0.1343365553602812,
+        "localCount": 15762,
+        "outsideCount": 2446,
+        "totalParcels": 18208
+      },
+      "permits": {
+        "permitCount": 1462,
+        "totalReportedCost": 324789653.32,
+        "demolitionCount": 40
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 18841
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60609": {
+    "corridorType": "zip",
+    "corridorId": "60609",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.1376414382700528,
+    "turnoverRate": 0.06581570412687078,
+    "ownershipHHI": 0.0032363232160488,
+    "localOwnershipShare": 0.8428950647380682,
+    "permitCount": 1221,
+    "incentiveCoverage": null,
+    "healthScore": 92.6,
+    "computedAt": "2026-07-03T17:23:19.883Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.1376414382700528,
+        "vacantCount": 2737,
+        "totalParcels": 19885
+      },
+      "turnover": {
+        "openings": 2129,
+        "closures": 83,
+        "net": 2046,
+        "turnoverRate": 0.06581570412687078
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0032363232160488,
+        "topOwnerShare": 0.053256223283882326,
+        "distinctOwners": 13092,
+        "totalParcels": 19885
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8428950647380682,
+        "outsideShare": 0.15710493526193184,
+        "localCount": 15559,
+        "outsideCount": 2900,
+        "totalParcels": 18459
+      },
+      "permits": {
+        "permitCount": 1221,
+        "totalReportedCost": 312433081.99,
+        "demolitionCount": 36
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 19885
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60610": {
+    "corridorType": "zip",
+    "corridorId": "60610",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0048762389357078495,
+    "turnoverRate": 0.0365016149769513,
+    "ownershipHHI": 0.00034082970749305135,
+    "localOwnershipShare": 0.8330299785867238,
+    "permitCount": 1141,
+    "incentiveCoverage": null,
+    "healthScore": 96.1,
+    "computedAt": "2026-07-03T17:23:19.949Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0048762389357078495,
+        "vacantCount": 92,
+        "totalParcels": 18867
+      },
+      "turnover": {
+        "openings": 1103,
+        "closures": 61,
+        "net": 1042,
+        "turnoverRate": 0.0365016149769513
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00034082970749305135,
+        "topOwnerShare": 0.011925584353633329,
+        "distinctOwners": 13440,
+        "totalParcels": 18867
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8330299785867238,
+        "outsideShare": 0.16697002141327624,
+        "localCount": 15561,
+        "outsideCount": 3119,
+        "totalParcels": 18680
+      },
+      "permits": {
+        "permitCount": 1141,
+        "totalReportedCost": 2208630556.01,
+        "demolitionCount": 7
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 18867
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60611": {
+    "corridorType": "zip",
+    "corridorId": "60611",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0009444585709615314,
+    "turnoverRate": 0.05377325021539709,
+    "ownershipHHI": 0.0006415038173972318,
+    "localOwnershipShare": 0.735477746540582,
+    "permitCount": 2437,
+    "incentiveCoverage": null,
+    "healthScore": 94.6,
+    "computedAt": "2026-07-03T17:23:21.759Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0009444585709615314,
+        "vacantCount": 26,
+        "totalParcels": 27529
+      },
+      "turnover": {
+        "openings": 2004,
+        "closures": 118,
+        "net": 1886,
+        "turnoverRate": 0.05377325021539709
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0006415038173972318,
+        "topOwnerShare": 0.012532238730066475,
+        "distinctOwners": 18428,
+        "totalParcels": 27529
+      },
+      "ownershipOrigin": {
+        "localShare": 0.735477746540582,
+        "outsideShare": 0.264522253459418,
+        "localCount": 20144,
+        "outsideCount": 7245,
+        "totalParcels": 27389
+      },
+      "permits": {
+        "permitCount": 2437,
+        "totalReportedCost": 1039844222.71,
+        "demolitionCount": 2
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 27529
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60612": {
+    "corridorType": "zip",
+    "corridorId": "60612",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0974936948297604,
+    "turnoverRate": 0.061573737486717746,
+    "ownershipHHI": 0.0036519552321072077,
+    "localOwnershipShare": 0.7387594915109632,
+    "permitCount": 1263,
+    "incentiveCoverage": null,
+    "healthScore": 91.9,
+    "computedAt": "2026-07-03T17:23:20.699Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0974936948297604,
+        "vacantCount": 1237,
+        "totalParcels": 12688
+      },
+      "turnover": {
+        "openings": 1057,
+        "closures": 44,
+        "net": 1013,
+        "turnoverRate": 0.061573737486717746
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0036519552321072077,
+        "topOwnerShare": 0.05252001884126237,
+        "distinctOwners": 7431,
+        "totalParcels": 12738
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7387594915109632,
+        "outsideShare": 0.2612405084890368,
+        "localCount": 8659,
+        "outsideCount": 3062,
+        "totalParcels": 11721
+      },
+      "permits": {
+        "permitCount": 1263,
+        "totalReportedCost": 448350545.71999997,
+        "demolitionCount": 37
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 12688
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60613": {
+    "corridorType": "zip",
+    "corridorId": "60613",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0037307711964021054,
+    "turnoverRate": 0.05787913340935006,
+    "ownershipHHI": 0.00017061371627896324,
+    "localOwnershipShare": 0.8605985424096759,
+    "permitCount": 1021,
+    "incentiveCoverage": null,
+    "healthScore": 96.1,
+    "computedAt": "2026-07-03T17:23:22.692Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0037307711964021054,
+        "vacantCount": 73,
+        "totalParcels": 19567
+      },
+      "turnover": {
+        "openings": 1192,
+        "closures": 77,
+        "net": 1115,
+        "turnoverRate": 0.05787913340935006
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00017061371627896324,
+        "topOwnerShare": 0.006331699346405229,
+        "distinctOwners": 15552,
+        "totalParcels": 19584
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8605985424096759,
+        "outsideShare": 0.13940145759032407,
+        "localCount": 16650,
+        "outsideCount": 2697,
+        "totalParcels": 19347
+      },
+      "permits": {
+        "permitCount": 1021,
+        "totalReportedCost": 240098388.21,
+        "demolitionCount": 50
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 19567
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60614": {
+    "corridorType": "zip",
+    "corridorId": "60614",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.009159444796730783,
+    "turnoverRate": 0.0544894574745321,
+    "ownershipHHI": 0.00031171868945884033,
+    "localOwnershipShare": 0.8078616575527306,
+    "permitCount": 2126,
+    "incentiveCoverage": null,
+    "healthScore": 95.3,
+    "computedAt": "2026-07-03T17:23:22.659Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.009159444796730783,
+        "vacantCount": 260,
+        "totalParcels": 28386
+      },
+      "turnover": {
+        "openings": 1956,
+        "closures": 114,
+        "net": 1842,
+        "turnoverRate": 0.0544894574745321
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00031171868945884033,
+        "topOwnerShare": 0.008476662797650452,
+        "distinctOwners": 21695,
+        "totalParcels": 28431
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8078616575527306,
+        "outsideShare": 0.19213834244726938,
+        "localCount": 22751,
+        "outsideCount": 5411,
+        "totalParcels": 28162
+      },
+      "permits": {
+        "permitCount": 2126,
+        "totalReportedCost": 460575695.16,
+        "demolitionCount": 90
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 28386
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60615": {
+    "corridorType": "zip",
+    "corridorId": "60615",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.029715102624323496,
+    "turnoverRate": 0.05042016806722689,
+    "ownershipHHI": 0.0013627853746037818,
+    "localOwnershipShare": 0.809927229282068,
+    "permitCount": 944,
+    "incentiveCoverage": null,
+    "healthScore": 95.3,
+    "computedAt": "2026-07-03T17:23:22.227Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.029715102624323496,
+        "vacantCount": 291,
+        "totalParcels": 9793
+      },
+      "turnover": {
+        "openings": 466,
+        "closures": 20,
+        "net": 446,
+        "turnoverRate": 0.05042016806722689
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0013627853746037818,
+        "topOwnerShare": 0.03012355764321454,
+        "distinctOwners": 7702,
+        "totalParcels": 9793
+      },
+      "ownershipOrigin": {
+        "localShare": 0.809927229282068,
+        "outsideShare": 0.19007277071793202,
+        "localCount": 7457,
+        "outsideCount": 1750,
+        "totalParcels": 9207
+      },
+      "permits": {
+        "permitCount": 944,
+        "totalReportedCost": 313503750.08,
+        "demolitionCount": 4
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 9793
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60616": {
+    "corridorType": "zip",
+    "corridorId": "60616",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.01925840758838747,
+    "turnoverRate": 0.06018771642063058,
+    "ownershipHHI": 0.0011836307454923941,
+    "localOwnershipShare": 0.8513580491673275,
+    "permitCount": 1019,
+    "incentiveCoverage": null,
+    "healthScore": 96.2,
+    "computedAt": "2026-07-03T17:23:23.327Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.01925840758838747,
+        "vacantCount": 402,
+        "totalParcels": 20874
+      },
+      "turnover": {
+        "openings": 1269,
+        "closures": 52,
+        "net": 1217,
+        "turnoverRate": 0.06018771642063058
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0011836307454923941,
+        "topOwnerShare": 0.022266915673035483,
+        "distinctOwners": 12777,
+        "totalParcels": 20883
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8513580491673275,
+        "outsideShare": 0.14864195083267248,
+        "localCount": 17177,
+        "outsideCount": 2999,
+        "totalParcels": 20176
+      },
+      "permits": {
+        "permitCount": 1019,
+        "totalReportedCost": 294303315,
+        "demolitionCount": 16
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 20874
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60617": {
+    "corridorType": "zip",
+    "corridorId": "60617",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.061465217082356284,
+    "turnoverRate": 0.04750661125802796,
+    "ownershipHHI": 0.0006233391908989203,
+    "localOwnershipShare": 0.6248019163442049,
+    "permitCount": 1634,
+    "incentiveCoverage": null,
+    "healthScore": 91,
+    "computedAt": "2026-07-03T17:23:24.785Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.061465217082356284,
+        "vacantCount": 1730,
+        "totalParcels": 28146
+      },
+      "turnover": {
+        "openings": 953,
+        "closures": 53,
+        "net": 900,
+        "turnoverRate": 0.04750661125802796
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0006233391908989203,
+        "topOwnerShare": 0.02039076376554174,
+        "distinctOwners": 21928,
+        "totalParcels": 28150
+      },
+      "ownershipOrigin": {
+        "localShare": 0.6248019163442049,
+        "outsideShare": 0.3751980836557951,
+        "localCount": 16954,
+        "outsideCount": 10181,
+        "totalParcels": 27135
+      },
+      "permits": {
+        "permitCount": 1634,
+        "totalReportedCost": 298414518.72,
+        "demolitionCount": 36
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 28146
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60618": {
+    "corridorType": "zip",
+    "corridorId": "60618",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0062216513466864685,
+    "turnoverRate": 0.05064283847049597,
+    "ownershipHHI": 0.00013932241565353808,
+    "localOwnershipShare": 0.8825298756198683,
+    "permitCount": 2002,
+    "incentiveCoverage": null,
+    "healthScore": 96.7,
+    "computedAt": "2026-07-03T17:23:25.166Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0062216513466864685,
+        "vacantCount": 155,
+        "totalParcels": 24913
+      },
+      "turnover": {
+        "openings": 2044,
+        "closures": 87,
+        "net": 1957,
+        "turnoverRate": 0.05064283847049597
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00013932241565353808,
+        "topOwnerShare": 0.007543535831795201,
+        "distinctOwners": 20821,
+        "totalParcels": 24922
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8825298756198683,
+        "outsideShare": 0.1174701243801317,
+        "localCount": 21712,
+        "outsideCount": 2890,
+        "totalParcels": 24602
+      },
+      "permits": {
+        "permitCount": 2002,
+        "totalReportedCost": 324170216.1099999,
+        "demolitionCount": 125
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 24913
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60619": {
+    "corridorType": "zip",
+    "corridorId": "60619",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.056435740995866956,
+    "turnoverRate": 0.04665716902411723,
+    "ownershipHHI": 0.0004142213301712284,
+    "localOwnershipShare": 0.8328666700605813,
+    "permitCount": 1551,
+    "incentiveCoverage": null,
+    "healthScore": 94.7,
+    "computedAt": "2026-07-03T17:23:26.193Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.056435740995866956,
+        "vacantCount": 1147,
+        "totalParcels": 20324
+      },
+      "turnover": {
+        "openings": 873,
+        "closures": 44,
+        "net": 829,
+        "turnoverRate": 0.04665716902411723
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0004142213301712284,
+        "topOwnerShare": 0.01436583685919512,
+        "distinctOwners": 16685,
+        "totalParcels": 20326
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8328666700605813,
+        "outsideShare": 0.16713332993941862,
+        "localCount": 16360,
+        "outsideCount": 3283,
+        "totalParcels": 19643
+      },
+      "permits": {
+        "permitCount": 1551,
+        "totalReportedCost": 63302188.64,
+        "demolitionCount": 23
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 20324
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60620": {
+    "corridorType": "zip",
+    "corridorId": "60620",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.05567226890756303,
+    "turnoverRate": 0.04512015693967631,
+    "ownershipHHI": 0.000446072023850579,
+    "localOwnershipShare": 0.8536778536778536,
+    "permitCount": 1629,
+    "incentiveCoverage": null,
+    "healthScore": 95.2,
+    "computedAt": "2026-07-03T17:23:26.521Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.05567226890756303,
+        "vacantCount": 1166,
+        "totalParcels": 20944
+      },
+      "turnover": {
+        "openings": 791,
+        "closures": 37,
+        "net": 754,
+        "turnoverRate": 0.04512015693967631
+      },
+      "ownershipConcentration": {
+        "hhi": 0.000446072023850579,
+        "topOwnerShare": 0.016042780748663103,
+        "distinctOwners": 17058,
+        "totalParcels": 20944
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8536778536778536,
+        "outsideShare": 0.14632214632214632,
+        "localCount": 17246,
+        "outsideCount": 2956,
+        "totalParcels": 20202
+      },
+      "permits": {
+        "permitCount": 1629,
+        "totalReportedCost": 102069188.58,
+        "demolitionCount": 14
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 20944
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60621": {
+    "corridorType": "zip",
+    "corridorId": "60621",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.23911468812877262,
+    "turnoverRate": 0.04156479217603912,
+    "ownershipHHI": 0.016095562509869054,
+    "localOwnershipShare": 0.7772387697681188,
+    "permitCount": 783,
+    "incentiveCoverage": null,
+    "healthScore": 87.9,
+    "computedAt": "2026-07-03T17:23:26.342Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.23911468812877262,
+        "vacantCount": 2971,
+        "totalParcels": 12425
+      },
+      "turnover": {
+        "openings": 290,
+        "closures": 16,
+        "net": 274,
+        "turnoverRate": 0.04156479217603912
+      },
+      "ownershipConcentration": {
+        "hhi": 0.016095562509869054,
+        "topOwnerShare": 0.12185110663983903,
+        "distinctOwners": 7421,
+        "totalParcels": 12425
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7772387697681188,
+        "outsideShare": 0.22276123023188124,
+        "localCount": 8011,
+        "outsideCount": 2296,
+        "totalParcels": 10307
+      },
+      "permits": {
+        "permitCount": 783,
+        "totalReportedCost": 76034475.14,
+        "demolitionCount": 46
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 12425
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60622": {
+    "corridorType": "zip",
+    "corridorId": "60622",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.01087462200511747,
+    "turnoverRate": 0.05794879213076812,
+    "ownershipHHI": 0.00031907255419376824,
+    "localOwnershipShare": 0.8102687760983356,
+    "permitCount": 1422,
+    "incentiveCoverage": null,
+    "healthScore": 95.3,
+    "computedAt": "2026-07-03T17:23:27.392Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.01087462200511747,
+        "vacantCount": 187,
+        "totalParcels": 17196
+      },
+      "turnover": {
+        "openings": 1901,
+        "closures": 102,
+        "net": 1799,
+        "turnoverRate": 0.05794879213076812
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00031907255419376824,
+        "topOwnerShare": 0.008349762263713326,
+        "distinctOwners": 13313,
+        "totalParcels": 17246
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8102687760983356,
+        "outsideShare": 0.18973122390166441,
+        "localCount": 13777,
+        "outsideCount": 3226,
+        "totalParcels": 17003
+      },
+      "permits": {
+        "permitCount": 1422,
+        "totalReportedCost": 248895670.54,
+        "demolitionCount": 65
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 17196
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60623": {
+    "corridorType": "zip",
+    "corridorId": "60623",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.08610704884469143,
+    "turnoverRate": 0.04363471212968138,
+    "ownershipHHI": 0.0020621025605080724,
+    "localOwnershipShare": 0.8833964646464646,
+    "permitCount": 1381,
+    "incentiveCoverage": null,
+    "healthScore": 94.6,
+    "computedAt": "2026-07-03T17:23:27.604Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.08610704884469143,
+        "vacantCount": 1472,
+        "totalParcels": 17095
+      },
+      "turnover": {
+        "openings": 1187,
+        "closures": 62,
+        "net": 1125,
+        "turnoverRate": 0.04363471212968138
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0020621025605080724,
+        "topOwnerShare": 0.04087002280301701,
+        "distinctOwners": 12312,
+        "totalParcels": 17103
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8833964646464646,
+        "outsideShare": 0.11660353535353535,
+        "localCount": 13993,
+        "outsideCount": 1847,
+        "totalParcels": 15840
+      },
+      "permits": {
+        "permitCount": 1381,
+        "totalReportedCost": 166692313.67999998,
+        "demolitionCount": 32
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 17095
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60624": {
+    "corridorType": "zip",
+    "corridorId": "60624",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.16175322139789144,
+    "turnoverRate": 0.050084063357225025,
+    "ownershipHHI": 0.006027660043433166,
+    "localOwnershipShare": 0.7948490230905861,
+    "permitCount": 980,
+    "incentiveCoverage": null,
+    "healthScore": 90.6,
+    "computedAt": "2026-07-03T17:23:27.287Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.16175322139789144,
+        "vacantCount": 1657,
+        "totalParcels": 10244
+      },
+      "turnover": {
+        "openings": 528,
+        "closures": 38,
+        "net": 490,
+        "turnoverRate": 0.050084063357225025
+      },
+      "ownershipConcentration": {
+        "hhi": 0.006027660043433166,
+        "topOwnerShare": 0.07289737842315563,
+        "distinctOwners": 6602,
+        "totalParcels": 10261
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7948490230905861,
+        "outsideShare": 0.20515097690941386,
+        "localCount": 7160,
+        "outsideCount": 1848,
+        "totalParcels": 9008
+      },
+      "permits": {
+        "permitCount": 980,
+        "totalReportedCost": 417033603.8,
+        "demolitionCount": 32
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 10244
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60625": {
+    "corridorType": "zip",
+    "corridorId": "60625",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0033256880733944956,
+    "turnoverRate": 0.05347758887171561,
+    "ownershipHHI": 0.00038861807843894194,
+    "localOwnershipShare": 0.8655374441672951,
+    "permitCount": 1453,
+    "incentiveCoverage": null,
+    "healthScore": 96.6,
+    "computedAt": "2026-07-03T17:23:28.094Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0033256880733944956,
+        "vacantCount": 58,
+        "totalParcels": 17440
+      },
+      "turnover": {
+        "openings": 1313,
+        "closures": 71,
+        "net": 1242,
+        "turnoverRate": 0.05347758887171561
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00038861807843894194,
+        "topOwnerShare": 0.010025780578630765,
+        "distinctOwners": 14285,
+        "totalParcels": 17455
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8655374441672951,
+        "outsideShare": 0.13446255583270492,
+        "localCount": 14921,
+        "outsideCount": 2318,
+        "totalParcels": 17239
+      },
+      "permits": {
+        "permitCount": 1453,
+        "totalReportedCost": 204810264.43999997,
+        "demolitionCount": 36
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 17440
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60626": {
+    "corridorType": "zip",
+    "corridorId": "60626",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.003429878048780488,
+    "turnoverRate": 0.05079227262860864,
+    "ownershipHHI": 0.0003716287600739623,
+    "localOwnershipShare": 0.870253471885015,
+    "permitCount": 609,
+    "incentiveCoverage": null,
+    "healthScore": 96.6,
+    "computedAt": "2026-07-03T17:23:28.133Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.003429878048780488,
+        "vacantCount": 36,
+        "totalParcels": 10496
+      },
+      "turnover": {
+        "openings": 655,
+        "closures": 47,
+        "net": 608,
+        "turnoverRate": 0.05079227262860864
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0003716287600739623,
+        "topOwnerShare": 0.009678337603188158,
+        "distinctOwners": 8581,
+        "totalParcels": 10539
+      },
+      "ownershipOrigin": {
+        "localShare": 0.870253471885015,
+        "outsideShare": 0.12974652811498494,
+        "localCount": 8961,
+        "outsideCount": 1336,
+        "totalParcels": 10297
+      },
+      "permits": {
+        "permitCount": 609,
+        "totalReportedCost": 73761842.33999999,
+        "demolitionCount": 3
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 10496
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60628": {
+    "corridorType": "zip",
+    "corridorId": "60628",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.09347650216959623,
+    "turnoverRate": 0.04227455485353245,
+    "ownershipHHI": 0.0011300400145704775,
+    "localOwnershipShare": 0.4483082706766917,
+    "permitCount": 1729,
+    "incentiveCoverage": null,
+    "healthScore": 86.9,
+    "computedAt": "2026-07-03T17:23:29.855Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.09347650216959623,
+        "vacantCount": 2542,
+        "totalParcels": 27194
+      },
+      "turnover": {
+        "openings": 706,
+        "closures": 30,
+        "net": 676,
+        "turnoverRate": 0.04227455485353245
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0011300400145704775,
+        "topOwnerShare": 0.028609252040891372,
+        "distinctOwners": 20679,
+        "totalParcels": 27194
+      },
+      "ownershipOrigin": {
+        "localShare": 0.4483082706766917,
+        "outsideShare": 0.5516917293233082,
+        "localCount": 11448,
+        "outsideCount": 14088,
+        "totalParcels": 25536
+      },
+      "permits": {
+        "permitCount": 1729,
+        "totalReportedCost": 189087560.03,
+        "demolitionCount": 130
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 27194
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60629": {
+    "corridorType": "zip",
+    "corridorId": "60629",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.014787946428571428,
+    "turnoverRate": 0.05089408528198074,
+    "ownershipHHI": 0.00013377973309458644,
+    "localOwnershipShare": 0.9427106463724817,
+    "permitCount": 1447,
+    "incentiveCoverage": null,
+    "healthScore": 97.8,
+    "computedAt": "2026-07-03T17:23:30.407Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.014787946428571428,
+        "vacantCount": 371,
+        "totalParcels": 25088
+      },
+      "turnover": {
+        "openings": 1022,
+        "closures": 51,
+        "net": 971,
+        "turnoverRate": 0.05089408528198074
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00013377973309458644,
+        "topOwnerShare": 0.0072146045918367345,
+        "distinctOwners": 21221,
+        "totalParcels": 25088
+      },
+      "ownershipOrigin": {
+        "localShare": 0.9427106463724817,
+        "outsideShare": 0.05728935362751827,
+        "localCount": 23350,
+        "outsideCount": 1419,
+        "totalParcels": 24769
+      },
+      "permits": {
+        "permitCount": 1447,
+        "totalReportedCost": 62143841.13000001,
+        "demolitionCount": 10
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 25088
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60630": {
+    "corridorType": "zip",
+    "corridorId": "60630",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.004575201250941101,
+    "turnoverRate": 0.048898071625344354,
+    "ownershipHHI": 0.0001561734396757133,
+    "localOwnershipShare": 0.9330270365789008,
+    "permitCount": 1054,
+    "incentiveCoverage": null,
+    "healthScore": 97.7,
+    "computedAt": "2026-07-03T17:23:29.722Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.004575201250941101,
+        "vacantCount": 79,
+        "totalParcels": 17267
+      },
+      "turnover": {
+        "openings": 935,
+        "closures": 59,
+        "net": 876,
+        "turnoverRate": 0.048898071625344354
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0001561734396757133,
+        "topOwnerShare": 0.005733480048647709,
+        "distinctOwners": 15462,
+        "totalParcels": 17267
+      },
+      "ownershipOrigin": {
+        "localShare": 0.9330270365789008,
+        "outsideShare": 0.06697296342109914,
+        "localCount": 15840,
+        "outsideCount": 1137,
+        "totalParcels": 16977
+      },
+      "permits": {
+        "permitCount": 1054,
+        "totalReportedCost": 50999740.81,
+        "demolitionCount": 11
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 17267
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60631": {
+    "corridorType": "zip",
+    "corridorId": "60631",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0037161564324898247,
+    "turnoverRate": 0.050114329268292686,
+    "ownershipHHI": 0.0001321796926084484,
+    "localOwnershipShare": 0.9472556894243641,
+    "permitCount": 825,
+    "incentiveCoverage": null,
+    "healthScore": 98,
+    "computedAt": "2026-07-03T17:23:29.315Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0037161564324898247,
+        "vacantCount": 42,
+        "totalParcels": 11302
+      },
+      "turnover": {
+        "openings": 499,
+        "closures": 27,
+        "net": 472,
+        "turnoverRate": 0.050114329268292686
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0001321796926084484,
+        "topOwnerShare": 0.004423995752964077,
+        "distinctOwners": 10475,
+        "totalParcels": 11302
+      },
+      "ownershipOrigin": {
+        "localShare": 0.9472556894243641,
+        "outsideShare": 0.052744310575635875,
+        "localCount": 10614,
+        "outsideCount": 591,
+        "totalParcels": 11205
+      },
+      "permits": {
+        "permitCount": 825,
+        "totalReportedCost": 141653266.16,
+        "demolitionCount": 12
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 11302
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60632": {
+    "corridorType": "zip",
+    "corridorId": "60632",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.020782332413146518,
+    "turnoverRate": 0.05191192734340963,
+    "ownershipHHI": 0.0002047386657986921,
+    "localOwnershipShare": 0.925458291510381,
+    "permitCount": 1037,
+    "incentiveCoverage": null,
+    "healthScore": 97.3,
+    "computedAt": "2026-07-03T17:23:31.233Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.020782332413146518,
+        "vacantCount": 399,
+        "totalParcels": 19199
+      },
+      "turnover": {
+        "openings": 1479,
+        "closures": 70,
+        "net": 1409,
+        "turnoverRate": 0.05191192734340963
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0002047386657986921,
+        "topOwnerShare": 0.0076566487837908224,
+        "distinctOwners": 15250,
+        "totalParcels": 19199
+      },
+      "ownershipOrigin": {
+        "localShare": 0.925458291510381,
+        "outsideShare": 0.07454170848961911,
+        "localCount": 17518,
+        "outsideCount": 1411,
+        "totalParcels": 18929
+      },
+      "permits": {
+        "permitCount": 1037,
+        "totalReportedCost": 78520818.97,
+        "demolitionCount": 15
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 19199
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60633": {
+    "corridorType": "zip",
+    "corridorId": "60633",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.08163620539599652,
+    "turnoverRate": 0.03713235294117647,
+    "ownershipHHI": 0.000982304967198228,
+    "localOwnershipShare": 0.20526598602901666,
+    "permitCount": 276,
+    "incentiveCoverage": null,
+    "healthScore": 83.8,
+    "computedAt": "2026-07-03T17:23:30.344Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.08163620539599652,
+        "vacantCount": 469,
+        "totalParcels": 5745
+      },
+      "turnover": {
+        "openings": 98,
+        "closures": 3,
+        "net": 95,
+        "turnoverRate": 0.03713235294117647
+      },
+      "ownershipConcentration": {
+        "hhi": 0.000982304967198228,
+        "topOwnerShare": 0.014273281114012184,
+        "distinctOwners": 4213,
+        "totalParcels": 5745
+      },
+      "ownershipOrigin": {
+        "localShare": 0.20526598602901666,
+        "outsideShare": 0.7947340139709833,
+        "localCount": 1146,
+        "outsideCount": 4437,
+        "totalParcels": 5583
+      },
+      "permits": {
+        "permitCount": 276,
+        "totalReportedCost": 30466923,
+        "demolitionCount": 6
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 5745
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60634": {
+    "corridorType": "zip",
+    "corridorId": "60634",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0025637683048711597,
+    "turnoverRate": 0.049072817729534146,
+    "ownershipHHI": 0.0000888541591615692,
+    "localOwnershipShare": 0.9502080140135757,
+    "permitCount": 1079,
+    "incentiveCoverage": null,
+    "healthScore": 98.4,
+    "computedAt": "2026-07-03T17:23:33.162Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0025637683048711597,
+        "vacantCount": 59,
+        "totalParcels": 23013
+      },
+      "turnover": {
+        "openings": 1045,
+        "closures": 40,
+        "net": 1005,
+        "turnoverRate": 0.049072817729534146
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0000888541591615692,
+        "topOwnerShare": 0.0049971755094946335,
+        "distinctOwners": 21219,
+        "totalParcels": 23013
+      },
+      "ownershipOrigin": {
+        "localShare": 0.9502080140135757,
+        "outsideShare": 0.04979198598642435,
+        "localCount": 21698,
+        "outsideCount": 1137,
+        "totalParcels": 22835
+      },
+      "permits": {
+        "permitCount": 1079,
+        "totalReportedCost": 65735020.30000001,
+        "demolitionCount": 11
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 23013
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60636": {
+    "corridorType": "zip",
+    "corridorId": "60636",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.18922093174996737,
+    "turnoverRate": 0.04776269482151835,
+    "ownershipHHI": 0.004966667358633182,
+    "localOwnershipShare": 0.8256144701334694,
+    "permitCount": 875,
+    "incentiveCoverage": null,
+    "healthScore": 90.3,
+    "computedAt": "2026-07-03T17:23:31.938Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.18922093174996737,
+        "vacantCount": 2900,
+        "totalParcels": 15326
+      },
+      "turnover": {
+        "openings": 543,
+        "closures": 27,
+        "net": 516,
+        "turnoverRate": 0.04776269482151835
+      },
+      "ownershipConcentration": {
+        "hhi": 0.004966667358633182,
+        "topOwnerShare": 0.06609682891817827,
+        "distinctOwners": 10800,
+        "totalParcels": 15326
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8256144701334694,
+        "outsideShare": 0.17438552986653053,
+        "localCount": 11320,
+        "outsideCount": 2391,
+        "totalParcels": 13711
+      },
+      "permits": {
+        "permitCount": 875,
+        "totalReportedCost": 54425477.38,
+        "demolitionCount": 64
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 15326
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60637": {
+    "corridorType": "zip",
+    "corridorId": "60637",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.07032223606907602,
+    "turnoverRate": 0.05422549621444649,
+    "ownershipHHI": 0.004031338269665022,
+    "localOwnershipShare": 0.7573587127158555,
+    "permitCount": 1259,
+    "incentiveCoverage": null,
+    "healthScore": 93.3,
+    "computedAt": "2026-07-03T17:23:31.511Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.07032223606907602,
+        "vacantCount": 790,
+        "totalParcels": 11234
+      },
+      "turnover": {
+        "openings": 514,
+        "closures": 16,
+        "net": 498,
+        "turnoverRate": 0.05422549621444649
+      },
+      "ownershipConcentration": {
+        "hhi": 0.004031338269665022,
+        "topOwnerShare": 0.05483354103614029,
+        "distinctOwners": 7747,
+        "totalParcels": 11234
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7573587127158555,
+        "outsideShare": 0.2426412872841444,
+        "localCount": 7719,
+        "outsideCount": 2473,
+        "totalParcels": 10192
+      },
+      "permits": {
+        "permitCount": 1259,
+        "totalReportedCost": 649020679.2,
+        "demolitionCount": 14
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 11234
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60638": {
+    "corridorType": "zip",
+    "corridorId": "60638",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.014525668322687485,
+    "turnoverRate": 0.05215140731154966,
+    "ownershipHHI": 0.0001340644249129322,
+    "localOwnershipShare": 0.9207025267993875,
+    "permitCount": 971,
+    "incentiveCoverage": null,
+    "healthScore": 97.2,
+    "computedAt": "2026-07-03T17:23:33.036Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.014525668322687485,
+        "vacantCount": 307,
+        "totalParcels": 21135
+      },
+      "turnover": {
+        "openings": 757,
+        "closures": 49,
+        "net": 708,
+        "turnoverRate": 0.05215140731154966
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0001340644249129322,
+        "topOwnerShare": 0.0050626922167021525,
+        "distinctOwners": 18100,
+        "totalParcels": 21135
+      },
+      "ownershipOrigin": {
+        "localShare": 0.9207025267993875,
+        "outsideShare": 0.07929747320061256,
+        "localCount": 19239,
+        "outsideCount": 1657,
+        "totalParcels": 20896
+      },
+      "permits": {
+        "permitCount": 971,
+        "totalReportedCost": 120030420.92,
+        "demolitionCount": 4
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 21135
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60639": {
+    "corridorType": "zip",
+    "corridorId": "60639",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.011983471074380166,
+    "turnoverRate": 0.05070597889137263,
+    "ownershipHHI": 0.00018630237423837145,
+    "localOwnershipShare": 0.9042527774459443,
+    "permitCount": 919,
+    "incentiveCoverage": null,
+    "healthScore": 97.3,
+    "computedAt": "2026-07-03T17:23:33.373Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.011983471074380166,
+        "vacantCount": 203,
+        "totalParcels": 16940
+      },
+      "turnover": {
+        "openings": 1715,
+        "closures": 77,
+        "net": 1638,
+        "turnoverRate": 0.05070597889137263
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00018630237423837145,
+        "topOwnerShare": 0.007851239669421488,
+        "distinctOwners": 13908,
+        "totalParcels": 16940
+      },
+      "ownershipOrigin": {
+        "localShare": 0.9042527774459443,
+        "outsideShare": 0.09574722255405567,
+        "localCount": 15139,
+        "outsideCount": 1603,
+        "totalParcels": 16742
+      },
+      "permits": {
+        "permitCount": 919,
+        "totalReportedCost": 75303678.21,
+        "demolitionCount": 9
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 16940
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60640": {
+    "corridorType": "zip",
+    "corridorId": "60640",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0032656615686061066,
+    "turnoverRate": 0.05504370422867942,
+    "ownershipHHI": 0.00017262609757849828,
+    "localOwnershipShare": 0.8730849774054888,
+    "permitCount": 1245,
+    "incentiveCoverage": null,
+    "healthScore": 96.7,
+    "computedAt": "2026-07-03T17:23:33.309Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0032656615686061066,
+        "vacantCount": 60,
+        "totalParcels": 18373
+      },
+      "turnover": {
+        "openings": 1318,
+        "closures": 80,
+        "net": 1238,
+        "turnoverRate": 0.05504370422867942
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00017262609757849828,
+        "topOwnerShare": 0.00592971385050593,
+        "distinctOwners": 14373,
+        "totalParcels": 18382
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8730849774054888,
+        "outsideShare": 0.12691502259451118,
+        "localCount": 15843,
+        "outsideCount": 2303,
+        "totalParcels": 18146
+      },
+      "permits": {
+        "permitCount": 1245,
+        "totalReportedCost": 235925914.94,
+        "demolitionCount": 25
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 18373
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60641": {
+    "corridorType": "zip",
+    "corridorId": "60641",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.005218643152780277,
+    "turnoverRate": 0.0493204648414418,
+    "ownershipHHI": 0.000141805851371248,
+    "localOwnershipShare": 0.8960606060606061,
+    "permitCount": 1167,
+    "incentiveCoverage": null,
+    "healthScore": 97.4,
+    "computedAt": "2026-07-03T17:23:35.611Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.005218643152780277,
+        "vacantCount": 87,
+        "totalParcels": 16671
+      },
+      "turnover": {
+        "openings": 1205,
+        "closures": 47,
+        "net": 1158,
+        "turnoverRate": 0.0493204648414418
+      },
+      "ownershipConcentration": {
+        "hhi": 0.000141805851371248,
+        "topOwnerShare": 0.005518565173055006,
+        "distinctOwners": 14538,
+        "totalParcels": 16671
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8960606060606061,
+        "outsideShare": 0.10393939393939394,
+        "localCount": 14785,
+        "outsideCount": 1715,
+        "totalParcels": 16500
+      },
+      "permits": {
+        "permitCount": 1167,
+        "totalReportedCost": 96344645.72,
+        "demolitionCount": 19
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 16671
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60642": {
+    "corridorType": "zip",
+    "corridorId": "60642",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.024571854058078928,
+    "turnoverRate": 0.06927820094305405,
+    "ownershipHHI": 0.000591364753489502,
+    "localOwnershipShare": 0.7535993937863097,
+    "permitCount": 847,
+    "incentiveCoverage": null,
+    "healthScore": 94.2,
+    "computedAt": "2026-07-03T17:23:33.918Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.024571854058078928,
+        "vacantCount": 198,
+        "totalParcels": 8058
+      },
+      "turnover": {
+        "openings": 912,
+        "closures": 43,
+        "net": 869,
+        "turnoverRate": 0.06927820094305405
+      },
+      "ownershipConcentration": {
+        "hhi": 0.000591364753489502,
+        "topOwnerShare": 0.00840855694324224,
+        "distinctOwners": 5623,
+        "totalParcels": 8087
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7535993937863097,
+        "outsideShare": 0.24640060621369034,
+        "localCount": 5967,
+        "outsideCount": 1951,
+        "totalParcels": 7918
+      },
+      "permits": {
+        "permitCount": 847,
+        "totalReportedCost": 251281785.04,
+        "demolitionCount": 25
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 8058
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60643": {
+    "corridorType": "zip",
+    "corridorId": "60643",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.05387450295800601,
+    "turnoverRate": 0.04988159804445803,
+    "ownershipHHI": 0.00034226977335024753,
+    "localOwnershipShare": 0.5010030090270813,
+    "permitCount": 1330,
+    "incentiveCoverage": null,
+    "healthScore": 89.3,
+    "computedAt": "2026-07-03T17:23:35.749Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.05387450295800601,
+        "vacantCount": 1111,
+        "totalParcels": 20622
+      },
+      "turnover": {
+        "openings": 623,
+        "closures": 30,
+        "net": 593,
+        "turnoverRate": 0.04988159804445803
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00034226977335024753,
+        "topOwnerShare": 0.010037823683444864,
+        "distinctOwners": 16902,
+        "totalParcels": 20622
+      },
+      "ownershipOrigin": {
+        "localShare": 0.5010030090270813,
+        "outsideShare": 0.4989969909729188,
+        "localCount": 9990,
+        "outsideCount": 9950,
+        "totalParcels": 19940
+      },
+      "permits": {
+        "permitCount": 1330,
+        "totalReportedCost": 72520214.89,
+        "demolitionCount": 23
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 20622
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60644": {
+    "corridorType": "zip",
+    "corridorId": "60644",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.08976345418861688,
+    "turnoverRate": 0.0479836651352731,
+    "ownershipHHI": 0.0016858454853966184,
+    "localOwnershipShare": 0.8569996658870699,
+    "permitCount": 885,
+    "incentiveCoverage": null,
+    "healthScore": 93.5,
+    "computedAt": "2026-07-03T17:23:35.509Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.08976345418861688,
+        "vacantCount": 869,
+        "totalParcels": 9681
+      },
+      "turnover": {
+        "openings": 515,
+        "closures": 49,
+        "net": 466,
+        "turnoverRate": 0.0479836651352731
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0016858454853966184,
+        "topOwnerShare": 0.034073309241094474,
+        "distinctOwners": 7333,
+        "totalParcels": 9685
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8569996658870699,
+        "outsideShare": 0.14300033411293017,
+        "localCount": 7695,
+        "outsideCount": 1284,
+        "totalParcels": 8979
+      },
+      "permits": {
+        "permitCount": 885,
+        "totalReportedCost": 111594818.1,
+        "demolitionCount": 19
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 9681
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60645": {
+    "corridorType": "zip",
+    "corridorId": "60645",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.00534940986668931,
+    "turnoverRate": 0.04589041095890411,
+    "ownershipHHI": 0.00018719808311929705,
+    "localOwnershipShare": 0.9137857081581882,
+    "permitCount": 505,
+    "incentiveCoverage": null,
+    "healthScore": 97.2,
+    "computedAt": "2026-07-03T17:23:35.114Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.00534940986668931,
+        "vacantCount": 63,
+        "totalParcels": 11777
+      },
+      "turnover": {
+        "openings": 312,
+        "closures": 23,
+        "net": 289,
+        "turnoverRate": 0.04589041095890411
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00018719808311929705,
+        "topOwnerShare": 0.0072992700729927005,
+        "distinctOwners": 10298,
+        "totalParcels": 11782
+      },
+      "ownershipOrigin": {
+        "localShare": 0.9137857081581882,
+        "outsideShare": 0.08621429184181179,
+        "localCount": 10652,
+        "outsideCount": 1005,
+        "totalParcels": 11657
+      },
+      "permits": {
+        "permitCount": 505,
+        "totalReportedCost": 58511695.45,
+        "demolitionCount": 6
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 11777
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60646": {
+    "corridorType": "zip",
+    "corridorId": "60646",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.004779555208739758,
+    "turnoverRate": 0.04833141542002301,
+    "ownershipHHI": 0.00020393230657656281,
+    "localOwnershipShare": 0.9381565906838454,
+    "permitCount": 597,
+    "incentiveCoverage": null,
+    "healthScore": 98,
+    "computedAt": "2026-07-03T17:23:36.015Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.004779555208739758,
+        "vacantCount": 49,
+        "totalParcels": 10252
+      },
+      "turnover": {
+        "openings": 441,
+        "closures": 21,
+        "net": 420,
+        "turnoverRate": 0.04833141542002301
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00020393230657656281,
+        "topOwnerShare": 0.006145142411236832,
+        "distinctOwners": 9173,
+        "totalParcels": 10252
+      },
+      "ownershipOrigin": {
+        "localShare": 0.9381565906838454,
+        "outsideShare": 0.06184340931615461,
+        "localCount": 9466,
+        "outsideCount": 624,
+        "totalParcels": 10090
+      },
+      "permits": {
+        "permitCount": 597,
+        "totalReportedCost": 37988829,
+        "demolitionCount": 4
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 10252
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60647": {
+    "corridorType": "zip",
+    "corridorId": "60647",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.012723624098031681,
+    "turnoverRate": 0.057809511666454164,
+    "ownershipHHI": 0.00017924335873728973,
+    "localOwnershipShare": 0.8446543060128228,
+    "permitCount": 1820,
+    "incentiveCoverage": null,
+    "healthScore": 96.1,
+    "computedAt": "2026-07-03T17:23:38.114Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.012723624098031681,
+        "vacantCount": 298,
+        "totalParcels": 23421
+      },
+      "turnover": {
+        "openings": 2169,
+        "closures": 98,
+        "net": 2071,
+        "turnoverRate": 0.057809511666454164
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00017924335873728973,
+        "topOwnerShare": 0.006310224268781445,
+        "distinctOwners": 18200,
+        "totalParcels": 23454
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8446543060128228,
+        "outsideShare": 0.15534569398717726,
+        "localCount": 19498,
+        "outsideCount": 3586,
+        "totalParcels": 23084
+      },
+      "permits": {
+        "permitCount": 1820,
+        "totalReportedCost": 262668071.44,
+        "demolitionCount": 58
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 23421
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60649": {
+    "corridorType": "zip",
+    "corridorId": "60649",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0373157092018302,
+    "turnoverRate": 0.04408372490388723,
+    "ownershipHHI": 0.0006776892441605535,
+    "localOwnershipShare": 0.7701027651234241,
+    "permitCount": 822,
+    "incentiveCoverage": null,
+    "healthScore": 94.1,
+    "computedAt": "2026-07-03T17:23:36.442Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0373157092018302,
+        "vacantCount": 367,
+        "totalParcels": 9835
+      },
+      "turnover": {
+        "openings": 487,
+        "closures": 29,
+        "net": 458,
+        "turnoverRate": 0.04408372490388723
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0006776892441605535,
+        "topOwnerShare": 0.017386883579054397,
+        "distinctOwners": 7742,
+        "totalParcels": 9835
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7701027651234241,
+        "outsideShare": 0.2298972348765759,
+        "localCount": 7269,
+        "outsideCount": 2170,
+        "totalParcels": 9439
+      },
+      "permits": {
+        "permitCount": 822,
+        "totalReportedCost": 134821225.26,
+        "demolitionCount": 8
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 9835
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60651": {
+    "corridorType": "zip",
+    "corridorId": "60651",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0426762316082278,
+    "turnoverRate": 0.046668068110153456,
+    "ownershipHHI": 0.0003081242892939385,
+    "localOwnershipShare": 0.8998276766314528,
+    "permitCount": 1091,
+    "incentiveCoverage": null,
+    "healthScore": 95.9,
+    "computedAt": "2026-07-03T17:23:37.283Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0426762316082278,
+        "vacantCount": 583,
+        "totalParcels": 13661
+      },
+      "turnover": {
+        "openings": 833,
+        "closures": 55,
+        "net": 778,
+        "turnoverRate": 0.046668068110153456
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0003081242892939385,
+        "topOwnerShare": 0.009511267193444542,
+        "distinctOwners": 11318,
+        "totalParcels": 13668
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8998276766314528,
+        "outsideShare": 0.10017232336854724,
+        "localCount": 12010,
+        "outsideCount": 1337,
+        "totalParcels": 13347
+      },
+      "permits": {
+        "permitCount": 1091,
+        "totalReportedCost": 112685309.03,
+        "demolitionCount": 22
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 13661
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60652": {
+    "corridorType": "zip",
+    "corridorId": "60652",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.007299802905321557,
+    "turnoverRate": 0.04185103244837758,
+    "ownershipHHI": 0.00019819079455259876,
+    "localOwnershipShare": 0.9403316553153687,
+    "permitCount": 952,
+    "incentiveCoverage": null,
+    "healthScore": 97.9,
+    "computedAt": "2026-07-03T17:23:38.074Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.007299802905321557,
+        "vacantCount": 100,
+        "totalParcels": 13699
+      },
+      "turnover": {
+        "openings": 430,
+        "closures": 24,
+        "net": 406,
+        "turnoverRate": 0.04185103244837758
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00019819079455259876,
+        "topOwnerShare": 0.0074457989634279876,
+        "distinctOwners": 12297,
+        "totalParcels": 13699
+      },
+      "ownershipOrigin": {
+        "localShare": 0.9403316553153687,
+        "outsideShare": 0.05966834468463133,
+        "localCount": 12702,
+        "outsideCount": 806,
+        "totalParcels": 13508
+      },
+      "permits": {
+        "permitCount": 952,
+        "totalReportedCost": 38666902.96,
+        "demolitionCount": 0
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 13699
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60653": {
+    "corridorType": "zip",
+    "corridorId": "60653",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.06739402204796,
+    "turnoverRate": 0.062409708176827505,
+    "ownershipHHI": 0.0055242768595026946,
+    "localOwnershipShare": 0.7870603015075377,
+    "permitCount": 656,
+    "incentiveCoverage": null,
+    "healthScore": 93.5,
+    "computedAt": "2026-07-03T17:23:37.216Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.06739402204796,
+        "vacantCount": 593,
+        "totalParcels": 8799
+      },
+      "turnover": {
+        "openings": 410,
+        "closures": 22,
+        "net": 388,
+        "turnoverRate": 0.062409708176827505
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0055242768595026946,
+        "topOwnerShare": 0.062386363636363636,
+        "distinctOwners": 5476,
+        "totalParcels": 8800
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7870603015075377,
+        "outsideShare": 0.2129396984924623,
+        "localCount": 6265,
+        "outsideCount": 1695,
+        "totalParcels": 7960
+      },
+      "permits": {
+        "permitCount": 656,
+        "totalReportedCost": 147566336.5,
+        "demolitionCount": 6
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 8799
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60654": {
+    "corridorType": "zip",
+    "corridorId": "60654",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0027594561852200836,
+    "turnoverRate": 0.07713132054693952,
+    "ownershipHHI": 0.0003030981622209586,
+    "localOwnershipShare": 0.7919322033898305,
+    "permitCount": 1112,
+    "incentiveCoverage": null,
+    "healthScore": 95.1,
+    "computedAt": "2026-07-03T17:23:38.497Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0027594561852200836,
+        "vacantCount": 41,
+        "totalParcels": 14858
+      },
+      "turnover": {
+        "openings": 1548,
+        "closures": 133,
+        "net": 1415,
+        "turnoverRate": 0.07713132054693952
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0003030981622209586,
+        "topOwnerShare": 0.0069995961771436264,
+        "distinctOwners": 8769,
+        "totalParcels": 14858
+      },
+      "ownershipOrigin": {
+        "localShare": 0.7919322033898305,
+        "outsideShare": 0.2080677966101695,
+        "localCount": 11681,
+        "outsideCount": 3069,
+        "totalParcels": 14750
+      },
+      "permits": {
+        "permitCount": 1112,
+        "totalReportedCost": 1868700348.1,
+        "demolitionCount": 5
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 14858
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60655": {
+    "corridorType": "zip",
+    "corridorId": "60655",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0075832806716620025,
+    "turnoverRate": 0.05396565821749796,
+    "ownershipHHI": 0.00017793816327311727,
+    "localOwnershipShare": 0.28554480744661437,
+    "permitCount": 496,
+    "incentiveCoverage": null,
+    "healthScore": 87,
+    "computedAt": "2026-07-03T17:23:38.474Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0075832806716620025,
+        "vacantCount": 84,
+        "totalParcels": 11077
+      },
+      "turnover": {
+        "openings": 252,
+        "closures": 12,
+        "net": 240,
+        "turnoverRate": 0.05396565821749796
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00017793816327311727,
+        "topOwnerShare": 0.006319400559718335,
+        "distinctOwners": 10060,
+        "totalParcels": 11077
+      },
+      "ownershipOrigin": {
+        "localShare": 0.28554480744661437,
+        "outsideShare": 0.7144551925533856,
+        "localCount": 3129,
+        "outsideCount": 7829,
+        "totalParcels": 10958
+      },
+      "permits": {
+        "permitCount": 496,
+        "totalReportedCost": 53446540.72,
+        "demolitionCount": 9
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 11077
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60656": {
+    "corridorType": "zip",
+    "corridorId": "60656",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0013192612137203166,
+    "turnoverRate": 0.04811915218636624,
+    "ownershipHHI": 0.0005005493437390532,
+    "localOwnershipShare": 0.9454750435584709,
+    "permitCount": 321,
+    "incentiveCoverage": null,
+    "healthScore": 97.7,
+    "computedAt": "2026-07-03T17:23:38.850Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0013192612137203166,
+        "vacantCount": 13,
+        "totalParcels": 9854
+      },
+      "turnover": {
+        "openings": 234,
+        "closures": 18,
+        "net": 216,
+        "turnoverRate": 0.04811915218636624
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0005005493437390532,
+        "topOwnerShare": 0.018165212096610515,
+        "distinctOwners": 8927,
+        "totalParcels": 9854
+      },
+      "ownershipOrigin": {
+        "localShare": 0.9454750435584709,
+        "outsideShare": 0.05452495644152916,
+        "localCount": 9225,
+        "outsideCount": 532,
+        "totalParcels": 9757
+      },
+      "permits": {
+        "permitCount": 321,
+        "totalReportedCost": 17160808.11,
+        "demolitionCount": 7
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 9854
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60657": {
+    "corridorType": "zip",
+    "corridorId": "60657",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0026295246312502568,
+    "turnoverRate": 0.05393872413581384,
+    "ownershipHHI": 0.00028978187256281695,
+    "localOwnershipShare": 0.8586983522397946,
+    "permitCount": 1571,
+    "incentiveCoverage": null,
+    "healthScore": 96.2,
+    "computedAt": "2026-07-03T17:23:40.174Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0026295246312502568,
+        "vacantCount": 64,
+        "totalParcels": 24339
+      },
+      "turnover": {
+        "openings": 1658,
+        "closures": 99,
+        "net": 1559,
+        "turnoverRate": 0.05393872413581384
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00028978187256281695,
+        "topOwnerShare": 0.01317727942380095,
+        "distinctOwners": 19989,
+        "totalParcels": 24436
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8586983522397946,
+        "outsideShare": 0.14130164776020535,
+        "localCount": 20741,
+        "outsideCount": 3413,
+        "totalParcels": 24154
+      },
+      "permits": {
+        "permitCount": 1571,
+        "totalReportedCost": 302480433.4,
+        "demolitionCount": 74
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 24339
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60659": {
+    "corridorType": "zip",
+    "corridorId": "60659",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0017808506180599204,
+    "turnoverRate": 0.047522250302164594,
+    "ownershipHHI": 0.0002320959229733525,
+    "localOwnershipShare": 0.898667230801777,
+    "permitCount": 506,
+    "incentiveCoverage": null,
+    "healthScore": 97.4,
+    "computedAt": "2026-07-03T17:23:39.147Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0017808506180599204,
+        "vacantCount": 17,
+        "totalParcels": 9546
+      },
+      "turnover": {
+        "openings": 826,
+        "closures": 39,
+        "net": 787,
+        "turnoverRate": 0.047522250302164594
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0002320959229733525,
+        "topOwnerShare": 0.006390111041273832,
+        "distinctOwners": 8018,
+        "totalParcels": 9546
+      },
+      "ownershipOrigin": {
+        "localShare": 0.898667230801777,
+        "outsideShare": 0.10133276919822297,
+        "localCount": 8496,
+        "outsideCount": 958,
+        "totalParcels": 9454
+      },
+      "permits": {
+        "permitCount": 506,
+        "totalReportedCost": 50652775,
+        "demolitionCount": 6
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 9546
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60660": {
+    "corridorType": "zip",
+    "corridorId": "60660",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.001591823056300268,
+    "turnoverRate": 0.05722742969906265,
+    "ownershipHHI": 0.000322243576675238,
+    "localOwnershipShare": 0.877547554347826,
+    "permitCount": 575,
+    "incentiveCoverage": null,
+    "healthScore": 97,
+    "computedAt": "2026-07-03T17:23:40.212Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.001591823056300268,
+        "vacantCount": 19,
+        "totalParcels": 11936
+      },
+      "turnover": {
+        "openings": 659,
+        "closures": 37,
+        "net": 622,
+        "turnoverRate": 0.05722742969906265
+      },
+      "ownershipConcentration": {
+        "hhi": 0.000322243576675238,
+        "topOwnerShare": 0.009034632758909152,
+        "distinctOwners": 10112,
+        "totalParcels": 11954
+      },
+      "ownershipOrigin": {
+        "localShare": 0.877547554347826,
+        "outsideShare": 0.12245244565217392,
+        "localCount": 10334,
+        "outsideCount": 1442,
+        "totalParcels": 11776
+      },
+      "permits": {
+        "permitCount": 575,
+        "totalReportedCost": 114153647.19,
+        "demolitionCount": 3
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 11936
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60661": {
+    "corridorType": "zip",
+    "corridorId": "60661",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0045528455284552845,
+    "turnoverRate": 0.0605699624301292,
+    "ownershipHHI": 0.0008880977066590204,
+    "localOwnershipShare": 0.8051798086440118,
+    "permitCount": 547,
+    "incentiveCoverage": null,
+    "healthScore": 95.6,
+    "computedAt": "2026-07-03T17:23:39.303Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0045528455284552845,
+        "vacantCount": 28,
+        "totalParcels": 6150
+      },
+      "turnover": {
+        "openings": 621,
+        "closures": 40,
+        "net": 581,
+        "turnoverRate": 0.0605699624301292
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0008880977066590204,
+        "topOwnerShare": 0.017232970248740043,
+        "distinctOwners": 3486,
+        "totalParcels": 6151
+      },
+      "ownershipOrigin": {
+        "localShare": 0.8051798086440118,
+        "outsideShare": 0.19482019135598813,
+        "localCount": 4881,
+        "outsideCount": 1181,
+        "totalParcels": 6062
+      },
+      "permits": {
+        "permitCount": 547,
+        "totalReportedCost": 187696036,
+        "demolitionCount": 2
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 6150
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60666": {
+    "corridorType": "zip",
+    "corridorId": "60666",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0,
+    "turnoverRate": 0.0689601250977326,
+    "ownershipHHI": 0.10493827160493827,
+    "localOwnershipShare": 0.14285714285714285,
+    "permitCount": 201,
+    "incentiveCoverage": null,
+    "healthScore": 83,
+    "computedAt": "2026-07-03T17:23:39.659Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0,
+        "vacantCount": 0,
+        "totalParcels": 18
+      },
+      "turnover": {
+        "openings": 430,
+        "closures": 11,
+        "net": 419,
+        "turnoverRate": 0.0689601250977326
+      },
+      "ownershipConcentration": {
+        "hhi": 0.10493827160493827,
+        "topOwnerShare": 0.2222222222222222,
+        "distinctOwners": 13,
+        "totalParcels": 18
+      },
+      "ownershipOrigin": {
+        "localShare": 0.14285714285714285,
+        "outsideShare": 0.8571428571428571,
+        "localCount": 2,
+        "outsideCount": 12,
+        "totalParcels": 14
+      },
+      "permits": {
+        "permitCount": 201,
+        "totalReportedCost": 527988042,
+        "demolitionCount": 0
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 18
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60707": {
+    "corridorType": "zip",
+    "corridorId": "60707",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.003946613088404133,
+    "turnoverRate": 0.04304139172165567,
+    "ownershipHHI": 0.00016303824865777772,
+    "localOwnershipShare": 0.932866527106042,
+    "permitCount": 404,
+    "incentiveCoverage": null,
+    "healthScore": 97.9,
+    "computedAt": "2026-07-03T17:23:40.392Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.003946613088404133,
+        "vacantCount": 55,
+        "totalParcels": 13936
+      },
+      "turnover": {
+        "openings": 273,
+        "closures": 14,
+        "net": 259,
+        "turnoverRate": 0.04304139172165567
+      },
+      "ownershipConcentration": {
+        "hhi": 0.00016303824865777772,
+        "topOwnerShare": 0.005381745120551091,
+        "distinctOwners": 12556,
+        "totalParcels": 13936
+      },
+      "ownershipOrigin": {
+        "localShare": 0.932866527106042,
+        "outsideShare": 0.06713347289395799,
+        "localCount": 12923,
+        "outsideCount": 930,
+        "totalParcels": 13853
+      },
+      "permits": {
+        "permitCount": 404,
+        "totalReportedCost": 64140850.79,
+        "demolitionCount": 2
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 13936
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  },
+  "60827": {
+    "corridorType": "zip",
+    "corridorId": "60827",
+    "asOf": "2026-07-03",
+    "vacancyRate": 0.0534202699611073,
+    "turnoverRate": 0.03968938740293356,
+    "ownershipHHI": 0.0013107123702366973,
+    "localOwnershipShare": 0.2836635425317357,
+    "permitCount": 46,
+    "incentiveCoverage": null,
+    "healthScore": 84.3,
+    "computedAt": "2026-07-03T17:23:40.404Z",
+    "details": {
+      "vacancy": {
+        "vacancyRate": 0.0534202699611073,
+        "vacantCount": 467,
+        "totalParcels": 8742
+      },
+      "turnover": {
+        "openings": 46,
+        "closures": 0,
+        "net": 46,
+        "turnoverRate": 0.03968938740293356
+      },
+      "ownershipConcentration": {
+        "hhi": 0.0013107123702366973,
+        "topOwnerShare": 0.021734156943491192,
+        "distinctOwners": 6447,
+        "totalParcels": 8742
+      },
+      "ownershipOrigin": {
+        "localShare": 0.2836635425317357,
+        "outsideShare": 0.7163364574682644,
+        "localCount": 2391,
+        "outsideCount": 6038,
+        "totalParcels": 8429
+      },
+      "permits": {
+        "permitCount": 46,
+        "totalReportedCost": 19363124,
+        "demolitionCount": 5
+      },
+      "incentiveCoverage": {
+        "coverageShare": null,
+        "coveredCount": null,
+        "totalParcels": 8742
+      },
+      "windowMonths": 24,
+      "method": "socrata-aggregate"
+    }
+  }
+}

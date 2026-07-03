@@ -1561,7 +1561,7 @@ function loadStaticCorridorMetrics(zip: string | null): CorridorMetric | null {
 }
 
 /** Plain-language band for parcel-ownership HHI (no raw index in UI copy). */
-function corridorConcentrationBand(hhi: number): string {
+export function corridorConcentrationBand(hhi: number): string {
   if (hhi < 0.15) return "Low concentration";
   if (hhi < 0.25) return "Moderate concentration";
   return "High concentration";
