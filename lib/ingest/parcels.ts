@@ -156,6 +156,29 @@ async function fetchAssessorBatch(
   return out;
 }
 
+// Un-tokened requests against this dataset routinely take 30s+ per page and
+// occasionally stall past any single timeout; a non-OK status (e.g. a 429
+// throttle) must not silently truncate the scan as if it completed.
+async function fetchUniversePage(url: string, attempts = 3): Promise<RawParcel[]> {
+  let lastError: unknown = null;
+  for (let i = 0; i < attempts; i++) {
+    try {
+      const res = await fetch(url, {
+        headers: socrataHeaders(),
+        signal: AbortSignal.timeout(120000),
+      });
+      if (res.ok) return (await res.json()) as RawParcel[];
+      lastError = new Error(`parcels: page fetch HTTP ${res.status}`);
+    } catch (err) {
+      lastError = err;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 5000 * (i + 1)));
+  }
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("parcels: page fetch failed");
+}
+
 export const parcelsAdapter: SourceAdapter<RawParcel, ParcelRow> = {
   sourceKey: SOURCE_KEY,
   targetTable: "parcels",
@@ -204,12 +227,7 @@ export const parcelsAdapter: SourceAdapter<RawParcel, ParcelRow> = {
       // $order=:id pages on Socrata's indexed internal row id; $order=pin forces
       // a server-side sort of the filtered scan and times out on this dataset.
       const url = `${PARCEL_UNIVERSE_URL}?$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=:id`;
-      const res = await fetch(url, {
-        headers: socrataHeaders(),
-        signal: AbortSignal.timeout(60000),
-      });
-      if (!res.ok) break;
-      const page: RawParcel[] = await res.json();
+      const page = await fetchUniversePage(url);
       if (page.length === 0) break;
       all.push(...page);
       if (page.length < pageSize) break;
