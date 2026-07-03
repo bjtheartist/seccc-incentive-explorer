@@ -70,6 +70,14 @@ export function Footer() {
         <div className="font-mono-bureau text-[8px] tracking-[0.1em] text-white/15 text-center mt-2">
           Program details change over time &middot; verify with administrators
         </div>
+        <div className="text-center mt-4">
+          <Link
+            href="/login?callbackUrl=/workspace"
+            className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-white/20 hover:text-white/60 transition-colors"
+          >
+            Partner &amp; Admin Sign In
+          </Link>
+        </div>
       </div>
     </footer>
   );

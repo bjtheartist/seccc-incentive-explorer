@@ -80,20 +80,13 @@ export function Header() {
               Workspace
             </Link>
           )}
-          {signedIn ? (
+          {signedIn && (
             <button
               onClick={() => signOut({ callbackUrl: "/" })}
               className="px-4 py-2 font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/35 hover:text-[#0C1B33]/70 transition-colors cursor-pointer"
             >
               Sign Out
             </button>
-          ) : (
-            <Link
-              href="/login?callbackUrl=/workspace"
-              className="px-4 py-2 font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-[#0C1B33]/40 hover:text-[#2563EB] transition-colors cursor-pointer"
-            >
-              Sign In
-            </Link>
           )}
         </nav>
 
@@ -149,7 +142,7 @@ export function Header() {
                   Workspace
                 </Link>
               )}
-              {signedIn ? (
+              {signedIn && (
                 <button
                   onClick={() => {
                     setOpen(false);
@@ -160,15 +153,6 @@ export function Header() {
                   <span className="text-[#0C1B33]/15 text-[10px]">07</span>
                   Sign Out
                 </button>
-              ) : (
-                <Link
-                  href="/login?callbackUrl=/workspace"
-                  onClick={() => setOpen(false)}
-                  className="py-4 border-b border-[#0C1B33]/5 font-mono-bureau text-[11px] tracking-[0.2em] uppercase flex items-center gap-4 text-left text-[#0C1B33]/40 hover:text-[#0C1B33]/80"
-                >
-                  <span className="text-[#0C1B33]/15 text-[10px]">06</span>
-                  Sign In
-                </Link>
               )}
             </nav>
           </SheetContent>

@@ -74,11 +74,12 @@ function LoginContent() {
             Chicago Incentive Explorer
           </div>
           <h1 className="font-editorial text-3xl text-white leading-tight mb-3">
-            Save your reports and next steps.
+            Partner &amp; admin sign in.
           </h1>
           <p className="text-white/50 text-sm leading-relaxed">
-            Sign in to create a business workspace, choose a goal, and keep your
-            incentive reports organized.
+            For SECCC staff and partner organizations. Exploring the map and
+            generating reports never requires an account — sign in only to
+            keep incentive reports organized in a workspace.
           </p>
         </div>
         <div className="px-8 py-8 space-y-5">
@@ -180,7 +181,7 @@ function LoginContent() {
               href="/report"
               className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/40 hover:text-[#0C1B33]"
             >
-              Continue without saving
+              Generate a report — no account needed
             </Link>
           </div>
         </div>
