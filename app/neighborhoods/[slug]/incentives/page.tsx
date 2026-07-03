@@ -9,9 +9,11 @@ import {
 } from "@/lib/neighborhood-slugs";
 import { pageMetadata, buildFaqJsonLd, buildTrailJsonLd } from "@/lib/seo";
 import { getNeighborhoodPageData } from "@/lib/neighborhood-page-data";
+import { getCorridorSignalsForCommunityArea } from "@/lib/neighborhood-corridor";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SnapshotCTA } from "@/components/seo/SnapshotCTA";
 import { NeighborhoodSnapshotButton } from "@/components/seo/NeighborhoodSnapshotButton";
+import { DataRow, ContextNotProofFootnote } from "@/components/corridors/CorridorSignalsUI";
 
 export const dynamicParams = false;
 
@@ -87,6 +89,8 @@ export default async function NeighborhoodIncentivesPage({
     zones,
     zoneCount,
   } = data;
+
+  const corridorSignals = getCorridorSignalsForCommunityArea(ca.id);
 
   const orgNames = support?.organizations.map((o) => o.name) ?? [];
   const supportSummary =
@@ -463,6 +467,58 @@ export default async function NeighborhoodIncentivesPage({
           )}
         </div>
       </section>
+
+      {/* ── Corridor signals ──────────────────────────────────────────── */}
+      {corridorSignals ? (
+        <section className="bg-warm">
+          <div className="max-w-4xl mx-auto px-6 py-12">
+            <Eyebrow>Corridor signals</Eyebrow>
+            <div className="accent-bar mt-3 mb-5" />
+            <h2 className="font-editorial text-2xl md:text-3xl text-[#0C1B33] mb-2">
+              ZIP-level signals for {corridorSignals.zip}
+            </h2>
+            <p className="text-[#0C1B33]/55 text-sm mb-6 max-w-2xl leading-relaxed">
+              {corridorSignals.zip} is the ZIP at the heart of {ca.name}
+              {" "}— boundaries don&apos;t align exactly, so read these as
+              neighborhood-level context, not a reading for a specific
+              address.
+            </p>
+
+            <div className="grid gap-4 sm:grid-cols-3">
+              {corridorSignals.vacancy.vacancyRate != null ? (
+                <DataRow
+                  label="Properties flagged vacant"
+                  value={`${Math.round(corridorSignals.vacancy.vacancyRate * 100)}% of property records`}
+                  detail={`Share of property records in ZIP ${corridorSignals.zip} with a public vacancy indicator.`}
+                />
+              ) : null}
+              {corridorSignals.turnover.openings != null &&
+              corridorSignals.turnover.closures != null ? (
+                <DataRow
+                  label="Business license activity"
+                  value={`${corridorSignals.turnover.openings.toLocaleString()} opened / ${corridorSignals.turnover.closures.toLocaleString()} closed in the last ${corridorSignals.windowMonths} months`}
+                  detail={`Business licenses recorded as opened or closed in ZIP ${corridorSignals.zip}, shown separately so the direction is visible.`}
+                />
+              ) : null}
+              {corridorSignals.permits.permitCount != null ? (
+                <DataRow
+                  label="Building permit activity"
+                  value={`${corridorSignals.permits.permitCount.toLocaleString()} permits in the last ${corridorSignals.windowMonths} months`}
+                  detail={
+                    corridorSignals.permits.demolitionCount
+                      ? `Building permits issued in ZIP ${corridorSignals.zip} in the last ${corridorSignals.windowMonths} months, including ${corridorSignals.permits.demolitionCount.toLocaleString()} demolition ${corridorSignals.permits.demolitionCount === 1 ? "permit" : "permits"}.`
+                      : `Building permits issued in ZIP ${corridorSignals.zip} — a directional reinvestment signal, not a complete inventory.`
+                  }
+                />
+              ) : null}
+            </div>
+
+            <div className="mt-4">
+              <ContextNotProofFootnote />
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {/* ── Conversion CTA ───────────────────────────────────────────── */}
       <section className="bg-warm">
