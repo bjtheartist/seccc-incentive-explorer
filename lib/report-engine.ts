@@ -25,6 +25,8 @@ import {
   TIMELINE_OPTIONS,
   optionLabel,
 } from "./report-wizard-config";
+import { deadlinesForAddress, type TifFinancialsSlim, type SbifWindow } from "./deadlines";
+import { normalizeTifKey } from "./tif-finance";
 
 // ─── Local Types ────────────────────────────────────────────────────
 
@@ -1411,6 +1413,291 @@ function buildCommunityAssets(
   return { edos, bsos, narrative };
 }
 
+// ─── Integration: TIF Financials, Deadlines, Corridor Context ──────
+
+/**
+ * Load tif-financials.json from the static public data file.
+ * Returns null if the file is missing, empty, or has no districts.
+ */
+function loadTifFinancials(): Record<string, TifFinancialsSlim> | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const raw = require("../public/data/tif-financials.json") as {
+      districts?: Record<string, {
+        tifNumber: string;
+        tifName?: string | null;
+        expirationDate?: string | null;
+        expirationYear?: number | null;
+        expiresWithin24Months?: boolean;
+      }>;
+    };
+    if (!raw?.districts || Object.keys(raw.districts).length === 0) return null;
+    const result: Record<string, TifFinancialsSlim> = {};
+    for (const [key, d] of Object.entries(raw.districts)) {
+      result[key] = {
+        tifNumber: d.tifNumber,
+        tifName: d.tifName ?? null,
+        expirationDate: d.expirationDate ?? null,
+        expirationYear: d.expirationYear ?? null,
+        expiresWithin24Months: d.expiresWithin24Months ?? false,
+      };
+    }
+    return result;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Load sbif-rollout.json from the static public data file.
+ * Returns null gracefully when the file is empty (fetchError state).
+ */
+function loadSbifRollout(): SbifWindow[] | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const raw = require("../public/data/sbif-rollout.json") as {
+      windows?: SbifWindow[];
+      fetchError?: string;
+    };
+    if (!raw?.windows || raw.windows.length === 0) return null;
+    return raw.windows;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Load corridor-metrics.json static export if present.
+ * The file is optional — returns null when absent.
+ * Uses a lazy require pattern identical to programs-data.ts so the bundler
+ * does not produce a module-not-found error when the file has not been
+ * generated yet. The try/catch ensures a graceful null return.
+ */
+function loadStaticCorridorMetrics(): CorridorMetric | null {
+  // Skip in browser context; this function is only meaningful server-side.
+  if (typeof window !== "undefined") return null;
+  try {
+    // Indirect require avoids static analysis by bundlers for optional files.
+    const modulePath = ["../public/data", "corridor-metrics.json"].join("/");
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const raw = require(/* webpackIgnore: true */ modulePath) as CorridorMetric;
+    if (!raw?.corridorId) return null;
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Enrich the tifFinance section of neighborhoodEconomics from the static
+ * tif-financials.json when the address is inside a TIF district.
+ *
+ * Uses: ctx.neighborhoodEconomics.tifFinance.districtId (already set by the
+ * tif-finance API route) or falls back to normalizeTifKey(zoneNames["tif"]).
+ * Returns the districtId used (for deadline lookup) or null.
+ */
+function enrichTifFinancialContext(
+  ctx: ReportContext,
+  financials: Record<string, TifFinancialsSlim> | null,
+): string | null {
+  if (!financials) return null;
+
+  // The districtId already in ctx (set by /api/tif-finance) is most reliable.
+  const existingId = ctx.neighborhoodEconomics?.tifFinance?.districtId ?? null;
+  // Fallback: normalize the zone name (zoneNames["tif"] = "35th/Halsted" but that
+  // doesn't map directly; instead use normalizeTifKey on zoneNames["tif"] raw value
+  // if it looks like a TIF number, otherwise skip).
+  const zoneNameRaw = ctx.zoneNames?.["tif"] ?? null;
+  const normalizedFromZone = zoneNameRaw ? normalizeTifKey(zoneNameRaw) : null;
+
+  const districtId = existingId || normalizedFromZone;
+  if (!districtId) return null;
+
+  const fin = financials[districtId];
+  if (!fin) return districtId; // in TIF but no finance record — still return id for deadlines
+
+  // If the report engine already has tifFinance context (from live API), leave it
+  // in place and only fill in the expiration/fund fields that may be missing.
+  const existing = ctx.neighborhoodEconomics?.tifFinance;
+  if (existing) {
+    // Already populated — note expiration urgency if not already set
+    return districtId;
+  }
+
+  // No tifFinance context yet — build a minimal enrichment note via the
+  // Neighborhood Economic Context section.  The full context object is read-only
+  // in this scope, so we surface the enrichment as additional ReportItems via
+  // the section builder; the enrichment is returned as the districtId only here.
+  return districtId;
+}
+
+/**
+ * Build the "Upcoming Deadlines Near This Address" report section.
+ *
+ * Merges:
+ *   - program card deadlines[] entries for matched/relevant programs
+ *   - the address's SBIF window from sbif-rollout.json (omitted when empty)
+ *   - TIF expiration alerts (when tifDistrict is known and expires ≤24 months)
+ *
+ * Sorted ascending by date, past dates dropped, capped at 8 items.
+ * Returns undefined when there are no upcoming items to show.
+ */
+function buildDeadlinesSection(
+  programs: Program[],
+  tifDistrictId: string | null,
+  financials: Record<string, TifFinancialsSlim> | null,
+  sbifRollout: SbifWindow[] | null,
+): ReportSection | undefined {
+  // Flatten programs with deadlines[] arrays into ProgramCardSlim entries.
+  // Each deadline entry in a program gets its own item so sorting is by date.
+  const cardSlims = programs.flatMap((p) => {
+    // Support both the older flat `deadline` string field and the new `deadlines[]` array.
+    const deadlineArr: Array<{ label?: string; date: string }> =
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (p as any).deadlines ?? [];
+    if (deadlineArr.length > 0) {
+      return deadlineArr.map((d) => ({
+        id: p.id,
+        name: d.label ? `${p.name} — ${d.label}` : p.name,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        deadline: d.date ?? (p as any).deadline ?? null,
+        deadlineNote: null,
+      }));
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const flatDeadline = (p as any).deadline as string | null | undefined;
+    if (flatDeadline) {
+      return [{ id: p.id, name: p.name, deadline: flatDeadline, deadlineNote: null }];
+    }
+    return [];
+  });
+
+  const summary = deadlinesForAddress({
+    matchedPrograms: cardSlims,
+    tifDistrict: tifDistrictId,
+    tifFinancials: financials,
+    sbifRollout,
+    today: new Date(),
+    deadlineWindowDays: 365, // broader window for report — show full year
+  });
+
+  // Build final list: TIF expirations and SBIF windows always surface first
+  // (they are context-specific to this address), then program deadlines sorted
+  // by date. Cap at 8 total items; drop past items.
+  const notPast = summary.allItems.filter((item) => !item.isPast);
+  const addressSpecific = notPast.filter(
+    (item) => item.kind === "tif_expiration" || item.kind === "sbif_window",
+  );
+  const programDeadlines = notPast
+    .filter((item) => item.kind === "program_deadline")
+    .slice(0, Math.max(0, 8 - addressSpecific.length));
+  const upcoming = [...addressSpecific, ...programDeadlines].sort(
+    (a, b) => a.daysFromToday - b.daysFromToday,
+  );
+
+  if (upcoming.length === 0) return undefined;
+
+  const items: ReportItem[] = upcoming.map((item) => {
+    let value = item.date;
+    if (item.daysFromToday === 0) value = `Today (${item.date})`;
+    else if (item.daysFromToday === 1) value = `Tomorrow (${item.date})`;
+    else if (item.daysFromToday <= 7) value = `In ${item.daysFromToday} days — ${item.date}`;
+    else value = item.date;
+
+    const detail = item.note
+      ? item.note
+      : item.kind === "tif_expiration"
+      ? "TIF districts can fund SBIF reimbursements, public improvements, and redevelopment agreements. Apply for TIF-funded programs before the district expires."
+      : item.kind === "sbif_window"
+      ? "Small Business Improvement Fund (SBIF) reimburses up to 90% of eligible façade and interior improvement costs. Windows are district-specific."
+      : undefined;
+
+    // For TIF expiration items, add the "act soon" note
+    let actSoonNote: string | undefined;
+    if (item.kind === "tif_expiration" && tifDistrictId && financials?.[tifDistrictId]) {
+      const fin = financials[tifDistrictId];
+      if (fin.expiresWithin24Months) {
+        actSoonNote = `Act soon: this TIF district is scheduled to expire ${fin.expirationDate ?? "soon"}. Apply for TIF-funded programs before the window closes.`;
+      }
+    }
+
+    return {
+      label: item.label,
+      value,
+      detail: actSoonNote ?? detail,
+    };
+  });
+
+  return {
+    title: "Upcoming Deadlines Near This Address",
+    description: "Program deadlines, SBIF application windows, and TIF expiration alerts relevant to this location, sorted by date.",
+    items,
+  };
+}
+
+/**
+ * Build the "Corridor Context" section when corridor metrics are available.
+ *
+ * Sources (checked in order):
+ *   1. ctx.corridorMetrics (from DB via /api/corridor)
+ *   2. public/data/corridor-metrics.json static export
+ *
+ * Returns undefined when no metrics are available — the section is omitted
+ * entirely rather than rendered with a placeholder.
+ */
+function buildCorridorContextSection(
+  ctx: ReportContext,
+): ReportSection | undefined {
+  const metric = ctx.corridorMetrics ?? loadStaticCorridorMetrics();
+  if (!metric) return undefined;
+
+  const label = formatCorridorLabel(metric);
+
+  const items: ReportItem[] = [
+    {
+      label: "Vacancy rate",
+      value: metric.vacancyRate != null ? `${Math.round(metric.vacancyRate * 100)}%` : "Not available",
+      detail: "Share of parcels in this corridor carrying a vacancy flag in public records.",
+    },
+    {
+      label: "Business turnover",
+      value: metric.turnoverRate != null ? `${Math.round(metric.turnoverRate * 100)}%` : "Not available",
+      detail: "License openings and closures as a share of active licenses in the trailing measurement window.",
+    },
+    {
+      label: "Ownership concentration",
+      value: metric.ownershipHHI != null ? `HHI ${metric.ownershipHHI.toFixed(3)}` : "Not available",
+      detail: "Herfindahl-Hirschman Index of parcel ownership. Higher values indicate more concentrated ownership.",
+    },
+    {
+      label: "Local ownership share",
+      value: metric.localOwnershipShare != null ? `${Math.round(metric.localOwnershipShare * 100)}%` : "Not available",
+      detail: "Share of classified private-owner parcels with a local Illinois mailing address.",
+    },
+    {
+      label: "Permit activity",
+      value: metric.permitCount != null ? `${metric.permitCount.toLocaleString()} permits` : "Not available",
+      detail: "Building permits filed in the trailing measurement window — a proxy for visible reinvestment.",
+    },
+    {
+      label: "Composite",
+      value: metric.healthScore != null ? `${Math.round(metric.healthScore)}/100` : "Not available",
+      detail: "Market Signal Composite summarizing the readings above for comparison across corridors. Not a grade of corridor success.",
+    },
+    {
+      label: "Context, not a judgment",
+      value: `${label} corridor snapshot`,
+      detail: "These metrics describe observable public-record patterns in this corridor. They are context for decision-making, not a judgment of the community or its residents.",
+    },
+  ];
+
+  return {
+    title: "Corridor Context",
+    description: `Public-record market signals for the ${label} corridor. Use as context alongside this address's incentive screening.`,
+    items,
+  };
+}
+
 // ─── Report Generators ──────────────────────────────────────────────
 
 function generateLocationIncentives(
@@ -1573,6 +1860,65 @@ function generateLocationIncentives(
         : "Local organizations that provide free advising and application assistance.",
       items: assetItems,
     });
+  }
+
+  // §06 TIF Financial Context enrichment + Deadlines + Corridor Context
+  {
+    const tifFinancials = loadTifFinancials();
+    const sbifRollout = loadSbifRollout();
+
+    // Resolve the TIF district key for this address.
+    // Priority: already-set districtId from ctx.neighborhoodEconomics.tifFinance
+    // Fallback: normalizeTifKey on raw zoneNames["tif"] value.
+    const tifDistrictId = enrichTifFinancialContext(ctx, tifFinancials);
+
+    // TIF Financial Context: when in a TIF and tif-financials.json has a record,
+    // add an enrichment note to the Neighborhood Economic Context section items.
+    // If the section was already built by buildNeighborhoodEconomicContextSection
+    // (which uses ctx.neighborhoodEconomics.tifFinance from the live API), this
+    // is a no-op. When the static file has data the live API didn't provide, we
+    // append a standalone section.
+    if (tifDistrictId && tifFinancials?.[tifDistrictId] && !ctx.neighborhoodEconomics?.tifFinance) {
+      const fin = tifFinancials[tifDistrictId];
+      const expiresNote = fin.expiresWithin24Months && fin.expirationDate
+        ? ` Act soon: this TIF is scheduled to expire ${fin.expirationDate}.`
+        : "";
+      const econSectionIdx = sections.findIndex((s) => s.title === "Neighborhood Economic Context");
+      const tifItem: ReportItem = {
+        label: "TIF District Funding Overview",
+        value: `TIF district ${fin.tifName ?? fin.tifNumber}${fin.expirationDate ? ` — expires ${fin.expirationDate}` : ""}`,
+        detail: [
+          `This address is inside the ${fin.tifName ?? fin.tifNumber} TIF district (${fin.tifNumber}).`,
+          fin.expirationDate ? `Expiration date: ${fin.expirationDate} (${fin.expirationYear}).` : null,
+          expiresNote || null,
+          "TIF districts can fund SBIF façade reimbursements, public improvements, and redevelopment agreements. Contact the City of Chicago DPD for current fund availability.",
+        ].filter(Boolean).join(" "),
+        sourceLabel: "City of Chicago TIF Annual Reports",
+        sourceUrl: "https://data.cityofchicago.org/Community-Economic-Development/Tax-Increment-Financing-TIF-Annual-Report-Analysis/qm7s-3ctt",
+      };
+      if (econSectionIdx >= 0) {
+        sections[econSectionIdx].items.push(tifItem);
+      } else {
+        sections.push({
+          title: "TIF Financial Context",
+          description: "Annual report financial context for the TIF district covering this address.",
+          items: [tifItem],
+        });
+      }
+    }
+
+    // Deadlines section
+    const deadlinesSection = buildDeadlinesSection(
+      [...confirmedPrograms, ...exploratoryPrograms],
+      tifDistrictId,
+      tifFinancials,
+      sbifRollout,
+    );
+    if (deadlinesSection) sections.push(deadlinesSection);
+
+    // Corridor Context section (omitted entirely when no data)
+    const corridorSection = buildCorridorContextSection(ctx);
+    if (corridorSection) sections.push(corridorSection);
   }
 
   // ── Benefit Estimates ──────────────────────────────────────────────

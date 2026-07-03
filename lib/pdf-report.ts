@@ -4,24 +4,59 @@ import type { LookupResult, Program } from "./types";
 import type { GeneratedReport } from "./report-engine";
 
 /**
- * PDF print order elevates "Your Support Network" into the primary story —
- * right after "Eligible Incentive Programs", or first if that section is
- * absent — instead of leaving it buried mid-report. Mirrors the report
- * page's verdict-level partner strip so page and PDF tell one story.
+ * PDF print order:
+ *  1. Elevates "Your Support Network" right after "Eligible Incentive Programs".
+ *  2. Places "Upcoming Deadlines Near This Address" after the support network
+ *     so time-sensitive items appear early in the PDF.
+ *  3. Places "Corridor Context" after deadlines (context block, not action).
+ *
+ * Sections not listed are left in their natural order.
  */
 export function orderSectionsForPdf(
   sections: GeneratedReport["sections"],
 ): GeneratedReport["sections"] {
-  const ordered = [...sections];
+  let ordered = [...sections];
+
+  // Step 1: elevate Support Network after Eligible Programs
   const supportIdx = ordered.findIndex(
     (s) => s.title === "Your Support Network",
   );
-  if (supportIdx < 0) return ordered;
-  const [support] = ordered.splice(supportIdx, 1);
-  const eligibleIdx = ordered.findIndex(
-    (s) => s.title === "Eligible Incentive Programs",
+  if (supportIdx >= 0) {
+    const [support] = ordered.splice(supportIdx, 1);
+    const eligibleIdx = ordered.findIndex(
+      (s) => s.title === "Eligible Incentive Programs",
+    );
+    ordered.splice(eligibleIdx >= 0 ? eligibleIdx + 1 : 0, 0, support);
+  }
+
+  // Step 2: move Deadlines after Support Network (or after Eligible Programs if no support)
+  const deadlinesIdx = ordered.findIndex(
+    (s) => s.title === "Upcoming Deadlines Near This Address",
   );
-  ordered.splice(eligibleIdx >= 0 ? eligibleIdx + 1 : 0, 0, support);
+  if (deadlinesIdx >= 0) {
+    const [deadlines] = ordered.splice(deadlinesIdx, 1);
+    const anchorIdx = ordered.findIndex(
+      (s) => s.title === "Your Support Network" || s.title === "Eligible Incentive Programs",
+    );
+    // Insert after the anchor, or at position 1 if neither found
+    ordered.splice(anchorIdx >= 0 ? anchorIdx + 1 : 1, 0, deadlines);
+  }
+
+  // Step 3: move Corridor Context after Deadlines (or after Eligible Programs)
+  const corridorIdx = ordered.findIndex(
+    (s) => s.title === "Corridor Context",
+  );
+  if (corridorIdx >= 0) {
+    const [corridor] = ordered.splice(corridorIdx, 1);
+    const anchorIdx = ordered.findIndex(
+      (s) =>
+        s.title === "Upcoming Deadlines Near This Address" ||
+        s.title === "Your Support Network" ||
+        s.title === "Eligible Incentive Programs",
+    );
+    ordered.splice(anchorIdx >= 0 ? anchorIdx + 1 : 1, 0, corridor);
+  }
+
   return ordered;
 }
 

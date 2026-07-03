@@ -136,7 +136,7 @@
     "lastVerifiedAt": "2026-07-02",
     "benefitRange": "Tax deferral + 0% gains after 10 yrs (OZ 1.0 through 2028; OZ 2.0 eff. 1/1/2027)",
     "fastestConfirmingStep": "Consult a tax advisor about QOF eligibility under OBBBA",
-    "oz2Note": "OBBBA (Pub. L. 119-21, July 4, 2025) made Opportunity Zones permanent on a 10-year redesignation cycle. Governors nominate new tracts July\u2013Sept 2026; new OZ 2.0 map takes effect January 1, 2027. OZ 1.0 tracts remain valid through December 31, 2028. Pre-2027 OZ 1.0 deferred gains trigger inclusion on 12/31/2026 unless rolled into a OZ 2.0 investment. Illinois is expected to nominate new tracts in H2 2026 \u2014 DCEO list not yet published as of 2026-07-02.",
+    "oz2Note": "OBBBA (Pub. L. 119-21, July 4, 2025) made Opportunity Zones permanent on a 10-year redesignation cycle. Governors nominate new tracts July–Sept 2026; new OZ 2.0 map takes effect January 1, 2027. OZ 1.0 tracts remain valid through December 31, 2028. Pre-2027 OZ 1.0 deferred gains trigger inclusion on 12/31/2026 unless rolled into a OZ 2.0 investment. Illinois is expected to nominate new tracts in H2 2026 — DCEO list not yet published as of 2026-07-02.",
     "deadlines": [
       {
         "label": "IL governor OZ 2.0 nomination window opens",
@@ -313,8 +313,8 @@
       "Single-tenant commercial: up to $150,000",
       "Single-tenant industrial: up to $250,000",
       "Multi-tenant industrial: up to $100,000 per tenant ($250,000 property max)",
-      "Reimbursement rate \u2014 commercial: 90% ($0-$3M gross sales/net worth), 60% ($3-$6M), 30% ($6-$9M)",
-      "Reimbursement rate \u2014 industrial: flat 50% regardless of size",
+      "Reimbursement rate — commercial: 90% ($0-$3M gross sales/net worth), 60% ($3-$6M), 30% ($6-$9M)",
+      "Reimbursement rate — industrial: flat 50% regardless of size",
       "Covers permanent improvements: HVAC, plumbing, electrical, roofing, fire suppression",
       "Can combine with other TIF incentives"
     ],
@@ -380,7 +380,7 @@
       }
     ],
     "lastVerifiedAt": "2026-07-02",
-    "benefitRange": "$75K\u2013$250K cap (property-type dependent); 30\u201390% reimbursement (commercial) / 50% (industrial)",
+    "benefitRange": "$75K–$250K cap (property-type dependent); 30–90% reimbursement (commercial) / 50% (industrial)",
     "fastestConfirmingStep": "Check the SBIF rollout calendar at chicago.gov/sbif for your TIF's enrollment month, then contact SomerCor at (312) 360-3384",
     "deadlines": [
       {
@@ -611,7 +611,7 @@
       },
       {
         "criterion": "investmentSize",
-        "description": "\u2265$2.5M investment + lesser of 50 jobs or 10% of worldwide baseline",
+        "description": "≥$2.5M investment + lesser of 50 jobs or 10% of worldwide baseline",
         "verifiedBy": "manual",
         "required": true
       }
@@ -690,7 +690,7 @@
     "benefitRange": "Sales tax exemption on equipment + 20% construction wage credit (underserved areas)",
     "fastestConfirmingStep": "Call DCEO at (217) 782-7500; verify suspension status",
     "boundaryDisclaimer": "The state-incentive zone overlay is a high-unemployment census-tract proxy, not an official Data Center zone designation.",
-    "suspensionNote": "New project certifications suspended July 1, 2026 \u2013 June 30, 2028. Existing certifications unaffected. Illinois Senate is debating earlier sunset.",
+    "suspensionNote": "New project certifications suspended July 1, 2026 – June 30, 2028. Existing certifications unaffected. Illinois Senate is debating earlier sunset.",
     "verificationSteps": [
       {
         "label": "IDOR Business Incentives Reporting",
@@ -706,7 +706,7 @@
     "name": "Special Service Area (SSA)",
     "level": "City",
     "zoneKey": "ssa",
-    "summary": "Special Service Areas are localized taxing districts where businesses self-tax to fund enhanced services \u2014 streetscaping, marketing, security, facade improvements \u2014 within a defined commercial corridor. Chicago has 58 active SSAs citywide, each managed by a delegate service provider (a local chamber, EDO, or nonprofit).",
+    "summary": "Special Service Areas are localized taxing districts where businesses self-tax to fund enhanced services — streetscaping, marketing, security, facade improvements — within a defined commercial corridor. Chicago has 58 active SSAs citywide, each managed by a delegate service provider (a local chamber, EDO, or nonprofit).",
     "whoQualifies": "All commercial properties within an active SSA boundary automatically participate and benefit from enhanced services. No application needed for the underlying benefits.",
     "benefits": [
       "Streetscaping and beautification",
@@ -721,7 +721,7 @@
       "Contact your SSA's delegate agency for sub-programs and grants"
     ],
     "requiredDocs": [
-      "No application needed \u2014 benefits are automatic by location",
+      "No application needed — benefits are automatic by location",
       "Contact your SSA delegate agency for any sub-program requirements"
     ],
     "contact": "Find your SSA delegate agency at chicago.gov",
@@ -754,10 +754,10 @@
     "name": "High Unemployment Zone (Information Overlay)",
     "level": "Federal",
     "zoneKey": "highUnemployment",
-    "summary": "WOTC LAPSE NOTICE: The Work Opportunity Tax Credit (WOTC) expired December 31, 2025. As of July 2026 it is in legislative hiatus \u2014 no new credits are available for employees starting work on or after January 1, 2026. WOTC has historically been reauthorized retroactively; employers are advised to CONTINUE pre-screening new hires using IRS Form 8850 to preserve potential retroactive eligibility. Credit value: $2,400\u2013$9,600 per qualifying hire.",
+    "summary": "WOTC LAPSE NOTICE: The Work Opportunity Tax Credit (WOTC) expired December 31, 2025. As of July 2026 it is in legislative hiatus — no new credits are available for employees starting work on or after January 1, 2026. WOTC has historically been reauthorized retroactively; employers are advised to CONTINUE pre-screening new hires using IRS Form 8850 to preserve potential retroactive eligibility. Credit value: $2,400–$9,600 per qualifying hire.",
     "whoQualifies": "Employers hiring from designated WOTC target groups (veterans, SNAP recipients, ex-felons, residents of Empowerment Zones/RRCs, long-term unemployed, etc.). Pre-screen on IRS Form 8850 before/at hire.",
     "benefits": [
-      "Work Opportunity Tax Credit up to $9,600 per qualifying hire (LAPSED 1/1/2026 \u2014 see status)",
+      "Work Opportunity Tax Credit up to $9,600 per qualifying hire (LAPSED 1/1/2026 — see status)",
       "State and federal workforce training grants",
       "Priority for workforce development programs"
     ],
@@ -793,9 +793,9 @@
       }
     ],
     "lastVerifiedAt": "2026-07-02",
-    "benefitRange": "WOTC: $2,400\u2013$9,600/hire (authority lapsed 1/1/2026; retroactive reauthorization historically occurs)",
+    "benefitRange": "WOTC: $2,400–$9,600/hire (authority lapsed 1/1/2026; retroactive reauthorization historically occurs)",
     "fastestConfirmingStep": "Call IDES at (800) 247-4984; continue Form 8850 pre-screening to preserve retroactive eligibility",
-    "sunsetWarning": "WOTC authority lapsed 12/31/2025. No credits for 2026 hires as of today. Continue IRS Form 8850 pre-screening \u2014 if Congress reauthorizes WOTC retroactively (historical pattern), pre-screened hires will be eligible. File Form 8850 within 28 days of hire start date regardless of current lapse.",
+    "sunsetWarning": "WOTC authority lapsed 12/31/2025. No credits for 2026 hires as of today. Continue IRS Form 8850 pre-screening — if Congress reauthorizes WOTC retroactively (historical pattern), pre-screened hires will be eligible. File Form 8850 within 28 days of hire start date regardless of current lapse.",
     "deadlines": []
   },
   {
@@ -842,7 +842,7 @@
       },
       {
         "criterion": "propertyType",
-        "description": "Commercial property \u2014 new construction, rehab, or reoccupancy",
+        "description": "Commercial property — new construction, rehab, or reoccupancy",
         "verifiedBy": "survey",
         "required": true
       },
@@ -890,7 +890,7 @@
     "name": "Cook County Catalyst Grant",
     "level": "County",
     "zoneKey": "",
-    "summary": "The Catalyst Grant provides up to $100,000 to established small businesses in Cook County for equipment, facilities, and hiring \u2014 funded through ARPA dollars.",
+    "summary": "The Catalyst Grant provides up to $100,000 to established small businesses in Cook County for equipment, facilities, and hiring — funded through ARPA dollars.",
     "whoQualifies": "For-profit businesses in Cook County with at least 1 full-time employee besides owner, annual revenue between $500K and $10M, and demonstrated growth in net income and employee count.",
     "benefits": [
       "Up to $100,000 grant per business",
@@ -949,7 +949,7 @@
     "summary": "C-PACE provides up to 100% upfront financing from private capital for energy efficiency, renewable energy, and water conservation improvements to commercial buildings, repaid through property tax bills.",
     "whoQualifies": "Commercial property owners in Cook County including office buildings, retail, industrial, multi-family (5+ units), hotels, and nonprofits.",
     "benefits": [
-      "Up to 100% upfront financing \u2014 no large out-of-pocket costs",
+      "Up to 100% upfront financing — no large out-of-pocket costs",
       "Loan terms up to 30 years (matching useful life of improvements)",
       "Repaid as a line item on property tax bill",
       "Covers HVAC, lighting, solar, insulation, water systems"
@@ -1188,7 +1188,7 @@
     "name": "New Markets Tax Credits (NMTC)",
     "level": "Federal",
     "zoneKey": "nmtcEligible",
-    "summary": "The New Markets Tax Credit program was made permanent by OBBBA (July 2025) with $5 billion in annual allocation authority \u2014 eliminating the prior reauthorization risk. The 39% federal tax credit on qualified equity investments through certified CDEs continues without sunset. CY 2026 application round not yet open as of July 2026. NMTC flows through Community Development Entities (CDEs), not directly to businesses \u2014 projects typically $5M+.",
+    "summary": "The New Markets Tax Credit program was made permanent by OBBBA (July 2025) with $5 billion in annual allocation authority — eliminating the prior reauthorization risk. The 39% federal tax credit on qualified equity investments through certified CDEs continues without sunset. CY 2026 application round not yet open as of July 2026. NMTC flows through Community Development Entities (CDEs), not directly to businesses — projects typically $5M+.",
     "whoQualifies": "Investors who make Qualified Equity Investments (QEIs) through certified CDEs in eligible census tracts. Business owners can attract NMTC-backed financing for large projects ($5M+).",
     "benefits": [
       "39% federal income tax credit claimed over 7 years (5% years 1-3, 6% years 4-7)",
@@ -1258,7 +1258,7 @@
   },
   {
     "id": "qct",
-    "name": "Qualified Census Tract (QCT) \u2014 LIHTC Boost",
+    "name": "Qualified Census Tract (QCT) — LIHTC Boost",
     "level": "Federal",
     "zoneKey": "qct",
     "summary": "HUD-designated Qualified Census Tracts boost Low-Income Housing Tax Credits (LIHTC) by 30%, making affordable housing development more financially viable in these areas.",
@@ -1330,7 +1330,7 @@
     "name": "Chicago Landmark District Incentives",
     "level": "City",
     "zoneKey": "landmarkDistricts",
-    "summary": "Properties in Chicago Landmark Districts may access local preservation incentives. The City designates landmarks via the Commission on Chicago Landmarks (62 districts per the 2025 Landmarks Ordinance); the related Class L property tax reduction is administered by the Cook County Assessor \u2014 see the separate Class L entry.",
+    "summary": "Properties in Chicago Landmark Districts may access local preservation incentives. The City designates landmarks via the Commission on Chicago Landmarks (62 districts per the 2025 Landmarks Ordinance); the related Class L property tax reduction is administered by the Cook County Assessor — see the separate Class L entry.",
     "whoQualifies": "Property owners in Chicago-designated landmark districts who are rehabilitating historically significant buildings. Both commercial and residential properties may qualify.",
     "benefits": [
       "City designation is a precondition for Class L property tax reduction (administered by Cook County Assessor)",
@@ -1356,7 +1356,7 @@
     "status": "active",
     "contacts": [
       {
-        "agency": "City of Chicago Department of Planning and Development \u2014 Historic Preservation",
+        "agency": "City of Chicago Department of Planning and Development — Historic Preservation",
         "abbreviation": "DPD-HP",
         "phone": "(312) 744-3200",
         "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/landmark.html"
@@ -1416,7 +1416,7 @@
         "url": "https://www.illinois.gov/historic-preservation"
       },
       {
-        "agency": "National Park Service \u2014 Technical Preservation Services",
+        "agency": "National Park Service — Technical Preservation Services",
         "abbreviation": "NPS",
         "phone": "(202) 513-7270",
         "url": "https://www.nps.gov/subjects/taxincentives/index.htm"
@@ -1471,7 +1471,7 @@
       "Homebuyer counseling certificate (NHS)",
       "Purchase contract for property in MMRP area"
     ],
-    "contact": "NHS Chicago \u2014 MMRP Purchase Assistance",
+    "contact": "NHS Chicago — MMRP Purchase Assistance",
     "url": "https://www.chicago.gov/city/en/depts/doh/provdrs/lenders/svcs/micro-market-recovery-program.html",
     "sourceUrl": "https://nhschicago.org/mmrp-purchase-assistance-grant/",
     "status": "active",
@@ -1584,7 +1584,7 @@
       "Visit Chicago.gov/CCSA for application details",
       "Contact Program Administrator Allies for Community Business for grant questions",
       "Connect with your Corridor Lead Agency for technical assistance",
-      "Submit application \u2014 accepted on a rolling basis, awarded quarterly"
+      "Submit application — accepted on a rolling basis, awarded quarterly"
     ],
     "requiredDocs": [
       "Proof of business ownership or nonprofit status",
@@ -1788,22 +1788,22 @@
   },
   {
     "id": "iraCleanElectricity",
-    "name": "IRA Clean Electricity Credits (\u00a748E / \u00a745Y) + Low-Income Communities Bonus",
+    "name": "IRA Clean Electricity Credits (§48E / §45Y) + Low-Income Communities Bonus",
     "level": "Federal",
     "zoneKey": "",
-    "summary": "OBBBA (July 4, 2025) terminates \u00a748E and \u00a745Y credits for wind and solar facilities that did not begin physical construction by July 4, 2026 (12 months after enactment). Non-wind/solar zero-emission technologies (geothermal, nuclear, fuel cells, etc.) are NOT phased out and continue to earn the full \u00a748E / \u00a745Y credit. Chicago solar projects that began construction before July 4, 2026 are grandfathered. The 2026 Low-Income Communities Bonus Credit program window (\u00a748E(h)) closes August 7, 2026.",
+    "summary": "OBBBA (July 4, 2025) terminates §48E and §45Y credits for wind and solar facilities that did not begin physical construction by July 4, 2026 (12 months after enactment). Non-wind/solar zero-emission technologies (geothermal, nuclear, fuel cells, etc.) are NOT phased out and continue to earn the full §48E / §45Y credit. Chicago solar projects that began construction before July 4, 2026 are grandfathered. The 2026 Low-Income Communities Bonus Credit program window (§48E(h)) closes August 7, 2026.",
     "whoQualifies": "Owners of qualified clean electricity facilities placed in service after 2024. Solar and storage projects <5 MW are the typical Chicago use case. Nonprofits, schools, places of worship, and local governments can monetize via elective pay.",
     "benefits": [
-      "30% base Investment Tax Credit (\u00a748E)",
+      "30% base Investment Tax Credit (§48E)",
       "+10% bonus for energy community sites (brownfield, MSA fossil-fuel employment)",
       "+10% bonus for low-income community projects, or +20% for qualified low-income economic benefit projects",
-      "Production Tax Credit alternative (\u00a745Y) on a $/MWh basis",
-      "PHASE-OUT: \u00a748E / \u00a745Y credits for wind and solar terminated for facilities not beginning construction by 7/4/2026 (OBBBA). Non-wind/solar zero-emission technologies unaffected.",
-      "Grandfathered solar: physical construction must have begun by 7/4/2026"
+      "Production Tax Credit alternative (§45Y) on a $/MWh basis",
+      "PHASE-OUT: §48E / §45Y credits for wind and solar apply only to facilities that begin physical construction by July 4, 2026 (OBBBA). Non-wind/solar zero-emission technologies unaffected.",
+      "Construction-start deadline: wind and solar facilities must begin physical construction by July 4, 2026 to qualify."
     ],
     "howToApply": [
       "Pre-file registration through IRS Energy Credits Online (ECO) portal",
-      "Apply to the \u00a748E(h) Low-Income Communities Bonus Credit Program (2026 program year: 2/2/2026 \u2013 8/7/2026, 1.8 GW total capacity)",
+      "Apply to the §48E(h) Low-Income Communities Bonus Credit Program (2026 program year: 2/2/2026 – 8/7/2026, 1.8 GW total capacity)",
       "Place facility in service; file Form 3468 (ITC) or Form 8835 (PTC) with tax return"
     ],
     "requiredDocs": [
@@ -1843,23 +1843,27 @@
     "fastestConfirmingStep": "Visit IRS Energy Credits Online to pre-file",
     "deadlines": [
       {
-        "label": "\u00a748E Low-Income Communities Bonus Credit 2026 window closes",
+        "label": "48E/45Y wind/solar construction-start deadline",
+        "date": "2026-07-04"
+      },
+      {
+        "label": "§48E Low-Income Communities Bonus Credit 2026 window closes",
         "date": "2026-08-07"
       }
     ],
-    "sunsetWarning": "Wind and solar projects that did not begin physical construction by July 4, 2026 are NOT eligible for \u00a748E / \u00a745Y credits. Non-wind/solar zero-emission technologies are unaffected. Consult a tax advisor to confirm grandfathering status."
+    "sunsetWarning": "Wind and solar facilities must begin physical construction by July 4, 2026 to remain eligible for §48E / §45Y credits. Non-wind/solar zero-emission technologies are unaffected. Consult a tax advisor to confirm construction-start documentation requirements."
   },
   {
     "id": "electivePay",
     "name": "Elective Pay & Transferability (Clean Energy Credits)",
     "level": "Federal",
     "zoneKey": "",
-    "summary": "Elective pay (direct pay) lets nonprofits, places of worship, schools, and local governments monetize \u00a748E, \u00a730C, and other IRA clean-energy credits as a cash refund. Transferability lets for-profit owners that lack tax appetite sell their credits.",
+    "summary": "Elective pay (direct pay) lets nonprofits, places of worship, schools, and local governments monetize §48E, §30C, and other IRA clean-energy credits as a cash refund. Transferability lets for-profit owners that lack tax appetite sell their credits.",
     "whoQualifies": "Tax-exempt entities (nonprofits, schools, churches, local governments, tribal governments) for elective pay. Any taxable owner of an eligible credit for transferability.",
     "benefits": [
       "Direct cash refund for tax-exempt entities (elective pay)",
       "Ability to sell credits to taxable buyers (transferability)",
-      "Applies to \u00a748E (clean electricity ITC), \u00a730C (EV charging), \u00a745Y (clean electricity PTC), and others"
+      "Applies to §48E (clean electricity ITC), §30C (EV charging), §45Y (clean electricity PTC), and others"
     ],
     "howToApply": [
       "Pre-file registration through IRS Energy Credits Online (ECO) portal",
@@ -1901,16 +1905,16 @@
         "url": "https://www.irs.gov/credits-deductions/elective-pay-and-transferability",
         "kind": "preapproval",
         "appliesBefore": "construction",
-        "note": "Mandatory \u2014 credit cannot be claimed without ECO registration number."
+        "note": "Mandatory — credit cannot be claimed without ECO registration number."
       }
     ]
   },
   {
     "id": "sec179d",
-    "name": "\u00a7179D \u2014 Energy Efficient Commercial Buildings Deduction",
+    "name": "§179D — Energy Efficient Commercial Buildings Deduction",
     "level": "Federal",
     "zoneKey": "",
-    "summary": "Up to $5.94 per square foot deduction for energy-efficient HVAC, lighting, and envelope improvements in commercial buildings. SUNSET WARNING: OBBBA terminates \u00a7179D for construction beginning after 6/30/2026.",
+    "summary": "Up to $5.94 per square foot deduction for energy-efficient HVAC, lighting, and envelope improvements in commercial buildings. SUNSET WARNING: OBBBA terminates §179D for construction beginning after 6/30/2026.",
     "whoQualifies": "Commercial building owners, and designers working on government- or nonprofit-owned buildings (the deduction can be allocated to the designer when the owner is tax-exempt).",
     "benefits": [
       "Up to $5.94 per square foot federal deduction",
@@ -1919,7 +1923,7 @@
     ],
     "howToApply": [
       "Begin construction by 6/30/2026 to qualify",
-      "Engage a qualified energy modeler to certify \u00a7179D compliance",
+      "Engage a qualified energy modeler to certify §179D compliance",
       "File Form 7205 with tax return"
     ],
     "requiredDocs": [
@@ -1955,8 +1959,8 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Up to $5.94/sf federal deduction",
-    "fastestConfirmingStep": "Engage a \u00a7179D energy modeler before 6/30/2026 construction start",
-    "sunsetWarning": "\u00a7179D terminates for construction beginning after 6/30/2026 (OBBBA). Property owners considering qualifying work should act before that date."
+    "fastestConfirmingStep": "Engage a §179D energy modeler before 6/30/2026 construction start",
+    "sunsetWarning": "§179D terminates for construction beginning after 6/30/2026 (OBBBA). Property owners considering qualifying work should act before that date."
   },
   {
     "id": "hudSection108",
@@ -1964,7 +1968,7 @@
     "level": "Federal",
     "zoneKey": "",
     "summary": "Federally-guaranteed loans for economic development, public facilities, and housing issued by CDBG entitlement cities. FY 2026 fee is 0.58% (down from 0.82%). Useful for catalytic projects too large for NOF/SBIF but too small for conventional capital markets.",
-    "whoQualifies": "Projects sponsored by Chicago (a CDBG entitlement city) that further CDBG national objectives \u2014 economic development, public facilities, housing rehabilitation, large-scale physical development.",
+    "whoQualifies": "Projects sponsored by Chicago (a CDBG entitlement city) that further CDBG national objectives — economic development, public facilities, housing rehabilitation, large-scale physical development.",
     "benefits": [
       "Federally-guaranteed loans up to 5x the city's annual CDBG allocation",
       "30-year maturity (matching useful life)",
@@ -2128,11 +2132,11 @@
   },
   {
     "id": "sbaDisasterEidl",
-    "name": "SBA Disaster EIDL \u2014 Cook County Flood Declaration",
+    "name": "SBA Disaster EIDL — Cook County Flood Declaration",
     "level": "Federal",
     "zoneKey": "",
     "summary": "SBA Economic Injury Disaster Loans (EIDL) are available to Cook County small businesses and nonprofits that suffered revenue losses from the July 25-28, 2025 storms and flooding. Physical damage loan applications have closed (deadline was June 2026); ECONOMIC INJURY applications remain open through January 25, 2027. Low fixed interest rate (4% for small businesses, 2.75% for nonprofits); up to 30-year terms.",
-    "whoQualifies": "Cook County small businesses, small agricultural cooperatives, and private nonprofits that suffered economic injury (lost revenue/working capital) from the July 25-28, 2025 storms. Physical damage deadline has passed \u2014 only economic injury EIDL remains open. No requirement to have sustained physical property damage to qualify for economic injury.",
+    "whoQualifies": "Cook County small businesses, small agricultural cooperatives, and private nonprofits that suffered economic injury (lost revenue/working capital) from the July 25-28, 2025 storms. Physical damage deadline has passed — only economic injury EIDL remains open. No requirement to have sustained physical property damage to qualify for economic injury.",
     "benefits": [
       "Up to $2 million in low-interest federal disaster loans",
       "4% fixed interest rate for small businesses; 2.75% for nonprofits",
@@ -2160,7 +2164,7 @@
     "status": "current",
     "contacts": [
       {
-        "agency": "U.S. Small Business Administration \u2014 Disaster Assistance",
+        "agency": "U.S. Small Business Administration — Disaster Assistance",
         "abbreviation": "SBA",
         "phone": "(800) 659-2955",
         "url": "https://disasterloanassistance.sba.gov/"
@@ -2188,7 +2192,7 @@
     ],
     "lastVerifiedAt": "2026-07-02",
     "benefitRange": "Up to $2M at 4% (small business) or 2.75% (nonprofit), up to 30-year term",
-    "fastestConfirmingStep": "Call SBA at (800) 659-2955 or go to disasterloanassistance.sba.gov \u2014 economic injury window open through Jan 25, 2027",
+    "fastestConfirmingStep": "Call SBA at (800) 659-2955 or go to disasterloanassistance.sba.gov — economic injury window open through Jan 25, 2027",
     "deadlines": [
       {
         "label": "Economic injury EIDL application deadline",
@@ -2199,7 +2203,7 @@
   },
   {
     "id": "chips48d",
-    "name": "CHIPS Investment Tax Credit (\u00a748D)",
+    "name": "CHIPS Investment Tax Credit (§48D)",
     "level": "Federal",
     "zoneKey": "",
     "summary": "25% federal investment tax credit for semiconductor manufacturing facilities or specialized equipment. Eligible for direct pay. Investment must be initiated by end of 2026 to qualify.",
@@ -2251,7 +2255,7 @@
   },
   {
     "id": "ssbciAdvantageIL",
-    "name": "SSBCI \u2014 Advantage Illinois & INVENT VCP",
+    "name": "SSBCI — Advantage Illinois & INVENT VCP",
     "level": "Federal",
     "zoneKey": "",
     "summary": "Federal Treasury allocates $354.6M to Illinois through the State Small Business Credit Initiative (SSBCI). Administered by DCEO as Advantage Illinois (loan participation/guarantee) and INVENT Venture Capital Program.",
@@ -2309,7 +2313,7 @@
     "summary": "$500K-$5M federal grants for regional tech-ecosystem capacity. Applicants are nonprofits, EDOs, universities, or governments. FY 2026 cycle closed; next NOFO expected late summer 2026.",
     "whoQualifies": "Nonprofits, economic development organizations, universities, and government entities building regional innovation capacity. SECCC could partner as a sub-awardee for entrepreneur capacity building.",
     "benefits": [
-      "$500K \u2013 $5M federal grants",
+      "$500K – $5M federal grants",
       "Supports innovation capacity, entrepreneur networks, scale-up assistance",
       "3-year project periods"
     ],
@@ -2345,7 +2349,7 @@
       }
     ],
     "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "$500K \u2013 $5M federal grants",
+    "benefitRange": "$500K – $5M federal grants",
     "fastestConfirmingStep": "Monitor grants.gov for FY 2026 Build to Scale NOFO"
   },
   {
@@ -2420,8 +2424,8 @@
     "summary": "Illinois capital tax credit effective for tax years beginning on/after 1/1/2026 (P.A. 104-0006). Tiered credit on $10M+ manufacturing capital investments in automotive, aerospace, life sciences, energy, food, advanced materials, robotics, and semiconductors. DCEO-administered.",
     "whoQualifies": "Illinois manufacturers investing at least $10M in qualifying capital projects in target industries.",
     "benefits": [
-      "3% credit on $10M \u2013 $50M capital investments",
-      "5% credit on $50M \u2013 $100M",
+      "3% credit on $10M – $50M capital investments",
+      "5% credit on $50M – $100M",
       "7% credit on $100M+",
       "Claimed against income tax over 5 years; carries forward 10 years"
     ],
@@ -2489,7 +2493,7 @@
     "level": "State",
     "zoneKey": "",
     "summary": "DCEO program supporting tenants of designated quantum campuses (notably Illinois Quantum & Microelectronics Park on the former South Works site, immediately relevant to SECCC's footprint). Provides utility-tax exemptions, sales-tax exemptions, and income-tax credits for quantum-tech tenants.",
-    "whoQualifies": "Businesses operating within a designated Quantum Enterprise Zone \u2014 typically quantum computing, microelectronics, and supporting supply-chain firms.",
+    "whoQualifies": "Businesses operating within a designated Quantum Enterprise Zone — typically quantum computing, microelectronics, and supporting supply-chain firms.",
     "benefits": [
       "Utility tax exemptions (electric, gas, telecom)",
       "Sales tax exemptions on qualifying equipment and materials",
@@ -2550,7 +2554,7 @@
     "name": "High Impact Business (HIB)",
     "level": "State",
     "zoneKey": "",
-    "summary": "Long-standing DCEO program for projects outside Enterprise Zone boundaries \u2014 analogous benefits structure (sales tax exemptions, utility exemptions, manufacturing M&E) for large-scale Illinois projects.",
+    "summary": "Long-standing DCEO program for projects outside Enterprise Zone boundaries — analogous benefits structure (sales tax exemptions, utility exemptions, manufacturing M&E) for large-scale Illinois projects.",
     "whoQualifies": "Illinois businesses investing at least $12M and creating 500 new jobs, OR investing $30M and retaining 1,500 jobs. Renewable energy / fuel cells / clean coal projects have alternative thresholds.",
     "benefits": [
       "Sales tax exemption on building materials (via BMEC)",
@@ -2584,7 +2588,7 @@
     "eligibilityRules": [
       {
         "criterion": "investmentSize",
-        "description": "\u2265$12M investment + 500 new jobs OR $30M + 1,500 retained",
+        "description": "≥$12M investment + 500 new jobs OR $30M + 1,500 retained",
         "verifiedBy": "manual",
         "required": true
       }
@@ -2663,7 +2667,7 @@
   },
   {
     "id": "economicEmpowermentCenters",
-    "name": "Economic Empowerment Centers (EEC) Grant Program \u2014 Round 2",
+    "name": "Economic Empowerment Centers (EEC) Grant Program — Round 2",
     "level": "State",
     "zoneKey": "",
     "summary": "DCEO Office of Economic Equity & Empowerment grant program supporting organizations that deliver tailored business training, mentorship, outreach, and enterprise-building services for underserved businesses and entrepreneurs. Round 2 is open on a rolling basis until funding is exhausted.",
@@ -2832,11 +2836,11 @@
   },
   {
     "id": "cannabisR3",
-    "name": "Illinois Cannabis Social Equity Loan Program \u2014 Round III",
+    "name": "Illinois Cannabis Social Equity Loan Program — Round III",
     "level": "State",
     "zoneKey": "",
     "summary": "DCEO Office of Economic Equity forgivable-loan program for social-equity cannabis license holders. Round III opened 8/11/2025; $31.8M awarded to 95 businesses.",
-    "whoQualifies": "Illinois social-equity licensed cannabis businesses \u2014 craft growers, infusers, transporters, dispensaries.",
+    "whoQualifies": "Illinois social-equity licensed cannabis businesses — craft growers, infusers, transporters, dispensaries.",
     "benefits": [
       "Forgivable loans for buildout, equipment, and working capital",
       "Designed to address barriers facing social-equity license holders"
@@ -2880,7 +2884,7 @@
     "name": "Restore, Reinvest, Renew (R3) Program",
     "level": "State",
     "zoneKey": "",
-    "summary": "25% of adult-use cannabis tax revenue funds grants for disinvested Illinois communities \u2014 civic legal aid, economic development, reentry, violence prevention, youth development. Administered by the Illinois Criminal Justice Information Authority on behalf of the R3 Board.",
+    "summary": "25% of adult-use cannabis tax revenue funds grants for disinvested Illinois communities — civic legal aid, economic development, reentry, violence prevention, youth development. Administered by the Illinois Criminal Justice Information Authority on behalf of the R3 Board.",
     "whoQualifies": "Nonprofits and local governments serving R3-designated disinvested communities (many SECCC neighborhoods qualify).",
     "benefits": [
       "Grants supporting civil legal aid, economic development, reentry, violence prevention, youth dev",
@@ -2958,7 +2962,7 @@
     "status": "active",
     "contacts": [
       {
-        "agency": "Cook County Assessor's Office \u2014 Incentives",
+        "agency": "Cook County Assessor's Office — Incentives",
         "abbreviation": "CCAO",
         "phone": "(312) 603-7529",
         "url": "https://www.cookcountyassessoril.gov/incentives-special-properties"
@@ -3043,7 +3047,7 @@
     "status": "active",
     "contacts": [
       {
-        "agency": "Cook County Assessor's Office \u2014 Incentives",
+        "agency": "Cook County Assessor's Office — Incentives",
         "abbreviation": "CCAO",
         "phone": "(312) 603-7529",
         "url": "https://www.cookcountyassessoril.gov/incentives-special-properties"
@@ -3120,7 +3124,7 @@
     "status": "active",
     "contacts": [
       {
-        "agency": "Cook County Assessor's Office \u2014 Incentives",
+        "agency": "Cook County Assessor's Office — Incentives",
         "abbreviation": "CCAO",
         "phone": "(312) 603-7529",
         "url": "https://www.cookcountyassessoril.gov/incentives-special-properties"
@@ -3135,7 +3139,7 @@
       },
       {
         "criterion": "propertyType",
-        "description": "Commercial property \u2014 new construction, rehab, or reoccupancy",
+        "description": "Commercial property — new construction, rehab, or reoccupancy",
         "verifiedBy": "survey",
         "required": true
       },
@@ -3177,7 +3181,7 @@
       "10% assessment for years 1-3",
       "15% year 4, 20% year 5",
       "Renewable once for an additional 5 years",
-      "Faster ramp than 7a/7b \u2014 useful for tighter pro formas"
+      "Faster ramp than 7a/7b — useful for tighter pro formas"
     ],
     "howToApply": [
       "Obtain municipal resolution of support",
@@ -3197,7 +3201,7 @@
     "status": "active",
     "contacts": [
       {
-        "agency": "Cook County Assessor's Office \u2014 Incentives",
+        "agency": "Cook County Assessor's Office — Incentives",
         "abbreviation": "CCAO",
         "phone": "(312) 603-7529",
         "url": "https://www.cookcountyassessoril.gov/incentives-special-properties"
@@ -3212,7 +3216,7 @@
       },
       {
         "criterion": "propertyType",
-        "description": "Commercial \u2014 new construction, rehab, or reoccupancy",
+        "description": "Commercial — new construction, rehab, or reoccupancy",
         "verifiedBy": "survey",
         "required": true
       }
@@ -3235,7 +3239,7 @@
     "name": "Cook County Class 8 Property Tax Incentive",
     "level": "County",
     "zoneKey": "",
-    "summary": "Class 8 grants the same 12-year reduced assessment as 6b/7b but is restricted to industrial and commercial property in severely economically depressed areas \u2014 primarily the five south-suburban townships: Bloom, Bremen, Calumet, Rich, and Thornton.",
+    "summary": "Class 8 grants the same 12-year reduced assessment as 6b/7b but is restricted to industrial and commercial property in severely economically depressed areas — primarily the five south-suburban townships: Bloom, Bremen, Calumet, Rich, and Thornton.",
     "whoQualifies": "Industrial or commercial owners/developers in Bloom, Bremen, Calumet, Rich, or Thornton Township.",
     "benefits": [
       "10% assessment years 1-10 (vs. 25%)",
@@ -3261,7 +3265,7 @@
     "status": "active",
     "contacts": [
       {
-        "agency": "Cook County Assessor's Office \u2014 Incentives",
+        "agency": "Cook County Assessor's Office — Incentives",
         "abbreviation": "CCAO",
         "phone": "(312) 603-7529",
         "url": "https://www.cookcountyassessoril.gov/incentives-special-properties"
@@ -3308,10 +3312,10 @@
     "level": "County",
     "zoneKey": "",
     "summary": "Class 8 variant calibrated for semiconductor and microchip manufacturing investments. Connects to the State of Illinois MICRO program and federal CHIPS Act incentives.",
-    "whoQualifies": "Semiconductor, microchip, or related supply-chain manufacturers investing in Cook County. Coordinates with state MICRO and federal \u00a748D credits.",
+    "whoQualifies": "Semiconductor, microchip, or related supply-chain manufacturers investing in Cook County. Coordinates with state MICRO and federal §48D credits.",
     "benefits": [
       "10% assessment for 10 years (vs. 25%)",
-      "Stacks effectively with state MICRO credit and federal \u00a748D ITC",
+      "Stacks effectively with state MICRO credit and federal §48D ITC",
       "Designed to support advanced manufacturing investments"
     ],
     "howToApply": [
@@ -3330,7 +3334,7 @@
     "status": "active",
     "contacts": [
       {
-        "agency": "Cook County Assessor's Office \u2014 Incentives",
+        "agency": "Cook County Assessor's Office — Incentives",
         "abbreviation": "CCAO",
         "phone": "(312) 603-7529",
         "url": "https://www.cookcountyassessoril.gov/incentives-special-properties"
@@ -3351,7 +3355,7 @@
       }
     ],
     "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "10% assessment for 10 years (stacks with state MICRO + federal \u00a748D)",
+    "benefitRange": "10% assessment for 10 years (stacks with state MICRO + federal §48D)",
     "fastestConfirmingStep": "Call Assessor Incentives at (312) 603-7529 to scope 8a MICRO"
   },
   {
@@ -3375,7 +3379,7 @@
     ],
     "requiredDocs": [
       "IEPA No Further Remediation letter",
-      "Remediation cost documentation (\u2265$100K or \u226525% of MV)",
+      "Remediation cost documentation (≥$100K or ≥25% of MV)",
       "Engineering and legal cost invoices",
       "Municipal resolution",
       "Use plan for the remediated site"
@@ -3386,7 +3390,7 @@
     "status": "active",
     "contacts": [
       {
-        "agency": "Cook County Assessor's Office \u2014 Incentives",
+        "agency": "Cook County Assessor's Office — Incentives",
         "abbreviation": "CCAO",
         "phone": "(312) 603-7529",
         "url": "https://www.cookcountyassessor.com/form-document/class-c"
@@ -3407,7 +3411,7 @@
       },
       {
         "criterion": "investmentSize",
-        "description": "Remediation costs \u2265$100K or \u226525% of market value",
+        "description": "Remediation costs ≥$100K or ≥25% of market value",
         "verifiedBy": "manual",
         "required": true
       }
@@ -3453,7 +3457,7 @@
     ],
     "requiredDocs": [
       "Landmark designation documentation",
-      "Rehabilitation scope and budget (\u226550% of MV)",
+      "Rehabilitation scope and budget (≥50% of MV)",
       "Historic preservation review and approval",
       "City Council ordinance supporting Class L",
       "Final certification of completed work"
@@ -3470,7 +3474,7 @@
         "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/hist/svcs/class_l_propertytaxincentive.html"
       },
       {
-        "agency": "Cook County Assessor's Office \u2014 Incentives",
+        "agency": "Cook County Assessor's Office — Incentives",
         "abbreviation": "CCAO",
         "phone": "(312) 603-7529",
         "url": "https://www.cookcountyassessoril.gov/incentives-special-properties"
@@ -3491,7 +3495,7 @@
       },
       {
         "criterion": "investmentSize",
-        "description": "Rehab investment \u226550% of building market value",
+        "description": "Rehab investment ≥50% of building market value",
         "verifiedBy": "manual",
         "required": true
       }
@@ -3542,13 +3546,13 @@
       "Documentation of replacement of 2 primary building systems",
       "Annual recertification of affordable units"
     ],
-    "contact": "Cook County Assessor \u2014 Affordable Housing: (312) 603-7529",
+    "contact": "Cook County Assessor — Affordable Housing: (312) 603-7529",
     "url": "https://www.cookcountyassessoril.gov/affordable-housing",
     "sourceUrl": "https://www.cookcountyassessoril.gov/affordable-housing",
     "status": "active",
     "contacts": [
       {
-        "agency": "Cook County Assessor's Office \u2014 Affordable Housing",
+        "agency": "Cook County Assessor's Office — Affordable Housing",
         "abbreviation": "CCAO-AH",
         "phone": "(312) 603-7529",
         "url": "https://www.cookcountyassessoril.gov/affordable-housing"
@@ -3635,7 +3639,7 @@
   },
   {
     "id": "investInCook",
-    "name": "Invest in Cook \u2014 Transportation Grant Program",
+    "name": "Invest in Cook — Transportation Grant Program",
     "level": "County",
     "zoneKey": "",
     "summary": "Annual $8.5M grant program from Cook County DOTH funding planning, engineering, ROW, and construction for transportation projects. Private organizations may participate as partners to a public sponsor. 10th round closed March 2026.",
@@ -3750,14 +3754,14 @@
   },
   {
     "id": "cdgSmall",
-    "name": "Community Development Grant \u2014 Small (\u2264 $250K)",
+    "name": "Community Development Grant — Small (≤ $250K)",
     "level": "City",
     "zoneKey": "",
-    "summary": "DPD's flagship reimbursement grant for capital projects across all 77 Chicago community areas. The Small tier funds projects up to $250,000 at 75% of eligible costs. Funded by HED bond. Citywide \u2014 no corridor or zone gate. Current cycle deadline: August 14, 2026 at 11:59 p.m.",
+    "summary": "DPD's flagship reimbursement grant for capital projects across all 77 Chicago community areas. The Small tier funds projects up to $250,000 at 75% of eligible costs. Funded by HED bond. Citywide — no corridor or zone gate. Current cycle deadline: August 14, 2026 at 11:59 p.m.",
     "whoQualifies": "For-profit small businesses, 501(c)(3) nonprofits, and developers in good standing with the State of Illinois and the City of Chicago, undertaking a qualifying capital project (construction, rehabilitation, build-out, or equipment) at a Chicago address with documented site control. Operating expenses, working capital, and routine maintenance do not qualify.",
     "benefits": [
       "Reimbursement grant up to $250,000",
-      "Citywide eligibility \u2014 no corridor or zone gate",
+      "Citywide eligibility — no corridor or zone gate",
       "Covers capital costs: construction, rehab, build-out, equipment, soft costs",
       "Pairs with NOF, SBIF, and most state/federal incentives (subject to standard stacking limits)"
     ],
@@ -3771,7 +3775,7 @@
       "Project narrative + scope of work",
       "Itemized capital budget with contractor estimates",
       "Project timeline (completion within program window)",
-      "Proof of site control \u2014 deed, lease (\u22655 yrs remaining), or owner consent letter",
+      "Proof of site control — deed, lease (≥5 yrs remaining), or owner consent letter",
       "Entity documentation (business license, 501(c)(3) determination, or developer LLC docs)",
       "Good-standing verification with State of Illinois and City of Chicago",
       "W-9, certificate of insurance, and matching-funds documentation (if applicable)"
@@ -3823,17 +3827,17 @@
     "lastVerifiedAt": "2026-07-02",
     "benefitRange": "Up to $250,000 (75% of eligible costs)",
     "fastestConfirmingStep": "Start the Submittable application or call DPD at (312) 744-4190",
-    "boundaryDisclaimer": "Citywide \u2014 eligible anywhere within Chicago city limits. No zone gate, but the project address must be in Chicago.",
+    "boundaryDisclaimer": "Citywide — eligible anywhere within Chicago city limits. No zone gate, but the project address must be in Chicago.",
     "applicationPortals": [
       {
         "type": "submittable",
-        "label": "Small Community Development Grant (\u2264 $250K)",
+        "label": "Small Community Development Grant (≤ $250K)",
         "url": "https://cocdpd.submittable.com/submit/348438/small-community-development-grants-up-to-250-000",
         "language": "en"
       },
       {
         "type": "submittable",
-        "label": "Subvenci\u00f3n de Desarrollo Comunitario (hasta $250,000)",
+        "label": "Subvención de Desarrollo Comunitario (hasta $250,000)",
         "url": "https://cocdpd.submittable.com/submit/354576/subvencion-de-desarrollo-comunitario-hasta-250-000-2026",
         "language": "es"
       }
@@ -3847,14 +3851,14 @@
   },
   {
     "id": "cdgMedium",
-    "name": "Community Development Grant \u2014 Medium ($300K \u2013 $5M)",
+    "name": "Community Development Grant — Medium ($300K – $5M)",
     "level": "City",
     "zoneKey": "",
     "summary": "DPD Medium-tier reimbursement grant for substantial capital projects with budgets between $300,001 and $5,000,000. Citywide. Covers 50% of eligible costs. South/Southwest/West Side location is a scoring preference factor. Current cycle deadline: August 14, 2026 at 11:59 p.m. Monthly webinars: July 8 (10 a.m.) and August 12 (10 a.m.).",
     "whoQualifies": "For-profit businesses, 501(c)(3) nonprofits, and developers in good standing with the State of Illinois and the City of Chicago, undertaking a capital project at a Chicago address with documented site control. Project must demonstrate community benefit (jobs created/retained, service expansion, or neighborhood impact).",
     "benefits": [
       "Reimbursement grant from $300,001 to $5,000,000",
-      "Citywide eligibility \u2014 no corridor or zone gate",
+      "Citywide eligibility — no corridor or zone gate",
       "Covers construction, substantial rehabilitation, equipment, soft costs",
       "Pairs with TIF RDAs, NOF, federal HTC, and most state credits (subject to standard stacking limits)"
     ],
@@ -3869,7 +3873,7 @@
       "Detailed pro forma including financing stack and source/use",
       "Itemized capital budget with three contractor bids for major scopes",
       "Construction timeline with milestones",
-      "Proof of site control \u2014 deed, executed lease, or PSA with contingencies cleared",
+      "Proof of site control — deed, executed lease, or PSA with contingencies cleared",
       "Entity good-standing documentation",
       "Match documentation (most Medium awards require matching funds or owner equity)",
       "W-9, insurance, and any required environmental/zoning approvals"
@@ -3907,7 +3911,7 @@
       },
       {
         "criterion": "investmentSize",
-        "description": "Total project cost $300,001 \u2013 $5,000,000 (Medium tier)",
+        "description": "Total project cost $300,001 – $5,000,000 (Medium tier)",
         "verifiedBy": "manual",
         "required": true
       },
@@ -3919,9 +3923,9 @@
       }
     ],
     "lastVerifiedAt": "2026-07-02",
-    "benefitRange": "$300K\u2013$5M reimbursement (50% of eligible costs)",
+    "benefitRange": "$300K–$5M reimbursement (50% of eligible costs)",
     "fastestConfirmingStep": "Discuss scope with DPD at (312) 744-4190 before applying via Submittable",
-    "boundaryDisclaimer": "Citywide \u2014 eligible anywhere within Chicago city limits. No zone gate, but project must be at a Chicago address.",
+    "boundaryDisclaimer": "Citywide — eligible anywhere within Chicago city limits. No zone gate, but project must be at a Chicago address.",
     "applicationPortals": [
       {
         "type": "submittable",
@@ -3939,14 +3943,14 @@
   },
   {
     "id": "cdgLarge",
-    "name": "Community Development Grant \u2014 Large (> $5M)",
+    "name": "Community Development Grant — Large (> $5M)",
     "level": "City",
     "zoneKey": "",
-    "summary": "DPD Large-tier reimbursement grant for catalytic capital projects exceeding $5,000,000. Citywide. Rolling application \u2014 no deadline. Replaces the legacy NOF Large Grant catalytic tier. Typically used for anchor development, large mixed-use redevelopment, and projects requiring City Council financial approval.",
+    "summary": "DPD Large-tier reimbursement grant for catalytic capital projects exceeding $5,000,000. Citywide. Rolling application — no deadline. Replaces the legacy NOF Large Grant catalytic tier. Typically used for anchor development, large mixed-use redevelopment, and projects requiring City Council financial approval.",
     "whoQualifies": "Developers, large nonprofits, and institutional sponsors in good standing with the State of Illinois and the City of Chicago, undertaking a catalytic capital project at a Chicago address with documented site control and a fully-stacked financing plan. Large awards generally require City Council ordinance, public hearings, and a demonstrated catalytic impact on the surrounding community area.",
     "benefits": [
       "Reimbursement grant exceeding $5,000,000",
-      "Citywide eligibility \u2014 designed for projects too large for NOF or the Medium CDG tier",
+      "Citywide eligibility — designed for projects too large for NOF or the Medium CDG tier",
       "Covers construction, major rehabilitation, equipment, and qualified soft costs",
       "Stacks with TIF Redevelopment Agreements, federal credits (NMTC, HTC), state credits, and Cook County classifications"
     ],
@@ -4014,7 +4018,7 @@
     "lastVerifiedAt": "2026-07-02",
     "benefitRange": "> $5M reimbursement (catalytic)",
     "fastestConfirmingStep": "Schedule a project concept meeting with DPD at (312) 744-4190 before submitting",
-    "boundaryDisclaimer": "Citywide \u2014 eligible anywhere within Chicago city limits. No zone gate, but Large awards almost always require City Council approval which involves the ward alderperson.",
+    "boundaryDisclaimer": "Citywide — eligible anywhere within Chicago city limits. No zone gate, but Large awards almost always require City Council approval which involves the ward alderperson.",
     "applicationPortals": [
       {
         "type": "submittable",
@@ -4030,18 +4034,18 @@
     "name": "Workforce Solutions Program (formerly TIFWorks)",
     "level": "City",
     "zoneKey": "",
-    "summary": "DPD reimbursement grant for employee training and onboarding costs. Created in 2002 as TIFWorks; expanded citywide February 1, 2026. Standard cap $250,000; up to $500,000 for extraordinary community impact. 100% reimbursement for small commercial businesses (gross sales \u2264$1.5M/yr, 3-yr avg) or small industrial employers (\u226440 FTE); 25\u201350% match required above those thresholds. Non-TIF businesses apply in quarterly windows (Q3 2026 window opened July 1, 2026). Businesses inside funded TIF districts may apply year-round.",
-    "whoQualifies": "Chicago employers \u2014 commercial or industrial \u2014 investing in training or onboarding current or new employees. Both TIF and non-TIF businesses eligible since Feb 1, 2026. Smaller businesses (\u2264$1.5M gross sales or \u226440 FTE) receive 100% reimbursement; larger businesses require a 25\u201350% match.",
+    "summary": "DPD reimbursement grant for employee training and onboarding costs. Created in 2002 as TIFWorks; expanded citywide February 1, 2026. Standard cap $250,000; up to $500,000 for extraordinary community impact. 100% reimbursement for small commercial businesses (gross sales ≤$1.5M/yr, 3-yr avg) or small industrial employers (≤40 FTE); 25–50% match required above those thresholds. Non-TIF businesses apply in quarterly windows (Q3 2026 window opened July 1, 2026). Businesses inside funded TIF districts may apply year-round.",
+    "whoQualifies": "Chicago employers — commercial or industrial — investing in training or onboarding current or new employees. Both TIF and non-TIF businesses eligible since Feb 1, 2026. Smaller businesses (≤$1.5M gross sales or ≤40 FTE) receive 100% reimbursement; larger businesses require a 25–50% match.",
     "benefits": [
       "Up to $250,000 reimbursement (standard); up to $500,000 for extraordinary community impact",
-      "100% reimbursement for commercial businesses with gross sales \u2264$1.5M (3-yr avg)",
-      "100% reimbursement for industrial businesses with \u226440 FTE",
-      "25\u201350% match required for larger businesses above those thresholds",
+      "100% reimbursement for commercial businesses with gross sales ≤$1.5M (3-yr avg)",
+      "100% reimbursement for industrial businesses with ≤40 FTE",
+      "25–50% match required for larger businesses above those thresholds",
       "Covers employee training, onboarding, and upskilling costs",
       "Citywide since Feb 1, 2026 (not TIF-restricted)"
     ],
     "howToApply": [
-      "Check the quarterly application window \u2014 non-TIF businesses: Q3 2026 window open now (July 1, 2026)",
+      "Check the quarterly application window — non-TIF businesses: Q3 2026 window open now (July 1, 2026)",
       "TIF-district businesses: apply year-round via DPD Submittable portal",
       "Submit training plan, employee roster, budget, and financial statements",
       "DPD reviews and issues reimbursement agreement",
@@ -4081,14 +4085,14 @@
       },
       {
         "criterion": "investmentSize",
-        "description": "100% reimbursement up to $1.5M gross sales (commercial) or \u226440 FTE (industrial); 25\u201350% match above those thresholds",
+        "description": "100% reimbursement up to $1.5M gross sales (commercial) or ≤40 FTE (industrial); 25–50% match above those thresholds",
         "verifiedBy": "manual",
         "required": false
       }
     ],
     "lastVerifiedAt": "2026-07-02",
-    "benefitRange": "Up to $250K (standard) / $500K (extraordinary impact); 100% or 25\u201350% match depending on business size",
-    "fastestConfirmingStep": "Submit via DPD Submittable portal \u2014 Q3 2026 non-TIF window is open now",
+    "benefitRange": "Up to $250K (standard) / $500K (extraordinary impact); 100% or 25–50% match depending on business size",
+    "fastestConfirmingStep": "Submit via DPD Submittable portal — Q3 2026 non-TIF window is open now",
     "deadlines": [
       {
         "label": "Q3 2026 window opened (non-TIF businesses)",
@@ -4160,12 +4164,12 @@
     "name": "ComEd EV Charger and Installation Rebate",
     "level": "Utility",
     "zoneKey": "",
-    "summary": "2026 ComEd rebate for EV charger purchase and installation. Stackable with federal \u00a730C charging credit and other clean-energy incentives.",
+    "summary": "2026 ComEd rebate for EV charger purchase and installation. Stackable with federal §30C charging credit and other clean-energy incentives.",
     "whoQualifies": "ComEd residential and commercial customers installing eligible EV chargers. Multi-family and small commercial sites can also access EV Make-Ready program.",
     "benefits": [
-      "$1,000 \u2013 $2,500 residential rebate",
+      "$1,000 – $2,500 residential rebate",
       "Up to $8,000 per port commercial via EV Make-Ready",
-      "Stacks with federal \u00a730C alternative-fuel-vehicle refueling property credit"
+      "Stacks with federal §30C alternative-fuel-vehicle refueling property credit"
     ],
     "howToApply": [
       "Confirm charger eligibility on the ComEd-approved equipment list",
@@ -4202,7 +4206,7 @@
     "fastestConfirmingStep": "Confirm charger eligibility at comed.com/EV before purchase",
     "verificationSteps": [
       {
-        "label": "Federal \u00a730C alternative-fuel-vehicle refueling property credit",
+        "label": "Federal §30C alternative-fuel-vehicle refueling property credit",
         "agency": "IRS",
         "url": "https://www.irs.gov/credits-deductions/businesses/alternative-fuel-vehicle-refueling-property-credit",
         "kind": "filing",
@@ -4213,12 +4217,12 @@
   },
   {
     "id": "comedSmallBizEfficiency",
-    "name": "ComEd Small Business Energy Efficiency (Adjacent Capital \u2014 NOT a grant incentive)",
+    "name": "ComEd Small Business Energy Efficiency (Adjacent Capital — NOT a grant incentive)",
     "level": "Utility",
     "zoneKey": "",
-    "adjacentCapitalNote": "This is a utility rebate program, NOT a government incentive. Listed here as adjacent capital \u2014 financing nearby \u2014 because it often stacks with SBIF, CDG, and federal IRA clean-energy credits for corridor businesses.",
+    "adjacentCapitalNote": "This is a utility rebate program, NOT a government incentive. Listed here as adjacent capital — financing nearby — because it often stacks with SBIF, CDG, and federal IRA clean-energy credits for corridor businesses.",
     "summary": "ComEd provides free energy assessments and equipment rebates covering up to 75% of project costs for non-residential customers with peak demand under 500 kW. Eligible measures include HVAC upgrades, lighting, refrigeration, and motors. Select Communities designation may unlock additional incentive stacking. Specific adder amounts require direct verification with ComEd as their .aspx pages block automated fetches.",
-    "whoQualifies": "ComEd business customers with peak demand under 500 kW \u2014 covers most corridor small businesses. Customers in Select Communities (ComEd-designated underserved areas) may access enhanced incentive tiers.",
+    "whoQualifies": "ComEd business customers with peak demand under 500 kW — covers most corridor small businesses. Customers in Select Communities (ComEd-designated underserved areas) may access enhanced incentive tiers.",
     "benefits": [
       "Free on-site energy assessment",
       "Rebates covering up to 75% of eligible equipment costs",
@@ -4271,18 +4275,18 @@
   },
   {
     "id": "comedDgSolar",
-    "name": "ComEd Distributed Generation Solar + Battery Rebate (Adjacent Capital \u2014 NOT a grant incentive)",
+    "name": "ComEd Distributed Generation Solar + Battery Rebate (Adjacent Capital — NOT a grant incentive)",
     "level": "Utility",
     "zoneKey": "",
-    "adjacentCapitalNote": "This is a utility rebate program, NOT a government incentive. Listed here as adjacent capital because it stacks directly with Illinois Shines RECs and federal \u00a748E / \u00a730D credits for commercial solar projects.",
-    "summary": "ComEd pays an upfront one-time rebate for solar installations: $300 per kW DC for systems up to 100 kW and $250 per kW DC for systems above 100 kW. A 50 kW rooftop commercial system yields approximately $15,000 upfront. Battery storage rebates ($250/kWh) are available but specific terms for standalone storage require direct ComEd verification. Stackable with Illinois Shines REC payments (IPA program) and federal ITC (\u00a748E). Source: Illinois Shines/ICC secondary pages and third-party verified amounts (comed.com pages block automated fetches).",
+    "adjacentCapitalNote": "This is a utility rebate program, NOT a government incentive. Listed here as adjacent capital because it stacks directly with Illinois Shines RECs and federal §48E / §30D credits for commercial solar projects.",
+    "summary": "ComEd pays an upfront one-time rebate for solar installations: $300 per kW DC for systems up to 100 kW and $250 per kW DC for systems above 100 kW. A 50 kW rooftop commercial system yields approximately $15,000 upfront. Battery storage rebates ($250/kWh) are available but specific terms for standalone storage require direct ComEd verification. Stackable with Illinois Shines REC payments (IPA program) and federal ITC (§48E). Source: Illinois Shines/ICC secondary pages and third-party verified amounts (comed.com pages block automated fetches).",
     "whoQualifies": "ComEd business customers installing rooftop or ground-mount solar systems. Smart inverter required. No waitlist reported as of mid-2026. Systems must interconnect with the ComEd grid.",
     "benefits": [
-      "$300/kW DC upfront rebate for solar systems \u2264100 kW",
+      "$300/kW DC upfront rebate for solar systems ≤100 kW",
       "$250/kW DC upfront rebate for solar systems >100 kW",
       "Battery storage: $250/kWh (verify standalone storage eligibility with ComEd)",
       "Stackable with Illinois Shines REC contract (15-year payments, IPA)",
-      "Stackable with federal \u00a748E Investment Tax Credit (30% base + bonuses)"
+      "Stackable with federal §48E Investment Tax Credit (30% base + bonuses)"
     ],
     "howToApply": [
       "Contact a ComEd-approved solar contractor or installer",
@@ -4302,13 +4306,13 @@
     "status": "current",
     "contacts": [
       {
-        "agency": "Commonwealth Edison \u2014 Distributed Generation",
+        "agency": "Commonwealth Edison — Distributed Generation",
         "abbreviation": "ComEd DG",
         "phone": "(877) 4-COMED-1",
         "url": "https://www.comed.com/SmartEnergy/MyGreenPowerConnection/Pages/SolarRebates.aspx"
       },
       {
-        "agency": "Illinois Power Agency (Illinois Shines \u2014 REC contracts)",
+        "agency": "Illinois Power Agency (Illinois Shines — REC contracts)",
         "abbreviation": "IPA",
         "url": "https://illinoisshines.com/",
         "role": "Illinois Shines REC program administrator"
@@ -4329,17 +4333,17 @@
       }
     ],
     "lastVerifiedAt": "2026-07-02",
-    "benefitRange": "$300/kW (\u2264100 kW) or $250/kW (>100 kW) upfront; stacks with IL Shines RECs + federal ITC",
+    "benefitRange": "$300/kW (≤100 kW) or $250/kW (>100 kW) upfront; stacks with IL Shines RECs + federal ITC",
     "fastestConfirmingStep": "Contact a ComEd-approved solar installer or call (877) 4-COMED-1 for current rebate terms",
     "deadlines": []
   },
   {
     "id": "peoplesGasEfficiency",
-    "name": "Peoples Gas C&I Energy Efficiency Rebates 2026-2029 (Adjacent Capital \u2014 NOT a grant incentive)",
+    "name": "Peoples Gas C&I Energy Efficiency Rebates 2026-2029 (Adjacent Capital — NOT a grant incentive)",
     "level": "Utility",
     "zoneKey": "",
     "adjacentCapitalNote": "This is a utility rebate program, NOT a government incentive. Listed here as adjacent capital for corridor businesses with natural gas equipment (boilers, steam heat, commercial kitchens).",
-    "summary": "Peoples Gas offers prescriptive rebates for commercial and industrial natural gas efficiency improvements under the ICC-approved 2026-2029 Energy Efficiency Plan. Covers boiler/furnace replacements, steam trap repair, demand-controlled kitchen exhaust hoods, pipe insulation, boiler tune-ups, and custom rebates. Program runs January 1 \u2013 December 31, 2026 for the current annual cycle. Specific dollar amounts should be verified directly with Peoples Gas or from the prescriptive rebate application PDF.",
+    "summary": "Peoples Gas offers prescriptive rebates for commercial and industrial natural gas efficiency improvements under the ICC-approved 2026-2029 Energy Efficiency Plan. Covers boiler/furnace replacements, steam trap repair, demand-controlled kitchen exhaust hoods, pipe insulation, boiler tune-ups, and custom rebates. Program runs January 1 – December 31, 2026 for the current annual cycle. Specific dollar amounts should be verified directly with Peoples Gas or from the prescriptive rebate application PDF.",
     "whoQualifies": "Commercial and industrial natural gas customers of Peoples Gas (Chicago) replacing or upgrading qualifying gas-fired equipment. Applies to businesses with commercial kitchens, steam heating systems, or industrial process boilers.",
     "benefits": [
       "Prescriptive rebates on boiler/furnace replacements",
@@ -4367,7 +4371,7 @@
     "status": "current",
     "contacts": [
       {
-        "agency": "Peoples Gas \u2014 Commercial & Industrial Efficiency",
+        "agency": "Peoples Gas — Commercial & Industrial Efficiency",
         "abbreviation": "Peoples Gas",
         "phone": "(855) 849-8928",
         "url": "https://www.peoplesgasdelivery.com/savings/business/rebates-ci"
@@ -4388,7 +4392,7 @@
       }
     ],
     "lastVerifiedAt": "2026-07-02",
-    "benefitRange": "Prescriptive rebates vary by measure \u2014 call (855) 849-8928 or request the 2026 rebate schedule PDF",
+    "benefitRange": "Prescriptive rebates vary by measure — call (855) 849-8928 or request the 2026 rebate schedule PDF",
     "fastestConfirmingStep": "Call Peoples Gas at (855) 849-8928 for current rebate amounts and application form",
     "deadlines": [
       {
@@ -4399,15 +4403,15 @@
   },
   {
     "id": "kivaChicago",
-    "name": "Kiva Chicago 0% Microloan (Adjacent Capital \u2014 NOT a grant incentive)",
+    "name": "Kiva Chicago 0% Microloan (Adjacent Capital — NOT a grant incentive)",
     "level": "Nonprofit / CDFI",
     "zoneKey": "",
     "adjacentCapitalNote": "This is a crowdfunded microloan program, NOT a government incentive. Listed as adjacent capital for micro-enterprises that cannot access traditional bank financing or SBA loans.",
     "summary": "Kiva US offers 0% interest, zero-fee, zero-collateral crowdfunded loans from $1,000 to $15,000 for small businesses. No minimum credit score; underwriting is based on character and community endorsement. Borrowers must secure a portion of the loan from private lenders (family, friends, colleagues) before the loan goes public for crowdfunding. Repayment terms up to 36 months. Cannabis and gambling businesses excluded.",
     "whoQualifies": "Small businesses and micro-enterprises in Chicago and nationwide. No minimum credit score required. Business must be for-profit and legally operating. Cannabis, gambling, multi-level marketing, and gig-only businesses (Uber, DoorDash) excluded.",
     "benefits": [
-      "0% interest \u2014 no interest charges",
-      "Zero fees \u2014 no origination, application, or prepayment fees",
+      "0% interest — no interest charges",
+      "Zero fees — no origination, application, or prepayment fees",
       "Zero collateral requirement",
       "No minimum credit score",
       "$1,000 to $15,000 loan amount",
@@ -4451,13 +4455,13 @@
       }
     ],
     "lastVerifiedAt": "2026-07-02",
-    "benefitRange": "$1,000\u2013$15,000 at 0% interest, no fees",
-    "fastestConfirmingStep": "Apply at kiva.org/borrow \u2014 30-minute application, no credit score minimum",
+    "benefitRange": "$1,000–$15,000 at 0% interest, no fees",
+    "fastestConfirmingStep": "Apply at kiva.org/borrow — 30-minute application, no credit score minimum",
     "deadlines": []
   },
   {
     "id": "greenwoodArcher",
-    "name": "Greenwood Archer Capital CDFI Loans (Adjacent Capital \u2014 NOT a grant incentive)",
+    "name": "Greenwood Archer Capital CDFI Loans (Adjacent Capital — NOT a grant incentive)",
     "level": "Nonprofit / CDFI",
     "zoneKey": "",
     "adjacentCapitalNote": "This is a CDFI loan product, NOT a government incentive. Listed as adjacent capital because it fills the gap between Kiva's $15K microloan cap and SBA underwriting requirements for South/West Side corridor businesses.",
@@ -4477,7 +4481,7 @@
     ],
     "requiredDocs": [
       "Business plan and financial projections",
-      "2\u20133 years of tax returns (business and personal)",
+      "2–3 years of tax returns (business and personal)",
       "Proof of business registration",
       "For CRE: property appraisal or purchase contract"
     ],
@@ -4501,27 +4505,27 @@
       },
       {
         "criterion": "industry",
-        "description": "Small business or entrepreneur \u2014 most industries; verify CRE track eligibility directly",
+        "description": "Small business or entrepreneur — most industries; verify CRE track eligibility directly",
         "verifiedBy": "survey",
         "required": false
       }
     ],
     "lastVerifiedAt": "2026-07-02",
-    "benefitRange": "Loans up to $500,000; CRE-specific terms \u2014 verify with GAC",
+    "benefitRange": "Loans up to $500,000; CRE-specific terms — verify with GAC",
     "fastestConfirmingStep": "Visit greenwoodarchercapital.org or contact GAC directly for current product terms and CRE eligibility",
     "deadlines": []
   },
   {
     "id": "alliesCommunityBusiness",
-    "name": "Allies for Community Business (A4CB) Term & Revenue-Based Loans (Adjacent Capital \u2014 NOT a grant incentive)",
+    "name": "Allies for Community Business (A4CB) Term & Revenue-Based Loans (Adjacent Capital — NOT a grant incentive)",
     "level": "Nonprofit / CDFI",
     "zoneKey": "",
-    "adjacentCapitalNote": "This is a CDFI loan product, NOT a government incentive. Listed as adjacent capital. A4CB also administers the CCSA corridor grant program \u2014 businesses on CCSA corridors can access both their grant and their lending products.",
-    "summary": "Allies for Community Business (A4CB, formerly Chicago Microlending Institute) is a West Side-based nonprofit CDFI offering term loans ($500\u2013$500,000) and revenue-based financing ($50,000\u2013$500,000). Capitalized by the Cook County $2.4M CDFI Capacity Building Grant (2025). A4CB also serves as the program administrator for the CCSA commercial corridor grant.",
+    "adjacentCapitalNote": "This is a CDFI loan product, NOT a government incentive. Listed as adjacent capital. A4CB also administers the CCSA corridor grant program — businesses on CCSA corridors can access both their grant and their lending products.",
+    "summary": "Allies for Community Business (A4CB, formerly Chicago Microlending Institute) is a West Side-based nonprofit CDFI offering term loans ($500–$500,000) and revenue-based financing ($50,000–$500,000). Capitalized by the Cook County $2.4M CDFI Capacity Building Grant (2025). A4CB also serves as the program administrator for the CCSA commercial corridor grant.",
     "whoQualifies": "Small businesses in Chicago and Cook County. Explicit priority for businesses on commercial corridors and in underserved communities. For-profit businesses and nonprofits with earned revenue.",
     "benefits": [
-      "Term loans: $500\u2013$500,000 at 10\u201312% interest + 3% closing fee",
-      "Revenue-based financing: $50,000\u2013$500,000 with 3% commitment fee, max 1.5x repayment cap",
+      "Term loans: $500–$500,000 at 10–12% interest + 3% closing fee",
+      "Revenue-based financing: $50,000–$500,000 with 3% commitment fee, max 1.5x repayment cap",
       "No collateral required for loans under $25,000",
       "Business technical assistance and coaching alongside lending",
       "Stacks with CCSA grants for corridor businesses (A4CB is CCSA administrator)"
@@ -4565,7 +4569,7 @@
       }
     ],
     "lastVerifiedAt": "2026-07-02",
-    "benefitRange": "Term loans $500\u2013$500K (10\u201312% + 3% closing); revenue-based $50K\u2013$500K (3% fee, 1.5x max repayment)",
+    "benefitRange": "Term loans $500–$500K (10–12% + 3% closing); revenue-based $50K–$500K (3% fee, 1.5x max repayment)",
     "fastestConfirmingStep": "Call A4CB at (312) 275-3000 or visit a4cb.org/services/loans/",
     "deadlines": []
   }
