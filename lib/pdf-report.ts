@@ -14,7 +14,7 @@ import type { GeneratedReport } from "./report-engine";
 export function orderSectionsForPdf(
   sections: GeneratedReport["sections"],
 ): GeneratedReport["sections"] {
-  let ordered = [...sections];
+  const ordered = [...sections];
 
   // Step 1: elevate Support Network after Eligible Programs
   const supportIdx = ordered.findIndex(
