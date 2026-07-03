@@ -1271,11 +1271,53 @@ function buildNeighborhoodEconomicContextSection(
   // Anchors render in their own dedicated section (buildLocalImpactAnchorsSection).
   // Limitations are consolidated into a single concise note rather than a stack
   // of rows; the web report shows it as one footnote.
+  // Storefront-level public-record signals from the corridor-metrics export,
+  // merged here so area context lives in one section. Ownership rows render
+  // only when county owner data has actually loaded — absence must never
+  // read as a measurement. Permit activity is NOT repeated here: the
+  // Reinvestment tile above is the single permit figure for this report.
+  const corridorMetric = ctx.corridorMetrics ?? loadStaticCorridorMetrics(zipFromContext(ctx));
+  if (corridorMetric) {
+    const cd = corridorMetric.details ?? null;
+    const cWindow = cd?.windowMonths ?? 24;
+    if (corridorMetric.vacancyRate != null) {
+      items.push({
+        label: "Properties flagged vacant",
+        value: `${Math.round(corridorMetric.vacancyRate * 100)}% of property records`,
+        detail: "Share of property records in this ZIP with a public vacancy indicator.",
+      });
+    }
+    const cOpenings = cd?.turnover?.openings ?? null;
+    const cClosures = cd?.turnover?.closures ?? null;
+    if (cOpenings != null && cClosures != null) {
+      items.push({
+        label: "Business license activity",
+        value: `${cOpenings.toLocaleString()} opened / ${cClosures.toLocaleString()} closed in the last ${cWindow} months`,
+        detail: "Business licenses recorded as opened or closed in this ZIP, shown separately so the direction is visible.",
+      });
+    }
+    const ownerDataLoaded = (cd?.ownershipConcentration?.totalParcels ?? 0) > 0;
+    if (ownerDataLoaded && corridorMetric.ownershipHHI != null) {
+      items.push({
+        label: "Ownership concentration",
+        value: corridorConcentrationBand(corridorMetric.ownershipHHI),
+        detail: "How spread out private property ownership appears in available assessor records; higher concentration means fewer owners hold a larger share.",
+      });
+    }
+    if (ownerDataLoaded && corridorMetric.localOwnershipShare != null) {
+      items.push({
+        label: "Illinois owner mailing addresses",
+        value: `${Math.round(corridorMetric.localOwnershipShare * 100)}% of private-owner records`,
+        detail: "Share of private-owner property records with an Illinois owner mailing address; this does not measure residency or community commitment.",
+      });
+    }
+  }
+
   items.push({
     label: "How to read this",
     value: "Context, not proof",
     detail:
-      "Figures are ZIP-level aggregates for context — not address-level proof. License continuity is a neighborhood signal, not a closure list; ZIP Business Patterns is a 2020–2023 benchmark, not current-year; spending power, leakage, and multiplier are modeled estimates to verify with partners.",
+      "Figures are ZIP-level aggregates for context — not address-level proof. License continuity is a neighborhood signal, not a closure list; ZIP Business Patterns is a 2020–2023 benchmark, not current-year; spending power, leakage, and multiplier are modeled estimates to verify with partners. Storefront rows (vacancy, license activity, ownership) describe public-record patterns in this ZIP — context for decisions, not a judgment of the community or its residents.",
   });
 
   return {
@@ -1518,6 +1560,13 @@ function loadStaticCorridorMetrics(zip: string | null): CorridorMetric | null {
   }
 }
 
+/** Plain-language band for parcel-ownership HHI (no raw index in UI copy). */
+function corridorConcentrationBand(hhi: number): string {
+  if (hhi < 0.15) return "Low concentration";
+  if (hhi < 0.25) return "Moderate concentration";
+  return "High concentration";
+}
+
 /** Best-effort ZIP for the report address, for ZIP-level corridor metrics. */
 function zipFromContext(ctx: ReportContext): string | null {
   if (ctx.reportZip && /^\d{5}$/.test(ctx.reportZip)) return ctx.reportZip;
@@ -1675,122 +1724,6 @@ function buildDeadlinesSection(
   };
 }
 
-/**
- * Build the "Corridor Context" section when corridor metrics are available.
- *
- * Sources (checked in order):
- *   1. ctx.corridorMetrics (from DB via /api/corridor)
- *   2. public/data/corridor-metrics.json static export
- *
- * Returns undefined when no metrics are available — the section is omitted
- * entirely rather than rendered with a placeholder.
- */
-function buildCorridorContextSection(
-  ctx: ReportContext,
-): ReportSection | undefined {
-  const metric = ctx.corridorMetrics ?? loadStaticCorridorMetrics(zipFromContext(ctx));
-  if (!metric) return undefined;
-
-  const label = formatCorridorLabel(metric);
-
-  // Copy reviewed 2026-07-03 (Claude + Codex CLI cross-review): every metric
-  // stays tied to its record source, missing owner data renders as pending
-  // rather than zero, turnover shows direction, and there is no numeric
-  // score — a 100-point number reads as a grade regardless of disclaimers.
-  const d = metric.details ?? null;
-  const windowMonths = d?.windowMonths ?? 24;
-  const ownerDataPending = (d?.ownershipConcentration?.totalParcels ?? 0) === 0;
-  const openings = d?.turnover?.openings ?? null;
-  const closures = d?.turnover?.closures ?? null;
-
-  const concentrationBand = (hhi: number): string => {
-    if (hhi < 0.15) return "Low concentration";
-    if (hhi < 0.25) return "Moderate concentration";
-    return "High concentration";
-  };
-
-  const signalSummary = (): string => {
-    if (openings != null && closures != null && metric.permitCount != null) {
-      if (openings > closures && metric.permitCount > 0) {
-        return "More business openings and permit filings than vacancy flags in recent records";
-      }
-      if (closures > openings) {
-        return "More license closures than openings in recent records";
-      }
-    }
-    return "Mixed public-record signals in recent records";
-  };
-
-  const items: ReportItem[] = [
-    {
-      label: "Properties flagged vacant",
-      value:
-        metric.vacancyRate != null
-          ? `${Math.round(metric.vacancyRate * 100)}% of property records`
-          : "Not available",
-      detail: "Share of property records in this ZIP with a public vacancy indicator.",
-    },
-    {
-      label: "Business license activity",
-      value:
-        openings != null && closures != null
-          ? `${openings.toLocaleString()} opened / ${closures.toLocaleString()} closed in the last ${windowMonths} months`
-          : metric.turnoverRate != null
-            ? `${Math.round(metric.turnoverRate * 100)}%`
-            : "Not available",
-      detail:
-        "Business licenses recorded as opened or closed in this ZIP, shown separately so the direction is visible.",
-    },
-    {
-      label: "Ownership concentration",
-      value: ownerDataPending
-        ? "Data pending"
-        : metric.ownershipHHI != null
-          ? concentrationBand(metric.ownershipHHI)
-          : "Not available",
-      detail: ownerDataPending
-        ? "Cook County owner records are not available right now, so this metric is not calculated."
-        : "How spread out private property ownership appears in available assessor records; higher concentration means fewer owners hold a larger share.",
-    },
-    {
-      label: "Illinois owner mailing addresses",
-      value: ownerDataPending
-        ? "Data pending"
-        : metric.localOwnershipShare != null
-          ? `${Math.round(metric.localOwnershipShare * 100)}% of private-owner records`
-          : "Not available",
-      detail: ownerDataPending
-        ? "Cook County owner records are not available right now, so this metric is not calculated."
-        : "Share of private-owner property records with an Illinois owner mailing address; this does not measure residency or community commitment.",
-    },
-    {
-      label: "Permit activity",
-      value:
-        metric.permitCount != null
-          ? `${metric.permitCount.toLocaleString()} permits in the last ${windowMonths} months`
-          : "Not available",
-      detail:
-        "Building permits filed in this ZIP, a signal of permitted property work rather than a complete measure of investment.",
-    },
-    {
-      label: "Signal summary",
-      value: signalSummary(),
-      detail: "A non-scored summary of the public-record signals above for comparison across corridors.",
-    },
-    {
-      label: "Context, not a judgment",
-      value: `${label} corridor snapshot`,
-      detail:
-        "These metrics describe observable public-record patterns in this ZIP. They support business and lending decisions, but they do not judge the community, its residents, or its future.",
-    },
-  ];
-
-  return {
-    title: "Corridor Context",
-    description: `Public-record signals for ${label}. Use them alongside the address screening; they are not a rating of the community.`,
-    items,
-  };
-}
 
 // ─── Report Generators ──────────────────────────────────────────────
 
@@ -2015,8 +1948,6 @@ function generateLocationIncentives(
     if (deadlinesSection) sections.push(deadlinesSection);
 
     // Corridor Context section (omitted entirely when no data)
-    const corridorSection = buildCorridorContextSection(ctx);
-    if (corridorSection) sections.push(corridorSection);
   }
 
   // ── Benefit Estimates ──────────────────────────────────────────────

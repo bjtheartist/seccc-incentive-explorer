@@ -139,9 +139,11 @@ async function main() {
     "TIF expiration alert contains 'act soon' note"
   );
 
-  // Check 3: Corridor Context section is absent (no corridor-metrics.json or ctx metric)
+  // Check 3: no standalone Corridor Context section exists anymore — corridor
+  // signals are merged into Neighborhood Economic Context (and its ownership
+  // rows are omitted entirely while county owner data is pending)
   const corridorSection = report.sections.find((s) => s.title === "Corridor Context");
-  assert(!corridorSection, "Corridor Context section is absent when no metrics available");
+  assert(!corridorSection, "no standalone Corridor Context section (merged into econ context)");
 
   // Check 4: TIF financial context appears in Neighborhood Economic Context
   const econSection = report.sections.find((s) => s.title === "Neighborhood Economic Context");
@@ -176,8 +178,7 @@ async function main() {
     "sunsetWarning uses imminent-deadline framing ('must begin')"
   );
 
-  // Check 6: PDF section ordering — Deadlines should appear before Corridor Context
-  // (Corridor is absent here, but ordering logic should not error)
+  // Check 6: PDF section ordering runs without error
   const pdfSections = orderSectionsForPdf(report.sections);
   assert(pdfSections.length >= 1, "PDF ordering returns sections without error");
   console.log(

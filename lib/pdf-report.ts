@@ -8,7 +8,6 @@ import type { GeneratedReport } from "./report-engine";
  *  1. Elevates "Your Support Network" right after "Eligible Incentive Programs".
  *  2. Places "Upcoming Deadlines Near This Address" after the support network
  *     so time-sensitive items appear early in the PDF.
- *  3. Places "Corridor Context" after deadlines (context block, not action).
  *
  * Sections not listed are left in their natural order.
  */
@@ -42,20 +41,8 @@ export function orderSectionsForPdf(
     ordered.splice(anchorIdx >= 0 ? anchorIdx + 1 : 1, 0, deadlines);
   }
 
-  // Step 3: move Corridor Context after Deadlines (or after Eligible Programs)
-  const corridorIdx = ordered.findIndex(
-    (s) => s.title === "Corridor Context",
-  );
-  if (corridorIdx >= 0) {
-    const [corridor] = ordered.splice(corridorIdx, 1);
-    const anchorIdx = ordered.findIndex(
-      (s) =>
-        s.title === "Upcoming Deadlines Near This Address" ||
-        s.title === "Your Support Network" ||
-        s.title === "Eligible Incentive Programs",
-    );
-    ordered.splice(anchorIdx >= 0 ? anchorIdx + 1 : 1, 0, corridor);
-  }
+  // Corridor signals now live inside Neighborhood Economic Context, so no
+  // separate corridor section needs ordering.
 
   return ordered;
 }
