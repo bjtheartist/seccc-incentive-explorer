@@ -1495,19 +1495,36 @@ export function loadSbifRollout(): SbifWindow[] | null {
  * does not produce a module-not-found error when the file has not been
  * generated yet. The try/catch ensures a graceful null return.
  */
-function loadStaticCorridorMetrics(): CorridorMetric | null {
-  // Skip in browser context; this function is only meaningful server-side.
-  if (typeof window !== "undefined") return null;
+function loadStaticCorridorMetrics(zip: string | null): CorridorMetric | null {
+  if (!zip) return null;
   try {
-    // Indirect require avoids static analysis by bundlers for optional files.
-    const modulePath = ["../public/data", "corridor-metrics.json"].join("/");
+    // Literal require so the bundler ships the committed export to the
+    // client too (same pattern as tif-financials.json / sbif-rollout.json).
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const raw = require(/* webpackIgnore: true */ modulePath) as CorridorMetric;
-    if (!raw?.corridorId) return null;
-    return raw;
+    const raw = require("../public/data/corridor-metrics.json") as
+      | CorridorMetric
+      | Record<string, CorridorMetric>;
+    // Legacy single-metric shape.
+    if ((raw as CorridorMetric)?.corridorId) {
+      const single = raw as CorridorMetric;
+      return single.corridorId === zip ? single : null;
+    }
+    // ZIP-keyed map (scripts/export-corridor-metrics.ts shape).
+    const map = raw as Record<string, CorridorMetric>;
+    const metric = map[zip];
+    return metric?.corridorId ? metric : null;
   } catch {
     return null;
   }
+}
+
+/** Best-effort ZIP for the report address, for ZIP-level corridor metrics. */
+function zipFromContext(ctx: ReportContext): string | null {
+  const parcelZip = (ctx.parcel as { zip?: string | null } | undefined)?.zip;
+  if (parcelZip && /^\d{5}$/.test(parcelZip)) return parcelZip;
+  const econZip = (ctx.neighborhoodEconomics as { zip?: string | null } | undefined)?.zip;
+  if (econZip && /^\d{5}$/.test(econZip)) return econZip;
+  return null;
 }
 
 /**
@@ -1670,7 +1687,7 @@ function buildDeadlinesSection(
 function buildCorridorContextSection(
   ctx: ReportContext,
 ): ReportSection | undefined {
-  const metric = ctx.corridorMetrics ?? loadStaticCorridorMetrics();
+  const metric = ctx.corridorMetrics ?? loadStaticCorridorMetrics(zipFromContext(ctx));
   if (!metric) return undefined;
 
   const label = formatCorridorLabel(metric);
