@@ -119,6 +119,42 @@ function zipForPoint(lat: number, lon: number, boundaries: ZipBoundary[]): strin
   return null;
 }
 
+/** Max distance a centroid may sit outside every ZIP polygon and still be
+ * assigned to the nearest one. Riverdale's centroid lands in an industrial
+ * gap the city ZIP boundaries don't cover; beyond ~3km a match would be
+ * meaningless rather than merely approximate. */
+const NEAREST_FALLBACK_MAX_KM = 3;
+
+/** Curated assignments that beat geometry. Riverdale (CA 54): the nearest
+ * polygons are a coin flip (60628 at 0.76km vs 60827 at 0.81km), but the
+ * community area's residential core — Altgeld Gardens / Eden Green — is
+ * 60827; 60628 is Roseland, the neighboring area. */
+const MANUAL_OVERRIDES: Record<number, string> = {
+  54: "60827",
+};
+
+function nearestZip(
+  lat: number,
+  lon: number,
+  boundaries: ZipBoundary[]
+): { zip: string; distanceKm: number } | null {
+  const lonScale = Math.cos((lat * Math.PI) / 180);
+  let best: { zip: string; distanceKm: number } | null = null;
+  for (const b of boundaries) {
+    for (const polygon of b.coords) {
+      for (const [vLon, vLat] of polygon[0] as unknown as Ring) {
+        const dx = (vLon - lon) * lonScale * 111.32;
+        const dy = (vLat - lat) * 110.57;
+        const distanceKm = Math.sqrt(dx * dx + dy * dy);
+        if (!best || distanceKm < best.distanceKm) {
+          best = { zip: b.zip, distanceKm };
+        }
+      }
+    }
+  }
+  return best && best.distanceKm <= NEAREST_FALLBACK_MAX_KM ? best : null;
+}
+
 async function main() {
   const outPath = join(process.cwd(), "data/exports/community-area-zip.json");
 
@@ -128,11 +164,30 @@ async function main() {
 
   const out: Record<string, unknown> = {};
   const unmapped: string[] = [];
+  const nearestFallbacks: string[] = [];
+
+  const overridden: string[] = [];
 
   for (const ca of CHICAGO_COMMUNITY_AREAS) {
+    const override = MANUAL_OVERRIDES[ca.id];
+    if (override) {
+      out[String(ca.id)] = override;
+      overridden.push(`CA ${ca.id} (${ca.name}) -> ${override} via manual override`);
+      console.log(`  ${overridden[overridden.length - 1]}`);
+      continue;
+    }
     const zip = zipForPoint(ca.lat, ca.lon, boundaries);
     if (zip) {
       out[String(ca.id)] = zip;
+      continue;
+    }
+    const nearest = nearestZip(ca.lat, ca.lon, boundaries);
+    if (nearest) {
+      out[String(ca.id)] = nearest.zip;
+      nearestFallbacks.push(
+        `CA ${ca.id} (${ca.name}) -> ${nearest.zip} via nearest polygon, ${nearest.distanceKm.toFixed(2)}km`,
+      );
+      console.log(`  ${nearestFallbacks[nearestFallbacks.length - 1]}`);
     } else {
       unmapped.push(`${ca.id} (${ca.name})`);
       console.log(`  no ZIP match for CA ${ca.id} (${ca.name}) at ${ca.lat},${ca.lon}`);
@@ -142,7 +197,10 @@ async function main() {
   out._meta = {
     generatedAt: new Date().toISOString(),
     method:
-      "centroid point-in-polygon; a community area can span multiple ZIPs — this is the centroid's ZIP only",
+      "centroid point-in-polygon; a community area can span multiple ZIPs — this is the centroid's ZIP only. Centroids outside every polygon fall back to the nearest polygon within " +
+      `${NEAREST_FALLBACK_MAX_KM}km. Manual overrides beat geometry where the nearest polygon misrepresents the area.`,
+    nearestFallbacks,
+    manualOverrides: overridden,
   };
 
   mkdirSync(dirname(outPath), { recursive: true });

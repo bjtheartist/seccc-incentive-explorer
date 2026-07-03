@@ -15,7 +15,7 @@ vi.mock("node:fs", () => ({
 
 const CA_ZIP_FIXTURE = {
   "71": "60620", // Auburn Gresham
-  "54": undefined, // Riverdale — intentionally unmapped, mirrors real output
+  "99": undefined, // synthetic unmapped CA for null-path coverage (real map is 77/77 since the Riverdale fix)
   _meta: { generatedAt: "2026-07-03T00:00:00.000Z", method: "centroid point-in-polygon" },
 };
 
@@ -80,10 +80,10 @@ describe("neighborhood-corridor loader", () => {
     expect(zip).toBe("60620");
   });
 
-  it("returns null for a community area with no ZIP mapping (e.g. Riverdale, CA 54)", async () => {
+  it("returns null for a community area with no ZIP mapping", async () => {
     setupFs({});
     const { getZipForCommunityArea } = await import("@/lib/neighborhood-corridor");
-    expect(getZipForCommunityArea(54)).toBeNull();
+    expect(getZipForCommunityArea(99)).toBeNull();
   });
 
   it("returns full corridor signals for a mapped community area with metrics", async () => {
