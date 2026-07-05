@@ -43,7 +43,12 @@ function boundaryContextFromFeature(feature: Feature): {
   boundaryWards: string | null;
 } | null {
   const properties = (feature.properties ?? {}) as Record<string, unknown>;
+  // The published TIF boundary GeoJSON uses underscore keys (TIF_Number,
+  // District_Name, Expiration_Date). The snake/space variants below are kept
+  // only as defensive fallbacks for other/older exports; without TIF_Number
+  // first this resolved to null for every feature, blanking all TIF finance.
   const rawDistrictId = firstString(
+    properties.TIF_Number,
     properties["TIF Number"],
     properties.tif_number,
     properties.ref,
@@ -57,6 +62,7 @@ function boundaryContextFromFeature(feature: Feature): {
     rawDistrictId,
     districtName:
       firstString(
+        properties.District_Name,
         properties["District Name"],
         properties.name,
         properties.NAME,
@@ -65,6 +71,7 @@ function boundaryContextFromFeature(feature: Feature): {
       ) ?? districtId,
     expirationDate:
       firstString(
+        properties.Expiration_Date,
         properties["Expiration Date"],
         properties.expiration,
         properties.expiration_date

@@ -31,7 +31,6 @@ import {
   type AvailabilityState,
   type ResolveAvailabilityOpts,
 } from "./program-gating";
-import { normalizeTifKey } from "./tif-finance";
 
 // ─── Local Types ────────────────────────────────────────────────────
 
@@ -1581,8 +1580,12 @@ function zipFromContext(ctx: ReportContext): string | null {
  * Enrich the tifFinance section of neighborhoodEconomics from the static
  * tif-financials.json when the address is inside a TIF district.
  *
- * Uses: ctx.neighborhoodEconomics.tifFinance.districtId (already set by the
- * tif-finance API route) or falls back to normalizeTifKey(zoneNames["tif"]).
+ * Uses ctx.neighborhoodEconomics.tifFinance.districtId, which the tif-finance
+ * API route resolves by point-in-polygon against the district boundaries.
+ * There is deliberately no zone-name fallback: a district's NAME digits are
+ * cross-street numbers (e.g. "35th/Halsted"), not its TIF number, so deriving
+ * an id from the name attaches a different district's financials — showing
+ * nothing is correct when the id is genuinely unknown.
  * Returns the districtId used (for deadline lookup) or null.
  */
 function enrichTifFinancialContext(
@@ -1591,15 +1594,7 @@ function enrichTifFinancialContext(
 ): string | null {
   if (!financials) return null;
 
-  // The districtId already in ctx (set by /api/tif-finance) is most reliable.
-  const existingId = ctx.neighborhoodEconomics?.tifFinance?.districtId ?? null;
-  // Fallback: normalize the zone name (zoneNames["tif"] = "35th/Halsted" but that
-  // doesn't map directly; instead use normalizeTifKey on zoneNames["tif"] raw value
-  // if it looks like a TIF number, otherwise skip).
-  const zoneNameRaw = ctx.zoneNames?.["tif"] ?? null;
-  const normalizedFromZone = zoneNameRaw ? normalizeTifKey(zoneNameRaw) : null;
-
-  const districtId = existingId || normalizedFromZone;
+  const districtId = ctx.neighborhoodEconomics?.tifFinance?.districtId ?? null;
   if (!districtId) return null;
 
   const fin = financials[districtId];
