@@ -10,6 +10,7 @@ import {
 import { pageMetadata, buildFaqJsonLd, buildTrailJsonLd } from "@/lib/seo";
 import { getNeighborhoodPageData } from "@/lib/neighborhood-page-data";
 import { getCorridorSignalsForCommunityArea } from "@/lib/neighborhood-corridor";
+import { getTifDistrictsForCommunityArea } from "@/lib/neighborhood-tif";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SnapshotCTA } from "@/components/seo/SnapshotCTA";
 import { NeighborhoodSnapshotButton } from "@/components/seo/NeighborhoodSnapshotButton";
@@ -91,6 +92,7 @@ export default async function NeighborhoodIncentivesPage({
   } = data;
 
   const corridorSignals = getCorridorSignalsForCommunityArea(ca.id);
+  const tifDistricts = getTifDistrictsForCommunityArea(ca.id);
 
   const orgNames = support?.organizations.map((o) => o.name) ?? [];
   const supportSummary =
@@ -232,6 +234,57 @@ export default async function NeighborhoodIncentivesPage({
               incentive zone in our current data, but individual parcels may
               still qualify. Run a free snapshot on a specific address to be
               sure.
+            </p>
+          )}
+        </div>
+      </section>
+
+      {/* ── TIF districts (polygon-overlap, not centroid) ────────────── */}
+      <section className="bg-white border-b border-[#0C1B33]/10">
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <Eyebrow>Tax Increment Financing (TIF) districts</Eyebrow>
+          <div className="accent-bar mt-3 mb-5" />
+          <h2 className="font-editorial text-2xl md:text-3xl text-[#0C1B33] mb-2">
+            {tifDistricts.length > 0
+              ? `${tifDistricts.length} TIF ${
+                  tifDistricts.length === 1 ? "district overlaps" : "districts overlap"
+                } ${ca.name}`
+              : `No TIF district overlaps ${ca.name}`}
+          </h2>
+          <p className="text-[#0C1B33]/55 text-sm mb-6 max-w-2xl leading-relaxed">
+            Based on where each TIF district boundary overlaps this community
+            area — not a single center point. The percentage is the share of the
+            area&apos;s land inside that district; a given parcel may or may not
+            fall in it, so confirm a specific address with a free snapshot.
+          </p>
+
+          {tifDistricts.length > 0 ? (
+            <ul className="flex flex-col gap-3">
+              {tifDistricts.map((t) => (
+                <li
+                  key={t.tifNumber}
+                  className="rounded-xl border border-[#0C1B33]/10 bg-blue-soft px-5 py-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
+                >
+                  <div>
+                    <span className="text-[#0C1B33] font-medium">
+                      {t.districtName}
+                    </span>
+                    <span className="text-[#0C1B33]/45 text-[13px] ml-2">
+                      {t.tifNumber}
+                      {t.expirationYear ? ` · expires ${t.expirationYear}` : ""}
+                    </span>
+                  </div>
+                  <span className="text-[13px] text-[#0C1B33]/70 whitespace-nowrap">
+                    covers ~{Math.round(t.overlapPct)}% of {ca.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-[#0C1B33]/60 text-sm rounded-xl border border-[#0C1B33]/10 bg-blue-soft px-5 py-4 max-w-2xl leading-relaxed">
+              No mapped TIF district overlaps {ca.name} in our current data. Most
+              of Chicago sits outside any TIF, so this is common — run a free
+              snapshot on a specific address to confirm.
             </p>
           )}
         </div>

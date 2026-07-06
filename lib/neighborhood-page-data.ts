@@ -296,6 +296,10 @@ function zonesForPoint(
   const pt = point([lon, lat]);
   const labels: string[] = [];
   for (const layer of layers) {
+    // TIF is surfaced separately and accurately via the CA<->TIF polygon-overlap
+    // map (lib/neighborhood-tif.ts). The centroid test under-claims TIF, so
+    // excluding it here avoids contradicting the dedicated TIF section.
+    if (layer.key === "tif") continue;
     for (const feature of layer.features) {
       try {
         if (booleanPointInPolygon(pt, feature)) {
