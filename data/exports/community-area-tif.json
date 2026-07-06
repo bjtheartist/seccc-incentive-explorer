@@ -1,0 +1,1221 @@
+{
+  "1": [
+    {
+      "tifNumber": "T-134",
+      "districtName": "Devon/Sheridan",
+      "expirationYear": 2028,
+      "overlapPct": 4.7
+    },
+    {
+      "tifNumber": "T-135",
+      "districtName": "Pratt/Ridge Industrial Park Conservation Area",
+      "expirationYear": 2028,
+      "overlapPct": 3.7
+    }
+  ],
+  "2": [
+    {
+      "tifNumber": "T-146",
+      "districtName": "Touhy/Western",
+      "expirationYear": 2030,
+      "overlapPct": 11.1
+    },
+    {
+      "tifNumber": "T-77",
+      "districtName": "Lincoln Avenue",
+      "expirationYear": 2035,
+      "overlapPct": 3.4
+    }
+  ],
+  "3": [
+    {
+      "tifNumber": "T-180",
+      "districtName": "Red and Purple Modernization Phase One Project",
+      "expirationYear": 2052,
+      "overlapPct": 41.3
+    },
+    {
+      "tifNumber": "T-109",
+      "districtName": "Lawrence/Broadway",
+      "expirationYear": 2037,
+      "overlapPct": 4.6
+    },
+    {
+      "tifNumber": "T-70",
+      "districtName": "Clark/Montrose",
+      "expirationYear": 2035,
+      "overlapPct": 3.7
+    },
+    {
+      "tifNumber": "T-173",
+      "districtName": "Montrose/Clarendon",
+      "expirationYear": 2034,
+      "overlapPct": 2.1
+    }
+  ],
+  "4": [
+    {
+      "tifNumber": "T-177",
+      "districtName": "Foster and California",
+      "expirationYear": 2038,
+      "overlapPct": 2.1
+    }
+  ],
+  "5": [
+    {
+      "tifNumber": "T-150",
+      "districtName": "Addison South",
+      "expirationYear": 2031,
+      "overlapPct": 4.6
+    }
+  ],
+  "6": [
+    {
+      "tifNumber": "T-180",
+      "districtName": "Red and Purple Modernization Phase One Project",
+      "expirationYear": 2052,
+      "overlapPct": 50
+    }
+  ],
+  "7": [
+    {
+      "tifNumber": "T-180",
+      "districtName": "Red and Purple Modernization Phase One Project",
+      "expirationYear": 2052,
+      "overlapPct": 36.9
+    },
+    {
+      "tifNumber": "T-183",
+      "districtName": "Cortland and Chicago River",
+      "expirationYear": 2043,
+      "overlapPct": 4.2
+    }
+  ],
+  "8": [
+    {
+      "tifNumber": "T-30",
+      "districtName": "Near North",
+      "expirationYear": 2033,
+      "overlapPct": 19.1
+    },
+    {
+      "tifNumber": "T-23",
+      "districtName": "Goose Island",
+      "expirationYear": 2032,
+      "overlapPct": 5.3
+    },
+    {
+      "tifNumber": "T-180",
+      "districtName": "Red and Purple Modernization Phase One Project",
+      "expirationYear": 2052,
+      "overlapPct": 2.5
+    }
+  ],
+  "11": [
+    {
+      "tifNumber": "T-153",
+      "districtName": "Elston/Armstrong Industrial Corridor",
+      "expirationYear": 2031,
+      "overlapPct": 8.1
+    }
+  ],
+  "13": [
+    {
+      "tifNumber": "T-181",
+      "districtName": "Foster/Edens",
+      "expirationYear": 2042,
+      "overlapPct": 10
+    },
+    {
+      "tifNumber": "T-88",
+      "districtName": "Lawrence/Kedzie",
+      "expirationYear": 2036,
+      "overlapPct": 7.7
+    },
+    {
+      "tifNumber": "T-77",
+      "districtName": "Lincoln Avenue",
+      "expirationYear": 2035,
+      "overlapPct": 4.1
+    }
+  ],
+  "14": [
+    {
+      "tifNumber": "T-88",
+      "districtName": "Lawrence/Kedzie",
+      "expirationYear": 2036,
+      "overlapPct": 22.6
+    },
+    {
+      "tifNumber": "T-116",
+      "districtName": "Lawrence/Pulaski",
+      "expirationYear": 2026,
+      "overlapPct": 5.8
+    },
+    {
+      "tifNumber": "T-181",
+      "districtName": "Foster/Edens",
+      "expirationYear": 2042,
+      "overlapPct": 5
+    }
+  ],
+  "15": [
+    {
+      "tifNumber": "T-81",
+      "districtName": "Belmont/Central",
+      "expirationYear": 2036,
+      "overlapPct": 3.4
+    }
+  ],
+  "19": [
+    {
+      "tifNumber": "T-81",
+      "districtName": "Belmont/Central",
+      "expirationYear": 2036,
+      "overlapPct": 9.5
+    },
+    {
+      "tifNumber": "T-71",
+      "districtName": "Galewood/Armitage Industrial",
+      "expirationYear": 2035,
+      "overlapPct": 9.2
+    },
+    {
+      "tifNumber": "T-129",
+      "districtName": "Diversey/Narragansett",
+      "expirationYear": 2027,
+      "overlapPct": 5.5
+    },
+    {
+      "tifNumber": "T-64",
+      "districtName": "Northwest Industrial Corridor",
+      "expirationYear": 2034,
+      "overlapPct": 3.5
+    }
+  ],
+  "20": [
+    {
+      "tifNumber": "T-69",
+      "districtName": "Pulaski Corridor",
+      "expirationYear": 2035,
+      "overlapPct": 16.4
+    },
+    {
+      "tifNumber": "T-64",
+      "districtName": "Northwest Industrial Corridor",
+      "expirationYear": 2034,
+      "overlapPct": 12.6
+    },
+    {
+      "tifNumber": "T-151",
+      "districtName": "Armitage/Pulaski",
+      "expirationYear": 2031,
+      "overlapPct": 4.1
+    }
+  ],
+  "21": [
+    {
+      "tifNumber": "T-160",
+      "districtName": "Kennedy/Kimball",
+      "expirationYear": 2032,
+      "overlapPct": 11.4
+    },
+    {
+      "tifNumber": "T-87",
+      "districtName": "Fullerton/Milwaukee",
+      "expirationYear": 2027,
+      "overlapPct": 5.3
+    },
+    {
+      "tifNumber": "T-150",
+      "districtName": "Addison South",
+      "expirationYear": 2031,
+      "overlapPct": 5.1
+    },
+    {
+      "tifNumber": "T-69",
+      "districtName": "Pulaski Corridor",
+      "expirationYear": 2035,
+      "overlapPct": 3
+    }
+  ],
+  "22": [
+    {
+      "tifNumber": "T-87",
+      "districtName": "Fullerton/Milwaukee",
+      "expirationYear": 2027,
+      "overlapPct": 8.1
+    },
+    {
+      "tifNumber": "T-69",
+      "districtName": "Pulaski Corridor",
+      "expirationYear": 2035,
+      "overlapPct": 5.3
+    }
+  ],
+  "23": [
+    {
+      "tifNumber": "T-115",
+      "districtName": "Chicago/Central Park",
+      "expirationYear": 2026,
+      "overlapPct": 25.7
+    },
+    {
+      "tifNumber": "T-64",
+      "districtName": "Northwest Industrial Corridor",
+      "expirationYear": 2034,
+      "overlapPct": 20.9
+    },
+    {
+      "tifNumber": "T-52",
+      "districtName": "Kinzie Industrial Conservation Area",
+      "expirationYear": 2034,
+      "overlapPct": 11.1
+    },
+    {
+      "tifNumber": "T-107",
+      "districtName": "Division/Homan",
+      "expirationYear": 2037,
+      "overlapPct": 6.5
+    },
+    {
+      "tifNumber": "T-69",
+      "districtName": "Pulaski Corridor",
+      "expirationYear": 2035,
+      "overlapPct": 4.4
+    }
+  ],
+  "24": [
+    {
+      "tifNumber": "T-52",
+      "districtName": "Kinzie Industrial Conservation Area",
+      "expirationYear": 2034,
+      "overlapPct": 7.5
+    },
+    {
+      "tifNumber": "T-107",
+      "districtName": "Division/Homan",
+      "expirationYear": 2037,
+      "overlapPct": 7.2
+    }
+  ],
+  "25": [
+    {
+      "tifNumber": "T-144",
+      "districtName": "Harrison/Central",
+      "expirationYear": 2030,
+      "overlapPct": 8.3
+    },
+    {
+      "tifNumber": "T-38",
+      "districtName": "Roosevelt/Cicero",
+      "expirationYear": 2034,
+      "overlapPct": 6.7
+    },
+    {
+      "tifNumber": "T-75",
+      "districtName": "Madison/Austin Corridor",
+      "expirationYear": 2035,
+      "overlapPct": 6.2
+    },
+    {
+      "tifNumber": "T-95",
+      "districtName": "Midwest",
+      "expirationYear": 2036,
+      "overlapPct": 5.8
+    },
+    {
+      "tifNumber": "T-156",
+      "districtName": "Austin Commercial",
+      "expirationYear": 2031,
+      "overlapPct": 5.6
+    },
+    {
+      "tifNumber": "T-71",
+      "districtName": "Galewood/Armitage Industrial",
+      "expirationYear": 2035,
+      "overlapPct": 5.1
+    },
+    {
+      "tifNumber": "T-64",
+      "districtName": "Northwest Industrial Corridor",
+      "expirationYear": 2034,
+      "overlapPct": 4.7
+    }
+  ],
+  "26": [
+    {
+      "tifNumber": "T-95",
+      "districtName": "Midwest",
+      "expirationYear": 2036,
+      "overlapPct": 54.8
+    },
+    {
+      "tifNumber": "T-64",
+      "districtName": "Northwest Industrial Corridor",
+      "expirationYear": 2034,
+      "overlapPct": 16.7
+    },
+    {
+      "tifNumber": "T-75",
+      "districtName": "Madison/Austin Corridor",
+      "expirationYear": 2035,
+      "overlapPct": 13.5
+    }
+  ],
+  "27": [
+    {
+      "tifNumber": "T-95",
+      "districtName": "Midwest",
+      "expirationYear": 2036,
+      "overlapPct": 71.6
+    },
+    {
+      "tifNumber": "T-52",
+      "districtName": "Kinzie Industrial Conservation Area",
+      "expirationYear": 2034,
+      "overlapPct": 13.5
+    },
+    {
+      "tifNumber": "T-115",
+      "districtName": "Chicago/Central Park",
+      "expirationYear": 2026,
+      "overlapPct": 6.3
+    },
+    {
+      "tifNumber": "T-48",
+      "districtName": "Western/Ogden",
+      "expirationYear": 2034,
+      "overlapPct": 5.3
+    }
+  ],
+  "28": [
+    {
+      "tifNumber": "T-86",
+      "districtName": "Central West",
+      "expirationYear": 2036,
+      "overlapPct": 14.8
+    },
+    {
+      "tifNumber": "T-48",
+      "districtName": "Western/Ogden",
+      "expirationYear": 2034,
+      "overlapPct": 13.2
+    },
+    {
+      "tifNumber": "T-52",
+      "districtName": "Kinzie Industrial Conservation Area",
+      "expirationYear": 2034,
+      "overlapPct": 12.1
+    },
+    {
+      "tifNumber": "T-62",
+      "districtName": "Roosevelt/Racine",
+      "expirationYear": 2034,
+      "overlapPct": 5.9
+    },
+    {
+      "tifNumber": "T-95",
+      "districtName": "Midwest",
+      "expirationYear": 2036,
+      "overlapPct": 2.7
+    }
+  ],
+  "29": [
+    {
+      "tifNumber": "T-95",
+      "districtName": "Midwest",
+      "expirationYear": 2036,
+      "overlapPct": 37.6
+    },
+    {
+      "tifNumber": "T-161",
+      "districtName": "Ogden/Pulaski",
+      "expirationYear": 2032,
+      "overlapPct": 36.2
+    },
+    {
+      "tifNumber": "T-38",
+      "districtName": "Roosevelt/Cicero",
+      "expirationYear": 2034,
+      "overlapPct": 11.7
+    },
+    {
+      "tifNumber": "T-48",
+      "districtName": "Western/Ogden",
+      "expirationYear": 2034,
+      "overlapPct": 5.7
+    },
+    {
+      "tifNumber": "T-24",
+      "districtName": "Homan-Arthington",
+      "expirationYear": 2034,
+      "overlapPct": 3.1
+    }
+  ],
+  "30": [
+    {
+      "tifNumber": "T-152",
+      "districtName": "Little Village Industrial Corridor",
+      "expirationYear": 2031,
+      "overlapPct": 22.2
+    },
+    {
+      "tifNumber": "T-149",
+      "districtName": "Stevenson/Brighton",
+      "expirationYear": 2031,
+      "overlapPct": 7.8
+    },
+    {
+      "tifNumber": "T-42",
+      "districtName": "Sanitary Drainage and Ship Canal",
+      "expirationYear": 2027,
+      "overlapPct": 6.6
+    },
+    {
+      "tifNumber": "T-164",
+      "districtName": "Little Village East",
+      "expirationYear": 2033,
+      "overlapPct": 5.6
+    },
+    {
+      "tifNumber": "T-161",
+      "districtName": "Ogden/Pulaski",
+      "expirationYear": 2032,
+      "overlapPct": 4.5
+    }
+  ],
+  "31": [
+    {
+      "tifNumber": "T-53",
+      "districtName": "Pilsen",
+      "expirationYear": 2034,
+      "overlapPct": 55.5
+    },
+    {
+      "tifNumber": "T-48",
+      "districtName": "Western/Ogden",
+      "expirationYear": 2034,
+      "overlapPct": 3.2
+    }
+  ],
+  "32": [
+    {
+      "tifNumber": "T-186",
+      "districtName": "Red Line Extension (RLE)",
+      "expirationYear": 2058,
+      "overlapPct": 28.8
+    },
+    {
+      "tifNumber": "T-147",
+      "districtName": "LaSalle Central",
+      "expirationYear": 2030,
+      "overlapPct": 10.8
+    },
+    {
+      "tifNumber": "T-184",
+      "districtName": "Roosevelt/Clark",
+      "expirationYear": 2043,
+      "overlapPct": 2.6
+    }
+  ],
+  "33": [
+    {
+      "tifNumber": "T-186",
+      "districtName": "Red Line Extension (RLE)",
+      "expirationYear": 2058,
+      "overlapPct": 27
+    },
+    {
+      "tifNumber": "T-72",
+      "districtName": "24th/Michigan",
+      "expirationYear": 2035,
+      "overlapPct": 8.9
+    },
+    {
+      "tifNumber": "T-184",
+      "districtName": "Roosevelt/Clark",
+      "expirationYear": 2043,
+      "overlapPct": 7.4
+    },
+    {
+      "tifNumber": "T-61",
+      "districtName": "Bronzeville",
+      "expirationYear": 2034,
+      "overlapPct": 4.7
+    },
+    {
+      "tifNumber": "T-141",
+      "districtName": "26th & King Drive",
+      "expirationYear": 2030,
+      "overlapPct": 2.5
+    }
+  ],
+  "34": [
+    {
+      "tifNumber": "T-186",
+      "districtName": "Red Line Extension (RLE)",
+      "expirationYear": 2058,
+      "overlapPct": 74.1
+    },
+    {
+      "tifNumber": "T-53",
+      "districtName": "Pilsen",
+      "expirationYear": 2034,
+      "overlapPct": 6.8
+    },
+    {
+      "tifNumber": "T-131",
+      "districtName": "35th/State",
+      "expirationYear": 2028,
+      "overlapPct": 5.5
+    },
+    {
+      "tifNumber": "T-72",
+      "districtName": "24th/Michigan",
+      "expirationYear": 2035,
+      "overlapPct": 3
+    }
+  ],
+  "35": [
+    {
+      "tifNumber": "T-61",
+      "districtName": "Bronzeville",
+      "expirationYear": 2034,
+      "overlapPct": 44.8
+    },
+    {
+      "tifNumber": "T-186",
+      "districtName": "Red Line Extension (RLE)",
+      "expirationYear": 2058,
+      "overlapPct": 15.8
+    },
+    {
+      "tifNumber": "T-131",
+      "districtName": "35th/State",
+      "expirationYear": 2028,
+      "overlapPct": 5.2
+    },
+    {
+      "tifNumber": "T-126",
+      "districtName": "Madden/Wells",
+      "expirationYear": 2038,
+      "overlapPct": 2.4
+    }
+  ],
+  "36": [
+    {
+      "tifNumber": "T-126",
+      "districtName": "Madden/Wells",
+      "expirationYear": 2038,
+      "overlapPct": 23.9
+    },
+    {
+      "tifNumber": "T-119",
+      "districtName": "Lakefront",
+      "expirationYear": 2026,
+      "overlapPct": 7.3
+    },
+    {
+      "tifNumber": "T-55",
+      "districtName": "43rd Street/Cottage Grove Avenue",
+      "expirationYear": 2034,
+      "overlapPct": 3.8
+    }
+  ],
+  "37": [
+    {
+      "tifNumber": "T-121",
+      "districtName": "47th/Halsted",
+      "expirationYear": 2026,
+      "overlapPct": 64
+    }
+  ],
+  "38": [
+    {
+      "tifNumber": "T-118",
+      "districtName": "47th and King Drive",
+      "expirationYear": 2026,
+      "overlapPct": 51.6
+    },
+    {
+      "tifNumber": "T-55",
+      "districtName": "43rd Street/Cottage Grove Avenue",
+      "expirationYear": 2034,
+      "overlapPct": 18.5
+    },
+    {
+      "tifNumber": "T-136",
+      "districtName": "47th/State",
+      "expirationYear": 2028,
+      "overlapPct": 8.6
+    },
+    {
+      "tifNumber": "T-61",
+      "districtName": "Bronzeville",
+      "expirationYear": 2034,
+      "overlapPct": 4.4
+    }
+  ],
+  "39": [
+    {
+      "tifNumber": "T-55",
+      "districtName": "43rd Street/Cottage Grove Avenue",
+      "expirationYear": 2034,
+      "overlapPct": 7.6
+    }
+  ],
+  "40": [
+    {
+      "tifNumber": "T-178",
+      "districtName": "Washington Park",
+      "expirationYear": 2038,
+      "overlapPct": 75.8
+    },
+    {
+      "tifNumber": "T-136",
+      "districtName": "47th/State",
+      "expirationYear": 2028,
+      "overlapPct": 23.5
+    }
+  ],
+  "42": [
+    {
+      "tifNumber": "T-65",
+      "districtName": "Woodlawn",
+      "expirationYear": 2035,
+      "overlapPct": 25.1
+    },
+    {
+      "tifNumber": "T-171",
+      "districtName": "West Woodlawn",
+      "expirationYear": 2034,
+      "overlapPct": 23.6
+    },
+    {
+      "tifNumber": "T-174",
+      "districtName": "67th and Wentworth",
+      "expirationYear": 2035,
+      "overlapPct": 3.6
+    },
+    {
+      "tifNumber": "T-60",
+      "districtName": "71st & Stony Island",
+      "expirationYear": 2034,
+      "overlapPct": 2.8
+    }
+  ],
+  "43": [
+    {
+      "tifNumber": "T-60",
+      "districtName": "71st & Stony Island",
+      "expirationYear": 2034,
+      "overlapPct": 19.5
+    },
+    {
+      "tifNumber": "T-123",
+      "districtName": "Avalon Park/South Shore",
+      "expirationYear": 2026,
+      "overlapPct": 2.4
+    }
+  ],
+  "44": [
+    {
+      "tifNumber": "T-127",
+      "districtName": "87th/Cottage Grove",
+      "expirationYear": 2026,
+      "overlapPct": 7.6
+    },
+    {
+      "tifNumber": "T-133",
+      "districtName": "83rd/Stewart",
+      "expirationYear": 2028,
+      "overlapPct": 5.4
+    },
+    {
+      "tifNumber": "T-54",
+      "districtName": "Stony Island Avenue Commercial and Burnside Industrial Corridors",
+      "expirationYear": 2034,
+      "overlapPct": 3.2
+    }
+  ],
+  "45": [
+    {
+      "tifNumber": "T-54",
+      "districtName": "Stony Island Avenue Commercial and Burnside Industrial Corridors",
+      "expirationYear": 2034,
+      "overlapPct": 11.9
+    },
+    {
+      "tifNumber": "T-60",
+      "districtName": "71st & Stony Island",
+      "expirationYear": 2034,
+      "overlapPct": 8.6
+    }
+  ],
+  "46": [
+    {
+      "tifNumber": "T-93",
+      "districtName": "South Chicago",
+      "expirationYear": 2036,
+      "overlapPct": 17.2
+    },
+    {
+      "tifNumber": "T-128",
+      "districtName": "Commercial Avenue",
+      "expirationYear": 2026,
+      "overlapPct": 7.4
+    },
+    {
+      "tifNumber": "T-123",
+      "districtName": "Avalon Park/South Shore",
+      "expirationYear": 2026,
+      "overlapPct": 2.8
+    }
+  ],
+  "47": [
+    {
+      "tifNumber": "T-54",
+      "districtName": "Stony Island Avenue Commercial and Burnside Industrial Corridors",
+      "expirationYear": 2034,
+      "overlapPct": 62.9
+    }
+  ],
+  "48": [
+    {
+      "tifNumber": "T-54",
+      "districtName": "Stony Island Avenue Commercial and Burnside Industrial Corridors",
+      "expirationYear": 2034,
+      "overlapPct": 9.6
+    },
+    {
+      "tifNumber": "T-128",
+      "districtName": "Commercial Avenue",
+      "expirationYear": 2026,
+      "overlapPct": 9.5
+    }
+  ],
+  "49": [
+    {
+      "tifNumber": "T-176",
+      "districtName": "107th/Halsted",
+      "expirationYear": 2038,
+      "overlapPct": 20.7
+    },
+    {
+      "tifNumber": "T-113",
+      "districtName": "Roseland/Michigan Avenue",
+      "expirationYear": 2026,
+      "overlapPct": 5
+    },
+    {
+      "tifNumber": "T-166",
+      "districtName": "North Pullman",
+      "expirationYear": 2033,
+      "overlapPct": 2.1
+    }
+  ],
+  "50": [
+    {
+      "tifNumber": "T-166",
+      "districtName": "North Pullman",
+      "expirationYear": 2033,
+      "overlapPct": 34.1
+    },
+    {
+      "tifNumber": "T-103",
+      "districtName": "Lake Calumet Area Industrial",
+      "expirationYear": 2036,
+      "overlapPct": 25.6
+    },
+    {
+      "tifNumber": "T-54",
+      "districtName": "Stony Island Avenue Commercial and Burnside Industrial Corridors",
+      "expirationYear": 2034,
+      "overlapPct": 7.4
+    }
+  ],
+  "51": [
+    {
+      "tifNumber": "T-103",
+      "districtName": "Lake Calumet Area Industrial",
+      "expirationYear": 2036,
+      "overlapPct": 76.1
+    }
+  ],
+  "52": [
+    {
+      "tifNumber": "T-103",
+      "districtName": "Lake Calumet Area Industrial",
+      "expirationYear": 2036,
+      "overlapPct": 25.9
+    },
+    {
+      "tifNumber": "T-169",
+      "districtName": "Ewing Avenue",
+      "expirationYear": 2034,
+      "overlapPct": 19.2
+    },
+    {
+      "tifNumber": "T-182",
+      "districtName": "116th/Avenue O",
+      "expirationYear": 2042,
+      "overlapPct": 3
+    }
+  ],
+  "53": [
+    {
+      "tifNumber": "T-125",
+      "districtName": "119th Street/I-57",
+      "expirationYear": 2026,
+      "overlapPct": 25.1
+    },
+    {
+      "tifNumber": "T-114",
+      "districtName": "119th and Halsted",
+      "expirationYear": 2026,
+      "overlapPct": 24.8
+    }
+  ],
+  "54": [
+    {
+      "tifNumber": "T-103",
+      "districtName": "Lake Calumet Area Industrial",
+      "expirationYear": 2036,
+      "overlapPct": 15.1
+    }
+  ],
+  "55": [
+    {
+      "tifNumber": "T-103",
+      "districtName": "Lake Calumet Area Industrial",
+      "expirationYear": 2036,
+      "overlapPct": 16.4
+    },
+    {
+      "tifNumber": "T-169",
+      "districtName": "Ewing Avenue",
+      "expirationYear": 2034,
+      "overlapPct": 4.3
+    },
+    {
+      "tifNumber": "T-182",
+      "districtName": "116th/Avenue O",
+      "expirationYear": 2042,
+      "overlapPct": 4
+    }
+  ],
+  "56": [
+    {
+      "tifNumber": "T-185",
+      "districtName": "Cicero/Stevenson",
+      "expirationYear": 2046,
+      "overlapPct": 2.4
+    }
+  ],
+  "57": [
+    {
+      "tifNumber": "T-149",
+      "districtName": "Stevenson/Brighton",
+      "expirationYear": 2031,
+      "overlapPct": 49.8
+    }
+  ],
+  "58": [
+    {
+      "tifNumber": "T-149",
+      "districtName": "Stevenson/Brighton",
+      "expirationYear": 2031,
+      "overlapPct": 37.1
+    },
+    {
+      "tifNumber": "T-42",
+      "districtName": "Sanitary Drainage and Ship Canal",
+      "expirationYear": 2027,
+      "overlapPct": 3.3
+    },
+    {
+      "tifNumber": "T-163",
+      "districtName": "Archer/Western",
+      "expirationYear": 2033,
+      "overlapPct": 2.4
+    }
+  ],
+  "59": [
+    {
+      "tifNumber": "T-163",
+      "districtName": "Archer/Western",
+      "expirationYear": 2033,
+      "overlapPct": 25.6
+    },
+    {
+      "tifNumber": "T-1",
+      "districtName": "35th/Halsted",
+      "expirationYear": 2033,
+      "overlapPct": 21.8
+    },
+    {
+      "tifNumber": "T-53",
+      "districtName": "Pilsen",
+      "expirationYear": 2034,
+      "overlapPct": 6.9
+    }
+  ],
+  "60": [
+    {
+      "tifNumber": "T-1",
+      "districtName": "35th/Halsted",
+      "expirationYear": 2033,
+      "overlapPct": 19.9
+    },
+    {
+      "tifNumber": "T-53",
+      "districtName": "Pilsen",
+      "expirationYear": 2034,
+      "overlapPct": 12.1
+    },
+    {
+      "tifNumber": "T-186",
+      "districtName": "Red Line Extension (RLE)",
+      "expirationYear": 2058,
+      "overlapPct": 9.5
+    },
+    {
+      "tifNumber": "T-163",
+      "districtName": "Archer/Western",
+      "expirationYear": 2033,
+      "overlapPct": 5.1
+    }
+  ],
+  "61": [
+    {
+      "tifNumber": "T-121",
+      "districtName": "47th/Halsted",
+      "expirationYear": 2026,
+      "overlapPct": 18.7
+    },
+    {
+      "tifNumber": "T-117",
+      "districtName": "47th/Ashland",
+      "expirationYear": 2026,
+      "overlapPct": 10.7
+    },
+    {
+      "tifNumber": "T-45",
+      "districtName": "Stockyards Southeast Quadrant Industrial",
+      "expirationYear": 2028,
+      "overlapPct": 8.8
+    },
+    {
+      "tifNumber": "T-163",
+      "districtName": "Archer/Western",
+      "expirationYear": 2033,
+      "overlapPct": 2.1
+    },
+    {
+      "tifNumber": "T-1",
+      "districtName": "35th/Halsted",
+      "expirationYear": 2033,
+      "overlapPct": 2
+    }
+  ],
+  "62": [
+    {
+      "tifNumber": "T-98",
+      "districtName": "63rd/Pulaski",
+      "expirationYear": 2036,
+      "overlapPct": 9.1
+    }
+  ],
+  "63": [
+    {
+      "tifNumber": "T-149",
+      "districtName": "Stevenson/Brighton",
+      "expirationYear": 2031,
+      "overlapPct": 7.4
+    }
+  ],
+  "65": [
+    {
+      "tifNumber": "T-98",
+      "districtName": "63rd/Pulaski",
+      "expirationYear": 2036,
+      "overlapPct": 5.2
+    }
+  ],
+  "66": [
+    {
+      "tifNumber": "T-66",
+      "districtName": "Greater Southwest Industrial (East)",
+      "expirationYear": 2035,
+      "overlapPct": 4.1
+    }
+  ],
+  "67": [
+    {
+      "tifNumber": "T-143",
+      "districtName": "63rd/Ashland",
+      "expirationYear": 2030,
+      "overlapPct": 22.3
+    },
+    {
+      "tifNumber": "T-106",
+      "districtName": "Englewood Neighborhood",
+      "expirationYear": 2037,
+      "overlapPct": 4.4
+    },
+    {
+      "tifNumber": "T-56",
+      "districtName": "79th Street Corridor",
+      "expirationYear": 2034,
+      "overlapPct": 2.7
+    }
+  ],
+  "68": [
+    {
+      "tifNumber": "T-106",
+      "districtName": "Englewood Neighborhood",
+      "expirationYear": 2037,
+      "overlapPct": 46
+    },
+    {
+      "tifNumber": "T-174",
+      "districtName": "67th and Wentworth",
+      "expirationYear": 2035,
+      "overlapPct": 15.2
+    },
+    {
+      "tifNumber": "T-178",
+      "districtName": "Washington Park",
+      "expirationYear": 2038,
+      "overlapPct": 5.1
+    },
+    {
+      "tifNumber": "T-121",
+      "districtName": "47th/Halsted",
+      "expirationYear": 2026,
+      "overlapPct": 2.6
+    }
+  ],
+  "69": [
+    {
+      "tifNumber": "T-174",
+      "districtName": "67th and Wentworth",
+      "expirationYear": 2035,
+      "overlapPct": 25.4
+    },
+    {
+      "tifNumber": "T-155",
+      "districtName": "79th/Vincennes",
+      "expirationYear": 2031,
+      "overlapPct": 7.1
+    },
+    {
+      "tifNumber": "T-178",
+      "districtName": "Washington Park",
+      "expirationYear": 2038,
+      "overlapPct": 6.2
+    },
+    {
+      "tifNumber": "T-145",
+      "districtName": "73rd/University",
+      "expirationYear": 2030,
+      "overlapPct": 5.8
+    },
+    {
+      "tifNumber": "T-127",
+      "districtName": "87th/Cottage Grove",
+      "expirationYear": 2026,
+      "overlapPct": 3.8
+    }
+  ],
+  "70": [
+    {
+      "tifNumber": "T-66",
+      "districtName": "Greater Southwest Industrial (East)",
+      "expirationYear": 2035,
+      "overlapPct": 5.9
+    }
+  ],
+  "71": [
+    {
+      "tifNumber": "T-56",
+      "districtName": "79th Street Corridor",
+      "expirationYear": 2034,
+      "overlapPct": 6.9
+    },
+    {
+      "tifNumber": "T-155",
+      "districtName": "79th/Vincennes",
+      "expirationYear": 2031,
+      "overlapPct": 3
+    }
+  ],
+  "72": [
+    {
+      "tifNumber": "T-142",
+      "districtName": "Western Avenue/Rock Island",
+      "expirationYear": 2030,
+      "overlapPct": 7.3
+    },
+    {
+      "tifNumber": "T-9",
+      "districtName": "95th & Western",
+      "expirationYear": 2031,
+      "overlapPct": 2.9
+    }
+  ],
+  "74": [
+    {
+      "tifNumber": "T-73",
+      "districtName": "111th Street/Kedzie Avenue Business District",
+      "expirationYear": 2035,
+      "overlapPct": 4.6
+    }
+  ],
+  "75": [
+    {
+      "tifNumber": "T-125",
+      "districtName": "119th Street/I-57",
+      "expirationYear": 2026,
+      "overlapPct": 30.1
+    },
+    {
+      "tifNumber": "T-142",
+      "districtName": "Western Avenue/Rock Island",
+      "expirationYear": 2030,
+      "overlapPct": 20.5
+    },
+    {
+      "tifNumber": "T-176",
+      "districtName": "107th/Halsted",
+      "expirationYear": 2038,
+      "overlapPct": 10.5
+    }
+  ],
+  "77": [
+    {
+      "tifNumber": "T-180",
+      "districtName": "Red and Purple Modernization Phase One Project",
+      "expirationYear": 2052,
+      "overlapPct": 54.7
+    },
+    {
+      "tifNumber": "T-157",
+      "districtName": "Hollywood/Sheridan",
+      "expirationYear": 2031,
+      "overlapPct": 8.3
+    },
+    {
+      "tifNumber": "T-13",
+      "districtName": "Bryn Mawr/Broadway",
+      "expirationYear": 2032,
+      "overlapPct": 3.1
+    }
+  ],
+  "_meta": {
+    "method": "polygon overlap of TIF districts vs community-area boundaries; TIFs covering < 2% of a CA's area dropped as boundary clips; sorted by coverage desc",
+    "communityAreasWithTif": 67,
+    "tifCaPairs": 180
+  }
+}
