@@ -30,7 +30,7 @@ export default function MapMobileSheet({
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="md:hidden absolute bottom-0 left-0 right-0 z-20 max-h-[72vh] overflow-y-auto bg-white/98 backdrop-blur border-t border-[#0C1B33]/10 rounded-t-xl shadow-lg">
+    <div className="md:hidden absolute bottom-0 left-0 right-0 z-20 max-h-[72vh] overflow-y-auto bg-white/98 backdrop-blur border-t border-[#0C1B33]/10 rounded-t-xl shadow-lg touch-manipulation">
       <button
         type="button"
         onClick={() => setIsExpanded((value) => !value)}

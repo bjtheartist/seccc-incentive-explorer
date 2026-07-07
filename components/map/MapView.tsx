@@ -363,6 +363,176 @@ export default function MapView() {
     map.addControl(new mapboxgl.NavigationControl(), "bottom-right");
     mapRef.current = map;
 
+    // Mobile only: a second quick tap (a habitual double-tap, or a retry
+    // after a tap that felt like it did nothing) must not also zoom the map.
+    // That combination is the actual mechanism that turns a merely-late or
+    // dropped click into the "tap zoomed instead of opening the snapshot"
+    // complaint — see the click-handler comment below. Desktop keeps
+    // double-click-to-zoom; pinch-to-zoom (touchZoomRotate) is untouched.
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      map.doubleClickZoom.disable();
+    }
+
+    // Which zone fill layers currently exist on the map. Recomputed on every
+    // call (not memoized) because zone layers are added asynchronously as
+    // each zone's data loads inside `map.on("load", ...)` below — the set
+    // only grows over time, so a click/hover that lands before a zone has
+    // loaded just sees fewer layers rather than querying a missing one.
+    const getLoadedZoneFillLayers = () =>
+      ZONE_KEYS.map((k) => `zone-${k}-fill`).filter((id) => map.getLayer(id));
+
+    /* Hover + click for zones — bound immediately instead of inside the
+       `load` handler. Mapbox's canvas accepts pointer events as soon as the
+       map is constructed; queryRenderedFeatures/getLayer are both safe to
+       call before the style finishes loading (they just report "nothing
+       here yet"). Binding here closes the dead-tap window that used to
+       exist between "map looks interactive" (base style visible, mobile
+       hint text already showing) and "the load handler's awaited fetches
+       finished" — a tap in that window used to do nothing, and a
+       frustrated retry tap would then double-tap-zoom instead of opening
+       the snapshot (the exact bug this file already has one fix for). It
+       also means a single rejected fetch inside `load` can no longer
+       prevent this handler from ever binding. */
+    let hoveredId: string | number | null = null;
+    let hoveredSource: string = "";
+
+    map.on("mousemove", (e) => {
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: getLoadedZoneFillLayers(),
+      });
+
+      if (hoveredId !== null && hoveredSource) {
+        map.setFeatureState(
+          { source: hoveredSource, id: hoveredId },
+          { hover: false }
+        );
+      }
+
+      if (features.length > 0) {
+        const f = features[0];
+        hoveredSource = f.source ?? "";
+        hoveredId = f.id ?? 0;
+        map.setFeatureState(
+          { source: hoveredSource, id: hoveredId },
+          { hover: true }
+        );
+        map.getCanvas().style.cursor = "pointer";
+      } else {
+        hoveredId = null;
+        hoveredSource = "";
+        map.getCanvas().style.cursor = "";
+      }
+    });
+
+    map.on("click", (e) => {
+      const isMobileView = window.matchMedia("(max-width: 768px)").matches;
+
+      /* Zone popup — desktop only: zone fills blanket whole corridors, so on
+         mobile every tap would stack a popup under the snapshot sheet */
+      const features = map.queryRenderedFeatures(e.point, {
+        layers: getLoadedZoneFillLayers(),
+      });
+      if (!isMobileView && features.length > 0) {
+        const props = features[0].properties || {};
+        const sourceKey = (features[0].source ?? "").replace("zone-", "");
+        const label = ZONE_LABELS[sourceKey] || sourceKey;
+        const name = props.name || props.Name || props.NAME || "";
+        new mapboxgl.Popup({ maxWidth: "260px", className: "bureau-popup" })
+          .setLngLat(e.lngLat)
+          .setHTML(
+            `<div style="font-family:Inter,sans-serif">
+              <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#2563EB;margin-bottom:4px">${label}</div>
+              ${name ? `<div style="font-size:14px;font-weight:600;color:#0C1B33">${name}</div>` : ""}
+            </div>`
+          )
+          .addTo(map);
+      }
+
+      /* POI popup — desktop only, same reasoning as the zone popup above:
+         on mobile the snapshot sheet already surfaces this tap, so a second
+         popup would just stack underneath it. */
+      const poiLayers = Object.keys(POI_LAYERS)
+        .map((k) => `poi-${k}`)
+        .filter((id) => map.getLayer(id));
+      if (!isMobileView && poiLayers.length > 0) {
+        const poiFeats = map.queryRenderedFeatures(e.point, {
+          layers: poiLayers,
+        });
+        if (poiFeats.length > 0) {
+          const p = poiFeats[0].properties || {};
+          const layerKey = (poiFeats[0].layer?.id ?? "").replace("poi-", "");
+          const cfg = POI_LAYERS[layerKey];
+          const nameField = cfg?.nameField;
+          const name = (nameField ? p[nameField] : null) ||
+            p.station_name || p.short_name || p.long_name ||
+            p.name_ || p.Name || p.name || "";
+          const addr = p.address || p.street_address || p.the_geom_address || "";
+          new mapboxgl.Popup({ maxWidth: "260px", className: "bureau-popup" })
+            .setLngLat(e.lngLat)
+            .setHTML(
+              `<div style="font-family:Inter,sans-serif">
+                <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:${cfg.color};margin-bottom:4px">${cfg.label}</div>
+                ${name ? `<div style="font-size:14px;font-weight:600;color:#0C1B33">${name}</div>` : ""}
+                ${addr ? `<div style="font-size:12px;color:#5A6478;margin-top:2px">${addr}</div>` : ""}
+              </div>`
+            )
+            .addTo(map);
+        }
+      }
+
+      /* Area data (label + neighborhood zoom + snapshot card) — a tap opens
+         the snapshot on every viewport. Mapbox only fires `click` for
+         non-drag touches, so panning stays free; mobile skips the auto-zoom
+         below so a tap never yanks the viewport. */
+      const drawing = drawRef.current?.getMode?.() === "draw_polygon";
+      if (!drawing) {
+        // Skip community-area zoom if the click landed on a parcel
+        const clickedParcel = map.getLayer("parcels-fill")
+          ? map.queryRenderedFeatures(e.point, { layers: ["parcels-fill"] }).length > 0
+          : false;
+
+        let areaLabel: string | undefined;
+        if (map.getLayer("community-areas-fill")) {
+          const caFeats = map.queryRenderedFeatures(e.point, {
+            layers: ["community-areas-fill"],
+          });
+          if (caFeats.length > 0) {
+            const community = caFeats[0].properties?.community;
+            if (community) {
+              areaLabel = community
+                .toLowerCase()
+                .replace(/\b\w/g, (c: string) => c.toUpperCase());
+
+              // Zoom to the community area boundary — desktop only: on mobile
+              // the jump reads as "tap zoomed the map" and hides that the
+              // snapshot opened (skip when clicking a parcel or already at parcel zoom)
+              if (!isMobileView && !clickedParcel && map.getZoom() < 15) {
+                const geometry = caFeats[0].geometry;
+                if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
+                  const coords =
+                    geometry.type === "Polygon"
+                      ? geometry.coordinates.flat()
+                      : geometry.coordinates.flat(2);
+                  if (coords.length > 0) {
+                    const bounds = new mapboxgl.LngLatBounds();
+                    for (const c of coords) {
+                      bounds.extend(c as [number, number]);
+                    }
+                    map.fitBounds(bounds, { padding: 60, duration: 1200, maxZoom: 14.5 });
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        loadCensusRef.current(e.lngLat.lat, e.lngLat.lng, areaLabel);
+        lastClickRef.current(e.lngLat.lat, e.lngLat.lng);
+        snapshotOpenedAtRef.current = Date.now();
+        setSnapshotOpen(true);
+      }
+    });
+
     // Keep Mapbox's canvas + tap→location mapping in sync with the container.
     // On iOS Safari the toolbar show/hide changes 100dvh (and thus the map
     // height) after init; without a resize, taps over much of the map land on
@@ -575,149 +745,16 @@ export default function MapView() {
         }
       });
 
-      await Promise.all(zoneLoadPromises);
-
-      // Track which zone layers actually loaded (have sources on the map)
-      const loadedZoneFillLayers = ZONE_KEYS
-        .map((k) => `zone-${k}-fill`)
-        .filter((id) => map.getLayer(id));
-
-      /* Hover + click for zones */
-      let hoveredId: string | number | null = null;
-      let hoveredSource: string = "";
-
-      map.on("mousemove", (e) => {
-        const features = map.queryRenderedFeatures(e.point, {
-          layers: loadedZoneFillLayers,
-        });
-
-        if (hoveredId !== null && hoveredSource) {
-          map.setFeatureState(
-            { source: hoveredSource, id: hoveredId },
-            { hover: false }
-          );
-        }
-
-        if (features.length > 0) {
-          const f = features[0];
-          hoveredSource = f.source ?? "";
-          hoveredId = f.id ?? 0;
-          map.setFeatureState(
-            { source: hoveredSource, id: hoveredId },
-            { hover: true }
-          );
-          map.getCanvas().style.cursor = "pointer";
-        } else {
-          hoveredId = null;
-          hoveredSource = "";
-          map.getCanvas().style.cursor = "";
-        }
-      });
-
-      map.on("click", (e) => {
-        const isMobileView = window.matchMedia("(max-width: 768px)").matches;
-
-        /* Zone popup — desktop only: zone fills blanket whole corridors, so on
-           mobile every tap would stack a popup under the snapshot sheet */
-        const features = map.queryRenderedFeatures(e.point, {
-          layers: loadedZoneFillLayers,
-        });
-        if (!isMobileView && features.length > 0) {
-          const props = features[0].properties || {};
-          const sourceKey = (features[0].source ?? "").replace("zone-", "");
-          const label = ZONE_LABELS[sourceKey] || sourceKey;
-          const name = props.name || props.Name || props.NAME || "";
-          new mapboxgl.Popup({ maxWidth: "260px", className: "bureau-popup" })
-            .setLngLat(e.lngLat)
-            .setHTML(
-              `<div style="font-family:Inter,sans-serif">
-                <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#2563EB;margin-bottom:4px">${label}</div>
-                ${name ? `<div style="font-size:14px;font-weight:600;color:#0C1B33">${name}</div>` : ""}
-              </div>`
-            )
-            .addTo(map);
-        }
-
-        /* POI popup */
-        const poiLayers = Object.keys(POI_LAYERS)
-          .map((k) => `poi-${k}`)
-          .filter((id) => map.getLayer(id));
-        if (poiLayers.length > 0) {
-          const poiFeats = map.queryRenderedFeatures(e.point, {
-            layers: poiLayers,
-          });
-          if (poiFeats.length > 0) {
-            const p = poiFeats[0].properties || {};
-            const layerKey = (poiFeats[0].layer?.id ?? "").replace("poi-", "");
-            const cfg = POI_LAYERS[layerKey];
-            const nameField = cfg?.nameField;
-            const name = (nameField ? p[nameField] : null) ||
-              p.station_name || p.short_name || p.long_name ||
-              p.name_ || p.Name || p.name || "";
-            const addr = p.address || p.street_address || p.the_geom_address || "";
-            new mapboxgl.Popup({ maxWidth: "260px", className: "bureau-popup" })
-              .setLngLat(e.lngLat)
-              .setHTML(
-                `<div style="font-family:Inter,sans-serif">
-                  <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:${cfg.color};margin-bottom:4px">${cfg.label}</div>
-                  ${name ? `<div style="font-size:14px;font-weight:600;color:#0C1B33">${name}</div>` : ""}
-                  ${addr ? `<div style="font-size:12px;color:#5A6478;margin-top:2px">${addr}</div>` : ""}
-                </div>`
-              )
-              .addTo(map);
-          }
-        }
-
-        /* Area data (label + neighborhood zoom + snapshot card) — a tap opens
-           the snapshot on every viewport. Mapbox only fires `click` for
-           non-drag touches, so panning stays free; mobile skips the auto-zoom
-           below so a tap never yanks the viewport. */
-        const drawing = drawRef.current?.getMode?.() === "draw_polygon";
-        if (!drawing) {
-          // Skip community-area zoom if the click landed on a parcel
-          const clickedParcel = map.getLayer("parcels-fill")
-            ? map.queryRenderedFeatures(e.point, { layers: ["parcels-fill"] }).length > 0
-            : false;
-
-          let areaLabel: string | undefined;
-          if (map.getLayer("community-areas-fill")) {
-            const caFeats = map.queryRenderedFeatures(e.point, {
-              layers: ["community-areas-fill"],
-            });
-            if (caFeats.length > 0) {
-              const community = caFeats[0].properties?.community;
-              if (community) {
-                areaLabel = community
-                  .toLowerCase()
-                  .replace(/\b\w/g, (c: string) => c.toUpperCase());
-
-                // Zoom to the community area boundary — desktop only: on mobile
-                // the jump reads as "tap zoomed the map" and hides that the
-                // snapshot opened (skip when clicking a parcel or already at parcel zoom)
-                if (!isMobileView && !clickedParcel && map.getZoom() < 15) {
-                  const geometry = caFeats[0].geometry;
-                  if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
-                    const coords =
-                      geometry.type === "Polygon"
-                        ? geometry.coordinates.flat()
-                        : geometry.coordinates.flat(2);
-                    if (coords.length > 0) {
-                      const bounds = new mapboxgl.LngLatBounds();
-                      for (const c of coords) {
-                        bounds.extend(c as [number, number]);
-                      }
-                      map.fitBounds(bounds, { padding: 60, duration: 1200, maxZoom: 14.5 });
-                    }
-                  }
-                }
-              }
-            }
-          }
-
-          loadCensusRef.current(e.lngLat.lat, e.lngLat.lng, areaLabel);
-          lastClickRef.current(e.lngLat.lat, e.lngLat.lng);
-          snapshotOpenedAtRef.current = Date.now();
-          setSnapshotOpen(true);
+      // Promise.allSettled (not Promise.all): one zone's addSource/addLayer
+      // throwing must not abort the rest of map init — the zoning-districts
+      // fetch, the parcels/vacant-properties layers, the draw control, and
+      // setLoaded(true) all run after this line and would otherwise never
+      // run, permanently leaving the "Drawing zone boundaries" loading
+      // overlay up with no visible error.
+      const zoneLoadResults = await Promise.allSettled(zoneLoadPromises);
+      zoneLoadResults.forEach((result, i) => {
+        if (result.status === "rejected") {
+          console.warn(`[MapView] Zone layer "${ZONE_KEYS[i]}" failed to load:`, result.reason);
         }
       });
 
@@ -1596,7 +1633,7 @@ export default function MapView() {
           <button
             onClick={() => { setLegendOpen((o) => !o); setSnapshotOpen(false); }}
             aria-label="Map layers"
-            className={`w-11 h-11 flex items-center justify-center rounded-full backdrop-blur border shadow-md transition-colors ${
+            className={`w-11 h-11 flex items-center justify-center rounded-full backdrop-blur border shadow-md transition-colors touch-manipulation ${
               legendOpen ? "bg-[#2563EB] text-white border-[#2563EB]" : "bg-white/95 text-[#0C1B33]/70 border-[#0C1B33]/10"
             }`}
           >
