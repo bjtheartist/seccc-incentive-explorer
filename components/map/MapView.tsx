@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
-import { Layers, Crosshair } from "lucide-react";
+import { Layers } from "lucide-react";
 import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
@@ -49,14 +49,12 @@ export default function MapView() {
   );
   const [legendOpen, setLegendOpen] = useState(true);
   const [snapshotOpen, setSnapshotOpen] = useState(true);
-  // Mobile "tap the map for area data" mode. Off by default so taps pan/explore
-  // and search is the primary path; armed via a toggle (clear active state).
-  const [tapForAreaData, setTapForAreaData] = useState(false);
-  const tapForAreaDataRef = useRef(false);
-  useEffect(() => { tapForAreaDataRef.current = tapForAreaData; }, [tapForAreaData]);
   // Timestamp when the legend opened, to ignore the iOS post-tap ghost click.
   const legendOpenedAtRef = useRef(0);
   useEffect(() => { if (legendOpen) legendOpenedAtRef.current = Date.now(); }, [legendOpen]);
+  // Timestamp when a map tap opened the snapshot — MapSnapshotPanel uses it to
+  // ignore the same ghost click, which otherwise lands on the ×/links/CTA.
+  const snapshotOpenedAtRef = useRef(0);
   const [zoningRefOpen, setZoningRefOpen] = useState(false);
   const [classRefOpen, setClassRefOpen] = useState(false);
   const [zoningInfo, setZoningInfo] = useState<string | null>(null);
@@ -617,11 +615,14 @@ export default function MapView() {
       });
 
       map.on("click", (e) => {
-        /* Zone popup */
+        const isMobileView = window.matchMedia("(max-width: 768px)").matches;
+
+        /* Zone popup — desktop only: zone fills blanket whole corridors, so on
+           mobile every tap would stack a popup under the snapshot sheet */
         const features = map.queryRenderedFeatures(e.point, {
           layers: loadedZoneFillLayers,
         });
-        if (features.length > 0) {
+        if (!isMobileView && features.length > 0) {
           const props = features[0].properties || {};
           const sourceKey = (features[0].source ?? "").replace("zone-", "");
           const label = ZONE_LABELS[sourceKey] || sourceKey;
@@ -667,13 +668,12 @@ export default function MapView() {
           }
         }
 
-        /* Area data (label + neighborhood zoom + snapshot card) — gated so the
-           two experiences don't clash: always on desktop (snapshot panel is
-           open); on mobile only when the user has armed "tap for area data"
-           mode, so plain taps pan/explore and search stays the primary path. */
-        const isMobileView = window.matchMedia("(max-width: 768px)").matches;
+        /* Area data (label + neighborhood zoom + snapshot card) — a tap opens
+           the snapshot on every viewport. Mapbox only fires `click` for
+           non-drag touches, so panning stays free; mobile skips the auto-zoom
+           below so a tap never yanks the viewport. */
         const drawing = drawRef.current?.getMode?.() === "draw_polygon";
-        if (!drawing && (!isMobileView || tapForAreaDataRef.current)) {
+        if (!drawing) {
           // Skip community-area zoom if the click landed on a parcel
           const clickedParcel = map.getLayer("parcels-fill")
             ? map.queryRenderedFeatures(e.point, { layers: ["parcels-fill"] }).length > 0
@@ -691,8 +691,10 @@ export default function MapView() {
                   .toLowerCase()
                   .replace(/\b\w/g, (c: string) => c.toUpperCase());
 
-                // Zoom to the community area boundary (skip when clicking a parcel or already at parcel zoom)
-                if (!clickedParcel && map.getZoom() < 15) {
+                // Zoom to the community area boundary — desktop only: on mobile
+                // the jump reads as "tap zoomed the map" and hides that the
+                // snapshot opened (skip when clicking a parcel or already at parcel zoom)
+                if (!isMobileView && !clickedParcel && map.getZoom() < 15) {
                   const geometry = caFeats[0].geometry;
                   if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
                     const coords =
@@ -714,6 +716,7 @@ export default function MapView() {
 
           loadCensusRef.current(e.lngLat.lat, e.lngLat.lng, areaLabel);
           lastClickRef.current(e.lngLat.lat, e.lngLat.lng);
+          snapshotOpenedAtRef.current = Date.now();
           setSnapshotOpen(true);
         }
       });
@@ -789,9 +792,12 @@ export default function MapView() {
               }
             });
 
-            // Click popup — show code + human-readable description
+            // Click popup — show code + human-readable description. Desktop
+            // only: zoning blankets the city, so on mobile it would stack a
+            // popup under the snapshot sheet on every tap.
             map.on("click", layerId, (e) => {
               if (!e.features?.length) return;
+              if (window.matchMedia("(max-width: 768px)").matches) return;
               const props = e.features[0].properties || {};
               const zoneClass = props.zone_class || "Unknown";
               const description = describeZoneClass(zoneClass);
@@ -1596,22 +1602,6 @@ export default function MapView() {
           >
             <Layers className="w-5 h-5" />
           </button>
-          {/* Tap-for-area-data mode toggle — blue when armed */}
-          <button
-            onClick={() => {
-              const next = !tapForAreaData;
-              setTapForAreaData(next);
-              if (next) setLegendOpen(false);
-              else setSnapshotOpen(false);
-            }}
-            aria-label="Tap map for area data"
-            aria-pressed={tapForAreaData}
-            className={`w-11 h-11 flex items-center justify-center rounded-full backdrop-blur border shadow-md transition-colors ${
-              tapForAreaData ? "bg-[#2563EB] text-white border-[#2563EB]" : "bg-white/95 text-[#0C1B33]/70 border-[#0C1B33]/10"
-            }`}
-          >
-            <Crosshair className="w-5 h-5" />
-          </button>
         </div>
       )}
 
@@ -1619,21 +1609,15 @@ export default function MapView() {
       <div className="absolute bottom-3 left-3 z-10 bg-white/90 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[9px] md:text-[9px] tracking-[0.1em] text-[#0C1B33]/40 hidden md:block">
         Click anywhere for area data &middot; Right-click for zoning
       </div>
-      {/* Mobile hint reflects the active mode */}
-      <div
-        className={`absolute bottom-3 left-3 z-10 backdrop-blur border px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.1em] md:hidden transition-colors ${
-          tapForAreaData
-            ? "bg-[#2563EB]/95 text-white border-[#2563EB]"
-            : "bg-white/90 text-[#0C1B33]/45 border-[#0C1B33]/10"
-        }`}
-      >
-        {tapForAreaData ? "Area-data mode on — tap the map" : "Search, or tap ⌖ for area data"}
+      {/* Mobile hint */}
+      <div className="absolute bottom-3 left-3 z-10 backdrop-blur border px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.1em] md:hidden bg-white/90 text-[#0C1B33]/45 border-[#0C1B33]/10">
+        Tap the map for area data
       </div>
 
       {/* Mobile backdrop — legend only. The snapshot is a bottom sheet that must
-          leave the map tappable (a tap inspects a new area in armed mode), so it
-          gets NO scrim. The 350ms guard ignores the synthetic "ghost click" iOS
-          fires right after a tap, which was instantly dismissing the just-opened
+          leave the map tappable (a tap inspects a new area), so it gets NO
+          scrim. The 350ms guard ignores the synthetic "ghost click" iOS fires
+          right after a tap, which was instantly dismissing the just-opened
           snapshot (it landed on this scrim before you could see the card). */}
       {legendOpen && (
         <div
@@ -1687,6 +1671,7 @@ export default function MapView() {
           tifFinanceLoading={tifFinanceLoading}
           zoningInfo={zoningInfo}
           isGeneratingSnapshot={isGeneratingSnapshot}
+          openedAt={snapshotOpenedAtRef.current}
           onClose={() => setSnapshotOpen(false)}
           onGenerateSnapshot={handleGenerateSnapshot}
           onDrawArea={() => {
