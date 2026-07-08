@@ -491,8 +491,8 @@ export default function MapView() {
       }
 
       /* Area data (label + neighborhood zoom + snapshot card) — a tap opens
-         the snapshot on every viewport; mobile skips the auto-zoom below so
-         a tap never yanks the viewport. */
+         the snapshot on every viewport and zooms to the tapped neighborhood
+         (mobile pads the fit so the area lands above the bottom sheet). */
       const drawing = drawRef.current?.getMode?.() === "draw_polygon";
       if (!drawing) {
         // Skip community-area zoom if the click landed on a parcel
@@ -512,10 +512,12 @@ export default function MapView() {
                 .toLowerCase()
                 .replace(/\b\w/g, (c: string) => c.toUpperCase());
 
-              // Zoom to the community area boundary — desktop only: on mobile
-              // the jump reads as "tap zoomed the map" and hides that the
-              // snapshot opened (skip when clicking a parcel or already at parcel zoom)
-              if (!isMobileView && !clickedParcel && map.getZoom() < 15) {
+              // Zoom to the community area boundary (skip when clicking a
+              // parcel or already at parcel zoom). On mobile the snapshot
+              // sheet covers the bottom ~60% of the screen, so pad the fit
+              // asymmetrically to land the neighborhood in the visible strip
+              // above the sheet instead of centering it behind it.
+              if (!clickedParcel && map.getZoom() < 15) {
                 const geometry = caFeats[0].geometry;
                 if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
                   const coords =
@@ -527,7 +529,13 @@ export default function MapView() {
                     for (const c of coords) {
                       bounds.extend(c as [number, number]);
                     }
-                    map.fitBounds(bounds, { padding: 60, duration: 1200, maxZoom: 14.5 });
+                    let padding: number | mapboxgl.PaddingOptions = 60;
+                    if (isMobileView) {
+                      const mapH = map.getContainer().clientHeight;
+                      const bottom = Math.min(Math.round(mapH * 0.58), mapH - 220);
+                      padding = { top: 60, left: 24, right: 24, bottom: Math.max(bottom, 0) };
+                    }
+                    map.fitBounds(bounds, { padding, duration: 1200, maxZoom: 14.5 });
                   }
                 }
               }
