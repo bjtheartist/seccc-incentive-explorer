@@ -1,4 +1,9 @@
-@import "https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css";
+/* Import from the installed npm package, not the Mapbox CDN — this always
+   matches the installed mapbox-gl JS version (no drift from a hardcoded
+   URL) and removes a cross-origin fetch that, if it fails on flaky mobile
+   data, silently drops the touch-action rules Mapbox's CSS sets on the
+   canvas container. */
+@import "mapbox-gl/dist/mapbox-gl.css";
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";

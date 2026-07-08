@@ -88,7 +88,10 @@ export default function MapSnapshotPanel({
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none"
+      className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none touch-manipulation"
+      // touch-manipulation: this sheet sits over the map canvas (which Mapbox's
+      // own CSS sets to touch-action:none) — without it, Safari's residual
+      // double-tap/zoom gesture heuristics can still apply to the panel itself.
       // Swallow the synthetic "ghost click" iOS fires ~300ms after the map tap that opened this panel — it would otherwise hit the ×, a link, or Generate.
       onClickCapture={(e) => {
         if (openedAt && Date.now() - openedAt < 350) {
