@@ -424,12 +424,22 @@ export default function MapView() {
       }
     });
 
-    map.on("click", (e) => {
+    /* One shared tap action, fed by two entry points:
+       1. map "click" — mouse clicks, plus the browser's touch-compat click
+          where it still exists;
+       2. the touch-tap recognizer below — real touches.
+       mapbox-gl-draw preventDefaults every touchend on the canvas ("Prevent
+       emulated mouse events", draw's events.js), which stops WebKit/Blink
+       from synthesizing a compat click for a touch — so on real touch
+       devices map "click" never fires and the recognizer is the only path
+       that opens the snapshot. Draw only suppresses the browser's compat
+       events, not Mapbox's event bus, so the touch map events still arrive. */
+    const openSnapshotAt = (point: mapboxgl.Point, lngLat: mapboxgl.LngLat) => {
       const isMobileView = window.matchMedia("(max-width: 768px)").matches;
 
       /* Zone popup — desktop only: zone fills blanket whole corridors, so on
          mobile every tap would stack a popup under the snapshot sheet */
-      const features = map.queryRenderedFeatures(e.point, {
+      const features = map.queryRenderedFeatures(point, {
         layers: getLoadedZoneFillLayers(),
       });
       if (!isMobileView && features.length > 0) {
@@ -438,7 +448,7 @@ export default function MapView() {
         const label = ZONE_LABELS[sourceKey] || sourceKey;
         const name = props.name || props.Name || props.NAME || "";
         new mapboxgl.Popup({ maxWidth: "260px", className: "bureau-popup" })
-          .setLngLat(e.lngLat)
+          .setLngLat(lngLat)
           .setHTML(
             `<div style="font-family:Inter,sans-serif">
               <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#2563EB;margin-bottom:4px">${label}</div>
@@ -455,7 +465,7 @@ export default function MapView() {
         .map((k) => `poi-${k}`)
         .filter((id) => map.getLayer(id));
       if (!isMobileView && poiLayers.length > 0) {
-        const poiFeats = map.queryRenderedFeatures(e.point, {
+        const poiFeats = map.queryRenderedFeatures(point, {
           layers: poiLayers,
         });
         if (poiFeats.length > 0) {
@@ -468,7 +478,7 @@ export default function MapView() {
             p.name_ || p.Name || p.name || "";
           const addr = p.address || p.street_address || p.the_geom_address || "";
           new mapboxgl.Popup({ maxWidth: "260px", className: "bureau-popup" })
-            .setLngLat(e.lngLat)
+            .setLngLat(lngLat)
             .setHTML(
               `<div style="font-family:Inter,sans-serif">
                 <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:${cfg.color};margin-bottom:4px">${cfg.label}</div>
@@ -481,19 +491,18 @@ export default function MapView() {
       }
 
       /* Area data (label + neighborhood zoom + snapshot card) — a tap opens
-         the snapshot on every viewport. Mapbox only fires `click` for
-         non-drag touches, so panning stays free; mobile skips the auto-zoom
-         below so a tap never yanks the viewport. */
+         the snapshot on every viewport; mobile skips the auto-zoom below so
+         a tap never yanks the viewport. */
       const drawing = drawRef.current?.getMode?.() === "draw_polygon";
       if (!drawing) {
         // Skip community-area zoom if the click landed on a parcel
         const clickedParcel = map.getLayer("parcels-fill")
-          ? map.queryRenderedFeatures(e.point, { layers: ["parcels-fill"] }).length > 0
+          ? map.queryRenderedFeatures(point, { layers: ["parcels-fill"] }).length > 0
           : false;
 
         let areaLabel: string | undefined;
         if (map.getLayer("community-areas-fill")) {
-          const caFeats = map.queryRenderedFeatures(e.point, {
+          const caFeats = map.queryRenderedFeatures(point, {
             layers: ["community-areas-fill"],
           });
           if (caFeats.length > 0) {
@@ -526,11 +535,55 @@ export default function MapView() {
           }
         }
 
-        loadCensusRef.current(e.lngLat.lat, e.lngLat.lng, areaLabel);
-        lastClickRef.current(e.lngLat.lat, e.lngLat.lng);
+        loadCensusRef.current(lngLat.lat, lngLat.lng, areaLabel);
+        lastClickRef.current(lngLat.lat, lngLat.lng);
         snapshotOpenedAtRef.current = Date.now();
         setSnapshotOpen(true);
       }
+    };
+
+    let lastTouchTapAt = 0;
+    let touchTapStart: { x: number; y: number; startedAt: number } | null = null;
+
+    map.on("click", (e) => {
+      // The recognizer below just handled this tap; if the browser also
+      // synthesized a compat click for it, drop the duplicate. Mouse clicks
+      // never set lastTouchTapAt, so desktop behavior is unchanged.
+      if (Date.now() - lastTouchTapAt < 700) return;
+      openSnapshotAt(e.point, e.lngLat);
+    });
+
+    /* Touch-tap recognizer: a single stationary finger, down-to-up within
+       900ms and ~12px, is a tap. Runs on every viewport (a desktop-width
+       iPad has the same dead compat click); pans, pinches, and long presses
+       fall through to Mapbox's gesture handlers untouched. */
+    map.on("touchstart", (e) => {
+      if (e.points.length !== 1) {
+        touchTapStart = null;
+        return;
+      }
+      touchTapStart = { x: e.point.x, y: e.point.y, startedAt: Date.now() };
+    });
+    map.on("touchmove", (e) => {
+      if (!touchTapStart) return;
+      const dx = e.point.x - touchTapStart.x;
+      const dy = e.point.y - touchTapStart.y;
+      if (e.points.length !== 1 || dx * dx + dy * dy > 144) {
+        touchTapStart = null;
+      }
+    });
+    map.on("touchcancel", () => {
+      touchTapStart = null;
+    });
+    map.on("touchend", (e) => {
+      const start = touchTapStart;
+      touchTapStart = null;
+      if (!start || e.points.length !== 1) return;
+      const dx = e.point.x - start.x;
+      const dy = e.point.y - start.y;
+      if (Date.now() - start.startedAt > 900 || dx * dx + dy * dy > 144) return;
+      lastTouchTapAt = Date.now();
+      openSnapshotAt(e.point, e.lngLat);
     });
 
     // Keep Mapbox's canvas + tap→location mapping in sync with the container.
