@@ -38,9 +38,6 @@ export function Header() {
             <div className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-[#0C1B33]/80">
               Chicago Incentive Explorer
             </div>
-            <div className="font-mono-bureau text-[10px] tracking-[0.1em] text-[#0C1B33]/50 mt-0.5">
-              Built by Billy Ndizeye &middot; South East Chicago Chamber
-            </div>
           </div>
         </Link>
 
@@ -158,11 +155,6 @@ export function Header() {
                 </button>
               )}
             </nav>
-            <div className="mt-8 pt-4 border-t border-[#0C1B33]/5 text-center font-mono-bureau text-[10px] tracking-[0.1em] text-[#0C1B33]/45 leading-relaxed">
-              Built by Billy Ndizeye
-              <br />
-              South East Chicago Chamber of Commerce
-            </div>
           </SheetContent>
         </Sheet>
       </div>
