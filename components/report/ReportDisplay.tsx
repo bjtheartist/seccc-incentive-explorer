@@ -33,6 +33,7 @@ import type { ApplicationPortal, ExecutiveSummary, Program, VerificationStep } f
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
+import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
 import {
   Accordion,
   AccordionItem,
@@ -2121,6 +2122,15 @@ export function ReportDisplay({
               <FileText className="w-3.5 h-3.5" />
               {isVacancyReport ? "Save Report" : "Save to Workspace"}
             </button>
+            {report.metadata?.lat != null && report.metadata?.lon != null && (
+              <WatchAreaButton
+                lat={report.metadata.lat}
+                lon={report.metadata.lon}
+                label={report.metadata?.address || report.title}
+                callbackUrl={`/map?lat=${report.metadata.lat}&lon=${report.metadata.lon}&label=${encodeURIComponent(report.metadata?.address || report.title)}`}
+                variant="action"
+              />
+            )}
             <button
               onClick={() => setEmailDialogOpen(true)}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"

@@ -758,7 +758,7 @@ function ReportWizardPage() {
       .then((data) => { if (data) setParcelData(data); })
       .catch(() => {})
       .finally(() => setParcelLookupComplete(true));
-    cachedFetch<DistrictData>(`/api/districts?lat=${wizardState.lat}&lon=${wizardState.lon}`)
+    cachedFetch<DistrictData>(`/api/representatives?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setDistrictsData(data); })
       .catch(() => {});
   }, [wizardState.lat, wizardState.lon]);

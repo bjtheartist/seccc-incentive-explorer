@@ -3,9 +3,21 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { ArrowRight, FileText, Loader2, Target } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Eye,
+  FileText,
+  Loader2,
+  MapPin,
+  Pencil,
+  Target,
+  Trash2,
+  X,
+} from "lucide-react";
 import { PendingReportSaver } from "@/components/workspace/PendingReportSaver";
 import type { BusinessProject, SavedReportSummary } from "@/lib/workspace";
+import type { WatchedArea } from "@/lib/types/user-intel";
 
 export default function WorkspacePage() {
   return (
@@ -16,11 +28,23 @@ export default function WorkspacePage() {
   );
 }
 
+function parseAreaPoint(area: WatchedArea): { lat: number; lon: number } | null {
+  const parts = area.areaId.split(",").map((p) => Number(p.trim()));
+  if (parts.length !== 2 || !parts.every(Number.isFinite)) return null;
+  return { lat: parts[0], lon: parts[1] };
+}
+
 function WorkspaceContent() {
   const { status } = useSession();
   const [projects, setProjects] = useState<BusinessProject[] | null>(null);
   const [reports, setReports] = useState<SavedReportSummary[] | null>(null);
+  const [watchedAreas, setWatchedAreas] = useState<WatchedArea[] | null>(null);
   const [error, setError] = useState("");
+
+  // Report row actions
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [rowBusyId, setRowBusyId] = useState<string | null>(null);
 
   useEffect(() => {
     if (status !== "authenticated") {
@@ -30,17 +54,81 @@ function WorkspaceContent() {
     Promise.all([
       fetch("/api/projects").then((res) => res.json()),
       fetch("/api/saved-reports").then((res) => res.json()),
+      fetch("/api/watchlist").then((res) => res.json()),
     ])
-      .then(([projectData, reportData]) => {
+      .then(([projectData, reportData, watchlistData]) => {
         setProjects(projectData.projects || []);
         setReports(reportData.reports || []);
+        setWatchedAreas(watchlistData.areas || []);
       })
       .catch(() => setError("Could not load your workspace."))
   }, [status]);
 
+  const startRename = (report: SavedReportSummary) => {
+    setRenamingId(report.id);
+    setRenameDraft(report.title);
+  };
+
+  const commitRename = async (reportId: string) => {
+    const title = renameDraft.trim();
+    if (!title) {
+      setRenamingId(null);
+      return;
+    }
+    setRowBusyId(reportId);
+    try {
+      const res = await fetch(`/api/saved-reports/${reportId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
+      if (!res.ok) throw new Error();
+      setReports((prev) =>
+        (prev || []).map((r) => (r.id === reportId ? { ...r, title } : r))
+      );
+      setRenamingId(null);
+    } catch {
+      setError("Could not rename the report.");
+    } finally {
+      setRowBusyId(null);
+    }
+  };
+
+  const deleteReport = async (report: SavedReportSummary) => {
+    if (!window.confirm(`Delete "${report.title}"? This cannot be undone.`)) {
+      return;
+    }
+    setRowBusyId(report.id);
+    try {
+      const res = await fetch(`/api/saved-reports/${report.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error();
+      setReports((prev) => (prev || []).filter((r) => r.id !== report.id));
+    } catch {
+      setError("Could not delete the report.");
+    } finally {
+      setRowBusyId(null);
+    }
+  };
+
+  const unwatchArea = async (area: WatchedArea) => {
+    try {
+      const res = await fetch(
+        `/api/watchlist?areaType=${encodeURIComponent(area.areaType)}&areaId=${encodeURIComponent(area.areaId)}`,
+        { method: "DELETE" }
+      );
+      if (!res.ok && res.status !== 404) throw new Error();
+      setWatchedAreas((prev) => (prev || []).filter((a) => a.id !== area.id));
+    } catch {
+      setError("Could not remove the watched area.");
+    }
+  };
+
   const isLoading =
     status === "loading" ||
-    (status === "authenticated" && (projects === null || reports === null));
+    (status === "authenticated" &&
+      (projects === null || reports === null || watchedAreas === null));
 
   if (isLoading) {
     return (
@@ -154,6 +242,79 @@ function WorkspaceContent() {
           )}
         </section>
 
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]/70">
+              Watched Areas
+            </h2>
+            <span className="text-[12px] text-[#0C1B33]/35">
+              {watchedAreas?.length || 0} watched
+            </span>
+          </div>
+          {(watchedAreas || []).length === 0 ? (
+            <EmptyState
+              icon={<Eye className="w-5 h-5" />}
+              title="No watched areas yet"
+              text="Tap a location on the map and choose &ldquo;Watch this area&rdquo; to get weekly deadline alerts for it."
+              action={
+                <Link
+                  href="/map"
+                  className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB] hover:text-[#1d4ed8] mt-3"
+                >
+                  <MapPin className="w-3.5 h-3.5" />
+                  Open the map
+                </Link>
+              }
+            />
+          ) : (
+            <div className="bg-white border border-[#0C1B33]/10 divide-y divide-[#0C1B33]/6">
+              {(watchedAreas || []).map((area) => {
+                const point = parseAreaPoint(area);
+                const label = area.areaLabel || area.areaId;
+                return (
+                  <div
+                    key={area.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4"
+                  >
+                    <div className="min-w-0">
+                      <h3 className="text-sm text-[#0C1B33]/80 font-medium truncate">
+                        {label}
+                      </h3>
+                      <p className="text-[12px] text-[#0C1B33]/35 mt-0.5">
+                        Watching since{" "}
+                        {new Date(area.createdAt).toLocaleDateString("en-US", {
+                          year: "numeric",
+                          month: "short",
+                          day: "numeric",
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4 shrink-0">
+                      {point && (
+                        <Link
+                          href={`/map?lat=${point.lat}&lon=${point.lon}&label=${encodeURIComponent(label)}`}
+                          className="inline-flex items-center gap-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB]/80 hover:text-[#2563EB]"
+                        >
+                          <MapPin className="w-3.5 h-3.5" />
+                          View on map
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => unwatchArea(area)}
+                        className="inline-flex items-center gap-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/35 hover:text-red-600"
+                        title="Stop watching this area"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                        Unwatch
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </section>
+
         <section>
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]/70">
@@ -169,23 +330,90 @@ function WorkspaceContent() {
             />
           ) : (
             <div className="bg-white border border-[#0C1B33]/10 divide-y divide-[#0C1B33]/6">
-              {(reports || []).slice(0, 8).map((report) => (
-                <Link
-                  key={report.id}
-                  href={`/workspace/reports/${report.id}`}
-                  className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-[#0C1B33]/[0.02]"
-                >
-                  <div>
-                    <h3 className="text-sm text-[#0C1B33]/80 font-medium">{report.title}</h3>
-                    <p className="text-[12px] text-[#0C1B33]/35 mt-0.5">
-                      {report.address || report.reportType}
-                    </p>
+              {(reports || []).slice(0, 8).map((report) => {
+                const isRenaming = renamingId === report.id;
+                const isBusy = rowBusyId === report.id;
+                return (
+                  <div
+                    key={report.id}
+                    className="flex items-center justify-between gap-4 px-5 py-4 hover:bg-[#0C1B33]/[0.02]"
+                  >
+                    <div className="min-w-0 flex-1">
+                      {isRenaming ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            value={renameDraft}
+                            onChange={(e) => setRenameDraft(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") commitRename(report.id);
+                              if (e.key === "Escape") setRenamingId(null);
+                            }}
+                            autoFocus
+                            className="flex-1 border border-[#2563EB]/40 px-3 py-1.5 text-sm text-[#0C1B33] focus:outline-none focus:border-[#2563EB]"
+                          />
+                          <button
+                            onClick={() => commitRename(report.id)}
+                            disabled={isBusy}
+                            className="p-1.5 text-[#2563EB] hover:bg-[#2563EB]/5 disabled:opacity-50"
+                            title="Save name"
+                          >
+                            {isBusy ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
+                          </button>
+                          <button
+                            onClick={() => setRenamingId(null)}
+                            className="p-1.5 text-[#0C1B33]/35 hover:text-[#0C1B33]"
+                            title="Cancel"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      ) : (
+                        <Link href={`/workspace/reports/${report.id}`} className="block">
+                          <h3 className="text-sm text-[#0C1B33]/80 font-medium truncate">
+                            {report.title}
+                          </h3>
+                          <p className="text-[12px] text-[#0C1B33]/35 mt-0.5">
+                            {report.address || report.reportType}
+                          </p>
+                        </Link>
+                      )}
+                    </div>
+                    {!isRenaming && (
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => startRename(report)}
+                          className="p-2 text-[#0C1B33]/30 hover:text-[#2563EB] transition-colors"
+                          title="Rename report"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deleteReport(report)}
+                          disabled={isBusy}
+                          className="p-2 text-[#0C1B33]/30 hover:text-red-600 transition-colors disabled:opacity-50"
+                          title="Delete report"
+                        >
+                          {isBusy ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Trash2 className="w-3.5 h-3.5" />
+                          )}
+                        </button>
+                        <Link
+                          href={`/workspace/reports/${report.id}`}
+                          className="ml-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/30 hover:text-[#0C1B33]"
+                        >
+                          Open
+                        </Link>
+                      </div>
+                    )}
                   </div>
-                  <span className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/30">
-                    Open
-                  </span>
-                </Link>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -198,10 +426,12 @@ function EmptyState({
   icon,
   title,
   text,
+  action,
 }: {
   icon: React.ReactNode;
   title: string;
   text: string;
+  action?: React.ReactNode;
 }) {
   return (
     <div className="bg-white border border-dashed border-[#0C1B33]/15 px-6 py-10 text-center">
@@ -210,6 +440,7 @@ function EmptyState({
       </div>
       <h3 className="text-sm text-[#0C1B33]/75 font-medium mb-1">{title}</h3>
       <p className="text-[12px] text-[#0C1B33]/35">{text}</p>
+      {action}
     </div>
   );
 }
