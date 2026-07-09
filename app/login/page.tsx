@@ -77,9 +77,10 @@ function LoginContent() {
             Partner &amp; admin sign in.
           </h1>
           <p className="text-white/50 text-sm leading-relaxed">
-            For SECCC staff and partner organizations. Exploring the map and
-            generating reports never requires an account — sign in only to
-            keep incentive reports organized in a workspace.
+            Exploring the map and generating reports never requires an
+            account. Sign in to keep reports in a workspace, watch the
+            corridors you care about, and get alerts before funding deadlines
+            close.
           </p>
         </div>
         <div className="px-8 py-8 space-y-5">

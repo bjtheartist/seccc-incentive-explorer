@@ -1428,6 +1428,26 @@ export default function MapView() {
     []
   );
 
+  /* ── Deep link: /map?lat=&lon=[&label=] ── */
+  // Used by "View on map" links from workspace watched areas. Reuses the
+  // search-result flow (fly to point, drop marker, open the snapshot panel).
+  const deepLinkHandledRef = useRef(false);
+  useEffect(() => {
+    if (!loaded || deepLinkHandledRef.current) return;
+    deepLinkHandledRef.current = true;
+    const params = new URLSearchParams(window.location.search);
+    const lat = Number(params.get("lat"));
+    const lon = Number(params.get("lon"));
+    if (!params.get("lat") || !Number.isFinite(lat) || !Number.isFinite(lon)) {
+      return;
+    }
+    handleSearchResult({
+      lat,
+      lon,
+      label: params.get("label") || `${lat.toFixed(4)}, ${lon.toFixed(4)}`,
+    });
+  }, [loaded, handleSearchResult]);
+
   const handleGenerateSnapshot = useCallback(async () => {
     if (isGeneratingSnapshot) return;
 
@@ -1763,6 +1783,8 @@ export default function MapView() {
         <MapSnapshotPanel
           areaStats={areaStats}
           snapshotLabel={snapshotLabel}
+          snapshotLat={lastClickLat}
+          snapshotLon={lastClickLon}
           snapshotPrograms={snapshotPrograms}
           snapshotTifFinance={snapshotTifFinance}
           snapshotContextSummary={snapshotContextSummary}

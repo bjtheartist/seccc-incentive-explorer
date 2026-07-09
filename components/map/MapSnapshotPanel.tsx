@@ -7,10 +7,13 @@ import type { ProgramCheckResult } from "@/lib/types";
 import type { TifFinanceContext } from "@/lib/tif-finance";
 import type { LocationContextMapSummary } from "@/lib/location-context";
 import { formatMiles } from "@/lib/transport-access";
+import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
 
 interface MapSnapshotPanelProps {
   areaStats: AreaStats;
   snapshotLabel: string;
+  snapshotLat?: number | null;
+  snapshotLon?: number | null;
   snapshotPrograms: ProgramCheckResult[];
   snapshotTifFinance: TifFinanceContext | null;
   snapshotContextSummary?: LocationContextMapSummary | null;
@@ -26,6 +29,8 @@ interface MapSnapshotPanelProps {
 export default function MapSnapshotPanel({
   areaStats,
   snapshotLabel,
+  snapshotLat,
+  snapshotLon,
   snapshotPrograms,
   snapshotTifFinance,
   snapshotContextSummary,
@@ -492,6 +497,15 @@ export default function MapSnapshotPanel({
         >
           {isGeneratingSnapshot ? "Preparing Snapshot" : "Generate Location Snapshot"}
         </button>
+        {snapshotLat != null && snapshotLon != null && (
+          <WatchAreaButton
+            lat={snapshotLat}
+            lon={snapshotLon}
+            label={snapshotLabel}
+            callbackUrl="/map"
+            variant="panel"
+          />
+        )}
         <button
           onClick={onDrawArea}
           className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase border border-[#0C1B33]/15 text-[#0C1B33]/60 py-2 px-3 hover:text-[#0C1B33] hover:border-[#0C1B33]/30 transition-colors"
