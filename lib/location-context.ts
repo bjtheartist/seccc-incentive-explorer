@@ -8,6 +8,7 @@ import type {
 import type { SiteSignals } from "./site-signals";
 import type { TifFinanceContext } from "./tif-finance";
 import type { TransportAccess } from "./transport-access";
+import type { MobilityAccess } from "./mobility-access";
 import type {
   CommunityAsset,
   DistrictData,
@@ -78,6 +79,7 @@ export interface LocationContextInput {
   neighborhoodEconomics?: NeighborhoodEconomicContext;
   siteSignals?: SiteSignals | null;
   transport?: TransportAccess | null;
+  mobilityAccess?: MobilityAccess | null;
   tifFinance?: TifFinanceContext | null;
 }
 
@@ -113,6 +115,7 @@ export interface LocationContext {
   site: {
     siteSignals?: LocationContextClaim<SiteSignals>;
     transport?: LocationContextClaim<TransportAccess>;
+    mobilityAccess?: LocationContextClaim<MobilityAccess>;
     tifFinance?: LocationContextClaim<LocationContextTifFinance>;
   };
   neighborhood: {
@@ -172,6 +175,11 @@ const SOURCE_REGISTRY: Record<string, LocationContextSource> = {
     id: "transport",
     label: "Transportation and logistics access layer",
     freshness: "Application proximity scan",
+  },
+  mobilityAccess: {
+    id: "mobilityAccess",
+    label: "Transportation and site access context",
+    freshness: "Cached public-source proximity scan",
   },
   tifFinance: {
     id: "tifFinance",
@@ -391,6 +399,16 @@ export function buildLocationContext(
       input.transport,
       ["transport"],
       { caveat: "Distances are straight-line proximity signals, not travel-time or freight-capacity analysis." }
+    );
+  }
+  if (input.mobilityAccess) {
+    context.site.mobilityAccess = claim(
+      "mobilityAccess",
+      "Transportation and site access",
+      "proximity",
+      input.mobilityAccess,
+      ["mobilityAccess"],
+      { caveat: "Distances are straight-line proximity signals, not routed travel times or site-access due diligence." }
     );
   }
   if (tifFinance) {

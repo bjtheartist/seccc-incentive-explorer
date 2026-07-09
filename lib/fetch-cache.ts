@@ -33,6 +33,7 @@ const TTL_RULES: { pattern: RegExp; ttlMs: number }[] = [
   { pattern: /\/api\/parcel/, ttlMs: 30 * 60_000 },
   { pattern: /\/api\/representatives/, ttlMs: 30 * 60_000 },
   { pattern: /\/api\/districts/, ttlMs: 30 * 60_000 },
+  { pattern: /\/api\/mobility-access/, ttlMs: 30 * 60_000 },
   { pattern: /\/api\/assets/, ttlMs: 30 * 60_000 },
   // External datasets (community areas, zoning polygons, POI)
   { pattern: /data\.cityofchicago\.org/, ttlMs: 60 * 60_000 },

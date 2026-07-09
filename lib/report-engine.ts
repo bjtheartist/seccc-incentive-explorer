@@ -2,6 +2,7 @@ import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule,
 import type { LocalBusinessSupportContext, LocalBusinessSupportOrganization } from "./local-business-support";
 import type { SiteSignals } from "./site-signals";
 import type { TransportAccess } from "./transport-access";
+import type { MobilityAccess, MobilityAccessLine, MobilityAccessPoint } from "./mobility-access";
 import { buildLocationContext, publicParcelContext } from "./location-context";
 import type { LocationContext } from "./location-context";
 import { isClass7aEligible } from "./parcel-classes";
@@ -809,6 +810,12 @@ const DATA_SOURCES: Record<string, DataSourceCitation> = {
     label: "Transportation and logistics access layer",
     description: "Straight-line proximity to expressways, freight rail, and Chicago airports for site-context screening.",
   },
+  mobilityAccess: {
+    id: "mobilityAccess",
+    label: "Public mobility and site-access sources",
+    description: "CTA GTFS, Metra GTFS, Chicago CTA bus stops, Chicago bike routes, airports, and Explorer transport-network layers used for straight-line proximity context.",
+    url: "https://www.transitchicago.com/developers/gtfs/",
+  },
 };
 
 function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
@@ -822,7 +829,8 @@ function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
   if (ctx.neighborhoodEconomics?.property) sources.push(DATA_SOURCES.assessorValues);
   if (ctx.neighborhoodEconomics?.tifFinance) sources.push(DATA_SOURCES.tifFinance);
   if (ctx.siteSignals) sources.push(DATA_SOURCES.siteSignals);
-  if (ctx.transport) sources.push(DATA_SOURCES.transport);
+  if (ctx.mobilityAccess) sources.push(DATA_SOURCES.mobilityAccess);
+  else if (ctx.transport) sources.push(DATA_SOURCES.transport);
   if (ctx.localBusinessSupport?.organizations?.length) {
     const source = { ...DATA_SOURCES.localBusinessSupport };
     const firstUrl = ctx.localBusinessSupport.sourceUrls?.[0];
@@ -3346,6 +3354,50 @@ function buildLogisticsAccessItem(transport: TransportAccess): ReportItem {
   };
 }
 
+function pointList(points: MobilityAccessPoint[], limit = 3): string {
+  return points
+    .slice(0, limit)
+    .map((point) => {
+      const routes = point.routes?.length ? ` routes ${point.routes.slice(0, 4).join(", ")}` : "";
+      return `${point.name}${routes} (${formatMiles(point.miles)})`;
+    })
+    .join(" · ");
+}
+
+function lineList(lines: MobilityAccessLine[], limit = 3): string {
+  return lines
+    .slice(0, limit)
+    .map((line) => {
+      const routeType = line.routeType ? `${line.routeType} on ` : "";
+      return `${routeType}${line.name} (${formatMiles(line.miles)})`;
+    })
+    .join(" · ");
+}
+
+function buildTransportationSiteAccessItem(mobility: MobilityAccess): ReportItem {
+  const detailLines = [
+    mobility.ctaRailStations.length ? `CTA rail: ${pointList(mobility.ctaRailStations)}` : null,
+    mobility.busStops.length ? `CTA bus: ${pointList(mobility.busStops)}` : null,
+    mobility.metraStations.length ? `Metra: ${pointList(mobility.metraStations)}` : null,
+    mobility.bikeRoutes.length ? `Bike routes: ${lineList(mobility.bikeRoutes)}` : null,
+    mobility.expressways.length ? `Drive access: ${lineList(mobility.expressways)}` : null,
+    mobility.airports.length ? `Airports: ${pointList(mobility.airports, 2)}` : null,
+    mobility.freightRail.length ? `Freight rail: ${lineList(mobility.freightRail)}` : null,
+    ...(mobility.caveats.length
+      ? [mobility.caveats[0]]
+      : ["Distances are straight-line proximity signals; verify travel time and site access before relying on them."]),
+  ].filter(Boolean) as string[];
+
+  return {
+    label: "Transportation & Site Access",
+    value: [mobility.transitLabel, mobility.bikeLabel, mobility.driveLabel]
+      .filter(Boolean)
+      .join(" · "),
+    detail: detailLines.join("\n"),
+    sourceLabel: "Public mobility and transportation access sources",
+  };
+}
+
 function buildSiteSignalsItem(siteSignals: SiteSignals): ReportItem {
   const lines = [
     siteSignals.nofAwardsNearby > 0
@@ -3423,7 +3475,7 @@ function buildPoliticalDistrictItem(districts: DistrictData): ReportItem | null 
     detail: [
       ...(parts.length > 2 ? [parts.slice(2).join(" · ")] : []),
       ...(officials.length > 0 ? [`Current officials: ${officials.join(" · ")}`] : []),
-      "Representative info is civic context only; update or verify rosters after elections, appointments, or redistricting before formal outreach or applications.",
+      "Representative info is civic context only; verify with the source offices before formal outreach or applications.",
     ].join("\n"),
   };
 }
@@ -3468,6 +3520,7 @@ export interface ReportContext {
   neighborhoodEconomics?: NeighborhoodEconomicContext;
   siteSignals?: SiteSignals | null;
   transport?: TransportAccess | null;
+  mobilityAccess?: MobilityAccess | null;
   locationContext?: LocationContext;
 }
 
@@ -3606,8 +3659,11 @@ export function generateReportData(
       if (districtItem) contextItems.push(districtItem);
     }
 
+    const mobilityAccess = locationContext.site.mobilityAccess?.value ?? ctx.mobilityAccess;
     const transport = locationContext.site.transport?.value ?? ctx.transport;
-    if (transport) {
+    if (mobilityAccess) {
+      contextItems.push(buildTransportationSiteAccessItem(mobilityAccess));
+    } else if (transport) {
       contextItems.push(buildLogisticsAccessItem(transport));
     }
 
@@ -3621,7 +3677,7 @@ export function generateReportData(
         // Prepend as "Site Overview" — first section users see
         report.sections.unshift({
           title: "Site Overview",
-          description: "Zoning, property, district, logistics, and nearby public-data signals for this address.",
+          description: "Zoning, property, district, transportation, and nearby public-data signals for this address.",
           items: contextItems,
         });
       } else {

@@ -141,7 +141,7 @@ describe("generateReportData", () => {
     );
 
     const siteOverview = report.sections.find((section) => section.title === "Site Overview");
-    expect(siteOverview?.description).toContain("logistics");
+    expect(siteOverview?.description).toContain("transportation");
     expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.value).toContain("I-90");
     expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.detail).toContain("Straight-line distance only");
     expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.sourceLabel).toBe("Transportation and logistics access layer");
@@ -153,6 +153,104 @@ describe("generateReportData", () => {
     expect(report.locationContext?.site.transport?.kind).toBe("proximity");
     expect(report.dataSources?.map((source) => source.id)).toEqual(
       expect.arrayContaining(["siteSignals", "transport"])
+    );
+  });
+
+  it("prefers transportation and site access context when richer mobility data is available", () => {
+    const report = generateReportData(
+      makeState(),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        transport: {
+          expressway: { name: "I-90", miles: 1.2 },
+          rail: { name: "NS Chicago Line", miles: 0.3 },
+          midwayMiles: 8.7,
+          ohareMiles: 19.1,
+        },
+        mobilityAccess: {
+          transitLabel: "Strong public transit access",
+          bikeLabel: "Nearby bike access",
+          driveLabel: "Good drive access",
+          freightLabel: "Freight rail nearby",
+          ctaRailStations: [
+            {
+              name: "79th",
+              category: "cta_rail",
+              agency: "CTA",
+              miles: 0.2,
+              lat: 41.7504,
+              lon: -87.6251,
+              sourceId: "cta-gtfs",
+            },
+          ],
+          metraStations: [],
+          busStops: [
+            {
+              name: "79th Red Line Station",
+              category: "bus_stop",
+              agency: "CTA",
+              miles: 0.1,
+              lat: 41.7508,
+              lon: -87.625,
+              routes: ["75", "79"],
+              sourceId: "cta-bus-stops",
+            },
+          ],
+          bikeRoutes: [
+            {
+              name: "STATE ST - 79TH ST to 75TH ST",
+              category: "bike_route",
+              miles: 0.1,
+              routeType: "Buffered Bike Lane",
+              sourceId: "city-bike-routes",
+            },
+          ],
+          airports: [
+            {
+              name: "Chicago Midway International",
+              category: "airport",
+              agency: "Airport",
+              miles: 8.7,
+              lat: 41.7868,
+              lon: -87.7522,
+              sourceId: "airports",
+            },
+          ],
+          expressways: [
+            {
+              name: "Dan Ryan Expy (I-90/94)",
+              category: "expressway",
+              miles: 1.2,
+              sourceId: "transport-network",
+            },
+          ],
+          freightRail: [
+            {
+              name: "NS Chicago Line",
+              category: "freight_rail",
+              miles: 0.3,
+              sourceId: "transport-network",
+            },
+          ],
+          sources: [],
+          caveats: ["Distances are straight-line proximity signals, not routed travel times."],
+          refreshedAt: "2026-07-09T00:00:00.000Z",
+        },
+      },
+    );
+
+    const siteOverview = report.sections.find((section) => section.title === "Site Overview");
+    const mobilityItem = siteOverview?.items.find((item) => item.label === "Transportation & Site Access");
+    expect(mobilityItem?.value).toContain("Strong public transit access");
+    expect(mobilityItem?.detail).toContain("CTA rail: 79th");
+    expect(mobilityItem?.detail).toContain("CTA bus: 79th Red Line Station routes 75, 79");
+    expect(mobilityItem?.detail).toContain("Bike routes: Buffered Bike Lane");
+    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")).toBeUndefined();
+    expect(report.locationContext?.site.mobilityAccess?.kind).toBe("proximity");
+    expect(report.dataSources?.map((source) => source.id)).toEqual(
+      expect.arrayContaining(["mobilityAccess"])
     );
   });
 
