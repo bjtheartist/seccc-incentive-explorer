@@ -463,7 +463,7 @@ export default function MapSnapshotPanel({
                 )}
                 {areaStats.districts.officials && (
                   <div className="pt-1 text-[9px] text-[#0C1B33]/35">
-                    Current public roster lookup; verify before formal outreach.
+                    Current public roster lookup; update/verify after elections, appointments, or redistricting.
                   </div>
                 )}
               </div>

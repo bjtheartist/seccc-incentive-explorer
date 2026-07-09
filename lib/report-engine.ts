@@ -3423,7 +3423,7 @@ function buildPoliticalDistrictItem(districts: DistrictData): ReportItem | null 
     detail: [
       ...(parts.length > 2 ? [parts.slice(2).join(" · ")] : []),
       ...(officials.length > 0 ? [`Current officials: ${officials.join(" · ")}`] : []),
-      "Representative info is civic context only; verify with the source offices before formal outreach or applications.",
+      "Representative info is civic context only; update or verify rosters after elections, appointments, or redistricting before formal outreach or applications.",
     ].join("\n"),
   };
 }
