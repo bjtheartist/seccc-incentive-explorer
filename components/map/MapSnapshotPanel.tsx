@@ -399,46 +399,71 @@ export default function MapSnapshotPanel({
         </>
       )}
 
-      {/* Districts */}
+      {/* Civic representation */}
       {(areaStats.districts || areaStats.districtsLoading) && (
         <>
           <div className="mx-4 h-px bg-[#0C1B33]/8" />
           <div className="px-4 py-3">
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#D97706]/50 mb-1.5">
-              Districts
+              Civic Representation
             </div>
             {areaStats.districtsLoading && !areaStats.districts ? (
               <div className="text-[10px] text-[#0C1B33]/40 italic">Loading districts...</div>
             ) : areaStats.districts ? (
               <div className="space-y-0.5">
                 {areaStats.districts.ward && (
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-[#0C1B33]/50">Ward</span>
-                    <span className="font-mono-bureau text-[#0C1B33]/80">{areaStats.districts.ward}</span>
+                  <div className="flex justify-between gap-3 text-[10px]">
+                    <span className="text-[#0C1B33]/50 shrink-0">Alderperson</span>
+                    <span className="font-mono-bureau text-[#0C1B33]/80 text-right">
+                      {areaStats.districts.officials?.alderperson?.name
+                        ? `${areaStats.districts.officials.alderperson.name} · Ward ${areaStats.districts.ward}`
+                        : `Ward ${areaStats.districts.ward}`}
+                    </span>
                   </div>
                 )}
                 {areaStats.districts.commissionerDistrict && (
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-[#0C1B33]/50">Commissioner</span>
-                    <span className="font-mono-bureau text-[#0C1B33]/80">Dist. {areaStats.districts.commissionerDistrict}</span>
+                  <div className="flex justify-between gap-3 text-[10px]">
+                    <span className="text-[#0C1B33]/50 shrink-0">Commissioner</span>
+                    <span className="font-mono-bureau text-[#0C1B33]/80 text-right">
+                      {areaStats.districts.officials?.commissioner?.name
+                        ? `${areaStats.districts.officials.commissioner.name} · Dist. ${areaStats.districts.commissionerDistrict}`
+                        : `Dist. ${areaStats.districts.commissionerDistrict}`}
+                    </span>
                   </div>
                 )}
                 {areaStats.districts.congressionalDistrict && (
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-[#0C1B33]/50">Congressional</span>
-                    <span className="font-mono-bureau text-[#0C1B33]/80">IL-{areaStats.districts.congressionalDistrict}</span>
+                  <div className="flex justify-between gap-3 text-[10px]">
+                    <span className="text-[#0C1B33]/50 shrink-0">Congress</span>
+                    <span className="font-mono-bureau text-[#0C1B33]/80 text-right">
+                      {areaStats.districts.officials?.congressionalRepresentative?.name
+                        ? `${areaStats.districts.officials.congressionalRepresentative.name} · IL-${areaStats.districts.congressionalDistrict}`
+                        : `IL-${areaStats.districts.congressionalDistrict}`}
+                    </span>
                   </div>
                 )}
                 {areaStats.districts.stateHouseDistrict && (
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-[#0C1B33]/50">State Rep</span>
-                    <span className="font-mono-bureau text-[#0C1B33]/80">Dist. {areaStats.districts.stateHouseDistrict}</span>
+                  <div className="flex justify-between gap-3 text-[10px]">
+                    <span className="text-[#0C1B33]/50 shrink-0">State Rep</span>
+                    <span className="font-mono-bureau text-[#0C1B33]/80 text-right">
+                      {areaStats.districts.officials?.stateRepresentative?.name
+                        ? `${areaStats.districts.officials.stateRepresentative.name} · Dist. ${areaStats.districts.stateHouseDistrict}`
+                        : `Dist. ${areaStats.districts.stateHouseDistrict}`}
+                    </span>
                   </div>
                 )}
                 {areaStats.districts.stateSenateDistrict && (
-                  <div className="flex justify-between text-[10px]">
-                    <span className="text-[#0C1B33]/50">State Senate</span>
-                    <span className="font-mono-bureau text-[#0C1B33]/80">Dist. {areaStats.districts.stateSenateDistrict}</span>
+                  <div className="flex justify-between gap-3 text-[10px]">
+                    <span className="text-[#0C1B33]/50 shrink-0">State Senate</span>
+                    <span className="font-mono-bureau text-[#0C1B33]/80 text-right">
+                      {areaStats.districts.officials?.stateSenator?.name
+                        ? `${areaStats.districts.officials.stateSenator.name} · Dist. ${areaStats.districts.stateSenateDistrict}`
+                        : `Dist. ${areaStats.districts.stateSenateDistrict}`}
+                    </span>
+                  </div>
+                )}
+                {areaStats.districts.officials && (
+                  <div className="pt-1 text-[9px] text-[#0C1B33]/35">
+                    Current public roster lookup; verify before formal outreach.
                   </div>
                 )}
               </div>

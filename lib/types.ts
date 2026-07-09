@@ -272,6 +272,39 @@ export interface DistrictData {
   stateHouseDistrict: string | null;
   stateSenateDistrict: string | null;
   commissionerDistrict: string | null;
+  officials?: DistrictOfficials;
+  sources?: DistrictSource[];
+  refreshedAt?: string;
+}
+
+export interface DistrictOfficial {
+  office: string;
+  district: string;
+  districtLabel: string;
+  name: string;
+  party?: string | null;
+  phone?: string;
+  email?: string;
+  website?: string;
+  sourceId: string;
+  sourceLabel: string;
+  sourceUrl: string;
+  refreshedAt: string;
+}
+
+export interface DistrictOfficials {
+  alderperson?: DistrictOfficial | null;
+  commissioner?: DistrictOfficial | null;
+  congressionalRepresentative?: DistrictOfficial | null;
+  stateRepresentative?: DistrictOfficial | null;
+  stateSenator?: DistrictOfficial | null;
+}
+
+export interface DistrictSource {
+  id: string;
+  label: string;
+  url: string;
+  refreshedAt: string;
 }
 
 export interface LookupResult {

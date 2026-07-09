@@ -3382,6 +3382,52 @@ function buildSiteSignalsItem(siteSignals: SiteSignals): ReportItem {
   };
 }
 
+function districtParts(districts: DistrictData): string[] {
+  const parts: string[] = [];
+  if (districts.ward) parts.push(`Ward ${districts.ward}`);
+  if (districts.commissionerDistrict) parts.push(`Commissioner Dist. ${districts.commissionerDistrict}`);
+  if (districts.congressionalDistrict) parts.push(`IL-${districts.congressionalDistrict}`);
+  if (districts.stateHouseDistrict) parts.push(`State Rep Dist. ${districts.stateHouseDistrict}`);
+  if (districts.stateSenateDistrict) parts.push(`State Senate Dist. ${districts.stateSenateDistrict}`);
+  return parts;
+}
+
+function officialParts(districts: DistrictData): string[] {
+  return [
+    districts.officials?.alderperson
+      ? `${districts.officials.alderperson.name} (${districts.officials.alderperson.districtLabel})`
+      : null,
+    districts.officials?.commissioner
+      ? `${districts.officials.commissioner.name} (${districts.officials.commissioner.districtLabel})`
+      : null,
+    districts.officials?.congressionalRepresentative
+      ? `${districts.officials.congressionalRepresentative.name} (${districts.officials.congressionalRepresentative.districtLabel})`
+      : null,
+    districts.officials?.stateRepresentative
+      ? `${districts.officials.stateRepresentative.name} (${districts.officials.stateRepresentative.districtLabel})`
+      : null,
+    districts.officials?.stateSenator
+      ? `${districts.officials.stateSenator.name} (${districts.officials.stateSenator.districtLabel})`
+      : null,
+  ].filter(Boolean) as string[];
+}
+
+function buildPoliticalDistrictItem(districts: DistrictData): ReportItem | null {
+  const parts = districtParts(districts);
+  if (parts.length === 0) return null;
+
+  const officials = officialParts(districts);
+  return {
+    label: officials.length > 0 ? "Civic Representation" : "Political Districts",
+    value: parts.slice(0, 2).join(" · "),
+    detail: [
+      ...(parts.length > 2 ? [parts.slice(2).join(" · ")] : []),
+      ...(officials.length > 0 ? [`Current officials: ${officials.join(" · ")}`] : []),
+      "Representative info is civic context only; verify with the source offices before formal outreach or applications.",
+    ].join("\n"),
+  };
+}
+
 /**
  * Census data for the report location.
  */
@@ -3556,19 +3602,8 @@ export function generateReportData(
 
     // District data items
     if (districts) {
-      const districtParts: string[] = [];
-      if (districts.ward) districtParts.push(`Ward ${districts.ward}`);
-      if (districts.commissionerDistrict) districtParts.push(`Commissioner Dist. ${districts.commissionerDistrict}`);
-      if (districts.congressionalDistrict) districtParts.push(`IL-${districts.congressionalDistrict}`);
-      if (districts.stateHouseDistrict) districtParts.push(`State Rep Dist. ${districts.stateHouseDistrict}`);
-      if (districts.stateSenateDistrict) districtParts.push(`State Senate Dist. ${districts.stateSenateDistrict}`);
-      if (districtParts.length > 0) {
-        contextItems.push({
-          label: "Political Districts",
-          value: districtParts.slice(0, 2).join(" · "),
-          detail: districtParts.length > 2 ? districtParts.slice(2).join(" · ") : undefined,
-        });
-      }
+      const districtItem = buildPoliticalDistrictItem(districts);
+      if (districtItem) contextItems.push(districtItem);
     }
 
     const transport = locationContext.site.transport?.value ?? ctx.transport;
@@ -3632,18 +3667,8 @@ export function generateReportData(
         });
       }
       if (districts) {
-        const parts: string[] = [];
-        if (districts.ward) parts.push(`Ward ${districts.ward}`);
-        if (districts.commissionerDistrict) parts.push(`Commissioner Dist. ${districts.commissionerDistrict}`);
-        if (districts.congressionalDistrict) parts.push(`IL-${districts.congressionalDistrict}`);
-        if (districts.stateHouseDistrict) parts.push(`State Rep Dist. ${districts.stateHouseDistrict}`);
-        if (districts.stateSenateDistrict) parts.push(`State Senate Dist. ${districts.stateSenateDistrict}`);
-        if (parts.length > 0) {
-          propertyItems.push({
-            label: "Political Districts",
-            value: parts.join(" · "),
-          });
-        }
+        const districtItem = buildPoliticalDistrictItem(districts);
+        if (districtItem) propertyItems.push(districtItem);
       }
 
       // Insert after Location Context / Site Profile

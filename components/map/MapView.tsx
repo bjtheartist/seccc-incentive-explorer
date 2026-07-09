@@ -226,8 +226,8 @@ export default function MapView() {
           setSnapshotLabel(`Tract ${data.tractId}`);
         }
 
-        // Async non-blocking fetch for political districts
-        cachedFetch<DistrictData>(`/api/districts?lat=${lat}&lon=${lon}`)
+        // Async non-blocking fetch for political districts and current officials
+        cachedFetch<DistrictData>(`/api/representatives?lat=${lat}&lon=${lon}`)
           .then((districts) => {
             setAreaStats((prev) => ({ ...prev, districts, districtsLoading: false }));
           })
