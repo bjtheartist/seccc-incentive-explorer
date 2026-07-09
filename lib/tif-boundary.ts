@@ -92,9 +92,21 @@ export async function findTifBoundaryAtPoint(
   const point = turf.point([lon, lat]);
 
   const match = collection.features.find(
-    (feature): feature is Feature<Polygon | MultiPolygon> =>
-      Boolean(feature.geometry) &&
-      turf.booleanPointInPolygon(point, feature as Feature<Polygon | MultiPolygon>)
+    (feature): feature is Feature<Polygon | MultiPolygon> => {
+      if (!feature.geometry) return false;
+      try {
+        return turf.booleanPointInPolygon(
+          point,
+          feature as Feature<Polygon | MultiPolygon>
+        );
+      } catch {
+        // The city's TIF boundary GeoJSON ships at least one malformed
+        // feature (an unclosed ring), which makes turf throw "First and
+        // last coordinates in a ring must be the same". Skip that feature
+        // and keep scanning the rest instead of failing the whole lookup.
+        return false;
+      }
+    }
   );
 
   return match ? boundaryContextFromFeature(match) : null;

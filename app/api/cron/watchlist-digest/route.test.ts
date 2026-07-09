@@ -129,6 +129,47 @@ describe("GET /api/cron/watchlist-digest", () => {
     expect(payload.usersSkipped).toBe(1);
   });
 
+  it("still emails the user when one area's lookup throws (bad geometry)", async () => {
+    sqlMock.mockResolvedValue([
+      {
+        user_id: "user-1",
+        area_type: "point",
+        area_id: "41.8481,-87.6395", // trips malformed-ring source geometry
+        area_label: "Bad geometry corner",
+        email: "user1@example.com",
+        name: "User One",
+      },
+      ...watchedRows,
+    ]);
+    findTifBoundaryMock
+      .mockRejectedValueOnce(
+        new Error("First and last coordinates in a ring must be the same")
+      )
+      .mockResolvedValueOnce({
+        districtId: "T-999",
+        rawDistrictId: "T-999",
+        districtName: "Test District",
+        expirationDate: isoInDays(60),
+        boundaryWards: null,
+      });
+
+    const res = await GET(
+      digestRequest("/api/cron/watchlist-digest?dryRun=1", {
+        authorization: "Bearer test-secret",
+      })
+    );
+    const payload = await res.json();
+
+    expect(res.status).toBe(200);
+    // The failing area degrades to "nothing notable"; the good area still
+    // produces the user's digest.
+    expect(payload.wouldSend).toHaveLength(1);
+    expect(payload.wouldSend[0].areas).toHaveLength(1);
+    expect(payload.wouldSend[0].areas[0]).toMatchObject({
+      areaId: "41.7355,-87.5512",
+    });
+  });
+
   it("sends one email per user with notable items", async () => {
     sqlMock.mockResolvedValue([
       ...watchedRows,

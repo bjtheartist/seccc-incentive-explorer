@@ -130,7 +130,14 @@ export async function GET(req: NextRequest) {
     for (const area of user.areas) {
       let assessment = assessmentCache.get(area.areaId);
       if (assessment === undefined) {
-        assessment = await assessWatchedArea(area, resolvers, today);
+        // A single failing area degrades to "no findings" — it must not
+        // sink the rest of this user's digest (or other users' digests).
+        assessment = await assessWatchedArea(area, resolvers, today).catch(
+          (err) => {
+            console.error("watchlist digest: area skipped", area.areaId, err);
+            return null;
+          }
+        );
         assessmentCache.set(area.areaId, assessment);
       }
       if (assessment) {

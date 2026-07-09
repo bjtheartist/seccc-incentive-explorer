@@ -145,6 +145,30 @@ describe("assessWatchedArea", () => {
     });
   });
 
+  it("degrades to no findings when the area's lookups fail", async () => {
+    const result = await assessWatchedArea(
+      { areaType: "point", areaId: "41.7355,-87.5512", areaLabel: "Bad geometry" },
+      {
+        ...resolvers,
+        findTifBoundary: async () => {
+          throw new Error("First and last coordinates in a ring must be the same");
+        },
+        checkZones: async () => {
+          throw new Error("zone lookup failed");
+        },
+      },
+      TODAY
+    );
+
+    // The failure degrades to an empty assessment — it never throws.
+    expect(result).toMatchObject({
+      areaLabel: "Bad geometry",
+      tif: null,
+      deadlines: [],
+      notable: false,
+    });
+  });
+
   it("is not notable when nothing expires and no deadlines are near", async () => {
     const result = await assessWatchedArea(
       { areaType: "point", areaId: "41.7355,-87.5512", areaLabel: null },

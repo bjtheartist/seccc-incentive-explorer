@@ -158,38 +158,47 @@ export async function assessWatchedArea(
   const point = parsePointAreaId(area.areaId);
   if (!point) return null;
 
+  // Every per-area lookup degrades to "no info for this facet" on failure —
+  // one bad area (e.g. a point that trips malformed source geometry) must
+  // never sink the user's whole digest email.
   const [boundary, zoneResponse] = await Promise.all([
     resolvers.findTifBoundary(point.lat, point.lon).catch(() => null),
     resolvers.checkZones(point.lat, point.lon).catch(() => null),
   ]);
 
-  const tif = assessTifExpiration(boundary, today);
-
+  let tif: TifExpirationFinding | null = null;
   let deadlines: DeadlineItem[] = [];
-  const normalized = normalizeZoneCheckResponse(zoneResponse);
-  if (normalized) {
-    const matched = runConfidenceEngine(
-      resolvers.programs,
-      normalized.zones,
-      normalized.zoneNames
-    ).filter((r) => r.confidence !== "not_applicable");
+  try {
+    tif = assessTifExpiration(boundary, today);
 
-    const summary = deadlinesForAddress({
-      matchedPrograms: programDeadlineSlims(matched.map((r) => r.program)),
-      tifDistrict: boundary?.districtId ?? null,
-      tifFinancials: resolvers.tifFinancials,
-      sbifRollout: resolvers.sbifRollout,
-      today,
-      deadlineWindowDays: PROGRAM_DEADLINE_WINDOW_DAYS,
-    });
-    deadlines = summary.allItems.filter(
-      (item) =>
-        !item.isPast &&
-        // TIF expiration is reported via the boundary-based finding above
-        // (12-month/120-day thresholds); avoid double-counting it here.
-        item.kind !== "tif_expiration" &&
-        item.daysFromToday <= PROGRAM_DEADLINE_WINDOW_DAYS
-    );
+    const normalized = normalizeZoneCheckResponse(zoneResponse);
+    if (normalized) {
+      const matched = runConfidenceEngine(
+        resolvers.programs,
+        normalized.zones,
+        normalized.zoneNames
+      ).filter((r) => r.confidence !== "not_applicable");
+
+      const summary = deadlinesForAddress({
+        matchedPrograms: programDeadlineSlims(matched.map((r) => r.program)),
+        tifDistrict: boundary?.districtId ?? null,
+        tifFinancials: resolvers.tifFinancials,
+        sbifRollout: resolvers.sbifRollout,
+        today,
+        deadlineWindowDays: PROGRAM_DEADLINE_WINDOW_DAYS,
+      });
+      deadlines = summary.allItems.filter(
+        (item) =>
+          !item.isPast &&
+          // TIF expiration is reported via the boundary-based finding above
+          // (12-month/120-day thresholds); avoid double-counting it here.
+          item.kind !== "tif_expiration" &&
+          item.daysFromToday <= PROGRAM_DEADLINE_WINDOW_DAYS
+      );
+    }
+  } catch (err) {
+    console.error("watchlist digest: area assessment degraded", area.areaId, err);
+    deadlines = [];
   }
 
   return {
