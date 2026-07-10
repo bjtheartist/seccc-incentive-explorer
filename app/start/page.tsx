@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import type { Metadata } from "next";
 import { StartPageClient } from "@/components/start/StartPageClient";
 import { absoluteUrl, SITE_NAME } from "@/lib/seo";
@@ -22,5 +23,9 @@ export const metadata: Metadata = {
 };
 
 export default function StartPage() {
-  return <StartPageClient />;
+  return (
+    <Suspense fallback={null}>
+      <StartPageClient />
+    </Suspense>
+  );
 }

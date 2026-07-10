@@ -179,7 +179,7 @@ function LoginContent() {
           </p>
           <div className="pt-3 text-center">
             <Link
-              href="/report"
+              href="/report?source=login"
               className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/40 hover:text-[#0C1B33]"
             >
               Generate a report — no account needed

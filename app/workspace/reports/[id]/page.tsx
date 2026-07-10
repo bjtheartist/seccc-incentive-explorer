@@ -8,6 +8,7 @@ import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { ReportDisplay } from "@/components/report/ReportDisplay";
 import type { GeneratedReport } from "@/lib/report-engine";
 import type { WizardState } from "@/lib/report-wizard-config";
+import { deriveIsInstantMode } from "@/lib/workspace";
 
 export default function SavedReportPage() {
   const params = useParams<{ id: string }>();
@@ -100,6 +101,8 @@ export default function SavedReportPage() {
         wizardState={wizardState}
         onStartOver={() => router.push("/report")}
         onRefine={() => router.push("/report")}
+        isInstantMode={deriveIsInstantMode(wizardState)}
+        analyticsSource="workspace"
       />
     </div>
   );

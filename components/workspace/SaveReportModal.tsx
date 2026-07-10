@@ -6,6 +6,7 @@ import { Check, Loader2, X } from "lucide-react";
 import type { GeneratedReport } from "@/lib/report-engine";
 import type { WizardState } from "@/lib/report-wizard-config";
 import { GOAL_OPTIONS, type GoalType } from "@/lib/workspace";
+import { trackEvent } from "@/lib/analytics-events";
 
 export interface PendingSavedReport {
   reportData: GeneratedReport;
@@ -38,6 +39,15 @@ export function SaveReportModal({
       if (!res.ok) {
         throw new Error(data.error || "Could not save report");
       }
+
+      trackEvent("report_saved", {
+        reportType: reportData.reportType,
+        source: "save_report_modal",
+        address: reportData.metadata?.address ?? null,
+        lat: reportData.metadata?.lat ?? null,
+        lon: reportData.metadata?.lon ?? null,
+        metadata: { goalType },
+      });
 
       const projectId = data.report?.projectId;
       if (projectId) {

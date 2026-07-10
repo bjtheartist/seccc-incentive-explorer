@@ -15,6 +15,17 @@ describe("analytics events", () => {
     expect(isAnalyticsEventType("not_real")).toBe(false);
   });
 
+  it("accepts the report-funnel instrumentation events added for the 2026-07 audit", () => {
+    // Tier 0 "measure first" events: wizard step / refine exposure & click,
+    // silent-engine-failure visibility, and save/email click-level telemetry.
+    expect(isAnalyticsEventType("wizard_step_viewed")).toBe(true);
+    expect(isAnalyticsEventType("refine_cta_shown")).toBe(true);
+    expect(isAnalyticsEventType("refine_clicked")).toBe(true);
+    expect(isAnalyticsEventType("report_generation_failed")).toBe(true);
+    expect(isAnalyticsEventType("save_report_clicked")).toBe(true);
+    expect(isAnalyticsEventType("email_report_clicked")).toBe(true);
+  });
+
   it("sanitizes event payloads before storing", () => {
     const event = sanitizeAnalyticsEventPayload("refined_report_generated", {
       reportType: "site-incentives",

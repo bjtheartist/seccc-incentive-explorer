@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import {
@@ -34,6 +34,7 @@ import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
 import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
+import { trackEvent } from "@/lib/analytics-events";
 import {
   Accordion,
   AccordionItem,
@@ -790,6 +791,38 @@ function ReportNavigationLinks({
 
 // ─── Report Display ──────────────────────────────────────────────────
 
+// Small analytics helpers, intentionally duplicated from app/report/page.tsx.
+// This component and app/report/page.tsx's local ReportDisplay are two
+// diverged forks of the same UI (see RF2/RO1); unifying them is out of
+// scope here, so instrumentation added to one is mirrored in the other by
+// hand instead of shared.
+function analyticsReportKey(report: GeneratedReport): string {
+  return [
+    report.reportType,
+    report.generatedAt,
+    report.metadata?.address || report.title,
+  ].join("|");
+}
+
+function reportAnalyticsPayload(
+  report: GeneratedReport,
+  source: string,
+  metadata: Record<string, string | number | boolean | null | (string | number | boolean)[]> = {}
+) {
+  return {
+    reportType: report.reportType,
+    source,
+    address: report.metadata?.address ?? null,
+    lat: report.metadata?.lat ?? null,
+    lon: report.metadata?.lon ?? null,
+    metadata: {
+      reportKey: analyticsReportKey(report),
+      reportTitle: report.title,
+      ...metadata,
+    },
+  };
+}
+
 export function ReportDisplay({
   report,
   onStartOver,
@@ -805,6 +838,7 @@ export function ReportDisplay({
   onCompareGeocode,
   compareGeoResult,
   programs = [],
+  analyticsSource = "workspace",
 }: {
   report: GeneratedReport;
   onStartOver: () => void;
@@ -820,6 +854,8 @@ export function ReportDisplay({
   onCompareGeocode?: () => void;
   compareGeoResult?: { lat: number; lon: number; display_name: string } | null;
   programs?: Program[];
+  /** Entry-point label used on refine/save/email instrumentation (Tier 0 audit). */
+  analyticsSource?: string;
 }) {
   const { status } = useSession();
   const [linkCopied, setLinkCopied] = useState(false);
@@ -883,6 +919,11 @@ export function ReportDisplay({
   }, [reportWizardState]);
 
   const handleSaveReport = useCallback(() => {
+    trackEvent(
+      "save_report_clicked",
+      reportAnalyticsPayload(report, analyticsSource)
+    );
+
     if (status === "authenticated") {
       setSaveModalOpen(true);
       return;
@@ -892,7 +933,43 @@ export function ReportDisplay({
     window.location.assign(
       `/login?callbackUrl=${encodeURIComponent("/workspace?savePending=1")}`
     );
-  }, [report, reportWizardState, status]);
+  }, [analyticsSource, report, reportWizardState, status]);
+
+  const handleEmailReportClick = useCallback(() => {
+    trackEvent(
+      "email_report_clicked",
+      reportAnalyticsPayload(report, analyticsSource)
+    );
+    setEmailDialogOpen(true);
+  }, [analyticsSource, report]);
+
+  // Refine exposure event (Tier 0 / BM6), and a click handler that records
+  // banner-vs-action-row location (RF5) — mirrors app/report/page.tsx's
+  // in-file ReportDisplay so refine instrumentation isn't dark on saved
+  // Workspace reports too (RF1's success metric depends on this).
+  const refineShownKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isInstantMode || !onRefine || compact) return;
+    const shownKey = `${analyticsReportKey(report)}|refine-shown|${analyticsSource}`;
+    if (refineShownKeyRef.current === shownKey) return;
+    refineShownKeyRef.current = shownKey;
+
+    trackEvent(
+      "refine_cta_shown",
+      reportAnalyticsPayload(report, analyticsSource, { isInstantMode })
+    );
+  }, [analyticsSource, compact, isInstantMode, onRefine, report]);
+
+  const handleRefineClick = useCallback(
+    (location: "banner" | "action_row") => {
+      trackEvent(
+        "refine_clicked",
+        reportAnalyticsPayload(report, analyticsSource, { location })
+      );
+      onRefine?.();
+    },
+    [analyticsSource, onRefine, report]
+  );
 
   const priorityBadge: Record<string, { label: string; classes: string }> = {
     high: {
@@ -1232,7 +1309,7 @@ export function ReportDisplay({
                 Save Report
               </button>
               <button
-                onClick={() => setEmailDialogOpen(true)}
+                onClick={handleEmailReportClick}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"
               >
                 <Mail className="w-3.5 h-3.5" />
@@ -1367,7 +1444,7 @@ export function ReportDisplay({
                 </div>
                 {onRefine && (
                   <button
-                    onClick={onRefine}
+                    onClick={() => handleRefineClick("banner")}
                     className="inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-5 py-3 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-sm"
                   >
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -2132,7 +2209,7 @@ export function ReportDisplay({
               />
             )}
             <button
-              onClick={() => setEmailDialogOpen(true)}
+              onClick={handleEmailReportClick}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"
             >
               <Mail className="w-3.5 h-3.5" />
@@ -2181,7 +2258,7 @@ export function ReportDisplay({
             )}
             {isInstantMode && onRefine && (
               <button
-                onClick={onRefine}
+                onClick={() => handleRefineClick("action_row")}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
               >
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -2310,6 +2387,7 @@ function EmailReportModal({
       }
 
       setStatus("sent");
+      trackEvent("report_emailed", reportAnalyticsPayload(report, "report_email_modal"));
       setTimeout(() => { onClose(); }, 2000);
     } catch (err) {
       setStatus("error");
@@ -2394,6 +2472,11 @@ function DownloadGateModal({
   const handleSubmit = async () => {
     if (!isValid) return;
     setStatus("saving");
+    trackEvent("inquiry_submitted", {
+      source: "report_pdf_gate",
+      address: reportAddress || null,
+      metadata: { reportTitle: reportTitle || null },
+    });
 
     try {
       await fetch("/api/leads", {

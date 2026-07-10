@@ -185,7 +185,7 @@ export default function IncentiveGlance() {
               </div>
             </div>
             <a
-              href="/report"
+              href="/report?source=map_inline_card"
               className="flex items-center gap-2 bg-[#0C1B33] text-white px-4 py-2 text-[11px] font-mono-bureau tracking-[0.1em] uppercase hover:bg-[#1E3054] transition-colors"
             >
               <svg

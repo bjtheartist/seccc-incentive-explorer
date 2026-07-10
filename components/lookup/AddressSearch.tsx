@@ -53,8 +53,11 @@ const LOADING_MESSAGES = [
 
 export function AddressSearch({
   source = "address_search",
+  campaign = null,
 }: {
   source?: string;
+  /** QR/campaign attribution parsed by the launching page (e.g. /start's utm_campaign). */
+  campaign?: string | null;
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -110,9 +113,10 @@ export function AddressSearch({
         typeof window !== "undefined" ? window.location.pathname : "";
       if (landingPage) params.set("src", landingPage);
       if (source) params.set("source", source);
+      if (campaign) params.set("campaign", campaign);
       router.push(`/report?${params.toString()}`);
     },
-    [router, source]
+    [router, source, campaign]
   );
 
   const handleLookup = useCallback(
@@ -127,6 +131,7 @@ export function AddressSearch({
       trackEvent("location_snapshot_requested", {
         source,
         address: q.trim() || directBusiness?.address || null,
+        metadata: campaign ? { campaign } : undefined,
       });
 
       // Fire the funnel's entry event for this search action (not per keystroke).
@@ -145,6 +150,7 @@ export function AddressSearch({
               typeof window !== "undefined" ? window.location.pathname : "",
             result_kind: resultKind,
             queryType: directBusiness ? "business_suggestion" : "address_or_business",
+            ...(campaign ? { campaign } : {}),
           },
         });
       };
@@ -214,7 +220,7 @@ export function AddressSearch({
         setLoading(false);
       }
     },
-    [query, businesses, navigateToReport, source]
+    [query, businesses, navigateToReport, source, campaign]
   );
 
   return (
