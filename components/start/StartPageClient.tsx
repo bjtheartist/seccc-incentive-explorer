@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Map, Network, Search, Users } from "lucide-react";
 import { AddressSearch } from "@/components/lookup/AddressSearch";
@@ -18,24 +19,39 @@ function cleanTrackingValue(value: string | null, fallback: string) {
 }
 
 export function StartPageClient() {
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const source = cleanTrackingValue(
-      params.get("source") || params.get("utm_source"),
-      "start_page",
-    );
-    const campaign = cleanTrackingValue(
-      params.get("campaign") || params.get("utm_campaign") || params.get("c"),
-      "direct",
-    );
+  // QR/campaign attribution (EF5): parsed here for the page-view event, and
+  // also threaded down into AddressSearch so it survives into the /report
+  // redirect and the terminal snapshot/report event — previously this value
+  // was captured only in start_page_viewed's metadata and dropped before it
+  // ever reached a conversion event. Read via useSearchParams (not
+  // window.location.search in an effect) so this is derived at render time
+  // instead of a setState-in-effect.
+  const searchParams = useSearchParams();
+  const source = useMemo(
+    () =>
+      cleanTrackingValue(
+        searchParams.get("source") || searchParams.get("utm_source"),
+        "start_page",
+      ),
+    [searchParams],
+  );
+  const campaign = useMemo(
+    () =>
+      cleanTrackingValue(
+        searchParams.get("campaign") || searchParams.get("utm_campaign") || searchParams.get("c"),
+        "direct",
+      ),
+    [searchParams],
+  );
 
+  useEffect(() => {
     trackEvent("start_page_viewed", {
       source,
       metadata: {
         campaign,
       },
     });
-  }, []);
+  }, [source, campaign]);
 
   return (
     <main className="min-h-screen bg-[#0C1B33] text-white">
@@ -71,7 +87,7 @@ export function StartPageClient() {
           </div>
 
           <div className="mx-auto mt-9 w-full max-w-[660px]">
-            <AddressSearch source="start_page" />
+            <AddressSearch source="start_page" campaign={campaign} />
           </div>
 
           <div className="mx-auto mt-10 grid w-full max-w-[760px] gap-px bg-white/10 sm:grid-cols-3">

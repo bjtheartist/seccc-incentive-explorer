@@ -9,6 +9,26 @@ import { ReportDisplay } from "@/components/report/ReportDisplay";
 import type { GeneratedReport } from "@/lib/report-engine";
 import type { WizardState } from "@/lib/report-wizard-config";
 
+/**
+ * RF1 (confirmed, 2026-07-10 report-workflow audit): this page never passed
+ * `isInstantMode` to <ReportDisplay>, and the button that renders "Refine
+ * with Project Details" gates on that prop — so refine was dead code on
+ * every saved Workspace report. There's no explicit "was this an instant
+ * snapshot" flag stored with a saved report, so derive it the same way the
+ * instant flow itself builds wizard state (see MapView/AddressSearch):
+ * a bare site-incentives lookup with none of the refine-only project-detail
+ * fields filled in yet.
+ */
+export function deriveIsInstantMode(wizardState: WizardState | undefined): boolean {
+  if (!wizardState || wizardState.reportType !== "site-incentives") return false;
+  return (
+    !wizardState.industry &&
+    !wizardState.projectType &&
+    !wizardState.budgetRange &&
+    !wizardState.timeline
+  );
+}
+
 export default function SavedReportPage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
@@ -100,6 +120,8 @@ export default function SavedReportPage() {
         wizardState={wizardState}
         onStartOver={() => router.push("/report")}
         onRefine={() => router.push("/report")}
+        isInstantMode={deriveIsInstantMode(wizardState)}
+        analyticsSource="workspace"
       />
     </div>
   );

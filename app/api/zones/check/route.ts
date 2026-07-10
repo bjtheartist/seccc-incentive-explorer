@@ -49,6 +49,34 @@ async function loadStaticZone(key: string): Promise<FeatureCollection> {
   return data;
 }
 
+/**
+ * Point-in-polygon test that tolerates malformed source geometry (e.g. an
+ * unclosed ring), matching the pattern in lib/tif-boundary.ts. Some of the
+ * city's shipped zone GeoJSON (at least the TIF districts file) contains a
+ * handful of features that make turf throw "First and last coordinates in a
+ * ring must be the same" regardless of the query point. Skip that one
+ * feature and keep scanning the rest instead of failing the whole lookup.
+ */
+function pointInPolygonSafe(
+  point: ReturnType<typeof turf.point>,
+  key: string,
+  feature: Feature<Polygon | MultiPolygon>
+): boolean {
+  try {
+    return turf.booleanPointInPolygon(point, feature);
+  } catch (err) {
+    console.warn(
+      `[zones/check] skipping malformed feature in zone "${key}" (${
+        (feature.properties as Record<string, unknown> | null)?.name ??
+        (feature.properties as Record<string, unknown> | null)?.NAME ??
+        "unknown feature"
+      }):`,
+      err instanceof Error ? err.message : err
+    );
+    return false;
+  }
+}
+
 async function checkStaticZones(lat: number, lon: number) {
   const point = turf.point([lon, lat]);
   const matches: Array<{ key: string; name: string }> = [];
@@ -59,10 +87,7 @@ async function checkStaticZones(lat: number, lon: number) {
       const match = collection.features.find(
         (feature): feature is Feature<Polygon | MultiPolygon> =>
           Boolean(feature.geometry) &&
-          turf.booleanPointInPolygon(
-            point,
-            feature as Feature<Polygon | MultiPolygon>
-          )
+          pointInPolygonSafe(point, key, feature as Feature<Polygon | MultiPolygon>)
       );
 
       if (match) {
@@ -84,10 +109,7 @@ async function checkStaticZone(
   const match = collection.features.find(
     (feature): feature is Feature<Polygon | MultiPolygon> =>
       Boolean(feature.geometry) &&
-      turf.booleanPointInPolygon(
-        point,
-        feature as Feature<Polygon | MultiPolygon>
-      )
+      pointInPolygonSafe(point, key, feature as Feature<Polygon | MultiPolygon>)
   );
 
   return match ? { key, name: featureDisplayName(key, match) } : null;

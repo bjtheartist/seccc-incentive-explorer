@@ -489,14 +489,14 @@ export default function LocatePage() {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                 <Link
-                  href="/report?wv=2&rt=df"
+                  href="/report?wv=2&rt=df&source=locate"
                   className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-full font-mono-bureau text-[11px] tracking-[0.15em] uppercase transition-all hover:shadow-lg hover:shadow-blue-500/25"
                 >
                   Run Vacancy Report
                   <ArrowRight className="w-4 h-4" />
                 </Link>
                 <Link
-                  href="/report"
+                  href="/report?source=locate"
                   className="inline-flex items-center justify-center gap-3 px-8 py-4 border border-white/15 hover:border-white/30 text-white/55 hover:text-white rounded-full font-mono-bureau text-[11px] tracking-[0.15em] uppercase transition-all"
                 >
                   Check an Address

@@ -33,6 +33,7 @@ export function NeighborhoodSnapshotButton({
       lat: String(lat),
       lon: String(lon),
       addr,
+      source: "neighborhood_page",
     });
     router.push(`/report?${params.toString()}`);
   };

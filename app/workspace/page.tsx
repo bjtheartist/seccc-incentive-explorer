@@ -181,7 +181,7 @@ function WorkspaceContent() {
             </p>
           </div>
           <Link
-            href="/report"
+            href="/report?source=workspace"
             className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white px-5 py-3 font-mono-bureau text-[10px] tracking-[0.15em] uppercase"
           >
             Generate Report

@@ -21,6 +21,7 @@ import { cachedFetch } from "@/lib/fetch-cache";
 import { getSiteSignals } from "@/lib/site-signals";
 import { getTransportAccess } from "@/lib/transport-access";
 import type { TifFinanceContext } from "@/lib/tif-finance";
+import { trackEvent } from "@/lib/analytics-events";
 import {
   buildLocationContext,
   summarizeLocationContextForMap,
@@ -1452,11 +1453,18 @@ export default function MapView() {
     if (isGeneratingSnapshot) return;
 
     if (lastClickLat !== null && lastClickLon !== null) {
+      trackEvent("location_snapshot_requested", {
+        source: "map",
+        address: snapshotLabel || null,
+        lat: lastClickLat,
+        lon: lastClickLon,
+      });
       const params = new URLSearchParams({
         instant: "true",
         lat: lastClickLat.toFixed(5),
         lon: lastClickLon.toFixed(5),
         addr: snapshotLabel,
+        source: "map",
       });
       window.location.href = `/report?${params.toString()}`;
       return;
@@ -1464,7 +1472,7 @@ export default function MapView() {
 
     const query = searchQuery.trim();
     if (!query) {
-      window.location.href = "/report";
+      window.location.href = "/report?source=map";
       return;
     }
 
@@ -1475,15 +1483,25 @@ export default function MapView() {
       const data = await res.json();
       if (!data.lat || !data.lon) throw new Error("Address not found");
 
+      const lat = Number(data.lat);
+      const lon = Number(data.lon);
+      const addr = data.displayName || data.display_name || query;
+      trackEvent("location_snapshot_requested", {
+        source: "map",
+        address: addr,
+        lat,
+        lon,
+      });
       const params = new URLSearchParams({
         instant: "true",
-        lat: Number(data.lat).toFixed(5),
-        lon: Number(data.lon).toFixed(5),
-        addr: data.displayName || data.display_name || query,
+        lat: lat.toFixed(5),
+        lon: lon.toFixed(5),
+        addr,
+        source: "map",
       });
       window.location.href = `/report?${params.toString()}`;
     } catch {
-      window.location.href = `/report?addr=${encodeURIComponent(query)}`;
+      window.location.href = `/report?addr=${encodeURIComponent(query)}&source=map`;
     } finally {
       setIsGeneratingSnapshot(false);
     }

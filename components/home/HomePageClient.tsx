@@ -594,7 +594,7 @@ export function HomePageClient({
           <p className="text-white/50 text-sm mb-8">
             One free snapshot. No login. Sixty seconds.
           </p>
-          <AddressSearch />
+          <AddressSearch source="homepage_repeat" />
           <p className="font-mono-bureau text-[9px] tracking-[0.22em] uppercase text-white/25 mt-6">
             chicagoincentiveexplorer.com · built from public data
           </p>
