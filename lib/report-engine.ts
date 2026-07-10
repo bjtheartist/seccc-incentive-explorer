@@ -2892,7 +2892,6 @@ export interface CorridorMetric {
   localOwnershipShare?: number | null;
   permitCount?: number | null;
   incentiveCoverage?: number | null;
-  healthScore?: number | null;
   computedAt?: string | null;
   details?: CorridorMetricDetails | null;
 }
@@ -2954,8 +2953,6 @@ function generateCorridorIntelligence(
   const incentiveCoverage = details.incentiveCoverage ?? {};
   const ownerClusters = ctx.corridorOwnerClusters ?? [];
   const hasMetric = Boolean(metric);
-  const healthScore =
-    metric?.healthScore != null ? `${Math.round(Number(metric.healthScore))}/100` : "Not available";
   const placeBasedPrograms = programs.filter((program) => program.zoneKey).length;
   const activityWindowMonths = details.windowMonths ?? turnover.windowMonths ?? permits.windowMonths ?? 24;
   const activityWindowLabel = `Trailing ${activityWindowMonths} months`;
@@ -2993,14 +2990,6 @@ function generateCorridorIntelligence(
       : "Permit detail unavailable";
 
   const metricRows = [
-    [
-      "Market Signal Composite",
-      healthScore,
-      "Comparison-only summary",
-      hasMetric
-        ? "Summarizes the readings below for comparison across corridors. It is not a grade of corridor success."
-        : "No computed metric snapshot is available yet.",
-    ],
     [
       "Vacancy pressure",
       vacancyRead,
@@ -3119,13 +3108,6 @@ function generateCorridorIntelligence(
           ? `${permitInvestmentBasis}. The useful question is where permitted investment overlaps with vacancy, ownership, and business activity, and where it does not.`
           : "Permit activity detail is not available yet for this corridor snapshot.",
     },
-    {
-      label: "Composite score is a comparison aid",
-      value: healthScore,
-      detail: hasMetric
-        ? "The Market Signal Composite summarizes vacancy, license activity, ownership, and reinvestment so corridors can be compared later. It should not be read as a grade."
-        : "No corridor metric snapshot is available yet for this geography.",
-    },
   ];
 
   const confidenceItems: ReportItem[] = [
@@ -3188,7 +3170,7 @@ function generateCorridorIntelligence(
     reportType: "corridor-intelligence",
     generatedAt: new Date().toISOString(),
     summary: hasMetric
-      ? `${label} shows ${netLicenseCount != null && netLicenseCount > 0 ? "strong business momentum" : "measurable business activity"} and active reinvestment, with vacancy concentrated in a reviewable set of ${formatNumber(vacancy.vacantCount)} flagged parcels and a highly fragmented ownership base. The Market Signal Composite (${healthScore}) summarizes these readings for comparison across corridors; it is not a grade of corridor success. Activity metrics use a ${activityWindowLabel.toLowerCase()} unless noted.`
+      ? `${label} shows ${netLicenseCount != null && netLicenseCount > 0 ? "strong business momentum" : "measurable business activity"} and active reinvestment, with vacancy concentrated in a reviewable set of ${formatNumber(vacancy.vacantCount)} flagged parcels and a highly fragmented ownership base. Activity metrics use a ${activityWindowLabel.toLowerCase()} unless noted.`
       : `${label} does not have a computed corridor metric snapshot yet. This report still shows the intended data structure, but the metrics should be backfilled before using it for decisions.`,
     sections: [
       {

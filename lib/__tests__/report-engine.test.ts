@@ -660,7 +660,6 @@ describe("generateReportData", () => {
           localOwnershipShare: 0.41,
           permitCount: 19,
           incentiveCoverage: null,
-          healthScore: 64,
           details: {
             vacancy: { vacantCount: 120, totalParcels: 1000 },
             turnover: { openings: 18, closures: 7 },
@@ -682,6 +681,9 @@ describe("generateReportData", () => {
     expect(report.sections.map((section) => section.title)).toContain("What A Funded Version Unlocks");
     expect(report.sections.map((section) => section.title)).not.toContain("Intervention Buckets");
     expect(report.recommendedActions).toEqual([]);
+    expect(JSON.stringify(report)).not.toMatch(
+      /healthScore|Market Signal Composite|Composite score|64\/100/i,
+    );
   });
 
   it("flows restored polygon zone programs into report eligibility", () => {

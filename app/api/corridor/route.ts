@@ -4,7 +4,7 @@ import { getSQL } from "@/lib/db";
 /**
  * GET /api/corridor?zip=60617
  *
- * Returns the latest Corridor Health metrics snapshot per ZIP corridor.
+ * Returns the latest corridor metrics snapshot per ZIP corridor.
  * Optional `zip` filter narrows to a single corridor.
  *
  * When DATABASE_URL is not configured the endpoint degrades gracefully and
@@ -22,7 +22,6 @@ interface CorridorRow {
   local_ownership_share: number | null;
   permit_count: number | null;
   incentive_coverage: number | null;
-  health_score: number | null;
   computed_at: string;
   details: unknown;
 }
@@ -38,7 +37,6 @@ function serialize(r: CorridorRow) {
     localOwnershipShare: r.local_ownership_share,
     permitCount: r.permit_count,
     incentiveCoverage: r.incentive_coverage,
-    healthScore: r.health_score,
     computedAt: r.computed_at,
     details: typeof r.details === "string" ? JSON.parse(r.details) : r.details,
   };
@@ -77,7 +75,7 @@ export async function GET(request: NextRequest) {
             corridor_type, corridor_id, as_of,
             vacancy_rate, turnover_rate, ownership_hhi,
             local_ownership_share, permit_count, incentive_coverage,
-            health_score, computed_at, details
+            computed_at, details
           FROM corridor_metrics
           WHERE corridor_type = 'zip' AND corridor_id = ${zip}
           ORDER BY corridor_type, corridor_id, as_of DESC
@@ -87,7 +85,7 @@ export async function GET(request: NextRequest) {
             corridor_type, corridor_id, as_of,
             vacancy_rate, turnover_rate, ownership_hhi,
             local_ownership_share, permit_count, incentive_coverage,
-            health_score, computed_at, details
+            computed_at, details
           FROM corridor_metrics
           WHERE corridor_type = 'zip'
           ORDER BY corridor_type, corridor_id, as_of DESC

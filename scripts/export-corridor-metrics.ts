@@ -30,7 +30,6 @@ interface Row {
   local_ownership_share: number | null;
   permit_count: number | null;
   incentive_coverage: number | null;
-  health_score: number | null;
   computed_at: string | null;
   details: unknown;
 }
@@ -39,7 +38,7 @@ async function main() {
   const res = (await sql.query(
     `SELECT corridor_type, corridor_id, as_of, vacancy_rate, turnover_rate,
             ownership_hhi, local_ownership_share, permit_count,
-            incentive_coverage, health_score, computed_at, details
+            incentive_coverage, computed_at, details
      FROM corridor_metrics
      ORDER BY corridor_id`,
     [],
@@ -62,7 +61,6 @@ async function main() {
       localOwnershipShare: r.local_ownership_share,
       permitCount: r.permit_count,
       incentiveCoverage: r.incentive_coverage,
-      healthScore: r.health_score,
       computedAt: r.computed_at,
       details: r.details ?? null,
     };
