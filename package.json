@@ -30,6 +30,7 @@
     "db:sync:transfers": "npx tsx scripts/sync-transfers.ts",
     "db:enrich:parcel-ownership": "npx tsx scripts/enrich-parcel-ownership.ts",
     "db:compute:corridor": "npx tsx scripts/compute-corridor.ts",
+    "corridor:owners:export": "npx tsx scripts/export-corridor-owners.ts",
     "corridor:resilience:export": "npx tsx scripts/export-southeast-resilience.ts",
     "neighborhood:economics:export": "npx tsx scripts/export-chicago-neighborhood-economics.ts",
     "db:reset": "npm run db:migrate && npm run db:seed",
