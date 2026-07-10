@@ -16,7 +16,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home" },
   { href: "/report", label: "Generate Report", isPrimary: true },
-  { href: "/map", label: "Explorer" },
+  { href: "/map", label: "Map" },
   { href: "/programs", label: "Programs" },
   { href: "/faq", label: "FAQ" },
 ];

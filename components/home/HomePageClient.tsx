@@ -3,6 +3,7 @@
 import { AddressSearch } from "@/components/lookup/AddressSearch";
 import { trackEvent } from "@/lib/analytics-events";
 import { motion } from "framer-motion";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, MapPin } from "lucide-react";
@@ -237,6 +238,62 @@ export function HomePageClient({
           </span>
         </div>
       </Link>
+
+      {/* ═══ THE MAP — the product, shown ═══ */}
+      <section className="py-16 md:py-24 px-6 bg-white">
+        <div className="container mx-auto max-w-5xl">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8 }}
+            className="text-center mb-10 md:mb-12"
+          >
+            <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#2563EB]/60">
+              — The Map
+            </span>
+            <h2 className="font-editorial text-3xl md:text-4xl text-[#0C1B33] mt-3 mb-4 leading-tight">
+              Tap any neighborhood.
+              <br />
+              See every incentive that applies.
+            </h2>
+            <p className="text-sm text-[#0C1B33]/55 max-w-xl mx-auto leading-relaxed">
+              Every TIF, Opportunity Zone, Enterprise Zone, and program layer
+              in Chicago — drawn on one live map, free to explore.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.8, delay: 0.1 }}
+          >
+            <Link
+              href="/map"
+              onClick={() =>
+                trackEvent("map_preview_clicked", {
+                  source: "homepage_map_preview",
+                })
+              }
+              className="group relative block overflow-hidden rounded-2xl border border-[#0C1B33]/10 shadow-[0_24px_60px_-24px_rgba(12,27,51,0.25)]"
+            >
+              <Image
+                src="/home/map-preview.webp"
+                alt="Live map of Chicago incentive zones — TIF districts, Opportunity Zones, and program boundaries"
+                width={1600}
+                height={900}
+                className="w-full h-[240px] sm:h-[360px] md:h-[480px] object-cover transition-[filter] duration-300 group-hover:brightness-105"
+                priority={false}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0C1B33]/30 via-transparent to-transparent pointer-events-none" />
+              <span className="absolute bottom-4 left-1/2 -translate-x-1/2 sm:left-5 sm:translate-x-0 inline-flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.2em] uppercase shadow-lg group-hover:bg-[#1d4ed8] transition-colors">
+                Explore the map <ArrowRight className="w-3.5 h-3.5" />
+              </span>
+            </Link>
+          </motion.div>
+        </div>
+      </section>
 
       {/* ═══ 02 · SPECIMEN — what one address returns ═══ */}
       <section className="py-20 md:py-24 px-6 bg-[#FAF9F6] bureau-grid">

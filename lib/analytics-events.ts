@@ -17,6 +17,7 @@ export const ANALYTICS_EVENT_TYPES = [
   "program_link_clicked",
   "share_link_copied",
   "demo_address_clicked",
+  "map_preview_clicked",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];
