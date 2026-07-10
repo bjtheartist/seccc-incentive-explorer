@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-10T10:59:08.208Z",
+  "generatedAt": "2026-07-10T12:34:10.343Z",
   "zips": {
     "60617": [
       {
@@ -11,7 +11,13 @@
         "vacantParcelCount": 43,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8232 S BURLEY AVE",
+          "8236 S MACKINAW AVE",
+          "8258 S MACKINAW AVE",
+          "8260 S MACKINAW AVE",
+          "8400 S GREEN BAY AVE"
+        ],
         "latestTransferDate": "2025-09-23T05:00:00.000Z",
         "latestBuyerName": "RELATED CHICAGO 8080 LLC, A DELAWARE LIMITED LIABILITY COMPANY",
         "latestSellerName": "CLD ADJOINING RESIDENTIAL PARCELS, LLC, A DELAWARE LIMITED LIABILITY COMPANY",
@@ -27,7 +33,13 @@
         "vacantParcelCount": 20,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9808 S HOUSTON AVE",
+          "9810 S HOUSTON AVE",
+          "9812 S HOUSTON AVE",
+          "9814 S HOUSTON AVE",
+          "9816 S HOUSTON AVE"
+        ],
         "latestTransferDate": "2026-06-23T05:00:00.000Z",
         "latestBuyerName": "ALEJANDRO CAMPOS  LARIOS",
         "latestSellerName": "JOSE MENDEZ",
@@ -43,7 +55,13 @@
         "vacantParcelCount": 17,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10646 S TORRENCE AVE",
+          "10720 S BUFFALO AVE",
+          "10722 S BUFFALO AVE",
+          "10735 S BUFFALO AVE",
+          "10752 S BUFFALO AVE"
+        ],
         "latestTransferDate": "2026-01-26T06:00:00.000Z",
         "latestBuyerName": "GLENN HARRELL",
         "latestSellerName": "WINCHESTER-WOLCOTT LLC",
@@ -59,7 +77,13 @@
         "vacantParcelCount": 16,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2814 E 80TH ST HSE",
+          "7942 S MANISTEE AVE",
+          "8015 S MANISTEE AVE",
+          "8032 S MANISTEE AVE",
+          "8050 S MUSKEGON AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -75,7 +99,13 @@
         "vacantParcelCount": 13,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10041 S VAN VLISSINGEN RD",
+          "10430 S CALHOUN AVE",
+          "10625 S HOXIE AVE",
+          "10826 S TORRENCE AVE",
+          "2958 E 81ST PL"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -91,7 +121,13 @@
         "vacantParcelCount": 11,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10020 S COMMERCIAL AVE",
+          "10105 S COMMERCIAL AVE",
+          "10107 S COMMERCIAL AVE",
+          "8002 S ESCANABA AVE",
+          "8023 S MANISTEE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -107,7 +143,13 @@
         "vacantParcelCount": 10,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2948 E 80TH PL",
+          "3000 E 80TH ST",
+          "3002 E 80TH ST",
+          "3016 E 79TH PL",
+          "8028 S COLES AVE"
+        ],
         "latestTransferDate": "2016-02-04T06:00:00.000Z",
         "latestBuyerName": "SAM TRAKAS",
         "latestSellerName": "JAMES TSIOLES",
@@ -123,7 +165,13 @@
         "vacantParcelCount": 10,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9901 S COMMERCIAL AVE",
+          "9911 S COMMERCIAL AVE",
+          "9913 S COMMERCIAL AVE",
+          "9921 S COMMERCIAL AVE",
+          "9923 S COMMERCIAL AVE"
+        ],
         "latestTransferDate": "2023-04-17T05:00:00.000Z",
         "latestBuyerName": "SOUTHSHORE BUSINESS TRUST NO. 281-80377",
         "latestSellerName": "COUNTY CLERK OF THE COUNTY OF COOK",
@@ -139,7 +187,13 @@
         "vacantParcelCount": 10,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2503 E 95TH ST",
+          "2507 E 95TH ST",
+          "2511 E 95TH ST",
+          "2513 E 95TH ST",
+          "2517 E 95TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -155,7 +209,13 @@
         "vacantParcelCount": 9,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10014 S ESCANABA AVE",
+          "10022 S ESCANABA AVE",
+          "10028 S ESCANABA AVE",
+          "10102 S ESCANABA AVE",
+          "10150 S ESCANABA AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -171,7 +231,13 @@
         "vacantParcelCount": 8,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9500 S MARQUETTE AVE",
+          "9522 S MARQUETTE AVE",
+          "9524 S MARQUETTE AVE",
+          "9526 S MARQUETTE AVE",
+          "9528 S MARQUETTE AVE"
+        ],
         "latestTransferDate": "2025-05-29T05:00:00.000Z",
         "latestBuyerName": "PHEBE RODGERS",
         "latestSellerName": "DUKIA ASSETS LLC",
@@ -187,7 +253,13 @@
         "vacantParcelCount": 8,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9314 S STONY ISLAND AVE",
+          "9318 S STONY ISLAND AVE",
+          "9324 S STONY ISLAND AVE",
+          "9326 S STONY ISLAND AVE",
+          "9328 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -203,7 +275,13 @@
         "vacantParcelCount": 8,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2880 E 94TH ST",
+          "2884 E 94TH ST",
+          "2886 E 94TH ST",
+          "2888 E 94TH ST",
+          "2890 E 94TH ST"
+        ],
         "latestTransferDate": "2020-08-28T05:00:00.000Z",
         "latestBuyerName": "ELIJAH RODRIGUEZ",
         "latestSellerName": "JAMES V. MORGAN SR.",
@@ -219,7 +297,13 @@
         "vacantParcelCount": 7,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8500 S SOUTH CHICAGO AVE",
+          "8501 S SOUTH CHICAGO AVE",
+          "8509 S SOUTH CHICAGO AVE",
+          "8510 S SOUTH CHICAGO AVE",
+          "8511 S SOUTH CHICAGO AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -237,7 +321,13 @@
         "businessNames": [
           "COMMONWEALTH EDISON CO"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10425 S EWING AVE",
+          "10518 S INDIANAPOLIS AVE",
+          "3200 E 100TH ST",
+          "4001 E 102ND ST",
+          "7900 S SOUTH CHICAGO AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -253,7 +343,13 @@
         "vacantParcelCount": 7,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10157 S CALHOUN AVE",
+          "10211 S BENSLEY AVE",
+          "10701 S HOXIE AVE",
+          "8105 S COLES AVE",
+          "8740 S COLFAX AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -267,11 +363,18 @@
         "ownerType": "corporate_llc",
         "parcelCount": 20,
         "vacantParcelCount": 6,
-        "businessCount": 1,
+        "businessCount": 2,
         "businessNames": [
+          "BLACK INDUSTRIAL SUPPLY CORP",
           "9100 S. BURLEY LLC"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "3200 E 92ND ST",
+          "3208 E 92ND ST",
+          "3212 E 92ND ST",
+          "3223 E 91ST ST",
+          "3242 E 92ND ST"
+        ],
         "latestTransferDate": "2022-04-06T05:00:00.000Z",
         "latestBuyerName": "CLARETIAN ASSOCIATES",
         "latestSellerName": "VILLA GUADALUPE",
@@ -289,7 +392,13 @@
         "businessNames": [
           "KOMPARE FUNERAL HOME"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9842 S COMMERCIAL AVE",
+          "9844 S COMMERCIAL AVE",
+          "9846 S COMMERCIAL AVE",
+          "9848 S COMMERCIAL AVE",
+          "9852 S COMMERCIAL AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -305,7 +414,13 @@
         "vacantParcelCount": 6,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10044 S TORRENCE AVE",
+          "10046 S TORRENCE AVE",
+          "10050 S TORRENCE AVE",
+          "10052 S TORRENCE AVE",
+          "10054 S TORRENCE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -319,14 +434,26 @@
         "ownerType": "corporate_llc",
         "parcelCount": 66,
         "vacantParcelCount": 5,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 5,
+        "businessNames": [
+          "SUPERMERCADO EL PUENTE INC",
+          "M & S GROCERY INC.",
+          "GEORGES FAMILY MARKET",
+          "MACIAS PRODUCE INC.",
+          "T's Tap & Grill"
+        ],
+        "sampleAddresses": [
+          "10063 S AVENUE N",
+          "10155 S AVENUE L",
+          "10230 S CRANDON AVE",
+          "10239 S AVENUE J",
+          "10322 S CALHOUN AVE HSE"
+        ],
         "latestTransferDate": "2026-06-25T05:00:00.000Z",
         "latestBuyerName": "1212 INCORPORATED",
         "latestSellerName": "CHICAGO TITLE LAND TRUST COMPANY DBA THE LAND TRUST COMPANY",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:pobox17234chicagoil60617",
@@ -337,7 +464,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10002 S EXCHANGE AVE",
+          "10004 S EXCHANGE AVE",
+          "10007 S EXCHANGE AVE",
+          "10039 S AVENUE M",
+          "10041 S COMMERCIAL AVE"
+        ],
         "latestTransferDate": "2019-12-19T06:00:00.000Z",
         "latestBuyerName": "JUAN  SANDOVAL",
         "latestSellerName": "PEDRO GARCIA",
@@ -353,7 +486,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9629 S COMMERCIAL AVE",
+          "9631 S COMMERCIAL AVE",
+          "9633 S COMMERCIAL AVE",
+          "9637 S COMMERCIAL AVE",
+          "9639 S COMMERCIAL AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -369,7 +508,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8415 S CREGIER AVE",
+          "8743 S ESCANABA AVE",
+          "8842 S SAGINAW AVE",
+          "8957 S MUSKEGON AVE",
+          "9107 S MACKINAW AVE"
+        ],
         "latestTransferDate": "2023-03-30T05:00:00.000Z",
         "latestBuyerName": "MIGHTY MAL CONSTRUCTION, INC.",
         "latestSellerName": "CHICAGO LAND & TITLE, LLC - SERIES II",
@@ -385,7 +530,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8911 S MACKINAW AVE",
+          "8915 S MACKINAW AVE",
+          "8921 S MACKINAW AVE",
+          "8923 S MACKINAW AVE",
+          "8925 S MACKINAW AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -401,7 +552,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9937 S COMMERCIAL AVE",
+          "9939 S COMMERCIAL AVE",
+          "9941 S COMMERCIAL AVE",
+          "9943 S COMMERCIAL AVE",
+          "9945 S COMMERCIAL AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -417,7 +574,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8240 S MACKINAW AVE",
+          "8246 S MACKINAW AVE",
+          "8250 S MACKINAW AVE",
+          "9101 S MACKINAW AVE",
+          "9105 S MACKINAW AVE"
+        ],
         "latestTransferDate": "2018-03-23T05:00:00.000Z",
         "latestBuyerName": "PATRICK CLEARY",
         "latestSellerName": "CITY OF CHICAGO",
@@ -433,7 +596,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2509 E 95TH ST",
+          "2529 E 95TH ST",
+          "2535 E 95TH ST",
+          "2537 E 95TH ST",
+          "2539 E 95TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -449,7 +618,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2264 E 96TH ST",
+          "2324 E 100TH ST",
+          "8300 S MACKINAW AVE",
+          "8329 S BRANDON AVE",
+          "8515 S MUSKEGON AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -465,7 +640,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "11031 S AVENUE F",
+          "11033 S AVENUE F",
+          "11035 S AVENUE F",
+          "11045 S AVENUE F",
+          "11051 S AVENUE F"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -479,14 +660,22 @@
         "ownerType": "out_of_state",
         "parcelCount": 7,
         "vacantParcelCount": 4,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "FAIR ELM TAP"
+        ],
+        "sampleAddresses": [
+          "10148 S EXCHANGE AVE",
+          "10152 S EXCHANGE AVE",
+          "11243 S GREEN BAY AVE",
+          "11247 S GREEN BAY AVE",
+          "11251 S GREEN BAY AVE"
+        ],
         "latestTransferDate": "2017-09-27T05:00:00.000Z",
-        "latestBuyerName": "DANNY KNEZEVICH",
+        "latestBuyerName": "DANNY  LNEZEVICH",
         "latestSellerName": "MANE KNEZEVICH",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:8024sstonyislandchicagoil60617",
@@ -497,7 +686,13 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8024 S STONY ISLAND AVE",
+          "8034 S STONY ISLAND AVE",
+          "8036 S STONY ISLAND AVE",
+          "8038 S STONY ISLAND AVE",
+          "8040 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -513,7 +708,13 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10026 S TORRENCE AVE",
+          "10038 S TORRENCE AVE",
+          "10040 S TORRENCE AVE",
+          "10042 S TORRENCE AVE",
+          "11554 S AVENUE H"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -529,7 +730,13 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9613 S EWING AVE",
+          "9636 S EWING AVE",
+          "9727 S EWING AVE",
+          "9729 S EWING AVE",
+          "9731 S EWING AVE"
+        ],
         "latestTransferDate": "2025-08-22T05:00:00.000Z",
         "latestBuyerName": "CARLOS R. CARDENAS",
         "latestSellerName": "FEREIDON KHOSHABE",
@@ -545,7 +752,13 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10062 S AVENUE M",
+          "3022 E 96TH ST",
+          "8000 S ESCANABA AVE",
+          "8344 S BUFFALO AVE",
+          "8345 S BUFFALO AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -561,7 +774,11 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "11000 S MACKINAW AVE",
+          "11017 MACKINAW",
+          "11043 S MACKINAW AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -577,7 +794,13 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10723 S GREEN BAY AVE",
+          "10729 S GREEN BAY AVE",
+          "9806 S HOUSTON AVE",
+          "9824 S AVENUE L",
+          "9939 S AVENUE N"
+        ],
         "latestTransferDate": "2025-11-25T06:00:00.000Z",
         "latestBuyerName": "JOSE MENDEZ",
         "latestSellerName": "COUNTY CLERK OF COOK COUNTY",
@@ -591,14 +814,22 @@
         "ownerType": "out_of_state",
         "parcelCount": 5,
         "vacantParcelCount": 4,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "LAVISH LYFE STAFFING"
+        ],
+        "sampleAddresses": [
+          "3055 E 93RD ST",
+          "3057 E 93RD ST",
+          "3059 E 93RD ST",
+          "3061 E 93RD ST",
+          "9316 S BALTIMORE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:4redridgecirclebarringtonil60010",
@@ -609,7 +840,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2759 E 82ND ST",
+          "3032 E 80TH ST",
+          "8203 S HOUSTON AVE 1",
+          "8455 S BURLEY AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -625,7 +861,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8430 S CHAPPEL AVE",
+          "8432 S CHAPPEL AVE",
+          "8438 S CHAPPEL AVE",
+          "8440 S CHAPPEL AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -641,10 +882,15 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10116 S EXCHANGE AVE",
+          "8340 S BURNHAM AVE 2",
+          "8738 S EXCHANGE AVE",
+          "9221 S BRANDON AVE"
+        ],
         "latestTransferDate": "2025-08-11T05:00:00.000Z",
         "latestBuyerName": "MONICA AND RAYMUNDO GARCIA",
-        "latestSellerName": "DION, LLC",
+        "latestSellerName": "DISTINCTIVE, LLC",
         "confidence": "High",
         "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
       },
@@ -657,7 +903,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8712 S MACKINAW AVE",
+          "8714 S MACKINAW AVE",
+          "8848 S MACKINAW AVE",
+          "8854 S MACKINAW AVE"
+        ],
         "latestTransferDate": "2021-08-18T05:00:00.000Z",
         "latestBuyerName": "DAY BY DAY ENTERPRISES, LTD",
         "latestSellerName": "DORA DIXIE",
@@ -673,7 +924,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10516 S AVENUE B",
+          "10518 S AVENUE B",
+          "10520 S AVENUE B",
+          "10526 S AVENUE B"
+        ],
         "latestTransferDate": "2024-04-11T05:00:00.000Z",
         "latestBuyerName": "AREYES PROPERTIES",
         "latestSellerName": "ANDRES  REYES",
@@ -689,7 +945,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10017 S HOXIE AVE",
+          "8129 S KINGSTON AVE",
+          "9860 S VAN VLISSINGEN RD",
+          "9945 S CLYDE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -705,7 +966,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2708 E 92ND ST",
+          "2710 E 92ND ST",
+          "2712 E 92ND ST",
+          "2714 E 92ND ST"
+        ],
         "latestTransferDate": "2014-01-28T06:00:00.000Z",
         "latestBuyerName": "T & R Properties Management and Consultants, Inc.",
         "latestSellerName": "3MR Development Group, Inc.",
@@ -721,7 +987,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8001 S BURNHAM AVE",
+          "8005 S BURNHAM AVE",
+          "8007 S BURNHAM AVE",
+          "8009 S BURNHAM AVE"
+        ],
         "latestTransferDate": "2017-01-13T06:00:00.000Z",
         "latestBuyerName": "ARGOS REAL ESTATE DEVELOPMENT, LLC",
         "latestSellerName": "NORTHERN ASTERI PROPERTY MANAGEMENT, LLC",
@@ -737,7 +1008,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9134 S STONY ISLAND AVE",
+          "9136 S STONY ISLAND AVE",
+          "9140 S STONY ISLAND AVE",
+          "9142 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -753,7 +1029,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9636 S AVENUE J",
+          "9640 S AVENUE J",
+          "9642 S AVENUE J",
+          "9644 S AVENUE J"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -767,14 +1048,22 @@
         "ownerType": "out_of_state",
         "parcelCount": 22,
         "vacantParcelCount": 3,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "PAMERLA L BRAGGS"
+        ],
+        "sampleAddresses": [
+          "10156 S EXCHANGE AVE",
+          "10329 S AVENUE L",
+          "10427 S HOXIE AVE 1ST",
+          "10516 S BENSLEY AVE",
+          "10520 S BENSLEY AVE"
+        ],
         "latestTransferDate": "2021-03-04T06:00:00.000Z",
         "latestBuyerName": "MANE M KNEZEVICH, TRUSTEE OF THE MANE M KNEZEVICH REVOCABLE TRUST DATED NOVEMBER 20 2020",
         "latestSellerName": "MANE KNEZEVICH",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:10247savenueochicagoil60617",
@@ -783,14 +1072,24 @@
         "ownerType": "out_of_state",
         "parcelCount": 8,
         "vacantParcelCount": 3,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 3,
+        "businessNames": [
+          "MASTER POLISHING & BUFFING",
+          "CHICAGO METAL POLISHING, INC.",
+          "LOCKER ROOM, INC"
+        ],
+        "sampleAddresses": [
+          "10215 S AVENUE O",
+          "10233 S AVENUE O",
+          "10241 S AVENUE O",
+          "10247 S AVENUE O",
+          "10249 S AVENUE O"
+        ],
         "latestTransferDate": "2024-10-17T05:00:00.000Z",
         "latestBuyerName": "GERARDO RAMIREZ",
         "latestSellerName": "ROBERT RAMIREZ AND SILVIA RAMIREZ LIVING TRUST",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:3335e106thstchicagoil60617",
@@ -799,14 +1098,25 @@
         "ownerType": "local_private",
         "parcelCount": 7,
         "vacantParcelCount": 3,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 4,
+        "businessNames": [
+          "EL TACONAZO TAQUERIA",
+          "TACOS NIETOS",
+          "LOS TRES AMIGOS 2, INC.",
+          "KWAN CHOP SUEY"
+        ],
+        "sampleAddresses": [
+          "3335 E 106TH ST",
+          "3339 E 106TH ST",
+          "3341 E 106TH ST",
+          "3343 E 106TH ST",
+          "3345 E 106TH ST"
+        ],
         "latestTransferDate": "2018-05-04T05:00:00.000Z",
         "latestBuyerName": "FERNANDO GUADARRAMA DIAZ LEAL",
         "latestSellerName": "FRANCISCO ARCEO",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:9966scommercialavchicagoil60617",
@@ -815,12 +1125,19 @@
         "ownerType": "local_private",
         "parcelCount": 7,
         "vacantParcelCount": 3,
-        "businessCount": 2,
+        "businessCount": 3,
         "businessNames": [
+          "CHUY'S GARAGE",
           "EXCLUSIVE WROUGHT IRON",
           "HAROLD'S LOCK & KEY"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10002 S COMMERCIAL AVE",
+          "10006 S COMMERCIAL AVE",
+          "2946 E 95TH ST",
+          "9112 S SOUTH CHICAGO AVE",
+          "9120 S SOUTH CHICAGO AVE"
+        ],
         "latestTransferDate": "2026-06-16T05:00:00.000Z",
         "latestBuyerName": "ROCIO M VALLES TRUSTEE OR HER SUCCESSORS IN INTEREST OF THE VALLES LEGACY TRUST DATED MARCH 16 2026 AND ANY AMENDMENTS THERETO",
         "latestSellerName": "ROCIO M VALLES",
@@ -836,7 +1153,13 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2901 E 95TH ST",
+          "2905 E 95TH ST",
+          "2907 E 95TH ST",
+          "2919 E 95TH ST",
+          "2921 E 95TH ST"
+        ],
         "latestTransferDate": "2021-09-15T05:00:00.000Z",
         "latestBuyerName": "95TH STREET PROPERTIES, L.L.C.",
         "latestSellerName": "NEVENKA SOLDO",
@@ -850,14 +1173,26 @@
         "ownerType": "local_private",
         "parcelCount": 5,
         "vacantParcelCount": 3,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 5,
+        "businessNames": [
+          "EAST SIDE DETAIL SHOP",
+          "CITY HAND CAR WASH & DETAIL",
+          "CARWASH CABRERA",
+          "CHICAGO 1 HAND CAR WASH",
+          "PATTY'S FASHION"
+        ],
+        "sampleAddresses": [
+          "9641 S EWING AVE",
+          "9649 S EWING AVE",
+          "9654 S EWING AVE",
+          "9656 S EWING AVE",
+          "9712 S AVENUE L"
+        ],
         "latestTransferDate": "2025-11-14T06:00:00.000Z",
         "latestBuyerName": "JL GRAND EWING LLC, AN ILLINOIS LIMITED LIABILITY COMPANY",
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:20nclarkst2450chicagoil60602",
@@ -868,7 +1203,13 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10305 S CALHOUN AVE",
+          "10307 S CALHOUN AVE",
+          "10627 S BENSLEY AVE",
+          "10808 S CALHOUN AVE 1",
+          "8407 S BUFFALO AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -882,14 +1223,22 @@
         "ownerType": "corporate_llc",
         "parcelCount": 4,
         "vacantParcelCount": 3,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 2,
+        "businessNames": [
+          "ABBEYS HAND CAR WASH",
+          "CULTUREVILLE  ENTERPRISES"
+        ],
+        "sampleAddresses": [
+          "8059 S STONY ISLAND AVE",
+          "8061 S STONY ISLAND AVE",
+          "8063 S STONY ISLAND AVE",
+          "8065 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:9738smarquetteavechicagoil60617",
@@ -898,14 +1247,21 @@
         "ownerType": "local_private",
         "parcelCount": 4,
         "vacantParcelCount": 3,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "PETE'S HIDEAWAY"
+        ],
+        "sampleAddresses": [
+          "10755 S BURLEY AVE",
+          "10757 S BURLEY AVE",
+          "10759 S BURLEY AVE",
+          "9640 S HOUSTON AVE"
+        ],
         "latestTransferDate": "2024-12-18T06:00:00.000Z",
         "latestBuyerName": "MARIA E.  MEDINA",
         "latestSellerName": "COUNTY CLERK OF COOK COUNTY",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:11628storrenceavechicagoil60617",
@@ -916,7 +1272,12 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "11622 S TORRENCE AVE",
+          "11624 S TORRENCE AVE",
+          "11628 S TORRENCE AVE",
+          "11630 S TORRENCE AVE"
+        ],
         "latestTransferDate": "2026-03-16T05:00:00.000Z",
         "latestBuyerName": "JOEL MARES",
         "latestSellerName": "JOEL MARES",
@@ -930,11 +1291,17 @@
         "ownerType": "local_private",
         "parcelCount": 4,
         "vacantParcelCount": 3,
-        "businessCount": 1,
+        "businessCount": 2,
         "businessNames": [
+          "MJ DESIGN AND COMPANY",
           "HER VEL'S UNLIMITED CERAMICS"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8817 S STONY ISLAND AVE",
+          "8819 S STONY ISLAND AVE",
+          "8821 S STONY ISLAND AVE",
+          "8823 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -950,7 +1317,12 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7931 S BURNHAM AVE",
+          "8059 S MARQUETTE AVE",
+          "8448 S MUSKEGON AVE",
+          "9835 S MERRILL AVE"
+        ],
         "latestTransferDate": "2016-07-27T05:00:00.000Z",
         "latestBuyerName": "GOLDMINE INVESTMENTS, LLC",
         "latestSellerName": "Z FINANCIAL ILLINOIS G PROPERTIES, LLC",
@@ -966,7 +1338,12 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8109 S CLYDE AVE",
+          "8113 S CLYDE AVE",
+          "8121 S CLYDE AVE",
+          "8123 S CLYDE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -982,7 +1359,12 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "3131 E 92ND ST",
+          "3133 E 92ND ST",
+          "3135 E 92ND ST",
+          "8723 S EXCHANGE AVE"
+        ],
         "latestTransferDate": "2025-05-19T05:00:00.000Z",
         "latestBuyerName": "COUNTY OF COOK, D/B/A COOK COUNTY LAND BANK AUTHORITY",
         "latestSellerName": " MONICA GORDON, COUNTY CLERK OF THE COUNTY OF COOK",
@@ -998,7 +1380,12 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "3301 E 91ST ST",
+          "3305 E 91ST ST",
+          "3307 E 91ST ST",
+          "3311 E 91ST ST"
+        ],
         "latestTransferDate": "2024-01-19T06:00:00.000Z",
         "latestBuyerName": "JONATHAN CRAIG",
         "latestSellerName": "AGBOGUN",
@@ -1014,7 +1401,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8239 S STONY ISLAND AVE",
+          "8241 S STONY ISLAND AVE",
+          "8243 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1030,7 +1421,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10752 S GREEN BAY AVE",
+          "10754 S GREEN BAY AVE",
+          "10756 S GREEN BAY AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1046,7 +1441,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8707 S HOUSTON AVE",
+          "8713 S HOUSTON AVE",
+          "8719 S HOUSTON AVE"
+        ],
         "latestTransferDate": "2020-12-08T06:00:00.000Z",
         "latestBuyerName": "CRYSTAL  HAMMOND",
         "latestSellerName": "CITY OF CHICAGO",
@@ -1062,7 +1461,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "11632 S TORRENCE AVE",
+          "11634 S TORRENCE AVE",
+          "11638 S TORRENCE AVE"
+        ],
         "latestTransferDate": "2021-07-06T05:00:00.000Z",
         "latestBuyerName": "THOMAS PILARSKI",
         "latestSellerName": "FAYE DEL RIO",
@@ -1078,7 +1481,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8413 S BURLEY AVE",
+          "8421 S BURLEY AVE",
+          "8538 S BURLEY AVE"
+        ],
         "latestTransferDate": "2018-03-27T05:00:00.000Z",
         "latestBuyerName": "ROSA SANTIAGO",
         "latestSellerName": "CITY OF CHICAGO",
@@ -1094,7 +1501,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8725 S EXCHANGE AVE",
+          "8828 S COMMERCIAL AVE",
+          "8830 S COMMERCIAL AVE"
+        ],
         "latestTransferDate": "2023-02-21T06:00:00.000Z",
         "latestBuyerName": "DANIEL HERNANDEZ",
         "latestSellerName": "DISTICTIVE, LLC",
@@ -1110,7 +1521,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8531 S BALTIMORE AVE",
+          "8533 S BALTIMORE AVE",
+          "8535 S BALTIMORE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1126,7 +1541,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8850 S HOUSTON AVE",
+          "8852 S HOUSTON AVE",
+          "8856 S HOUSTON AVE"
+        ],
         "latestTransferDate": "2019-11-07T06:00:00.000Z",
         "latestBuyerName": "MASJID AL-HAFEEZ INC., NFP",
         "latestSellerName": "GW HOUSTON, INC.",
@@ -1142,7 +1561,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9373 S EWING AVE",
+          "9375 S EWING AVE",
+          "9377 S EWING AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1158,7 +1581,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8819 S HOUSTON AVE 2",
+          "8835 S HOUSTON AVE",
+          "8851 S ESCANABA AVE 2"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1174,7 +1601,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9532 S AVENUE N",
+          "9534 S AVENUE N",
+          "9536 S AVENUE N"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1190,7 +1621,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8314 S STONY ISLAND AVE",
+          "8316 S STONY ISLAND AVE",
+          "8318 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1206,7 +1641,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8308 S MACKINAW AVE",
+          "8323 S BUFFALO AVE",
+          "8547 S MACKINAW AVE"
+        ],
         "latestTransferDate": "2023-04-11T05:00:00.000Z",
         "latestBuyerName": "ANDRZEJ DAMIAN POSNIAK",
         "latestSellerName": "STEVEN GLINSKI",
@@ -1222,7 +1661,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8220 S MANISTEE AVE",
+          "8701 S BALTIMORE AVE",
+          "8901 S BALTIMORE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1238,7 +1681,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "12210 S TORRENCE AVE",
+          "12212 S TORRENCE AVE",
+          "12214 S TORRENCE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1254,7 +1701,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2918 E 87TH ST",
+          "2920 E 87TH ST",
+          "2924 E 87TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1270,7 +1721,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9630 S AVENUE J",
+          "9632 S AVENUE J",
+          "9634 S AVENUE J"
+        ],
         "latestTransferDate": "2021-09-07T05:00:00.000Z",
         "latestBuyerName": "THOMAS LOPEZ JR.",
         "latestSellerName": "EMILIA MARIA FERNANDEZ",
@@ -1286,7 +1741,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8814 S MARQUETTE AVE",
+          "9925 S AVENUE M",
+          "9927 S AVENUE M"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1302,7 +1761,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2549 E 95TH ST",
+          "2567 E 95TH ST",
+          "9508 S COLFAX AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1318,7 +1781,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8049 S EXCHANGE AVE",
+          "8051 S EXCHANGE AVE",
+          "8053 S EXCHANGE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1334,7 +1801,13 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "11625 S BURLEY AVE",
+          "11701 S BURLEY AVE",
+          "11707 S BURLEY AVE",
+          "11721 S BURLEY AVE",
+          "11729 S BURLEY AVE"
+        ],
         "latestTransferDate": "2021-03-03T06:00:00.000Z",
         "latestBuyerName": "NP AVENUE O, LLC",
         "latestSellerName": "CITY OF CHICAGO",
@@ -1348,14 +1821,23 @@
         "ownerType": "corporate_llc",
         "parcelCount": 8,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 2,
+        "businessNames": [
+          "SIMS METAL MANAGEMENT",
+          "SCRAP PROCESSING INC"
+        ],
+        "sampleAddresses": [
+          "3200 E 96TH ST",
+          "9258 S EWING AVE",
+          "9330 S KREITER AVE",
+          "9331 S EWING AVE",
+          "9370 S KREITER AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:10232savenuenchicagoil60617",
@@ -1366,7 +1848,13 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10226 S AVENUE N",
+          "10228 S AVENUE N",
+          "10230 S AVENUE N",
+          "10234 S AVENUE N",
+          "10236 S AVENUE N"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1380,14 +1868,22 @@
         "ownerType": "local_private",
         "parcelCount": 6,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "SMEDBERG MACHINE CORPORATION"
+        ],
+        "sampleAddresses": [
+          "7934 S SOUTH CHICAGO AVE",
+          "7936 S SOUTH CHICAGO AVE",
+          "7950 S SOUTH CHICAGO AVE",
+          "7956 S SOUTH CHICAGO AVE",
+          "7962 S SOUTH CHICAGO AVE"
+        ],
         "latestTransferDate": "2018-08-31T05:00:00.000Z",
         "latestBuyerName": "7934 SOUTH CHICAGO LLC, AN ILLINOIS LIMITED LIABILITY COMPANY",
         "latestSellerName": "KENNETH L. SMEDBERG",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:10011scommercialchicagoil60617",
@@ -1396,14 +1892,22 @@
         "ownerType": "out_of_state",
         "parcelCount": 6,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "Nal Var Corp dba Local Motion"
+        ],
+        "sampleAddresses": [
+          "10009 S COMMERCIAL AVE",
+          "10011 S COMMERCIAL AVE",
+          "10015 S COMMERCIAL AVE",
+          "10017 S COMMERCIAL AVE",
+          "10021 S COMMERCIAL AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:10630storrencechicagoil60617",
@@ -1414,7 +1918,13 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10620 S TORRENCE AVE",
+          "10624 S TORRENCE AVE",
+          "10626 S TORRENCE AVE",
+          "10632 S TORRENCE AVE",
+          "10636 S TORRENCE AVE"
+        ],
         "latestTransferDate": "2015-06-24T05:00:00.000Z",
         "latestBuyerName": "CHRISTINA  GONZALEZ",
         "latestSellerName": "SECRETARY OF HOUSING URBAN DEVELOPMENT",
@@ -1432,7 +1942,13 @@
         "businessNames": [
           "DEANDA SERVICES"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2610 E 108TH ST",
+          "3511 E 98TH ST",
+          "9420 S EWING AVE",
+          "9802 S AVENUE M",
+          "9804 S AVENUE M"
+        ],
         "latestTransferDate": "2022-04-25T05:00:00.000Z",
         "latestBuyerName": "TIA & GRAMMA ORGANIZATION",
         "latestSellerName": "CHICAGO STEAMSHIP SUPPLY CO",
@@ -1448,7 +1964,13 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8817 S BUFFALO AVE",
+          "8819 S BUFFALO AVE",
+          "8821 S BUFFALO AVE",
+          "8827 S BUFFALO AVE",
+          "8829 S BUFFALO AVE"
+        ],
         "latestTransferDate": "2024-02-01T06:00:00.000Z",
         "latestBuyerName": "LORENZO RAMIREZ",
         "latestSellerName": "BRIAN REYNA",
@@ -1464,7 +1986,12 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2610 E 83RD ST",
+          "2612 E 83RD ST",
+          "2618 E 83RD ST",
+          "2624 E 83RD ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1478,14 +2005,21 @@
         "ownerType": "local_private",
         "parcelCount": 4,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "ANN MARIES DOLLARS DISCOUNTS"
+        ],
+        "sampleAddresses": [
+          "9226 S HOUSTON AVE",
+          "9228 S HOUSTON AVE",
+          "9230 S HOUSTON AVE",
+          "9915 S EWING AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:3409e106thstchicagoil60617",
@@ -1498,7 +2032,12 @@
         "businessNames": [
           "EUGENIO JIMENEZ"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "3405 E 106TH ST",
+          "3407 E 106TH ST",
+          "3409 E 106TH ST 1",
+          "9450 S COMMERCIAL AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1514,7 +2053,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8038 S CONSTANCE AVE",
+          "8054 S CONSTANCE AVE",
+          "8058 S CONSTANCE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1530,7 +2073,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "11115 S AVENUE M",
+          "11751 S TORRENCE AVE",
+          "8457 S BURLEY AVE"
+        ],
         "latestTransferDate": "2019-04-25T05:00:00.000Z",
         "latestBuyerName": "DAVAN NGUYEN",
         "latestSellerName": "CHICAGO TITLE LAND TRUST COMPANY, AS SUCCESSOR TRUSTEE TO SOUTH CHICAGO SAVINGS BANK, AS TRUSTEE UNDER TRUST AGREEMENT DATED JULY 8, 1986",
@@ -1546,7 +2093,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9512 S AVENUE L",
+          "9514 S AVENUE L",
+          "9516 S AVENUE L"
+        ],
         "latestTransferDate": "2022-06-06T05:00:00.000Z",
         "latestBuyerName": "NICOLAS VIVEROS",
         "latestSellerName": "PUBLIC INVESTMENT GROUP LLC",
@@ -1562,7 +2113,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7900 S ESCANABA AVE",
+          "7944 S MARQUETTE AVE",
+          "8433 S BUFFALO AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1578,7 +2133,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8001 S OGLESBY AVE",
+          "8005 S OGLESBY AVE",
+          "8009 S OGLESBY AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1594,7 +2153,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8338 S BURLEY AVE",
+          "8342 S BURLEY AVE",
+          "8344 S BURLEY AVE 1FF"
+        ],
         "latestTransferDate": "2018-04-06T05:00:00.000Z",
         "latestBuyerName": "SALVADOR VELAZQUEZ",
         "latestSellerName": "CITY OF CHICAGO",
@@ -1610,7 +2173,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "10623 S CALHOUN AVE",
+          "10625 S CALHOUN AVE",
+          "2525 E 106TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1626,11 +2193,19 @@
         "ownerType": "out_of_state",
         "parcelCount": 21,
         "vacantParcelCount": 14,
-        "businessCount": 1,
+        "businessCount": 3,
         "businessNames": [
+          "JESSICA",
+          "HAPPY FOOD - LIQUOR",
           "LARRY'S"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1010 E 79TH ST 1W",
+          "7512 S GREENWOOD AVE",
+          "7601 S DOBSON AVE",
+          "7630 S GREENWOOD AVE",
+          "7634 S GREENWOOD AVE"
+        ],
         "latestTransferDate": "2025-01-29T06:00:00.000Z",
         "latestBuyerName": "CTLT #9002347577, DATED 12/9/24",
         "latestSellerName": "7901 S. COTTAGE GROVE LLC",
@@ -1644,14 +2219,22 @@
         "ownerType": "out_of_state",
         "parcelCount": 19,
         "vacantParcelCount": 14,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "DUNBARS FOODS"
+        ],
+        "sampleAddresses": [
+          "7104 S ELLIS AVE",
+          "7138 S SOUTH CHICAGO AVE",
+          "7200 S DOBSON AVE",
+          "7218 S SOUTH CHICAGO AVE",
+          "7224 S SOUTH CHICAGO AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:pobox123skokieil60076",
@@ -1662,7 +2245,13 @@
         "vacantParcelCount": 11,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1051 E 95TH ST",
+          "1245 E 95TH ST",
+          "1249 E 95TH ST",
+          "300 E 91ST ST",
+          "316 E 91ST ST"
+        ],
         "latestTransferDate": "2025-09-19T05:00:00.000Z",
         "latestBuyerName": "B QUICK TOWING AND TRANSPORTING LLC",
         "latestSellerName": "DION, LLC",
@@ -1678,7 +2267,13 @@
         "vacantParcelCount": 10,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1018 E 76TH ST",
+          "1039 E 90TH ST",
+          "7428 S DORCHESTER AVE",
+          "7727 S MARYLAND AVE",
+          "9024 S UNIVERSITY AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1692,14 +2287,21 @@
         "ownerType": "out_of_state",
         "parcelCount": 21,
         "vacantParcelCount": 9,
-        "businessCount": 1,
+        "businessCount": 2,
         "businessNames": [
+          "REVERE COMMUNITY HOUSING DEVELOPMENT, LLC",
           "GARY COMER YOUTH CENTER"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1031 E 73RD ST",
+          "1035 E 73RD ST",
+          "7124 S DREXEL AVE",
+          "7128 S DREXEL AVE",
+          "7137 S DREXEL AVE HSE"
+        ],
         "latestTransferDate": "2020-02-25T06:00:00.000Z",
         "latestBuyerName": "GCYC, LLC",
-        "latestSellerName": "REVERE COMMUNITY HOUSING DEVELOPMENT LLC",
+        "latestSellerName": "COMER SCIENCE AND EDUCATION FOUNDATION",
         "confidence": "High",
         "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
@@ -1714,7 +2316,13 @@
         "businessNames": [
           "BEAUTY SUPPLY & ACCESSORIES"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1025 E 82ND ST",
+          "1336 E 72ND PL",
+          "256 E 95TH ST",
+          "315 E 95TH ST",
+          "58 E 95TH ST"
+        ],
         "latestTransferDate": "2026-04-24T05:00:00.000Z",
         "latestBuyerName": "COUNTY OF COOK D/B/A COOK COUNTY LAND BANK AUTHORITY",
         "latestSellerName": "MONICA GORDON COUNTY CLERK OF THE COUNTY OF COOK IN THE STATE OF ILLINOIS",
@@ -1730,7 +2338,13 @@
         "vacantParcelCount": 9,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1132 E 79TH PL",
+          "1134 E 79TH PL",
+          "1138 E 79TH PL",
+          "1140 E 79TH PL",
+          "1142 E 79TH PL"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1748,7 +2362,13 @@
         "businessNames": [
           "FINKL STEEL - CHICAGO"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1303 E 93RD ST",
+          "1307 E 93RD ST",
+          "1309 E 93RD ST",
+          "1311 E 93RD ST",
+          "1320 E 93RD ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1764,7 +2384,13 @@
         "vacantParcelCount": 8,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7100 S COTTAGE GROVE AVE 1",
+          "7100 S COTTAGE GROVE AVE 12",
+          "7100 S COTTAGE GROVE AVE 13",
+          "7100 S COTTAGE GROVE AVE 15",
+          "7100 S COTTAGE GROVE AVE 2"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1778,14 +2404,24 @@
         "ownerType": "out_of_state",
         "parcelCount": 10,
         "vacantParcelCount": 7,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 3,
+        "businessNames": [
+          "SOLOMAN FISHERY",
+          "I-57 RIB HOUSE",
+          "DARRIN'S"
+        ],
+        "sampleAddresses": [
+          "1227 E 87TH ST",
+          "1231 E 87TH ST",
+          "1235 E 87TH ST",
+          "1237 E 87TH ST",
+          "1241 E 87TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:4753nbroadwaychicagoil60640",
@@ -1796,7 +2432,13 @@
         "vacantParcelCount": 7,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7100 S COTTAGE GROVE AVE 10",
+          "7100 S COTTAGE GROVE AVE 11",
+          "7100 S COTTAGE GROVE AVE 14",
+          "7100 S COTTAGE GROVE AVE 5",
+          "7100 S COTTAGE GROVE AVE 7"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1812,7 +2454,13 @@
         "vacantParcelCount": 7,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "618 E 93RD ST",
+          "639 E 92ND PL",
+          "8117 S HARPER AVE",
+          "914 E 93RD ST",
+          "9333 S HARPER AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1828,7 +2476,13 @@
         "vacantParcelCount": 6,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1010 E 79TH ST 2W-T1",
+          "7103 S DOBSON AVE",
+          "7538 S ELLIS AVE",
+          "762 E 95TH ST",
+          "7827 S DREXEL AVE"
+        ],
         "latestTransferDate": "2019-09-25T05:00:00.000Z",
         "latestBuyerName": "GOLDMINE INVESTMENTS, LLC",
         "latestSellerName": "Z FINANCIAL ILLINOIS G PROPERTIES, LLC",
@@ -1844,7 +2498,13 @@
         "vacantParcelCount": 6,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7146 S UNIVERSITY AVE",
+          "7245 S CHAMPLAIN AVE",
+          "7418 S DREXEL AVE",
+          "7521 S DREXEL AVE",
+          "7810 S GREENWOOD AVE"
+        ],
         "latestTransferDate": "2024-06-28T05:00:00.000Z",
         "latestBuyerName": "CHICAGO TITLE LAND COMPANY, UTA DATED 5/6/21 KNOWN AS TRUST #",
         "latestSellerName": "JORGE BARAJAS",
@@ -1860,7 +2520,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1244 E 73RD ST",
+          "1250 E 73RD ST",
+          "1252 E 73RD ST",
+          "1254 E 73RD ST",
+          "1256 E 73RD ST"
+        ],
         "latestTransferDate": "2023-01-06T06:00:00.000Z",
         "latestBuyerName": "THE REBUILD FOUNDATION",
         "latestSellerName": "1341 EAST 72ND STREET, LLC",
@@ -1876,7 +2542,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7315 S KIMBARK AVE",
+          "7317 S KIMBARK AVE",
+          "7409 S BLACKSTONE AVE",
+          "7413 S BLACKSTONE AVE",
+          "7418 S KIMBARK AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1892,7 +2564,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1048 E 72ND ST",
+          "1052 E 72ND ST",
+          "7151 S DOBSON AVE",
+          "7208 S UNIVERSITY AVE HSE",
+          "7246 S WOODLAWN AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1908,7 +2586,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "116 E 91ST ST",
+          "1300 E 71ST PL",
+          "633 E 88TH ST 1",
+          "7209 S UNIVERSITY AVE",
+          "9317 S LYON AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1924,7 +2608,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "624 E 92ND PL",
+          "626 E 92ND PL",
+          "9100 S GREENWOOD AVE",
+          "9102 S GREENWOOD AVE",
+          "9134 S GREENWOOD AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1938,11 +2628,21 @@
         "ownerType": "corporate_llc",
         "parcelCount": 70,
         "vacantParcelCount": 4,
-        "businessCount": 1,
+        "businessCount": 5,
         "businessNames": [
-          "CHRISTIAN BROTHERS"
+          "JACKIE O HAIR SALON",
+          "83RD & PRAIRIE CURRENCY EXCHANGE INC",
+          "JJ & J LOGISTICS INC",
+          "MARY A. ANDERSON",
+          "CUDDIES LEARNING CENTER"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1024 E 83RD ST",
+          "1052 E 80TH ST",
+          "115 E 83RD ST",
+          "13 E 83RD ST",
+          "1401 E 75TH ST"
+        ],
         "latestTransferDate": "2026-06-15T05:00:00.000Z",
         "latestBuyerName": "RENEE K. FIELDS",
         "latestSellerName": "CHICAGO TITLE LAND TRUST COMPANY DBA THE LAND TRUST COMPANY, AS TRUSTEE, DATED 19TH DAY OF MARCH, 2013",
@@ -1960,7 +2660,10 @@
         "businessNames": [
           "FINKL STEEL - CHICAGO"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1335 E 93RD ST",
+          "1355 E 93RD ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1976,7 +2679,13 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1101 E 95TH ST",
+          "436 E 83RD ST",
+          "7619 S DANTE AVE",
+          "7628 S BLACKSTONE AVE",
+          "9022 S COTTAGE GROVE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -1992,7 +2701,13 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1548 E 94TH ST",
+          "1550 E 94TH ST",
+          "1554 E 94TH ST",
+          "1556 E 94TH ST",
+          "1558 E 94TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2008,7 +2723,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7627 S STATE ST",
+          "7635 S STATE ST",
+          "7639 S STATE ST",
+          "7643 S STATE ST"
+        ],
         "latestTransferDate": "2020-01-03T06:00:00.000Z",
         "latestBuyerName": "AHMAD ELKHATIB",
         "latestSellerName": "CHICAGO TITLE LAND TRUST COMPANY",
@@ -2024,7 +2744,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "833 E 87TH PL",
+          "904 E 92ND ST",
+          "916 E 93RD ST",
+          "9360 S KENWOOD AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2040,7 +2765,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8145 S INDIANA AVE",
+          "8149 S INDIANA AVE",
+          "8153 S INDIANA AVE",
+          "8157 S INDIANA AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2056,7 +2786,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1345 E 75TH ST",
+          "1349 E 75TH ST",
+          "7400 S DREXEL AVE",
+          "816 E 75TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2072,7 +2807,13 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "214 E 71ST ST",
+          "218 E 71ST ST",
+          "224 E 71ST ST",
+          "318 E 71ST ST",
+          "320 E 71ST ST"
+        ],
         "latestTransferDate": "2016-06-21T05:00:00.000Z",
         "latestBuyerName": "A.A. RAYNER & SONS LLC",
         "latestSellerName": "CHICAGO TITLE LAND TRUST COMPANY",
@@ -2088,7 +2829,13 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7201 S COTTAGE GROVE AVE",
+          "7606 S SOUTH CHICAGO AVE",
+          "7620 S SOUTH CHICAGO AVE",
+          "7675 S SOUTH CHICAGO AVE",
+          "912 E 87TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2104,7 +2851,13 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "316 E 90TH PL",
+          "504 E 92ND ST",
+          "508 E 92ND ST",
+          "515 E 92ND ST",
+          "517 E 92ND ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2120,7 +2873,13 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "20 E 90TH ST",
+          "42 E 90TH ST",
+          "55 E 89TH PL",
+          "59 E 89TH PL",
+          "6 E 90TH ST"
+        ],
         "latestTransferDate": "2021-10-29T05:00:00.000Z",
         "latestBuyerName": "SATCHELBANKS LLC",
         "latestSellerName": "AMOS FINANCIAL LLC",
@@ -2136,7 +2895,12 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1565 E 93RD ST",
+          "1567 E 93RD ST",
+          "1569 E 93RD ST",
+          "1571 E 93RD ST"
+        ],
         "latestTransferDate": "2025-12-04T06:00:00.000Z",
         "latestBuyerName": "AKALJI 9300 LLC",
         "latestSellerName": "SAMIH SWEIS",
@@ -2152,7 +2916,12 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1519 E 93RD ST",
+          "1521 E 93RD ST",
+          "1523 E 93RD ST",
+          "1529 E 93RD ST"
+        ],
         "latestTransferDate": "2022-07-08T05:00:00.000Z",
         "latestBuyerName": "LESTER KNIGHTEN",
         "latestSellerName": "LESTER KNIGHTEN",
@@ -2168,7 +2937,12 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7411 S LANGLEY AVE",
+          "7606 S RHODES AVE 1",
+          "7622 S EBERHART AVE",
+          "7636 S CHAMPLAIN AVE"
+        ],
         "latestTransferDate": "2026-01-27T06:00:00.000Z",
         "latestBuyerName": "LINCOLN AVENUE LLC",
         "latestSellerName": "COUNTY CLERK OF COOK COUNTY",
@@ -2184,7 +2958,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7438 S SAINT LAWRENCE AVE REAR",
+          "7440 S SAINT LAWRENCE AVE",
+          "7440 S SAINT LAWRENCE AVE REAR"
+        ],
         "latestTransferDate": "2026-05-20T05:00:00.000Z",
         "latestBuyerName": "ARMANDO ORDONEZ MEDINA",
         "latestSellerName": "ESTEFANI M. GONZALEZ",
@@ -2200,7 +2978,12 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9248 S COTTAGE GROVE AVE",
+          "9256 S COTTAGE GROVE AVE",
+          "9258 S COTTAGE GROVE AVE",
+          "9314 S COTTAGE GROVE AVE"
+        ],
         "latestTransferDate": "2014-06-16T05:00:00.000Z",
         "latestBuyerName": "Good Temple Missionary Baptist Church, an Illinois Not For Profit Corporation",
         "latestSellerName": "Chesterfield Tom Thumb Day Care #2, Inc.",
@@ -2214,14 +2997,21 @@
         "ownerType": "corporate_llc",
         "parcelCount": 4,
         "vacantParcelCount": 3,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "JA-KA MCKINLEY & ASSOCIATES"
+        ],
+        "sampleAddresses": [
+          "1418 E 72ND ST",
+          "1422 E 72ND ST",
+          "1513 E 72ND PL",
+          "7220 S BLACKSTONE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:7340sstlawrencechicagoil60619",
@@ -2232,7 +3022,10 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7340 S SAINT LAWRENCE AVE",
+          "7342 S SAINT LAWRENCE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2248,7 +3041,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7150 S LANGLEY AVE 2",
+          "8023 S WOODLAWN AVE",
+          "815 E 76TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2264,7 +3061,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7138 S RHODES AVE",
+          "7319 S DANTE AVE",
+          "7349 S DORCHESTER AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2280,7 +3081,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7310 S SOUTH CHICAGO AVE",
+          "7340 S SOUTH CHICAGO AVE",
+          "7380 S SOUTH CHICAGO AVE"
+        ],
         "latestTransferDate": "2017-10-04T05:00:00.000Z",
         "latestBuyerName": "THE PEOPLES GAS LIGHT AND COKE COMPANY",
         "latestSellerName": "A.A.U., INC. (D/B/A \"NEW CATS AUTO PARTS\")",
@@ -2296,7 +3101,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7426 S KIMBARK AVE",
+          "7428 S KIMBARK AVE",
+          "7430 S KIMBARK AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2312,7 +3121,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7218 S COTTAGE GROVE AVE",
+          "7508 S KENWOOD AVE",
+          "7916 S GREENWOOD AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2328,7 +3141,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "915 E 92ND ST",
+          "917 E 92ND ST",
+          "919 E 92ND ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2344,7 +3161,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1418 E 76TH ST",
+          "7300 S DANTE AVE",
+          "7539 S DORCHESTER AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2360,7 +3181,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "710 E 95TH ST",
+          "728 E 95TH ST",
+          "730 E 95TH ST"
+        ],
         "latestTransferDate": "2020-11-29T06:00:00.000Z",
         "latestBuyerName": "ERICK L.  SMITH",
         "latestSellerName": "PEOPLES BANK FKA PEOPLES BANK AS SUCCESSOR IN INTERST TO PERSONAL BANK",
@@ -2376,7 +3201,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9048 S ELLIS AVE",
+          "921 E 75TH ST",
+          "9220 S DOBSON AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2392,7 +3221,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7738 S KIMBARK AVE",
+          "7742 S KIMBARK AVE",
+          "7744 S KIMBARK AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2408,7 +3241,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9315 S SAINT LAWRENCE AVE",
+          "9317 S SAINT LAWRENCE AVE",
+          "9319 S SAINT LAWRENCE AVE"
+        ],
         "latestTransferDate": "2016-02-23T06:00:00.000Z",
         "latestBuyerName": "CHICAGO CELLS INC",
         "latestSellerName": "CHI GROUP INC",
@@ -2424,7 +3261,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1010 E 75TH ST",
+          "1014 E 75TH ST",
+          "1016 E 75TH ST"
+        ],
         "latestTransferDate": "2025-10-22T05:00:00.000Z",
         "latestBuyerName": "OFSEVENTY-NINTH INC",
         "latestSellerName": "LEONARD  SUSBERRY",
@@ -2434,18 +3275,27 @@
       {
         "clusterKey": "mail:2035wgiddingsstchicagoil60625",
         "ownerName": "ANDRES SCHCOLNIK",
-        "ownerMailingAddress": "2035 W GIDDINGS ST, CHICAGO, IL, 60625",
+        "ownerMailingAddress": "2035 W GIDDINGS ST    , CHICAGO, IL, 60625",
         "ownerType": "corporate_llc",
         "parcelCount": 24,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 2,
+        "businessNames": [
+          "MOON LIGHT MARKET",
+          "GRIFFEA REAL ESTATE"
+        ],
+        "sampleAddresses": [
+          "1422 E 75TH ST",
+          "1423 E 76TH ST",
+          "1522 E 72ND ST",
+          "1526 E 72ND PL",
+          "406 E 75TH ST"
+        ],
         "latestTransferDate": "2025-08-14T05:00:00.000Z",
         "latestBuyerName": "EDIFICE GENERAL CONSTRUCTION, LLC",
         "latestSellerName": "COUNTY CLERK OF COOK COUNTY",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:2850smichiganchicagoil60616",
@@ -2454,14 +3304,22 @@
         "ownerType": "local_private",
         "parcelCount": 9,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "CHICAGO ALDERMANIC BLACK CAUCUS FOUNDATION"
+        ],
+        "sampleAddresses": [
+          "656 E 79TH ST",
+          "700 E 79TH ST",
+          "706 E 79TH ST",
+          "708 E 79TH ST",
+          "710 E 79TH ST"
+        ],
         "latestTransferDate": "2026-06-05T05:00:00.000Z",
         "latestBuyerName": "THE ELZIE L. HIGGINBOTTOM REVOCABLE TRUST U/A/D 11/11/99",
         "latestSellerName": "ELZIE L.  HIGGINBOTTOM",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:121nlasallerm1000chicagoil60602",
@@ -2472,7 +3330,13 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1212 E 73RD ST",
+          "7124 S DOBSON AVE",
+          "7149 S DOBSON AVE",
+          "7235 S UNIVERSITY AVE",
+          "7245 S UNIVERSITY AVE 1"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2486,14 +3350,26 @@
         "ownerType": "local_private",
         "parcelCount": 5,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 5,
+        "businessNames": [
+          "SOUTHSIDE MARKET INC.",
+          "J & J ELECTRONICS",
+          "WAFFLE LOUNGE",
+          "NEW CITY",
+          "MAXWELL STREET GRILL"
+        ],
+        "sampleAddresses": [
+          "7401 S STATE ST",
+          "7427 S STATE ST",
+          "7433 S STATE ST",
+          "7437 S STATE ST",
+          "7445 S STATE ST"
+        ],
         "latestTransferDate": "2017-05-23T05:00:00.000Z",
         "latestBuyerName": "FIRST MIDWEST BANK AS SUCCESSOR TRUSTEE",
         "latestSellerName": "FIRST MIDWEST BANK AS SUCCESSOR TRUSTEE",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:18601amlincircntryclbhlil60478",
@@ -2504,10 +3380,15 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "106 E 87TH ST",
+          "110 E 87TH ST",
+          "7657 S EBERHART AVE",
+          "8212 S PRAIRIE AVE HSE"
+        ],
         "latestTransferDate": "2025-11-28T06:00:00.000Z",
         "latestBuyerName": "FRANCESCA VETAUN DAVIS",
-        "latestSellerName": "ODESSA  SCOTT",
+        "latestSellerName": "WALTER  EDWARDS",
         "confidence": "High",
         "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
       },
@@ -2520,7 +3401,12 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1030 E 87TH ST",
+          "1034 E 87TH ST",
+          "9148 S MICHIGAN AVE",
+          "9152 S MICHIGAN AVE"
+        ],
         "latestTransferDate": "2026-02-20T06:00:00.000Z",
         "latestBuyerName": "ADL SOLUTIONS, LLC",
         "latestSellerName": "STAR GROUNDS, LLC",
@@ -2534,14 +3420,24 @@
         "ownerType": "local_private",
         "parcelCount": 4,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 4,
+        "businessNames": [
+          "LULU'S KIDZZ SPA INCORPORATED",
+          "MACK & ASSOCIATES INC.",
+          "XTREME MOBILE",
+          "EXTREME MOBILE"
+        ],
+        "sampleAddresses": [
+          "1015 E 95TH ST",
+          "1019 E 95TH ST",
+          "1149 E 95TH ST",
+          "1151 E 95TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:1408lawrencecresflossmooril60422",
@@ -2550,14 +3446,21 @@
         "ownerType": "local_private",
         "parcelCount": 4,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 2,
+        "businessNames": [
+          "BTS & REGAN FUNERAL HOME",
+          "MCCULLOUGH FUNERAL HOME"
+        ],
+        "sampleAddresses": [
+          "843 E 75TH ST",
+          "847 E 75TH ST",
+          "851 E 75TH ST"
+        ],
         "latestTransferDate": "2021-02-02T06:00:00.000Z",
         "latestBuyerName": "MC CULLOUGH FUNERAL AND CREMATION SERVICES, LTD",
         "latestSellerName": "UISCE LLC",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:1229e74thstchicagoil60619",
@@ -2568,7 +3471,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7352 S KIMBARK AVE",
+          "7410 S KIMBARK AVE",
+          "7420 S KIMBARK AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2584,7 +3491,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7540 S INGLESIDE AVE",
+          "7542 S INGLESIDE AVE",
+          "924 E 76TH ST"
+        ],
         "latestTransferDate": "2023-01-23T06:00:00.000Z",
         "latestBuyerName": "CLARETHA WASHINGTON",
         "latestSellerName": "CHICAGO TITLE LAND TRUST COMPANY, AS SUCCESSOR TRUSTEE U/T/A DATED THE 5TH DAY OF JANUARY, 2007 AND KNOWN AS TRUST NUMBER",
@@ -2600,7 +3511,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8101 S WABASH AVE",
+          "8103 S WABASH AVE",
+          "8107 S WABASH AVE"
+        ],
         "latestTransferDate": "2018-11-30T06:00:00.000Z",
         "latestBuyerName": "ISAAC THOMAS",
         "latestSellerName": "DARISSE  CULP",
@@ -2616,7 +3531,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7355 S RHODES AVE",
+          "7403 S BLACKSTONE AVE",
+          "8211 S PRAIRIE AVE"
+        ],
         "latestTransferDate": "2023-11-07T06:00:00.000Z",
         "latestBuyerName": "RHODES COURT II, LLC",
         "latestSellerName": "RHODES COURT, LLC AND RHODES COURTYARD, LLC",
@@ -2632,7 +3551,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7331 S GREENWOOD AVE",
+          "7339 S GREENWOOD AVE",
+          "7343 S GREENWOOD AVE"
+        ],
         "latestTransferDate": "2020-05-26T05:00:00.000Z",
         "latestBuyerName": "MARLENE SHONTELL FISHER",
         "latestSellerName": "US BANK NATIONAL ASSOCIATION",
@@ -2648,7 +3571,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8230 S DOBSON AVE G",
+          "9200 S HARPER AVE HSE",
+          "9211 S DOBSON AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2664,7 +3591,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "652 E 91ST ST",
+          "654 E 91ST ST",
+          "658 E 91ST ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2680,7 +3611,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8041 S RHODES AVE",
+          "8234 S KING DR",
+          "8238 S KING DR"
+        ],
         "latestTransferDate": "2023-08-16T05:00:00.000Z",
         "latestBuyerName": "MOORE FAMILY INVESTMENTS, LLC",
         "latestSellerName": "COUNTY CLERK OF THE COUNTY OF COOK",
@@ -2696,7 +3631,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "700 E 90TH PL",
+          "704 E 90TH PL",
+          "9032 S GREENWOOD AVE"
+        ],
         "latestTransferDate": "2016-04-18T05:00:00.000Z",
         "latestBuyerName": "QDC FINANCIAL, LLC",
         "latestSellerName": "JEFF BV LAND, LLC",
@@ -2712,7 +3651,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "72 E 95TH ST",
+          "74 E 95TH ST",
+          "76 E 95TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2728,7 +3671,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8224 S KING DR",
+          "8226 S KING DR",
+          "8228 S KING DR"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2744,10 +3691,14 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7232 S COTTAGE GROVE AVE",
+          "7234 S COTTAGE GROVE AVE",
+          "7245 S COTTAGE GROVE AVE"
+        ],
         "latestTransferDate": "2016-09-08T05:00:00.000Z",
         "latestBuyerName": "7255 COTTAGE GROVE PROPERTIES, LLC",
-        "latestSellerName": "LEE  GREENSPON",
+        "latestSellerName": "CHICAGO TITLE LAND TRUST COMPANY, AS SUCCESSOR TRUSTEE UTA DATED THE 11TH DAY OF JULY, 1994 KATN 11-2838",
         "confidence": "High",
         "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
       },
@@ -2760,7 +3711,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1215 E 71ST ST",
+          "1217 E 71ST ST",
+          "1219 E 71ST ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2776,7 +3731,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1010 E 76TH ST",
+          "7248 W WOODLAWN AVE",
+          "7252 W WOODLAWN AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2792,7 +3751,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7712 S AVALON AVE",
+          "7716 S AVALON AVE",
+          "7800 S GREENWOOD AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2808,7 +3771,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "623 E 75TH ST",
+          "625 E 75TH ST"
+        ],
         "latestTransferDate": "2025-06-18T05:00:00.000Z",
         "latestBuyerName": "VETERANS LIFE SOURCE PROPERTY MGMT, LLC",
         "latestSellerName": "TLH TD ILLINOIS PROPERTIES LLC",
@@ -2824,7 +3790,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8016 S KIMBARK AVE",
+          "8018 S KIMBARK AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2840,7 +3809,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7255 S UNIVERSITY AVE",
+          "7259 S UNIVERSITY AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2856,7 +3828,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "107 E 75TH ST",
+          "7445 S MICHIGAN AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2872,7 +3847,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "518 E 88TH PL",
+          "8028 S ELLIS AVE"
+        ],
         "latestTransferDate": "2025-04-07T05:00:00.000Z",
         "latestBuyerName": "BLUE FEATHER HOLDINGS LIMITED LIABILITY COMPANY",
         "latestSellerName": "FINANCE OF AMERICA REVERSE LLC",
@@ -2888,7 +3866,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1142 E 91ST ST",
+          "1534 E 93RD ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2904,7 +3885,9 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7843 S DOBSON AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2918,14 +3901,19 @@
         "ownerType": "local_private",
         "parcelCount": 2,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "LOVE JONES ENTERTAINMENT"
+        ],
+        "sampleAddresses": [
+          "7626 S INGLESIDE AVE",
+          "9114 S DAUPHIN AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:7608slangleychicagoil60619",
@@ -2936,7 +3924,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7608 S LANGLEY AVE",
+          "7610 S LANGLEY AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2952,7 +3943,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7120 S RHODES AVE 2",
+          "7120 S RHODES AVE 3"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2968,7 +3962,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8245 S INGLESIDE AVE",
+          "8251 S INGLESIDE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -2984,7 +3981,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9351 S KIMBARK AVE",
+          "9353 S KIMBARK AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3000,7 +4000,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9244 S COTTAGE GROVE AVE",
+          "9246 S COTTAGE GROVE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3016,7 +4019,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1338 E 73RD ST",
+          "1340 E 73RD ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3032,7 +4038,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8144 S HARPER AVE",
+          "8148 S HARPER AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3048,7 +4057,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9028 S HARPER AVE",
+          "9032 S HARPER AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3064,7 +4076,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7114 S CHAMPLAIN AVE",
+          "7116 S CHAMPLAIN AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3080,7 +4095,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "9104 S AVALON AVE",
+          "9106 S AVALON AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3096,7 +4114,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1415 E 72ND PL HSE",
+          "7358 S KENWOOD AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3112,7 +4133,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1518 E 93RD ST",
+          "1520 E 93RD ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3128,7 +4152,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1520 E 74TH PL",
+          "948 E 79TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3144,7 +4171,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1140 E 90TH ST",
+          "9204 S GREENWOOD AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3160,7 +4190,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "8022 S AVALON AVE",
+          "8024 S AVALON AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3176,7 +4209,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1513 E 76TH ST",
+          "9421 S LANGLEY AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3192,7 +4228,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1400 E 72ND PL",
+          "1402 E 72ND PL"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3208,7 +4247,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7519 S KENWOOD AVE",
+          "7527 S KENWOOD AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3224,7 +4266,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7109 S DREXEL AVE",
+          "7212 S UNIVERSITY AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3242,7 +4287,13 @@
         "vacantParcelCount": 14,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1630 E 79TH ST",
+          "1636 E 79TH ST",
+          "1638 E 79TH ST",
+          "2148 E 71ST ST",
+          "2154 E 79TH ST"
+        ],
         "latestTransferDate": "2025-10-21T05:00:00.000Z",
         "latestBuyerName": "COUNTY OF COOK, D/B/A COOK COUNTY LAND BANK AUTHORITY",
         "latestSellerName": "MONICA GORDON, COUNTY CLERK OF THE COUNTY OF COOK",
@@ -3258,7 +4309,13 @@
         "vacantParcelCount": 7,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7703 S STONY ISLAND AVE",
+          "7707 S STONY ISLAND AVE",
+          "7709 S STONY ISLAND AVE",
+          "7713 S STONY ISLAND AVE",
+          "7715 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3274,7 +4331,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7704 S STONY ISLAND AVE",
+          "7710 S STONY ISLAND AVE",
+          "7715 S STONY ISLAND AVE",
+          "7722 S STONY ISLAND AVE",
+          "7726 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": "2022-11-15T06:00:00.000Z",
         "latestBuyerName": "REGAL MILE VENTURES LLC",
         "latestSellerName": "WELLS FARGO BANK, N.A. AND BEVERLY A. FIELDS AS CO-TRUSTEES",
@@ -3290,7 +4353,13 @@
         "vacantParcelCount": 5,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7301 S SOUTH SHORE DR",
+          "7307 S SOUTH SHORE DR",
+          "7310 S SOUTH SHORE DR",
+          "7311 S SOUTH SHORE DR",
+          "7315 S SOUTH SHORE DR"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3306,7 +4375,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2311 E 79TH ST",
+          "2315 E 79TH ST",
+          "2317 E 79TH ST",
+          "2319 E 79TH ST"
+        ],
         "latestTransferDate": "2022-04-08T05:00:00.000Z",
         "latestBuyerName": "LAKESIDE BAN LLC",
         "latestSellerName": "RALPH CRANDON LLC",
@@ -3322,7 +4396,12 @@
         "vacantParcelCount": 4,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7100 S CORNELL AVE",
+          "7102 S CORNELL AVE",
+          "7104 S CORNELL AVE",
+          "7106 S CORNELL AVE"
+        ],
         "latestTransferDate": "2019-02-14T06:00:00.000Z",
         "latestBuyerName": "LAND WISE REALTY, LLC",
         "latestSellerName": "CHARLES P. GILBERT ACTING GUARDIAN OF ESTATE OF REGINALD THOMPSON",
@@ -3340,7 +4419,12 @@
         "businessNames": [
           "JACKSON PARK HOSPITAL"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1601 E 75TH ST",
+          "1642 E 75TH ST",
+          "1646 E 75TH ST",
+          "1648 E 75TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3356,7 +4440,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7036 S STONY ISLAND AVE",
+          "7046 S STONY ISLAND AVE",
+          "7048 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3372,7 +4460,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7016 S EAST END AVE",
+          "7020 S EAST END AVE",
+          "7030 S EAST END AVE"
+        ],
         "latestTransferDate": "2015-08-13T05:00:00.000Z",
         "latestBuyerName": "7016 S EAST END CORP",
         "latestSellerName": "ZLC INVESTMENTS, LLC",
@@ -3386,14 +4478,19 @@
         "ownerType": "corporate_llc",
         "parcelCount": 3,
         "vacantParcelCount": 3,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "THE FOOD EXCHANGE"
+        ],
+        "sampleAddresses": [
+          "7141 S YATES BLVD",
+          "7162 S EXCHANGE AVE"
+        ],
         "latestTransferDate": "2021-07-23T05:00:00.000Z",
         "latestBuyerName": "PARK SOUTH SHORE, LLC",
         "latestSellerName": "IBC PROPERTY HOLDINGS LLC",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:15900wolfrdste204orlandparkil60467",
@@ -3404,7 +4501,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2664 E 76TH ST",
+          "2670 E 76TH ST",
+          "2674 E 76TH ST"
+        ],
         "latestTransferDate": "2017-01-09T06:00:00.000Z",
         "latestBuyerName": "CHICAGO HILLS PROPERTIES LLC",
         "latestSellerName": "THE FRUHAN GROUP, LLC",
@@ -3418,14 +4519,18 @@
         "ownerType": "local_private",
         "parcelCount": 3,
         "vacantParcelCount": 3,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "MARCUS DAILEY"
+        ],
+        "sampleAddresses": [
+          "7201 S RIDGELAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:10360srobertsrdpaloshillsil60465",
@@ -3436,7 +4541,11 @@
         "vacantParcelCount": 3,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2670 E 75TH ST",
+          "2676 E 75TH ST",
+          "2678 E 75TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3450,14 +4559,22 @@
         "ownerType": "corporate_llc",
         "parcelCount": 11,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "THE LEARNING HUB LLC"
+        ],
+        "sampleAddresses": [
+          "1617 E 74TH ST",
+          "1949 E 72ND ST",
+          "2042 E 75TH ST",
+          "2100 E 75TH ST",
+          "6837 S RIDGELAND AVE 201"
+        ],
         "latestTransferDate": "2024-12-04T06:00:00.000Z",
         "latestBuyerName": "EDIFICE GENERAL CONSTRUCTIONS, LLC",
         "latestSellerName": "CEDRIC GILES",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:2727lbjfwyste800dallastx75234",
@@ -3466,14 +4583,22 @@
         "ownerType": "out_of_state",
         "parcelCount": 10,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "PETES ITALIAN BEEF"
+        ],
+        "sampleAddresses": [
+          "1606 E 79TH ST",
+          "1612 E 79TH ST",
+          "7831 S STONY ISLAND AVE",
+          "7833 S STONY ISLAND AVE",
+          "7836 S CORNELL AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:58georgestgrayslakeil60030",
@@ -3484,7 +4609,13 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2348 E 71ST ST P18",
+          "2370 E 71ST ST 16G",
+          "7545 S OGLESBY AVE",
+          "7631 S COLES AVE B",
+          "7813 S JEFFERY AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3500,7 +4631,12 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7247 S JEFFERY AVE",
+          "7251 S JEFFERY AVE",
+          "7254 S CRANDON AVE",
+          "7257 S JEFFERY AVE"
+        ],
         "latestTransferDate": "2015-08-13T05:00:00.000Z",
         "latestBuyerName": "SD 87TH PROPERTY, LLC",
         "latestSellerName": "JEFF BV-COMMERCIAL, LLC",
@@ -3516,7 +4652,13 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2910 E 79TH ST",
+          "2914 E 79TH ST",
+          "2924 E 79TH ST",
+          "7843 S ESCANABA AVE",
+          "7850 S ESCANABA AVE"
+        ],
         "latestTransferDate": "2014-10-09T05:00:00.000Z",
         "latestBuyerName": "AMERICAN FOOD EXCHANGE LLC",
         "latestSellerName": "NCB DEVELOPMENT XLII LLC",
@@ -3532,7 +4674,9 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "3065 E CHELTENHAM PL"
+        ],
         "latestTransferDate": "2023-01-20T06:00:00.000Z",
         "latestBuyerName": "LESLIE  JONES",
         "latestSellerName": "CHONDRITE REO, LLC (4)",
@@ -3548,7 +4692,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2657 E 77TH ST",
+          "7631 S SAGINAW AVE",
+          "7836 S YATES BLVD"
+        ],
         "latestTransferDate": "2017-01-04T06:00:00.000Z",
         "latestBuyerName": "TREND'S DESTINATION LLC",
         "latestSellerName": "BAYVIEW LOAN SERVICING LLC",
@@ -3564,7 +4712,12 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "6944 S STONY ISLAND AVE",
+          "6946 S STONY ISLAND AVE",
+          "6952 S STONY ISLAND AVE",
+          "7337 S SOUTH SHORE DR 1217"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3580,7 +4733,12 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2418 E 79TH ST",
+          "2422 E 79TH ST",
+          "2434 E 79TH ST",
+          "2440 E 79TH ST"
+        ],
         "latestTransferDate": "2016-04-01T05:00:00.000Z",
         "latestBuyerName": "REALTY INCOME ILLINOIS PROPERTIES 4, LLC, A DELAWARE LIMITED LIABILITY COMPANY",
         "latestSellerName": "CHICAGO DIALYSIS I, LLC",
@@ -3596,7 +4754,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2410 E 73RD ST",
+          "2414 E 73RD ST",
+          "2430 E 73RD ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3612,7 +4774,11 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2500 E 74TH ST",
+          "2504 E 74TH ST",
+          "2506 E 74TH ST"
+        ],
         "latestTransferDate": "2023-12-26T06:00:00.000Z",
         "latestBuyerName": "AXERT LLC - 6052 SERIES",
         "latestSellerName": "KAREN A.  YARBROUGH",
@@ -3628,7 +4794,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "6740 S SOUTH SHORE DR",
+          "6774 S SOUTH SHORE DR"
+        ],
         "latestTransferDate": "2019-05-28T05:00:00.000Z",
         "latestBuyerName": "SOUTH SHORE & 67 LLC",
         "latestSellerName": "JAMES PAUL",
@@ -3644,7 +4813,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1949 E 73RD ST",
+          "1957 E 73RD ST"
+        ],
         "latestTransferDate": "2020-03-03T06:00:00.000Z",
         "latestBuyerName": "1949-1957 E 73RD LLC",
         "latestSellerName": "JOHN P KERLEY MARRIED TO FIONA KERLEY",
@@ -3660,7 +4832,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7103 S MERRILL AVE",
+          "7107 S MERRILL AVE"
+        ],
         "latestTransferDate": "2019-03-12T05:00:00.000Z",
         "latestBuyerName": "INNOVATION INVESTMENT GROUP LLC",
         "latestSellerName": "CHICAGO IRISH IMMIGRANT SUPPORT",
@@ -3676,7 +4851,9 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7255 S SOUTH SHORE DR"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3692,7 +4869,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2868 E 79TH ST",
+          "2870 E 79TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3708,7 +4888,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7816 S MARQUETTE AVE",
+          "7826 S MARQUETTE AVE"
+        ],
         "latestTransferDate": "2026-06-05T05:00:00.000Z",
         "latestBuyerName": "KNOX PROPERTIES LLC",
         "latestSellerName": "CATALYST PROPERTY GROUP LLC.",
@@ -3722,14 +4905,20 @@
         "ownerType": "local_private",
         "parcelCount": 2,
         "vacantParcelCount": 2,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 2,
+        "businessNames": [
+          "FAMILY COIN LAUNDRY INC",
+          "COIN LAUDRY INC"
+        ],
+        "sampleAddresses": [
+          "2743 E 79TH ST",
+          "2747 E 79TH ST"
+        ],
         "latestTransferDate": "2016-09-14T05:00:00.000Z",
         "latestBuyerName": "LABOR OF LOVE APOSTOLIC CHURCH",
-        "latestSellerName": "ESTATE OF ROBERT H. FARLEY SR.",
+        "latestSellerName": "TRUST NUMBER 3906",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:14117concorddrorlandparkil60462",
@@ -3740,7 +4929,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7520 S SAGINAW AVE",
+          "7526 S SAGINAW AVE HSE"
+        ],
         "latestTransferDate": "2014-03-14T05:00:00.000Z",
         "latestBuyerName": "SAMIR KASSEM",
         "latestSellerName": "NATIVIDAD CORTEZ",
@@ -3756,7 +4948,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1750 E 75TH ST",
+          "1752 E 75TH ST"
+        ],
         "latestTransferDate": "2022-01-27T06:00:00.000Z",
         "latestBuyerName": "UMA REAL ESTATE LLC",
         "latestSellerName": "GALACTICA PARTNERS, LLC",
@@ -3772,7 +4967,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1700 E 75TH ST",
+          "1704 E 75TH ST"
+        ],
         "latestTransferDate": "2022-01-27T06:00:00.000Z",
         "latestBuyerName": "M & M REALTY PROPERTIES, LLC",
         "latestSellerName": "GALACTICA PARTNERS, LLC",
@@ -3788,7 +4986,9 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2049 E 75TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3804,7 +5004,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2638 E 75TH ST",
+          "2654 E 75TH ST"
+        ],
         "latestTransferDate": "2020-08-13T05:00:00.000Z",
         "latestBuyerName": "THE VILLA AT WINDSOR PARK REALTY III, LLC",
         "latestSellerName": "THE VILLA AT WINDSOR PARK REALTY II, LLC",
@@ -3822,7 +5025,10 @@
         "businessNames": [
           "KAR KARE SERVICE"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2601 E 74TH PL",
+          "2605 E 74TH PL"
+        ],
         "latestTransferDate": "2023-03-08T06:00:00.000Z",
         "latestBuyerName": "KUSTOM KAR LLC",
         "latestSellerName": "FITZ CORPORATION",
@@ -3838,7 +5044,10 @@
         "vacantParcelCount": 2,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7719 S BURNHAM AVE",
+          "7725 S BURNHAM AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3852,14 +5061,23 @@
         "ownerType": "corporate_llc",
         "parcelCount": 40,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 2,
+        "businessNames": [
+          "Gibson Lakeshore LLC",
+          "MARIA KING"
+        ],
+        "sampleAddresses": [
+          "1907 E 74TH ST",
+          "2317 E 68TH ST 3",
+          "2818 E 76TH ST",
+          "2825 E 76TH ST",
+          "6700 S CRANDON AVE 12A"
+        ],
         "latestTransferDate": "2026-02-09T06:00:00.000Z",
         "latestBuyerName": "THE LAND TRUST COMPANY",
         "latestSellerName": "THE LAND TRUST COMPANY",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:pobox18oaklawnil60454",
@@ -3868,14 +5086,24 @@
         "ownerType": "corporate_llc",
         "parcelCount": 23,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 3,
+        "businessNames": [
+          "INA MARTIN",
+          "BARBARA ANN MAMON",
+          "MACK L. HIGGINS"
+        ],
+        "sampleAddresses": [
+          "2354 E 70TH ST",
+          "2917 E 77TH ST",
+          "6826 S OGLESBY AVE",
+          "6924 S SOUTH SHORE DR",
+          "6930 S SOUTH SHORE DR"
+        ],
         "latestTransferDate": "2019-05-03T05:00:00.000Z",
         "latestBuyerName": "THE CHICAGO TRUST COMPANY, N.A.",
         "latestSellerName": "MARIA KALABICH",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:324e115thstchicagoil60628",
@@ -3886,7 +5114,9 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "6916 S CORNELL AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -3900,14 +5130,23 @@
         "ownerType": "corporate_llc",
         "parcelCount": 7,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 2,
+        "businessNames": [
+          "STEKEENA ANN ROLLINS",
+          "REHAB SPECIAL SERVICES"
+        ],
+        "sampleAddresses": [
+          "6701 S MERRILL AVE",
+          "6715 S PAXTON AVE",
+          "6725 S PAXTON AVE",
+          "6750 S MERRILL AVE",
+          "6811 S PAXTON AVE"
+        ],
         "latestTransferDate": "2023-09-27T05:00:00.000Z",
         "latestBuyerName": "JACKSON HIGHLANDS PROPERTIES LLC",
         "latestSellerName": "GRV JACKSON PARK LLC",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:1205wadamsst101chicagoil60607",
@@ -3916,14 +5155,22 @@
         "ownerType": "local_private",
         "parcelCount": 6,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "JEFFERY CLEANERS"
+        ],
+        "sampleAddresses": [
+          "7609 S JEFFERY AVE",
+          "7623 S JEFFERY AVE",
+          "7625 S JEFFERY AVE",
+          "7627 S JEFFERY AVE",
+          "7629 S JEFFERY AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:765e69thplchicagoil60637",
@@ -3934,7 +5181,13 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2212 E 68TH ST",
+          "2218 E 68TH ST",
+          "7018 S CLYDE AVE",
+          "7446 S KINGSTON AVE",
+          "7750 S ESSEX AVE"
+        ],
         "latestTransferDate": "2024-06-04T05:00:00.000Z",
         "latestBuyerName": "7436 KINGSTON SOUTH PORTFOLIO LLC",
         "latestSellerName": "7436 S KINGSTON AVE HOLDINGS LLC",
@@ -3950,7 +5203,13 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2567 E 72ND PL",
+          "2569 E 72ND PL",
+          "2571 E 71ST ST",
+          "2572 E 72ND PL",
+          "2577 E 72ND PL"
+        ],
         "latestTransferDate": "2019-02-26T06:00:00.000Z",
         "latestBuyerName": "2571 E. 71ST STREET, LLC",
         "latestSellerName": "CHICAGO TITLE LAND TRUST COMPANY, AS SUCCESSOR LAND TRUSTEE",
@@ -3964,14 +5223,22 @@
         "ownerType": "local_private",
         "parcelCount": 5,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "NATURAL ROOTS"
+        ],
+        "sampleAddresses": [
+          "2037 E 75TH ST",
+          "6717 S EAST END AVE",
+          "7341 S YATES BLVD",
+          "7347 S YATES BLVD",
+          "7353 S YATES BLVD"
+        ],
         "latestTransferDate": "2022-04-08T05:00:00.000Z",
         "latestBuyerName": "NICHOLAS BRUMFIELD",
         "latestSellerName": "SECRETARY OF HOUSING & URBAN DEVELOPMENT",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:4355nravenswoodavchicagoil60613",
@@ -3980,14 +5247,26 @@
         "ownerType": "corporate_llc",
         "parcelCount": 5,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 5,
+        "businessNames": [
+          "SONYA C. GAGE",
+          "EL BARAKAH",
+          "SIDNEY JOSEPH TOLBERT",
+          "JACQUELYN M BUTLER",
+          "SIDNEY J. TOLBERT"
+        ],
+        "sampleAddresses": [
+          "7300 S SOUTH SHORE DR",
+          "7304 S SOUTH SHORE DR",
+          "7306 S SOUTH SHORE DR",
+          "7345 S SOUTH SHORE DR",
+          "7437 S SOUTH SHORE DR"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:999roslynrdolympiafldsil60461",
@@ -3996,14 +5275,23 @@
         "ownerType": "local_private",
         "parcelCount": 5,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 2,
+        "businessNames": [
+          "WILLIE  MAES LEARNING CENTER",
+          "CLARENCE HODGES HEADSTART"
+        ],
+        "sampleAddresses": [
+          "1920 E 79TH ST",
+          "1921 E 79TH ST",
+          "1925 E 79TH ST",
+          "1932 E 79TH ST",
+          "1936 E 79TH ST"
+        ],
         "latestTransferDate": "2022-04-18T05:00:00.000Z",
         "latestBuyerName": "PRODIGY CHILD, INC.",
         "latestSellerName": "COMMERCIAL PROPERTIES 17, INC",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:7531sstonyislandavchicagoil60649",
@@ -4012,14 +5300,21 @@
         "ownerType": "local_private",
         "parcelCount": 4,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "Shore Auto Rebuilders"
+        ],
+        "sampleAddresses": [
+          "1631 E 75TH ST",
+          "1635 E 75TH ST",
+          "1637 E 75TH ST",
+          "1645 E 75TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:1907sblueislandavechicagoil60608",
@@ -4030,7 +5325,12 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2800 E 76TH PL",
+          "6922 S CORNELL AVE",
+          "7026 S CORNELL AVE",
+          "7558 S COLES AVE"
+        ],
         "latestTransferDate": "2024-08-06T05:00:00.000Z",
         "latestBuyerName": "VENTUS HOLDINGS LLC, AN ILLINOIS LIMITED LIABILITY COMPANY",
         "latestSellerName": "CHICAGO TITLE LAND TRUST COMPANY, AS TRUSTEE UNDER TRUST AGREEMENT DATED JUNE 23, 1989 AND KNOWN AS TRUST NO. 1093348",
@@ -4046,7 +5346,11 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2030 E 72ND PL 1D",
+          "2454 E 74TH ST",
+          "2456 E 74TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4062,7 +5366,12 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7040 S EUCLID AVE",
+          "7044 S EUCLID AVE",
+          "7050 S EUCLID AVE",
+          "7117 S EUCLID AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4076,11 +5385,19 @@
         "ownerType": "corporate_llc",
         "parcelCount": 4,
         "vacantParcelCount": 1,
-        "businessCount": 1,
+        "businessCount": 4,
         "businessNames": [
+          "FRESH BREEZE LAUNDROMAT",
+          "BUBBLEZ  GROUP LLC",
+          "DUNMORE RENT CAR INC",
           "DUNMORE AUTO SALES"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2601 E 75TH ST",
+          "2605 E 75TH ST",
+          "2611 E 75TH ST",
+          "7320 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": "2022-05-31T05:00:00.000Z",
         "latestBuyerName": "CHICAGO TITLE LAND TRUST COMPANY",
         "latestSellerName": "WILLIE DUNMORE",
@@ -4094,14 +5411,22 @@
         "ownerType": "corporate_llc",
         "parcelCount": 4,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 2,
+        "businessNames": [
+          "ERICKA'S PASSION 4 HAIR -- HEY NAH KIDS 2 SALON",
+          "OZELL'S HAIR DESIGN"
+        ],
+        "sampleAddresses": [
+          "3030 E 79TH ST",
+          "3032 E 79TH ST",
+          "7255 S EUCLID AVE",
+          "7600 S KINGSTON AVE"
+        ],
         "latestTransferDate": "2021-07-27T05:00:00.000Z",
         "latestBuyerName": "GI 7600 S KINGSTON LP, AN ILLINOIS LIMITED PARTNERSHIP",
         "latestSellerName": "76TH AND KINGSTON LLC, AN ILLINOIS LIMITED LIABILITY COMPANY",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:3002cheltenhamplchicagoil60649",
@@ -4112,7 +5437,12 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2842 E 79TH ST",
+          "3000 E CHELTENHAM PL",
+          "3002 E CHELTENHAM PL",
+          "3004 E CHELTENHAM PL"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4128,7 +5458,11 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7300 S OGLESBY AVE",
+          "7301 S BENNETT AVE",
+          "7413 S EXCHANGE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4144,7 +5478,11 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2734 E 76TH ST",
+          "2738 E 76TH ST",
+          "7402 S JEFFERY BLVD"
+        ],
         "latestTransferDate": "2024-03-14T05:00:00.000Z",
         "latestBuyerName": "MARCUS  MALTBIA",
         "latestSellerName": "TL6 II 1 LLC",
@@ -4162,7 +5500,11 @@
         "businessNames": [
           "THE STONY GROUP, LLC"
         ],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "6740 S STONY ISLAND AVE",
+          "6758 S STONY ISLAND AVE",
+          "7030 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": "2016-11-09T06:00:00.000Z",
         "latestBuyerName": "THE STONY GROUP, LLC",
         "latestSellerName": "HARDING AVENUE PROPERTIES, LLC",
@@ -4178,7 +5520,11 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7812 S COLES AVE",
+          "7819 S EXCHANGE AVE",
+          "7829 S EXCHANGE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4194,7 +5540,11 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1910 E 73RD ST",
+          "2475 E 71ST ST",
+          "7255 S BENNETT AVE"
+        ],
         "latestTransferDate": "2021-11-02T05:00:00.000Z",
         "latestBuyerName": "7245 BENNETT LLC",
         "latestSellerName": "BENNETT COURTYARD LLC",
@@ -4210,7 +5560,11 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2545 E 72ND PL",
+          "6742 S CONSTANCE AVE",
+          "7233 S SOUTH SHORE DR"
+        ],
         "latestTransferDate": "2023-02-07T06:00:00.000Z",
         "latestBuyerName": "CAMPBELL/CHAMBERLIN REVOCABLE TRUST DATED 9/15/2020",
         "latestSellerName": "KATHLEEN S. CAMPBELL",
@@ -4226,7 +5580,11 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7328 S EXCHANGE AVE",
+          "7356 S EXCHANGE AVE",
+          "7431 S CRANDON AVE"
+        ],
         "latestTransferDate": "2016-05-11T05:00:00.000Z",
         "latestBuyerName": "INVALOT HOLDING LLC",
         "latestSellerName": "LYDIA HANDY",
@@ -4242,7 +5600,11 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7652 S STONY ISLAND AVE",
+          "7654 S STONY ISLAND AVE",
+          "7656 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4258,9 +5620,13 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1747 E 71ST ST",
+          "1755 E 71ST ST",
+          "7102 S CONSTANCE AVE"
+        ],
         "latestTransferDate": "2015-07-08T05:00:00.000Z",
-        "latestBuyerName": "1755 LLC, A SERIES OF BLACK UNITED FUND OF ILLINOIS DEVELOPMENT LLC",
+        "latestBuyerName": "CONSTANCE LLC, A SERIES OF BLACK UNITED FUND OF ILLINOIS DEVELOPMENT, LLC",
         "latestSellerName": "BLACK UNITED FUND OF ILLINOIS, INC.",
         "confidence": "High",
         "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
@@ -4272,14 +5638,20 @@
         "ownerType": "out_of_state",
         "parcelCount": 3,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "123 CONNECT"
+        ],
+        "sampleAddresses": [
+          "2401 E 75TH ST",
+          "7330 S RIDGELAND AVE",
+          "7338 S RIDGELAND AVE"
+        ],
         "latestTransferDate": "2025-11-13T06:00:00.000Z",
         "latestBuyerName": "ELITE REAL ESTATE INVESTMENT GROUP",
         "latestSellerName": "STONEDRY, LLC",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:1657e70thstchicagoil60649",
@@ -4290,7 +5662,9 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1657 E 70TH ST"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4304,14 +5678,20 @@
         "ownerType": "corporate_llc",
         "parcelCount": 3,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 1,
+        "businessNames": [
+          "WATERFRONT TERRACE INC"
+        ],
+        "sampleAddresses": [
+          "7750 S SOUTH SHORE DR",
+          "7753 S COLES AVE",
+          "7766 S SOUTH SHORE DR"
+        ],
         "latestTransferDate": "2014-07-17T05:00:00.000Z",
         "latestBuyerName": "7760 SOUTH SHORE DRIVE BUILDING, LLC",
         "latestSellerName": "THE CATHOLIC BISHOP OF CHICAGO",
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN"
+        "evidence": "grouped by recorded owner mailing address; recent transfer record attached by PIN; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:2923e78thstchicagoil60649",
@@ -4322,7 +5702,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2923 E 78TH ST",
+          "2925 E 78TH ST"
+        ],
         "latestTransferDate": "2018-03-29T05:00:00.000Z",
         "latestBuyerName": "YVONNE GILL",
         "latestSellerName": "CITY OF CHICAGO",
@@ -4338,7 +5721,11 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7818 S EUCLID AVE",
+          "7820 S EUCLID AVE",
+          "7825 S EUCLID AVE 2"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4354,7 +5741,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2972 E 78TH ST",
+          "7719 S COLES AVE"
+        ],
         "latestTransferDate": "2023-05-10T05:00:00.000Z",
         "latestBuyerName": "SILVESTRE  BELTRAN",
         "latestSellerName": "SOUTH WESTSIDE PROPERTIES LLC",
@@ -4370,7 +5760,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7721 S SOUTH SHORE DR",
+          "7727 S SOUTH SHORE DR"
+        ],
         "latestTransferDate": "2023-07-27T05:00:00.000Z",
         "latestBuyerName": "ROBERT GLICK",
         "latestSellerName": "KAREN A YARBROUGH COOK COUNTY CLERK",
@@ -4386,7 +5779,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7733 S RIDGELAND AVE",
+          "7741 S RIDGELAND AVE"
+        ],
         "latestTransferDate": "2018-03-29T05:00:00.000Z",
         "latestBuyerName": "CANDACE H WISE",
         "latestSellerName": "CITY OF CHICAGO",
@@ -4402,7 +5798,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7743 S OGLESBY AVE",
+          "7745 S OGLESBY AVE"
+        ],
         "latestTransferDate": "2015-12-04T06:00:00.000Z",
         "latestBuyerName": " NICOLA R. CARTER",
         "latestSellerName": "SEAWAY BANK AND TRUST COMPANY",
@@ -4418,7 +5817,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7630 S CHAPPELL AVE",
+          "7632 S CHAPPELL AVE"
+        ],
         "latestTransferDate": "2022-12-29T06:00:00.000Z",
         "latestBuyerName": "CHICAGO TITLE LAND TRUST CMOPANY, TRUST #8002383013",
         "latestSellerName": "CHICAGO TITLE LAND TRUST CMOPANY, TRUST #8002383013",
@@ -4434,7 +5836,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "1908 E 75TH ST",
+          "7451 S EUCLID PKY"
+        ],
         "latestTransferDate": "2023-03-14T05:00:00.000Z",
         "latestBuyerName": "CHICAGO TITLE LAND TRUST COMPANY",
         "latestSellerName": "SYREETA N. TALBERT",
@@ -4450,7 +5855,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2462 E 74TH ST",
+          "2464 E 74TH ST"
+        ],
         "latestTransferDate": "2022-08-26T05:00:00.000Z",
         "latestBuyerName": "KASAJEN 2 LLC",
         "latestSellerName": "CHICAGO TITLE LAND TRUST COMPANY., AS SUCCESSOR TRUSTEE UNDER TRUST AGREEMENT DATED 4/18/2006",
@@ -4466,7 +5874,9 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7314 S BENNETT AVE"
+        ],
         "latestTransferDate": "2024-12-20T06:00:00.000Z",
         "latestBuyerName": "MUHAMMAD'S HOLY TEMPLE OF ISLAM",
         "latestSellerName": "SHAUNDA R BATSON",
@@ -4482,7 +5892,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "6732 S RIDGELAND AVE",
+          "7661 S SOUTH SHORE DR"
+        ],
         "latestTransferDate": "2019-07-17T05:00:00.000Z",
         "latestBuyerName": "KOURTNI K. MARSHALL",
         "latestSellerName": "TAHEERA KHAN",
@@ -4496,14 +5909,21 @@
         "ownerType": "local_private",
         "parcelCount": 2,
         "vacantParcelCount": 1,
-        "businessCount": 0,
-        "businessNames": [],
-        "sampleAddresses": [],
+        "businessCount": 3,
+        "businessNames": [
+          "SIKAMAN LIMITED",
+          "WALL TO FLOOR LIMITED",
+          "UJAMAA-BROWN & MOMEN, LLC"
+        ],
+        "sampleAddresses": [
+          "7744 S STONY ISLAND AVE",
+          "7752 S STONY ISLAND AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
         "confidence": "High",
-        "evidence": "grouped by recorded owner mailing address"
+        "evidence": "grouped by recorded owner mailing address; linked to business licenses by site address/name"
       },
       {
         "clusterKey": "mail:7541scrandonavenuechicagoil60649",
@@ -4514,7 +5934,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7541 S CRANDON AVE",
+          "7545 S CRANDON AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4530,7 +5953,9 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7310 S PHILLIPS AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4546,7 +5971,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7600 S MERRILL AVE",
+          "7604 S MERRILL AVE"
+        ],
         "latestTransferDate": "2022-05-12T05:00:00.000Z",
         "latestBuyerName": "BRENDA A SHERIFF",
         "latestSellerName": "MARTHA L COLLINS",
@@ -4562,7 +5990,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7412 S OGLESBY AVE",
+          "7414 S OGLESBY AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4578,7 +6009,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7438 S CLYDE AVE",
+          "7440 S CLYDE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4594,7 +6028,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7334 S OGLESBY AVE",
+          "7336 S OGLESBY AVE"
+        ],
         "latestTransferDate": "2024-09-18T05:00:00.000Z",
         "latestBuyerName": "CAITRIONA ROCKWELL",
         "latestSellerName": "DEREK C. HILL",
@@ -4610,7 +6047,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7734 S MUSKEGON AVE HSE",
+          "7828 S MARQUETTE AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4626,7 +6066,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2810 E 76TH PL",
+          "2822 E 76TH PL"
+        ],
         "latestTransferDate": "2021-11-16T06:00:00.000Z",
         "latestBuyerName": "WILDA MICHEL MARTHOL",
         "latestSellerName": "WILDA MICHEL MARTHOL",
@@ -4642,7 +6085,9 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7348 S PAXTON AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4658,7 +6103,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7609 S CHAPPEL AVE",
+          "7611 S CHAPPEL AVE"
+        ],
         "latestTransferDate": "2020-11-11T06:00:00.000Z",
         "latestBuyerName": "DAVID  ROBERSON",
         "latestSellerName": "COUNTY OF COOK, ILLINOIS, A BODY POLITIC AND CORPORATE, D/B/A COOK COUNTY LAND BANK AUTHORITY",
@@ -4674,7 +6122,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7747 S EUCLID AVE",
+          "7749 S EUCLID AVE"
+        ],
         "latestTransferDate": "2016-09-22T05:00:00.000Z",
         "latestBuyerName": "FELICIA GRANGER",
         "latestSellerName": "BRIAN W. POSEY, SUCCESSOR TRUSTEE OF THE ELVA Z. POSEY REVOCABLE TRUST DATED JUNE 15, 2006",
@@ -4690,7 +6141,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7233 S MERRILL AVE",
+          "7235 S MERRILL AVE"
+        ],
         "latestTransferDate": "2020-02-10T06:00:00.000Z",
         "latestBuyerName": "ROLLAND JASPER",
         "latestSellerName": "SASHAI JASPER",
@@ -4706,7 +6160,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7220 S PHILLIPS AVE",
+          "7222 S PHILLIPS AVE"
+        ],
         "latestTransferDate": "2020-02-18T06:00:00.000Z",
         "latestBuyerName": "KADEEM  KAMAL",
         "latestSellerName": "CHICAGO TITLE LAND TRUST COMPANY",
@@ -4722,7 +6179,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7149 S EUCLID AVE",
+          "7716 S BENNETT AVE"
+        ],
         "latestTransferDate": null,
         "latestBuyerName": null,
         "latestSellerName": null,
@@ -4738,7 +6198,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7319 S PHILLIPS AVE",
+          "7321 S PHILLIPS AVE"
+        ],
         "latestTransferDate": "2020-03-03T06:00:00.000Z",
         "latestBuyerName": "ALEXANDER BUCKLES",
         "latestSellerName": "AB MANAGEMENT LLC",
@@ -4754,7 +6217,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "6729 S OGLESBY AVE 1S",
+          "7813 S SOUTH SHORE DR"
+        ],
         "latestTransferDate": "2016-08-12T05:00:00.000Z",
         "latestBuyerName": "NICHOLE PINKARD",
         "latestSellerName": "FRANK WOLF",
@@ -4770,7 +6236,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2661 E 76TH ST",
+          "7600 S MARQUETTE AVE"
+        ],
         "latestTransferDate": "2023-07-19T05:00:00.000Z",
         "latestBuyerName": "CHICAGO TITLE LAND TRUST COMPANY",
         "latestSellerName": "LEON INVESTMENT GROUP, LLC",
@@ -4786,7 +6255,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7412 S SOUTH SHORE DR",
+          "7811 S SOUTH SHORE DR"
+        ],
         "latestTransferDate": "2026-06-01T05:00:00.000Z",
         "latestBuyerName": "7412 S. SOUTH SHORE, LLC",
         "latestSellerName": "GERALDINE KUCER",
@@ -4802,7 +6274,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2700 E 78TH ST",
+          "7639 S KINGSTON AVE"
+        ],
         "latestTransferDate": "2019-09-26T05:00:00.000Z",
         "latestBuyerName": "ARTUR  SZYDLOWSKI",
         "latestSellerName": "ACE MERIDIAN HOUSING LLC",
@@ -4818,7 +6293,9 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "7408 S JEFFERY BLVD"
+        ],
         "latestTransferDate": "2022-10-13T05:00:00.000Z",
         "latestBuyerName": "JAMES STEWART",
         "latestSellerName": "JAMES STEWART",
@@ -4834,7 +6311,10 @@
         "vacantParcelCount": 1,
         "businessCount": 0,
         "businessNames": [],
-        "sampleAddresses": [],
+        "sampleAddresses": [
+          "2912 E 78TH ST",
+          "2916 E 78TH ST"
+        ],
         "latestTransferDate": "2023-11-09T06:00:00.000Z",
         "latestBuyerName": "IDA BROWN",
         "latestSellerName": "MARY E HETLAND",
