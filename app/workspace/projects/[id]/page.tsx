@@ -118,7 +118,7 @@ export default function ProjectPage() {
               className="inline-flex items-center justify-center gap-2 bg-white text-[#0C1B33] px-5 py-3 font-mono-bureau text-[10px] tracking-[0.13em] uppercase hover:bg-white/90 transition-colors shrink-0"
             >
               <ClipboardCheck className="w-3.5 h-3.5" />
-              Start Preparation Packet
+              Start application prep
             </Link>
           </div>
 

@@ -1,0 +1,490 @@
+[
+ {
+  "program": "Small Business Improvement Fund (SBIF) — City of Chicago Department of Planning and Development (DPD), administered by SomerCor 504, Inc. Program Rules updated January 2026. TIF-funded reimbursement grant for permanent building improvements in designated TIF districts.",
+  "eligibility": "Gates (all verified from live SomerCor/DPD Program Rules, Jan 2026 and the live application form):\n1. PROPERTY LOCATION: project must sit inside a TIF district that has SBIF authorized and currently open for applications (check via SBIF Locator Tool / rollout calendar). LaSalle Central has its own special rule set (below).\n2. APPLICANT TYPE (mutually exclusive, selected on form): Commercial Owner, Commercial Tenant, Commercial Multi-Tenant, Commercial Landlord, Industrial Owner, Industrial Tenant, Industrial Multi-Tenant, Industrial Landlord, Non-Profit Owner, Non-Profit Tenant.\n3. SIZE/FINANCIAL THRESHOLDS (determine both eligibility and reimbursement %):\n   - Commercial business (owner-occupied or tenant): average annual gross sales < $9,000,000 over past 3 years (or 3-year projection for start-ups/business plan).\n   - Industrial business: ≤200 full-time-equivalent employees.\n   - Landlord/property owner (no ownership interest in occupying business): net worth ≤ $9,000,000 AND liquid assets ≤ $500,000 per individual/entity.\n   - Tenant: must meet Annual Sales Requirement AND hold a leasehold interest AND have express prior property-owner approval for the specific improvements.\n   - Reimbursement % tiers (commercial, by sales or net worth): <$3M = 90%; $3-6M = 60%; $6-9M = 30%. Industrial: flat 50% regardless of size (up to the 200-employee cap).\n4. SITE CONTROL: deed or executed lease agreement, required by the Stage 1 deadline.\n5. NOT a national chain/franchise (per DPD definition) — disqualifying, no exception.\n6. NOT an ineligible use type: branch banks, day-labor/employment agencies, currency exchanges, payday/title loan or pawn shops, fortune-telling services, liquor stores, taverns/bars (unless licensed 2+ calendar years — see special tavern rule), hotels/motels, adult uses, private clubs, nationally-affiliated not-for-profits, start-up banquet halls (<1 year in business), track wagering, K-12 schools, gas stations, firearms dealers/ranges, places of worship (unless religious org runs a qualifying business — special affidavit rule), smoke shops/tobacco dealers, residential storage/trailer-storage/junk yards, government-owned/leased property (City, CHA, CPS, etc.).\n7. NO disqualifying legal status: no Lis Pendens, pending litigation, code enforcement action, injunctions, foreclosure actions, or liens (mechanic's/tax/judgment) against the property or title.\n8. City-debt / scofflaw clearance: applicant (and, if <7.5% single owner, ALL owners/entities) must not be indebted to the City (parking tickets, water bills, license fees) — a payment plan is acceptable if in current compliance — and must be in compliance with child-support laws (verified via full SSN through SomerCor's secure portal).\n9. Current on Cook County property taxes — required at both the commitment-letter stage AND before final reimbursement.\n10. City-employee/elected-official cap: no more than $1,000/calendar year in aggregate City loan/grant assistance unless specifically designated exempt.\n11. Property-level cooldown: a given \"Property\" (single building, or contiguous commonly-owned parcels ≥7.5% common ownership) can only receive Maximum Program Assistance once every 3 years; after receiving the max, must wait 3 years from final payment before reapplying for that property.\n12. Offset rule: max grant reduced dollar-for-dollar by any other \"Direct City Financial Assistance\" (e.g., Neighborhood Opportunity Fund, Community Development Grant) received, committed, or currently being provided for that property within 3 years of application.\n13. Vacant-property rule: if the property is vacant, reimbursement requires 100% lease-up of the SBIF-funded portion by a qualified, actively operating tenant, evidenced by an executed lease.\n14. LaSalle Central TIF special rules: max $250,000/project, $1,000,000/property; up to 90% reimbursement; no net worth/liquidity/sales caps; ground-floor improvements only (upper/lower floors at DPD discretion); +$50,000 bonus for businesses expanding from a Qualifying Low-/Moderate-Income Neighborhood; no other Direct City Financial Assistance to the property in the same 3-year window.\n15. DPD holds sole, final discretion to deny applications based on past misrepresentation/non-compliance, and can remove a project mid-stream for major changes (e.g., altered construction plans, damage, or start-up business-plan changes).",
+  "applicantFields": [
+   "Applicant First Name (required)",
+   "Applicant Last Name (required)",
+   "Applicant Phone Number (required)",
+   "Applicant Email (required)",
+   "Preferred Mailing Address: Country, Address, Address Line 2 (optional), City, State/Province/Region, Zip/Postal Code (required, used for correspondence and notices)",
+   "Project Address: Street Number, Street Direction (N/S/E/W), Street Name, Street Type (Ave/St/Pl/Blvd/Dr), City, State, Zip (all required)",
+   "What TIF is this project in? (required — via SBIF Locator Tool)",
+   "What Ward is this project in? (required — via locator tool)",
+   "Applicant Type — single select: Commercial Owner / Commercial Tenant / Commercial Multi-Tenant / Commercial Landlord / Industrial Owner / Industrial Tenant / Industrial Multi-Tenant / Industrial Landlord / Non-Profit Owner / Non-Profit Tenant (required)",
+   "[Business Owner section, skip if landlord-only] Legal business name (required)",
+   "DBA / assumed name / trade name, or 'Not Applicable' (required)",
+   "Business description (required)",
+   "Is the business/nonprofit a start-up (<3 years)? Yes/No/N/A (required)",
+   "Year business was established, or 0 if start-up (required)",
+   "Is the business a national chain or franchise? Yes/No (required — Yes disqualifies)",
+   "Does the business have other locations? Yes/No (required)",
+   "If yes: other location address(es) and brief activity description (required)",
+   "[Property Owner/Landlord section, skip if tenant-only] Name(s) of individuals/entities holding legal title (trusts, LLCs, etc.) (required)",
+   "Do you currently have tenants at the property? Yes/No/N/A (required)",
+   "If yes: list tenants and description of their businesses (required)",
+   "Project plan description (required, e.g. 'replace storefront, rehab bathrooms for ADA')",
+   "Project budget table: Cost Category / Amount (USD) / Additional Notes, per line item, with Total (required)",
+   "Total estimated project cost (required, must match budget table)",
+   "Acknowledgment that cost estimates could increase (Yes/No, required)",
+   "Do you currently have the funds or financing available for this project? Yes/No (required)",
+   "Will you be seeking a loan or financing to fund construction? Yes/No (required)",
+   "Do you need help securing a loan or additional financing? Yes/No (required)",
+   "How much money has been secured for the project so far? (required, $ amount)",
+   "Are you currently under consideration for, or have you previously received, funding from another City of Chicago program for this or another project site? Yes/No (required)",
+   "If yes: select program(s) — SBIF (previous recipient) / Neighborhood Opportunity Fund (NOF) / Community Development Grant (CDG) / TIF / Other",
+   "If yes: list site addresses, programs used, amounts, and dates (required)",
+   "Additional Information section (voluntary, no effect on application outcome): race/ethnicity identification, gender identification, LGBTQIA identification, how you heard about the program, whether it's a family-owned business",
+   "Did anyone help you fill out this application? (required) — self / friend-or-family / consultant / community partner-organization / other / prefer not to answer, plus helper's name and contact info if applicable",
+   "Applicant certification: acknowledgment of reimbursement-only structure, upfront cost responsibility, 3-year no-relocate/no-sale requirement, typed signature and date (required)"
+  ],
+  "requiredDocuments": [
+   "Proof of site control: deed or executed lease agreement (must be provided by the Stage 1 deadline)",
+   "Stage 1 documents/affidavits — vary by applicant type per the individualized Stage 1 letter from the SomerCor project coordinator; typically includes business/personal tax returns, income statements, and bank statements (used by SomerCor to verify net worth, liquidity, and annual sales)",
+   "For start-ups: detailed business plan plus income/expense projections covering the first 36 months of operation, and BACP confirmation that the property is zoned for the planned use with an issuable license",
+   "Economic Disclosure Affidavit (required of every applicant)",
+   "Full Social Security Number submitted via SomerCor's secure portal for each owner/entity ≥7.5% ownership (or all owners/entities if none holds ≥7.5%) — for City-debt and child-support compliance checks; must be CURRENT/no outstanding scofflaw debt at time of check, re-verified at both commitment-letter and reimbursement stages",
+   "Current, paid-up Cook County property tax status — verified twice: before DPD issues the Conditional Commitment Letter, and again before final reimbursement (this is a recency-sensitive / must-be-current-at-each-gate item, not a one-time submission)",
+   "Stage 2: minimum two 'apples-to-apples' competing licensed-contractor bids",
+   "Each contractor's City of Chicago contractor license and proof of insurance (submitted with the bids) — applicant may not act as their own general contractor",
+   "Stage 3.4: proof of sufficient funds/financing — evidence may include a financial institution's commitment letter for a loan/line of credit, or financial statements showing the applicant currently holds at least 50% of total project cost in equity — due within 120 days of the Conditional Commitment Letter",
+   "Stage 3.4: proof of permit or permit application — receipt showing payment for permit application, due within the same 120-day window; roofing permits are mandatory where applicable; Landmarks Division check required if building is a designated Chicago Landmark",
+   "Stage 4 (reimbursement): sworn statement, invoices, cancelled checks, final waiver of lien, and copies of building permits — all proof-of-payment documentation reviewed by SomerCor before a 4-6 week processing window",
+   "Grantee affidavit at time of reimbursement: certifies 3-year non-relocation/non-sale of property or business",
+   "For land-purchase reimbursement specifically: proof of land ownership required before that portion is reimbursed",
+   "For religious organizations operating a qualifying business: signed affidavit limiting SBIF use to non-worship business space and agreeing to repay present-value improvement cost if use reverts to worship",
+   "For not-for-profit applicants: compliance/financial checks performed on Executive Director, President, and Treasurer of the board (in place of individual owner checks)",
+   "Post-completion: photograph of the SBIF program decal displayed in the entry door/window, sent to the SomerCor project manager"
+  ],
+  "processStages": [
+   {
+    "stage": "Getting Started (pre-application)",
+    "actor": "Applicant, self-serve",
+    "duration": "No deadline — can be done any time before a window opens"
+   },
+   {
+    "stage": "Confirm TIF district + check open acceptance windows + review Program Rules",
+    "actor": "Applicant, using SBIF Locator Tool and rollout calendar",
+    "duration": "Ongoing / before applying"
+   },
+   {
+    "stage": "Initial Application submission (via Submittable)",
+    "actor": "Applicant",
+    "duration": "Must arrive by 5:00 PM Central on the last day of the monthly TIF acceptance window (1st 9am–30th 5pm)"
+   },
+   {
+    "stage": "Application confirmation",
+    "actor": "SomerCor",
+    "duration": "Confirmation email within 2 business days, noting any preliminary concerns"
+   },
+   {
+    "stage": "Lottery (only if demand exceeds available district funding)",
+    "actor": "SomerCor",
+    "duration": "Determines random processing order; unfunded applicants placed on a waitlist that expires after 24 months"
+   },
+   {
+    "stage": "Stage 1 — Applicant Eligibility Review",
+    "actor": "Applicant responds to SomerCor coordinator's document request (site control, financials/affidavits per applicant type)",
+    "duration": "20 days from request date"
+   },
+   {
+    "stage": "Stage 2 — Project Eligibility Review (bids, plans, specs, debt cure)",
+    "actor": "Applicant obtains 2 competing licensed-contractor bids; resolves City debt; SomerCor reviews plans/design compliance",
+    "duration": "120 days"
+   },
+   {
+    "stage": "Final review and project approval",
+    "actor": "Department of Planning and Development (DPD), informed by SomerCor's file",
+    "duration": "Concludes Stages 1-2; issues Conditional Commitment Letter if approved"
+   },
+   {
+    "stage": "Stage 3 — Project Approval and Construction",
+    "actor": "Applicant executes construction (may not begin before the Conditional Commitment Letter is issued)",
+    "duration": "10 months (300 days) to complete construction"
+   },
+   {
+    "stage": "Stage 3.4 — Proof of Financing and Proof of Permit",
+    "actor": "Applicant submits to DPD's satisfaction, concurrent with construction",
+    "duration": "120 days from Conditional Commitment Letter date"
+   },
+   {
+    "stage": "Stage 4 — Reimbursement",
+    "actor": "Applicant submits proof-of-payment (sworn statement, invoices, cancelled checks, lien waivers, permits); SomerCor reviews and performs a closing site visit",
+    "duration": "4-6 weeks processing after full documentation received"
+   },
+   {
+    "stage": "Stage 5 — Closing / grant payment issued",
+    "actor": "SomerCor/DPD issue reimbursement check plus SBIF decal",
+    "duration": "Concludes at check issuance"
+   },
+   {
+    "stage": "3-year compliance period",
+    "actor": "Grantee monitored annually by SomerCor",
+    "duration": "3 years post-disbursement — no relocation, no property/business sale, or full grant must be repaid"
+   }
+  ],
+  "verifiers": [
+   "SomerCor 504, Inc. project coordinator/project manager — intake review, document collection, eligibility screening, financial (net worth/sales/liquidity) review via tax returns/income statements/bank statements, contractor bid review, closing site visit, reimbursement document review",
+   "City of Chicago Department of Planning and Development (DPD) — final project approval/denial authority, issues the Conditional Commitment Letter, sole discretion on exceptions (foreclosure/delinquency, design changes, extensions, project removal), approves phased-payment plans",
+   "Department of Business Affairs and Consumer Protection (BACP) — vetted for tavern/bar applicants (license discipline, public nuisance/community-meeting issues) and for start-up zoning/licensability confirmation; DPD makes the final call in consultation with BACP",
+   "Applicant / authorized officer — signs the Economic Disclosure Affidavit, the reimbursement-stage sworn statement/affidavit (3-year non-relocation certification), and (for religious organizations) the worship-use affidavit; ultimately certifies the application itself",
+   "Licensed contractors — submit their own City of Chicago license and proof of insurance as part of Stage 2 competing bids (not a self-certification by the applicant)"
+  ],
+  "timelineNotes": "Funding windows open per TIF district on a fixed monthly rotating calendar (verified live, 2026 schedule): July = Archer/Western, Lawrence/Kedzie, Lincoln Avenue, Little Village Industrial, Washington Park. August = 43rd/Cottage Grove, Clark/Montrose, Goose Island, Northwest Industrial Corridor, West Woodlawn. September = 107th/Halsted, Fullerton/Milwaukee, LaSalle Central, Madison/Austin, Woodlawn. October = Englewood Neighborhood, Greater Southwest (East), Pilsen Industrial Corridor, South Chicago, Stevenson/Brighton. November = Lawrence/Broadway, Little Village East, Midwest, Pulaski Corridor, Stockyards Southeast Quadrant. December = 111th/Kedzie, Austin Commercial, Bronzeville, Division/Homan, Touhy/Western. Each window runs from the 1st at 9:00 AM through the 30th at 5:00 PM (verify current month's list live each cycle — rollout calendars shift year to year).\n\nPREPARABLE BEFORE A WINDOW OPENS (foundational/continuity-of-effort work): confirming TIF district and ward via the locator tool; legal business name, DBA, entity/ownership structure, formation date, industry description; whether business is a start-up/chain/franchise (disqualifying checks); other-location list; site-control documentation (deed or lease) gathered/organized; 3 years of tax returns, income statements, and bank statements assembled for net-worth/sales verification; start-up business plan and 36-month projections if applicable; property tax good-standing check; scofflaw/child-support self-check (SSNs are only submitted once SomerCor requests them, but compliance status can be checked ahead); rough project scope/description and a \"best guess\" budget table (contractor estimates NOT required at initial application — the form explicitly allows a good-faith estimate); prior/pending City financial assistance history (NOF, CDG, TIF, previous SBIF) for the offset-rule disclosure.\n\nMUST WAIT for a program-specific step (cannot be done in advance): the initial application itself can only be submitted during the property's TIF district's specific monthly window; the Stage 1 coordinator's specific document request (varies by applicant type, sets the 20-day clock); the 2 competing licensed-contractor bids (Stage 2, needs SomerCor's go-ahead and a defined scope after Stage 1 review); the Conditional Commitment Letter (construction may not legally begin before this is issued — starting early makes those costs ineligible for reimbursement); permit applications tied to the approved scope (should be filed \"immediately upon receiving SBIF approval,\" within the 120-day Stage 3.4 window); proof-of-financing showing 50% of contract price (tied to the approved contract price, which is only known after bids are in); all Stage 4 proof-of-payment documents (necessarily post-construction).\n\nHard constraints to model as timeline risk: DPD can shorten stage deadlines or deny extensions if a TIF district is nearing statutory expiration — \"no exceptions\" once that clock is running, so the base packet's foundational work should be complete well before a window opens in a district with a known expiration on file. Maximum of 2 extensions per stage are possible with DPD approval only for \"extraordinary circumstances.\" A given property can't get the Maximum Program Assistance more than once every 3 years, so continuity-of-effort profiles should track prior-grant history per property, not just per applicant.",
+  "sources": [
+   "https://somercor.com/sbif/",
+   "https://somercor.com/sbif-current/ (fetch blocked 403 on the eligibility subpage attempt; process detail sourced from cached/indexed content instead)",
+   "https://resources.somercor.com/hubfs/2-%20SBIF%20PDF/SBIF%20Application%20FORM%20ONLY.pdf (SBIF Grant Application 2025, 8 pages, read directly)",
+   "https://resources.somercor.com/hubfs/2-%20SBIF%20PDF/SBIF%20Program%20Rules.pdf (City of Chicago DPD/SBIF Program Rules, Updated January 2026, 20 pages, read directly)",
+   "https://www.chicago.gov/city/en/sites/small-business-improvement-fund/home.html",
+   "https://www.chicago.gov/city/en/sites/small-business-improvement-fund/home/eligibility.html (fetch returned 403 Forbidden — not independently verified live; eligibility content instead drawn from the Program Rules PDF above)",
+   "https://www.chicago.gov/city/en/sites/small-business-improvement-fund/home/faqs.html"
+  ]
+ },
+ {
+  "applicantFields": [
+   "Legal business/entity name (must match site control documents)",
+   "Project address (validated against NOF Eligibility Map corridor)",
+   "Entity type / organization structure",
+   "Business description and how services benefit the community",
+   "Business and strategic plan (required for start-ups, strongly encouraged for others)",
+   "Funding need identified (total project cost)",
+   "Sources and Uses table (secured/pending debt + personal equity contributed)",
+   "Detailed uses of project funds: hard costs, soft costs, acquisition costs (if any)",
+   "Construction cost estimates from licensed General Contractor(s) - minimum 2 bids, itemized (no lump sum)",
+   "Permit application timeline or permit itself (permit preferred)",
+   "GC construction and payment timeline (if GC selected)",
+   "Community impact narrative (alignment with local community plans/goals)",
+   "Site control type and details (deed / lease terms / purchase agreement)",
+   "Requested grant amount / Technical Assistance Fund (TAF) opt-in if using a DPD-approved TA provider"
+  ],
+  "eligibility": "GEOGRAPHY: Project must sit on a designated NOF corridor on Chicago's West, Southwest, or South Sides -- either an \"Eligible Corridor\" (public streets generally zoned retail/commercial) or a \"Priority Corridor\" (zoned retail/commercial AND high existing retail/commercial activity, more competitive). Both corridor types were selected because they fall inside the Qualified Investment Area (QIA), a set of neighborhoods with sustained historic disinvestment (high unemployment/poverty/vacancy, low educational attainment). Address eligibility must be confirmed via the live NOF Eligibility Map tool (not a static list) - this is a hard, binary geographic gate that should be checked before any other packet work.\nPROJECT TYPE: Must be a capital, real-estate development project = new construction, building addition, OR internal/external rehab of an existing structure (or combination). Must be revenue-generating and in substantial compliance with the Chicago Zoning Ordinance. Eligible uses: commercial (office/retail, incl. exteriors of mixed-use residential), cultural (museums/theaters/performance venues), non-profits with an on-site commercial component, artisanal manufacturing/production/services with an on-site commercial component. Ineligible: places of worship that exclusively promote religious teaching, residential/home-based/live-work uses, heavy manufacturing/industrial, social services (workforce dev, schools, daycare/elder care). Acquisition-only projects (no rehab/new construction) are ineligible.\nFINANCIAL: Grant = reimbursement/escrow only, up to 75% of eligible project cost, capped at $250,000; optional Technical Assistance Fund adds up to 20% of the base grant or $50,000 (whichever less) for design/permitting/construction-management support via a DPD-approved TA provider. Applicants need proof of financing for the remaining ~50%+ of project cost; those below that threshold are diverted to a \"project pipeline\" (paired with a CDFI) rather than rejected outright. Total project cost must exceed $150,000 (excl. pre-development expenses) plus a 30% personal contingency to use the escrow disbursement path.\nCOMPETITIVE FACTORS: catalytic community impact, project readiness (site control + no material liens/court orders/past-due taxes), financial feasibility, and construction implementation readiness (GC bid quality). This is a competitive, discretionary grant, not a first-come entitlement -- DPD's final eligibility determination is discretionary even when the checklist is met.",
+  "processStages": [
+   {
+    "stage": "Pre-application: info session + eligibility self-check",
+    "actor": "Applicant",
+    "duration": "Before any deadline; no formal minimum but strongly encouraged before submitting"
+   },
+   {
+    "stage": "Application submission (Submittable portal)",
+    "actor": "Applicant",
+    "duration": "Rolling, evaluated quarterly against a fixed deadline (e.g. 11:59pm Aug 14 2026, next Q4 Nov 13 2026)"
+   },
+   {
+    "stage": "Eligibility screening + evaluation against 4 factors (catalytic impact, readiness, feasibility, construction implementation)",
+    "actor": "DPD staff + Program Administrator",
+    "duration": "Roughly 1-3 months after the application deadline closes (per FAQ)"
+   },
+   {
+    "stage": "Advisory Committee review",
+    "actor": "NOF Advisory Committee (cross-section of community economic-development leaders)",
+    "duration": "After DPD/administrator recommendation, before Commissioner sign-off"
+   },
+   {
+    "stage": "DPD Commissioner approval -> Finalist designation",
+    "actor": "DPD Commissioner",
+    "duration": "Following Advisory Committee review"
+   },
+   {
+    "stage": "Stage 1 - Legal Documents (EDS, child-support affidavit, property-owner affidavit, ownership chart, Principal Profile Form)",
+    "actor": "Finalist submits; City runs scofflaw check + debt search",
+    "duration": "21 days from finalist designation"
+   },
+   {
+    "stage": "Stage 2 - Project Documents (cleared scofflaw, site control, architectural drawings, 2 GC bids, GC license+insurance, construction timeline) -> Conditional Award Letter (CAL) issued",
+    "actor": "Finalist submits; DPD/Program Administrator reviews and issues CAL",
+    "duration": "120 days from submission of legal documents"
+   },
+   {
+    "stage": "Stage 3 Part I - Proof of Financing + Proof of Permit",
+    "actor": "Grantee submits (bank statements/closing docs/permit); DPD/administrator verifies",
+    "duration": "120 days from CAL issuance"
+   },
+   {
+    "stage": "Stage 3 Part II - Construction and Completion (escrow draws or reimbursement payments, up to 3 draws, mid-point 6-month/180-day progress check)",
+    "actor": "Grantee + GC execute; Program Administrator disburses/approves each draw; DPD reviews sworn statements/waivers of lien",
+    "duration": "12 months from CAL issuance (overall project expected complete within 2 years of CAL, extensions require DPD/administrator approval)"
+   },
+   {
+    "stage": "Stage 4 - Project in Process of Closing (final payment corrections, completion survey, permit signatures, business license, property-tax payment, SOS registration)",
+    "actor": "Grantee submits; Program Administrator reviews",
+    "duration": "90 days from submission of final payment request"
+   },
+   {
+    "stage": "Stage 5 - Project Completion: due-diligence review (site visit, business-license check, Certificate of Occupancy, health inspections) -> Certificate of Completion + final payment issued -> status becomes Alumnus",
+    "actor": "DPD + Program Administrator verify; DPD issues Certificate of Completion",
+    "duration": "No fixed duration stated; triggers 3-year post-completion compliance term"
+   },
+   {
+    "stage": "Post-completion compliance (3-year monitoring term: annual status-report surveys, no sale/relocation without DPD consent, recapture covenant)",
+    "actor": "Alumnus/grantee reports; Program Administrator administers surveys; DPD holds recapture rights",
+    "duration": "3 years from Certificate of Completion, then release of covenant recorded on title"
+   }
+  ],
+  "verifiers": [
+   "DPD (Department of Planning and Development) - final eligibility determination, Commissioner approval of finalists, CAL issuance, draw approvals, Certificate of Completion",
+   "Program Administrator (third party acting at DPD's direction) - day-to-day document collection, scofflaw/debt search coordination, escrow/reimbursement draw processing, annual alumnus surveys",
+   "NOF Advisory Committee - community economic-development leaders who review recommended projects and give DPD feedback before Commissioner sign-off",
+   "Department of Finance - scofflaw/City debt search",
+   "Title company + General Contractor - joint parties to the construction escrow agreement (funds held/disbursed against DPD-approved draws)",
+   "Applicant / authorized representative - only party who can certify/sign Economic Disclosure Statement, sworn statements, and covenant; applicant or their financier makes the underlying reimbursement/escrow payments"
+  ],
+  "timelineNotes": "Application rounds are rolling submission, quarterly evaluation -- confirmed live deadlines: Aug 14, 2026 (current/next round) and Nov 13, 2026 (Q4); NOF states future deadlines are \"subject to change and will be finalized at a later date,\" so cadence is stable (quarterly) but exact dates are not fixed far in advance. Selection/scoring after a deadline closes takes about 1-3 months. Once an applicant becomes a Finalist, hard internal clocks start: Stage 1 legal docs = 21 days; Stage 2 project docs (culminating in CAL) = 120 days; Stage 3 Part I proof of financing/permit = 120 days from CAL; Stage 3 Part II construction = 12 months from CAL; Stage 4 closing = 90 days from final payment request submission. Overall project completion target is 2 years from CAL (extensions require advance DPD/administrator approval or removal risk). Post-completion, a 3-year monitoring/recapture term runs from the Certificate of Completion, with annual surveys due each year -- this is the one artifact-relevant \"document that expires/needs refresh\" analog (recurring compliance survey, not a one-time expiring credential). Financing proof (bank statements/closing docs) is time-bound relative to CAL (must be demonstrated within 4 months of CAL), so it is a program-specific field, not something to bank indefinitely in a base profile. What CAN be prepared before a round opens / before choosing NOF as a target: geographic eligibility check via the Eligibility Map, business description/plan, entity formation and ownership documentation, site control documentation (deed/lease/purchase agreement), Sources-and-Uses / financing proof groundwork, GC bids and construction cost estimates, community-impact narrative. What CANNOT be front-loaded because it is gated by finalist/CAL status: Economic Disclosure Statement package (Stage 1, only after finalist designation), scofflaw/City-debt clearance (run per finalist), permit-in-hand and 50% financing proof verified against the specific CAL-conditioned timeline, and all draw/reimbursement documentation (only relevant after CAL, work before CAL receipt is not reimbursable at all).",
+  "program": "Neighborhood Opportunity Fund (NOF) Grant -- City of Chicago Department of Planning and Development (DPD), Bureau of Small Business Development",
+  "requiredDocuments": [
+   "Proof of site control: recorded deed, OR fully executed lease (minimum 5-year term), OR fully executed purchase-and-sale/redevelopment agreement (for acquisition-component projects) - does not expire per se but must match applicant/site names exactly",
+   "Proof of financing for >=50% of total project cost: bank statement showing available funds, OR combined bank statements + other secured funding, OR lender closing documents showing active/ready financing - time-boxed: must be demonstrated within 4 months of CAL receipt, so effectively expires/must be refreshed against that window",
+   "Balanced Sources and Uses table (secured/pending debt + personal equity)",
+   "At least one (competitively, at least two) complete General Contractor bid(s), itemized materials/labor, no lump-sum pricing",
+   "GC license (City of Chicago) - must remain current/valid through the project",
+   "GC Certificate of Insurance showing Commercial General Liability coverage - typically an annually-renewing document, must stay active through construction",
+   "Architectural/permit-ready drawings",
+   "Permit application timeline or issued permit (issued permit preferred; required before final payments)",
+   "Construction timeline",
+   "Economic Disclosure Statement (EDS) - City of Chicago standard disclosure form, collected at Stage 1 (post-finalist)",
+   "Affidavit of Child Support Compliance",
+   "Affidavit and Certification of Property Owner",
+   "Organization/Ownership chart",
+   "Principal Profile Form",
+   "Cleared Scofflaw request (Dept. of Finance debt search) - City debts (parking tickets, water bills, inspection/permit fees, hearing fees) must be clear or on a payment plan; finalists get 30 days to resolve identified debts",
+   "Business license (required for final payment / Certificate of Completion)",
+   "Certificate of Occupancy (if applicable, for final payments)",
+   "Signed covenants (NOF Grant Recipient Covenant / recapture provision; recorded on title for property owners, released after 3-year term)",
+   "Confirmation of payment of property taxes",
+   "Confirmation of registration with the Illinois Secretary of State",
+   "Detailed invoices + canceled checks (for reimbursement path) OR Sworn Owner's Statement + GC Sworn Statement + waivers of lien + reimbursement letters (for escrow path)",
+   "Completion Survey (post-construction)",
+   "Annual status-report surveys during the 3-year post-completion compliance term (recurring, not one-time)"
+  ],
+  "sources": [
+   "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home/Apply.html",
+   "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home/frequently-asked-questions-.html",
+   "https://www.chicago.gov/content/dam/city/sites/neighborhood-opportunity-fund/pdfs/NOF_Program_Manual_9.18.25.pdf",
+   "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home.html",
+   "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home/EligibilityMap.html"
+  ]
+ },
+ {
+  "applicantFields": [
+   "Applicant legal name, company, mailing address, phone, email",
+   "Contact person (if different from applicant) with same fields",
+   "Property description per PIN: street address, Permanent Real Estate Index Number (PIN), city, ZIP, township, existing property class (attach extra sheet if >3 PINs)",
+   "Basis for area eligibility (certified area / one of five townships – Bloom, Bremen, Calumet, Rich, Thornton – for Class 8 / Tax Reactivation Program parcel)",
+   "Identification of all parties with an interest in the property: owners, developers, occupants, land-trust beneficiaries, general/limited partners — names, addresses, nature and extent of interest",
+   "Type of development: industrial or commercial; general description of proposed use, and % breakdown if multiple uses",
+   "Legal description, site dimensions/square footage, building dimensions/square footage",
+   "Nature of development checkbox: new construction / substantial rehabilitation / reoccupation of abandoned property (no special circumstance / with special circumstance / TEERM)",
+   "Estimated construction commencement and completion dates, or estimated reoccupation date",
+   "For abandoned-property claims: date of purchase, name of purchaser, name of seller, relationship of purchaser to seller, duration and evidence of vacancy",
+   "Employment data: current FT/PT employees in Cook County, projected new FT/PT jobs from the development, projected construction jobs",
+   "Municipal/County Board resolution or ordinance status (attached, or letter confirming one has been requested)",
+   "Signature block: signature, printed name, title, date (must be a beneficiary, officer, or general partner if title is held in trust/corporation/partnership)",
+   "For 7a/7b only: the five Section 74-65(a) narrative exhibits – area designation documentation, 6-year real estate tax/AV/EAV analysis, development plan, pro forma financials (with/without incentive), financing sources/terms, principals' financial/business background, development schedule",
+   "For SER (Class 6b Sustainable Emergency Relief) only: 10-year same-ownership occupancy history and financial hardship/viability showing"
+  ],
+  "eligibility": "Four Cook County Real Property Assessment Classification Ordinance incentive classes, all administered by the Cook County Assessor's Development Incentives Department with a required municipal (or County Board, if unincorporated) resolution of support:\n\nCLASS 6b — industrial property (manufacturing, processing, recycling, wholesale distribution/storage of raw or finished goods). Triggered by new construction, substantial rehabilitation, or reoccupation of property abandoned (vacant/unused) ≥12 continuous months and purchased for value from an unrelated seller (or a municipal/County Board \"special circumstances\" finding of abandonment). Assessed at 10% of market value for 10 years, 15% in year 11, 20% in year 12 (vs. 25% standard industrial rate). Renewable indefinitely.\n\nCLASS 6b SER (Sustainable Emergency Relief) — a 6b variant for an already-occupied industrial building with NO physical construction: owner must show ≥10 years of continuous same-ownership occupancy plus financial hardship/non-viability without the incentive. Heavier review chain (CCBED staff → Economic Development Advisory Committee → Cook County Board of Commissioners → Assessor). Term = 12 years or until the SER applicant vacates, whichever is sooner.\n\nCLASS 7a — commercial projects (buying/selling or providing goods/services, incl. hotels/motels) with total development cost, excluding land, ≤$2,000,000, in an area \"in need of commercial development.\" Requires new construction, reoccupation of property abandoned ≥24 months (shorter period possible with municipal/County Board approval), or substantial rehabilitation. Applicant must satisfy all five Sec. 74-65(a) factors: (1) area designation as blighted/conservation/renewal/empowerment zone; (2) 6-year declining/stagnant/under-realized real estate tax or AV/EAV trend; (3) project viability/timeliness; (4) assistance-and-necessity (project won't proceed without the incentive); (5) reasonably expected increase in tax revenue and employment. 12-year reduced assessment (10%/15%/20% schedule), same as 6b. Renewable.\n\nCLASS 7b — same structure and five-factor test as 7a but for projects with development costs >$2,000,000, in an area designated \"blighted\" by the municipality; heavier documentation expected (pro forma financials benchmarking with/without incentive still required, but with commensurately more rigor for larger projects). Same 10%/15%/20% assessment schedule; renewable.\n\nCLASS 8 — industrial or commercial development in areas of \"severe economic stagnation\": automatically eligible in Bloom, Bremen, Calumet, Rich, or Thornton townships, in a locally-certified Class 8 area, or on Cook County Tax Reactivation Project property. New construction, substantial rehabilitation, or reoccupation of abandoned property (≥24 months vacant/unused, purchase for value from unrelated seller, or special-circumstances finding). A \"TEERM\" supplemental track exists for abandoned property vacant 12–24 months with no purchase transaction; TEERM is NOT renewable. Standard Class 8 (non-TEERM) uses the same 10%/15%/20% schedule and is renewable.\n\nCITY OF CHICAGO ROUTE (for property inside Chicago): before the County process can proceed, the applicant must obtain the City's ordinance of support. Since Nov. 1, 2020 (Municipal Code 2-45-160), any applicant seeking City support for a 6b/7a/7b/7c/7d/Class C tax incentive must also enter into a redevelopment agreement with the City as a condition of that support, with a substantially final version of the RDA attached to the supporting ordinance/resolution. An Economic Disclosure Statement (per County Ordinance) must also be filed with the Class 6b eligibility application. Chicago intake runs through DPD's Submittable portal (FID_Intake@cityofchicago.org, 312-744-0765), goes to the Committee on Economic, Capital and Technology Development, and requires a Community Development Commission + City Council vote before the certified ordinance/resolution can be filed with the Assessor.",
+  "processStages": [
+   {
+    "stage": "Foundational business/property profile assembled (continuity-of-effort layer)",
+    "actor": "business owner / applicant",
+    "duration": "ongoing, done once"
+   },
+   {
+    "stage": "Pre-filing: confirm area/township eligibility, gather PIN(s), ownership/interest disclosures, employment baseline",
+    "actor": "applicant",
+    "duration": "days to weeks"
+   },
+   {
+    "stage": "Chicago-only: submit incentive request package via DPD Submittable, negotiate redevelopment agreement, file Economic Disclosure Statement",
+    "actor": "applicant + City of Chicago DPD",
+    "duration": "weeks to a few months; RDA negotiation is often the longest single step"
+   },
+   {
+    "stage": "Chicago-only: Committee on Economic, Capital and Technology Development hearing → Community Development Commission → full City Council vote on ordinance of support",
+    "actor": "City Council / CDC",
+    "duration": "typically one to two council cycles (~4-8 weeks once queued)"
+   },
+   {
+    "stage": "Municipal (or County Board, if unincorporated) resolution/ordinance adopted expressly consenting to the specific class and (for abandonment claims) any special-circumstances finding",
+    "actor": "municipality or County Board",
+    "duration": "varies; must be filed with or shortly after the Eligibility Application, before construction/rehab/reoccupation begins"
+   },
+   {
+    "stage": "SER track only: CCBED staff review → Economic Development Advisory Committee (EDAC) → Cook County Board of Commissioners approval",
+    "actor": "CCBED / EDAC / County Board",
+    "duration": "several months, multiple committee cycles"
+   },
+   {
+    "stage": "File Eligibility Application + filing fee ($1,000 for 6b; $500 for 7a/7b/8) + supporting documentation with Cook County Assessor — MUST be filed before construction/rehab/reoccupation commences (6b may file up to 1 year in advance)",
+    "actor": "applicant → Cook County Assessor, Development Incentives Dept.",
+    "duration": "one-time filing; Assessor issues Class 7a determination within 60 days of a complete filing"
+   },
+   {
+    "stage": "Construction, substantial rehabilitation, or reoccupation actually occurs",
+    "actor": "applicant / contractor",
+    "duration": "project-dependent; 7a certification lapses after 1 year if not commenced"
+   },
+   {
+    "stage": "File Incentives Appeal Form (Real Estate Assessed Valuation Appeal) with the Board of Review/Assessor to formalize reclassification, on the applicable township appeal deadline; pay appeal fee ($100 for 7a); file the certified resolution here if not filed earlier",
+    "actor": "applicant → Assessor / Board of Review",
+    "duration": "township-specific appeal window"
+   },
+   {
+    "stage": "Triennial affidavit (use + employment) mailed by Assessor at each triennial reassessment; must be signed, notarized, returned within 3 weeks",
+    "actor": "applicant (notarized) → Assessor",
+    "duration": "recurring every 3 years; missing the 3-week window forfeits the incentive"
+   },
+   {
+    "stage": "Renewal application (filed in the last year of the 10% assessment period, or while at 15%/20%) with a fresh municipal/County Board consent resolution",
+    "actor": "applicant + municipality/County Board → Assessor",
+    "duration": "recurring at ~year 10 of each incentive term; unlimited renewals (not applicable to TEERM)"
+   }
+  ],
+  "requiredDocuments": [
+   "Class-specific Eligibility Application form (6b / 7a / 7b / 8) with $1,000 (6b) or $500 (7a/7b/8) filing fee",
+   "Certified copy of municipal ordinance/resolution (or County Board resolution if unincorporated) expressly supporting/consenting to the specific class — or, if not yet available, a letter confirming one has been requested",
+   "For abandonment claims: sworn statements of vacancy/abandonment, utility company statements, sale contract, closing statement, recorded deed, assignment of beneficial interest, real estate transfer declaration",
+   "For 'special circumstances' abandonment findings: municipal finding plus County Board resolution validating the finding (required in all special-circumstances cases)",
+   "Cook County Living Wage Ordinance compliance affidavit (Class 6b)",
+   "New construction/rehab documentation: plat of survey, 1st-floor plan or schematics, building/wrecking/occupancy permits with issuance dates, itemized cost documentation and contractor affidavits",
+   "List of all owners, developers, occupants, and interested parties (incl. land-trust beneficiaries) with addresses and nature of interest",
+   "Business materials (letterhead, brochures, leases, photographs) describing the occupant's business",
+   "7a/7b only: area-designation certification, 6-year real estate tax/AV/EAV analysis, full development plan, pro forma financial statements (with vs. without incentive, matching what's shown to lenders), financing sources/terms, principals' financial background, development schedule, statistical tax-revenue and employment projections",
+   "TEERM Supplemental Application (Class 8 only, abandonment 12-24 months, no purchase transaction) — notarized",
+   "SER Supplemental Application + hardship/viability documentation (Class 6b SER only)",
+   "Incentives Appeal Form / Real Estate Assessed Valuation Appeal filed post-construction/reoccupation (appeal fee $100 for 7a)",
+   "Notarized triennial affidavit (use + employment) at each triennial reassessment",
+   "Renewal Application + fresh certified municipal/County Board consent resolution",
+   "Chicago properties: Economic Disclosure Statement (per County Ordinance), draft/final Redevelopment Agreement with the City (required for applications filed on or after 11/1/2020), DPD Submittable intake package"
+  ],
+  "timelineNotes": "Hard timing trap across all four classes: the Eligibility Application (and, ideally, the municipal resolution or at least a letter that one has been requested) MUST be filed with the Assessor BEFORE construction, substantial rehabilitation, or reoccupation begins — filing after the fact makes the property ineligible. Class 6b may be filed up to (but no more than) one year before commencement. Class 7a determinations are made within 60 days of a complete filing and lapse after 1 year if the project hasn't started. Abandonment thresholds differ by class: 12 continuous months for Class 6b, 24 continuous months for 7a/7b/8 (Class 8's TEERM track bridges the 12–24 month gap for no-purchase reoccupations, but TEERM is not renewable). Triennial affidavits are strict: the Assessor mails them at each triennial reassessment and they must be signed, notarized, and returned within 3 weeks or the incentive is lost outright — no cure period. Renewal must be requested during the final year of the 10% assessment level (or while still at 15%/20%), and owners must notify the Assessor of intent to renew before requesting the municipal renewal resolution; renewal count is unlimited except TEERM. For Chicago properties, the redevelopment-agreement requirement (in effect since 11/1/2020) and Economic Disclosure Statement typically add the longest lead time in the whole pipeline, since RDA negotiation and City Council scheduling run on the City's own calendar, separate from and prior to the Assessor's township appeal deadlines (which are also independently scheduled and vary by township). What a business can prepare well in advance, independent of any specific incentive: entity/ownership documentation, PIN and site data, employment baseline figures, and (for the 7a/7b track) the 6-year tax/AV history and pro forma financial modeling, since these draw on data that doesn't change once a target incentive is chosen.",
+  "verifiers": [
+   "Cook County Assessor's Office, Development Incentives Department — reviews and certifies eligibility, issues final class determination",
+   "Municipality (City Council / Village Board) or Cook County Board of Commissioners (if unincorporated) — adopts the consent resolution/ordinance required for every class; sole body that can make or validate a 'special circumstances' abandonment finding",
+   "City of Chicago Department of Planning and Development (DPD) — intake, redevelopment agreement negotiation, Economic Disclosure Statement review for Chicago properties",
+   "Chicago Committee on Economic, Capital and Technology Development + Community Development Commission + full City Council — approve the City's ordinance of support",
+   "Cook County Board Economic Development Advisory Committee (EDAC) — SER-track review body before Board of Commissioners vote",
+   "Notary Public — required for triennial affidavits and TEERM/SER supplemental applications",
+   "Applicant, or an authorized officer/beneficiary/general partner — the only party who signs and certifies the Eligibility Application itself; the Explorer never performs this step"
+  ],
+  "program": "Cook County Property Tax Incentive Classifications 6b, 7a, 7b, and 8 (Cook County Assessor's Office, with municipal/City of Chicago DPD support-ordinance route)",
+  "sources": [
+   "https://www.cookcountyassessoril.gov/incentives-special-properties",
+   "https://prodassets.cookcountyassessoril.gov/s3fs-public/2026-01/6b%20Eligibility%20bulletin%20(revised).pdf",
+   "https://prodassets.cookcountyassessoril.gov/s3fs-public/form_documents/cls7ab.pdf",
+   "https://prodassets.cookcountyassessoril.gov/s3fs-public/form_documents/cls8a.pdf",
+   "https://www.cookcountyassessor.com/form-document/class-6b-eligibility-bulletin",
+   "https://www.cookcountyassessor.com/form-document/class-8-eligibility-bulletin",
+   "https://prodassets.cookcountyassessoril.gov/s3fs-public/2024-03/CLASS%206b%20SUSTAINABLE%20EMERGENCY%20RELIEF%20Application%20(5-4-22).pdf",
+   "https://www.chicago.gov/city/en/depts/dcd/provdrs/ec_dev/svcs/find_property_taxincentivesforyourplaceofbusiness.html",
+   "https://codelibrary.amlegal.com/codes/chicago/latest/chicago_il/0-0-0-2599471",
+   "https://www.chicago.gov/EDS",
+   "https://cocdpd.submittable.com/submit",
+   "https://www.cookcountyil.gov/service/property-tax-incentives"
+  ]
+ },
+ {
+  "program": "Chicago/Illinois small-business incentive prerequisite cluster — covers (a) City of Chicago TIF-Works / Workforce Solutions (TIF-funded workforce training reimbursement), (b) City of Chicago Small Business Improvement Fund (SBIF, the live TIF-funded facade/building-improvement rebate program — DCEO's OE3 capital/infrastructure grant is CONFIRMED CLOSED as of 4/7/2025 with no relaunch planned, and DCEO's B2B/B2B-NewBiz programs are CONFIRMED CLOSED, application windows already lapsed in 2023), and (c) the recurring cross-program prerequisite bundle (City business license standing, City debt check, EDS, W-9, IL Secretary of State good standing, IDOR tax clearance).",
+  "requiredDocuments": [
+   "Legal business name, DBA, and entity type (as filed with IL Secretary of State)",
+   "Federal EIN and W-9 (payee/taxpayer certification — one-time, no expiry unless business info changes)",
+   "Illinois Secretary of State Certificate of Good Standing / Certificate of Existence (dated document — programs generally want a recent copy; online orders are instant, mailed PDF standard is 5-7 business days, expedited mail ~24-48 hours)",
+   "Illinois Department of Revenue Tax Clearance Letter (Form ITR-1; ~10 business day processing minimum; will NOT be issued until all returns are filed and all tax, penalty, and interest balances are paid in full)",
+   "City of Chicago business license number and current/active status (issuance is blocked by any outstanding debt to the City)",
+   "City of Chicago Debt Check clearance — resolution of parking tickets, water/utility bills, Dept. of Finance debt, expired permit/sign fees, delinquent child support, or any other city-owed debt for the applicant AND any controlling person",
+   "City of Chicago Economic Disclosure Statement (EDS) and Affidavit, filed online per Matter — required from the applicant entity plus any owner or controlling entity holding >7.5% interest; each discloser files a separate EDS; drafts auto-delete after 60 days if not submitted; non-contract-specific data persists 1 year then must be refreshed",
+   "Proof of site control (deed or executed lease) for property-based programs like SBIF",
+   "Two contractor bids from licensed Chicago contractors (SBIF-specific, within 120 days of coordinator request)",
+   "Current property tax standing (SBIF-specific — must be current, not just no city debt)",
+   "Financing proof and building permits (SBIF-specific, 120 days after project approval)",
+   "Certificate/proof of insurance where required by the specific program",
+   "Attestations/eligibility certifications specific to the program (e.g., gross sales, employee count, net worth thresholds for SBIF; industry-specific attestations for DCEO grant cycles when open)"
+  ],
+  "processStages": [
+   {
+    "stage": "Foundational identity and standing verification",
+    "actor": "business owner / accountant",
+    "duration": "IL good standing: minutes (online) to ~5-7 business days (mailed); IDOR tax clearance: 10+ business days and only after all filings/payments are current"
+   },
+   {
+    "stage": "City compliance clearance (license standing + debt check)",
+    "actor": "business owner via BACP / City Dept. of Finance",
+    "duration": "Variable — blocked entirely until all city debt is resolved; City has an active 'Cut the Tape' initiative (announced Dec 2025) to streamline this check, timeline not yet published"
+   },
+   {
+    "stage": "EDS filing (applicant + any >7.5% owner/controlling entity)",
+    "actor": "applicant and each disclosing party, via chicago.gov/EDS",
+    "duration": "Filing itself is same-day online; draft expires after 60 days unsubmitted; must be recertified before City Council action or closing and kept current until then"
+   },
+   {
+    "stage": "Program-specific application intake",
+    "actor": "business + program administrator (e.g., SomerCor for SBIF)",
+    "duration": "SBIF: coordinator requests materials within 20 days of TIF district window opening; monthly rolling windows by TIF district through 2026"
+   },
+   {
+    "stage": "Program-specific documentation (bids, financing, permits)",
+    "actor": "business + contractor/lender",
+    "duration": "SBIF: 120 days to submit two contractor bids after request; another 120 days post-approval for financing proof and permits"
+   },
+   {
+    "stage": "Program review/approval",
+    "actor": "administering department (e.g., DPD for SBIF, DCEO for state grants)",
+    "duration": "Varies by program; not publicly standardized"
+   },
+   {
+    "stage": "Execution / construction or activity period",
+    "actor": "business",
+    "duration": "SBIF: construction must complete within 300 days of approval"
+   },
+   {
+    "stage": "Post-completion verification and disbursement",
+    "actor": "program administrator via site visit",
+    "duration": "SBIF: reimbursement processed 4-6 weeks after post-construction review"
+   }
+  ],
+  "verifiers": [
+   "Illinois Secretary of State (Business Services Dept.) — issues Certificate of Good Standing/Existence",
+   "Illinois Department of Revenue, Taxpayer Assistance Division — issues ITR-1 tax clearance letters",
+   "City of Chicago Dept. of Business Affairs and Consumer Protection (BACP) — business license standing",
+   "City of Chicago Department of Finance — administrative debt check / delinquency resolution",
+   "City of Chicago Dept. of Procurement Services / Dept. of Law — EDS review and rules",
+   "SomerCor (nonprofit CDFI) — administers SBIF on behalf of Chicago Dept. of Planning and Development (DPD)",
+   "Chicago Dept. of Planning and Development (DPD) — SBIF project review/approval, TIF-Works/Workforce Solutions oversight",
+   "Illinois Dept. of Commerce and Economic Opportunity (DCEO) — administers state grant programs (B2B family currently closed; OE3 capital grant confirmed closed 4/7/2025 with no relaunch planned)",
+   "NCRC CDF — was third-party processor for the 2023 B2B grant rounds (program now closed)",
+   "Licensed Chicago general contractors — provide required bids for SBIF construction scope"
+  ],
+  "timelineNotes": "Live status as of 2026-07-10, verified against official/administrator sources (not memory): SBIF is the currently active City rebate program, funded via TIF revenue, running monthly rolling application windows by TIF district through the 2026 rollout calendar (July-December 2026 cycles listed) — this is a real, open, foundation-relevant program. Chicago Workforce Solutions (successor branding to TIF-Works) is also active with Q3 (Jul 1-30, 2026) and Q4 (Oct 1-30, 2026) 2026 bond funding cycles plus year-round TIF-funded applications in 77 eligible TIF districts. On the Illinois DCEO side, the B2B and B2B-NewBiz small-business recovery grants are confirmed CLOSED (2023 application windows already lapsed) and the OE3 Small Business Capital and Infrastructure Grant is confirmed CLOSED as of April 7, 2025 with DCEO stating no plans for future funding — these should NOT be modeled as open programs in the current-cycle equivalent slot; current open DCEO small-business-adjacent items are technical-assistance/rolling programs (Small Business Development Centers, Illinois Economic Empowerment Centers, ETIP) rather than direct capital grants, so the brief's 'current-cycle equivalent' of B2B does not presently exist as an open capital grant — flag this rather than fabricate a replacement. Recency/expiry rules to encode in the foundational data model: IL good standing has no fixed statutory shelf life but program reviewers commonly want a 'recently issued' copy since it is cheap and fast to re-pull (minutes online); IDOR tax clearance requires full filing/payment compliance and cannot be obtained at all while delinquent, so it functions as a hard gate rather than a renewable artifact; City debt check similarly functions as a gate on license standing, not a document with an expiry date; EDS is the one artifact with an explicit shelf-life-like rule — drafts expire in 60 days unsubmitted, and previously-submitted non-contract data auto-expires and must be refreshed after 1 year, plus mandatory recertification before City Council action or closing on any given Matter. City is actively trying to shorten the license-standing/debt-check step via the December 2025 'Cut the Tape for Small Business' initiative, but no published new SLA yet — worth a follow-up check before hardening timeline estimates in code.",
+  "applicantFields": [
+   "Legal business name and DBA",
+   "Entity type and formation date",
+   "EIN / Federal Tax ID",
+   "Physical business address(es) and mailing address",
+   "Primary contact name, phone, email",
+   "Industry / NAICS code",
+   "Employee count",
+   "Gross sales / revenue (for SBIF: under $9M threshold)",
+   "Net worth and liquid assets (for SBIF: under $9M net worth, under $500K liquid assets)",
+   "Ownership structure and ownership percentages (for EDS >7.5% threshold disclosure)",
+   "Any controlling entities",
+   "Site control basis (own vs. lease) and TIF district location",
+   "City business license number",
+   "Outstanding city debt disclosure (tickets, utilities, permits, child support)",
+   "IL Secretary of State registration/file number",
+   "Prior incentive or relief history (e.g., did the business already receive B2B, BIG, RRF, EHG, or other local funding — affects eligibility/award reduction in state programs when they reopen)"
+  ],
+  "sources": [
+   "https://somercor.com/sbif/",
+   "https://dceo.illinois.gov/smallbizassistance/b2b-newbiz.html",
+   "https://dceo.illinois.gov/smallbizassistance/b2b.html",
+   "https://dceo.illinois.gov/aboutdceo/grantopportunities/grants.html",
+   "https://webapps1.chicago.gov/eds/faq",
+   "https://grantedai.com/grants/oe3-small-business-capital-and-infrastructure-grant-program-illinois-department-of-commerce-and-econ-1cf3a20b",
+   "https://www.ilsos.gov/departments/business-services/howdoi.html",
+   "https://tax.illinois.gov/content/dam/soi/en/web/tax/forms/misc/documents/clearance/itr-1.pdf",
+   "https://www.chicago.gov/city/en/depts/dcd/supp_info/tifworks_program.html",
+   "https://www.chicago.gov/WorkforceSolutions",
+   "https://www.chicago.gov/city/en/depts/bacp/provdrs/business_support_tools/news/2025/December/cuttheapeforsmallbusiness.html"
+  ]
+ }
+]

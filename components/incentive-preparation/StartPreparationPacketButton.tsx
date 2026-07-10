@@ -68,7 +68,7 @@ export function StartPreparationPacketButton({
       ) : (
         <FilePlus2 className="h-4 w-4" aria-hidden="true" />
       )}
-      Start Preparation Packet
+      Start application prep
     </button>
   );
 }

@@ -33,7 +33,19 @@ interface PreparationPacketSummary {
     estimatedMinWeeks?: number;
     estimatedMaxWeeks?: number;
   } | null;
+  timelines?: {
+    foundation?: { estimatedWeeks?: { min?: number; max?: number } | null } | null;
+    application?: { estimatedWeeks?: { min?: number; max?: number } | null } | null;
+  } | null;
   updatedAt: string;
+}
+
+function compactWeeks(weeks?: { min?: number; max?: number } | null): string {
+  const min = typeof weeks?.min === "number" ? weeks.min : null;
+  const max = typeof weeks?.max === "number" ? weeks.max : null;
+  if (max === null) return "";
+  if (min === null || min === max) return `about ${max} wks`;
+  return `about ${min}–${max} wks`;
 }
 
 const PREPARATION_STATUS_LABELS: Record<string, string> = {
@@ -206,7 +218,7 @@ function WorkspaceContent() {
               Business Workspace
             </p>
             <h1 className="font-editorial text-4xl text-[#0C1B33] mb-2">
-              Your incentive projects
+              Your Business File and application prep
             </h1>
             <p className="text-sm text-[#0C1B33]/45 leading-relaxed max-w-xl">
               Save reports as projects, track the goal behind each lookup, and
@@ -232,10 +244,10 @@ function WorkspaceContent() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div>
               <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]/70">
-                Incentive Preparation Packets
+                Application prep
               </h2>
               <p className="text-[12px] text-[#0C1B33]/35 mt-1">
-                Organize the facts, documents, dependencies, and support needed to apply.
+                Powered by your Business File. Your information carries into every application.
               </p>
             </div>
             <Link
@@ -243,20 +255,20 @@ function WorkspaceContent() {
               className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB] hover:text-[#1d4ed8]"
             >
               <ClipboardCheck className="w-3.5 h-3.5" />
-              Start a packet
+              Start application prep
             </Link>
           </div>
           {(packets || []).length === 0 ? (
             <EmptyState
               icon={<ClipboardCheck className="w-5 h-5" />}
-              title="No preparation packets yet"
+              title="No application prep started yet"
               text="Start from a likely-match report to preserve your business facts and map the work needed before an official application."
               action={
                 <Link
                   href="/workspace/incentive-preparation/new"
                   className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB] hover:text-[#1d4ed8] mt-3"
                 >
-                  Start a packet
+                  Start application prep
                   <ArrowRight className="w-3.5 h-3.5" />
                 </Link>
               }
@@ -272,6 +284,27 @@ function WorkspaceContent() {
                   typeof minWeeks === "number" && typeof maxWeeks === "number"
                     ? `${minWeeks}-${maxWeeks} week preparation window`
                     : "Preparation window being assessed";
+
+                const timelines = packet.timelines;
+                const foundationMax = timelines?.foundation?.estimatedWeeks?.max;
+                const foundationCompact = compactWeeks(
+                  timelines?.foundation?.estimatedWeeks,
+                );
+                const foundationLine = timelines
+                  ? foundationMax === 0
+                    ? "Business File: complete"
+                    : foundationCompact
+                      ? `Business File: ${foundationCompact} left`
+                      : "Business File: in progress"
+                  : null;
+                const applicationCompact = compactWeeks(
+                  timelines?.application?.estimatedWeeks,
+                );
+                const applicationLine = timelines
+                  ? `${packet.programName}: ${
+                      applicationCompact ? `${applicationCompact} prep` : "prep window being assessed"
+                    }`
+                  : null;
 
                 return (
                   <Link
@@ -290,9 +323,17 @@ function WorkspaceContent() {
                         {packet.businessName}
                         {packet.projectAddress ? ` · ${packet.projectAddress}` : ""}
                       </p>
+                      {timelines && (
+                        <div className="mt-1.5 space-y-0.5">
+                          <p className="text-[11px] text-[#0C1B33]/45 truncate">{foundationLine}</p>
+                          <p className="text-[11px] text-[#0C1B33]/45 truncate">{applicationLine}</p>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[11px] text-[#0C1B33]/35">{range}</span>
+                      {!timelines && (
+                        <span className="text-[11px] text-[#0C1B33]/35">{range}</span>
+                      )}
                       <ArrowRight className="w-3.5 h-3.5 text-[#0C1B33]/30" />
                     </div>
                   </Link>

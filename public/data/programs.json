@@ -56,7 +56,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-07-10",
     "benefitRange": "Project-sized (no fixed cap)",
     "fastestConfirmingStep": "Call DPD at (312) 744-4190 to confirm TIF eligibility",
     "applicationPortals": [
@@ -67,7 +67,17 @@
         "language": "en"
       }
     ],
-    "boundaryDisclaimer": "tif-districts.geojson currently holds 100 features; current count is 124 active TIFs (Civic Federation 2025). Refresh from data.cityofchicago.org. 9 TIFs expired 12/31/2025; 13 more sunset 12/31/2026."
+    "boundaryDisclaimer": "tif-districts.geojson currently holds 100 features; current count is 124 active TIFs (Civic Federation 2025). Refresh from data.cityofchicago.org. 9 TIFs expired 12/31/2025; 13 more sunset 12/31/2026.",
+    "verificationSteps": [
+      {
+        "label": "Confirm district status and eligible costs with DPD",
+        "agency": "City of Chicago Department of Planning and Development",
+        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html",
+        "kind": "preapproval",
+        "appliesBefore": "application",
+        "note": "TIF assistance is negotiated per project. Confirm your district's status, remaining term, and eligible costs with DPD before relying on it."
+      }
+    ]
   },
   {
     "id": "federalOZ",
@@ -380,7 +390,7 @@
         "required": false
       }
     ],
-    "lastVerifiedAt": "2026-07-02",
+    "lastVerifiedAt": "2026-07-10",
     "benefitRange": "$75K–$250K cap (property-type dependent); 30–90% reimbursement (commercial) / 50% (industrial)",
     "fastestConfirmingStep": "Check the SBIF rollout calendar at chicago.gov/sbif for your TIF's enrollment month, then contact SomerCor at (312) 360-3384",
     "deadlines": [
@@ -409,7 +419,33 @@
         "language": "en"
       }
     ],
-    "boundaryDisclaimer": "The rollout calendar is TIF-district-specific. Not every TIF district is open in the July or August window. Check the rollout calendar at chicago.gov/city/en/sites/small-business-improvement-fund/home/rollout-calendar.html for your specific district's enrollment month."
+    "boundaryDisclaimer": "The rollout calendar is TIF-district-specific. Not every TIF district is open in the July or August window. Check the rollout calendar at chicago.gov/city/en/sites/small-business-improvement-fund/home/rollout-calendar.html for your specific district's enrollment month.",
+    "verificationSteps": [
+      {
+        "label": "Confirm your TIF district's current application window",
+        "agency": "SomerCor",
+        "url": "https://somercor.com/sbif/",
+        "kind": "preapproval",
+        "appliesBefore": "application",
+        "note": "Application windows open by TIF district on a rotating calendar, and oversubscribed districts use a lottery. Confirm the current schedule with SomerCor before preparing materials."
+      },
+      {
+        "label": "Applicant eligibility review (Stage 1)",
+        "agency": "SomerCor",
+        "url": "https://somercor.com/sbif/",
+        "kind": "preapproval",
+        "appliesBefore": "application",
+        "note": "A SomerCor coordinator requests site control, financial, and affidavit documents by applicant type before project review begins."
+      },
+      {
+        "label": "Economic Disclosure Affidavit and DPD conditional commitment",
+        "agency": "City of Chicago Department of Planning and Development",
+        "url": "https://www.chicago.gov/city/en/sites/small-business-improvement-fund/home.html",
+        "kind": "certification",
+        "appliesBefore": "construction",
+        "note": "Only the applicant or an authorized officer signs the disclosure affidavit. DPD issues the Conditional Commitment Letter; confirm approval with SomerCor before beginning work."
+      }
+    ]
   },
   {
     "id": "edge",
@@ -1167,7 +1203,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-07-10",
     "benefitRange": "$250K @ 75% reimbursement + up to $50K TA bonus",
     "fastestConfirmingStep": "Call DPD at (312) 744-4190 about NOF eligibility, or start the Submittable application",
     "applicationPortals": [
@@ -1182,6 +1218,32 @@
         "label": "NOF Grant Application (Spanish)",
         "url": "https://cocdpd.submittable.com/submit/320126/neighborhood-opportunity-fund-nof-grant-application-spanish",
         "language": "es"
+      }
+    ],
+    "verificationSteps": [
+      {
+        "label": "Check corridor eligibility and the current application round",
+        "agency": "City of Chicago Department of Planning and Development",
+        "url": "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home/Apply.html",
+        "kind": "preapproval",
+        "appliesBefore": "application",
+        "note": "Applications are evaluated in rounds and eligibility is corridor-based. Confirm the current deadline and the eligibility map before preparing materials."
+      },
+      {
+        "label": "Finalist legal documents (EDS, affidavits, ownership chart)",
+        "agency": "City of Chicago Department of Planning and Development",
+        "url": "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home.html",
+        "kind": "filing",
+        "appliesBefore": "construction",
+        "note": "Finalists complete an Economic Disclosure Statement, child-support and property-owner affidavits, and a principal profile on the program's schedule. The applicant or an authorized representative signs."
+      },
+      {
+        "label": "Proof of financing after the Conditional Award Letter",
+        "agency": "City of Chicago Department of Planning and Development",
+        "url": "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home/frequently-asked-questions-.html",
+        "kind": "reporting",
+        "appliesBefore": "construction",
+        "note": "After a Conditional Award Letter, finalists document their share of project financing within the program's stated window. Construction funds flow through an escrow with DPD-approved draws."
       }
     ]
   },
@@ -2992,7 +3054,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-07-10",
     "benefitRange": "10% assessment (vs. 25%) for 10 years, then 15% / 20%",
     "fastestConfirmingStep": "Call Assessor Incentives at (312) 603-7529 to confirm 6b eligibility",
     "applicationPortals": [
@@ -3016,7 +3078,8 @@
         "agency": "Cook County Assessor's Office",
         "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
         "kind": "filing",
-        "appliesBefore": "construction"
+        "appliesBefore": "construction",
+        "note": "File the Eligibility Application with the Assessor BEFORE construction, substantial rehabilitation, or reoccupation begins; filing after work starts can forfeit eligibility. The application may be filed up to one year before commencement."
       }
     ]
   },
@@ -4097,7 +4160,7 @@
         "required": false
       }
     ],
-    "lastVerifiedAt": "2026-07-02",
+    "lastVerifiedAt": "2026-07-10",
     "benefitRange": "Up to $250K (standard) / $500K (extraordinary impact); 100% or 25–50% match depending on business size",
     "fastestConfirmingStep": "Submit via DPD Submittable portal — Q3 2026 non-TIF window is open now",
     "deadlines": [
@@ -4112,6 +4175,16 @@
         "label": "Workforce Solutions Program Grant Application",
         "url": "https://cocdpd.submittable.com/submit/64d343a4-40d2-47fc-bdea-b290036e9e82/workforce-solutions-program-grant-application",
         "language": "en"
+      }
+    ],
+    "verificationSteps": [
+      {
+        "label": "Confirm the current funding cycle and your TIF district",
+        "agency": "City of Chicago Department of Planning and Development",
+        "url": "https://www.chicago.gov/city/en/sites/workforce-solutions/home.html",
+        "kind": "preapproval",
+        "appliesBefore": "application",
+        "note": "Funding runs in cycles tied to TIF districts. Confirm the current cycle and your district's eligibility before building a training plan."
       }
     ]
   },

@@ -4,6 +4,7 @@ import { getSQL } from "@/lib/db";
 import {
   buildPreparationTasks,
   buildProfileSnapshot,
+  calculateFoundationTimeline,
   calculatePreparationTimeline,
   normalizePreparationTasks,
   summarizePreparationStatus,
@@ -103,6 +104,7 @@ function packetTimeline(row: DatabaseRow): PreparationTimeline {
 
 function packetSummary(row: DatabaseRow, businessName?: string | null) {
   const tasks = normalizePreparationTasks(parseJson(row.tasks_json, []));
+  const application = packetTimeline(row);
   return {
     id: String(row.id),
     title: String(row.title || "Incentive Preparation Packet"),
@@ -114,7 +116,11 @@ function packetSummary(row: DatabaseRow, businessName?: string | null) {
     businessName:
       businessName ||
       (row.business_name ? String(row.business_name) : "Business profile"),
-    timeline: packetTimeline(row),
+    timeline: application,
+    timelines: {
+      foundation: calculateFoundationTimeline(tasks),
+      application,
+    },
     createdAt: dateTime(row.created_at),
     updatedAt: dateTime(row.updated_at),
   };
@@ -388,7 +394,7 @@ export async function POST(req: NextRequest) {
   });
   const timeline = calculatePreparationTimeline(tasks);
   const status = summarizePreparationStatus(tasks);
-  const title = optionalString(body.title) || "Incentive Preparation Packet";
+  const title = optionalString(body.title) || `${programName} application prep`;
   const projectAddress = optionalString(body.projectAddress) || profile.physicalAddress;
 
   const packetRows = await sql`

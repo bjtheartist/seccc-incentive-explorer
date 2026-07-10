@@ -8,8 +8,11 @@ import {
   PREPARATION_TASK_STATUSES,
   buildPreparationTasks,
   buildProfileSnapshot,
+  calculateFoundationTimeline,
   calculatePreparationTimeline,
+  calculatePreparationTimelines,
   canApplicantUpdateTask,
+  isFoundationScopeTask,
   normalizePreparationTasks,
   summarizePreparationStatus,
   type BusinessProfileInput,
@@ -201,6 +204,16 @@ describe("buildPreparationTasks", () => {
     }
   });
 
+  it("scopes accountant-reviewed financials to the business identity only", () => {
+    for (const goalType of GOAL_TYPES) {
+      const tasks = buildPreparationTasks({ goalType, profile: COMPLETE_PROFILE });
+      const financials = tasks.find((task) => task.id === "accountant-financials");
+      // The continuity document is program-agnostic: it depends only on the
+      // business identity, no longer on the goal task.
+      expect(financials?.dependsOn).toEqual(["foundation-business-identity"]);
+    }
+  });
+
   it("adds site control, zoning, and consent-aware local support only to site goals", () => {
     const siteGoals: GoalType[] = [
       "improve-storefront",
@@ -387,6 +400,86 @@ describe("calculatePreparationTimeline", () => {
 
   it("rejects an invalid as-of date", () => {
     expect(() => calculatePreparationTimeline([], "not-a-date")).toThrow(/valid date/i);
+  });
+});
+
+describe("Business File scope split", () => {
+  it("counts foundation categories and continuity documents as Business File scope", () => {
+    expect(
+      isFoundationScopeTask({ id: "foundation-business-identity", category: "foundation" })
+    ).toBe(true);
+    expect(
+      isFoundationScopeTask({ id: "foundation-addresses", category: "foundation" })
+    ).toBe(true);
+    expect(
+      isFoundationScopeTask({ id: "accountant-financials", category: "dependency" })
+    ).toBe(true);
+    expect(
+      isFoundationScopeTask({ id: "tax-good-standing", category: "dependency" })
+    ).toBe(true);
+    expect(
+      isFoundationScopeTask({ id: "storefront-improvement-scope", category: "goal" })
+    ).toBe(false);
+    expect(
+      isFoundationScopeTask({ id: "program-application-requirements", category: "dependency" })
+    ).toBe(false);
+    expect(
+      isFoundationScopeTask({ id: OFFICIAL_CERTIFICATION_TASK_ID, category: "certification" })
+    ).toBe(false);
+  });
+
+  it("keeps goal, program, and certification work off the foundation critical path", () => {
+    const tasks = buildPreparationTasks({
+      goalType: "improve-storefront",
+      programName: "Small Business Improvement Fund",
+      profile: { legalName: "Incomplete Business" },
+    });
+    const foundation = calculateFoundationTimeline(tasks, "2026-07-10");
+    const foundationIds = new Set(
+      tasks.filter((task) => isFoundationScopeTask(task)).map((task) => task.id)
+    );
+
+    expect(foundation.criticalPathTaskIds.length).toBeGreaterThan(0);
+    for (const id of foundation.criticalPathTaskIds) {
+      expect(foundationIds.has(id)).toBe(true);
+    }
+    expect(foundation.criticalPathTaskIds).not.toContain("storefront-improvement-scope");
+    expect(foundation.criticalPathTaskIds).not.toContain("program-application-requirements");
+    expect(foundation.criticalPathTaskIds).not.toContain(OFFICIAL_CERTIFICATION_TASK_ID);
+  });
+
+  it("reports zero remaining foundation work once the Business File basics are complete", () => {
+    const tasks = buildPreparationTasks({
+      goalType: "buy-equipment",
+      profile: COMPLETE_PROFILE,
+    }).map((task) =>
+      isFoundationScopeTask(task) ? { ...task, status: "complete" as const } : task
+    );
+
+    const foundation = calculateFoundationTimeline(tasks, "2026-07-10");
+    expect(foundation.estimatedWeeks).toEqual({ min: 0, max: 0 });
+    expect(foundation.estimatedMaxWeeks).toBe(0);
+  });
+
+  it("returns both timelines, with the application timeline equal to the full-set timeline", () => {
+    const tasks = buildPreparationTasks({
+      goalType: "improve-storefront",
+      programName: "Small Business Improvement Fund",
+      profile: COMPLETE_PROFILE,
+    });
+    const timelines = calculatePreparationTimelines(tasks, "2026-07-10");
+    const application = calculatePreparationTimeline(tasks, "2026-07-10");
+    const foundation = calculateFoundationTimeline(tasks, "2026-07-10");
+
+    expect(Object.keys(timelines).sort()).toEqual(["application", "foundation"]);
+    expect(timelines.application.estimatedMaxWeeks).toBe(application.estimatedMaxWeeks);
+    expect(timelines.application.criticalPathTaskIds).toEqual(
+      application.criticalPathTaskIds
+    );
+    expect(timelines.foundation.estimatedMaxWeeks).toBe(foundation.estimatedMaxWeeks);
+    expect(timelines.application.estimatedMaxWeeks).toBeGreaterThanOrEqual(
+      timelines.foundation.estimatedMaxWeeks
+    );
   });
 });
 

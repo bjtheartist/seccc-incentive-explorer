@@ -17,9 +17,11 @@ import { trackEvent } from "@/lib/analytics-events";
 import {
   extractPreparationPacket,
   extractPreparationSupportRequests,
+  isFoundationScopeTask,
   type PreparationPacket,
   type PreparationSupportRequest,
   type PreparationTask,
+  type PreparationTimelineView,
 } from "@/components/incentive-preparation/types";
 
 function packetPath(id: string) {
@@ -95,6 +97,12 @@ function statusClass(status: string) {
   if (status === "external_dependency") return "border-amber-200 bg-amber-50 text-amber-800";
   if (status === "needs_advisor") return "border-blue-200 bg-blue-50 text-blue-800";
   return "border-[#0C1B33]/12 bg-[#FAF9F6] text-[#0C1B33]/55";
+}
+
+function formatWeekRange(weeks: { min: number; max: number }): string {
+  if (weeks.max <= 0) return "Timing estimate pending";
+  if (weeks.min === weeks.max) return `About ${weeks.max} weeks`;
+  return `About ${weeks.min}–${weeks.max} weeks`;
 }
 
 export default function PreparationPacketDetailPage() {
@@ -262,6 +270,42 @@ export default function PreparationPacketDetailPage() {
   }
   if (status !== "authenticated" || !packet) return null;
 
+  const foundationTasks = packet.tasks.filter((task) => isFoundationScopeTask(task));
+  const applicationTasks = packet.tasks.filter((task) => !isFoundationScopeTask(task));
+  const foundationConfirmed = foundationTasks.filter(
+    (task) => task.status === "complete",
+  ).length;
+  const foundationTimeline = packet.timelines.foundation;
+  const applicationTimeline = packet.timelines.application;
+  const criticalPathLabel = (timeline: PreparationTimelineView) =>
+    timeline.criticalPath.length
+      ? timeline.criticalPath
+          .map((taskId) => packet.tasks.find((task) => task.id === taskId)?.title || taskId)
+          .join(" then ")
+      : "Will update as tasks are confirmed";
+
+  const renderTaskRow = (task: PreparationTask) => (
+    <article key={task.id} className="border border-[#0C1B33]/10 px-4 py-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="text-sm font-semibold text-[#0C1B33]">{task.title}</h3>
+            <span className={`border px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] ${statusClass(task.status)}`}>{statusLabel(task.status)}</span>
+          </div>
+          {task.description && <p className="mt-2 text-sm leading-5 text-[#0C1B33]/55">{task.description}</p>}
+          <p className="mt-3 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">Owner: {statusLabel(task.owner)}</p>
+        </div>
+        {task.isCertification ? (
+          <div className="flex max-w-xs items-start gap-2 border border-[#0C1B33]/10 bg-[#FAF9F6] px-3 py-2 text-xs leading-5 text-[#0C1B33]/55"><LockKeyhole className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" /> Only the applicant or authorized representative can complete official certification. This packet does not automate it.</div>
+        ) : task.mutable ? (
+          <button type="button" onClick={() => updateTask(task, task.status === "complete" ? "needs_owner_answer" : "complete")} disabled={savingTaskId === task.id} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 border border-[#2563EB]/35 px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#2563EB] hover:bg-[#2563EB]/5 disabled:opacity-60">
+            {savingTaskId === task.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : task.status === "complete" ? <ChevronRight className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />} {task.status === "complete" ? "Reopen" : "Mark complete"}
+          </button>
+        ) : null}
+      </div>
+    </article>
+  );
+
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-10 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-6xl">
@@ -270,7 +314,7 @@ export default function PreparationPacketDetailPage() {
         </Link>
 
         <header className="border border-[#0C1B33]/10 bg-[#0C1B33] px-5 py-7 text-white sm:px-7 sm:py-8">
-          <p className="mb-3 font-mono-bureau text-[10px] uppercase tracking-[0.23em] text-white/50">Incentive Preparation Packet</p>
+          <p className="mb-3 font-mono-bureau text-[10px] uppercase tracking-[0.23em] text-white/50">Application prep</p>
           <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end">
             <div>
               <h1 className="font-editorial text-3xl leading-tight sm:text-4xl">{packet.businessProfile.legalBusinessName || "Business preparation"}</h1>
@@ -292,48 +336,53 @@ export default function PreparationPacketDetailPage() {
             </section>
 
             <section className="border-b border-[#0C1B33]/8 px-5 py-6 sm:px-7">
-              <h2 className="text-base font-semibold text-[#0C1B33]">Preparation timeline</h2>
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
-                <TimelineFact label="Preparation range" value={packet.estimatedWeekRange} />
-                <TimelineFact label="Earliest realistic date" value={packet.earliestRealisticDate ? formatDateLabel(packet.earliestRealisticDate) : "Pending task review"} />
-                <TimelineFact label="Critical path" value={packet.criticalPath.length ? packet.criticalPath.map((taskId) => packet.tasks.find((task) => task.id === taskId)?.title || taskId).join(" then ") : "Will update as tasks are confirmed"} />
+              <div className="flex flex-col gap-1">
+                <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <h2 className="text-base font-semibold text-[#0C1B33]">Your Business File</h2>
+                  <span className="font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#0C1B33]/45">{foundationConfirmed} of {foundationTasks.length} confirmed</span>
+                </div>
+                <p className="text-sm leading-5 text-[#0C1B33]/55">Done once, reused for every application you prepare.</p>
+                {foundationTimeline.asOfDate && (
+                  <p className="mt-1 text-[11px] leading-4 text-[#0C1B33]/45">Estimated as of {formatDateLabel(foundationTimeline.asOfDate)}</p>
+                )}
+              </div>
+              <p className="mt-4 text-sm leading-6 text-[#0C1B33]/75">
+                {foundationTimeline.estimatedWeeks.max <= 0
+                  ? "Business File basics complete. They carry into every application automatically."
+                  : `${formatWeekRange(foundationTimeline.estimatedWeeks)} of work left`}
+              </p>
+              <div className="mt-4 space-y-3">
+                {foundationTasks.length ? (
+                  foundationTasks.map(renderTaskRow)
+                ) : (
+                  <p className="text-sm text-[#0C1B33]/45">No Business File items in this packet yet.</p>
+                )}
               </div>
             </section>
 
             <section className="px-5 py-6 sm:px-7">
-              <div className="flex items-center justify-between gap-4">
-                <h2 className="text-base font-semibold text-[#0C1B33]">Preparation tasks</h2>
-                <span className="font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#0C1B33]/40">Preparation work</span>
+              <div className="flex flex-col gap-1">
+                <h2 className="text-base font-semibold text-[#0C1B33]">This application{packet.selectedProgram.label ? ` – ${packet.selectedProgram.label}` : ""}</h2>
+                <p className="text-sm leading-5 text-[#0C1B33]/55">{packet.selectedProgram.label || "This program"}&apos;s specific pieces, once your Business File basics are in place.</p>
+                {applicationTimeline.asOfDate && (
+                  <p className="mt-1 text-[11px] leading-4 text-[#0C1B33]/45">Estimated as of {formatDateLabel(applicationTimeline.asOfDate)}</p>
+                )}
               </div>
+              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <TimelineFact label="Preparation range" value={formatWeekRange(applicationTimeline.estimatedWeeks)} />
+                <TimelineFact label="Earliest realistic date" value={applicationTimeline.earliestRealisticDate ? formatDateLabel(applicationTimeline.earliestRealisticDate) : "Pending task review"} />
+                <TimelineFact label="Critical path" value={criticalPathLabel(applicationTimeline)} />
+              </div>
+              <p className="mt-5 text-xs leading-5 text-[#0C1B33]/45">Your Business File items above carry into this application automatically.</p>
               <div className="mt-4 space-y-3">
-                {packet.tasks.map((task) => (
-                  <article key={task.id} className="border border-[#0C1B33]/10 px-4 py-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="min-w-0">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <h3 className="text-sm font-semibold text-[#0C1B33]">{task.title}</h3>
-                          <span className={`border px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] ${statusClass(task.status)}`}>{statusLabel(task.status)}</span>
-                        </div>
-                        {task.description && <p className="mt-2 text-sm leading-5 text-[#0C1B33]/55">{task.description}</p>}
-                        <p className="mt-3 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">Owner: {statusLabel(task.owner)}</p>
-                      </div>
-                      {task.isCertification ? (
-                        <div className="flex max-w-xs items-start gap-2 border border-[#0C1B33]/10 bg-[#FAF9F6] px-3 py-2 text-xs leading-5 text-[#0C1B33]/55"><LockKeyhole className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" /> Only the applicant or authorized representative can complete official certification. This packet does not automate it.</div>
-                      ) : task.mutable ? (
-                        <button type="button" onClick={() => updateTask(task, task.status === "complete" ? "needs_owner_answer" : "complete")} disabled={savingTaskId === task.id} className="inline-flex min-h-10 shrink-0 items-center justify-center gap-2 border border-[#2563EB]/35 px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#2563EB] hover:bg-[#2563EB]/5 disabled:opacity-60">
-                          {savingTaskId === task.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : task.status === "complete" ? <ChevronRight className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />} {task.status === "complete" ? "Reopen" : "Mark complete"}
-                        </button>
-                      ) : null}
-                    </div>
-                  </article>
-                ))}
+                {applicationTasks.map(renderTaskRow)}
               </div>
             </section>
           </div>
 
           <aside className="border-t border-[#0C1B33]/10 bg-[#FAF9F6] lg:border-l lg:border-t-0">
             <section className="border-b border-[#0C1B33]/10 px-5 py-6">
-              <h2 className="text-base font-semibold text-[#0C1B33]">Profile facts</h2>
+              <h2 className="text-base font-semibold text-[#0C1B33]">Business File facts</h2>
               <dl className="mt-4 space-y-3 text-sm">
                 <ProfileFact label="Legal name" value={packet.businessProfile.legalBusinessName} />
                 <ProfileFact label="Address" value={packet.businessProfile.physicalAddress} />
