@@ -1,0 +1,170 @@
+{
+ "completeness": {
+  "verdicts": [
+   {
+    "item": "Foundational-first structure (general info / background-context / continuity pieces)",
+    "status": "covered",
+    "note": "Track 1 §1.1 introduces a `phase` axis (foundation|incentive) orthogonal to category and explicitly sub-groups foundation into the three matrix headings: General information (1A), Background & context (1B), Continuity documents (1C), with incentive-specific pieces layered on top via the existing goal/dependency/certification categories. Ordering is foundation-first by construction. Fully addressed."
+   },
+   {
+    "item": "Persistent, portable business profile (durable hub, one profile many packets)",
+    "status": "covered",
+    "note": "Track 1 §1.5 makes the business_profiles row the durable object and packets program-specific views; §1.5.1 correctly resolves the snapshot-immutability trigger that would otherwise break continuity (live profile = source of truth for foundation readiness, frozen snapshot demoted to an audit copy, plus a 'Refresh foundation from profile' recompute). One residual gap: the profile's own dedicated UI surface is thin — only GET /api/business-profiles/[id] is specified; the standalone 'profile view' referenced for the 'start another application' button is never given a route/page in the §1.8 file summary. The workspace reframe carries it implicitly, but the persistent-profile home page is underspecified."
+   },
+   {
+    "item": "One-to-two-click reuse with only a couple of residual questions",
+    "status": "covered",
+    "note": "Track 1 §1.5 specifies the flow: extended StartPreparationPacketButton routes to POST with {profileId, goalType, programId, programName} (click 1 = program packet prefilled from the persistent profile), new-packet page bypassed when profile+program are both known and reduced to residual questions otherwise. The 'couple of remaining questions' are precisely scoped (needs_owner_answer goal-overlay fields + program delta fields not in core profile), and goalAnswers_json persistence makes a second application against the same goal genuinely cheap. Well covered."
+   },
+   {
+    "item": "80-90% readiness claim made honest",
+    "status": "covered",
+    "note": "Track 1 §1.3 defines readiness as a plain fraction ('N of M foundational items current' + stale/missing breakout), never a score or approval probability, with the locked verification line. Crucially it explains WHY the cap is 80-90% not 100%: hard-gate items (IDOR clearance, EDS, bids, 50%-financing proof, certification) are explicitly excluded from the reusable foundation and shown as application-time program-gated work. §1.2.1 staleness rules make 'current' honest. This is the strongest honesty treatment in the spec."
+   },
+   {
+    "item": "Handoff artifact to an authorizer/verifier/certifier",
+    "status": "covered",
+    "note": "Track 2 is entirely this: the six existing task owners are mapped to real receivers (accountant→verifies, landlord→authorizes, local_partner→provides letter, program_administrator→determines/answers, advisor→reviews, business→certifies) with boundary-safe verbs; two handoff forms (print/PDF + consent-scoped share link); triple-locked applicant-only certification gate; no in-tool Submit button (terminal CTA is an external 'Open the official application'). Boundary is honored throughout — records intent-to-share, never transmits."
+   },
+   {
+    "item": "External dependencies on external parties modeled",
+    "status": "covered",
+    "note": "Track 2 (a) maps every non-business owner to a receiver and (e) specifies the dependency UX: owner chips ('Waiting on: your accountant'), a per-row 'Prepare a handoff' action, a 'N items waiting on others' count, and applicant-facing (never third-party) passive reminders. dependsOn graph and external_dependency status from the existing model drive it. Covered without crossing the compliance-calendar boundary."
+   },
+   {
+    "item": "TWO timelines (base/foundation packet + chosen-incentive application)",
+    "status": "covered",
+    "note": "Requirement is met (over-met) but the spec contains a genuine internal conflict that must be reconciled before build. Track 1 §1.4 partitions via a NEW `phase` field on PreparationTask and returns timelines:{foundation, incentive, combined}. Track 3 §1a partitions via a PREDICATE isFoundationScopeTask (category==='foundation' || CONTINUITY_TASK_IDS.has(id)) with NO phase field, and returns timelines:{foundation, application} (no `combined`, key named 'application' not 'incentive'). These are two incompatible implementations and two different API shapes for the same feature. Track 3's predicate is actually the better design (it banks program-agnostic continuity docs like financials/tax-standing into Timeline 1, which Track 1's category-only phase tagging would misplace), but the tracks must be merged into one mechanism, one key name, and one decision on whether `combined` survives. Flag for reconciliation."
+   },
+   {
+    "item": "Replaces the save-the-report concept",
+    "status": "covered",
+    "note": "Track 1 §1.7 disposition is explicit and staged: saved_reports absorbed as a seed for a packet (not a persistent object), business_projects superseded by PreparationTask, workspace reframed around profile+packets, header CTA repointed off /report?source=workspace. §1.7.1 gives an honestly lossy, Neon-branch-verified backfill that does NOT fabricate core fields or auto-mark tasks complete, with a falsifiable terminal state for the migration loop. Watch-areas/digest correctly kept untouched. Well handled and staged so retirement is a later separate PR."
+   },
+   {
+    "item": "Comprehensive per-program grounding",
+    "status": "partial",
+    "note": "Process/deadline grounding (Track 3 §3 Band B, lib/program-process.ts) is seeded only for SBIF, NOF, and Cook County 6b/7a — three programs, versus the 7 existing goal overlays and the broader program set the tool covers. Programs missing from PROGRAM_PROCESS get an honest 'we don't have this program's posted process on file' fallback, which is boundary-safe but is NOT comprehensive coverage. Separately, per-program FIELD deltas (matrix 2A-2D: SBIF applicant-type/tier, NOF corridor/Sources-and-Uses, County class/PIN basis) are only gestured at as examples in Track 1 §1.5 — no complete per-program residual-field schema is enumerated, so 'the couple of program-specific fields' is defined by example, not exhaustively. Grounding is well-architected but incomplete in breadth."
+   },
+   {
+    "item": "Consent model for handoff",
+    "status": "covered",
+    "note": "Not a named brief item but load-bearing for the handoff requirement: Track 2 (c) extends the already-correct support-request consent pattern (explicit consent===true, ALLOWED_CONSENT_SCOPES vocabulary reused, per-share re-affirmation, revocation, consented_at as audit anchor, no transmission). Honest and consistent with the existing route."
+   },
+   {
+    "item": "INVENTED SCOPE — tokenized share-link system",
+    "status": "overreach",
+    "note": "Track 2 (b) Form 2 adds a full share-link subsystem: new incentive_packet_shares table, /share/incentive-preparation/[token] public route, opaque tokens, 14-day expiry, revocation, scope-filtered read-only recipient view, recipient banner, expired/revoked pages, plus two analytics events. The brief only requires that the packet 'gets handed to somebody' — the print/PDF handoff (Form 1) fully satisfies that. The web share-link infrastructure is a substantial additional build (new table, route, security surface) the brief never requested. Defensible as a convenience, but it should be called out as v2/optional rather than bundled into the core schema-and-handoff change; it materially enlarges scope and attack surface."
+   },
+   {
+    "item": "INVENTED SCOPE — weekly-digest program-window integration",
+    "status": "overreach",
+    "note": "Track 3 §6 wires Timeline 2's program deadline windows into the existing PR#47 weekly digest via a new digest_window_optin packet flag, cron changes, and a preparation_deadline_reference_added event. The brief asks for two timelines; it does not ask to pipe program windows into the email digest. Though carefully bounded (opt-in, informational line, no days-remaining, no obligation framing) and boundary-conscious, it is additive scope beyond the brief and brushes closest to the 'no compliance calendar' line. Recommend deferring."
+   },
+   {
+    "item": "INVENTED SCOPE — business_properties table and owner demographics",
+    "status": "overreach",
+    "note": "Mild/justified but worth flagging. Track 1 §1.2 adds a one-to-many business_properties entity and voluntary consent-gated OwnerDemographics — neither requested by the brief. Both are grounded in the research matrix (SBIF/NOF/County rules attach to the property; matrix 1B collects demographics) and demographics are correctly excluded from the readiness denominator, so this is defensible support for 'comprehensive per-program grounding' rather than gratuitous. But it expands the schema and data-sensitivity footprint noticeably; confirm the property-level modeling and demographic collection are actually wanted before building, rather than treating them as implied."
+   }
+  ]
+ },
+ "skeptic": {
+  "verdicts": [
+   {
+    "item": "FEASIBILITY: 'buildPreparationTasks runs the foundation branch only' for a program-less packet (Track 1 §1.5, Track 3 §2)",
+    "status": "overreach",
+    "note": "No such branch exists. lib/incentive-preparation.ts:529 does GOAL_OVERLAYS[goalType] unconditionally, then unconditionally pushes overlay tasks, PROGRAM_REQUIREMENTS, financials, tax-standing, advisor, and certification. A program-less/goal-less packet cannot run this function as written — 'make goalType/programName optional' is not a validation relaxation, it requires authoring a real foundation-only code path plus a foundation-only overlay. Both tracks describe this as trivial; it is net-new branching logic and new tasks."
+   },
+   {
+    "item": "FEASIBILITY: the 'continuity documents' thesis (financials, tax, good-standing, COI reusable before a program is chosen)",
+    "status": "overreach",
+    "note": "The tasks the whole reuse story rests on are program-gated, not foundational. FINANCIALS_TASK_ID (607) and TAX_STANDING_TASK_ID (620) are category:'dependency', owner:'accountant', and depend on goalFoundationTaskId — they are only generated once a goal exists. A foundation-only packet therefore produces ONLY identity/address/contact tasks. Track 1 claims continuity docs are the reusable core and Track 3 banks them into Timeline 1, but neither exists until a program/goal is selected, directly contradicting foundation-first."
+   },
+   {
+    "item": "FEASIBILITY: Track 1 (financials → phase:'incentive') vs Track 3 (financials → foundation Timeline 1) partition the same tasks oppositely",
+    "status": "overreach",
+    "note": "Track 1 §1.1 assigns 'financials/tax ... certification tasks get phase:incentive'. Track 3 §1a adds CONTINUITY_TASK_IDS = {FINANCIALS_TASK_ID, TAX_STANDING_TASK_ID} and computes the FOUNDATION timeline over exactly those. So foundationReadiness (Track 1) excludes financials while the foundation timeline (Track 3) includes them — two conflicting 'foundation' definitions shown side-by-side to the same user. The assembled spec never reconciles this."
+   },
+   {
+    "item": "FEASIBILITY: 'phase is a purely additive field; normalize continues to sort certification last within its phase' (Track 1 §1.1)",
+    "status": "overreach",
+    "note": "normalizePreparationTasks (754) rebuilds every task from an explicit field allowlist (id, title, description, status, owner, category, dependsOn, weeks, programId, programName, requiredProfileFields, cert flags). A new 'phase' field is silently DROPPED on every round-trip — and normalize is called inside summarizePreparationStatus AND calculatePreparationTimeline AND on API read, so phase never survives to persistence or computation unless normalize is edited. There is also no 'sort within phase'; normalize does one global cert-last partition. The claim misdescribes the function."
+   },
+   {
+    "item": "FEASIBILITY: filtering tasks into a foundation subset before calculatePreparationTimeline (Track 3 calculateFoundationTimeline)",
+    "status": "partial",
+    "note": "calculateFoundationTimeline filters to isFoundationScopeTask then calls calculatePreparationTimeline → normalizePreparationTasks, whose validIds filter drops any dependsOn edge pointing outside the subset. FINANCIALS/TAX (in the foundation subset per Track 3) depend on goalFoundationTaskId and (transitively) PROGRAM_REQUIREMENTS — incentive-scope tasks. Those prerequisite edges vanish in the foundation timeline, so financials appear to have no predecessor and the foundation critical path is understated. The 'two timelines compose honestly' claim (Track 1 §1.4) breaks under the actual dependency graph."
+   },
+   {
+    "item": "FEASIBILITY: Track 3 Band B program-process data (stages, windows, NOF Aug 14 / Nov 13 2026, SBIF 120-day, 6b pre-occupancy)",
+    "status": "missing",
+    "note": "No PROGRAM_PROCESS or program-timeline data exists anywhere in the repo — grep found only a relative test fixture (deadlines.test.ts:23, daysFromToday(43)), not canonical dates. Track 3 hard-codes agency stage durations and specific 2026 round dates 'seeded from the research matrix', but that matrix is not in the codebase, the dates are unverified, and a static in-app table of agency deadlines will rot. This is the headline feature of Track 3 built on data the reader confirmed empty."
+   },
+   {
+    "item": "BOUNDARY: hard-coding and displaying agency stages/windows/deadlines in Band B (Track 3 §3, §6 digest opt-in)",
+    "status": "overreach",
+    "note": "The 5/21 does-not list bans 'track compliance deadlines' and 'maintain a compliance calendar.' Rendering SBIF's 120-day financing window, NOF quarterly rounds, and a 6b pre-occupancy clock as in-app reference data — and piping the 'next posted window' into the weekly digest — is a compliance calendar in effect, hedge copy notwithstanding. The opt-in digest line asserting a program window is exactly the calendar the doctrine forbids; the honest version links out and stores nothing."
+   },
+   {
+    "item": "BOUNDARY: readiness percentage / 'Foundation prepared' / '80-90% ready' (Track 1 §1.3)",
+    "status": "overreach",
+    "note": "A numeric 'ready' score displayed in proximity to programs is inherently eligibility-shaped and reads as implied pre-qualification, which the 5/21 boundary forbids. Track 1 itself waffles ('The percentage, if shown at all'). The adversarial position: suppress the percentage entirely and show only 'N of M items current / K missing' as a neutral inventory count. A single % labeled 'ready' is the exact overpromise the boundary and the voice rules (no overpromise) exist to prevent."
+   },
+   {
+    "item": "BOUNDARY: complianceSelfChecks with ineligibleUseScreen result 'clear'/'issue_found' counted toward readiness (Track 1 §1.2)",
+    "status": "overreach",
+    "note": "Storing a structured 'clear' result for city-debt / child-support / scofflaw / ineligible-use and letting it gate a readiness number is the tool implicitly determining eligibility and interpreting what the user must clear — banned by 5/21 ('determine final eligibility', 'interpret tax rules', 'tell users what they are legally required to file'). Even with 'self-reported, verify' labels, the moment the value feeds a readiness fraction the tool is scoring compliance. Keep these as un-scored notes at most."
+   },
+   {
+    "item": "BOUNDARY: field named eligibilityAreaDetermination storing 'the eligibility determination' (Track 1 §1.2 business_properties)",
+    "status": "overreach",
+    "note": "Persisting and displaying a field literally called an 'eligibility determination' — and counting it toward readiness — will read as the tool's determination regardless of the 'applicant found it on the map' framing. The word 'determination' is the boundary line itself. Rename to something like locatorCheckResult and never let it contribute to a readiness/eligibility-shaped number."
+   },
+   {
+    "item": "BOUNDARY / RECEIVER: program_administrator share link 'shows the full assembled profile ... what the applicant would hand across a SomerCor desk' (Track 2 §b)",
+    "status": "overreach",
+    "note": "A tokenized URL sent to SomerCor/DPD is functionally a transmission of an application-shaped document to an agency, which blurs 'never submit / never route' — the very property the support-request route was built to preserve (it deliberately sends nothing). A URL a reviewer opens is materially different from a PDF the applicant hands over in person. Restrict share links to accountant/landlord/advisor/local_partner; for program_administrator keep the official-portal link only, no shareable packet view."
+   },
+   {
+    "item": "RECEIVER REALITY: the packet as a 'handoff artifact ... handed to somebody to authorize, verify, or certify' by a program administrator",
+    "status": "overreach",
+    "note": "SomerCor/DPD intake works from the agency's own application forms and systems. A third-party tool-generated PDF stamped 'Likely match — not an eligibility decision' cannot be ingested; a counselor must re-key it, cannot trust its provenance, and the hedges signal it is not a submission. The realistic, acceptable handoffs are accountant (verify financials), landlord (site control), advisor (review) — the administrator 'handoff' creates work and will likely be ignored. The spec oversells the administrator as a receiver."
+   },
+   {
+    "item": "RECEIVER REALITY: generic accountant/landlord tasks lack program-specific specificity",
+    "status": "partial",
+    "note": "'Prepare accountant-reviewed financials' and 'Obtain tax and good-standing records' (608/626) are generic strings. A CPA needs the specific program's document list (e.g. SBIF's actual required financials, return years, format). Handing an accountant a generic task forces a clarifying round-trip rather than saving one — undercutting the '80-90% done, one or two clicks left' promise for the parties who actually receive the packet."
+   },
+   {
+    "item": "FEASIBILITY: 'Refresh foundation from live profile' recompute preserving in-flight incentive-task state (Track 1 §1.5.1)",
+    "status": "missing",
+    "note": "buildPreparationTasks is all-or-nothing: to recompute foundation status against the live profile you must re-run it, which regenerates the ENTIRE task array (program docs, external dependencies, advisor, cert) and would clobber user-set statuses like an external_dependency the applicant marked complete. There is no partial foundation-only recompute that merges over existing incentive-task state. The spec asserts 'recompute the packet's foundation tasks' as if surgical; the code offers no such seam."
+   },
+   {
+    "item": "FEASIBILITY: employeeCount scalar → employment{} object with 'backward compatibility in existing reads' (Track 1 §1.2)",
+    "status": "partial",
+    "note": "buildProfileSnapshot (404) coerces a scalar employeeCount and the business_profiles column plus every frozen profile_snapshot_json hold scalars. Because the snapshot has an immutability trigger, old snapshots can't be rewritten to the new shape, so read paths must handle both indefinitely. Feasible but the migration/back-compat is under-specified, and 'keep employeeCount as computed total' needs a defined precedence when both the scalar and the object are present."
+   },
+   {
+    "item": "FEASIBILITY: two definitions of foundation_complete (Track 1 §1.3)",
+    "status": "partial",
+    "note": "summarizePreparationStatus (843) derives foundation_complete purely from task-status completeness and absence of a certification task; it never reads a readiness core-set. Track 1 asserts foundation_complete 'now has a precise meaning: missingCore===0 && staleCore===0'. These two definitions coexist and can disagree (status says foundation_complete while readiness reports staleCore>0), producing contradictory UI. One must be made the source of truth."
+   },
+   {
+    "item": "BOUNDARY: collecting netWorth, liquidAssets, owner demographics and SSN-adjacent owner records with no stated data-handling",
+    "status": "partial",
+    "note": "Track 1 correctly consent-gates demographics, mirroring the support-request consent pattern. But it adds highly sensitive financial/personal data (net worth, liquid assets, controlling-owner records) to the app DB with no mention of encryption, retention, or deletion — a real trust and liability exposure for a discovery tool that explicitly is NOT a compliance system of record. At minimum flag retention/deletion policy before storing these."
+   },
+   {
+    "item": "RECEIVER REALITY: 14-day share-link expiry against multi-month SBIF/NOF cycles (Track 2 §b)",
+    "status": "partial",
+    "note": "NOF/SBIF preparation runs months; a 14-day default link that dead-ends means repeated re-generation and a receiver hitting an 'unavailable' page mid-review. Not fatal, but the default fights the actual cadence of the receivers it targets; make it renewable-with-notice or set the default to the program's realistic prep horizon."
+   },
+   {
+    "item": "BOUNDARY: Track 2/Track 3 correctly preserve the no-transmission and triple-locked certification model",
+    "status": "covered",
+    "note": "Verified: the certification gate is enforced at data (applicantOnly/completionAuthority, 711-718), server (canApplicantUpdateTask, 837), and client layers; support-request sends nothing; both tracks keep these untouched and route the terminal CTA to an external 'Open the official application' link rather than an in-tool Submit. This part honors the 5/21 boundary and should be retained exactly as specified."
+   }
+  ]
+ }
+}

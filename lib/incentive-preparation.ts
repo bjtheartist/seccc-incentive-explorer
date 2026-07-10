@@ -607,11 +607,11 @@ export function buildPreparationTasks({
     id: FINANCIALS_TASK_ID,
     title: "Prepare accountant-reviewed financials",
     description:
-      "Coordinate with an accountant to assemble the current financial and tax records needed for application preparation.",
+      "Coordinate with an accountant to assemble the current financial and tax records needed for application preparation. These records are reusable across programs.",
     status: "external_dependency",
     owner: "accountant",
     category: "dependency",
-    dependsOn: [FOUNDATION_IDENTITY_TASK_ID, goalFoundationTaskId],
+    dependsOn: [FOUNDATION_IDENTITY_TASK_ID],
     estimatedMinWeeks: 1,
     estimatedMaxWeeks: 3,
   });
@@ -1013,5 +1013,55 @@ export function calculatePreparationTimeline(
     owners,
     parallelizableWork,
     parallelizableTaskIds,
+  };
+}
+
+/*
+ * The Business File split: foundation-scope work is program-agnostic and
+ * reusable across every application a business prepares. Continuity documents
+ * (financials, tax standing) carry category "dependency" but bank into the
+ * foundation because an accountant prepares them once, independent of any
+ * program. Program/goal/site tasks stay application-scope.
+ */
+const CONTINUITY_TASK_IDS = new Set<string>([
+  FINANCIALS_TASK_ID,
+  TAX_STANDING_TASK_ID,
+]);
+
+export function isFoundationScopeTask(
+  task: Pick<PreparationTask, "id" | "category">
+): boolean {
+  return task.category === "foundation" || CONTINUITY_TASK_IDS.has(task.id);
+}
+
+export interface PreparationTimelines {
+  foundation: PreparationTimeline;
+  application: PreparationTimeline;
+}
+
+export function calculateFoundationTimeline(
+  tasks: readonly PreparationTask[],
+  asOf: Date | string = new Date()
+): PreparationTimeline {
+  return calculatePreparationTimeline(
+    normalizePreparationTasks(tasks).filter(isFoundationScopeTask),
+    asOf
+  );
+}
+
+export function calculateApplicationTimeline(
+  tasks: readonly PreparationTask[],
+  asOf: Date | string = new Date()
+): PreparationTimeline {
+  return calculatePreparationTimeline(tasks, asOf);
+}
+
+export function calculatePreparationTimelines(
+  tasks: readonly PreparationTask[],
+  asOf: Date | string = new Date()
+): PreparationTimelines {
+  return {
+    foundation: calculateFoundationTimeline(tasks, asOf),
+    application: calculateApplicationTimeline(tasks, asOf),
   };
 }

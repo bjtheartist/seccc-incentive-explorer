@@ -88,6 +88,20 @@ describe("PATCH /api/incentive-preparation/[id]", () => {
     expect(updateSql).toContain("tasks_json");
     expect(updateSql).toContain("timeline_json");
     expect(updateSql).not.toContain("profile_snapshot_json");
+
+    const body = (await res.json()) as {
+      packet: {
+        timeline: { estimatedWeeks: unknown };
+        timelines: {
+          foundation: { estimatedWeeks: unknown };
+          application: { estimatedWeeks: unknown };
+        };
+      };
+    };
+    expect(body.packet.timeline).toBeTruthy();
+    expect(body.packet.timelines.foundation.estimatedWeeks).toBeTruthy();
+    expect(body.packet.timelines.application.estimatedWeeks).toBeTruthy();
+    expect(body.packet.timelines.application).toEqual(body.packet.timeline);
   });
 
   it("never completes the official certification task", async () => {

@@ -26,8 +26,39 @@ export interface PreparationTask {
   description: string;
   status: PreparationTaskStatus;
   owner: string;
+  category: string;
   isCertification: boolean;
   mutable: boolean;
+}
+
+export interface PreparationTimelineView {
+  estimatedWeeks: { min: number; max: number };
+  earliestRealisticDate: string;
+  criticalPath: string[];
+  asOfDate: string;
+  owners: string[];
+}
+
+export interface PreparationTimelines {
+  foundation: PreparationTimelineView;
+  application: PreparationTimelineView;
+}
+
+// Continuity documents (financials, tax standing) bank into the Business File
+// even though the back-end tags them category "dependency"; mirror the
+// server-side isFoundationScopeTask predicate on the client.
+export const FOUNDATION_CONTINUITY_TASK_IDS = [
+  "accountant-financials",
+  "tax-good-standing",
+] as const;
+
+export function isFoundationScopeTask(
+  task: Pick<PreparationTask, "id" | "category">,
+): boolean {
+  return (
+    task.category === "foundation" ||
+    (FOUNDATION_CONTINUITY_TASK_IDS as readonly string[]).includes(task.id)
+  );
 }
 
 export interface PreparationPacket {
@@ -42,6 +73,7 @@ export interface PreparationPacket {
   estimatedWeekRange: string;
   earliestRealisticDate: string;
   criticalPath: string[];
+  timelines: PreparationTimelines;
   tasks: PreparationTask[];
   createdAt: string;
   updatedAt: string;
@@ -174,6 +206,7 @@ function normalizeTask(value: unknown, index: number): PreparationTask | null {
     description: readString(record, "description", "detail"),
     status: normalizeTaskStatus(record.status),
     owner: readString(record, "owner", "ownerLabel", "owner_label") || "Applicant",
+    category: isCertification ? "certification" : category || "goal",
     isCertification,
     mutable: !isCertification && explicitlyMutable !== false,
   };
@@ -218,6 +251,64 @@ function normalizeCriticalPath(value: unknown): string[] {
   return text ? [text] : [];
 }
 
+function readNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+function normalizeEstimatedWeeks(record: UnknownRecord): { min: number; max: number } {
+  const nested = asRecord(record.estimatedWeeks);
+  const min = Math.max(
+    0,
+    readNumber(nested?.min) ??
+      readNumber(record.estimatedMinWeeks) ??
+      readNumber(record.minWeeks) ??
+      0,
+  );
+  const max = Math.max(
+    min,
+    readNumber(nested?.max) ??
+      readNumber(record.estimatedMaxWeeks) ??
+      readNumber(record.maxWeeks) ??
+      min,
+  );
+  return { min, max };
+}
+
+function normalizeOwners(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(cleanString).filter(Boolean);
+}
+
+function normalizeTimelineView(value: unknown): PreparationTimelineView {
+  const record = asRecord(value) ?? {};
+  return {
+    estimatedWeeks: normalizeEstimatedWeeks(record),
+    earliestRealisticDate: readString(
+      record,
+      "earliestRealisticDate",
+      "earliest_realistic_date",
+    ),
+    criticalPath: normalizeCriticalPath(
+      record.criticalPathTaskIds ?? record.criticalPath ?? record.critical_path,
+    ),
+    asOfDate: readString(record, "asOfDate", "as_of_date"),
+    owners: normalizeOwners(record.owners),
+  };
+}
+
+const EMPTY_TIMELINE_VIEW: PreparationTimelineView = {
+  estimatedWeeks: { min: 0, max: 0 },
+  earliestRealisticDate: "",
+  criticalPath: [],
+  asOfDate: "",
+  owners: [],
+};
+
 export function extractPreparationPacket(payload: unknown): PreparationPacket | null {
   const root = asRecord(payload);
   if (!root) return null;
@@ -255,6 +346,16 @@ export function extractPreparationPacket(payload: unknown): PreparationPacket | 
   const selectedProgramRecord = asRecord(record.selectedProgram ?? record.program);
   const timeline = asRecord(record.timeline);
   const rawTasks = record.tasks ?? record.preparationTasks ?? record.taskGroups;
+
+  // Dual timelines: prefer the API's `timelines` split; fall back to the single
+  // `timeline` (which equals the application timeline) so older payloads render.
+  const timelinesRecord = asRecord(record.timelines);
+  const applicationView = normalizeTimelineView(
+    timelinesRecord?.application ?? record.timeline ?? record,
+  );
+  const foundationView = timelinesRecord?.foundation
+    ? normalizeTimelineView(timelinesRecord.foundation)
+    : EMPTY_TIMELINE_VIEW;
 
   return {
     id,
@@ -296,6 +397,7 @@ export function extractPreparationPacket(payload: unknown): PreparationPacket | 
         timeline?.criticalPath ??
         timeline?.criticalPathTaskIds,
     ),
+    timelines: { foundation: foundationView, application: applicationView },
     tasks: taskValues(rawTasks)
       .map((value, index) => normalizeTask(value, index))
       .filter((value): value is PreparationTask => value !== null),

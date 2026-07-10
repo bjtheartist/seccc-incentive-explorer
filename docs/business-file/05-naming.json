@@ -1,0 +1,133 @@
+{
+ "candidates": [
+  {
+   "name": "Business File",
+   "rationale": "The most universal everyday noun for 'the stuff about my business, kept in one place.' Every owner has mentally filed papers in a manila folder; this maps to that instantly with zero learning. Reads clean in all three sentences: 'finish your business file,' 'your business file is 80% complete,' 'share your business file with SomerCor.' It correctly centers the PERSISTENT foundational layer (the base that's built once) rather than any single incentive, which matches the continuity-of-effort goal. Neutral, honest, no sales charge.",
+   "risk": "'Business file' is generic enough that it may not signal WHY you'd build one — an owner might not connect it to incentives without surrounding copy. Also mild collision with government/legal 'file' (as in a case file), though that connotation is harmless here."
+  },
+  {
+   "name": "Incentive File",
+   "rationale": "Keeps the everyday 'file' noun but anchors it to the reason the owner is here. Because the whole product is 'chicagoincentiveexplorer,' 'incentive' is already the site's plain word, so this creates continuity with the surrounding experience. Sentence-fit is strong: 'your incentive file is 80% complete,' 'share your incentive file with SomerCor.'",
+   "risk": "'Incentive' is the one semi-jargon word an inexperienced owner might not use in daily speech (they'd say 'grant,' 'money,' 'help'). It also slightly narrows the noun toward a single incentive, which undercuts the portable-across-applications idea the base layer is meant to serve."
+  },
+  {
+   "name": "Business Profile",
+   "rationale": "Best captures the PERSISTENCE and DONE-ONCE nature: a profile is understood to be a standing thing you keep and update, not a one-time document. Fits the foundational-first structure perfectly — the profile is the base, incentives layer on top. Familiar from every app signup, so 'finish your business profile' feels routine and low-stakes.",
+   "risk": "'Profile' carries a marketing/social-media connotation (a listing, a public page) that clashes with the HANDOFF-artifact reality — you don't 'share your profile with SomerCor to certify.' It reads as something you display, not something authorized parties verify, which is a meaningful mismatch with the feature's purpose."
+  },
+  {
+   "name": "Application File",
+   "rationale": "Maximally literal about what it's for: getting you ready to apply. An owner with no grants experience immediately grasps 'this is the file I use when I apply for something.' Dovetails with the two-timeline design (base file, then a specific application). 'Share your application file with SomerCor' reads exactly like the real handoff.",
+   "risk": "'Application' implies a SINGLE application, which fights the portability promise (one base, many applications). It can also feel heavier/more intimidating — 'application' signals bureaucracy and effort, the opposite of the reassuring, low-friction tone you want on the foundational step."
+  },
+  {
+   "name": "Funding File",
+   "rationale": "Swaps the jargony 'incentive' for 'funding,' a word an owner actually uses ('I need funding'). Keeps the everyday 'file' noun and the plain alliteration makes it memorable without being salesy. Signals the payoff (money/help) in honest, non-hyped terms and reads naturally: 'finish your funding file,' 'share your funding file with SomerCor.'",
+   "risk": "'Funding' can quietly overpromise — it hints the outcome is money, when the hard boundary says the tool never pre-approves or guarantees anything. On the West/South Side where owners have been burned by 'funding' pitches, it may read closer to a sales frame than 'incentive' does."
+  },
+  {
+   "name": "Business Binder",
+   "rationale": "Evokes the physical three-ring binder an owner literally carries into a bank or a chamber meeting — the most tangible, non-digital, non-jargon metaphor on this list. It communicates 'everything about my business, organized, ready to hand over' better than 'file,' and the handoff sense is built in: you bring your binder to the meeting. Warm and human.",
+   "risk": "Slightly folksy/quaint — could feel low-tech or twee for a web product, and younger owners may find it dated. 'Your business binder is 80% complete' is a mild metaphor stretch (binders aren't 'complete,' they're filled), so the progress-meter sentence lands a hair less cleanly than with 'file.'"
+  },
+  {
+   "name": "Readiness File",
+   "rationale": "Names the actual value honestly: it gets you READY, without claiming approval — perfectly aligned with the compliance boundary (a discovery/prep tool, not a certifier). 'Your readiness file is 80% complete' communicates progress toward being prepared, not toward being approved, which is exactly the truthful framing the voice rules demand.",
+   "risk": "'Readiness' is a slightly abstract, HR/consultant-flavored word that a no-grants-experience owner may not instantly parse — it's less concrete than 'business' or 'funding.' 'Share your readiness file with SomerCor' is a touch awkward; the noun describes a state, not a thing you hand someone."
+  },
+  {
+   "name": "Business Record",
+   "rationale": "Strong on the HANDOFF-and-verification dimension: a 'record' is understood as the authoritative, factual account someone else can check and certify — matching the dependency-on-external-parties reality better than 'profile' or 'binder.' Sober, official, trustworthy tone with zero sales charge; 'share your business record with SomerCor' sounds exactly like a real submission.",
+   "risk": "'Record' is cold and bureaucratic — it can feel like something the government keeps ON you rather than something you build FOR yourself, which may lower the motivation-to-finish you want from the owner lens. It also reads as static/backward-looking (a log of what happened) rather than a living thing you complete and reuse."
+  },
+  {
+   "name": "Incentive Preparation Packet",
+   "rationale": "The already-merged name, tested against the receiver: a grant manager hears 'preparation' and correctly files it as pre-submission working material, not a claim of eligibility. 'Packet' is the everyday word for a bundle of supporting material that lands on a counselor's desk. It fits 'send me your incentive preparation packet' cleanly and carries zero pre-approval implication.",
+   "risk": "Generic and slightly informal for the most institutional readers (a DPD reviewer may think 'packet' vs 'file'); it also does not foreground the persistent, reuse-across-programs quality that is the product's whole point."
+  },
+  {
+   "name": "Incentive Preparation File",
+   "rationale": "One-word swap (packet to file) that keeps the honest 'preparation' hedge while sounding more institutional to a SomerCor or DPD reviewer, who thinks in files and case folders. 'Send me your incentive preparation file' reads as a term of art an agency would adopt without conferring any status.",
+   "risk": "Diverges from the already-shipped 'packet' wording, so it costs a rename; 'file' vs 'packet' is close to a coin-flip on formality and some receivers may read 'file' as the agency's own official case file rather than the applicant's prep material."
+  },
+  {
+   "name": "Business Profile and Incentive File",
+   "rationale": "Names the two-layer structure directly: the durable foundational business profile plus the incentive-specific layer on top. To a receiver it signals 'the hard upfront work is already organized here, and the program-specific pieces are attached,' which is exactly the continuity-of-effort pitch, stated plainly and without any eligibility claim.",
+   "risk": "Two-part name is clunky as a spoken term of art ('send me your business profile and incentive file' is a mouthful), so it is unlikely to get adopted verbatim and will get shortened unpredictably by staff."
+  },
+  {
+   "name": "Application Readiness File",
+   "rationale": "'File' is the institutional container a reviewer already uses, and 'readiness' communicates complete-and-organized, which is what makes a counselor willing to pick it up. Strong 'send me your readiness file' adoptability among chamber advisors who coach businesses toward applying.",
+   "risk": "'Readiness' brushes the hard boundary: it can be read as a readiness determination (the tool judged the business ready), edging toward implied pre-qualification. Would need verification copy to neutralize, and even then some receivers infer a screening the tool never performed."
+  },
+  {
+   "name": "Pre-Application Packet",
+   "rationale": "Mirrors a real government stage; many programs have a formal pre-application phase, so a reviewer instantly places this as before-submission material. Honest about sequence: it says 'not yet an application' in the name itself, which respects the never-submits-on-behalf boundary.",
+   "risk": "'Pre-application' is a defined, sometimes legally meaningful step in specific programs (e.g., a formal pre-app a program administrator receives and acts on). Borrowing the term risks implying the tool initiates that official step or confers that status, colliding with an agency's own process."
+  },
+  {
+   "name": "Applicant File",
+   "rationale": "Maximally institutional and exactly what a grant manager calls the folder on their desk, so adoption as a term of art is effortless: 'send me your applicant file.' Plain, descriptive, no promotional charge, no verb that implies the tool did anything but organize.",
+   "risk": "So generic it can imply the agency's own official applicant file, suggesting a case already exists in their system; it also loses the prepared-by-the-business, portable-across-programs nuance that distinguishes the artifact from a submitted application."
+  },
+  {
+   "name": "Incentive Application Worksheet",
+   "rationale": "'Worksheet' is honestly a working, in-progress document, which strongly signals draft-not-final and keeps the tool clearly on the discovery/navigation side of the boundary. A counselor reading 'worksheet' expects to help refine it, not receive a certified submission, which matches the handoff intent.",
+   "risk": "'Worksheet' may read as too lightweight or informal for an artifact that carries certification-bearing and landlord/accountant dependency pieces handed to a grant manager; it can undersell the depth of the foundational profile."
+  },
+  {
+   "name": "Business Intake Packet",
+   "rationale": "'Intake' is the receiver's own onboarding vocabulary, so it lands as a familiar term a counselor would say ('send me your intake packet') and sets the expectation that they will process and verify what is inside, which fits the handoff-artifact framing.",
+   "risk": "'Intake' implies the agency's intake step, which can suggest the tool initiates an official process on the applicant's behalf, brushing the never-submits boundary; it also downplays the persistent, reusable-across-multiple-programs quality by framing the artifact as a one-time onboarding event."
+  },
+  {
+   "name": "Standing Profile",
+   "rationale": "Frames the business record as something that stays standing between applications — always current, never rebuilt. 'Standing' reads as persistent and ready-to-use (like a standing order or standing appointment), signaling the do-it-once, reuse-forever core without any sales gloss. Plain, honest, and it maps cleanly onto the code's BusinessProfileInput/Snapshot as the durable base layer.",
+   "risk": "'Standing' can be misread as static/passive rather than living and updatable; may undersell that the profile grows and carries effort forward."
+  },
+  {
+   "name": "Continuity File",
+   "rationale": "Names the defining idea literally — continuity of effort — and 'File' evokes the persistent chart/dossier metaphor (medical chart, case file) that outlives any single form. Descriptive and neutral, it tells a business owner exactly what it is: one enduring record their work accumulates in, then feeds each application.",
+   "risk": "'File' can feel like a one-time document or a filing action rather than an ongoing living profile; slightly bureaucratic, could read as paperwork rather than saved effort."
+  },
+  {
+   "name": "Readiness Profile",
+   "rationale": "Centers on the outcome the packet exists to create — being 80–90% ready before an incentive is even chosen — while 'Profile' signals the persistent, reusable base that later gets incentive-specific layers. Honest about what it delivers (preparedness, not approval) and respects the discovery-not-compliance boundary.",
+   "risk": "'Readiness' edges toward an implied promise of qualification/approval; must be paired with clear copy so it isn't heard as 'ready to be approved.'"
+  },
+  {
+   "name": "Business Passport",
+   "rationale": "Borrows the passport mental model directly from the brief — one verified identity document, established once, presented again and again to different authorities. Captures portability and reuse across applications and the handoff-to-an-external-authority nature of the packet (a passport is checked and stamped by others, never self-issued), which fits the certification boundary.",
+   "risk": "Metaphor risks over-promising 'access/entry'; 'passport' is a common product-naming cliché and could feel gimmicky against the plain-voice mandate."
+  },
+  {
+   "name": "Application Base",
+   "rationale": "States the architecture plainly: a foundational base built once that every specific application draws from. 'Base' communicates the layered structure in the brief (foundation first, incentive-specific on top) and the reuse promise — you build the base, then stack each application onto it. About as plain and honest as a name gets.",
+   "risk": "Fairly generic and low-distinctiveness; 'base' could be mistaken for a database or a starter template rather than a persistent, evolving business record."
+  },
+  {
+   "name": "Standing Packet",
+   "rationale": "Keeps the shipped feature word ('preparation packet') and adds 'Standing' to signal it persists and stays ready between applications rather than being assembled from scratch each time. Directly bridges the existing code/UX vocabulary while adding the continuity meaning; the base packet stands, incentive-specific pieces layer on.",
+   "risk": "'Packet' connotes a finished, one-shot deliverable (like a mailed packet), which slightly fights the living/ongoing intent; 'Standing Packet' is a less familiar collocation and may need explanation."
+  },
+  {
+   "name": "Groundwork Profile",
+   "rationale": "'Groundwork' names exactly what the foundational layer is — the hard upfront work done once — and 'Profile' carries the persistent, reusable record. Honest and descriptive: it says the effort is laid down at the ground level and reused, matching the foundation-then-overlay structure and the do-the-hard-work-once thesis without any hype.",
+   "risk": "Two-word compound is a touch soft/abstract; 'groundwork' could imply only the beginning stage, underselling that the profile also carries through to the specific-application phase."
+  },
+  {
+   "name": "Carryforward Profile",
+   "rationale": "'Carryforward' is a plain, accounting-familiar term (carryforward balance) that precisely names the mechanic: effort and information entered once are carried forward into every future application draft. It's the most literal expression of portability and reuse in the brief, and it stays honest — it describes data movement, not approval.",
+   "risk": "Slightly jargon-adjacent and longer to say; some users may not parse 'carryforward' instantly, and it leans more mechanical than warm."
+  }
+ ],
+ "verdict": {
+  "top3": [
+   "Business File",
+   "Business Profile",
+   "Incentive Preparation Packet (incumbent)"
+  ],
+  "recommendation": "Business File",
+  "reasoning": "WINNER — Business File. It wins the two highest-weighted criteria outright. (1) Owner clarity: every Chicago owner, grants experience or not, has mentally kept \"the stuff about my business\" in a manila folder — this maps to that with zero learning, no jargon. (2) Receiver adoption: \"send me your business file\" is exactly how a SomerCor counselor or chamber advisor already talks; it reads as a real handoff, not a display object. (4) Zero overpromise: \"file\" claims nothing about approval, eligibility, or funding — it is the safest noun on the list against the 2026-05-21 boundary. (5/6) UI copy is clean (\"finish your business file,\" \"your business file is 80% complete,\" \"share your business file with SomerCor\"), and it coexists with the brand precisely BECAUSE it is neutral: \"Chicago Incentive Explorer\" already supplies the WHY, so the artifact noun should carry the persistent, reusable base — not re-state \"incentive.\" Its one cited weakness (doesn't self-signal why you'd build one) is the least costly weakness here, and it is fully absorbed by the surrounding product frame. On persistence (3) \"file\" is solid — you keep a file, you add to it over time.\n\nRUNNER-UP — Business Profile. It is the single best name on criterion 3 (persistence/done-once): a profile is understood as a standing thing you keep and update, which is the product's core thesis. I rank it second and not first because it loses on criterion 2, the second-heaviest weight: a \"profile\" is something you DISPLAY (social/marketing listing), not something an external party verifies and certifies. \"Share your profile with SomerCor to certify\" is a genuine category mismatch with a handoff artifact that has landlord/accountant/administrator dependencies. Persistence is important, but adoptability by the receiver outranks it in the weighting, so it stays #2.\n\nTHIRD — Incentive Preparation Packet (the incumbent). Worth keeping on the podium because it is honest and already shipped: a grant manager correctly files \"preparation\" as pre-submission working material with zero pre-approval implication, and \"packet\" is real counselor vocabulary. It loses to Business File on criterion 1 (the word \"incentive\" is the one semi-jargon term a no-grants owner wouldn't use — they say \"grant,\" \"money,\" \"help\"; and the three-word name is heavy for the reassuring foundational step) and on criterion 3 (\"packet\" connotes a one-shot mailed bundle, which actively fights the persistent, reuse-across-programs quality that is the whole point). A rename to Business File is cheap relative to that mismatch. If Billy prefers not to rename at all, the incumbent is a defensible hold — it violates nothing — but it is not the best available name.\n\nKILLED. Funding File — dies on criterion 4: \"funding\" quietly promises money the tool never guarantees, and on the West/South Side \"funding\" reads as a pitch owners have been burned by. Incentive File / Application File — both narrow the noun to a SINGLE incentive/application, undercutting the portability-across-drafts promise (criterion 3). Business Record — cold, backward-looking, feels like something the government keeps ON you, lowering finish-motivation (criterion 1). The metaphor/coinage names — Business Binder, Business Passport, Standing Profile/Packet, Continuity File, Carryforward Profile, Groundwork Profile — are either twee, cliché, or jargon-adjacent (\"carryforward,\" \"standing,\" \"passport-as-access\") and fail the plain-honest voice test or the instant-comprehension test; cut per the \"kill anything cute\" instruction. Readiness File/Profile and Application Readiness File brush the boundary by implying a readiness DETERMINATION (implied pre-qualification) — avoidable risk under criterion 4."
+ }
+}

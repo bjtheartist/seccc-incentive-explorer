@@ -252,15 +252,15 @@ function NewPreparationPacketContent() {
 
         <header className="mb-8 max-w-3xl">
           <p className="mb-3 font-mono-bureau text-[10px] uppercase tracking-[0.25em] text-[#2563EB]/70">
-            Start a new packet
+            Start application prep
           </p>
           <h1 className="mb-3 font-editorial text-4xl leading-tight text-[#0C1B33] sm:text-5xl">
-            Incentive Preparation Packet
+            Application prep
           </h1>
           <p className="max-w-2xl text-sm leading-6 text-[#0C1B33]/55">
-            Organize shared business facts and application-preparation work for
-            one likely-match program. Program administrators make final
-            eligibility and award determinations.
+            Your Business File holds shared business facts. This prep organizes
+            application work for one likely-match program. Program administrators
+            make final eligibility and award determinations.
           </p>
         </header>
 
@@ -286,23 +286,23 @@ function NewPreparationPacketContent() {
               />
               <div>
                 <h2 className="text-base font-semibold text-[#0C1B33]">
-                  Business profile
+                  Your Business File
                 </h2>
                 <p className="mt-1 text-xs leading-5 text-[#0C1B33]/45">
-                  Reuse a saved profile or create one for this business.
+                  Reuse a saved Business File or create one for this business.
                 </p>
               </div>
             </div>
 
             <div className="max-w-xl">
-              <FieldLabel htmlFor="business-profile">Saved profile</FieldLabel>
+              <FieldLabel htmlFor="business-profile">Saved Business File</FieldLabel>
               <select
                 id="business-profile"
                 value={profileChoice}
                 onChange={(event) => chooseProfile(event.target.value)}
                 className={inputClassName}
               >
-                <option value="new">Create a business profile</option>
+                <option value="new">Create a new Business File</option>
                 {(profiles ?? []).map((profile) => (
                   <option key={profile.id} value={profile.id}>
                     {profile.legalBusinessName || "Saved business"}
@@ -315,8 +315,8 @@ function NewPreparationPacketContent() {
 
           <section className="border-b border-[#0C1B33]/8 px-5 py-6 sm:px-7 sm:py-7">
             <SectionHeading
-              title="Shared business facts"
-              description="These facts can be reused across preparation packets."
+              title="Business File facts"
+              description="Entered once, reused in every application you prepare."
             />
             <div className="grid grid-cols-1 gap-x-5 gap-y-5 md:grid-cols-2">
               <TextField
@@ -521,7 +521,7 @@ function NewPreparationPacketContent() {
               ) : (
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               )}
-              Create packet
+              Start prep
             </button>
           </footer>
         </form>

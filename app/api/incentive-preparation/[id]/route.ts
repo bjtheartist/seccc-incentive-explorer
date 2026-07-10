@@ -4,6 +4,7 @@ import { getSQL } from "@/lib/db";
 import {
   PREPARATION_TASK_STATUSES,
   buildProfileSnapshot,
+  calculateFoundationTimeline,
   calculatePreparationTimeline,
   canApplicantUpdateTask,
   normalizePreparationTasks,
@@ -95,6 +96,7 @@ function packetTimeline(row: DatabaseRow): PreparationTimeline {
 
 function packetSummary(row: DatabaseRow) {
   const tasks = normalizePreparationTasks(parseJson(row.tasks_json, []));
+  const application = packetTimeline(row);
   return {
     id: String(row.id),
     title: String(row.title || "Incentive Preparation Packet"),
@@ -104,7 +106,11 @@ function packetSummary(row: DatabaseRow) {
     projectAddress: row.project_address ? String(row.project_address) : null,
     status: row.status ? String(row.status) : summarizePreparationStatus(tasks),
     businessName: row.business_name ? String(row.business_name) : "Business profile",
-    timeline: packetTimeline(row),
+    timeline: application,
+    timelines: {
+      foundation: calculateFoundationTimeline(tasks),
+      application,
+    },
     createdAt: dateTime(row.created_at),
     updatedAt: dateTime(row.updated_at),
   };

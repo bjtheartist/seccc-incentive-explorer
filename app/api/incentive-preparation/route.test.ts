@@ -132,5 +132,23 @@ describe("/api/incentive-preparation", () => {
     expect(tasksJson).toContain("Confirm program step: Confirm application window");
     expect(tasksJson).not.toContain("This must not enter the packet");
     expect(tasksJson).not.toContain("$1-$999");
+
+    // Default packet title derives from the program name.
+    expect(packetValues).toContain("Exact likely match application prep");
+
+    // Response carries both the combined timeline and the Business File split.
+    const body = (await res.json()) as {
+      packet: {
+        timeline: { estimatedWeeks: unknown };
+        timelines: {
+          foundation: { estimatedWeeks: unknown };
+          application: { estimatedWeeks: unknown };
+        };
+      };
+    };
+    expect(body.packet.timeline).toBeTruthy();
+    expect(body.packet.timelines.foundation.estimatedWeeks).toBeTruthy();
+    expect(body.packet.timelines.application.estimatedWeeks).toBeTruthy();
+    expect(body.packet.timelines.application).toEqual(body.packet.timeline);
   });
 });
