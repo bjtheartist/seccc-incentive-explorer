@@ -31,6 +31,8 @@ import type {
 } from "@/lib/report-engine";
 import type { ApplicationPortal, ExecutiveSummary, Program, VerificationStep } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
+import { RefineValuePanel } from "@/components/report/RefineValuePanel";
+import { BenefitEstimatesBlock } from "@/components/report/BenefitEstimatesBlock";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
 import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
@@ -1431,28 +1433,19 @@ export function ReportDisplay({
             <div className="w-10 h-[3px] bg-white/30" />
           </div>
 
-          {isInstantMode && !compact && (
-            <div className="px-5 sm:px-12 md:px-16 py-5 border-b border-[#2563EB]/15 bg-[#2563EB]/[0.035]">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <div className="font-mono-bureau text-[9px] tracking-[0.28em] uppercase text-[#2563EB]/70 mb-1.5">
-                    Location-Only Snapshot
-                  </div>
-                  <p className="text-[13px] leading-relaxed text-[#0C1B33]/60 max-w-2xl">
-                    This shows the zones, parcel context, and programs that touch this address. It does not yet account for your project goals, timeline, budget, site control, or document readiness.
-                  </p>
-                </div>
-                {onRefine && (
-                  <button
-                    onClick={() => handleRefineClick("banner")}
-                    className="inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-5 py-3 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-sm"
-                  >
-                    <ArrowRight className="w-3.5 h-3.5" />
-                    Refine with Project Details
-                  </button>
-                )}
-              </div>
-            </div>
+          {/* Refine value preview (audit RF6/WU5/BM1): honestly sell what
+              refining unlocks instead of the old undersell disclaimer.
+              Rendered in compact (compare) mode too — audit RF4. The refine
+              path routes through handleRefineClick so PR #49's refine_clicked
+              keeps firing (location: banner) alongside the panel's own
+              refine_value_preview_shown exposure event. */}
+          {isInstantMode && (
+            <RefineValuePanel
+              report={report}
+              context={compact ? "compare_a" : "workspace"}
+              onRefine={onRefine ? () => handleRefineClick("banner") : undefined}
+              compact={compact}
+            />
           )}
 
           {/* ── Metadata Row ── */}
@@ -1636,6 +1629,14 @@ export function ReportDisplay({
                   onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
                   onTextChange={setEditedSummaryText}
                 />
+              </div>
+            )}
+
+            {/* ── Estimated Incentive Value (refined reports) — the engine
+                has always computed this; it was never rendered (audit RF6). */}
+            {report.benefitEstimates && (
+              <div id="benefit-estimates">
+                <BenefitEstimatesBlock estimates={report.benefitEstimates} />
               </div>
             )}
 
@@ -2256,15 +2257,10 @@ export function ReportDisplay({
                 Compare Another Address
               </button>
             )}
-            {isInstantMode && onRefine && (
-              <button
-                onClick={() => handleRefineClick("action_row")}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
-              >
-                <ArrowRight className="w-3.5 h-3.5" />
-                Refine with Project Details
-              </button>
-            )}
+            {/* Refine intentionally lives only in the top value panel — it
+                previously competed with 8 same-weight buttons here (audit
+                RF5). PR #49's refine_clicked keeps firing from the panel
+                with location "banner"; "action_row" retires with the button. */}
             <button
               onClick={onStartOver}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"

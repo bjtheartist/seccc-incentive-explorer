@@ -404,6 +404,78 @@ export function estimateCreditValue(
   return `${pctDisplay}% of ${formatDollars(median)} = ${formatDollars(capped)}`;
 }
 
+/**
+ * Human-readable value framing for a program's modeled credit assumption
+ * ("Up to 90% reimbursement; caps vary by property type"). Returns null for
+ * programs without a modeled percentage. Estimates only — never an
+ * eligibility determination.
+ */
+export function programValueTeaser(programId: string): string | null {
+  const info = CREDIT_PERCENTAGES[programId];
+  if (!info || info.pct === 0) return null;
+  return info.label;
+}
+
+export interface ProgramsValueEstimate {
+  total: number;
+  totalFormatted: string;
+  items: {
+    programId: string;
+    programName: string;
+    estimatedValue: number;
+    estimatedValueFormatted: string;
+    label: string;
+  }[];
+}
+
+/**
+ * Planning-level total across a set of programs for a budget range — the same
+ * math the refined report's Benefit Estimates section uses. Estimates only;
+ * every program requires verification with its administrator.
+ */
+export function estimateProgramsValue(
+  programs: { id: string; name: string }[],
+  budgetRange: string,
+): ProgramsValueEstimate | null {
+  const median = BUDGET_MEDIANS[budgetRange];
+  if (!median) return null;
+
+  const items: ProgramsValueEstimate["items"] = [];
+  let total = 0;
+  for (const p of programs) {
+    const info = CREDIT_PERCENTAGES[p.id];
+    if (!info || info.pct === 0) continue;
+    const raw = median * info.pct;
+    const capped = info.cap ? Math.min(raw, info.cap) : raw;
+    total += capped;
+    items.push({
+      programId: p.id,
+      programName: p.name,
+      estimatedValue: capped,
+      estimatedValueFormatted: formatDollars(capped),
+      label: info.label,
+    });
+  }
+
+  if (items.length === 0) return null;
+  return { total, totalFormatted: formatDollars(total), items };
+}
+
+export const CONFIRMED_PROGRAMS_SECTION_TITLE = "Eligible Incentive Programs";
+
+/** Address-confirmed programs surfaced by a generated report (id + name). */
+export function confirmedProgramsFromReport(
+  report: GeneratedReport,
+): { id: string; name: string }[] {
+  const section = report.sections?.find(
+    (s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE,
+  );
+  if (!section) return [];
+  return section.items
+    .filter((item) => Boolean(item.programId))
+    .map((item) => ({ id: item.programId as string, name: item.label }));
+}
+
 function getIndustryName(industryId: string): string {
   const industry = getIndustryById(industryId);
   return industry?.name || industryId || "General Business";
@@ -1861,7 +1933,7 @@ function generateLocationIncentives(
   // §03 Eligible Incentive Programs — address-confirmed by zone match
   if (confirmedPrograms.length > 0) {
     sections.push({
-      title: "Eligible Incentive Programs",
+      title: CONFIRMED_PROGRAMS_SECTION_TITLE,
       description: "Programs matched to this address through active incentive-zone boundaries, ordered by eligibility confidence.",
       items: confirmedPrograms.map((p) => programReportItem(p, confidenceMap, gatingOpts)),
     });

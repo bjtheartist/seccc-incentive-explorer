@@ -1,3 +1,4 @@
+import { isSnapshotWizardState } from "@/lib/report-wizard-config";
 import type { WizardState } from "@/lib/report-wizard-config";
 
 /**
@@ -9,15 +10,14 @@ import type { WizardState } from "@/lib/report-wizard-config";
  * so derive it the same way the instant flow itself builds wizard state
  * (see MapView/AddressSearch): a bare site-incentives lookup with none of
  * the refine-only project-detail fields filled in yet.
+ *
+ * Delegates to isSnapshotWizardState (lib/report-wizard-config) — the single
+ * source of truth for "is this wizard state a location-only snapshot",
+ * shared with the refine value panel work. Kept as an export so callers and
+ * the RF1 regression tests keep a workspace-scoped name.
  */
 export function deriveIsInstantMode(wizardState: WizardState | undefined): boolean {
-  if (!wizardState || wizardState.reportType !== "site-incentives") return false;
-  return (
-    !wizardState.industry &&
-    !wizardState.projectType &&
-    !wizardState.budgetRange &&
-    !wizardState.timeline
-  );
+  return isSnapshotWizardState(wizardState);
 }
 
 export const GOAL_OPTIONS = [

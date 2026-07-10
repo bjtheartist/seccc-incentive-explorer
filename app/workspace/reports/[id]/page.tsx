@@ -100,9 +100,20 @@ export default function SavedReportPage() {
         report={report}
         wizardState={wizardState}
         onStartOver={() => router.push("/report")}
-        onRefine={() => router.push("/report")}
+        // Saved location snapshots re-enter the refine flow with the address
+        // preserved (audit RF1: isInstantMode was never passed here, so the
+        // refine CTA could never render on a saved report).
         isInstantMode={deriveIsInstantMode(wizardState)}
         analyticsSource="workspace"
+        onRefine={() => {
+          if (wizardState?.lat != null && wizardState?.lon != null) {
+            router.push(
+              `/report?refine=true&lat=${wizardState.lat}&lon=${wizardState.lon}&addr=${encodeURIComponent(wizardState.address || "")}&src=workspace`
+            );
+            return;
+          }
+          router.push("/report");
+        }}
       />
     </div>
   );

@@ -25,6 +25,12 @@ export function generatedReportEventType(
   if (report.reportType === "dev-feasibility" || report.reportType === "best-location") {
     return "vacancy_report_generated" as const;
   }
+  // Corridor Intelligence is a first-class report type (audit RF7/WU7); its
+  // generations get their own funnel event instead of masquerading as
+  // refined reports.
+  if (report.reportType === "corridor-intelligence") {
+    return "corridor_report_generated" as const;
+  }
   if (isInstantMode && !hasRefinedInstantReport) {
     return "location_snapshot_generated" as const;
   }
