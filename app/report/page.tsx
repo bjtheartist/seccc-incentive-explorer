@@ -103,6 +103,12 @@ import { cachedFetch } from "@/lib/fetch-cache";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
 import { trackEvent } from "@/lib/analytics-events";
+import {
+  analyticsReportKey,
+  createGeneratedReportEventGate,
+  generatedReportEventKey,
+  generatedReportEventType,
+} from "@/lib/report-generated-event";
 
 type ReportNavigationItem = GeneratedReport["sections"][number]["items"][number] & {
   applicationPortals?: ApplicationPortal[];
@@ -155,14 +161,6 @@ function extractReportZipCode(report: GeneratedReport): string | null {
   const address = report.metadata?.address || "";
   const match = address.match(/\b(606\d{2}|60707|60827)\b/);
   return match?.[1] ?? null;
-}
-
-function analyticsReportKey(report: GeneratedReport): string {
-  return [
-    report.reportType,
-    report.generatedAt,
-    report.metadata?.address || report.title,
-  ].join("|");
 }
 
 function reportAnalyticsPayload(
@@ -221,20 +219,6 @@ function supportOrganizationCount(report: GeneratedReport) {
   );
   if (!supportSection) return 0;
   return supportSection.items.filter((item) => item.label !== "Community Support").length;
-}
-
-function generatedReportEventType(
-  report: GeneratedReport,
-  isInstantMode: boolean,
-  hasRefinedInstantReport: boolean,
-) {
-  if (report.reportType === "dev-feasibility" || report.reportType === "best-location") {
-    return "vacancy_report_generated" as const;
-  }
-  if (isInstantMode && !hasRefinedInstantReport) {
-    return "location_snapshot_generated" as const;
-  }
-  return "refined_report_generated" as const;
 }
 
 function zoneMatchesToText(value: unknown): string {
@@ -600,7 +584,7 @@ function ReportWizardPage() {
   const [report, setReport] = useState<GeneratedReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasRefinedInstantReport, setHasRefinedInstantReport] = useState(false);
-  const generatedReportEventKeyRef = useRef<string | null>(null);
+  const generatedReportEventGateRef = useRef(createGeneratedReportEventGate());
 
   // Comparison state
   const [compareMode, setCompareMode] = useState(false);
@@ -654,10 +638,12 @@ function ReportWizardPage() {
 
   // Instant mode state
   const [instantLoading, setInstantLoading] = useState(isInstantMode);
-  // Guards location_snapshot_generated against duplicate fires on re-render,
-  // keyed to the lat/lon of the snapshot that was successfully generated.
-  const instantSnapshotFiredKeyRef = useRef<string | null>(null);
 
+  // The ONLY emitter of the generated-report funnel events
+  // (location_snapshot_generated / refined_report_generated /
+  // vacancy_report_generated), gated by report identity so one generated
+  // report fires exactly one event. The instant-mode generation effect must
+  // not fire its own copy — that double-counted every instant snapshot.
   useEffect(() => {
     if (!report) return;
     const eventType = generatedReportEventType(
@@ -665,9 +651,8 @@ function ReportWizardPage() {
       isInstantMode,
       hasRefinedInstantReport,
     );
-    const reportEventKey = `${analyticsReportKey(report)}|${eventType}|${reportSource}`;
-    if (generatedReportEventKeyRef.current === reportEventKey) return;
-    generatedReportEventKeyRef.current = reportEventKey;
+    const reportEventKey = generatedReportEventKey(report, eventType, reportSource);
+    if (!generatedReportEventGateRef.current.shouldFire(reportEventKey)) return;
 
     trackEvent(
       eventType,
@@ -676,10 +661,13 @@ function ReportWizardPage() {
         isInstantMode,
         hasProjectDetails: !isInstantMode || hasRefinedInstantReport,
         supportOrganizationsSurfaced: supportOrganizationCount(report),
+        // Landing page that launched an instant search (raw `src` URL param),
+        // kept alongside the cleaned entrySource for attribution.
+        ...(isInstantMode ? { landing_page: instantSrc || null } : {}),
         ...(campaignParam ? { campaign: campaignParam } : {}),
       }),
     );
-  }, [campaignParam, hasRefinedInstantReport, isInstantMode, report, reportSource]);
+  }, [campaignParam, hasRefinedInstantReport, instantSrc, isInstantMode, report, reportSource]);
 
   // ZIP parsed from address/parcel/geocode strings.
   const stringZip = useMemo(
@@ -1005,21 +993,9 @@ function ReportWizardPage() {
           mobilityAccess: mobilityAccess ?? undefined,
         });
         setReport(generated);
-
-        // Funnel completion: the instant snapshot has successfully resolved and
-        // is about to render. Fire once per location, attributing it back to the
-        // landing page that launched the search (the `src` URL param).
-        const snapshotKey = `${wizardState.lat}|${wizardState.lon}`;
-        if (instantSnapshotFiredKeyRef.current !== snapshotKey) {
-          instantSnapshotFiredKeyRef.current = snapshotKey;
-          trackEvent("location_snapshot_generated", {
-            source: "instant",
-            address: wizardState.address || instantAddr || null,
-            lat: wizardState.lat,
-            lon: wizardState.lon,
-            metadata: { landing_page: instantSrc || null },
-          });
-        }
+        // Funnel completion (location_snapshot_generated) is fired by the
+        // generated-report effect above, gated by report identity — do not
+        // trackEvent here or the snapshot double-counts.
       } catch (err) {
         // Stay on loading — but make the failure visible to engineering
         // instead of looking identical to "still loading" in the data (ED4).
@@ -1040,7 +1016,7 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, instantAddr, instantSrc]);
+  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, instantAddr]);
 
   // Corridor URL mode: auto-generate a corridor report after the metric lookup completes.
   const [corridorAutoGenerated, setCorridorAutoGenerated] = useState(false);
