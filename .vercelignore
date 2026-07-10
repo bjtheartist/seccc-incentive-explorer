@@ -1,0 +1,11 @@
+.git
+.next
+.vercel
+node_modules
+video
+.ds-sync
+ds-bundle
+.design-sync
+.playwright-cli
+test-results
+coverage
