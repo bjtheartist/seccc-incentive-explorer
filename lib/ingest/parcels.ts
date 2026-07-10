@@ -14,8 +14,9 @@ import type { FetchOpts, Provenance, SourceAdapter, SQL } from "./types";
  * Worked example that later domain adapters copy. Bulk source is the Socrata
  * Parcel Universe (`nj4t-kc8j`, ZIP-filterable, paginated). Each normalized
  * row is enriched with assessed values + ownership from the Cook County
- * Assessor (`uzyt-m557`). Upsert lands the snapshot in `parcels` and appends
- * an assessment row to `parcel_valuations`.
+ * Assessor (`uzyt-m557`) and with the situs address from the Assessor's
+ * Parcel Addresses dataset (`3723-97qp`). Upsert lands the snapshot in
+ * `parcels` and appends an assessment row to `parcel_valuations`.
  */
 
 const SOURCE_KEY = "parcels";
@@ -26,6 +27,14 @@ const PARCEL_UNIVERSE_URL =
 /** Cook County Assessor enrichment dataset. */
 const ASSESSOR_URL =
   "https://datacatalog.cookcountyassessor.com/resource/uzyt-m557.json";
+/**
+ * Assessor Parcel Addresses dataset — where the situs (property) address
+ * lives since the Parcel Universe restructure dropped `prop_address`. Same
+ * pin/year spine as the universe; on the main county portal (reachable even
+ * when the assessor portal is down).
+ */
+const PARCEL_ADDRESSES_URL =
+  "https://datacatalog.cookcountyil.gov/resource/3723-97qp.json";
 
 /** Raw Socrata Parcel Universe record, augmented with assessor enrichment. */
 /**
@@ -33,8 +42,9 @@ const ASSESSOR_URL =
  * 2026-07-03). The county restructured this dataset into a longitudinal
  * spine: one row per parcel per YEAR, geo/admin context only. The old
  * fields (prop_address, land_square_footage, certified_*, latitude/
- * longitude, property_type) no longer exist; situs address and valuations
- * now come only from the assessor dataset enrichment.
+ * longitude, property_type) no longer exist; valuations come from the
+ * assessor dataset enrichment and the situs address from the Parcel
+ * Addresses dataset (`3723-97qp`, verified 2026-07-10).
  */
 export interface RawParcel {
   pin?: string;
@@ -50,6 +60,30 @@ export interface RawParcel {
   census_tract_geoid?: string;
   /** Assessor enrichment (joined by PIN in `fetch`). */
   assessor?: AssessorRecord;
+  /** Parcel Addresses enrichment (joined by PIN in `fetch`). */
+  situs?: ParcelAddressRecord;
+}
+
+/**
+ * Row shape of the Parcel Addresses enrichment query. Besides the situs
+ * address it carries the recorded owner/taxpayer mailing fields — the same
+ * mapping enrich-parcel-ownership.ts uses — so owner data survives a sync
+ * even when the assessor portal is unreachable (it lives on a separate,
+ * flakier domain than the main county portal).
+ */
+interface ParcelAddressRecord {
+  pin?: string;
+  prop_address_full?: string;
+  owner_address_name?: string;
+  mail_address_name?: string;
+  mail_address_full?: string;
+  mail_address_city_name?: string;
+  mail_address_state?: string;
+  mail_address_zipcode_1?: string;
+  owner_address_full?: string;
+  owner_address_city_name?: string;
+  owner_address_state?: string;
+  owner_address_zipcode_1?: string;
 }
 
 interface AssessorRecord {
@@ -156,10 +190,10 @@ async function fetchAssessorBatch(
   return out;
 }
 
-// Un-tokened requests against this dataset routinely take 30s+ per page and
+// Un-tokened requests against these datasets routinely take 30s+ per page and
 // occasionally stall past any single timeout; a non-OK status (e.g. a 429
 // throttle) must not silently truncate the scan as if it completed.
-async function fetchUniversePage(url: string, attempts = 3): Promise<RawParcel[]> {
+async function fetchUniversePage<T = RawParcel>(url: string, attempts = 3): Promise<T[]> {
   let lastError: unknown = null;
   for (let i = 0; i < attempts; i++) {
     try {
@@ -167,7 +201,7 @@ async function fetchUniversePage(url: string, attempts = 3): Promise<RawParcel[]
         headers: socrataHeaders(),
         signal: AbortSignal.timeout(120000),
       });
-      if (res.ok) return (await res.json()) as RawParcel[];
+      if (res.ok) return (await res.json()) as T[];
       lastError = new Error(`parcels: page fetch HTTP ${res.status}`);
     } catch (err) {
       lastError = err;
@@ -177,6 +211,50 @@ async function fetchUniversePage(url: string, attempts = 3): Promise<RawParcel[]
   throw lastError instanceof Error
     ? lastError
     : new Error("parcels: page fetch failed");
+}
+
+/**
+ * Fetch situs address + recorded owner records for the target ZIPs from
+ * Parcel Addresses, keyed by PIN. Paged by situs ZIP + the universe's data
+ * year (the two datasets share the pin/year spine, so the same year filter
+ * lines up row-for-row). Throws on failure like the universe scan — a
+ * silent miss here would regress every parcel back to an empty address and
+ * report it as a successful sync.
+ */
+async function fetchSitusAddresses(
+  zips: string[],
+  year: string
+): Promise<Map<string, ParcelAddressRecord>> {
+  const out = new Map<string, ParcelAddressRecord>();
+  const pageSize = 1000;
+  const zipList = zips.map((z) => `'${z}'`).join(",");
+  const select = [
+    "pin",
+    "prop_address_full",
+    "owner_address_name",
+    "mail_address_name",
+    "mail_address_full",
+    "mail_address_city_name",
+    "mail_address_state",
+    "mail_address_zipcode_1",
+    "owner_address_full",
+    "owner_address_city_name",
+    "owner_address_state",
+    "owner_address_zipcode_1",
+  ].join(",");
+  const where = encodeURIComponent(
+    `prop_address_zipcode_1 in(${zipList}) AND year='${year}'`
+  );
+  for (let offset = 0; ; offset += pageSize) {
+    const url = `${PARCEL_ADDRESSES_URL}?$select=${select}&$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=:id`;
+    const page = await fetchUniversePage<ParcelAddressRecord>(url);
+    for (const r of page) {
+      const pin = r.pin?.trim();
+      if (pin && !out.has(pin)) out.set(pin, r);
+    }
+    if (page.length < pageSize) break;
+  }
+  return out;
 }
 
 export const parcelsAdapter: SourceAdapter<RawParcel, ParcelRow> = {
@@ -239,6 +317,12 @@ export const parcelsAdapter: SourceAdapter<RawParcel, ParcelRow> = {
       if (r.pin && assessor.has(r.pin)) r.assessor = assessor.get(r.pin);
     }
 
+    const situs = await fetchSitusAddresses(zips, dataYear);
+    console.log(`  situs addresses: ${situs.size} records for target ZIPs`);
+    for (const r of all) {
+      if (r.pin && situs.has(r.pin)) r.situs = situs.get(r.pin);
+    }
+
     return all;
   },
 
@@ -253,12 +337,29 @@ export const parcelsAdapter: SourceAdapter<RawParcel, ParcelRow> = {
 
     const classCode = raw.class || "";
     const a = raw.assessor;
+    const s = raw.situs;
 
-    const ownerName = a ? a.tax_bill_name || a.taxpayer_name || null : null;
+    // Owner precedence: assessor tax-bill record, then the recorded owner /
+    // mailing fields from Parcel Addresses (same mapping as
+    // enrich-parcel-ownership.ts) so an assessor-portal outage doesn't null
+    // owner fields on an otherwise-successful sync.
+    const situsMailingParts = s
+      ? [s.mail_address_full, s.mail_address_city_name, s.mail_address_state, s.mail_address_zipcode_1].filter(Boolean)
+      : [];
+    const situsOwnerParts = s
+      ? [s.owner_address_full, s.owner_address_city_name, s.owner_address_state, s.owner_address_zipcode_1].filter(Boolean)
+      : [];
+    const ownerName =
+      (a ? a.tax_bill_name || a.taxpayer_name : null) ||
+      (s ? s.owner_address_name?.trim() || s.mail_address_name?.trim() : null) ||
+      null;
     const mailingParts = a
       ? [a.tax_bill_mailing_address, a.tax_bill_city, a.tax_bill_state, a.tax_bill_zip].filter(Boolean)
       : [];
-    const ownerMailingAddress = mailingParts.length > 0 ? mailingParts.join(", ") : null;
+    const ownerMailingAddress =
+      (mailingParts.length > 0 ? mailingParts.join(", ") : null) ??
+      (situsMailingParts.length > 0 ? situsMailingParts.join(", ") : null) ??
+      (situsOwnerParts.length > 0 ? situsOwnerParts.join(", ") : null);
     const ownerType = ownerName ? classifyOwner(ownerName, ownerMailingAddress) : null;
 
     const assessedLand = a ? num(a.certified_tot_land) : null;
@@ -270,9 +371,7 @@ export const parcelsAdapter: SourceAdapter<RawParcel, ParcelRow> = {
 
     return {
       pin,
-      // Situs address is no longer published in the Parcel Universe dataset;
-      // the assessor enrichment carries only the owner's mailing address.
-      address: "",
+      address: s?.prop_address_full?.trim() ?? "",
       zip: raw.zip_code?.trim() || null,
       classCode,
       classDescription: describeClassCode(classCode),
