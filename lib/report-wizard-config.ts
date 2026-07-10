@@ -96,6 +96,15 @@ export const REPORT_TYPE_OPTIONS: ReportTypeOption[] = [
       "Best for corridor managers, developers, and partners evaluating vacant land or buildings.",
     icon: "\uD83C\uDFDA\uFE0F",
   },
+  {
+    id: "corridor-intelligence",
+    title: "Corridor Intelligence",
+    subtitle:
+      "Directional market and resilience signals for an area \u2014 ownership, vacancy, and business activity across a corridor.",
+    bestFor:
+      "Best for lenders, brokers, corridor managers, and chamber staff evaluating an area rather than one address.",
+    icon: "\uD83E\uDDED",
+  },
 ];
 
 // ─── Shared Option Lists ────────────────────────────────────────────
@@ -618,4 +627,28 @@ export function getReportTypeOption(
   type: ReportType,
 ): ReportTypeOption | undefined {
   return REPORT_TYPE_OPTIONS.find((opt) => opt.id === type);
+}
+
+/**
+ * A saved wizard state is a location-only snapshot when it's a
+ * site-incentives report generated with none of the refine-path inputs.
+ * Used to re-offer "Refine" on saved Workspace reports (audit RF1: the
+ * Workspace viewer never passed isInstantMode, so the refine CTA was dead
+ * code on every saved snapshot).
+ */
+export function isSnapshotWizardState(
+  state?: Partial<WizardState> | null,
+): boolean {
+  if (!state || state.reportType !== "site-incentives") return false;
+  return (
+    !state.industry &&
+    !state.projectType &&
+    !state.proposedUse &&
+    !state.budgetRange &&
+    !state.timeline &&
+    !state.siteControl &&
+    !state.jobsImpact &&
+    !(state.documentsAvailable && state.documentsAvailable.length > 0) &&
+    !(state.supportNeeded && state.supportNeeded.length > 0)
+  );
 }

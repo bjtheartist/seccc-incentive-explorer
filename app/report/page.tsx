@@ -59,6 +59,9 @@ import type {
   ReportSection,
   ReportItem,
 } from "@/lib/report-engine";
+import { RefineValuePanel } from "@/components/report/RefineValuePanel";
+import type { QuickRefineFields } from "@/components/report/RefineValuePanel";
+import { BenefitEstimatesBlock } from "@/components/report/BenefitEstimatesBlock";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
 import { normalizeZoneCheckResponse } from "@/lib/zone-response";
@@ -530,21 +533,33 @@ function ReportWizardPage() {
   const corridorPreviewKey = searchParams.get("preview") || "";
   const isCorridorPreview = corridorPreviewKey === "corridor-poc";
   const isCorridorMode = Boolean(corridorParam && isCorridorPreview);
+  // Refine entry: a saved snapshot (Workspace) re-entering the refine flow
+  // with its address preserved (audit RF1).
+  const isRefineEntry =
+    searchParams.get("refine") === "true" &&
+    !isInstantMode &&
+    instantLat != null &&
+    instantLon != null;
 
-  // Try to hydrate wizard state from URL params
+  // Try to hydrate wizard state from URL params.
+  // Corridor Intelligence is a first-class report type (audit RF7/WU7), so
+  // shared corridor links no longer require the preview key.
   const urlWizardState = useMemo(() => decodeWizardState(searchParams), [searchParams]);
-  const shareWizardState =
-    urlWizardState?.reportType === "corridor-intelligence" && !isCorridorPreview
-      ? null
-      : urlWizardState;
+  const shareWizardState = urlWizardState;
   const isShareMode = !!shareWizardState?.reportType && !isInstantMode;
   const reportSource = useMemo(() => {
     return (
       cleanReportSource(searchParams.get("source")) ||
       cleanReportSource(searchParams.get("src")) ||
-      (isInstantMode ? "instant_report" : isShareMode ? "shared_report" : "report_wizard")
+      (isInstantMode
+        ? "instant_report"
+        : isShareMode
+          ? "shared_report"
+          : isCorridorMode
+            ? "corridor_preview"
+            : "report_wizard")
     );
-  }, [isInstantMode, isShareMode, searchParams]);
+  }, [isCorridorMode, isInstantMode, isShareMode, searchParams]);
 
   // Wizard state
   const [wizardState, setWizardState] = useState<WizardState>(() => {
@@ -567,6 +582,15 @@ function ReportWizardPage() {
         neighborhood: corridorParam,
       };
     }
+    if (isRefineEntry && instantLat && instantLon) {
+      return {
+        ...INITIAL_WIZARD_STATE,
+        reportType: "site-incentives",
+        address: instantAddr,
+        lat: instantLat,
+        lon: instantLon,
+      };
+    }
     if (urlAddress) {
       return {
         ...INITIAL_WIZARD_STATE,
@@ -577,13 +601,17 @@ function ReportWizardPage() {
     }
     return INITIAL_WIZARD_STATE;
   });
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  // Refine entries skip straight to the first refine screen (si-industry) —
+  // the address is already known, so re-asking it is pure friction.
+  const [currentStepIndex, setCurrentStepIndex] = useState(() =>
+    isRefineEntry ? Math.max(getStepIndex("site-incentives", "si-industry"), 1) : 0
+  );
   const [direction, setDirection] = useState(1);
 
   // Report state
   const [report, setReport] = useState<GeneratedReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [hasRefinedInstantReport, setHasRefinedInstantReport] = useState(false);
+  const [hasRefinedInstantReport, setHasRefinedInstantReport] = useState(isRefineEntry);
   const generatedReportEventGateRef = useRef(createGeneratedReportEventGate());
 
   // Comparison state
@@ -1275,6 +1303,34 @@ function ReportWizardPage() {
     window.history.replaceState(null, "", "/report");
   }, [wizardState]);
 
+  // Refine the second card of a comparison (audit RF4): same jump as
+  // handleRefine, but re-pointed at the compared address. Data effects
+  // re-fetch from the new lat/lon (already cached from the compare fetch).
+  const handleRefineCompareB = useCallback(() => {
+    if (!compareGeoResult) return;
+    const refinedState: WizardState = {
+      ...wizardState,
+      reportType: "site-incentives",
+      address: compareGeoResult.display_name,
+      lat: compareGeoResult.lat,
+      lon: compareGeoResult.lon,
+      compareAddress: undefined,
+      compareLat: undefined,
+      compareLon: undefined,
+    };
+    const industryStepIndex = getStepIndex("site-incentives", "si-industry");
+
+    setWizardState(refinedState);
+    setReport(null);
+    setCompareReport(null);
+    setCompareMode(false);
+    setInstantLoading(false);
+    setHasRefinedInstantReport(true);
+    setCurrentStepIndex(industryStepIndex >= 0 ? industryStepIndex : 1);
+    setDirection(1);
+    window.history.replaceState(null, "", "/report");
+  }, [compareGeoResult, wizardState]);
+
   const handleCompareGeocode = useCallback(async () => {
     if (!compareAddressInput.trim()) return;
     setCompareGeocoding(true);
@@ -1299,37 +1355,38 @@ function ReportWizardPage() {
 
   // ── Report Generation ────────────────────────────────────────────
 
-  const handleGenerateReport = useCallback(async () => {
+  const handleGenerateReport = useCallback(async (overrideState?: WizardState) => {
+    const stateForReport = overrideState ?? wizardState;
     setIsGenerating(true);
     try {
       let economicsForReport = neighborhoodEconomics;
       if (reportZip && neighborhoodEconomicsZip !== reportZip) {
-        economicsForReport = await fetchEconomicsWithAnchors(reportZip, wizardState.lat, wizardState.lon);
+        economicsForReport = await fetchEconomicsWithAnchors(reportZip, stateForReport.lat, stateForReport.lon);
         setNeighborhoodEconomics(economicsForReport);
         setNeighborhoodEconomicsZip(reportZip);
       }
       let supportForReport = localBusinessSupport;
-      if (wizardState.lat != null && wizardState.lon != null && supportForReport === undefined) {
-        supportForReport = await fetchLocalBusinessSupport(wizardState.lat, wizardState.lon);
+      if (stateForReport.lat != null && stateForReport.lon != null && supportForReport === undefined) {
+        supportForReport = await fetchLocalBusinessSupport(stateForReport.lat, stateForReport.lon);
         setLocalBusinessSupport(supportForReport);
       }
       let siteSignalsForReport = siteSignals;
-      if (wizardState.lat != null && wizardState.lon != null && siteSignalsForReport === undefined) {
-        siteSignalsForReport = await getSiteSignals(wizardState.lat, wizardState.lon).catch(() => null);
+      if (stateForReport.lat != null && stateForReport.lon != null && siteSignalsForReport === undefined) {
+        siteSignalsForReport = await getSiteSignals(stateForReport.lat, stateForReport.lon).catch(() => null);
         setSiteSignals(siteSignalsForReport);
       }
       let transportForReport = transportAccess;
-      if (wizardState.lat != null && wizardState.lon != null && transportForReport === undefined) {
-        transportForReport = await getTransportAccess(wizardState.lat, wizardState.lon).catch(() => null);
+      if (stateForReport.lat != null && stateForReport.lon != null && transportForReport === undefined) {
+        transportForReport = await getTransportAccess(stateForReport.lat, stateForReport.lon).catch(() => null);
         setTransportAccess(transportForReport);
       }
       let mobilityForReport = mobilityAccess;
-      if (wizardState.lat != null && wizardState.lon != null && mobilityForReport === undefined) {
-        mobilityForReport = await cachedFetch<MobilityAccess>(`/api/mobility-access?lat=${wizardState.lat}&lon=${wizardState.lon}`).catch(() => null);
+      if (stateForReport.lat != null && stateForReport.lon != null && mobilityForReport === undefined) {
+        mobilityForReport = await cachedFetch<MobilityAccess>(`/api/mobility-access?lat=${stateForReport.lat}&lon=${stateForReport.lon}`).catch(() => null);
         setMobilityAccess(mobilityForReport);
       }
 
-      const generated = generateReportData(wizardState, programs, {
+      const generated = generateReportData(stateForReport, programs, {
         zones: zones ?? undefined,
         zoneNames: zoneNames ?? undefined,
         census: censusData ?? undefined,
@@ -1355,6 +1412,30 @@ function ReportWizardPage() {
       setIsGenerating(false);
     }
   }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics, neighborhoodEconomicsZip, reportZip]);
+
+  // Inline "quick refine" from the snapshot value panel (audit BM1/RF6):
+  // regenerate the report with two answers, without leaving the view.
+  const handleQuickRefine = useCallback(
+    async (fields: QuickRefineFields) => {
+      const refinedState: WizardState = {
+        ...wizardState,
+        reportType: "site-incentives",
+        budgetRange: fields.budgetRange,
+        timeline: fields.timeline || wizardState.timeline,
+      };
+      setWizardState(refinedState);
+      setHasRefinedInstantReport(true);
+      setCompareReport(null);
+      setCompareMode(false);
+      await handleGenerateReport(refinedState);
+      // NOTE: the instant URL params are intentionally kept — Next syncs
+      // useSearchParams with history.replaceState, and clearing them here
+      // would flip reportSource mid-flight and double-fire the generated
+      // event with a second source.
+      window.scrollTo({ top: 0 });
+    },
+    [wizardState, handleGenerateReport]
+  );
 
   // ── Value Change Handlers ────────────────────────────────────────
 
@@ -1415,7 +1496,11 @@ function ReportWizardPage() {
             <div className="w-2 h-2 bg-[#2563EB]/40 rounded-full animate-pulse" style={{ animationDelay: "0.4s" }} />
           </div>
           <p className="font-mono-bureau text-[11px] tracking-[0.15em] uppercase text-[#0C1B33]/30 mb-2">
-            {isCorridorMode ? "Generating Corridor Intelligence" : "Generating Location Snapshot"}
+            {isCorridorMode
+              ? "Generating Corridor Intelligence"
+              : hasRefinedInstantReport
+                ? "Generating Refined Report"
+                : "Generating Location Snapshot"}
           </p>
           {(isCorridorMode ? corridorParam : instantAddr) && (
             <p className="text-[13px] text-[#0C1B33]/40">
@@ -1438,6 +1523,9 @@ function ReportWizardPage() {
           onStartOver={handleStartOver}
           wizardState={wizardState}
           programs={programs}
+          isInstantMode={isInstantMode && !hasRefinedInstantReport}
+          onRefineA={handleRefine}
+          onRefineB={handleRefineCompareB}
         />
       </div>
     );
@@ -1450,6 +1538,8 @@ function ReportWizardPage() {
           report={report}
           onStartOver={handleStartOver}
           onRefine={handleRefine}
+          onQuickRefine={handleQuickRefine}
+          quickRefineBusy={isGenerating}
           isInstantMode={isInstantMode && !hasRefinedInstantReport}
           wizardState={wizardState}
           onCompare={() => setCompareMode(true)}
@@ -1625,7 +1715,7 @@ function ReportWizardPage() {
                       wizardState={wizardState}
                       steps={steps}
                       isGenerating={isGenerating}
-                      onGenerate={handleGenerateReport}
+                      onGenerate={() => handleGenerateReport()}
                     />
                   )}
                 </motion.div>
@@ -3576,12 +3666,18 @@ function ComparisonDisplay({
   onStartOver,
   wizardState: _reportWizardState,
   programs = [],
+  isInstantMode,
+  onRefineA,
+  onRefineB,
 }: {
   reportA: GeneratedReport;
   reportB: GeneratedReport;
   onStartOver: () => void;
   wizardState?: WizardState;
   programs?: Program[];
+  isInstantMode?: boolean;
+  onRefineA?: () => void;
+  onRefineB?: () => void;
 }) {
   return (
     <div className="bg-[#FAF9F6] min-h-screen py-10 px-4">
@@ -3612,19 +3708,27 @@ function ComparisonDisplay({
           <ComparisonSummary reportA={reportA} reportB={reportB} />
         </div>
 
-        {/* Two reports side by side */}
+        {/* Two reports side by side. Each card keeps a lightweight refine
+            affordance — refine used to be unreachable in compare mode
+            (audit RF4). */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <ReportDisplay
             report={reportA}
             onStartOver={onStartOver}
             compact
             programs={programs}
+            isInstantMode={isInstantMode}
+            onRefine={onRefineA}
+            refineContext="compare_a"
           />
           <ReportDisplay
             report={reportB}
             onStartOver={onStartOver}
             compact
             programs={programs}
+            isInstantMode={isInstantMode}
+            onRefine={onRefineB}
+            refineContext="compare_b"
           />
         </div>
       </div>
@@ -3638,6 +3742,9 @@ function ReportDisplay({
   report,
   onStartOver,
   onRefine,
+  onQuickRefine,
+  quickRefineBusy,
+  refineContext,
   isInstantMode,
   wizardState: reportWizardState,
   compact,
@@ -3654,6 +3761,9 @@ function ReportDisplay({
   report: GeneratedReport;
   onStartOver: () => void;
   onRefine?: () => void;
+  onQuickRefine?: (fields: QuickRefineFields) => void;
+  quickRefineBusy?: boolean;
+  refineContext?: "instant" | "compare_a" | "compare_b";
   isInstantMode?: boolean;
   wizardState?: WizardState;
   compact?: boolean;
@@ -4352,28 +4462,22 @@ function ReportDisplay({
             <div className="w-10 h-[3px] bg-white/30" />
           </div>
 
-          {isInstantMode && !compact && (
-            <div className="px-5 sm:px-12 md:px-16 py-5 border-b border-[#2563EB]/15 bg-[#2563EB]/[0.035]">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                <div>
-                  <div className="font-mono-bureau text-[9px] tracking-[0.28em] uppercase text-[#2563EB]/70 mb-1.5">
-                    Location-Only Snapshot
-                  </div>
-                  <p className="text-[13px] leading-relaxed text-[#0C1B33]/60 max-w-2xl">
-                    This shows the zones, parcel context, and programs that touch this address. It does not yet account for your project goals, timeline, budget, site control, or document readiness.
-                  </p>
-                </div>
-                {onRefine && (
-                  <button
-                    onClick={() => handleRefineClick("banner")}
-                    className="inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-5 py-3 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-sm"
-                  >
-                    <ArrowRight className="w-3.5 h-3.5" />
-                    Refine with Project Details
-                  </button>
-                )}
-              </div>
-            </div>
+          {/* Refine value preview (audit RF6/WU5/BM1): honestly sell what
+              refining unlocks — dollar estimates, action plan, gap checklist —
+              with an inline two-field quick refine. Rendered in compact
+              (compare) mode too — audit RF4. The full-refine path routes
+              through handleRefineClick so PR #49's refine_clicked keeps
+              firing (location: banner) alongside the panel's own
+              refine_value_preview_shown exposure event. */}
+          {isInstantMode && (
+            <RefineValuePanel
+              report={report}
+              context={refineContext ?? "instant"}
+              onRefine={onRefine ? () => handleRefineClick("banner") : undefined}
+              onQuickRefine={onQuickRefine}
+              quickRefineBusy={quickRefineBusy}
+              compact={compact}
+            />
           )}
 
           {/* ── Metadata Row ── */}
@@ -4610,6 +4714,14 @@ function ReportDisplay({
                   onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
                   onTextChange={setEditedSummaryText}
                 />
+              </div>
+            )}
+
+            {/* ── Estimated Incentive Value (refined reports) — the engine
+                has always computed this; it was never rendered (audit RF6). */}
+            {report.benefitEstimates && (
+              <div id="benefit-estimates">
+                <BenefitEstimatesBlock estimates={report.benefitEstimates} />
               </div>
             )}
 
@@ -5243,15 +5355,10 @@ function ReportDisplay({
                 Compare Another Address
               </button>
             )}
-            {isInstantMode && onRefine && (
-              <button
-                onClick={() => handleRefineClick("action_row")}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-md"
-              >
-                <ArrowRight className="w-3.5 h-3.5" />
-                Refine with Project Details
-              </button>
-            )}
+            {/* Refine intentionally lives only in the top value panel — it
+                previously competed with 8 same-weight buttons here (audit
+                RF5). PR #49's refine_clicked keeps firing from the panel
+                with location "banner"; "action_row" retires with the button. */}
             <button
               onClick={onStartOver}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#0C1B33]/15 text-[#0C1B33]/60 font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:border-[#0C1B33]/30 hover:text-[#0C1B33] transition-colors cursor-pointer shadow-md"

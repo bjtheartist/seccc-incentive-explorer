@@ -6,6 +6,7 @@ export const REPORT_GENERATED_EVENTS = [
   "location_snapshot_generated",
   "refined_report_generated",
   "vacancy_report_generated",
+  "corridor_report_generated",
 ] as const;
 
 export const REPORT_ACTIVATION_EVENTS = [
