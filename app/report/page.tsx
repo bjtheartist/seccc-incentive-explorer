@@ -30,6 +30,7 @@ import {
   setStepValue,
   INITIAL_WIZARD_STATE,
   PROJECT_TYPE_LABELS,
+  SITE_PROJECT_TYPE_OPTIONS,
   PROPOSED_USE_LABELS,
   PROPOSED_USE_OPTIONS,
   VACANCY_PROJECT_TYPE_OPTIONS,
@@ -61,7 +62,11 @@ import type {
 } from "@/lib/report-engine";
 import { RefineValuePanel } from "@/components/report/RefineValuePanel";
 import type { QuickRefineFields } from "@/components/report/RefineValuePanel";
-import { BenefitEstimatesBlock } from "@/components/report/BenefitEstimatesBlock";
+import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
+import { ProjectFitNote } from "@/components/report/ProjectFitNote";
+import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
+import { ReportEmailGate } from "@/components/report/ReportEmailGate";
+import { reportEmailGateKey, reportRequiresEmailGate } from "@/lib/report-email";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
 import { normalizeZoneCheckResponse } from "@/lib/zone-response";
@@ -612,6 +617,7 @@ function ReportWizardPage() {
   const [report, setReport] = useState<GeneratedReport | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [hasRefinedInstantReport, setHasRefinedInstantReport] = useState(isRefineEntry);
+  const [revealedReportKey, setRevealedReportKey] = useState<string | null>(null);
   const generatedReportEventGateRef = useRef(createGeneratedReportEventGate());
 
   // Comparison state
@@ -674,6 +680,10 @@ function ReportWizardPage() {
   // not fire its own copy — that double-counted every instant snapshot.
   useEffect(() => {
     if (!report) return;
+    if (
+      reportRequiresEmailGate(report)
+      && revealedReportKey !== reportEmailGateKey(report)
+    ) return;
     const eventType = generatedReportEventType(
       report,
       isInstantMode,
@@ -695,7 +705,7 @@ function ReportWizardPage() {
         ...(campaignParam ? { campaign: campaignParam } : {}),
       }),
     );
-  }, [campaignParam, hasRefinedInstantReport, instantSrc, isInstantMode, report, reportSource]);
+  }, [campaignParam, hasRefinedInstantReport, instantSrc, isInstantMode, report, reportSource, revealedReportKey]);
 
   // ZIP parsed from address/parcel/geocode strings.
   const stringZip = useMemo(
@@ -1173,7 +1183,9 @@ function ReportWizardPage() {
           (wizardState.address.trim() !== "" && wizardState.lat !== null && wizardState.lon !== null)
         );
       case "project-intake":
-        return true;
+        return wizardState.reportType === "site-incentives"
+          ? Boolean(wizardState.projectType)
+          : true;
       case "single":
       case "combobox": {
         if (currentStep.id === "si-industry") return true;
@@ -1266,6 +1278,7 @@ function ReportWizardPage() {
     setCurrentStepIndex(0);
     setDirection(1);
     setReport(null);
+    setRevealedReportKey(null);
     setGeocodeResult(null);
     setAddressInput("");
     setGeocodeError(null);
@@ -1355,7 +1368,7 @@ function ReportWizardPage() {
 
   // ── Report Generation ────────────────────────────────────────────
 
-  const handleGenerateReport = useCallback(async (overrideState?: WizardState) => {
+  const handleGenerateReport = useCallback(async (overrideState?: WizardState): Promise<GeneratedReport | null> => {
     const stateForReport = overrideState ?? wizardState;
     setIsGenerating(true);
     try {
@@ -1406,12 +1419,40 @@ function ReportWizardPage() {
         mobilityAccess: mobilityForReport ?? undefined,
       });
       setReport(generated);
-    } catch {
-      // If generation fails, stay on review step
+      return generated;
+    } catch (error) {
+      console.error("report generation failed:", error);
+      return null;
     } finally {
       setIsGenerating(false);
     }
   }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics, neighborhoodEconomicsZip, reportZip]);
+
+  const handlePrepareGatedReport = useCallback(
+    async (projectType: string): Promise<GeneratedReport | null> => {
+      if (report?.metadata?.projectType === projectType) return report;
+
+      const preparedState: WizardState = {
+        ...wizardState,
+        reportType: "site-incentives",
+        projectType,
+      };
+      setWizardState(preparedState);
+      setHasRefinedInstantReport(true);
+      setCompareReport(null);
+      setCompareMode(false);
+      return handleGenerateReport(preparedState);
+    },
+    [handleGenerateReport, report, wizardState],
+  );
+
+  const handleGatedReportReady = useCallback(
+    (readyReport: GeneratedReport) => {
+      setRevealedReportKey(reportEmailGateKey(readyReport));
+      window.scrollTo({ top: 0 });
+    },
+    [],
+  );
 
   // Inline "quick refine" from the snapshot value panel (audit BM1/RF6):
   // regenerate the report with two answers, without leaving the view.
@@ -1420,6 +1461,7 @@ function ReportWizardPage() {
       const refinedState: WizardState = {
         ...wizardState,
         reportType: "site-incentives",
+        projectType: fields.projectType,
         budgetRange: fields.budgetRange,
         timeline: fields.timeline || wizardState.timeline,
       };
@@ -1532,6 +1574,8 @@ function ReportWizardPage() {
   }
 
   if (report) {
+    const showEmailGate = reportRequiresEmailGate(report)
+      && revealedReportKey !== reportEmailGateKey(report);
     return (
       <div className="min-h-screen">
         <ReportDisplay
@@ -1552,6 +1596,14 @@ function ReportWizardPage() {
           analyticsSource={reportSource}
           programs={programs}
         />
+        {showEmailGate && (
+          <ReportEmailGate
+            report={report}
+            source={reportSource}
+            onPrepareReport={handlePrepareGatedReport}
+            onReportReady={handleGatedReportReady}
+          />
+        )}
       </div>
     );
   }
@@ -2356,12 +2408,12 @@ function ProjectIntakeStep({
   return (
     <div className="space-y-8">
       <IntakeField
-        label="Project type"
-        helper="Choose the closest project type. You can refine it later."
-        options={Object.entries(PROJECT_TYPE_LABELS).map(([id, label]) => ({ id, label }))}
+        label="Primary goal"
+        helper="Choose the main outcome you want incentives to support."
+        options={SITE_PROJECT_TYPE_OPTIONS}
         value={wizardState.projectType}
         onSelect={(value) => onChange("projectType", value)}
-        required={!isOptional}
+        required
       />
 
       <IntakeField
@@ -2988,7 +3040,9 @@ function ExecutiveSummarySection({
       {summary.topPrograms.length > 0 && (
         <div className="mb-6">
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-3">
-            Top Programs for Your Location
+            {summary.projectGoalLabel
+              ? `Top Programs for ${summary.projectGoalLabel}`
+              : "Top Programs for Your Location"}
           </span>
           <ul className="space-y-2">
             {summary.topPrograms.map((prog) => {
@@ -3013,6 +3067,11 @@ function ExecutiveSummarySection({
                         </span>
                       )}
                     </span>
+                    {prog.projectFitLabel && (
+                      <span className="font-mono-bureau text-[9px] text-[#2563EB]">
+                        {prog.projectFitLabel}
+                      </span>
+                    )}
                     {prog.benefitRange && (
                       <span className="font-mono-bureau text-[11px] text-[#0C1B33]/40">
                         {prog.benefitRange}
@@ -4319,7 +4378,7 @@ function ReportDisplay({
           </div>
 
           <div className="mx-auto max-w-[1180px] print:hidden mt-8">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3">
               <button
                 onClick={handleVacancySpreadsheetExport}
                 disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet}
@@ -4339,6 +4398,12 @@ function ReportDisplay({
                 <FileText className="w-3.5 h-3.5" />
                 Save Report
               </button>
+              <StartPreparationPacketButton
+                report={report}
+                wizardState={reportWizardState}
+                source={`${analyticsSource}_vacancy_actions`}
+                className="w-full sm:w-auto px-8 py-3.5 shadow-md"
+              />
               <button
                 onClick={handleEmailReportClick}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"
@@ -4462,9 +4527,9 @@ function ReportDisplay({
             <div className="w-10 h-[3px] bg-white/30" />
           </div>
 
-          {/* Refine value preview (audit RF6/WU5/BM1): honestly sell what
-              refining unlocks — dollar estimates, action plan, gap checklist —
-              with an inline two-field quick refine. Rendered in compact
+          {/* Refine value preview (audit RF6/WU5/BM1): explain what
+              refining unlocks — goal-based ranking, action plan, and gap checklist —
+              with an inline goal-first quick refine. Rendered in compact
               (compare) mode too — audit RF4. The full-refine path routes
               through handleRefineClick so PR #49's refine_clicked keeps
               firing (location: banner) alongside the panel's own
@@ -4515,6 +4580,16 @@ function ReportDisplay({
                 </span>
                 <span className="text-[#0C1B33] text-[13px]">
                   {report.metadata.industry}
+                </span>
+              </div>
+            )}
+            {report.metadata?.projectType && (
+              <div>
+                <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
+                  Primary Goal
+                </span>
+                <span className="text-[#0C1B33] text-[13px]">
+                  {PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType}
                 </span>
               </div>
             )}
@@ -4714,14 +4789,6 @@ function ReportDisplay({
                   onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
                   onTextChange={setEditedSummaryText}
                 />
-              </div>
-            )}
-
-            {/* ── Estimated Incentive Value (refined reports) — the engine
-                has always computed this; it was never rendered (audit RF6). */}
-            {report.benefitEstimates && (
-              <div id="benefit-estimates">
-                <BenefitEstimatesBlock estimates={report.benefitEstimates} />
               </div>
             )}
 
@@ -4946,6 +5013,8 @@ function ReportDisplay({
                           const isSupportNetworkItem = section.title === "Your Support Network";
                           const isDeadlineItem = section.title === "Upcoming Deadlines Near This Address";
                           const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
+                          const hasGroupedDetail = Boolean(item.detailGroups?.length);
+                          const hasSideValue = Boolean(item.value && !hasGroupedDetail);
                           const hasNavigationLinks = Boolean(
                             reportItem.sourceUrl ||
                             itemProgram?.sourceUrl ||
@@ -4958,9 +5027,9 @@ function ReportDisplay({
                           return (
                             <div
                               key={itemIdx}
-                              className="report-item py-4 first:pt-0"
+                              className="report-item py-5 first:pt-0 sm:py-6"
                             >
-                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
+                            <div className={`grid grid-cols-1 gap-3 ${hasSideValue ? "sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] sm:gap-x-10" : ""}`}>
                               {/* Left: label */}
                               <div className="flex-1 min-w-0">
                                 <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold block">
@@ -4983,7 +5052,7 @@ function ReportDisplay({
                                     </span>
                                   )}
                                 </span>
-                                {item.detail && section.title === "Required Documents" ? (
+                                {!hasGroupedDetail && item.detail && section.title === "Required Documents" ? (
                                   <ul className="mt-2 space-y-1.5">
                                     {item.detail.split("\n").map((line, li) => {
                                       const [docName, programs] = line.split(" — ");
@@ -5000,24 +5069,33 @@ function ReportDisplay({
                                       );
                                     })}
                                   </ul>
-                                ) : item.detail ? (
-                                  <span className={`text-[#0C1B33]/40 text-[11px] sm:text-[12px] leading-relaxed block mt-0.5 ${isSupportNetworkItem || isDeadlineItem ? "whitespace-pre-line" : ""}`}>
+                                ) : !hasGroupedDetail && item.detail ? (
+                                  <span className={`mt-1.5 block text-[12px] leading-[1.65] text-[#0C1B33]/50 sm:text-[13px] ${isSupportNetworkItem || isDeadlineItem ? "whitespace-pre-line" : ""}`}>
                                     {item.detail}
                                   </span>
                                 ) : null}
                               </div>
 
                               {/* Right: value */}
-                              {item.value && (
-                                <span className="font-mono-bureau text-[10px] sm:text-[11px] tracking-[0.05em] text-[#0C1B33]/50 flex-shrink-0 sm:text-right pt-0.5">
+                              {hasSideValue && (
+                                <span className="min-w-0 break-words font-mono-bureau text-[11px] leading-[1.7] text-[#0C1B33]/50 sm:text-[12px]">
                                   {item.value}
                                 </span>
                               )}
                             </div>
 
+                            {hasGroupedDetail && item.detailGroups && (
+                              <GroupedReportDetail
+                                summary={item.value}
+                                groups={item.detailGroups}
+                                caveat={item.detailCaveat}
+                              />
+                            )}
+                            <ProjectFitNote fit={item.projectFit} />
+
                             {/* Eligibility & URL — collapsible accordion for program items */}
                             {!isSupportNetworkItem && (item.whoQualifies || item.eligibilityRules || item.url || item.whyOneLine || hasNavigationLinks) && (
-                              <Accordion type="single" collapsible className="mt-1.5">
+                              <Accordion type="single" collapsible className="mt-3 sm:mt-4">
                                 <AccordionItem value="eligibility" className="border-none">
                                   <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
                                     {item.confidenceLabel || "Eligibility Details"}
@@ -5292,7 +5370,7 @@ function ReportDisplay({
 
         {/* ── Action Buttons (outside the document) ── */}
         <div className={`report-actions mx-auto max-w-[850px] print:hidden mt-8 ${compact ? "hidden" : ""}`}>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3">
             <button
               onClick={handlePrint}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 transition-colors cursor-pointer shadow-md"
@@ -5307,6 +5385,12 @@ function ReportDisplay({
               <FileText className="w-3.5 h-3.5" />
               {isVacancyReport ? "Save Report" : "Save to Workspace"}
             </button>
+            <StartPreparationPacketButton
+              report={report}
+              wizardState={reportWizardState}
+              source={`${analyticsSource}_report_actions`}
+              className="w-full sm:w-auto px-8 py-3.5 shadow-md"
+            />
             <button
               onClick={handleEmailReportClick}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"

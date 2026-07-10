@@ -12,6 +12,7 @@ export const ANALYTICS_EVENT_TYPES = [
   "inline_refine_used",
   "report_saved",
   "report_emailed",
+  "report_email_gate_skipped",
   "report_pdf_downloaded",
   "spreadsheet_exported",
   "inquiry_submitted",
@@ -27,6 +28,10 @@ export const ANALYTICS_EVENT_TYPES = [
   "report_generation_failed",
   "save_report_clicked",
   "email_report_clicked",
+  "preparation_packet_started",
+  "preparation_packet_created",
+  "preparation_task_updated",
+  "preparation_support_requested",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];

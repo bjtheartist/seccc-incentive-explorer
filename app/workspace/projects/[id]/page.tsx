@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { ArrowLeft, Check, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, Check, ClipboardCheck, FileText, Loader2 } from "lucide-react";
 import type { BusinessProject, ChecklistItem, SavedReportSummary } from "@/lib/workspace";
 
 export default function ProjectPage() {
@@ -81,6 +81,12 @@ export default function ProjectPage() {
   if (!project) return null;
 
   const completed = project.checklist.filter((item) => item.completed).length;
+  const preparationParams = new URLSearchParams({
+    projectId: project.id,
+    goalType: project.goalType,
+  });
+  if (project.address) preparationParams.set("address", project.address);
+  if (project.industry) preparationParams.set("industry", project.industry);
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] px-6 py-12">
@@ -94,17 +100,26 @@ export default function ProjectPage() {
         </Link>
 
         <div className="bg-white border border-[#0C1B33]/10 shadow-xl mb-8">
-          <div className="bg-[#0C1B33] px-7 py-8">
-            <p className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-white/45 mb-3">
-              {project.goalLabel}
-            </p>
-            <h1 className="font-editorial text-3xl text-white leading-tight mb-3">
-              {project.address || "Saved project"}
-            </h1>
-            <p className="text-white/45 text-sm">
-              {completed} of {project.checklist.length} next steps complete
-              {saving ? " · saving..." : ""}
-            </p>
+          <div className="bg-[#0C1B33] px-7 py-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+            <div>
+              <p className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-white/45 mb-3">
+                {project.goalLabel}
+              </p>
+              <h1 className="font-editorial text-3xl text-white leading-tight mb-3">
+                {project.address || "Saved project"}
+              </h1>
+              <p className="text-white/45 text-sm">
+                {completed} of {project.checklist.length} next steps complete
+                {saving ? " · saving..." : ""}
+              </p>
+            </div>
+            <Link
+              href={`/workspace/incentive-preparation/new?${preparationParams.toString()}`}
+              className="inline-flex items-center justify-center gap-2 bg-white text-[#0C1B33] px-5 py-3 font-mono-bureau text-[10px] tracking-[0.13em] uppercase hover:bg-white/90 transition-colors shrink-0"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5" />
+              Start Preparation Packet
+            </Link>
           </div>
 
           {error && (

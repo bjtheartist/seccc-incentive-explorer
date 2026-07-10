@@ -1,0 +1,648 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
+import {
+  OFFICIAL_CERTIFICATION_TASK_ID,
+  PREPARATION_PACKET_STATUSES,
+  PREPARATION_TASK_OWNERS,
+  PREPARATION_TASK_STATUSES,
+  buildPreparationTasks,
+  buildProfileSnapshot,
+  calculatePreparationTimeline,
+  canApplicantUpdateTask,
+  normalizePreparationTasks,
+  summarizePreparationStatus,
+  type BusinessProfileInput,
+  type JsonValue,
+  type PreparationTask,
+} from "../incentive-preparation";
+import type { GoalType } from "../workspace";
+
+const GOAL_TYPES: GoalType[] = [
+  "improve-storefront",
+  "buy-equipment",
+  "hire-staff",
+  "expand-location",
+  "open-relocate",
+  "acquire-vacant-property",
+  "development-feasibility",
+];
+
+const COMPLETE_PROFILE: BusinessProfileInput = {
+  legalName: "South Shore Supply LLC",
+  dbaName: "South Shore Supply",
+  physicalAddress: "9000 S Commercial Ave, Chicago, IL 60617",
+  mailingAddress: "PO Box 170, Chicago, IL 60617",
+  contactName: "Jordan Lee",
+  contactEmail: "jordan@example.com",
+  contactPhone: "312-555-0134",
+  entityType: "LLC",
+  formationDate: "2021-03-15",
+  industry: "Retail",
+  naicsCode: "444240",
+  employeeCount: 8,
+  ownershipNotes: "Applicant-owned business",
+  licenses: [{ type: "business", status: "active" }],
+  fieldProvenance: {
+    legalName: { source: "applicant", confirmedAt: "2026-07-01" },
+  },
+};
+
+function preparationTask(
+  id: string,
+  overrides: Partial<PreparationTask> = {}
+): PreparationTask {
+  return {
+    id,
+    title: id,
+    description: "Application preparation task",
+    status: "needs_document",
+    owner: "business",
+    category: "goal",
+    dependsOn: [],
+    estimatedMinWeeks: 1,
+    estimatedMaxWeeks: 1,
+    ...overrides,
+  };
+}
+
+describe("incentive preparation domain values", () => {
+  it("exports the required task statuses, owners, and packet summaries", () => {
+    expect(PREPARATION_TASK_STATUSES).toEqual([
+      "needs_document",
+      "needs_owner_answer",
+      "needs_advisor",
+      "external_dependency",
+      "requires_certification",
+      "complete",
+    ]);
+    expect(PREPARATION_TASK_OWNERS).toEqual([
+      "business",
+      "advisor",
+      "accountant",
+      "landlord",
+      "local_partner",
+      "program_administrator",
+    ]);
+    expect(PREPARATION_PACKET_STATUSES).toEqual([
+      "foundation_complete",
+      "needs_information",
+      "waiting_on_others",
+      "needs_advisor",
+      "requires_certification",
+      "ready_to_submit",
+    ]);
+  });
+});
+
+describe("buildPreparationTasks", () => {
+  const expectedGoalTaskIds: Record<GoalType, string[]> = {
+    "improve-storefront": [
+      "storefront-improvement-scope",
+      "storefront-contractor-materials",
+    ],
+    "buy-equipment": ["equipment-use-plan", "equipment-vendor-materials"],
+    "hire-staff": ["staffing-plan", "workforce-records"],
+    "expand-location": ["expansion-scope", "expansion-project-materials"],
+    "open-relocate": ["opening-relocation-plan", "opening-relocation-materials"],
+    "acquire-vacant-property": [
+      "vacant-property-acquisition-plan",
+      "vacant-property-due-diligence",
+    ],
+    "development-feasibility": [
+      "development-concept",
+      "development-feasibility-materials",
+    ],
+  };
+
+  it.each(GOAL_TYPES)("builds the common foundation and the %s overlay", (goalType) => {
+    const tasks = buildPreparationTasks({
+      goalType,
+      programId: "sbif",
+      programName: "Small Business Improvement Fund",
+      profile: COMPLETE_PROFILE,
+    });
+    const ids = tasks.map((task) => task.id);
+    const foundation = tasks.filter((task) => task.category === "foundation");
+
+    expect(foundation.map((task) => task.id)).toEqual([
+      "foundation-business-identity",
+      "foundation-addresses",
+      "foundation-authorized-contact",
+    ]);
+    expect(foundation.every((task) => task.status === "complete")).toBe(true);
+    expect(tasks.filter((task) => task.category === "goal").map((task) => task.id)).toEqual(
+      expectedGoalTaskIds[goalType]
+    );
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(tasks.every((task) => task.dependsOn.every((id) => ids.includes(id)))).toBe(true);
+    expect(tasks.every((task) => task.programId === "sbif")).toBe(true);
+    expect(tasks.every((task) => task.programName === "Small Business Improvement Fund")).toBe(
+      true
+    );
+
+    const certification = tasks.at(-1);
+    expect(certification).toMatchObject({
+      id: OFFICIAL_CERTIFICATION_TASK_ID,
+      status: "requires_certification",
+      owner: "business",
+      category: "certification",
+      applicantOnly: true,
+      completionAuthority: "applicant_or_authorized_representative",
+    });
+    expect(certification?.dependsOn).toEqual(tasks.slice(0, -1).map((task) => task.id));
+    expect(canApplicantUpdateTask(certification!)).toBe(false);
+  });
+
+  it("keeps incomplete profile fields in the applicant information stage", () => {
+    const tasks = buildPreparationTasks({
+      goalType: "buy-equipment",
+      profile: { legalName: "Incomplete Business" },
+    });
+
+    expect(tasks.slice(0, 3).map((task) => task.status)).toEqual([
+      "needs_owner_answer",
+      "needs_owner_answer",
+      "needs_owner_answer",
+    ]);
+    expect(summarizePreparationStatus(tasks)).toBe("needs_information");
+  });
+
+  it("adds the required outside parties to every preparation graph", () => {
+    for (const goalType of GOAL_TYPES) {
+      const tasks = buildPreparationTasks({ goalType, profile: COMPLETE_PROFILE });
+
+      expect(tasks).toContainEqual(
+        expect.objectContaining({
+          id: "accountant-financials",
+          owner: "accountant",
+          status: "external_dependency",
+        })
+      );
+      expect(tasks).toContainEqual(
+        expect.objectContaining({
+          id: "tax-good-standing",
+          status: "external_dependency",
+        })
+      );
+      expect(tasks).toContainEqual(
+        expect.objectContaining({
+          id: "program-application-requirements",
+          owner: "program_administrator",
+        })
+      );
+      expect(tasks).toContainEqual(
+        expect.objectContaining({
+          id: "advisor-application-review",
+          owner: "advisor",
+          status: "needs_advisor",
+        })
+      );
+    }
+  });
+
+  it("adds site control, zoning, and consent-aware local support only to site goals", () => {
+    const siteGoals: GoalType[] = [
+      "improve-storefront",
+      "expand-location",
+      "open-relocate",
+      "acquire-vacant-property",
+      "development-feasibility",
+    ];
+    const nonSiteGoals: GoalType[] = ["buy-equipment", "hire-staff"];
+
+    for (const goalType of siteGoals) {
+      const tasks = buildPreparationTasks({ goalType, profile: COMPLETE_PROFILE });
+      expect(tasks).toContainEqual(
+        expect.objectContaining({ id: "landlord-site-control", owner: "landlord" })
+      );
+      expect(tasks).toContainEqual(
+        expect.objectContaining({ id: "zoning-permits", owner: "program_administrator" })
+      );
+      const supportLetter = tasks.find((task) => task.id === "local-support-letter");
+      expect(supportLetter).toMatchObject({
+        owner: "local_partner",
+        status: "external_dependency",
+      });
+      expect(supportLetter?.description).toMatch(/explicit consent/i);
+    }
+
+    for (const goalType of nonSiteGoals) {
+      const ids = buildPreparationTasks({ goalType, profile: COMPLETE_PROFILE }).map(
+        (task) => task.id
+      );
+      expect(ids).not.toContain("landlord-site-control");
+      expect(ids).not.toContain("zoning-permits");
+      expect(ids).not.toContain("local-support-letter");
+    }
+  });
+
+  it("uses preparation and likely-match framing without scores or incentive totals", () => {
+    const tasks = buildPreparationTasks({
+      goalType: "hire-staff",
+      profile: COMPLETE_PROFILE,
+    });
+    const serialized = JSON.stringify(tasks).toLowerCase();
+
+    expect(serialized).toContain("application preparation");
+    expect(serialized).toContain("likely match");
+    expect(serialized).not.toMatch(/numeric score|possible incentive dollars|guaranteed award/);
+    expect(serialized).not.toMatch(/\$[0-9]/);
+    expect(tasks.some((task) => "score" in task)).toBe(false);
+    expect(tasks.some((task) => "amount" in task)).toBe(false);
+  });
+
+  it("adds the selected program's maintained document and verification steps", () => {
+    const tasks = buildPreparationTasks({
+      goalType: "improve-storefront",
+      programId: "sbif",
+      programName: "Small Business Improvement Fund",
+      programRequiredDocs: [
+        "Proof of property ownership or lease",
+        "Contractor bids",
+        "Contractor bids",
+      ],
+      programVerificationSteps: [
+        {
+          label: "Confirm the current application window",
+          agency: "Chicago DPD",
+          kind: "preapproval",
+          appliesBefore: "application",
+          note: "Funding windows are district-specific.",
+        },
+      ],
+      profile: COMPLETE_PROFILE,
+    });
+
+    const documentTasks = tasks.filter((task) => task.id.startsWith("program-document-"));
+    const verificationTasks = tasks.filter((task) =>
+      task.id.startsWith("program-verification-")
+    );
+
+    expect(documentTasks).toHaveLength(2);
+    expect(documentTasks[0]).toMatchObject({
+      title: "Collect program document: Proof of property ownership or lease",
+      status: "needs_document",
+      programId: "sbif",
+    });
+    expect(verificationTasks).toHaveLength(1);
+    expect(verificationTasks[0]).toMatchObject({
+      title: "Confirm program step: Confirm the current application window",
+      owner: "program_administrator",
+      status: "external_dependency",
+    });
+    expect(verificationTasks[0].description).toContain("Funding windows are district-specific");
+  });
+});
+
+describe("calculatePreparationTimeline", () => {
+  it("calculates the min/max dependency chain, critical path, owners, and parallel work", () => {
+    const tasks = [
+      preparationTask("start", {
+        estimatedMinWeeks: 1,
+        estimatedMaxWeeks: 2,
+      }),
+      preparationTask("short-branch", {
+        owner: "local_partner",
+        dependsOn: ["start"],
+        estimatedMinWeeks: 1,
+        estimatedMaxWeeks: 1,
+      }),
+      preparationTask("long-branch", {
+        owner: "accountant",
+        status: "external_dependency",
+        dependsOn: ["start"],
+        estimatedMinWeeks: 2,
+        estimatedMaxWeeks: 4,
+      }),
+      preparationTask("review", {
+        owner: "advisor",
+        status: "needs_advisor",
+        dependsOn: ["short-branch", "long-branch"],
+        estimatedMinWeeks: 0.5,
+        estimatedMaxWeeks: 1,
+      }),
+    ];
+
+    const timeline = calculatePreparationTimeline(tasks, new Date("2026-07-01T18:00:00Z"));
+
+    expect(timeline).toMatchObject({
+      asOfDate: "2026-07-01",
+      estimatedMinWeeks: 3.5,
+      estimatedMaxWeeks: 7,
+      estimatedWeeks: { min: 3.5, max: 7 },
+      earliestRealisticDate: "2026-08-19",
+      criticalPathTaskIds: ["start", "long-branch", "review"],
+      owners: ["business", "local_partner", "accountant", "advisor"],
+    });
+    expect(timeline.parallelizableWork).toContainEqual(["short-branch", "long-branch"]);
+    expect(timeline.parallelizableTaskIds).toEqual(["short-branch", "long-branch"]);
+    expect(timeline).not.toHaveProperty("score");
+  });
+
+  it("treats completed work as elapsed rather than adding it to the remaining range", () => {
+    const timeline = calculatePreparationTimeline(
+      [
+        preparationTask("already-done", {
+          status: "complete",
+          estimatedMinWeeks: 4,
+          estimatedMaxWeeks: 8,
+        }),
+        preparationTask("remaining", {
+          dependsOn: ["already-done"],
+          estimatedMinWeeks: 2,
+          estimatedMaxWeeks: 3,
+        }),
+      ],
+      "2026-07-10"
+    );
+
+    expect(timeline.estimatedWeeks).toEqual({ min: 2, max: 3 });
+    expect(timeline.earliestRealisticDate).toBe("2026-07-31");
+    expect(timeline.owners).toEqual(["business"]);
+  });
+
+  it("returns a zero-length timeline for no work", () => {
+    expect(calculatePreparationTimeline([], "2026-07-10")).toEqual({
+      asOfDate: "2026-07-10",
+      estimatedMinWeeks: 0,
+      estimatedMaxWeeks: 0,
+      estimatedWeeks: { min: 0, max: 0 },
+      earliestRealisticDate: "2026-07-10",
+      criticalPathTaskIds: [],
+      owners: [],
+      parallelizableWork: [],
+      parallelizableTaskIds: [],
+    });
+  });
+
+  it("rejects circular dependencies instead of returning a misleading date", () => {
+    const tasks = [
+      preparationTask("a", { dependsOn: ["b"] }),
+      preparationTask("b", { dependsOn: ["a"] }),
+    ];
+
+    expect(() => calculatePreparationTimeline(tasks, "2026-07-10")).toThrow(/acyclic/i);
+  });
+
+  it("rejects an invalid as-of date", () => {
+    expect(() => calculatePreparationTimeline([], "not-a-date")).toThrow(/valid date/i);
+  });
+});
+
+describe("certification protection and normalization", () => {
+  it("sanitizes persisted tasks, removes invalid dependencies, and moves certification last", () => {
+    const normalized = normalizePreparationTasks([
+      {
+        id: OFFICIAL_CERTIFICATION_TASK_ID,
+        title: "Submit",
+        status: "complete",
+        owner: "advisor",
+        category: "certification",
+        dependsOn: ["work"],
+        estimatedMinWeeks: -1,
+        estimatedMaxWeeks: -2,
+      },
+      {
+        id: "work",
+        title: "  Collect records  ",
+        description: "  Records  ",
+        status: "needs_document",
+        owner: "business",
+        category: "goal",
+        dependencies: ["work", "missing", "work"],
+        estimatedWeeks: { min: 2, max: 1 },
+      },
+      { id: "work", title: "Duplicate" },
+      { id: "missing-title" },
+      null,
+    ]);
+
+    expect(normalized.map((task) => task.id)).toEqual([
+      "work",
+      OFFICIAL_CERTIFICATION_TASK_ID,
+    ]);
+    expect(normalized[0]).toMatchObject({
+      title: "Collect records",
+      description: "Records",
+      dependsOn: [],
+      estimatedMinWeeks: 2,
+      estimatedMaxWeeks: 2,
+    });
+    expect(normalized[1]).toMatchObject({
+      status: "requires_certification",
+      owner: "business",
+      category: "certification",
+      applicantOnly: true,
+      completionAuthority: "applicant_or_authorized_representative",
+      estimatedMinWeeks: 0,
+      estimatedMaxWeeks: 0,
+    });
+    expect(canApplicantUpdateTask(normalized[0])).toBe(true);
+    expect(canApplicantUpdateTask(normalized[1])).toBe(false);
+  });
+
+  it("never lets the generic applicant helper complete official certification", () => {
+    const certification = preparationTask(OFFICIAL_CERTIFICATION_TASK_ID, {
+      status: "complete",
+      category: "certification",
+      applicantOnly: true,
+      completionAuthority: "applicant_or_authorized_representative",
+    });
+    const normalized = normalizePreparationTasks([certification])[0];
+
+    expect(normalized.status).toBe("requires_certification");
+    expect(canApplicantUpdateTask(certification)).toBe(false);
+    expect(canApplicantUpdateTask(normalized)).toBe(false);
+  });
+
+  it("permits applicants to track any non-certification task", () => {
+    expect(canApplicantUpdateTask(preparationTask("business-task"))).toBe(true);
+    expect(
+      canApplicantUpdateTask(preparationTask("advisor-task", { owner: "advisor" }))
+    ).toBe(true);
+    expect(
+      canApplicantUpdateTask(
+        preparationTask("separate-certification", { status: "requires_certification" })
+      )
+    ).toBe(false);
+  });
+
+  it("returns an empty list for non-array persisted values", () => {
+    expect(normalizePreparationTasks(null)).toEqual([]);
+    expect(normalizePreparationTasks({ tasks: [] })).toEqual([]);
+  });
+});
+
+describe("summarizePreparationStatus", () => {
+  it.each([
+    [[], "needs_information"],
+    [[preparationTask("info")], "needs_information"],
+    [
+      [preparationTask("outside", { status: "external_dependency", owner: "landlord" })],
+      "waiting_on_others",
+    ],
+    [[preparationTask("advisor", { status: "needs_advisor", owner: "advisor" })], "needs_advisor"],
+    [[preparationTask("certify", { status: "requires_certification" })], "requires_certification"],
+    [[preparationTask("foundation", { status: "complete", category: "foundation" })], "foundation_complete"],
+  ] as const)("summarizes %# as %s", (tasks, expected) => {
+    expect(summarizePreparationStatus([...tasks])).toBe(expected);
+  });
+
+  it("reports ready_to_submit when only official certification remains", () => {
+    const tasks = [
+      preparationTask("prepared", { status: "complete" }),
+      preparationTask(OFFICIAL_CERTIFICATION_TASK_ID, {
+        status: "requires_certification",
+        category: "certification",
+      }),
+    ];
+
+    expect(summarizePreparationStatus(tasks)).toBe("ready_to_submit");
+  });
+
+  it("keeps applicant information ahead of outside waiting in a mixed queue", () => {
+    expect(
+      summarizePreparationStatus([
+        preparationTask("answer", { status: "needs_owner_answer" }),
+        preparationTask("outside", {
+          status: "external_dependency",
+          owner: "program_administrator",
+        }),
+      ])
+    ).toBe("needs_information");
+  });
+});
+
+describe("buildProfileSnapshot", () => {
+  it("normalizes and deeply detaches the immutable JSON snapshot", () => {
+    const licenses: BusinessProfileInput["licenses"] = [
+      { type: "retail", details: { active: true } },
+    ];
+    const fieldProvenance: NonNullable<BusinessProfileInput["fieldProvenance"]> = {
+      legalName: { source: "applicant" },
+    };
+    const profile: BusinessProfileInput = {
+      ...COMPLETE_PROFILE,
+      legalName: "  South Shore Supply LLC  ",
+      contactEmail: "  OWNER@EXAMPLE.COM ",
+      employeeCount: 8.9,
+      licenses,
+      fieldProvenance,
+    };
+
+    const snapshot = buildProfileSnapshot(profile);
+    (licenses as Array<Record<string, unknown>>)[0].type = "changed";
+    (fieldProvenance.legalName as Record<string, JsonValue>).source = "changed";
+    profile.legalName = "Changed Business";
+
+    expect(snapshot).toMatchObject({
+      legalName: "South Shore Supply LLC",
+      contactEmail: "owner@example.com",
+      employeeCount: 8,
+      licenses: [{ type: "retail", details: { active: true } }],
+      fieldProvenance: { legalName: { source: "applicant" } },
+    });
+    expect(Object.isFrozen(snapshot)).toBe(true);
+    expect(Object.isFrozen(snapshot.licenses)).toBe(true);
+    expect(Object.isFrozen(snapshot.fieldProvenance.legalName)).toBe(true);
+    expect(() => {
+      (snapshot as { legalName: string | null }).legalName = "Mutation";
+    }).toThrow();
+  });
+
+  it("uses JSON-safe defaults for missing or invalid profile values", () => {
+    expect(
+      buildProfileSnapshot({
+        employeeCount: Number.NaN,
+        licenses: Number.POSITIVE_INFINITY,
+      })
+    ).toEqual({
+      legalName: null,
+      dbaName: null,
+      physicalAddress: null,
+      mailingAddress: null,
+      contactName: null,
+      contactEmail: null,
+      contactPhone: null,
+      entityType: null,
+      formationDate: null,
+      industry: null,
+      naicsCode: null,
+      employeeCount: null,
+      ownershipNotes: null,
+      licenses: [],
+      fieldProvenance: {},
+    });
+  });
+});
+
+describe("incentive preparation migration", () => {
+  const migration = readFileSync(
+    resolve(process.cwd(), "scripts/migrate-incentive-preparation.ts"),
+    "utf8"
+  );
+
+  it("creates the three required tables and their complete column contract", () => {
+    expect(migration).toContain("CREATE EXTENSION IF NOT EXISTS pgcrypto");
+    expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS business_profiles/);
+    expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS incentive_preparation_packets/);
+    expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS incentive_support_requests/);
+
+    const requiredColumns = [
+      "legal_name",
+      "dba_name",
+      "physical_address",
+      "mailing_address",
+      "contact_name",
+      "contact_email",
+      "contact_phone",
+      "entity_type",
+      "formation_date",
+      "industry",
+      "naics_code",
+      "employee_count",
+      "ownership_notes",
+      "licenses_json",
+      "field_provenance_json",
+      "business_profile_id",
+      "project_id",
+      "saved_report_id",
+      "program_id",
+      "program_name",
+      "goal_type",
+      "project_address",
+      "tasks_json",
+      "timeline_json",
+      "profile_snapshot_json",
+      "target_organization",
+      "requested_help",
+      "consent_scope_json",
+      "consented_at",
+    ];
+    for (const column of requiredColumns) {
+      expect(migration).toMatch(new RegExp("\\b" + column + "\\b"));
+    }
+  });
+
+  it("uses cascading ownership FKs, nullable workspace links, pending consent, and immutable snapshots", () => {
+    expect(migration).toMatch(/user_id TEXT NOT NULL REFERENCES users\(id\) ON DELETE CASCADE/g);
+    expect(migration).toMatch(
+      /business_profile_id TEXT NOT NULL REFERENCES business_profiles\(id\) ON DELETE CASCADE/
+    );
+    expect(migration).toMatch(
+      /project_id TEXT REFERENCES business_projects\(id\) ON DELETE SET NULL/
+    );
+    expect(migration).toMatch(
+      /saved_report_id TEXT REFERENCES saved_reports\(id\) ON DELETE SET NULL/
+    );
+    expect(migration).toMatch(
+      /packet_id TEXT NOT NULL REFERENCES incentive_preparation_packets\(id\) ON DELETE CASCADE/
+    );
+    expect(migration).toContain("status TEXT NOT NULL DEFAULT 'pending'");
+    expect(migration).toContain("prevent_incentive_packet_profile_snapshot_update");
+    expect(migration).toContain("profile_snapshot_json is immutable");
+    expect(migration).toContain("CREATE INDEX IF NOT EXISTS idx_incentive_packets_profile_id");
+    expect(migration).toContain("CREATE INDEX IF NOT EXISTS idx_incentive_support_requests_packet_id");
+  });
+});

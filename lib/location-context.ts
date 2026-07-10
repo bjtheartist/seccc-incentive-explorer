@@ -1,4 +1,5 @@
 import { runConfidenceEngine } from "./confidence-engine";
+import { orderProgramCheckResultsByProjectGoal } from "./project-fit";
 import type { LocalBusinessSupportContext } from "./local-business-support";
 import type {
   NeighborhoodEconomicContext,
@@ -294,7 +295,10 @@ export function buildLocationContext(
   const programResults = input.zones
     ? runConfidenceEngine(programs, input.zones, input.zoneNames || {}, undefined, input.parcel ?? undefined)
     : [];
-  const topMatches = programResults
+  const orderedProgramResults = state.projectType
+    ? orderProgramCheckResultsByProjectGoal(programResults, state.projectType, state.industry)
+    : programResults;
+  const topMatches = orderedProgramResults
     .filter((result) => result.confidence !== "not_applicable")
     .slice(0, 8);
   const zoneKeys = activeZoneKeys(input.zones);

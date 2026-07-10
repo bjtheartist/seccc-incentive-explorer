@@ -71,6 +71,16 @@ async function main() {
     )
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS password_reset_requests (
+      id BIGSERIAL PRIMARY KEY,
+      recipient_hash TEXT NOT NULL,
+      client_hash TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'pending',
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
   console.log("2. Creating workspace tables...");
   await sql`
     CREATE TABLE IF NOT EXISTS business_projects (
@@ -109,6 +119,8 @@ async function main() {
   console.log("3. Creating indexes...");
   await sql`CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts ("userId")`;
   await sql`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions ("userId")`;
+  await sql`CREATE INDEX IF NOT EXISTS verification_token_token_idx ON verification_token (token)`;
+  await sql`CREATE INDEX IF NOT EXISTS password_reset_requests_created_at_idx ON password_reset_requests (created_at DESC)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_business_projects_user_id ON business_projects (user_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_business_projects_goal_type ON business_projects (goal_type)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_saved_reports_user_id ON saved_reports (user_id)`;

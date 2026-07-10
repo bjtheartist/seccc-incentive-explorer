@@ -24,6 +24,11 @@ describe("analytics events", () => {
     expect(isAnalyticsEventType("report_generation_failed")).toBe(true);
     expect(isAnalyticsEventType("save_report_clicked")).toBe(true);
     expect(isAnalyticsEventType("email_report_clicked")).toBe(true);
+    expect(isAnalyticsEventType("report_email_gate_skipped")).toBe(true);
+    expect(isAnalyticsEventType("preparation_packet_started")).toBe(true);
+    expect(isAnalyticsEventType("preparation_packet_created")).toBe(true);
+    expect(isAnalyticsEventType("preparation_task_updated")).toBe(true);
+    expect(isAnalyticsEventType("preparation_support_requested")).toBe(true);
   });
 
   it("sanitizes event payloads before storing", () => {

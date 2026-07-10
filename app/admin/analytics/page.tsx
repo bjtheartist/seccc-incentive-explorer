@@ -324,12 +324,12 @@ function FounderView({ data }: { data: AnalyticsDashboardSummary }) {
 
         <div className="border border-[#0C1B33]/10 bg-white p-5">
           <h2 className="font-mono-bureau text-[10px] tracking-[0.18em] uppercase text-[#0C1B33]">
-            Follow-Up Queue
+            Report Recipients
           </h2>
           <div className="mt-4 divide-y divide-[#0C1B33]/6">
             {data.followUpQueue.length === 0 ? (
               <p className="py-3 text-[12px] text-[#0C1B33]/35">
-                No captured inquiries yet.
+                No report recipients captured yet.
               </p>
             ) : (
               data.followUpQueue.map((lead) => (
@@ -339,12 +339,22 @@ function FounderView({ data }: { data: AnalyticsDashboardSummary }) {
                       <p className="text-[13px] font-semibold text-[#0C1B33]">{lead.name}</p>
                       <p className="text-[12px] text-[#0C1B33]/45">{lead.email}</p>
                     </div>
-                    <span className="font-mono-bureau text-[10px] text-[#0C1B33]/35">
-                      {lead.zipCode}
+                    <span className={`font-mono-bureau text-[10px] ${
+                      lead.wantsIncentiveHelp ? "text-[#2563EB]" : "text-[#0C1B33]/35"
+                    }`}>
+                      {lead.wantsIncentiveHelp ? "Help requested" : "Delivery only"}
                     </span>
                   </div>
                   <p className="mt-2 text-[12px] leading-relaxed text-[#0C1B33]/40">
                     {lead.reportTitle || lead.reportAddress || "Report inquiry"}
+                  </p>
+                  {lead.projectGoal && (
+                    <p className="mt-1 text-[12px] leading-relaxed text-[#0C1B33]/50">
+                      Primary goal: {lead.projectGoal}
+                    </p>
+                  )}
+                  <p className="mt-1 font-mono-bureau text-[10px] text-[#0C1B33]/30">
+                    {lead.zipCode || "ZIP not provided"}
                   </p>
                 </div>
               ))

@@ -10,8 +10,6 @@ import {
 } from "@/lib/report-wizard-config";
 import {
   confirmedProgramsFromReport,
-  estimateProgramsValue,
-  programValueTeaser,
   CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
@@ -74,7 +72,7 @@ describe("tier 1 analytics events", () => {
   });
 });
 
-// ─── Refine value helpers (audit RF6: preview real engine values) ─────
+// ─── Refine value helpers ───────────────────────────────────────────
 
 function reportFixture(): GeneratedReport {
   return {
@@ -107,31 +105,6 @@ describe("refine value preview helpers", () => {
     ]);
   });
 
-  it("previews a hedged value teaser only for programs with modeled percentages", () => {
-    expect(programValueTeaser("sbif")).toMatch(/90%/);
-    // federalOZ is modeled at 0% — no dollar teaser should be claimed.
-    expect(programValueTeaser("federalOZ")).toBeNull();
-    expect(programValueTeaser("not-a-program")).toBeNull();
-  });
-
-  it("matches the refined report's benefit-estimate math (caps included)", () => {
-    const estimate = estimateProgramsValue(
-      [
-        { id: "sbif", name: "SBIF" },
-        { id: "tif", name: "TIF" },
-      ],
-      "500k-2m",
-    );
-    // SBIF: 90% of $1M capped at $250K; TIF: 25% of $1M = $250K.
-    expect(estimate?.total).toBe(500_000);
-    expect(estimate?.totalFormatted).toBe("$500K");
-    expect(estimate?.items).toHaveLength(2);
-  });
-
-  it("returns null when the budget range is unknown or nothing is estimable", () => {
-    expect(estimateProgramsValue([{ id: "sbif", name: "SBIF" }], "")).toBeNull();
-    expect(estimateProgramsValue([{ id: "federalOZ", name: "OZ" }], "500k-2m")).toBeNull();
-  });
 });
 
 // ─── Saved snapshot detection (audit RF1: workspace refine CTA) ──────
@@ -180,9 +153,11 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     expect(workspaceFork).toContain("RefineValuePanel");
   });
 
-  it("both forks render the engine's benefit estimates (RF6)", () => {
-    expect(liveFork).toContain("BenefitEstimatesBlock");
-    expect(workspaceFork).toContain("BenefitEstimatesBlock");
+  it("neither fork renders modeled deal-total estimates", () => {
+    expect(liveFork).not.toContain("BenefitEstimatesBlock");
+    expect(workspaceFork).not.toContain("BenefitEstimatesBlock");
+    expect(liveFork).not.toContain("Estimated Incentive Value");
+    expect(workspaceFork).not.toContain("Estimated Incentive Value");
   });
 
   it("the old undersell banner copy is gone from both forks", () => {

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { generateReportData } from "../report-engine";
+import {
+  generateReportData,
+  GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+  OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+} from "../report-engine";
 import type { Program } from "../types";
 
 function makeProgram(overrides: Partial<Program> = {}): Program {
@@ -244,14 +248,76 @@ describe("generateReportData", () => {
     const siteOverview = report.sections.find((section) => section.title === "Site Overview");
     const mobilityItem = siteOverview?.items.find((item) => item.label === "Transportation & Site Access");
     expect(mobilityItem?.value).toContain("Strong public transit access");
-    expect(mobilityItem?.detail).toContain("CTA rail: 79th");
-    expect(mobilityItem?.detail).toContain("CTA bus: 79th Red Line Station routes 75, 79");
-    expect(mobilityItem?.detail).toContain("Bike routes: Buffered Bike Lane");
+    expect(mobilityItem?.detail).toContain("CTA rail: 79th · 0.2 mi");
+    expect(mobilityItem?.detail).toContain(
+      "CTA bus: 79th Red Line Station · Routes 75, 79 · 0.1 mi",
+    );
+    expect(mobilityItem?.detailGroups).toEqual(
+      expect.arrayContaining([
+        {
+          id: "cta-bus",
+          label: "CTA bus",
+          items: ["79th Red Line Station · Routes 75, 79 · 0.1 mi"],
+        },
+        {
+          id: "bike-routes",
+          label: "Bike routes",
+          items: ["Buffered Bike Lane · State St - 79th St to 75th St · 0.1 mi"],
+        },
+      ]),
+    );
+    expect(mobilityItem?.detailCaveat).toBe(
+      "Distances are straight-line proximity signals, not routed travel times.",
+    );
     expect(siteOverview?.items.find((item) => item.label === "Logistics Access")).toBeUndefined();
     expect(report.locationContext?.site.mobilityAccess?.kind).toBe("proximity");
     expect(report.dataSources?.map((source) => source.id)).toEqual(
       expect.arrayContaining(["mobilityAccess"])
     );
+  });
+
+  it("prioritizes confirmed programs by the user's primary goal without exposing scores", () => {
+    const report = generateReportData(
+      makeState({ projectType: "hiring" }),
+      [
+        makeProgram({
+          id: "edge",
+          name: "Economic Development for a Growing Economy (EDGE)",
+        }),
+        makeProgram({
+          id: "sbif",
+          name: "Small Business Improvement Fund (SBIF)",
+        }),
+        makeProgram({
+          id: "dataCenter",
+          name: "Illinois Data Center Investment Program",
+        }),
+      ],
+      { zones, zoneNames },
+    );
+
+    const bestMatches = report.sections.find(
+      (section) => section.title === GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+    );
+    const otherMatches = report.sections.find(
+      (section) => section.title === OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+    );
+    const edge = bestMatches?.items.find((item) => item.programId === "edge");
+    const dataCenter = otherMatches?.items.find((item) => item.programId === "dataCenter");
+
+    expect(bestMatches?.items[0].programId).toBe("edge");
+    expect(edge?.projectFit?.label).toContain("Strong fit");
+    expect(otherMatches?.items.map((item) => item.programId)).toEqual(
+      expect.arrayContaining(["sbif", "dataCenter"]),
+    );
+    expect(dataCenter?.confidenceLevel).toBe("location_eligible");
+    expect(dataCenter?.projectFit?.level).toBe("industry-check");
+    expect(dataCenter?.projectFit).not.toHaveProperty("score");
+    expect(JSON.stringify(report)).not.toContain('"score"');
+    expect(report.executiveSummary?.projectGoalLabel).toBe("Hire or retain employees");
+    expect(report.executiveSummary?.topPrograms[0].programId).toBe("edge");
+    expect(report.summary).toContain("Hire or retain employees");
+    expect(report.actionRoadmap?.[0].callScript).toContain("hire or retain employees");
   });
 
   it("prioritizes Cook County discovery programs without treating them as address-confirmed", () => {
@@ -478,10 +544,11 @@ describe("generateReportData", () => {
     expect(item?.verificationSteps).toEqual(verificationSteps);
   });
 
-  it("estimates benefits only for address-confirmed programs using current assumptions", () => {
+  it("does not aggregate possible incentive dollars from a project budget", () => {
     const report = generateReportData(
       makeState({
         budgetRange: "500k-2m",
+        projectType: "rehab",
       }),
       [
         makeProgram({ id: "tif", zoneKey: "tif" }),
@@ -491,22 +558,9 @@ describe("generateReportData", () => {
       { zones, zoneNames },
     );
 
-    const ids = report.benefitEstimates?.items.map((i) => i.programId) ?? [];
-    expect(ids).toContain("tif");
-    expect(ids).not.toContain("sbif");
-    expect(ids).not.toContain("federalOZ");
-
-    const sbifReport = generateReportData(
-      makeState({
-        budgetRange: "500k-2m",
-      }),
-      [makeProgram({ id: "sbif", name: "SBIF", zoneKey: "sbif" })],
-      { zones: { sbif: true }, zoneNames: { sbif: "Test SBIF" } },
-    );
-
-    const sbifEstimate = sbifReport.benefitEstimates?.items.find((i) => i.programId === "sbif");
-    expect(sbifEstimate?.label).toContain("90%");
-    expect(sbifEstimate?.estimatedValue).toBeLessThanOrEqual(250_000);
+    expect(report).not.toHaveProperty("benefitEstimates");
+    expect(report.summary).not.toContain("total potential incentives");
+    expect(report.summary).not.toContain("we estimate");
   });
 
   it("adds neighborhood economic context with measured ZBP and license-continuity signals when provided", () => {

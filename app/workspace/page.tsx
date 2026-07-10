@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import {
   ArrowRight,
   Check,
+  ClipboardCheck,
   Eye,
   FileText,
   Loader2,
@@ -18,6 +19,35 @@ import {
 import { PendingReportSaver } from "@/components/workspace/PendingReportSaver";
 import type { BusinessProject, SavedReportSummary } from "@/lib/workspace";
 import type { WatchedArea } from "@/lib/types/user-intel";
+
+interface PreparationPacketSummary {
+  id: string;
+  title: string;
+  programName: string;
+  projectAddress: string | null;
+  status: string;
+  businessName: string;
+  timeline?: {
+    minWeeks?: number;
+    maxWeeks?: number;
+    estimatedMinWeeks?: number;
+    estimatedMaxWeeks?: number;
+  } | null;
+  updatedAt: string;
+}
+
+const PREPARATION_STATUS_LABELS: Record<string, string> = {
+  foundation_complete: "Foundation complete",
+  needs_information: "Needs information",
+  waiting_on_others: "Waiting on others",
+  needs_advisor: "Needs advisor review",
+  requires_certification: "Applicant certification required",
+  ready_to_submit: "Prepared for applicant certification",
+};
+
+function preparationStatusLabel(status: string): string {
+  return PREPARATION_STATUS_LABELS[status] || "In preparation";
+}
 
 export default function WorkspacePage() {
   return (
@@ -38,6 +68,7 @@ function WorkspaceContent() {
   const { status } = useSession();
   const [projects, setProjects] = useState<BusinessProject[] | null>(null);
   const [reports, setReports] = useState<SavedReportSummary[] | null>(null);
+  const [packets, setPackets] = useState<PreparationPacketSummary[] | null>(null);
   const [watchedAreas, setWatchedAreas] = useState<WatchedArea[] | null>(null);
   const [error, setError] = useState("");
 
@@ -54,14 +85,16 @@ function WorkspaceContent() {
     Promise.all([
       fetch("/api/projects").then((res) => res.json()),
       fetch("/api/saved-reports").then((res) => res.json()),
+      fetch("/api/incentive-preparation").then((res) => res.json()),
       fetch("/api/watchlist").then((res) => res.json()),
     ])
-      .then(([projectData, reportData, watchlistData]) => {
+      .then(([projectData, reportData, packetData, watchlistData]) => {
         setProjects(projectData.projects || []);
         setReports(reportData.reports || []);
+        setPackets(packetData.packets || []);
         setWatchedAreas(watchlistData.areas || []);
       })
-      .catch(() => setError("Could not load your workspace."))
+      .catch(() => setError("Could not load your workspace."));
   }, [status]);
 
   const startRename = (report: SavedReportSummary) => {
@@ -128,7 +161,7 @@ function WorkspaceContent() {
   const isLoading =
     status === "loading" ||
     (status === "authenticated" &&
-      (projects === null || reports === null || watchedAreas === null));
+      (projects === null || reports === null || packets === null || watchedAreas === null));
 
   if (isLoading) {
     return (
@@ -194,6 +227,80 @@ function WorkspaceContent() {
             {error}
           </div>
         )}
+
+        <section className="mb-12">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div>
+              <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]/70">
+                Incentive Preparation Packets
+              </h2>
+              <p className="text-[12px] text-[#0C1B33]/35 mt-1">
+                Organize the facts, documents, dependencies, and support needed to apply.
+              </p>
+            </div>
+            <Link
+              href="/workspace/incentive-preparation/new"
+              className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB] hover:text-[#1d4ed8]"
+            >
+              <ClipboardCheck className="w-3.5 h-3.5" />
+              Start a packet
+            </Link>
+          </div>
+          {(packets || []).length === 0 ? (
+            <EmptyState
+              icon={<ClipboardCheck className="w-5 h-5" />}
+              title="No preparation packets yet"
+              text="Start from a likely-match report to preserve your business facts and map the work needed before an official application."
+              action={
+                <Link
+                  href="/workspace/incentive-preparation/new"
+                  className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB] hover:text-[#1d4ed8] mt-3"
+                >
+                  Start a packet
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              }
+            />
+          ) : (
+            <div className="bg-white border border-[#0C1B33]/10 divide-y divide-[#0C1B33]/6">
+              {(packets || []).slice(0, 8).map((packet) => {
+                const minWeeks =
+                  packet.timeline?.estimatedMinWeeks ?? packet.timeline?.minWeeks;
+                const maxWeeks =
+                  packet.timeline?.estimatedMaxWeeks ?? packet.timeline?.maxWeeks;
+                const range =
+                  typeof minWeeks === "number" && typeof maxWeeks === "number"
+                    ? `${minWeeks}-${maxWeeks} week preparation window`
+                    : "Preparation window being assessed";
+
+                return (
+                  <Link
+                    key={packet.id}
+                    href={`/workspace/incentive-preparation/${packet.id}`}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 hover:bg-[#0C1B33]/[0.02]"
+                  >
+                    <div className="min-w-0">
+                      <p className="font-mono-bureau text-[9px] tracking-[0.16em] uppercase text-[#2563EB]/70 mb-1">
+                        {preparationStatusLabel(packet.status)}
+                      </p>
+                      <h3 className="text-sm text-[#0C1B33]/80 font-medium truncate">
+                        {packet.title || packet.programName}
+                      </h3>
+                      <p className="text-[12px] text-[#0C1B33]/35 mt-0.5">
+                        {packet.businessName}
+                        {packet.projectAddress ? ` · ${packet.projectAddress}` : ""}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-[11px] text-[#0C1B33]/35">{range}</span>
+                      <ArrowRight className="w-3.5 h-3.5 text-[#0C1B33]/30" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
         <section className="mb-12">
           <div className="flex items-center justify-between mb-4">

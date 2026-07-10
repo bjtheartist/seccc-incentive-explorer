@@ -27,25 +27,22 @@ function reportFixture(): GeneratedReport {
 }
 
 describe("RefineValuePanel", () => {
-  it("previews the value refine unlocks, with hedged estimate language (RF6/WU5)", () => {
+  it("previews goal-based refinement without promising a deal total", () => {
     const html = renderToStaticMarkup(
       <RefineValuePanel report={reportFixture()} context="instant" onRefine={() => {}} />,
     );
     expect(html).toContain("Location-Only Snapshot");
-    expect(html).toContain("Dollar Estimates");
+    expect(html).toContain("Goal-Based Ranking");
     expect(html).toContain("Week-One Action Plan");
     expect(html).toContain("Document Gap Checklist");
-    // Concrete but hedged teaser from the engine's modeled assumptions.
-    expect(html).toContain("Small Business Improvement Fund (SBIF)");
-    expect(html).toMatch(/90%/);
-    // Product boundary: estimates, never eligibility determinations.
-    expect(html).toContain("planning estimates, not eligibility determinations");
-    expect(html).toContain("verification with its administrator");
+    expect(html).toContain("does not add them up, predict an award, or guarantee eligibility");
+    expect(html).not.toContain("Dollar Estimates");
+    expect(html).not.toContain("Estimated Incentive Value");
     // Honest expectations for the full path (WU5).
     expect(html).toContain("3 short screens");
   });
 
-  it("offers the inline two-field quick refine when the pipeline supports it (BM1)", () => {
+  it("offers a goal-first quick refine with optional budget and timeline", () => {
     const html = renderToStaticMarkup(
       <RefineValuePanel
         report={reportFixture()}
@@ -55,7 +52,10 @@ describe("RefineValuePanel", () => {
       />,
     );
     expect(html).toContain("Quick Refine");
-    expect(html).toContain("Project Budget");
+    expect(html).toContain("Primary Goal");
+    expect(html).toContain("Remodel or renovate");
+    expect(html).toContain("Hire or retain employees");
+    expect(html).toContain("Project Budget (Optional)");
     expect(html).toContain("Timeline (Optional)");
     expect(html).toContain("Generate Refined Report");
     expect(html).toContain("Add full project details instead");
@@ -80,7 +80,7 @@ describe("RefineValuePanel", () => {
     );
     expect(html).toContain("Location-only snapshot");
     expect(html).toContain("Refine");
-    // Compact strip stays lightweight — no full value grid.
+    // Compact strip stays lightweight - no full value grid.
     expect(html).not.toContain("Week-One Action Plan");
   });
 });

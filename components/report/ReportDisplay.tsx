@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { encodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
+import { PROJECT_TYPE_LABELS } from "@/lib/report-wizard-config";
 import type { WizardState } from "@/lib/report-wizard-config";
 import type {
   GeneratedReport,
@@ -32,7 +33,9 @@ import type {
 import type { ApplicationPortal, ExecutiveSummary, Program, VerificationStep } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { RefineValuePanel } from "@/components/report/RefineValuePanel";
-import { BenefitEstimatesBlock } from "@/components/report/BenefitEstimatesBlock";
+import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
+import { ProjectFitNote } from "@/components/report/ProjectFitNote";
+import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
 import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
@@ -238,7 +241,9 @@ function ExecutiveSummarySection({
       {summary.topPrograms.length > 0 && (
         <div className="mb-6">
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-3">
-            Top Programs for Your Location
+            {summary.projectGoalLabel
+              ? `Top Programs for ${summary.projectGoalLabel}`
+              : "Top Programs for Your Location"}
           </span>
           <ul className="space-y-2">
             {summary.topPrograms.map((prog) => {
@@ -263,6 +268,11 @@ function ExecutiveSummarySection({
                         </span>
                       )}
                     </span>
+                    {prog.projectFitLabel && (
+                      <span className="font-mono-bureau text-[9px] text-[#2563EB]">
+                        {prog.projectFitLabel}
+                      </span>
+                    )}
                     {prog.benefitRange && (
                       <span className="font-mono-bureau text-[11px] text-[#0C1B33]/40">
                         {prog.benefitRange}
@@ -1290,7 +1300,7 @@ export function ReportDisplay({
           </div>
 
           <div className="mx-auto max-w-[1180px] print:hidden mt-8">
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3">
               <button
                 onClick={handleVacancySpreadsheetExport}
                 disabled={isLoadingVacancySpreadsheet || isExportingVacancySpreadsheet}
@@ -1310,6 +1320,12 @@ export function ReportDisplay({
                 <FileText className="w-3.5 h-3.5" />
                 Save Report
               </button>
+              <StartPreparationPacketButton
+                report={report}
+                wizardState={reportWizardState}
+                source={`${analyticsSource}_vacancy_actions`}
+                className="w-full sm:w-auto px-8 py-3.5 shadow-md"
+              />
               <button
                 onClick={handleEmailReportClick}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border border-[#2563EB]/30 text-[#2563EB] font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#2563EB]/5 hover:border-[#2563EB]/50 transition-colors cursor-pointer shadow-md"
@@ -1486,6 +1502,16 @@ export function ReportDisplay({
                 </span>
               </div>
             )}
+            {report.metadata?.projectType && (
+              <div>
+                <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
+                  Primary Goal
+                </span>
+                <span className="text-[#0C1B33] text-[13px]">
+                  {PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType}
+                </span>
+              </div>
+            )}
             {report.metadata?.corridorLabel && (
               <div>
                 <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
@@ -1629,14 +1655,6 @@ export function ReportDisplay({
                   onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
                   onTextChange={setEditedSummaryText}
                 />
-              </div>
-            )}
-
-            {/* ── Estimated Incentive Value (refined reports) — the engine
-                has always computed this; it was never rendered (audit RF6). */}
-            {report.benefitEstimates && (
-              <div id="benefit-estimates">
-                <BenefitEstimatesBlock estimates={report.benefitEstimates} />
               </div>
             )}
 
@@ -1840,6 +1858,8 @@ export function ReportDisplay({
                           const isSupportNetworkItem = section.title === "Your Support Network";
                           const isDeadlineItem = section.title === "Upcoming Deadlines Near This Address";
                           const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
+                          const hasGroupedDetail = Boolean(item.detailGroups?.length);
+                          const hasSideValue = Boolean(item.value && !hasGroupedDetail);
                           const hasNavigationLinks = Boolean(
                             reportItem.sourceUrl ||
                             itemProgram?.sourceUrl ||
@@ -1852,9 +1872,9 @@ export function ReportDisplay({
                           return (
                             <div
                               key={itemIdx}
-                              className="report-item py-4 first:pt-0"
+                              className="report-item py-5 first:pt-0 sm:py-6"
                             >
-                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-4">
+                            <div className={`grid grid-cols-1 gap-3 ${hasSideValue ? "sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] sm:gap-x-10" : ""}`}>
                               {/* Left: label */}
                               <div className="flex-1 min-w-0">
                                 <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold block">
@@ -1877,7 +1897,7 @@ export function ReportDisplay({
                                     </span>
                                   )}
                                 </span>
-                                {item.detail && section.title === "Required Documents" ? (
+                                {!hasGroupedDetail && item.detail && section.title === "Required Documents" ? (
                                   <ul className="mt-2 space-y-1.5">
                                     {item.detail.split("\n").map((line, li) => {
                                       const [docName, programs] = line.split(" — ");
@@ -1894,24 +1914,33 @@ export function ReportDisplay({
                                       );
                                     })}
                                   </ul>
-                                ) : item.detail ? (
-                                  <span className={`text-[#0C1B33]/40 text-[11px] sm:text-[12px] leading-relaxed block mt-0.5 ${isSupportNetworkItem || isDeadlineItem ? "whitespace-pre-line" : ""}`}>
+                                ) : !hasGroupedDetail && item.detail ? (
+                                  <span className={`mt-1.5 block text-[12px] leading-[1.65] text-[#0C1B33]/50 sm:text-[13px] ${isSupportNetworkItem || isDeadlineItem ? "whitespace-pre-line" : ""}`}>
                                     {item.detail}
                                   </span>
                                 ) : null}
                               </div>
 
                               {/* Right: value */}
-                              {item.value && (
-                                <span className="font-mono-bureau text-[10px] sm:text-[11px] tracking-[0.05em] text-[#0C1B33]/50 flex-shrink-0 sm:text-right pt-0.5">
+                              {hasSideValue && (
+                                <span className="min-w-0 break-words font-mono-bureau text-[11px] leading-[1.7] text-[#0C1B33]/50 sm:text-[12px]">
                                   {item.value}
                                 </span>
                               )}
                             </div>
 
+                            {hasGroupedDetail && item.detailGroups && (
+                              <GroupedReportDetail
+                                summary={item.value}
+                                groups={item.detailGroups}
+                                caveat={item.detailCaveat}
+                              />
+                            )}
+                            <ProjectFitNote fit={item.projectFit} />
+
                             {/* Eligibility & URL — collapsible accordion for program items */}
                             {!isSupportNetworkItem && (item.whoQualifies || item.eligibilityRules || item.url || item.whyOneLine || hasNavigationLinks) && (
-                              <Accordion type="single" collapsible className="mt-1.5">
+                              <Accordion type="single" collapsible className="mt-3 sm:mt-4">
                                 <AccordionItem value="eligibility" className="border-none">
                                   <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
                                     {item.confidenceLabel || "Eligibility Details"}
@@ -2185,7 +2214,7 @@ export function ReportDisplay({
 
         {/* ── Action Buttons (outside the document) ── */}
         <div className={`report-actions mx-auto max-w-[850px] print:hidden mt-8 ${compact ? "hidden" : ""}`}>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap items-center justify-center gap-3">
             <button
               onClick={handlePrint}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-8 py-3.5 hover:bg-[#0C1B33]/80 transition-colors cursor-pointer shadow-md"
@@ -2200,6 +2229,12 @@ export function ReportDisplay({
               <FileText className="w-3.5 h-3.5" />
               {isVacancyReport ? "Save Report" : "Save to Workspace"}
             </button>
+            <StartPreparationPacketButton
+              report={report}
+              wizardState={reportWizardState}
+              source={`${analyticsSource}_report_actions`}
+              className="w-full sm:w-auto px-8 py-3.5 shadow-md"
+            />
             {report.metadata?.lat != null && report.metadata?.lon != null && (
               <WatchAreaButton
                 lat={report.metadata.lat}

@@ -30,6 +30,7 @@ describe("POST /api/events", () => {
     "report_generation_failed",
     "save_report_clicked",
     "email_report_clicked",
+    "report_email_gate_skipped",
   ])("accepts the new %s event", async (eventType) => {
     const res = await POST(
       eventRequest({

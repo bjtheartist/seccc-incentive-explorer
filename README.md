@@ -7,7 +7,7 @@ Live site: [chicagoincentiveexplorer.com](https://chicagoincentiveexplorer.com)
 ## What It Does
 
 - Checks an address against Chicago incentive zones such as TIF, Opportunity Zones, Enterprise Zones, SSA, CCSA corridors, NMTC, QCT, historic districts, industrial corridors, and related layers.
-- Generates location-based incentive reports with confidence labels, program explanations, benefit estimates, action steps, parcel context, census context, zoning, and stacking analysis.
+- Generates location-based incentive reports with confidence labels, published program benefit ranges, action steps, parcel context, census context, zoning, and stacking analysis. Reports do not total possible incentive dollars or predict award amounts.
 - Provides an interactive Mapbox map for exploring zones, vacant properties, parcel/zoning context, community assets, and neighborhood snapshots.
 - Includes a pre-qualification survey that scores business profile answers against incentive program rules.
 - Offers a program directory filtered by government level and industry.
@@ -91,9 +91,14 @@ SOCRATA_APP_TOKEN=...
 UPSTASH_REDIS_REST_URL=...
 UPSTASH_REDIS_REST_TOKEN=...
 RESEND_API_KEY=...
+PASSWORD_RESET_EMAILS_ENABLED=true
+AUTH_EMAIL_FROM="Chicago Incentive Explorer <reports@chicagoincentiveexplorer.com>"
+REPORT_EMAILS_ENABLED=true
+REPORT_EMAIL_FROM="Chicago Incentive Explorer <reports@chicagoincentiveexplorer.com>"
+INCENTIVE_HELP_INBOX=...
 ```
 
-Only `NEXT_PUBLIC_MAPBOX_TOKEN` is required for the interactive map to render. `DATABASE_URL`, `AUTH_SECRET`, and `NEXTAUTH_URL` are required for account login, saved reports, and workspace features. `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` enable Google login. Email/password signup also requires the workspace migration so the `users.password_hash` column exists. The rest are optional service integrations; the app should degrade gracefully when they are absent.
+Only `NEXT_PUBLIC_MAPBOX_TOKEN` is required for the interactive map to render. `DATABASE_URL`, `AUTH_SECRET`, and `NEXTAUTH_URL` are required for account login, saved reports, and workspace features. `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` enable Google login; the option is hidden when either value is absent. Email/password signup also requires the workspace migration so the `users.password_hash` column exists. Password recovery is fail-closed and requires `DATABASE_URL`, `RESEND_API_KEY`, and `PASSWORD_RESET_EMAILS_ENABLED=true`. Report delivery is fail-closed and requires `DATABASE_URL`, `RESEND_API_KEY`, and `REPORT_EMAILS_ENABLED=true`; `INCENTIVE_HELP_INBOX` receives staff notifications only when a report recipient explicitly requests Chamber support. The rest are optional service integrations; the app should degrade gracefully when they are absent.
 
 ## Important Files
 

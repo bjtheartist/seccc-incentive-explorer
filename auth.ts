@@ -10,6 +10,60 @@ const pool = process.env.DATABASE_URL
   ? new Pool({ connectionString: process.env.DATABASE_URL })
   : null;
 
+const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+
+const providers: NextAuthOptions["providers"] = [];
+
+if (googleClientId && googleClientSecret) {
+  providers.push(
+    GoogleProvider({
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+    })
+  );
+}
+
+providers.push(
+  CredentialsProvider({
+    id: "credentials",
+    name: "Email",
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" },
+    },
+    async authorize(credentials) {
+      if (!pool || !credentials?.email || !credentials.password) {
+        return null;
+      }
+
+      const email = normalizeEmail(credentials.email);
+      const result = await pool.query(
+        `SELECT id, name, email, image, password_hash
+         FROM users
+         WHERE lower(email) = $1
+         LIMIT 1`,
+        [email]
+      );
+      const user = result.rows[0];
+      if (!user?.password_hash) return null;
+
+      const valid = await verifyPassword(
+        credentials.password,
+        user.password_hash
+      );
+      if (!valid) return null;
+
+      return {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+      };
+    },
+  })
+);
+
 export const authOptions: NextAuthOptions = {
   adapter: pool ? (NeonAdapter(pool) as Adapter) : undefined,
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
@@ -19,50 +73,7 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: "/login",
   },
-  providers: [
-    GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID || "missing-google-client-id",
-      clientSecret:
-        process.env.GOOGLE_CLIENT_SECRET || "missing-google-client-secret",
-    }),
-    CredentialsProvider({
-      id: "credentials",
-      name: "Email",
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        if (!pool || !credentials?.email || !credentials.password) {
-          return null;
-        }
-
-        const email = normalizeEmail(credentials.email);
-        const result = await pool.query(
-          `SELECT id, name, email, image, password_hash
-           FROM users
-           WHERE lower(email) = $1
-           LIMIT 1`,
-          [email]
-        );
-        const user = result.rows[0];
-        if (!user?.password_hash) return null;
-
-        const valid = await verifyPassword(
-          credentials.password,
-          user.password_hash
-        );
-        if (!valid) return null;
-
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          image: user.image,
-        };
-      },
-    }),
-  ],
+  providers,
   callbacks: {
     session({ session, user, token }) {
       if (session.user) {

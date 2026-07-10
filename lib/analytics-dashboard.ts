@@ -39,6 +39,10 @@ export interface FollowUpLead {
   zipCode: string;
   reportAddress: string | null;
   reportTitle: string | null;
+  projectGoal: string | null;
+  wantsIncentiveHelp: boolean;
+  deliverySource: string | null;
+  emailDeliveredAt: string | null;
   createdAt: string;
 }
 
@@ -389,18 +393,44 @@ async function safeCount(sql: SqlClient, query: "users" | "saved_reports" | "bus
 
 async function safeFollowUpQueue(sql: SqlClient): Promise<FollowUpLead[]> {
   try {
-    const rows = await sql`
-      SELECT name, email, zip_code, report_address, report_title, created_at
-      FROM report_leads
-      ORDER BY created_at DESC
-      LIMIT 20
-    `;
+    let rows;
+    try {
+      rows = await sql`
+        SELECT
+          name,
+          email,
+          zip_code,
+          report_address,
+          report_title,
+          project_goal,
+          wants_incentive_help,
+          delivery_source,
+          email_delivered_at,
+          created_at
+        FROM report_leads
+        ORDER BY wants_incentive_help DESC, created_at DESC
+        LIMIT 30
+      `;
+    } catch {
+      // Older databases remain readable until the first gated delivery adds
+      // the consent-aware columns.
+      rows = await sql`
+        SELECT name, email, zip_code, report_address, report_title, created_at
+        FROM report_leads
+        ORDER BY created_at DESC
+        LIMIT 30
+      `;
+    }
     return rows.map((row) => ({
       name: String(row.name ?? ""),
       email: String(row.email ?? ""),
       zipCode: String(row.zip_code ?? ""),
       reportAddress: row.report_address ? String(row.report_address) : null,
       reportTitle: row.report_title ? String(row.report_title) : null,
+      projectGoal: row.project_goal ? String(row.project_goal) : null,
+      wantsIncentiveHelp: Boolean(row.wants_incentive_help),
+      deliverySource: row.delivery_source ? String(row.delivery_source) : null,
+      emailDeliveredAt: row.email_delivered_at ? toIso(String(row.email_delivered_at)) : null,
       createdAt: toIso(String(row.created_at)),
     }));
   } catch {

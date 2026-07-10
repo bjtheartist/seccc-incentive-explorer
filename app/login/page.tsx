@@ -1,10 +1,16 @@
 "use client";
 
-import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, Suspense, useState } from "react";
+import { getProviders, signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Loader2, Mail, MapPin } from "lucide-react";
+
+function safeCallbackUrl(value: string | null): string {
+  return value?.startsWith("/") && !value.startsWith("//")
+    ? value
+    : "/workspace";
+}
 
 export default function LoginPage() {
   return (
@@ -15,20 +21,42 @@ export default function LoginPage() {
 }
 
 function LoginContent() {
-  const router = useRouter();
   const params = useSearchParams();
-  const callbackUrl = params.get("callbackUrl") || "/workspace";
+  const callbackUrl = safeCallbackUrl(params.get("callbackUrl"));
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [googleAvailable, setGoogleAvailable] = useState(false);
+  const [message, setMessage] = useState<string | null>(
+    params.get("reset") === "1"
+      ? "Password updated. Sign in with your new password."
+      : null
+  );
+  const [messageTone, setMessageTone] = useState<"error" | "success">(
+    params.get("reset") === "1" ? "success" : "error"
+  );
+
+  useEffect(() => {
+    let active = true;
+    getProviders()
+      .then((providers) => {
+        if (active) setGoogleAvailable(Boolean(providers?.google));
+      })
+      .catch(() => {
+        if (active) setGoogleAvailable(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleEmailAuth = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
     setMessage(null);
+    setMessageTone("error");
 
     try {
       if (mode === "signup") {
@@ -54,8 +82,7 @@ function LoginContent() {
         throw new Error("Email or password did not match.");
       }
 
-      router.push(result?.url || callbackUrl);
-      router.refresh();
+      window.location.assign(result?.url || callbackUrl);
     } catch (err) {
       setMessage(
         err instanceof Error ? err.message : "Something went wrong. Try again."
@@ -84,21 +111,25 @@ function LoginContent() {
           </p>
         </div>
         <div className="px-8 py-8 space-y-5">
-          <button
-            onClick={() => signIn("google", { callbackUrl })}
-            className="w-full inline-flex items-center justify-center gap-3 bg-[#2563EB] text-white px-5 py-3.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase hover:bg-[#1d4ed8] transition-colors cursor-pointer"
-          >
-            Continue with Google
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
+          {googleAvailable && (
+            <>
+              <button
+                onClick={() => signIn("google", { callbackUrl })}
+                className="w-full inline-flex items-center justify-center gap-3 bg-[#2563EB] text-white px-5 py-3.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase hover:bg-[#1d4ed8] transition-colors cursor-pointer"
+              >
+                Continue with Google
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
 
-          <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-[#0C1B33]/10" />
-            <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/25">
-              Or
-            </span>
-            <div className="h-px flex-1 bg-[#0C1B33]/10" />
-          </div>
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-[#0C1B33]/10" />
+                <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/25">
+                  Or
+                </span>
+                <div className="h-px flex-1 bg-[#0C1B33]/10" />
+              </div>
+            </>
+          )}
 
           <div className="grid grid-cols-2 border border-[#0C1B33]/10">
             {[
@@ -110,6 +141,7 @@ function LoginContent() {
                 onClick={() => {
                   setMode(item.id as "signin" | "signup");
                   setMessage(null);
+                  setMessageTone("error");
                 }}
                 className={`py-3 font-mono-bureau text-[10px] tracking-[0.15em] uppercase transition-colors ${
                   mode === item.id
@@ -152,8 +184,25 @@ function LoginContent() {
               className="w-full border border-[#0C1B33]/10 px-4 py-3 text-sm text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#2563EB]"
             />
 
+            {mode === "signin" && (
+              <div className="flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-[12px] text-[#2563EB] hover:text-[#1d4ed8]"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+            )}
+
             {message && (
-              <p className="text-[12px] text-red-600 bg-red-50 border border-red-100 px-3 py-2">
+              <p
+                className={`text-[12px] border px-3 py-2 ${
+                  messageTone === "success"
+                    ? "text-emerald-700 bg-emerald-50 border-emerald-100"
+                    : "text-red-600 bg-red-50 border-red-100"
+                }`}
+              >
                 {message}
               </p>
             )}

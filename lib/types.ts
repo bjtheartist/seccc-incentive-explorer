@@ -383,8 +383,11 @@ export interface ExecutiveSummary {
     benefitRange: string;
     whyOneLine?: string;
     notVerified?: string[];
+    projectFitLabel?: string;
+    projectFitReason?: string;
   }[];
   topActions: TopAction[];
   zoneCount: number;
   whyTheseMatter: string;
+  projectGoalLabel?: string;
 }

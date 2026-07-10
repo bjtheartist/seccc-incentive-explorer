@@ -1,12 +1,19 @@
 import { jsPDF } from "jspdf";
 import { ZONE_KEYS, ZONE_COLORS } from "./constants";
 import type { LookupResult, Program } from "./types";
+import {
+  CONFIRMED_PROGRAMS_SECTION_TITLE,
+  GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+  OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+} from "./report-engine";
 import type { GeneratedReport } from "./report-engine";
+import { PROJECT_TYPE_LABELS } from "./report-wizard-config";
 
 /**
  * PDF print order:
- *  1. Elevates "Your Support Network" right after "Eligible Incentive Programs".
- *  2. Places "Upcoming Deadlines Near This Address" after the support network
+ *  1. Keeps goal-ranked confirmed program sections together.
+ *  2. Elevates "Your Support Network" right after all confirmed programs.
+ *  3. Places "Upcoming Deadlines Near This Address" after the support network
  *     so time-sensitive items appear early in the PDF.
  *
  * Sections not listed are left in their natural order.
@@ -16,27 +23,53 @@ export function orderSectionsForPdf(
 ): GeneratedReport["sections"] {
   const ordered = [...sections];
 
-  // Step 1: elevate Support Network after Eligible Programs
+  const confirmedSectionTitles = new Set([
+    CONFIRMED_PROGRAMS_SECTION_TITLE,
+    GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+    OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+  ]);
+
+  const goalMatchIdx = ordered.findIndex(
+    (section) => section.title === GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+  );
+  const otherConfirmedIdx = ordered.findIndex(
+    (section) => section.title === OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+  );
+  if (goalMatchIdx >= 0 && otherConfirmedIdx >= 0) {
+    const [otherConfirmed] = ordered.splice(otherConfirmedIdx, 1);
+    const updatedGoalMatchIdx = ordered.findIndex(
+      (section) => section.title === GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+    );
+    ordered.splice(updatedGoalMatchIdx + 1, 0, otherConfirmed);
+  }
+
+  // Elevate Support Network after every address-confirmed program section.
   const supportIdx = ordered.findIndex(
     (s) => s.title === "Your Support Network",
   );
   if (supportIdx >= 0) {
     const [support] = ordered.splice(supportIdx, 1);
-    const eligibleIdx = ordered.findIndex(
-      (s) => s.title === "Eligible Incentive Programs",
+    const confirmedIdx = ordered.reduce(
+      (lastIndex, section, index) =>
+        confirmedSectionTitles.has(section.title) ? index : lastIndex,
+      -1,
     );
-    ordered.splice(eligibleIdx >= 0 ? eligibleIdx + 1 : 0, 0, support);
+    ordered.splice(confirmedIdx >= 0 ? confirmedIdx + 1 : 0, 0, support);
   }
 
-  // Step 2: move Deadlines after Support Network (or after Eligible Programs if no support)
+  // Move Deadlines after Support Network (or after confirmed programs if no support).
   const deadlinesIdx = ordered.findIndex(
     (s) => s.title === "Upcoming Deadlines Near This Address",
   );
   if (deadlinesIdx >= 0) {
     const [deadlines] = ordered.splice(deadlinesIdx, 1);
-    const anchorIdx = ordered.findIndex(
-      (s) => s.title === "Your Support Network" || s.title === "Eligible Incentive Programs",
+    const supportAnchorIdx = ordered.findIndex((s) => s.title === "Your Support Network");
+    const confirmedAnchorIdx = ordered.reduce(
+      (lastIndex, section, index) =>
+        confirmedSectionTitles.has(section.title) ? index : lastIndex,
+      -1,
     );
+    const anchorIdx = supportAnchorIdx >= 0 ? supportAnchorIdx : confirmedAnchorIdx;
     // Insert after the anchor, or at position 1 if neither found
     ordered.splice(anchorIdx >= 0 ? anchorIdx + 1 : 1, 0, deadlines);
   }
@@ -832,8 +865,16 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
   coverY = Math.max(coverY + 5, 180);
   doc.setFontSize(8);
   setColor(doc, "#FFFFFF40");
-  if (report.metadata?.industry) doc.text(`Industry: ${report.metadata.industry}`, MARGIN, coverY);
-  if (report.metadata?.zoneClass) { coverY += 6; doc.text(`Zoning: ${report.metadata.zoneClass}`, MARGIN, coverY); }
+  if (report.metadata?.industry) {
+    doc.text(`Industry: ${report.metadata.industry}`, MARGIN, coverY);
+    coverY += 6;
+  }
+  if (report.metadata?.projectType) {
+    const goalLabel = PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType;
+    doc.text(`Primary goal: ${goalLabel}`, MARGIN, coverY);
+    coverY += 6;
+  }
+  if (report.metadata?.zoneClass) doc.text(`Zoning: ${report.metadata.zoneClass}`, MARGIN, coverY);
 
   doc.setFontSize(8);
   setColor(doc, "#FFFFFF40");
@@ -928,7 +969,9 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
       setColor(doc, NAVY);
       doc.text(item.label, MARGIN + 6, y);
 
-      if (item.value) {
+      const hasGroupedDetail = Boolean(item.detailGroups?.length);
+
+      if (item.value && !hasGroupedDetail) {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
         setColor(doc, MEDIUM_GRAY);
@@ -936,12 +979,61 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
         doc.text(item.value, W - MARGIN - valW, y);
       }
 
-      if (item.detail) {
+      if (hasGroupedDetail && item.detailGroups) {
+        if (item.value) {
+          y += 4;
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(7);
+          setColor(doc, MEDIUM_GRAY);
+          y += wrapText(doc, item.value, MARGIN + 6, y, CONTENT_W - 10, 3.5);
+        }
+
+        for (const group of item.detailGroups) {
+          y = checkPage(doc, y + 3, 12);
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(7);
+          setColor(doc, NAVY);
+          doc.text(group.label, MARGIN + 6, y);
+          y += 4;
+
+          for (const entry of group.items) {
+            y = checkPage(doc, y, 8);
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(7);
+            setColor(doc, MEDIUM_GRAY);
+            doc.text("\u2022", MARGIN + 8, y);
+            y += wrapText(doc, entry, MARGIN + 13, y, CONTENT_W - 17, 3.5);
+          }
+        }
+
+        if (item.detailCaveat) {
+          y = checkPage(doc, y + 3, 10);
+          doc.setFont("helvetica", "italic");
+          doc.setFontSize(6.5);
+          setColor(doc, LIGHT_GRAY);
+          y += wrapText(doc, item.detailCaveat, MARGIN + 6, y, CONTENT_W - 10, 3.3);
+        }
+      } else if (item.detail) {
         y += 4;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
         setColor(doc, LIGHT_GRAY);
         y += wrapText(doc, item.detail, MARGIN + 6, y, CONTENT_W - 10, 3.5);
+      }
+
+      if (item.projectFit && item.projectFit.level !== "location-only") {
+        y = checkPage(doc, y + 3, 9);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(6.5);
+        setColor(doc, item.projectFit.level === "industry-check" ? AMBER : BLUE);
+        y += wrapText(
+          doc,
+          `${item.projectFit.label}. ${item.projectFit.reason}`,
+          MARGIN + 6,
+          y,
+          CONTENT_W - 10,
+          3.3,
+        );
       }
 
       const provenanceStartY = y + 3;

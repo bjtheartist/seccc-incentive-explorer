@@ -32,6 +32,15 @@ import {
   type AvailabilityState,
   type ResolveAvailabilityOpts,
 } from "./program-gating";
+import {
+  compareProjectGoalFit,
+  isProjectGoalMatch,
+  orderProgramCheckResultsByProjectGoal,
+  projectGoalFit,
+  projectGoalLabel,
+  summarizeProjectFit,
+} from "./project-fit";
+import type { ProjectFit, ProjectFitSummary } from "./project-fit";
 
 // ─── Local Types ────────────────────────────────────────────────────
 
@@ -83,10 +92,19 @@ export interface ReportSection {
   items: ReportItem[];
 }
 
+export interface ReportDetailGroup {
+  id: string;
+  label: string;
+  items: string[];
+}
+
 export interface ReportItem {
   label: string;
   value: string;
   detail?: string;
+  detailGroups?: ReportDetailGroup[];
+  detailCaveat?: string;
+  projectFit?: ProjectFitSummary;
   programId?: string;
   color?: string;
   whoQualifies?: string;
@@ -223,14 +241,6 @@ export interface NeighborhoodEconomicContext {
   limitations?: string[];
 }
 
-export interface BenefitEstimate {
-  programId: string;
-  programName: string;
-  estimatedValue: number;
-  label: string;
-  color?: string;
-}
-
 export interface ActionRoadmapItem {
   tier: "do-this-week" | "start-gathering" | "worth-exploring";
   programId?: string;
@@ -271,12 +281,6 @@ export interface GeneratedReport {
     corridorLabel?: string;
   };
   executiveSummary?: ExecutiveSummary;
-  benefitEstimates?: {
-    total: number;
-    totalFormatted: string;
-    budgetRange: string;
-    items: BenefitEstimate[];
-  };
   actionRoadmap?: ActionRoadmapItem[];
   verdict?: {
     signal: "strong" | "moderate" | "limited";
@@ -327,152 +331,35 @@ export interface GeneratedReport {
   dataSources?: DataSourceCitation[];
 }
 
-// ─── Budget Median Mapping ──────────────────────────────────────────
-
-const BUDGET_MEDIANS: Record<string, number> = {
-  "Under $100K": 50_000,
-  "$100K-$500K": 300_000,
-  "$500K-$2M": 1_000_000,
-  "$2M-$10M": 5_000_000,
-  "Over $10M": 15_000_000,
-  // Wizard step option IDs (kebab-case) mapped to same values
-  "under-100k": 50_000,
-  "100k-500k": 300_000,
-  "500k-2m": 1_000_000,
-  "2m-10m": 5_000_000,
-  "over-10m": 15_000_000,
-};
-
-/**
- * Credit percentage assumptions per program type.
- * These are simplified estimates for reporting purposes.
- */
-const CREDIT_PERCENTAGES: Record<string, { pct: number; label: string; cap?: number }> = {
-  federalOZ: { pct: 0, label: "Tax deferral/exclusion depends on Qualified Opportunity Fund structure" },
-  illinoisOZ: { pct: 0, label: "Illinois OZ record is a discovery/stacking reference, not a separate state credit" },
-  tif: { pct: 0.25, label: "Up to 25% of rehab costs" },
-  sbif: { pct: 0.9, label: "Up to 90% reimbursement; caps vary by property type", cap: 250_000 },
-  enterprise: { pct: 0.1, label: "~10% via sales/utility tax exemptions" },
-  edge: { pct: 0.1, label: "~10% income tax credit over agreement term" },
-  rev: { pct: 0.2, label: "Up to 20% income tax credit" },
-  micro: { pct: 0.2, label: "Up to 20% income tax credit" },
-  dataCenter: { pct: 0.1, label: "~10% via sales tax exemptions on equipment" },
-  cpace: { pct: 0.15, label: "~15% savings via long-term PACE financing" },
-  class7a: { pct: 0.35, label: "~35% property tax reduction over 12 years" },
-  landBank: { pct: 0.3, label: "~30% savings on discounted land acquisition" },
-  highUnemployment: { pct: 0.08, label: "~8% via WOTC and workforce credits" },
-  catalystGrant: { pct: 0.2, label: "Up to 20% grant on eligible costs" },
-  nmtcEligible: { pct: 0.39, label: "Up to 39% NMTC over 7 years" },
-  nrhpDistricts: { pct: 0.2, label: "20% Federal Historic Tax Credit" },
-  landmarkDistricts: { pct: 0.1, label: "~10% local preservation incentive" },
-  smallBizSource: { pct: 0, label: "Free advising (no direct credit)" },
-  workforceSolutions: { pct: 0, label: "Training/upskilling grant; award size varies by NOFO and project" },
-  ssa: { pct: 0.02, label: "~2% via shared marketing/services" },
-};
-
-// ─── Helpers ────────────────────────────────────────────────────────
-
-export function formatDollars(amount: number): string {
-  if (amount >= 1_000_000) {
-    return `$${(amount / 1_000_000).toFixed(amount % 1_000_000 === 0 ? 0 : 1)}M`;
-  }
-  if (amount >= 1_000) {
-    return `$${(amount / 1_000).toFixed(0)}K`;
-  }
-  return `$${amount.toFixed(0)}`;
-}
-
-/**
- * Estimate the dollar value of a credit program for a given budget range.
- */
-export function estimateCreditValue(
-  creditId: string,
-  budgetRange: string,
-): string {
-  const median = BUDGET_MEDIANS[budgetRange];
-  if (!median) return "Budget range not specified";
-
-  const creditInfo = CREDIT_PERCENTAGES[creditId];
-  if (!creditInfo || creditInfo.pct === 0) {
-    return creditInfo?.label || "Contact for details";
-  }
-
-  const raw = median * creditInfo.pct;
-  const capped = creditInfo.cap ? Math.min(raw, creditInfo.cap) : raw;
-  const pctDisplay = Math.round(creditInfo.pct * 100);
-
-  return `${pctDisplay}% of ${formatDollars(median)} = ${formatDollars(capped)}`;
-}
-
-/**
- * Human-readable value framing for a program's modeled credit assumption
- * ("Up to 90% reimbursement; caps vary by property type"). Returns null for
- * programs without a modeled percentage. Estimates only — never an
- * eligibility determination.
- */
-export function programValueTeaser(programId: string): string | null {
-  const info = CREDIT_PERCENTAGES[programId];
-  if (!info || info.pct === 0) return null;
-  return info.label;
-}
-
-export interface ProgramsValueEstimate {
-  total: number;
-  totalFormatted: string;
-  items: {
-    programId: string;
-    programName: string;
-    estimatedValue: number;
-    estimatedValueFormatted: string;
-    label: string;
-  }[];
-}
-
-/**
- * Planning-level total across a set of programs for a budget range — the same
- * math the refined report's Benefit Estimates section uses. Estimates only;
- * every program requires verification with its administrator.
- */
-export function estimateProgramsValue(
-  programs: { id: string; name: string }[],
-  budgetRange: string,
-): ProgramsValueEstimate | null {
-  const median = BUDGET_MEDIANS[budgetRange];
-  if (!median) return null;
-
-  const items: ProgramsValueEstimate["items"] = [];
-  let total = 0;
-  for (const p of programs) {
-    const info = CREDIT_PERCENTAGES[p.id];
-    if (!info || info.pct === 0) continue;
-    const raw = median * info.pct;
-    const capped = info.cap ? Math.min(raw, info.cap) : raw;
-    total += capped;
-    items.push({
-      programId: p.id,
-      programName: p.name,
-      estimatedValue: capped,
-      estimatedValueFormatted: formatDollars(capped),
-      label: info.label,
-    });
-  }
-
-  if (items.length === 0) return null;
-  return { total, totalFormatted: formatDollars(total), items };
-}
-
 export const CONFIRMED_PROGRAMS_SECTION_TITLE = "Eligible Incentive Programs";
+export const GOAL_MATCH_PROGRAMS_SECTION_TITLE = "Best Matches for Your Goal";
+export const OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE = "Other Programs Tied to This Address";
+
+const CONFIRMED_PROGRAMS_SECTION_TITLES = new Set([
+  CONFIRMED_PROGRAMS_SECTION_TITLE,
+  GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+  OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+]);
 
 /** Address-confirmed programs surfaced by a generated report (id + name). */
 export function confirmedProgramsFromReport(
   report: GeneratedReport,
 ): { id: string; name: string }[] {
-  const section = report.sections?.find(
-    (s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE,
+  const sections = report.sections?.filter((section) =>
+    CONFIRMED_PROGRAMS_SECTION_TITLES.has(section.title),
   );
-  if (!section) return [];
-  return section.items
+  if (!sections?.length) return [];
+
+  const seen = new Set<string>();
+  return sections
+    .flatMap((section) => section.items)
     .filter((item) => Boolean(item.programId))
+    .filter((item) => {
+      const id = item.programId as string;
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
+    })
     .map((item) => ({ id: item.programId as string, name: item.label }));
 }
 
@@ -533,7 +420,7 @@ function buildProjectIntakeSection(state: WizardState): ReportSection | null {
 
   if (state.projectType) {
     items.push({
-      label: isVacancy ? "Project Focus" : "Project Type",
+      label: isVacancy ? "Project Focus" : "Primary Goal",
       value: PROJECT_TYPE_LABELS[state.projectType] || state.projectType,
     });
   }
@@ -716,6 +603,7 @@ function programReportItem(
   program: Program,
   confidenceMap?: Map<string, ProgramCheckResult>,
   gatingOpts?: ResolveAvailabilityOpts,
+  fit?: ProjectFit,
 ): ReportItem {
   const cr = confidenceMap?.get(program.id);
   // 'expired' programs are filtered out before sections are built
@@ -745,6 +633,7 @@ function programReportItem(
     whyOneLine: cr?.whyOneLine,
     notVerified: cr?.notVerified,
     matchedRules: cr?.matchedRules,
+    projectFit: summarizeProjectFit(fit),
     lastVerifiedAt: program.lastVerifiedAt,
     isStale: isStaleProgramData(program),
     sourceLabel: program.zoneKey ? (ZONE_LABELS[program.zoneKey] || program.zoneKey) : "Official source",
@@ -759,10 +648,13 @@ function sortProgramItems(
   programs: Program[],
   zones?: Record<string, boolean>,
   confidenceMap?: Map<string, ProgramCheckResult>,
+  projectFitMap?: Map<string, ProjectFit | undefined>,
 ): Program[] {
   return [...programs].sort((a, b) => {
     const zoneDiff = Number(!hasAddressZoneMatch(a, zones)) - Number(!hasAddressZoneMatch(b, zones));
     if (zoneDiff !== 0) return zoneDiff;
+    const fitDiff = compareProjectGoalFit(projectFitMap?.get(a.id), projectFitMap?.get(b.id));
+    if (fitDiff !== 0) return fitDiff;
     const confidenceDiff = confidenceRank(confidenceMap?.get(a.id)?.confidence) - confidenceRank(confidenceMap?.get(b.id)?.confidence);
     if (confidenceDiff !== 0) return confidenceDiff;
     return a.name.localeCompare(b.name);
@@ -773,8 +665,11 @@ function sortExploratoryProgramItems(
   programs: Program[],
   zones?: Record<string, boolean>,
   confidenceMap?: Map<string, ProgramCheckResult>,
+  projectFitMap?: Map<string, ProjectFit | undefined>,
 ): Program[] {
-  return sortProgramItems(programs, zones, confidenceMap).sort((a, b) => {
+  return sortProgramItems(programs, zones, confidenceMap, projectFitMap).sort((a, b) => {
+    const fitDiff = compareProjectGoalFit(projectFitMap?.get(a.id), projectFitMap?.get(b.id));
+    if (fitDiff !== 0) return fitDiff;
     const aCountyRank = countyExploratoryRank(a);
     const bCountyRank = countyExploratoryRank(b);
     if (aCountyRank != null || bCountyRank != null) {
@@ -1879,8 +1774,25 @@ function generateLocationIncentives(
     : [];
   const confidenceMap = new Map<string, ProgramCheckResult>();
   for (const r of confidenceResults) confidenceMap.set(r.programId, r);
-  const confirmedPrograms = sortProgramItems(zoneBased, zones, confidenceMap);
-  const exploratoryPrograms = sortExploratoryProgramItems(discoveryOnly, zones, confidenceMap);
+  const projectFitMap = new Map<string, ProjectFit | undefined>(
+    industryRelevant.map((program) => [
+      program.id,
+      projectGoalFit(program, state.projectType, state.industry),
+    ]),
+  );
+  const confirmedPrograms = sortProgramItems(zoneBased, zones, confidenceMap, projectFitMap);
+  const exploratoryPrograms = sortExploratoryProgramItems(
+    discoveryOnly,
+    zones,
+    confidenceMap,
+    projectFitMap,
+  );
+  const goalMatchedPrograms = state.projectType
+    ? confirmedPrograms.filter((program) => isProjectGoalMatch(projectFitMap.get(program.id)))
+    : [];
+  const otherConfirmedPrograms = goalMatchedPrograms.length > 0
+    ? confirmedPrograms.filter((program) => !isProjectGoalMatch(projectFitMap.get(program.id)))
+    : [];
 
   // ── Static TIF/SBIF context (loaded once; reused by program gating notes,
   //    the TIF financial enrichment, and the deadlines section below) ──
@@ -1930,20 +1842,44 @@ function generateLocationIncentives(
     }
   }
 
-  // §03 Eligible Incentive Programs — address-confirmed by zone match
+  // §03 Address-confirmed programs, with project fit kept separate from location eligibility.
   if (confirmedPrograms.length > 0) {
-    sections.push({
-      title: CONFIRMED_PROGRAMS_SECTION_TITLE,
-      description: "Programs matched to this address through active incentive-zone boundaries, ordered by eligibility confidence.",
-      items: confirmedPrograms.map((p) => programReportItem(p, confidenceMap, gatingOpts)),
-    });
+    if (goalMatchedPrograms.length > 0) {
+      const goalLabel = projectGoalLabel(state.projectType);
+      sections.push({
+        title: GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+        description: `Programs tied to this address and prioritized for the selected goal: ${goalLabel}. Project fit changes ordering, not eligibility status.`,
+        items: goalMatchedPrograms.map((program) =>
+          programReportItem(program, confidenceMap, gatingOpts, projectFitMap.get(program.id)),
+        ),
+      });
+      if (otherConfirmedPrograms.length > 0) {
+        sections.push({
+          title: OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+          description: `Other programs connected to this address that do not directly target ${goalLabel.toLowerCase()} or still need industry confirmation.`,
+          items: otherConfirmedPrograms.map((program) =>
+            programReportItem(program, confidenceMap, gatingOpts, projectFitMap.get(program.id)),
+          ),
+        });
+      }
+    } else {
+      sections.push({
+        title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+        description: "Programs matched to this address through active incentive-zone boundaries, ordered by eligibility confidence.",
+        items: confirmedPrograms.map((program) =>
+          programReportItem(program, confidenceMap, gatingOpts, projectFitMap.get(program.id)),
+        ),
+      });
+    }
   }
 
   if (exploratoryPrograms.length > 0) {
     sections.push({
       title: "Additional Programs to Explore",
       description: "Programs not confirmed by this address alone, including Cook County tools that may apply countywide but still need project, property, and administrator review.",
-      items: exploratoryPrograms.slice(0, 8).map((p) => programReportItem(p, confidenceMap, gatingOpts)),
+      items: exploratoryPrograms.slice(0, 8).map((program) =>
+        programReportItem(program, confidenceMap, gatingOpts, projectFitMap.get(program.id)),
+      ),
     });
   }
 
@@ -2077,52 +2013,20 @@ function generateLocationIncentives(
     // Corridor Context section (omitted entirely when no data)
   }
 
-  // ── Benefit Estimates ──────────────────────────────────────────────
-  let benefitEstimates: GeneratedReport["benefitEstimates"] | undefined;
-
-  if (state.budgetRange) {
-    const budgetMedian = BUDGET_MEDIANS[state.budgetRange];
-    if (budgetMedian) {
-      let totalEstimate = 0;
-      const items: BenefitEstimate[] = [];
-
-      for (const p of confirmedPrograms) {
-        const creditInfo = CREDIT_PERCENTAGES[p.id];
-        if (!creditInfo || creditInfo.pct === 0) continue;
-        const raw = budgetMedian * creditInfo.pct;
-        const capped = creditInfo.cap ? Math.min(raw, creditInfo.cap) : raw;
-        totalEstimate += capped;
-        items.push({
-          programId: p.id,
-          programName: p.name,
-          estimatedValue: capped,
-          label: creditInfo.label,
-          
-        });
-      }
-
-      if (items.length > 0) {
-        benefitEstimates = {
-          total: totalEstimate,
-          totalFormatted: formatDollars(totalEstimate),
-          budgetRange: state.budgetRange,
-          items,
-        };
-      }
-    }
-  }
-
   // ── Action Roadmap ("Your Next Steps") ──────────────────────────
   const actionRoadmap: ActionRoadmapItem[] = [];
-  const topPrograms = confirmedPrograms.slice(0, 2);
+  const topPrograms = (goalMatchedPrograms.length > 0 ? goalMatchedPrograms : confirmedPrograms).slice(0, 2);
 
   // Tier 1: "Do This Week" — top 2 programs with full contact + call script
   for (const p of topPrograms) {
     const contact = p.contacts?.[0];
     const addressDisplay = state.address || "my address";
     const zoneName = p.zoneKey ? (zoneNames?.[p.zoneKey] || ZONE_LABELS[p.zoneKey] || p.zoneKey) : "";
+    const goalContext = state.projectType
+      ? ` with a focus on ${projectGoalLabel(state.projectType).toLowerCase()}`
+      : "";
     const callScript = contact
-      ? `"Hi, I'm at ${addressDisplay}${zoneName ? ` in ${zoneName}` : ""}. I'd like to learn about ${p.name} for my ${getIndustryName(state.industry).toLowerCase()}${getIndustryName(state.industry).toLowerCase().includes("business") ? "" : " business"}."`
+      ? `"Hi, I'm at ${addressDisplay}${zoneName ? ` in ${zoneName}` : ""}. I'd like to learn about ${p.name} for my ${getIndustryName(state.industry).toLowerCase()}${getIndustryName(state.industry).toLowerCase().includes("business") ? "" : " business"}${goalContext}."`
       : undefined;
 
     actionRoadmap.push({
@@ -2180,8 +2084,8 @@ function generateLocationIncentives(
   const stackingContext = stackingAnalysis
     ? ` Your ${stackingAnalysis.zoneCount}-zone overlap places you in the ${stackingAnalysis.percentileLabel} of Chicago locations for incentive density.`
     : "";
-  const dollarSummary = benefitEstimates
-    ? ` Based on a ${state.budgetRange} budget, we estimate ~${benefitEstimates.totalFormatted} in total potential incentives.`
+  const projectGoalSummary = state.projectType
+    ? ` Recommendations are prioritized for the selected goal: ${projectGoalLabel(state.projectType)}.`
     : "";
 
   return {
@@ -2189,7 +2093,7 @@ function generateLocationIncentives(
     subtitle: `Location-based analysis for ${getIndustryName(state.industry)}`,
     reportType: "location-incentives",
     generatedAt: new Date().toISOString(),
-    summary: `${verdict?.headline || "Incentive analysis complete"}. Your address at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}, matching ${confirmedPrograms.length} address-confirmed program${confirmedPrograms.length !== 1 ? "s" : ""}.${exploratoryPrograms.length > 0 ? ` ${exploratoryPrograms.length} additional program${exploratoryPrograms.length !== 1 ? "s" : ""} appear as discovery next steps.` : ""}${stackingContext}${dollarSummary} The sections below are organized from key findings to detailed evidence.`,
+    summary: `${verdict?.headline || "Incentive analysis complete"}. Your address at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}, matching ${confirmedPrograms.length} address-confirmed program${confirmedPrograms.length !== 1 ? "s" : ""}.${exploratoryPrograms.length > 0 ? ` ${exploratoryPrograms.length} additional program${exploratoryPrograms.length !== 1 ? "s" : ""} appear as discovery next steps.` : ""}${projectGoalSummary}${stackingContext} The sections below are organized from key findings to detailed evidence.`,
     sections,
     recommendedActions: recommendedActions.slice(0, 4),
     metadata: {
@@ -2200,7 +2104,6 @@ function generateLocationIncentives(
       budgetRange: state.budgetRange || undefined,
       projectType: state.projectType || undefined,
     },
-    benefitEstimates,
     actionRoadmap,
     verdict,
     marketContext,
@@ -2757,7 +2660,6 @@ function generateDeveloperAnalysis(
   const creditsToAnalyze = state.creditsToAnalyze || [];
   const budgetRange = state.budgetRange || "";
   const projectType = state.projectType || "Commercial development";
-  const budgetMedian = BUDGET_MEDIANS[budgetRange] || 0;
 
   // Resolve credit IDs to programs
   const creditPrograms = creditsToAnalyze
@@ -2767,18 +2669,11 @@ function generateDeveloperAnalysis(
   const sections: ReportSection[] = [];
 
   // Section 1: Incentive Pathway Review
-  const stackingItems: ReportItem[] = creditPrograms.map((p) => {
-    const creditInfo = CREDIT_PERCENTAGES[p.id];
-    const valueDisplay = budgetMedian > 0
-      ? estimateCreditValue(p.id, budgetRange)
-      : (p.benefitRange || "Contact for details");
-
-    return {
-      ...programReportItem(p),
-      value: valueDisplay,
-      detail: creditInfo?.label || p.summary,
-    };
-  });
+  const stackingItems: ReportItem[] = creditPrograms.map((program) => ({
+    ...programReportItem(program),
+    value: program.benefitRange || "Review published program details",
+    detail: program.summary,
+  }));
 
   sections.push({
     title: "Incentive Pathway Review",
@@ -3426,46 +3321,85 @@ function buildLogisticsAccessItem(transport: TransportAccess): ReportItem {
   };
 }
 
-function pointList(points: MobilityAccessPoint[], limit = 3): string {
-  return points
-    .slice(0, limit)
-    .map((point) => {
-      const routes = point.routes?.length ? ` routes ${point.routes.slice(0, 4).join(", ")}` : "";
-      return `${point.name}${routes} (${formatMiles(point.miles)})`;
-    })
-    .join(" · ");
+function humanizeTransportationName(value: string): string {
+  const letters = value.match(/[A-Za-z]/g) || [];
+  if (letters.length === 0) return value;
+  const uppercaseRatio = letters.filter((letter) => letter === letter.toUpperCase()).length / letters.length;
+  if (uppercaseRatio < 0.75) return value;
+
+  const uppercaseTokens = new Set(["n", "s", "e", "w", "cta", "bnsf", "ri", "csx"]);
+  const lowercaseTokens = new Set(["to", "on", "and", "of"]);
+
+  return value.toLowerCase().replace(/\b[a-z0-9]+\b/g, (token) => {
+    if (uppercaseTokens.has(token)) return token.toUpperCase();
+    if (lowercaseTokens.has(token)) return token;
+    if (/^\d+(st|nd|rd|th)$/.test(token)) return token;
+    return token.charAt(0).toUpperCase() + token.slice(1);
+  });
 }
 
-function lineList(lines: MobilityAccessLine[], limit = 3): string {
-  return lines
-    .slice(0, limit)
-    .map((line) => {
-      const routeType = line.routeType ? `${line.routeType} on ` : "";
-      return `${routeType}${line.name} (${formatMiles(line.miles)})`;
-    })
-    .join(" · ");
+function formatAccessPointName(point: MobilityAccessPoint): string {
+  const name = humanizeTransportationName(point.name);
+  if (point.category !== "cta_rail") return name;
+  return name.replace(/\(([^)]+)\)$/, (match, line: string) =>
+    /line$/i.test(line) ? match : `(${line} Line)`,
+  );
+}
+
+function formatAccessPointRoutes(point: MobilityAccessPoint): string | null {
+  const routes = point.routes?.slice(0, 4) || [];
+  if (routes.length === 0) return null;
+  if (point.category === "bus_stop") {
+    return `${routes.length === 1 ? "Route" : "Routes"} ${routes.join(", ")}`;
+  }
+  if (point.category === "metra") {
+    return routes.map((route) => (/line$/i.test(route) ? route : `${route} Line`)).join(", ");
+  }
+  return routes.join(", ");
+}
+
+function pointEntries(points: MobilityAccessPoint[], limit = 3): string[] {
+  return points.slice(0, limit).map((point) =>
+    [formatAccessPointName(point), formatAccessPointRoutes(point), formatMiles(point.miles)]
+      .filter(Boolean)
+      .join(" · "),
+  );
+}
+
+function lineEntries(lines: MobilityAccessLine[], limit = 3): string[] {
+  return lines.slice(0, limit).map((line) =>
+    [
+      line.routeType ? humanizeTransportationName(line.routeType) : null,
+      humanizeTransportationName(line.name),
+      formatMiles(line.miles),
+    ]
+      .filter(Boolean)
+      .join(" · "),
+  );
 }
 
 function buildTransportationSiteAccessItem(mobility: MobilityAccess): ReportItem {
-  const detailLines = [
-    mobility.ctaRailStations.length ? `CTA rail: ${pointList(mobility.ctaRailStations)}` : null,
-    mobility.busStops.length ? `CTA bus: ${pointList(mobility.busStops)}` : null,
-    mobility.metraStations.length ? `Metra: ${pointList(mobility.metraStations)}` : null,
-    mobility.bikeRoutes.length ? `Bike routes: ${lineList(mobility.bikeRoutes)}` : null,
-    mobility.expressways.length ? `Drive access: ${lineList(mobility.expressways)}` : null,
-    mobility.airports.length ? `Airports: ${pointList(mobility.airports, 2)}` : null,
-    mobility.freightRail.length ? `Freight rail: ${lineList(mobility.freightRail)}` : null,
-    ...(mobility.caveats.length
-      ? [mobility.caveats[0]]
-      : ["Distances are straight-line proximity signals; verify travel time and site access before relying on them."]),
-  ].filter(Boolean) as string[];
+  const detailGroups: ReportDetailGroup[] = [
+    { id: "cta-rail", label: "CTA rail", items: pointEntries(mobility.ctaRailStations) },
+    { id: "cta-bus", label: "CTA bus", items: pointEntries(mobility.busStops) },
+    { id: "metra", label: "Metra", items: pointEntries(mobility.metraStations) },
+    { id: "bike-routes", label: "Bike routes", items: lineEntries(mobility.bikeRoutes) },
+    { id: "drive-access", label: "Drive access", items: lineEntries(mobility.expressways) },
+    { id: "airports", label: "Airports", items: pointEntries(mobility.airports, 2) },
+    { id: "freight-rail", label: "Freight rail", items: lineEntries(mobility.freightRail) },
+  ].filter((group) => group.items.length > 0);
+  const detailCaveat = mobility.caveats[0]
+    || "Distances are straight-line proximity signals; verify travel time and site access before relying on them.";
+  const detailLines = detailGroups.map((group) => `${group.label}: ${group.items.join(" · ")}`);
 
   return {
     label: "Transportation & Site Access",
     value: [mobility.transitLabel, mobility.bikeLabel, mobility.driveLabel]
       .filter(Boolean)
       .join(" · "),
-    detail: detailLines.join("\n"),
+    detail: [...detailLines, detailCaveat].join("\n"),
+    detailGroups,
+    detailCaveat,
     sourceLabel: "Public mobility and transportation access sources",
   };
 }
@@ -3812,7 +3746,32 @@ export function generateReportData(
   if (zones && zoneNames && reportType !== "program-explorer") {
     // Run confidence engine once for exec summary (lightweight — it's already cached in location-incentives)
     const execResults = runConfidenceEngine(programs, zones, zoneNames, undefined, ctx.parcel);
-    report.executiveSummary = generateExecutiveSummary(programs, zones, zoneNames, undefined, execResults);
+    const orderedExecResults = state.projectType
+      ? orderProgramCheckResultsByProjectGoal(execResults, state.projectType, state.industry)
+      : execResults;
+    report.executiveSummary = generateExecutiveSummary(
+      programs,
+      zones,
+      zoneNames,
+      undefined,
+      orderedExecResults,
+    );
+    if (state.projectType && report.executiveSummary) {
+      const goalLabel = projectGoalLabel(state.projectType);
+      report.executiveSummary.projectGoalLabel = goalLabel;
+      report.executiveSummary.topPrograms = report.executiveSummary.topPrograms.map((program) => {
+        const sourceProgram = programs.find((candidate) => candidate.id === program.programId);
+        const fit = sourceProgram
+          ? projectGoalFit(sourceProgram, state.projectType, state.industry)
+          : undefined;
+        return {
+          ...program,
+          projectFitLabel: isProjectGoalMatch(fit) ? fit?.label : undefined,
+          projectFitReason: isProjectGoalMatch(fit) ? fit?.reason : undefined,
+        };
+      });
+      report.executiveSummary.whyTheseMatter = `These programs are ordered for the selected goal: ${goalLabel}. ${report.executiveSummary.whyTheseMatter}`;
+    }
   }
 
   return report;

@@ -141,25 +141,25 @@ export const BUDGET_RANGE_OPTIONS: StepOption[] = [
   { id: "over-10m", label: "Over $10M" },
 ];
 
-const PROJECT_TYPE_OPTIONS: StepOption[] = [
+export const SITE_PROJECT_TYPE_OPTIONS: StepOption[] = [
   {
     id: "rehab",
-    label: "Rehabilitation / renovation",
+    label: "Remodel or renovate",
     description: "Renovating or adaptively reusing an existing structure.",
   },
   {
     id: "expansion",
-    label: "Expansion",
+    label: "Expand current operations",
     description: "Growing into more space, adding capacity, or expanding operations.",
   },
   {
     id: "equipment",
-    label: "Equipment purchase",
+    label: "Buy equipment",
     description: "Buying machinery, fixtures, vehicles, technology, or other equipment.",
   },
   {
     id: "hiring",
-    label: "Hiring / workforce",
+    label: "Hire or retain employees",
     description: "Creating or retaining jobs, training staff, or building a hiring plan.",
   },
   {
@@ -194,7 +194,7 @@ const PROJECT_TYPE_OPTIONS: StepOption[] = [
   },
   {
     id: "other",
-    label: "Other / still scoping",
+    label: "Not sure yet",
     description: "Use this if the project is early or does not fit a single category.",
   },
 ];
@@ -232,7 +232,7 @@ export const PROPOSED_USE_OPTIONS: StepOption[] = [
 ];
 
 export const PROJECT_TYPE_LABELS = Object.fromEntries(
-  [...PROJECT_TYPE_OPTIONS, ...VACANCY_PROJECT_TYPE_OPTIONS].map((option) => [option.id, option.label])
+  [...VACANCY_PROJECT_TYPE_OPTIONS, ...SITE_PROJECT_TYPE_OPTIONS].map((option) => [option.id, option.label])
 ) as Record<string, string>;
 
 export const PROPOSED_USE_LABELS = Object.fromEntries(
@@ -402,7 +402,7 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   {
     id: "si-project-intake",
     title: "Tell us about the project",
-    subtitle: "Optional: a few scoping answers can refine the location snapshot into practical next steps.",
+    subtitle: "Choose the primary goal you want incentives to support. The remaining details are optional.",
     appliesTo: ["site-incentives"],
     inputType: "project-intake",
     stateKey: "projectType",
