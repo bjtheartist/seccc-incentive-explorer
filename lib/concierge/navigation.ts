@@ -49,6 +49,20 @@ export function resolveNavTarget(
     return { route: pathOnly, label };
   }
 
+  // Signed-in workspace deep-links the action tools point to. The packet id is a
+  // uuid-style string (gen_random_uuid()::text). Kept strict to clean id chars.
+  if (pathOnly === "/workspace/incentive-preparation/new") {
+    return { route: pathOnly, label };
+  }
+  const packetMatch = /^\/workspace\/incentive-preparation\/([a-z0-9-]+)$/.exec(pathOnly);
+  if (packetMatch) {
+    return { route: pathOnly, label };
+  }
+  const profileMatch = /^\/workspace\/business-profile(?:\/([a-z0-9-]+))?$/.exec(pathOnly);
+  if (profileMatch) {
+    return { route: pathOnly, label };
+  }
+
   return null;
 }
 

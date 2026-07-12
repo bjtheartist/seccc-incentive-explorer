@@ -18,16 +18,26 @@ import {
 import { resolveZonesAtPoint } from "@/lib/zones-check";
 import { resolveNavTarget } from "./navigation";
 import type { ConciergePageContext } from "./types";
+import {
+  buildConciergeActionTools,
+  type ConciergeActionDeps,
+} from "./action-tools";
 
 export interface ConciergeToolDeps {
   /** Page context the client sent with the request (echoed by getPageContext). */
   pageContext: ConciergePageContext;
   /** Called (best-effort) whenever a tool executes, for server-side telemetry. */
   onToolCall?: (toolName: string) => void;
+  /**
+   * Present ONLY for a signed-in user. When set, the approval-gated action tools
+   * (profile/packet updates, support-request draft) are merged into the same
+   * tool map. Guests (no `actions`) get exactly the Stage-1 read-only map.
+   */
+  actions?: ConciergeActionDeps;
 }
 
-export function buildConciergeTools({ pageContext, onToolCall }: ConciergeToolDeps) {
-  return {
+export function buildConciergeTools({ pageContext, onToolCall, actions }: ConciergeToolDeps) {
+  const readOnlyTools = {
     searchPrograms: tool({
       description:
         "Search the Chicago incentive program dataset by keyword (name, summary, who-qualifies, benefits). Use this first to find candidate programs. Returns sourced summaries with officialUrl.",
@@ -137,6 +147,15 @@ export function buildConciergeTools({ pageContext, onToolCall }: ConciergeToolDe
         };
       },
     }),
+  };
+
+  if (!actions) return readOnlyTools;
+
+  // Signed-in: merge the approval-gated action tools into the same map. The
+  // read-only tools stay auto-executing; only the action tools need approval.
+  return {
+    ...readOnlyTools,
+    ...buildConciergeActionTools({ ...actions, onToolCall }),
   };
 }
 
