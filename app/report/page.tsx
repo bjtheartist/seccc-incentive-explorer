@@ -1594,6 +1594,7 @@ function ReportWizardPage() {
           onQuickRefine={handleQuickRefine}
           quickRefineBusy={isGenerating}
           isInstantMode={isInstantMode && !hasRefinedInstantReport}
+          showPersonaLens={isInstantMode}
           wizardState={wizardState}
           onCompare={() => setCompareMode(true)}
           compareMode={compareMode}
@@ -3814,6 +3815,7 @@ function ReportDisplay({
   quickRefineBusy,
   refineContext,
   isInstantMode,
+  showPersonaLens,
   wizardState: reportWizardState,
   compact,
   onCompare,
@@ -3833,6 +3835,15 @@ function ReportDisplay({
   quickRefineBusy?: boolean;
   refineContext?: "instant" | "compare_a" | "compare_b";
   isInstantMode?: boolean;
+  /**
+   * Persona lens visibility (Tier 1b, BM4). Deliberately decoupled from
+   * isInstantMode: the page passes isInstantMode diminished by
+   * hasRefinedInstantReport (hiding the refine pitch after refining is
+   * intentional), but persona (audience) and goal (project outcome) are
+   * orthogonal — the lens must stay available on the goal-refined report the
+   * email gate funnels every real user into.
+   */
+  showPersonaLens?: boolean;
   wizardState?: WizardState;
   compact?: boolean;
   onCompare?: () => void;
@@ -3885,8 +3896,10 @@ function ReportDisplay({
     storePersona(next);
   }, []);
   const lensed = useMemo(
-    () => applyPersonaLens(report, persona).report,
-    [report, persona],
+    // Without visible chips there must be no invisible lens: a stored session
+    // persona must never silently reorder a report that can't show the row.
+    () => (showPersonaLens ? applyPersonaLens(report, persona).report : report),
+    [report, persona, showPersonaLens],
   );
 
   // ── TOC ──
@@ -4579,8 +4592,10 @@ function ReportDisplay({
             />
           )}
 
-          {/* ── Persona lens chips (Tier 1b, BM4) ── */}
-          {isInstantMode && !compact && (
+          {/* ── Persona lens chips (Tier 1b, BM4). Gated on showPersonaLens
+              (page-level instant mode), NOT the diminished isInstantMode prop,
+              so the lens survives the email gate's goal-refined report. ── */}
+          {showPersonaLens && !compact && (
             <PersonaChips
               persona={persona}
               onSelect={handlePersonaSelect}

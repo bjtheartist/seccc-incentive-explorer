@@ -172,6 +172,48 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     expect(workspaceFork).toContain("PersonaChips");
   });
 
+  // Live-smoke regression (2026-07-12): the email gate forces every real
+  // instant-flow user into a goal-refined report, and both call sites pass
+  // isInstantMode diminished by hasRefinedInstantReport — chips gated on that
+  // prop were unreachable in practice (visible behind the modal backdrop,
+  // gone after the gate). The chips must gate on a dedicated showPersonaLens
+  // prop fed from page-level (URL-derived) instant mode / the saved-report
+  // wizard shape. RefineValuePanel keeps the diminished prop by design.
+  it("chips gate on showPersonaLens (never the diminished isInstantMode) in both forks", () => {
+    expect(liveFork).toContain("{showPersonaLens && !compact && (");
+    expect(workspaceFork).toContain("{showPersonaLens && !compact && (");
+    expect(liveFork).not.toContain("{isInstantMode && !compact && (");
+    expect(workspaceFork).not.toContain("{isInstantMode && !compact && (");
+  });
+
+  it("the live flow feeds showPersonaLens from page-level instant mode, undiminished by hasRefinedInstantReport", () => {
+    // Post-email-gate state (hasRefinedInstantReport=true) keeps the chips:
+    // the prop must be the raw URL-derived isInstantMode.
+    expect(liveFork).toContain("showPersonaLens={isInstantMode}");
+    expect(liveFork).not.toContain(
+      "showPersonaLens={isInstantMode && !hasRefinedInstantReport}",
+    );
+  });
+
+  it("the saved-report page feeds showPersonaLens from the site-report wizard shape", () => {
+    const savedReportPage = readFileSync(
+      join(root, "app/workspace/reports/[id]/page.tsx"),
+      "utf8",
+    );
+    expect(savedReportPage).toContain(
+      "showPersonaLens={derivePersonaLensVisible(wizardState)}",
+    );
+  });
+
+  it("neither fork applies an invisible lens when the chips are hidden", () => {
+    // A stored session persona must never silently reorder a report that
+    // cannot render the chip row.
+    const guard =
+      "showPersonaLens ? applyPersonaLens(report, persona).report : report";
+    expect(liveFork).toContain(guard);
+    expect(workspaceFork).toContain(guard);
+  });
+
   it("both forks drive the on-screen body from the persona-lensed report", () => {
     expect(liveFork).toContain("lensed.sections");
     expect(workspaceFork).toContain("lensed.sections");

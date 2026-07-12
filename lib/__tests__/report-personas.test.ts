@@ -10,6 +10,8 @@ import {
 } from "@/lib/report-personas";
 import {
   CONFIRMED_PROGRAMS_SECTION_TITLE,
+  GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+  OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
 import { PERSONA_CHIPS, type PersonaId } from "@/lib/personas";
@@ -154,6 +156,73 @@ describe("applyPersonaLens", () => {
     expect(lensed.sections.some((s) => s.title === ALSO_AT_ADDRESS_TITLE)).toBe(false);
     expect(lensed.sections[0].items).toHaveLength(2);
     expect(matchedAfter).toBe(0);
+  });
+
+  it("composes with a goal-refined report: both confirmed sections partition into ONE combined disclosure", () => {
+    // The email gate funnels every real instant-flow user into the refined
+    // shape: "Best Matches for Your Goal" + "Other Programs Tied to This
+    // Address". Persona (audience) and goal (outcome) are orthogonal lenses —
+    // the persona lens must re-rank both sections and pool their out-of-lens
+    // programs into a single "Also at this address" after the last one.
+    const refined: GeneratedReport = {
+      ...reportFixture(),
+      sections: [
+        {
+          title: GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+          description: "",
+          items: [
+            { label: "SBIF", value: "", programId: "sbif" },
+            { label: "Federal OZ", value: "", programId: "federalOZ" },
+          ],
+        },
+        {
+          title: OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+          description: "",
+          items: [
+            { label: "TIF", value: "", programId: "tif" },
+            { label: "High Unemployment", value: "", programId: "highUnemployment" },
+          ],
+        },
+        {
+          title: "Neighborhood Economic Context",
+          description: "",
+          items: [{ label: "Median income", value: "$40,000" }],
+        },
+      ],
+    };
+
+    const { report: lensed, matchedBefore, matchedAfter } = applyPersonaLens(
+      refined,
+      "developer",
+    );
+
+    const titles = lensed.sections.map((s) => s.title);
+    // Exactly one combined disclosure, placed right after the last confirmed
+    // section (no duplicate "Also at this address" anchors in the DOM).
+    expect(titles.filter((t) => t === ALSO_AT_ADDRESS_TITLE)).toHaveLength(1);
+    expect(titles).toEqual([
+      GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+      OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+      ALSO_AT_ADDRESS_TITLE,
+      "Neighborhood Economic Context",
+    ]);
+
+    // Goal-ranked order is preserved inside each lensed section.
+    expect(lensed.sections[0].items.map((i) => i.programId)).toEqual(["federalOZ"]);
+    expect(lensed.sections[1].items.map((i) => i.programId)).toEqual(["tif"]);
+    const also = lensed.sections[2];
+    expect(also.collapsedByPersona).toBe(true);
+    expect(also.items.map((i) => i.programId)).toEqual([
+      "sbif",
+      "highUnemployment",
+    ]);
+
+    // Collapse-not-hide across the refined shape too.
+    expect(new Set(programIds(lensed))).toEqual(
+      new Set(["sbif", "federalOZ", "tif", "highUnemployment"]),
+    );
+    expect(matchedBefore).toBe(4);
+    expect(matchedAfter).toBe(2);
   });
 
   it("reorders the action roadmap so persona-relevant actions lead (all kept)", () => {

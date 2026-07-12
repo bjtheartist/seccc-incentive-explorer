@@ -8,7 +8,7 @@ import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { ReportDisplay } from "@/components/report/ReportDisplay";
 import type { GeneratedReport } from "@/lib/report-engine";
 import type { WizardState } from "@/lib/report-wizard-config";
-import { deriveIsInstantMode } from "@/lib/workspace";
+import { deriveIsInstantMode, derivePersonaLensVisible } from "@/lib/workspace";
 
 export default function SavedReportPage() {
   const params = useParams<{ id: string }>();
@@ -104,6 +104,9 @@ export default function SavedReportPage() {
         // preserved (audit RF1: isInstantMode was never passed here, so the
         // refine CTA could never render on a saved report).
         isInstantMode={deriveIsInstantMode(wizardState)}
+        // Persona lens stays available on goal-refined saved reports too —
+        // audience and goal are orthogonal (Tier 1b, BM4).
+        showPersonaLens={derivePersonaLensVisible(wizardState)}
         analyticsSource="workspace"
         onRefine={() => {
           if (wizardState?.lat != null && wizardState?.lon != null) {

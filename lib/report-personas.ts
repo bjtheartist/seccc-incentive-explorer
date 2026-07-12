@@ -242,6 +242,12 @@ export function applyPersonaLens(
 
   const matchedIds = new Set<string>();
   const nextSections: ReportSection[] = [];
+  // Refined reports carry TWO confirmed sections ("Best Matches for Your Goal"
+  // + "Other Programs Tied to This Address") — persona and goal are orthogonal
+  // lenses, so both are partitioned and their out-of-lens programs pool into a
+  // SINGLE combined "Also at this address" disclosure after the last one.
+  const alsoItems: ReportItem[] = [];
+  let lastConfirmedIndex = -1;
 
   for (const section of report.sections ?? []) {
     if (section.title === SUPPORT_NETWORK_TITLE) {
@@ -278,16 +284,22 @@ export function applyPersonaLens(
     // collapse the whole thing (a persona with zero hits still sees its list).
     if (matchedProgramCount === 0 || secondary.length === 0) {
       nextSections.push(section);
+      lastConfirmedIndex = nextSections.length - 1;
       continue;
     }
 
     nextSections.push({ ...section, items: primary });
-    nextSections.push({
+    lastConfirmedIndex = nextSections.length - 1;
+    alsoItems.push(...secondary);
+  }
+
+  if (alsoItems.length > 0) {
+    nextSections.splice(lastConfirmedIndex + 1, 0, {
       title: ALSO_AT_ADDRESS_TITLE,
       description: `Other programs tied to this address — outside the ${personaDescriptor(
         persona,
       )} lens. Nothing is removed; switch to All to rank them first.`,
-      items: secondary,
+      items: alsoItems,
       collapsedByPersona: true,
     });
   }

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildChecklist,
   deriveIsInstantMode,
+  derivePersonaLensVisible,
   goalLabel,
   GOAL_OPTIONS,
   isGoalType,
@@ -105,5 +106,49 @@ describe("deriveIsInstantMode (RF1 regression)", () => {
 
   it("is false when there is no saved wizard state at all", () => {
     expect(deriveIsInstantMode(undefined)).toBe(false);
+  });
+});
+
+describe("derivePersonaLensVisible (Tier 1b, BM4)", () => {
+  // Deliberately BROADER than deriveIsInstantMode: persona (audience) and
+  // goal (project outcome) are orthogonal lenses, so the chips stay on
+  // goal-refined site reports — the shape the email gate funnels every real
+  // instant-flow user into.
+
+  it("is true for a bare instant snapshot", () => {
+    expect(
+      derivePersonaLensVisible({
+        ...INITIAL_WIZARD_STATE,
+        reportType: "site-incentives",
+        address: "3039 E 91st St, Chicago, IL",
+        lat: 41.7327,
+        lon: -87.5563,
+      }),
+    ).toBe(true);
+  });
+
+  it("stays true on a goal-refined site report (where deriveIsInstantMode is false)", () => {
+    const refinedWizardState: WizardState = {
+      ...INITIAL_WIZARD_STATE,
+      reportType: "site-incentives",
+      address: "3039 E 91st St, Chicago, IL",
+      lat: 41.7327,
+      lon: -87.5563,
+      industry: "retail",
+      budgetRange: "100k-500k",
+      timeline: "0-6-months",
+    };
+    expect(deriveIsInstantMode(refinedWizardState)).toBe(false);
+    expect(derivePersonaLensVisible(refinedWizardState)).toBe(true);
+  });
+
+  it("is false for non-site report types and missing state", () => {
+    expect(
+      derivePersonaLensVisible({
+        ...INITIAL_WIZARD_STATE,
+        reportType: "dev-feasibility",
+      }),
+    ).toBe(false);
+    expect(derivePersonaLensVisible(undefined)).toBe(false);
   });
 });

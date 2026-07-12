@@ -849,6 +849,7 @@ export function ReportDisplay({
   onStartOver,
   onRefine,
   isInstantMode,
+  showPersonaLens,
   wizardState: reportWizardState,
   compact,
   onCompare,
@@ -865,6 +866,13 @@ export function ReportDisplay({
   onStartOver: () => void;
   onRefine?: () => void;
   isInstantMode?: boolean;
+  /**
+   * Persona lens visibility (Tier 1b, BM4). Deliberately decoupled from
+   * isInstantMode (which is snapshot-only — false on saved goal-refined
+   * reports): persona (audience) and goal (project outcome) are orthogonal
+   * lenses, so callers pass this for any location-anchored site report.
+   */
+  showPersonaLens?: boolean;
   wizardState?: WizardState;
   compact?: boolean;
   onCompare?: () => void;
@@ -918,8 +926,10 @@ export function ReportDisplay({
     storePersona(next);
   }, []);
   const lensed = useMemo(
-    () => applyPersonaLens(report, persona).report,
-    [report, persona],
+    // Without visible chips there must be no invisible lens: a stored session
+    // persona must never silently reorder a report that can't show the row.
+    () => (showPersonaLens ? applyPersonaLens(report, persona).report : report),
+    [report, persona, showPersonaLens],
   );
 
   // ── TOC ──
@@ -1500,8 +1510,10 @@ export function ReportDisplay({
             />
           )}
 
-          {/* ── Persona lens chips (Tier 1b, BM4) ── */}
-          {isInstantMode && !compact && (
+          {/* ── Persona lens chips (Tier 1b, BM4). Gated on showPersonaLens,
+              NOT isInstantMode (snapshot-only), so saved goal-refined reports
+              keep the lens too. ── */}
+          {showPersonaLens && !compact && (
             <PersonaChips
               persona={persona}
               onSelect={handlePersonaSelect}
