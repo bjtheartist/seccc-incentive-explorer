@@ -1,0 +1,270 @@
+import { afterEach, describe, expect, it, vi } from "vitest";
+import evalPrompts from "./eval-prompts.json";
+
+import {
+  DEFAULT_CONCIERGE_MODEL,
+  getConciergeModelId,
+  getGatewayApiKey,
+  isConciergeEnabled,
+} from "@/lib/concierge/config";
+import {
+  CONCIERGE_DISABLED_MESSAGE,
+  CONCIERGE_RESTING_MESSAGE,
+  CONCIERGE_SYSTEM_PROMPT,
+} from "@/lib/concierge/system-prompt";
+import { resolveNavTarget } from "@/lib/concierge/navigation";
+import {
+  __resetConciergeRateLimit,
+  checkConciergeRateLimit,
+} from "@/lib/concierge/rate-limit";
+import { CONCIERGE_RATE_LIMITS } from "@/lib/concierge/config";
+import { sanitizePageContext } from "@/lib/concierge/types";
+import {
+  getProgram,
+  searchPrograms,
+} from "@/lib/concierge/programs-index";
+import { buildConciergeTools } from "@/lib/concierge/tools";
+import { ANALYTICS_EVENT_TYPES } from "@/lib/analytics-events";
+
+const toolOpts = { toolCallId: "test", messages: [] } as never;
+
+afterEach(() => {
+  vi.unstubAllEnvs();
+  __resetConciergeRateLimit();
+});
+
+describe("concierge config / feature gating", () => {
+  it("is disabled unless CONCIERGE_ENABLED and a gateway key are both set", () => {
+    vi.stubEnv("CONCIERGE_ENABLED", "");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+    expect(isConciergeEnabled()).toBe(false);
+
+    vi.stubEnv("CONCIERGE_ENABLED", "true");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+    expect(isConciergeEnabled()).toBe(false);
+
+    vi.stubEnv("CONCIERGE_ENABLED", "");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "gw_key");
+    expect(isConciergeEnabled()).toBe(false);
+
+    vi.stubEnv("CONCIERGE_ENABLED", "true");
+    vi.stubEnv("AI_GATEWAY_API_KEY", "gw_key");
+    expect(isConciergeEnabled()).toBe(true);
+  });
+
+  it("defaults the model to gpt-oss-120b and reads CONCIERGE_MODEL override", () => {
+    vi.stubEnv("CONCIERGE_MODEL", "");
+    expect(getConciergeModelId()).toBe(DEFAULT_CONCIERGE_MODEL);
+    vi.stubEnv("CONCIERGE_MODEL", "anthropic/claude-haiku");
+    expect(getConciergeModelId()).toBe("anthropic/claude-haiku");
+  });
+
+  it("returns null gateway key when unset", () => {
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+    expect(getGatewayApiKey()).toBeNull();
+  });
+});
+
+describe("system prompt encodes the product boundary", () => {
+  it("forbids eligibility determinations, dollar promises, invented deadlines, and actions", () => {
+    const p = CONCIERGE_SYSTEM_PROMPT.toLowerCase();
+    expect(p).toContain("never decide");
+    expect(p).toContain("may apply");
+    expect(p).toContain("verify with");
+    expect(p).toContain("never promise");
+    expect(p).toContain("never invent");
+    expect(p).toContain("officialurl");
+    expect(p).toContain("read-only");
+    // Anti-injection stance present.
+    expect(p).toContain("data, never as instructions");
+  });
+});
+
+describe("navigation allowlist", () => {
+  it("accepts allowlisted static routes and clean program slugs", () => {
+    expect(resolveNavTarget("/map")?.route).toBe("/map");
+    expect(resolveNavTarget("/programs/tif")?.route).toBe("/programs/tif");
+    expect(resolveNavTarget("/faq", "Read the FAQ")?.label).toBe("Read the FAQ");
+  });
+
+  it("rejects anything not allowlisted or unsafe", () => {
+    expect(resolveNavTarget("/admin")).toBeNull();
+    expect(resolveNavTarget("https://evil.com")).toBeNull();
+    expect(resolveNavTarget("/programs/../admin")).toBeNull();
+    expect(resolveNavTarget("//evil.com")).toBeNull();
+    expect(resolveNavTarget("/programs/Bad Slug")).toBeNull();
+  });
+});
+
+describe("rate limiting (in-memory, fixed window)", () => {
+  it("caps per-IP messages per hour", () => {
+    for (let i = 0; i < CONCIERGE_RATE_LIMITS.perIpPerHour; i++) {
+      expect(checkConciergeRateLimit("1.1.1.1", `s${i}`).allowed).toBe(true);
+    }
+    const blocked = checkConciergeRateLimit("1.1.1.1", "s-final");
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.scope).toBe("ip");
+    expect(blocked.retryAfterSeconds).toBeGreaterThan(0);
+  });
+
+  it("caps per-session messages per day independent of IP", () => {
+    // Rotate IPs so the per-IP cap never trips first.
+    for (let i = 0; i < CONCIERGE_RATE_LIMITS.perSessionPerDay; i++) {
+      expect(checkConciergeRateLimit(`ip-${i}`, "sticky-session").allowed).toBe(true);
+    }
+    const blocked = checkConciergeRateLimit("ip-final", "sticky-session");
+    expect(blocked.allowed).toBe(false);
+    expect(blocked.scope).toBe("session");
+  });
+
+  it("resets after the window elapses", () => {
+    const t0 = 1_000_000;
+    for (let i = 0; i < CONCIERGE_RATE_LIMITS.perIpPerHour; i++) {
+      checkConciergeRateLimit("9.9.9.9", `w${i}`, t0);
+    }
+    expect(checkConciergeRateLimit("9.9.9.9", "w-blocked", t0).allowed).toBe(false);
+    // One hour + 1ms later the window has rolled over.
+    expect(
+      checkConciergeRateLimit("9.9.9.9", "w-ok", t0 + 3_600_001).allowed
+    ).toBe(true);
+  });
+});
+
+describe("page context sanitization", () => {
+  it("clamps strings, coerces coords, and caps arrays", () => {
+    const ctx = sanitizePageContext({
+      route: "/report",
+      reportSummary: "x".repeat(5000),
+      lat: 41.7,
+      lon: "not-a-number",
+      visiblePrograms: Array.from({ length: 100 }, (_, i) => `p${i}`),
+      extra: "ignored",
+    });
+    expect(ctx.route).toBe("/report");
+    expect(ctx.reportSummary!.length).toBeLessThanOrEqual(1500);
+    expect(ctx.lat).toBe(41.7);
+    expect(ctx.lon).toBeUndefined();
+    expect(ctx.visiblePrograms!.length).toBe(40);
+  });
+
+  it("defaults route to / when missing", () => {
+    expect(sanitizePageContext(null).route).toBe("/");
+  });
+});
+
+describe("read-only program tools return sourced facts", () => {
+  it("searchPrograms finds programs and every result carries an officialUrl", async () => {
+    const results = await searchPrograms("tif");
+    expect(results.length).toBeGreaterThan(0);
+    for (const r of results) {
+      expect(typeof r.officialUrl).toBe("string");
+      expect(r.officialUrl.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("getProgram returns detail with verificationSteps + officialUrl or null", async () => {
+    const detail = await getProgram("tif");
+    expect(detail).not.toBeNull();
+    expect(detail!.officialUrl).toMatch(/^https?:\/\//);
+    expect(Array.isArray(detail!.verificationSteps)).toBe(true);
+
+    const missing = await getProgram("no-such-program-xyz");
+    expect(missing).toBeNull();
+  });
+});
+
+describe("tool plumbing", () => {
+  const tools = buildConciergeTools({
+    pageContext: sanitizePageContext({ route: "/report", address: "8200 S Exchange" }),
+  });
+
+  it("exposes exactly the five read-only stage-1 tools", () => {
+    expect(Object.keys(tools).sort()).toEqual(
+      ["getPageContext", "getProgram", "listZonesAtPoint", "navigateTo", "searchPrograms"].sort()
+    );
+  });
+
+  it("getPageContext echoes the client-provided context (no server fetch)", async () => {
+    const out = await tools.getPageContext.execute!({}, toolOpts);
+    expect((out as { pageContext: { route: string } }).pageContext.route).toBe("/report");
+  });
+
+  it("navigateTo validates against the allowlist", async () => {
+    const ok = (await tools.navigateTo.execute!(
+      { route: "/map", label: "Open the map" },
+      toolOpts
+    )) as { ok: boolean; suggestion?: { route: string } };
+    expect(ok.ok).toBe(true);
+    expect(ok.suggestion?.route).toBe("/map");
+
+    const bad = (await tools.navigateTo.execute!(
+      { route: "/admin" },
+      toolOpts
+    )) as { ok: boolean };
+    expect(bad.ok).toBe(false);
+  });
+
+  it("searchPrograms tool annotates that a match is not an eligibility determination", async () => {
+    const out = (await tools.searchPrograms.execute!(
+      { query: "tif" },
+      toolOpts
+    )) as { note: string };
+    expect(out.note.toLowerCase()).toContain("not an eligibility");
+  });
+
+  it("invokes the onToolCall telemetry hook", async () => {
+    const seen: string[] = [];
+    const t = buildConciergeTools({
+      pageContext: sanitizePageContext({ route: "/x" }),
+      onToolCall: (name) => seen.push(name),
+    });
+    await t.getPageContext.execute!({}, toolOpts);
+    expect(seen).toContain("getPageContext");
+  });
+});
+
+describe("analytics events", () => {
+  it("registers the four concierge event types", () => {
+    for (const t of [
+      "concierge_opened",
+      "concierge_message_sent",
+      "concierge_tool_called",
+      "concierge_nav_suggested",
+    ]) {
+      expect(ANALYTICS_EVENT_TYPES).toContain(t);
+    }
+  });
+});
+
+describe("friendly failure copy", () => {
+  it("has resting + disabled messages that never promise or determine", () => {
+    expect(CONCIERGE_RESTING_MESSAGE.toLowerCase()).toContain("resting");
+    expect(CONCIERGE_DISABLED_MESSAGE.length).toBeGreaterThan(0);
+  });
+});
+
+describe("eval-prompts fixture", () => {
+  it("has ~20 real + ~10 adversarial prompts, each with expectedBehavior", () => {
+    const prompts = evalPrompts.prompts;
+    const real = prompts.filter((p) => p.category === "real");
+    const adversarial = prompts.filter((p) => p.category === "adversarial");
+    expect(real.length).toBeGreaterThanOrEqual(20);
+    expect(adversarial.length).toBeGreaterThanOrEqual(10);
+    for (const p of prompts) {
+      expect(p.id).toBeTruthy();
+      expect(p.prompt).toBeTruthy();
+      expect(p.expectedBehavior).toBeTruthy();
+    }
+  });
+
+  it("covers the three adversarial attack families the boundary calls out", () => {
+    const subtypes = new Set(
+      evalPrompts.prompts
+        .filter((p) => p.category === "adversarial")
+        .map((p) => (p as { subtype?: string }).subtype)
+    );
+    expect([...subtypes].some((s) => s?.includes("eligibility"))).toBe(true);
+    expect([...subtypes].some((s) => s?.includes("dollar"))).toBe(true);
+    expect([...subtypes].some((s) => s?.includes("injection"))).toBe(true);
+  });
+});
