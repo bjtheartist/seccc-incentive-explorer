@@ -3,8 +3,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
-import { MessageCircle, X, Send, ArrowRight, Loader2 } from "lucide-react";
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+} from "ai";
+import {
+  MessageCircle,
+  X,
+  Send,
+  ArrowRight,
+  Loader2,
+  ShieldCheck,
+  Check,
+  Ban,
+} from "lucide-react";
 import { trackEvent } from "@/lib/analytics-events";
 import type { ConciergePageContext } from "@/lib/concierge/types";
 import { MarkdownLite } from "./MarkdownLite";
@@ -18,12 +30,47 @@ const TOOL_STATUS: Record<string, string> = {
   listZonesAtPoint: "Checking zone coverage…",
   getPageContext: "Reading this page…",
   navigateTo: "Finding the right page…",
+  updateBusinessProfile: "Saving your profile…",
+  updatePacketTask: "Updating your packet…",
+  createFoundationPacket: "Starting your packet…",
+  selectPacketProgram: "Setting the program…",
+  prepareSupportRequest: "Preparing a draft…",
 };
+
+/** Friendly titles for the approval cards (action tools only). */
+const ACTION_LABEL: Record<string, string> = {
+  updateBusinessProfile: "Update your business profile",
+  updatePacketTask: "Update a packet task",
+  createFoundationPacket: "Start an application-prep packet",
+  selectPacketProgram: "Set your packet's program",
+  prepareSupportRequest: "Draft a partner support request",
+};
+
+const ACTION_TOOL_NAMES = new Set(Object.keys(ACTION_LABEL));
 
 interface NavSuggestion {
   route: string;
   label: string;
   reason: string | null;
+}
+
+/** Flatten a tool input object into readable "field → value" rows for the card. */
+function toApprovalRows(input: unknown): Array<{ key: string; value: string }> {
+  const rows: Array<{ key: string; value: string }> = [];
+  const walk = (obj: unknown, prefix = "") => {
+    if (!obj || typeof obj !== "object") return;
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      const label = prefix ? `${prefix}.${k}` : k;
+      if (v === null || v === undefined || v === "") continue;
+      if (typeof v === "object" && !Array.isArray(v)) {
+        walk(v, label);
+      } else {
+        rows.push({ key: label, value: Array.isArray(v) ? v.join(", ") : String(v) });
+      }
+    }
+  };
+  walk(input);
+  return rows.slice(0, 12);
 }
 
 /**
@@ -97,7 +144,13 @@ export function ConciergePanel({
     []
   );
 
-  const { messages, sendMessage, status, error } = useChat({ transport });
+  const { messages, sendMessage, status, error, addToolApprovalResponse } =
+    useChat({
+      transport,
+      // After the user approves/declines a tool, auto-resubmit so the server can
+      // run (or skip) the tool and continue the turn.
+      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+    });
 
   const fireOnce = useCallback(
     (key: string, fn: () => void) => {
@@ -117,6 +170,14 @@ export function ConciergePanel({
         if (!type?.startsWith("tool-")) return;
         const toolName = type.slice("tool-".length);
         const state = (part as { state?: string }).state;
+        if (state === "approval-requested" && ACTION_TOOL_NAMES.has(toolName)) {
+          fireOnce(`proposed:${message.id}:${i}`, () =>
+            trackEvent("concierge_action_proposed", {
+              source: pageContextRef.current.route,
+              metadata: { tool: toolName },
+            })
+          );
+        }
         if (state === "output-available" || state === "output-error") {
           fireOnce(`tool:${message.id}:${i}`, () =>
             trackEvent("concierge_tool_called", {
@@ -167,6 +228,20 @@ export function ConciergePanel({
       setOpen(false);
     },
     [router]
+  );
+
+  const handleApproval = useCallback(
+    (approvalId: string, toolName: string, approved: boolean) => {
+      trackEvent(
+        approved ? "concierge_action_approved" : "concierge_action_declined",
+        {
+          source: pageContextRef.current.route,
+          metadata: { tool: toolName },
+        }
+      );
+      void addToolApprovalResponse({ id: approvalId, approved });
+    },
+    [addToolApprovalResponse]
   );
 
   if (enabled !== true) return null;
@@ -237,6 +312,7 @@ export function ConciergePanel({
                 key={message.id}
                 message={message}
                 onNavigate={navigate}
+                onApproval={handleApproval}
               />
             ))}
 
@@ -302,9 +378,11 @@ export function ConciergePanel({
 function ConciergeMessage({
   message,
   onNavigate,
+  onApproval,
 }: {
-  message: { role: string; parts?: Array<Record<string, unknown>> };
+  message: { id?: string; role: string; parts?: Array<Record<string, unknown>> };
   onNavigate: (route: string) => void;
+  onApproval: (approvalId: string, toolName: string, approved: boolean) => void;
 }) {
   const isUser = message.role === "user";
   const parts = message.parts ?? [];
@@ -334,15 +412,42 @@ function ConciergeMessage({
           if (type.startsWith("tool-")) {
             const toolName = type.slice("tool-".length);
             const state = String(part.state ?? "");
-            const done = state === "output-available" || state === "output-error";
 
-            // Navigation suggestion → "Take me there" button.
-            if (toolName === "navigateTo" && state === "output-available") {
+            // Approval card — action tool awaiting the user's decision.
+            if (state === "approval-requested") {
+              const approval = part.approval as { id?: string } | undefined;
+              if (!approval?.id) return null;
+              const approvalId = approval.id;
+              return (
+                <ApprovalCard
+                  key={i}
+                  toolName={toolName}
+                  input={part.input}
+                  onApprove={() => onApproval(approvalId, toolName, true)}
+                  onDecline={() => onApproval(approvalId, toolName, false)}
+                />
+              );
+            }
+
+            // Declined → polite confirmation that nothing happened.
+            if (state === "output-denied") {
+              return (
+                <div
+                  key={i}
+                  className="border border-[#0C1B33]/12 bg-[#FAF9F6] px-3 py-2 text-[12px] leading-relaxed text-[#0C1B33]/60"
+                >
+                  You declined that action — nothing was changed.
+                </div>
+              );
+            }
+
+            // A tool result carrying a nav / deep-link suggestion → button.
+            if (state === "output-available") {
               const output = part.output as
-                | { ok?: boolean; suggestion?: NavSuggestion }
+                | { ok?: boolean; note?: string; suggestion?: NavSuggestion | null }
                 | undefined;
-              if (output?.ok && output.suggestion) {
-                const s = output.suggestion;
+              const s = output?.suggestion;
+              if (s?.route) {
                 return (
                   <button
                     key={i}
@@ -362,11 +467,23 @@ function ConciergeMessage({
                   </button>
                 );
               }
+              // Action tool success without a deep-link → small confirmation.
+              if (ACTION_TOOL_NAMES.has(toolName) && output?.ok) {
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 border border-emerald-200 bg-emerald-50 px-3 py-2 text-[12px] leading-relaxed text-emerald-800"
+                  >
+                    <Check className="h-3.5 w-3.5 shrink-0" />
+                    {output.note ?? "Done."}
+                  </div>
+                );
+              }
               return null;
             }
 
-            // Other tools → transient status line while running.
-            if (!done) {
+            // Still running (input-streaming / input-available) → status line.
+            if (state !== "output-error") {
               return (
                 <div
                   key={i}
@@ -384,6 +501,76 @@ function ConciergeMessage({
 
           return null;
         })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Explicit approval card for an action tool. Shows what will change (the tool's
+ * proposed input, as field → value rows) and Approve / Decline buttons. Nothing
+ * runs on the server until Approve is clicked.
+ */
+function ApprovalCard({
+  toolName,
+  input,
+  onApprove,
+  onDecline,
+}: {
+  toolName: string;
+  input: unknown;
+  onApprove: () => void;
+  onDecline: () => void;
+}) {
+  const rows = toApprovalRows(input);
+  return (
+    <div className="border border-[#2563EB]/40 bg-[#2563EB]/[0.04] p-3">
+      <div className="flex items-center gap-2">
+        <ShieldCheck className="h-4 w-4 shrink-0 text-[#2563EB]" strokeWidth={1.75} />
+        <p className="font-mono-bureau text-[9px] uppercase tracking-[0.18em] text-[#0C1B33]/55">
+          Approve this action
+        </p>
+      </div>
+      <p className="mt-2 text-[13px] font-medium leading-snug text-[#0C1B33]">
+        {ACTION_LABEL[toolName] ?? toolName}
+      </p>
+      {rows.length > 0 && (
+        <dl className="mt-2 space-y-1 border-t border-[#0C1B33]/10 pt-2">
+          {rows.map((r) => (
+            <div key={r.key} className="flex gap-2 text-[11px] leading-relaxed">
+              <dt className="shrink-0 font-mono-bureau uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                {r.key}
+              </dt>
+              <dd className="text-[#0C1B33]/80">{r.value}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+      <p className="mt-2 text-[10px] leading-relaxed text-[#0C1B33]/45">
+        Nothing changes until you approve. This prepares and organizes — it never
+        certifies or submits anything for you.
+      </p>
+      <div className="mt-3 flex gap-2">
+        <button
+          type="button"
+          onClick={onApprove}
+          className="flex flex-1 items-center justify-center gap-1.5 bg-[#2563EB] px-3 py-2 text-white transition-opacity hover:opacity-90"
+        >
+          <Check className="h-3.5 w-3.5" strokeWidth={2} />
+          <span className="font-mono-bureau text-[10px] uppercase tracking-[0.15em]">
+            Approve
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={onDecline}
+          className="flex flex-1 items-center justify-center gap-1.5 border border-[#0C1B33]/20 px-3 py-2 text-[#0C1B33]/70 transition-colors hover:bg-[#0C1B33]/5"
+        >
+          <Ban className="h-3.5 w-3.5" strokeWidth={2} />
+          <span className="font-mono-bureau text-[10px] uppercase tracking-[0.15em]">
+            Decline
+          </span>
+        </button>
       </div>
     </div>
   );

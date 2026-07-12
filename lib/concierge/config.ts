@@ -33,6 +33,23 @@ export const CONCIERGE_RATE_LIMITS = {
   perSessionPerDay: 40,
 } as const;
 
+/** Default per-day GLOBAL message cap (design note §6 daily budget). */
+export const DEFAULT_CONCIERGE_DAILY_BUDGET = 500;
+
+/**
+ * Global daily message budget (env CONCIERGE_DAILY_BUDGET, default 500). Enforced
+ * in the route across all users/sessions. A safety valve on total spend, distinct
+ * from the per-IP / per-session throttles. Non-numeric or non-positive values fall
+ * back to the default so a bad env can never disable the cap silently.
+ */
+export function getConciergeDailyBudget(): number {
+  const raw = process.env.CONCIERGE_DAILY_BUDGET?.trim();
+  if (!raw) return DEFAULT_CONCIERGE_DAILY_BUDGET;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_CONCIERGE_DAILY_BUDGET;
+  return Math.floor(parsed);
+}
+
 export function getConciergeModelId(): string {
   const fromEnv = process.env.CONCIERGE_MODEL?.trim();
   return fromEnv && fromEnv.length > 0 ? fromEnv : DEFAULT_CONCIERGE_MODEL;

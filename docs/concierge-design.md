@@ -133,3 +133,52 @@ Per-IP **20 msg/hour** and per-session (cookie) **40 msg/day**, in-memory per se
 - **Auth**: the Stage-1 route is unauthenticated. Stage 2 must read the session (next-auth) in the route to authorize action tools and scope the session/rate-limit keys to the user.
 - **Persistence**: no transcript storage in Stage 1 (open question §8.2). Stage 3 adds the conversation/tool-action/approval/citation audit tables.
 - **Model routing**: \`getConciergeModelId()\` centralizes the model id; add the "easy→small, hard→large" split (§5) here.
+
+---
+
+## Stage 2 & 3 implementation notes (2026-07-12)
+
+Stages 2 (signed-in, approval-gated actions) and 3 (trust infrastructure) are implemented on \`feat/concierge-stage2-3\`, stacked on Stage 1. Feature-flag behavior is unchanged — everything is still OFF unless \`CONCIERGE_ENABLED === "true"\` **and** \`AI_GATEWAY_API_KEY\` is set. Guests keep exactly the Stage-1 read-only experience.
+
+### Verified approval API shape (against installed \`ai@7.0.22\` + \`@ai-sdk/react@4.0.23\`, and live docs 2026-07-12)
+The AI SDK moved to a tool-level / \`streamText\`-level approval model. Confirmed exports and shapes:
+- **Tool declares approval**: \`tool({ inputSchema, execute, needsApproval: true })\` — \`needsApproval\` is a real field on the installed \`Tool\` type (\`boolean | ToolNeedsApprovalFunction\`). We set \`needsApproval: true\` on each of the five action tools only; the read tools omit it and auto-execute. (\`streamText\` also accepts a \`toolApproval: { toolName: 'user-approval' }\` map — equivalent; we chose the per-tool flag so the approval intent lives at the tool definition.)
+- **Server route**: no special config — the same \`streamText(...).toUIMessageStreamResponse()\` handles the approval round-trip. When a tool needs approval the stream emits an \`approval-requested\` tool part instead of executing.
+- **Client**: \`useChat({ transport, sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses })\` (both exported from \`ai\`). The panel reads \`part.approval.id\` on the \`approval-requested\` part and calls \`addToolApprovalResponse({ id, approved })\` (from \`useChat\`). On approve/decline the \`sendAutomaticallyWhen\` helper resubmits so the server runs (or skips) the tool.
+- **Tool part states rendered**: \`approval-requested\` → approval card; \`approval-responded\`/\`input-*\` → "Working…"; \`output-available\` → success/deep-link; \`output-denied\` → "you declined — nothing changed".
+
+### Action tools (all \`needsApproval: true\`) — \`lib/concierge/action-tools.ts\`
+\`updateBusinessProfile\`, \`updatePacketTask\`, \`createFoundationPacket\`, \`selectPacketProgram\`, \`prepareSupportRequest\`. Merged into the **same** \`buildConciergeTools\` map only when \`actions\` deps are passed (signed-in + DB configured). Boundary re-asserted: actions PREPARE/ORGANIZE only. \`prepareSupportRequest\` **drafts** and deep-links into the existing consent-gated packet form; it never POSTs the support request (consent checkbox + submit stay in that UI).
+
+### Ownership re-verification (never trust model-supplied ids)
+The session \`userId\` is captured server-side in the route (\`getCurrentUserId()\`) and closed over in the action deps — it is **never** read from tool input. Every executor re-checks ownership with a \`WHERE ... AND user_id = \${userId}\` query (\`ownedProfileId\` / \`ownsPacket\`) **before** acting; an unowned id returns a polite tool result and touches nothing. Actions then COMPOSE with the existing auth-gated routes (they inherit every guard):
+- \`updateBusinessProfile\` → dynamic-import + call the exported \`PATCH\` of \`app/api/business-profiles/[id]/route\`.
+- \`updatePacketTask\` → exported \`PATCH\` of \`app/api/incentive-preparation/[id]/route\` (its applicant-only / certification guard is preserved).
+- \`createFoundationPacket\` → exported \`POST\` of \`app/api/incentive-preparation/route\`.
+
+The handlers are **dynamically imported inside the executors** (not at module top level) so the next-auth adapter chain — which is not ESM-\`exports\`-clean under plain \`tsx\` — never loads for consumers that merely import the tool map (e.g. the eval runner). Session auth still resolves correctly because the nested handler's \`getServerSession\` reads the same ambient request context.
+
+### Cross-branch dependency (documented)
+\`selectPacketProgram\` targets a program-selection endpoint that lives on the **business-file branches, not this one**. It calls \`POST {origin}/api/incentive-preparation/{packetId}/select-program\` with the user's cookies (2.5s timeout) and **degrades gracefully to a packet deep-link** on 404/any non-2xx/network error — so it composes automatically if those branches merge, with no code change. \`createFoundationPacket\` composes with the packet-creation route that DOES exist here; if a dedicated foundation endpoint replaces it at the same path the composition survives.
+
+### Stage 3 — trust infrastructure
+- **Audit tables** (\`scripts/migrate-concierge.ts\`, idempotent, follows \`migrate-incentive-preparation.ts\`; **not run** against any DB): \`concierge_conversations\` (user, session, page, model, message_count), \`concierge_messages\` (role, content, \`tool_calls_json\`, \`citations_json\` for source/officialUrl records), \`concierge_tool_actions\` (tool, \`input_json\`, \`approval_status\` proposed|approved|declined|executed|failed, \`result_summary\`). npm script \`db:migrate:concierge\` (intentionally NOT in the \`db:migrate\` chain — persistence is optional/best-effort).
+- **Persistence** (\`lib/concierge/persistence.ts\`): route persists in \`streamText.onFinish\` **only when DB configured AND user signed in**; guests are never written to the DB (their usage stays in analytics events). Strictly best-effort — every write is wrapped so a missing table (migration not run) or any error can never break the chat. Conversation keyed by (user, session).
+- **Daily budget** (\`lib/concierge/budget.ts\`): global per-day message cap, env \`CONCIERGE_DAILY_BUDGET\` (default 500). Uses **Upstash Redis** (already a dependency — no new dep) for cross-instance accuracy via \`INCR\` + 48h TTL; falls back to a per-instance in-memory counter when Upstash is unset (documented limitation). Over-budget returns the same friendly 429.
+- **Abuse controls**: max input length (Stage-1 caps retained); \`screenPageContext\` redacts prompt-injection markers in client-supplied page-context fields (address/summary/program names) and flags them; \`noteConciergeRejection\`/\`clearConciergeRejection\` add an escalating repeated-429 backoff; a profanity/off-domain refusal note is added to the system prompt. Session-scoped rate-limit keys for signed-in users (\`user:{id}\`) instead of the clearable cookie.
+- **Eval RUNNER** (\`scripts/concierge-eval.ts\`, \`npm run concierge:eval\`, NOT in CI): runs \`tests/concierge/eval-prompts.json\` against the live gateway, scores each response with deterministic string/regex checks (no boundary violations; hedged/grounded for real prompts; graceful refusal for adversarial), writes \`docs/concierge-eval-report.md\`. **Skips cleanly** (exit 0, writes a skip notice) when \`AI_GATEWAY_API_KEY\` is absent.
+
+### New env vars (Stage 2/3)
+| Var | Required | Default | Purpose |
+|---|---|---|---|
+| \`CONCIERGE_DAILY_BUDGET\` | no | \`500\` | Global per-day message cap. |
+| \`UPSTASH_REDIS_REST_URL\` / \`_TOKEN\` | no | — | Existing repo vars; if present the daily budget becomes cross-instance-accurate. |
+
+No new dependencies were added. Additive API only; no changes to Business File / packet page / report page beyond the existing concierge mount; persona/corridor code untouched.
+
+### Judgment calls
+1. **Per-tool \`needsApproval\` over the \`streamText.toolApproval\` map** — approval intent belongs at the tool definition, and it cleanly marks exactly the action tools without a parallel config list.
+2. **Compose by calling exported route handlers (dynamic import) rather than HTTP-to-self** for routes that exist here — more reliable in serverless and inherits the same ambient session; HTTP-with-cookies is reserved for the genuinely-cross-branch \`select-program\` route so the 404 degrade path is real.
+3. **Ownership pre-check in the executor AND the route's own \`WHERE user_id\`** — double enforcement; the executor short-circuits with friendlier copy before any handler call.
+4. **No packet-page edits for \`packetId\` context** — the model reads the packet id from the route path (\`/workspace/incentive-preparation/{id}\`) via \`getPageContext\`, so \`ConciergePageContext\` did not need new populated fields (scope fence).
+5. **HMAC \`experimental_toolApprovalSecret\` not enabled** — ownership is re-verified server-side in every executor and actions inherit the auth-gated routes, so a forged approval cannot exceed what the user could already do; the secret is available as future hardening.
