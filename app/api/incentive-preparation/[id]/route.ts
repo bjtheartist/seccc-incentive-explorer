@@ -19,6 +19,7 @@ import {
 } from "@/lib/incentive-preparation";
 import { getAllPrograms } from "@/lib/programs-data";
 import { isGoalType } from "@/lib/workspace";
+import { isDocumentExtractEnabled, isDocumentsEnabled } from "@/lib/document-flags";
 
 type Params = { params: Promise<{ id: string }> };
 type DatabaseRow = Record<string, unknown>;
@@ -160,6 +161,7 @@ function getProgramOverlay(programId: string | null, programName: string) {
 
   return {
     programRequiredDocs: program?.requiredDocs ?? [],
+    programDocumentSpecs: program?.documentSpecs ?? [],
     programVerificationSteps: program?.verificationSteps ?? [],
   };
 }
@@ -240,6 +242,13 @@ export async function GET(_req: NextRequest, { params }: Params) {
       normalizePreparationTasks(parseJson(packetRow.tasks_json, [])),
       joinedProfileInput(packetRow)
     ),
+    // Flag surface for the client. When disabled the document UI renders nothing
+    // and never calls the document endpoints (which 503 anyway). No table query
+    // here — the documents route owns packet_documents.
+    documents: {
+      enabled: isDocumentsEnabled(),
+      extractEnabled: isDocumentExtractEnabled(),
+    },
   });
 }
 
