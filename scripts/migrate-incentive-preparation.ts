@@ -100,6 +100,17 @@ async function main() {
     $$
   `;
 
+  console.log(
+    "2b. Relaxing goal_type / program_name for foundation-first packets..."
+  );
+  // Foundation-first ("Business File") packets are created before a target
+  // incentive is chosen, so goal_type and program_name must be nullable. These
+  // ALTERs are idempotent: dropping NOT NULL on an already-nullable column is a
+  // no-op, so re-running the migration is safe. Existing program packets keep
+  // their non-null values untouched.
+  await sql`ALTER TABLE incentive_preparation_packets ALTER COLUMN goal_type DROP NOT NULL`;
+  await sql`ALTER TABLE incentive_preparation_packets ALTER COLUMN program_name DROP NOT NULL`;
+
   console.log("3. Creating consent-gated support requests...");
   await sql`
     CREATE TABLE IF NOT EXISTS incentive_support_requests (

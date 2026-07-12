@@ -117,7 +117,13 @@ export interface PreparationTimeline {
 }
 
 export interface BuildPreparationTasksInput {
-  goalType: GoalType;
+  /**
+   * The target incentive's goal overlay. When omitted (foundation-first
+   * "Business File" packets), only the program-agnostic foundation scope is
+   * generated — identity/address/contact plus the reusable continuity
+   * documents — with no goal, program, or certification work.
+   */
+  goalType?: GoalType | null;
   programId?: string | null;
   programName?: string | null;
   programRequiredDocs?: readonly string[];
@@ -454,8 +460,44 @@ function withProgramContext(
   };
 }
 
+/**
+ * The reusable continuity documents (accountant-reviewed financials and tax /
+ * good-standing records). They carry category "dependency" but bank into the
+ * foundation scope via CONTINUITY_TASK_IDS, so both the full application build
+ * and the foundation-only Business File emit them identically. They depend only
+ * on business identity — program-agnostic, preparable before any goal exists.
+ */
+function buildContinuityTasks(): PreparationTask[] {
+  return [
+    {
+      id: FINANCIALS_TASK_ID,
+      title: "Prepare accountant-reviewed financials",
+      description:
+        "Coordinate with an accountant to assemble the current financial and tax records needed for application preparation. These records are reusable across programs.",
+      status: "external_dependency",
+      owner: "accountant",
+      category: "dependency",
+      dependsOn: [FOUNDATION_IDENTITY_TASK_ID],
+      estimatedMinWeeks: 1,
+      estimatedMaxWeeks: 3,
+    },
+    {
+      id: TAX_STANDING_TASK_ID,
+      title: "Obtain tax and good-standing records",
+      description:
+        "Request current tax-clearance and entity good-standing records from the appropriate issuing offices for application preparation.",
+      status: "external_dependency",
+      owner: "accountant",
+      category: "dependency",
+      dependsOn: [FOUNDATION_IDENTITY_TASK_ID],
+      estimatedMinWeeks: 1,
+      estimatedMaxWeeks: 3,
+    },
+  ];
+}
+
 export function buildPreparationTasks({
-  goalType,
+  goalType = null,
   programId,
   programName,
   programRequiredDocs = [],
@@ -523,6 +565,14 @@ export function buildPreparationTasks({
       requiredProfileFields: contactFields,
     },
   ];
+
+  if (!goalType) {
+    // Foundation-first "Business File": program-agnostic scope only. No goal
+    // overlay, no program/dependency/certification work — those layer in later
+    // through mergePreparationProgramTasks when a target incentive is chosen.
+    tasks.push(...buildContinuityTasks());
+    return tasks.map((task) => withProgramContext(task, null, null));
+  }
 
   const overlay = GOAL_OVERLAYS[goalType];
   const overlayTasks = overlay.tasks.map((task) => ({
@@ -603,31 +653,7 @@ export function buildPreparationTasks({
     });
   }
 
-  tasks.push({
-    id: FINANCIALS_TASK_ID,
-    title: "Prepare accountant-reviewed financials",
-    description:
-      "Coordinate with an accountant to assemble the current financial and tax records needed for application preparation. These records are reusable across programs.",
-    status: "external_dependency",
-    owner: "accountant",
-    category: "dependency",
-    dependsOn: [FOUNDATION_IDENTITY_TASK_ID],
-    estimatedMinWeeks: 1,
-    estimatedMaxWeeks: 3,
-  });
-
-  tasks.push({
-    id: TAX_STANDING_TASK_ID,
-    title: "Obtain tax and good-standing records",
-    description:
-      "Request current tax-clearance and entity good-standing records from the appropriate issuing offices for application preparation.",
-    status: "external_dependency",
-    owner: "accountant",
-    category: "dependency",
-    dependsOn: [FOUNDATION_IDENTITY_TASK_ID],
-    estimatedMinWeeks: 1,
-    estimatedMaxWeeks: 3,
-  });
+  tasks.push(...buildContinuityTasks());
 
   if (overlay.needsSiteControl) {
     tasks.push({
@@ -831,6 +857,46 @@ export function normalizePreparationTasks(value: unknown): PreparationTask[] {
     ...withValidDependencies.filter((task) => !isOfficialCertificationTask(task)),
     ...withValidDependencies.filter((task) => isOfficialCertificationTask(task)),
   ];
+}
+
+/**
+ * The task-merge seam for foundation-first packets. When a foundation-only
+ * "Business File" packet gains a target incentive, program/goal/application
+ * tasks must layer in WITHOUT clobbering the user's confirmed foundation work.
+ *
+ * `freshTasks` is the authoritative full-graph rebuild (foundation + goal +
+ * program + certification) for the newly chosen program. `existingTasks` is the
+ * packet's current, possibly user-edited, task state. The merge:
+ *
+ *   - keeps the fresh structure (titles, descriptions, dependency graph,
+ *     program context) so the graph is complete and dependency-closed;
+ *   - preserves the user-set `status` on any task that already existed
+ *     (identity/address/contact/financials/tax the applicant confirmed);
+ *   - adds the new goal/program/dependency tasks with their fresh status;
+ *   - never carries a stale status onto the protected certification task
+ *     (normalizePreparationTasks re-locks it to requires_certification anyway);
+ *   - is idempotent: re-merging an already-merged packet returns the same set
+ *     with statuses preserved, so a repeated program selection is a safe no-op.
+ *
+ * Foundation tasks are matched by id, so they are never duplicated. Any task
+ * present only in the old state (none exist today — the foundation subset is a
+ * strict subset of the full graph) is dropped in favor of the fresh structure.
+ */
+export function mergePreparationProgramTasks(
+  existingTasks: unknown,
+  freshTasks: readonly PreparationTask[]
+): PreparationTask[] {
+  const existingById = new Map(
+    normalizePreparationTasks(existingTasks).map((task) => [task.id, task])
+  );
+
+  const merged = freshTasks.map((fresh) => {
+    const existing = existingById.get(fresh.id);
+    if (!existing || isOfficialCertificationTask(fresh)) return fresh;
+    return { ...fresh, status: existing.status };
+  });
+
+  return normalizePreparationTasks(merged);
 }
 
 export function canApplicantUpdateTask(task: PreparationTask): boolean {
