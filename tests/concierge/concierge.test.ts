@@ -76,6 +76,13 @@ describe("concierge config / feature gating", () => {
     expect(hasGatewayCredential()).toBe(true);
   });
 
+  it("lets the Gateway client request native OIDC in a Vercel runtime", () => {
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+    vi.stubEnv("VERCEL_OIDC_TOKEN", "");
+    vi.stubEnv("VERCEL", "1");
+    expect(hasGatewayCredential()).toBe(true);
+  });
+
   it("bounds signed-in conversation retention", () => {
     vi.stubEnv("CONCIERGE_RETENTION_DAYS", "");
     expect(getConciergeRetentionDays()).toBe(DEFAULT_CONCIERGE_RETENTION_DAYS);

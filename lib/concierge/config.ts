@@ -80,7 +80,11 @@ export function getGatewayApiKey(): string | null {
 
 /** Vercel deployments use the Gateway package's native OIDC auth path. */
 export function hasGatewayCredential(): boolean {
-  return Boolean(getGatewayApiKey() || process.env.VERCEL_OIDC_TOKEN?.trim());
+  return Boolean(
+    getGatewayApiKey() ||
+      process.env.VERCEL_OIDC_TOKEN?.trim() ||
+      process.env.VERCEL === "1"
+  );
 }
 
 /**
