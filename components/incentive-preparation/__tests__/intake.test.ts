@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   EMPTY_PREPARATION_INTAKE,
+  buildFoundationPayload,
   buildPreparationPayload,
   normalizeGoalType,
+  validateBusinessFileIntake,
   validatePreparationIntake,
 } from "../intake";
 import type { PreparationContext } from "../report-context";
@@ -64,5 +66,46 @@ describe("preparation intake", () => {
       primaryGoal: expect.any(String),
       selectedProgramLabel: expect.any(String),
     });
+  });
+
+  it("validates a foundation-first Business File without a goal or program", () => {
+    const validErrors = validateBusinessFileIntake({
+      ...EMPTY_PREPARATION_INTAKE,
+      legalBusinessName: "South Shore Supply LLC",
+      physicalAddress: "9000 S Commercial Ave",
+      contactName: "Jordan Lee",
+      contactEmail: "jordan@example.com",
+    });
+    expect(validErrors).toEqual({});
+
+    const missing = validateBusinessFileIntake({ ...EMPTY_PREPARATION_INTAKE });
+    expect(missing).toMatchObject({
+      legalBusinessName: expect.any(String),
+      physicalAddress: expect.any(String),
+      contactName: expect.any(String),
+      contactEmail: expect.any(String),
+    });
+    // No goal or program is required for the foundation-first path.
+    expect(missing.primaryGoal).toBeUndefined();
+    expect(missing.selectedProgramLabel).toBeUndefined();
+  });
+
+  it("builds a foundation-only payload with no goal or program fields", () => {
+    const draft = {
+      ...EMPTY_PREPARATION_INTAKE,
+      legalBusinessName: "South Shore Supply LLC",
+      physicalAddress: "9000 S Commercial Ave",
+      contactName: "Jordan Lee",
+      contactEmail: "jordan@example.com",
+    };
+
+    const inlinePayload = buildFoundationPayload(draft, "", null);
+    expect(inlinePayload).not.toHaveProperty("goalType");
+    expect(inlinePayload).not.toHaveProperty("programName");
+    expect(inlinePayload).toMatchObject({ profile: { legalName: "South Shore Supply LLC" } });
+
+    const savedProfilePayload = buildFoundationPayload(draft, "profile-1", null);
+    expect(savedProfilePayload).toMatchObject({ profileId: "profile-1" });
+    expect(savedProfilePayload).not.toHaveProperty("profile");
   });
 });

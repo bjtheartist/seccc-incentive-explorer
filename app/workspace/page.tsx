@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import {
   ArrowRight,
+  Building2,
   Check,
   ClipboardCheck,
   Eye,
@@ -250,13 +251,22 @@ function WorkspaceContent() {
                 Powered by your Business File. Your information carries into every application.
               </p>
             </div>
-            <Link
-              href="/workspace/incentive-preparation/new"
-              className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB] hover:text-[#1d4ed8]"
-            >
-              <ClipboardCheck className="w-3.5 h-3.5" />
-              Start application prep
-            </Link>
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+              <Link
+                href="/workspace/business-file"
+                className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/60 hover:text-[#0C1B33]"
+              >
+                <Building2 className="w-3.5 h-3.5" />
+                Your Business File
+              </Link>
+              <Link
+                href="/workspace/incentive-preparation/new"
+                className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB] hover:text-[#1d4ed8]"
+              >
+                <ClipboardCheck className="w-3.5 h-3.5" />
+                Start application prep
+              </Link>
+            </div>
           </div>
           {(packets || []).length === 0 ? (
             <EmptyState
@@ -301,9 +311,11 @@ function WorkspaceContent() {
                   timelines?.application?.estimatedWeeks,
                 );
                 const applicationLine = timelines
-                  ? `${packet.programName}: ${
-                      applicationCompact ? `${applicationCompact} prep` : "prep window being assessed"
-                    }`
+                  ? packet.programName
+                    ? `${packet.programName}: ${
+                        applicationCompact ? `${applicationCompact} prep` : "prep window being assessed"
+                      }`
+                    : "No program chosen yet — pick one to start an application"
                   : null;
 
                 return (

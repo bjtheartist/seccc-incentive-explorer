@@ -61,6 +61,35 @@ describe("/api/business-profiles", () => {
     expect(sqlMock).not.toHaveBeenCalled();
   });
 
+  it("includes a neutral foundation summary with each listed profile", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    sqlMock.mockResolvedValue([
+      {
+        id: "profile-1",
+        legal_name: "South Shore Supply",
+        entity_type: "LLC",
+        formation_date: "2021-03-15",
+        industry: "Retail",
+        naics_code: "444240",
+        physical_address: "9000 S Commercial Ave",
+        mailing_address: "PO Box 170",
+        contact_name: "Jordan Lee",
+        contact_email: "jordan@example.com",
+        contact_phone: "312-555-0134",
+        licenses_json: [],
+        field_provenance_json: {},
+        created_at: "2026-07-10T00:00:00.000Z",
+        updated_at: "2026-07-10T00:00:00.000Z",
+      },
+    ]);
+
+    const body = (await (await GET()).json()) as {
+      profiles: Array<{ foundationSummary: { confirmed: number; total: number } }>;
+    };
+    // All three profile-derived groups are complete; neutral count, no percentage.
+    expect(body.profiles[0].foundationSummary).toEqual({ confirmed: 3, total: 3 });
+  });
+
   it("creates an owned profile", async () => {
     getCurrentUserIdMock.mockResolvedValue("user-1");
     sqlMock.mockResolvedValue([

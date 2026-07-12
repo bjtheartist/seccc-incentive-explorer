@@ -1,3 +1,11 @@
+import {
+  isDocumentKindTask as isDocumentKindTaskShared,
+  normalizeDocumentSpec,
+  type DocumentSpec,
+} from "@/lib/document-spec";
+
+export type { DocumentSpec } from "@/lib/document-spec";
+
 export type PreparationTaskStatus =
   | "needs_document"
   | "needs_owner_answer"
@@ -5,6 +13,19 @@ export type PreparationTaskStatus =
   | "external_dependency"
   | "requires_certification"
   | "complete";
+
+export type PacketDocumentStatus = "uploaded" | "confirmed_current" | "superseded";
+
+export interface PacketDocumentView {
+  id: string;
+  taskId: string;
+  originalName: string;
+  contentType: string;
+  sizeBytes: number;
+  status: PacketDocumentStatus;
+  uploadedAt: string;
+  retentionExpiresAt: string;
+}
 
 export interface BusinessProfile {
   id: string;
@@ -29,6 +50,12 @@ export interface PreparationTask {
   category: string;
   isCertification: boolean;
   mutable: boolean;
+  documentSpec: DocumentSpec | null;
+}
+
+/** A task can hold document attachments (mirrors the server predicate). */
+export function isDocumentTask(task: Pick<PreparationTask, "status" | "documentSpec">): boolean {
+  return isDocumentKindTaskShared(task);
 }
 
 export interface PreparationTimelineView {
@@ -86,6 +113,24 @@ export interface PreparationSupportRequest {
   dataScopes: string[];
   status: string;
 }
+
+export interface FoundationRefreshItemView {
+  taskId: string;
+  title: string;
+  newlyCovered: boolean;
+}
+
+export interface FoundationRefreshView {
+  asOfDate: string;
+  items: FoundationRefreshItemView[];
+  newlyCoveredTaskIds: string[];
+}
+
+const EMPTY_FOUNDATION_REFRESH: FoundationRefreshView = {
+  asOfDate: "",
+  items: [],
+  newlyCoveredTaskIds: [],
+};
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -209,6 +254,7 @@ function normalizeTask(value: unknown, index: number): PreparationTask | null {
     category: isCertification ? "certification" : category || "goal",
     isCertification,
     mutable: !isCertification && explicitlyMutable !== false,
+    documentSpec: normalizeDocumentSpec(record.documentSpec),
   };
 }
 
@@ -408,6 +454,121 @@ export function extractPreparationPacket(payload: unknown): PreparationPacket | 
 
 export function extractCreatedPreparationId(payload: unknown): string {
   return extractPreparationPacket(payload)?.id ?? "";
+}
+
+export function extractFoundationRefresh(payload: unknown): FoundationRefreshView {
+  const root = asRecord(payload);
+  const record = asRecord(root?.foundationRefresh);
+  if (!record) return EMPTY_FOUNDATION_REFRESH;
+
+  const items = Array.isArray(record.items)
+    ? record.items.flatMap((value): FoundationRefreshItemView[] => {
+        const item = asRecord(value);
+        const taskId = item ? readString(item, "taskId", "task_id") : "";
+        if (!item || !taskId) return [];
+        return [
+          {
+            taskId,
+            title: readString(item, "title"),
+            newlyCovered: readBoolean(item, "newlyCovered", "newly_covered") === true,
+          },
+        ];
+      })
+    : [];
+
+  const newlyCoveredTaskIds = Array.isArray(record.newlyCoveredTaskIds)
+    ? record.newlyCoveredTaskIds.map(cleanString).filter(Boolean)
+    : items.filter((item) => item.newlyCovered).map((item) => item.taskId);
+
+  return {
+    asOfDate: readString(record, "asOfDate", "as_of_date"),
+    items,
+    newlyCoveredTaskIds,
+  };
+}
+
+const DOCUMENT_STATUSES: PacketDocumentStatus[] = [
+  "uploaded",
+  "confirmed_current",
+  "superseded",
+];
+
+export interface DocumentFlags {
+  enabled: boolean;
+  extractEnabled: boolean;
+}
+
+/** Whether the document layer is provisioned, read from the packet payload. */
+export function extractDocumentFlags(payload: unknown): DocumentFlags {
+  const record = asRecord(payload);
+  const documents = asRecord(record?.documents);
+  return {
+    enabled: documents?.enabled === true,
+    extractEnabled: documents?.extractEnabled === true,
+  };
+}
+
+function normalizeDocumentView(value: unknown): PacketDocumentView | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  const id = readString(record, "id");
+  const taskId = readString(record, "taskId", "task_id");
+  if (!id || !taskId) return null;
+  const status = cleanString(record.status) as PacketDocumentStatus;
+  return {
+    id,
+    taskId,
+    originalName: readString(record, "originalName", "original_name") || "Document",
+    contentType: readString(record, "contentType", "content_type"),
+    sizeBytes: readNumber(record.sizeBytes ?? record.size_bytes) ?? 0,
+    status: DOCUMENT_STATUSES.includes(status) ? status : "uploaded",
+    uploadedAt: readString(record, "uploadedAt", "uploaded_at"),
+    retentionExpiresAt: readString(record, "retentionExpiresAt", "retention_expires_at"),
+  };
+}
+
+export function extractPacketDocuments(payload: unknown): PacketDocumentView[] {
+  const root = asRecord(payload);
+  const values = Array.isArray(payload)
+    ? payload
+    : Array.isArray(root?.documents)
+      ? root.documents
+      : [];
+  return values
+    .map((value) => normalizeDocumentView(value))
+    .filter((value): value is PacketDocumentView => value !== null);
+}
+
+export interface ExtractionSuggestionView {
+  field: string;
+  label: string;
+  value: string;
+}
+
+export interface ExtractionResultView {
+  supported: boolean;
+  disclaimer: string;
+  model: string;
+  suggestions: ExtractionSuggestionView[];
+}
+
+export function extractExtractionResult(payload: unknown): ExtractionResultView {
+  const record = asRecord(payload);
+  const suggestions = Array.isArray(record?.suggestions)
+    ? record.suggestions.flatMap((value): ExtractionSuggestionView[] => {
+        const item = asRecord(value);
+        const field = item ? readString(item, "field") : "";
+        const suggestionValue = item ? readString(item, "value") : "";
+        if (!item || !field || !suggestionValue) return [];
+        return [{ field, label: readString(item, "label") || field, value: suggestionValue }];
+      })
+    : [];
+  return {
+    supported: record?.supported === true,
+    disclaimer: readString(record ?? {}, "disclaimer"),
+    model: readString(record ?? {}, "model"),
+    suggestions,
+  };
 }
 
 export function extractPreparationSupportRequests(
