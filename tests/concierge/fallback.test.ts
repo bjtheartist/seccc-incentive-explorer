@@ -64,6 +64,18 @@ describe("deterministic concierge", () => {
     expect(continuation).toBeNull();
   });
 
+  it("immediately refuses saved-record changes for a signed-out visitor", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText: "Update my profile contact email to owner@example.com.",
+      pageContext,
+      signedIn: false,
+    });
+
+    expect(response).toContain("while you're signed out");
+    expect(response).toContain("Nothing was changed");
+    expect(response).toContain("/login?callbackUrl=/workspace");
+  });
+
   it("leaves nuanced questions to the model while keeping greetings deterministic", async () => {
     const nuanced = await buildDeterministicConciergeResponse({
       userText: "Help me turn a vague project idea into useful questions.",

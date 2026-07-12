@@ -343,6 +343,14 @@ export async function POST(request: NextRequest) {
     tools,
     stopWhen: stepCountIs(CONCIERGE_MAX_STEPS),
     maxOutputTokens: CONCIERGE_MAX_OUTPUT_TOKENS,
+    maxRetries: 1,
+    abortSignal: request.signal,
+    timeout: {
+      totalMs: 45_000,
+      stepMs: 20_000,
+      chunkMs: 15_000,
+      toolMs: 10_000,
+    },
     temperature: 0.3,
     providerOptions: {
       gateway: { disallowPromptTraining: true },

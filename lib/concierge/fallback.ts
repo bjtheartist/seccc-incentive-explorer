@@ -24,6 +24,17 @@ export function shouldUseSignedInActionTools({
   );
 }
 
+function isSavedRecordActionRequest(
+  text: string,
+  pageContext: ConciergePageContext
+): boolean {
+  return Boolean(
+    ACTION_REQUEST_RE.test(text) ||
+      (pageContext.route.startsWith("/workspace") &&
+        WORKSPACE_ACTION_VERB_RE.test(text))
+  );
+}
+
 function programLines(
   programs: Awaited<ReturnType<typeof searchPrograms>>
 ): string[] {
@@ -92,6 +103,10 @@ export async function buildDeterministicConciergeResponse({
   // Leave nuanced owner-authorized writes to the approval-gated model tools.
   if (shouldUseSignedInActionTools({ text, pageContext, signedIn })) {
     return null;
+  }
+
+  if (!signedIn && isSavedRecordActionRequest(text, pageContext)) {
+    return "I can't change a Business File or Incentive Preparedness Packet while you're signed out. Nothing was changed. [Sign in to your workspace](/login?callbackUrl=/workspace), then the guide can propose a saved-record update for your approval.";
   }
 
   if (
