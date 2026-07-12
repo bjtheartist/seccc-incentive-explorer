@@ -38,7 +38,10 @@ import {
   type ConciergeActionDeps,
 } from "@/lib/concierge/action-tools";
 import { sanitizePageContext } from "@/lib/concierge/types";
-import { buildDeterministicConciergeResponse } from "@/lib/concierge/fallback";
+import {
+  buildDeterministicConciergeResponse,
+  shouldUseSignedInActionTools,
+} from "@/lib/concierge/fallback";
 import { getCurrentUserId } from "@/lib/current-user";
 import { getSQL } from "@/lib/db";
 import {
@@ -288,8 +291,15 @@ export async function POST(request: NextRequest) {
   // No credential means signed-in action requests still fail safely and direct
   // the owner to the existing guarded UI.
   if (!gatewayCredentialAvailable) {
+    const actionRequest = shouldUseSignedInActionTools({
+      text: userText,
+      pageContext,
+      signedIn: Boolean(userId),
+    });
     return deterministicStreamResponse(
-      "The live assistant is unavailable for that saved-record change right now. Nothing was changed. You can continue securely in [your workspace](/workspace), where profile and packet updates stay under your control.",
+      actionRequest
+        ? "The live assistant is unavailable for that saved-record change right now. Nothing was changed. You can continue securely in [your workspace](/workspace), where profile and packet updates stay under your control."
+        : "The live assistant is unavailable for that question right now. You can still explore [programs](/programs), check an address on the [report builder](/report), or tell me whether the business plans to improve its space, hire, buy equipment, open, or relocate.",
       sessionId,
       isNewSession
     );

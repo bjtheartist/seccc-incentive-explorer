@@ -7,6 +7,23 @@ const ACTION_REQUEST_RE =
 const WORKSPACE_ACTION_VERB_RE =
   /\b(update|change|save|record|remember|set|add|remove|clear|mark|start|create|draft|prepare|go ahead|do it)\b/i;
 
+export function shouldUseSignedInActionTools({
+  text,
+  pageContext,
+  signedIn,
+}: {
+  text: string;
+  pageContext: ConciergePageContext;
+  signedIn: boolean;
+}): boolean {
+  return Boolean(
+    signedIn &&
+      (ACTION_REQUEST_RE.test(text) ||
+        (pageContext.route.startsWith("/workspace") &&
+          WORKSPACE_ACTION_VERB_RE.test(text)))
+  );
+}
+
 function programLines(
   programs: Awaited<ReturnType<typeof searchPrograms>>
 ): string[] {
@@ -73,13 +90,17 @@ export async function buildDeterministicConciergeResponse({
   if (!text) return null;
 
   // Leave nuanced owner-authorized writes to the approval-gated model tools.
-  if (
-    signedIn &&
-    (ACTION_REQUEST_RE.test(text) ||
-      (pageContext.route.startsWith("/workspace") &&
-        WORKSPACE_ACTION_VERB_RE.test(text)))
-  ) {
+  if (shouldUseSignedInActionTools({ text, pageContext, signedIn })) {
     return null;
+  }
+
+  if (
+    /^(?:hi|hello|hey|good (?:morning|afternoon|evening))[!.\s]*$/i.test(text) ||
+    /\b(just explore|what can i explore|help me (?:get started|explore|understand what))\b/i.test(
+      text
+    )
+  ) {
+    return "I can help with Chicago business incentives, location reports, Business Files, and Incentive Preparedness Packets. What is the business trying to do: improve its space, hire, buy equipment, open or relocate, or just explore?";
   }
 
   if (/\b(corridor score|internal score|internal ranking|ranked against)\b/i.test(text)) {
@@ -152,5 +173,7 @@ export async function buildDeterministicConciergeResponse({
     return "Tell me the business address and the priority: improving the space, hiring, buying equipment, opening or relocating, or exploring. I can point you to sourced programs and the next preparation step without deciding eligibility or estimating a total award.";
   }
 
-  return "I can help with Chicago business incentives, location reports, Business Files, and Incentive Preparedness Packets. What is the business trying to do: improve its space, hire, buy equipment, open or relocate, or just explore?";
+  // Let the model handle nuanced, in-domain conversation. The route supplies a
+  // useful generic response instead when no model credential is available.
+  return null;
 }

@@ -63,4 +63,20 @@ describe("deterministic concierge", () => {
     expect(fieldUpdate).toBeNull();
     expect(continuation).toBeNull();
   });
+
+  it("leaves nuanced questions to the model while keeping greetings deterministic", async () => {
+    const nuanced = await buildDeterministicConciergeResponse({
+      userText: "How should I sequence conversations with an alderman and a lender?",
+      pageContext,
+      signedIn: false,
+    });
+    const greeting = await buildDeterministicConciergeResponse({
+      userText: "Hello!",
+      pageContext,
+      signedIn: false,
+    });
+
+    expect(nuanced).toBeNull();
+    expect(greeting).toContain("Chicago business incentives");
+  });
 });
