@@ -33,6 +33,10 @@ export const ANALYTICS_EVENT_TYPES = [
   "preparation_packet_created",
   "preparation_task_updated",
   "preparation_support_requested",
+  "concierge_opened",
+  "concierge_message_sent",
+  "concierge_tool_called",
+  "concierge_nav_suggested",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];
