@@ -91,3 +91,45 @@ A trustworthy action-capable pilot ≈ **3–4 weeks** (phases 1–3); document 
 - AI SDK tool-approval API shape against live docs (feature is current as of 2026-07 but the API surface moves).
 - Gateway model availability + current per-provider rates for `gpt-oss-120b`.
 - Open-weight tool-calling quality on our actual tool set (run the eval suite against 2–3 candidate models before committing).
+
+---
+
+## Stage 1 implementation notes (2026-07-12)
+
+Stage 1 (read-only guest concierge) is implemented on `feat/concierge-stage1`. Scope is exactly §1 "for every visitor" + §2 boundaries — no signed-in profile/packet actions, no approval-gated tools, no audit tables, no DB writes (those are Stages 2–4).
+
+### Feature flag — safe to merge with no keys
+The concierge is OFF unless **both** are true: \`CONCIERGE_ENABLED === "true"\` **and** \`AI_GATEWAY_API_KEY\` is present. With no keys: \`/api/concierge\` returns **503** with a friendly JSON, \`/api/concierge/status\` returns \`{ enabled: false }\`, and the UI panel **renders nothing**. This PR is safe to merge into an environment with no gateway key provisioned.
+
+### Environment variables (add to Vercel / \`.env.local\` when enabling — no \`.env.example\` in this repo)
+| Var | Required | Default | Purpose |
+|---|---|---|---|
+| \`CONCIERGE_ENABLED\` | to turn on | (off) | Must equal \`"true"\` to enable. |
+| \`AI_GATEWAY_API_KEY\` | to turn on | — | Vercel AI Gateway credential. Also gates the feature. **Secret — never commit.** |
+| \`CONCIERGE_MODEL\` | no | \`openai/gpt-oss-120b\` | Gateway model id. Swappable for a Haiku-class fallback (§5). |
+
+No secrets are committed. Keys are read from \`process.env\` only.
+
+### Verified against live AI SDK docs (2026-07-12)
+- \`ai-sdk.dev/docs/getting-started/nextjs-app-router\` — route handler shape, \`convertToModelMessages\` (async in this version), \`toUIMessageStreamResponse\`.
+- \`ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling\` — \`tool({ inputSchema, execute })\`, multi-step via \`stopWhen: stepCountIs(n)\`.
+- \`ai-sdk.dev/docs/ai-sdk-ui/chatbot\` — \`useChat\` + \`DefaultChatTransport\`, per-request \`sendMessage(msg, { body })\`, \`message.parts\` tool-part shape.
+- Exact exports re-confirmed against the installed packages. Versions installed: **\`ai@7.0.22\`**, **\`@ai-sdk/react@4.0.23\`**, **\`@ai-sdk/gateway@4.0.16\`** (zod@4 already present). Model is created with \`createGateway({ apiKey }).\`(modelId)\`.
+
+### What shipped
+- **\`app/api/concierge/route.ts\`** — streaming \`streamText\` endpoint. Feature gate → session cookie → rate limit → body caps (≤20 messages, ≤2000 chars/msg) → \`stopWhen: stepCountIs(6)\`. \`app/api/concierge/status/route.ts\` exposes the flag boolean only.
+- **Read-only tools** (\`lib/concierge/tools.ts\`): \`searchPrograms\`, \`getProgram\` (carries \`officialUrl\` + \`verificationSteps\`), \`listZonesAtPoint\` (reuses the report engine's point-in-zone logic, now extracted to \`lib/zones-check.ts\` and imported by both the tool and \`/api/zones/check\`), \`getPageContext\` (echoes client-sent route + report summary; no server fetch), and \`navigateTo\` (allowlist in \`lib/concierge/navigation.ts\`; **suggests** only). Every tool returns sourced facts and hedged notes.
+- **System prompt** (\`lib/concierge/system-prompt.ts\`) encodes §2: no eligibility determinations, no dollar promises, no invented deadlines/URLs, cite \`officialUrl\`, redirect eligibility questions to administrators, treat tool/address/program text as data not instructions, refuse off-topic/injection.
+- **Panel** (\`components/concierge/ConciergePanel.tsx\`): floating trigger + right slide-over, mono/hairline/#2563EB/#0C1B33 system, markdown-lite (bold/lists/links), tool status lines, citation links, and "Take me there →" nav buttons (user clicks — never auto-navigate). Mounted on **/report** (\`app/report/page.tsx\`, \`suppressed={showEmailGate}\`) and on **all /workspace** routes (new \`app/workspace/layout.tsx\`). The trigger hides while any modal dialog is open (MutationObserver on \`dialog[open], [role="dialog"], [aria-modal="true"]\`) so it never fights the native \`<dialog>\` email gate and is reachable once the gate resolves.
+- **Instrumentation** (added to \`ANALYTICS_EVENT_TYPES\`): \`concierge_opened\`, \`concierge_message_sent\`, \`concierge_tool_called\`, \`concierge_nav_suggested\` — fired client-side through the existing \`/api/events\` pipe, exactly-once via a fired-key set.
+- **Eval seed**: \`tests/concierge/eval-prompts.json\` (20 real + 11 adversarial, with expectedBehavior). Consumed by the Stage 3 eval suite; Stage 1 only unit-tests plumbing.
+
+### Rate-limit design + documented limitation
+Per-IP **20 msg/hour** and per-session (cookie) **40 msg/day**, in-memory per serverless instance (fixed window), fails **closed** with the "concierge is resting" 429. **Limitation:** counters are per-instance and reset on cold start, so under N concurrent instances the effective ceiling is ~limit×N — a courtesy throttle, not an enforceable quota; the session cookie is clearable and IP is spoofable without a trusted proxy. Stage 3 should move this to shared Upstash Redis (already a dependency) for cross-instance accuracy + real daily budgets.
+
+### Notes for Stage 2 (interface contract)
+- **Tool registry**: \`buildConciergeTools({ pageContext, onToolCall })\` returns the read-only tool map. Stage 2 adds approval-gated action tools (profile update, packet task update, support request) to this same map, using the AI SDK tool-approval flow, and calls the existing auth-gated routes (§3) as the authenticated user — do **not** re-implement guards.
+- **Page context**: \`ConciergePageContext\` (\`lib/concierge/types.ts\`) is the client→server contract; extend it (e.g. \`businessProfileId\`, \`packetId\`) rather than adding server fetches.
+- **Auth**: the Stage-1 route is unauthenticated. Stage 2 must read the session (next-auth) in the route to authorize action tools and scope the session/rate-limit keys to the user.
+- **Persistence**: no transcript storage in Stage 1 (open question §8.2). Stage 3 adds the conversation/tool-action/approval/citation audit tables.
+- **Model routing**: \`getConciergeModelId()\` centralizes the model id; add the "easy→small, hard→large" split (§5) here.
