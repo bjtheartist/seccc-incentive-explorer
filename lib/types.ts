@@ -1,3 +1,5 @@
+import type { PersonaId } from "./personas";
+
 export interface Business {
   id: string;
   name: string;
@@ -132,6 +134,13 @@ export interface Program {
    * between windows it is shown with an "applications currently closed" note.
    */
   recurring?: boolean;
+  /**
+   * Persona lens tags (Tier 1b, audit BM4). Which visitor lenses most often
+   * use this program. Descriptive editorial tagging, NOT an eligibility gate —
+   * an untagged program still appears in the default "All" lens. DRAFT: review
+   * with SECCC staff (docs/persona-tags-review.md).
+   */
+  personas?: PersonaId[];
 }
 
 /* ── Phase 1: Check result types ── */
