@@ -19,16 +19,22 @@ import {
 import { trackEvent } from "@/lib/analytics-events";
 import { GOAL_OPTIONS } from "@/lib/workspace";
 import {
+  extractDocumentFlags,
   extractFoundationRefresh,
+  extractPacketDocuments,
   extractPreparationPacket,
   extractPreparationSupportRequests,
+  isDocumentTask,
   isFoundationScopeTask,
+  type DocumentFlags,
   type FoundationRefreshView,
+  type PacketDocumentView,
   type PreparationPacket,
   type PreparationSupportRequest,
   type PreparationTask,
   type PreparationTimelineView,
 } from "@/components/incentive-preparation/types";
+import { DocumentAttachments } from "@/components/incentive-preparation/document-attachments";
 
 interface ProgramOption {
   id: string;
@@ -121,6 +127,11 @@ export default function PreparationPacketDetailPage() {
   const router = useRouter();
   const { status } = useSession();
   const [packet, setPacket] = useState<PreparationPacket | null>(null);
+  const [documentFlags, setDocumentFlags] = useState<DocumentFlags>({
+    enabled: false,
+    extractEnabled: false,
+  });
+  const [documents, setDocuments] = useState<PacketDocumentView[]>([]);
   const [foundationRefresh, setFoundationRefresh] = useState<FoundationRefreshView | null>(null);
   const [supportRequests, setSupportRequests] = useState<PreparationSupportRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,6 +180,7 @@ export default function PreparationPacketDetailPage() {
         const loadedPacket = extractPreparationPacket(body);
         if (!loadedPacket) throw new Error("The preparation packet response was incomplete.");
         setPacket(loadedPacket);
+        setDocumentFlags(extractDocumentFlags(body));
         setFoundationRefresh(extractFoundationRefresh(body));
         setSupportRequests(extractPreparationSupportRequests(body));
       })
@@ -208,6 +220,24 @@ export default function PreparationPacketDetailPage() {
       active = false;
     };
   }, [packet, hasProgram, programs.length]);
+
+  // Load stored documents only when the feature is provisioned. When it is not,
+  // the document UI renders nothing and these endpoints are never called.
+  useEffect(() => {
+    if (!packet || !documentFlags.enabled) return;
+    let active = true;
+    fetch(`/api/incentive-preparation/${packet.id}/documents`)
+      .then((response) => (response.ok ? response.json() : { documents: [] }))
+      .then((data: unknown) => {
+        if (active) setDocuments(extractPacketDocuments(data));
+      })
+      .catch(() => {
+        // The document list degrades to empty if it cannot load.
+      });
+    return () => {
+      active = false;
+    };
+  }, [packet, documentFlags.enabled]);
 
   const selectProgram = async () => {
     if (!packet || selectingProgram) return;
@@ -376,6 +406,19 @@ export default function PreparationPacketDetailPage() {
 
   const foundationTasks = packet.tasks.filter((task) => isFoundationScopeTask(task));
   const applicationTasks = packet.tasks.filter((task) => !isFoundationScopeTask(task));
+  const documentsByTask = documents.reduce<Record<string, PacketDocumentView[]>>((acc, doc) => {
+    (acc[doc.taskId] ??= []).push(doc);
+    return acc;
+  }, {});
+  const profileEditHref = packet.businessProfile.id
+    ? `/workspace/business-file/${encodeURIComponent(packet.businessProfile.id)}/edit`
+    : null;
+  // "N of M requested files attached": M = program-requested document tasks (those
+  // carrying a documentSpec); N = those with at least one non-superseded file.
+  const requestedDocumentTasks = applicationTasks.filter((task) => task.documentSpec);
+  const requestedAttachedCount = requestedDocumentTasks.filter((task) =>
+    (documentsByTask[task.id] ?? []).some((doc) => doc.status !== "superseded"),
+  ).length;
   const foundationConfirmed = foundationTasks.filter(
     (task) => task.status === "complete",
   ).length;
@@ -411,6 +454,16 @@ export default function PreparationPacketDetailPage() {
           </button>
         ) : null}
       </div>
+      {documentFlags.enabled && (isDocumentTask(task) || (documentsByTask[task.id] ?? []).length > 0) && (
+        <DocumentAttachments
+          packetId={packet.id}
+          task={task}
+          documents={documentsByTask[task.id] ?? []}
+          extractEnabled={documentFlags.extractEnabled}
+          profileEditHref={profileEditHref}
+          onDocumentsChange={setDocuments}
+        />
+      )}
     </article>
   );
 
@@ -504,6 +557,11 @@ export default function PreparationPacketDetailPage() {
                   <p className="text-sm leading-5 text-[#0C1B33]/55">{packet.selectedProgram.label || "This program"}&apos;s specific pieces, once your Business File basics are in place.</p>
                   {applicationTimeline.asOfDate && (
                     <p className="mt-1 text-[11px] leading-4 text-[#0C1B33]/45">Estimated as of {formatDateLabel(applicationTimeline.asOfDate)}</p>
+                  )}
+                  {documentFlags.enabled && requestedDocumentTasks.length > 0 && (
+                    <p className="mt-1 font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/45">
+                      {requestedAttachedCount} of {requestedDocumentTasks.length} requested files attached
+                    </p>
                   )}
                 </div>
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">

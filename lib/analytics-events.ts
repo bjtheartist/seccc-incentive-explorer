@@ -36,6 +36,9 @@ export const ANALYTICS_EVENT_TYPES = [
   "preparation_program_selected",
   "business_file_home_viewed",
   "foundation_refresh_confirmed",
+  "packet_document_uploaded",
+  "packet_document_deleted",
+  "packet_document_extract_suggested",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];

@@ -208,6 +208,7 @@ function getProgramPreparationOverlay(programId: string | null, programName: str
 
   return {
     programRequiredDocs: program?.requiredDocs ?? [],
+    programDocumentSpecs: program?.documentSpecs ?? [],
     programVerificationSteps: program?.verificationSteps ?? [],
   };
 }
@@ -396,7 +397,7 @@ export async function POST(req: NextRequest) {
 
   const programId = foundationOnly ? null : optionalString(body.programId);
   const programOverlay = foundationOnly
-    ? { programRequiredDocs: [], programVerificationSteps: [] }
+    ? { programRequiredDocs: [], programDocumentSpecs: [], programVerificationSteps: [] }
     : getProgramPreparationOverlay(programId, programName ?? "");
   const tasks = buildPreparationTasks({
     goalType,

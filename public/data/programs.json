@@ -24,6 +24,12 @@
       "Contractor bids (minimum 2)",
       "Building permits (if applicable)"
     ],
+    "documentSpecs": [
+      { "id": "proof-of-site-control", "label": "Proof of property ownership or lease", "acceptedTypes": [], "multi": false },
+      { "id": "project-plan-and-budget", "label": "Detailed project plan and budget", "acceptedTypes": [], "multi": false },
+      { "id": "contractor-bids", "label": "Contractor bids (minimum 2)", "acceptedTypes": [], "multi": true },
+      { "id": "building-permits", "label": "Building permits (if applicable)", "acceptedTypes": [], "multi": false }
+    ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html",
     "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html",
@@ -358,6 +364,15 @@
       "W-9 form",
       "Certificate of insurance",
       "Business financial statements (to determine reimbursement tier)"
+    ],
+    "documentSpecs": [
+      { "id": "sbif-application", "label": "Completed SBIF application", "acceptedTypes": [], "multi": false },
+      { "id": "proof-of-site-control", "label": "Proof of property ownership or lease (minimum 5 years remaining)", "acceptedTypes": [], "multi": false },
+      { "id": "contractor-bids", "label": "Two contractor bids for proposed work", "acceptedTypes": [], "multi": true },
+      { "id": "building-permits", "label": "Building permits", "acceptedTypes": [], "multi": false },
+      { "id": "w9-form", "label": "W-9 form", "acceptedTypes": [], "multi": false },
+      { "id": "certificate-of-insurance", "label": "Certificate of insurance", "acceptedTypes": [], "multi": false },
+      { "id": "financial-statements", "label": "Business financial statements (to determine reimbursement tier)", "acceptedTypes": [], "multi": false }
     ],
     "contact": "SomerCor (SBIF Administrator): (312) 360-3384",
     "url": "https://somercor.com/sbif/",
@@ -1223,6 +1238,13 @@
       "Proof of property ownership or lease agreement",
       "Business plan showing community impact",
       "Contractor bids for construction/renovation"
+    ],
+    "documentSpecs": [
+      { "id": "nof-application", "label": "Completed NOF application", "acceptedTypes": [], "multi": false },
+      { "id": "project-budget-and-timeline", "label": "Project budget and timeline", "acceptedTypes": [], "multi": false },
+      { "id": "proof-of-site-control", "label": "Proof of property ownership or lease agreement", "acceptedTypes": [], "multi": false },
+      { "id": "business-plan", "label": "Business plan showing community impact", "acceptedTypes": [], "multi": false },
+      { "id": "contractor-bids", "label": "Contractor bids for construction/renovation", "acceptedTypes": [], "multi": true }
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home/Apply.html",
@@ -4335,6 +4357,13 @@
       "Business financial statements (3-yr gross sales for commercial applicants)",
       "Invoices and proof of completed training",
       "W-9 and certificate of insurance"
+    ],
+    "documentSpecs": [
+      { "id": "training-plan-and-curriculum", "label": "Training plan and curriculum", "acceptedTypes": [], "multi": false },
+      { "id": "employee-roster", "label": "Employee roster (showing FTE count for industrial applicants)", "acceptedTypes": [], "multi": false },
+      { "id": "financial-statements", "label": "Business financial statements (3-yr gross sales for commercial applicants)", "acceptedTypes": [], "multi": false },
+      { "id": "training-invoices", "label": "Invoices and proof of completed training", "acceptedTypes": [], "multi": true },
+      { "id": "w9-and-insurance", "label": "W-9 and certificate of insurance", "acceptedTypes": [], "multi": false }
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/sites/workforce-solutions/home.html",
