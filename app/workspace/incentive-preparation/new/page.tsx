@@ -14,10 +14,12 @@ import {
   Loader2,
 } from "lucide-react";
 import {
+  buildFoundationPayload,
   buildPreparationPayload,
   draftFromContext,
   draftFromProfile,
   selectProgramCandidate,
+  validateBusinessFileIntake,
   validatePreparationIntake,
   type PreparationIntakeDraft,
   type PreparationIntakeErrors,
@@ -151,6 +153,18 @@ function NewPreparationPacketContent() {
     };
   }, [router, status]);
 
+  // "Start another application from this Business File" links here with a
+  // ?profileId; preselect that saved profile once profiles have loaded.
+  useEffect(() => {
+    if (!profiles) return;
+    const preselect = searchParams.get("profileId")?.trim();
+    if (!preselect) return;
+    const profile = profiles.find((value) => value.id === preselect);
+    if (!profile) return;
+    setProfileChoice(preselect);
+    setDraft((current) => draftFromProfile(profile, current));
+  }, [profiles, searchParams]);
+
   const updateField = (field: keyof PreparationIntakeDraft, value: string) => {
     setDraft((current) => ({ ...current, [field]: value }));
     setErrors((current) => ({ ...current, [field]: undefined }));
@@ -177,25 +191,24 @@ function NewPreparationPacketContent() {
     setErrors((current) => ({ ...current, selectedProgramLabel: undefined }));
   };
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const validationErrors = validatePreparationIntake(draft);
+  const createPacket = async (foundationOnly: boolean) => {
+    const validationErrors = foundationOnly
+      ? validateBusinessFileIntake(draft)
+      : validatePreparationIntake(draft);
     setErrors(validationErrors);
     setSubmitError("");
     if (Object.keys(validationErrors).length > 0) return;
 
     setSubmitting(true);
     try {
+      const savedProfileId = profileChoice === "new" ? "" : profileChoice;
+      const payload = foundationOnly
+        ? buildFoundationPayload(draft, savedProfileId, context)
+        : buildPreparationPayload(draft, savedProfileId, context);
       const packetResponse = await fetch("/api/incentive-preparation", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          buildPreparationPayload(
-            draft,
-            profileChoice === "new" ? "" : profileChoice,
-            context,
-          ),
-        ),
+        body: JSON.stringify(payload),
       });
       const packetBody = await responseBody(packetResponse);
       if (!packetResponse.ok) {
@@ -213,9 +226,10 @@ function NewPreparationPacketContent() {
         source: "preparation_intake",
         address: draft.physicalAddress || context?.address || null,
         metadata: {
-          goalType: draft.primaryGoal,
+          goalType: foundationOnly ? "" : draft.primaryGoal,
           hasSavedProfile: profileChoice !== "new",
-          hasProgramId: Boolean(draft.selectedProgramId),
+          hasProgramId: foundationOnly ? false : Boolean(draft.selectedProgramId),
+          foundationOnly,
         },
       });
       window.sessionStorage.removeItem(PREPARATION_CONTEXT_STORAGE_KEY);
@@ -229,6 +243,11 @@ function NewPreparationPacketContent() {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void createPacket(false);
   };
 
   if (status === "loading" || (status === "authenticated" && profiles === null)) {
@@ -511,18 +530,29 @@ function NewPreparationPacketContent() {
                 to the program administrator.
               </p>
             </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 bg-[#0C1B33] px-5 py-3 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-white transition-colors hover:bg-[#1E3054] disabled:cursor-wait disabled:opacity-60"
-            >
-              {submitting ? (
-                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              ) : (
-                <ArrowRight className="h-4 w-4" aria-hidden="true" />
-              )}
-              Start prep
-            </button>
+            <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={() => void createPacket(true)}
+                disabled={submitting}
+                className="inline-flex min-h-11 items-center justify-center gap-2 border border-[#0C1B33]/25 px-5 py-3 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-[#0C1B33] transition-colors hover:bg-[#0C1B33]/[0.04] disabled:cursor-wait disabled:opacity-60"
+              >
+                <FilePlus2 className="h-4 w-4" aria-hidden="true" />
+                Start Business File only
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="inline-flex min-h-11 items-center justify-center gap-2 bg-[#0C1B33] px-5 py-3 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-white transition-colors hover:bg-[#1E3054] disabled:cursor-wait disabled:opacity-60"
+              >
+                {submitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                ) : (
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                )}
+                Start prep
+              </button>
+            </div>
           </footer>
         </form>
       </div>

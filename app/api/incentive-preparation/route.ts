@@ -14,7 +14,7 @@ import {
   type PreparationTimeline,
 } from "@/lib/incentive-preparation";
 import { getAllPrograms } from "@/lib/programs-data";
-import { isGoalType } from "@/lib/workspace";
+import { isGoalType, type GoalType } from "@/lib/workspace";
 
 type DatabaseRow = Record<string, unknown>;
 
@@ -110,7 +110,7 @@ function packetSummary(row: DatabaseRow, businessName?: string | null) {
     title: String(row.title || "Incentive Preparation Packet"),
     programId: row.program_id ? String(row.program_id) : null,
     programName: String(row.program_name || ""),
-    goalType: String(row.goal_type),
+    goalType: row.goal_type ? String(row.goal_type) : null,
     projectAddress: row.project_address ? String(row.project_address) : null,
     status: row.status ? String(row.status) : summarizePreparationStatus(tasks),
     businessName:
@@ -301,13 +301,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Request body is required" }, { status: 400 });
   }
 
-  const goalType = body.goalType;
-  if (!isGoalType(goalType)) {
-    return NextResponse.json({ error: "Valid goalType is required" }, { status: 400 });
-  }
+  const goalProvided =
+    body.goalType !== undefined && body.goalType !== null && body.goalType !== "";
   const programName = optionalString(body.programName);
-  if (!programName) {
-    return NextResponse.json({ error: "programName is required" }, { status: 400 });
+  // Foundation-first "Business File": no goal and no program yet. The program is
+  // layered on later via PATCH (mergePreparationProgramTasks). Providing one of
+  // goal/program without the other is an incomplete program packet — reject it.
+  const foundationOnly = !goalProvided && !programName;
+
+  let goalType: GoalType | null = null;
+  if (!foundationOnly) {
+    if (!isGoalType(body.goalType)) {
+      return NextResponse.json({ error: "Valid goalType is required" }, { status: 400 });
+    }
+    goalType = body.goalType;
+    if (!programName) {
+      return NextResponse.json({ error: "programName is required" }, { status: 400 });
+    }
   }
 
   if (body.profileId !== undefined && body.profileId !== null && typeof body.profileId !== "string") {
@@ -383,8 +393,10 @@ export async function POST(req: NextRequest) {
     profileRow = profileRows[0] as DatabaseRow;
   }
 
-  const programId = optionalString(body.programId);
-  const programOverlay = getProgramPreparationOverlay(programId, programName);
+  const programId = foundationOnly ? null : optionalString(body.programId);
+  const programOverlay = foundationOnly
+    ? { programRequiredDocs: [], programVerificationSteps: [] }
+    : getProgramPreparationOverlay(programId, programName ?? "");
   const tasks = buildPreparationTasks({
     goalType,
     programId,
@@ -394,7 +406,9 @@ export async function POST(req: NextRequest) {
   });
   const timeline = calculatePreparationTimeline(tasks);
   const status = summarizePreparationStatus(tasks);
-  const title = optionalString(body.title) || `${programName} application prep`;
+  const title =
+    optionalString(body.title) ||
+    (foundationOnly ? "Business File" : `${programName} application prep`);
   const projectAddress = optionalString(body.projectAddress) || profile.physicalAddress;
 
   const packetRows = await sql`
