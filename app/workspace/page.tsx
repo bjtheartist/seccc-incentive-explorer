@@ -301,9 +301,11 @@ function WorkspaceContent() {
                   timelines?.application?.estimatedWeeks,
                 );
                 const applicationLine = timelines
-                  ? `${packet.programName}: ${
-                      applicationCompact ? `${applicationCompact} prep` : "prep window being assessed"
-                    }`
+                  ? packet.programName
+                    ? `${packet.programName}: ${
+                        applicationCompact ? `${applicationCompact} prep` : "prep window being assessed"
+                      }`
+                    : "No program chosen yet — pick one to start an application"
                   : null;
 
                 return (
