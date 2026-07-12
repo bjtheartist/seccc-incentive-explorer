@@ -1,5 +1,6 @@
 import type { GoalType } from "./workspace";
 import type { VerificationStep } from "./types";
+import { normalizeDocumentSpec, type DocumentSpec } from "./document-spec";
 
 export const PREPARATION_TASK_STATUSES = [
   "needs_document",
@@ -99,6 +100,12 @@ export interface PreparationTask {
   requiredProfileFields?: Array<keyof BusinessProfileSnapshot>;
   applicantOnly?: boolean;
   completionAuthority?: "applicant_or_authorized_representative";
+  /**
+   * The program's document schema for this task, when the task collects a
+   * program-requested document. Lets the task validate what is attached against
+   * what the program asks for and surface a neutral "N of M attached" count.
+   */
+  documentSpec?: DocumentSpec;
 }
 
 export interface PreparationTimeline {
@@ -127,6 +134,12 @@ export interface BuildPreparationTasksInput {
   programId?: string | null;
   programName?: string | null;
   programRequiredDocs?: readonly string[];
+  /**
+   * The program's document schemas, matched to `programRequiredDocs` by label.
+   * The matching spec is attached to the generated "Collect program document"
+   * task so it can validate and count attached files.
+   */
+  programDocumentSpecs?: readonly DocumentSpec[];
   programVerificationSteps?: ReadonlyArray<
     Pick<VerificationStep, "label" | "agency" | "kind" | "appliesBefore" | "note">
   >;
@@ -534,6 +547,7 @@ export function buildPreparationTasks({
   programId,
   programName,
   programRequiredDocs = [],
+  programDocumentSpecs = [],
   programVerificationSteps = [],
   profile,
 }: BuildPreparationTasksInput): PreparationTask[] {
@@ -627,6 +641,11 @@ export function buildPreparationTasks({
     estimatedMaxWeeks: 2,
   });
 
+  const documentSpecByLabel = new Map<string, DocumentSpec>();
+  for (const spec of programDocumentSpecs) {
+    documentSpecByLabel.set(spec.label.toLowerCase(), spec);
+  }
+
   const programDocumentTaskIds: string[] = [];
   const seenProgramDocuments = new Set<string>();
   for (const requirement of programRequiredDocs) {
@@ -636,6 +655,7 @@ export function buildPreparationTasks({
     seenProgramDocuments.add(normalizedLabel);
     const id = `program-document-${programDocumentTaskIds.length + 1}`;
     programDocumentTaskIds.push(id);
+    const documentSpec = documentSpecByLabel.get(normalizedLabel);
     tasks.push({
       id,
       title: `Collect program document: ${label}`,
@@ -646,6 +666,7 @@ export function buildPreparationTasks({
       dependsOn: [PROGRAM_REQUIREMENTS_TASK_ID, FOUNDATION_IDENTITY_TASK_ID],
       estimatedMinWeeks: 0.5,
       estimatedMaxWeeks: 2,
+      ...(documentSpec ? { documentSpec } : {}),
     });
   }
 
@@ -840,6 +861,7 @@ export function normalizePreparationTasks(value: unknown): PreparationTask[] {
     >;
     const programId = normalizeText(item.programId);
     const programName = normalizeText(item.programName);
+    const documentSpec = normalizeDocumentSpec(item.documentSpec);
 
     seenIds.add(id);
     normalized.push({
@@ -855,6 +877,7 @@ export function normalizePreparationTasks(value: unknown): PreparationTask[] {
       ...(programId ? { programId } : {}),
       ...(programName ? { programName } : {}),
       ...(requiredProfileFields.length > 0 ? { requiredProfileFields } : {}),
+      ...(documentSpec ? { documentSpec } : {}),
       ...(certificationTask ? { applicantOnly: true as const } : {}),
       ...(certificationTask
         ? { completionAuthority: "applicant_or_authorized_representative" as const }

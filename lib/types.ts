@@ -1,4 +1,5 @@
 import type { PersonaId } from "./personas";
+import type { DocumentSpec } from "./document-spec";
 
 export interface Business {
   id: string;
@@ -141,6 +142,13 @@ export interface Program {
    * with SECCC staff (docs/persona-tags-review.md).
    */
   personas?: PersonaId[];
+  /**
+   * Application-specific document schemas, matched by `label` to entries in
+   * `requiredDocs`. Derived only from the program's existing requiredDocs /
+   * verificationSteps text; where that text is vague the spec is generic (any
+   * accepted type, single file). Flows into generated packet document tasks.
+   */
+  documentSpecs?: DocumentSpec[];
 }
 
 /* ── Phase 1: Check result types ── */
