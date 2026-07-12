@@ -3,6 +3,7 @@ import { getCurrentUserId } from "@/lib/current-user";
 import { getSQL } from "@/lib/db";
 import {
   buildProfileSnapshot,
+  summarizeProfileFoundation,
   type BusinessProfileInput,
   type BusinessProfileSnapshot,
   type JsonValue,
@@ -78,10 +79,12 @@ function rowToInput(row: ProfileRow): BusinessProfileInput {
 }
 
 function toProfile(row: ProfileRow) {
-  const snapshot = buildProfileSnapshot(rowToInput(row));
+  const input = rowToInput(row);
+  const snapshot = buildProfileSnapshot(input);
   return {
     id: String(row.id),
     ...snapshot,
+    foundationSummary: summarizeProfileFoundation(input),
     createdAt: dateTime(row.created_at),
     updatedAt: dateTime(row.updated_at),
   };
