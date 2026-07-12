@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   ArrowLeft,
+  Building2,
   Check,
   ChevronRight,
   Clock3,
@@ -18,9 +19,11 @@ import {
 import { trackEvent } from "@/lib/analytics-events";
 import { GOAL_OPTIONS } from "@/lib/workspace";
 import {
+  extractFoundationRefresh,
   extractPreparationPacket,
   extractPreparationSupportRequests,
   isFoundationScopeTask,
+  type FoundationRefreshView,
   type PreparationPacket,
   type PreparationSupportRequest,
   type PreparationTask,
@@ -118,6 +121,7 @@ export default function PreparationPacketDetailPage() {
   const router = useRouter();
   const { status } = useSession();
   const [packet, setPacket] = useState<PreparationPacket | null>(null);
+  const [foundationRefresh, setFoundationRefresh] = useState<FoundationRefreshView | null>(null);
   const [supportRequests, setSupportRequests] = useState<PreparationSupportRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [savingTaskId, setSavingTaskId] = useState("");
@@ -165,6 +169,7 @@ export default function PreparationPacketDetailPage() {
         const loadedPacket = extractPreparationPacket(body);
         if (!loadedPacket) throw new Error("The preparation packet response was incomplete.");
         setPacket(loadedPacket);
+        setFoundationRefresh(extractFoundationRefresh(body));
         setSupportRequests(extractPreparationSupportRequests(body));
       })
       .catch((loadError: unknown) => {
@@ -229,6 +234,7 @@ export default function PreparationPacketDetailPage() {
       }
       const updatedPacket = extractPreparationPacket(body);
       if (updatedPacket) setPacket(updatedPacket);
+      setFoundationRefresh(extractFoundationRefresh(body));
       trackEvent("preparation_program_selected", {
         source: "preparation_packet_detail",
         metadata: {
@@ -246,7 +252,11 @@ export default function PreparationPacketDetailPage() {
     }
   };
 
-  const updateTask = async (task: PreparationTask, nextStatus: "complete" | "needs_owner_answer") => {
+  const patchTaskStatus = async (
+    task: PreparationTask,
+    nextStatus: "complete" | "needs_owner_answer",
+    event: "preparation_task_updated" | "foundation_refresh_confirmed",
+  ) => {
     if (!packet || savingTaskId) return;
     setSavingTaskId(task.id);
     setError("");
@@ -270,7 +280,8 @@ export default function PreparationPacketDetailPage() {
           ),
         },
       );
-      trackEvent("preparation_task_updated", {
+      setFoundationRefresh(extractFoundationRefresh(body));
+      trackEvent(event, {
         source: "preparation_packet_detail",
         metadata: { taskId: task.id, nextStatus },
       });
@@ -279,6 +290,17 @@ export default function PreparationPacketDetailPage() {
     } finally {
       setSavingTaskId("");
     }
+  };
+
+  const updateTask = (task: PreparationTask, nextStatus: "complete" | "needs_owner_answer") =>
+    patchTaskStatus(task, nextStatus, "preparation_task_updated");
+
+  // The live-profile refresh affordance: the user completed these fields on their
+  // business profile after this packet was created. Confirming records the same
+  // task-status update — the tool never auto-confirms (spec §3 honesty rulings).
+  const confirmFoundationFromProfile = (taskId: string) => {
+    const task = packet?.tasks.find((item) => item.id === taskId);
+    if (task) void patchTaskStatus(task, "complete", "foundation_refresh_confirmed");
   };
 
   const toggleScope = (scope: string) => {
@@ -359,6 +381,10 @@ export default function PreparationPacketDetailPage() {
   ).length;
   const foundationTimeline = packet.timelines.foundation;
   const applicationTimeline = packet.timelines.application;
+  const newlyCoveredFoundation = (foundationRefresh?.items ?? []).filter(
+    (item) =>
+      item.newlyCovered && foundationTasks.some((task) => task.id === item.taskId),
+  );
   const criticalPathLabel = (timeline: PreparationTimelineView) =>
     timeline.criticalPath.length
       ? timeline.criticalPath
@@ -391,9 +417,14 @@ export default function PreparationPacketDetailPage() {
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-10 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-6xl">
-        <Link href="/workspace" className="mb-8 inline-flex items-center gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-[#0C1B33]/45 hover:text-[#0C1B33]">
-          <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Workspace
-        </Link>
+        <div className="mb-8 flex flex-wrap items-center gap-x-5 gap-y-2">
+          <Link href="/workspace" className="inline-flex items-center gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-[#0C1B33]/45 hover:text-[#0C1B33]">
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" /> Workspace
+          </Link>
+          <Link href="/workspace/business-file" className="inline-flex items-center gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.15em] text-[#0C1B33]/45 hover:text-[#0C1B33]">
+            <Building2 className="h-3.5 w-3.5" aria-hidden="true" /> Business File
+          </Link>
+        </div>
 
         <header className="border border-[#0C1B33]/10 bg-[#0C1B33] px-5 py-7 text-white sm:px-7 sm:py-8">
           <p className="mb-3 font-mono-bureau text-[10px] uppercase tracking-[0.23em] text-white/50">{hasProgram ? "Application prep" : "Business File"}</p>
@@ -435,6 +466,28 @@ export default function PreparationPacketDetailPage() {
                   ? "Business File basics complete. They carry into every application automatically."
                   : `${formatWeekRange(foundationTimeline.estimatedWeeks)} of work left`}
               </p>
+              {newlyCoveredFoundation.length > 0 && (
+                <div className="mt-4 border border-[#2563EB]/25 bg-[#2563EB]/[0.04] px-4 py-3">
+                  <p className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#2563EB]">Your profile now covers this</p>
+                  <p className="mt-1.5 text-xs leading-5 text-[#0C1B33]/60">You have filled in these details on your live business profile since this packet was created. Confirm to mark them complete here. Nothing is confirmed automatically — your confirmation is the record.</p>
+                  <ul className="mt-3 space-y-2">
+                    {newlyCoveredFoundation.map((item) => (
+                      <li key={item.taskId} className="flex flex-wrap items-center justify-between gap-2">
+                        <span className="text-sm text-[#0C1B33]/80">{item.title}</span>
+                        <button
+                          type="button"
+                          onClick={() => confirmFoundationFromProfile(item.taskId)}
+                          disabled={savingTaskId === item.taskId}
+                          className="inline-flex min-h-9 shrink-0 items-center justify-center gap-2 border border-[#2563EB]/35 bg-white px-3 py-1.5 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#2563EB] hover:bg-[#2563EB]/5 disabled:opacity-60"
+                        >
+                          {savingTaskId === item.taskId ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
+                          Confirm from profile
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <div className="mt-4 space-y-3">
                 {foundationTasks.length ? (
                   foundationTasks.map(renderTaskRow)

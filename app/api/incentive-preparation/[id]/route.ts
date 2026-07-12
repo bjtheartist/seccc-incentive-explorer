@@ -8,6 +8,7 @@ import {
   calculateFoundationTimeline,
   calculatePreparationTimeline,
   canApplicantUpdateTask,
+  computeFoundationRefresh,
   mergePreparationProgramTasks,
   normalizePreparationTasks,
   summarizePreparationStatus,
@@ -104,6 +105,7 @@ function packetSummary(row: DatabaseRow) {
   return {
     id: String(row.id),
     title: String(row.title || "Incentive Preparation Packet"),
+    businessProfileId: row.business_profile_id ? String(row.business_profile_id) : null,
     programId: row.program_id ? String(row.program_id) : null,
     programName: String(row.program_name || ""),
     goalType: row.goal_type ? String(row.goal_type) : null,
@@ -230,7 +232,28 @@ export async function GET(_req: NextRequest, { params }: Params) {
     packet: packetDetail(packetRow),
     profile: toProfile(packetRow),
     supportRequests: supportRows.map((row) => toSupportRequest(row as DatabaseRow)),
+    // Reconcile the packet's stored foundation state against the CURRENT live
+    // profile (already joined into packetRow) so a profile the user completed
+    // after creating this packet surfaces a "your profile now covers this"
+    // affordance. Never mutates the packet or the immutable snapshot.
+    foundationRefresh: computeFoundationRefresh(
+      normalizePreparationTasks(parseJson(packetRow.tasks_json, [])),
+      joinedProfileInput(packetRow)
+    ),
   });
+}
+
+/**
+ * Recomputes the live-profile → packet foundation reconciliation for a PATCH
+ * response. The updated tasks come from `RETURNING *`; the live profile comes
+ * from the joined `packetRow` loaded before the write (its profile columns are
+ * unaffected by a task/program update).
+ */
+function foundationRefreshFor(updatedRow: DatabaseRow, joinedPacketRow: DatabaseRow) {
+  return computeFoundationRefresh(
+    normalizePreparationTasks(parseJson(updatedRow.tasks_json, [])),
+    joinedProfileInput(joinedPacketRow)
+  );
 }
 
 export async function PATCH(req: NextRequest, { params }: Params) {
@@ -329,6 +352,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       ...(updatedRows[0] as DatabaseRow),
       business_name: packetRow.business_name,
     }),
+    foundationRefresh: foundationRefreshFor(updatedRows[0] as DatabaseRow, packetRow),
   });
 }
 
@@ -417,5 +441,6 @@ async function selectProgramForPacket(
       ...(updatedRows[0] as DatabaseRow),
       business_name: packetRow.business_name,
     }),
+    foundationRefresh: foundationRefreshFor(updatedRows[0] as DatabaseRow, packetRow),
   });
 }

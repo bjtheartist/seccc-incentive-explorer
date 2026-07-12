@@ -138,6 +138,39 @@ export const OFFICIAL_CERTIFICATION_TASK_ID = "official-certification-submission
 const FOUNDATION_IDENTITY_TASK_ID = "foundation-business-identity";
 const FOUNDATION_ADDRESS_TASK_ID = "foundation-addresses";
 const FOUNDATION_CONTACT_TASK_ID = "foundation-authorized-contact";
+
+/**
+ * The live-profile fields each profile-derived foundation task confirms. Shared
+ * by `buildPreparationTasks` (to set the initial task status), by
+ * `summarizeProfileFoundation` (the Business File "N of M confirmed" glance),
+ * and by `computeFoundationRefresh` (the live-profile → packet reconciliation).
+ * Keeping one source of truth means the three surfaces never drift.
+ */
+export const FOUNDATION_IDENTITY_FIELDS: ReadonlyArray<keyof BusinessProfileSnapshot> = [
+  "legalName",
+  "entityType",
+  "formationDate",
+  "industry",
+  "naicsCode",
+];
+export const FOUNDATION_ADDRESS_FIELDS: ReadonlyArray<keyof BusinessProfileSnapshot> = [
+  "physicalAddress",
+  "mailingAddress",
+];
+export const FOUNDATION_CONTACT_FIELDS: ReadonlyArray<keyof BusinessProfileSnapshot> = [
+  "contactName",
+  "contactEmail",
+  "contactPhone",
+];
+
+const FOUNDATION_FIELD_GROUPS: ReadonlyArray<{
+  taskId: string;
+  fields: ReadonlyArray<keyof BusinessProfileSnapshot>;
+}> = [
+  { taskId: FOUNDATION_IDENTITY_TASK_ID, fields: FOUNDATION_IDENTITY_FIELDS },
+  { taskId: FOUNDATION_ADDRESS_TASK_ID, fields: FOUNDATION_ADDRESS_FIELDS },
+  { taskId: FOUNDATION_CONTACT_TASK_ID, fields: FOUNDATION_CONTACT_FIELDS },
+];
 const PROGRAM_REQUIREMENTS_TASK_ID = "program-application-requirements";
 const FINANCIALS_TASK_ID = "accountant-financials";
 const TAX_STANDING_TASK_ID = "tax-good-standing";
@@ -507,22 +540,9 @@ export function buildPreparationTasks({
   const snapshot = buildProfileSnapshot(profile);
   const normalizedProgramId = normalizeText(programId);
   const normalizedProgramName = normalizeText(programName);
-  const identityFields: Array<keyof BusinessProfileSnapshot> = [
-    "legalName",
-    "entityType",
-    "formationDate",
-    "industry",
-    "naicsCode",
-  ];
-  const addressFields: Array<keyof BusinessProfileSnapshot> = [
-    "physicalAddress",
-    "mailingAddress",
-  ];
-  const contactFields: Array<keyof BusinessProfileSnapshot> = [
-    "contactName",
-    "contactEmail",
-    "contactPhone",
-  ];
+  const identityFields = [...FOUNDATION_IDENTITY_FIELDS];
+  const addressFields = [...FOUNDATION_ADDRESS_FIELDS];
+  const contactFields = [...FOUNDATION_CONTACT_FIELDS];
 
   const tasks: PreparationTask[] = [
     {
@@ -1129,5 +1149,92 @@ export function calculatePreparationTimelines(
   return {
     foundation: calculateFoundationTimeline(tasks, asOf),
     application: calculateApplicationTimeline(tasks, asOf),
+  };
+}
+
+export interface ProfileFoundationSummary {
+  /** Profile-derived foundation groups the live profile currently satisfies. */
+  confirmed: number;
+  /** Total profile-derived foundation groups (identity, addresses, contact). */
+  total: number;
+}
+
+/**
+ * The Business File "N of M confirmed" glance for a profile on its own — a
+ * neutral count of how many profile-derived foundation groups the live profile
+ * satisfies. This is NOT a readiness percentage or an eligibility signal (spec
+ * §3): it only counts which reusable basics are filled in. Continuity documents
+ * (financials, tax) are per-packet external dependencies, not profile fields, so
+ * they are deliberately excluded from the profile-level count.
+ */
+export function summarizeProfileFoundation(
+  profile: BusinessProfileInput
+): ProfileFoundationSummary {
+  const snapshot = buildProfileSnapshot(profile);
+  const confirmed = FOUNDATION_FIELD_GROUPS.filter((group) =>
+    allPresent(snapshot, [...group.fields])
+  ).length;
+  return { confirmed, total: FOUNDATION_FIELD_GROUPS.length };
+}
+
+export interface FoundationRefreshItem {
+  taskId: string;
+  title: string;
+  storedStatus: PreparationTaskStatus;
+  /** The live business_profiles row now satisfies this task's required fields. */
+  liveProfileSatisfies: boolean;
+  /** Live profile covers it but the packet's stored status is not yet complete. */
+  newlyCovered: boolean;
+}
+
+export interface FoundationRefreshState {
+  asOfDate: string;
+  items: FoundationRefreshItem[];
+  /** Tasks the live profile now covers that the user can confirm complete. */
+  newlyCoveredTaskIds: string[];
+}
+
+/**
+ * Reconciles a packet's stored foundation-task state against the CURRENT live
+ * business_profiles row. Packets snapshot the profile immutably at creation, but
+ * a user may fill in more of their live profile later; this surfaces which
+ * profile-derived foundation tasks the live profile now covers.
+ *
+ * By design (spec §3 honesty rulings) this NEVER auto-confirms and NEVER mutates
+ * the packet or the immutable snapshot: it only reports state. A "newly covered"
+ * task is offered to the user as a "your profile now covers this" affordance;
+ * confirming it is an ordinary task-status update, so user confirmation stays the
+ * source of truth. Continuity documents (financials, tax) have no
+ * `requiredProfileFields` and are skipped — they are accountant-owned external
+ * documents the live profile cannot vouch for.
+ */
+export function computeFoundationRefresh(
+  tasks: readonly PreparationTask[],
+  liveProfile: BusinessProfileInput,
+  asOf: Date | string = new Date()
+): FoundationRefreshState {
+  const snapshot = buildProfileSnapshot(liveProfile);
+  const items: FoundationRefreshItem[] = [];
+
+  for (const task of normalizePreparationTasks(tasks)) {
+    if (!isFoundationScopeTask(task)) continue;
+    const fields = task.requiredProfileFields;
+    if (!fields || fields.length === 0) continue;
+    const liveProfileSatisfies = allPresent(snapshot, [...fields]);
+    items.push({
+      taskId: task.id,
+      title: task.title,
+      storedStatus: task.status,
+      liveProfileSatisfies,
+      newlyCovered: liveProfileSatisfies && task.status !== "complete",
+    });
+  }
+
+  return {
+    asOfDate: formatDate(normalizeAsOfDate(asOf)),
+    items,
+    newlyCoveredTaskIds: items
+      .filter((item) => item.newlyCovered)
+      .map((item) => item.taskId),
   };
 }

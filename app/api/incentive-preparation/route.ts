@@ -108,6 +108,7 @@ function packetSummary(row: DatabaseRow, businessName?: string | null) {
   return {
     id: String(row.id),
     title: String(row.title || "Incentive Preparation Packet"),
+    businessProfileId: row.business_profile_id ? String(row.business_profile_id) : null,
     programId: row.program_id ? String(row.program_id) : null,
     programName: String(row.program_name || ""),
     goalType: row.goal_type ? String(row.goal_type) : null,

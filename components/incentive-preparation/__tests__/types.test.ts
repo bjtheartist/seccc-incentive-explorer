@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  extractFoundationRefresh,
   extractPreparationPacket,
   extractPreparationSupportRequests,
 } from "../types";
@@ -102,5 +103,61 @@ describe("preparation API normalization", () => {
         status: "pending",
       }),
     ]);
+  });
+});
+
+describe("extractFoundationRefresh", () => {
+  it("normalizes the newly-covered affordance list from the API response", () => {
+    const refresh = extractFoundationRefresh({
+      foundationRefresh: {
+        asOfDate: "2026-07-12",
+        items: [
+          {
+            taskId: "foundation-business-identity",
+            title: "Confirm the business identity",
+            storedStatus: "needs_owner_answer",
+            liveProfileSatisfies: true,
+            newlyCovered: true,
+          },
+          {
+            taskId: "foundation-addresses",
+            title: "Confirm addresses",
+            storedStatus: "complete",
+            liveProfileSatisfies: true,
+            newlyCovered: false,
+          },
+        ],
+        newlyCoveredTaskIds: ["foundation-business-identity"],
+      },
+    });
+
+    expect(refresh.asOfDate).toBe("2026-07-12");
+    expect(refresh.newlyCoveredTaskIds).toEqual(["foundation-business-identity"]);
+    expect(refresh.items).toHaveLength(2);
+    expect(refresh.items[0]).toMatchObject({
+      taskId: "foundation-business-identity",
+      title: "Confirm the business identity",
+      newlyCovered: true,
+    });
+  });
+
+  it("returns an empty affordance when the response omits the refresh", () => {
+    expect(extractFoundationRefresh({ packet: {} })).toEqual({
+      asOfDate: "",
+      items: [],
+      newlyCoveredTaskIds: [],
+    });
+  });
+
+  it("derives newly-covered ids from items when the id list is absent", () => {
+    const refresh = extractFoundationRefresh({
+      foundationRefresh: {
+        items: [
+          { taskId: "a", title: "A", newlyCovered: true },
+          { taskId: "b", title: "B", newlyCovered: false },
+        ],
+      },
+    });
+    expect(refresh.newlyCoveredTaskIds).toEqual(["a"]);
   });
 });

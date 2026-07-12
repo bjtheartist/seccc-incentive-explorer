@@ -87,6 +87,24 @@ export interface PreparationSupportRequest {
   status: string;
 }
 
+export interface FoundationRefreshItemView {
+  taskId: string;
+  title: string;
+  newlyCovered: boolean;
+}
+
+export interface FoundationRefreshView {
+  asOfDate: string;
+  items: FoundationRefreshItemView[];
+  newlyCoveredTaskIds: string[];
+}
+
+const EMPTY_FOUNDATION_REFRESH: FoundationRefreshView = {
+  asOfDate: "",
+  items: [],
+  newlyCoveredTaskIds: [],
+};
+
 type UnknownRecord = Record<string, unknown>;
 
 function asRecord(value: unknown): UnknownRecord | null {
@@ -408,6 +426,37 @@ export function extractPreparationPacket(payload: unknown): PreparationPacket | 
 
 export function extractCreatedPreparationId(payload: unknown): string {
   return extractPreparationPacket(payload)?.id ?? "";
+}
+
+export function extractFoundationRefresh(payload: unknown): FoundationRefreshView {
+  const root = asRecord(payload);
+  const record = asRecord(root?.foundationRefresh);
+  if (!record) return EMPTY_FOUNDATION_REFRESH;
+
+  const items = Array.isArray(record.items)
+    ? record.items.flatMap((value): FoundationRefreshItemView[] => {
+        const item = asRecord(value);
+        const taskId = item ? readString(item, "taskId", "task_id") : "";
+        if (!item || !taskId) return [];
+        return [
+          {
+            taskId,
+            title: readString(item, "title"),
+            newlyCovered: readBoolean(item, "newlyCovered", "newly_covered") === true,
+          },
+        ];
+      })
+    : [];
+
+  const newlyCoveredTaskIds = Array.isArray(record.newlyCoveredTaskIds)
+    ? record.newlyCoveredTaskIds.map(cleanString).filter(Boolean)
+    : items.filter((item) => item.newlyCovered).map((item) => item.taskId);
+
+  return {
+    asOfDate: readString(record, "asOfDate", "as_of_date"),
+    items,
+    newlyCoveredTaskIds,
+  };
 }
 
 export function extractPreparationSupportRequests(
