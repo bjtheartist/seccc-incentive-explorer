@@ -22,6 +22,7 @@ export const ANALYTICS_EVENT_TYPES = [
   "share_link_copied",
   "demo_address_clicked",
   "map_preview_clicked",
+  "persona_chip_selected",
   "wizard_step_viewed",
   "refine_cta_shown",
   "refine_clicked",

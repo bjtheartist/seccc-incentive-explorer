@@ -20,6 +20,20 @@ export function deriveIsInstantMode(wizardState: WizardState | undefined): boole
   return isSnapshotWizardState(wizardState);
 }
 
+/**
+ * Tier 1b (BM4): should a saved report show the persona lens chips?
+ * Deliberately broader than deriveIsInstantMode — persona (audience) and goal
+ * (project outcome) are orthogonal lenses, so the chips stay available on
+ * goal-refined site reports, not just bare location snapshots. This mirrors
+ * the live /report flow, which gates the chips on page-level instant mode
+ * regardless of whether the email gate produced a goal-refined report.
+ */
+export function derivePersonaLensVisible(
+  wizardState: WizardState | undefined,
+): boolean {
+  return wizardState?.reportType === "site-incentives";
+}
+
 export const GOAL_OPTIONS = [
   { id: "improve-storefront", label: "Improve storefront" },
   { id: "buy-equipment", label: "Buy equipment" },

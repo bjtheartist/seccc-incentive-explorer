@@ -62,6 +62,15 @@ import type {
 } from "@/lib/report-engine";
 import { RefineValuePanel } from "@/components/report/RefineValuePanel";
 import type { QuickRefineFields } from "@/components/report/RefineValuePanel";
+import { PersonaChips } from "@/components/report/PersonaChips";
+import { applyPersonaLens } from "@/lib/report-personas";
+import {
+  DEFAULT_PERSONA,
+  personaShareParam,
+  resolveInitialPersona,
+  storePersona,
+  type PersonaId,
+} from "@/lib/personas";
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { ProjectFitNote } from "@/components/report/ProjectFitNote";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
@@ -1585,6 +1594,7 @@ function ReportWizardPage() {
           onQuickRefine={handleQuickRefine}
           quickRefineBusy={isGenerating}
           isInstantMode={isInstantMode && !hasRefinedInstantReport}
+          showPersonaLens={isInstantMode}
           wizardState={wizardState}
           onCompare={() => setCompareMode(true)}
           compareMode={compareMode}
@@ -3805,6 +3815,7 @@ function ReportDisplay({
   quickRefineBusy,
   refineContext,
   isInstantMode,
+  showPersonaLens,
   wizardState: reportWizardState,
   compact,
   onCompare,
@@ -3824,6 +3835,15 @@ function ReportDisplay({
   quickRefineBusy?: boolean;
   refineContext?: "instant" | "compare_a" | "compare_b";
   isInstantMode?: boolean;
+  /**
+   * Persona lens visibility (Tier 1b, BM4). Deliberately decoupled from
+   * isInstantMode: the page passes isInstantMode diminished by
+   * hasRefinedInstantReport (hiding the refine pitch after refining is
+   * intentional), but persona (audience) and goal (project outcome) are
+   * orthogonal — the lens must stay available on the goal-refined report the
+   * email gate funnels every real user into.
+   */
+  showPersonaLens?: boolean;
   wizardState?: WizardState;
   compact?: boolean;
   onCompare?: () => void;
@@ -3858,6 +3878,29 @@ function ReportDisplay({
     [programs],
   );
   const viewedSupportKeyRef = useRef<string | null>(null);
+
+  // ── Persona lens (Tier 1b, audit BM4) ──
+  // Viewing lens over this snapshot: re-orders and collapses existing content
+  // client-side. Canonical `report` stays untouched (save/email/PDF/refine use
+  // it); only the on-screen sections + roadmap read the lensed copy.
+  const [persona, setPersona] = useState<PersonaId>(DEFAULT_PERSONA);
+  useEffect(() => {
+    setPersona(
+      resolveInitialPersona(
+        typeof window !== "undefined" ? window.location.search : null,
+      ),
+    );
+  }, []);
+  const handlePersonaSelect = useCallback((next: PersonaId) => {
+    setPersona(next);
+    storePersona(next);
+  }, []);
+  const lensed = useMemo(
+    // Without visible chips there must be no invisible lens: a stored session
+    // persona must never silently reorder a report that can't show the row.
+    () => (showPersonaLens ? applyPersonaLens(report, persona).report : report),
+    [report, persona, showPersonaLens],
+  );
 
   // ── TOC ──
   const sectionToAnchor = (title: string) =>
@@ -4025,7 +4068,11 @@ function ReportDisplay({
   const handleShareReport = useCallback(() => {
     if (!reportWizardState) return;
     const encoded = encodeWizardState(reportWizardState);
-    const url = `${window.location.origin}/report?${encoded}`;
+    // Round-trip the persona lens so a forwarded snapshot opens in the same view.
+    const personaParam = personaShareParam(persona);
+    const url = `${window.location.origin}/report?${encoded}${
+      personaParam ? `&persona=${personaParam}` : ""
+    }`;
 	    navigator.clipboard.writeText(url).then(() => {
 	      setLinkCopied(true);
 	      trackEvent(
@@ -4034,7 +4081,7 @@ function ReportDisplay({
 	      );
 	      setTimeout(() => setLinkCopied(false), 2500);
 	    });
-	  }, [report, reportWizardState]);
+	  }, [persona, report, reportWizardState]);
 
   const handleSaveReport = useCallback(() => {
     trackEvent(
@@ -4545,6 +4592,17 @@ function ReportDisplay({
             />
           )}
 
+          {/* ── Persona lens chips (Tier 1b, BM4). Gated on showPersonaLens
+              (page-level instant mode), NOT the diminished isInstantMode prop,
+              so the lens survives the email gate's goal-refined report. ── */}
+          {showPersonaLens && !compact && (
+            <PersonaChips
+              persona={persona}
+              onSelect={handlePersonaSelect}
+              report={report}
+            />
+          )}
+
           {/* ── Metadata Row ── */}
           <div className={`report-meta ${compact ? "px-4 py-3" : "px-5 sm:px-12 md:px-16 py-5"} border-b border-[#0C1B33]/8 flex flex-wrap gap-x-5 sm:gap-x-8 gap-y-3`}>
             <div>
@@ -4793,11 +4851,16 @@ function ReportDisplay({
             )}
 
             {/* ── Content Sections ── */}
-            {report.sections &&
-              report.sections.map((section, sectionIdx) => {
+            {lensed.sections &&
+              lensed.sections.map((section, sectionIdx) => {
                 const sectionNumber = String(sectionIdx + sectionOffset + 1).padStart(2, "0");
 
-                const sectionOpen = isSectionOpen(sectionIdx, section.title);
+                // Persona lens: the "Also at this address" group defaults to
+                // collapsed (still user-expandable, still in the DOM for print/
+                // anchors — collapse, never hide).
+                const sectionOpen = section.collapsedByPersona
+                  ? (expandedSections[sectionIdx] ?? false)
+                  : isSectionOpen(sectionIdx, section.title);
 
                 return (
                   <div
@@ -5191,9 +5254,9 @@ function ReportDisplay({
               })}
 
             {/* ── Your Next Steps (action roadmap) ── */}
-            {report.actionRoadmap && report.actionRoadmap.length > 0 && (
+            {lensed.actionRoadmap && lensed.actionRoadmap.length > 0 && (
               <div id="action-roadmap">
-                <ActionRoadmapSection items={report.actionRoadmap} report={report} />
+                <ActionRoadmapSection items={lensed.actionRoadmap} report={report} />
               </div>
             )}
 

@@ -90,6 +90,13 @@ export interface ReportSection {
     rows: string[][];
   };
   items: ReportItem[];
+  /**
+   * Persona lens (Tier 1b): when a non-"All" lens is active this section holds
+   * the programs that fall outside the lens. The UI renders it as a collapsed
+   * ("Also at this address") disclosure — collapse, never hide. Absent on the
+   * canonical report; only the lensed view sets it.
+   */
+  collapsedByPersona?: boolean;
 }
 
 export interface ReportDetailGroup {

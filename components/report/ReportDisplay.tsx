@@ -33,6 +33,15 @@ import type {
 import type { ApplicationPortal, ExecutiveSummary, Program, VerificationStep } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { RefineValuePanel } from "@/components/report/RefineValuePanel";
+import { PersonaChips } from "@/components/report/PersonaChips";
+import { applyPersonaLens } from "@/lib/report-personas";
+import {
+  DEFAULT_PERSONA,
+  personaShareParam,
+  resolveInitialPersona,
+  storePersona,
+  type PersonaId,
+} from "@/lib/personas";
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { ProjectFitNote } from "@/components/report/ProjectFitNote";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
@@ -840,6 +849,7 @@ export function ReportDisplay({
   onStartOver,
   onRefine,
   isInstantMode,
+  showPersonaLens,
   wizardState: reportWizardState,
   compact,
   onCompare,
@@ -856,6 +866,13 @@ export function ReportDisplay({
   onStartOver: () => void;
   onRefine?: () => void;
   isInstantMode?: boolean;
+  /**
+   * Persona lens visibility (Tier 1b, BM4). Deliberately decoupled from
+   * isInstantMode (which is snapshot-only — false on saved goal-refined
+   * reports): persona (audience) and goal (project outcome) are orthogonal
+   * lenses, so callers pass this for any location-anchored site report.
+   */
+  showPersonaLens?: boolean;
   wizardState?: WizardState;
   compact?: boolean;
   onCompare?: () => void;
@@ -888,6 +905,31 @@ export function ReportDisplay({
   const programById = useMemo(
     () => new Map(programs.map((program) => [program.id, program])),
     [programs],
+  );
+
+  // ── Persona lens (Tier 1b, audit BM4) ──
+  // A viewing lens over this snapshot: re-orders and collapses existing content
+  // client-side. Canonical `report` stays untouched (save/email/PDF/refine use
+  // it); only the on-screen sections + roadmap read the lensed copy.
+  const [persona, setPersona] = useState<PersonaId>(DEFAULT_PERSONA);
+  useEffect(() => {
+    // Resolve after mount to avoid a hydration mismatch; a forwarded ?persona=
+    // (or the per-session choice) opens the snapshot in that lens.
+    setPersona(
+      resolveInitialPersona(
+        typeof window !== "undefined" ? window.location.search : null,
+      ),
+    );
+  }, []);
+  const handlePersonaSelect = useCallback((next: PersonaId) => {
+    setPersona(next);
+    storePersona(next);
+  }, []);
+  const lensed = useMemo(
+    // Without visible chips there must be no invisible lens: a stored session
+    // persona must never silently reorder a report that can't show the row.
+    () => (showPersonaLens ? applyPersonaLens(report, persona).report : report),
+    [report, persona, showPersonaLens],
   );
 
   // ── TOC ──
@@ -923,12 +965,16 @@ export function ReportDisplay({
   const handleShareReport = useCallback(() => {
     if (!reportWizardState) return;
     const encoded = encodeWizardState(reportWizardState);
-    const url = `${window.location.origin}/report?${encoded}`;
+    // Round-trip the persona lens so a forwarded snapshot opens in the same view.
+    const personaParam = personaShareParam(persona);
+    const url = `${window.location.origin}/report?${encoded}${
+      personaParam ? `&persona=${personaParam}` : ""
+    }`;
     navigator.clipboard.writeText(url).then(() => {
       setLinkCopied(true);
       setTimeout(() => setLinkCopied(false), 2500);
     });
-  }, [reportWizardState]);
+  }, [persona, reportWizardState]);
 
   const handleSaveReport = useCallback(() => {
     trackEvent(
@@ -1464,6 +1510,17 @@ export function ReportDisplay({
             />
           )}
 
+          {/* ── Persona lens chips (Tier 1b, BM4). Gated on showPersonaLens,
+              NOT isInstantMode (snapshot-only), so saved goal-refined reports
+              keep the lens too. ── */}
+          {showPersonaLens && !compact && (
+            <PersonaChips
+              persona={persona}
+              onSelect={handlePersonaSelect}
+              report={report}
+            />
+          )}
+
           {/* ── Metadata Row ── */}
           <div className={`report-meta ${compact ? "px-4 py-3" : "px-5 sm:px-12 md:px-16 py-5"} border-b border-[#0C1B33]/8 flex flex-wrap gap-x-5 sm:gap-x-8 gap-y-3`}>
             <div>
@@ -1659,12 +1716,21 @@ export function ReportDisplay({
             )}
 
             {/* ── Content Sections ── */}
-            {report.sections &&
-              report.sections.map((section, sectionIdx) => {
+            {lensed.sections &&
+              lensed.sections.map((section, sectionIdx) => {
                 const sectionNumber = String(sectionIdx + sectionOffset + 1).padStart(2, "0");
+                // Persona lens: the "Also at this address" group collapses (never
+                // hides) into a native disclosure. Print/PDF is generated from the
+                // canonical report, so this only affects the on-screen view.
+                const Wrapper = section.collapsedByPersona ? "details" : "div";
 
                 return (
-                  <div key={sectionIdx} id={sectionToAnchor(section.title)} className="report-section mb-14">
+                  <Wrapper key={sectionIdx} id={sectionToAnchor(section.title)} className={`report-section mb-14 ${section.collapsedByPersona ? "persona-collapsed border border-[#0C1B33]/8 px-5 py-4" : ""}`}>
+                    {section.collapsedByPersona && (
+                      <summary className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB] cursor-pointer select-none">
+                        {section.title} · {section.items.length} more
+                      </summary>
+                    )}
                     <div className="flex items-baseline gap-4 mb-4">
                       <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
                         {sectionNumber}
@@ -2030,14 +2096,14 @@ export function ReportDisplay({
                         })}
                       </div>
                     )}
-                  </div>
+                  </Wrapper>
                 );
               })}
 
             {/* ── Your Next Steps (action roadmap) ── */}
-            {report.actionRoadmap && report.actionRoadmap.length > 0 && (
+            {lensed.actionRoadmap && lensed.actionRoadmap.length > 0 && (
               <div id="action-roadmap">
-                <ActionRoadmapSection items={report.actionRoadmap} />
+                <ActionRoadmapSection items={lensed.actionRoadmap} />
               </div>
             )}
 

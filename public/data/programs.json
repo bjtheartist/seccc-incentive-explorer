@@ -77,6 +77,10 @@
         "appliesBefore": "application",
         "note": "TIF assistance is negotiated per project. Confirm your district's status, remaining term, and eligible costs with DPD before relying on it."
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -164,6 +168,9 @@
         "label": "OZ 2.0 new designations effective",
         "date": "2027-01-01"
       }
+    ],
+    "personas": [
+      "developer"
     ]
   },
   {
@@ -219,7 +226,10 @@
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "DCEO grants + federal OZ stacking",
     "fastestConfirmingStep": "Email opportunityzones@illinois.gov or call DCEO (217) 782-7500",
-    "oz2Note": "Illinois must nominate ~238 new OZ tracts in H2 2026, effective 1/1/2027. Existing IL OZ boundaries valid through 12/31/2026."
+    "oz2Note": "Illinois must nominate ~238 new OZ tracts in H2 2026, effective 1/1/2027. Existing IL OZ boundaries valid through 12/31/2026.",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "enterprise",
@@ -309,6 +319,10 @@
         "appliesBefore": "annual",
         "note": "Annual reporting required for businesses receiving Enterprise Zone benefits."
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -445,6 +459,10 @@
         "appliesBefore": "construction",
         "note": "Only the applicant or an authorized officer signs the disclosure affidavit. DPD issues the Conditional Commitment Letter; confirm approval with SomerCor before beginning work."
       }
+    ],
+    "personas": [
+      "starting",
+      "growing"
     ]
   },
   {
@@ -524,6 +542,10 @@
         "kind": "reporting",
         "appliesBefore": "annual"
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -602,6 +624,9 @@
         "kind": "reporting",
         "appliesBefore": "annual"
       }
+    ],
+    "personas": [
+      "developer"
     ]
   },
   {
@@ -672,6 +697,9 @@
         "kind": "reporting",
         "appliesBefore": "annual"
       }
+    ],
+    "personas": [
+      "developer"
     ]
   },
   {
@@ -736,6 +764,9 @@
         "kind": "reporting",
         "appliesBefore": "annual"
       }
+    ],
+    "personas": [
+      "developer"
     ]
   },
   {
@@ -784,7 +815,10 @@
     "benefitRange": "Free corridor services (streetscaping, marketing, safety)",
     "fastestConfirmingStep": "Look up your SSA on the city's Provider List",
     "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
-    "status": "active"
+    "status": "active",
+    "personas": [
+      "growing"
+    ]
   },
   {
     "id": "highUnemployment",
@@ -920,6 +954,10 @@
         "kind": "filing",
         "appliesBefore": "construction"
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -976,7 +1014,11 @@
     "fastestConfirmingStep": "Check cookcountysmallbiz.org for Round 3 announcements",
     "sourceUrl": "https://cookcountysmallbiz.org/catalystgrant-2/",
     "status": "active",
-    "expirationNote": "Round 2 closed Nov 14, 2025; disbursements spring 2026. Round 3 timing TBD."
+    "expirationNote": "Round 2 closed Nov 14, 2025; disbursements spring 2026. Round 3 timing TBD.",
+    "personas": [
+      "starting",
+      "growing"
+    ]
   },
   {
     "id": "cpace",
@@ -1037,7 +1079,11 @@
     "benefitRange": "Up to 100% project financing (30-year terms)",
     "fastestConfirmingStep": "Call (312) 603-1000 about C-PACE eligibility",
     "sourceUrl": "https://www.cookcountyil.gov/service/clean-energy-cpace-program",
-    "status": "active"
+    "status": "active",
+    "personas": [
+      "growing",
+      "developer"
+    ]
   },
   {
     "id": "smallBizSource",
@@ -1085,7 +1131,11 @@
     "benefitRange": "Free advising (no cost)",
     "fastestConfirmingStep": "Visit cookcountysmallbiz.org to request an advisor",
     "sourceUrl": "https://cookcountysmallbiz.org/",
-    "status": "active"
+    "status": "active",
+    "personas": [
+      "starting",
+      "growing"
+    ]
   },
   {
     "id": "landBank",
@@ -1141,7 +1191,10 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Below-market property acquisition + Reclaiming Chicago pipeline",
-    "fastestConfirmingStep": "Call CCLBA at (312) 603-8015 or email Info@CookCountyLandBank.org"
+    "fastestConfirmingStep": "Call CCLBA at (312) 603-8015 or email Info@CookCountyLandBank.org",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "nof",
@@ -1245,6 +1298,10 @@
         "appliesBefore": "construction",
         "note": "After a Conditional Award Letter, finalists document their share of project financing within the program's stated window. Construction funds flow through an escrow with DPD-approved draws."
       }
+    ],
+    "personas": [
+      "starting",
+      "growing"
     ]
   },
   {
@@ -1318,7 +1375,10 @@
         "appliesBefore": "application"
       }
     ],
-    "deadlines": []
+    "deadlines": [],
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "qct",
@@ -1387,7 +1447,10 @@
     "fastestConfirmingStep": "Call IHDA at (312) 836-5200 about QCT LIHTC allocation",
     "sourceUrl": "https://www.huduser.gov/portal/datasets/qct.html",
     "status": "active",
-    "boundaryDisclaimer": "HUD publishes new QCT designations annually each January 1 (latest: 2026 designations effective 1/1/2026, using 2020 census tract boundaries). The current qct.geojson should be refreshed against HUD's 2026 dataset."
+    "boundaryDisclaimer": "HUD publishes new QCT designations annually each January 1 (latest: 2026 designations effective 1/1/2026, using 2020 census tract boundaries). The current qct.geojson should be refreshed against HUD's 2026 dataset.",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "landmarkDistricts",
@@ -1443,7 +1506,11 @@
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Class L: 10% assessment for 10 years (administered by Cook County Assessor)",
     "fastestConfirmingStep": "Call DPD Historic Preservation at (312) 744-3200",
-    "boundaryDisclaimer": "landmark-districts.geojson holds 59 features; current count is 62 (2025 Landmarks Ordinance). Refresh from data.cityofchicago.org."
+    "boundaryDisclaimer": "landmark-districts.geojson holds 59 features; current count is 62 (2025 Landmarks Ordinance). Refresh from data.cityofchicago.org.",
+    "personas": [
+      "growing",
+      "developer"
+    ]
   },
   {
     "id": "nrhpDistricts",
@@ -1510,7 +1577,10 @@
     "benefitRange": "20% federal tax credit (no cap)",
     "fastestConfirmingStep": "Call Illinois SHPO at (217) 785-4512 to confirm historic status",
     "sourceUrl": "https://www.nps.gov/subjects/taxincentives/index.htm",
-    "status": "active"
+    "status": "active",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "microMarketRecovery",
@@ -1572,7 +1642,11 @@
     "benefitRange": "$30,000 down-payment assistance",
     "fastestConfirmingStep": "Contact NHS Chicago about MMRP eligibility",
     "boundaryDisclaimer": "micro-market-recovery.geojson holds 13 features; current MMRP areas number 19 per chicago.gov/doh. Refresh required.",
-    "expirationNote": "Program scope changed: this is now a homeownership program (Department of Housing), not a commercial storefront program. Treat references to corridor activation as historical."
+    "expirationNote": "Program scope changed: this is now a homeownership program (Department of Housing), not a commercial storefront program. Treat references to corridor activation as historical.",
+    "personas": [
+      "growing",
+      "developer"
+    ]
   },
   {
     "id": "industrialCorridors",
@@ -1718,6 +1792,10 @@
         "url": "https://cocdpd.submittable.com/submit/343419/commercial-corridor-storefront-activation-grant",
         "language": "en"
       }
+    ],
+    "personas": [
+      "starting",
+      "growing"
     ]
   },
   {
@@ -1788,7 +1866,11 @@
     "benefitRange": "Contract set-asides + 10% price preference",
     "fastestConfirmingStep": "Check the address on SBA's HUBZone map, then confirm certification requirements with SBA",
     "deadlines": [],
-    "redesignatedAreaWarning": "HUBZone Redesignated Areas expired July 1, 2026. Businesses relying on Redesignated Area status to qualify must reverify eligibility immediately. The SBA certify.sba.gov/hubzone/map API distinguishes active QCTs from now-expired Redesignated Areas."
+    "redesignatedAreaWarning": "HUBZone Redesignated Areas expired July 1, 2026. Businesses relying on Redesignated Area status to qualify must reverify eligibility immediately. The SBA certify.sba.gov/hubzone/map API distinguishes active QCTs from now-expired Redesignated Areas.",
+    "personas": [
+      "starting",
+      "growing"
+    ]
   },
   {
     "id": "energyCommunityBonus",
@@ -1848,7 +1930,10 @@
     ],
     "lastVerifiedAt": "2026-06-12",
     "benefitRange": "+10 points on ITC / +10% PTC",
-    "fastestConfirmingStep": "Check the site on the official energy communities map, then confirm project fit with a tax advisor"
+    "fastestConfirmingStep": "Check the site on the official energy communities map, then confirm project fit with a tax advisor",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "iraCleanElectricity",
@@ -1915,7 +2000,10 @@
         "date": "2026-08-07"
       }
     ],
-    "sunsetWarning": "Wind and solar facilities must begin physical construction by July 4, 2026 to remain eligible for §48E / §45Y credits. Non-wind/solar zero-emission technologies are unaffected. Consult a tax advisor to confirm construction-start documentation requirements."
+    "sunsetWarning": "Wind and solar facilities must begin physical construction by July 4, 2026 to remain eligible for §48E / §45Y credits. Non-wind/solar zero-emission technologies are unaffected. Consult a tax advisor to confirm construction-start documentation requirements.",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "electivePay",
@@ -1971,6 +2059,9 @@
         "appliesBefore": "construction",
         "note": "Mandatory — credit cannot be claimed without ECO registration number."
       }
+    ],
+    "personas": [
+      "developer"
     ]
   },
   {
@@ -2024,7 +2115,11 @@
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Up to $5.94/sf federal deduction",
     "fastestConfirmingStep": "Engage a §179D energy modeler before 6/30/2026 construction start",
-    "sunsetWarning": "§179D terminates for construction beginning after 6/30/2026 (OBBBA). Property owners considering qualifying work should act before that date."
+    "sunsetWarning": "§179D terminates for construction beginning after 6/30/2026 (OBBBA). Property owners considering qualifying work should act before that date.",
+    "personas": [
+      "growing",
+      "developer"
+    ]
   },
   {
     "id": "hudSection108",
@@ -2078,7 +2173,10 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Federally-guaranteed loan, 30-year term, 0.58% FY26 fee",
-    "fastestConfirmingStep": "Discuss the project with Chicago DPD before approaching HUD"
+    "fastestConfirmingStep": "Discuss the project with Chicago DPD before approaching HUD",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "cdfiBond",
@@ -2131,7 +2229,10 @@
       }
     ],
     "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "Long-term fixed-rate capital deployed through certified CDFIs"
+    "benefitRange": "Long-term fixed-rate capital deployed through certified CDFIs",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "sba7a504",
@@ -2192,6 +2293,11 @@
         "label": "FY2026 manufacturer fee waiver expires",
         "date": "2026-09-30"
       }
+    ],
+    "personas": [
+      "starting",
+      "growing",
+      "developer"
     ]
   },
   {
@@ -2265,7 +2371,11 @@
         "date": "2027-01-25"
       }
     ],
-    "expirationNote": "Physical damage loan applications closed approximately June 22, 2026. ONLY economic injury applications remain open. Storm event: July 25-28, 2025 (Cook County disaster declaration)."
+    "expirationNote": "Physical damage loan applications closed approximately June 22, 2026. ONLY economic injury applications remain open. Storm event: July 25-28, 2025 (Cook County disaster declaration).",
+    "personas": [
+      "starting",
+      "growing"
+    ]
   },
   {
     "id": "chips48d",
@@ -2317,7 +2427,10 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "25% federal investment tax credit",
-    "fastestConfirmingStep": "Consult a tax advisor before initiating qualified investment"
+    "fastestConfirmingStep": "Consult a tax advisor before initiating qualified investment",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "ssbciAdvantageIL",
@@ -2369,7 +2482,11 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Loans up to $1.5M (state guarantee) + equity through INVENT VCP",
-    "fastestConfirmingStep": "Visit dceo.illinois.gov/smallbizassistance/advantageillinois for current partner lenders"
+    "fastestConfirmingStep": "Visit dceo.illinois.gov/smallbizassistance/advantageillinois for current partner lenders",
+    "personas": [
+      "starting",
+      "growing"
+    ]
   },
   {
     "id": "edaBuildToScale",
@@ -2416,7 +2533,11 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "$500K – $5M federal grants",
-    "fastestConfirmingStep": "Monitor grants.gov for FY 2026 Build to Scale NOFO"
+    "fastestConfirmingStep": "Monitor grants.gov for FY 2026 Build to Scale NOFO",
+    "personas": [
+      "growing",
+      "developer"
+    ]
   },
   {
     "id": "bmec",
@@ -2480,6 +2601,10 @@
         "kind": "reporting",
         "appliesBefore": "annual"
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -2551,6 +2676,10 @@
         "kind": "reporting",
         "appliesBefore": "annual"
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -2613,6 +2742,9 @@
         "kind": "certification",
         "appliesBefore": "purchase"
       }
+    ],
+    "personas": [
+      "developer"
     ]
   },
   {
@@ -2677,6 +2809,9 @@
         "kind": "reporting",
         "appliesBefore": "annual"
       }
+    ],
+    "personas": [
+      "developer"
     ]
   },
   {
@@ -2729,7 +2864,11 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Up to $75,000 (75% reimbursement)",
-    "fastestConfirmingStep": "Visit innovate-illinois.com/dceo-incentives for next round timing"
+    "fastestConfirmingStep": "Visit innovate-illinois.com/dceo-incentives for next round timing",
+    "personas": [
+      "starting",
+      "growing"
+    ]
   },
   {
     "id": "economicEmpowermentCenters",
@@ -2806,6 +2945,9 @@
         "appliesBefore": "application",
         "note": "DCEO notes that entities must be pre-qualified for the application to be considered."
       }
+    ],
+    "personas": [
+      "starting"
     ]
   },
   {
@@ -2852,7 +2994,10 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Up to 35% transferable credit",
-    "fastestConfirmingStep": "Pre-apply with the Illinois Film Office before production begins"
+    "fastestConfirmingStep": "Pre-apply with the Illinois Film Office before production begins",
+    "personas": [
+      "growing"
+    ]
   },
   {
     "id": "liveTheaterCredit",
@@ -2898,7 +3043,10 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "20% transferable credit on qualified IL expenditures",
-    "fastestConfirmingStep": "Pre-apply with DCEO before production begins"
+    "fastestConfirmingStep": "Pre-apply with DCEO before production begins",
+    "personas": [
+      "growing"
+    ]
   },
   {
     "id": "cannabisR3",
@@ -2943,7 +3091,10 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Forgivable loans (size varies by round)",
-    "fastestConfirmingStep": "Monitor DCEO OE3 page for next round"
+    "fastestConfirmingStep": "Monitor DCEO OE3 page for next round",
+    "personas": [
+      "starting"
+    ]
   },
   {
     "id": "r3Grants",
@@ -2994,7 +3145,10 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Grants (size varies by NOFO)",
-    "fastestConfirmingStep": "Monitor r3.illinois.gov for next NOFO"
+    "fastestConfirmingStep": "Monitor r3.illinois.gov for next NOFO",
+    "personas": [
+      "starting"
+    ]
   },
   {
     "id": "class6b",
@@ -3081,6 +3235,10 @@
         "appliesBefore": "construction",
         "note": "File the Eligibility Application with the Assessor BEFORE construction, substantial rehabilitation, or reoccupation begins; filing after work starts can forfeit eligibility. The application may be filed up to one year before commencement."
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -3158,6 +3316,10 @@
         "kind": "consent",
         "appliesBefore": "application"
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -3235,6 +3397,10 @@
         "kind": "filing",
         "appliesBefore": "construction"
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -3299,6 +3465,10 @@
         "kind": "consent",
         "appliesBefore": "application"
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -3371,6 +3541,10 @@
         "kind": "filing",
         "appliesBefore": "application"
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -3423,7 +3597,10 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "10% assessment for 10 years (stacks with state MICRO + federal §48D)",
-    "fastestConfirmingStep": "Call Assessor Incentives at (312) 603-7529 to scope 8a MICRO"
+    "fastestConfirmingStep": "Call Assessor Incentives at (312) 603-7529 to scope 8a MICRO",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "classC",
@@ -3501,6 +3678,9 @@
         "kind": "consent",
         "appliesBefore": "application"
       }
+    ],
+    "personas": [
+      "developer"
     ]
   },
   {
@@ -3585,6 +3765,10 @@
         "kind": "consent",
         "appliesBefore": "application"
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -3648,7 +3832,10 @@
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Assessment freeze, tiered by neighborhood market",
     "fastestConfirmingStep": "Call (312) 603-7529 or visit cookcountyassessoril.gov/affordable-housing before Sept 5 deadline",
-    "expirationNote": "2026 Part 1 + Part 2 application deadline: September 5, 2026."
+    "expirationNote": "2026 Part 1 + Part 2 application deadline: September 5, 2026.",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "cookCannabisGrant",
@@ -3702,7 +3889,10 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "$75,000 per recipient",
-    "fastestConfirmingStep": "Call CCBED at (312) 603-1000 about upcoming rounds"
+    "fastestConfirmingStep": "Call CCBED at (312) 603-1000 about upcoming rounds",
+    "personas": [
+      "starting"
+    ]
   },
   {
     "id": "investInCook",
@@ -3757,7 +3947,11 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Grant award sized to project (program total $8.5M/year)",
-    "fastestConfirmingStep": "Visit cookcountyil.gov/investincook for next call schedule"
+    "fastestConfirmingStep": "Visit cookcountyil.gov/investincook for next call schedule",
+    "personas": [
+      "growing",
+      "developer"
+    ]
   },
   {
     "id": "cookBrownfield",
@@ -3817,7 +4011,10 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Phase I/II assessments and remediation planning (no-cost to qualifying owners)",
-    "fastestConfirmingStep": "Call Cook County DES at (312) 603-8200 for site eligibility"
+    "fastestConfirmingStep": "Call Cook County DES at (312) 603-8200 for site eligibility",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "cdgSmall",
@@ -3915,6 +4112,10 @@
         "label": "Small CDG application deadline",
         "date": "2026-08-14"
       }
+    ],
+    "personas": [
+      "starting",
+      "growing"
     ]
   },
   {
@@ -4008,6 +4209,10 @@
         "label": "Medium CDG application deadline",
         "date": "2026-08-14"
       }
+    ],
+    "personas": [
+      "growing",
+      "developer"
     ]
   },
   {
@@ -4096,7 +4301,10 @@
         "language": "en"
       }
     ],
-    "deadlines": []
+    "deadlines": [],
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "workforceSolutions",
@@ -4186,6 +4394,9 @@
         "appliesBefore": "application",
         "note": "Funding runs in cycles tied to TIF districts. Confirm the current cycle and your district's eligibility before building a training plan."
       }
+    ],
+    "personas": [
+      "growing"
     ]
   },
   {
@@ -4237,7 +4448,10 @@
     ],
     "lastVerifiedAt": "2026-05-21",
     "benefitRange": "Capital grants (size varies)",
-    "fastestConfirmingStep": "Discuss project alignment with DPD before applying"
+    "fastestConfirmingStep": "Discuss project alignment with DPD before applying",
+    "personas": [
+      "developer"
+    ]
   },
   {
     "id": "comedEvRebate",
@@ -4293,6 +4507,9 @@
         "appliesBefore": "annual",
         "note": "Stackable federal credit; file with annual tax return."
       }
+    ],
+    "personas": [
+      "growing"
     ]
   },
   {
@@ -4351,7 +4568,11 @@
     "lastVerifiedAt": "2026-07-02",
     "benefitRange": "Up to 75% of eligible equipment costs (specific caps require direct ComEd verification)",
     "fastestConfirmingStep": "Call ComEd at (877) 4-COMED-1 or visit comed.com/SmallBusiness for current rebate schedule",
-    "deadlines": []
+    "deadlines": [],
+    "personas": [
+      "starting",
+      "growing"
+    ]
   },
   {
     "id": "comedDgSolar",
@@ -4415,7 +4636,11 @@
     "lastVerifiedAt": "2026-07-02",
     "benefitRange": "$300/kW (≤100 kW) or $250/kW (>100 kW) upfront; stacks with IL Shines RECs + federal ITC",
     "fastestConfirmingStep": "Contact a ComEd-approved solar installer or call (877) 4-COMED-1 for current rebate terms",
-    "deadlines": []
+    "deadlines": [],
+    "personas": [
+      "growing",
+      "developer"
+    ]
   },
   {
     "id": "peoplesGasEfficiency",
@@ -4479,6 +4704,9 @@
         "label": "2026 annual rebate cycle closes",
         "date": "2026-12-31"
       }
+    ],
+    "personas": [
+      "growing"
     ]
   },
   {
@@ -4537,7 +4765,10 @@
     "lastVerifiedAt": "2026-07-02",
     "benefitRange": "$1,000–$15,000 at 0% interest, no fees",
     "fastestConfirmingStep": "Apply at kiva.org/borrow — 30-minute application, no credit score minimum",
-    "deadlines": []
+    "deadlines": [],
+    "personas": [
+      "starting"
+    ]
   },
   {
     "id": "greenwoodArcher",
@@ -4593,7 +4824,11 @@
     "lastVerifiedAt": "2026-07-02",
     "benefitRange": "Loans up to $500,000; CRE-specific terms — verify with GAC",
     "fastestConfirmingStep": "Visit greenwoodarchercapital.org or contact GAC directly for current product terms and CRE eligibility",
-    "deadlines": []
+    "deadlines": [],
+    "personas": [
+      "starting",
+      "growing"
+    ]
   },
   {
     "id": "alliesCommunityBusiness",
@@ -4651,6 +4886,10 @@
     "lastVerifiedAt": "2026-07-02",
     "benefitRange": "Term loans $500–$500K (10–12% + 3% closing); revenue-based $50K–$500K (3% fee, 1.5x max repayment)",
     "fastestConfirmingStep": "Call A4CB at (312) 275-3000 or visit a4cb.org/services/loans/",
-    "deadlines": []
+    "deadlines": [],
+    "personas": [
+      "starting",
+      "growing"
+    ]
   }
 ]
