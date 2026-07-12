@@ -12,10 +12,12 @@ import {
   calculatePreparationTimeline,
   calculatePreparationTimelines,
   canApplicantUpdateTask,
+  computeFoundationRefresh,
   isFoundationScopeTask,
   mergePreparationProgramTasks,
   normalizePreparationTasks,
   summarizePreparationStatus,
+  summarizeProfileFoundation,
   type BusinessProfileInput,
   type JsonValue,
   type PreparationTask,
@@ -873,5 +875,87 @@ describe("incentive preparation migration", () => {
     expect(migration).toMatch(
       /ALTER TABLE incentive_preparation_packets ALTER COLUMN program_name DROP NOT NULL/
     );
+  });
+});
+
+describe("summarizeProfileFoundation", () => {
+  it("counts the three profile-derived foundation groups a complete profile satisfies", () => {
+    expect(summarizeProfileFoundation(COMPLETE_PROFILE)).toEqual({
+      confirmed: 3,
+      total: 3,
+    });
+  });
+
+  it("counts only the groups whose live fields are all present", () => {
+    // Contact group is missing contactPhone; identity is missing naicsCode.
+    const partial: BusinessProfileInput = {
+      legalName: "South Shore Supply LLC",
+      entityType: "LLC",
+      formationDate: "2021-03-15",
+      industry: "Retail",
+      naicsCode: null,
+      physicalAddress: "9000 S Commercial Ave",
+      mailingAddress: "PO Box 170",
+      contactName: "Jordan Lee",
+      contactEmail: "jordan@example.com",
+      contactPhone: null,
+    };
+    expect(summarizeProfileFoundation(partial)).toEqual({ confirmed: 1, total: 3 });
+  });
+
+  it("never returns a percentage or readiness signal — only neutral counts", () => {
+    const summary = summarizeProfileFoundation({});
+    expect(summary).toEqual({ confirmed: 0, total: 3 });
+    expect(Object.keys(summary).sort()).toEqual(["confirmed", "total"]);
+  });
+});
+
+describe("computeFoundationRefresh", () => {
+  it("flags a foundation task the live profile now covers but the packet has not confirmed", () => {
+    const tasks = buildPreparationTasks({ profile: {} });
+    // Live profile now has full identity/address/contact facts.
+    const refresh = computeFoundationRefresh(tasks, COMPLETE_PROFILE);
+
+    expect(refresh.newlyCoveredTaskIds).toEqual(
+      expect.arrayContaining([
+        "foundation-business-identity",
+        "foundation-addresses",
+        "foundation-authorized-contact",
+      ])
+    );
+    const identity = refresh.items.find(
+      (item) => item.taskId === "foundation-business-identity"
+    );
+    expect(identity).toMatchObject({ liveProfileSatisfies: true, newlyCovered: true });
+  });
+
+  it("does not flag a task the user already confirmed complete", () => {
+    const tasks = buildPreparationTasks({ profile: {} }).map((task) =>
+      task.id === "foundation-business-identity"
+        ? { ...task, status: "complete" as const }
+        : task
+    );
+    const refresh = computeFoundationRefresh(tasks, COMPLETE_PROFILE);
+    expect(refresh.newlyCoveredTaskIds).not.toContain("foundation-business-identity");
+    const identity = refresh.items.find(
+      (item) => item.taskId === "foundation-business-identity"
+    );
+    // Still reported, but not offered as a confirm affordance.
+    expect(identity).toMatchObject({ liveProfileSatisfies: true, newlyCovered: false });
+  });
+
+  it("never marks a task as newly covered when the live profile is still incomplete", () => {
+    const tasks = buildPreparationTasks({ profile: {} });
+    const refresh = computeFoundationRefresh(tasks, {});
+    expect(refresh.newlyCoveredTaskIds).toEqual([]);
+    expect(refresh.items.every((item) => item.newlyCovered === false)).toBe(true);
+  });
+
+  it("skips continuity documents, which the live profile cannot vouch for", () => {
+    const tasks = buildPreparationTasks({ profile: COMPLETE_PROFILE });
+    const refresh = computeFoundationRefresh(tasks, COMPLETE_PROFILE);
+    const continuityIds = refresh.items.map((item) => item.taskId);
+    expect(continuityIds).not.toContain("accountant-financials");
+    expect(continuityIds).not.toContain("tax-good-standing");
   });
 });
