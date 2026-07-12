@@ -66,7 +66,7 @@ describe("deterministic concierge", () => {
 
   it("leaves nuanced questions to the model while keeping greetings deterministic", async () => {
     const nuanced = await buildDeterministicConciergeResponse({
-      userText: "How should I sequence conversations with an alderman and a lender?",
+      userText: "Help me turn a vague project idea into useful questions.",
       pageContext,
       signedIn: false,
     });
@@ -78,5 +78,19 @@ describe("deterministic concierge", () => {
 
     expect(nuanced).toBeNull();
     expect(greeting).toContain("Chicago business incentives");
+  });
+
+  it("keeps stakeholder sequencing advisory and free of invented requirements", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText:
+        "How should I sequence conversations with an alderman, a lender, and a local chamber?",
+      pageContext,
+      signedIn: false,
+    });
+
+    expect(response).toContain("optional coordination plan");
+    expect(response).toContain("official instructions");
+    expect(response).not.toMatch(/\bcontrols?\b|\bgatekeepers?\b/i);
+    expect(response).not.toContain("https://");
   });
 });

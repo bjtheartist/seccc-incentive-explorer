@@ -119,6 +119,26 @@ export async function buildDeterministicConciergeResponse({
     return "I can help you prepare and organize, but I can't certify or submit information for you. Those final steps stay with you or an authorized representative in the official process. [Open your workspace](/workspace)";
   }
 
+  if (
+    /\b(alderman(?:ic)?|ward office|local chamber|chamber of commerce|lender|support letter|letter of support)\b/i.test(
+      text
+    )
+  ) {
+    return [
+      "There is not one official stakeholder sequence in the Explorer. A cautious preparation order is:",
+      "",
+      "1. Write down the project address, business priority, scope, timing, and financing needs.",
+      "2. Check the program's official instructions or ask its administrator which documents, financing evidence, or support letters are actually required.",
+      "3. If useful, ask a local chamber or business-support organization to help organize the request and identify the right contacts.",
+      "4. Involve a lender when outside financing is part of the project and ask what underwriting documents they need.",
+      "5. Contact the aldermanic office when the official program guidance or local project context indicates that ward-level coordination would be useful.",
+      "",
+      "This is an optional coordination plan, not an official application order. A chamber, lender, or aldermanic office should not be treated as confirming program eligibility unless the program's official rules give that party a formal role.",
+      "",
+      "[Build an address report](/report) or [organize the project in your workspace](/workspace).",
+    ].join("\n");
+  }
+
   if (/\b(faq|frequently asked)\b/i.test(text)) {
     return "You can open the [frequently asked questions](/faq). I can also help you find a program, check an address, or understand a report.";
   }
