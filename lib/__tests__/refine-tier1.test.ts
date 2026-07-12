@@ -165,4 +165,26 @@ describe("ReportDisplay forks keep the shared refine panel", () => {
     expect(liveFork).not.toContain(oldCopy);
     expect(workspaceFork).not.toContain(oldCopy);
   });
+
+  // ─── Tier 1b: ONE shared persona chip component wired into BOTH forks ──
+  it("both forks render the shared PersonaChips component", () => {
+    expect(liveFork).toContain("PersonaChips");
+    expect(workspaceFork).toContain("PersonaChips");
+  });
+
+  it("both forks drive the on-screen body from the persona-lensed report", () => {
+    expect(liveFork).toContain("lensed.sections");
+    expect(workspaceFork).toContain("lensed.sections");
+    expect(liveFork).toContain("lensed.actionRoadmap");
+    expect(workspaceFork).toContain("lensed.actionRoadmap");
+  });
+
+  it("both forks export the PDF from the canonical report (print = 'All')", () => {
+    // The lens only re-shapes the on-screen `lensed` copy; PDF/export must read
+    // the untouched `report` so a forwarded/printed snapshot is the full view.
+    expect(liveFork).toContain("generateReportPdf(report)");
+    expect(workspaceFork).toContain("generateReportPdf(report)");
+    expect(liveFork).not.toContain("generateReportPdf(lensed)");
+    expect(workspaceFork).not.toContain("generateReportPdf(lensed)");
+  });
 });

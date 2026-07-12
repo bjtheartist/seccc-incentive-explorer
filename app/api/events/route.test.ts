@@ -31,6 +31,7 @@ describe("POST /api/events", () => {
     "save_report_clicked",
     "email_report_clicked",
     "report_email_gate_skipped",
+    "persona_chip_selected",
   ])("accepts the new %s event", async (eventType) => {
     const res = await POST(
       eventRequest({
