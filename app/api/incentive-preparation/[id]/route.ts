@@ -3,10 +3,12 @@ import { getCurrentUserId } from "@/lib/current-user";
 import { getSQL } from "@/lib/db";
 import {
   PREPARATION_TASK_STATUSES,
+  buildPreparationTasks,
   buildProfileSnapshot,
   calculateFoundationTimeline,
   calculatePreparationTimeline,
   canApplicantUpdateTask,
+  mergePreparationProgramTasks,
   normalizePreparationTasks,
   summarizePreparationStatus,
   type BusinessProfileInput,
@@ -14,6 +16,8 @@ import {
   type PreparationTaskStatus,
   type PreparationTimeline,
 } from "@/lib/incentive-preparation";
+import { getAllPrograms } from "@/lib/programs-data";
+import { isGoalType } from "@/lib/workspace";
 
 type Params = { params: Promise<{ id: string }> };
 type DatabaseRow = Record<string, unknown>;
@@ -102,7 +106,7 @@ function packetSummary(row: DatabaseRow) {
     title: String(row.title || "Incentive Preparation Packet"),
     programId: row.program_id ? String(row.program_id) : null,
     programName: String(row.program_name || ""),
-    goalType: String(row.goal_type),
+    goalType: row.goal_type ? String(row.goal_type) : null,
     projectAddress: row.project_address ? String(row.project_address) : null,
     status: row.status ? String(row.status) : summarizePreparationStatus(tasks),
     businessName: row.business_name ? String(row.business_name) : "Business profile",
@@ -143,6 +147,18 @@ function toSupportRequest(row: DatabaseRow) {
     consentedAt: row.consented_at ? dateTime(row.consented_at) : null,
     createdAt: dateTime(row.created_at),
     updatedAt: dateTime(row.updated_at),
+  };
+}
+
+function getProgramOverlay(programId: string | null, programName: string) {
+  const programs = getAllPrograms();
+  const program =
+    (programId ? programs.find((candidate) => candidate.id === programId) : undefined) ??
+    programs.find((candidate) => candidate.name === programName);
+
+  return {
+    programRequiredDocs: program?.requiredDocs ?? [],
+    programVerificationSteps: program?.verificationSteps ?? [],
   };
 }
 
@@ -232,14 +248,6 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   if (!isRecord(body)) {
     return NextResponse.json({ error: "Request body is required" }, { status: 400 });
   }
-  const taskId = typeof body.taskId === "string" ? body.taskId.trim() : "";
-  if (!taskId) {
-    return NextResponse.json({ error: "taskId is required" }, { status: 400 });
-  }
-  const nextStatus = typeof body.status === "string" ? body.status.trim() : "";
-  if (!PREPARATION_TASK_STATUSES.includes(nextStatus as PreparationTaskStatus)) {
-    return NextResponse.json({ error: "Valid status is required" }, { status: 400 });
-  }
 
   const { id } = await params;
   const packetRows = await loadPacket(sql, id, userId);
@@ -249,8 +257,27 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       { status: 404 }
     );
   }
-
   const packetRow = packetRows[0] as DatabaseRow;
+
+  // A packet-detail request with no taskId but a goal/program selects a target
+  // incentive for a foundation-first "Business File" — layer program tasks in
+  // via the merge seam rather than a task-status update.
+  const isProgramSelection =
+    body.taskId === undefined &&
+    (body.goalType !== undefined || body.programName !== undefined);
+  if (isProgramSelection) {
+    return selectProgramForPacket(sql, id, userId, packetRow, body);
+  }
+
+  const taskId = typeof body.taskId === "string" ? body.taskId.trim() : "";
+  if (!taskId) {
+    return NextResponse.json({ error: "taskId is required" }, { status: 400 });
+  }
+  const nextStatus = typeof body.status === "string" ? body.status.trim() : "";
+  if (!PREPARATION_TASK_STATUSES.includes(nextStatus as PreparationTaskStatus)) {
+    return NextResponse.json({ error: "Valid status is required" }, { status: 400 });
+  }
+
   const tasks = normalizePreparationTasks(parseJson(packetRow.tasks_json, []));
   const task = tasks.find((candidate) => candidate.id === taskId);
   if (!task) {
@@ -286,6 +313,94 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       tasks_json = ${JSON.stringify(updatedTasks)}::jsonb,
       timeline_json = ${JSON.stringify(timeline)}::jsonb,
       status = ${status},
+      updated_at = NOW()
+    WHERE id = ${id} AND user_id = ${userId}
+    RETURNING *
+  `;
+  if (updatedRows.length === 0) {
+    return NextResponse.json(
+      { error: "Incentive Preparation Packet not found" },
+      { status: 404 }
+    );
+  }
+
+  return NextResponse.json({
+    packet: packetDetail({
+      ...(updatedRows[0] as DatabaseRow),
+      business_name: packetRow.business_name,
+    }),
+  });
+}
+
+async function selectProgramForPacket(
+  sql: NonNullable<ReturnType<typeof getSQL>>,
+  id: string,
+  userId: string,
+  packetRow: DatabaseRow,
+  body: Record<string, unknown>
+) {
+  const goalType = body.goalType;
+  if (!isGoalType(goalType)) {
+    return NextResponse.json({ error: "Valid goalType is required" }, { status: 400 });
+  }
+  const programName =
+    typeof body.programName === "string" ? body.programName.trim() : "";
+  if (!programName) {
+    return NextResponse.json({ error: "programName is required" }, { status: 400 });
+  }
+  const programId =
+    typeof body.programId === "string" && body.programId.trim()
+      ? body.programId.trim()
+      : null;
+
+  // Existing program packets are unaffected: a packet that already targets a
+  // different incentive is not re-pointed here (that is a new packet — "start
+  // another application from your Business File"). Re-selecting the same target
+  // is an idempotent no-op merge.
+  const existingGoalType = packetRow.goal_type ? String(packetRow.goal_type) : null;
+  if (existingGoalType && existingGoalType !== goalType) {
+    return NextResponse.json(
+      {
+        error:
+          "This packet already targets a program. Start another application from your Business File to prepare a different one.",
+      },
+      { status: 400 }
+    );
+  }
+
+  const existingTasks = normalizePreparationTasks(parseJson(packetRow.tasks_json, []));
+  // Build the fresh full graph from the immutable point-in-time snapshot (the
+  // record the applicant certifies), then merge, preserving confirmed statuses.
+  const profile = buildProfileSnapshot(
+    parseJson(packetRow.profile_snapshot_json, {}) as BusinessProfileInput
+  );
+  const overlay = getProgramOverlay(programId, programName);
+  const freshTasks = buildPreparationTasks({
+    goalType,
+    programId,
+    programName,
+    ...overlay,
+    profile,
+  });
+  const mergedTasks = mergePreparationProgramTasks(existingTasks, freshTasks);
+  const timeline = calculatePreparationTimeline(mergedTasks);
+  const status = summarizePreparationStatus(mergedTasks);
+  const currentTitle = packetRow.title ? String(packetRow.title) : "";
+  const title =
+    currentTitle && currentTitle !== "Business File"
+      ? currentTitle
+      : `${programName} application prep`;
+
+  const updatedRows = await sql`
+    UPDATE incentive_preparation_packets
+    SET
+      tasks_json = ${JSON.stringify(mergedTasks)}::jsonb,
+      timeline_json = ${JSON.stringify(timeline)}::jsonb,
+      status = ${status},
+      goal_type = ${goalType},
+      program_id = ${programId},
+      program_name = ${programName},
+      title = ${title},
       updated_at = NOW()
     WHERE id = ${id} AND user_id = ${userId}
     RETURNING *
