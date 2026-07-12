@@ -4,6 +4,7 @@
  * renders a "Take me there →" button that the USER clicks (design note §1,
  * "client-side navigation actions, not just links in prose").
  */
+import { getProgramBySlug } from "@/lib/programs-data";
 
 /** Static routes the concierge can point to. */
 export const CONCIERGE_STATIC_ROUTES = [
@@ -11,6 +12,7 @@ export const CONCIERGE_STATIC_ROUTES = [
   "/report",
   "/faq",
   "/workspace",
+  "/workspace/business-file",
   "/programs",
 ] as const;
 
@@ -23,8 +25,8 @@ export interface AllowedNavTarget {
 
 /**
  * Validate a model-proposed navigation target against the allowlist. Returns
- * null if the route is not allowed. Program detail pages are allowed only in
- * the exact shape /programs/{slug} with a clean slug.
+ * null if the route is not allowed. Program detail pages are allowed only when
+ * the slug resolves to a real program in the Explorer dataset.
  */
 export function resolveNavTarget(
   rawRoute: string,
@@ -45,7 +47,7 @@ export function resolveNavTarget(
   }
 
   const programMatch = /^\/programs\/([a-z0-9-]+)$/.exec(pathOnly);
-  if (programMatch) {
+  if (programMatch && getProgramBySlug(programMatch[1])) {
     return { route: pathOnly, label };
   }
 
@@ -58,7 +60,8 @@ export function resolveNavTarget(
   if (packetMatch) {
     return { route: pathOnly, label };
   }
-  const profileMatch = /^\/workspace\/business-profile(?:\/([a-z0-9-]+))?$/.exec(pathOnly);
+  const profileMatch =
+    /^\/workspace\/business-file\/([a-z0-9-]+)\/edit$/.exec(pathOnly);
   if (profileMatch) {
     return { route: pathOnly, label };
   }
@@ -71,6 +74,7 @@ function defaultLabelFor(path: string): string {
   if (path === "/report") return "Build a report";
   if (path === "/faq") return "Read the FAQ";
   if (path === "/workspace") return "Go to workspace";
+  if (path === "/workspace/business-file") return "Open your Business File";
   if (path === "/programs") return "Browse programs";
   if (path.startsWith("/programs/")) return "View this program";
   return "Take me there";

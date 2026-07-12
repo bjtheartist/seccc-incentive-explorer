@@ -1,26 +1,28 @@
 /**
- * Stage 3 GLOBAL daily message budget for the Site Concierge.
+ * Stage 3 GLOBAL daily model-turn budget for the Incentive Guide.
  *
  * A single per-day counter across ALL users/sessions — the last-resort valve on
  * total gateway spend (design note §6, task item 6). This is distinct from the
  * per-IP / per-session throttles in rate-limit.ts: those bound one caller, this
  * bounds the whole site's daily cost.
  *
- * Storage: Upstash Redis when configured (the repo already depends on
- * `@upstash/redis` — no new dependency), which makes the counter accurate ACROSS
- * serverless instances. When Upstash is not configured it falls back to an
- * in-memory per-instance counter.
+ * Storage: Upstash Redis when configured, otherwise the existing Neon database.
+ * Both make the counter accurate across serverless instances. In-memory is the
+ * final local/outage fallback.
  *
- * DOCUMENTED LIMITATION: the in-memory fallback is per-instance, so under N
- * concurrent instances the effective global cap is roughly budget × N and cold
- * starts reset it. With Upstash the cap is exact. The route degrades to the same
- * friendly 429 either way when the cap is hit.
+ * DOCUMENTED LIMITATION: the final in-memory fallback is per-instance, so under
+ * N concurrent instances its effective cap is roughly budget × N and cold
+ * starts reset it. Upstash and Neon counters are exact across instances.
  *
  * Fails OPEN on a Redis error (never blocks a real user because the store
  * hiccuped) but fails CLOSED on an exact over-count.
  */
 import { getRedisClient } from "@/lib/redis";
 import { getConciergeDailyBudget } from "./config";
+import {
+  incrementDatabaseCounter,
+  type ConciergeCounterSQL,
+} from "./shared-counter";
 
 /** UTC day key so the window is stable regardless of instance timezone. */
 export function budgetDayKey(now: number = Date.now()): string {
@@ -42,7 +44,8 @@ export interface BudgetDecision {
  * the line is the one rejected.
  */
 export async function consumeDailyBudget(
-  now: number = Date.now()
+  now: number = Date.now(),
+  sql?: ConciergeCounterSQL | null
 ): Promise<BudgetDecision> {
   const limit = getConciergeDailyBudget();
   const day = budgetDayKey(now);
@@ -58,7 +61,23 @@ export async function consumeDailyBudget(
       }
       return { allowed: count <= limit, count, limit };
     } catch {
-      // Redis unavailable → fail OPEN, fall through to in-memory below.
+      // Redis unavailable: try the shared database next.
+    }
+  }
+
+  if (sql) {
+    try {
+      const expiresAt = new Date(
+        Date.parse(`${day}T00:00:00.000Z`) + 2 * 24 * 60 * 60 * 1000
+      );
+      const count = await incrementDatabaseCounter(
+        sql,
+        `concierge:budget:${day}`,
+        expiresAt
+      );
+      return { allowed: count <= limit, count, limit };
+    } catch {
+      // Missing migration or database outage: preserve a local ceiling below.
     }
   }
 

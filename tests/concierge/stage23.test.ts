@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { buildConciergeTools } from "@/lib/concierge/tools";
 import {
   buildConciergeActionTools,
@@ -14,16 +15,40 @@ import {
 import {
   noteConciergeRejection,
   clearConciergeRejection,
+  checkConciergeRateLimit,
   __resetConciergeRateLimit,
 } from "@/lib/concierge/rate-limit";
 import { resolveNavTarget } from "@/lib/concierge/navigation";
 import { ANALYTICS_EVENT_TYPES } from "@/lib/analytics-events";
+import { isSamePreparationProgramTarget } from "@/lib/incentive-preparation";
+import { toApprovalRows } from "@/lib/concierge/approval";
+import { CONCIERGE_RATE_LIMITS } from "@/lib/concierge/config";
+
+const routeMocks = vi.hoisted(() => ({
+  patchPacket: vi.fn(async (_request: Request, _context: unknown) =>
+    Response.json({ packet: { id: "packet-1" } })
+  ),
+}));
+
+vi.mock("@/app/api/incentive-preparation/[id]/route", () => ({
+  PATCH: routeMocks.patchPacket,
+}));
 
 const toolOpts = { toolCallId: "test", messages: [] } as never;
 
 /** Tagged-template mock matching the Neon sql() call shape. */
 function sqlReturning(rows: unknown[]) {
   return (() => Promise.resolve(rows)) as never;
+}
+
+function counterSql() {
+  const counts = new Map<string, number>();
+  return ((_: TemplateStringsArray, ...values: unknown[]) => {
+    const key = String(values[0]);
+    const count = (counts.get(key) ?? 0) + 1;
+    counts.set(key, count);
+    return Promise.resolve([{ count }]);
+  }) as never;
 }
 
 const baseDeps = {
@@ -36,6 +61,10 @@ afterEach(() => {
   vi.unstubAllEnvs();
   __resetConciergeDailyBudget();
   __resetConciergeRateLimit();
+});
+
+beforeEach(() => {
+  routeMocks.patchPacket.mockClear();
 });
 
 describe("buildConciergeTools with signed-in actions", () => {
@@ -53,11 +82,12 @@ describe("buildConciergeTools with signed-in actions", () => {
     );
   });
 
-  it("signed-in users additionally get the five approval-gated action tools", () => {
+  it("signed-in users get owner-scoped reads plus five approval-gated actions", () => {
     for (const name of CONCIERGE_ACTION_TOOL_NAMES) {
       expect(signedInTools).toHaveProperty(name);
     }
-    // still has the read tools too
+    expect(signedInTools).toHaveProperty("getWorkspaceOverview");
+    expect(signedInTools).toHaveProperty("getPreparationPacket");
     expect(signedInTools).toHaveProperty("searchPrograms");
   });
 
@@ -66,9 +96,24 @@ describe("buildConciergeTools with signed-in actions", () => {
     for (const name of CONCIERGE_ACTION_TOOL_NAMES) {
       expect(t[name].needsApproval).toBe(true);
     }
-    for (const name of ["searchPrograms", "getProgram", "navigateTo"]) {
+    for (const name of [
+      "searchPrograms",
+      "getProgram",
+      "navigateTo",
+      "getWorkspaceOverview",
+      "getPreparationPacket",
+    ]) {
       expect(t[name].needsApproval).toBeUndefined();
     }
+  });
+
+  it("workspace reads return only records scoped by the server-side user id", async () => {
+    const out = (await signedInTools.getWorkspaceOverview.execute!({}, toolOpts)) as {
+      profiles: unknown[];
+      packets: unknown[];
+    };
+    expect(out.profiles).toEqual([]);
+    expect(out.packets).toEqual([]);
   });
 });
 
@@ -86,7 +131,7 @@ describe("action tool ownership re-verification (never trusts model ids)", () =>
   it("updatePacketTask refuses an unowned packet id from the model", async () => {
     const tools = buildConciergeActionTools({ ...baseDeps, sql: sqlReturning([]) });
     const out = (await tools.updatePacketTask.execute!(
-      { packetId: "not-mine", taskId: "t1", status: "in_progress" },
+      { packetId: "not-mine", taskId: "t1", status: "needs_owner_answer" },
       toolOpts
     )) as { ok: boolean };
     expect(out.ok).toBe(false);
@@ -110,6 +155,54 @@ describe("action tool ownership re-verification (never trusts model ids)", () =>
     expect(out.draft).toBeTruthy();
     // Deep-links into the consent-gated packet UI (never submits here).
     expect(out.suggestion?.route).toBe("/workspace/incentive-preparation/packet-1");
+  });
+
+  it("accepts only task statuses supported by the packet API", () => {
+    const tools = buildConciergeActionTools({
+      ...baseDeps,
+      sql: sqlReturning([{ id: "packet-1" }]),
+    });
+    const schema = tools.updatePacketTask.inputSchema as z.ZodType;
+    expect(
+      schema.safeParse({
+        packetId: "packet-1",
+        taskId: "task-1",
+        status: "needs_owner_answer",
+      }).success
+    ).toBe(true);
+    expect(
+      schema.safeParse({
+        packetId: "packet-1",
+        taskId: "task-1",
+        status: "in_progress",
+      }).success
+    ).toBe(false);
+  });
+
+  it("selectPacketProgram composes with the merged PATCH route and includes the goal", async () => {
+    const tools = buildConciergeActionTools({
+      ...baseDeps,
+      sql: sqlReturning([{ id: "packet-1" }]),
+    });
+    const out = (await tools.selectPacketProgram.execute!(
+      {
+        packetId: "packet-1",
+        programId: "tif",
+        programName: "TIF Districts",
+        goalType: "improve-storefront",
+      },
+      toolOpts
+    )) as { ok: boolean };
+
+    expect(out.ok).toBe(true);
+    expect(routeMocks.patchPacket).toHaveBeenCalledOnce();
+    const request = routeMocks.patchPacket.mock.calls[0]?.[0] as Request;
+    expect(request.method).toBe("PATCH");
+    await expect(request.json()).resolves.toMatchObject({
+      programId: "tif",
+      programName: "TIF Districts",
+      goalType: "improve-storefront",
+    });
   });
 });
 
@@ -149,6 +242,33 @@ describe("global daily budget", () => {
   it("keys the budget by UTC day", () => {
     expect(budgetDayKey(Date.parse("2026-07-12T23:59:00Z"))).toBe("2026-07-12");
   });
+
+  it("uses the shared database counter when Redis is absent", async () => {
+    vi.stubEnv("CONCIERGE_DAILY_BUDGET", "2");
+    const sql = counterSql();
+    expect((await consumeDailyBudget(Date.now(), sql)).allowed).toBe(true);
+    expect((await consumeDailyBudget(Date.now(), sql)).allowed).toBe(true);
+    expect((await consumeDailyBudget(Date.now(), sql)).allowed).toBe(false);
+  });
+});
+
+describe("shared rate limits", () => {
+  it("enforces the per-IP ceiling through the database counter", async () => {
+    const sql = counterSql();
+    for (let i = 0; i < CONCIERGE_RATE_LIMITS.perIpPerHour; i++) {
+      expect(
+        (await checkConciergeRateLimit("4.4.4.4", `session-${i}`, Date.now(), sql))
+          .allowed
+      ).toBe(true);
+    }
+    const blocked = await checkConciergeRateLimit(
+      "4.4.4.4",
+      "session-final",
+      Date.now(),
+      sql
+    );
+    expect(blocked).toMatchObject({ allowed: false, scope: "ip" });
+  });
 });
 
 describe("repeated-429 backoff", () => {
@@ -169,14 +289,58 @@ describe("navigation allowlist covers signed-in deep-links", () => {
     expect(
       resolveNavTarget("/workspace/incentive-preparation/abc-123")?.route
     ).toBe("/workspace/incentive-preparation/abc-123");
-    expect(resolveNavTarget("/workspace/business-profile")?.route).toBe(
-      "/workspace/business-profile"
+    expect(resolveNavTarget("/workspace/business-file")?.route).toBe(
+      "/workspace/business-file"
+    );
+    expect(resolveNavTarget("/workspace/business-file/profile-1/edit")?.route).toBe(
+      "/workspace/business-file/profile-1/edit"
     );
   });
 
   it("still rejects unsafe or unknown routes", () => {
     expect(resolveNavTarget("/workspace/../admin")).toBeNull();
     expect(resolveNavTarget("/workspace/incentive-preparation/Bad Id")).toBeNull();
+  });
+});
+
+describe("packet program selection invariants", () => {
+  const current = {
+    goalType: "hire-staff",
+    programId: "wotc",
+    programName: "Work Opportunity Tax Credit",
+  };
+
+  it("allows an idempotent selection of the same target", () => {
+    expect(isSamePreparationProgramTarget(current, { ...current })).toBe(true);
+  });
+
+  it("rejects repointing to a different program with the same goal", () => {
+    expect(
+      isSamePreparationProgramTarget(current, {
+        goalType: "hire-staff",
+        programId: "irep",
+        programName: "Illinois Re-Entry Employment Program",
+      })
+    ).toBe(false);
+  });
+});
+
+describe("approval cards", () => {
+  it("shows field clears instead of silently omitting them", () => {
+    expect(
+      toApprovalRows({ changes: { dbaName: null, contactPhone: "" } })
+    ).toEqual([
+      { key: "changes.dbaName", value: "Clear this field" },
+      { key: "changes.contactPhone", value: "Clear this field" },
+    ]);
+  });
+
+  it("shows every proposed field in a full Business File update", () => {
+    const changes = Object.fromEntries(
+      Array.from({ length: 13 }, (_, index) => [`field${index + 1}`, index + 1])
+    );
+
+    expect(toApprovalRows({ changes })).toHaveLength(13);
   });
 });
 

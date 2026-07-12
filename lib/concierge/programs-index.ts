@@ -9,6 +9,7 @@
 import { readFile } from "fs/promises";
 import path from "path";
 import type { Program } from "@/lib/types";
+import { programSlug } from "@/lib/programs-data";
 
 let _cache: Program[] | null = null;
 
@@ -29,6 +30,8 @@ export interface ConciergeProgramSummary {
   summary: string;
   /** The official/source URL the concierge MUST cite for this program. */
   officialUrl: string;
+  /** Canonical in-app detail route. Safe to pass to navigateTo. */
+  detailRoute: string;
 }
 
 /** Full program detail returned by getProgram — sourced facts only. */
@@ -60,6 +63,7 @@ export function toSummary(p: Program): ConciergeProgramSummary {
     status: p.status,
     summary: p.summary,
     officialUrl: officialUrlOf(p),
+    detailRoute: `/programs/${programSlug(p)}`,
   };
 }
 

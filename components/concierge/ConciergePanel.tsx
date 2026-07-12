@@ -8,7 +8,7 @@ import {
   lastAssistantMessageIsCompleteWithApprovalResponses,
 } from "ai";
 import {
-  MessageCircle,
+  Compass,
   X,
   Send,
   ArrowRight,
@@ -18,17 +18,30 @@ import {
   Ban,
 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics-events";
+import { toApprovalRows } from "@/lib/concierge/approval";
 import type { ConciergePageContext } from "@/lib/concierge/types";
 import { MarkdownLite } from "./MarkdownLite";
 
 const RESTING_MESSAGE =
   "The concierge is resting right now — you've hit the usage limit for this window. Keep exploring the map, programs, and reports directly, and check back a little later.";
 
+const GREETING_STORAGE_KEY = "seccc_incentive_guide_greeted_v1";
+
+const QUICK_STARTS = [
+  { label: "Improve my space", prompt: "I want to improve or remodel my space." },
+  { label: "Hire employees", prompt: "I want to hire employees." },
+  { label: "Buy equipment", prompt: "I want to buy equipment for my business." },
+  { label: "Open or relocate", prompt: "I want to open or relocate a business." },
+  { label: "Just explore", prompt: "Help me understand what I can explore here." },
+] as const;
+
 const TOOL_STATUS: Record<string, string> = {
   searchPrograms: "Checking programs…",
   getProgram: "Reading program details…",
   listZonesAtPoint: "Checking zone coverage…",
   getPageContext: "Reading this page…",
+  getWorkspaceOverview: "Reading your Business File…",
+  getPreparationPacket: "Reading your packet…",
   navigateTo: "Finding the right page…",
   updateBusinessProfile: "Saving your profile…",
   updatePacketTask: "Updating your packet…",
@@ -41,7 +54,7 @@ const TOOL_STATUS: Record<string, string> = {
 const ACTION_LABEL: Record<string, string> = {
   updateBusinessProfile: "Update your business profile",
   updatePacketTask: "Update a packet task",
-  createFoundationPacket: "Start an application-prep packet",
+  createFoundationPacket: "Start an Incentive Preparedness Packet",
   selectPacketProgram: "Set your packet's program",
   prepareSupportRequest: "Draft a partner support request",
 };
@@ -54,31 +67,12 @@ interface NavSuggestion {
   reason: string | null;
 }
 
-/** Flatten a tool input object into readable "field → value" rows for the card. */
-function toApprovalRows(input: unknown): Array<{ key: string; value: string }> {
-  const rows: Array<{ key: string; value: string }> = [];
-  const walk = (obj: unknown, prefix = "") => {
-    if (!obj || typeof obj !== "object") return;
-    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-      const label = prefix ? `${prefix}.${k}` : k;
-      if (v === null || v === undefined || v === "") continue;
-      if (typeof v === "object" && !Array.isArray(v)) {
-        walk(v, label);
-      } else {
-        rows.push({ key: label, value: Array.isArray(v) ? v.join(", ") : String(v) });
-      }
-    }
-  };
-  walk(input);
-  return rows.slice(0, 12);
-}
-
 /**
- * Floating trigger + slide-over concierge panel. Renders ONLY when the feature
- * is enabled server-side (checked via /api/concierge/status). Read-only,
- * guest-safe. Hides its trigger while any modal dialog is open — including the
- * report page's native <dialog> email gate — so it never fights a blocking
- * dialog and becomes usable the moment the gate resolves.
+ * Floating trigger + responsive guide panel. Renders only when enabled by the
+ * server flag. Guests receive sourced read-only guidance; signed-in owners can
+ * approve guarded workspace actions. Hides while any modal dialog is open,
+ * including the report page's native <dialog> email gate, so it never fights a
+ * blocking dialog and becomes usable the moment the gate resolves.
  */
 export function ConciergePanel({
   pageContext,
@@ -93,7 +87,9 @@ export function ConciergePanel({
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [showGreeting, setShowGreeting] = useState(false);
   const firedRef = useRef<Set<string>>(new Set());
+  const transcriptEndRef = useRef<HTMLDivElement | null>(null);
 
   // Keep the latest page context in a ref so callbacks/effects always read the
   // freshest value without re-subscribing. Updated in an effect (never during
@@ -119,6 +115,28 @@ export function ConciergePanel({
     };
   }, []);
 
+  // 3. Offer one quiet, non-blocking greeting per browser. It waits until no
+  // other dialog is open and is remembered only after the visitor dismisses it
+  // or opens the guide.
+  useEffect(() => {
+    if (
+      enabled !== true ||
+      open ||
+      dialogOpen ||
+      suppressed ||
+      showGreeting
+    ) {
+      return;
+    }
+    try {
+      if (window.localStorage.getItem(GREETING_STORAGE_KEY) === "true") return;
+    } catch {
+      // Storage can be unavailable in privacy modes; the greeting still works.
+    }
+    const timer = window.setTimeout(() => setShowGreeting(true), 900);
+    return () => window.clearTimeout(timer);
+  }, [dialogOpen, enabled, open, showGreeting, suppressed]);
+
   // 2. Watch the DOM for any open modal dialog and hide the trigger while one
   // is present (the report email gate is a native <dialog open>).
   useEffect(() => {
@@ -127,6 +145,7 @@ export function ConciergePanel({
         'dialog[open], [role="dialog"], [aria-modal="true"]'
       );
       setDialogOpen(Boolean(found));
+      if (found) setOpen(false);
     };
     check();
     const observer = new MutationObserver(check);
@@ -144,7 +163,7 @@ export function ConciergePanel({
     []
   );
 
-  const { messages, sendMessage, status, error, addToolApprovalResponse } =
+  const { messages, sendMessage, status, addToolApprovalResponse } =
     useChat({
       transport,
       // After the user approves/declines a tool, auto-resubmit so the server can
@@ -161,7 +180,7 @@ export function ConciergePanel({
     []
   );
 
-  // 3. Exactly-once instrumentation for tool calls + nav suggestions.
+  // 4. Exactly-once instrumentation for tool calls + nav suggestions.
   useEffect(() => {
     for (const message of messages) {
       if (message.role !== "assistant") continue;
@@ -201,25 +220,61 @@ export function ConciergePanel({
     }
   }, [messages, fireOnce]);
 
+  useEffect(() => {
+    if (!open) return;
+    transcriptEndRef.current?.scrollIntoView({ block: "end" });
+  }, [messages, open, status]);
+
+  useEffect(() => {
+    if (!open) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [open]);
+
+  const rememberGreeting = useCallback(() => {
+    setShowGreeting(false);
+    try {
+      window.localStorage.setItem(GREETING_STORAGE_KEY, "true");
+    } catch {
+      // No-op when storage is unavailable.
+    }
+  }, []);
+
   const openPanel = useCallback(() => {
+    rememberGreeting();
     setOpen(true);
     fireOnce("opened", () =>
       trackEvent("concierge_opened", { source: pageContextRef.current.route })
     );
-  }, [fireOnce]);
+  }, [fireOnce, rememberGreeting]);
+
+  const sendPrompt = useCallback(
+    (text: string) => {
+      const prompt = text.trim();
+      if (!prompt || status === "streaming" || status === "submitted") return;
+      trackEvent("concierge_message_sent", {
+        source: pageContextRef.current.route,
+      });
+      sendMessage(
+        { text: prompt },
+        { body: { pageContext: pageContextRef.current } }
+      );
+    },
+    [sendMessage, status]
+  );
 
   const handleSend = useCallback(
     (e?: React.FormEvent) => {
       e?.preventDefault();
       const text = input.trim();
-      if (!text || status === "streaming" || status === "submitted") return;
-      trackEvent("concierge_message_sent", {
-        source: pageContextRef.current.route,
-      });
-      sendMessage({ text }, { body: { pageContext: pageContextRef.current } });
+      if (!text) return;
+      sendPrompt(text);
       setInput("");
     },
-    [input, sendMessage, status]
+    [input, sendPrompt]
   );
 
   const navigate = useCallback(
@@ -253,39 +308,73 @@ export function ConciergePanel({
     <>
       {/* Floating trigger */}
       {showTrigger && (
-        <button
-          type="button"
-          onClick={openPanel}
-          aria-label="Open the incentive concierge"
-          className="fixed bottom-5 right-5 z-40 flex items-center gap-2 border border-[#0C1B33]/12 bg-[#0C1B33] px-4 py-3 text-white shadow-lg transition-transform hover:-translate-y-0.5 print:hidden"
-        >
-          <MessageCircle className="h-4 w-4" strokeWidth={1.75} />
-          <span className="font-mono-bureau text-[10px] uppercase tracking-[0.2em]">
-            Concierge
-          </span>
-        </button>
+        <div className="fixed bottom-4 right-4 z-[70] flex items-end gap-3 print:hidden sm:bottom-5 sm:right-5">
+          {showGreeting && (
+            <div className="relative w-[min(270px,calc(100vw-88px))] border border-[#0C1B33]/15 bg-white px-4 py-3 pr-9 shadow-xl">
+              <button
+                type="button"
+                onClick={rememberGreeting}
+                aria-label="Dismiss greeting"
+                title="Dismiss"
+                className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-[#0C1B33]/45 hover:text-[#0C1B33]"
+              >
+                <X className="h-3.5 w-3.5" strokeWidth={1.75} />
+              </button>
+              <button
+                type="button"
+                onClick={openPanel}
+                className="block text-left text-[13px] leading-5 text-[#0C1B33]/75"
+              >
+                <span className="font-medium text-[#0C1B33]">
+                  Hi, I&apos;m your Incentive Guide.
+                </span>{" "}
+                What are you working on today?
+              </button>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={openPanel}
+            aria-label="Open the AI Incentive Guide"
+            title="Open Incentive Guide"
+            className="relative flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border-2 border-white bg-[#0C1B33] text-white shadow-xl transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+          >
+            <Compass className="h-5 w-5" strokeWidth={1.75} />
+            <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#2563EB] px-1 font-mono-bureau text-[7px] uppercase text-white">
+              AI
+            </span>
+          </button>
+        </div>
       )}
 
       {/* Slide-over panel */}
-      {open && (
+      {open && !dialogOpen && !suppressed && (
         <div
-          className="fixed inset-y-0 right-0 z-40 flex w-full max-w-md flex-col border-l border-[#0C1B33]/12 bg-white shadow-2xl print:hidden"
+          className="fixed inset-x-0 bottom-0 z-[70] flex h-[88dvh] w-full flex-col border-t border-[#0C1B33]/12 bg-white shadow-2xl print:hidden sm:inset-y-0 sm:left-auto sm:right-0 sm:h-auto sm:max-w-md sm:border-l sm:border-t-0"
           role="complementary"
-          aria-label="Incentive concierge"
+          aria-label="AI Incentive Guide"
         >
           {/* Header */}
           <header className="flex items-center justify-between border-b border-[#0C1B33]/10 bg-[#0C1B33] px-4 py-4 text-white">
-            <div>
-              <p className="font-mono-bureau text-[9px] uppercase tracking-[0.25em] text-white/55">
-                SECCC Explorer
-              </p>
-              <h2 className="font-editorial text-xl leading-tight">Concierge</h2>
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/20 bg-white/10">
+                <Compass className="h-4 w-4" strokeWidth={1.75} />
+              </div>
+              <div>
+                <p className="font-mono-bureau text-[9px] uppercase tracking-[0.2em] text-white/55">
+                  AI guide
+                </p>
+                <h2 className="font-editorial text-xl leading-tight">
+                  Incentive Guide
+                </h2>
+              </div>
             </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              aria-label="Close concierge"
-              className="text-white/70 transition-colors hover:text-white"
+              aria-label="Close Incentive Guide"
+              title="Close"
+              className="flex h-9 w-9 items-center justify-center text-white/70 transition-colors hover:text-white"
             >
               <X className="h-5 w-5" strokeWidth={1.75} />
             </button>
@@ -296,13 +385,28 @@ export function ConciergePanel({
             {messages.length === 0 && (
               <div className="border border-dashed border-[#0C1B33]/15 bg-[#FAF9F6] p-4">
                 <p className="font-mono-bureau text-[9px] uppercase tracking-[0.2em] text-[#0C1B33]/40">
-                  Guide, not authority
+                  Start here
                 </p>
-                <p className="mt-2 text-[13px] leading-relaxed text-[#0C1B33]/75">
-                  Tell me what you&apos;re trying to do — remodel a storefront,
-                  hire, buy a building — and I&apos;ll point you to programs that
-                  may apply and the pages that help. I don&apos;t decide
-                  eligibility; always verify with the program administrators.
+                <p className="mt-2 text-[14px] font-medium leading-5 text-[#0C1B33]">
+                  What are you working on today?
+                </p>
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {QUICK_STARTS.map((choice) => (
+                    <button
+                      key={choice.label}
+                      type="button"
+                      onClick={() => sendPrompt(choice.prompt)}
+                      disabled={busy}
+                      className="flex min-h-10 items-center justify-between gap-2 border border-[#0C1B33]/12 bg-white px-3 py-2 text-left text-[12px] font-medium text-[#0C1B33]/75 transition-colors hover:border-[#2563EB]/40 hover:text-[#0C1B33] disabled:opacity-40"
+                    >
+                      {choice.label}
+                      <ArrowRight className="h-3.5 w-3.5 shrink-0 text-[#2563EB]" />
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-[11px] leading-4 text-[#0C1B33]/45">
+                  I can help you explore and prepare. Program administrators make
+                  eligibility and award decisions.
                 </p>
               </div>
             )}
@@ -331,9 +435,9 @@ export function ConciergePanel({
                 className="border border-[#0C1B33]/15 bg-[#FAF9F6] p-3 text-[12px] leading-relaxed text-[#0C1B33]/75"
               >
                 {RESTING_MESSAGE}
-                {error?.message ? null : null}
               </div>
             )}
+            <div ref={transcriptEndRef} aria-hidden="true" />
           </div>
 
           {/* Composer */}
@@ -347,7 +451,8 @@ export function ConciergePanel({
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
-                    handleSend(e);
+                    e.preventDefault();
+                    handleSend();
                   }
                 }}
                 rows={1}
@@ -365,7 +470,7 @@ export function ConciergePanel({
               </button>
             </div>
             <p className="mt-1.5 font-mono-bureau text-[8px] uppercase tracking-[0.15em] text-[#0C1B33]/30">
-              Descriptive guidance only · verify with administrators
+              Preparation guidance only · verify with administrators
             </p>
           </form>
         </div>
@@ -479,6 +584,18 @@ function ConciergeMessage({
                   </div>
                 );
               }
+              if (ACTION_TOOL_NAMES.has(toolName) && output?.ok === false) {
+                return (
+                  <div
+                    key={i}
+                    role="alert"
+                    className="flex items-start gap-2 border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] leading-relaxed text-rose-800"
+                  >
+                    <Ban className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                    {output.note ?? "That action could not be completed. Nothing was changed."}
+                  </div>
+                );
+              }
               return null;
             }
 
@@ -496,7 +613,18 @@ function ConciergeMessage({
                 </div>
               );
             }
-            return null;
+            return (
+              <div
+                key={i}
+                role="alert"
+                className="flex items-start gap-2 border border-rose-200 bg-rose-50 px-3 py-2 text-[12px] leading-relaxed text-rose-800"
+              >
+                <Ban className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                {ACTION_TOOL_NAMES.has(toolName)
+                  ? "That action could not be completed. Nothing was changed."
+                  : "I couldn't complete that check. Please try again."}
+              </div>
+            );
           }
 
           return null;
@@ -541,7 +669,7 @@ function ApprovalCard({
               <dt className="shrink-0 font-mono-bureau uppercase tracking-[0.1em] text-[#0C1B33]/40">
                 {r.key}
               </dt>
-              <dd className="text-[#0C1B33]/80">{r.value}</dd>
+              <dd className="min-w-0 break-words text-[#0C1B33]/80">{r.value}</dd>
             </div>
           ))}
         </dl>

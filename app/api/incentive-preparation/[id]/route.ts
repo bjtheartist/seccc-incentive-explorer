@@ -9,6 +9,7 @@ import {
   calculatePreparationTimeline,
   canApplicantUpdateTask,
   computeFoundationRefresh,
+  isSamePreparationProgramTarget,
   mergePreparationProgramTasks,
   normalizePreparationTasks,
   summarizePreparationStatus,
@@ -390,8 +391,22 @@ async function selectProgramForPacket(
   // different incentive is not re-pointed here (that is a new packet — "start
   // another application from your Business File"). Re-selecting the same target
   // is an idempotent no-op merge.
-  const existingGoalType = packetRow.goal_type ? String(packetRow.goal_type) : null;
-  if (existingGoalType && existingGoalType !== goalType) {
+  const existingTarget = {
+    goalType: packetRow.goal_type ? String(packetRow.goal_type) : null,
+    programId: packetRow.program_id ? String(packetRow.program_id) : null,
+    programName: packetRow.program_name ? String(packetRow.program_name) : null,
+  };
+  const hasExistingTarget = Boolean(
+    existingTarget.goalType || existingTarget.programId || existingTarget.programName
+  );
+  if (
+    hasExistingTarget &&
+    !isSamePreparationProgramTarget(existingTarget, {
+      goalType,
+      programId,
+      programName,
+    })
+  ) {
     return NextResponse.json(
       {
         error:

@@ -949,6 +949,30 @@ export function canApplicantUpdateTask(task: PreparationTask): boolean {
   );
 }
 
+export interface PreparationProgramTarget {
+  goalType: string | null;
+  programId: string | null;
+  programName: string | null;
+}
+
+/**
+ * A program packet may be selected idempotently, but it must never be
+ * repointed to a different program while carrying forward task completion.
+ */
+export function isSamePreparationProgramTarget(
+  current: PreparationProgramTarget,
+  next: PreparationProgramTarget
+): boolean {
+  if (current.goalType !== next.goalType) return false;
+  if (current.programId && next.programId) {
+    return current.programId === next.programId;
+  }
+  return (
+    (current.programName ?? "").trim().toLowerCase() ===
+    (next.programName ?? "").trim().toLowerCase()
+  );
+}
+
 export function summarizePreparationStatus(tasks: readonly PreparationTask[]): PreparationPacketStatus {
   const normalized = normalizePreparationTasks(tasks);
   if (normalized.length === 0) return "needs_information";

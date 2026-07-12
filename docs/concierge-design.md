@@ -1,6 +1,6 @@
 # Site Concierge — Design Note: Conversational Navigation & Packet Assistance
 
-**Status:** proposed (not built). Shelf note — pick up after Tier 1b persona chips ships and funnel data is read.
+**Status:** implemented as a hybrid pilot on 2026-07-12. Common guidance is deterministic and sourced; nuanced signed-in changes use approval-gated model tools when Gateway capacity is available.
 **Source:** Billy + Claude working session, 2026-07-12. Builds on the Report & Refine Workflow Audit (2026-07-10) and the Business File spec (`docs/business-file/00-spec-overview.md`).
 **Scope recommendation (decided):** build first on the **report page and Incentive Preparedness Packet**, not as an unrestricted site-wide chatbot. That gives businesses free personalized assistance, gives partner governments better-prepared requests, and strengthens the institutional product.
 
@@ -35,7 +35,7 @@ The concierge identifies the relevant report sections, asks several project ques
 ## 2. What it will not do
 - Decide official eligibility.
 - Expose internal scoring (corridor scoring stays internal — see 24a52e2).
-- Promise or estimate incentive dollars beyond the existing, already-shipped estimate surfaces and their copy.
+- Promise an award or combine individual program figures into a top-line incentive-dollar estimate or deal budget.
 - Certify information for the applicant.
 - Submit an application or send any external message without approval.
 - Invent deadlines, requirements, or source information (no answer without a source in the loaded program data).
@@ -82,10 +82,10 @@ A trustworthy action-capable pilot ≈ **3–4 weeks** (phases 1–3); document 
 `concierge_opened`, `concierge_message`, per-tool-call events, `concierge_action_approved` / `_declined`, `concierge_handoff_requested` — added to `ANALYTICS_EVENT_TYPES` like `map_preview_clicked` was. Success metric: movement in the activation funnel (baseline 2%, ~34 product touches/30d) and packet starts/completions per session.
 
 ## 8. Open questions
-1. Where does the guest panel live first — report page only, or report + homepage "tell me your address and what you're trying to do" (the activation-lever variant)?
-2. Conversation retention: how long do guest transcripts live, and do signed-in transcripts attach to the profile?
+1. The first release mounts the guide on the report builder, generated report, and signed-in workspace routes.
+2. Guest transcripts are never stored. Signed-in audit conversations are retained for 90 days by default, configurable from 1–365 days.
 3. Who reviews the adversarial eval set before launch — Billy only, or SECCC staff too?
-4. Daily budget cap value and what the panel shows when it's hit.
+4. Production starts at 100 model-backed turns/day. Deterministic guidance remains available without model spend; a throttled model turn shows the resting message.
 
 ## 9. Verify before building (stale-docs rule)
 - AI SDK tool-approval API shape against live docs (feature is current as of 2026-07 but the API surface moves).
@@ -99,14 +99,15 @@ A trustworthy action-capable pilot ≈ **3–4 weeks** (phases 1–3); document 
 Stage 1 (read-only guest concierge) is implemented on `feat/concierge-stage1`. Scope is exactly §1 "for every visitor" + §2 boundaries — no signed-in profile/packet actions, no approval-gated tools, no audit tables, no DB writes (those are Stages 2–4).
 
 ### Feature flag — safe to merge with no keys
-The concierge is OFF unless **both** are true: \`CONCIERGE_ENABLED === "true"\` **and** \`AI_GATEWAY_API_KEY\` is present. With no keys: \`/api/concierge\` returns **503** with a friendly JSON, \`/api/concierge/status\` returns \`{ enabled: false }\`, and the UI panel **renders nothing**. This PR is safe to merge into an environment with no gateway key provisioned.
+The guide is OFF unless \`CONCIERGE_ENABLED === "true"\`. With the flag on, common sourced guidance works without a model credential. Model-backed turns use \`AI_GATEWAY_API_KEY\` locally or Vercel's automatic \`VERCEL_OIDC_TOKEN\` in deployments.
 
 ### Environment variables (add to Vercel / \`.env.local\` when enabling — no \`.env.example\` in this repo)
 | Var | Required | Default | Purpose |
 |---|---|---|---|
 | \`CONCIERGE_ENABLED\` | to turn on | (off) | Must equal \`"true"\` to enable. |
-| \`AI_GATEWAY_API_KEY\` | to turn on | — | Vercel AI Gateway credential. Also gates the feature. **Secret — never commit.** |
+| \`AI_GATEWAY_API_KEY\` | local model eval only | — | Vercel AI Gateway credential. Production uses deployment OIDC. **Secret — never commit.** |
 | \`CONCIERGE_MODEL\` | no | \`openai/gpt-oss-120b\` | Gateway model id. Swappable for a Haiku-class fallback (§5). |
+| \`CONCIERGE_RETENTION_DAYS\` | no | \`90\` | Signed-in conversation audit retention, bounded to 1–365 days. Guest transcripts are never stored. |
 
 No secrets are committed. Keys are read from \`process.env\` only.
 
@@ -114,7 +115,7 @@ No secrets are committed. Keys are read from \`process.env\` only.
 - \`ai-sdk.dev/docs/getting-started/nextjs-app-router\` — route handler shape, \`convertToModelMessages\` (async in this version), \`toUIMessageStreamResponse\`.
 - \`ai-sdk.dev/docs/ai-sdk-core/tools-and-tool-calling\` — \`tool({ inputSchema, execute })\`, multi-step via \`stopWhen: stepCountIs(n)\`.
 - \`ai-sdk.dev/docs/ai-sdk-ui/chatbot\` — \`useChat\` + \`DefaultChatTransport\`, per-request \`sendMessage(msg, { body })\`, \`message.parts\` tool-part shape.
-- Exact exports re-confirmed against the installed packages. Versions installed: **\`ai@7.0.22\`**, **\`@ai-sdk/react@4.0.23\`**, **\`@ai-sdk/gateway@4.0.16\`** (zod@4 already present). Model is created with \`createGateway({ apiKey }).\`(modelId)\`.
+- Exact exports re-confirmed against the installed packages. Versions installed: **\`ai@7.0.22\`**, **\`@ai-sdk/react@4.0.23\`**, **\`@ai-sdk/gateway@4.0.16\`** (zod@4 already present). Local evaluation passes an explicit API key; Vercel production uses the Gateway package's native OIDC path.
 
 ### What shipped
 - **\`app/api/concierge/route.ts\`** — streaming \`streamText\` endpoint. Feature gate → session cookie → rate limit → body caps (≤20 messages, ≤2000 chars/msg) → \`stopWhen: stepCountIs(6)\`. \`app/api/concierge/status/route.ts\` exposes the flag boolean only.
@@ -125,7 +126,7 @@ No secrets are committed. Keys are read from \`process.env\` only.
 - **Eval seed**: \`tests/concierge/eval-prompts.json\` (20 real + 11 adversarial, with expectedBehavior). Consumed by the Stage 3 eval suite; Stage 1 only unit-tests plumbing.
 
 ### Rate-limit design + documented limitation
-Per-IP **20 msg/hour** and per-session (cookie) **40 msg/day**, in-memory per serverless instance (fixed window), fails **closed** with the "concierge is resting" 429. **Limitation:** counters are per-instance and reset on cold start, so under N concurrent instances the effective ceiling is ~limit×N — a courtesy throttle, not an enforceable quota; the session cookie is clearable and IP is spoofable without a trusted proxy. Stage 3 should move this to shared Upstash Redis (already a dependency) for cross-instance accuracy + real daily budgets.
+Per-IP **20 msg/hour** and per-session **40 msg/day** use Upstash when configured, otherwise the existing Neon \`concierge_usage_counters\` table. Both are cross-instance. In-memory is only the final local/outage fallback.
 
 ### Notes for Stage 2 (interface contract)
 - **Tool registry**: \`buildConciergeTools({ pageContext, onToolCall })\` returns the read-only tool map. Stage 2 adds approval-gated action tools (profile update, packet task update, support request) to this same map, using the AI SDK tool-approval flow, and calls the existing auth-gated routes (§3) as the authenticated user — do **not** re-implement guards.
@@ -138,7 +139,7 @@ Per-IP **20 msg/hour** and per-session (cookie) **40 msg/day**, in-memory per se
 
 ## Stage 2 & 3 implementation notes (2026-07-12)
 
-Stages 2 (signed-in, approval-gated actions) and 3 (trust infrastructure) are implemented on \`feat/concierge-stage2-3\`, stacked on Stage 1. Feature-flag behavior is unchanged — everything is still OFF unless \`CONCIERGE_ENABLED === "true"\` **and** \`AI_GATEWAY_API_KEY\` is set. Guests keep exactly the Stage-1 read-only experience.
+Stages 2 (signed-in, approval-gated actions) and 3 (trust infrastructure) are implemented. Everything stays OFF unless \`CONCIERGE_ENABLED === "true"\`; model credentials are optional because the sourced deterministic path remains available without them.
 
 ### Verified approval API shape (against installed \`ai@7.0.22\` + \`@ai-sdk/react@4.0.23\`, and live docs 2026-07-12)
 The AI SDK moved to a tool-level / \`streamText\`-level approval model. Confirmed exports and shapes:
@@ -158,27 +159,27 @@ The session \`userId\` is captured server-side in the route (\`getCurrentUserId(
 
 The handlers are **dynamically imported inside the executors** (not at module top level) so the next-auth adapter chain — which is not ESM-\`exports\`-clean under plain \`tsx\` — never loads for consumers that merely import the tool map (e.g. the eval runner). Session auth still resolves correctly because the nested handler's \`getServerSession\` reads the same ambient request context.
 
-### Cross-branch dependency (documented)
-\`selectPacketProgram\` targets a program-selection endpoint that lives on the **business-file branches, not this one**. It calls \`POST {origin}/api/incentive-preparation/{packetId}/select-program\` with the user's cookies (2.5s timeout) and **degrades gracefully to a packet deep-link** on 404/any non-2xx/network error — so it composes automatically if those branches merge, with no code change. \`createFoundationPacket\` composes with the packet-creation route that DOES exist here; if a dedicated foundation endpoint replaces it at the same path the composition survives.
+### Business File composition
+\`selectPacketProgram\` composes directly with the merged, authenticated packet \`PATCH\` route and supplies \`programId\`, \`programName\`, and \`goalType\` together. The route permits an idempotent re-selection of the same target and rejects repointing a packet to another program. \`createFoundationPacket\` composes with the existing authenticated packet-creation route.
 
 ### Stage 3 — trust infrastructure
-- **Audit tables** (\`scripts/migrate-concierge.ts\`, idempotent, follows \`migrate-incentive-preparation.ts\`; **not run** against any DB): \`concierge_conversations\` (user, session, page, model, message_count), \`concierge_messages\` (role, content, \`tool_calls_json\`, \`citations_json\` for source/officialUrl records), \`concierge_tool_actions\` (tool, \`input_json\`, \`approval_status\` proposed|approved|declined|executed|failed, \`result_summary\`). npm script \`db:migrate:concierge\` (intentionally NOT in the \`db:migrate\` chain — persistence is optional/best-effort).
+- **Audit tables** (\`scripts/migrate-concierge.ts\`, idempotent, follows \`migrate-incentive-preparation.ts\`; applied to production on 2026-07-12): \`concierge_conversations\` (user, session, page, model, message_count), \`concierge_messages\` (role, content, \`tool_calls_json\`, \`citations_json\` for source/officialUrl records), \`concierge_tool_actions\` (tool, \`input_json\`, \`approval_status\` proposed|approved|declined|executed|failed, \`result_summary\`), and \`concierge_usage_counters\` for shared limits. npm script \`db:migrate:concierge\` remains outside the general migration chain because persistence is optional/best-effort.
 - **Persistence** (\`lib/concierge/persistence.ts\`): route persists in \`streamText.onFinish\` **only when DB configured AND user signed in**; guests are never written to the DB (their usage stays in analytics events). Strictly best-effort — every write is wrapped so a missing table (migration not run) or any error can never break the chat. Conversation keyed by (user, session).
-- **Daily budget** (\`lib/concierge/budget.ts\`): global per-day message cap, env \`CONCIERGE_DAILY_BUDGET\` (default 500). Uses **Upstash Redis** (already a dependency — no new dep) for cross-instance accuracy via \`INCR\` + 48h TTL; falls back to a per-instance in-memory counter when Upstash is unset (documented limitation). Over-budget returns the same friendly 429.
+- **Daily budget** (\`lib/concierge/budget.ts\`): global per-day model-turn cap, env \`CONCIERGE_DAILY_BUDGET\` (default 500). Uses Upstash when configured, otherwise the existing Neon database; in-memory is the final outage fallback. Deterministic turns do not consume model budget.
 - **Abuse controls**: max input length (Stage-1 caps retained); \`screenPageContext\` redacts prompt-injection markers in client-supplied page-context fields (address/summary/program names) and flags them; \`noteConciergeRejection\`/\`clearConciergeRejection\` add an escalating repeated-429 backoff; a profanity/off-domain refusal note is added to the system prompt. Session-scoped rate-limit keys for signed-in users (\`user:{id}\`) instead of the clearable cookie.
-- **Eval RUNNER** (\`scripts/concierge-eval.ts\`, \`npm run concierge:eval\`, NOT in CI): runs \`tests/concierge/eval-prompts.json\` against the live gateway, scores each response with deterministic string/regex checks (no boundary violations; hedged/grounded for real prompts; graceful refusal for adversarial), writes \`docs/concierge-eval-report.md\`. **Skips cleanly** (exit 0, writes a skip notice) when \`AI_GATEWAY_API_KEY\` is absent.
+- **Eval RUNNER** (\`scripts/concierge-eval.ts\`, \`npm run concierge:eval\`, NOT in CI): runs \`tests/concierge/eval-prompts.json\` against the live gateway, scores boundary behavior, and supports \`CONCIERGE_EVAL_LIMIT\` plus a custom report filename. It skips cleanly without a local key. See \`docs/concierge-eval-report.md\` for the launch result.
 
 ### New env vars (Stage 2/3)
 | Var | Required | Default | Purpose |
 |---|---|---|---|
-| \`CONCIERGE_DAILY_BUDGET\` | no | \`500\` | Global per-day message cap. |
-| \`UPSTASH_REDIS_REST_URL\` / \`_TOKEN\` | no | — | Existing repo vars; if present the daily budget becomes cross-instance-accurate. |
+| \`CONCIERGE_DAILY_BUDGET\` | no | \`500\` | Global per-day model-turn cap. Production is configured to \`100\` for the pilot. |
+| \`UPSTASH_REDIS_REST_URL\` / \`_TOKEN\` | no | — | Optional fast counter store. Neon provides the cross-instance fallback. |
 
 No new dependencies were added. Additive API only; no changes to Business File / packet page / report page beyond the existing concierge mount; persona/corridor code untouched.
 
 ### Judgment calls
 1. **Per-tool \`needsApproval\` over the \`streamText.toolApproval\` map** — approval intent belongs at the tool definition, and it cleanly marks exactly the action tools without a parallel config list.
-2. **Compose by calling exported route handlers (dynamic import) rather than HTTP-to-self** for routes that exist here — more reliable in serverless and inherits the same ambient session; HTTP-with-cookies is reserved for the genuinely-cross-branch \`select-program\` route so the 404 degrade path is real.
+2. **Compose by calling exported route handlers (dynamic import) rather than HTTP-to-self**. Profile, task, packet creation, and program selection all call the merged guarded route handlers directly.
 3. **Ownership pre-check in the executor AND the route's own \`WHERE user_id\`** — double enforcement; the executor short-circuits with friendlier copy before any handler call.
 4. **No packet-page edits for \`packetId\` context** — the model reads the packet id from the route path (\`/workspace/incentive-preparation/{id}\`) via \`getPageContext\`, so \`ConciergePageContext\` did not need new populated fields (scope fence).
 5. **HMAC \`experimental_toolApprovalSecret\` not enabled** — ownership is re-verified server-side in every executor and actions inherit the auth-gated routes, so a forged approval cannot exceed what the user could already do; the secret is available as future hardening.

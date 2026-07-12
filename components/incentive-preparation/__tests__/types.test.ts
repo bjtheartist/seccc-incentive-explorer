@@ -104,6 +104,18 @@ describe("preparation API normalization", () => {
       }),
     ]);
   });
+
+  it("keeps the Business File id when a PATCH response omits the root profile", () => {
+    const packet = extractPreparationPacket({
+      packet: {
+        ...payload.packet,
+        businessProfileId: "profile-1",
+      },
+      foundationRefresh: { items: [] },
+    });
+
+    expect(packet?.businessProfile.id).toBe("profile-1");
+  });
 });
 
 describe("extractFoundationRefresh", () => {

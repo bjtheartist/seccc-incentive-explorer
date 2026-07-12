@@ -81,7 +81,18 @@ async function main() {
     )
   `;
 
-  console.log("4. Creating indexes...");
+  console.log("4. Creating concierge_usage_counters...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS concierge_usage_counters (
+      counter_key TEXT PRIMARY KEY,
+      count INTEGER NOT NULL DEFAULT 0 CHECK (count >= 0),
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  console.log("5. Creating indexes...");
   await sql`CREATE INDEX IF NOT EXISTS idx_concierge_conversations_user_id ON concierge_conversations (user_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_concierge_conversations_session_id ON concierge_conversations (session_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_concierge_conversations_updated_at ON concierge_conversations (updated_at DESC)`;
@@ -92,6 +103,7 @@ async function main() {
   await sql`CREATE INDEX IF NOT EXISTS idx_concierge_tool_actions_user_id ON concierge_tool_actions (user_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_concierge_tool_actions_tool_name ON concierge_tool_actions (tool_name)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_concierge_tool_actions_status ON concierge_tool_actions (approval_status)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_concierge_usage_counters_expires_at ON concierge_usage_counters (expires_at)`;
 
   console.log("\nConcierge audit migration complete.");
 }

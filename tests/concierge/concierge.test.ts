@@ -3,8 +3,11 @@ import evalPrompts from "./eval-prompts.json";
 
 import {
   DEFAULT_CONCIERGE_MODEL,
+  DEFAULT_CONCIERGE_RETENTION_DAYS,
   getConciergeModelId,
+  getConciergeRetentionDays,
   getGatewayApiKey,
+  hasGatewayCredential,
   isConciergeEnabled,
 } from "@/lib/concierge/config";
 import {
@@ -34,14 +37,15 @@ afterEach(() => {
 });
 
 describe("concierge config / feature gating", () => {
-  it("is disabled unless CONCIERGE_ENABLED and a gateway key are both set", () => {
+  it("is controlled by CONCIERGE_ENABLED even when the model credential is absent", () => {
+    vi.stubEnv("VERCEL_OIDC_TOKEN", "");
     vi.stubEnv("CONCIERGE_ENABLED", "");
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
     expect(isConciergeEnabled()).toBe(false);
 
     vi.stubEnv("CONCIERGE_ENABLED", "true");
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
-    expect(isConciergeEnabled()).toBe(false);
+    expect(isConciergeEnabled()).toBe(true);
 
     vi.stubEnv("CONCIERGE_ENABLED", "");
     vi.stubEnv("AI_GATEWAY_API_KEY", "gw_key");
@@ -61,7 +65,24 @@ describe("concierge config / feature gating", () => {
 
   it("returns null gateway key when unset", () => {
     vi.stubEnv("AI_GATEWAY_API_KEY", "");
+    vi.stubEnv("VERCEL_OIDC_TOKEN", "");
     expect(getGatewayApiKey()).toBeNull();
+  });
+
+  it("detects Vercel OIDC without treating it as an API key", () => {
+    vi.stubEnv("AI_GATEWAY_API_KEY", "");
+    vi.stubEnv("VERCEL_OIDC_TOKEN", "oidc_token");
+    expect(getGatewayApiKey()).toBeNull();
+    expect(hasGatewayCredential()).toBe(true);
+  });
+
+  it("bounds signed-in conversation retention", () => {
+    vi.stubEnv("CONCIERGE_RETENTION_DAYS", "");
+    expect(getConciergeRetentionDays()).toBe(DEFAULT_CONCIERGE_RETENTION_DAYS);
+    vi.stubEnv("CONCIERGE_RETENTION_DAYS", "30");
+    expect(getConciergeRetentionDays()).toBe(30);
+    vi.stubEnv("CONCIERGE_RETENTION_DAYS", "9999");
+    expect(getConciergeRetentionDays()).toBe(DEFAULT_CONCIERGE_RETENTION_DAYS);
   });
 });
 
@@ -72,6 +93,7 @@ describe("system prompt encodes the product boundary", () => {
     expect(p).toContain("may apply");
     expect(p).toContain("verify with");
     expect(p).toContain("never promise");
+    expect(p).toContain("top-line estimate");
     expect(p).toContain("never invent");
     expect(p).toContain("officialurl");
     expect(p).toContain("read-only");
@@ -81,9 +103,11 @@ describe("system prompt encodes the product boundary", () => {
 });
 
 describe("navigation allowlist", () => {
-  it("accepts allowlisted static routes and clean program slugs", () => {
+  it("accepts allowlisted static routes and real program slugs", () => {
     expect(resolveNavTarget("/map")?.route).toBe("/map");
-    expect(resolveNavTarget("/programs/tif")?.route).toBe("/programs/tif");
+    expect(resolveNavTarget("/programs/tif-districts")?.route).toBe(
+      "/programs/tif-districts"
+    );
     expect(resolveNavTarget("/faq", "Read the FAQ")?.label).toBe("Read the FAQ");
   });
 
@@ -93,39 +117,42 @@ describe("navigation allowlist", () => {
     expect(resolveNavTarget("/programs/../admin")).toBeNull();
     expect(resolveNavTarget("//evil.com")).toBeNull();
     expect(resolveNavTarget("/programs/Bad Slug")).toBeNull();
+    expect(resolveNavTarget("/programs/not-a-real-program")).toBeNull();
   });
 });
 
-describe("rate limiting (in-memory, fixed window)", () => {
-  it("caps per-IP messages per hour", () => {
+describe("rate limiting (shared with in-memory fallback)", () => {
+  it("caps per-IP messages per hour", async () => {
     for (let i = 0; i < CONCIERGE_RATE_LIMITS.perIpPerHour; i++) {
-      expect(checkConciergeRateLimit("1.1.1.1", `s${i}`).allowed).toBe(true);
+      expect((await checkConciergeRateLimit("1.1.1.1", `s${i}`)).allowed).toBe(true);
     }
-    const blocked = checkConciergeRateLimit("1.1.1.1", "s-final");
+    const blocked = await checkConciergeRateLimit("1.1.1.1", "s-final");
     expect(blocked.allowed).toBe(false);
     expect(blocked.scope).toBe("ip");
     expect(blocked.retryAfterSeconds).toBeGreaterThan(0);
   });
 
-  it("caps per-session messages per day independent of IP", () => {
+  it("caps per-session messages per day independent of IP", async () => {
     // Rotate IPs so the per-IP cap never trips first.
     for (let i = 0; i < CONCIERGE_RATE_LIMITS.perSessionPerDay; i++) {
-      expect(checkConciergeRateLimit(`ip-${i}`, "sticky-session").allowed).toBe(true);
+      expect((await checkConciergeRateLimit(`ip-${i}`, "sticky-session")).allowed).toBe(true);
     }
-    const blocked = checkConciergeRateLimit("ip-final", "sticky-session");
+    const blocked = await checkConciergeRateLimit("ip-final", "sticky-session");
     expect(blocked.allowed).toBe(false);
     expect(blocked.scope).toBe("session");
   });
 
-  it("resets after the window elapses", () => {
+  it("resets after the window elapses", async () => {
     const t0 = 1_000_000;
     for (let i = 0; i < CONCIERGE_RATE_LIMITS.perIpPerHour; i++) {
-      checkConciergeRateLimit("9.9.9.9", `w${i}`, t0);
+      await checkConciergeRateLimit("9.9.9.9", `w${i}`, t0);
     }
-    expect(checkConciergeRateLimit("9.9.9.9", "w-blocked", t0).allowed).toBe(false);
+    expect(
+      (await checkConciergeRateLimit("9.9.9.9", "w-blocked", t0)).allowed
+    ).toBe(false);
     // One hour + 1ms later the window has rolled over.
     expect(
-      checkConciergeRateLimit("9.9.9.9", "w-ok", t0 + 3_600_001).allowed
+      (await checkConciergeRateLimit("9.9.9.9", "w-ok", t0 + 3_600_001)).allowed
     ).toBe(true);
   });
 });
@@ -166,6 +193,7 @@ describe("read-only program tools return sourced facts", () => {
     const detail = await getProgram("tif");
     expect(detail).not.toBeNull();
     expect(detail!.officialUrl).toMatch(/^https?:\/\//);
+    expect(detail!.detailRoute).toBe("/programs/tif-districts");
     expect(Array.isArray(detail!.verificationSteps)).toBe(true);
 
     const missing = await getProgram("no-such-program-xyz");

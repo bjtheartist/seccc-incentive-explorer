@@ -5,8 +5,8 @@ export const runtime = "nodejs";
 
 /**
  * Lightweight, unauthenticated flag check so the client panel can stay hidden
- * entirely when the concierge is turned off or has no gateway key. Returns only
- * a boolean — never leaks key presence or model id.
+ * when the guide is turned off. Returns only a boolean and never leaks model
+ * credential presence or a model id.
  */
 export async function GET() {
   return NextResponse.json(

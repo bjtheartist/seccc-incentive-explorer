@@ -21,8 +21,14 @@ const eslintConfig = defineConfig([
   globalIgnores([
     // Default ignores of eslint-config-next:
     ".next/**",
+    ".vercel/**",
+    ".design-sync/**",
+    ".ds-sync/**",
     "out/**",
     "build/**",
+    "ds-bundle/**",
+    "video/**",
+    "**/node_modules/**",
     "next-env.d.ts",
   ]),
 ]);

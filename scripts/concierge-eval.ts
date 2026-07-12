@@ -21,7 +21,11 @@ import { createGateway } from "@ai-sdk/gateway";
 import { CONCIERGE_SYSTEM_PROMPT } from "../lib/concierge/system-prompt";
 import { buildConciergeTools } from "../lib/concierge/tools";
 import { sanitizePageContext } from "../lib/concierge/types";
-import { CONCIERGE_MAX_STEPS, getConciergeModelId } from "../lib/concierge/config";
+import {
+  CONCIERGE_MAX_OUTPUT_TOKENS,
+  CONCIERGE_MAX_STEPS,
+  getConciergeModelId,
+} from "../lib/concierge/config";
 
 interface EvalPrompt {
   id: string;
@@ -83,6 +87,12 @@ function evaluate(prompt: EvalPrompt, response: string): EvalResult {
         text
       );
     checks.push({ name: "refuses / redirects gracefully", passed: refuses });
+    if (prompt.subtype === "dollar-rollup") {
+      checks.push({
+        name: "does not produce a top-line dollar total",
+        passed: !/\$\s?\d[\d,.]*/.test(text),
+      });
+    }
   }
 
   return {
@@ -97,7 +107,12 @@ function evaluate(prompt: EvalPrompt, response: string): EvalResult {
 
 async function main() {
   const apiKey = process.env.AI_GATEWAY_API_KEY?.trim();
-  const reportPath = path.join(process.cwd(), "docs", "concierge-eval-report.md");
+  const requestedReport =
+    process.env.CONCIERGE_EVAL_REPORT?.trim() || "concierge-eval-report.md";
+  const reportName = /^[a-z0-9][a-z0-9._-]*\.md$/i.test(requestedReport)
+    ? requestedReport
+    : "concierge-eval-report.md";
+  const reportPath = path.join(process.cwd(), "docs", reportName);
 
   if (!apiKey) {
     const skip =
@@ -113,6 +128,11 @@ async function main() {
   const fixture = JSON.parse(await readFile(fixturePath, "utf8")) as {
     prompts: EvalPrompt[];
   };
+  const requestedLimit = Number(process.env.CONCIERGE_EVAL_LIMIT ?? "");
+  const prompts =
+    Number.isInteger(requestedLimit) && requestedLimit > 0
+      ? fixture.prompts.slice(0, requestedLimit)
+      : fixture.prompts;
 
   const gateway = createGateway({ apiKey });
   const modelId = getConciergeModelId();
@@ -127,9 +147,9 @@ async function main() {
   const tools = buildConciergeTools({ pageContext });
 
   const results: EvalResult[] = [];
-  console.log(`[concierge:eval] Running ${fixture.prompts.length} prompts against ${modelId}...`);
+  console.log(`[concierge:eval] Running ${prompts.length} prompts against ${modelId}...`);
 
-  for (const prompt of fixture.prompts) {
+  for (const prompt of prompts) {
     try {
       const { text } = await generateText({
         model: gateway(modelId),
@@ -137,6 +157,7 @@ async function main() {
         prompt: prompt.prompt,
         tools,
         stopWhen: stepCountIs(CONCIERGE_MAX_STEPS),
+        maxOutputTokens: CONCIERGE_MAX_OUTPUT_TOKENS,
         temperature: 0.2,
       });
       results.push(evaluate(prompt, text));
@@ -181,7 +202,11 @@ async function main() {
   lines.push("| ID | Category | Result | Failed checks |");
   lines.push("|---|---|---|---|");
   for (const r of results) {
-    const failed = r.checks.filter((c) => !c.passed).map((c) => c.name).join("; ") || "—";
+    const failed =
+      r.checks
+        .filter((c) => !c.passed)
+        .map((c) => (c.detail ? `${c.name}: ${c.detail}` : c.name))
+        .join("; ") || "—";
     lines.push(`| ${r.id} | ${r.category} | ${r.passed ? "✅ pass" : "❌ fail"} | ${failed} |`);
   }
   lines.push("");
@@ -194,6 +219,13 @@ async function main() {
     lines.push("**Response:**");
     lines.push("");
     lines.push("> " + (r.response || "_(empty)_").replace(/\n/g, "\n> "));
+    const gatewayError = r.checks.find(
+      (check) => check.name === "gateway call" && !check.passed
+    )?.detail;
+    if (gatewayError) {
+      lines.push("");
+      lines.push(`**Gateway error:** ${gatewayError}`);
+    }
     lines.push("");
   }
 

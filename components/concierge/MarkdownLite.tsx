@@ -29,7 +29,9 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
     if (linkMatch) {
       const label = linkMatch[1];
       const href = linkMatch[2].trim();
-      const safe = /^https?:\/\//i.test(href) || href.startsWith("/");
+      const internal =
+        href.startsWith("/") && !href.startsWith("//") && !href.includes("..");
+      const safe = /^https?:\/\//i.test(href) || internal;
       if (safe) {
         const external = /^https?:\/\//i.test(href);
         nodes.push(

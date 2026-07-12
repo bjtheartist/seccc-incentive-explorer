@@ -11,8 +11,26 @@
  *     in one session append to one conversation row.
  */
 import type { NeonQueryFunction } from "@neondatabase/serverless";
+import { getConciergeRetentionDays } from "./config";
 
 type SQL = NeonQueryFunction<false, false>;
+const PRUNE_INTERVAL_MS = 24 * 60 * 60 * 1000;
+let lastPruneAt = 0;
+
+async function pruneExpiredConversations(sql: SQL): Promise<void> {
+  const now = Date.now();
+  if (now - lastPruneAt < PRUNE_INTERVAL_MS) return;
+  lastPruneAt = now;
+  const days = getConciergeRetentionDays();
+  try {
+    await sql`
+      DELETE FROM concierge_conversations
+      WHERE updated_at < NOW() - (${days} * INTERVAL '1 day')
+    `;
+  } catch {
+    /* best-effort */
+  }
+}
 
 export interface ConciergePersistContext {
   sql: SQL;
@@ -139,6 +157,7 @@ export async function persistConciergeTurn(
   }
 ): Promise<void> {
   try {
+    await pruneExpiredConversations(ctx.sql);
     const conversationId = await ensureConciergeConversation(ctx);
     if (!conversationId) return;
 

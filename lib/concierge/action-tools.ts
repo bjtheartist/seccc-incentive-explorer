@@ -16,9 +16,8 @@
  *   3. COMPOSES with the existing auth-gated routes instead of re-implementing
  *      their guards. For routes that exist on THIS branch we call the exported
  *      handler in-process (it re-runs its own auth + validation + boundary
- *      checks). For the Tier-2 "foundation" routes that live on the business-file
- *      branches (NOT here), we call by URL with the user's cookies and DEGRADE
- *      gracefully to a deep-link when the route 404s. See CROSS-BRANCH notes.
+ *      checks). The merged Business File and program-selection routes are used
+ *      directly, so tool inputs cannot drift from those API contracts.
  *
  * Boundary (re-asserted for actions): these tools PREPARE and ORGANIZE. They
  * never certify, submit, or send anything externally. `prepareSupportRequest`
@@ -30,6 +29,7 @@ import { z } from "zod";
 import type { NeonQueryFunction } from "@neondatabase/serverless";
 import { NextRequest } from "next/server";
 import { isGoalType } from "@/lib/workspace";
+import { getAllPrograms } from "@/lib/programs-data";
 import { resolveNavTarget } from "./navigation";
 
 // NOTE: the existing auth-gated route handlers are DYNAMICALLY imported inside
@@ -50,9 +50,9 @@ export interface ConciergeActionDeps {
   userId: string;
   /** Neon client (present only when the DB is configured). */
   sql: SQL;
-  /** Absolute origin (proto://host) for cross-branch route composition. */
+  /** Absolute origin (proto://host) for synthetic in-process route requests. */
   requestOrigin: string;
-  /** The signed-in user's cookie header, forwarded on cross-branch URL calls. */
+  /** The signed-in user's cookie header, forwarded to guarded route handlers. */
   cookieHeader: string;
   /** Best-effort per-tool telemetry hook. */
   onToolCall?: (toolName: string) => void;
@@ -125,6 +125,19 @@ const NOT_YOURS = {
   note:
     "I couldn't find that under your account, so I didn't change anything. It may belong to a different profile, or you may need to create it first.",
 };
+
+function canonicalProgram(programId: string, programName?: string | null) {
+  const id = programId.trim();
+  const name = programName?.trim().toLowerCase();
+  return (
+    getAllPrograms().find((program) => program.id === id) ??
+    (name
+      ? getAllPrograms().find(
+          (program) => program.name.trim().toLowerCase() === name
+        )
+      : undefined)
+  );
+}
 
 export function buildConciergeActionTools(deps: ConciergeActionDeps) {
   const { userId, sql, requestOrigin, cookieHeader, onToolCall } = deps;
@@ -206,17 +219,17 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
 
     updatePacketTask: tool({
       description:
-        "Mark an applicant-controlled task on an Incentive Preparation Packet as (for example) in progress or complete. REQUIRES the user's approval. Certification/submission tasks are protected and cannot be completed here — those belong only to the applicant in the official process.",
+        "Update the state of an applicant-controlled task on an Incentive Preparedness Packet. REQUIRES the user's approval. Read the packet first and use only a status accepted by the packet API. Certification/submission tasks are protected and cannot be changed here.",
       inputSchema: z.object({
         packetId: z.string().max(200).describe("The packet id."),
         taskId: z.string().max(200).describe("The task id within the packet."),
         status: z
           .enum([
-            "not_started",
-            "in_progress",
-            "blocked",
+            "needs_document",
+            "needs_owner_answer",
+            "needs_advisor",
+            "external_dependency",
             "complete",
-            "requires_certification",
           ])
           .describe("The new task status."),
       }),
@@ -249,15 +262,20 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
 
     createFoundationPacket: tool({
       description:
-        "Start an Incentive Preparation Packet ('application prep') for the signed-in owner, building the foundation task list and timeline from their saved profile. REQUIRES the user's approval. Needs a program name and a project goal.",
+        "Start a reusable Business File foundation for the signed-in owner, or start an Incentive Preparedness Packet for a specific sourced program and project goal. REQUIRES the user's approval. Omit programName, programId, and goalType for a foundation-only Business File; otherwise provide all three.",
       inputSchema: z.object({
-        programName: z.string().max(200).describe("The program the packet is for."),
+        programName: z
+          .string()
+          .max(200)
+          .optional()
+          .describe("The sourced program name. Omit for a foundation-only Business File."),
         programId: z.string().max(120).optional().describe("Program id if known."),
         goalType: z
           .string()
           .max(60)
+          .optional()
           .describe(
-            "One of: hire-staff, expand-location, open-relocate, acquire-vacant-property, development-feasibility."
+            "One of: improve-storefront, buy-equipment, hire-staff, expand-location, open-relocate, acquire-vacant-property, development-feasibility. Omit for a foundation-only Business File."
           ),
         projectAddress: z.string().max(300).optional(),
         businessProfileId: z
@@ -275,10 +293,25 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
         businessProfileId,
       }) => {
         onToolCall?.("createFoundationPacket");
-        if (!isGoalType(goalType)) {
+        const hasProgramIntent = Boolean(programName || programId || goalType);
+        if (
+          hasProgramIntent &&
+          (!programName || !programId || !goalType || !isGoalType(goalType))
+        ) {
           return {
             ok: false,
-            note: "That project goal isn't one I can use. Ask the owner which goal fits, then try again.",
+            note:
+              "To start a program-specific packet I need a sourced program and one project goal. Ask the owner for the missing choice, then try again. A foundation-only Business File can be started without either.",
+          };
+        }
+        const program = hasProgramIntent
+          ? canonicalProgram(programId!, programName)
+          : null;
+        if (hasProgramIntent && !program) {
+          return {
+            ok: false,
+            note:
+              "I couldn't match that program to the Explorer's sourced program list, so I didn't create a packet.",
           };
         }
         const profileId = await ownedProfileId(sql, userId, businessProfileId);
@@ -293,10 +326,7 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
             ),
           };
         }
-        // Composes with the packet-creation route that exists on this branch.
-        // CROSS-BRANCH: the business-file branches may replace this with a
-        // dedicated foundation endpoint; because we call the route (not its
-        // internals) the composition survives that swap.
+        // Compose with the same guarded creation route used by the workspace.
         const { POST: createPacket } = await import(
           "@/app/api/incentive-preparation/route"
         );
@@ -305,7 +335,15 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
           path: `/api/incentive-preparation`,
           method: "POST",
           cookieHeader,
-          body: { programName, programId, goalType, projectAddress, profileId },
+          body: program
+            ? {
+                programName: program.name,
+                programId: program.id,
+                goalType,
+                projectAddress,
+                profileId,
+              }
+            : { projectAddress, profileId },
         });
         if (status >= 400 || !json) {
           return {
@@ -324,7 +362,9 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
         return {
           ok: true,
           packetId: packetId ?? null,
-          note: `Started your ${programName} application-prep packet.`,
+          note: program
+            ? `Started your ${program.name} Incentive Preparedness Packet.`
+            : "Started your reusable Business File foundation.",
           suggestion: packetId
             ? resolveNavTarget(
                 `/workspace/incentive-preparation/${packetId}`,
@@ -337,57 +377,66 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
 
     selectPacketProgram: tool({
       description:
-        "Set (or change) which program an existing Incentive Preparation Packet targets. REQUIRES the user's approval.",
+        "Set the sourced program and project goal for a foundation-only Incentive Preparedness Packet. REQUIRES the user's approval. A packet that already targets a program cannot be repointed; start another packet instead.",
       inputSchema: z.object({
         packetId: z.string().max(200).describe("The packet id to update."),
         programId: z.string().max(120).describe("The program id to target."),
         programName: z.string().max(200).describe("The program name."),
+        goalType: z
+          .string()
+          .max(60)
+          .describe(
+            "One of: improve-storefront, buy-equipment, hire-staff, expand-location, open-relocate, acquire-vacant-property, development-feasibility."
+          ),
       }),
       needsApproval: true,
-      execute: async ({ packetId, programId, programName }) => {
+      execute: async ({ packetId, programId, programName, goalType }) => {
         onToolCall?.("selectPacketProgram");
         if (!(await ownsPacket(sql, userId, packetId))) return NOT_YOURS;
+        if (!isGoalType(goalType)) {
+          return {
+            ok: false,
+            note: "Choose one supported project goal before setting the program.",
+          };
+        }
+        const program = canonicalProgram(programId, programName);
+        if (!program) {
+          return {
+            ok: false,
+            note:
+              "I couldn't match that program to the Explorer's sourced program list, so I didn't change the packet.",
+          };
+        }
 
-        // CROSS-BRANCH DEPENDENCY: the program-selection endpoint for a foundation
-        // packet lives on the business-file branches, NOT this one. We call it by
-        // URL with the user's cookies and DEGRADE gracefully to a deep-link when
-        // it 404s here. When the branches merge this lights up with no code change.
-        try {
-          const controller = new AbortController();
-          const timer = setTimeout(() => controller.abort(), 2500);
-          const res = await fetch(
-            new URL(
-              `/api/incentive-preparation/${packetId}/select-program`,
-              requestOrigin
-            ),
-            {
-              method: "POST",
-              headers: {
-                "content-type": "application/json",
-                ...(cookieHeader ? { cookie: cookieHeader } : {}),
-              },
-              body: JSON.stringify({ programId, programName }),
-              signal: controller.signal,
-            }
-          ).finally(() => clearTimeout(timer));
-
-          if (res.ok) {
-            return {
-              ok: true,
-              packetId,
-              programId,
-              note: `Set your packet to target ${programName}.`,
-            };
-          }
-          // 404 (not on this branch) or any other non-2xx → degrade.
-        } catch {
-          // network/abort → degrade.
+        const { PATCH: patchPacket } = await import(
+          "@/app/api/incentive-preparation/[id]/route"
+        );
+        const { status, json } = await callHandler(patchPacket, {
+          origin: requestOrigin,
+          path: `/api/incentive-preparation/${packetId}`,
+          method: "PATCH",
+          cookieHeader,
+          id: packetId,
+          body: {
+            programId: program.id,
+            programName: program.name,
+            goalType,
+          },
+        });
+        if (status >= 400 || !json) {
+          return {
+            ok: false,
+            note:
+              (json?.error as string) ||
+              "I couldn't set that program. Nothing was changed.",
+          };
         }
 
         return {
           ok: true,
-          degraded: true,
-          note: `Program selection for an existing packet isn't wired up in this environment yet. Open your packet to choose ${programName} there.`,
+          packetId,
+          programId: program.id,
+          note: `Set this Incentive Preparedness Packet to ${program.name}.`,
           suggestion: resolveNavTarget(
             `/workspace/incentive-preparation/${packetId}`,
             "Open your packet"

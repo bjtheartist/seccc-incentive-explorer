@@ -22,6 +22,7 @@ import {
   buildConciergeActionTools,
   type ConciergeActionDeps,
 } from "./action-tools";
+import { buildConciergeWorkspaceTools } from "./workspace-tools";
 
 export interface ConciergeToolDeps {
   /** Page context the client sent with the request (echoed by getPageContext). */
@@ -88,8 +89,8 @@ export function buildConciergeTools({ pageContext, onToolCall, actions }: Concie
       description:
         "List which incentive zones (TIF, Enterprise Zone, Opportunity Zone, NOF corridor, SSA, etc.) cover a specific latitude/longitude. Location coverage only — NOT an eligibility determination.",
       inputSchema: z.object({
-        lat: z.number().describe("Latitude in decimal degrees."),
-        lon: z.number().describe("Longitude in decimal degrees."),
+        lat: z.number().min(-90).max(90).describe("Latitude in decimal degrees."),
+        lon: z.number().min(-180).max(180).describe("Longitude in decimal degrees."),
       }),
       execute: async ({ lat, lon }) => {
         onToolCall?.("listZonesAtPoint");
@@ -114,7 +115,7 @@ export function buildConciergeTools({ pageContext, onToolCall, actions }: Concie
 
     navigateTo: tool({
       description:
-        "Suggest an in-app page for the visitor to open. Allowed routes: /map, /report, /faq, /workspace, /programs, and /programs/{slug}. This does NOT navigate — the visitor sees a button and chooses. Use when a page would help them move forward.",
+        "Suggest an in-app page for the visitor to open. Allowed routes include /map, /report, /faq, /workspace, /workspace/business-file, /programs, real /programs/{slug} pages, and owner workspace deep-links returned by action tools. This does NOT navigate — the visitor sees a button and chooses.",
       inputSchema: z.object({
         route: z
           .string()
@@ -151,10 +152,11 @@ export function buildConciergeTools({ pageContext, onToolCall, actions }: Concie
 
   if (!actions) return readOnlyTools;
 
-  // Signed-in: merge the approval-gated action tools into the same map. The
-  // read-only tools stay auto-executing; only the action tools need approval.
+  // Signed-in: add owner-scoped workspace reads, then merge the approval-gated
+  // actions. Read tools auto-execute; only mutation tools need approval.
   return {
     ...readOnlyTools,
+    ...buildConciergeWorkspaceTools({ ...actions, onToolCall }),
     ...buildConciergeActionTools({ ...actions, onToolCall }),
   };
 }

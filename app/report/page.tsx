@@ -1615,9 +1615,8 @@ function ReportWizardPage() {
             onReportReady={handleGatedReportReady}
           />
         )}
-        {/* Read-only guest concierge — hidden while the email gate blocks the
-            report, so it never fights the dialog and is reachable once the gate
-            resolves (feature-flagged; renders nothing with no gateway key). */}
+        {/* The guide yields to the optional email dialog and returns once the
+            report is visible again. */}
         <ConciergePanel
           suppressed={showEmailGate}
           pageContext={{
@@ -1837,6 +1836,15 @@ function ReportWizardPage() {
           </div>
         </div>
       </section>
+      <ConciergePanel
+        pageContext={{
+          route: "/report",
+          pageLabel: "Report builder",
+          address: wizardState.address || undefined,
+          lat: wizardState.lat || undefined,
+          lon: wizardState.lon || undefined,
+        }}
+      />
     </div>
   );
 }

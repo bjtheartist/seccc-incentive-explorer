@@ -70,6 +70,17 @@ function readString(record: Record<string, unknown>, key: string): string | null
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+async function fetchWorkspaceJson(path: string): Promise<Record<string, unknown>> {
+  const response = await fetch(path);
+  const body = asRecord(await response.json().catch(() => null));
+  if (!response.ok) {
+    throw new Error(
+      (body && readString(body, "error")) || "Could not load your Business File."
+    );
+  }
+  return body ?? {};
+}
+
 function normalizeProfile(value: unknown): BusinessFileProfile | null {
   const record = asRecord(value);
   const id = record ? readString(record, "id") : null;
@@ -123,8 +134,8 @@ export default function BusinessFileHomePage() {
 
     let active = true;
     Promise.all([
-      fetch("/api/business-profiles").then((res) => res.json()),
-      fetch("/api/incentive-preparation").then((res) => res.json()),
+      fetchWorkspaceJson("/api/business-profiles"),
+      fetchWorkspaceJson("/api/incentive-preparation"),
     ])
       .then(([profileData, packetData]) => {
         if (!active) return;
@@ -141,8 +152,15 @@ export default function BusinessFileHomePage() {
         setProfiles(loadedProfiles);
         setPackets(loadedPackets);
       })
-      .catch(() => {
-        if (active) setError("Could not load your Business File.");
+      .catch((loadError: unknown) => {
+        if (!active) return;
+        setError(
+          loadError instanceof Error
+            ? loadError.message
+            : "Could not load your Business File."
+        );
+        setProfiles([]);
+        setPackets([]);
       });
 
     return () => {
