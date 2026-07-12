@@ -1,5 +1,6 @@
 import type { GoalType } from "./workspace";
 import type { VerificationStep } from "./types";
+import { normalizeDocumentSpec, type DocumentSpec } from "./document-spec";
 
 export const PREPARATION_TASK_STATUSES = [
   "needs_document",
@@ -99,6 +100,12 @@ export interface PreparationTask {
   requiredProfileFields?: Array<keyof BusinessProfileSnapshot>;
   applicantOnly?: boolean;
   completionAuthority?: "applicant_or_authorized_representative";
+  /**
+   * The program's document schema for this task, when the task collects a
+   * program-requested document. Lets the task validate what is attached against
+   * what the program asks for and surface a neutral "N of M attached" count.
+   */
+  documentSpec?: DocumentSpec;
 }
 
 export interface PreparationTimeline {
@@ -117,10 +124,22 @@ export interface PreparationTimeline {
 }
 
 export interface BuildPreparationTasksInput {
-  goalType: GoalType;
+  /**
+   * The target incentive's goal overlay. When omitted (foundation-first
+   * "Business File" packets), only the program-agnostic foundation scope is
+   * generated — identity/address/contact plus the reusable continuity
+   * documents — with no goal, program, or certification work.
+   */
+  goalType?: GoalType | null;
   programId?: string | null;
   programName?: string | null;
   programRequiredDocs?: readonly string[];
+  /**
+   * The program's document schemas, matched to `programRequiredDocs` by label.
+   * The matching spec is attached to the generated "Collect program document"
+   * task so it can validate and count attached files.
+   */
+  programDocumentSpecs?: readonly DocumentSpec[];
   programVerificationSteps?: ReadonlyArray<
     Pick<VerificationStep, "label" | "agency" | "kind" | "appliesBefore" | "note">
   >;
@@ -132,6 +151,39 @@ export const OFFICIAL_CERTIFICATION_TASK_ID = "official-certification-submission
 const FOUNDATION_IDENTITY_TASK_ID = "foundation-business-identity";
 const FOUNDATION_ADDRESS_TASK_ID = "foundation-addresses";
 const FOUNDATION_CONTACT_TASK_ID = "foundation-authorized-contact";
+
+/**
+ * The live-profile fields each profile-derived foundation task confirms. Shared
+ * by `buildPreparationTasks` (to set the initial task status), by
+ * `summarizeProfileFoundation` (the Business File "N of M confirmed" glance),
+ * and by `computeFoundationRefresh` (the live-profile → packet reconciliation).
+ * Keeping one source of truth means the three surfaces never drift.
+ */
+export const FOUNDATION_IDENTITY_FIELDS: ReadonlyArray<keyof BusinessProfileSnapshot> = [
+  "legalName",
+  "entityType",
+  "formationDate",
+  "industry",
+  "naicsCode",
+];
+export const FOUNDATION_ADDRESS_FIELDS: ReadonlyArray<keyof BusinessProfileSnapshot> = [
+  "physicalAddress",
+  "mailingAddress",
+];
+export const FOUNDATION_CONTACT_FIELDS: ReadonlyArray<keyof BusinessProfileSnapshot> = [
+  "contactName",
+  "contactEmail",
+  "contactPhone",
+];
+
+const FOUNDATION_FIELD_GROUPS: ReadonlyArray<{
+  taskId: string;
+  fields: ReadonlyArray<keyof BusinessProfileSnapshot>;
+}> = [
+  { taskId: FOUNDATION_IDENTITY_TASK_ID, fields: FOUNDATION_IDENTITY_FIELDS },
+  { taskId: FOUNDATION_ADDRESS_TASK_ID, fields: FOUNDATION_ADDRESS_FIELDS },
+  { taskId: FOUNDATION_CONTACT_TASK_ID, fields: FOUNDATION_CONTACT_FIELDS },
+];
 const PROGRAM_REQUIREMENTS_TASK_ID = "program-application-requirements";
 const FINANCIALS_TASK_ID = "accountant-financials";
 const TAX_STANDING_TASK_ID = "tax-good-standing";
@@ -454,33 +506,57 @@ function withProgramContext(
   };
 }
 
+/**
+ * The reusable continuity documents (accountant-reviewed financials and tax /
+ * good-standing records). They carry category "dependency" but bank into the
+ * foundation scope via CONTINUITY_TASK_IDS, so both the full application build
+ * and the foundation-only Business File emit them identically. They depend only
+ * on business identity — program-agnostic, preparable before any goal exists.
+ */
+function buildContinuityTasks(): PreparationTask[] {
+  return [
+    {
+      id: FINANCIALS_TASK_ID,
+      title: "Prepare accountant-reviewed financials",
+      description:
+        "Coordinate with an accountant to assemble the current financial and tax records needed for application preparation. These records are reusable across programs.",
+      status: "external_dependency",
+      owner: "accountant",
+      category: "dependency",
+      dependsOn: [FOUNDATION_IDENTITY_TASK_ID],
+      estimatedMinWeeks: 1,
+      estimatedMaxWeeks: 3,
+    },
+    {
+      id: TAX_STANDING_TASK_ID,
+      title: "Obtain tax and good-standing records",
+      description:
+        "Request current tax-clearance and entity good-standing records from the appropriate issuing offices for application preparation.",
+      status: "external_dependency",
+      owner: "accountant",
+      category: "dependency",
+      dependsOn: [FOUNDATION_IDENTITY_TASK_ID],
+      estimatedMinWeeks: 1,
+      estimatedMaxWeeks: 3,
+    },
+  ];
+}
+
 export function buildPreparationTasks({
-  goalType,
+  goalType = null,
   programId,
   programName,
   programRequiredDocs = [],
+  programDocumentSpecs = [],
   programVerificationSteps = [],
   profile,
 }: BuildPreparationTasksInput): PreparationTask[] {
   const snapshot = buildProfileSnapshot(profile);
   const normalizedProgramId = normalizeText(programId);
   const normalizedProgramName = normalizeText(programName);
-  const identityFields: Array<keyof BusinessProfileSnapshot> = [
-    "legalName",
-    "entityType",
-    "formationDate",
-    "industry",
-    "naicsCode",
-  ];
-  const addressFields: Array<keyof BusinessProfileSnapshot> = [
-    "physicalAddress",
-    "mailingAddress",
-  ];
-  const contactFields: Array<keyof BusinessProfileSnapshot> = [
-    "contactName",
-    "contactEmail",
-    "contactPhone",
-  ];
+  const identityFields = [...FOUNDATION_IDENTITY_FIELDS];
+  const addressFields = [...FOUNDATION_ADDRESS_FIELDS];
+  const contactFields = [...FOUNDATION_CONTACT_FIELDS];
 
   const tasks: PreparationTask[] = [
     {
@@ -524,6 +600,14 @@ export function buildPreparationTasks({
     },
   ];
 
+  if (!goalType) {
+    // Foundation-first "Business File": program-agnostic scope only. No goal
+    // overlay, no program/dependency/certification work — those layer in later
+    // through mergePreparationProgramTasks when a target incentive is chosen.
+    tasks.push(...buildContinuityTasks());
+    return tasks.map((task) => withProgramContext(task, null, null));
+  }
+
   const overlay = GOAL_OVERLAYS[goalType];
   const overlayTasks = overlay.tasks.map((task) => ({
     ...task,
@@ -557,6 +641,11 @@ export function buildPreparationTasks({
     estimatedMaxWeeks: 2,
   });
 
+  const documentSpecByLabel = new Map<string, DocumentSpec>();
+  for (const spec of programDocumentSpecs) {
+    documentSpecByLabel.set(spec.label.toLowerCase(), spec);
+  }
+
   const programDocumentTaskIds: string[] = [];
   const seenProgramDocuments = new Set<string>();
   for (const requirement of programRequiredDocs) {
@@ -566,6 +655,7 @@ export function buildPreparationTasks({
     seenProgramDocuments.add(normalizedLabel);
     const id = `program-document-${programDocumentTaskIds.length + 1}`;
     programDocumentTaskIds.push(id);
+    const documentSpec = documentSpecByLabel.get(normalizedLabel);
     tasks.push({
       id,
       title: `Collect program document: ${label}`,
@@ -576,6 +666,7 @@ export function buildPreparationTasks({
       dependsOn: [PROGRAM_REQUIREMENTS_TASK_ID, FOUNDATION_IDENTITY_TASK_ID],
       estimatedMinWeeks: 0.5,
       estimatedMaxWeeks: 2,
+      ...(documentSpec ? { documentSpec } : {}),
     });
   }
 
@@ -603,31 +694,7 @@ export function buildPreparationTasks({
     });
   }
 
-  tasks.push({
-    id: FINANCIALS_TASK_ID,
-    title: "Prepare accountant-reviewed financials",
-    description:
-      "Coordinate with an accountant to assemble the current financial and tax records needed for application preparation. These records are reusable across programs.",
-    status: "external_dependency",
-    owner: "accountant",
-    category: "dependency",
-    dependsOn: [FOUNDATION_IDENTITY_TASK_ID],
-    estimatedMinWeeks: 1,
-    estimatedMaxWeeks: 3,
-  });
-
-  tasks.push({
-    id: TAX_STANDING_TASK_ID,
-    title: "Obtain tax and good-standing records",
-    description:
-      "Request current tax-clearance and entity good-standing records from the appropriate issuing offices for application preparation.",
-    status: "external_dependency",
-    owner: "accountant",
-    category: "dependency",
-    dependsOn: [FOUNDATION_IDENTITY_TASK_ID],
-    estimatedMinWeeks: 1,
-    estimatedMaxWeeks: 3,
-  });
+  tasks.push(...buildContinuityTasks());
 
   if (overlay.needsSiteControl) {
     tasks.push({
@@ -794,6 +861,7 @@ export function normalizePreparationTasks(value: unknown): PreparationTask[] {
     >;
     const programId = normalizeText(item.programId);
     const programName = normalizeText(item.programName);
+    const documentSpec = normalizeDocumentSpec(item.documentSpec);
 
     seenIds.add(id);
     normalized.push({
@@ -809,6 +877,7 @@ export function normalizePreparationTasks(value: unknown): PreparationTask[] {
       ...(programId ? { programId } : {}),
       ...(programName ? { programName } : {}),
       ...(requiredProfileFields.length > 0 ? { requiredProfileFields } : {}),
+      ...(documentSpec ? { documentSpec } : {}),
       ...(certificationTask ? { applicantOnly: true as const } : {}),
       ...(certificationTask
         ? { completionAuthority: "applicant_or_authorized_representative" as const }
@@ -831,6 +900,46 @@ export function normalizePreparationTasks(value: unknown): PreparationTask[] {
     ...withValidDependencies.filter((task) => !isOfficialCertificationTask(task)),
     ...withValidDependencies.filter((task) => isOfficialCertificationTask(task)),
   ];
+}
+
+/**
+ * The task-merge seam for foundation-first packets. When a foundation-only
+ * "Business File" packet gains a target incentive, program/goal/application
+ * tasks must layer in WITHOUT clobbering the user's confirmed foundation work.
+ *
+ * `freshTasks` is the authoritative full-graph rebuild (foundation + goal +
+ * program + certification) for the newly chosen program. `existingTasks` is the
+ * packet's current, possibly user-edited, task state. The merge:
+ *
+ *   - keeps the fresh structure (titles, descriptions, dependency graph,
+ *     program context) so the graph is complete and dependency-closed;
+ *   - preserves the user-set `status` on any task that already existed
+ *     (identity/address/contact/financials/tax the applicant confirmed);
+ *   - adds the new goal/program/dependency tasks with their fresh status;
+ *   - never carries a stale status onto the protected certification task
+ *     (normalizePreparationTasks re-locks it to requires_certification anyway);
+ *   - is idempotent: re-merging an already-merged packet returns the same set
+ *     with statuses preserved, so a repeated program selection is a safe no-op.
+ *
+ * Foundation tasks are matched by id, so they are never duplicated. Any task
+ * present only in the old state (none exist today — the foundation subset is a
+ * strict subset of the full graph) is dropped in favor of the fresh structure.
+ */
+export function mergePreparationProgramTasks(
+  existingTasks: unknown,
+  freshTasks: readonly PreparationTask[]
+): PreparationTask[] {
+  const existingById = new Map(
+    normalizePreparationTasks(existingTasks).map((task) => [task.id, task])
+  );
+
+  const merged = freshTasks.map((fresh) => {
+    const existing = existingById.get(fresh.id);
+    if (!existing || isOfficialCertificationTask(fresh)) return fresh;
+    return { ...fresh, status: existing.status };
+  });
+
+  return normalizePreparationTasks(merged);
 }
 
 export function canApplicantUpdateTask(task: PreparationTask): boolean {
@@ -1063,5 +1172,92 @@ export function calculatePreparationTimelines(
   return {
     foundation: calculateFoundationTimeline(tasks, asOf),
     application: calculateApplicationTimeline(tasks, asOf),
+  };
+}
+
+export interface ProfileFoundationSummary {
+  /** Profile-derived foundation groups the live profile currently satisfies. */
+  confirmed: number;
+  /** Total profile-derived foundation groups (identity, addresses, contact). */
+  total: number;
+}
+
+/**
+ * The Business File "N of M confirmed" glance for a profile on its own — a
+ * neutral count of how many profile-derived foundation groups the live profile
+ * satisfies. This is NOT a readiness percentage or an eligibility signal (spec
+ * §3): it only counts which reusable basics are filled in. Continuity documents
+ * (financials, tax) are per-packet external dependencies, not profile fields, so
+ * they are deliberately excluded from the profile-level count.
+ */
+export function summarizeProfileFoundation(
+  profile: BusinessProfileInput
+): ProfileFoundationSummary {
+  const snapshot = buildProfileSnapshot(profile);
+  const confirmed = FOUNDATION_FIELD_GROUPS.filter((group) =>
+    allPresent(snapshot, [...group.fields])
+  ).length;
+  return { confirmed, total: FOUNDATION_FIELD_GROUPS.length };
+}
+
+export interface FoundationRefreshItem {
+  taskId: string;
+  title: string;
+  storedStatus: PreparationTaskStatus;
+  /** The live business_profiles row now satisfies this task's required fields. */
+  liveProfileSatisfies: boolean;
+  /** Live profile covers it but the packet's stored status is not yet complete. */
+  newlyCovered: boolean;
+}
+
+export interface FoundationRefreshState {
+  asOfDate: string;
+  items: FoundationRefreshItem[];
+  /** Tasks the live profile now covers that the user can confirm complete. */
+  newlyCoveredTaskIds: string[];
+}
+
+/**
+ * Reconciles a packet's stored foundation-task state against the CURRENT live
+ * business_profiles row. Packets snapshot the profile immutably at creation, but
+ * a user may fill in more of their live profile later; this surfaces which
+ * profile-derived foundation tasks the live profile now covers.
+ *
+ * By design (spec §3 honesty rulings) this NEVER auto-confirms and NEVER mutates
+ * the packet or the immutable snapshot: it only reports state. A "newly covered"
+ * task is offered to the user as a "your profile now covers this" affordance;
+ * confirming it is an ordinary task-status update, so user confirmation stays the
+ * source of truth. Continuity documents (financials, tax) have no
+ * `requiredProfileFields` and are skipped — they are accountant-owned external
+ * documents the live profile cannot vouch for.
+ */
+export function computeFoundationRefresh(
+  tasks: readonly PreparationTask[],
+  liveProfile: BusinessProfileInput,
+  asOf: Date | string = new Date()
+): FoundationRefreshState {
+  const snapshot = buildProfileSnapshot(liveProfile);
+  const items: FoundationRefreshItem[] = [];
+
+  for (const task of normalizePreparationTasks(tasks)) {
+    if (!isFoundationScopeTask(task)) continue;
+    const fields = task.requiredProfileFields;
+    if (!fields || fields.length === 0) continue;
+    const liveProfileSatisfies = allPresent(snapshot, [...fields]);
+    items.push({
+      taskId: task.id,
+      title: task.title,
+      storedStatus: task.status,
+      liveProfileSatisfies,
+      newlyCovered: liveProfileSatisfies && task.status !== "complete",
+    });
+  }
+
+  return {
+    asOfDate: formatDate(normalizeAsOfDate(asOf)),
+    items,
+    newlyCoveredTaskIds: items
+      .filter((item) => item.newlyCovered)
+      .map((item) => item.taskId),
   };
 }

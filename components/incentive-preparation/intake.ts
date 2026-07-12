@@ -153,6 +153,34 @@ export function validatePreparationIntake(
   return errors;
 }
 
+/**
+ * Foundation-first validation: only the Business File profile facts are
+ * required. A goal and a target program are chosen later on the packet, so they
+ * are not validated here.
+ */
+export function validateBusinessFileIntake(
+  draft: PreparationIntakeDraft,
+): PreparationIntakeErrors {
+  const errors: PreparationIntakeErrors = {};
+  const required: Array<[keyof PreparationIntakeDraft, string]> = [
+    ["legalBusinessName", "Legal business name is required."],
+    ["physicalAddress", "Physical or project address is required."],
+    ["contactName", "Contact name is required."],
+    ["contactEmail", "Contact email is required."],
+  ];
+
+  for (const [field, message] of required) {
+    if (!clean(draft[field])) errors[field] = message;
+  }
+
+  const email = clean(draft.contactEmail);
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    errors.contactEmail = "Enter a valid contact email.";
+  }
+
+  return errors;
+}
+
 export function buildBusinessProfilePayload(draft: PreparationIntakeDraft) {
   return {
     legalName: clean(draft.legalBusinessName),
@@ -182,6 +210,25 @@ export function buildPreparationPayload(
     goalType: clean(draft.primaryGoal),
     programId: clean(draft.selectedProgramId) || null,
     programName: clean(draft.selectedProgramLabel),
+    projectId: context?.projectId || null,
+    projectAddress: clean(draft.physicalAddress) || context?.address || null,
+  };
+}
+
+/**
+ * Foundation-first payload: creates a Business File packet with no goal and no
+ * program. The API detects the absence of both and generates the foundation
+ * scope only; a target incentive is layered on later.
+ */
+export function buildFoundationPayload(
+  draft: PreparationIntakeDraft,
+  profileId: string,
+  context: PreparationContext | null,
+) {
+  return {
+    ...(profileId
+      ? { profileId }
+      : { profile: buildBusinessProfilePayload(draft) }),
     projectId: context?.projectId || null,
     projectAddress: clean(draft.physicalAddress) || context?.address || null,
   };

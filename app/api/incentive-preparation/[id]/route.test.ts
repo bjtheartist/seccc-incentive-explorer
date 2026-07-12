@@ -1,15 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { getCurrentUserIdMock, sqlMock } = vi.hoisted(() => ({
+const { getAllProgramsMock, getCurrentUserIdMock, sqlMock } = vi.hoisted(() => ({
+  getAllProgramsMock: vi.fn(),
   getCurrentUserIdMock: vi.fn(),
   sqlMock: vi.fn(),
 }));
 
 vi.mock("@/lib/current-user", () => ({ getCurrentUserId: getCurrentUserIdMock }));
 vi.mock("@/lib/db", () => ({ getSQL: () => sqlMock }));
+vi.mock("@/lib/programs-data", () => ({ getAllPrograms: getAllProgramsMock }));
 
-import { PATCH } from "./route";
+import { GET, PATCH } from "./route";
 
 const params = { params: Promise.resolve({ id: "packet-1" }) };
 
@@ -20,6 +22,73 @@ function request(body: unknown) {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+function getRequest() {
+  return new NextRequest("http://localhost/api/incentive-preparation/packet-1");
+}
+
+// A foundation-only packet whose stored foundation tasks are still unconfirmed,
+// but whose JOINED live profile columns now satisfy identity + contact fields.
+const joinedFoundationRefreshRow = {
+  id: "packet-1",
+  title: "Business File",
+  goal_type: null,
+  program_name: null,
+  program_id: null,
+  business_profile_id: "profile-1",
+  project_address: "9000 S Commercial Ave",
+  status: "needs_information",
+  business_name: "South Shore Supply",
+  tasks_json: [
+    {
+      id: "foundation-business-identity",
+      title: "Confirm the business identity",
+      description: "",
+      status: "needs_owner_answer",
+      owner: "business",
+      category: "foundation",
+      dependsOn: [],
+      estimatedMinWeeks: 0.5,
+      estimatedMaxWeeks: 1,
+      requiredProfileFields: [
+        "legalName",
+        "entityType",
+        "formationDate",
+        "industry",
+        "naicsCode",
+      ],
+    },
+    {
+      id: "foundation-authorized-contact",
+      title: "Confirm the authorized contact",
+      description: "",
+      status: "needs_owner_answer",
+      owner: "business",
+      category: "foundation",
+      dependsOn: ["foundation-business-identity"],
+      estimatedMinWeeks: 0.5,
+      estimatedMaxWeeks: 1,
+      requiredProfileFields: ["contactName", "contactEmail", "contactPhone"],
+    },
+  ],
+  timeline_json: {},
+  profile_snapshot_json: { legalName: "South Shore Supply" },
+  profile_id: "profile-1",
+  profile_legal_name: "South Shore Supply",
+  profile_entity_type: "LLC",
+  profile_formation_date: "2021-03-15",
+  profile_industry: "Retail",
+  profile_naics_code: "444240",
+  profile_physical_address: "9000 S Commercial Ave",
+  profile_mailing_address: "PO Box 170",
+  profile_contact_name: "Jordan Lee",
+  profile_contact_email: "jordan@example.com",
+  profile_contact_phone: "312-555-0134",
+  profile_created_at: "2026-07-10T00:00:00.000Z",
+  profile_updated_at: "2026-07-11T00:00:00.000Z",
+  created_at: "2026-07-10T00:00:00.000Z",
+  updated_at: "2026-07-10T00:00:00.000Z",
+};
 
 const packetRow = {
   id: "packet-1",
@@ -59,7 +128,86 @@ const packetRow = {
   updated_at: "2026-07-10T00:00:00.000Z",
 };
 
+const foundationPacketRow = {
+  id: "packet-1",
+  title: "Business File",
+  goal_type: null,
+  program_name: null,
+  program_id: null,
+  project_address: "9000 S Commercial Ave",
+  status: "waiting_on_others",
+  business_name: "South Shore Supply",
+  tasks_json: [
+    {
+      id: "foundation-business-identity",
+      title: "Confirm the business identity",
+      description: "",
+      status: "complete",
+      owner: "business",
+      category: "foundation",
+      dependsOn: [],
+      estimatedMinWeeks: 0.5,
+      estimatedMaxWeeks: 1,
+    },
+    {
+      id: "foundation-addresses",
+      title: "Confirm addresses",
+      description: "",
+      status: "complete",
+      owner: "business",
+      category: "foundation",
+      dependsOn: [],
+      estimatedMinWeeks: 0.5,
+      estimatedMaxWeeks: 1,
+    },
+    {
+      id: "foundation-authorized-contact",
+      title: "Confirm the authorized contact",
+      description: "",
+      status: "needs_owner_answer",
+      owner: "business",
+      category: "foundation",
+      dependsOn: ["foundation-business-identity"],
+      estimatedMinWeeks: 0.5,
+      estimatedMaxWeeks: 1,
+    },
+    {
+      id: "accountant-financials",
+      title: "Prepare accountant-reviewed financials",
+      description: "",
+      status: "complete",
+      owner: "accountant",
+      category: "dependency",
+      dependsOn: ["foundation-business-identity"],
+      estimatedMinWeeks: 1,
+      estimatedMaxWeeks: 3,
+    },
+    {
+      id: "tax-good-standing",
+      title: "Obtain tax and good-standing records",
+      description: "",
+      status: "external_dependency",
+      owner: "accountant",
+      category: "dependency",
+      dependsOn: ["foundation-business-identity"],
+      estimatedMinWeeks: 1,
+      estimatedMaxWeeks: 3,
+    },
+  ],
+  timeline_json: {},
+  profile_snapshot_json: {
+    legalName: "South Shore Supply",
+    physicalAddress: "9000 S Commercial Ave",
+    contactName: "Jordan Lee",
+    contactEmail: "jordan@example.com",
+  },
+  created_at: "2026-07-10T00:00:00.000Z",
+  updated_at: "2026-07-10T00:00:00.000Z",
+};
+
 beforeEach(() => {
+  getAllProgramsMock.mockReset();
+  getAllProgramsMock.mockReturnValue([]);
   getCurrentUserIdMock.mockReset();
   sqlMock.mockReset();
 });
@@ -104,6 +252,90 @@ describe("PATCH /api/incentive-preparation/[id]", () => {
     expect(body.packet.timelines.application).toEqual(body.packet.timeline);
   });
 
+  it("layers a chosen program into a foundation-only packet, preserving confirmed statuses", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    getAllProgramsMock.mockReturnValue([
+      {
+        id: "sbif",
+        name: "Small Business Improvement Fund",
+        requiredDocs: [],
+        verificationSteps: [],
+      },
+    ]);
+    sqlMock
+      .mockResolvedValueOnce([foundationPacketRow])
+      .mockResolvedValueOnce([
+        {
+          ...foundationPacketRow,
+          goal_type: "improve-storefront",
+          program_id: "sbif",
+          program_name: "Small Business Improvement Fund",
+          title: "Small Business Improvement Fund application prep",
+          updated_at: "2026-07-11T00:00:00.000Z",
+        },
+      ]);
+
+    const res = await PATCH(
+      request({
+        goalType: "improve-storefront",
+        programId: "sbif",
+        programName: "Small Business Improvement Fund",
+      }),
+      params
+    );
+
+    expect(res.status).toBe(200);
+
+    // The merge writes goal/program columns but never the immutable snapshot.
+    const updateSql = String(sqlMock.mock.calls[1][0]);
+    expect(updateSql).toContain("goal_type");
+    expect(updateSql).toContain("program_name");
+    expect(updateSql).not.toContain("profile_snapshot_json");
+
+    const updateValues = sqlMock.mock.calls[1].slice(1);
+    const tasksJson = updateValues.find(
+      (value) =>
+        typeof value === "string" && value.includes("storefront-improvement-scope")
+    ) as string;
+    const mergedTasks = JSON.parse(tasksJson) as Array<{ id: string; status: string }>;
+
+    // Program/goal/certification tasks were layered in.
+    expect(mergedTasks.some((task) => task.id === "storefront-improvement-scope")).toBe(true);
+    expect(mergedTasks.some((task) => task.id === "official-certification-submission")).toBe(
+      true
+    );
+    // The confirmed foundation status survived the merge.
+    expect(
+      mergedTasks.find((task) => task.id === "accountant-financials")?.status
+    ).toBe("complete");
+    // Foundation tasks are not duplicated.
+    const ids = mergedTasks.map((task) => task.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    // The generic Business File title is replaced with the program's prep title.
+    expect(updateValues).toContain("Small Business Improvement Fund");
+    expect(updateValues).toContain("improve-storefront");
+  });
+
+  it("refuses to re-point a packet that already targets a different program", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    sqlMock.mockResolvedValue([
+      { ...foundationPacketRow, goal_type: "buy-equipment", program_name: "Existing program" },
+    ]);
+
+    const res = await PATCH(
+      request({
+        goalType: "improve-storefront",
+        programId: "sbif",
+        programName: "Small Business Improvement Fund",
+      }),
+      params
+    );
+
+    expect(res.status).toBe(400);
+    // Only the load happened; no UPDATE was attempted.
+    expect(sqlMock).toHaveBeenCalledTimes(1);
+  });
+
   it("never completes the official certification task", async () => {
     getCurrentUserIdMock.mockResolvedValue("user-1");
     sqlMock.mockResolvedValue([packetRow]);
@@ -115,5 +347,69 @@ describe("PATCH /api/incentive-preparation/[id]", () => {
 
     expect(res.status).toBe(400);
     expect(sqlMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns the live-profile foundation refresh after a task update", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    sqlMock
+      .mockResolvedValueOnce([joinedFoundationRefreshRow])
+      .mockResolvedValueOnce([
+        {
+          ...joinedFoundationRefreshRow,
+          status: "needs_information",
+          updated_at: "2026-07-12T00:00:00.000Z",
+        },
+      ]);
+
+    const res = await PATCH(
+      request({ taskId: "foundation-business-identity", status: "complete" }),
+      params
+    );
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      foundationRefresh: { newlyCoveredTaskIds: string[] };
+    };
+    // The confirmed identity task is no longer "newly covered"; the still-open
+    // contact task (satisfied by the live profile) remains offered.
+    expect(body.foundationRefresh.newlyCoveredTaskIds).toContain(
+      "foundation-authorized-contact"
+    );
+  });
+});
+
+describe("GET /api/incentive-preparation/[id]", () => {
+  it("reconciles stored foundation tasks against the live profile on load", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    sqlMock
+      .mockResolvedValueOnce([joinedFoundationRefreshRow])
+      .mockResolvedValueOnce([]);
+
+    const res = await GET(getRequest(), params);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      foundationRefresh: {
+        newlyCoveredTaskIds: string[];
+        items: Array<{ taskId: string; newlyCovered: boolean }>;
+      };
+    };
+    // Both foundation tasks are unconfirmed in storage but the live profile
+    // now satisfies their fields, so both surface as confirm affordances.
+    expect(body.foundationRefresh.newlyCoveredTaskIds).toEqual(
+      expect.arrayContaining([
+        "foundation-business-identity",
+        "foundation-authorized-contact",
+      ])
+    );
+    expect(body.foundationRefresh.items.every((item) => item.newlyCovered)).toBe(true);
+  });
+
+  it("returns 404 for a packet outside the current user's scope", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    sqlMock.mockResolvedValue([]);
+
+    const res = await GET(getRequest(), params);
+    expect(res.status).toBe(404);
   });
 });

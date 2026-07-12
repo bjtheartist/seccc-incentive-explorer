@@ -12,9 +12,12 @@ import {
   calculatePreparationTimeline,
   calculatePreparationTimelines,
   canApplicantUpdateTask,
+  computeFoundationRefresh,
   isFoundationScopeTask,
+  mergePreparationProgramTasks,
   normalizePreparationTasks,
   summarizePreparationStatus,
+  summarizeProfileFoundation,
   type BusinessProfileInput,
   type JsonValue,
   type PreparationTask,
@@ -483,6 +486,132 @@ describe("Business File scope split", () => {
   });
 });
 
+describe("foundation-first Business File packets", () => {
+  it("emits only the program-agnostic foundation scope when no goal is given", () => {
+    const tasks = buildPreparationTasks({ profile: COMPLETE_PROFILE });
+
+    expect(tasks.map((task) => task.id)).toEqual([
+      "foundation-business-identity",
+      "foundation-addresses",
+      "foundation-authorized-contact",
+      "accountant-financials",
+      "tax-good-standing",
+    ]);
+    // Every emitted task banks into the Business File scope.
+    expect(tasks.every((task) => isFoundationScopeTask(task))).toBe(true);
+    // No goal, program, or certification work leaks in.
+    expect(tasks.some((task) => task.category === "goal")).toBe(false);
+    expect(tasks.some((task) => task.category === "certification")).toBe(false);
+    expect(tasks.some((task) => task.id === OFFICIAL_CERTIFICATION_TASK_ID)).toBe(false);
+    // No program context is attached until a program is chosen.
+    expect(tasks.every((task) => task.programId === undefined)).toBe(true);
+    expect(tasks.every((task) => task.programName === undefined)).toBe(true);
+    // The dependency graph is closed within the foundation subset.
+    const ids = new Set(tasks.map((task) => task.id));
+    expect(tasks.every((task) => task.dependsOn.every((id) => ids.has(id)))).toBe(true);
+  });
+
+  it("reports foundation_complete for a foundation-only packet with a complete profile", () => {
+    const tasks = buildPreparationTasks({ profile: COMPLETE_PROFILE }).map((task) =>
+      isFoundationScopeTask(task) ? { ...task, status: "complete" as const } : task
+    );
+    expect(summarizePreparationStatus(tasks)).toBe("foundation_complete");
+  });
+
+  it("treats an explicit null goal the same as omitting it", () => {
+    const withNull = buildPreparationTasks({ goalType: null, profile: COMPLETE_PROFILE });
+    const omitted = buildPreparationTasks({ profile: COMPLETE_PROFILE });
+    expect(withNull.map((task) => task.id)).toEqual(omitted.map((task) => task.id));
+  });
+});
+
+describe("mergePreparationProgramTasks", () => {
+  const foundationOnly = buildPreparationTasks({ profile: COMPLETE_PROFILE });
+
+  function freshProgramTasks() {
+    return buildPreparationTasks({
+      goalType: "improve-storefront",
+      programId: "sbif",
+      programName: "Small Business Improvement Fund",
+      profile: COMPLETE_PROFILE,
+    });
+  }
+
+  it("layers program tasks in while preserving user-set foundation statuses", () => {
+    // The owner confirmed financials on the foundation-only packet.
+    const existing = foundationOnly.map((task) =>
+      task.id === "accountant-financials"
+        ? { ...task, status: "complete" as const }
+        : task
+    );
+
+    const merged = mergePreparationProgramTasks(existing, freshProgramTasks());
+    const mergedIds = merged.map((task) => task.id);
+
+    // Preserved user status survives the merge.
+    expect(merged.find((task) => task.id === "accountant-financials")?.status).toBe(
+      "complete"
+    );
+    // New program/goal/certification tasks are added.
+    expect(mergedIds).toContain("storefront-improvement-scope");
+    expect(mergedIds).toContain("program-application-requirements");
+    expect(mergedIds).toContain(OFFICIAL_CERTIFICATION_TASK_ID);
+    // Foundation tasks are not duplicated.
+    expect(new Set(mergedIds).size).toBe(mergedIds.length);
+    expect(mergedIds.filter((id) => id === "accountant-financials")).toHaveLength(1);
+    // Dependencies stay closed and certification is last.
+    const validIds = new Set(mergedIds);
+    expect(merged.every((task) => task.dependsOn.every((id) => validIds.has(id)))).toBe(
+      true
+    );
+    expect(merged.at(-1)?.id).toBe(OFFICIAL_CERTIFICATION_TASK_ID);
+  });
+
+  it("matches a fresh full build when no foundation status was changed", () => {
+    const merged = mergePreparationProgramTasks(foundationOnly, freshProgramTasks());
+    const fresh = normalizePreparationTasks(freshProgramTasks());
+    expect(merged).toEqual(fresh);
+  });
+
+  it("is idempotent across a repeated merge", () => {
+    const existing = foundationOnly.map((task) =>
+      task.id === "tax-good-standing"
+        ? { ...task, status: "complete" as const }
+        : task
+    );
+    const once = mergePreparationProgramTasks(existing, freshProgramTasks());
+    const twice = mergePreparationProgramTasks(once, freshProgramTasks());
+    expect(twice).toEqual(once);
+    expect(twice.find((task) => task.id === "tax-good-standing")?.status).toBe("complete");
+  });
+
+  it("preserves a user status set on a program task across a re-merge", () => {
+    const merged = mergePreparationProgramTasks(foundationOnly, freshProgramTasks());
+    const withProgress = merged.map((task) =>
+      task.id === "program-application-requirements"
+        ? { ...task, status: "complete" as const }
+        : task
+    );
+    const reMerged = mergePreparationProgramTasks(withProgress, freshProgramTasks());
+    expect(
+      reMerged.find((task) => task.id === "program-application-requirements")?.status
+    ).toBe("complete");
+  });
+
+  it("never carries a stale status onto the protected certification task", () => {
+    const tampered = mergePreparationProgramTasks(foundationOnly, freshProgramTasks()).map(
+      (task) =>
+        task.id === OFFICIAL_CERTIFICATION_TASK_ID
+          ? { ...task, status: "complete" as const }
+          : task
+    );
+    const reMerged = mergePreparationProgramTasks(tampered, freshProgramTasks());
+    expect(reMerged.find((task) => task.id === OFFICIAL_CERTIFICATION_TASK_ID)?.status).toBe(
+      "requires_certification"
+    );
+  });
+});
+
 describe("certification protection and normalization", () => {
   it("sanitizes persisted tasks, removes invalid dependencies, and moves certification last", () => {
     const normalized = normalizePreparationTasks([
@@ -737,5 +866,96 @@ describe("incentive preparation migration", () => {
     expect(migration).toContain("profile_snapshot_json is immutable");
     expect(migration).toContain("CREATE INDEX IF NOT EXISTS idx_incentive_packets_profile_id");
     expect(migration).toContain("CREATE INDEX IF NOT EXISTS idx_incentive_support_requests_packet_id");
+  });
+
+  it("relaxes goal_type and program_name to nullable for foundation-first packets", () => {
+    expect(migration).toMatch(
+      /ALTER TABLE incentive_preparation_packets ALTER COLUMN goal_type DROP NOT NULL/
+    );
+    expect(migration).toMatch(
+      /ALTER TABLE incentive_preparation_packets ALTER COLUMN program_name DROP NOT NULL/
+    );
+  });
+});
+
+describe("summarizeProfileFoundation", () => {
+  it("counts the three profile-derived foundation groups a complete profile satisfies", () => {
+    expect(summarizeProfileFoundation(COMPLETE_PROFILE)).toEqual({
+      confirmed: 3,
+      total: 3,
+    });
+  });
+
+  it("counts only the groups whose live fields are all present", () => {
+    // Contact group is missing contactPhone; identity is missing naicsCode.
+    const partial: BusinessProfileInput = {
+      legalName: "South Shore Supply LLC",
+      entityType: "LLC",
+      formationDate: "2021-03-15",
+      industry: "Retail",
+      naicsCode: null,
+      physicalAddress: "9000 S Commercial Ave",
+      mailingAddress: "PO Box 170",
+      contactName: "Jordan Lee",
+      contactEmail: "jordan@example.com",
+      contactPhone: null,
+    };
+    expect(summarizeProfileFoundation(partial)).toEqual({ confirmed: 1, total: 3 });
+  });
+
+  it("never returns a percentage or readiness signal — only neutral counts", () => {
+    const summary = summarizeProfileFoundation({});
+    expect(summary).toEqual({ confirmed: 0, total: 3 });
+    expect(Object.keys(summary).sort()).toEqual(["confirmed", "total"]);
+  });
+});
+
+describe("computeFoundationRefresh", () => {
+  it("flags a foundation task the live profile now covers but the packet has not confirmed", () => {
+    const tasks = buildPreparationTasks({ profile: {} });
+    // Live profile now has full identity/address/contact facts.
+    const refresh = computeFoundationRefresh(tasks, COMPLETE_PROFILE);
+
+    expect(refresh.newlyCoveredTaskIds).toEqual(
+      expect.arrayContaining([
+        "foundation-business-identity",
+        "foundation-addresses",
+        "foundation-authorized-contact",
+      ])
+    );
+    const identity = refresh.items.find(
+      (item) => item.taskId === "foundation-business-identity"
+    );
+    expect(identity).toMatchObject({ liveProfileSatisfies: true, newlyCovered: true });
+  });
+
+  it("does not flag a task the user already confirmed complete", () => {
+    const tasks = buildPreparationTasks({ profile: {} }).map((task) =>
+      task.id === "foundation-business-identity"
+        ? { ...task, status: "complete" as const }
+        : task
+    );
+    const refresh = computeFoundationRefresh(tasks, COMPLETE_PROFILE);
+    expect(refresh.newlyCoveredTaskIds).not.toContain("foundation-business-identity");
+    const identity = refresh.items.find(
+      (item) => item.taskId === "foundation-business-identity"
+    );
+    // Still reported, but not offered as a confirm affordance.
+    expect(identity).toMatchObject({ liveProfileSatisfies: true, newlyCovered: false });
+  });
+
+  it("never marks a task as newly covered when the live profile is still incomplete", () => {
+    const tasks = buildPreparationTasks({ profile: {} });
+    const refresh = computeFoundationRefresh(tasks, {});
+    expect(refresh.newlyCoveredTaskIds).toEqual([]);
+    expect(refresh.items.every((item) => item.newlyCovered === false)).toBe(true);
+  });
+
+  it("skips continuity documents, which the live profile cannot vouch for", () => {
+    const tasks = buildPreparationTasks({ profile: COMPLETE_PROFILE });
+    const refresh = computeFoundationRefresh(tasks, COMPLETE_PROFILE);
+    const continuityIds = refresh.items.map((item) => item.taskId);
+    expect(continuityIds).not.toContain("accountant-financials");
+    expect(continuityIds).not.toContain("tax-good-standing");
   });
 });

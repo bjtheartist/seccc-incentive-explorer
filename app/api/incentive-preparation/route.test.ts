@@ -60,6 +60,59 @@ describe("/api/incentive-preparation", () => {
     expect(sqlMock).not.toHaveBeenCalled();
   });
 
+  it("creates a foundation-only Business File packet with no goal or program", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    sqlMock
+      .mockResolvedValueOnce([
+        {
+          id: "profile-1",
+          legal_name: profile.legalName,
+          physical_address: profile.physicalAddress,
+          contact_name: profile.contactName,
+          contact_email: profile.contactEmail,
+          licenses_json: [],
+          field_provenance_json: {},
+          created_at: "2026-07-10T00:00:00.000Z",
+          updated_at: "2026-07-10T00:00:00.000Z",
+        },
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "packet-1",
+          title: "Business File",
+          goal_type: null,
+          program_name: null,
+          status: "waiting_on_others",
+          tasks_json: [],
+          timeline_json: {},
+          profile_snapshot_json: profile,
+          created_at: "2026-07-10T00:00:00.000Z",
+          updated_at: "2026-07-10T00:00:00.000Z",
+        },
+      ]);
+
+    const res = await POST(request({ profile }));
+
+    expect(res.status).toBe(201);
+    // The program catalog is never consulted for a foundation-only packet.
+    expect(getAllProgramsMock).not.toHaveBeenCalled();
+
+    const packetValues = sqlMock.mock.calls[1].slice(1);
+    const tasksJson = packetValues.find(
+      (value) => typeof value === "string" && value.includes("foundation-business-identity")
+    ) as string;
+    expect(tasksJson).toContain("accountant-financials");
+    expect(tasksJson).not.toContain("official-certification-submission");
+    expect(tasksJson).not.toContain("storefront-improvement-scope");
+    expect(packetValues).toContain("Business File");
+
+    const body = (await res.json()) as {
+      packet: { goalType: string | null; programName: string };
+    };
+    expect(body.packet.goalType).toBeNull();
+    expect(body.packet.programName).toBe("");
+  });
+
   it("returns 404 when an optional project is not owned by the current user", async () => {
     getCurrentUserIdMock.mockResolvedValue("user-1");
     sqlMock.mockResolvedValue([]);
