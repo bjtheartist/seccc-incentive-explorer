@@ -118,8 +118,52 @@ export function checkConciergeRateLimit(
   return { allowed: true, scope: null, retryAfterSeconds: 0 };
 }
 
+// ─── Repeated-429 backoff (Stage 3 abuse control) ─────────────────────
+//
+// A caller that keeps hammering after being throttled gets an escalating
+// Retry-After. Purely additive to the base window decision: the base limit
+// still governs whether a request is allowed; this only lengthens the
+// cool-down advertised to a persistent offender.
+
+interface BackoffEntry {
+  strikes: number;
+  updatedAt: number;
+}
+
+const backoffByKey = new Map<string, BackoffEntry>();
+const BACKOFF_TTL_MS = DAY_MS;
+const BACKOFF_STEP_SECONDS = 30;
+const BACKOFF_MAX_SECONDS = 15 * 60;
+
+/**
+ * Record one throttled request for a caller and return the escalated
+ * additional cool-down (seconds) to add on top of the base Retry-After.
+ */
+export function noteConciergeRejection(
+  key: string,
+  now: number = Date.now()
+): number {
+  const existing = backoffByKey.get(key);
+  const strikes =
+    existing && now - existing.updatedAt < BACKOFF_TTL_MS ? existing.strikes + 1 : 1;
+  backoffByKey.set(key, { strikes, updatedAt: now });
+
+  if (backoffByKey.size > MAX_TRACKED_KEYS) {
+    for (const [k, v] of backoffByKey) {
+      if (now - v.updatedAt >= BACKOFF_TTL_MS) backoffByKey.delete(k);
+    }
+  }
+  return Math.min(BACKOFF_MAX_SECONDS, strikes * BACKOFF_STEP_SECONDS);
+}
+
+/** Clear the backoff strikes for a caller after a successful request. */
+export function clearConciergeRejection(key: string) {
+  backoffByKey.delete(key);
+}
+
 /** Test-only: reset the in-memory windows. */
 export function __resetConciergeRateLimit() {
   ipBuckets.clear();
   sessionBuckets.clear();
+  backoffByKey.clear();
 }

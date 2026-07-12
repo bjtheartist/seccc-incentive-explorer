@@ -20,6 +20,15 @@ function getRedis(): Redis | null {
 }
 
 /**
+ * Public accessor for the lazily-initialized Upstash client. Returns null when
+ * Upstash env vars are absent (graceful degradation — callers must have an
+ * in-memory / no-op fallback). Reuses the same cached instance as `cached()`.
+ */
+export function getRedisClient(): Redis | null {
+  return getRedis();
+}
+
+/**
  * Cache-through helper.
  * Returns cached value from Redis if available; otherwise calls fn(),
  * stores the result with the given TTL, and returns it.

@@ -22,6 +22,8 @@
     "db:migrate:userintel": "npx tsx scripts/migrate-userintel.ts",
     "db:migrate:corridor": "npx tsx scripts/migrate-corridor.ts",
     "db:migrate:analytics": "npx tsx scripts/migrate-analytics.ts",
+    "db:migrate:concierge": "npx tsx scripts/migrate-concierge.ts",
+    "concierge:eval": "npx tsx scripts/concierge-eval.ts",
     "db:seed": "npm run db:sync:vacant",
     "db:sync:vacant": "npx tsx scripts/sync-vacant-properties.ts",
     "db:sync:parcels": "npx tsx scripts/sync-parcels.ts",
