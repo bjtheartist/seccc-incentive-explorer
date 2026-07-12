@@ -39,6 +39,10 @@ export const ANALYTICS_EVENT_TYPES = [
   "packet_document_uploaded",
   "packet_document_deleted",
   "packet_document_extract_suggested",
+  "concierge_opened",
+  "concierge_message_sent",
+  "concierge_tool_called",
+  "concierge_nav_suggested",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];

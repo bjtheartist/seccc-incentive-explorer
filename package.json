@@ -41,6 +41,8 @@
     "support:import": "npx tsx scripts/import-business-support-workbook.ts"
   },
   "dependencies": {
+    "@ai-sdk/gateway": "^4.0.16",
+    "@ai-sdk/react": "^4.0.23",
     "@auth/neon-adapter": "^1.11.2",
     "@fontsource/inter": "^5.2.8",
     "@fontsource/jetbrains-mono": "^5.2.8",
@@ -53,6 +55,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/blob": "^2.6.1",
     "@xmldom/xmldom": "0.9.10",
+    "ai": "^7.0.22",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "fflate": "^0.8.3",

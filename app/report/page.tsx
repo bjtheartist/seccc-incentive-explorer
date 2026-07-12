@@ -75,6 +75,7 @@ import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { ProjectFitNote } from "@/components/report/ProjectFitNote";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { ReportEmailGate } from "@/components/report/ReportEmailGate";
+import { ConciergePanel } from "@/components/concierge/ConciergePanel";
 import { reportEmailGateKey, reportRequiresEmailGate } from "@/lib/report-email";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
@@ -1614,6 +1615,20 @@ function ReportWizardPage() {
             onReportReady={handleGatedReportReady}
           />
         )}
+        {/* Read-only guest concierge — hidden while the email gate blocks the
+            report, so it never fights the dialog and is reachable once the gate
+            resolves (feature-flagged; renders nothing with no gateway key). */}
+        <ConciergePanel
+          suppressed={showEmailGate}
+          pageContext={{
+            route: "/report",
+            pageLabel: "Incentive report",
+            reportSummary: report.summary,
+            address: report.metadata?.address,
+            lat: report.metadata?.lat,
+            lon: report.metadata?.lon,
+          }}
+        />
       </div>
     );
   }
