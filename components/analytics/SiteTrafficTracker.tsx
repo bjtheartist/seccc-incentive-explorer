@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { trackEvent } from "@/lib/analytics-events";
+import { readTrafficAttribution } from "@/lib/traffic-attribution";
 
 const SESSION_KEY = "cie_traffic_session_id";
 const SESSION_STARTED_KEY = "cie_traffic_session_started_at";
@@ -61,6 +62,7 @@ export function SiteTrafficTracker() {
         sessionId: getSessionId(),
         deviceType: deviceType(),
         viewportWidth: window.innerWidth,
+        ...readTrafficAttribution(window.location.search, document.referrer),
       },
     });
   }, [pathname]);
