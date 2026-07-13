@@ -27,7 +27,7 @@ const LOADING_MESSAGES = [
   "Cross-referencing TIF district boundaries...",
   "Checking Opportunity Zone eligibility...",
   "Analyzing Enterprise Zone coverage...",
-  "Computing your incentive stacking score...",
+  "Checking overlapping incentive zones...",
   "Running spatial analysis on your location...",
   "This part usually impresses people...",
   "Crunching the numbers the city doesn't want you to know...",
@@ -38,7 +38,7 @@ const LOADING_MESSAGES = [
   "Consulting the ancient TIF scrolls...",
   "Mapping potential incentive opportunities...",
   "Whispering to the Cook County parcel data...",
-  "Checking if your block is secretly a goldmine...",
+  "Reviewing mapped programs for this block...",
   "Reviewing 20+ federal, state, and city programs...",
   "Doing math so you don't have to...",
   "Convincing the server this is important...",
@@ -47,7 +47,7 @@ const LOADING_MESSAGES = [
   "Verifying census tract employment data...",
   "Stacking zones like it's a game of Tetris...",
   "If this were a city meeting, we'd still be on roll call...",
-  "Running the numbers... they're looking good...",
+  "Reviewing the available location context...",
   "Pulling data from 6 government databases at once...",
 ];
 

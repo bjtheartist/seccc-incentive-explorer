@@ -249,14 +249,16 @@ function FounderView({ data }: { data: AnalyticsDashboardSummary }) {
           detail="Clicks to support organizations, contact methods, or resource links surfaced inside reports."
         />
         <MetricCard
-          label="Support Opportunities"
-          value={formatNumber(data.totals.connectionOpportunitiesSurfaced)}
-          detail="Local support organizations surfaced across generated reports."
+          label="Financing Resources Shown"
+          value={formatNumber(data.totals.capitalPartnerReferralsShown)}
+          detail="Reports where a potentially relevant financing resource was surfaced for consideration."
         />
         <MetricCard
-          label="Reports Generated"
-          value={formatNumber(data.totals.reportsGenerated)}
-          detail="Location snapshots, refined reports, and vacancy reports generated in this window."
+          label="Financing Resource Actions"
+          value={formatNumber(
+            data.totals.capitalPartnerClicks + data.totals.capitalPartnerContactsStarted,
+          )}
+          detail="Tracked visits, calls, or emails toward a surfaced financing resource."
         />
       </div>
 
@@ -289,6 +291,7 @@ function FounderView({ data }: { data: AnalyticsDashboardSummary }) {
         <RankingList title="Top Neighborhoods / ZIPs" rows={data.topNeighborhoods} />
         <RankingList title="Program Links Clicked" rows={data.topPrograms} />
         <RankingList title="Support Organizations Clicked" rows={data.topSupportOrganizations} />
+        <RankingList title="Financing Resources Contacted" rows={data.topCapitalPartners} />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-[1.5fr_1fr] gap-4">
@@ -376,7 +379,7 @@ function PartnerView({ data }: { data: AnalyticsDashboardSummary }) {
         <h2 className="mt-4 font-editorial text-[34px] leading-tight text-[#0C1B33]">
           {data.partnerSummary.headline}
         </h2>
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
           <MetricCard
             label="Reports Generated"
             value={formatNumber(data.totals.reportsGenerated)}
@@ -391,6 +394,11 @@ function PartnerView({ data }: { data: AnalyticsDashboardSummary }) {
             label="Resource Connections"
             value={formatNumber(data.totals.localResourceConnections)}
             detail="Tracked clicks toward local support organizations and contact pathways."
+          />
+          <MetricCard
+            label="Financing Resources Shown"
+            value={formatNumber(data.totals.capitalPartnerReferralsShown)}
+            detail="Reports that surfaced a potentially relevant financing resource."
           />
         </div>
       </div>
@@ -415,6 +423,7 @@ function PartnerView({ data }: { data: AnalyticsDashboardSummary }) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <RankingList title="Neighborhoods / ZIPs Reached" rows={data.topNeighborhoods} />
         <RankingList title="Support Organizations Clicked" rows={data.topSupportOrganizations} />
+        <RankingList title="Financing Resources Contacted" rows={data.topCapitalPartners} />
       </div>
     </div>
   );

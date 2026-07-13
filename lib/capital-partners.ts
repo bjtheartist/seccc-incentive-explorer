@@ -39,6 +39,7 @@ export interface PartnerProduct {
   id: string;
   productType: CapitalProductType | string;
   productName?: string;
+  publicFitNote?: string;
   /** Report project types this product is meant for (e.g. "rehab", "expansion"). */
   projectTypes?: string[];
   industries?: string[];
@@ -56,6 +57,7 @@ export interface CapitalPartner {
   name: string;
   partnerType: PartnerType | string;
   website?: string;
+  intakeUrl?: string;
   contactEmail?: string;
   phone?: string;
   address?: string;
@@ -87,6 +89,7 @@ export interface CapitalMatchRequest {
   lon?: number;
   projectType?: string;
   productNeed?: CapitalProductType | string;
+  industry?: string;
   /** Reference date for staleness checks; pass a fixed value for determinism. */
   asOf?: string;
 }
@@ -103,7 +106,11 @@ export interface CapitalPartnerMatch {
   name: string;
   partnerType: string;
   website?: string;
+  intakeUrl?: string;
+  contactEmail?: string;
+  phone?: string;
   productType?: string;
+  fitNote?: string;
   reason: string;
   provenance: CapitalMatchProvenance;
 }
@@ -236,10 +243,16 @@ function productFit(product: PartnerProduct, request: CapitalMatchRequest): FitT
     (product.projectTypes ?? []).some(
       (type) => type.toLowerCase() === String(request.projectType).toLowerCase()
     );
+  const checksIndustry = Boolean(request.industry && product.industries?.length);
+  const industryMatches =
+    checksIndustry &&
+    (product.industries ?? []).some(
+      (industry) => industry.toLowerCase() === String(request.industry).toLowerCase(),
+    );
 
-  const requested = Number(wantsProduct) + Number(wantsProject);
+  const requested = Number(wantsProduct) + Number(wantsProject) + Number(checksIndustry);
   if (requested === 0) return 0;
-  const matched = Number(productMatches) + Number(projectMatches);
+  const matched = Number(productMatches) + Number(projectMatches) + Number(industryMatches);
   if (matched === requested) return 0;
   if (matched > 0) return 1;
   return 2;
@@ -248,24 +261,35 @@ function productFit(product: PartnerProduct, request: CapitalMatchRequest): FitT
 function bestProduct(
   partner: CapitalPartner,
   request: CapitalMatchRequest
-): { product: PartnerProduct | null; fit: FitTier } {
+): { product: PartnerProduct | null; fit: FitTier; industrySpecific: boolean } {
   const active = partner.products.filter((product) => product.active !== false);
-  if (active.length === 0) return { product: null, fit: 2 };
+  if (active.length === 0) return { product: null, fit: 2, industrySpecific: false };
 
   let best: PartnerProduct | null = null;
   let bestFit: FitTier = 2;
+  let bestIndustrySpecific = false;
   for (const product of active) {
     const fit = productFit(product, request);
+    const industrySpecific = Boolean(
+      request.industry &&
+      product.industries?.some(
+        (industry) => industry.toLowerCase() === String(request.industry).toLowerCase(),
+      ),
+    );
     if (
       best === null ||
       fit < bestFit ||
-      (fit === bestFit && product.id.localeCompare(best.id) < 0)
+      (fit === bestFit && industrySpecific && !bestIndustrySpecific) ||
+      (fit === bestFit &&
+        industrySpecific === bestIndustrySpecific &&
+        product.id.localeCompare(best.id) < 0)
     ) {
       best = product;
       bestFit = fit;
+      bestIndustrySpecific = industrySpecific;
     }
   }
-  return { product: best, fit: bestFit };
+  return { product: best, fit: bestFit, industrySpecific: bestIndustrySpecific };
 }
 
 function haversineKm(latA: number, lonA: number, latB: number, lonB: number): number {
@@ -283,6 +307,7 @@ interface Candidate {
   geography: GeographyFit;
   product: PartnerProduct | null;
   fitTier: FitTier;
+  industrySpecific: boolean;
   verification: VerificationTier;
   distanceKm: number;
 }
@@ -309,18 +334,30 @@ function buildReason(candidate: Candidate, request: CapitalMatchRequest): string
 }
 
 function toMatch(candidate: Candidate, request: CapitalMatchRequest): CapitalPartnerMatch {
-  const { partner, product } = candidate;
+  const { partner, product, verification } = candidate;
+  const verificationStatus: PartnerVerificationStatus =
+    verification === 0 ? "verified" : verification === 1 ? "unverified" : "stale";
   return {
     partnerId: partner.id,
     name: partner.name,
     partnerType: partner.partnerType,
     ...(partner.website ? { website: partner.website } : {}),
+    ...(partner.intakeUrl ? { intakeUrl: partner.intakeUrl } : {}),
+    ...(partner.contactEmail ? { contactEmail: partner.contactEmail } : {}),
+    ...(partner.phone ? { phone: partner.phone } : {}),
     ...(product && candidate.fitTier < 2 ? { productType: product.productType } : {}),
+    ...(product?.publicFitNote && candidate.fitTier < 2
+      ? { fitNote: product.publicFitNote }
+      : {}),
     reason: buildReason(candidate, request),
     provenance: {
-      verificationStatus: partner.verificationStatus,
-      ...(partner.sourceUrl ? { sourceUrl: partner.sourceUrl } : {}),
-      ...(partner.sourceDate ? { sourceDate: partner.sourceDate } : {}),
+      verificationStatus,
+      ...(product?.sourceUrl || partner.sourceUrl
+        ? { sourceUrl: product?.sourceUrl || partner.sourceUrl }
+        : {}),
+      ...(product?.sourceDate || partner.sourceDate
+        ? { sourceDate: product?.sourceDate || partner.sourceDate }
+        : {}),
       ...(partner.lastVerifiedAt ? { lastVerifiedAt: partner.lastVerifiedAt } : {}),
     },
   };
@@ -328,6 +365,7 @@ function toMatch(candidate: Candidate, request: CapitalMatchRequest): CapitalPar
 
 function compareCandidates(a: Candidate, b: Candidate): number {
   if (a.fitTier !== b.fitTier) return a.fitTier - b.fitTier;
+  if (a.industrySpecific !== b.industrySpecific) return a.industrySpecific ? -1 : 1;
   if (a.verification !== b.verification) return a.verification - b.verification;
   if (a.geography.local !== b.geography.local) return a.geography.local ? -1 : 1;
   if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;
@@ -355,7 +393,7 @@ export function matchCapitalPartners(
     const geography = geographyFit(partner, request);
     if (!geography) continue;
 
-    const { product, fit } = bestProduct(partner, request);
+    const { product, fit, industrySpecific } = bestProduct(partner, request);
     const distanceKm =
       request.lat !== undefined &&
       request.lon !== undefined &&
@@ -364,7 +402,15 @@ export function matchCapitalPartners(
         ? haversineKm(request.lat, request.lon, partner.lat, partner.lon)
         : Number.POSITIVE_INFINITY;
 
-    candidates.push({ partner, geography, product, fitTier: fit, verification, distanceKm });
+    candidates.push({
+      partner,
+      geography,
+      product,
+      fitTier: fit,
+      industrySpecific,
+      verification,
+      distanceKm,
+    });
   }
 
   candidates.sort(compareCandidates);

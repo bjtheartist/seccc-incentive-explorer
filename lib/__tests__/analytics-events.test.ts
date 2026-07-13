@@ -10,6 +10,9 @@ describe("analytics events", () => {
     expect(isAnalyticsEventType("start_page_viewed")).toBe(true);
     expect(isAnalyticsEventType("location_snapshot_generated")).toBe(true);
     expect(isAnalyticsEventType("support_resource_clicked")).toBe(true);
+    expect(isAnalyticsEventType("capital_partner_shown")).toBe(true);
+    expect(isAnalyticsEventType("capital_partner_clicked")).toBe(true);
+    expect(isAnalyticsEventType("capital_partner_contact_started")).toBe(true);
     expect(isAnalyticsEventType("program_link_clicked")).toBe(true);
     expect(isAnalyticsEventType("share_link_copied")).toBe(true);
     expect(isAnalyticsEventType("not_real")).toBe(false);

@@ -487,7 +487,7 @@ export default async function NeighborhoodIncentivesPage({
           <p className="text-[#0C1B33]/55 text-sm mb-6 max-w-2xl leading-relaxed">
             Anchor institutions — hospitals, colleges, development corporations,
             and corridor projects — concentrate jobs and reinvestment. These are
-            the highest-scoring anchors identified for {ca.name}.
+            source-backed anchor institutions identified for {ca.name}.
           </p>
 
           {anchors.length > 0 ? (
@@ -515,7 +515,7 @@ export default async function NeighborhoodIncentivesPage({
             </div>
           ) : (
             <p className="text-[#0C1B33]/60 text-sm rounded-xl border border-[#0C1B33]/10 bg-white px-5 py-4 max-w-2xl leading-relaxed">
-              No scored anchor institutions are catalogued for {ca.name} yet.
+              No anchor institutions are catalogued for {ca.name} yet.
             </p>
           )}
         </div>

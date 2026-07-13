@@ -493,7 +493,7 @@ export default function MapSnapshotPanel({
           <div className="mx-4 h-px bg-[#0C1B33]/8" />
           <div className="px-4 pt-3 pb-2">
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-2">
-              Top Programs Here
+              Programs at This Location
             </div>
             <div className="space-y-1.5">
               {contextPrograms.map((r) => (

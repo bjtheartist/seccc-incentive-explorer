@@ -41,6 +41,12 @@ import {
   summarizeProjectFit,
 } from "./project-fit";
 import type { ProjectFit, ProjectFitSummary } from "./project-fit";
+import type { CapitalMatchResult, CapitalPartnerMatch } from "./capital-partners";
+import {
+  CAPITAL_PARTNER_SECTION_TITLE,
+  capitalPartnerHandoffForReport,
+} from "./capital-partner-report";
+import { addPartnerReferralAttribution } from "./partner-referrals";
 
 // ─── Local Types ────────────────────────────────────────────────────
 
@@ -113,6 +119,7 @@ export interface ReportItem {
   detailCaveat?: string;
   projectFit?: ProjectFitSummary;
   programId?: string;
+  partnerId?: string;
   color?: string;
   whoQualifies?: string;
   eligibilityRules?: { description: string; required: boolean }[];
@@ -333,13 +340,14 @@ export interface GeneratedReport {
     communityArea?: string;
     narrative: string;
   };
+  capitalPartnerHandoff?: CapitalMatchResult;
   neighborhoodEconomics?: NeighborhoodEconomicContext;
   locationContext?: LocationContext;
   dataSources?: DataSourceCitation[];
 }
 
 export const CONFIRMED_PROGRAMS_SECTION_TITLE = "Eligible Incentive Programs";
-export const GOAL_MATCH_PROGRAMS_SECTION_TITLE = "Best Matches for Your Goal";
+export const GOAL_MATCH_PROGRAMS_SECTION_TITLE = "Programs to Review for Your Goal";
 export const OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE = "Other Programs Tied to This Address";
 
 const CONFIRMED_PROGRAMS_SECTION_TITLES = new Set([
@@ -848,26 +856,20 @@ function computeVerdict(
   else if (zoneCount >= 2 && programCount >= 3) signal = "moderate";
   else signal = "limited";
 
-  const headline =
-    signal === "strong"
-      ? "This location has strong incentive coverage"
-      : signal === "moderate"
-        ? "This location has moderate incentive coverage"
-        : "This location has limited incentive coverage";
+  const headline = zoneCount > 0
+    ? "Mapped incentive zones were found at this address"
+    : "No mapped zone-based programs were found at this address";
 
-  const subheadline =
-    signal === "strong"
-      ? "Multiple overlapping zones create significant cost-offset opportunities."
-      : signal === "moderate"
-        ? "Several programs apply here — review eligibility to maximize benefits."
-        : "Fewer zone-based programs, but county-wide options may still apply.";
+  const subheadline = programCount > 0
+    ? "The programs linked to those zones have separate eligibility, timing, and approval requirements to confirm."
+    : "Broader programs may still be worth exploring with a local business-support organization.";
 
   const topReasons: string[] = [];
-  topReasons.push(`${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} at this location`);
-  topReasons.push(`${programCount} program${programCount !== 1 ? "s" : ""} potentially available`);
-  if (comboCount > 0) topReasons.push(`${comboCount} beneficial stacking combination${comboCount !== 1 ? "s" : ""} identified`);
-  if (isQCT) topReasons.push("Located in a Qualified Census Tract — enhanced federal credits");
-  if (isLMI && !isQCT) topReasons.push("Low-to-moderate income area — qualifies for place-based programs");
+  topReasons.push(`${zoneCount} mapped incentive zone${zoneCount !== 1 ? "s" : ""} intersect this location`);
+  topReasons.push(`${programCount} address-linked program${programCount !== 1 ? "s" : ""} identified for individual confirmation`);
+  if (comboCount > 0) topReasons.push(`${comboCount} program interaction${comboCount !== 1 ? "s" : ""} to verify`);
+  if (isQCT) topReasons.push("A Qualified Census Tract indicator is present; confirm its implications program by program");
+  if (isLMI && !isQCT) topReasons.push("A low-to-moderate income indicator is present; confirm program-specific requirements");
 
   return { signal, headline, subheadline, topReasons: topReasons.slice(0, 5) };
 }
@@ -1456,6 +1458,42 @@ function buildCommunityAssets(
   return { edos, bsos, narrative };
 }
 
+function capitalPartnerReportItem(match: CapitalPartnerMatch): ReportItem {
+  const contactLines = [
+    match.fitNote ? `Organization focus: ${match.fitNote}` : null,
+    match.phone ? `Phone: ${match.phone}` : null,
+    match.contactEmail ? `Email: ${match.contactEmail}` : null,
+    "Informational listing only; contact the organization to ask whether its services may be relevant.",
+  ].filter(Boolean);
+  const intakeUrl = match.intakeUrl || match.website;
+
+  return {
+    label: match.name,
+    partnerId: match.partnerId,
+    value: "Financing resource to explore",
+    detail: [match.reason, ...contactLines].join("\n"),
+    url: intakeUrl ? addPartnerReferralAttribution(intakeUrl, match.partnerId) : undefined,
+    sourceLabel: "Official organization source",
+    sourceUrl: match.provenance.sourceUrl,
+    lastVerifiedAt: match.provenance.lastVerifiedAt || null,
+    isStale: match.provenance.verificationStatus === "stale",
+    confidenceLabel: "Contact and source",
+  };
+}
+
+function buildCapitalPartnerSection(handoff: CapitalMatchResult): ReportSection | null {
+  if (!handoff.primary) return null;
+  return {
+    title: CAPITAL_PARTNER_SECTION_TITLE,
+    description:
+      "These organizations describe financing services for certain projects. Contact them directly to ask whether their services may be relevant. These listings are informational, not endorsements, approvals, or eligibility decisions. Other public, community, financing, and program reviews may apply, and no contact information has been shared on your behalf.",
+    items: [
+      capitalPartnerReportItem(handoff.primary),
+      ...handoff.alternates.map((match) => capitalPartnerReportItem(match)),
+    ],
+  };
+}
+
 // ─── Integration: TIF Financials, Deadlines, Corridor Context ──────
 
 /**
@@ -1830,20 +1868,20 @@ function generateLocationIncentives(
   const localImpactAnchorsSection = buildLocalImpactAnchorsSection(ctx);
   if (localImpactAnchorsSection) sections.push(localImpactAnchorsSection);
 
-  // §02 Incentive Density & Stacking
+  // §02 Mapped zone coverage and program interactions
   if (stackingAnalysis) {
     const stackingItems: ReportItem[] = [];
-    stackingItems.push({ label: "Incentive Density", value: stackingAnalysis.percentileLabel, detail: stackingAnalysis.narrative });
+    stackingItems.push({ label: "Mapped Zone Coverage", value: `${stackingAnalysis.zoneCount} zone${stackingAnalysis.zoneCount === 1 ? "" : "s"}`, detail: stackingAnalysis.narrative });
     for (const combo of stackingAnalysis.combinations) {
-      stackingItems.push({ label: combo.zones.join(" + "), value: "Can stack", detail: combo.benefit });
+      stackingItems.push({ label: combo.zones.join(" + "), value: "Verify interaction", detail: combo.benefit });
     }
     for (const rule of stackingAnalysis.rules) {
-      stackingItems.push({ label: `${rule.programA} + ${rule.programB}`, value: rule.relationship === "can" ? "Can stack" : rule.relationship === "cannot" ? "Cannot stack" : "Conditional", detail: rule.reason });
+      stackingItems.push({ label: `${rule.programA} + ${rule.programB}`, value: "Verify interaction", detail: rule.reason });
     }
     if (stackingItems.length > 0) {
       sections.push({
-        title: "Incentive Density & Stacking",
-        description: "How your overlapping incentive zones compare to other Chicago locations and which programs can be combined.",
+        title: "Incentive Zone Coverage & Program Interactions",
+        description: "Mapped incentive zones at this address and program interactions to confirm with the relevant administrators.",
         items: stackingItems,
       });
     }
@@ -1855,7 +1893,7 @@ function generateLocationIncentives(
       const goalLabel = projectGoalLabel(state.projectType);
       sections.push({
         title: GOAL_MATCH_PROGRAMS_SECTION_TITLE,
-        description: `Programs tied to this address and prioritized for the selected goal: ${goalLabel}. Project fit changes ordering, not eligibility status.`,
+        description: `Programs tied to this address whose stated uses may relate to the selected goal: ${goalLabel}. Each program still requires individual eligibility confirmation.`,
         items: goalMatchedPrograms.map((program) =>
           programReportItem(program, confidenceMap, gatingOpts, projectFitMap.get(program.id)),
         ),
@@ -1872,7 +1910,7 @@ function generateLocationIncentives(
     } else {
       sections.push({
         title: CONFIRMED_PROGRAMS_SECTION_TITLE,
-        description: "Programs matched to this address through active incentive-zone boundaries, ordered by eligibility confidence.",
+        description: "Programs connected to this address through mapped incentive-zone boundaries. Confirm the applicable requirements for each program.",
         items: confirmedPrograms.map((program) =>
           programReportItem(program, confidenceMap, gatingOpts, projectFitMap.get(program.id)),
         ),
@@ -2089,10 +2127,10 @@ function generateLocationIncentives(
 
   const addressDisplay = state.address || "your location";
   const stackingContext = stackingAnalysis
-    ? ` Your ${stackingAnalysis.zoneCount}-zone overlap places you in the ${stackingAnalysis.percentileLabel} of Chicago locations for incentive density.`
+    ? ` The address intersects ${stackingAnalysis.zoneCount} mapped incentive zone${stackingAnalysis.zoneCount === 1 ? "" : "s"}; each program has separate eligibility and approval rules.`
     : "";
   const projectGoalSummary = state.projectType
-    ? ` Recommendations are prioritized for the selected goal: ${projectGoalLabel(state.projectType)}.`
+    ? ` The selected project goal is ${projectGoalLabel(state.projectType)}; each program still requires individual confirmation.`
     : "";
 
   return {
@@ -2250,7 +2288,7 @@ function generateBestLocation(
   const localImpactAnchorsSection = buildLocalImpactAnchorsSection(ctx);
   if (localImpactAnchorsSection) sections.push(localImpactAnchorsSection);
 
-  // §04 Incentive Zone Coverage & Stacking
+  // §04 Incentive zone coverage and program interactions
   if (zoneCount > 0) {
     const zoneItems: ReportItem[] = activeZones.map((key) => {
       const matchingPrograms = programs.filter((p) => p.zoneKey === key);
@@ -2264,16 +2302,16 @@ function generateBestLocation(
         ).join("; ") || ""),
       };
     });
-    // Add stacking info
+    // Add program interaction notes without exposing internal rankings.
     if (stackingAnalysis) {
-      zoneItems.push({ label: "Incentive Density", value: stackingAnalysis.percentileLabel, detail: stackingAnalysis.narrative });
+      zoneItems.push({ label: "Mapped Zone Coverage", value: `${stackingAnalysis.zoneCount} zone${stackingAnalysis.zoneCount === 1 ? "" : "s"}`, detail: stackingAnalysis.narrative });
       for (const combo of stackingAnalysis.combinations) {
-        zoneItems.push({ label: combo.zones.join(" + "), value: "Can stack", detail: combo.benefit });
+        zoneItems.push({ label: combo.zones.join(" + "), value: "Verify interaction", detail: combo.benefit });
       }
     }
     sections.push({
-      title: `Incentive Zone Coverage & Stacking (${zoneCount} zones)`,
-      description: "Active incentive zones at this location and how they can be combined.",
+      title: `Incentive Zone Coverage & Program Interactions (${zoneCount} zones)`,
+      description: "Mapped incentive zones at this location and program interactions to confirm with the relevant administrators.",
       items: zoneItems,
     });
   }
@@ -2318,9 +2356,9 @@ function generateBestLocation(
     }
     if (parcel?.isCommercial && isClass7aEligible(parcel.classCode)) {
       feasibilityItems.push({
-        label: "Class 7a eligibility",
-        value: "Potentially eligible",
-        detail: `Property class ${parcel.classCode} may qualify for Class 7a assessment reduction (10% of market value for 12 years for commercial/industrial rehab).`,
+        label: "Class 7a review",
+        value: "Worth confirming",
+        detail: `Property class ${parcel.classCode} is one signal to review against the current Class 7a requirements for this project.`,
       });
     }
   }
@@ -2336,26 +2374,23 @@ function generateBestLocation(
     feasibilityItems.push({
       label: "Enterprise Zone",
       value: "Active",
-      detail: "Sales tax exemption on building materials, utility tax exemption, and investment tax credits available for this site.",
+      detail: "Enterprise Zone benefits may be relevant to eligible projects at this site. Confirm the current project, cost, and application requirements with the program administrator.",
     });
-  }
-
-  // Risk signals
-  if (verdict?.signal === "limited") {
-    feasibilityItems.push({ label: "Risk Signal", value: "Limited incentive coverage", detail: "Fewer address-confirmed programs are available. Broader county, state, federal, and utility programs may still be worth exploring." });
   }
 
   if (feasibilityItems.length === 0) {
     feasibilityItems.push({
-      label: "Baseline vacancy fit",
-      value: `${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} active`,
-      detail: `This site has ${zoneCount > 0 ? "incentive coverage that can offset project costs" : "limited zone coverage — county-wide programs may still apply"}.`,
+      label: "Mapped zone context",
+      value: `${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}`,
+      detail: zoneCount > 0
+        ? "Each mapped program has separate eligibility and approval requirements to confirm."
+        : "Broader county, state, federal, and utility programs may still be worth exploring.",
     });
   }
 
   sections.push({
-    title: `${projectLabel} Vacancy Fit`,
-    description: "Vacancy-focused assessment of incentive eligibility, risk signals, and financing opportunities.",
+    title: `${projectLabel} Location Context`,
+    description: "Vacancy-focused property and program context to verify before relying on an incentive or financing path.",
     items: feasibilityItems,
   });
 
@@ -2536,7 +2571,7 @@ function generateBestLocation(
     subtitle: `${projectLabel} Analysis`,
     reportType: "best-location",
     generatedAt: new Date().toISOString(),
-    summary: `${verdict?.headline || "Site assessment complete"}. ${summaryParts.join(". ")}. ${projectType === "rehab" && parcel?.bldgAge != null && parcel.bldgAge >= 50 ? "The building's age may unlock historic tax credits. " : ""}The sections below are organized from key findings to detailed evidence.`,
+    summary: `${verdict?.headline || "Site assessment complete"}. ${summaryParts.join(". ")}. ${projectType === "rehab" && parcel?.bldgAge != null && parcel.bldgAge >= 50 ? "The building's age may warrant reviewing current historic tax credit requirements. " : ""}The sections below are organized from key findings to detailed evidence.`,
     sections,
     recommendedActions,
     metadata: {
@@ -3729,6 +3764,35 @@ export function generateReportData(
         items: propertyItems,
       });
     }
+  }
+
+  const capitalPartnerHandoff = capitalPartnerHandoffForReport(state, {
+    zip: ctx.reportZip,
+    lat: report.metadata.lat ?? state.lat,
+    lon: report.metadata.lon ?? state.lon,
+    asOf: report.generatedAt,
+  });
+  const capitalPartnerSection = capitalPartnerHandoff
+    ? buildCapitalPartnerSection(capitalPartnerHandoff)
+    : null;
+  if (capitalPartnerHandoff?.primary && capitalPartnerSection) {
+    report.capitalPartnerHandoff = capitalPartnerHandoff;
+    const supportIndex = report.sections.findIndex(
+      (section) => section.title === "Your Support Network",
+    );
+    const contextIndex = report.sections.reduce(
+      (lastIndex, section, index) =>
+        ["Site Overview", "Location Context", "Property Analysis"].includes(section.title)
+          ? index
+          : lastIndex,
+      -1,
+    );
+    const insertionIndex = supportIndex >= 0
+      ? supportIndex
+      : contextIndex >= 0
+        ? contextIndex + 1
+        : 0;
+    report.sections.splice(insertionIndex, 0, capitalPartnerSection);
   }
 
   // Attach executive summary for address-based reports when zone data is available

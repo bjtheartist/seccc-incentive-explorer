@@ -1,0 +1,193 @@
+{
+  "generatedAt": "2026-07-13",
+  "sourceLabel": "Official organization websites reviewed for the Chicago project financing pilot",
+  "partners": [
+    {
+      "id": "allies-for-community-business",
+      "name": "Allies for Community Business",
+      "partnerType": "cdfi",
+      "website": "https://a4cb.org/",
+      "intakeUrl": "https://a4cb.org/services/loans/",
+      "contactEmail": "info@a4cb.org",
+      "phone": "312-275-3000",
+      "address": "135 N Kedzie Ave, Chicago, IL 60612",
+      "lat": 41.884052365004,
+      "lon": -87.706133523753,
+      "serviceAreas": [
+        { "scope": "citywide" }
+      ],
+      "products": [
+        {
+          "id": "a4cb-term-loan",
+          "productType": "term_loan",
+          "productName": "Small business term loan",
+          "publicFitNote": "Early, emerging, and established businesses seeking capital for operating growth or a planned business investment.",
+          "projectTypes": ["expansion", "equipment", "relocation", "other"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://a4cb.org/services/loans/",
+          "sourceDate": "2026-07-13",
+          "active": true
+        },
+        {
+          "id": "a4cb-line-of-credit",
+          "productType": "line_of_credit",
+          "productName": "Small business line of credit",
+          "publicFitNote": "Businesses seeking flexible capital for operating growth, staffing, or recurring business needs.",
+          "projectTypes": ["expansion", "hiring"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://a4cb.org/services/loans/",
+          "sourceDate": "2026-07-13",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://a4cb.org/services/loans/",
+      "sourceDate": "2026-07-13",
+      "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "chicago-community-loan-fund",
+      "name": "Chicago Community Loan Fund",
+      "partnerType": "cdfi",
+      "website": "https://cclfchicago.org/",
+      "intakeUrl": "https://cclfchicago.org/lending/our-lending-process/",
+      "contactEmail": "info@cclfchicago.org",
+      "phone": "312-252-0440",
+      "address": "29 E Madison St, Suite 1700, Chicago, IL 60602",
+      "lat": 41.882019849846,
+      "lon": -87.626770185583,
+      "serviceAreas": [
+        { "scope": "citywide" }
+      ],
+      "products": [
+        {
+          "id": "cclf-commercial-real-estate",
+          "productType": "commercial_real_estate",
+          "productName": "Mission-driven commercial real estate financing",
+          "publicFitNote": "Mission-driven commercial real estate projects that serve or benefit low- to moderate-income communities in the Chicago region.",
+          "projectTypes": ["rehab", "new-construction", "vacant-acquisition", "expansion", "relocation"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://cclfchicago.org/lending/commercial-retail-loans/",
+          "sourceDate": "2026-07-13",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://cclfchicago.org/lending/commercial-retail-loans/",
+      "sourceDate": "2026-07-13",
+      "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "somercor",
+      "name": "SomerCor",
+      "partnerType": "mission_lender",
+      "website": "https://somercor.com/",
+      "intakeUrl": "https://somercor.com/start-here/",
+      "contactEmail": "info@somercor.com",
+      "phone": "312-360-3300",
+      "address": "209 S LaSalle St, Suite 203, Chicago, IL 60604",
+      "lat": 41.87913450862,
+      "lon": -87.632207578481,
+      "serviceAreas": [
+        { "scope": "citywide" }
+      ],
+      "products": [
+        {
+          "id": "somercor-fixed-assets",
+          "productType": "commercial_real_estate",
+          "productName": "SBA fixed-asset financing",
+          "publicFitNote": "Businesses planning an owner-occupied real estate purchase, construction project, or other long-term fixed-asset investment.",
+          "projectTypes": ["relocation", "expansion", "new-construction", "vacant-acquisition"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://somercor.com/sba-504-loans/",
+          "sourceDate": "2026-07-13",
+          "active": true
+        },
+        {
+          "id": "somercor-equipment",
+          "productType": "equipment_financing",
+          "productName": "SBA equipment financing",
+          "publicFitNote": "Businesses planning a substantial equipment or building-systems purchase as part of a long-term fixed-asset investment.",
+          "projectTypes": ["equipment", "energy"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://somercor.com/sba-504-loans/",
+          "sourceDate": "2026-07-13",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://somercor.com/sba-504-loans/",
+      "sourceDate": "2026-07-13",
+      "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "community-investment-corporation",
+      "name": "Community Investment Corporation",
+      "partnerType": "cdfi",
+      "website": "https://www.cicchicago.com/",
+      "intakeUrl": "https://www.cicchicago.com/loans/",
+      "contactEmail": "lending@cicchicago.com",
+      "phone": "312-258-0070",
+      "address": "222 S Riverside Plaza, Suite 380, Chicago, IL 60606",
+      "lat": 41.8786929,
+      "lon": -87.6389978,
+      "serviceAreas": [
+        { "scope": "citywide" }
+      ],
+      "products": [
+        {
+          "id": "cic-multifamily",
+          "productType": "commercial_real_estate",
+          "productName": "Multifamily and mixed-use financing",
+          "publicFitNote": "Multifamily properties with five or more units, including qualifying mixed-use buildings with a residential component.",
+          "projectTypes": ["mixed-use", "affordable-housing"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.cicchicago.com/loans/",
+          "sourceDate": "2026-07-13",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.cicchicago.com/loans/",
+      "sourceDate": "2026-07-13",
+      "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "chicago-trend",
+      "name": "Chicago TREND",
+      "partnerType": "mission_lender",
+      "website": "https://www.chicagotrend.com/",
+      "intakeUrl": "https://www.chicagotrend.com/financing",
+      "contactEmail": "info@chicagotrend.com",
+      "address": "1 S Dearborn St, 21st Floor, Chicago, IL 60603",
+      "lat": 41.881940393202,
+      "lon": -87.629324275157,
+      "serviceAreas": [
+        { "scope": "citywide" }
+      ],
+      "products": [
+        {
+          "id": "chicago-trend-retail",
+          "productType": "commercial_real_estate",
+          "productName": "Strategic retail and corridor financing",
+          "publicFitNote": "Retailers and developers pursuing strategic retail projects in transitioning or underinvested commercial corridors.",
+          "projectTypes": ["mixed-use", "vacant-acquisition", "new-construction", "relocation"],
+          "industries": ["retail"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.chicagotrend.com/financing",
+          "sourceDate": "2026-07-13",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.chicagotrend.com/financing",
+      "sourceDate": "2026-07-13",
+      "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
+      "active": true
+    }
+  ]
+}

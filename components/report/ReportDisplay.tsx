@@ -44,6 +44,8 @@ import {
 } from "@/lib/personas";
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { ProjectFitNote } from "@/components/report/ProjectFitNote";
+import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff";
+import { CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
@@ -181,14 +183,12 @@ const CONFIDENCE_BADGE: Record<string, { bg: string; text: string; border: strin
 };
 
 function VerdictCard({ verdict }: { verdict: NonNullable<GeneratedReport["verdict"]> }) {
-  const signalLabel = verdict.signal === "strong" ? "Strong Coverage" : verdict.signal === "moderate" ? "Moderate Coverage" : "Limited Coverage";
-
   return (
     <div className="mb-12">
       <div className="flex items-center gap-3 mb-4">
         <div className="w-2 h-2 rounded-full bg-[#0C1B33]" />
         <span className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/40">
-          {signalLabel}
+          Location findings
         </span>
       </div>
       <h3 className="font-editorial text-[22px] sm:text-[26px] text-[#0C1B33] leading-snug mb-2">
@@ -246,13 +246,13 @@ function ExecutiveSummarySection({
         </button>
       </div>
 
-      {/* Top Programs — bullet points */}
+      {/* Programs to review — bullet points */}
       {summary.topPrograms.length > 0 && (
         <div className="mb-6">
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-3">
             {summary.projectGoalLabel
-              ? `Top Programs for ${summary.projectGoalLabel}`
-              : "Top Programs for Your Location"}
+              ? `Programs to Review for ${summary.projectGoalLabel}`
+              : "Programs to Review for Your Location"}
           </span>
           <ul className="space-y-2">
             {summary.topPrograms.map((prog) => {
@@ -947,7 +947,7 @@ export function ReportDisplay({
 
   const tocEntries = useMemo(() => {
     const entries: { label: string; anchor: string }[] = [];
-    if (report.verdict) entries.push({ label: "Verdict", anchor: "verdict" });
+    if (report.verdict) entries.push({ label: "Location Findings", anchor: "verdict" });
     if (report.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
     if (report.sections) {
       for (const s of report.sections) {
@@ -1033,6 +1033,22 @@ export function ReportDisplay({
         reportAnalyticsPayload(report, "report_support_network", {
           organizationName: item.label,
           organizationType: item.value || "local_support",
+          contactMethod: "website",
+          originSource: analyticsSource,
+        }),
+      );
+    },
+    [analyticsSource, report],
+  );
+
+  const trackSectionLinkClick = useCallback(
+    (section: ReportSection, item: ReportItem) => {
+      if (section.title !== CAPITAL_PARTNER_SECTION_TITLE) return;
+      trackEvent(
+        "capital_partner_clicked",
+        reportAnalyticsPayload(report, "report_capital_partner_section", {
+          partnerId: item.partnerId || item.label,
+          partnerName: item.label,
           contactMethod: "website",
           originSource: analyticsSource,
         }),
@@ -1634,6 +1650,12 @@ export function ReportDisplay({
             )}
           </div>
 
+          <CapitalPartnerHandoff
+            report={report}
+            source={analyticsSource}
+            compact={compact}
+          />
+
           {/* ── Table of Contents ── */}
           {tocEntries.length > 0 && (
             <nav className="px-5 sm:px-12 md:px-16 pt-8 pb-2">
@@ -1884,42 +1906,27 @@ export function ReportDisplay({
                       <AnchorCards anchors={report.neighborhoodEconomics.anchors} />
                     )}
 
-                    {/* Stacking section: visual table + density bar */}
-                    {section.title === "Incentive Density & Stacking" && report.stackingAnalysis && (
+                    {/* Factual zone coverage and program interactions */}
+                    {section.title === "Incentive Zone Coverage & Program Interactions" && report.stackingAnalysis && (
                       <div className="mb-8">
-                        {/* Density visual */}
-                        <div className="mb-6">
-                          <div className="flex items-baseline justify-between mb-2">
-                            <span className="text-[#0C1B33] text-[13px] font-semibold">Zone Overlap</span>
-                            <span className="font-mono-bureau text-[10px] text-[#0C1B33]/40">
-                              {report.stackingAnalysis.zoneCount} zones &middot; {report.stackingAnalysis.percentileLabel}
-                            </span>
-                          </div>
-                          <div className="h-6 bg-[#0C1B33]/[0.04] relative w-full">
-                            <div
-                              className="h-full bg-[#0C1B33]/12 transition-all"
-                              style={{ width: `${Math.min(report.stackingAnalysis.zoneCount * 10, 100)}%` }}
-                            />
-                            {/* Tick marks at 25%, 50%, 75% */}
-                            {[25, 50, 75].map((tick) => (
-                              <div key={tick} className="absolute top-0 bottom-0 w-px bg-[#0C1B33]/8" style={{ left: `${tick}%` }} />
-                            ))}
-                          </div>
-                          <div className="flex justify-between mt-1">
-                            <span className="font-mono-bureau text-[8px] text-[#0C1B33]/20">0</span>
-                            <span className="font-mono-bureau text-[8px] text-[#0C1B33]/20">10+ zones</span>
-                          </div>
+                        <div className="mb-6 border-l-2 border-[#2563EB]/25 pl-4">
+                          <span className="font-mono-bureau text-[9px] uppercase tracking-[0.15em] text-[#0C1B33]/35">
+                            Mapped zone coverage
+                          </span>
+                          <p className="mt-1 text-[13px] text-[#0C1B33]/60">
+                            {report.stackingAnalysis.zoneCount} incentive zone{report.stackingAnalysis.zoneCount === 1 ? "" : "s"} intersect this address.
+                          </p>
                         </div>
 
-                        {/* Stacking rules table */}
+                        {/* Program interaction table */}
                         {(report.stackingAnalysis.combinations.length > 0 || report.stackingAnalysis.rules.length > 0) && (
                           <div className="border border-[#0C1B33]/8 overflow-hidden">
                             <table className="w-full text-[12px]">
                               <thead>
                                 <tr className="bg-[#0C1B33]/[0.03]">
-                                  <th className="text-left font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/40 px-4 py-2.5">Combination</th>
-                                  <th className="text-left font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/40 px-4 py-2.5 w-24">Status</th>
-                                  <th className="text-left font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/40 px-4 py-2.5 hidden sm:table-cell">Benefit / Note</th>
+                                  <th className="text-left font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/40 px-4 py-2.5">Programs</th>
+                                  <th className="text-left font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/40 px-4 py-2.5 w-24">Next step</th>
+                                  <th className="text-left font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/40 px-4 py-2.5 hidden sm:table-cell">What to confirm</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-[#0C1B33]/5">
@@ -1928,7 +1935,7 @@ export function ReportDisplay({
                                     <td className="px-4 py-3 text-[#0C1B33]/70 font-medium">{combo.zones.join(" + ")}</td>
                                     <td className="px-4 py-3">
                                       <span className="font-mono-bureau text-[9px] tracking-[0.1em] uppercase text-[#0C1B33]/50 bg-[#0C1B33]/[0.04] px-2 py-0.5">
-                                        Can stack
+                                        Verify
                                       </span>
                                     </td>
                                     <td className="px-4 py-3 text-[#0C1B33]/40 hidden sm:table-cell">{combo.benefit}</td>
@@ -1938,12 +1945,8 @@ export function ReportDisplay({
                                   <tr key={`rule-${ri}`}>
                                     <td className="px-4 py-3 text-[#0C1B33]/70 font-medium">{rule.programA} + {rule.programB}</td>
                                     <td className="px-4 py-3">
-                                      <span className={`font-mono-bureau text-[9px] tracking-[0.1em] uppercase px-2 py-0.5 ${
-                                        rule.relationship === "can" ? "text-[#0C1B33]/50 bg-[#0C1B33]/[0.04]" :
-                                        rule.relationship === "cannot" ? "text-[#0C1B33]/30 bg-[#0C1B33]/[0.02] line-through" :
-                                        "text-[#0C1B33]/40 bg-[#0C1B33]/[0.03]"
-                                      }`}>
-                                        {rule.relationship === "can" ? "Can stack" : rule.relationship === "cannot" ? "Cannot stack" : "Conditional"}
+                                      <span className="bg-[#0C1B33]/[0.04] px-2 py-0.5 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/50">
+                                        Verify
                                       </span>
                                     </td>
                                     <td className="px-4 py-3 text-[#0C1B33]/40 hidden sm:table-cell">{rule.reason}</td>
@@ -2022,7 +2025,7 @@ export function ReportDisplay({
                                     })}
                                   </ul>
                                 ) : !hasGroupedDetail && item.detail ? (
-                                  <span className={`mt-1.5 block text-[12px] leading-[1.65] text-[#0C1B33]/50 sm:text-[13px] ${isSupportNetworkItem || isDeadlineItem ? "whitespace-pre-line" : ""}`}>
+                                  <span className={`mt-1.5 block text-[12px] leading-[1.65] text-[#0C1B33]/50 sm:text-[13px] ${isSupportNetworkItem || isDeadlineItem || section.title === CAPITAL_PARTNER_SECTION_TITLE ? "whitespace-pre-line" : ""}`}>
                                     {item.detail}
                                   </span>
                                 ) : null}
@@ -2118,6 +2121,7 @@ export function ReportDisplay({
                                         href={item.url}
                                         target="_blank"
                                         rel="noopener noreferrer"
+                                        onClick={() => trackSectionLinkClick(section, item)}
                                         className="inline-flex items-center gap-1.5 text-[11px] text-[#0C1B33]/50 hover:text-[#0C1B33] transition-colors font-mono-bureau tracking-wide print-url"
                                       >
                                         <ExternalLink className="w-3 h-3 flex-shrink-0" />

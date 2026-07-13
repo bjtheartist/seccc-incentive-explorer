@@ -8,12 +8,14 @@ import {
 } from "./report-engine";
 import type { GeneratedReport } from "./report-engine";
 import { PROJECT_TYPE_LABELS } from "./report-wizard-config";
+import { CAPITAL_PARTNER_SECTION_TITLE } from "./capital-partner-report";
 
 /**
  * PDF print order:
  *  1. Keeps goal-ranked confirmed program sections together.
- *  2. Elevates "Your Support Network" right after all confirmed programs.
- *  3. Places "Upcoming Deadlines Near This Address" after the support network
+ *  2. Places the financing resource after confirmed programs.
+ *  3. Elevates "Your Support Network" after the financing resource.
+ *  4. Places "Upcoming Deadlines Near This Address" after the support network
  *     so time-sensitive items appear early in the PDF.
  *
  * Sections not listed are left in their natural order.
@@ -43,18 +45,35 @@ export function orderSectionsForPdf(
     ordered.splice(updatedGoalMatchIdx + 1, 0, otherConfirmed);
   }
 
-  // Elevate Support Network after every address-confirmed program section.
-  const supportIdx = ordered.findIndex(
-    (s) => s.title === "Your Support Network",
+  const capitalPartnerIdx = ordered.findIndex(
+    (section) => section.title === CAPITAL_PARTNER_SECTION_TITLE,
   );
-  if (supportIdx >= 0) {
-    const [support] = ordered.splice(supportIdx, 1);
+  if (capitalPartnerIdx >= 0) {
+    const [capitalPartner] = ordered.splice(capitalPartnerIdx, 1);
     const confirmedIdx = ordered.reduce(
       (lastIndex, section, index) =>
         confirmedSectionTitles.has(section.title) ? index : lastIndex,
       -1,
     );
-    ordered.splice(confirmedIdx >= 0 ? confirmedIdx + 1 : 0, 0, support);
+    ordered.splice(confirmedIdx >= 0 ? confirmedIdx + 1 : 0, 0, capitalPartner);
+  }
+
+  // Elevate Support Network after the financing resource or confirmed programs.
+  const supportIdx = ordered.findIndex(
+    (s) => s.title === "Your Support Network",
+  );
+  if (supportIdx >= 0) {
+    const [support] = ordered.splice(supportIdx, 1);
+    const capitalAnchorIdx = ordered.findIndex(
+      (section) => section.title === CAPITAL_PARTNER_SECTION_TITLE,
+    );
+    const confirmedIdx = ordered.reduce(
+      (lastIndex, section, index) =>
+        confirmedSectionTitles.has(section.title) ? index : lastIndex,
+      -1,
+    );
+    const anchorIdx = capitalAnchorIdx >= 0 ? capitalAnchorIdx : confirmedIdx;
+    ordered.splice(anchorIdx >= 0 ? anchorIdx + 1 : 0, 0, support);
   }
 
   // Move Deadlines after Support Network (or after confirmed programs if no support).
@@ -64,12 +83,19 @@ export function orderSectionsForPdf(
   if (deadlinesIdx >= 0) {
     const [deadlines] = ordered.splice(deadlinesIdx, 1);
     const supportAnchorIdx = ordered.findIndex((s) => s.title === "Your Support Network");
+    const capitalAnchorIdx = ordered.findIndex(
+      (s) => s.title === CAPITAL_PARTNER_SECTION_TITLE,
+    );
     const confirmedAnchorIdx = ordered.reduce(
       (lastIndex, section, index) =>
         confirmedSectionTitles.has(section.title) ? index : lastIndex,
       -1,
     );
-    const anchorIdx = supportAnchorIdx >= 0 ? supportAnchorIdx : confirmedAnchorIdx;
+    const anchorIdx = supportAnchorIdx >= 0
+      ? supportAnchorIdx
+      : capitalAnchorIdx >= 0
+        ? capitalAnchorIdx
+        : confirmedAnchorIdx;
     // Insert after the anchor, or at position 1 if neither found
     ordered.splice(anchorIdx >= 0 ? anchorIdx + 1 : 1, 0, deadlines);
   }
@@ -394,7 +420,7 @@ function _buildReport(
     coverY += 8;
   }
 
-  // Score box
+  // Factual mapped-zone count
   coverY = Math.max(coverY + 10, 195);
   fillRect(doc, MARGIN, coverY, CONTENT_W, 40, "#FFFFFF08");
   fillRect(doc, MARGIN, coverY, 3, 40, BLUE);
@@ -402,7 +428,7 @@ function _buildReport(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   setColor(doc, "#FFFFFF60");
-  doc.text("INCENTIVE STACKING SCORE", MARGIN + 12, coverY + 12);
+  doc.text("MAPPED INCENTIVE ZONES", MARGIN + 12, coverY + 12);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(28);
@@ -412,7 +438,7 @@ function _buildReport(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(12);
   setColor(doc, "#FFFFFF50");
-  doc.text(`of ${ZONE_KEYS.length} incentive zones`, MARGIN + 12 + doc.getTextWidth(`${result.incentiveCount} `) + 5, coverY + 28);
+  doc.text(`zones intersect this location`, MARGIN + 12 + doc.getTextWidth(`${result.incentiveCount} `) + 5, coverY + 28);
 
   // Footer
   doc.setFontSize(8);

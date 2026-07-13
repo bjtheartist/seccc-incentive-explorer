@@ -57,6 +57,23 @@ describe("analytics dashboard metrics", () => {
             communityArea: "South Chicago",
           },
         }),
+        row({
+          event_type: "capital_partner_shown",
+          metadata_json: {
+            reportKey: "site-incentives|2026-06-16|3039-e-91st",
+            partnerName: "Allies for Community Business",
+            partnerId: "allies-for-community-business",
+          },
+        }),
+        row({
+          event_type: "capital_partner_clicked",
+          metadata_json: {
+            reportKey: "site-incentives|2026-06-16|3039-e-91st",
+            partnerName: "Allies for Community Business",
+            partnerId: "allies-for-community-business",
+            contactMethod: "website",
+          },
+        }),
       ],
       {
         windowDays: 30,
@@ -66,13 +83,19 @@ describe("analytics dashboard metrics", () => {
 
     expect(summary.totals.reportsGenerated).toBe(1);
     expect(summary.totals.activatedReports).toBe(1);
-    expect(summary.totals.activationActions).toBe(2);
+    expect(summary.totals.activationActions).toBe(3);
     expect(summary.totals.activationRate).toBe(100);
-    expect(summary.totals.localResourceConnections).toBe(1);
+    expect(summary.totals.localResourceConnections).toBe(2);
     expect(summary.totals.connectionOpportunitiesSurfaced).toBe(3);
     expect(summary.totals.resourceConnectionRate).toBe(100);
     expect(summary.topSupportOrganizations).toEqual([
       { label: "Claretian Associates", count: 1 },
+    ]);
+    expect(summary.totals.capitalPartnerReferralsShown).toBe(1);
+    expect(summary.totals.capitalPartnerClicks).toBe(1);
+    expect(summary.totals.capitalPartnerContactsStarted).toBe(0);
+    expect(summary.topCapitalPartners).toEqual([
+      { label: "Allies for Community Business", count: 1 },
     ]);
   });
 

@@ -10,9 +10,9 @@ Hi David,
 
 I wanted to check back in about the possibility of joining the CCLF lending team on Tuesday, July 21.
 
-Since we last spoke, one product question has become much clearer: the Chicago Incentive Explorer should not stop at identifying programs. When a report involves acquisition, construction, renovation, equipment, or financing, the user also needs a trusted professional to help determine whether the project is viable and what information is still missing.
+Since we last spoke, one product question has become much clearer: the Chicago Incentive Explorer should not stop at identifying programs. When a report involves acquisition, construction, renovation, equipment, or financing, the user may also benefit from learning about organizations that offer relevant financing services.
 
-I am building a small pilot that would introduce one mission-aligned project vetting partner based on service area and project type. It would not prequalify a borrower, promise financing, or share any user information without consent. CCLF is exactly the kind of organization whose lending perspective should shape that workflow before it launches.
+I am building a small pilot that would surface CCLF and other mission-aligned organizations as possible financing resources when their publicly listed service area and project focus appear relevant. It would not endorse an organization, prequalify a borrower, promise financing, replace public or community review, or share any user information without consent. CCLF's lending perspective should help shape that workflow before it launches.
 
 If July 21 still works for your team, I would love to use the 30 minutes for a short live walkthrough and a practical design conversation: what information would make a first conversation more useful, what the Explorer should never try to decide, and which intake path would be most appropriate.
 
@@ -34,9 +34,9 @@ Hi Brad,
 
 I wanted to share a meaningful next step since our conversation in June.
 
-The Chicago Incentive Explorer is moving from simply identifying programs toward helping a business owner reach the right professional next. For projects involving financing, equipment, expansion, remodeling, or a grant with a funding gap, the report would introduce one mission-aligned project vetting partner based on service area and project type.
+The Chicago Incentive Explorer is moving from simply identifying programs toward helping a business owner explore useful financing resources. For projects involving financing, equipment, expansion, remodeling, or a grant with a funding gap, the report would surface A4CB and other mission-aligned organizations when their publicly listed service area and project focus appear relevant.
 
-The Explorer would not prequalify the business, estimate an award, or replace coaching and underwriting. The goal is to help the owner arrive at a conversation with A4CB or another appropriate partner with a clearer project description, address, and list of open questions.
+The Explorer would not endorse an organization, prequalify the business, estimate an award, or replace coaching, public review, or underwriting. The goal is to help the owner learn where to ask questions and arrive with a clearer project description, address, and list of open questions.
 
 Given A4CB's combination of capital and free coaching, I would value a 30-minute review with you or the right lending and coaching colleagues. I would like to test whether the handoff reflects how your team actually works, which business information is useful at the start, and what your preferred public intake or referral path should be.
 
@@ -46,19 +46,37 @@ Warm regards,
 
 Billy
 
-## LISC Chicago
+## LISC Chicago - Jaime Arteaga
 
 Reply in: `One Chicago for All General Meetin Notes`
 
-Hi Jaime and Caroline,
+Hi Jaime,
 
-Thank you again for making space for the Chicago Incentive Explorer in the One Chicago for All conversation. The feedback from that room has continued to shape the product.
+Thank you again for making space for the Chicago Incentive Explorer in the One Chicago for All conversation and for sharing it with the group afterward. The feedback from that room has continued to shape the product.
 
-One next step is becoming especially important. When an owner finds a relevant incentive, the report should also help them reach a trusted organization that can assess project viability, financing readiness, and the questions that still need professional judgment. I am designing a small partner pilot around that handoff, with service area and project fit guiding the referral and explicit user consent before any information is shared.
+One need is becoming especially important. When an owner finds a relevant incentive, the report should also help them learn about organizations that may offer relevant financing or project support. I am designing a small pilot that would surface resources to explore using public service-area and project-focus information, with explicit user consent before any information is shared.
 
 I would value LISC's perspective on the inclusion criteria and the role that neighborhood organizations should play alongside CDFIs and mission lenders. The Explorer should make the network easier to enter without pretending that software can replace the people doing the real project work.
 
 Would you be open to a short review conversation, or to helping identify a few One Chicago partners who should test the workflow with us?
+
+Warm regards,
+
+Billy
+
+## LISC Chicago - Caroline Tipton Rendon
+
+Reply in: `Congratulations on the 45th Chicago Neighborhood Development Awards`
+
+Hi Caroline,
+
+I wanted to follow up with one product question that grew out of the neighborhood-development and capital-access conversations around the awards.
+
+The Chicago Incentive Explorer can now surface possible financing resources when their publicly listed service area and project focus may be relevant to a user's project. The language is intentionally careful: the listing is informational, it is not an endorsement or approval, and public, community, program, and financing reviews remain separate.
+
+I would value your perspective on whether that framing respects how LISC and its partners work, and whether neighborhood organizations should have a distinct role in the report alongside financing organizations.
+
+Would you be open to a short review conversation or able to point me to the best LISC colleague for this question?
 
 Warm regards,
 
@@ -72,7 +90,7 @@ Hi Jonah,
 
 I wanted to bring this back to the top of your inbox with a more specific reason I think CIC's perspective would be valuable.
 
-The Chicago Incentive Explorer is beginning to connect an address-level incentive report to the professional next step. For a multifamily or mixed-use project, that means helping an owner understand that incentives are only part of the picture and directing them to an organization that can assess acquisition, rehabilitation, financing, and operating viability.
+The Chicago Incentive Explorer is beginning to connect an address-level incentive report to financing resources the user can explore. For a multifamily or mixed-use project, that means helping an owner understand that incentives are only part of the picture and making it easier to learn about organizations such as CIC when their publicly listed lending focus may be relevant.
 
 I am designing that handoff now. The Explorer would not prequalify an owner, estimate financing, or replace CIC's lending process. It would help the owner arrive with a clearer property address, project goal, incentive context, and list of unresolved questions.
 

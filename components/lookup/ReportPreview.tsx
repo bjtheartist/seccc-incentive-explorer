@@ -14,7 +14,7 @@ interface ReportPreviewProps {
 
 /**
  * Compact inline report preview card.
- * Shows stacking score, top 3 programs, census snapshot, and zoning.
+ * Shows mapped zone count, top 3 programs, census snapshot, and zoning.
  * "View Full Breakdown" expands to existing detailed view.
  */
 export function ReportPreview({ result, programs, onExpand }: ReportPreviewProps) {
@@ -27,15 +27,6 @@ export function ReportPreview({ result, programs, onExpand }: ReportPreviewProps
     .map((k) => programMap.get(k))
     .filter(Boolean)
     .slice(0, 3);
-
-  const scoreColor =
-    result.incentiveCount >= 7
-      ? "#4ADE80"
-      : result.incentiveCount >= 4
-        ? "#FBBF24"
-        : result.incentiveCount >= 1
-          ? "#FB923C"
-          : "#EF4444";
 
   const handleExpand = () => {
     setExpanded(!expanded);
@@ -55,21 +46,15 @@ export function ReportPreview({ result, programs, onExpand }: ReportPreviewProps
 
   return (
     <div className="border border-[#0C1B33]/10 bg-white overflow-hidden">
-      {/* Header row: score + address */}
+      {/* Header row: mapped zone count + address */}
       <div className="flex items-center gap-4 px-5 py-4 border-b border-[#0C1B33]/6">
-        {/* Score badge */}
-        <div
-          className="w-12 h-12 flex flex-col items-center justify-center flex-shrink-0"
-          style={{ backgroundColor: scoreColor + "15" }}
-        >
-          <span
-            className="font-editorial text-xl leading-none"
-            style={{ color: scoreColor }}
-          >
+        {/* Mapped zone count */}
+        <div className="w-12 h-12 flex flex-col items-center justify-center flex-shrink-0 bg-[#2563EB]/[0.06]">
+          <span className="font-editorial text-xl leading-none text-[#2563EB]">
             {result.incentiveCount}
           </span>
           <span className="font-mono-bureau text-[7px] tracking-[0.1em] text-[#0C1B33]/30 uppercase">
-            of {ZONE_KEYS.length}
+            zones
           </span>
         </div>
 

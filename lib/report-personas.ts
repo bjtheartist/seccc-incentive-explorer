@@ -242,7 +242,7 @@ export function applyPersonaLens(
 
   const matchedIds = new Set<string>();
   const nextSections: ReportSection[] = [];
-  // Refined reports carry TWO confirmed sections ("Best Matches for Your Goal"
+  // Refined reports carry TWO confirmed sections ("Programs to Review for Your Goal"
   // + "Other Programs Tied to This Address") — persona and goal are orthogonal
   // lenses, so both are partitioned and their out-of-lens programs pool into a
   // SINGLE combined "Also at this address" disclosure after the last one.

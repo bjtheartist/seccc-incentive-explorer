@@ -16,9 +16,15 @@ export const REPORT_ACTIVATION_EVENTS = [
   "spreadsheet_exported",
   "inquiry_submitted",
   "support_resource_clicked",
+  "capital_partner_clicked",
+  "capital_partner_contact_started",
 ] as const;
 
-const RESOURCE_CONNECTION_EVENTS = ["support_resource_clicked"] as const;
+const RESOURCE_CONNECTION_EVENTS = [
+  "support_resource_clicked",
+  "capital_partner_clicked",
+  "capital_partner_contact_started",
+] as const;
 
 type EventMetadata = Record<string, unknown>;
 
@@ -61,6 +67,9 @@ export interface AnalyticsDashboardSummary {
     localResourceConnections: number;
     connectionOpportunitiesSurfaced: number;
     resourceConnectionRate: number;
+    capitalPartnerReferralsShown: number;
+    capitalPartnerClicks: number;
+    capitalPartnerContactsStarted: number;
     vacancySpreadsheetExports: number;
     neighborhoodsReached: number;
   };
@@ -74,6 +83,7 @@ export interface AnalyticsDashboardSummary {
   topNeighborhoods: { label: string; count: number }[];
   topPrograms: { label: string; count: number }[];
   topSupportOrganizations: { label: string; count: number }[];
+  topCapitalPartners: { label: string; count: number }[];
   recentActivity: {
     createdAt: string;
     eventType: string;
@@ -187,6 +197,15 @@ function eventSummary(row: AnalyticsEventRow): string {
     const method = metadataString(metadata, "contactMethod") || "contact";
     return `${org} ${method}`;
   }
+  if (
+    row.event_type === "capital_partner_shown" ||
+    row.event_type === "capital_partner_clicked" ||
+    row.event_type === "capital_partner_contact_started"
+  ) {
+    const partner = metadataString(metadata, "partnerName") || "Financing resource";
+    const method = metadataString(metadata, "contactMethod");
+    return method ? `${partner} ${method}` : partner;
+  }
   if (row.event_type === "program_link_clicked") {
     return metadataString(metadata, "programId") || metadataString(metadata, "programName") || "Program link";
   }
@@ -211,6 +230,7 @@ export function summarizeAnalyticsEvents(
   const topNeighborhoods = new Map<string, number>();
   const topPrograms = new Map<string, number>();
   const topSupportOrganizations = new Map<string, number>();
+  const topCapitalPartners = new Map<string, number>();
   const topPages = new Map<string, number>();
   const deviceBreakdown = new Map<string, number>();
   const dailyPageViews = new Map<string, number>();
@@ -272,6 +292,16 @@ export function summarizeAnalyticsEvents(
       increment(topSupportOrganizations, metadataString(metadata, "organizationName") || "Unknown organization");
     }
 
+    if (
+      row.event_type === "capital_partner_clicked" ||
+      row.event_type === "capital_partner_contact_started"
+    ) {
+      increment(
+        topCapitalPartners,
+        metadataString(metadata, "partnerName") || "Unknown financing resource",
+      );
+    }
+
     if (row.event_type === "program_link_clicked") {
       increment(topPrograms, metadataString(metadata, "programId") || metadataString(metadata, "programName") || "Unknown program");
     }
@@ -284,12 +314,19 @@ export function summarizeAnalyticsEvents(
   const activationActions = REPORT_ACTIVATION_EVENTS.reduce((sum, type) => sum + eventCount(type), 0);
   const localResourceConnections = RESOURCE_CONNECTION_EVENTS.reduce((sum, type) => sum + eventCount(type), 0);
   const activationRate = reportsGenerated > 0 ? Math.round((activatedReports / reportsGenerated) * 100) : 0;
-  const resourceConnectionRate = reportsGenerated > 0 ? Math.round((localResourceConnections / reportsGenerated) * 100) : 0;
+  const resourceConnectionRate = reportsGenerated > 0
+    ? Math.min(100, Math.round((localResourceConnections / reportsGenerated) * 100))
+    : 0;
+  const capitalPartnerReferralsShown = eventCount("capital_partner_shown");
+  const capitalPartnerClicks = eventCount("capital_partner_clicked");
+  const capitalPartnerContactsStarted = eventCount("capital_partner_contact_started");
 
   const partnerBullets = [
     `${reportsGenerated.toLocaleString()} report${reportsGenerated === 1 ? "" : "s"} generated`,
     `${activatedReports.toLocaleString()} report${activatedReports === 1 ? "" : "s"} moved into an action step`,
     `${localResourceConnections.toLocaleString()} local resource contact action${localResourceConnections === 1 ? "" : "s"} tracked`,
+    `${capitalPartnerReferralsShown.toLocaleString()} financing resource listing${capitalPartnerReferralsShown === 1 ? "" : "s"} shown`,
+    `${(capitalPartnerClicks + capitalPartnerContactsStarted).toLocaleString()} financing resource contact action${capitalPartnerClicks + capitalPartnerContactsStarted === 1 ? "" : "s"} tracked`,
     `${connectionOpportunitiesSurfaced.toLocaleString()} support organization ${
       connectionOpportunitiesSurfaced === 1 ? "opportunity" : "opportunities"
     } surfaced`,
@@ -311,6 +348,9 @@ export function summarizeAnalyticsEvents(
       localResourceConnections,
       connectionOpportunitiesSurfaced,
       resourceConnectionRate,
+      capitalPartnerReferralsShown,
+      capitalPartnerClicks,
+      capitalPartnerContactsStarted,
       vacancySpreadsheetExports: eventCount("spreadsheet_exported"),
       neighborhoodsReached: reachedNeighborhoods.size,
     },
@@ -343,6 +383,7 @@ export function summarizeAnalyticsEvents(
     topNeighborhoods: ranked(topNeighborhoods),
     topPrograms: ranked(topPrograms),
     topSupportOrganizations: ranked(topSupportOrganizations),
+    topCapitalPartners: ranked(topCapitalPartners),
     recentActivity: rows
       .slice()
       .sort((a, b) => toIso(b.created_at).localeCompare(toIso(a.created_at)))
@@ -364,7 +405,7 @@ export function summarizeAnalyticsEvents(
     },
     partnerSummary: {
       headline:
-        "The Explorer helped users identify incentive pathways and local organizations tied to their location.",
+        "The Explorer helped users identify incentive pathways, local support organizations, and financing resources that may be relevant to their location and goal.",
       bullets: partnerBullets,
     },
   };

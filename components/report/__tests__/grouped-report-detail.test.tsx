@@ -29,13 +29,13 @@ describe("grouped report details", () => {
       <ProjectFitNote
         fit={{
           level: "strong",
-          label: "Strong fit for hiring",
+          label: "Directly related to hiring",
           reason: "This program directly supports the selected goal.",
         }}
       />,
     );
 
-    expect(html).toContain("Strong fit for hiring");
+    expect(html).toContain("Directly related to hiring");
     expect(html).not.toContain("score");
   });
 });

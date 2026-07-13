@@ -220,6 +220,34 @@ describe("matchCapitalPartners", () => {
     expect(result.primary?.partnerId).toBe("near-citywide");
   });
 
+  it("uses a declared industry restriction before proximity", () => {
+    const nearbyRetailOnly = fixturePartner({
+      id: "nearby-retail-only",
+      name: "Nearby Retail Fund",
+      lat: 41.739,
+      lon: -87.556,
+      products: [
+        {
+          id: "nearby-retail-only-term",
+          productType: "term_loan",
+          projectTypes: ["rehab"],
+          industries: ["retail"],
+        },
+      ],
+    });
+    const fartherGeneral = fixturePartner({
+      id: "farther-general",
+      name: "Farther General Fund",
+      lat: 41.82,
+      lon: -87.62,
+    });
+    const result = matchCapitalPartners([nearbyRetailOnly, fartherGeneral], {
+      ...SOUTH_CHICAGO_REQUEST,
+      industry: "manufacturing",
+    });
+    expect(result.primary?.partnerId).toBe("farther-general");
+  });
+
   it("keeps provenance dates and verification state on every match", () => {
     const result = matchCapitalPartners(ALL_PARTNERS, SOUTH_CHICAGO_REQUEST);
     expect(result.primary?.provenance).toEqual({
@@ -228,6 +256,39 @@ describe("matchCapitalPartners", () => {
       sourceDate: "2026-05-01",
       lastVerifiedAt: "2026-05-15T00:00:00.000Z",
     });
+  });
+
+  it("uses the selected product source and omits notes from an unrelated fallback product", () => {
+    const productSourced = fixturePartner({
+      id: "product-sourced",
+      name: "Product Sourced Fund",
+      products: [
+        {
+          id: "product-sourced-equipment",
+          productType: "equipment_financing",
+          projectTypes: ["equipment"],
+          publicFitNote: "Equipment projects with long-lived fixed assets.",
+          sourceUrl: "https://example.org/equipment",
+          sourceDate: "2026-06-15",
+        },
+      ],
+    });
+
+    const exact = matchCapitalPartners([productSourced], {
+      ...SOUTH_CHICAGO_REQUEST,
+      projectType: "equipment",
+      productNeed: "equipment_financing",
+    });
+    expect(exact.primary?.fitNote).toBe("Equipment projects with long-lived fixed assets.");
+    expect(exact.primary?.provenance.sourceUrl).toBe("https://example.org/equipment");
+    expect(exact.primary?.provenance.sourceDate).toBe("2026-06-15");
+
+    const unrelated = matchCapitalPartners([productSourced], {
+      ...SOUTH_CHICAGO_REQUEST,
+      projectType: "hiring",
+      productNeed: "line_of_credit",
+    });
+    expect(unrelated.primary?.fitNote).toBeUndefined();
   });
 
   it("never serializes internal ordering or product bound fields", () => {

@@ -5,6 +5,7 @@ import {
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "../report-engine";
 import type { GeneratedReport } from "../report-engine";
+import { CAPITAL_PARTNER_SECTION_TITLE } from "../capital-partner-report";
 
 function section(title: string): GeneratedReport["sections"][number] {
   return { title, items: [] };
@@ -15,7 +16,7 @@ describe("orderSectionsForPdf", () => {
     const input = [
       section("Site Overview"),
       section("Neighborhood Economic Context"),
-      section("Incentive Density & Stacking"),
+      section("Incentive Zone Coverage & Program Interactions"),
       section("Eligible Incentive Programs"),
       section("Additional Programs to Explore"),
       section("Required Documents"),
@@ -25,7 +26,7 @@ describe("orderSectionsForPdf", () => {
     expect(titles).toEqual([
       "Site Overview",
       "Neighborhood Economic Context",
-      "Incentive Density & Stacking",
+      "Incentive Zone Coverage & Program Interactions",
       "Eligible Incentive Programs",
       "Your Support Network",
       "Additional Programs to Explore",
@@ -59,6 +60,24 @@ describe("orderSectionsForPdf", () => {
       OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
       "Your Support Network",
       "Additional Programs to Explore",
+    ]);
+  });
+
+  it("places the financing resource before the support network", () => {
+    const input = [
+      section("Site Overview"),
+      section("Your Support Network"),
+      section("Eligible Incentive Programs"),
+      section(CAPITAL_PARTNER_SECTION_TITLE),
+      section("Required Documents"),
+    ];
+
+    expect(orderSectionsForPdf(input).map((item) => item.title)).toEqual([
+      "Site Overview",
+      "Eligible Incentive Programs",
+      CAPITAL_PARTNER_SECTION_TITLE,
+      "Your Support Network",
+      "Required Documents",
     ]);
   });
 

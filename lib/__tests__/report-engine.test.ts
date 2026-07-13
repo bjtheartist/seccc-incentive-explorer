@@ -5,6 +5,7 @@ import {
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "../report-engine";
 import type { Program } from "../types";
+import { CAPITAL_PARTNER_SECTION_TITLE } from "../capital-partner-report";
 
 function makeProgram(overrides: Partial<Program> = {}): Program {
   return {
@@ -69,6 +70,38 @@ function makeState(overrides: Partial<ReportState> = {}): ReportState {
 }
 
 describe("generateReportData", () => {
+  it("attaches a source-backed financing resource to capital-shaped reports", () => {
+    const report = generateReportData(
+      makeState({ projectType: "equipment" }),
+      [makeProgram()],
+      { zones, zoneNames, reportZip: "60617" },
+    );
+
+    expect(report.capitalPartnerHandoff?.primary?.partnerId).toBe("somercor");
+    const section = report.sections.find(
+      (candidate) => candidate.title === CAPITAL_PARTNER_SECTION_TITLE,
+    );
+    expect(section?.items[0]).toMatchObject({
+      label: "SomerCor",
+      partnerId: "somercor",
+      value: "Financing resource to explore",
+    });
+    expect(section?.description).toContain("listings are informational");
+    expect(section?.description).toContain("reviews may apply");
+    expect(section?.description).toContain("no contact information has been shared");
+  });
+
+  it("does not add a lender handoff to a hiring-only report without a capital request", () => {
+    const report = generateReportData(
+      makeState({ projectType: "hiring" }),
+      [makeProgram()],
+      { zones, zoneNames },
+    );
+
+    expect(report.capitalPartnerHandoff).toBeUndefined();
+    expect(report.sections.some((section) => section.title === CAPITAL_PARTNER_SECTION_TITLE)).toBe(false);
+  });
+
   it("attaches executive summaries to current site-incentives reports", () => {
     const report = generateReportData(
       makeState(),
@@ -306,7 +339,7 @@ describe("generateReportData", () => {
     const dataCenter = otherMatches?.items.find((item) => item.programId === "dataCenter");
 
     expect(bestMatches?.items[0].programId).toBe("edge");
-    expect(edge?.projectFit?.label).toContain("Strong fit");
+    expect(edge?.projectFit?.label).toContain("Directly related");
     expect(otherMatches?.items.map((item) => item.programId)).toEqual(
       expect.arrayContaining(["sbif", "dataCenter"]),
     );
@@ -561,6 +594,15 @@ describe("generateReportData", () => {
     expect(report).not.toHaveProperty("benefitEstimates");
     expect(report.summary).not.toContain("total potential incentives");
     expect(report.summary).not.toContain("we estimate");
+    expect(report.stackingAnalysis?.percentileLabel).toMatch(/^\d+ mapped zones?$/);
+    expect(
+      report.sections.some(
+        (section) => section.title === "Incentive Zone Coverage & Program Interactions",
+      ),
+    ).toBe(true);
+    expect(JSON.stringify(report)).not.toMatch(
+      /stacking score|incentive density|top \d+%|strong fit|best matches|can stack|dramatically reduce|combined savings/i,
+    );
   });
 
   it("adds neighborhood economic context with measured ZBP and license-continuity signals when provided", () => {

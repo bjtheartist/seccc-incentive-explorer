@@ -160,7 +160,7 @@ describe("applyPersonaLens", () => {
 
   it("composes with a goal-refined report: both confirmed sections partition into ONE combined disclosure", () => {
     // The email gate funnels every real instant-flow user into the refined
-    // shape: "Best Matches for Your Goal" + "Other Programs Tied to This
+    // shape: "Programs to Review for Your Goal" + "Other Programs Tied to This
     // Address". Persona (audience) and goal (outcome) are orthogonal lenses —
     // the persona lens must re-rank both sections and pool their out-of-lens
     // programs into a single "Also at this address" after the last one.

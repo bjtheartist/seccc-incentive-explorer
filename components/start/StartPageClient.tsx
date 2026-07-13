@@ -87,7 +87,7 @@ export function StartPageClient() {
           </div>
 
           <div className="mx-auto mt-9 w-full max-w-[660px]">
-            <AddressSearch source="start_page" campaign={campaign} />
+            <AddressSearch source={source} campaign={campaign} />
           </div>
 
           <div className="mx-auto mt-10 grid w-full max-w-[760px] gap-px bg-white/10 sm:grid-cols-3">

@@ -324,10 +324,10 @@ export function projectGoalFit(
     if (!industry || !industrySupportsProgram) {
       return {
         level: "industry-check",
-        label: "Industry confirmation needed",
+        label: "Industry requirements to confirm",
         reason: industry
-          ? `The selected industry does not confirm this specialized program as a match for ${goalLabel.toLowerCase()}.`
-          : `This program is tied to the address, but its industry requirement must be confirmed before treating it as a match for ${goalLabel.toLowerCase()}.`,
+          ? `The selected industry does not establish whether this specialized program applies to ${goalLabel.toLowerCase()}.`
+          : `This program is tied to the address, but its industry requirement must be confirmed before considering it for ${goalLabel.toLowerCase()}.`,
       };
     }
   }
@@ -335,7 +335,7 @@ export function projectGoalFit(
   if (level === "strong") {
     return {
       level: "strong",
-      label: `Strong fit for ${goalLabel.toLowerCase()}`,
+      label: `Directly related to ${goalLabel.toLowerCase()}`,
       reason: `This program directly supports the selected goal: ${goalLabel.toLowerCase()}.`,
     };
   }
@@ -343,15 +343,15 @@ export function projectGoalFit(
   if (level === "related") {
     return {
       level: "related",
-      label: `Related to ${goalLabel.toLowerCase()}`,
+      label: `May relate to ${goalLabel.toLowerCase()}`,
       reason: `This program may support part of the selected goal and should be verified with its administrator.`,
     };
   }
 
   return {
     level: "location-only",
-    label: "Location match only",
-    reason: `The address may match this program, but the program does not directly target ${goalLabel.toLowerCase()}.`,
+    label: "Location-based program",
+    reason: `The address may connect to this program, but its current description does not clearly target ${goalLabel.toLowerCase()}.`,
   };
 }
 

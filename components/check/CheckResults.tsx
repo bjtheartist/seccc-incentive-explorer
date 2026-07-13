@@ -211,7 +211,7 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
         </div>
       )}
 
-      {/* Zone Power Score */}
+      {/* Mapped zone coverage */}
       {stackingNarrative && zoneCount > 0 && (
         <div className="mb-6 p-4 bg-gradient-to-br from-[#2563EB]/[0.04] to-[#7C3AED]/[0.03] border border-[#2563EB]/10 rounded-lg">
           <div className="flex items-center gap-2 mb-2">
@@ -220,10 +220,10 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
             </div>
             <div>
               <span className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB]/70 block">
-                Zone Power Score
+                Mapped Incentive Coverage
               </span>
               <span className="font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/30">
-                {stackingNarrative.percentileLabel} of Chicago locations
+                {stackingNarrative.percentileLabel} found at this address
               </span>
             </div>
           </div>

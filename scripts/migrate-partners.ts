@@ -32,6 +32,7 @@ async function migrate() {
       name TEXT NOT NULL,
       partner_type TEXT NOT NULL CHECK (partner_type IN ('cdfi', 'mission_lender', 'community_bank', 'public_program')),
       website TEXT,
+      intake_url TEXT,
       contact_email TEXT,
       phone TEXT,
       address TEXT,
@@ -47,6 +48,7 @@ async function migrate() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+  await sql`ALTER TABLE partners ADD COLUMN IF NOT EXISTS intake_url TEXT`;
 
   console.log("2. Creating partner_service_areas table...");
   await sql`
@@ -67,6 +69,7 @@ async function migrate() {
       partner_id TEXT NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
       product_type TEXT NOT NULL,
       product_name TEXT,
+      public_fit_note TEXT,
       project_types JSONB NOT NULL DEFAULT '[]'::jsonb,
       industries JSONB NOT NULL DEFAULT '[]'::jsonb,
       min_amount_cents BIGINT,
@@ -79,23 +82,66 @@ async function migrate() {
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+  await sql`ALTER TABLE partner_products ADD COLUMN IF NOT EXISTS public_fit_note TEXT`;
 
   console.log("4. Creating referrals table...");
   await sql`
     CREATE TABLE IF NOT EXISTS referrals (
       id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      session_id TEXT,
       report_id TEXT,
       user_id TEXT,
       partner_id TEXT NOT NULL REFERENCES partners(id) ON DELETE CASCADE,
       product_id TEXT REFERENCES partner_products(id) ON DELETE SET NULL,
       role TEXT NOT NULL CHECK (role IN ('primary', 'alternate')),
+      source TEXT NOT NULL DEFAULT 'report',
+      contact_method TEXT,
       reason TEXT NOT NULL,
       provenance_json JSONB NOT NULL DEFAULT '{}'::jsonb,
       request_json JSONB,
-      status TEXT NOT NULL DEFAULT 'proposed' CHECK (status IN ('proposed', 'sent', 'accepted', 'declined', 'expired')),
+      status TEXT NOT NULL DEFAULT 'shown' CHECK (status IN ('shown', 'clicked', 'contact_started', 'consented_handoff', 'handoff_sent', 'partner_acknowledged', 'closed')),
+      consent_to_share BOOLEAN NOT NULL DEFAULT FALSE,
+      shown_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      clicked_at TIMESTAMPTZ,
+      contact_started_at TIMESTAMPTZ,
+      consented_at TIMESTAMPTZ,
+      handoff_sent_at TIMESTAMPTZ,
+      partner_acknowledged_at TIMESTAMPTZ,
+      closed_at TIMESTAMPTZ,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  await sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS session_id TEXT`;
+  await sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'report'`;
+  await sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS contact_method TEXT`;
+  await sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS consent_to_share BOOLEAN NOT NULL DEFAULT FALSE`;
+  await sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS shown_at TIMESTAMPTZ NOT NULL DEFAULT NOW()`;
+  await sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS clicked_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS contact_started_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS consented_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS handoff_sent_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS partner_acknowledged_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE referrals ADD COLUMN IF NOT EXISTS closed_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE referrals DROP CONSTRAINT IF EXISTS referrals_status_check`;
+  await sql`
+    UPDATE referrals
+    SET status = CASE status
+      WHEN 'proposed' THEN 'shown'
+      WHEN 'sent' THEN 'handoff_sent'
+      WHEN 'accepted' THEN 'partner_acknowledged'
+      WHEN 'declined' THEN 'closed'
+      WHEN 'expired' THEN 'closed'
+      ELSE status
+    END
+    WHERE status IN ('proposed', 'sent', 'accepted', 'declined', 'expired')
+  `;
+  await sql`ALTER TABLE referrals ALTER COLUMN status SET DEFAULT 'shown'`;
+  await sql`
+    ALTER TABLE referrals
+    ADD CONSTRAINT referrals_status_check
+    CHECK (status IN ('shown', 'clicked', 'contact_started', 'consented_handoff', 'handoff_sent', 'partner_acknowledged', 'closed'))
   `;
 
   console.log("5. Creating indexes...");
@@ -106,6 +152,7 @@ async function migrate() {
   await sql`CREATE INDEX IF NOT EXISTS idx_partner_products_partner_id ON partner_products (partner_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_partner_products_product_type ON partner_products (product_type)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_referrals_partner_id ON referrals (partner_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_referrals_session_id ON referrals (session_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_referrals_report_id ON referrals (report_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_referrals_status ON referrals (status)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_referrals_created_at ON referrals (created_at DESC)`;

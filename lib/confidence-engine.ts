@@ -319,24 +319,16 @@ export interface StackingNarrative {
   }[];
 }
 
-/**
- * Chicago stacking distribution (from Stats.stackingDistribution).
- * Hardcoded percentile thresholds based on 360+ businesses analyzed.
- */
-const STACKING_PERCENTILES: Record<number, number> = {
-  0: 95, 1: 78, 2: 55, 3: 35, 4: 18, 5: 8, 6: 4, 7: 2, 8: 1, 9: 1, 10: 1, 11: 1,
-};
-
-/** Well-known beneficial zone combinations. */
+/** Program interactions that may warrant a confirming conversation. */
 const ZONE_COMBOS: { zones: string[]; benefit: string }[] = [
-  { zones: ["federalOZ", "enterprise"], benefit: "Stack capital gains deferral with sales/utility tax exemptions — combined savings of ~20-25%" },
-  { zones: ["tif", "sbif"], benefit: "TIF funds public improvements while SBIF may reimburse up to 90% of eligible renovation costs, subject to property-type caps" },
-  { zones: ["federalOZ", "nmtcEligible"], benefit: "Layer Opportunity Zone capital gains benefits with 39% NMTC credits over 7 years" },
-  { zones: ["tif", "enterprise"], benefit: "TIF rehabilitation funding plus Enterprise Zone tax exemptions reduce both property and operating costs" },
-  { zones: ["nrhpDistricts", "tif"], benefit: "20% Federal Historic Tax Credit plus TIF funding for certified rehabilitation projects" },
-  { zones: ["enterprise", "highUnemployment"], benefit: "Enterprise Zone exemptions plus WOTC credits for hiring in high-unemployment areas" },
-  { zones: ["federalOZ", "illinoisOZ"], benefit: "Federal and state Opportunity Zone benefits stack — defer and reduce capital gains at both levels" },
-  { zones: ["tif", "highUnemployment"], benefit: "TIF funding for improvements plus workforce development credits for local hiring" },
+  { zones: ["federalOZ", "enterprise"], benefit: "These programs address different tax categories. Confirm current eligibility and whether both may apply with the relevant administrators." },
+  { zones: ["tif", "sbif"], benefit: "SBIF operates within eligible TIF districts. Confirm district availability, eligible costs, and application timing." },
+  { zones: ["federalOZ", "nmtcEligible"], benefit: "These programs use different investment structures. Ask qualified advisors whether either or both are relevant to the transaction." },
+  { zones: ["tif", "enterprise"], benefit: "These programs may address different project costs or tax categories. Confirm current rules before relying on both." },
+  { zones: ["nrhpDistricts", "tif"], benefit: "Historic rehabilitation and TIF processes have separate requirements. Confirm project, cost, and approval compatibility." },
+  { zones: ["enterprise", "highUnemployment"], benefit: "Location and hiring programs have separate eligibility and timing rules. Confirm each independently." },
+  { zones: ["federalOZ", "illinoisOZ"], benefit: "Federal and state rules may interact. Obtain current tax and program guidance for the specific investment." },
+  { zones: ["tif", "highUnemployment"], benefit: "Property and workforce programs have separate requirements. Confirm each independently with the relevant administrator." },
 ];
 
 /**
@@ -374,14 +366,7 @@ export function computeStackingNarrative(
   const zoneCount = activeZones.length;
   const totalZones = 11; // standard zone count
 
-  const percentile = STACKING_PERCENTILES[Math.min(zoneCount, 11)] || 1;
-  const percentileLabel = percentile <= 10
-    ? `top ${percentile}%`
-    : percentile <= 25
-      ? `top quarter`
-      : percentile <= 50
-        ? `above average`
-        : `below average`;
+  const percentileLabel = `${zoneCount} mapped zone${zoneCount === 1 ? "" : "s"}`;
 
   // Find matching combinations
   const combinations: StackingNarrative["combinations"] = [];
@@ -390,7 +375,7 @@ export function computeStackingNarrative(
       combinations.push({
         zones: combo.zones.map((z) => zoneNames[z] || ZONE_LABELS_LOCAL[z] || z),
         benefit: combo.benefit,
-        relationship: "can",
+        relationship: "conditional",
       });
     }
   }
@@ -401,15 +386,13 @@ export function computeStackingNarrative(
     narrative = "This location is not within any mapped incentive zones. Broader non-zone programs may still be worth exploring.";
   } else if (zoneCount <= 2) {
     const names = activeZones.map((z) => zoneNames[z] || ZONE_LABELS_LOCAL[z] || z).join(" and ");
-    narrative = `Your location is in ${names}. While the zone overlap is limited, you still qualify for targeted programs designed for this area.`;
-  } else if (zoneCount <= 4) {
-    narrative = `With ${zoneCount} overlapping zones, your location is in the ${percentileLabel} of Chicago locations for incentive density. This overlap means multiple programs can be combined to reduce your total project cost.`;
+    narrative = `This location intersects ${names}. Each program has separate eligibility, timing, approval, and interaction rules.`;
   } else {
-    narrative = `Your ${zoneCount}-zone overlap puts you in the ${percentileLabel} of all Chicago locations. This exceptional density means you can stack incentives across federal, state, and local programs — a rare combination that can dramatically reduce costs.`;
+    narrative = `This location intersects ${zoneCount} mapped incentive zones. Each program has separate eligibility, timing, approval, and interaction rules.`;
   }
 
   if (combinations.length > 0) {
-    narrative += ` We identified ${combinations.length} beneficial zone combination${combinations.length !== 1 ? "s" : ""} at your location.`;
+    narrative += ` We found ${combinations.length} program interaction${combinations.length !== 1 ? "s" : ""} to verify with the relevant administrators.`;
   }
 
   return {

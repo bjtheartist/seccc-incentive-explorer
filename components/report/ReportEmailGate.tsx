@@ -165,7 +165,7 @@ export function ReportEmailGate({
               id="report-email-gate-description"
               className="mt-1.5 text-[13px] leading-relaxed text-[#0C1B33]/60"
             >
-              Select your primary goal. You can have the prioritized PDF
+              Select your primary goal. You can have the refined PDF
               emailed first, or continue directly to the online report.
             </p>
           </div>

@@ -36,7 +36,7 @@ describe("project goal fit", () => {
   it("keeps specialized programs behind an industry confirmation", () => {
     const fit = projectGoalFit(program("dataCenter"), "equipment");
     expect(fit?.level).toBe("industry-check");
-    expect(fit?.label).toBe("Industry confirmation needed");
+    expect(fit?.label).toBe("Industry requirements to confirm");
   });
 
   it("orders goal matches first while keeping the score out of the public summary", () => {

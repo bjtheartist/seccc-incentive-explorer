@@ -15,7 +15,7 @@ function fixture(overrides: Partial<GeneratedReport> = {}): GeneratedReport {
     summary: "A focused report.",
     sections: [
       {
-        title: "Best Matches for Your Goal",
+        title: "Programs to Review for Your Goal",
         items: [
           {
             label: "EDGE",
@@ -23,7 +23,7 @@ function fixture(overrides: Partial<GeneratedReport> = {}): GeneratedReport {
             programId: "edge",
             projectFit: {
               level: "strong",
-              label: "Strong fit for hiring",
+              label: "Directly related to hiring",
               reason: "Directly supports the selected goal.",
             },
           },
