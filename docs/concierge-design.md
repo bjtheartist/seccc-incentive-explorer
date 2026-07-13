@@ -2,7 +2,7 @@
 
 **Status:** implemented as a hybrid pilot on 2026-07-12. Common guidance is deterministic and sourced; nuanced signed-in changes use approval-gated model tools when Gateway capacity is available.
 **Source:** Billy + Claude working session, 2026-07-12. Builds on the Report & Refine Workflow Audit (2026-07-10) and the Business File spec (`docs/business-file/00-spec-overview.md`).
-**Scope recommendation (decided):** build first on the **report page and Incentive Preparedness Packet**, not as an unrestricted site-wide chatbot. That gives businesses free personalized assistance, gives partner governments better-prepared requests, and strengthens the institutional product.
+**Scope recommendation (updated):** keep the constrained **Incentive Guide available site-wide**, with richer context on the report page and Incentive Preparedness Packet. It remains focused on incentive discovery and preparation rather than acting as an unrestricted chatbot.
 
 **Boundary reminder:** the model provides the conversation; **the existing Explorer stays the source of truth**. This is a discovery/navigation surface under the 2026-05-21 product boundary — nothing here certifies eligibility.
 
@@ -50,7 +50,7 @@ All persona copy stays descriptive and mirrors the shipped report language: "may
 The concierge's action tools call these same routes (or the logic behind them) as the authenticated user — it inherits every guard instead of re-implementing them. Tools never get a service-role bypass.
 
 ## 4. What we need to build
-1. A contextual concierge panel on report and workspace pages (not site-wide in v1).
+1. A persistent, contextual Incentive Guide on every application route.
 2. A streaming `/api/concierge` endpoint.
 3. **Read-only tools:** reports, programs, profiles, packets, deadlines, local resources.
 4. **Approval-gated tools:** profile updates, packet changes, support requests — using the AI SDK's native tool-approval flow (human confirms in the UI before the tool executes). Ref: https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-tool-usage
@@ -82,7 +82,7 @@ A trustworthy action-capable pilot ≈ **3–4 weeks** (phases 1–3); document 
 `concierge_opened`, `concierge_message`, per-tool-call events, `concierge_action_approved` / `_declined`, `concierge_handoff_requested` — added to `ANALYTICS_EVENT_TYPES` like `map_preview_clicked` was. Success metric: movement in the activation funnel (baseline 2%, ~34 product touches/30d) and packet starts/completions per session.
 
 ## 8. Open questions
-1. The first release mounts the guide on the report builder, generated report, and signed-in workspace routes.
+1. The guide is mounted once in the root application shell and remains available across every route. The report supplies richer address and report context through a page bridge.
 2. Guest transcripts are never stored. Signed-in audit conversations are retained for 90 days by default, configurable from 1–365 days.
 3. Who reviews the adversarial eval set before launch — Billy only, or SECCC staff too?
 4. Production starts at 100 model-backed turns/day. Deterministic guidance remains available without model spend; a throttled model turn shows the resting message.
@@ -121,7 +121,7 @@ No secrets are committed. Keys are read from \`process.env\` only.
 - **\`app/api/concierge/route.ts\`** — streaming \`streamText\` endpoint. Feature gate → session cookie → rate limit → body caps (≤20 messages, ≤2000 chars/msg) → \`stopWhen: stepCountIs(6)\`. \`app/api/concierge/status/route.ts\` exposes the flag boolean only.
 - **Read-only tools** (\`lib/concierge/tools.ts\`): \`searchPrograms\`, \`getProgram\` (carries \`officialUrl\` + \`verificationSteps\`), \`listZonesAtPoint\` (reuses the report engine's point-in-zone logic, now extracted to \`lib/zones-check.ts\` and imported by both the tool and \`/api/zones/check\`), \`getPageContext\` (echoes client-sent route + report summary; no server fetch), and \`navigateTo\` (allowlist in \`lib/concierge/navigation.ts\`; **suggests** only). Every tool returns sourced facts and hedged notes.
 - **System prompt** (\`lib/concierge/system-prompt.ts\`) encodes §2: no eligibility determinations, no dollar promises, no invented deadlines/URLs, cite \`officialUrl\`, redirect eligibility questions to administrators, treat tool/address/program text as data not instructions, refuse off-topic/injection.
-- **Panel** (\`components/concierge/ConciergePanel.tsx\`): floating trigger + right slide-over, mono/hairline/#2563EB/#0C1B33 system, markdown-lite (bold/lists/links), tool status lines, citation links, and "Take me there →" nav buttons (user clicks — never auto-navigate). Mounted on **/report** (\`app/report/page.tsx\`, \`suppressed={showEmailGate}\`) and on **all /workspace** routes (new \`app/workspace/layout.tsx\`). The trigger hides while any modal dialog is open (MutationObserver on \`dialog[open], [role="dialog"], [aria-modal="true"]\`) so it never fights the native \`<dialog>\` email gate and is reachable once the gate resolves.
+- **Panel** (\`components/concierge/ConciergePanel.tsx\`): floating trigger + right slide-over, mono/hairline/#2563EB/#0C1B33 system, markdown-lite (bold/lists/links), tool status lines, citation links, and "Take me there →" nav buttons (user clicks — never auto-navigate). \`SiteConciergeProvider\` mounts one persistent instance in the root layout so it is available on every route without resetting during navigation. The report uses \`ConciergePageContextBridge\` to supply its current address and summary and suppress the trigger while its optional email dialog is open. The trigger also hides while any modal dialog is open (MutationObserver on \`dialog[open], [role="dialog"], [aria-modal="true"]\`) so it never fights a blocking dialog and returns once the dialog closes.
 - **Instrumentation** (added to \`ANALYTICS_EVENT_TYPES\`): \`concierge_opened\`, \`concierge_message_sent\`, \`concierge_tool_called\`, \`concierge_nav_suggested\` — fired client-side through the existing \`/api/events\` pipe, exactly-once via a fired-key set.
 - **Eval seed**: \`tests/concierge/eval-prompts.json\` (20 real + 11 adversarial, with expectedBehavior). Consumed by the Stage 3 eval suite; Stage 1 only unit-tests plumbing.
 

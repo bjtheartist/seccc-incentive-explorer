@@ -335,14 +335,11 @@ export function ConciergePanel({
           <button
             type="button"
             onClick={openPanel}
-            aria-label="Open the AI Incentive Guide"
+            aria-label="Open Incentive Guide"
             title="Open Incentive Guide"
-            className="relative flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border-2 border-white bg-[#0C1B33] text-white shadow-xl transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+            className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-full border-2 border-white bg-[#0C1B33] text-white shadow-xl transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
           >
             <Compass className="h-5 w-5" strokeWidth={1.75} />
-            <span className="absolute -right-0.5 -top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#2563EB] px-1 font-mono-bureau text-[7px] uppercase text-white">
-              AI
-            </span>
           </button>
         </div>
       )}
@@ -352,7 +349,7 @@ export function ConciergePanel({
         <div
           className="fixed inset-x-0 bottom-0 z-[70] flex h-[88dvh] w-full flex-col border-t border-[#0C1B33]/12 bg-white shadow-2xl print:hidden sm:inset-y-0 sm:left-auto sm:right-0 sm:h-auto sm:max-w-md sm:border-l sm:border-t-0"
           role="complementary"
-          aria-label="AI Incentive Guide"
+          aria-label="Incentive Guide"
         >
           {/* Header */}
           <header className="flex items-center justify-between border-b border-[#0C1B33]/10 bg-[#0C1B33] px-4 py-4 text-white">

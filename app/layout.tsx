@@ -16,6 +16,7 @@ import { Footer } from "@/components/layout/Footer";
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { SiteTrafficTracker } from "@/components/analytics/SiteTrafficTracker";
+import { SiteConciergeProvider } from "@/components/concierge/SiteConciergeProvider";
 import { Analytics } from "@vercel/analytics/next";
 import {
   DEFAULT_DESCRIPTION,
@@ -76,13 +77,15 @@ export default function RootLayout({
     <html lang="en">
       <body className="antialiased min-h-screen flex flex-col">
         <AuthProvider>
-          <Header />
-          <StructuredData />
-          <main className="flex-1">{children}</main>
-          <Footer />
-          <ServiceWorkerRegistrar />
-          <SiteTrafficTracker />
-          <Analytics />
+          <SiteConciergeProvider>
+            <Header />
+            <StructuredData />
+            <main className="flex-1">{children}</main>
+            <Footer />
+            <ServiceWorkerRegistrar />
+            <SiteTrafficTracker />
+            <Analytics />
+          </SiteConciergeProvider>
         </AuthProvider>
       </body>
     </html>
