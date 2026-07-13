@@ -906,6 +906,15 @@ export function ReportDisplay({
     () => new Map(programs.map((program) => [program.id, program])),
     [programs],
   );
+  const supportSection = useMemo(
+    () => report.sections?.find((section) => section.title === "Your Support Network") ?? null,
+    [report.sections],
+  );
+  const supportItems = useMemo(
+    () => supportSection?.items.slice(1) ?? [],
+    [supportSection],
+  );
+  const viewedSupportKeyRef = useRef<string | null>(null);
 
   // ── Persona lens (Tier 1b, audit BM4) ──
   // A viewing lens over this snapshot: re-orders and collapses existing content
@@ -1000,6 +1009,37 @@ export function ReportDisplay({
     );
     setEmailDialogOpen(true);
   }, [analyticsSource, report]);
+
+  useEffect(() => {
+    if (!supportSection || supportItems.length === 0) return;
+    const supportViewKey = `${analyticsReportKey(report)}|support-view|${analyticsSource}`;
+    if (viewedSupportKeyRef.current === supportViewKey) return;
+    viewedSupportKeyRef.current = supportViewKey;
+
+    trackEvent(
+      "support_resource_viewed",
+      reportAnalyticsPayload(report, "report_support_network", {
+        organizationCount: supportItems.length,
+        organizationNames: supportItems.map((item) => item.label),
+        originSource: analyticsSource,
+      }),
+    );
+  }, [analyticsSource, report, supportItems, supportSection]);
+
+  const trackSupportResourceClick = useCallback(
+    (item: ReportItem) => {
+      trackEvent(
+        "support_resource_clicked",
+        reportAnalyticsPayload(report, "report_support_network", {
+          organizationName: item.label,
+          organizationType: item.value || "local_support",
+          contactMethod: "website",
+          originSource: analyticsSource,
+        }),
+      );
+    },
+    [analyticsSource, report],
+  );
 
   // Refine exposure event (Tier 0 / BM6), and a click handler that records
   // banner-vs-action-row location (RF5) — mirrors app/report/page.tsx's
@@ -1949,6 +1989,7 @@ export function ReportDisplay({
                                       href={supportWebsiteUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
+                                      onClick={() => trackSupportResourceClick(reportItem)}
                                       className="inline-flex items-center gap-1.5 hover:text-[#2F5BEA] transition-colors print-url"
                                     >
                                       {item.label}

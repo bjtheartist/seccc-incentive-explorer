@@ -609,6 +609,16 @@ describe("generateReportData", () => {
             distinctOwners: 500,
             assessedValueChangeRate: 0.08,
           },
+          anchors: [
+            {
+              name: "Regional Hospital",
+              type: "Healthcare institution",
+              totalScore: 88,
+              impactTier: "High",
+              rationale: "Major employer and destination",
+              sourceUrls: ["https://example.org/hospital"],
+            },
+          ],
           tifFinance: {
             districtId: "T-087",
             districtName: "Fullerton/Milwaukee",
@@ -634,6 +644,13 @@ describe("generateReportData", () => {
     expect(section?.items.find((i) => i.label === "TIF District Funding Overview")?.detail).toContain("Not proof of funding availability");
     expect(section?.items.find((i) => i.label === "TIF District Funding Overview")?.detail).toContain("capture growth in property-tax revenue");
     expect(section?.items.find((i) => i.label === "Local Retail Demand")?.value).toContain("Modeled");
+    const anchorSection = report.sections.find((s) => s.title === "Local Impact Anchors");
+    expect(anchorSection?.items[0]).toMatchObject({
+      label: "Regional Hospital",
+      value: "Healthcare institution",
+      detail: "Major employer and destination",
+    });
+    expect(JSON.stringify(anchorSection)).not.toMatch(/Score 88|High impact/i);
     expect(report.dataSources?.map((source) => source.id)).toContain("zbp");
     expect(report.dataSources?.map((source) => source.id)).toContain("buildingPermits");
     expect(report.dataSources?.map((source) => source.id)).toContain("assessorValues");

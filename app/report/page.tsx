@@ -3981,9 +3981,7 @@ function ReportDisplay({
     return () => window.removeEventListener("hashchange", openFromHash);
   }, [report.sections]);
   const supportItems = useMemo(
-    () =>
-      supportSection?.items.filter((item) => item.label !== "Community Support") ??
-      [],
+    () => supportSection?.items.slice(1) ?? [],
     [supportSection]
   );
   const supportCtaItem = useMemo(

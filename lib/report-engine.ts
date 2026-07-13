@@ -1318,7 +1318,7 @@ function buildLocalImpactAnchorsSection(ctx: ReportContext): ReportSection | und
 
   const items: ReportItem[] = anchors.map((a) => ({
     label: a.name,
-    value: [a.totalScore != null ? `Score ${a.totalScore}` : null, a.impactTier].filter(Boolean).join(" · ") || "Anchor",
+    value: a.type || "Community anchor",
     detail: a.rationale || a.type || "",
     sourceLabel: a.type,
     sourceUrl: a.sourceUrls && a.sourceUrls.length > 0 ? a.sourceUrls[0] : undefined,
