@@ -268,7 +268,16 @@ export function rankLocalBusinessSupport(
         const laneMatches = inferSupportLanes(org).filter((lane) => requestedLanes.has(lane)).length;
         const projectMatch = includesNormalized(org.projectTypes, request.projectType) ? 30 : 0;
         const useMatch = includesNormalized(org.proposedUses, request.proposedUse) ? 30 : 0;
-        return bestRelationshipScore(org) + Math.min(laneMatches, 2) * 20 + projectMatch + useMatch;
+        // Naming this community area is stronger place-based evidence than a
+        // region-wide claim, and both beat merely not being excluded.
+        const geographyMatch = includesNormalized(org.communityAreaNumbers, request.communityAreaNumber)
+          ? 25
+          : includesNormalized(org.serviceRegions, request.region)
+            ? 15
+            : 0;
+        return (
+          bestRelationshipScore(org) + Math.min(laneMatches, 2) * 20 + projectMatch + useMatch + geographyMatch
+        );
       };
       const relevanceDelta = relevance(b) - relevance(a);
       if (relevanceDelta !== 0) return relevanceDelta;
