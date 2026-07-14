@@ -3,6 +3,7 @@ import citywideSupportData from "@/data/curated/citywide_business_support_resour
 import supportData from "@/data/exports/chicago-neighborhood-economics/local_business_support_by_community_area.json";
 import {
   mergeCitywideBusinessSupport,
+  inferSupportLanes,
   rankLocalBusinessSupport,
   type LocalBusinessSupportOrganization,
 } from "@/lib/local-business-support";
@@ -26,7 +27,7 @@ describe("local business support data", () => {
     );
 
     expect(supportData.providerCount).toBe(140);
-    expect(citywideSupportData.providerCount).toBe(1);
+    expect(citywideSupportData.providerCount).toBe(9);
     expect(lane?.relationships).toContain("legal_support");
     expect(lane?.website).toBe("https://lanechicago.org/legal_help");
     expect(lane?.supportTypes).toContain("entity formation");
@@ -83,6 +84,54 @@ describe("rankLocalBusinessSupport", () => {
       citywideSupportData.organizations as unknown as LocalBusinessSupportOrganization[]
     );
 
-    expect(supportPool).toHaveLength(1);
+    expect(
+      supportPool.filter((org) => org.name === "Legal Aid for New Entrepreneurs (LANE)")
+    ).toHaveLength(1);
+  });
+
+  it("deduplicates aliases and enriches place-based organizations", () => {
+    const pullman = supportData.byCommunityArea["50"];
+    const request = {
+      communityAreaNumber: "50",
+      communityArea: "Pullman",
+      region: "Far South Side",
+      reportType: "site-incentives",
+      projectType: "equipment",
+    };
+    const supportPool = mergeCitywideBusinessSupport(
+      pullman.organizations as unknown as LocalBusinessSupportOrganization[],
+      citywideSupportData.organizations as unknown as LocalBusinessSupportOrganization[],
+      request,
+    );
+    const ranked = rankLocalBusinessSupport(supportPool, 10, request);
+    const farSouth = ranked.filter((org) => org.name.includes("Far South Community"));
+
+    expect(farSouth).toHaveLength(1);
+    expect(farSouth[0].website).toBe("https://farsouthcdc.org/nbdc");
+    expect(inferSupportLanes(farSouth[0])).toContain("capital_readiness");
+  });
+
+  it("routes specialists by geography and project instead of listing everyone", () => {
+    const woodlawnRequest = {
+      communityAreaNumber: "42",
+      communityArea: "Woodlawn",
+      region: "South Side",
+      reportType: "dev-feasibility",
+      projectType: "vacant-acquisition",
+      proposedUse: "community-cultural",
+    };
+    const woodlawnPool = mergeCitywideBusinessSupport(
+      [],
+      citywideSupportData.organizations as unknown as LocalBusinessSupportOrganization[],
+      woodlawnRequest,
+    );
+    const names = rankLocalBusinessSupport(woodlawnPool, 20, woodlawnRequest).map(
+      (org) => org.name,
+    );
+
+    expect(names).toContain("Emerald South Economic Development Collaborative");
+    expect(names).toContain("LISC Chicago");
+    expect(names).not.toContain("Neighborhood Housing Services of Chicago");
+    expect(names).not.toContain("The Resurrection Project");
   });
 });

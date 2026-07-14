@@ -42,6 +42,8 @@ export interface PartnerProduct {
   publicFitNote?: string;
   /** Report project types this product is meant for (e.g. "rehab", "expansion"). */
   projectTypes?: string[];
+  /** Intended end uses from property-development reports (e.g. "housing"). */
+  proposedUses?: string[];
   industries?: string[];
   /** Internal routing bounds in whole USD. Never serialized to users. */
   minUsd?: number;
@@ -66,6 +68,10 @@ export interface CapitalPartner {
   lon?: number;
   serviceAreas: PartnerServiceArea[];
   products: PartnerProduct[];
+  /** Optional report surfaces where this organization should be considered. */
+  reportTypes?: string[];
+  /** Hard-gate specialist organizations to a declared project type or end use. */
+  requiresProjectContext?: boolean;
   verificationStatus: PartnerVerificationStatus;
   sourceUrl?: string;
   sourceDate?: string;
@@ -87,7 +93,9 @@ export interface CapitalMatchRequest {
   ward?: string;
   lat?: number;
   lon?: number;
+  reportType?: string;
   projectType?: string;
+  proposedUse?: string;
   productNeed?: CapitalProductType | string;
   industry?: string;
   /** Reference date for staleness checks; pass a fixed value for determinism. */
@@ -231,18 +239,59 @@ function geographyFit(partner: CapitalPartner, request: CapitalMatchRequest): Ge
   return citywide ? { local: false, areaLabel: "businesses citywide in Chicago" } : null;
 }
 
+function matchesRequiredProjectContext(
+  partner: CapitalPartner,
+  request: CapitalMatchRequest,
+): boolean {
+  if (!partner.requiresProjectContext) return true;
+
+  const projectType = request.projectType?.trim().toLowerCase();
+  const proposedUse = request.proposedUse?.trim().toLowerCase();
+
+  return partner.products.some((product) => {
+    if (product.active === false) return false;
+    const projectMatches = Boolean(
+      projectType &&
+      product.projectTypes?.some((type) => type.toLowerCase() === projectType),
+    );
+    const useMatches = Boolean(
+      proposedUse &&
+      product.proposedUses?.some((use) => use.toLowerCase() === proposedUse),
+    );
+    return projectMatches || useMatches;
+  });
+}
+
+function matchesReportType(
+  partner: CapitalPartner,
+  request: CapitalMatchRequest,
+): boolean {
+  if (!partner.reportTypes?.length) return true;
+  const reportType = request.reportType?.trim().toLowerCase();
+  return Boolean(
+    reportType &&
+    partner.reportTypes.some((type) => type.toLowerCase() === reportType),
+  );
+}
+
 type FitTier = 0 | 1 | 2;
 
 function productFit(product: PartnerProduct, request: CapitalMatchRequest): FitTier {
   const wantsProduct = Boolean(request.productNeed);
-  const wantsProject = Boolean(request.projectType);
+  const wantsProjectContext = Boolean(request.projectType || request.proposedUse);
   const productMatches =
     wantsProduct && product.productType.toLowerCase() === String(request.productNeed).toLowerCase();
   const projectMatches =
-    wantsProject &&
+    Boolean(request.projectType) &&
     (product.projectTypes ?? []).some(
       (type) => type.toLowerCase() === String(request.projectType).toLowerCase()
     );
+  const proposedUseMatches =
+    Boolean(request.proposedUse) &&
+    (product.proposedUses ?? []).some(
+      (use) => use.toLowerCase() === String(request.proposedUse).toLowerCase(),
+    );
+  const projectContextMatches = projectMatches || proposedUseMatches;
   const checksIndustry = Boolean(request.industry && product.industries?.length);
   const industryMatches =
     checksIndustry &&
@@ -250,9 +299,11 @@ function productFit(product: PartnerProduct, request: CapitalMatchRequest): FitT
       (industry) => industry.toLowerCase() === String(request.industry).toLowerCase(),
     );
 
-  const requested = Number(wantsProduct) + Number(wantsProject) + Number(checksIndustry);
+  const requested =
+    Number(wantsProduct) + Number(wantsProjectContext) + Number(checksIndustry);
   if (requested === 0) return 0;
-  const matched = Number(productMatches) + Number(projectMatches) + Number(industryMatches);
+  const matched =
+    Number(productMatches) + Number(projectContextMatches) + Number(industryMatches);
   if (matched === requested) return 0;
   if (matched > 0) return 1;
   return 2;
@@ -261,13 +312,21 @@ function productFit(product: PartnerProduct, request: CapitalMatchRequest): FitT
 function bestProduct(
   partner: CapitalPartner,
   request: CapitalMatchRequest
-): { product: PartnerProduct | null; fit: FitTier; industrySpecific: boolean } {
+): {
+  product: PartnerProduct | null;
+  fit: FitTier;
+  industrySpecific: boolean;
+  proposedUseSpecific: boolean;
+} {
   const active = partner.products.filter((product) => product.active !== false);
-  if (active.length === 0) return { product: null, fit: 2, industrySpecific: false };
+  if (active.length === 0) {
+    return { product: null, fit: 2, industrySpecific: false, proposedUseSpecific: false };
+  }
 
   let best: PartnerProduct | null = null;
   let bestFit: FitTier = 2;
   let bestIndustrySpecific = false;
+  let bestProposedUseSpecific = false;
   for (const product of active) {
     const fit = productFit(product, request);
     const industrySpecific = Boolean(
@@ -276,20 +335,37 @@ function bestProduct(
         (industry) => industry.toLowerCase() === String(request.industry).toLowerCase(),
       ),
     );
+    const proposedUseSpecific = Boolean(
+      request.proposedUse &&
+      product.proposedUses?.some(
+        (use) => use.toLowerCase() === String(request.proposedUse).toLowerCase(),
+      ),
+    );
     if (
       best === null ||
       fit < bestFit ||
-      (fit === bestFit && industrySpecific && !bestIndustrySpecific) ||
+      (fit === bestFit && proposedUseSpecific && !bestProposedUseSpecific) ||
       (fit === bestFit &&
+        proposedUseSpecific === bestProposedUseSpecific &&
+        industrySpecific &&
+        !bestIndustrySpecific) ||
+      (fit === bestFit &&
+        proposedUseSpecific === bestProposedUseSpecific &&
         industrySpecific === bestIndustrySpecific &&
         product.id.localeCompare(best.id) < 0)
     ) {
       best = product;
       bestFit = fit;
       bestIndustrySpecific = industrySpecific;
+      bestProposedUseSpecific = proposedUseSpecific;
     }
   }
-  return { product: best, fit: bestFit, industrySpecific: bestIndustrySpecific };
+  return {
+    product: best,
+    fit: bestFit,
+    industrySpecific: bestIndustrySpecific,
+    proposedUseSpecific: bestProposedUseSpecific,
+  };
 }
 
 function haversineKm(latA: number, lonA: number, latB: number, lonB: number): number {
@@ -308,6 +384,7 @@ interface Candidate {
   product: PartnerProduct | null;
   fitTier: FitTier;
   industrySpecific: boolean;
+  proposedUseSpecific: boolean;
   verification: VerificationTier;
   distanceKm: number;
 }
@@ -365,6 +442,9 @@ function toMatch(candidate: Candidate, request: CapitalMatchRequest): CapitalPar
 
 function compareCandidates(a: Candidate, b: Candidate): number {
   if (a.fitTier !== b.fitTier) return a.fitTier - b.fitTier;
+  // An explicit end-use match (e.g. a community-cultural development product)
+  // is stronger evidence of fit than an industry tag on a general product.
+  if (a.proposedUseSpecific !== b.proposedUseSpecific) return a.proposedUseSpecific ? -1 : 1;
   if (a.industrySpecific !== b.industrySpecific) return a.industrySpecific ? -1 : 1;
   if (a.verification !== b.verification) return a.verification - b.verification;
   if (a.geography.local !== b.geography.local) return a.geography.local ? -1 : 1;
@@ -388,12 +468,14 @@ export function matchCapitalPartners(
   const candidates: Candidate[] = [];
   for (const partner of partners) {
     if (partner.active === false) continue;
+    if (!matchesReportType(partner, request)) continue;
+    if (!matchesRequiredProjectContext(partner, request)) continue;
     const verification = verificationTier(partner, asOfMs);
     if (verification === null) continue;
     const geography = geographyFit(partner, request);
     if (!geography) continue;
 
-    const { product, fit, industrySpecific } = bestProduct(partner, request);
+    const { product, fit, industrySpecific, proposedUseSpecific } = bestProduct(partner, request);
     const distanceKm =
       request.lat !== undefined &&
       request.lon !== undefined &&
@@ -408,6 +490,7 @@ export function matchCapitalPartners(
       product,
       fitTier: fit,
       industrySpecific,
+      proposedUseSpecific,
       verification,
       distanceKm,
     });

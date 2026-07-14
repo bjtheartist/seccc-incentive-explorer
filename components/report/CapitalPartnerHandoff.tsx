@@ -83,13 +83,13 @@ export function CapitalPartnerHandoff({
       <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="min-w-0 max-w-3xl">
           <div className="mb-1.5 font-mono-bureau text-[9px] uppercase tracking-[0.22em] text-[#2563EB]/70">
-            Resource to explore
+            Get connected to local support
           </div>
           <h2 className="font-editorial text-[24px] leading-tight text-[#0C1B33] sm:text-[28px]">
-            {primary.name} may be relevant to your plans
+            {primary.name} may be able to help with the next step
           </h2>
           <p className="mt-2 text-[13px] leading-relaxed text-[#0C1B33]/55">
-            This organization provides financing and project-support services. Review its offerings to decide whether contacting the organization makes sense for your project.
+            You don&apos;t need to have every detail figured out before talking with someone. Based on the project information in this report, this organization may be able to help you work through the next step.
           </p>
           {primary.fitNote && (
             <p className="mt-2 text-[12px] leading-relaxed text-[#0C1B33]/45">

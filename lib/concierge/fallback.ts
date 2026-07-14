@@ -6,6 +6,10 @@ const ACTION_REQUEST_RE =
   /\b(update|change|save|record|remember|set|add|remove|clear|mark|start|create|draft|prepare)\b[\s\S]{0,120}\b(profile|business file|packet|task|support request|legal name|dba|contact|email|phone|address|entity type|formation date|industry|naics|employee(?:s| count)?|ownership)\b/i;
 const WORKSPACE_ACTION_VERB_RE =
   /\b(update|change|save|record|remember|set|add|remove|clear|mark|start|create|draft|prepare|go ahead|do it)\b/i;
+const INTRODUCTION_ACTION_RE =
+  /(?:\b(request|prepare|make|arrange|send|set up)\b[\s\S]{0,100}\b(introduction|local support|support organization|partner|delegate agenc(?:y|ies)|cdfi)\b|\b(connect|introduce)\s+(?:me|us|my business|our business)\b)/i;
+const LOCAL_SUPPORT_GUIDANCE_RE =
+  /\b(get connected|local support|support organization|delegate agenc(?:y|ies)|who can help|help me find (?:someone|an organization)|next local (?:resource|organization)|warm handoff)\b/i;
 
 export function shouldUseSignedInActionTools({
   text,
@@ -19,6 +23,7 @@ export function shouldUseSignedInActionTools({
   return Boolean(
     signedIn &&
       (ACTION_REQUEST_RE.test(text) ||
+        INTRODUCTION_ACTION_RE.test(text) ||
         (pageContext.route.startsWith("/workspace") &&
           WORKSPACE_ACTION_VERB_RE.test(text)))
   );
@@ -30,6 +35,7 @@ function isSavedRecordActionRequest(
 ): boolean {
   return Boolean(
     ACTION_REQUEST_RE.test(text) ||
+      INTRODUCTION_ACTION_RE.test(text) ||
       (pageContext.route.startsWith("/workspace") &&
         WORKSPACE_ACTION_VERB_RE.test(text))
   );
@@ -105,6 +111,10 @@ export async function buildDeterministicConciergeResponse({
     return null;
   }
 
+  if (!signedIn && INTRODUCTION_ACTION_RE.test(text)) {
+    return "You don't need to have every detail figured out before talking with someone. I can help organize what you're working toward and any open questions so you don't have to start from scratch. To save that summary and request an introduction, [sign in to your workspace](/login?callbackUrl=/workspace). Nothing has been shared with an organization.";
+  }
+
   if (!signedIn && isSavedRecordActionRequest(text, pageContext)) {
     return "I can't change a Business File or Incentive Preparedness Packet while you're signed out. Nothing was changed. [Sign in to your workspace](/login?callbackUrl=/workspace), then the guide can propose a saved-record update for your approval.";
   }
@@ -115,7 +125,11 @@ export async function buildDeterministicConciergeResponse({
       text
     )
   ) {
-    return "I can help with Chicago business incentives, location reports, Business Files, and Incentive Preparedness Packets. What is the business trying to do: improve its space, hire, buy equipment, open or relocate, or just explore?";
+    return "I can help with Chicago business incentives, location reports, Business Files, and getting connected to local support. What is the business trying to do: improve its space, hire, buy equipment, open or relocate, or just explore?";
+  }
+
+  if (LOCAL_SUPPORT_GUIDANCE_RE.test(text)) {
+    return "You don't need to have every detail figured out before talking with someone. To help identify a useful next connection, where does the project stand right now: are you exploring an idea, actively planning, or is the work already underway? This helps shape the conversation; it is not an eligibility, viability, or readiness score.";
   }
 
   if (/\b(corridor score|internal score|internal ranking|ranked against)\b/i.test(text)) {

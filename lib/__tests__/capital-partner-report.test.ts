@@ -12,6 +12,7 @@ function state(
   return {
     reportType,
     projectType,
+    proposedUse: "",
     supportNeeded,
     neighborhood: "South Chicago",
     industry: "retail",
@@ -22,13 +23,13 @@ const context = {
   zip: "60617",
   lat: 41.739,
   lon: -87.556,
-  asOf: "2026-07-13T12:00:00.000Z",
+  asOf: "2026-07-14T12:00:00.000Z",
 };
 
 describe("capitalPartnerHandoffForReport", () => {
   it.each([
-    ["expansion", "allies-for-community-business"],
-    ["equipment", "somercor"],
+    ["expansion", "greenwood-archer-capital"],
+    ["equipment", "greenwood-archer-capital"],
     ["rehab", "chicago-community-loan-fund"],
     ["affordable-housing", "community-investment-corporation"],
   ])("routes %s projects to an appropriate first conversation", (projectType, partnerId) => {
@@ -58,6 +59,77 @@ describe("capitalPartnerHandoffForReport", () => {
     };
     const manufacturingMixedUse = capitalPartnerHandoffForReport(manufacturingState, context);
     expect(manufacturingMixedUse?.primary?.partnerId).toBe("community-investment-corporation");
+  });
+
+  it("excludes CIC from general business equipment reports", () => {
+    const handoff = capitalPartnerHandoffForReport(
+      {
+        ...state("equipment"),
+        industry: "",
+      },
+      context,
+    );
+    const partnerIds = [
+      handoff?.primary?.partnerId,
+      ...(handoff?.alternates.map((partner) => partner.partnerId) ?? []),
+    ];
+
+    expect(partnerIds).not.toContain("community-investment-corporation");
+    expect(partnerIds).not.toContain("chicago-neighborhood-initiatives");
+    expect(handoff?.primary?.partnerId).toBe("greenwood-archer-capital");
+    expect(handoff?.primary?.fitNote).toContain("purchase equipment");
+  });
+
+  it("reserves CNI for complex development and structured-finance reports", () => {
+    const siteReport = capitalPartnerHandoffForReport(
+      {
+        ...state("new-construction"),
+        proposedUse: "community-cultural",
+      },
+      context,
+    );
+    const siteIds = [
+      siteReport?.primary?.partnerId,
+      ...(siteReport?.alternates.map((partner) => partner.partnerId) ?? []),
+    ];
+    expect(siteIds).not.toContain("chicago-neighborhood-initiatives");
+
+    const developmentReport = capitalPartnerHandoffForReport(
+      {
+        ...state("new-construction", [], "dev-feasibility"),
+        proposedUse: "community-cultural",
+      },
+      { ...context, zip: "60628", lat: 41.6944, lon: -87.5992 },
+    );
+    expect(developmentReport?.primary?.partnerId).toBe(
+      "chicago-neighborhood-initiatives",
+    );
+    expect(developmentReport?.primary?.fitNote).toContain("NMTC structuring");
+  });
+
+  it("surfaces CIC only with a multifamily project type or property-use signal", () => {
+    const affordableHousing = capitalPartnerHandoffForReport(
+      state("affordable-housing"),
+      context,
+    );
+    expect(affordableHousing?.primary?.partnerId).toBe("community-investment-corporation");
+    expect(affordableHousing?.primary?.fitNote).toContain(
+      "affordable multifamily rental housing",
+    );
+    expect(affordableHousing?.primary?.fitNote).toContain("five or more units");
+
+    const housingRehab = capitalPartnerHandoffForReport(
+      {
+        ...state("rehab", [], "dev-feasibility"),
+        proposedUse: "housing",
+      },
+      context,
+    );
+    const housingPartnerIds = [
+      housingRehab?.primary?.partnerId,
+      ...(housingRehab?.alternates.map((partner) => partner.partnerId) ?? []),
+    ];
+    expect(housingPartnerIds).toContain("community-investment-corporation");
   });
 
   it("does not attach a business referral to corridor intelligence reports", () => {

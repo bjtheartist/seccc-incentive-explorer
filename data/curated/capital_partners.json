@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-13",
+  "generatedAt": "2026-07-14",
   "sourceLabel": "Official organization websites reviewed for the Chicago project financing pilot",
   "partners": [
     {
@@ -44,6 +44,237 @@
       "sourceUrl": "https://a4cb.org/services/loans/",
       "sourceDate": "2026-07-13",
       "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "accion-opportunity-fund",
+      "name": "Accion Opportunity Fund",
+      "partnerType": "cdfi",
+      "website": "https://aofund.org/",
+      "intakeUrl": "https://aofund.org/loans/",
+      "serviceAreas": [
+        { "scope": "citywide" }
+      ],
+      "reportTypes": ["site-incentives"],
+      "products": [
+        {
+          "id": "aof-small-business-term-loan",
+          "productType": "term_loan",
+          "productName": "Small business term loan",
+          "publicFitNote": "Established Illinois businesses seeking mission-driven financing for expansion, equipment, inventory, marketing, cash-flow stabilization, or another operating-business need.",
+          "projectTypes": ["expansion", "equipment", "hiring", "relocation", "other"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://aofund.org/state-licenses-disclosures-and-programs/",
+          "sourceDate": "2026-07-14",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://aofund.org/state-licenses-disclosures-and-programs/",
+      "sourceDate": "2026-07-14",
+      "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "pursuit",
+      "name": "Pursuit",
+      "partnerType": "mission_lender",
+      "website": "https://pursuitlending.com/",
+      "intakeUrl": "https://pursuitlending.com/business-loans/service-locations/illinois-small-business-loans/",
+      "phone": "866-466-9232",
+      "address": "332 S Michigan Ave, Suite 900, Chicago, IL 60604",
+      "serviceAreas": [
+        { "scope": "citywide" }
+      ],
+      "reportTypes": ["site-incentives"],
+      "products": [
+        {
+          "id": "pursuit-illinois-business-loan",
+          "productType": "term_loan",
+          "productName": "Illinois small business financing",
+          "publicFitNote": "Illinois businesses, including startups and established firms, exploring financing for working capital, equipment, inventory, expansion, business acquisition, or owner-occupied commercial real estate.",
+          "projectTypes": ["expansion", "equipment", "relocation", "other"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://pursuitlending.com/business-loans/service-locations/",
+          "sourceDate": "2026-07-14",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://pursuitlending.com/business-loans/service-locations/",
+      "sourceDate": "2026-07-14",
+      "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "jewish-free-loan-chicago",
+      "name": "Jewish Free Loan Chicago",
+      "partnerType": "mission_lender",
+      "website": "https://jflchicago.org/",
+      "intakeUrl": "https://jflchicago.org/how-to-apply-small-business-loan",
+      "contactEmail": "info@jflchicago.org",
+      "phone": "312-344-3468",
+      "address": "4411 N Ravenswood Ave, Suite 300, Chicago, IL 60640",
+      "serviceAreas": [
+        { "scope": "citywide" }
+      ],
+      "reportTypes": ["site-incentives"],
+      "requiresProjectContext": true,
+      "products": [
+        {
+          "id": "jflc-small-business-loan",
+          "productType": "microloan",
+          "productName": "Interest-free small business loan",
+          "publicFitNote": "Cook County businesses operating for at least four months that are exploring financing for inventory, equipment, working capital, capital improvements, marketing, or another operating need. Published income and guarantor or business-advisor reference requirements apply.",
+          "projectTypes": ["rehab", "expansion", "equipment", "hiring", "other"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://jflchicago.org/how-to-apply-small-business-loan",
+          "sourceDate": "2026-07-14",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://jflchicago.org/how-to-apply-small-business-loan",
+      "sourceDate": "2026-07-14",
+      "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "greenwood-archer-capital",
+      "name": "Greenwood Archer Capital",
+      "partnerType": "cdfi",
+      "website": "https://greenwoodarchercapital.org/",
+      "intakeUrl": "https://greenwoodarchercapital.org/apply-for-a-loan",
+      "contactEmail": "loans@greenwoodarchercapital.org",
+      "phone": "773-341-2060",
+      "address": "1000 E 111th St, 10th Floor, Chicago, IL 60628",
+      "lat": 41.6944402,
+      "lon": -87.5991673,
+      "serviceAreas": [
+        { "scope": "citywide" }
+      ],
+      "reportTypes": ["site-incentives"],
+      "products": [
+        {
+          "id": "gac-general-lending",
+          "productType": "term_loan",
+          "productName": "Flexible small business lending",
+          "publicFitNote": "Startup and established business owners seeking flexible financing and technical assistance for working capital, inventory, business improvements, or planned growth.",
+          "projectTypes": ["expansion", "relocation", "other"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://greenwoodarchercapital.org/general-lending",
+          "sourceDate": "2026-07-14",
+          "active": true
+        },
+        {
+          "id": "gac-equipment",
+          "productType": "equipment_financing",
+          "productName": "Small business equipment financing",
+          "publicFitNote": "Business owners seeking financing to purchase equipment as part of starting or growing an operating business.",
+          "projectTypes": ["equipment"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://greenwoodarchercapital.org/general-lending",
+          "sourceDate": "2026-07-14",
+          "active": true
+        },
+        {
+          "id": "gac-working-capital",
+          "productType": "working_capital",
+          "productName": "Small business working capital",
+          "publicFitNote": "Business owners seeking flexible capital for operating needs, inventory, staffing, or growth.",
+          "projectTypes": ["expansion", "hiring", "other"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://greenwoodarchercapital.org/general-lending",
+          "sourceDate": "2026-07-14",
+          "active": true
+        },
+        {
+          "id": "gac-owner-occupied-real-estate",
+          "productType": "commercial_real_estate",
+          "productName": "Owner-occupied commercial real estate financing",
+          "publicFitNote": "Operating businesses seeking to purchase commercial real estate they will occupy; this is not financing for residential investment or real estate-development ventures.",
+          "projectTypes": ["relocation"],
+          "proposedUses": ["commercial", "mixed-use", "industrial-maker"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://greenwoodarchercapital.org/faq",
+          "sourceDate": "2026-07-14",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://greenwoodarchercapital.org/programs",
+      "sourceDate": "2026-07-14",
+      "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "chicago-neighborhood-initiatives",
+      "name": "Chicago Neighborhood Initiatives",
+      "partnerType": "development_advisor",
+      "website": "https://www.cnigroup.org/",
+      "intakeUrl": "https://www.cnigroup.org/consulting/",
+      "contactEmail": "jbransfield@cnigroup.org",
+      "phone": "773-301-2647",
+      "address": "1000 E 111th St, 10th Floor, Chicago, IL 60628",
+      "lat": 41.6944402,
+      "lon": -87.5991673,
+      "serviceAreas": [
+        { "scope": "citywide" }
+      ],
+      "reportTypes": ["dev-feasibility"],
+      "requiresProjectContext": true,
+      "products": [
+        {
+          "id": "cni-structured-finance-development",
+          "productType": "commercial_real_estate",
+          "productName": "Structured finance and development consulting",
+          "publicFitNote": "Nonprofit, mission-driven, and community-development sponsors pursuing complex real estate or community-facility projects that may need NMTC structuring, layered financing, development management, or transaction support.",
+          "projectTypes": ["new-construction", "vacant-acquisition", "mixed-use"],
+          "proposedUses": ["community-cultural", "commercial", "industrial-maker", "mixed-use"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.cnigroup.org/consulting/",
+          "sourceDate": "2026-07-14",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.cnigroup.org/consulting/",
+      "sourceDate": "2026-07-14",
+      "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "iff",
+      "name": "IFF",
+      "partnerType": "cdfi",
+      "website": "https://iff.org/",
+      "intakeUrl": "https://iff.org/contact-us/locations/illinois/",
+      "contactEmail": "general@iff.org",
+      "phone": "312-629-0060",
+      "address": "333 S Wabash Ave, Suite 2800, Chicago, IL 60604",
+      "serviceAreas": [
+        { "scope": "citywide" }
+      ],
+      "reportTypes": ["dev-feasibility"],
+      "requiresProjectContext": true,
+      "products": [
+        {
+          "id": "iff-nonprofit-facilities",
+          "productType": "commercial_real_estate",
+          "productName": "Nonprofit facility financing and real estate support",
+          "publicFitNote": "Nonprofit organizations planning a facility acquisition, rehabilitation, new construction, affordable-housing project, or other mission-driven real estate project that may need financing, feasibility, site, or development support.",
+          "projectTypes": ["rehab", "new-construction", "mixed-use", "affordable-housing", "vacant-acquisition"],
+          "proposedUses": ["community-cultural", "housing", "mixed-use"],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://iff.org/services/real-estate/",
+          "sourceDate": "2026-07-14",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://iff.org/contact-us/locations/illinois/",
+      "sourceDate": "2026-07-14",
+      "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
       "active": true
     },
     {
@@ -137,13 +368,15 @@
       "serviceAreas": [
         { "scope": "citywide" }
       ],
+      "requiresProjectContext": true,
       "products": [
         {
           "id": "cic-multifamily",
           "productType": "commercial_real_estate",
-          "productName": "Multifamily and mixed-use financing",
-          "publicFitNote": "Multifamily properties with five or more units, including qualifying mixed-use buildings with a residential component.",
+          "productName": "Affordable multifamily rental housing financing",
+          "publicFitNote": "Property owners and developers seeking financing to acquire, rehabilitate, refinance, or improve affordable multifamily rental housing, generally buildings with five or more units.",
           "projectTypes": ["mixed-use", "affordable-housing"],
+          "proposedUses": ["housing", "mixed-use"],
           "verificationStatus": "verified",
           "sourceUrl": "https://www.cicchicago.com/loans/",
           "sourceDate": "2026-07-13",

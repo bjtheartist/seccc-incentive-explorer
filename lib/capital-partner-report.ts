@@ -44,6 +44,7 @@ export interface CapitalPartnerReportContext {
 export interface CapitalPartnerReportState {
   reportType: string | null;
   projectType: string;
+  proposedUse: string;
   supportNeeded: string[];
   neighborhood: string;
   industry: string;
@@ -71,7 +72,9 @@ export function capitalPartnerHandoffForReport(
     zip: context.zip || undefined,
     lat: context.lat ?? undefined,
     lon: context.lon ?? undefined,
+    reportType: state.reportType || undefined,
     projectType: state.projectType || undefined,
+    proposedUse: state.proposedUse || undefined,
     productNeed: PROJECT_PRODUCT_NEEDS[state.projectType] || undefined,
     industry: state.industry || undefined,
     asOf: context.asOf,

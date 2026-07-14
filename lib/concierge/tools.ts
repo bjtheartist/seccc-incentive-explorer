@@ -105,7 +105,7 @@ export function buildConciergeTools({ pageContext, onToolCall, actions }: Concie
 
     getPageContext: tool({
       description:
-        "Get context about the page the visitor is currently on and, if present, a summary of the report they are viewing. Use this to ground your help in what they can already see.",
+        "Get context about the current page and, if present, the report summary, address, place-based support organizations, and separate financing/development match. Use this before naming an organization so the suggestion stays grounded in what the Explorer surfaced.",
       inputSchema: z.object({}),
       execute: async () => {
         onToolCall?.("getPageContext");

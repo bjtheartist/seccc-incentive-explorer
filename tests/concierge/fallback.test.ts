@@ -48,6 +48,39 @@ describe("deterministic concierge", () => {
     expect(response).toBeNull();
   });
 
+  it("asks about project stage when someone wants local support", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText: "Help me get connected to local support.",
+      pageContext,
+      signedIn: false,
+    });
+
+    expect(response).toContain("don't need to have every detail figured out");
+    expect(response).toContain("where does the project stand");
+    expect(response).toContain("not an eligibility, viability, or readiness score");
+  });
+
+  it("routes a signed-in introduction request to approval-gated tools", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText: "Please request an introduction to the local support organization.",
+      pageContext,
+      signedIn: true,
+    });
+
+    expect(response).toBeNull();
+  });
+
+  it("keeps signed-out introduction requests unsent and points to sign-in", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText: "Please introduce me to the organization in my report.",
+      pageContext,
+      signedIn: false,
+    });
+
+    expect(response).toContain("sign in to your workspace");
+    expect(response).toContain("Nothing has been shared");
+  });
+
   it("recognizes natural profile-field updates and workspace continuations", async () => {
     const fieldUpdate = await buildDeterministicConciergeResponse({
       userText: "Set my employee count to 12.",

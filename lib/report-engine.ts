@@ -1,5 +1,10 @@
 import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats } from "./types";
-import type { LocalBusinessSupportContext, LocalBusinessSupportOrganization } from "./local-business-support";
+import {
+  inferSupportLanes,
+  type LocalBusinessSupportContext,
+  type LocalBusinessSupportOrganization,
+  type LocalSupportLane,
+} from "./local-business-support";
 import type { SiteSignals } from "./site-signals";
 import type { TransportAccess } from "./transport-access";
 import type { MobilityAccess, MobilityAccessLine, MobilityAccessPoint } from "./mobility-access";
@@ -336,6 +341,9 @@ export interface GeneratedReport {
       phone?: string;
       website?: string;
       detail?: string;
+      supportLanes?: LocalSupportLane[];
+      supportTypes?: string;
+      serviceGeography?: string;
     }[];
     communityArea?: string;
     narrative: string;
@@ -1423,6 +1431,9 @@ function buildCommunityAssets(
       phone: org.phone,
       website: org.website,
       detail: localSupportDetail(org, localSupport.communityArea),
+      supportLanes: inferSupportLanes(org),
+      supportTypes: org.supportTypes,
+      serviceGeography: org.serviceGeography,
     }));
 
     const edos = organizations

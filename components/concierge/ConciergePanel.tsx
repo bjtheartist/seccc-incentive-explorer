@@ -32,6 +32,7 @@ const QUICK_STARTS = [
   { label: "Hire employees", prompt: "I want to hire employees." },
   { label: "Buy equipment", prompt: "I want to buy equipment for my business." },
   { label: "Open or relocate", prompt: "I want to open or relocate a business." },
+  { label: "Get local support", prompt: "Help me get connected to local support." },
   { label: "Just explore", prompt: "Help me understand what I can explore here." },
 ] as const;
 
@@ -47,7 +48,7 @@ const TOOL_STATUS: Record<string, string> = {
   updatePacketTask: "Updating your packet…",
   createFoundationPacket: "Starting your packet…",
   selectPacketProgram: "Setting the program…",
-  prepareSupportRequest: "Preparing a draft…",
+  prepareSupportRequest: "Preparing your introduction request…",
 };
 
 /** Friendly titles for the approval cards (action tools only). */
@@ -56,7 +57,7 @@ const ACTION_LABEL: Record<string, string> = {
   updatePacketTask: "Update a packet task",
   createFoundationPacket: "Start an Incentive Preparedness Packet",
   selectPacketProgram: "Set your packet's program",
-  prepareSupportRequest: "Draft a partner support request",
+  prepareSupportRequest: "Prepare an introduction request",
 };
 
 const ACTION_TOOL_NAMES = new Set(Object.keys(ACTION_LABEL));
@@ -402,8 +403,9 @@ export function ConciergePanel({
                   ))}
                 </div>
                 <p className="mt-3 text-[11px] leading-4 text-[#0C1B33]/45">
-                  I can help you explore and prepare. Program administrators make
-                  eligibility and award decisions.
+                  I can help you explore, prepare, and get connected to local
+                  support. Program administrators make eligibility and award
+                  decisions.
                 </p>
               </div>
             )}

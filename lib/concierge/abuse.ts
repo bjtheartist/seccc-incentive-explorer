@@ -72,7 +72,7 @@ export function screenPageContext(
   context: ConciergePageContext
 ): PageContextScreenResult {
   const flagged: string[] = [];
-  const scrub = (field: keyof ConciergePageContext, value?: string) => {
+  const scrub = (field: string, value?: string) => {
     if (typeof value !== "string" || !value) return value;
     if (!containsInjectionMarker(value)) return value;
     flagged.push(field);
@@ -86,6 +86,19 @@ export function screenPageContext(
     }
     return p;
   });
+  const localSupportOrganizations = context.localSupportOrganizations?.map((org, i) => ({
+    ...org,
+    name: scrub(`localSupportOrganizations[${i}].name`, org.name) || "Support organization",
+    role: scrub(`localSupportOrganizations[${i}].role`, org.role),
+    supportTypes: scrub(`localSupportOrganizations[${i}].supportTypes`, org.supportTypes),
+    serviceGeography: scrub(
+      `localSupportOrganizations[${i}].serviceGeography`,
+      org.serviceGeography,
+    ),
+    supportLanes: org.supportLanes?.map((lane, laneIndex) =>
+      scrub(`localSupportOrganizations[${i}].supportLanes[${laneIndex}]`, lane) || "support"
+    ),
+  }));
 
   return {
     context: {
@@ -93,6 +106,10 @@ export function screenPageContext(
       pageLabel: scrub("pageLabel", context.pageLabel),
       reportSummary: scrub("reportSummary", context.reportSummary),
       address: scrub("address", context.address),
+      localSupportOrganizations,
+      capitalSupportName: scrub("capitalSupportName", context.capitalSupportName),
+      capitalSupportReason: scrub("capitalSupportReason", context.capitalSupportReason),
+      capitalSupportFitNote: scrub("capitalSupportFitNote", context.capitalSupportFitNote),
       visiblePrograms,
     },
     flagged,
