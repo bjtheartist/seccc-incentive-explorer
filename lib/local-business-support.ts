@@ -48,6 +48,8 @@ export interface LocalBusinessSupportRequest {
   reportType?: string;
   projectType?: string;
   proposedUse?: string;
+  /** True when the report address sits inside an SSA or CCSA corridor. */
+  storefrontCorridor?: boolean;
 }
 
 export interface LocalBusinessSupportContext {
@@ -67,6 +69,8 @@ export interface LocalBusinessSupportContext {
     ssa?: string;
   };
   organizations: LocalBusinessSupportOrganization[];
+  /** Echoed by the API when the SSA-first storefront reordering applied. */
+  storefrontCorridor?: boolean;
   sourceLabel: string;
   sourceUrls: string[];
 }
@@ -275,8 +279,18 @@ export function rankLocalBusinessSupport(
           : includesNormalized(org.serviceRegions, request.region)
             ? 15
             : 0;
+        // Corridor storefront programs (CCSA, and SBIF windows) are delivered
+        // through SSA/corridor operators: for a permanent storefront remodel
+        // inside an SSA or CCSA corridor, the SSA provider is the first
+        // conversation and outranks even the primary access point.
+        const ssaFirst =
+          request.storefrontCorridor &&
+          normalized(request.projectType) === "rehab" &&
+          org.relationships.includes("ssa_provider")
+            ? 90
+            : 0;
         return (
-          bestRelationshipScore(org) + Math.min(laneMatches, 2) * 20 + projectMatch + useMatch + geographyMatch
+          bestRelationshipScore(org) + Math.min(laneMatches, 2) * 20 + projectMatch + useMatch + geographyMatch + ssaFirst
         );
       };
       const relevanceDelta = relevance(b) - relevance(a);

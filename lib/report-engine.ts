@@ -1398,7 +1398,11 @@ function relationshipLabel(org: LocalBusinessSupportOrganization): string {
   return org.relationships.map((r) => labels[r] ?? r).slice(0, 3).join(" + ");
 }
 
-function localSupportDetail(org: LocalBusinessSupportOrganization, communityArea?: string): string {
+function localSupportDetail(
+  org: LocalBusinessSupportOrganization,
+  communityArea?: string,
+  storefrontCorridor?: boolean,
+): string {
   const inferredSupport = org.relationships.includes("cbc_hub")
     ? "Can help with: regional business navigation, referrals, and Chicago Business Center support. Confirm the exact intake path before referring a business."
     : org.relationships.includes("ssa_provider")
@@ -1408,6 +1412,9 @@ function localSupportDetail(org: LocalBusinessSupportOrganization, communityArea
       : "Can help with: business advising, referrals, and incentive-navigation questions. Confirm current capacity before referring a business.";
 
   const details = [
+    storefrontCorridor && org.relationships.includes("ssa_provider")
+      ? "Storefront remodel note: this address falls within a Special Service Area or CCSA corridor. Start with the SSA/corridor operator first — corridor storefront programs, like the Commercial Corridor Storefront Activation (CCSA) grants, are delivered through local corridor organizations. Ask what is active for this corridor right now."
+      : "",
     org.address ? `Address: ${org.address}` : "",
     org.phone ? `Phone: ${org.phone}` : "",
     org.supportTypes ? `Can help with: ${org.supportTypes}` : inferredSupport,
@@ -1430,7 +1437,7 @@ function buildCommunityAssets(
       address: org.address,
       phone: org.phone,
       website: org.website,
-      detail: localSupportDetail(org, localSupport.communityArea),
+      detail: localSupportDetail(org, localSupport.communityArea, localSupport.storefrontCorridor),
       supportLanes: inferSupportLanes(org),
       supportTypes: org.supportTypes,
       serviceGeography: org.serviceGeography,
