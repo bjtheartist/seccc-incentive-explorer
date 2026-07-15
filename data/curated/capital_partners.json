@@ -1,6 +1,6 @@
 {
   "generatedAt": "2026-07-14",
-  "sourceLabel": "Official organization websites reviewed for the Chicago project financing pilot",
+  "sourceLabel": "Official organization websites and the U.S. Treasury CDFI Fund certified list, reviewed for the Chicago project financing pilot",
   "partners": [
     {
       "id": "allies-for-community-business",
@@ -14,7 +14,9 @@
       "lat": 41.884052365004,
       "lon": -87.706133523753,
       "serviceAreas": [
-        { "scope": "citywide" }
+        {
+          "scope": "citywide"
+        }
       ],
       "products": [
         {
@@ -22,7 +24,12 @@
           "productType": "term_loan",
           "productName": "Small business term loan",
           "publicFitNote": "Early, emerging, and established businesses seeking capital for operating growth or a planned business investment.",
-          "projectTypes": ["expansion", "equipment", "relocation", "other"],
+          "projectTypes": [
+            "expansion",
+            "equipment",
+            "relocation",
+            "other"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://a4cb.org/services/loans/",
           "sourceDate": "2026-07-13",
@@ -33,7 +40,10 @@
           "productType": "line_of_credit",
           "productName": "Small business line of credit",
           "publicFitNote": "Businesses seeking flexible capital for operating growth, staffing, or recurring business needs.",
-          "projectTypes": ["expansion", "hiring"],
+          "projectTypes": [
+            "expansion",
+            "hiring"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://a4cb.org/services/loans/",
           "sourceDate": "2026-07-13",
@@ -44,7 +54,10 @@
       "sourceUrl": "https://a4cb.org/services/loans/",
       "sourceDate": "2026-07-13",
       "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
-      "active": true
+      "active": true,
+      "certifications": [
+        "U.S. Treasury CDFI Fund certified"
+      ]
     },
     {
       "id": "accion-opportunity-fund",
@@ -53,16 +66,26 @@
       "website": "https://aofund.org/",
       "intakeUrl": "https://aofund.org/loans/",
       "serviceAreas": [
-        { "scope": "citywide" }
+        {
+          "scope": "citywide"
+        }
       ],
-      "reportTypes": ["site-incentives"],
+      "reportTypes": [
+        "site-incentives"
+      ],
       "products": [
         {
           "id": "aof-small-business-term-loan",
           "productType": "term_loan",
           "productName": "Small business term loan",
           "publicFitNote": "Established Illinois businesses seeking mission-driven financing for expansion, equipment, inventory, marketing, cash-flow stabilization, or another operating-business need.",
-          "projectTypes": ["expansion", "equipment", "hiring", "relocation", "other"],
+          "projectTypes": [
+            "expansion",
+            "equipment",
+            "hiring",
+            "relocation",
+            "other"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://aofund.org/state-licenses-disclosures-and-programs/",
           "sourceDate": "2026-07-14",
@@ -73,7 +96,10 @@
       "sourceUrl": "https://aofund.org/state-licenses-disclosures-and-programs/",
       "sourceDate": "2026-07-14",
       "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
-      "active": true
+      "active": true,
+      "certifications": [
+        "U.S. Treasury CDFI Fund certified (as Accion Opportunity Fund Community Development)"
+      ]
     },
     {
       "id": "pursuit",
@@ -84,16 +110,25 @@
       "phone": "866-466-9232",
       "address": "332 S Michigan Ave, Suite 900, Chicago, IL 60604",
       "serviceAreas": [
-        { "scope": "citywide" }
+        {
+          "scope": "citywide"
+        }
       ],
-      "reportTypes": ["site-incentives"],
+      "reportTypes": [
+        "site-incentives"
+      ],
       "products": [
         {
           "id": "pursuit-illinois-business-loan",
           "productType": "term_loan",
           "productName": "Illinois small business financing",
           "publicFitNote": "Illinois businesses, including startups and established firms, exploring financing for working capital, equipment, inventory, expansion, business acquisition, or owner-occupied commercial real estate.",
-          "projectTypes": ["expansion", "equipment", "relocation", "other"],
+          "projectTypes": [
+            "expansion",
+            "equipment",
+            "relocation",
+            "other"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://pursuitlending.com/business-loans/service-locations/",
           "sourceDate": "2026-07-14",
@@ -104,7 +139,10 @@
       "sourceUrl": "https://pursuitlending.com/business-loans/service-locations/",
       "sourceDate": "2026-07-14",
       "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
-      "active": true
+      "active": true,
+      "certifications": [
+        "U.S. Treasury CDFI Fund certified (as NYBDC Local Development Corporation)"
+      ]
     },
     {
       "id": "jewish-free-loan-chicago",
@@ -116,9 +154,13 @@
       "phone": "312-344-3468",
       "address": "4411 N Ravenswood Ave, Suite 300, Chicago, IL 60640",
       "serviceAreas": [
-        { "scope": "citywide" }
+        {
+          "scope": "citywide"
+        }
       ],
-      "reportTypes": ["site-incentives"],
+      "reportTypes": [
+        "site-incentives"
+      ],
       "requiresProjectContext": true,
       "products": [
         {
@@ -126,7 +168,13 @@
           "productType": "microloan",
           "productName": "Interest-free small business loan",
           "publicFitNote": "Cook County businesses operating for at least four months that are exploring financing for inventory, equipment, working capital, capital improvements, marketing, or another operating need. Published income and guarantor or business-advisor reference requirements apply.",
-          "projectTypes": ["rehab", "expansion", "equipment", "hiring", "other"],
+          "projectTypes": [
+            "rehab",
+            "expansion",
+            "equipment",
+            "hiring",
+            "other"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://jflchicago.org/how-to-apply-small-business-loan",
           "sourceDate": "2026-07-14",
@@ -151,16 +199,24 @@
       "lat": 41.6944402,
       "lon": -87.5991673,
       "serviceAreas": [
-        { "scope": "citywide" }
+        {
+          "scope": "citywide"
+        }
       ],
-      "reportTypes": ["site-incentives"],
+      "reportTypes": [
+        "site-incentives"
+      ],
       "products": [
         {
           "id": "gac-general-lending",
           "productType": "term_loan",
           "productName": "Flexible small business lending",
           "publicFitNote": "Startup and established business owners seeking flexible financing and technical assistance for working capital, inventory, business improvements, or planned growth.",
-          "projectTypes": ["expansion", "relocation", "other"],
+          "projectTypes": [
+            "expansion",
+            "relocation",
+            "other"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://greenwoodarchercapital.org/general-lending",
           "sourceDate": "2026-07-14",
@@ -171,7 +227,9 @@
           "productType": "equipment_financing",
           "productName": "Small business equipment financing",
           "publicFitNote": "Business owners seeking financing to purchase equipment as part of starting or growing an operating business.",
-          "projectTypes": ["equipment"],
+          "projectTypes": [
+            "equipment"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://greenwoodarchercapital.org/general-lending",
           "sourceDate": "2026-07-14",
@@ -182,7 +240,11 @@
           "productType": "working_capital",
           "productName": "Small business working capital",
           "publicFitNote": "Business owners seeking flexible capital for operating needs, inventory, staffing, or growth.",
-          "projectTypes": ["expansion", "hiring", "other"],
+          "projectTypes": [
+            "expansion",
+            "hiring",
+            "other"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://greenwoodarchercapital.org/general-lending",
           "sourceDate": "2026-07-14",
@@ -193,8 +255,14 @@
           "productType": "commercial_real_estate",
           "productName": "Owner-occupied commercial real estate financing",
           "publicFitNote": "Operating businesses seeking to purchase commercial real estate they will occupy; this is not financing for residential investment or real estate-development ventures.",
-          "projectTypes": ["relocation"],
-          "proposedUses": ["commercial", "mixed-use", "industrial-maker"],
+          "projectTypes": [
+            "relocation"
+          ],
+          "proposedUses": [
+            "commercial",
+            "mixed-use",
+            "industrial-maker"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://greenwoodarchercapital.org/faq",
           "sourceDate": "2026-07-14",
@@ -205,7 +273,10 @@
       "sourceUrl": "https://greenwoodarchercapital.org/programs",
       "sourceDate": "2026-07-14",
       "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
-      "active": true
+      "active": true,
+      "certifications": [
+        "U.S. Treasury CDFI Fund certified"
+      ]
     },
     {
       "id": "chicago-neighborhood-initiatives",
@@ -219,9 +290,13 @@
       "lat": 41.6944402,
       "lon": -87.5991673,
       "serviceAreas": [
-        { "scope": "citywide" }
+        {
+          "scope": "citywide"
+        }
       ],
-      "reportTypes": ["dev-feasibility"],
+      "reportTypes": [
+        "dev-feasibility"
+      ],
       "requiresProjectContext": true,
       "products": [
         {
@@ -229,8 +304,17 @@
           "productType": "commercial_real_estate",
           "productName": "Structured finance and development consulting",
           "publicFitNote": "Nonprofit, mission-driven, and community-development sponsors pursuing complex real estate or community-facility projects that may need NMTC structuring, layered financing, development management, or transaction support.",
-          "projectTypes": ["new-construction", "vacant-acquisition", "mixed-use"],
-          "proposedUses": ["community-cultural", "commercial", "industrial-maker", "mixed-use"],
+          "projectTypes": [
+            "new-construction",
+            "vacant-acquisition",
+            "mixed-use"
+          ],
+          "proposedUses": [
+            "community-cultural",
+            "commercial",
+            "industrial-maker",
+            "mixed-use"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://www.cnigroup.org/consulting/",
           "sourceDate": "2026-07-14",
@@ -253,9 +337,13 @@
       "phone": "312-629-0060",
       "address": "333 S Wabash Ave, Suite 2800, Chicago, IL 60604",
       "serviceAreas": [
-        { "scope": "citywide" }
+        {
+          "scope": "citywide"
+        }
       ],
-      "reportTypes": ["dev-feasibility"],
+      "reportTypes": [
+        "dev-feasibility"
+      ],
       "requiresProjectContext": true,
       "products": [
         {
@@ -263,8 +351,18 @@
           "productType": "commercial_real_estate",
           "productName": "Nonprofit facility financing and real estate support",
           "publicFitNote": "Nonprofit organizations planning a facility acquisition, rehabilitation, new construction, affordable-housing project, or other mission-driven real estate project that may need financing, feasibility, site, or development support.",
-          "projectTypes": ["rehab", "new-construction", "mixed-use", "affordable-housing", "vacant-acquisition"],
-          "proposedUses": ["community-cultural", "housing", "mixed-use"],
+          "projectTypes": [
+            "rehab",
+            "new-construction",
+            "mixed-use",
+            "affordable-housing",
+            "vacant-acquisition"
+          ],
+          "proposedUses": [
+            "community-cultural",
+            "housing",
+            "mixed-use"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://iff.org/services/real-estate/",
           "sourceDate": "2026-07-14",
@@ -275,7 +373,10 @@
       "sourceUrl": "https://iff.org/contact-us/locations/illinois/",
       "sourceDate": "2026-07-14",
       "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
-      "active": true
+      "active": true,
+      "certifications": [
+        "U.S. Treasury CDFI Fund certified"
+      ]
     },
     {
       "id": "chicago-community-loan-fund",
@@ -289,7 +390,9 @@
       "lat": 41.882019849846,
       "lon": -87.626770185583,
       "serviceAreas": [
-        { "scope": "citywide" }
+        {
+          "scope": "citywide"
+        }
       ],
       "products": [
         {
@@ -297,7 +400,13 @@
           "productType": "commercial_real_estate",
           "productName": "Mission-driven commercial real estate financing",
           "publicFitNote": "Mission-driven commercial real estate projects that serve or benefit low- to moderate-income communities in the Chicago region.",
-          "projectTypes": ["rehab", "new-construction", "vacant-acquisition", "expansion", "relocation"],
+          "projectTypes": [
+            "rehab",
+            "new-construction",
+            "vacant-acquisition",
+            "expansion",
+            "relocation"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://cclfchicago.org/lending/commercial-retail-loans/",
           "sourceDate": "2026-07-13",
@@ -308,7 +417,10 @@
       "sourceUrl": "https://cclfchicago.org/lending/commercial-retail-loans/",
       "sourceDate": "2026-07-13",
       "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
-      "active": true
+      "active": true,
+      "certifications": [
+        "U.S. Treasury CDFI Fund certified"
+      ]
     },
     {
       "id": "somercor",
@@ -322,7 +434,9 @@
       "lat": 41.87913450862,
       "lon": -87.632207578481,
       "serviceAreas": [
-        { "scope": "citywide" }
+        {
+          "scope": "citywide"
+        }
       ],
       "products": [
         {
@@ -330,7 +444,12 @@
           "productType": "commercial_real_estate",
           "productName": "SBA fixed-asset financing",
           "publicFitNote": "Businesses planning an owner-occupied real estate purchase, construction project, or other long-term fixed-asset investment.",
-          "projectTypes": ["relocation", "expansion", "new-construction", "vacant-acquisition"],
+          "projectTypes": [
+            "relocation",
+            "expansion",
+            "new-construction",
+            "vacant-acquisition"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://somercor.com/sba-504-loans/",
           "sourceDate": "2026-07-13",
@@ -341,7 +460,10 @@
           "productType": "equipment_financing",
           "productName": "SBA equipment financing",
           "publicFitNote": "Businesses planning a substantial equipment or building-systems purchase as part of a long-term fixed-asset investment.",
-          "projectTypes": ["equipment", "energy"],
+          "projectTypes": [
+            "equipment",
+            "energy"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://somercor.com/sba-504-loans/",
           "sourceDate": "2026-07-13",
@@ -366,7 +488,9 @@
       "lat": 41.8786929,
       "lon": -87.6389978,
       "serviceAreas": [
-        { "scope": "citywide" }
+        {
+          "scope": "citywide"
+        }
       ],
       "requiresProjectContext": true,
       "products": [
@@ -375,8 +499,14 @@
           "productType": "commercial_real_estate",
           "productName": "Affordable multifamily rental housing financing",
           "publicFitNote": "Property owners and developers seeking financing to acquire, rehabilitate, refinance, or improve affordable multifamily rental housing, generally buildings with five or more units.",
-          "projectTypes": ["mixed-use", "affordable-housing"],
-          "proposedUses": ["housing", "mixed-use"],
+          "projectTypes": [
+            "mixed-use",
+            "affordable-housing"
+          ],
+          "proposedUses": [
+            "housing",
+            "mixed-use"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://www.cicchicago.com/loans/",
           "sourceDate": "2026-07-13",
@@ -387,7 +517,10 @@
       "sourceUrl": "https://www.cicchicago.com/loans/",
       "sourceDate": "2026-07-13",
       "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
-      "active": true
+      "active": true,
+      "certifications": [
+        "U.S. Treasury CDFI Fund certified"
+      ]
     },
     {
       "id": "chicago-trend",
@@ -400,7 +533,9 @@
       "lat": 41.881940393202,
       "lon": -87.629324275157,
       "serviceAreas": [
-        { "scope": "citywide" }
+        {
+          "scope": "citywide"
+        }
       ],
       "products": [
         {
@@ -408,8 +543,15 @@
           "productType": "commercial_real_estate",
           "productName": "Strategic retail and corridor financing",
           "publicFitNote": "Retailers and developers pursuing strategic retail projects in transitioning or underinvested commercial corridors.",
-          "projectTypes": ["mixed-use", "vacant-acquisition", "new-construction", "relocation"],
-          "industries": ["retail"],
+          "projectTypes": [
+            "mixed-use",
+            "vacant-acquisition",
+            "new-construction",
+            "relocation"
+          ],
+          "industries": [
+            "retail"
+          ],
           "verificationStatus": "verified",
           "sourceUrl": "https://www.chicagotrend.com/financing",
           "sourceDate": "2026-07-13",
@@ -420,6 +562,283 @@
       "sourceUrl": "https://www.chicagotrend.com/financing",
       "sourceDate": "2026-07-13",
       "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "wbdc",
+      "name": "Women's Business Development Center",
+      "partnerType": "mission_lender",
+      "website": "https://www.wbdc.org/",
+      "intakeUrl": "https://www.wbdc.org/en/programs-and-services/access-to-capital/",
+      "phone": "312-853-3477",
+      "address": "8 S Michigan Ave, 4th Floor, Chicago, IL 60603",
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "reportTypes": [
+        "site-incentives"
+      ],
+      "products": [
+        {
+          "id": "wbdc-microloan",
+          "productType": "microloan",
+          "productName": "Microloans and direct small business lending",
+          "publicFitNote": "Small businesses in Northeast Illinois that have not been able to get a bank loan, including zero-interest Kiva microloans and loan-preparation coaching alongside the financing itself.",
+          "projectTypes": [
+            "expansion",
+            "equipment",
+            "hiring",
+            "other"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.wbdc.org/en/programs-and-services/access-to-capital/",
+          "sourceDate": "2026-07-14",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.wbdc.org/en/programs-and-services/access-to-capital/",
+      "sourceDate": "2026-07-14",
+      "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "cinnaire-lending",
+      "name": "Cinnaire Lending",
+      "partnerType": "cdfi",
+      "certifications": [
+        "U.S. Treasury CDFI Fund certified (as Cinnaire Lending Corporation)"
+      ],
+      "website": "https://cinnaire.com/cinnairelending/",
+      "intakeUrl": "https://cinnaire.com/contact/",
+      "phone": "312-957-7283",
+      "address": "225 W Washington St, Suite 1350, Chicago, IL 60606",
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "reportTypes": [
+        "dev-feasibility"
+      ],
+      "requiresProjectContext": true,
+      "products": [
+        {
+          "id": "cinnaire-community-development-lending",
+          "productType": "commercial_real_estate",
+          "productName": "Community development lending",
+          "publicFitNote": "Nonprofit organizations, government agencies, and mission-driven developers financing affordable housing, education, healthcare, community facilities, and economic-development projects, including transactions using Low-Income Housing, New Markets, or Historic tax credits.",
+          "projectTypes": [
+            "new-construction",
+            "rehab",
+            "mixed-use",
+            "affordable-housing",
+            "vacant-acquisition"
+          ],
+          "proposedUses": [
+            "housing",
+            "community-cultural",
+            "mixed-use"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://cinnaire.com/cinnairelending/",
+          "sourceDate": "2026-07-14",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://cinnaire.com/cinnairelending/",
+      "sourceDate": "2026-07-14",
+      "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "c3-impact-fund",
+      "name": "C3 Impact Fund",
+      "partnerType": "cdfi",
+      "certifications": [
+        "U.S. Treasury CDFI Fund certified (as C3 Impact Fund, LLC)"
+      ],
+      "website": "https://c3.fund/",
+      "intakeUrl": "https://c3.fund/",
+      "contactEmail": "support@c3.fund",
+      "address": "222 W Adams St, Ste 3150, Chicago, IL 60606",
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "reportTypes": [
+        "dev-feasibility"
+      ],
+      "requiresProjectContext": true,
+      "products": [
+        {
+          "id": "c3-residential-investor",
+          "productType": "commercial_real_estate",
+          "productName": "Residential investor financing (1-4 units)",
+          "publicFitNote": "Emerging real estate investors revitalizing or creating one-to-four-unit residential properties in low- and moderate-income communities that have historically lacked access to financing.",
+          "projectTypes": [
+            "rehab",
+            "vacant-acquisition",
+            "new-construction"
+          ],
+          "proposedUses": [
+            "housing"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://c3.fund/",
+          "sourceDate": "2026-07-14",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://c3.fund/",
+      "sourceDate": "2026-07-14",
+      "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "first-eagle-bank",
+      "name": "First Eagle Bank",
+      "partnerType": "community_bank",
+      "certifications": [
+        "U.S. Treasury CDFI Fund certified (CDFI bank)"
+      ],
+      "website": "https://www.febank.com/",
+      "intakeUrl": "https://www.febank.com/business/commercial-lending",
+      "phone": "312-850-2900",
+      "address": "1201 W Madison St, Chicago, IL 60607",
+      "lat": 41.8813714,
+      "lon": -87.6574855,
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "products": [
+        {
+          "id": "first-eagle-commercial-re",
+          "productType": "commercial_real_estate",
+          "productName": "Commercial real estate and construction financing",
+          "publicFitNote": "Owner-occupied and investment real estate, including acquisition, refinance, and construction for residential, mixed-use, commercial, and industrial projects, with SBA 504 financing for owner-occupied property.",
+          "projectTypes": [
+            "new-construction",
+            "mixed-use",
+            "relocation",
+            "vacant-acquisition"
+          ],
+          "proposedUses": [
+            "commercial",
+            "mixed-use",
+            "industrial-maker",
+            "housing"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.febank.com/business/commercial-lending",
+          "sourceDate": "2026-07-14",
+          "active": true
+        },
+        {
+          "id": "first-eagle-business-credit",
+          "productType": "line_of_credit",
+          "productName": "Business lines of credit and SBA lending",
+          "publicFitNote": "Working-capital lines of credit and SBA 7(a), SBA Express, and SBA 504 programs for operating businesses.",
+          "projectTypes": [
+            "expansion",
+            "hiring",
+            "other"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.febank.com/business/commercial-lending",
+          "sourceDate": "2026-07-14",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.febank.com/business/commercial-lending",
+      "sourceDate": "2026-07-14",
+      "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
+      "active": true
+    },
+    {
+      "id": "international-bank-of-chicago",
+      "name": "International Bank of Chicago",
+      "partnerType": "community_bank",
+      "certifications": [
+        "U.S. Treasury CDFI Fund certified (CDFI bank)"
+      ],
+      "website": "https://www.inbk.com/",
+      "intakeUrl": "https://www.inbk.com/about/contact-us",
+      "phone": "773-769-2899",
+      "address": "5069 N Broadway St, Chicago, IL 60640",
+      "lat": 41.974826049972,
+      "lon": -87.659748497971,
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "products": [
+        {
+          "id": "ibc-working-capital",
+          "productType": "working_capital",
+          "productName": "Working capital loans",
+          "publicFitNote": "Inventory purchases, receivables, and seasonal cash-flow needs for operating businesses.",
+          "projectTypes": [
+            "expansion",
+            "hiring",
+            "other"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.inbk.com/products/commercial-loans",
+          "sourceDate": "2026-07-14",
+          "active": true
+        },
+        {
+          "id": "ibc-term-loan",
+          "productType": "term_loan",
+          "productName": "Fixed-rate term loans",
+          "publicFitNote": "Equipment purchases and other long-term business investments.",
+          "projectTypes": [
+            "equipment",
+            "expansion"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.inbk.com/products/commercial-loans",
+          "sourceDate": "2026-07-14",
+          "active": true
+        },
+        {
+          "id": "ibc-commercial-re",
+          "productType": "commercial_real_estate",
+          "productName": "Real estate and construction loans",
+          "publicFitNote": "Purchase or refinance of business locations and investment property, plus construction for single- and multi-family residential and commercial projects, including expansions and rehab work.",
+          "projectTypes": [
+            "new-construction",
+            "rehab",
+            "mixed-use",
+            "relocation",
+            "vacant-acquisition"
+          ],
+          "proposedUses": [
+            "commercial",
+            "mixed-use",
+            "housing",
+            "industrial-maker"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.inbk.com/products/commercial-loans",
+          "sourceDate": "2026-07-14",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.inbk.com/products/commercial-loans",
+      "sourceDate": "2026-07-14",
+      "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
       "active": true
     }
   ]

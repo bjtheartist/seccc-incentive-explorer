@@ -72,6 +72,11 @@ export interface CapitalPartner {
   reportTypes?: string[];
   /** Hard-gate specialist organizations to a declared project type or end use. */
   requiresProjectContext?: boolean;
+  /**
+   * Factual, public certifications (e.g. the U.S. Treasury CDFI Fund certified
+   * list). Rendered verbatim as provenance; never an Explorer endorsement.
+   */
+  certifications?: string[];
   verificationStatus: PartnerVerificationStatus;
   sourceUrl?: string;
   sourceDate?: string;
@@ -119,6 +124,8 @@ export interface CapitalPartnerMatch {
   phone?: string;
   productType?: string;
   fitNote?: string;
+  /** Factual public certifications carried through from the registry. */
+  certifications?: string[];
   reason: string;
   provenance: CapitalMatchProvenance;
 }
@@ -426,6 +433,7 @@ function toMatch(candidate: Candidate, request: CapitalMatchRequest): CapitalPar
     ...(product?.publicFitNote && candidate.fitTier < 2
       ? { fitNote: product.publicFitNote }
       : {}),
+    ...(partner.certifications?.length ? { certifications: partner.certifications } : {}),
     reason: buildReason(candidate, request),
     provenance: {
       verificationStatus,
@@ -440,12 +448,22 @@ function toMatch(candidate: Candidate, request: CapitalMatchRequest): CapitalPar
   };
 }
 
+// At equal product fit, mission lenders (CDFIs, loan funds, development
+// advisors) come before commercial banks: banks stay available as alternates.
+const PARTNER_TYPE_PRIORITY: Record<string, number> = {
+  community_bank: 1,
+};
+
 function compareCandidates(a: Candidate, b: Candidate): number {
   if (a.fitTier !== b.fitTier) return a.fitTier - b.fitTier;
   // An explicit end-use match (e.g. a community-cultural development product)
   // is stronger evidence of fit than an industry tag on a general product.
   if (a.proposedUseSpecific !== b.proposedUseSpecific) return a.proposedUseSpecific ? -1 : 1;
   if (a.industrySpecific !== b.industrySpecific) return a.industrySpecific ? -1 : 1;
+  const typePriorityDelta =
+    (PARTNER_TYPE_PRIORITY[a.partner.partnerType] ?? 0) -
+    (PARTNER_TYPE_PRIORITY[b.partner.partnerType] ?? 0);
+  if (typePriorityDelta !== 0) return typePriorityDelta;
   if (a.verification !== b.verification) return a.verification - b.verification;
   if (a.geography.local !== b.geography.local) return a.geography.local ? -1 : 1;
   if (a.distanceKm !== b.distanceKm) return a.distanceKm - b.distanceKm;

@@ -46,6 +46,8 @@ These are engagement and referral-intent measures. They are not represented as a
 - No paid placement or payment for rank.
 - No funding amount or approval promise.
 - Organization information includes a source and verification date.
+- Financing organizations drawn from the U.S. Treasury CDFI Fund certified list carry that certification verbatim as a factual, sourced label. Certification is federal provenance, not an Explorer endorsement, deal role, or approval; copy never calls any organization an "official" financier of a project.
+- Membership-based consumer credit unions on the certified list are not routed to business or development reports; they remain in the outreach directory until a consumer-facing surface exists.
 - Users can suggest a correction or missing organization.
 - The user chooses whether any information is shared.
 - Missing nonessential details remain open questions and do not block an initial conversation.
