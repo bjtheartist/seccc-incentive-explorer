@@ -87,10 +87,27 @@ export function ConciergePageContextBridge({
   lat,
   lon,
   visiblePrograms,
+  localSupportOrganizations,
+  capitalSupportName,
+  capitalSupportReason,
+  capitalSupportFitNote,
+  capitalSupportIntakeUrl,
   suppressed = false,
 }: ConciergePageContext & { suppressed?: boolean }) {
   const setOverride = useContext(ConciergeOverrideContext);
   const ownerRef = useRef(Symbol("concierge-page-context"));
+  const serializedLocalSupport = localSupportOrganizations
+    ? JSON.stringify(localSupportOrganizations)
+    : "";
+  const stableLocalSupportOrganizations = useMemo<
+    ConciergePageContext["localSupportOrganizations"]
+  >(
+    () =>
+      serializedLocalSupport
+        ? (JSON.parse(serializedLocalSupport) as ConciergePageContext["localSupportOrganizations"])
+        : undefined,
+    [serializedLocalSupport]
+  );
 
   useEffect(() => {
     if (!setOverride) return;
@@ -105,6 +122,11 @@ export function ConciergePageContextBridge({
         lat,
         lon,
         visiblePrograms,
+        localSupportOrganizations: stableLocalSupportOrganizations,
+        capitalSupportName,
+        capitalSupportReason,
+        capitalSupportFitNote,
+        capitalSupportIntakeUrl,
       },
       suppressed,
     });
@@ -116,10 +138,15 @@ export function ConciergePageContextBridge({
     address,
     lat,
     lon,
+    capitalSupportFitNote,
+    capitalSupportIntakeUrl,
+    capitalSupportName,
+    capitalSupportReason,
     pageLabel,
     reportSummary,
     route,
     setOverride,
+    stableLocalSupportOrganizations,
     suppressed,
     visiblePrograms,
   ]);

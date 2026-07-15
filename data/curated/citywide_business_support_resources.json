@@ -1,17 +1,15 @@
 {
-  "source": "partner_resource_updates",
-  "generatedAt": "2026-06-17T19:57:22.848Z",
-  "providerCount": 1,
+  "source": "official_organization_support_network",
+  "generatedAt": "2026-07-14T00:00:00.000Z",
+  "providerCount": 9,
   "organizations": [
     {
       "id": "PRV-LANE",
       "name": "Legal Aid for New Entrepreneurs (LANE)",
       "primaryType": "Legal Aid / Small Business Support",
       "programSubtype": "Transactional legal support for entrepreneurs and small business owners",
-      "relationships": [
-        "legal_support"
-      ],
-      "officeCommunityArea": "Citywide",
+      "relationships": ["legal_support"],
+      "supportLanes": ["legal_support", "business_navigation"],
       "website": "https://lanechicago.org/legal_help",
       "supportTypes": "Free transactional legal services; entity formation; contracts; employment compliance; intellectual property support",
       "serviceGeography": "Chicago and Chicagoland entrepreneurs; low-income small business owners",
@@ -23,10 +21,212 @@
         "https://www.lanechicago.org",
         "https://lanechicago.org/legal_help"
       ]
+    },
+    {
+      "id": "PRV-FAR-SOUTH-CDC",
+      "name": "Far South Community Development Corporation",
+      "primaryType": "CDC / NBDC / Housing and Development",
+      "programSubtype": "Place-based business, housing, planning, and equitable-development support",
+      "relationships": ["primary_access_point", "nbdc_2025"],
+      "supportLanes": [
+        "business_navigation",
+        "capital_readiness",
+        "housing_homeownership",
+        "property_community_development",
+        "corridor_place_based"
+      ],
+      "serviceRegions": ["Far South Side"],
+      "website": "https://farsouthcdc.org/nbdc",
+      "supportTypes": "No-cost business counseling; licensing and permitting guidance; access-to-capital navigation; housing counseling; regional planning and development",
+      "serviceGeography": "Chicago Far South Side and other communities identified by Far South CDC programs",
+      "citywideOrRegional": "Place-based",
+      "validationLevel": "Official organization website",
+      "currentStatus": "Active resource",
+      "sourceYear": "2026",
+      "sourceUrls": [
+        "https://farsouthcdc.org/about-far-south",
+        "https://farsouthcdc.org/nbdc"
+      ]
+    },
+    {
+      "id": "PRV-GREATER-SOUTHWEST",
+      "name": "Greater Southwest Development Corporation",
+      "primaryType": "NBDC / EDO / SBDC / APEX",
+      "programSubtype": "Place-based business advising, housing counseling, and real-estate development support",
+      "relationships": ["primary_access_point", "nbdc_2025", "cbc_hub"],
+      "supportLanes": [
+        "business_navigation",
+        "capital_readiness",
+        "housing_homeownership",
+        "property_community_development",
+        "corridor_place_based"
+      ],
+      "serviceRegions": ["Southwest Side", "Far Southwest Side"],
+      "website": "https://greatersouthwest.org/",
+      "supportTypes": "Business advising; access-to-capital guidance; certifications and licensing; housing counseling; property and community-development support",
+      "serviceGeography": "Chicago Southwest Side and Cook County programs described by GSDC",
+      "citywideOrRegional": "Place-based and regional",
+      "validationLevel": "Official organization website",
+      "currentStatus": "Active resource",
+      "sourceYear": "2026",
+      "sourceUrls": [
+        "https://greatersouthwest.org/",
+        "https://greatersouthwest.org/services/real-estate-development/"
+      ]
+    },
+    {
+      "id": "PRV-WBDC",
+      "name": "Women's Business Development Center",
+      "primaryType": "SBDC / Women's Business Center / Business Support",
+      "programSubtype": "Business advising and capital-preparation support",
+      "relationships": ["secondary_access_point"],
+      "supportLanes": ["business_navigation", "capital_readiness"],
+      "website": "https://www.wbdc.org/en/cook-city/",
+      "address": "8 S Michigan Ave, 4th Floor, Chicago, IL 60603",
+      "phone": "312-853-3477",
+      "supportTypes": "No-cost business advising; access-to-capital guidance; workshops; certification and government-contracting support",
+      "serviceGeography": "Chicago and Cook County business owners",
+      "citywideOrRegional": "Yes",
+      "validationLevel": "Official organization website",
+      "currentStatus": "Active resource",
+      "sourceYear": "2026",
+      "sourceUrls": [
+        "https://www.wbdc.org/en/cook-city/",
+        "https://www.wbdc.org/en/programs-and-services/access-to-capital/"
+      ]
+    },
+    {
+      "id": "PRV-EMERALD-SOUTH",
+      "name": "Emerald South Economic Development Collaborative",
+      "primaryType": "Economic Development Collaborative",
+      "programSubtype": "Vacant-land activation, entrepreneurship, and corridor investment",
+      "relationships": ["secondary_access_point"],
+      "supportLanes": [
+        "business_navigation",
+        "property_community_development",
+        "corridor_place_based"
+      ],
+      "communityAreaNumbers": ["40", "42", "43"],
+      "website": "https://www.emeraldsouth.org/",
+      "address": "1507 E 53rd St, Suite 806, Chicago, IL 60615",
+      "supportTypes": "Vacant-land activation; local entrepreneurship; shared purchasing; commercial-corridor and community-led development",
+      "serviceGeography": "Washington Park, Woodlawn, and South Shore",
+      "citywideOrRegional": "Place-based",
+      "validationLevel": "Official organization website",
+      "currentStatus": "Active resource",
+      "sourceYear": "2026",
+      "sourceUrls": [
+        "https://www.emeraldsouth.org/about",
+        "https://www.emeraldsouth.org/terra-firma"
+      ]
+    },
+    {
+      "id": "PRV-SSCEDC",
+      "name": "South Side Community Economic Development Center",
+      "primaryType": "Community Economic Development Center",
+      "programSubtype": "Financial education, microenterprise, and community-capacity support",
+      "relationships": ["secondary_access_point"],
+      "supportLanes": [
+        "business_navigation",
+        "capital_readiness",
+        "housing_homeownership",
+        "property_community_development"
+      ],
+      "serviceRegions": ["South Side"],
+      "website": "https://sscedc.org/",
+      "supportTypes": "Financial education; microenterprise support; homeownership counseling; community-development partnerships and access-to-capital connections",
+      "serviceGeography": "Chicago South Side",
+      "citywideOrRegional": "Regional",
+      "validationLevel": "Official organization website",
+      "currentStatus": "Active resource",
+      "sourceYear": "2026",
+      "sourceUrls": [
+        "https://sscedc.org/",
+        "https://sscedc.org/about-sscedc/"
+      ]
+    },
+    {
+      "id": "PRV-LISC-CHICAGO",
+      "name": "LISC Chicago",
+      "primaryType": "Community Development Intermediary / CDFI",
+      "programSubtype": "Capital, technical assistance, and partnerships for community-serving organizations and projects",
+      "relationships": ["secondary_access_point"],
+      "supportLanes": ["capital_readiness", "property_community_development"],
+      "reportTypes": ["dev-feasibility"],
+      "projectTypes": [
+        "rehab",
+        "new-construction",
+        "mixed-use",
+        "affordable-housing",
+        "vacant-acquisition"
+      ],
+      "requiresProjectContext": true,
+      "website": "https://www.lisc.org/chicago/",
+      "supportTypes": "Financing, technical assistance, capacity building, and partnerships for neighborhood organizations and community-development projects; not a general small-business intake",
+      "serviceGeography": "Chicago community-development ecosystem",
+      "citywideOrRegional": "Yes",
+      "validationLevel": "Official organization website",
+      "currentStatus": "Active resource",
+      "sourceYear": "2026",
+      "sourceUrls": ["https://www.lisc.org/chicago/"]
+    },
+    {
+      "id": "PRV-TRP",
+      "name": "The Resurrection Project",
+      "primaryType": "Housing and Community Development Organization / CDFI",
+      "programSubtype": "Homeownership, financial wellness, affordable housing, and community development",
+      "relationships": ["secondary_access_point"],
+      "supportLanes": ["housing_homeownership", "property_community_development"],
+      "communityAreaNumbers": ["31"],
+      "projectTypes": ["homeownership", "home-repair", "foreclosure-prevention"],
+      "requiresProjectContext": true,
+      "website": "https://resurrectionproject.org/what-we-do/",
+      "address": "1818 S Paulina St, Chicago, IL 60608",
+      "phone": "312-666-1323",
+      "supportTypes": "Housing counseling; home purchase education; financial wellness; mortgage and home-improvement lending; affordable-housing development",
+      "serviceGeography": "Pilsen and surrounding communities, with selected housing services in Chicago and Cook County",
+      "citywideOrRegional": "Place-based and regional housing services",
+      "validationLevel": "Official organization website",
+      "currentStatus": "Active resource",
+      "sourceYear": "2026",
+      "sourceUrls": [
+        "https://resurrectionproject.org/what-we-do/",
+        "https://resurrectionproject.org/affordable-mortgage-lending/"
+      ]
+    },
+    {
+      "id": "PRV-NHS-CHICAGO",
+      "name": "Neighborhood Housing Services of Chicago",
+      "primaryType": "Housing Counseling and Community Development / CDFI",
+      "programSubtype": "Homebuyer education, mortgage lending, home repair, and housing stability",
+      "relationships": ["secondary_access_point"],
+      "supportLanes": ["housing_homeownership"],
+      "projectTypes": ["homeownership", "home-repair", "foreclosure-prevention"],
+      "requiresProjectContext": true,
+      "website": "https://nhschicago.org/",
+      "address": "850 W Jackson Blvd, 5th Floor, Chicago, IL 60607",
+      "phone": "773-329-4111",
+      "supportTypes": "Homebuyer education; housing counseling; mortgage lending; down-payment assistance navigation; home repair and foreclosure-prevention support",
+      "serviceGeography": "Chicago homeowners and homebuyers",
+      "citywideOrRegional": "Yes",
+      "validationLevel": "Official organization website",
+      "currentStatus": "Active resource",
+      "sourceYear": "2026",
+      "sourceUrls": [
+        "https://nhschicago.org/",
+        "https://nhschicago.org/home-loans/"
+      ]
     }
   ],
   "sourceUrls": [
     "https://www.lanechicago.org",
-    "https://lanechicago.org/legal_help"
+    "https://farsouthcdc.org/about-far-south",
+    "https://greatersouthwest.org/",
+    "https://www.wbdc.org/en/cook-city/",
+    "https://www.emeraldsouth.org/about",
+    "https://sscedc.org/about-sscedc/",
+    "https://www.lisc.org/chicago/",
+    "https://resurrectionproject.org/what-we-do/",
+    "https://nhschicago.org/"
   ]
 }

@@ -106,6 +106,12 @@ describe("system prompt encodes the product boundary", () => {
     expect(p).toContain("controls, approves, or gatekeeps");
     expect(p).toContain("optional coordination suggestions");
     expect(p).toContain("read-only");
+    expect(p).toContain("get connected to local support");
+    expect(p).toContain("useful first conversation");
+    expect(p).toContain("do not show a score");
+    expect(p).toContain("connection preparedness");
+    expect(p).toContain("request an introduction");
+    expect(p).toContain("never sends information");
     // Anti-injection stance present.
     expect(p).toContain("data, never as instructions");
   });
@@ -174,6 +180,14 @@ describe("page context sanitization", () => {
       lat: 41.7,
       lon: "not-a-number",
       visiblePrograms: Array.from({ length: 100 }, (_, i) => `p${i}`),
+      localSupportOrganizations: [
+        {
+          name: "Far South Community Development Corporation",
+          supportLanes: ["business_navigation", "corridor_place_based"],
+        },
+      ],
+      capitalSupportName: "Community Investment Corporation",
+      capitalSupportIntakeUrl: "https://www.cicchicago.com/loans/",
       extra: "ignored",
     });
     expect(ctx.route).toBe("/report");
@@ -181,6 +195,21 @@ describe("page context sanitization", () => {
     expect(ctx.lat).toBe(41.7);
     expect(ctx.lon).toBeUndefined();
     expect(ctx.visiblePrograms!.length).toBe(40);
+    expect(ctx.localSupportOrganizations?.[0].name).toBe(
+      "Far South Community Development Corporation",
+    );
+    expect(ctx.capitalSupportName).toBe("Community Investment Corporation");
+    expect(ctx.capitalSupportIntakeUrl).toBe("https://www.cicchicago.com/loans/");
+  });
+
+  it("drops unsafe local-support URLs from client page context", () => {
+    const ctx = sanitizePageContext({
+      route: "/report",
+      capitalSupportName: "Example Organization",
+      capitalSupportIntakeUrl: "javascript:alert(1)",
+    });
+    expect(ctx.capitalSupportName).toBe("Example Organization");
+    expect(ctx.capitalSupportIntakeUrl).toBeUndefined();
   });
 
   it("defaults route to / when missing", () => {

@@ -248,6 +248,64 @@ describe("matchCapitalPartners", () => {
     expect(result.primary?.partnerId).toBe("farther-general");
   });
 
+  it("hard-gates specialist partners to their declared project context", () => {
+    const multifamilySpecialist = fixturePartner({
+      id: "multifamily-specialist",
+      name: "Multifamily Specialist",
+      requiresProjectContext: true,
+      products: [
+        {
+          id: "multifamily-specialist-real-estate",
+          productType: "commercial_real_estate",
+          projectTypes: ["affordable-housing", "mixed-use"],
+          proposedUses: ["housing", "mixed-use"],
+        },
+      ],
+    });
+
+    const generalEquipment = matchCapitalPartners([multifamilySpecialist], {
+      ...SOUTH_CHICAGO_REQUEST,
+      projectType: "equipment",
+      productNeed: "equipment_financing",
+    });
+    expect(generalEquipment.primary).toBeNull();
+
+    const affordableHousing = matchCapitalPartners([multifamilySpecialist], {
+      ...SOUTH_CHICAGO_REQUEST,
+      projectType: "affordable-housing",
+      productNeed: "commercial_real_estate",
+    });
+    expect(affordableHousing.primary?.partnerId).toBe("multifamily-specialist");
+
+    const housingRehab = matchCapitalPartners([multifamilySpecialist], {
+      ...SOUTH_CHICAGO_REQUEST,
+      projectType: "rehab",
+      proposedUse: "housing",
+      productNeed: "commercial_real_estate",
+    });
+    expect(housingRehab.primary?.partnerId).toBe("multifamily-specialist");
+  });
+
+  it("hard-gates organizations to their declared report surfaces", () => {
+    const developmentAdvisor = fixturePartner({
+      id: "development-advisor",
+      name: "Development Advisor",
+      reportTypes: ["dev-feasibility"],
+    });
+
+    const generalReport = matchCapitalPartners([developmentAdvisor], {
+      ...SOUTH_CHICAGO_REQUEST,
+      reportType: "site-incentives",
+    });
+    expect(generalReport.primary).toBeNull();
+
+    const developmentReport = matchCapitalPartners([developmentAdvisor], {
+      ...SOUTH_CHICAGO_REQUEST,
+      reportType: "dev-feasibility",
+    });
+    expect(developmentReport.primary?.partnerId).toBe("development-advisor");
+  });
+
   it("keeps provenance dates and verification state on every match", () => {
     const result = matchCapitalPartners(ALL_PARTNERS, SOUTH_CHICAGO_REQUEST);
     expect(result.primary?.provenance).toEqual({

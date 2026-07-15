@@ -1,10 +1,10 @@
-# Project Financing Resource Pilot
+# Local Support Introduction Pilot
 
 Internal draft for Billy review. Do not circulate yet.
 
 ## Purpose
 
-Chicago Incentive Explorer helps a business or property owner understand which public programs reach a project address. The pilot adds financing resources to explore: when a report involves financing, acquisition, construction, remodeling, expansion, or equipment, it surfaces organizations whose publicly listed service area and capabilities may be relevant to the request.
+Chicago Incentive Explorer helps a business or property owner understand which public programs reach a project address. The pilot adds a path to local support: when a report involves financing, acquisition, construction, remodeling, expansion, or equipment, it surfaces organizations whose publicly listed service area and capabilities may be relevant to the request and helps the owner prepare an introduction.
 
 The Explorer does not endorse an organization, prequalify a borrower, promise funding, estimate an award, or replace underwriting or any public, community, agency, or program review. Each organization decides whether and how it can assist.
 
@@ -12,9 +12,11 @@ The Explorer does not endorse an organization, prequalify a borrower, promise fu
 
 1. The user enters a project address and describes the work they are considering.
 2. The report identifies relevant incentive programs without presenting a top-line dollar estimate.
-3. For a capital-shaped project, the report surfaces one financing resource to explore and provides access to other resources.
-4. The user can visit an organization's public information or intake path or explicitly request an introduction.
-5. No business profile, report, document, or contact information is shared with an organization without the user's consent.
+3. For a capital-shaped project, the report surfaces one local support organization to explore and provides access to other resources.
+4. The guide asks where the project stands and gathers enough context for a useful first conversation without assigning a readiness score or determining viability.
+5. The user can visit an organization's public information or intake path or explicitly request an introduction.
+6. The user reviews the project summary and chooses exactly what may be shared.
+7. No business profile, report, document, or contact information is shared with an organization without the user's consent.
 
 ## Participating Organization Role
 
@@ -46,6 +48,8 @@ These are engagement and referral-intent measures. They are not represented as a
 - Organization information includes a source and verification date.
 - Users can suggest a correction or missing organization.
 - The user chooses whether any information is shared.
+- Missing nonessential details remain open questions and do not block an initial conversation.
+- Public copy says "Get connected to local support" and never labels the user or project as ready, viable, approved, financeable, or eligible.
 
 ## Proposed Four-Week Pilot
 

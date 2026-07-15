@@ -17,6 +17,7 @@
 - Answer questions using official program information, with citations to the program data the engine already loads.
 - Produce a temporary next-step checklist.
 - Explain what information they would need to continue (toward a profile/packet).
+- Ask where a project stands and help the visitor get connected to local support.
 
 ### For signed-in users
 - Build and update their reusable business profile.
@@ -24,13 +25,22 @@
 - Ask for missing information conversationally.
 - Record draft answers for packet requirements.
 - Update applicant-controlled tasks **after explicit confirmation**.
-- Prepare a partner support request (consent-gated, see §3).
+- Prepare an introduction request (consent-gated, see §3).
 - Resume where the business stopped during a previous visit.
 
 ### Example conversation
 > "I want to remodel my storefront and hire three employees."
 
 The concierge identifies the relevant report sections, asks several project questions, populates the business profile, starts the packet, shows the next three tasks, and offers to connect the owner with a local partner.
+
+### Local-support conversation contract
+
+- Public framing: **Get connected to local support**.
+- The guide asks whether the project is exploratory, actively planned, underway, or already connected. This shapes the conversation; it is not a readiness score.
+- Before offering an introduction, the guide gathers the business or property name, project address or service area, project goal, contact method, and main open question. Missing nonessential details remain open questions rather than blockers.
+- Organization suggestions must come from the report's local-support context, another sourced tool result, or the owner. The guide never invents delegate-agency status or government authority.
+- The handoff begins: "You don't need to have every detail figured out before talking with someone. Based on what you've shared, **[Organization]** may be able to help you work through the next step."
+- The guide may prepare the summary, but it never claims the request was sent, accepted, or routed. The owner reviews what will be shared and gives explicit consent in the packet form.
 
 ## 2. What it will not do
 - Decide official eligibility.
@@ -45,7 +55,7 @@ All persona copy stays descriptive and mirrors the shipped report language: "may
 ## 3. Existing code already enforces the hard boundaries (verified 2026-07-12)
 - **Business profile updates** are auth-gated PATCH — `app/api/business-profiles/[id]/route.ts:194`.
 - **Packet task updates** are auth-gated, body-validated, task-scoped PATCH — `app/api/incentive-preparation/[id]/route.ts:220`.
-- **Partner support requests** hard-require `consent === true` or 400 — `app/api/incentive-preparation/[id]/support-request/route.ts:72`.
+- **Introduction requests** hard-require `consent === true` or 400 — `app/api/incentive-preparation/[id]/support-request/route.ts:72`.
 
 The concierge's action tools call these same routes (or the logic behind them) as the authenticated user — it inherits every guard instead of re-implementing them. Tools never get a service-role bypass.
 
@@ -53,7 +63,7 @@ The concierge's action tools call these same routes (or the logic behind them) a
 1. A persistent, contextual Incentive Guide on every application route.
 2. A streaming `/api/concierge` endpoint.
 3. **Read-only tools:** reports, programs, profiles, packets, deadlines, local resources.
-4. **Approval-gated tools:** profile updates, packet changes, support requests — using the AI SDK's native tool-approval flow (human confirms in the UI before the tool executes). Ref: https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-tool-usage
+4. **Approval-gated tools:** profile updates, packet changes, introduction-request preparation — using the AI SDK's native tool-approval flow (human confirms in the UI before the tool executes). Ref: https://ai-sdk.dev/docs/ai-sdk-ui/chatbot-tool-usage
 5. Audit tables: conversation, tool-action, approval, and source-citation records.
 6. Rate limits (IP + session), daily budgets, abuse detection, safe failure behavior (degrade to plain navigation links, never to invented answers).
 7. An evaluation suite using real business questions **and adversarial prompts** (eligibility fishing, dollar-promise fishing, prompt injection via addresses/program names).
@@ -129,7 +139,7 @@ No secrets are committed. Keys are read from \`process.env\` only.
 Per-IP **20 msg/hour** and per-session **40 msg/day** use Upstash when configured, otherwise the existing Neon \`concierge_usage_counters\` table. Both are cross-instance. In-memory is only the final local/outage fallback.
 
 ### Notes for Stage 2 (interface contract)
-- **Tool registry**: \`buildConciergeTools({ pageContext, onToolCall })\` returns the read-only tool map. Stage 2 adds approval-gated action tools (profile update, packet task update, support request) to this same map, using the AI SDK tool-approval flow, and calls the existing auth-gated routes (§3) as the authenticated user — do **not** re-implement guards.
+- **Tool registry**: \`buildConciergeTools({ pageContext, onToolCall })\` returns the read-only tool map. Stage 2 adds approval-gated action tools (profile update, packet task update, introduction-request preparation) to this same map, using the AI SDK tool-approval flow, and calls the existing auth-gated routes (§3) as the authenticated user — do **not** re-implement guards.
 - **Page context**: \`ConciergePageContext\` (\`lib/concierge/types.ts\`) is the client→server contract; extend it (e.g. \`businessProfileId\`, \`packetId\`) rather than adding server fetches.
 - **Auth**: the Stage-1 route is unauthenticated. Stage 2 must read the session (next-auth) in the route to authorize action tools and scope the session/rate-limit keys to the user.
 - **Persistence**: no transcript storage in Stage 1 (open question §8.2). Stage 3 adds the conversation/tool-action/approval/citation audit tables.
@@ -149,7 +159,7 @@ The AI SDK moved to a tool-level / \`streamText\`-level approval model. Confirme
 - **Tool part states rendered**: \`approval-requested\` → approval card; \`approval-responded\`/\`input-*\` → "Working…"; \`output-available\` → success/deep-link; \`output-denied\` → "you declined — nothing changed".
 
 ### Action tools (all \`needsApproval: true\`) — \`lib/concierge/action-tools.ts\`
-\`updateBusinessProfile\`, \`updatePacketTask\`, \`createFoundationPacket\`, \`selectPacketProgram\`, \`prepareSupportRequest\`. Merged into the **same** \`buildConciergeTools\` map only when \`actions\` deps are passed (signed-in + DB configured). Boundary re-asserted: actions PREPARE/ORGANIZE only. \`prepareSupportRequest\` **drafts** and deep-links into the existing consent-gated packet form; it never POSTs the support request (consent checkbox + submit stay in that UI).
+\`updateBusinessProfile\`, \`updatePacketTask\`, \`createFoundationPacket\`, \`selectPacketProgram\`, \`prepareSupportRequest\`. Merged into the **same** \`buildConciergeTools\` map only when \`actions\` deps are passed (signed-in + DB configured). Boundary re-asserted: actions PREPARE/ORGANIZE only. \`prepareSupportRequest\` prepares an introduction request and deep-links into the existing consent-gated packet form; it never POSTs the request (review, consent, and recording stay in that UI).
 
 ### Ownership re-verification (never trust model-supplied ids)
 The session \`userId\` is captured server-side in the route (\`getCurrentUserId()\`) and closed over in the action deps — it is **never** read from tool input. Every executor re-checks ownership with a \`WHERE ... AND user_id = \${userId}\` query (\`ownedProfileId\` / \`ownsPacket\`) **before** acting; an unowned id returns a polite tool result and touches nothing. Actions then COMPOSE with the existing auth-gated routes (they inherit every guard):

@@ -21,8 +21,9 @@
  *
  * Boundary (re-asserted for actions): these tools PREPARE and ORGANIZE. They
  * never certify, submit, or send anything externally. `prepareSupportRequest`
- * only drafts — the consent checkbox and the actual POST stay in the existing
- * consent-gated packet UI, which this tool deep-links to.
+ * prepares an introduction request for review. The consent checkbox and the
+ * actual POST stay in the existing consent-gated packet UI, which this tool
+ * deep-links to.
  */
 import { tool } from "ai";
 import { z } from "zod";
@@ -447,7 +448,7 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
 
     prepareSupportRequest: tool({
       description:
-        "Draft a partner support request for a packet (which organization, what help, which data to share). REQUIRES the user's approval to draft. This ONLY prepares a draft — it never sends anything. The owner reviews it, ticks the consent box, and submits it themselves in the packet's Request-support form.",
+        "Prepare a local-support introduction request for a packet (which organization, what help, and which data to share). REQUIRES the user's approval. Use this only after the owner has enough context for a useful first conversation and explicitly asks to continue. It never sends anything. The owner reviews the summary, chooses the data scope, gives consent, and records the request in the packet.",
       inputSchema: z.object({
         packetId: z.string().max(200).describe("The packet the request is for."),
         targetOrganization: z
@@ -457,7 +458,9 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
         requestedHelp: z
           .string()
           .max(2000)
-          .describe("A short description of the help being requested."),
+          .describe(
+            "A concise project summary covering what the owner is working toward and any open questions. Do not include an eligibility, viability, or readiness conclusion."
+          ),
         suggestedScopes: z
           .array(
             z.enum([
@@ -479,8 +482,8 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
       }) => {
         onToolCall?.("prepareSupportRequest");
         if (!(await ownsPacket(sql, userId, packetId))) return NOT_YOURS;
-        // DRAFT ONLY — never POSTs the support request. Consent + submit stay in
-        // the existing consent-gated packet UI, which we deep-link to.
+        // PREPARATION ONLY — never POSTs the introduction request. Review,
+        // consent, and recording stay in the packet UI, which we deep-link to.
         return {
           ok: true,
           draft: {
@@ -489,10 +492,10 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
             suggestedScopes: suggestedScopes ?? [],
           },
           note:
-            "Here's a draft. Nothing is sent yet — open your packet, review it, tick the consent box, and submit the request yourself.",
+            "Your introduction request is prepared. Nothing was sent. Open your packet to review what will be shared, give consent, and request the introduction.",
           suggestion: resolveNavTarget(
             `/workspace/incentive-preparation/${packetId}`,
-            "Review & submit in your packet"
+            "Review what will be shared"
           ),
         };
       },

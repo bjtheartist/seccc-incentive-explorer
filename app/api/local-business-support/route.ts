@@ -10,6 +10,7 @@ import {
   rankLocalBusinessSupport,
   type LocalBusinessSupportContext,
   type LocalBusinessSupportOrganization,
+  type LocalBusinessSupportRequest,
 } from "@/lib/local-business-support";
 
 interface CommunityAreaProps {
@@ -80,6 +81,9 @@ export async function GET(request: NextRequest) {
   const caParam = params.get("ca")?.trim();
   const latStr = params.get("lat");
   const lonStr = params.get("lon");
+  const reportType = params.get("reportType")?.trim().slice(0, 80) || undefined;
+  const projectType = params.get("projectType")?.trim().slice(0, 80) || undefined;
+  const proposedUse = params.get("proposedUse")?.trim().slice(0, 80) || undefined;
 
   let caNumber: string | null = caParam && /^\d{1,2}$/.test(caParam) ? caParam : null;
   let resolvedName: string | null = null;
@@ -111,9 +115,26 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const supportPool = mergeCitywideBusinessSupport(entry.organizations, citywideSupportFile.organizations);
-  const organizations = rankLocalBusinessSupport(supportPool, 6);
-  const sourceUrls = Array.from(new Set([...(entry.sourceUrls ?? []), ...citywideSupportFile.sourceUrls]));
+  const supportRequest: LocalBusinessSupportRequest = {
+    communityAreaNumber: caNumber,
+    communityArea: entry.communityArea || resolvedName || undefined,
+    region: entry.region,
+    reportType,
+    projectType,
+    proposedUse,
+  };
+  const supportPool = mergeCitywideBusinessSupport(
+    entry.organizations,
+    citywideSupportFile.organizations,
+    supportRequest,
+  );
+  const organizations = rankLocalBusinessSupport(supportPool, 6, supportRequest);
+  const sourceUrls = Array.from(
+    new Set([
+      ...(entry.sourceUrls ?? []),
+      ...organizations.flatMap((org) => org.sourceUrls ?? []),
+    ])
+  );
 
   return NextResponse.json(
     {

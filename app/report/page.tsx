@@ -366,9 +366,14 @@ async function fetchTifFinance(
 async function fetchLocalBusinessSupport(
   lat: number,
   lon: number,
+  state: Pick<WizardState, "reportType" | "projectType" | "proposedUse">,
   signal?: AbortSignal
 ): Promise<LocalBusinessSupportContext | null> {
-  const res = await fetch(`/api/local-business-support?lat=${lat}&lon=${lon}`, {
+  const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
+  if (state.reportType) params.set("reportType", state.reportType);
+  if (state.projectType) params.set("projectType", state.projectType);
+  if (state.proposedUse) params.set("proposedUse", state.proposedUse);
+  const res = await fetch(`/api/local-business-support?${params.toString()}`, {
     cache: "default",
     signal,
   });
@@ -853,10 +858,23 @@ function ReportWizardPage() {
     cachedFetch<StackingRule[]>("/api/stacking").then((d) => { if (d) setStackingRules(d); }).catch(() => {});
     cachedFetch<CommunityAsset[]>(`/api/assets?type=edo,bso`).then((d) => { if (d) setCommunityAssets(d); }).catch(() => {});
     setLocalBusinessSupport(undefined);
-    cachedFetch<LocalBusinessSupportContext>(`/api/local-business-support?lat=${wizardState.lat}&lon=${wizardState.lon}`)
+    const params = new URLSearchParams({
+      lat: String(wizardState.lat),
+      lon: String(wizardState.lon),
+    });
+    if (wizardState.reportType) params.set("reportType", wizardState.reportType);
+    if (wizardState.projectType) params.set("projectType", wizardState.projectType);
+    if (wizardState.proposedUse) params.set("proposedUse", wizardState.proposedUse);
+    cachedFetch<LocalBusinessSupportContext>(`/api/local-business-support?${params.toString()}`)
       .then((d) => setLocalBusinessSupport(d?.organizations?.length ? d : null))
       .catch(() => setLocalBusinessSupport(null));
-  }, [wizardState.lat, wizardState.lon]);
+  }, [
+    wizardState.lat,
+    wizardState.lon,
+    wizardState.projectType,
+    wizardState.proposedUse,
+    wizardState.reportType,
+  ]);
 
   // Load area stats on mount (no lat/lon dependency)
   useEffect(() => {
@@ -1392,7 +1410,11 @@ function ReportWizardPage() {
       }
       let supportForReport = localBusinessSupport;
       if (stateForReport.lat != null && stateForReport.lon != null && supportForReport === undefined) {
-        supportForReport = await fetchLocalBusinessSupport(stateForReport.lat, stateForReport.lon);
+        supportForReport = await fetchLocalBusinessSupport(
+          stateForReport.lat,
+          stateForReport.lon,
+          stateForReport,
+        );
         setLocalBusinessSupport(supportForReport);
       }
       let siteSignalsForReport = siteSignals;
@@ -1568,6 +1590,17 @@ function ReportWizardPage() {
 
   // ── If report is generated, show report display ──────────────────
 
+  const conciergeLocalSupport = report?.communityAssets?.organizations
+    ?.slice(0, 6)
+    .map((organization) => ({
+      name: organization.name,
+      role: organization.role,
+      supportTypes: organization.supportTypes,
+      serviceGeography: organization.serviceGeography,
+      website: organization.website,
+      supportLanes: organization.supportLanes,
+    }));
+
   if (report && compareReport) {
     return (
       <div className="min-h-screen">
@@ -1588,6 +1621,14 @@ function ReportWizardPage() {
           address={report.metadata?.address}
           lat={report.metadata?.lat}
           lon={report.metadata?.lon}
+          localSupportOrganizations={conciergeLocalSupport}
+          capitalSupportName={report.capitalPartnerHandoff?.primary?.name}
+          capitalSupportReason={report.capitalPartnerHandoff?.primary?.reason}
+          capitalSupportFitNote={report.capitalPartnerHandoff?.primary?.fitNote}
+          capitalSupportIntakeUrl={
+            report.capitalPartnerHandoff?.primary?.intakeUrl
+              || report.capitalPartnerHandoff?.primary?.website
+          }
         />
       </div>
     );
@@ -1635,6 +1676,14 @@ function ReportWizardPage() {
           address={report.metadata?.address}
           lat={report.metadata?.lat}
           lon={report.metadata?.lon}
+          localSupportOrganizations={conciergeLocalSupport}
+          capitalSupportName={report.capitalPartnerHandoff?.primary?.name}
+          capitalSupportReason={report.capitalPartnerHandoff?.primary?.reason}
+          capitalSupportFitNote={report.capitalPartnerHandoff?.primary?.fitNote}
+          capitalSupportIntakeUrl={
+            report.capitalPartnerHandoff?.primary?.intakeUrl
+              || report.capitalPartnerHandoff?.primary?.website
+          }
         />
       </div>
     );
