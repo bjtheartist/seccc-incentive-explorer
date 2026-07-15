@@ -87,6 +87,29 @@ function pointInPolygonSafe(
   }
 }
 
+/**
+ * True if the point falls inside ANY of the given static zone layers.
+ * Cheaper than checkStaticZones when only specific layers matter (e.g. the
+ * SSA/CCSA corridor check that reorders local support for storefront work).
+ */
+export async function pointInAnyZone(
+  lat: number,
+  lon: number,
+  keys: string[]
+): Promise<boolean> {
+  const point = turf.point([lon, lat]);
+  for (const key of keys) {
+    const collection = await loadStaticZone(key);
+    const hit = collection.features.some(
+      (feature) =>
+        Boolean(feature.geometry) &&
+        pointInPolygonSafe(point, key, feature as Feature<Polygon | MultiPolygon>)
+    );
+    if (hit) return true;
+  }
+  return false;
+}
+
 export async function checkStaticZones(
   lat: number,
   lon: number

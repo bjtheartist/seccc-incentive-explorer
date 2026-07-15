@@ -363,6 +363,20 @@ async function fetchTifFinance(
   return data.tifFinance ?? null;
 }
 
+/**
+ * Identity of a local-support request. The ranked list depends on the project
+ * context (e.g. SSA providers lead for storefront remodels), so a report
+ * refined with a goal set at the email gate must refetch rather than reuse
+ * the goal-less instant-report result.
+ */
+function localSupportRequestKey(
+  state: Pick<WizardState, "lat" | "lon" | "reportType" | "projectType" | "proposedUse">,
+): string {
+  return [state.lat, state.lon, state.reportType, state.projectType, state.proposedUse]
+    .map((value) => value ?? "")
+    .join("|");
+}
+
 async function fetchLocalBusinessSupport(
   lat: number,
   lon: number,
@@ -850,9 +864,11 @@ function ReportWizardPage() {
   }, [wizardState.lat, wizardState.lon]);
 
   // Load stacking rules + community assets when address has lat/lon
+  const localSupportKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!wizardState.lat || !wizardState.lon) {
       setLocalBusinessSupport(undefined);
+      localSupportKeyRef.current = null;
       return;
     }
     cachedFetch<StackingRule[]>("/api/stacking").then((d) => { if (d) setStackingRules(d); }).catch(() => {});
@@ -865,6 +881,13 @@ function ReportWizardPage() {
     if (wizardState.reportType) params.set("reportType", wizardState.reportType);
     if (wizardState.projectType) params.set("projectType", wizardState.projectType);
     if (wizardState.proposedUse) params.set("proposedUse", wizardState.proposedUse);
+    localSupportKeyRef.current = localSupportRequestKey({
+      lat: wizardState.lat,
+      lon: wizardState.lon,
+      reportType: wizardState.reportType,
+      projectType: wizardState.projectType,
+      proposedUse: wizardState.proposedUse,
+    });
     cachedFetch<LocalBusinessSupportContext>(`/api/local-business-support?${params.toString()}`)
       .then((d) => setLocalBusinessSupport(d?.organizations?.length ? d : null))
       .catch(() => setLocalBusinessSupport(null));
@@ -1409,13 +1432,19 @@ function ReportWizardPage() {
         setNeighborhoodEconomicsZip(reportZip);
       }
       let supportForReport = localBusinessSupport;
-      if (stateForReport.lat != null && stateForReport.lon != null && supportForReport === undefined) {
+      const supportKey = localSupportRequestKey(stateForReport);
+      if (
+        stateForReport.lat != null &&
+        stateForReport.lon != null &&
+        (supportForReport === undefined || localSupportKeyRef.current !== supportKey)
+      ) {
         supportForReport = await fetchLocalBusinessSupport(
           stateForReport.lat,
           stateForReport.lon,
           stateForReport,
         );
         setLocalBusinessSupport(supportForReport);
+        localSupportKeyRef.current = supportKey;
       }
       let siteSignalsForReport = siteSignals;
       if (stateForReport.lat != null && stateForReport.lon != null && siteSignalsForReport === undefined) {

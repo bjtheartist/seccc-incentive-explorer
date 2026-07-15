@@ -12,6 +12,7 @@ import {
   type LocalBusinessSupportOrganization,
   type LocalBusinessSupportRequest,
 } from "@/lib/local-business-support";
+import { pointInAnyZone } from "@/lib/zones-check";
 
 interface CommunityAreaProps {
   community?: string;
@@ -88,15 +89,15 @@ export async function GET(request: NextRequest) {
   let caNumber: string | null = caParam && /^\d{1,2}$/.test(caParam) ? caParam : null;
   let resolvedName: string | null = null;
 
-  if (!caNumber && latStr != null && lonStr != null) {
-    const lat = Number(latStr);
-    const lon = Number(lonStr);
-    if (Number.isFinite(lat) && Number.isFinite(lon)) {
-      const resolved = resolveCommunityArea(lat, lon);
-      if (resolved) {
-        caNumber = resolved.number;
-        resolvedName = resolved.name;
-      }
+  const lat = latStr != null ? Number(latStr) : Number.NaN;
+  const lon = lonStr != null ? Number(lonStr) : Number.NaN;
+  const hasPoint = Number.isFinite(lat) && Number.isFinite(lon);
+
+  if (!caNumber && hasPoint) {
+    const resolved = resolveCommunityArea(lat, lon);
+    if (resolved) {
+      caNumber = resolved.number;
+      resolvedName = resolved.name;
     }
   }
 
@@ -115,6 +116,19 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  // CCSA and corridor storefront programs run through SSA/corridor operators:
+  // for a storefront remodel, check whether the address sits inside an SSA or
+  // CCSA corridor so the SSA provider can lead the support list.
+  const storefrontParam = params.get("storefrontCorridor");
+  let storefrontCorridor = storefrontParam === "1" || storefrontParam === "true";
+  if (!storefrontCorridor && projectType === "rehab" && hasPoint) {
+    try {
+      storefrontCorridor = await pointInAnyZone(lat, lon, ["ssa", "ccsa"]);
+    } catch {
+      // zone data unavailable — skip the corridor reordering rather than fail
+    }
+  }
+
   const supportRequest: LocalBusinessSupportRequest = {
     communityAreaNumber: caNumber,
     communityArea: entry.communityArea || resolvedName || undefined,
@@ -122,6 +136,7 @@ export async function GET(request: NextRequest) {
     reportType,
     projectType,
     proposedUse,
+    storefrontCorridor,
   };
   const supportPool = mergeCitywideBusinessSupport(
     entry.organizations,
@@ -142,6 +157,7 @@ export async function GET(request: NextRequest) {
       communityArea: entry.communityArea || resolvedName || "",
       organizations,
       organizationCount: organizations.length,
+      storefrontCorridor,
       sourceUrls,
     },
     {

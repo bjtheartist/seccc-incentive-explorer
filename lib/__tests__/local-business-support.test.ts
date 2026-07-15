@@ -134,4 +134,37 @@ describe("rankLocalBusinessSupport", () => {
     expect(names).not.toContain("Neighborhood Housing Services of Chicago");
     expect(names).not.toContain("The Resurrection Project");
   });
+
+  it("puts the SSA provider first for storefront remodels inside an SSA/CCSA corridor", () => {
+    const southChicago = supportData.byCommunityArea["46"];
+    const base = {
+      communityAreaNumber: "46",
+      communityArea: "South Chicago",
+      region: "Southeast Side",
+      reportType: "site-incentives",
+    };
+    const rank = (request: Parameters<typeof rankLocalBusinessSupport>[2]) =>
+      rankLocalBusinessSupport(
+        mergeCitywideBusinessSupport(
+          southChicago.organizations as unknown as LocalBusinessSupportOrganization[],
+          citywideSupportData.organizations as unknown as LocalBusinessSupportOrganization[],
+          request,
+        ),
+        6,
+        request,
+      ).map((org) => org.name);
+
+    // Storefront remodel inside an SSA/CCSA corridor: the SSA provider (the
+    // CCSA/corridor-program front door) leads, above the primary access point.
+    const corridorRemodel = rank({ ...base, projectType: "rehab", storefrontCorridor: true });
+    expect(corridorRemodel[0]).toBe("South Chicago Parents and Friends, Inc.");
+
+    // Same remodel outside a corridor: default ordering holds.
+    const plainRemodel = rank({ ...base, projectType: "rehab", storefrontCorridor: false });
+    expect(plainRemodel[0]).toBe("Southeast Chicago Chamber of Commerce");
+
+    // A different project inside the corridor does not trigger the reorder.
+    const corridorEquipment = rank({ ...base, projectType: "equipment", storefrontCorridor: true });
+    expect(corridorEquipment[0]).toBe("Southeast Chicago Chamber of Commerce");
+  });
 });
