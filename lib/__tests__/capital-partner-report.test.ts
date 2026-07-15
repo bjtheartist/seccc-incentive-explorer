@@ -149,4 +149,49 @@ describe("capitalPartnerHandoffForReport", () => {
     expect(serialized).not.toMatch(/score|rank|minUsd|maxUsd|amount|dollar/i);
     expect(serialized).not.toContain("$");
   });
+
+  it("carries the Treasury certification factually and never invents one", () => {
+    const expansion = capitalPartnerHandoffForReport(state("expansion"), context);
+    expect(expansion?.primary?.partnerId).toBe("greenwood-archer-capital");
+    expect(expansion?.primary?.certifications?.join(" ")).toContain(
+      "U.S. Treasury CDFI Fund certified",
+    );
+
+    const retailMixedUse = capitalPartnerHandoffForReport(state("mixed-use"), context);
+    expect(retailMixedUse?.primary?.partnerId).toBe("chicago-trend");
+    expect(retailMixedUse?.primary?.certifications).toBeUndefined();
+  });
+
+  it("keeps CDFI banks behind mission lenders at equal product fit", () => {
+    const expansion = capitalPartnerHandoffForReport(state("expansion"), context);
+    const matches = [expansion?.primary, ...(expansion?.alternates ?? [])].filter(
+      (match): match is NonNullable<typeof match> => Boolean(match),
+    );
+    for (const match of matches.filter((m) => m.partnerType === "community_bank")) {
+      expect(match.partnerId).not.toBe(expansion?.primary?.partnerId);
+    }
+  });
+
+  it("reserves investor and community-development lenders for development reports", () => {
+    const equipment = capitalPartnerHandoffForReport(state("equipment"), context);
+    const equipmentIds = [
+      equipment?.primary?.partnerId,
+      ...(equipment?.alternates.map((partner) => partner.partnerId) ?? []),
+    ];
+    expect(equipmentIds).not.toContain("c3-impact-fund");
+    expect(equipmentIds).not.toContain("cinnaire-lending");
+
+    const housingDevelopment = capitalPartnerHandoffForReport(
+      {
+        ...state("rehab", [], "dev-feasibility"),
+        proposedUse: "housing",
+      },
+      context,
+    );
+    const developmentIds = [
+      housingDevelopment?.primary?.partnerId,
+      ...(housingDevelopment?.alternates.map((partner) => partner.partnerId) ?? []),
+    ];
+    expect(developmentIds).toContain("c3-impact-fund");
+  });
 });

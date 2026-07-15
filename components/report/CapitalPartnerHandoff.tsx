@@ -88,6 +88,11 @@ export function CapitalPartnerHandoff({
           <h2 className="font-editorial text-[24px] leading-tight text-[#0C1B33] sm:text-[28px]">
             {primary.name} may be able to help with the next step
           </h2>
+          {primary.certifications?.length ? (
+            <p className="mt-1.5 text-[11px] font-medium tracking-wide text-[#0D9488]">
+              {primary.certifications.join(" · ")}
+            </p>
+          ) : null}
           <p className="mt-2 text-[13px] leading-relaxed text-[#0C1B33]/55">
             You don&apos;t need to have every detail figured out before talking with someone. Based on the project information in this report, this organization may be able to help you work through the next step.
           </p>
