@@ -24,7 +24,9 @@ if (!process.env.DATABASE_URL) {
 }
 
 // SE-Chicago ZIPs only.
-const ZIPS = ["60617", "60619", "60649"];
+const ZIPS = (process.env.SYNC_ZIPS
+  ? process.env.SYNC_ZIPS.split(",").map((z) => z.trim()).filter((z) => /^\d{5}$/.test(z))
+  : null) ?? ["60617", "60619", "60649"];
 
 function printResult(result: IngestResult) {
   console.log(`\n── ${result.sourceKey} ──`);
@@ -41,9 +43,14 @@ async function main() {
   console.log("=== Condition Sync ===\n");
   console.log(`ZIPs: ${ZIPS.join(", ")}`);
 
-  printResult(await runIngest(permitsAdapter, { zips: ZIPS }));
-  printResult(await runIngest(violationsAdapter, { zips: ZIPS }));
-  printResult(await runIngest(serviceRequestsAdapter, { zips: ZIPS }));
+  // SYNC_CONDITION_ADAPTERS=violations (csv of permits,violations,requests)
+  // lets targeted refreshes skip sources they don't consume — the corridor
+  // owners export only reads building_violations.
+  const enabled = (process.env.SYNC_CONDITION_ADAPTERS ?? "permits,violations,requests")
+    .split(",").map((a) => a.trim());
+  if (enabled.includes("permits")) printResult(await runIngest(permitsAdapter, { zips: ZIPS }));
+  if (enabled.includes("violations")) printResult(await runIngest(violationsAdapter, { zips: ZIPS }));
+  if (enabled.includes("requests")) printResult(await runIngest(serviceRequestsAdapter, { zips: ZIPS }));
 
   console.log("\nDone!");
 }
