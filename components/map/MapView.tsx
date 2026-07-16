@@ -31,8 +31,13 @@ import {
   COMMUNITY_AREAS_URL, CHICAGO_ZONING_URL, EMPTY_FC, PARCELS_QUERY_BASE,
   fetchZoneGeoJSON,
   POI_LAYERS, jsonToGeoJSON, MAP_PRESETS,
+  buildOwnerClusterPopupHtml,
   type AreaStats, DEFAULT_STATS,
 } from "./map-helpers";
+import {
+  loadStoredOwnerClustersVisible,
+  storeOwnerClustersVisible,
+} from "@/lib/owner-clusters-toggle";
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -101,8 +106,18 @@ export default function MapView() {
   // the layer itself only ever fetches /api/owner-file/geo once per session
   // when toggled on, since the source dataset is a small nine-ZIP pilot
   // export rather than a citywide live query like vacant properties.
+  // The toggle is sessionStorage-backed (lib/owner-clusters-toggle.ts):
+  // the demo flow hard-navigates to /report (handleGenerateSnapshot) and
+  // back, remounting MapView and resetting useState — without persistence
+  // the admin layer silently unchecked on every report round-trip.
   const [adminSessionActive, setAdminSessionActive] = useState(false);
-  const [ownerClustersVisible, setOwnerClustersVisible] = useState(false);
+  const [ownerClustersVisible, setOwnerClustersVisible] = useState<boolean>(() =>
+    loadStoredOwnerClustersVisible()
+  );
+  const setOwnerClustersVisiblePersistent = useCallback((value: boolean) => {
+    setOwnerClustersVisible(value);
+    storeOwnerClustersVisible(value);
+  }, []);
   const [ownerClustersLoaded, setOwnerClustersLoaded] = useState(false);
   const [ownerClustersLoading, setOwnerClustersLoading] = useState(false);
   const [ownerClustersError, setOwnerClustersError] = useState<string | null>(null);
@@ -1230,25 +1245,9 @@ export default function MapView() {
       map.on("click", "owner-clusters-unclustered", (e) => {
         if (!e.features?.length) return;
         const p = e.features[0].properties || {};
-        const ownerType = p.ownerType as OwnerType | null;
-        const ownerLabel = ownerType ? (OWNER_TYPE_LABELS[ownerType] || ownerType) : OWNER_TYPE_LABELS.unknown;
-        const ownerColor = ownerType ? (OWNER_TYPE_COLORS[ownerType] || "#9CA3AF") : "#9CA3AF";
-        const zip = p.zip || "";
-        const clusterKey = p.clusterKey || "";
-        const ownerFileHref = `/admin/owner-files/${zip}/${encodeURIComponent(clusterKey)}`;
-
         new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" })
           .setLngLat(e.lngLat)
-          .setHTML(
-            `<div style="font-family:Inter,sans-serif">
-              <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#7C3AED;margin-bottom:4px;font-weight:500">Admin · Ownership Cluster</div>
-              <div style="font-size:14px;font-weight:600;color:#0C1B33">${p.ownerName || "Owner record unavailable"}</div>
-              <span style="display:inline-block;margin-top:4px;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${ownerLabel}</span>
-              <div style="font-size:11px;color:#5A6478;margin-top:6px">${p.clusterVacantCount ?? 0} of ${p.clusterParcelCount ?? 0} parcels vacant</div>
-              ${p.address ? `<div style="font-size:12px;color:#0C1B33;margin-top:3px">${p.address}</div>` : ""}
-              <a href="${ownerFileHref}" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">Open Owner File &rarr;</a>
-            </div>`
-          )
+          .setHTML(buildOwnerClusterPopupHtml(p))
           .addTo(map);
       });
 
@@ -1994,7 +1993,7 @@ export default function MapView() {
           onSetClassRefOpen={setClassRefOpen}
           onSetInspectMode={setInspectMode}
           onApplyPreset={applyPreset}
-          onSetOwnerClustersVisible={setOwnerClustersVisible}
+          onSetOwnerClustersVisible={setOwnerClustersVisiblePersistent}
         />
       )}
 
