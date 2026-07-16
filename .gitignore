@@ -45,6 +45,9 @@ yarn-error.log*
 # video (Remotion project, large)
 /video
 
+# generated PDF previews (scripts/preview-report-pdf.ts, scripts/smoke-report.ts)
+/output/
+
 # raw / processed data (AirDropped source files — large, not for git)
 /data/raw/
 /data/processed/
