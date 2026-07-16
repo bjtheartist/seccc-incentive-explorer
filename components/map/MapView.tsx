@@ -96,6 +96,17 @@ export default function MapView() {
   const vacantTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ownerFilter, setOwnerFilter] = useState<OwnerType | "all">("all");
 
+  // Admin-gated ownership-cluster layer (Owner Files, PRs #65/#67/#68).
+  // adminSessionActive comes from a one-time /api/owner-file/session probe;
+  // the layer itself only ever fetches /api/owner-file/geo once per session
+  // when toggled on, since the source dataset is a small nine-ZIP pilot
+  // export rather than a citywide live query like vacant properties.
+  const [adminSessionActive, setAdminSessionActive] = useState(false);
+  const [ownerClustersVisible, setOwnerClustersVisible] = useState(false);
+  const [ownerClustersLoaded, setOwnerClustersLoaded] = useState(false);
+  const [ownerClustersLoading, setOwnerClustersLoading] = useState(false);
+  const [ownerClustersError, setOwnerClustersError] = useState<string | null>(null);
+
   // Polygon draw tool
   const drawRef = useRef<MapboxDraw | null>(null);
   const [drawMode, setDrawMode] = useState(false);
@@ -109,6 +120,16 @@ export default function MapView() {
       .catch(() => cachedFetch<Program[]>("/data/programs.json"))
       .then(setAllPrograms)
       .catch(() => {});
+  }, []);
+
+  // Owner Files admin session probe (once, independent of map load) — gates
+  // whether the ADMIN legend section renders at all.
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch("/api/owner-file/session", { signal: controller.signal })
+      .then((res) => setAdminSessionActive(res.status === 204))
+      .catch(() => setAdminSessionActive(false));
+    return () => controller.abort();
   }, []);
 
 
@@ -1125,6 +1146,131 @@ export default function MapView() {
       map.on("mouseenter", "vacant-unclustered", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "vacant-unclustered", () => { map.getCanvas().style.cursor = ""; });
 
+      /* ── Admin ownership-cluster layer (Owner Files, PRs #65/#67/#68) ──
+         Gated: only rendered/toggleable when the ADMIN legend section is
+         visible (adminSessionActive), and only fetched when toggled on —
+         see the "Admin ownership-cluster loading" effect below. Mirrors the
+         Vacant Properties layer above (clustered GeoJSON, unclustered circles,
+         cluster zoom-in, popup) so it behaves identically at the map level;
+         added once here inside map.on("load", ...), same as vacant-properties,
+         since this app has no basemap/style switcher to survive. */
+      map.addSource("owner-clusters", {
+        type: "geojson",
+        data: EMPTY_FC,
+        cluster: true,
+        clusterMaxZoom: 14,
+        clusterRadius: 50,
+      });
+
+      map.addLayer({
+        id: "owner-clusters-clusters",
+        type: "circle",
+        source: "owner-clusters",
+        filter: ["has", "point_count"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": [
+            "step", ["get", "point_count"],
+            "#7C3AED",
+            10, "#6D28D9",
+            50, "#5B21B6",
+          ],
+          "circle-radius": [
+            "step", ["get", "point_count"],
+            15, 10, 20, 50, 28,
+          ],
+          "circle-opacity": 0.85,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+
+      map.addLayer({
+        id: "owner-clusters-cluster-count",
+        type: "symbol",
+        source: "owner-clusters",
+        filter: ["has", "point_count"],
+        layout: {
+          visibility: "none",
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+          "text-size": 12,
+        },
+        paint: { "text-color": "#ffffff" },
+      });
+
+      map.addLayer({
+        id: "owner-clusters-unclustered",
+        type: "circle",
+        source: "owner-clusters",
+        filter: ["!", ["has", "point_count"]],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": [
+            "match", ["get", "ownerType"],
+            "city_public", OWNER_TYPE_COLORS.city_public,
+            "out_of_state", OWNER_TYPE_COLORS.out_of_state,
+            "corporate_llc", OWNER_TYPE_COLORS.corporate_llc,
+            "local_private", OWNER_TYPE_COLORS.local_private,
+            OWNER_TYPE_COLORS.unknown,
+          ],
+          // sqrt scale on clusterVacantCount, clamped 4–16px (interpolate
+          // clamps to the first/last stop output outside the input domain).
+          "circle-radius": [
+            "interpolate", ["linear"], ["sqrt", ["get", "clusterVacantCount"]],
+            1, 4,
+            8, 16,
+          ],
+          "circle-opacity": ["case", ["==", ["get", "vacant"], true], 1, 0.35],
+          "circle-stroke-width": 1.5,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+
+      map.on("click", "owner-clusters-unclustered", (e) => {
+        if (!e.features?.length) return;
+        const p = e.features[0].properties || {};
+        const ownerType = p.ownerType as OwnerType | null;
+        const ownerLabel = ownerType ? (OWNER_TYPE_LABELS[ownerType] || ownerType) : OWNER_TYPE_LABELS.unknown;
+        const ownerColor = ownerType ? (OWNER_TYPE_COLORS[ownerType] || "#9CA3AF") : "#9CA3AF";
+        const zip = p.zip || "";
+        const clusterKey = p.clusterKey || "";
+        const ownerFileHref = `/admin/owner-files/${zip}/${encodeURIComponent(clusterKey)}`;
+
+        new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" })
+          .setLngLat(e.lngLat)
+          .setHTML(
+            `<div style="font-family:Inter,sans-serif">
+              <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#7C3AED;margin-bottom:4px;font-weight:500">Admin · Ownership Cluster</div>
+              <div style="font-size:14px;font-weight:600;color:#0C1B33">${p.ownerName || "Owner record unavailable"}</div>
+              <span style="display:inline-block;margin-top:4px;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${ownerLabel}</span>
+              <div style="font-size:11px;color:#5A6478;margin-top:6px">${p.clusterVacantCount ?? 0} of ${p.clusterParcelCount ?? 0} parcels vacant</div>
+              ${p.address ? `<div style="font-size:12px;color:#0C1B33;margin-top:3px">${p.address}</div>` : ""}
+              <a href="${ownerFileHref}" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">Open Owner File &rarr;</a>
+            </div>`
+          )
+          .addTo(map);
+      });
+
+      map.on("click", "owner-clusters-clusters", (e) => {
+        const features = map.queryRenderedFeatures(e.point, { layers: ["owner-clusters-clusters"] });
+        if (!features.length) return;
+        const clusterId = features[0].properties?.cluster_id;
+        const src = map.getSource("owner-clusters") as mapboxgl.GeoJSONSource;
+        src.getClusterExpansionZoom(clusterId, (err, zoom) => {
+          if (err) return;
+          map.easeTo({
+            center: (features[0].geometry as GeoJSON.Point).coordinates as [number, number],
+            zoom: zoom!,
+          });
+        });
+      });
+
+      map.on("mouseenter", "owner-clusters-clusters", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "owner-clusters-clusters", () => { map.getCanvas().style.cursor = ""; });
+      map.on("mouseenter", "owner-clusters-unclustered", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "owner-clusters-unclustered", () => { map.getCanvas().style.cursor = ""; });
+
       // ── Polygon draw control ──
       const draw = new MapboxDraw({
         displayControlsDefault: false,
@@ -1685,6 +1831,58 @@ export default function MapView() {
     };
   }, [vacantVisible, loaded, vacantLoaded, ownerFilter]);
 
+  /* ── Admin ownership-cluster layer: toggle + one-time fetch ──
+     Unlike vacant properties (a citywide live query re-fetched on every
+     moveend), the ownership-cluster dataset is a small nine-ZIP admin-only
+     pilot export — fetched once per toggle-on rather than following the
+     viewport, then cached client-side (ownerClustersLoaded) until the
+     component unmounts. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+
+    const vis = ownerClustersVisible ? "visible" : "none";
+    if (map.getLayer("owner-clusters-clusters")) map.setLayoutProperty("owner-clusters-clusters", "visibility", vis);
+    if (map.getLayer("owner-clusters-cluster-count")) map.setLayoutProperty("owner-clusters-cluster-count", "visibility", vis);
+    if (map.getLayer("owner-clusters-unclustered")) map.setLayoutProperty("owner-clusters-unclustered", "visibility", vis);
+
+    if (!adminSessionActive || !ownerClustersVisible) {
+      if (!ownerClustersVisible) {
+        const src = map.getSource("owner-clusters") as mapboxgl.GeoJSONSource | undefined;
+        if (src) src.setData(EMPTY_FC);
+        setOwnerClustersLoaded(false);
+      }
+      return;
+    }
+
+    if (ownerClustersLoaded) return;
+
+    const controller = new AbortController();
+    setOwnerClustersLoading(true);
+    setOwnerClustersError(null);
+
+    fetch("/api/owner-file/geo", { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`Ownership-cluster fetch failed (${res.status})`);
+        return res.json();
+      })
+      .then((data: GeoJSON.FeatureCollection) => {
+        const m = mapRef.current;
+        if (!m || data?.type !== "FeatureCollection") return;
+        const src = m.getSource("owner-clusters") as mapboxgl.GeoJSONSource | undefined;
+        if (src) src.setData(data);
+        setOwnerClustersLoaded(true);
+      })
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+        console.warn("[OwnerClusters] fetch error:", err);
+        setOwnerClustersError("Ownership clusters could not be loaded.");
+      })
+      .finally(() => setOwnerClustersLoading(false));
+
+    return () => controller.abort();
+  }, [ownerClustersVisible, adminSessionActive, loaded, ownerClustersLoaded]);
+
   return (
     <div className="relative w-full h-[calc(100dvh-56px)] md:h-[calc(100vh-220px)] min-h-[520px]">
       {/* Map container */}
@@ -1779,6 +1977,10 @@ export default function MapView() {
           classRefOpen={classRefOpen}
           inspectMode={inspectMode}
           activePreset={activePreset}
+          adminSessionActive={adminSessionActive}
+          ownerClustersVisible={ownerClustersVisible}
+          ownerClustersLoading={ownerClustersLoading}
+          ownerClustersError={ownerClustersError}
           onClose={() => setLegendOpen(false)}
           onToggleZone={toggleZone}
           onTogglePoi={togglePoi}
@@ -1792,6 +1994,7 @@ export default function MapView() {
           onSetClassRefOpen={setClassRefOpen}
           onSetInspectMode={setInspectMode}
           onApplyPreset={applyPreset}
+          onSetOwnerClustersVisible={setOwnerClustersVisible}
         />
       )}
 

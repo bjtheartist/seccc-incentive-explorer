@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Lock } from "lucide-react";
 import {
   ZONE_COLORS,
   ZONE_LABELS,
@@ -35,6 +36,11 @@ interface MapLegendPanelProps {
   classRefOpen: boolean;
   inspectMode: boolean;
   activePreset: string | null;
+  /** Owner Files admin session probe result (components/map/MapView.tsx probes /api/owner-file/session once on mount). Gates the entire ADMIN section. */
+  adminSessionActive: boolean;
+  ownerClustersVisible: boolean;
+  ownerClustersLoading?: boolean;
+  ownerClustersError?: string | null;
   onClose: () => void;
   onToggleZone: (key: string) => void;
   onTogglePoi: (key: string) => void;
@@ -48,6 +54,7 @@ interface MapLegendPanelProps {
   onSetClassRefOpen: React.Dispatch<React.SetStateAction<boolean>>;
   onSetInspectMode: React.Dispatch<React.SetStateAction<boolean>>;
   onApplyPreset: (presetId: string) => void;
+  onSetOwnerClustersVisible: (value: boolean) => void;
 }
 
 export default function MapLegendPanel({
@@ -62,6 +69,10 @@ export default function MapLegendPanel({
   classRefOpen,
   inspectMode,
   activePreset,
+  adminSessionActive,
+  ownerClustersVisible,
+  ownerClustersLoading,
+  ownerClustersError,
   onClose,
   onToggleZone,
   onTogglePoi,
@@ -75,6 +86,7 @@ export default function MapLegendPanel({
   onSetClassRefOpen,
   onSetInspectMode,
   onApplyPreset,
+  onSetOwnerClustersVisible,
 }: MapLegendPanelProps) {
   return (
     <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-3 md:right-auto z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100vh-280px)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
@@ -450,6 +462,52 @@ export default function MapLegendPanel({
           </div>
         )}
       </div>
+
+      {/* ADMIN — Ownership clusters (Owner Files, gated on adminSessionActive; PRs #65/#67/#68) */}
+      {adminSessionActive && (
+        <>
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 pt-3 pb-3">
+            <div className="mb-3 flex items-center gap-1.5">
+              <Lock className="h-2.5 w-2.5 text-[#B45309]" aria-hidden="true" />
+              <span className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#B45309]">
+                Admin
+              </span>
+            </div>
+            <label className="flex items-center gap-2.5 py-1 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={ownerClustersVisible}
+                onChange={() => onSetOwnerClustersVisible(!ownerClustersVisible)}
+                className="sr-only"
+              />
+              <span
+                className="w-3.5 h-3.5 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors"
+                style={{
+                  borderColor: "#7C3AED",
+                  backgroundColor: ownerClustersVisible ? "#7C3AED30" : "transparent",
+                }}
+              >
+                {ownerClustersVisible && (
+                  <span className="w-2 h-2 rounded-full block" style={{ backgroundColor: "#7C3AED" }} />
+                )}
+              </span>
+              <span className="text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight">
+                Ownership clusters
+              </span>
+            </label>
+            <p className="text-[9px] text-[#0C1B33]/35 mt-1.5 ml-6">
+              Owner Files pilot ZIPs · admin-only, never shown to public visitors
+            </p>
+            {ownerClustersLoading && (
+              <p className="text-[9px] text-[#0C1B33]/40 mt-1.5 ml-6">Loading ownership clusters…</p>
+            )}
+            {ownerClustersError && (
+              <p className="text-[9px] text-red-600 mt-1.5 ml-6">{ownerClustersError}</p>
+            )}
+          </div>
+        </>
+      )}
 
     </div>
   );
