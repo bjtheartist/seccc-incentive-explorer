@@ -5,6 +5,7 @@
 
 import mapboxgl from "mapbox-gl";
 import { POINT_DATA_ZONE_KEYS, ZONE_META, ZONING_CATEGORIES } from "@/lib/constants";
+import { OWNER_TYPE_COLORS, OWNER_TYPE_LABELS, type OwnerType } from "@/lib/owner-classify";
 import type { DistrictData } from "@/lib/types";
 import type { SiteSignals } from "@/lib/site-signals";
 import type { TransportAccess } from "@/lib/transport-access";
@@ -196,6 +197,66 @@ export function jsonToGeoJSON(
         properties: r,
       })),
   };
+}
+
+/* ── Admin ownership-cluster popup (Owner Files) ─────────────── */
+
+/**
+ * Feature properties for one unclustered point of the admin-gated
+ * ownership-cluster layer, as they arrive from Mapbox's feature.properties
+ * (already JSON-primitive coerced). Matches OwnerClusterGeoFeatureProperties
+ * (lib/owner-cluster-geo.ts).
+ */
+export interface OwnerClusterPopupProperties {
+  pin?: string;
+  address?: string | null;
+  vacant?: boolean;
+  zip?: string;
+  clusterKey?: string;
+  ownerName?: string | null;
+  ownerType?: string | null;
+  clusterParcelCount?: number;
+  clusterVacantCount?: number;
+  confidence?: string;
+}
+
+function escapePopupHtml(value: string): string {
+  return value.replace(/[&<>'"]/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;",
+  })[character] as string);
+}
+
+/**
+ * Popup body for a clicked ownership-cluster parcel (MapView's
+ * `map.on("click", "owner-clusters-unclustered")`). Extracted from the
+ * inline handler so the content contract — owner name, owner-type chip,
+ * "X of Y parcels vacant", address, and the percent-encoded Owner File
+ * link (cluster keys contain ':') — is unit-testable without a live map.
+ * Owner-type labels/colors come from lib/owner-classify.ts, mirroring the
+ * vacant-properties popup.
+ */
+export function buildOwnerClusterPopupHtml(p: OwnerClusterPopupProperties): string {
+  const ownerType = (p.ownerType ?? null) as OwnerType | null;
+  const ownerLabel = ownerType ? (OWNER_TYPE_LABELS[ownerType] || ownerType) : OWNER_TYPE_LABELS.unknown;
+  const ownerColor = ownerType ? (OWNER_TYPE_COLORS[ownerType] || "#9CA3AF") : "#9CA3AF";
+  const zip = p.zip || "";
+  const clusterKey = p.clusterKey || "";
+  const ownerFileHref = `/admin/owner-files/${zip}/${encodeURIComponent(clusterKey)}`;
+  const ownerName = escapePopupHtml(p.ownerName || "Owner record unavailable");
+  const address = p.address ? escapePopupHtml(p.address) : "";
+
+  return `<div style="font-family:Inter,sans-serif">
+    <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#7C3AED;margin-bottom:4px;font-weight:500">Admin · Ownership Cluster</div>
+    <div style="font-size:14px;font-weight:600;color:#0C1B33">${ownerName}</div>
+    <span style="display:inline-block;margin-top:4px;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapePopupHtml(ownerLabel)}</span>
+    <div style="font-size:11px;color:#5A6478;margin-top:6px">${p.clusterVacantCount ?? 0} of ${p.clusterParcelCount ?? 0} parcels vacant</div>
+    ${address ? `<div style="font-size:12px;color:#0C1B33;margin-top:3px">${address}</div>` : ""}
+    <a href="${ownerFileHref}" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">Open Owner File &rarr;</a>
+  </div>`;
 }
 
 /* ── Neighborhood stats type ─────────────── */
