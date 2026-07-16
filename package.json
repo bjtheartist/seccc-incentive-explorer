@@ -26,6 +26,7 @@
     "db:migrate:analytics": "npx tsx scripts/migrate-analytics.ts",
     "db:migrate:partners": "npx tsx scripts/migrate-partners.ts",
     "db:migrate:concierge": "npx tsx scripts/migrate-concierge.ts",
+    "db:migrate:owner-file": "npx tsx scripts/migrate-owner-file.ts",
     "concierge:eval": "npx tsx scripts/concierge-eval.ts",
     "db:seed": "npm run db:sync:vacant",
     "db:sync:vacant": "npx tsx scripts/sync-vacant-properties.ts",
