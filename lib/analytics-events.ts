@@ -49,6 +49,13 @@ export const ANALYTICS_EVENT_TYPES = [
   "concierge_action_proposed",
   "concierge_action_approved",
   "concierge_action_declined",
+  // ── Owner Files ("Who Owns It?" ownership workflow, MVP) ──────────
+  "owner_file_viewed",
+  "owner_file_verification_saved",
+  "owner_file_pdf_downloaded",
+  "outreach_letter_generated",
+  "outreach_letter_downloaded",
+  "outreach_outcome_logged",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];
