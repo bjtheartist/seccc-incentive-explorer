@@ -33,7 +33,9 @@ const TIER_DESCRIPTIONS: Record<string, string> = {
 type Params = Promise<{ zip: string; clusterKey: string }>;
 
 export default async function OwnerFileDetailPage({ params }: { params: Params }) {
-  const { zip, clusterKey } = await params;
+  const { zip, clusterKey: rawClusterKey } = await params;
+  // App Router route params arrive percent-encoded; cluster keys contain ':'.
+  const clusterKey = decodeURIComponent(rawClusterKey);
   if (!/^\d{5}$/.test(zip)) notFound();
 
   if (!isOwnerFilesAdminConfigured()) {

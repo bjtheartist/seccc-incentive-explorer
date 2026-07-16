@@ -41,7 +41,8 @@ export async function GET(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   }
 
-  const { clusterKey } = await params;
+  const { clusterKey: rawClusterKey } = await params;
+  const clusterKey = decodeURIComponent(rawClusterKey);
   const events = await listOutreachEvents(sql, clusterKey);
   return NextResponse.json({ events });
 }
@@ -69,7 +70,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Database not configured" }, { status: 503 });
   }
 
-  const { clusterKey } = await params;
+  const { clusterKey: rawClusterKey } = await params;
+  const clusterKey = decodeURIComponent(rawClusterKey);
   const body = await req.json().catch(() => null);
   if (!isRecord(body)) {
     return NextResponse.json({ error: "Request body is required" }, { status: 400 });

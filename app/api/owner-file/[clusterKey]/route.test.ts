@@ -105,4 +105,13 @@ describe("GET /api/owner-file/[clusterKey]", () => {
     expect(res.headers.get("Cache-Control")).toBe("no-store");
     expect(getOwnerFileMock).toHaveBeenCalledWith("60617", "mail:foo");
   });
+
+  it("decodes a percent-encoded clusterKey route param before resolving (App Router params arrive percent-encoded)", async () => {
+    getOwnerFileMock.mockResolvedValue(fakeOwnerFile);
+    const res = await GET(req("http://localhost/api/owner-file/mail%3Afoo?zip=60617"), {
+      params: Promise.resolve({ clusterKey: "mail%3Afoo" }),
+    });
+    expect(res.status).toBe(200);
+    expect(getOwnerFileMock).toHaveBeenCalledWith("60617", "mail:foo");
+  });
 });

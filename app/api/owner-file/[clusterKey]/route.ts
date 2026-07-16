@@ -27,7 +27,8 @@ export async function GET(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { clusterKey } = await params;
+  const { clusterKey: rawClusterKey } = await params;
+  const clusterKey = decodeURIComponent(rawClusterKey);
   const zip = req.nextUrl.searchParams.get("zip");
   if (!zip || !/^\d{5}$/.test(zip)) {
     return NextResponse.json({ error: "zip must be a 5-digit ZIP code" }, { status: 400 });
