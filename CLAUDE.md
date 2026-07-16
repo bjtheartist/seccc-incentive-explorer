@@ -172,3 +172,4 @@ Zone layers support two rendering paths:
 | `RESEND_API_KEY` | No | Resend API key for sending report emails (starts with `re_`). If absent, email feature returns 503. |
 | `ANALYTICS_ADMIN_PASSWORD` | For private analytics dashboard | Password required for `/admin/analytics`. Sets a signed HTTP-only session cookie. |
 | `ANALYTICS_ADMIN_TOKEN` | For private analytics API | Optional token for direct `/api/admin/analytics` script/API access. |
+| `OWNER_FILES_ADMIN_PASSWORD` | For the Owner Files admin tool | Password required for `/admin/owner-files`. Sets its own signed HTTP-only session cookie (`cie_owner_files_admin`), separate from the analytics dashboard gate — an Owner File is a named-entity dossier. MVP stopgap; see `lib/owner-files-admin-auth.ts`. |
