@@ -77,6 +77,13 @@ import { StartPreparationPacketButton } from "@/components/incentive-preparation
 import { ReportEmailGate } from "@/components/report/ReportEmailGate";
 import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
+import { AdminOwnershipPanel } from "@/components/report/AdminOwnershipPanel";
+import type { AdminOwnershipPanelStatus } from "@/components/report/AdminOwnershipPanel";
+import { fetchAdminOwnershipContext } from "@/lib/owner-file-report-context";
+import type {
+  OwnerFileReportMatch,
+  OwnerFileReportTopCluster,
+} from "@/lib/owner-file-report-context";
 import { ConciergePageContextBridge } from "@/components/concierge/SiteConciergeProvider";
 import { reportEmailGateKey, reportRequiresEmailGate } from "@/lib/report-email";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
@@ -4270,6 +4277,43 @@ function ReportDisplay({
     return () => controller.abort();
   }, [vacancySpreadsheetLocale]);
 
+  /* ── Admin-only ownership context (screen-only; never PDF/email — see
+        components/report/AdminOwnershipPanel.tsx). Probes the Owner Files
+        admin session once, then loads the private per-parcel geo export for
+        this report's ZIP only when the probe confirms an admin session. ── */
+  const reportZip = useMemo(() => extractReportZipCode(report), [report]);
+  const [adminOwnershipStatus, setAdminOwnershipStatus] = useState<AdminOwnershipPanelStatus>("idle");
+  const [adminOwnershipMatch, setAdminOwnershipMatch] = useState<OwnerFileReportMatch | null>(null);
+  const [adminOwnershipTopClusters, setAdminOwnershipTopClusters] = useState<OwnerFileReportTopCluster[]>([]);
+
+  useEffect(() => {
+    if (compact || !reportZip) {
+      setAdminOwnershipStatus("idle");
+      return;
+    }
+
+    const controller = new AbortController();
+
+    fetchAdminOwnershipContext({
+      zip: reportZip,
+      address: report.metadata?.address,
+      signal: controller.signal,
+      onAdminConfirmed: () => setAdminOwnershipStatus("loading"),
+    })
+      .then((result) => {
+        setAdminOwnershipMatch(result.match);
+        setAdminOwnershipTopClusters(result.topClusters);
+        setAdminOwnershipStatus(result.status);
+      })
+      .catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        console.error("[report] admin ownership context load failed:", err);
+        setAdminOwnershipStatus("error");
+      });
+
+    return () => controller.abort();
+  }, [compact, reportZip, report.metadata?.address]);
+
   const handleVacancySpreadsheetExport = useCallback(async () => {
     if (!vacancySpreadsheetLocale) return;
 
@@ -4759,6 +4803,15 @@ function ReportDisplay({
               </div>
             )}
           </div>
+
+          {!compact && (
+            <AdminOwnershipPanel
+              status={adminOwnershipStatus}
+              zip={reportZip}
+              match={adminOwnershipMatch}
+              topClusters={adminOwnershipTopClusters}
+            />
+          )}
 
           <CapitalPartnerHandoff
             report={report}

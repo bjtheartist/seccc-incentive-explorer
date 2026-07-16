@@ -93,6 +93,19 @@ function toNumber(value: number | string | null | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
+/**
+ * JS-side mirror of the SQL address-normalization convention this file uses
+ * for cluster/business-license matching
+ * (`regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g')`) —
+ * lowercase, strip everything but letters/digits. Used where the match has
+ * to happen in TypeScript instead of a query (e.g.
+ * lib/owner-file-report-context.ts matching a report address against the
+ * admin-only per-parcel geo export).
+ */
+export function normalizeOwnerAddress(address: string | null | undefined): string {
+  return (address ?? "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
 function serialize(
   row: OwnerClusterRow,
   businessNames: string[],
@@ -332,6 +345,132 @@ export async function fetchOwnerClusters(
     };
     return serialize(row, Array.from(names).slice(0, 5), distressSignals);
   });
+}
+
+export interface OwnerClusterGeoRow {
+  pin: string;
+  address: string | null;
+  vacant: boolean;
+  lat: number | null;
+  lon: number | null;
+  clusterKey: string;
+  ownerName: string | null;
+  ownerType: string | null;
+  clusterParcelCount: number;
+  clusterVacantCount: number;
+  confidence: string;
+}
+
+interface OwnerClusterGeoDbRow {
+  pin: string;
+  address: string | null;
+  vacant: boolean | null;
+  lat: number | string | null;
+  lon: number | string | null;
+  cluster_key: string;
+  owner_name: string | null;
+  owner_type: string | null;
+  cluster_parcel_count: number | string;
+  cluster_vacant_count: number | string;
+  confidence: string;
+}
+
+/**
+ * Per-parcel rows (with lat/lon) for the top `limit` owner clusters in a
+ * ZIP — the same clustering CTE as fetchOwnerClusters above, exploded back
+ * out to one row per parcel instead of aggregated. Backs the admin-only
+ * ownership-cluster map layer and report panel
+ * (scripts/export-owner-clusters-geo.ts -> data/private/owner-clusters-geo.json,
+ * served only through the gated /api/owner-file/geo route). Never touches
+ * public/ — an Owner File is a named-entity dossier, more sensitive than the
+ * public vacant-properties layer.
+ */
+export async function fetchOwnerClusterGeoRows(
+  sql: NeonQueryFunction<false, false>,
+  zip: string,
+  limit: number
+): Promise<OwnerClusterGeoRow[]> {
+  const rows = (await sql`
+    WITH parcel_base AS (
+      SELECT
+        pin,
+        address,
+        owner_name,
+        owner_mailing_address,
+        owner_type,
+        is_vacant,
+        lat,
+        lon,
+        regexp_replace(lower(coalesce(owner_mailing_address, '')), '[^a-z0-9]', '', 'g') AS norm_mailing,
+        regexp_replace(lower(coalesce(owner_name, '')), '[^a-z0-9]', '', 'g') AS norm_owner
+      FROM parcels
+      WHERE zip = ${zip}
+         OR raw_json->>'zip_code' = ${zip}
+         OR address ILIKE ${"%" + zip + "%"}
+    ),
+    clustered_parcels AS (
+      SELECT
+        *,
+        CASE
+          WHEN norm_mailing <> '' THEN 'mail:' || norm_mailing
+          WHEN norm_owner <> '' THEN 'owner:' || norm_owner
+          ELSE 'pin:' || pin
+        END AS cluster_key
+      FROM parcel_base
+      WHERE coalesce(owner_name, owner_mailing_address, pin) IS NOT NULL
+    ),
+    parcel_clusters AS (
+      SELECT
+        cluster_key,
+        MIN(NULLIF(owner_name, '')) AS owner_name,
+        MIN(NULLIF(owner_type, '')) AS owner_type,
+        COUNT(*) AS parcel_count,
+        COUNT(*) FILTER (WHERE is_vacant IS TRUE) AS vacant_parcel_count,
+        BOOL_OR(norm_mailing <> '') AS has_mailing_match,
+        BOOL_OR(norm_owner <> '') AS has_owner_name_match
+      FROM clustered_parcels
+      GROUP BY cluster_key
+    ),
+    top_clusters AS (
+      SELECT *
+      FROM parcel_clusters
+      ORDER BY vacant_parcel_count DESC, parcel_count DESC
+      LIMIT ${limit}
+    )
+    SELECT
+      cp.pin,
+      cp.address,
+      coalesce(cp.is_vacant, false) AS vacant,
+      cp.lat,
+      cp.lon,
+      tc.cluster_key,
+      tc.owner_name,
+      tc.owner_type,
+      tc.parcel_count AS cluster_parcel_count,
+      tc.vacant_parcel_count AS cluster_vacant_count,
+      CASE
+        WHEN tc.has_mailing_match AND tc.parcel_count > 1 THEN 'High'
+        WHEN tc.has_mailing_match THEN 'Medium'
+        WHEN tc.has_owner_name_match AND tc.parcel_count > 1 THEN 'Medium'
+        ELSE 'Low'
+      END AS confidence
+    FROM clustered_parcels cp
+    JOIN top_clusters tc ON tc.cluster_key = cp.cluster_key
+  `) as OwnerClusterGeoDbRow[];
+
+  return rows.map((row) => ({
+    pin: row.pin,
+    address: row.address,
+    vacant: Boolean(row.vacant),
+    lat: row.lat == null ? null : Number(row.lat),
+    lon: row.lon == null ? null : Number(row.lon),
+    clusterKey: row.cluster_key,
+    ownerName: row.owner_name,
+    ownerType: row.owner_type,
+    clusterParcelCount: toNumber(row.cluster_parcel_count),
+    clusterVacantCount: toNumber(row.cluster_vacant_count),
+    confidence: row.confidence,
+  }));
 }
 
 export interface OwnerClustersExport {
