@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { generateReportPdfBase64, orderSectionsForPdf } from "../pdf-report";
+import { generateReportPdfBase64, orderSectionsForPdf, sanitizeForPdf } from "../pdf-report";
 import {
+  CONFIRMED_PROGRAMS_SECTION_TITLE,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "../report-engine";
@@ -147,5 +148,74 @@ describe("orderSectionsForPdf", () => {
     expect(extracted.text).toContain("Review the Findings");
     expect(extracted.text).toContain("Who to Contact Next");
     expect(extracted.text).toContain("Take the Next Step");
+  });
+
+  it("includes real document names (not a bare count) in Priority Documents", async () => {
+    const report: GeneratedReport = {
+      title: "Site Incentive Analysis",
+      subtitle: "Test report",
+      reportType: "site-incentives",
+      generatedAt: "2026-07-10T12:00:00.000Z",
+      summary: "A focused report.",
+      sections: [
+        {
+          title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+          items: [
+            {
+              label: "Test Program",
+              value: "Benefit",
+              detail: "A test program.",
+            },
+          ],
+        },
+        {
+          title: "Required Documents",
+          items: [
+            {
+              label: "Financial & Tax",
+              value: "2 documents",
+              detail: [
+                "Last 2 years business tax returns — Test Program",
+                "Profit and loss statement — Test Program",
+              ].join("\n"),
+            },
+          ],
+        },
+      ],
+      recommendedActions: [],
+      metadata: {
+        address: "100 E Test St, Chicago, IL",
+        projectType: "hiring",
+      },
+    };
+
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: true,
+    });
+    expect(extracted.text).toContain("Last 2 years business tax returns");
+    expect(extracted.text).toContain("Profit and loss statement");
+  });
+});
+
+describe("sanitizeForPdf", () => {
+  it("replaces glyphs jsPDF's standard fonts can't render, per spec defect 3", () => {
+    expect(sanitizeForPdf("≤10 employees")).toBe("up to 10 employees");
+    expect(sanitizeForPdf("Remediation costs ≥$100K")).toBe("Remediation costs at least $100K");
+    expect(sanitizeForPdf("Rehab investment ≥50% of building market value")).toBe(
+      "Rehab investment at least 50% of building market value",
+    );
+  });
+
+  it("normalizes dash variants jsPDF's standard fonts can't render", () => {
+    expect(sanitizeForPdf("value—range")).toBe("value-range");
+    expect(sanitizeForPdf("value–range")).toBe("value-range");
+    expect(sanitizeForPdf("value−range")).toBe("value-range");
+  });
+
+  it("leaves ordinary text untouched", () => {
+    expect(sanitizeForPdf("Cook County Class 7a Property Tax Incentive")).toBe(
+      "Cook County Class 7a Property Tax Incentive",
+    );
   });
 });
