@@ -184,7 +184,7 @@ function slugifyFilePart(value: string): string {
     .replace(/^-|-$/g, "") || "locale";
 }
 
-export function extractReportZipCode(report: GeneratedReport): string | null {
+function extractReportZipCode(report: GeneratedReport): string | null {
   const address = report.metadata?.address || "";
   const match = address.match(/\b(606\d{2}|60707|60827)\b/);
   return match?.[1] ?? null;
