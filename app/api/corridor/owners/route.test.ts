@@ -40,6 +40,7 @@ function schemaError(code: string, message: string) {
 
 const liveCluster: OwnerCluster = {
   clusterKey: "mail:pobox123chicagoil",
+  pins: ["17111000010000", "17111000020000"],
   ownerName: "SOUTHWORKS LLC",
   ownerMailingAddress: "PO BOX 123 CHICAGO IL",
   ownerType: "LLC",
@@ -53,6 +54,13 @@ const liveCluster: OwnerCluster = {
   latestSellerName: "OLD OWNER TRUST",
   confidence: "High",
   evidence: "grouped by recorded owner mailing address",
+  distressSignals: {
+    buildingViolationCount: 2,
+    vacantBuildingViolationCount: null,
+    delinquentTaxCount: null,
+    scavengerOrAnnualSaleFlag: null,
+    cclbaInventoryFlag: null,
+  },
 };
 
 const staticCluster: OwnerCluster = {
