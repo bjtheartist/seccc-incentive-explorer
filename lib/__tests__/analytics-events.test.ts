@@ -138,4 +138,23 @@ describe("analytics events", () => {
   it("rejects unknown events", () => {
     expect(sanitizeAnalyticsEventPayload("whatever", {})).toBeNull();
   });
+
+  it("accepts the Owner Files ownership-workflow events (MVP)", () => {
+    expect(isAnalyticsEventType("owner_file_viewed")).toBe(true);
+    expect(isAnalyticsEventType("owner_file_verification_saved")).toBe(true);
+    expect(isAnalyticsEventType("owner_file_pdf_downloaded")).toBe(true);
+    expect(isAnalyticsEventType("outreach_letter_generated")).toBe(true);
+    expect(isAnalyticsEventType("outreach_letter_downloaded")).toBe(true);
+    expect(isAnalyticsEventType("outreach_outcome_logged")).toBe(true);
+
+    const event = sanitizeAnalyticsEventPayload("owner_file_verification_saved", {
+      source: "owner_file_verification_form",
+      metadata: { clusterKey: "mail:foo", zip: "60617", status: "verified", resolvedTier: "A" },
+    });
+    expect(event).toMatchObject({
+      eventType: "owner_file_verification_saved",
+      source: "owner_file_verification_form",
+      metadata: { clusterKey: "mail:foo", zip: "60617", status: "verified", resolvedTier: "A" },
+    });
+  });
 });

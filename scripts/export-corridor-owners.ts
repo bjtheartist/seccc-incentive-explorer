@@ -4,6 +4,13 @@
  * ZIP-keyed map served by /api/corridor/owners when the request-time
  * database has no parcel data (prod, by design — corridor-metrics doctrine).
  *
+ * Each cluster carries `pins[]` (the durable per-parcel join key the Owner
+ * File human layer snapshots onto every verification row — see
+ * lib/owner-file.ts) and `distressSignals` (MVP: `buildingViolationCount`
+ * only, joined from `building_violations`; every other field is `null` until
+ * its Phase 2 adapter ships). Both flow straight through from
+ * fetchOwnerClusters — no extra wiring needed here.
+ *
  * Run against a refresh branch that has the domain migrations plus parcel /
  * ownership-enrichment / transfer / business syncs applied:
  *

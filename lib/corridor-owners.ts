@@ -9,8 +9,42 @@ import type { NeonQueryFunction } from "@neondatabase/serverless";
  * branch; prod DB holds no parcel/ownership data by design).
  */
 
+/**
+ * MVP distress overlay (Phase 2 populates the rest — see 22u3-xenr, ydgz-vkrp,
+ * 55ju-2fs9, CCLBA in the plan). Only `buildingViolationCount` is computed
+ * today, by joining the already-ingested `building_violations` table
+ * (lib/ingest/violations.ts) by normalized address, the same technique this
+ * file already uses to link business licenses. Every other field is a
+ * literal `null` — never a silent zero — until its adapter ships. `null`
+ * always means "not yet available," while `buildingViolationCount: 0` is a
+ * real, confirmed zero once the join could run.
+ */
+export interface OwnerClusterDistressSignals {
+  buildingViolationCount: number | null;
+  vacantBuildingViolationCount: number | null;
+  delinquentTaxCount: number | null;
+  scavengerOrAnnualSaleFlag: boolean | null;
+  cclbaInventoryFlag: boolean | null;
+}
+
+export const EMPTY_DISTRESS_SIGNALS: OwnerClusterDistressSignals = {
+  buildingViolationCount: null,
+  vacantBuildingViolationCount: null,
+  delinquentTaxCount: null,
+  scavengerOrAnnualSaleFlag: null,
+  cclbaInventoryFlag: null,
+};
+
 export interface OwnerCluster {
   clusterKey: string;
+  /**
+   * Durable per-parcel PIN list for this cluster (array_agg(DISTINCT pin)).
+   * clusterKey is a hash of normalized owner-mailing/name text and can drift
+   * across refreshes (an assessor spelling change silently orphans human
+   * verification work); pins[] is the stable join key the human layer
+   * (lib/owner-file.ts) snapshots onto every verification row.
+   */
+  pins: string[];
   ownerName: string | null;
   ownerMailingAddress: string | null;
   ownerType: string | null;
@@ -24,10 +58,12 @@ export interface OwnerCluster {
   latestSellerName: string | null;
   confidence: string;
   evidence: string;
+  distressSignals: OwnerClusterDistressSignals;
 }
 
 interface OwnerClusterRow {
   cluster_key: string;
+  pins: string[] | null;
   owner_name: string | null;
   owner_mailing_address: string | null;
   owner_type: string | null;
@@ -57,7 +93,11 @@ function toNumber(value: number | string | null | undefined): number {
   return Number.isFinite(n) ? n : 0;
 }
 
-function serialize(row: OwnerClusterRow, businessNames: string[]): OwnerCluster {
+function serialize(
+  row: OwnerClusterRow,
+  businessNames: string[],
+  distressSignals: OwnerClusterDistressSignals
+): OwnerCluster {
   const evidenceParts = [
     row.evidence,
     businessNames.length > 0 ? "linked to business licenses by site address/name" : "",
@@ -65,6 +105,7 @@ function serialize(row: OwnerClusterRow, businessNames: string[]): OwnerCluster 
 
   return {
     clusterKey: row.cluster_key,
+    pins: row.pins ?? [],
     ownerName: row.owner_name,
     ownerMailingAddress: row.owner_mailing_address,
     ownerType: row.owner_type,
@@ -78,6 +119,43 @@ function serialize(row: OwnerClusterRow, businessNames: string[]): OwnerCluster 
     latestSellerName: row.latest_seller_name,
     confidence: row.confidence,
     evidence: evidenceParts.join("; "),
+    distressSignals,
+  };
+}
+
+/**
+ * Building-violation count for a cluster: sum of counts across the cluster's
+ * normalized site addresses. `violationCountsByAddress === null` means the
+ * join could not run at all (e.g. `building_violations` not migrated on this
+ * branch yet) — that degrades to `null` ("not yet available"), never a
+ * silent 0. An empty/no-match result once the join DID run is a real 0.
+ */
+export function buildingViolationCountForCluster(
+  normAddresses: string[] | null | undefined,
+  violationCountsByAddress: Map<string, number> | null
+): number | null {
+  if (violationCountsByAddress === null) return null;
+  if (!normAddresses || normAddresses.length === 0) return 0;
+  let total = 0;
+  for (const addr of normAddresses) {
+    total += violationCountsByAddress.get(addr) ?? 0;
+  }
+  return total;
+}
+
+/** Normalize a static-export or DB-fallback distress-signals value, defaulting every field to null. */
+export function normalizeDistressSignals(value: unknown): OwnerClusterDistressSignals {
+  if (!value || typeof value !== "object") return { ...EMPTY_DISTRESS_SIGNALS };
+  const raw = value as Partial<Record<keyof OwnerClusterDistressSignals, unknown>>;
+  return {
+    buildingViolationCount:
+      typeof raw.buildingViolationCount === "number" ? raw.buildingViolationCount : null,
+    vacantBuildingViolationCount:
+      typeof raw.vacantBuildingViolationCount === "number" ? raw.vacantBuildingViolationCount : null,
+    delinquentTaxCount: typeof raw.delinquentTaxCount === "number" ? raw.delinquentTaxCount : null,
+    scavengerOrAnnualSaleFlag:
+      typeof raw.scavengerOrAnnualSaleFlag === "boolean" ? raw.scavengerOrAnnualSaleFlag : null,
+    cclbaInventoryFlag: typeof raw.cclbaInventoryFlag === "boolean" ? raw.cclbaInventoryFlag : null,
   };
 }
 
@@ -131,6 +209,7 @@ export async function fetchOwnerClusters(
         MIN(NULLIF(owner_type, '')) AS owner_type,
         COUNT(*) AS parcel_count,
         COUNT(*) FILTER (WHERE is_vacant IS TRUE) AS vacant_parcel_count,
+        array_remove(array_agg(DISTINCT NULLIF(pin, '')), NULL) AS pins,
         (array_remove(array_agg(DISTINCT NULLIF(address, '')), NULL))[1:5] AS sample_addresses,
         array_remove(array_agg(DISTINCT NULLIF(norm_address, '')), NULL) AS norm_addresses,
         array_remove(array_agg(DISTINCT NULLIF(norm_owner, '')), NULL) AS norm_owners,
@@ -159,6 +238,7 @@ export async function fetchOwnerClusters(
     )
     SELECT
       pc.cluster_key,
+      coalesce(pc.pins, ARRAY[]::TEXT[]) AS pins,
       pc.owner_name,
       pc.owner_mailing_address,
       pc.owner_type,
@@ -211,6 +291,33 @@ export async function fetchOwnerClusters(
     }
   }
 
+  // MVP distress overlay: building-violation counts joined by the same
+  // normalized-address technique as the license linking above. Degrades to
+  // `null` (never a silent 0) when building_violations isn't migrated yet on
+  // this branch — see buildingViolationCountForCluster.
+  let violationCountsByAddress: Map<string, number> | null = null;
+  try {
+    const violationRows = (await sql`
+      SELECT regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g') AS norm_address
+      FROM building_violations
+      WHERE address IS NOT NULL AND address <> ''
+    `) as { norm_address: string }[];
+    violationCountsByAddress = new Map();
+    for (const violation of violationRows) {
+      if (!violation.norm_address) continue;
+      violationCountsByAddress.set(
+        violation.norm_address,
+        (violationCountsByAddress.get(violation.norm_address) ?? 0) + 1
+      );
+    }
+  } catch (err) {
+    console.warn(
+      "fetchOwnerClusters: building_violations join unavailable (table likely not migrated on this branch):",
+      err instanceof Error ? err.message : err
+    );
+    violationCountsByAddress = null;
+  }
+
   return rows.map((row) => {
     const names = new Set<string>();
     for (const key of row.norm_addresses ?? []) {
@@ -219,13 +326,32 @@ export async function fetchOwnerClusters(
     for (const key of row.norm_owners ?? []) {
       for (const name of licensesByLegal.get(key) ?? []) names.add(name);
     }
-    return serialize(row, Array.from(names).slice(0, 5));
+    const distressSignals: OwnerClusterDistressSignals = {
+      ...EMPTY_DISTRESS_SIGNALS,
+      buildingViolationCount: buildingViolationCountForCluster(row.norm_addresses, violationCountsByAddress),
+    };
+    return serialize(row, Array.from(names).slice(0, 5), distressSignals);
   });
 }
 
 export interface OwnerClustersExport {
   generatedAt: string;
   zips: Record<string, OwnerCluster[]>;
+}
+
+/**
+ * Backward compatibility: normalizes a cluster loaded from the committed
+ * static export (or any older snapshot) that predates `pins[]`/
+ * `distressSignals` — defaults `pins` to `[]` and every distress-signal
+ * field to `null` rather than leaving them `undefined`.
+ */
+function normalizeLoadedCluster(raw: unknown): OwnerCluster {
+  const cluster = (raw ?? {}) as Partial<OwnerCluster> & Record<string, unknown>;
+  return {
+    ...(cluster as OwnerCluster),
+    pins: Array.isArray(cluster.pins) ? (cluster.pins as string[]) : [],
+    distressSignals: normalizeDistressSignals(cluster.distressSignals),
+  };
 }
 
 /**
@@ -239,7 +365,23 @@ export function loadStaticOwnerClusters(zip: string, limit: number): OwnerCluste
     const raw = require("../public/data/corridor-owners.json") as OwnerClustersExport;
     const clusters = raw?.zips?.[zip];
     if (!Array.isArray(clusters)) return null;
-    return clusters.slice(0, limit);
+    return clusters.slice(0, limit).map(normalizeLoadedCluster);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The static export's `generatedAt` stamp (when the refresh branch that
+ * produced public/data/corridor-owners.json ran). Used by the Owner File
+ * verification write path to snapshot `export_generated_at` — the basis for
+ * a "verified against an older snapshot" banner (plan risk #1).
+ */
+export function loadStaticOwnerClustersGeneratedAt(): string | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const raw = require("../public/data/corridor-owners.json") as OwnerClustersExport;
+    return typeof raw?.generatedAt === "string" ? raw.generatedAt : null;
   } catch {
     return null;
   }
