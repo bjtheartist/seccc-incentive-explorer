@@ -89,7 +89,8 @@ export default async function OwnerFileDetailPage({ params }: { params: Params }
   const ownerFile = await getOwnerFile(zip, clusterKey);
   if (!ownerFile) notFound();
 
-  const { cluster, verification, notes, outreachEvents, resolvedTier } = ownerFile;
+  const { cluster, verification, notes, outreachEvents, resolvedTier, isEntityOwner, snapshotGeneratedAt } =
+    ownerFile;
   const ds = cluster.distressSignals;
 
   return (
@@ -134,6 +135,23 @@ export default async function OwnerFileDetailPage({ params }: { params: Params }
           <p className="mt-4 max-w-2xl text-[12px] leading-relaxed text-[#0C1B33]/45">
             {TIER_DESCRIPTIONS[resolvedTier]} Records indicate — verify before relying.
           </p>
+          <p className="mt-2 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
+            {snapshotGeneratedAt
+              ? `Records snapshot as of ${new Date(snapshotGeneratedAt).toLocaleDateString("en-US")} — records indicate, verify before relying.`
+              : "Records snapshot date unavailable — records indicate, verify before relying."}
+          </p>
+          {!isEntityOwner && (
+            <div className="mt-4 border border-amber-500/30 bg-amber-500/10 px-5 py-4">
+              <p className="font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-amber-700">
+                Individually owned
+              </p>
+              <p className="mt-1.5 text-[13px] leading-relaxed text-[#0C1B33]/70">
+                Individually owned (public taxpayer record). Automated outreach letters are reserved for
+                entity owners — coordinate personal contact through a local partner. Completing an IL SOS
+                lookup that shows this owner is a registered entity will unlock letters.
+              </p>
+            </div>
+          )}
           <div className="mt-5">
             <OwnerFileDossierButton ownerFile={ownerFile} />
           </div>
@@ -256,6 +274,7 @@ export default async function OwnerFileDetailPage({ params }: { params: Params }
             ownerName={cluster.ownerName}
             ownerMailingAddress={cluster.ownerMailingAddress}
             verificationStatus={verification?.status ?? null}
+            isEntityOwner={isEntityOwner}
             events={outreachEvents}
           />
         </section>

@@ -77,6 +77,9 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (!verifierName) {
     return NextResponse.json({ error: "verifierName is required" }, { status: 400 });
   }
+  if (verifierName.length > 200) {
+    return NextResponse.json({ error: "verifierName must be ≤ 200 characters" }, { status: 400 });
+  }
 
   const status = typeof body.status === "string" ? body.status : "draft";
   if (!OWNER_FILE_VERIFICATION_STATUSES.includes(status as OwnerFileVerificationStatus)) {
@@ -84,6 +87,24 @@ export async function POST(req: NextRequest, { params }: Params) {
       { error: `status must be one of: ${OWNER_FILE_VERIFICATION_STATUSES.join(", ")}` },
       { status: 400 }
     );
+  }
+
+  // IL-SOS free-text fields — capped at 500 chars each, matching the other
+  // length caps on this route (verifierName, note.body/sourceUrl below).
+  const registeredAgentName = trimmedStringOrNull(body.registeredAgentName);
+  const registeredAgentAddress = trimmedStringOrNull(body.registeredAgentAddress);
+  const ilSosFileNumber = trimmedStringOrNull(body.ilSosFileNumber);
+  const ilSosLookupUrl = trimmedStringOrNull(body.ilSosLookupUrl);
+  const ilSosFields: [string, string | null][] = [
+    ["registeredAgentName", registeredAgentName],
+    ["registeredAgentAddress", registeredAgentAddress],
+    ["ilSosFileNumber", ilSosFileNumber],
+    ["ilSosLookupUrl", ilSosLookupUrl],
+  ];
+  for (const [label, value] of ilSosFields) {
+    if (value && value.length > 500) {
+      return NextResponse.json({ error: `${label} must be ≤ 500 characters` }, { status: 400 });
+    }
   }
 
   const cluster = await getOwnerCluster(zip, clusterKey);
@@ -101,6 +122,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (isRecord(body.note)) {
     const noteType = typeof body.note.noteType === "string" ? body.note.noteType : "";
     const noteBody = trimmedStringOrNull(body.note.body);
+    const noteSourceUrl = trimmedStringOrNull(body.note.sourceUrl);
     if (!OWNER_FILE_NOTE_TYPES.includes(noteType as OwnerFileNoteType)) {
       return NextResponse.json(
         { error: `note.noteType must be one of: ${OWNER_FILE_NOTE_TYPES.join(", ")}` },
@@ -110,18 +132,23 @@ export async function POST(req: NextRequest, { params }: Params) {
     if (!noteBody) {
       return NextResponse.json({ error: "note.body is required when note is provided" }, { status: 400 });
     }
+    if (noteBody.length > 5000) {
+      return NextResponse.json({ error: "note.body must be ≤ 5000 characters" }, { status: 400 });
+    }
+    if (noteSourceUrl && noteSourceUrl.length > 500) {
+      return NextResponse.json({ error: "note.sourceUrl must be ≤ 500 characters" }, { status: 400 });
+    }
     createdNote = await addOwnerFileNote(sql, {
       clusterKey,
       zip,
       authorName: verifierName,
       noteType: noteType as OwnerFileNoteType,
       body: noteBody,
-      sourceUrl: trimmedStringOrNull(body.note.sourceUrl),
+      sourceUrl: noteSourceUrl,
     });
   }
 
   const notes = await listOwnerFileNotes(sql, clusterKey);
-  const ilSosLookupUrl = trimmedStringOrNull(body.ilSosLookupUrl);
   const confidenceTier = resolveConfidenceTier(cluster, { status, ilSosLookupUrl }, notes);
 
   const verification = await upsertOwnerFileVerification(sql, {
@@ -133,9 +160,9 @@ export async function POST(req: NextRequest, { params }: Params) {
     exportGeneratedAt: loadStaticOwnerClustersGeneratedAt(),
     verifierName,
     confidenceTier,
-    registeredAgentName: trimmedStringOrNull(body.registeredAgentName),
-    registeredAgentAddress: trimmedStringOrNull(body.registeredAgentAddress),
-    ilSosFileNumber: trimmedStringOrNull(body.ilSosFileNumber),
+    registeredAgentName,
+    registeredAgentAddress,
+    ilSosFileNumber,
     ilSosLookupUrl,
     taxpayerMailingAddressConfirmed:
       typeof body.taxpayerMailingAddressConfirmed === "boolean"

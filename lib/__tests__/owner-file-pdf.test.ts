@@ -35,6 +35,8 @@ function ownerFile(overrides: Partial<OwnerFile> = {}): OwnerFile {
     notes: [],
     outreachEvents: [],
     resolvedTier: "B",
+    isEntityOwner: true,
+    snapshotGeneratedAt: "2026-07-10T12:34:10.343Z",
     ...overrides,
   };
 }
@@ -100,6 +102,16 @@ describe("generateOwnerFileDossierPdfBase64", () => {
         ],
       })
     );
+    expect(result.base64.length).toBeGreaterThan(100);
+  });
+
+  it("builds a dossier PDF with the individually-owned notice when isEntityOwner is false", () => {
+    const result = generateOwnerFileDossierPdfBase64(ownerFile({ isEntityOwner: false }));
+    expect(result.base64.length).toBeGreaterThan(100);
+  });
+
+  it("builds a dossier PDF with the snapshot-date line even when snapshotGeneratedAt is null (unconditional, never gated on a verification)", () => {
+    const result = generateOwnerFileDossierPdfBase64(ownerFile({ verification: null, snapshotGeneratedAt: null }));
     expect(result.base64.length).toBeGreaterThan(100);
   });
 

@@ -20,6 +20,7 @@ import {
   listOutreachEvents,
   listOwnerClusters,
   listOwnerFileNotes,
+  resolveIsEntityOwner,
   upsertOwnerFileVerification,
 } from "../owner-file";
 
@@ -287,6 +288,54 @@ describe("owner file outreach events (append-only)", () => {
   });
 });
 
+describe("resolveIsEntityOwner", () => {
+  const individualCluster = { ownerName: "JANE SMITH", ownerType: "local_private" };
+
+  it("is true via a taxpayer-name entity marker, even with a non-entity ownerType", () => {
+    expect(resolveIsEntityOwner({ ownerName: "ACME PROPERTIES LLC", ownerType: "local_private" }, null)).toBe(
+      true
+    );
+  });
+
+  it("is true via ownerType === 'corporate_llc', even with a plain individual-looking name", () => {
+    expect(resolveIsEntityOwner({ ownerName: "JANE SMITH", ownerType: "corporate_llc" }, null)).toBe(true);
+  });
+
+  it("is true via ownerType === 'city_public'", () => {
+    expect(resolveIsEntityOwner({ ownerName: "JANE SMITH", ownerType: "city_public" }, null)).toBe(true);
+  });
+
+  it("is true via SOS evidence on the verification's ilSosLookupUrl, independent of name/ownerType", () => {
+    expect(
+      resolveIsEntityOwner(individualCluster, {
+        status: "draft",
+        ilSosLookupUrl: "https://apps.ilsos.gov/businessentitysearch/",
+      })
+    ).toBe(true);
+  });
+
+  it("is true via SOS evidence on an entity_lookup note, independent of name/ownerType", () => {
+    expect(
+      resolveIsEntityOwner(individualCluster, null, [
+        { noteType: "entity_lookup", sourceUrl: "https://apps.ilsos.gov/businessentitysearch/" },
+      ])
+    ).toBe(true);
+  });
+
+  it("does NOT treat a non-SOS sourceUrl on an entity_lookup note as evidence", () => {
+    expect(
+      resolveIsEntityOwner(individualCluster, null, [
+        { noteType: "entity_lookup", sourceUrl: "https://example.com/not-sos" },
+      ])
+    ).toBe(false);
+  });
+
+  it("is false for a plain individual person name with no entity ownerType and no SOS evidence", () => {
+    expect(resolveIsEntityOwner(individualCluster, null)).toBe(false);
+    expect(resolveIsEntityOwner(individualCluster, { status: "verified", ilSosLookupUrl: null }, [])).toBe(false);
+  });
+});
+
 describe("getOwnerFile (merged view model)", () => {
   it("merges an empty human layer when no database is configured, resolving the algorithmic tier", async () => {
     const ownerFile = await getOwnerFile(REAL_ZIP, REAL_CLUSTER_KEY);
@@ -297,6 +346,13 @@ describe("getOwnerFile (merged view model)", () => {
     expect(ownerFile!.outreachEvents).toEqual([]);
     // cluster.confidence is "High" in the static export -> algorithmic tier B.
     expect(ownerFile!.resolvedTier).toBe("B");
+    // "U S STEEL" carries no entity marker, ownerType is "out_of_state" (not
+    // corporate_llc/city_public), and there's no verification/note SOS
+    // evidence in this empty-human-layer case -> not an entity owner by this
+    // (deliberately conservative) heuristic.
+    expect(ownerFile!.isEntityOwner).toBe(false);
+    // The committed static export always has a generatedAt stamp.
+    expect(ownerFile!.snapshotGeneratedAt).toEqual(expect.any(String));
   });
 
   it("returns null when the cluster can't be resolved", async () => {
@@ -361,6 +417,9 @@ describe("getOwnerFile (merged view model)", () => {
     expect(ownerFile!.verification?.status).toBe("verified");
     expect(ownerFile!.notes).toHaveLength(1);
     expect(ownerFile!.resolvedTier).toBe("A");
+    // The entity_lookup note's ilsos.gov sourceUrl is SOS evidence -> entity
+    // owner, independent of "U S STEEL" carrying no name-based entity marker.
+    expect(ownerFile!.isEntityOwner).toBe(true);
   });
 
   it("degrades to an empty human layer (never throws) when the human-layer tables are unmigrated", async () => {

@@ -100,7 +100,8 @@ function fieldRow(doc: jsPDF, y: number, label: string, value: string): number {
 }
 
 function _buildOwnerFileDossierPdf(ownerFile: OwnerFile): { doc: jsPDF; slug: string } {
-  const { cluster, verification, notes, outreachEvents, resolvedTier } = ownerFile;
+  const { cluster, verification, notes, outreachEvents, resolvedTier, isEntityOwner, snapshotGeneratedAt } =
+    ownerFile;
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
   const ownerLabel = cluster.ownerName || "Owner record unavailable";
@@ -156,6 +157,17 @@ function _buildOwnerFileDossierPdf(ownerFile: OwnerFile): { doc: jsPDF; slug: st
   setColor(doc, "#FFFFFF60");
   doc.text(`${cluster.parcelCount} PARCEL${cluster.parcelCount === 1 ? "" : "S"} — ${cluster.vacantParcelCount} VACANT`, MARGIN, coverY);
 
+  // Snapshot as-of date — unconditional (previously this only surfaced
+  // inside the Verification section, and only once a verification existed).
+  coverY += 9;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7.5);
+  setColor(doc, "#FFFFFF50");
+  const snapshotLabel = snapshotGeneratedAt
+    ? `Records snapshot as of ${new Date(snapshotGeneratedAt).toLocaleDateString("en-US")} — records indicate, verify before relying.`
+    : "Records snapshot date unavailable — records indicate, verify before relying.";
+  wrapText(doc, snapshotLabel, MARGIN, coverY, CONTENT_W, 3.6);
+
   doc.setFontSize(8);
   setColor(doc, "#FFFFFF40");
   doc.text(dateStr, MARGIN, H - 25);
@@ -172,6 +184,27 @@ function _buildOwnerFileDossierPdf(ownerFile: OwnerFile): { doc: jsPDF; slug: st
   y = fieldRow(doc, y, "Owner type (assessor record)", cluster.ownerType || "Not recorded");
   y = fieldRow(doc, y, "Mailing address", cluster.ownerMailingAddress || "Not recorded");
   y = fieldRow(doc, y, "Confidence tier", `${resolvedTier} — ${cluster.confidence} algorithmic confidence at last export (${cluster.evidence || "n/a"})`);
+  if (!isEntityOwner) {
+    y = checkPage(doc, y, 14);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    setColor(doc, AMBER);
+    doc.text("Individually owned — handle with care", MARGIN, y);
+    y += 4.5;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    setColor(doc, MEDIUM_GRAY);
+    y += wrapText(
+      doc,
+      "This cluster's taxpayer of record appears to be an individual, not a registered entity. Automated " +
+        "outreach letters are reserved for entity owners — coordinate a personal contact through a local " +
+        "partner instead.",
+      MARGIN,
+      y,
+      CONTENT_W,
+      3.6
+    );
+  }
   y += 4;
 
   y = checkPage(doc, y, 40);

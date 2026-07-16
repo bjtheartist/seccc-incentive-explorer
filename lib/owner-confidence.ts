@@ -34,6 +34,24 @@ export interface OwnerFileVerificationForTier {
 /** The subset of an Owner File note resolveConfidenceTier needs. */
 export interface OwnerFileNoteForTier {
   noteType?: string | null;
+  sourceUrl?: string | null;
+}
+
+/**
+ * True only for URLs on the official IL Secretary of State host — Tier A
+ * evidence must point at a real individual lookup, not free text (a
+ * one-character string must never self-certify Tier A).
+ */
+export function isIlSosUrl(value: string | null | undefined): boolean {
+  if (!value) return false;
+  try {
+    const url = new URL(value.trim());
+    if (url.protocol !== "https:" && url.protocol !== "http:") return false;
+    const host = url.hostname.toLowerCase();
+    return host === "ilsos.gov" || host.endsWith(".ilsos.gov");
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -55,8 +73,10 @@ export function resolveConfidenceTier(
   notes: OwnerFileNoteForTier[] = []
 ): ConfidenceTier {
   const isVerified = verification?.status === "verified";
-  const hasLookupUrl = Boolean(verification?.ilSosLookupUrl?.trim());
-  const hasEntityLookupNote = notes.some((note) => note.noteType === "entity_lookup");
+  const hasLookupUrl = isIlSosUrl(verification?.ilSosLookupUrl);
+  const hasEntityLookupNote = notes.some(
+    (note) => note.noteType === "entity_lookup" && isIlSosUrl(note.sourceUrl)
+  );
 
   if (isVerified && (hasLookupUrl || hasEntityLookupNote)) {
     return "A";

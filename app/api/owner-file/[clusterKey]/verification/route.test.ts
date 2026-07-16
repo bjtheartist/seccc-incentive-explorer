@@ -166,7 +166,7 @@ describe("POST /api/owner-file/[clusterKey]/verification", () => {
       authorName: "Jane",
       noteType: "entity_lookup",
       body: "Confirmed active/good standing.",
-      sourceUrl: null,
+      sourceUrl: "https://apps.ilsos.gov/businessentitysearch/",
       createdAt: "2026-07-15T00:00:00.000Z",
     };
     addOwnerFileNoteMock.mockResolvedValue(createdNote);
@@ -178,7 +178,11 @@ describe("POST /api/owner-file/[clusterKey]/verification", () => {
         zip: "60617",
         verifierName: "Jane",
         status: "verified",
-        note: { noteType: "entity_lookup", body: "Confirmed active/good standing." },
+        note: {
+          noteType: "entity_lookup",
+          body: "Confirmed active/good standing.",
+          sourceUrl: "https://apps.ilsos.gov/businessentitysearch/",
+        },
       }),
       params()
     );
@@ -196,5 +200,55 @@ describe("POST /api/owner-file/[clusterKey]/verification", () => {
     );
     expect(res.status).toBe(400);
     expect(addOwnerFileNoteMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects verifierName over 200 characters", async () => {
+    const res = await POST(
+      req({ zip: "60617", verifierName: "x".repeat(201) }),
+      params()
+    );
+    expect(res.status).toBe(400);
+  });
+
+  it("rejects note.body over 5000 characters", async () => {
+    const res = await POST(
+      req({
+        zip: "60617",
+        verifierName: "Jane",
+        note: { noteType: "general", body: "x".repeat(5001) },
+      }),
+      params()
+    );
+    expect(res.status).toBe(400);
+    expect(addOwnerFileNoteMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects note.sourceUrl over 500 characters", async () => {
+    const res = await POST(
+      req({
+        zip: "60617",
+        verifierName: "Jane",
+        note: {
+          noteType: "general",
+          body: "short body",
+          sourceUrl: "https://example.com/" + "x".repeat(500),
+        },
+      }),
+      params()
+    );
+    expect(res.status).toBe(400);
+    expect(addOwnerFileNoteMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects IL-SOS free-text fields over 500 characters", async () => {
+    const long = "x".repeat(501);
+    for (const field of ["registeredAgentName", "registeredAgentAddress", "ilSosFileNumber", "ilSosLookupUrl"]) {
+      const res = await POST(
+        req({ zip: "60617", verifierName: "Jane", [field]: long }),
+        params()
+      );
+      expect(res.status).toBe(400);
+    }
+    expect(upsertOwnerFileVerificationMock).not.toHaveBeenCalled();
   });
 });

@@ -11,6 +11,7 @@ const {
   getOwnerClusterMock,
   getOwnerFileVerificationMock,
   listOutreachEventsMock,
+  listOwnerFileNotesMock,
   resolveParcelProgramContextMock,
 } = vi.hoisted(() => ({
   isConfiguredMock: vi.fn(),
@@ -20,6 +21,7 @@ const {
   getOwnerClusterMock: vi.fn(),
   getOwnerFileVerificationMock: vi.fn(),
   listOutreachEventsMock: vi.fn(),
+  listOwnerFileNotesMock: vi.fn(),
   resolveParcelProgramContextMock: vi.fn(),
 }));
 
@@ -39,6 +41,7 @@ vi.mock("@/lib/owner-file", async () => {
     getOwnerCluster: getOwnerClusterMock,
     getOwnerFileVerification: getOwnerFileVerificationMock,
     listOutreachEvents: listOutreachEventsMock,
+    listOwnerFileNotes: listOwnerFileNotesMock,
   };
 });
 
@@ -48,12 +51,17 @@ vi.mock("@/lib/owner-file-letter-context", () => ({
 
 import { GET, POST } from "./route";
 
+// ownerType "corporate_llc" makes this cluster an entity owner by default
+// (lib/owner-file.ts resolveIsEntityOwner) so the existing letter-generation
+// tests below exercise the verified-status gate in isolation; the dedicated
+// entity-owner-boundary test further down uses its own individual-owner
+// cluster.
 const cluster: OwnerCluster = {
   clusterKey: "mail:foo",
   pins: [],
   ownerName: "TEST OWNER",
   ownerMailingAddress: "1 MAIN ST",
-  ownerType: null,
+  ownerType: "corporate_llc",
   parcelCount: 1,
   vacantParcelCount: 1,
   businessCount: 0,
@@ -97,6 +105,7 @@ beforeEach(() => {
   getOwnerClusterMock.mockReset().mockResolvedValue(cluster);
   getOwnerFileVerificationMock.mockReset().mockResolvedValue(null);
   listOutreachEventsMock.mockReset().mockResolvedValue([]);
+  listOwnerFileNotesMock.mockReset().mockResolvedValue([]);
   resolveParcelProgramContextMock.mockReset().mockResolvedValue([]);
 });
 
@@ -174,5 +183,65 @@ describe("POST /api/owner-file/[clusterKey]/outreach", () => {
       {},
       expect.objectContaining({ verificationId: "v1", eventType: "letter_generated" })
     );
+  });
+
+  it("blocks letter_generated with 403 for a verified but non-entity (individual) owner cluster", async () => {
+    const individualCluster: OwnerCluster = {
+      ...cluster,
+      ownerName: "JANE SMITH",
+      ownerType: "local_private",
+    };
+    getOwnerClusterMock.mockResolvedValue(individualCluster);
+    getOwnerFileVerificationMock.mockResolvedValue({ id: "v1", status: "verified", ilSosLookupUrl: null });
+    listOwnerFileNotesMock.mockResolvedValue([]);
+
+    const res = await POST(
+      postReq({ zip: "60617", eventType: "letter_generated", actorName: "Jane" }),
+      params()
+    );
+    expect(res.status).toBe(403);
+    const data = await res.json();
+    expect(data.error).toMatch(/reserved for entity owners/i);
+    expect(addOutreachEventMock).not.toHaveBeenCalled();
+  });
+
+  it("blocks letter_downloaded with 403 for a verified but non-entity (individual) owner cluster", async () => {
+    const individualCluster: OwnerCluster = {
+      ...cluster,
+      ownerName: "JANE SMITH",
+      ownerType: "local_private",
+    };
+    getOwnerClusterMock.mockResolvedValue(individualCluster);
+    getOwnerFileVerificationMock.mockResolvedValue({ id: "v1", status: "verified", ilSosLookupUrl: null });
+    listOwnerFileNotesMock.mockResolvedValue([]);
+
+    const res = await POST(
+      postReq({ zip: "60617", eventType: "letter_downloaded", actorName: "Jane" }),
+      params()
+    );
+    expect(res.status).toBe(403);
+    expect(addOutreachEventMock).not.toHaveBeenCalled();
+  });
+
+  it("allows letter_generated for a verified individual-owner cluster once SOS evidence is on file", async () => {
+    const individualCluster: OwnerCluster = {
+      ...cluster,
+      ownerName: "JANE SMITH",
+      ownerType: "local_private",
+    };
+    getOwnerClusterMock.mockResolvedValue(individualCluster);
+    getOwnerFileVerificationMock.mockResolvedValue({
+      id: "v1",
+      status: "verified",
+      ilSosLookupUrl: "https://apps.ilsos.gov/businessentitysearch/",
+    });
+    addOutreachEventMock.mockResolvedValue({ id: "e1", eventType: "letter_generated" });
+    resolveParcelProgramContextMock.mockResolvedValue([]);
+
+    const res = await POST(
+      postReq({ zip: "60617", eventType: "letter_generated", actorName: "Jane" }),
+      params()
+    );
+    expect(res.status).toBe(200);
   });
 });

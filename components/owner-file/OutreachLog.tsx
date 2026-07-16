@@ -33,12 +33,28 @@ interface Props {
   ownerName: string | null;
   ownerMailingAddress: string | null;
   verificationStatus: string | null;
+  /**
+   * Governance rail: automated outreach letters are reserved for entity
+   * owners, never individual people (lib/owner-file.ts resolveIsEntityOwner)
+   * — server-enforced in the outreach API route; this only disables the
+   * button and explains why, it is not the boundary itself.
+   */
+  isEntityOwner: boolean;
   events: OwnerFileOutreachEvent[];
 }
 
-export function OutreachLog({ zip, clusterKey, ownerName, ownerMailingAddress, verificationStatus, events }: Props) {
+export function OutreachLog({
+  zip,
+  clusterKey,
+  ownerName,
+  ownerMailingAddress,
+  verificationStatus,
+  isEntityOwner,
+  events,
+}: Props) {
   const router = useRouter();
   const isVerified = verificationStatus === "verified";
+  const canGenerateLetter = isVerified && isEntityOwner;
 
   const [corridorManagerName, setCorridorManagerName] = useState("");
   const [corridorManagerContact, setCorridorManagerContact] = useState("");
@@ -68,6 +84,13 @@ export function OutreachLog({ zip, clusterKey, ownerName, ownerMailingAddress, v
       setLetterError("This Owner File must be verified before generating an outreach letter.");
       return;
     }
+    if (!isEntityOwner) {
+      setLetterError(
+        "Automated outreach letters are reserved for entity owners. This cluster's taxpayer of record " +
+          "appears to be an individual; coordinate a personal contact through a local partner instead."
+      );
+      return;
+    }
     if (!corridorManagerName.trim()) {
       setLetterError("Corridor manager name is required to generate a letter.");
       return;
@@ -95,7 +118,14 @@ export function OutreachLog({ zip, clusterKey, ownerName, ownerMailingAddress, v
         corridorManagerContact: corridorManagerContact.trim(),
         zip,
         clusterKey,
-        verificationStatus: "verified",
+        // The real client-side status, not a hardcoded "verified" — this is
+        // what makes lib/outreach-letter.ts's own defense-in-depth check
+        // (verificationStatus !== "verified" throws) meaningful. The route
+        // above already re-checked verified-status server-side before
+        // logging the letter_generated event, so this should always be
+        // "verified" by the time we get here; if it somehow isn't, the
+        // builder throws instead of silently producing a letter.
+        verificationStatus: verificationStatus ?? "draft",
         parcelProgramContext,
       });
 
@@ -156,18 +186,25 @@ export function OutreachLog({ zip, clusterKey, ownerName, ownerMailingAddress, v
             Save a verification with status &quot;Verified&quot; above before generating a letter.
           </p>
         )}
+        {isVerified && !isEntityOwner && (
+          <p className="mt-2 text-[12px] text-amber-700">
+            Automated outreach letters are reserved for entity owners — this cluster&apos;s taxpayer of
+            record appears to be an individual. Coordinate a personal contact through a local partner
+            instead; outcomes can still be logged below.
+          </p>
+        )}
         <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <input
             value={corridorManagerName}
             onChange={(e) => setCorridorManagerName(e.target.value)}
-            disabled={!isVerified}
+            disabled={!canGenerateLetter}
             placeholder="Corridor manager name"
             className="border border-[#0C1B33]/15 bg-white px-3 py-2 text-[13px] outline-none focus:border-[#2563EB] disabled:opacity-50"
           />
           <input
             value={corridorManagerContact}
             onChange={(e) => setCorridorManagerContact(e.target.value)}
-            disabled={!isVerified}
+            disabled={!canGenerateLetter}
             placeholder="Contact (email or phone)"
             className="border border-[#0C1B33]/15 bg-white px-3 py-2 text-[13px] outline-none focus:border-[#2563EB] disabled:opacity-50"
           />
@@ -181,7 +218,7 @@ export function OutreachLog({ zip, clusterKey, ownerName, ownerMailingAddress, v
         )}
         <button
           onClick={generateLetter}
-          disabled={!isVerified || generating}
+          disabled={!canGenerateLetter || generating}
           className="mt-4 inline-flex items-center justify-center gap-2 bg-[#0C1B33] px-5 py-3 font-mono-bureau text-[11px] uppercase tracking-[0.16em] text-white hover:bg-[#1E3054] disabled:opacity-40"
         >
           {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}

@@ -12,6 +12,8 @@ import {
   getOwnerCluster,
   getOwnerFileVerification,
   listOutreachEvents,
+  listOwnerFileNotes,
+  resolveIsEntityOwner,
   type OwnerFileOutreachEventType,
   type OwnerFileOutreachOutcome,
 } from "@/lib/owner-file";
@@ -98,6 +100,14 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
+  const cluster = await getOwnerCluster(zip, clusterKey);
+  if (!cluster) {
+    return NextResponse.json(
+      { error: "No owner cluster found for this zip/clusterKey" },
+      { status: 404 }
+    );
+  }
+
   const verification = await getOwnerFileVerification(sql, clusterKey);
 
   const requiresVerified = eventType === "letter_generated" || eventType === "letter_downloaded";
@@ -111,11 +121,35 @@ export async function POST(req: NextRequest, { params }: Params) {
     );
   }
 
+  // Governance rail: automated outreach letters are reserved for entity
+  // owners, never individual people (lib/owner-file.ts resolveIsEntityOwner)
+  // — enforced here, server-side, as the real gate; the UI (OutreachLog)
+  // disables the letter buttons for the same reason, but that is only a
+  // convenience, not the boundary.
+  if (requiresVerified) {
+    const notes = await listOwnerFileNotes(sql, clusterKey);
+    if (!resolveIsEntityOwner(cluster, verification, notes)) {
+      return NextResponse.json(
+        {
+          error:
+            "Automated outreach letters are reserved for entity owners. This cluster's taxpayer of record appears to be an individual; coordinate a personal contact through a local partner instead.",
+        },
+        { status: 403 }
+      );
+    }
+  }
+
   const programIds = Array.isArray(body.programIds)
-    ? body.programIds.filter((id): id is string => typeof id === "string")
+    ? body.programIds.filter((id): id is string => typeof id === "string").slice(0, 50)
     : [];
   const actorName = typeof body.actorName === "string" ? body.actorName.trim() || null : null;
   const notes = typeof body.notes === "string" ? body.notes.trim() || null : null;
+  if ((actorName && actorName.length > 200) || (notes && notes.length > 5000)) {
+    return NextResponse.json(
+      { error: "actorName must be ≤ 200 characters and notes ≤ 5000 characters" },
+      { status: 400 }
+    );
+  }
 
   const event = await addOutreachEvent(sql, {
     clusterKey,
@@ -132,10 +166,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ event });
   }
 
-  const cluster = await getOwnerCluster(zip, clusterKey);
-  const parcelProgramContext = cluster
-    ? await resolveParcelProgramContext(cluster.sampleAddresses)
-    : [];
+  const parcelProgramContext = await resolveParcelProgramContext(cluster.sampleAddresses);
 
   return NextResponse.json({ event, parcelProgramContext });
 }

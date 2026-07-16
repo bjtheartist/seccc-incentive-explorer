@@ -81,6 +81,62 @@ const CORPORATE_PATTERNS = [
   /\bnfp\b/i,
 ];
 
+/**
+ * Additional entity markers beyond PUBLIC_PATTERNS/CORPORATE_PATTERNS — used
+ * only by hasEntityMarkers (the entity-owner boundary check), never by
+ * classifyOwner. Covers institutional/organizational owner types classifyOwner
+ * doesn't need to distinguish for its Local/Out-of-State/Corporate buckets:
+ * financial institutions, religious and civic organizations, schools and
+ * medical institutions, and ownership-association structures. All
+ * word-boundary, case-insensitive. `post` is deliberately NOT a bare-word
+ * marker — "Post" is a common surname (e.g. "JOHN POST") and a false
+ * positive here would wrongly unlock automated outreach letters for an
+ * individual; veteran/fraternal posts are instead matched by the
+ * organization-name conventions they actually use ("VFW", "American
+ * Legion", "POST ####").
+ */
+const ADDITIONAL_ENTITY_MARKERS = [
+  /\bbank\b/i,
+  /\bchurch\b/i,
+  /\bministries\b/i,
+  /\bministry\b/i,
+  /\bcongregation\b/i,
+  /\btemple\b/i,
+  /\bsynagogue\b/i,
+  /\bmosque\b/i,
+  /\bcompany\b/i,
+  /\bfoundation\b/i,
+  /\buniversity\b/i,
+  /\bcollege\b/i,
+  /\bhospital\b/i,
+  /\bclinic\b/i,
+  /\bassociation\b/i,
+  /\bcondominium\b/i,
+  /\bcooperative\b/i,
+  /\bland\s+trust\b/i,
+  /\blodge\b/i,
+  /\bvfw\b/i,
+  /\bamerican\s+legion\b/i,
+  /\bpost\s+#?\d+\b/i,
+];
+
+/**
+ * True when a taxpayer name carries any recognizable entity marker — public/
+ * government (PUBLIC_PATTERNS), corporate/LLC (CORPORATE_PATTERNS), or the
+ * additional institutional/organizational markers above. Backs the
+ * entity-owner boundary (lib/owner-file.ts resolveIsEntityOwner): automated
+ * outreach letters are reserved for entity owners, never individual people,
+ * so this is deliberately a superset of what classifyOwner treats as
+ * "corporate_llc" — it must NOT change classifyOwner's own behavior.
+ */
+export function hasEntityMarkers(taxpayerName: string | null | undefined): boolean {
+  const name = (taxpayerName || "").trim();
+  if (!name) return false;
+  return [...PUBLIC_PATTERNS, ...CORPORATE_PATTERNS, ...ADDITIONAL_ENTITY_MARKERS].some((pattern) =>
+    pattern.test(name)
+  );
+}
+
 /** Illinois ZIP code ranges: 60001–62999. */
 function isIllinoisZip(zip: string): boolean {
   const num = parseInt(zip.replace(/-.*$/, ""), 10);

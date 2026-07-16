@@ -54,6 +54,8 @@ const fakeOwnerFile: OwnerFile = {
   notes: [],
   outreachEvents: [],
   resolvedTier: "B",
+  isEntityOwner: false,
+  snapshotGeneratedAt: "2026-07-10T12:34:10.343Z",
 };
 
 beforeEach(() => {

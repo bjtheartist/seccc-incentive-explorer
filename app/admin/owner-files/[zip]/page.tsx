@@ -7,6 +7,7 @@ import {
   isOwnerFilesAdminConfigured,
 } from "@/lib/owner-files-admin-auth";
 import { listOwnerClusters } from "@/lib/owner-file";
+import { loadStaticOwnerClustersGeneratedAt } from "@/lib/corridor-owners";
 
 export const dynamic = "force-dynamic";
 
@@ -91,6 +92,7 @@ export default async function OwnerFilesIndexPage({
   const clusters = (await listOwnerClusters(zip, 200))
     .slice()
     .sort((a, b) => b.vacantParcelCount - a.vacantParcelCount);
+  const snapshotGeneratedAt = loadStaticOwnerClustersGeneratedAt();
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
@@ -112,6 +114,11 @@ export default async function OwnerFilesIndexPage({
         <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/45">
           Ownership clusters over vacant parcels in this ZIP, ranked by vacant-parcel footprint. Records
           indicate — verify before relying; each Owner File carries its own confidence tier.
+        </p>
+        <p className="mt-2 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
+          {snapshotGeneratedAt
+            ? `Records snapshot as of ${new Date(snapshotGeneratedAt).toLocaleDateString("en-US")} — records indicate, verify before relying.`
+            : "Records snapshot date unavailable — records indicate, verify before relying."}
         </p>
 
         <div className="mt-8 divide-y divide-[#0C1B33]/8 border border-[#0C1B33]/10 bg-white">

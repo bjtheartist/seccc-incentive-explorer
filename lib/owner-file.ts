@@ -1,7 +1,19 @@
 import type { NeonQueryFunction } from "@neondatabase/serverless";
 import { getSQL } from "@/lib/db";
-import { fetchOwnerClusters, loadStaticOwnerClusters, type OwnerCluster } from "@/lib/corridor-owners";
-import { resolveConfidenceTier, type ConfidenceTier } from "@/lib/owner-confidence";
+import {
+  fetchOwnerClusters,
+  loadStaticOwnerClusters,
+  loadStaticOwnerClustersGeneratedAt,
+  type OwnerCluster,
+} from "@/lib/corridor-owners";
+import {
+  isIlSosUrl,
+  resolveConfidenceTier,
+  type ConfidenceTier,
+  type OwnerFileNoteForTier,
+  type OwnerFileVerificationForTier,
+} from "@/lib/owner-confidence";
+import { hasEntityMarkers } from "@/lib/owner-classify";
 import { normalizeChecklist, type ChecklistItem } from "@/lib/workspace";
 
 /**
@@ -159,6 +171,48 @@ export interface OwnerFile {
   outreachEvents: OwnerFileOutreachEvent[];
   /** Freshly recomputed via resolveConfidenceTier — the tier to display. */
   resolvedTier: ConfidenceTier;
+  /** Freshly recomputed via resolveIsEntityOwner — the governance gate for automated outreach letters. */
+  isEntityOwner: boolean;
+  /** The static export's generatedAt stamp (loadStaticOwnerClustersGeneratedAt) — null when no export is present. */
+  snapshotGeneratedAt: string | null;
+}
+
+/** The subset of an OwnerCluster resolveIsEntityOwner needs. */
+export interface OwnerClusterForEntityOwner {
+  ownerName?: string | null;
+  ownerType?: string | null;
+}
+
+/**
+ * Governance rail: automated outreach letters (lib/outreach-letter.ts) are
+ * reserved for ENTITY owners, never individual people. An owner is an entity
+ * when any of the following hold:
+ *  - the taxpayer name itself carries a recognizable entity marker
+ *    (lib/owner-classify.ts hasEntityMarkers — public/government, corporate/
+ *    LLC, or institutional/organizational);
+ *  - the assessor-classified ownerType is already "corporate_llc" or
+ *    "city_public" (lib/owner-classify.ts classifyOwner's own buckets); or
+ *  - the verification or notes carry IL-SOS evidence (the same isIlSosUrl
+ *    rule Tier A uses, see lib/owner-confidence.ts) — an owner found in the
+ *    IL SOS corporate registry is by definition an entity, independent of
+ *    what the taxpayer name or assessor record says.
+ *
+ * This is deliberately looser than Tier A (which additionally requires
+ * `verification.status === "verified"`): isEntityOwner is a factual finding
+ * about what kind of owner this is, not a workflow-completion gate. Callers
+ * that need "verified AND entity" (the outreach letter routes) check both
+ * conditions separately.
+ */
+export function resolveIsEntityOwner(
+  cluster: OwnerClusterForEntityOwner,
+  verification: OwnerFileVerificationForTier | null | undefined,
+  notes: OwnerFileNoteForTier[] = []
+): boolean {
+  if (hasEntityMarkers(cluster.ownerName)) return true;
+  if (cluster.ownerType === "corporate_llc" || cluster.ownerType === "city_public") return true;
+  if (isIlSosUrl(verification?.ilSosLookupUrl)) return true;
+  if (notes.some((note) => note.noteType === "entity_lookup" && isIlSosUrl(note.sourceUrl))) return true;
+  return false;
 }
 
 /* ── Row mapping (defensive JSONB parsing — Neon can return JSONB either
@@ -446,5 +500,7 @@ export async function getOwnerFile(zip: string, clusterKey: string): Promise<Own
     notes,
     outreachEvents,
     resolvedTier: resolveConfidenceTier(cluster, verification, notes),
+    isEntityOwner: resolveIsEntityOwner(cluster, verification, notes),
+    snapshotGeneratedAt: loadStaticOwnerClustersGeneratedAt(),
   };
 }
