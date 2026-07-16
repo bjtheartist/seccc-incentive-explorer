@@ -17,7 +17,9 @@ if (!process.env.DATABASE_URL) {
 }
 
 // SE-Chicago ZIPs only.
-const ZIPS = ["60617", "60619", "60649"];
+const ZIPS = (process.env.SYNC_ZIPS
+  ? process.env.SYNC_ZIPS.split(",").map((z) => z.trim()).filter((z) => /^\d{5}$/.test(z))
+  : null) ?? ["60617", "60619", "60649"];
 
 async function main() {
   console.log("=== Transfers Sync ===\n");
