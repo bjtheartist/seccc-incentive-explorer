@@ -1,0 +1,202 @@
+{
+  "type": "FeatureCollection",
+  "generatedAt": "2026-01-01T00:00:00.000Z",
+  "meta": {
+    "skippedNullLatLng": 0,
+    "zips": ["60617", "60624"]
+  },
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.5605, 41.7137] },
+      "properties": {
+        "pin": "FAKE-60617-001",
+        "address": "100 E 100TH ST",
+        "vacant": true,
+        "zip": "60617",
+        "clusterKey": "mail:fakeowneronellc1standardpkwy",
+        "ownerName": "FAKE OWNER ONE LLC",
+        "ownerType": "corporate_llc",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 4,
+        "confidence": "High"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.5598, 41.714] },
+      "properties": {
+        "pin": "FAKE-60617-002",
+        "address": "102 E 100TH ST",
+        "vacant": true,
+        "zip": "60617",
+        "clusterKey": "mail:fakeowneronellc1standardpkwy",
+        "ownerName": "FAKE OWNER ONE LLC",
+        "ownerType": "corporate_llc",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 4,
+        "confidence": "High"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.5591, 41.7143] },
+      "properties": {
+        "pin": "FAKE-60617-003",
+        "address": "104 E 100TH ST",
+        "vacant": true,
+        "zip": "60617",
+        "clusterKey": "mail:fakeowneronellc1standardpkwy",
+        "ownerName": "FAKE OWNER ONE LLC",
+        "ownerType": "corporate_llc",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 4,
+        "confidence": "High"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.5584, 41.7146] },
+      "properties": {
+        "pin": "FAKE-60617-004",
+        "address": "106 E 100TH ST",
+        "vacant": true,
+        "zip": "60617",
+        "clusterKey": "mail:fakeowneronellc1standardpkwy",
+        "ownerName": "FAKE OWNER ONE LLC",
+        "ownerType": "corporate_llc",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 4,
+        "confidence": "High"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.5577, 41.7149] },
+      "properties": {
+        "pin": "FAKE-60617-005",
+        "address": "108 E 100TH ST",
+        "vacant": false,
+        "zip": "60617",
+        "clusterKey": "mail:fakeowneronellc1standardpkwy",
+        "ownerName": "FAKE OWNER ONE LLC",
+        "ownerType": "corporate_llc",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 4,
+        "confidence": "High"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.557, 41.7152] },
+      "properties": {
+        "pin": "FAKE-60617-006",
+        "address": "110 E 100TH ST",
+        "vacant": false,
+        "zip": "60617",
+        "clusterKey": "mail:fakeowneronellc1standardpkwy",
+        "ownerName": "FAKE OWNER ONE LLC",
+        "ownerType": "corporate_llc",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 4,
+        "confidence": "High"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.7273, 41.8725] },
+      "properties": {
+        "pin": "FAKE-60624-001",
+        "address": "200 S PULASKI RD",
+        "vacant": true,
+        "zip": "60624",
+        "clusterKey": "mail:fakeownertwotrustpobox9",
+        "ownerName": "FAKE OWNER TWO TRUST",
+        "ownerType": "out_of_state",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 2,
+        "confidence": "Medium"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.7266, 41.8728] },
+      "properties": {
+        "pin": "FAKE-60624-002",
+        "address": "202 S PULASKI RD",
+        "vacant": true,
+        "zip": "60624",
+        "clusterKey": "mail:fakeownertwotrustpobox9",
+        "ownerName": "FAKE OWNER TWO TRUST",
+        "ownerType": "out_of_state",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 2,
+        "confidence": "Medium"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.7259, 41.8731] },
+      "properties": {
+        "pin": "FAKE-60624-003",
+        "address": "204 S PULASKI RD",
+        "vacant": false,
+        "zip": "60624",
+        "clusterKey": "mail:fakeownertwotrustpobox9",
+        "ownerName": "FAKE OWNER TWO TRUST",
+        "ownerType": "out_of_state",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 2,
+        "confidence": "Medium"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.7252, 41.8734] },
+      "properties": {
+        "pin": "FAKE-60624-004",
+        "address": "206 S PULASKI RD",
+        "vacant": false,
+        "zip": "60624",
+        "clusterKey": "mail:fakeownertwotrustpobox9",
+        "ownerName": "FAKE OWNER TWO TRUST",
+        "ownerType": "out_of_state",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 2,
+        "confidence": "Medium"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.7245, 41.8737] },
+      "properties": {
+        "pin": "FAKE-60624-005",
+        "address": "208 S PULASKI RD",
+        "vacant": false,
+        "zip": "60624",
+        "clusterKey": "mail:fakeownertwotrustpobox9",
+        "ownerName": "FAKE OWNER TWO TRUST",
+        "ownerType": "out_of_state",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 2,
+        "confidence": "Medium"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": { "type": "Point", "coordinates": [-87.7238, 41.874] },
+      "properties": {
+        "pin": "FAKE-60624-006",
+        "address": "210 S PULASKI RD",
+        "vacant": false,
+        "zip": "60624",
+        "clusterKey": "mail:fakeownertwotrustpobox9",
+        "ownerName": "FAKE OWNER TWO TRUST",
+        "ownerType": "out_of_state",
+        "clusterParcelCount": 6,
+        "clusterVacantCount": 2,
+        "confidence": "Medium"
+      }
+    }
+  ]
+}
