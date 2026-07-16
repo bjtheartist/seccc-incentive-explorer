@@ -1994,8 +1994,12 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
 
   /* COVER (physical page 1) — no page-number tab; numbering starts at Key Findings. */
   drawBrand(null);
-  doc.setFont("times", "bold");
   const coverTitleLines = fit("Chicago Business Incentive Report", CONTENT_W, 3, 30, "bold");
+  // fit() measures in helvetica and leaves it active — restore the serif
+  // display face before drawing (times runs narrower, so the measured wrap
+  // still fits).
+  doc.setFont("times", "bold");
+  doc.setFontSize(30);
   setColor(doc, NAVY);
   let coverY = 108;
   coverTitleLines.forEach((line, index) => {
