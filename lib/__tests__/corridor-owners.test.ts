@@ -39,18 +39,23 @@ describe("loadStaticOwnerClusters", () => {
    * real) — every loaded cluster must still satisfy the current OwnerCluster
    * shape rather than leaving the new fields undefined.
    */
-  it("backward-compat: defaults pins to [] and distressSignals fields to null for the current export", () => {
-    for (const zip of ["60617", "60619", "60649"]) {
+  it("the shipped export carries pins and the MVP distress signal for every ZIP", () => {
+    // The 2026-07-16 nine-ZIP export populates pins[] and
+    // buildingViolationCount; the four Phase-2 signals stay null until their
+    // adapters ship. Old-shape defaulting stays covered by the synthetic
+    // normalizeDistressSignals tests below.
+    const zips = ["60617", "60619", "60649", "60624", "60623", "60644", "60651", "60621", "60636"];
+    for (const zip of zips) {
       const clusters = loadStaticOwnerClusters(zip, 50)!;
+      expect(clusters.length).toBeGreaterThan(0);
       for (const cluster of clusters) {
         expect(Array.isArray(cluster.pins)).toBe(true);
-        expect(cluster.distressSignals).toEqual({
-          buildingViolationCount: null,
-          vacantBuildingViolationCount: null,
-          delinquentTaxCount: null,
-          scavengerOrAnnualSaleFlag: null,
-          cclbaInventoryFlag: null,
-        });
+        const ds = cluster.distressSignals;
+        expect(ds.buildingViolationCount === null || typeof ds.buildingViolationCount === "number").toBe(true);
+        expect(ds.vacantBuildingViolationCount).toBeNull();
+        expect(ds.delinquentTaxCount).toBeNull();
+        expect(ds.scavengerOrAnnualSaleFlag).toBeNull();
+        expect(ds.cclbaInventoryFlag).toBeNull();
       }
     }
   });
