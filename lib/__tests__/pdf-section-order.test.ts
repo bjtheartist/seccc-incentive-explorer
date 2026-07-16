@@ -6,13 +6,14 @@ import {
 } from "../report-engine";
 import type { GeneratedReport } from "../report-engine";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "../capital-partner-report";
+import { extractText } from "unpdf";
 
 function section(title: string): GeneratedReport["sections"][number] {
   return { title, items: [] };
 }
 
 describe("orderSectionsForPdf", () => {
-  it("moves Your Support Network directly after Eligible Incentive Programs", () => {
+  it("puts action sections before preparation and supporting context", () => {
     const input = [
       section("Site Overview"),
       section("Neighborhood Economic Context"),
@@ -21,16 +22,18 @@ describe("orderSectionsForPdf", () => {
       section("Additional Programs to Explore"),
       section("Required Documents"),
       section("Your Support Network"),
+      section("Upcoming Deadlines Near This Address"),
     ];
     const titles = orderSectionsForPdf(input).map((s) => s.title);
     expect(titles).toEqual([
-      "Site Overview",
-      "Neighborhood Economic Context",
-      "Incentive Zone Coverage & Program Interactions",
       "Eligible Incentive Programs",
+      "Upcoming Deadlines Near This Address",
       "Your Support Network",
       "Additional Programs to Explore",
       "Required Documents",
+      "Site Overview",
+      "Incentive Zone Coverage & Program Interactions",
+      "Neighborhood Economic Context",
     ]);
   });
 
@@ -55,11 +58,11 @@ describe("orderSectionsForPdf", () => {
     ];
 
     expect(orderSectionsForPdf(input).map((item) => item.title)).toEqual([
-      "Site Overview",
       GOAL_MATCH_PROGRAMS_SECTION_TITLE,
       OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
       "Your Support Network",
       "Additional Programs to Explore",
+      "Site Overview",
     ]);
   });
 
@@ -73,11 +76,11 @@ describe("orderSectionsForPdf", () => {
     ];
 
     expect(orderSectionsForPdf(input).map((item) => item.title)).toEqual([
-      "Site Overview",
       "Eligible Incentive Programs",
       CAPITAL_PARTNER_SECTION_TITLE,
       "Your Support Network",
       "Required Documents",
+      "Site Overview",
     ]);
   });
 
@@ -101,7 +104,7 @@ describe("orderSectionsForPdf", () => {
     expect(input.map((s) => s.title)).toEqual(before);
   });
 
-  it("generates a PDF with primary-goal and structured transportation content", () => {
+  it("generates a five-page action report with the new brand and workflow", async () => {
     const report: GeneratedReport = {
       title: "Site Incentive Analysis",
       subtitle: "Test report",
@@ -132,9 +135,17 @@ describe("orderSectionsForPdf", () => {
     };
 
     const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: true,
+    });
     expect(output.filename).toBe(
       "chicago-incentive-report-4200-s-california-ave-chicago-il.pdf",
     );
     expect(output.base64.length).toBeGreaterThan(1_000);
+    expect(extracted.totalPages).toBe(5);
+    expect(extracted.text).toContain("CHICAGO INCENTIVE EXPLORER");
+    expect(extracted.text).toContain("Review the Findings");
+    expect(extracted.text).toContain("Who to Contact Next");
+    expect(extracted.text).toContain("Take the Next Step");
   });
 });

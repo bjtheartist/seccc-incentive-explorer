@@ -117,6 +117,18 @@ describe("generateReportData", () => {
     expect(report.locationContext?.programs.topMatches.map((p) => p.programId)).toContain("tif");
   });
 
+  it("frames address-linked programs as a fit check before application", () => {
+    const report = generateReportData(
+      makeState({ projectType: "equipment" }),
+      [makeProgram()],
+      { zones, zoneNames },
+    );
+
+    expect(report.recommendedActions[0]?.label).toBe("Confirm fit for TIF Program");
+    expect(report.recommendedActions[0]?.label).not.toContain("Apply for");
+    expect(report.summary).toContain("Start with the recommended actions");
+  });
+
   it("attaches executive summaries to current dev-feasibility reports", () => {
     const report = generateReportData(
       makeState({

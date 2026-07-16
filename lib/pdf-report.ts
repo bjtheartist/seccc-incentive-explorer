@@ -11,99 +11,43 @@ import { PROJECT_TYPE_LABELS } from "./report-wizard-config";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "./capital-partner-report";
 
 /**
- * PDF print order:
- *  1. Keeps goal-ranked confirmed program sections together.
- *  2. Places the financing resource after confirmed programs.
- *  3. Elevates "Your Support Network" after the financing resource.
- *  4. Places "Upcoming Deadlines Near This Address" after the support network
- *     so time-sensitive items appear early in the PDF.
- *
- * Sections not listed are left in their natural order.
+ * PDF print order is intentionally action-first. The web report can support
+ * exploration, while the downloadable report should help someone decide what
+ * to do, who to contact, and what to prepare before they read the evidence.
+ * Unknown sections keep their relative order between the action and context
+ * groups so other report types remain predictable.
  */
 export function orderSectionsForPdf(
   sections: GeneratedReport["sections"],
 ): GeneratedReport["sections"] {
-  const ordered = [...sections];
-
   const confirmedSectionTitles = new Set([
     CONFIRMED_PROGRAMS_SECTION_TITLE,
     GOAL_MATCH_PROGRAMS_SECTION_TITLE,
     OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
   ]);
 
-  const goalMatchIdx = ordered.findIndex(
-    (section) => section.title === GOAL_MATCH_PROGRAMS_SECTION_TITLE,
-  );
-  const otherConfirmedIdx = ordered.findIndex(
-    (section) => section.title === OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
-  );
-  if (goalMatchIdx >= 0 && otherConfirmedIdx >= 0) {
-    const [otherConfirmed] = ordered.splice(otherConfirmedIdx, 1);
-    const updatedGoalMatchIdx = ordered.findIndex(
-      (section) => section.title === GOAL_MATCH_PROGRAMS_SECTION_TITLE,
-    );
-    ordered.splice(updatedGoalMatchIdx + 1, 0, otherConfirmed);
-  }
+  const priority = (title: string): number => {
+    if (title === GOAL_MATCH_PROGRAMS_SECTION_TITLE) return 10;
+    if (title === OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE) return 11;
+    if (confirmedSectionTitles.has(title)) return 12;
+    if (title === CAPITAL_PARTNER_SECTION_TITLE) return 20;
+    if (title === "Upcoming Deadlines Near This Address") return 30;
+    if (title === "Your Support Network") return 40;
+    if (title === "Additional Programs to Explore") return 50;
+    if (title === "Required Documents") return 60;
+    if (title === "Document Readiness Checklist") return 61;
+    if (title === "Site Overview") return 80;
+    if (title === "Project Intake") return 81;
+    if (title === "Incentive Zone Coverage & Program Interactions") return 82;
+    if (title === "Neighborhood Economic Context") return 90;
+    if (title === "Local Impact Anchors") return 91;
+    return 70;
+  };
 
-  const capitalPartnerIdx = ordered.findIndex(
-    (section) => section.title === CAPITAL_PARTNER_SECTION_TITLE,
-  );
-  if (capitalPartnerIdx >= 0) {
-    const [capitalPartner] = ordered.splice(capitalPartnerIdx, 1);
-    const confirmedIdx = ordered.reduce(
-      (lastIndex, section, index) =>
-        confirmedSectionTitles.has(section.title) ? index : lastIndex,
-      -1,
-    );
-    ordered.splice(confirmedIdx >= 0 ? confirmedIdx + 1 : 0, 0, capitalPartner);
-  }
-
-  // Elevate Support Network after the financing resource or confirmed programs.
-  const supportIdx = ordered.findIndex(
-    (s) => s.title === "Your Support Network",
-  );
-  if (supportIdx >= 0) {
-    const [support] = ordered.splice(supportIdx, 1);
-    const capitalAnchorIdx = ordered.findIndex(
-      (section) => section.title === CAPITAL_PARTNER_SECTION_TITLE,
-    );
-    const confirmedIdx = ordered.reduce(
-      (lastIndex, section, index) =>
-        confirmedSectionTitles.has(section.title) ? index : lastIndex,
-      -1,
-    );
-    const anchorIdx = capitalAnchorIdx >= 0 ? capitalAnchorIdx : confirmedIdx;
-    ordered.splice(anchorIdx >= 0 ? anchorIdx + 1 : 0, 0, support);
-  }
-
-  // Move Deadlines after Support Network (or after confirmed programs if no support).
-  const deadlinesIdx = ordered.findIndex(
-    (s) => s.title === "Upcoming Deadlines Near This Address",
-  );
-  if (deadlinesIdx >= 0) {
-    const [deadlines] = ordered.splice(deadlinesIdx, 1);
-    const supportAnchorIdx = ordered.findIndex((s) => s.title === "Your Support Network");
-    const capitalAnchorIdx = ordered.findIndex(
-      (s) => s.title === CAPITAL_PARTNER_SECTION_TITLE,
-    );
-    const confirmedAnchorIdx = ordered.reduce(
-      (lastIndex, section, index) =>
-        confirmedSectionTitles.has(section.title) ? index : lastIndex,
-      -1,
-    );
-    const anchorIdx = supportAnchorIdx >= 0
-      ? supportAnchorIdx
-      : capitalAnchorIdx >= 0
-        ? capitalAnchorIdx
-        : confirmedAnchorIdx;
-    // Insert after the anchor, or at position 1 if neither found
-    ordered.splice(anchorIdx >= 0 ? anchorIdx + 1 : 1, 0, deadlines);
-  }
-
-  // Corridor signals now live inside Neighborhood Economic Context, so no
-  // separate corridor section needs ordering.
-
-  return ordered;
+  return sections
+    .map((section, index) => ({ section, index }))
+    .sort((a, b) => priority(a.section.title) - priority(b.section.title) || a.index - b.index)
+    .map(({ section }) => section);
 }
 
 /* ── Brand Colors ── */
@@ -210,6 +154,35 @@ function formatDateLabel(value: string): string {
 
 function hasText(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
+}
+
+function conciseText(text: string, maxLength = 190): string {
+  const normalized = text.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) return normalized;
+
+  const sentence = normalized.match(/^.*?[.!?](?:\s|$)/)?.[0]?.trim();
+  if (sentence && sentence.length <= maxLength) return sentence;
+
+  const clipped = normalized.slice(0, maxLength - 3);
+  const wordBoundary = clipped.lastIndexOf(" ");
+  return `${clipped.slice(0, Math.max(wordBoundary, maxLength - 24)).trim()}...`;
+}
+
+function isCompactContextSection(title: string): boolean {
+  return [
+    "Site Overview",
+    "Project Intake",
+    "Neighborhood Economic Context",
+    "Local Impact Anchors",
+  ].includes(title);
+}
+
+function suppressItemProvenance(title: string): boolean {
+  return isCompactContextSection(title) || [
+    "Required Documents",
+    "Document Readiness Checklist",
+    "Incentive Zone Coverage & Program Interactions",
+  ].includes(title);
 }
 
 function drawLinkedWrappedText(
@@ -829,7 +802,7 @@ export function generateReportBase64(
    GENERATE ENHANCED PDF from GeneratedReport
    ══════════════════════════════════════════════════════ */
 
-function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } {
+function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const dateStr = new Date(report.generatedAt).toLocaleDateString("en-US", {
     year: "numeric",
@@ -927,6 +900,41 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
   doc.text("Key Findings", MARGIN, y);
   y += 10;
 
+  const confirmedTitles = new Set([
+    CONFIRMED_PROGRAMS_SECTION_TITLE,
+    GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+    OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+  ]);
+  const confirmedCount = report.sections
+    .filter((section) => confirmedTitles.has(section.title))
+    .reduce((count, section) => count + section.items.length, 0);
+  const discoveryCount = report.sections.find(
+    (section) => section.title === "Additional Programs to Explore",
+  )?.items.length || 0;
+  const deadlineCount = report.sections.find(
+    (section) => section.title === "Upcoming Deadlines Near This Address",
+  )?.items.length || 0;
+  const metricGap = 4;
+  const metricWidth = (CONTENT_W - metricGap * 2) / 3;
+  const metrics = [
+    { value: String(confirmedCount), label: "ADDRESS-LINKED", color: BLUE },
+    { value: String(discoveryCount), label: "TO EXPLORE", color: AMBER },
+    { value: String(deadlineCount), label: "UPCOMING DATES", color: GREEN },
+  ];
+  metrics.forEach((metric, index) => {
+    const x = MARGIN + index * (metricWidth + metricGap);
+    fillRect(doc, x, y, metricWidth, 20, "#F6F8FC");
+    fillRect(doc, x, y, 2, 20, metric.color);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    setColor(doc, NAVY);
+    doc.text(metric.value, x + 7, y + 9);
+    doc.setFontSize(6.5);
+    setColor(doc, MEDIUM_GRAY);
+    doc.text(metric.label, x + 7, y + 15);
+  });
+  y += 28;
+
   if (report.summary) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
@@ -956,6 +964,73 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
     y += 6;
   }
 
+  /* ── ACTIONS BELONG IN THE DECISION BRIEF, NOT AT THE END ── */
+  if (report.recommendedActions && report.recommendedActions.length > 0) {
+    drawAccentBar(doc, MARGIN, y);
+    y += 6;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    setColor(doc, NAVY);
+    doc.text("Recommended Actions", MARGIN, y);
+    y += 7;
+
+    report.recommendedActions.forEach((action, i) => {
+      const labelLines = doc.splitTextToSize(action.label, CONTENT_W - 34) as string[];
+      const description = conciseText(action.description, 170);
+      const descriptionLines = doc.splitTextToSize(description, CONTENT_W - 34) as string[];
+      const cardHeight = Math.max(18, 9 + labelLines.length * 3.8 + descriptionLines.length * 3.4);
+      y = checkPage(doc, y, cardHeight + 4);
+      fillRect(doc, MARGIN, y, CONTENT_W, cardHeight, i % 2 === 0 ? "#F8FAFD" : WHITE);
+      fillRect(doc, MARGIN, y, 3, cardHeight, action.priority === "high" ? BLUE : "#93A4BD");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      setColor(doc, BLUE);
+      doc.text(`${i + 1}`, MARGIN + 8, y + 8);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      setColor(doc, NAVY);
+      labelLines.forEach((line, lineIndex) => {
+        doc.text(line, MARGIN + 18, y + 7 + lineIndex * 3.8);
+      });
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      setColor(doc, MEDIUM_GRAY);
+      const descriptionY = y + 8 + labelLines.length * 3.8;
+      descriptionLines.forEach((line, lineIndex) => {
+        doc.text(line, MARGIN + 18, descriptionY + lineIndex * 3.4);
+      });
+      y += cardHeight + 3;
+    });
+  }
+
+  fillRect(doc, MARGIN, y + 3, CONTENT_W, 16, "#EFF3FB");
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  setColor(doc, BLUE);
+  doc.text("HOW TO USE THIS REPORT", MARGIN + 8, y + 10);
+  doc.setFont("helvetica", "normal");
+  setColor(doc, MEDIUM_GRAY);
+  doc.text("Act first, prepare documents next, then use the final sections for supporting context.", MARGIN + 48, y + 10);
+  y += 24;
+
+  fillRect(doc, MARGIN, y, CONTENT_W, 20, NAVY);
+  fillRect(doc, MARGIN, y, 3, 20, BLUE);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  setColor(doc, WHITE);
+  doc.text("NEED HELP TURNING THIS INTO A PLAN?", MARGIN + 9, y + 8);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(7);
+  setColor(doc, "#FFFFFFA0");
+  doc.text("Southeast Chicago Chamber of Commerce  |  (773) 721-1999  |  www.secchicago.org", MARGIN + 9, y + 14);
+
+  // Keep page 2 as a self-contained decision brief.
+  doc.addPage();
+  y = MARGIN + 10;
+
   /* ── PAGE 3+: SECTIONS ── */
   for (const section of orderSectionsForPdf(report.sections)) {
     y = checkPage(doc, y, 35);
@@ -973,7 +1048,12 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7);
       setColor(doc, LIGHT_GRAY);
-      y += wrapText(doc, section.description, MARGIN, y, CONTENT_W, 3.5);
+      const description = section.title === "Additional Programs to Explore"
+        ? "Useful leads that are not confirmed by the address alone. Verify project, property, timing, and administrator requirements before relying on them."
+        : isCompactContextSection(section.title)
+          ? conciseText(section.description, 180)
+          : section.description;
+      y += wrapText(doc, description, MARGIN, y, CONTENT_W, 3.5);
       y += 3;
     }
     y += 3;
@@ -993,17 +1073,30 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
       doc.setFont("helvetica", "bold");
       doc.setFontSize(8);
       setColor(doc, NAVY);
-      doc.text(item.label, MARGIN + 6, y);
 
       const hasGroupedDetail = Boolean(item.detailGroups?.length);
+      const valueColumnWidth = 54;
+      const labelWidth = hasGroupedDetail ? CONTENT_W - 10 : CONTENT_W - valueColumnWidth - 16;
+      const labelLines = doc.splitTextToSize(item.label, labelWidth) as string[];
+      labelLines.forEach((line, lineIndex) => {
+        doc.text(line, MARGIN + 6, y + lineIndex * 3.8);
+      });
+
+      let valueLines: string[] = [];
 
       if (item.value && !hasGroupedDetail) {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
         setColor(doc, MEDIUM_GRAY);
-        const valW = doc.getTextWidth(item.value);
-        doc.text(item.value, W - MARGIN - valW, y);
+        valueLines = doc.splitTextToSize(item.value, valueColumnWidth) as string[];
+        valueLines.forEach((line, lineIndex) => {
+          const valW = doc.getTextWidth(line);
+          doc.text(line, W - MARGIN - valW, y + lineIndex * 3.5);
+        });
       }
+
+      const headingLines = Math.max(labelLines.length, valueLines.length, 1);
+      y += (headingLines - 1) * 3.8;
 
       if (hasGroupedDetail && item.detailGroups) {
         if (item.value) {
@@ -1022,13 +1115,21 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
           doc.text(group.label, MARGIN + 6, y);
           y += 4;
 
-          for (const entry of group.items) {
+          const visibleEntries = group.items.slice(0, 2);
+          for (const entry of visibleEntries) {
             y = checkPage(doc, y, 8);
             doc.setFont("helvetica", "normal");
             doc.setFontSize(7);
             setColor(doc, MEDIUM_GRAY);
             doc.text("\u2022", MARGIN + 8, y);
             y += wrapText(doc, entry, MARGIN + 13, y, CONTENT_W - 17, 3.5);
+          }
+          if (group.items.length > visibleEntries.length) {
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(6.5);
+            setColor(doc, LIGHT_GRAY);
+            doc.text(`+ ${group.items.length - visibleEntries.length} more nearby`, MARGIN + 13, y);
+            y += 4;
           }
         }
 
@@ -1040,11 +1141,18 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
           y += wrapText(doc, item.detailCaveat, MARGIN + 6, y, CONTENT_W - 10, 3.3);
         }
       } else if (item.detail) {
-        y += 4;
+        y += isCompactContextSection(section.title) ? 3 : 4;
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
         setColor(doc, LIGHT_GRAY);
-        y += wrapText(doc, item.detail, MARGIN + 6, y, CONTENT_W - 10, 3.5);
+        const compactDetail = section.title === "Additional Programs to Explore"
+          ? conciseText(item.detail, 210)
+          : isCompactContextSection(section.title)
+            ? conciseText(item.detail, 175)
+            : section.title === "Document Readiness Checklist"
+              ? "Prepare if available; confirm exact requirements with the program administrator."
+              : item.detail;
+        y += wrapText(doc, compactDetail, MARGIN + 6, y, CONTENT_W - 10, 3.5);
       }
 
       if (item.projectFit && item.projectFit.level !== "location-only") {
@@ -1052,9 +1160,12 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(6.5);
         setColor(doc, item.projectFit.level === "industry-check" ? AMBER : BLUE);
+        const fitText = section.title === "Additional Programs to Explore" && item.projectFit.level !== "industry-check"
+          ? item.projectFit.label
+          : `${item.projectFit.label}: ${conciseText(item.projectFit.reason, 145)}`;
         y += wrapText(
           doc,
-          `${item.projectFit.label}. ${item.projectFit.reason}`,
+          fitText,
           MARGIN + 6,
           y,
           CONTENT_W - 10,
@@ -1062,50 +1173,22 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
         );
       }
 
-      const provenanceStartY = y + 3;
-      const provenanceEndY = drawProgramProvenance(
-        doc,
-        item as ReportItemWithProvenance,
-        MARGIN + 6,
-        provenanceStartY,
-        CONTENT_W - 10
-      );
-      if (provenanceEndY !== provenanceStartY) {
-        y = provenanceEndY + 3;
+      if (!suppressItemProvenance(section.title)) {
+        const provenanceStartY = y + 3;
+        const provenanceEndY = drawProgramProvenance(
+          doc,
+          item as ReportItemWithProvenance,
+          MARGIN + 6,
+          provenanceStartY,
+          CONTENT_W - 10
+        );
+        if (provenanceEndY !== provenanceStartY) {
+          y = provenanceEndY + 3;
+        }
       }
-      y += 4;
+      y += isCompactContextSection(section.title) ? 2 : 4;
     }
-    y += 6;
-  }
-
-  /* ── RECOMMENDED ACTIONS ── */
-  if (report.recommendedActions && report.recommendedActions.length > 0) {
-    y = checkPage(doc, y, 40);
-    if (y > H - 50) { doc.addPage(); y = MARGIN + 10; }
-    drawAccentBar(doc, MARGIN, y);
-    y += 6;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    setColor(doc, NAVY);
-    doc.text("Recommended Actions", MARGIN, y);
-    y += 8;
-
-    report.recommendedActions.forEach((action, i) => {
-      y = checkPage(doc, y, 16);
-      fillRect(doc, MARGIN, y, CONTENT_W, 12, i % 2 === 0 ? "#FAFAFA" : WHITE);
-      fillRect(doc, MARGIN, y, 3, 12, BLUE);
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      setColor(doc, BLUE);
-      doc.text(`${i + 1}`, MARGIN + 8, y + 8);
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-      setColor(doc, NAVY);
-      doc.text(action.label, MARGIN + 16, y + 8);
-      y += 15;
-    });
+    y += isCompactContextSection(section.title) ? 3 : 6;
   }
 
   /* ── DATA SOURCES ── */
@@ -1118,46 +1201,40 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     setColor(doc, NAVY);
-    doc.text("Data Sources", MARGIN, y);
-    y += 8;
+    doc.text("Sources & Verification", MARGIN, y);
+    y += 6;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    setColor(doc, LIGHT_GRAY);
+    y += wrapText(
+      doc,
+      "Official and public-data sources used for this screening. Open the linked source and confirm current requirements before making a decision.",
+      MARGIN,
+      y,
+      CONTENT_W,
+      3.5,
+    );
+    y += 4;
 
     for (const src of report.dataSources) {
-      y = checkPage(doc, y, 16);
+      y = checkPage(doc, y, 10);
+      drawLine(doc, MARGIN, y, W - MARGIN, "#EEF1F5");
+      y += 4;
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(8);
+      doc.setFontSize(7.5);
       setColor(doc, NAVY);
       doc.text(src.label, MARGIN + 4, y);
-      y += 4;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
-      setColor(doc, LIGHT_GRAY);
-      y += wrapText(doc, src.description, MARGIN + 4, y, CONTENT_W - 8, 3.5);
       if (src.url) {
-        y += 1;
         setColor(doc, BLUE);
-        doc.setFontSize(6);
-        doc.text(src.url, MARGIN + 4, y);
-        y += 4;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(6.5);
+        const sourceText = compactUrl(src.url);
+        const sourceWidth = doc.getTextWidth(sourceText);
+        doc.textWithLink(sourceText, W - MARGIN - sourceWidth, y, { url: src.url });
       }
-      y += 3;
+      y += 6;
     }
   }
-
-  // SECCC Contact block
-  y += 8;
-  y = checkPage(doc, y, 40);
-  fillRect(doc, MARGIN, y, CONTENT_W, 35, NAVY);
-  fillRect(doc, MARGIN, y, CONTENT_W, 2, BLUE);
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  setColor(doc, WHITE);
-  doc.text("SOUTHEAST CHICAGO CHAMBER OF COMMERCE", MARGIN + 10, y + 12);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8);
-  setColor(doc, "#FFFFFF80");
-  doc.text("Phone: (773) 721-1999", MARGIN + 10, y + 20);
-  doc.text("Web: www.secchicago.org", MARGIN + 10, y + 26);
-  doc.text("Serving the 7th, 8th, and 10th Wards of Chicago", MARGIN + 10, y + 32);
 
   /* ── PAGE HEADERS & FOOTERS ── */
   const totalPages = doc.getNumberOfPages();
@@ -1194,6 +1271,464 @@ function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } 
 
   const slug = address.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
   return { doc, slug };
+}
+
+function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
+  const address = report.metadata?.address || "Address Lookup";
+  const dateStr = new Date(report.generatedAt).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const primaryGoal = report.metadata?.projectType
+    ? PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType
+    : "Confirm the project goal with an advisor";
+
+  const section = (title: string) => report.sections.find((candidate) => candidate.title === title);
+  const sections = (titles: Set<string>) => report.sections.filter((candidate) => titles.has(candidate.title));
+  const confirmedTitles = new Set([
+    CONFIRMED_PROGRAMS_SECTION_TITLE,
+    GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+    OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+  ]);
+  const confirmedItems = sections(confirmedTitles).flatMap((candidate) => candidate.items);
+  const discoveryItems = section("Additional Programs to Explore")?.items || [];
+  const deadlineItems = section("Upcoming Deadlines Near This Address")?.items || [];
+  const financingItems = section(CAPITAL_PARTNER_SECTION_TITLE)?.items || [];
+  const supportItems = (section("Your Support Network")?.items || []).filter((item) => Boolean(item.url));
+  const requiredItems = section("Required Documents")?.items || [];
+  const readinessItems = section("Document Readiness Checklist")?.items || [];
+  const siteItems = [
+    ...(section("Site Overview")?.items || []),
+    ...(section("Project Intake")?.items || []),
+    ...(section("Incentive Zone Coverage & Program Interactions")?.items || []),
+  ];
+  const neighborhoodItems = section("Neighborhood Economic Context")?.items || [];
+
+  const safe = (value: string) => value.replace(/[‐‑‒–—−]/g, "-");
+  const fitLines = (
+    text: string,
+    width: number,
+    maxLines: number,
+  ): string[] => {
+    const lines = doc.splitTextToSize(safe(text), width) as string[];
+    if (lines.length <= maxLines) return lines;
+    const visible = lines.slice(0, maxLines);
+    visible[maxLines - 1] = `${visible[maxLines - 1].replace(/\.{0,3}$/, "")}...`;
+    return visible;
+  };
+
+  const drawGridMotif = () => {
+    const x = W - MARGIN - 39;
+    const y = 12;
+    const width = 39;
+    const height = 72;
+    const [r, g, b] = hexToRgb("#E9EFF8");
+    doc.setDrawColor(r, g, b);
+    doc.setLineWidth(0.22);
+    for (let offset = 0; offset <= width; offset += 8) doc.line(x + offset, y, x + offset, y + height);
+    for (let offset = 0; offset <= height; offset += 8) doc.line(x, y + offset, x + width, y + offset);
+    doc.line(x, y + 22, x + width, y + 48);
+    doc.line(x + 10, y, x + 31, y + height);
+  };
+
+  const drawBrand = (pageNumber: number) => {
+    drawGridMotif();
+    fillRect(doc, MARGIN, 15, 32, 1.8, BLUE);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    setColor(doc, BLUE);
+    doc.text("CHICAGO INCENTIVE EXPLORER", MARGIN, 23);
+    const tabX = W - MARGIN - 12;
+    fillRect(doc, tabX, 12, 12, 16, BLUE);
+    doc.setFontSize(11);
+    setColor(doc, WHITE);
+    const pageLabel = String(pageNumber);
+    const pageLabelWidth = doc.getTextWidth(pageLabel);
+    doc.text(pageLabel, tabX + (12 - pageLabelWidth) / 2, 22.5);
+    drawLine(doc, MARGIN, 29, W - MARGIN, "#B8C8E2");
+  };
+
+  const drawPageTitle = (pageNumber: number, step: string, title: string, subtitle: string) => {
+    drawBrand(pageNumber);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    setColor(doc, BLUE);
+    doc.text(step.toUpperCase(), MARGIN, 39);
+    doc.setFont("times", "bold");
+    doc.setFontSize(20);
+    setColor(doc, NAVY);
+    doc.text(title, MARGIN, 50);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    setColor(doc, MEDIUM_GRAY);
+    doc.text(safe(subtitle), MARGIN, 57);
+  };
+
+  const drawSectionHeading = (title: string, y: number, note?: string) => {
+    fillRect(doc, MARGIN, y - 2, 18, 1.4, BLUE);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.2);
+    setColor(doc, BLUE);
+    doc.text(title.toUpperCase(), MARGIN, y + 5);
+    if (note) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      setColor(doc, LIGHT_GRAY);
+      const noteWidth = doc.getTextWidth(note);
+      doc.text(note, W - MARGIN - noteWidth, y + 5);
+    }
+  };
+
+  const drawOpportunityCard = (
+    item: GeneratedReport["sections"][number]["items"][number],
+    y: number,
+    height: number,
+    options: { detailLines?: number; showSource?: boolean; accent?: string; badge?: string } = {},
+  ) => {
+    const accent = options.accent || BLUE;
+    fillRect(doc, MARGIN, y, CONTENT_W, height, "#F6F8FC");
+    const [borderR, borderG, borderB] = hexToRgb("#DCE4F0");
+    doc.setDrawColor(borderR, borderG, borderB);
+    doc.setLineWidth(0.25);
+    doc.rect(MARGIN, y, CONTENT_W, height);
+    fillRect(doc, MARGIN, y, 2.5, height, accent);
+    const contentX = options.badge ? MARGIN + 19 : MARGIN + 7;
+    if (options.badge) {
+      const [badgeR, badgeG, badgeB] = hexToRgb(accent);
+      doc.setFillColor(badgeR, badgeG, badgeB);
+      doc.circle(MARGIN + 10.5, y + height / 2, 5.2, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      setColor(doc, WHITE);
+      const badgeWidth = doc.getTextWidth(options.badge);
+      doc.text(options.badge, MARGIN + 10.5 - badgeWidth / 2, y + height / 2 + 2.3);
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.8);
+    setColor(doc, NAVY);
+    const valueWidth = item.value ? 45 : 0;
+    const labelLines = fitLines(item.label, CONTENT_W - valueWidth - (contentX - MARGIN) - 9, 2);
+    labelLines.forEach((line, index) => doc.text(line, contentX, y + 7 + index * 3.5));
+
+    if (item.value) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
+      setColor(doc, MEDIUM_GRAY);
+      const valueLines = fitLines(item.value, valueWidth, 2);
+      valueLines.forEach((line, index) => {
+        const lineWidth = doc.getTextWidth(line);
+        doc.text(line, W - MARGIN - lineWidth - 3, y + 7 + index * 3.2);
+      });
+    }
+
+    const detail = item.detail || item.projectFit?.reason;
+    if (detail) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.6);
+      setColor(doc, MEDIUM_GRAY);
+      const detailLines = fitLines(conciseText(detail, 230), CONTENT_W - (contentX - MARGIN) - 7, options.detailLines || 2);
+      const detailY = y + 8 + labelLines.length * 3.5;
+      detailLines.forEach((line, index) => doc.text(line, contentX, detailY + index * 3.1));
+    }
+
+    const sourceUrl = hasText(item.sourceUrl) ? item.sourceUrl : hasText(item.url) ? item.url : undefined;
+    if (options.showSource && sourceUrl) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6);
+      setColor(doc, BLUE);
+      const source = compactUrl(sourceUrl);
+      doc.textWithLink(source, contentX, y + height - 3, { url: sourceUrl });
+    }
+  };
+
+  const drawCompactRow = (
+    item: GeneratedReport["sections"][number]["items"][number],
+    y: number,
+    height: number,
+    accent = "#B8C4D6",
+    badge?: string,
+  ) => {
+    drawLine(doc, MARGIN, y, W - MARGIN, "#E8EDF4");
+    const badgeWidth = badge ? Math.min(9, height - 2) : 2;
+    fillRect(doc, MARGIN, y + 2, badgeWidth, height - 3, accent);
+    if (badge) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(badge.includes("\n") ? 4.8 : 7);
+      setColor(doc, WHITE);
+      const badgeLines = badge.split("\n");
+      badgeLines.forEach((line, index) => {
+        const width = doc.getTextWidth(line);
+        doc.text(line, MARGIN + (badgeWidth - width) / 2, y + 6 + index * 3.2);
+      });
+    }
+    const contentX = MARGIN + badgeWidth + 4;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.2);
+    setColor(doc, NAVY);
+    const valueWidth = item.value ? 43 : 0;
+    const labelLines = fitLines(item.label, CONTENT_W - valueWidth - badgeWidth - 11, 2);
+    labelLines.forEach((line, index) => doc.text(line, contentX, y + 7 + index * 3.2));
+    if (item.value) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.2);
+      setColor(doc, MEDIUM_GRAY);
+      const valueLines = fitLines(item.value, valueWidth, 2);
+      valueLines.forEach((line, index) => {
+        const width = doc.getTextWidth(line);
+        doc.text(line, W - MARGIN - width, y + 7 + index * 3);
+      });
+    }
+    if (item.detail && height >= 17) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.2);
+      setColor(doc, LIGHT_GRAY);
+      const detailLines = fitLines(conciseText(item.detail, 155), CONTENT_W - badgeWidth - 10, 1);
+      doc.text(detailLines[0], contentX, y + height - 3.5);
+    }
+  };
+
+  /* PAGE 1 - KEY FINDINGS */
+  drawBrand(1);
+  doc.setFont("times", "bold");
+  doc.setFontSize(27);
+  setColor(doc, NAVY);
+  doc.text("Key Findings", MARGIN, 45);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  setColor(doc, MEDIUM_GRAY);
+  doc.text(safe(address), MARGIN, 55);
+
+  fillRect(doc, MARGIN, 66, CONTENT_W, 32, NAVY);
+  fillRect(doc, MARGIN, 66, 3, 32, BLUE);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  setColor(doc, "#8CB4FF");
+  doc.text("PRIMARY GOAL", MARGIN + 10, 76);
+  doc.setFontSize(15);
+  setColor(doc, WHITE);
+  fitLines(primaryGoal, CONTENT_W - 20, 2).forEach((line, index) => {
+    doc.text(line, MARGIN + 10, 88 + index * 6);
+  });
+
+  const metricGap = 4;
+  const metricWidth = (CONTENT_W - metricGap * 2) / 3;
+  const metrics = [
+    { value: confirmedItems.length, label: "ADDRESS-LINKED", detail: "Matched at this location", color: BLUE },
+    { value: discoveryItems.length, label: "TO EXPLORE", detail: "High-potential leads", color: AMBER },
+    { value: deadlineItems.length, label: "UPCOMING DATES", detail: "Dates to keep visible", color: GREEN },
+  ];
+  metrics.forEach((metric, index) => {
+    const x = MARGIN + index * (metricWidth + metricGap);
+    fillRect(doc, x, 108, metricWidth, 26, "#F6F8FC");
+    const [borderR, borderG, borderB] = hexToRgb("#DCE4F0");
+    doc.setDrawColor(borderR, borderG, borderB);
+    doc.setLineWidth(0.25);
+    doc.rect(x, 108, metricWidth, 26);
+    fillRect(doc, x, 108, 2, 26, metric.color);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    setColor(doc, NAVY);
+    doc.text(String(metric.value), x + 7, 117);
+    doc.setFontSize(6.2);
+    setColor(doc, metric.color);
+    doc.text(metric.label, x + 7, 124);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(5.6);
+    setColor(doc, MEDIUM_GRAY);
+    doc.text(metric.detail, x + 7, 130);
+  });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  setColor(doc, MEDIUM_GRAY);
+  fitLines(conciseText(report.summary, 330), CONTENT_W, 4).forEach((line, index) => {
+    doc.text(line, MARGIN, 146 + index * 4);
+  });
+
+  drawSectionHeading("Your Path Forward", 169);
+  const pathSteps = [
+    { number: "1", title: "Review the findings", detail: "Start with address-linked opportunities, best discovery leads, and upcoming dates." },
+    { number: "2", title: "Identify who you should contact next", detail: "Use the primary local contact first, then reach the program or financing resource." },
+    { number: "3", title: "Take the next step", detail: "Confirm fit, gather the priority documents, and schedule the first conversation." },
+  ];
+  pathSteps.forEach((step, index) => {
+    const y = 180 + index * 25;
+    fillRect(doc, MARGIN, y, CONTENT_W, 20, index === 0 ? "#EFF4FD" : "#F8FAFD");
+    const cardBorder = index === 0 ? "#7EA6EB" : "#D7E0ED";
+    const [cardR, cardG, cardB] = hexToRgb(cardBorder);
+    doc.setDrawColor(cardR, cardG, cardB);
+    doc.setLineWidth(0.3);
+    doc.rect(MARGIN, y, CONTENT_W, 20);
+    const circleColor = index === 0 ? BLUE : "#74869F";
+    const [circleR, circleG, circleB] = hexToRgb(circleColor);
+    doc.setFillColor(circleR, circleG, circleB);
+    doc.circle(MARGIN + 9, y + 10, 5, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    setColor(doc, WHITE);
+    const numberWidth = doc.getTextWidth(step.number);
+    doc.text(step.number, MARGIN + 9 - numberWidth / 2, y + 12.4);
+    doc.setFontSize(8);
+    setColor(doc, NAVY);
+    doc.text(step.title, MARGIN + 19, y + 7);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.6);
+    setColor(doc, MEDIUM_GRAY);
+    doc.text(step.detail, MARGIN + 19, y + 14);
+  });
+
+  /* PAGE 2 - REVIEW */
+  doc.addPage();
+  drawPageTitle(2, "Step 1", "Review the Findings", "Focus on the strongest signals first. Address-linked does not guarantee eligibility.");
+  drawSectionHeading("Address-Linked Opportunities", 64, `${confirmedItems.length} found`);
+  const confirmedToShow = confirmedItems.slice(0, 2);
+  if (confirmedToShow.length === 0) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(8);
+    setColor(doc, MEDIUM_GRAY);
+    doc.text("No address-linked opportunity was found. Continue with the discovery leads below.", MARGIN, 77);
+  } else {
+    confirmedToShow.forEach((item, index) => {
+      drawOpportunityCard(item, 75 + index * 29, 25, { detailLines: 2, showSource: true });
+    });
+  }
+
+  drawSectionHeading("Best Programs to Explore", 137, `Top ${Math.min(4, discoveryItems.length)} of ${discoveryItems.length}`);
+  discoveryItems.slice(0, 4).forEach((item, index) => {
+    drawCompactRow(item, 147 + index * 18, 17, AMBER, String(index + 1));
+  });
+
+  drawSectionHeading("Upcoming Dates", 224, `Next ${Math.min(3, deadlineItems.length)}`);
+  deadlineItems.slice(0, 3).forEach((item, index) => {
+    const date = item.value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    const month = date ? ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][Number(date[2]) - 1] : "DATE";
+    const badge = date ? `${month}\n${date[3]}` : String(index + 1);
+    drawCompactRow(item, 234 + index * 10, 10, GREEN, badge);
+  });
+
+  /* PAGE 3 - CONTACT */
+  doc.addPage();
+  drawPageTitle(3, "Step 2", "Who to Contact Next", "Start with the most relevant local guide, then contact the program or financing resource directly.");
+  const primaryContact = supportItems[0];
+  drawSectionHeading("Start Here", 64);
+  if (primaryContact) {
+    drawOpportunityCard(primaryContact, 75, 34, { detailLines: 3, showSource: true, accent: BLUE, badge: "1" });
+  } else {
+    fillRect(doc, MARGIN, 75, CONTENT_W, 30, "#F8FAFD");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    setColor(doc, NAVY);
+    doc.text("Southeast Chicago Chamber of Commerce", MARGIN + 8, 87);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    setColor(doc, MEDIUM_GRAY);
+    doc.text("(773) 721-1999  |  www.secchicago.org", MARGIN + 8, 96);
+  }
+
+  drawSectionHeading("Additional Local Support", 121, `Top ${Math.min(4, Math.max(supportItems.length - 1, 0))}`);
+  supportItems.slice(1, 5).forEach((item, index) => {
+    drawOpportunityCard(item, 132 + index * 25, 22, { detailLines: 2, showSource: false, accent: "#9AA9BE" });
+  });
+
+  drawSectionHeading("Financing Resources", 235, `Top ${Math.min(2, financingItems.length)}`);
+  financingItems.slice(0, 2).forEach((item, index) => {
+    drawCompactRow(item, 245 + index * 10, 10, GREEN);
+  });
+
+  /* PAGE 4 - NEXT STEP */
+  doc.addPage();
+  drawPageTitle(4, "Step 3", "Take the Next Step", "Turn the report into a short, practical preparation list for the next conversation.");
+  drawSectionHeading("Recommended Actions", 64);
+  report.recommendedActions.slice(0, 3).forEach((action, index) => {
+    const item = { label: action.label, value: index === 0 ? "FIRST" : "NEXT", detail: action.description };
+    drawOpportunityCard(item, 75 + index * 27, 24, {
+      detailLines: 2,
+      accent: index === 0 ? BLUE : index === 1 ? AMBER : "#74869F",
+      badge: String(index + 1),
+    });
+  });
+
+  drawSectionHeading("Priority Documents", 162, `Top ${Math.min(3, requiredItems.length)} categories`);
+  requiredItems.slice(0, 3).forEach((item, index) => {
+    drawCompactRow(item, 173 + index * 17, 16, AMBER);
+  });
+
+  drawSectionHeading("Readiness Checklist", 229, `Top ${Math.min(8, readinessItems.length)} items`);
+  const checklistWidth = (CONTENT_W - 5) / 2;
+  readinessItems.slice(0, 8).forEach((item, index) => {
+    const col = index % 2;
+    const row = Math.floor(index / 2);
+    const x = MARGIN + col * (checklistWidth + 5);
+    const y = 240 + row * 8;
+    doc.setDrawColor(160, 174, 195);
+    doc.rect(x, y - 3.5, 3.5, 3.5);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    setColor(doc, NAVY);
+    doc.text(fitLines(item.label, checklistWidth - 24, 1)[0], x + 6, y - 0.5);
+    doc.setFontSize(5.8);
+    setColor(doc, LIGHT_GRAY);
+    const status = fitLines(item.value || "Confirm", 18, 1)[0];
+    const statusWidth = doc.getTextWidth(status);
+    doc.text(status, x + checklistWidth - statusWidth, y - 0.5);
+  });
+
+  /* PAGE 5 - SUPPORTING CONTEXT */
+  doc.addPage();
+  drawPageTitle(5, "Reference", "Supporting Context", "Use these signals to prepare questions. They are context, not proof of program eligibility.");
+  drawSectionHeading("Site Snapshot", 64, `Top ${Math.min(6, siteItems.length)} signals`);
+  siteItems.slice(0, 6).forEach((item, index) => {
+    drawCompactRow(item, 75 + index * 13, 12, BLUE);
+  });
+
+  drawSectionHeading("Neighborhood Snapshot", 163, `Top ${Math.min(5, neighborhoodItems.length)} indicators`);
+  neighborhoodItems.slice(0, 5).forEach((item, index) => {
+    drawCompactRow(item, 174 + index * 11, 10, "#9AA9BE");
+  });
+
+  drawSectionHeading("Sources & Verification", 238, `Top ${Math.min(4, report.dataSources?.length || 0)} source groups`);
+  const sourceItems = (report.dataSources || []).slice(0, 4);
+  const sourceColumnWidth = (CONTENT_W - 6) / 2;
+  sourceItems.forEach((source, index) => {
+    const col = index % 2;
+    const row = Math.floor(index / 2);
+    const x = MARGIN + col * (sourceColumnWidth + 6);
+    const y = 249 + row * 7;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6);
+    setColor(doc, source.url ? BLUE : MEDIUM_GRAY);
+    const label = fitLines(source.label, sourceColumnWidth, 1)[0];
+    if (source.url) doc.textWithLink(label, x, y, { url: source.url });
+    else doc.text(label, x, y);
+  });
+
+  const totalPages = doc.getNumberOfPages();
+  for (let page = 1; page <= totalPages; page++) {
+    doc.setPage(page);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.5);
+    setColor(doc, LIGHT_GRAY);
+    doc.text(dateStr, MARGIN, H - 8);
+    const pageText = `Page ${page} of ${totalPages}`;
+    const pageTextWidth = doc.getTextWidth(pageText);
+    doc.text(pageText, W - MARGIN - pageTextWidth, H - 8);
+  }
+  doc.setPage(5);
+  doc.setFontSize(5.8);
+  setColor(doc, LIGHT_GRAY);
+  doc.text("Informational screening only. Confirm current eligibility, timing, and approval requirements with the administering organization.", MARGIN, H - 14);
+
+  const slug = address.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
+  return { doc, slug };
+}
+
+function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } {
+  if (report.reportType === "site-incentives" || report.reportType === "location-incentives") {
+    return _buildFivePageActionReportPdf(report);
+  }
+  return _buildLegacyReportPdf(report);
 }
 
 export function generateReportPdf(report: GeneratedReport): void {
