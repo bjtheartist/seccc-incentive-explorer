@@ -42,7 +42,8 @@
     "neighborhood:economics:export": "npx tsx scripts/export-chicago-neighborhood-economics.ts",
     "db:reset": "npm run db:migrate && npm run db:seed",
     "anchors:import": "npx tsx scripts/import-anchor-workbook.ts",
-    "support:import": "npx tsx scripts/import-business-support-workbook.ts"
+    "support:import": "npx tsx scripts/import-business-support-workbook.ts",
+    "report:preview": "npx tsx scripts/preview-report-pdf.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.16",

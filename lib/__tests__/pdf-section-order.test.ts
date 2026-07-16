@@ -1,18 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { generateReportPdfBase64, orderSectionsForPdf } from "../pdf-report";
+import { generateReportPdfBase64, orderSectionsForPdf, sanitizeForPdf } from "../pdf-report";
 import {
+  CONFIRMED_PROGRAMS_SECTION_TITLE,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "../report-engine";
 import type { GeneratedReport } from "../report-engine";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "../capital-partner-report";
+import { extractText } from "unpdf";
 
 function section(title: string): GeneratedReport["sections"][number] {
   return { title, items: [] };
 }
 
 describe("orderSectionsForPdf", () => {
-  it("moves Your Support Network directly after Eligible Incentive Programs", () => {
+  it("puts action sections before preparation and supporting context", () => {
     const input = [
       section("Site Overview"),
       section("Neighborhood Economic Context"),
@@ -21,16 +23,18 @@ describe("orderSectionsForPdf", () => {
       section("Additional Programs to Explore"),
       section("Required Documents"),
       section("Your Support Network"),
+      section("Upcoming Deadlines Near This Address"),
     ];
     const titles = orderSectionsForPdf(input).map((s) => s.title);
     expect(titles).toEqual([
-      "Site Overview",
-      "Neighborhood Economic Context",
-      "Incentive Zone Coverage & Program Interactions",
       "Eligible Incentive Programs",
+      "Upcoming Deadlines Near This Address",
       "Your Support Network",
       "Additional Programs to Explore",
       "Required Documents",
+      "Site Overview",
+      "Incentive Zone Coverage & Program Interactions",
+      "Neighborhood Economic Context",
     ]);
   });
 
@@ -55,11 +59,11 @@ describe("orderSectionsForPdf", () => {
     ];
 
     expect(orderSectionsForPdf(input).map((item) => item.title)).toEqual([
-      "Site Overview",
       GOAL_MATCH_PROGRAMS_SECTION_TITLE,
       OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
       "Your Support Network",
       "Additional Programs to Explore",
+      "Site Overview",
     ]);
   });
 
@@ -73,11 +77,11 @@ describe("orderSectionsForPdf", () => {
     ];
 
     expect(orderSectionsForPdf(input).map((item) => item.title)).toEqual([
-      "Site Overview",
       "Eligible Incentive Programs",
       CAPITAL_PARTNER_SECTION_TITLE,
       "Your Support Network",
       "Required Documents",
+      "Site Overview",
     ]);
   });
 
@@ -101,7 +105,7 @@ describe("orderSectionsForPdf", () => {
     expect(input.map((s) => s.title)).toEqual(before);
   });
 
-  it("generates a PDF with primary-goal and structured transportation content", () => {
+  it("generates a seven-page action report — cover, five body pages, and a closing CTA page", async () => {
     const report: GeneratedReport = {
       title: "Site Incentive Analysis",
       subtitle: "Test report",
@@ -132,9 +136,98 @@ describe("orderSectionsForPdf", () => {
     };
 
     const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: true,
+    });
     expect(output.filename).toBe(
       "chicago-incentive-report-4200-s-california-ave-chicago-il.pdf",
     );
     expect(output.base64.length).toBeGreaterThan(1_000);
+    // Cover -> Key Findings -> Review -> Contact -> Next Step -> Supporting Context -> CTA
+    expect(extracted.totalPages).toBe(7);
+    expect(extracted.text).toContain("CHICAGO INCENTIVE EXPLORER");
+    // Cover: report title + address (spec addendum).
+    expect(extracted.text).toContain("Chicago Business Incentive Report");
+    expect(extracted.text).toContain("4200 S California Ave, Chicago, IL");
+    expect(extracted.text).toContain("Review the Findings");
+    expect(extracted.text).toContain("Who to Contact Next");
+    expect(extracted.text).toContain("Take the Next Step");
+    expect(extracted.text).toContain("Supporting Context");
+    // Closing CTA page: the only contact surface is the chamber inbox — no
+    // stale phone number or secchicago.org anywhere in the document.
+    expect(extracted.text).toContain("Want a Hand with the Next Steps");
+    expect(extracted.text).toContain("info@southeastchgochamber.org");
+    expect(extracted.text).not.toContain("721-1999");
+    expect(extracted.text).not.toContain("secchicago.org");
+    expect(extracted.text).toContain("Page 7 of 7");
+  });
+
+  it("includes real document names (not a bare count) in Priority Documents", async () => {
+    const report: GeneratedReport = {
+      title: "Site Incentive Analysis",
+      subtitle: "Test report",
+      reportType: "site-incentives",
+      generatedAt: "2026-07-10T12:00:00.000Z",
+      summary: "A focused report.",
+      sections: [
+        {
+          title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+          items: [
+            {
+              label: "Test Program",
+              value: "Benefit",
+              detail: "A test program.",
+            },
+          ],
+        },
+        {
+          title: "Required Documents",
+          items: [
+            {
+              label: "Financial & Tax",
+              value: "2 documents",
+              detail: [
+                "Last 2 years business tax returns — Test Program",
+                "Profit and loss statement — Test Program",
+              ].join("\n"),
+            },
+          ],
+        },
+      ],
+      recommendedActions: [],
+      metadata: {
+        address: "100 E Test St, Chicago, IL",
+        projectType: "hiring",
+      },
+    };
+
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: true,
+    });
+    expect(extracted.text).toContain("Last 2 years business tax returns");
+    expect(extracted.text).toContain("Profit and loss statement");
+  });
+});
+
+describe("sanitizeForPdf", () => {
+  it("replaces glyphs jsPDF's standard fonts can't render, per spec defect 3", () => {
+    expect(sanitizeForPdf("≤10 employees")).toBe("up to 10 employees");
+    expect(sanitizeForPdf("Remediation costs ≥$100K")).toBe("Remediation costs at least $100K");
+    expect(sanitizeForPdf("Rehab investment ≥50% of building market value")).toBe(
+      "Rehab investment at least 50% of building market value",
+    );
+  });
+
+  it("normalizes dash variants jsPDF's standard fonts can't render", () => {
+    expect(sanitizeForPdf("value—range")).toBe("value-range");
+    expect(sanitizeForPdf("value–range")).toBe("value-range");
+    expect(sanitizeForPdf("value−range")).toBe("value-range");
+  });
+
+  it("leaves ordinary text untouched", () => {
+    expect(sanitizeForPdf("Cook County Class 7a Property Tax Incentive")).toBe(
+      "Cook County Class 7a Property Tax Incentive",
+    );
   });
 });

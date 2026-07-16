@@ -298,6 +298,9 @@ export interface GeneratedReport {
     corridorType?: string;
     corridorId?: string;
     corridorLabel?: string;
+    /** Business or contact name for the cover page's "PREPARED FOR" line.
+     *  Rendered only when present — most callers don't set it yet. */
+    preparedFor?: string;
   };
   executiveSummary?: ExecutiveSummary;
   actionRoadmap?: ActionRoadmapItem[];
@@ -2120,10 +2123,10 @@ function generateLocationIncentives(
   // Recommended actions
   const recommendedActions: GeneratedReport["recommendedActions"] = topPrograms.map(
     (p) => ({
-      label: `Apply for ${p.name}`,
+      label: `Confirm fit for ${p.name}`,
       description:
         p.fastestConfirmingStep ||
-        `Contact the program administrator to begin the ${p.name} application process.`,
+        `Contact the program administrator to confirm current eligibility and the right next step for ${p.name}.`,
       priority: "high" as const,
     }),
   );
@@ -2156,7 +2159,7 @@ function generateLocationIncentives(
     subtitle: `Location-based analysis for ${getIndustryName(state.industry)}`,
     reportType: "location-incentives",
     generatedAt: new Date().toISOString(),
-    summary: `${verdict?.headline || "Incentive analysis complete"}. Your address at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}, matching ${confirmedPrograms.length} address-confirmed program${confirmedPrograms.length !== 1 ? "s" : ""}.${exploratoryPrograms.length > 0 ? ` ${exploratoryPrograms.length} additional program${exploratoryPrograms.length !== 1 ? "s" : ""} appear as discovery next steps.` : ""}${projectGoalSummary}${stackingContext} The sections below are organized from key findings to detailed evidence.`,
+    summary: `${verdict?.headline || "Incentive analysis complete"}. Your address at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}, matching ${confirmedPrograms.length} address-confirmed program${confirmedPrograms.length !== 1 ? "s" : ""}.${exploratoryPrograms.length > 0 ? ` ${exploratoryPrograms.length} additional program${exploratoryPrograms.length !== 1 ? "s" : ""} appear as discovery next steps.` : ""}${projectGoalSummary}${stackingContext} Start with the recommended actions, then use the later sections to prepare and verify.`,
     sections,
     recommendedActions: recommendedActions.slice(0, 4),
     metadata: {
