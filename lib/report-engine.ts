@@ -298,6 +298,9 @@ export interface GeneratedReport {
     corridorType?: string;
     corridorId?: string;
     corridorLabel?: string;
+    /** Business or contact name for the cover page's "PREPARED FOR" line.
+     *  Rendered only when present — most callers don't set it yet. */
+    preparedFor?: string;
   };
   executiveSummary?: ExecutiveSummary;
   actionRoadmap?: ActionRoadmapItem[];

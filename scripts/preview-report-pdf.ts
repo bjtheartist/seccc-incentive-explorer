@@ -1,7 +1,8 @@
 /**
  * scripts/preview-report-pdf.ts
  *
- * Visual-iteration tool for the five-page "action report" PDF (lib/pdf-report.ts).
+ * Visual-iteration tool for the seven-page "action report" PDF (lib/pdf-report.ts):
+ * a cover, five body pages, and a closing CTA page.
  * Builds a realistic, Near-North-Side-like GeneratedReport fixture — mirroring
  * the object-literal style used in lib/__tests__/pdf-section-order.test.ts and
  * lib/__tests__/report-engine.test.ts — and renders it through the exact same
@@ -301,6 +302,13 @@ const report: GeneratedReport = {
     lon: -87.6295,
     projectType: "expansion",
     zoneClass: "DX-7",
+    preparedFor: "Jordan Rivera",
+  },
+  communityAssets: {
+    edos: [],
+    bsos: [],
+    communityArea: "Near North Side",
+    narrative: "",
   },
   dataSources: [
     {

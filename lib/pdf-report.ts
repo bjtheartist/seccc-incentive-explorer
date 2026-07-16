@@ -1309,7 +1309,7 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
 
 type ReportRow = GeneratedReport["sections"][number]["items"][number];
 
-function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } {
+function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } {
   const doc = createSanitizedDoc();
   const address = report.metadata?.address || "Address Lookup";
   const dateStr = new Date(report.generatedAt).toLocaleDateString("en-US", {
@@ -1320,6 +1320,8 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
   const primaryGoal = report.metadata?.projectType
     ? PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType
     : "Confirm the project goal with an advisor";
+  const neighborhoodLabel = report.communityAssets?.communityArea || report.neighborhoodEconomics?.geographyLabel;
+  const preparedFor = hasText(report.metadata?.preparedFor) ? report.metadata.preparedFor.trim() : undefined;
 
   const section = (title: string) => report.sections.find((candidate) => candidate.title === title);
   const sections = (titles: Set<string>) => report.sections.filter((candidate) => titles.has(candidate.title));
@@ -1346,7 +1348,14 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
   const SECTION_GAP = 10; // gap between the end of one section and the next heading (spec: ~10-12mm)
   const HEADING_TO_ROW_GAP = 11; // gap from a section heading to its first row
   const ROW_GAP = 2; // gap between rows within the same section
-  const SAFE_BOTTOM = H - 24; // never draw a new row below this; protects the footer
+  // layoutList doesn't know a row's height until after it's drawn, so this
+  // stays generous enough to cover the tallest card types it renders.
+  const SAFE_BOTTOM = H - 24; // never *start* a layoutList row below this; protects the footer
+  // The readiness-checklist and sources grids are hand-rolled with a fixed,
+  // known row height, so their safe line can sit much closer to the footer
+  // (H - 8) without any real collision risk — using SAFE_BOTTOM here was
+  // needlessly dropping rows that had plenty of room.
+  const GRID_SAFE_BOTTOM = H - 12;
 
   /**
    * Wrap text to `maxWidth`, capping at `maxLines`. jsPDF measures against
@@ -1501,20 +1510,24 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
     doc.line(x + 10, y, x + 31, y + height);
   };
 
-  const drawBrand = (pageNumber: number) => {
+  /** `pageNumber: null` renders the brand row with no page-number tab — used
+   *  only by the cover, which is unnumbered per the addendum. */
+  const drawBrand = (pageNumber: number | null) => {
     drawGridMotif();
     fillRect(doc, MARGIN, 15, 32, 1.8, BLUE);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
     setColor(doc, BLUE);
     doc.text("CHICAGO INCENTIVE EXPLORER", MARGIN, 23);
-    const tabX = W - MARGIN - 12;
-    fillRect(doc, tabX, 12, 12, 16, BLUE);
-    doc.setFontSize(11);
-    setColor(doc, WHITE);
-    const pageLabel = String(pageNumber);
-    const pageLabelWidth = doc.getTextWidth(pageLabel);
-    doc.text(pageLabel, tabX + (12 - pageLabelWidth) / 2, 22.5);
+    if (pageNumber !== null) {
+      const tabX = W - MARGIN - 12;
+      fillRect(doc, tabX, 12, 12, 16, BLUE);
+      doc.setFontSize(11);
+      setColor(doc, WHITE);
+      const pageLabel = String(pageNumber);
+      const pageLabelWidth = doc.getTextWidth(pageLabel);
+      doc.text(pageLabel, tabX + (12 - pageLabelWidth) / 2, 22.5);
+    }
     drawLine(doc, MARGIN, 29, W - MARGIN, "#B8C8E2");
   };
 
@@ -1979,8 +1992,55 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
     return height;
   };
 
-  /* PAGE 1 - KEY FINDINGS */
-  drawBrand(1);
+  /* COVER (physical page 1) — no page-number tab; numbering starts at Key Findings. */
+  drawBrand(null);
+  doc.setFont("times", "bold");
+  const coverTitleLines = fit("Chicago Business Incentive Report", CONTENT_W, 3, 30, "bold");
+  setColor(doc, NAVY);
+  let coverY = 108;
+  coverTitleLines.forEach((line, index) => {
+    doc.text(line, MARGIN, coverY + index * 11);
+  });
+  coverY += (coverTitleLines.length - 1) * 11 + 16;
+
+  fillRect(doc, MARGIN, coverY, 24, 1.8, BLUE);
+  coverY += 11;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(11);
+  setColor(doc, MEDIUM_GRAY);
+  doc.text(address, MARGIN, coverY);
+  coverY += 8;
+
+  if (neighborhoodLabel) {
+    doc.setFontSize(9.5);
+    setColor(doc, LIGHT_GRAY);
+    doc.text(neighborhoodLabel, MARGIN, coverY);
+    coverY += 7;
+  }
+
+  if (preparedFor) {
+    coverY += 3;
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    setColor(doc, "#8A97A8");
+    doc.text(`PREPARED FOR ${preparedFor.toUpperCase()}`, MARGIN, coverY);
+  }
+
+  const coverChipY = 214;
+  const coverChipHeight = 22;
+  fillRect(doc, MARGIN, coverChipY, CONTENT_W, coverChipHeight, NAVY);
+  fillRect(doc, MARGIN, coverChipY, 3, coverChipHeight, BLUE);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(6.5);
+  setColor(doc, "#8CB4FF");
+  doc.text("PRIMARY GOAL", MARGIN + 10, coverChipY + 8);
+  setColor(doc, WHITE);
+  doc.text(fit(primaryGoal, CONTENT_W - 20, 1, 11, "bold")[0], MARGIN + 10, coverChipY + 17);
+
+  /* PAGE 2 - KEY FINDINGS */
+  doc.addPage();
+  drawBrand(2);
   doc.setFont("times", "bold");
   doc.setFontSize(27);
   setColor(doc, NAVY);
@@ -2068,9 +2128,9 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
     doc.text(step.detail, MARGIN + 19, y + 14);
   });
 
-  /* PAGE 2 - REVIEW */
+  /* PAGE 3 - REVIEW */
   doc.addPage();
-  drawPageTitle(2, "Step 1", "Review the Findings", "Focus on the strongest signals first. Address-linked does not guarantee eligibility.");
+  drawPageTitle(3, "Step 1", "Review the Findings", "Focus on the strongest signals first. Address-linked does not guarantee eligibility.");
   let y2 = 64;
 
   y2 = layoutList(
@@ -2098,9 +2158,9 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
     (item, rowY) => drawDateRow(item, rowY),
   );
 
-  /* PAGE 3 - CONTACT */
+  /* PAGE 4 - CONTACT */
   doc.addPage();
-  drawPageTitle(3, "Step 2", "Who to Contact Next", "Start with the most relevant local guide, then contact the program or financing resource directly.");
+  drawPageTitle(4, "Step 2", "Who to Contact Next", "Start with the most relevant local guide, then contact the program or financing resource directly.");
   let y3 = 64;
   const primaryContact = supportItems[0];
   const additionalSupport = supportItems.slice(1, 5);
@@ -2135,9 +2195,9 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
     (item, rowY) => drawFinancingRow(item, rowY),
   );
 
-  /* PAGE 4 - NEXT STEP */
+  /* PAGE 5 - NEXT STEP */
   doc.addPage();
-  drawPageTitle(4, "Step 3", "Take the Next Step", "Turn the report into a short, practical preparation list for the next conversation.");
+  drawPageTitle(5, "Step 3", "Take the Next Step", "Turn the report into a short, practical preparation list for the next conversation.");
   let y4 = 64;
 
   y4 = layoutList(
@@ -2172,10 +2232,10 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
     const row = Math.floor(index / 2);
     const x = MARGIN + col * (checklistWidth + 5);
     const rowY = checklistFirstY + row * checklistRowHeight;
-    // Defensive: layoutList's SAFE_BOTTOM guard doesn't cover this
-    // hand-rolled grid (two sections deep on a dense-data page). Skip rows
-    // that would otherwise collide with the footer instead of overflowing.
-    if (rowY > SAFE_BOTTOM) return;
+    // Defensive: this hand-rolled grid isn't covered by layoutList's guard.
+    // Skip rows that would otherwise collide with the footer (two sections
+    // deep on a dense-data page) instead of overflowing.
+    if (rowY > GRID_SAFE_BOTTOM) return;
     doc.setDrawColor(160, 174, 195);
     doc.setLineWidth(0.3);
     doc.rect(x, rowY - 3.2, 3.6, 3.6);
@@ -2190,9 +2250,9 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
     doc.text(status, x + checklistWidth - statusWidth, rowY - 0.2);
   });
 
-  /* PAGE 5 - SUPPORTING CONTEXT */
+  /* PAGE 6 - SUPPORTING CONTEXT */
   doc.addPage();
-  drawPageTitle(5, "Reference", "Supporting Context", "Use these signals to prepare questions. They are context, not proof of program eligibility.");
+  drawPageTitle(6, "Reference", "Supporting Context", "Use these signals to prepare questions. They are context, not proof of program eligibility.");
   let y5 = 64;
 
   y5 = layoutList(
@@ -2222,7 +2282,7 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
     const x = MARGIN + col * (sourceColumnWidth + 8);
     const rowY = sourceFirstY + row * sourceRowHeight;
     // Defensive: same footer-collision guard as the readiness checklist.
-    if (rowY > SAFE_BOTTOM) return;
+    if (rowY > GRID_SAFE_BOTTOM) return;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.2);
     setColor(doc, NAVY);
@@ -2235,6 +2295,77 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
     }
   });
 
+  /* PAGE 7 - CTA ("what happens after this report") */
+  doc.addPage();
+  drawPageTitle(7, "Get Support", "Want a Hand with the Next Steps?", "You do not have to figure this out alone.");
+  let y7 = 64;
+
+  const ctaCopy =
+    "If you'd like one-on-one support or an introduction to any program or financing partner in this report, reach out. A real person will pick it up.";
+  const ctaCopyLines = fit(ctaCopy, CONTENT_W - 20, 3, 8.5);
+  const ctaEmailGap = 9;
+  const ctaCardHeight = 11 + ctaCopyLines.length * 4 + ctaEmailGap + 6;
+
+  fillRect(doc, MARGIN, y7, CONTENT_W, ctaCardHeight, "#F6F8FC");
+  const [ctaBorderR, ctaBorderG, ctaBorderB] = hexToRgb("#DCE4F0");
+  doc.setDrawColor(ctaBorderR, ctaBorderG, ctaBorderB);
+  doc.setLineWidth(0.25);
+  doc.rect(MARGIN, y7, CONTENT_W, ctaCardHeight);
+  fillRect(doc, MARGIN, y7, 2.5, ctaCardHeight, BLUE);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  setColor(doc, NAVY);
+  ctaCopyLines.forEach((line, index) => doc.text(line, MARGIN + 10, y7 + 11 + index * 4));
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  setColor(doc, BLUE);
+  doc.text("info@southeastchgochamber.org", MARGIN + 10, y7 + 11 + ctaCopyLines.length * 4 + ctaEmailGap);
+
+  y7 += ctaCardHeight + SECTION_GAP;
+
+  const recapSteps = [
+    { number: "1", title: "Review", detail: "Start with address-linked opportunities, best discovery leads, and upcoming dates." },
+    { number: "2", title: "Contact", detail: "Use the primary local contact first, then reach the program or financing resource." },
+    { number: "3", title: "Next step", detail: "Confirm fit, gather the priority documents, and schedule the first conversation." },
+  ];
+  const recapRowHeight = 9;
+  recapSteps.forEach((step, index) => {
+    const rowY = y7 + index * recapRowHeight;
+    const [circleR, circleG, circleB] = hexToRgb(BLUE);
+    doc.setFillColor(circleR, circleG, circleB);
+    doc.circle(MARGIN + 3, rowY - 1, 3, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.5);
+    setColor(doc, WHITE);
+    const numberWidth = doc.getTextWidth(step.number);
+    doc.text(step.number, MARGIN + 3 - numberWidth / 2, rowY + 0.7);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.6);
+    setColor(doc, NAVY);
+    const titleText = `${step.title}:`;
+    doc.text(titleText, MARGIN + 10, rowY);
+    const titleWidth = doc.getTextWidth(`${titleText} `);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    setColor(doc, MEDIUM_GRAY);
+    doc.text(fit(step.detail, CONTENT_W - 10 - titleWidth, 1, 7)[0], MARGIN + 10 + titleWidth, rowY);
+  });
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(5.8);
+  setColor(doc, LIGHT_GRAY);
+  doc.text(
+    "Informational screening only. Confirm current eligibility, timing, and approval requirements with the administering organization.",
+    MARGIN,
+    H - 14,
+  );
+
+  /* PAGE HEADERS/FOOTERS across all physical pages. The cover carries no
+     page-number tab and no "Page N of M" — date only, per the addendum. */
   const totalPages = doc.getNumberOfPages();
   for (let page = 1; page <= totalPages; page++) {
     doc.setPage(page);
@@ -2242,14 +2373,12 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
     doc.setFontSize(6.5);
     setColor(doc, LIGHT_GRAY);
     doc.text(dateStr, MARGIN, H - 8);
-    const pageText = `Page ${page} of ${totalPages}`;
-    const pageTextWidth = doc.getTextWidth(pageText);
-    doc.text(pageText, W - MARGIN - pageTextWidth, H - 8);
+    if (page > 1) {
+      const pageText = `Page ${page} of ${totalPages}`;
+      const pageTextWidth = doc.getTextWidth(pageText);
+      doc.text(pageText, W - MARGIN - pageTextWidth, H - 8);
+    }
   }
-  doc.setPage(5);
-  doc.setFontSize(5.8);
-  setColor(doc, LIGHT_GRAY);
-  doc.text("Informational screening only. Confirm current eligibility, timing, and approval requirements with the administering organization.", MARGIN, H - 14);
 
   const slug = address.replace(/[^a-zA-Z0-9]+/g, "-").toLowerCase();
   return { doc, slug };
@@ -2257,7 +2386,7 @@ function _buildFivePageActionReportPdf(report: GeneratedReport): { doc: jsPDF; s
 
 function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } {
   if (report.reportType === "site-incentives" || report.reportType === "location-incentives") {
-    return _buildFivePageActionReportPdf(report);
+    return _buildSevenPageActionReportPdf(report);
   }
   return _buildLegacyReportPdf(report);
 }

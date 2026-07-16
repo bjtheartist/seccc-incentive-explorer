@@ -105,7 +105,7 @@ describe("orderSectionsForPdf", () => {
     expect(input.map((s) => s.title)).toEqual(before);
   });
 
-  it("generates a five-page action report with the new brand and workflow", async () => {
+  it("generates a seven-page action report — cover, five body pages, and a closing CTA page", async () => {
     const report: GeneratedReport = {
       title: "Site Incentive Analysis",
       subtitle: "Test report",
@@ -143,11 +143,23 @@ describe("orderSectionsForPdf", () => {
       "chicago-incentive-report-4200-s-california-ave-chicago-il.pdf",
     );
     expect(output.base64.length).toBeGreaterThan(1_000);
-    expect(extracted.totalPages).toBe(5);
+    // Cover -> Key Findings -> Review -> Contact -> Next Step -> Supporting Context -> CTA
+    expect(extracted.totalPages).toBe(7);
     expect(extracted.text).toContain("CHICAGO INCENTIVE EXPLORER");
+    // Cover: report title + address (spec addendum).
+    expect(extracted.text).toContain("Chicago Business Incentive Report");
+    expect(extracted.text).toContain("4200 S California Ave, Chicago, IL");
     expect(extracted.text).toContain("Review the Findings");
     expect(extracted.text).toContain("Who to Contact Next");
     expect(extracted.text).toContain("Take the Next Step");
+    expect(extracted.text).toContain("Supporting Context");
+    // Closing CTA page: the only contact surface is the chamber inbox — no
+    // stale phone number or secchicago.org anywhere in the document.
+    expect(extracted.text).toContain("Want a Hand with the Next Steps");
+    expect(extracted.text).toContain("info@southeastchgochamber.org");
+    expect(extracted.text).not.toContain("721-1999");
+    expect(extracted.text).not.toContain("secchicago.org");
+    expect(extracted.text).toContain("Page 7 of 7");
   });
 
   it("includes real document names (not a bare count) in Priority Documents", async () => {
