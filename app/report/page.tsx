@@ -79,15 +79,11 @@ import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff
 import { CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
 import { AdminOwnershipPanel } from "@/components/report/AdminOwnershipPanel";
 import type { AdminOwnershipPanelStatus } from "@/components/report/AdminOwnershipPanel";
-import {
-  matchReportAddressToOwnerParcel,
-  topOwnerClustersByVacancy,
-} from "@/lib/owner-file-report-context";
+import { fetchAdminOwnershipContext } from "@/lib/owner-file-report-context";
 import type {
   OwnerFileReportMatch,
   OwnerFileReportTopCluster,
 } from "@/lib/owner-file-report-context";
-import type { OwnerClusterGeoFeatureCollection } from "@/lib/owner-cluster-geo";
 import { ConciergePageContextBridge } from "@/components/concierge/SiteConciergeProvider";
 import { reportEmailGateKey, reportRequiresEmailGate } from "@/lib/report-email";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
@@ -4297,35 +4293,23 @@ function ReportDisplay({
     }
 
     const controller = new AbortController();
-    const zip = reportZip;
 
-    async function loadAdminOwnershipContext() {
-      try {
-        const sessionRes = await fetch("/api/owner-file/session", { signal: controller.signal });
-        if (sessionRes.status !== 204) {
-          setAdminOwnershipStatus("idle");
-          return;
-        }
-
-        setAdminOwnershipStatus("loading");
-        const geoRes = await fetch(`/api/owner-file/geo?zips=${zip}`, {
-          signal: controller.signal,
-        });
-        if (!geoRes.ok) throw new Error("Ownership geo fetch failed");
-        const fc = (await geoRes.json()) as OwnerClusterGeoFeatureCollection;
-
-        const address = report.metadata?.address || "";
-        setAdminOwnershipMatch(address ? matchReportAddressToOwnerParcel(fc, address) : null);
-        setAdminOwnershipTopClusters(topOwnerClustersByVacancy(fc, zip, 3));
-        setAdminOwnershipStatus("ready");
-      } catch (err) {
+    fetchAdminOwnershipContext({
+      zip: reportZip,
+      address: report.metadata?.address,
+      signal: controller.signal,
+      onAdminConfirmed: () => setAdminOwnershipStatus("loading"),
+    })
+      .then((result) => {
+        setAdminOwnershipMatch(result.match);
+        setAdminOwnershipTopClusters(result.topClusters);
+        setAdminOwnershipStatus(result.status);
+      })
+      .catch((err) => {
         if (err instanceof DOMException && err.name === "AbortError") return;
         console.error("[report] admin ownership context load failed:", err);
         setAdminOwnershipStatus("error");
-      }
-    }
-
-    loadAdminOwnershipContext();
+      });
 
     return () => controller.abort();
   }, [compact, reportZip, report.metadata?.address]);

@@ -112,3 +112,60 @@ export function topOwnerClustersByVacancy(
     )
     .slice(0, limit);
 }
+
+/**
+ * One resolved load of the admin ownership context for a report view:
+ * "idle" = viewer is not an Owner Files admin (probe != 204) — render
+ * nothing; "ready" = context resolved (match may still be null);
+ * "error" = the viewer IS an admin but the geo data could not be loaded.
+ */
+export interface AdminOwnershipContextResult {
+  status: "idle" | "ready" | "error";
+  match: OwnerFileReportMatch | null;
+  topClusters: OwnerFileReportTopCluster[];
+}
+
+/**
+ * The probe-then-fetch orchestration behind the report's admin-only
+ * ownership panel, extracted from app/report/page.tsx's ReportDisplay
+ * effect so the gate logic is unit-testable: probe /api/owner-file/session
+ * first (a non-204 means "not an admin" — resolve idle WITHOUT ever
+ * requesting geo data), then fetch /api/owner-file/geo for the report's
+ * ZIP and derive the address match + top clusters.
+ *
+ * AbortErrors propagate (the calling effect ignores them on unmount);
+ * every other failure resolves to status "error". `onAdminConfirmed` fires
+ * between the probe and the geo fetch so the caller can flip a loading
+ * state only for confirmed admins.
+ */
+export async function fetchAdminOwnershipContext(opts: {
+  zip: string;
+  address: string | null | undefined;
+  signal?: AbortSignal;
+  fetchImpl?: typeof fetch;
+  onAdminConfirmed?: () => void;
+}): Promise<AdminOwnershipContextResult> {
+  const doFetch = opts.fetchImpl ?? fetch;
+
+  const sessionRes = await doFetch("/api/owner-file/session", { signal: opts.signal });
+  if (sessionRes.status !== 204) {
+    return { status: "idle", match: null, topClusters: [] };
+  }
+
+  opts.onAdminConfirmed?.();
+
+  try {
+    const geoRes = await doFetch(`/api/owner-file/geo?zips=${opts.zip}`, { signal: opts.signal });
+    if (!geoRes.ok) throw new Error(`Ownership geo fetch failed (${geoRes.status})`);
+    const fc = (await geoRes.json()) as OwnerClusterGeoFeatureCollection;
+
+    return {
+      status: "ready",
+      match: opts.address ? matchReportAddressToOwnerParcel(fc, opts.address) : null,
+      topClusters: topOwnerClustersByVacancy(fc, opts.zip, 3),
+    };
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    return { status: "error", match: null, topClusters: [] };
+  }
+}
