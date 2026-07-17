@@ -28,7 +28,6 @@ const SOURCE_KEY = "vacant_building_violations";
 const VACANT_VIOLATIONS_URL = "https://data.cityofchicago.org/resource/u7si-yh3t.json";
 
 /** Bounding box covering ZIPs 60617/60619/60649 (SE Chicago) — same as violations.ts. */
-const SE_BBOX = { north: 41.77, west: -87.63, south: 41.65, east: -87.51 };
 /** Only pull reasonably recent violations to keep the backfill bounded. */
 const SINCE_DATE = "2015-01-01";
 
@@ -74,8 +73,11 @@ export const vacantBuildingViolationsAdapter: SourceAdapter<
   async fetch(_opts: FetchOpts): Promise<RawVacantBuildingViolation[]> {
     const all: RawVacantBuildingViolation[] = [];
     const pageSize = 1000;
-    const box = `within_box(location,${SE_BBOX.north},${SE_BBOX.west},${SE_BBOX.south},${SE_BBOX.east})`;
-    const where = encodeURIComponent(`${box} AND violation_date>'${SINCE_DATE}'`);
+    // u7si-yh3t has no point column (`location` does not exist upstream —
+    // only text latitude/longitude), so geographic scoping happens in
+    // normalize()'s citywide clamp + the export-time address join. Server-side
+    // we filter by date only; the full dataset is ~63k rows (paginated).
+    const where = encodeURIComponent(`violation_date>'${SINCE_DATE}'`);
 
     for (let offset = 0; ; offset += pageSize) {
       const url = `${VACANT_VIOLATIONS_URL}?$where=${where}&$limit=${pageSize}&$offset=${offset}&$order=id`;
@@ -83,7 +85,12 @@ export const vacantBuildingViolationsAdapter: SourceAdapter<
         headers: socrataHeaders(),
         signal: AbortSignal.timeout(30000),
       });
-      if (!res.ok) break;
+      if (!res.ok) {
+        // Never swallow upstream failures into a silent zero — surface them
+        // through runIngest's error channel (this exact bug shipped once:
+        // a 400 on an unknown column read as "Fetched: 0").
+        throw new Error(`u7si-yh3t fetch failed: HTTP ${res.status} at offset ${offset}`);
+      }
       const page: RawVacantBuildingViolation[] = await res.json();
       if (page.length === 0) break;
       all.push(...page);
