@@ -129,4 +129,34 @@ describe("generateOwnerFileDossierPdfBase64", () => {
     const result = generateOwnerFileDossierPdfBase64(ownerFile({ cluster: nullDistressCluster }));
     expect(result.base64.length).toBeGreaterThan(100);
   });
+
+  it("builds a dossier PDF with live Phase-2 distress values (vacant violations + sale exposure found)", () => {
+    const liveDistressCluster: OwnerCluster = {
+      ...cluster,
+      distressSignals: {
+        ...cluster.distressSignals,
+        vacantBuildingViolationCount: 4,
+        scavengerOrAnnualSaleFlag: true,
+      },
+      latestTaxSaleYear: 2013,
+      taxSaleSoldCount: 1,
+    };
+    const result = generateOwnerFileDossierPdfBase64(ownerFile({ cluster: liveDistressCluster }));
+    expect(result.base64.length).toBeGreaterThan(100);
+  });
+
+  it("builds a dossier PDF with a real 'no sale exposure found' result (flag ran but no PIN matched)", () => {
+    const noExposureCluster: OwnerCluster = {
+      ...cluster,
+      distressSignals: {
+        ...cluster.distressSignals,
+        vacantBuildingViolationCount: 0,
+        scavengerOrAnnualSaleFlag: false,
+      },
+      latestTaxSaleYear: null,
+      taxSaleSoldCount: 0,
+    };
+    const result = generateOwnerFileDossierPdfBase64(ownerFile({ cluster: noExposureCluster }));
+    expect(result.base64.length).toBeGreaterThan(100);
+  });
 });

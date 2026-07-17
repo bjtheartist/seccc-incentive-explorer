@@ -192,13 +192,48 @@ export default async function OwnerFileDetailPage({ params }: { params: Params }
             ) : (
               <DataPendingRow label="Building violations" />
             )}
-            <DataPendingRow label="Vacant-building violations" />
-            <DataPendingRow label="Delinquent-tax exposure" />
-            <DataPendingRow label="Scavenger / annual tax sale exposure" />
-            <DataPendingRow label="Cook County Land Bank inventory" />
+            {ds.vacantBuildingViolationCount != null ? (
+              <DataRow
+                label="Vacant-building violations"
+                value={`${ds.vacantBuildingViolationCount} recorded`}
+                detail="Joined from Chicago Vacant/Abandoned Building Violations (u7si-yh3t) by normalized site address."
+              />
+            ) : (
+              <DataPendingRow label="Vacant-building violations" />
+            )}
+            <DataPendingRow
+              label="Delinquent-tax exposure"
+              detail="Requires the Cook County Clerk's monthly delinquency file (manual import) — sale-exposure below is the public signal in the meantime."
+            />
+            {ds.scavengerOrAnnualSaleFlag != null ? (
+              <DataRow
+                label="Scavenger / annual tax sale exposure"
+                value={ds.scavengerOrAnnualSaleFlag ? "Sale exposure found" : "No sale exposure found in the loaded records"}
+                detail={
+                  ds.scavengerOrAnnualSaleFlag
+                    ? [
+                        cluster.latestTaxSaleYear != null ? `Latest tax-sale year on file: ${cluster.latestTaxSaleYear}.` : null,
+                        cluster.taxSaleSoldCount != null
+                          ? `${cluster.taxSaleSoldCount} matched entr${cluster.taxSaleSoldCount === 1 ? "y" : "ies"} actually sold at auction.`
+                          : null,
+                        "Joined by PIN from the Cook County Treasurer scavenger (ydgz-vkrp) and annual (55ju-2fs9) tax-sale datasets.",
+                      ]
+                        .filter(Boolean)
+                        .join(" ")
+                    : "Joined by PIN from the Cook County Treasurer scavenger (ydgz-vkrp) and annual (55ju-2fs9) tax-sale datasets — none of this cluster's PINs appear in either."
+                }
+              />
+            ) : (
+              <DataPendingRow label="Scavenger / annual tax sale exposure" />
+            )}
+            <DataPendingRow
+              label="Cook County Land Bank inventory"
+              detail="CCLBA publishes no public API — needs a periodic manual snapshot import."
+            />
           </div>
           <p className="mt-3 text-[11px] leading-relaxed text-[#0C1B33]/40">
-            Phase 2 adds vacant-building violations, delinquency, tax-sale exposure, and CCLBA inventory.
+            Vacant-building violations and tax-sale exposure are live. Delinquent-tax exposure and Cook County
+            Land Bank inventory require a periodic manual import — neither source publishes a public API.
             &quot;Not yet available&quot; always means the source hasn&apos;t loaded — never a silent zero.
           </p>
         </section>

@@ -63,15 +63,20 @@ export function DataRow({
   );
 }
 
-/** "Data pending" placeholder — never renders a bare 0%/0 when data is absent. */
-export function DataPendingRow({ label }: { label: string }) {
+/**
+ * "Data pending" placeholder — never renders a bare 0%/0 when data is
+ * absent. `detail` defaults to the generic "hasn't loaded yet" copy; pass an
+ * override for a source with a specific, named reason it stays pending
+ * (e.g. a manual-import-only upstream with no live sync path).
+ */
+export function DataPendingRow({ label, detail }: { label: string; detail?: string }) {
   return (
     <div className="rounded-xl border border-dashed border-[#0C1B33]/15 bg-white/60 p-5">
       <p className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/40">
         {label}
       </p>
       <p className="text-[13px] text-[#0C1B33]/45 mt-2 leading-relaxed">
-        Data pending — this source hasn&apos;t loaded for this ZIP yet.
+        {detail ?? "Data pending — this source hasn't loaded for this ZIP yet."}
       </p>
     </div>
   );
