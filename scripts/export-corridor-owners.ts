@@ -6,13 +6,16 @@
  *
  * Each cluster carries `pins[]` (the durable per-parcel join key the Owner
  * File human layer snapshots onto every verification row — see
- * lib/owner-file.ts) and `distressSignals` (MVP: `buildingViolationCount`
- * only, joined from `building_violations`; every other field is `null` until
- * its Phase 2 adapter ships). Both flow straight through from
+ * lib/owner-file.ts), `distressSignals` (Phase 1: `buildingViolationCount`;
+ * Phase 2: `vacantBuildingViolationCount` + `scavengerOrAnnualSaleFlag`;
+ * `delinquentTaxCount`/`cclbaInventoryFlag` stay `null` pending their
+ * manual-import sources), and `latestTaxSaleYear`/`taxSaleSoldCount` (richer
+ * copy alongside the sale flag). All flow straight through from
  * fetchOwnerClusters — no extra wiring needed here.
  *
- * Run against a refresh branch that has the domain migrations plus parcel /
- * ownership-enrichment / transfer / business syncs applied:
+ * Run against a refresh branch that has the domain migrations (including
+ * `db:migrate:distress`) plus parcel / ownership-enrichment / transfer /
+ * business / distress-overlay syncs applied:
  *
  *   DATABASE_URL="postgresql://..." npx tsx scripts/export-corridor-owners.ts
  *   DATABASE_URL="..." npx tsx scripts/export-corridor-owners.ts --zips=60617,60619

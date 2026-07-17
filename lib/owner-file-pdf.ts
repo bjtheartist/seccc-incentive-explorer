@@ -8,10 +8,12 @@ import type { OwnerFile } from "./owner-file";
  * calls — so it stays safe to import from client components.
  *
  * For a corridor manager's site visit or LIRI meeting: identity, parcel
- * footprint, distress signals (MVP: building violations only — everything
- * else renders "not yet available," matching the DataPendingRow doctrine,
- * never a silent zero), transfer/business-license context, the current
- * verification record, and outreach history.
+ * footprint, distress signals (building violations, vacant-building
+ * violations, and tax-sale exposure are live; delinquent-tax exposure and
+ * Cook County Land Bank inventory stay "not yet available" pending a manual
+ * import — matching the DataPendingRow doctrine, never a silent zero),
+ * transfer/business-license context, the current verification record, and
+ * outreach history.
  */
 
 const NAVY = "#0C1B33";
@@ -218,12 +220,29 @@ function _buildOwnerFileDossierPdf(ownerFile: OwnerFile): { doc: jsPDF; slug: st
   y = checkPage(doc, y, 40);
   y = sectionHeader(doc, y, "Distress Signals");
   const ds = cluster.distressSignals;
+  const saleExposureValue = ds.scavengerOrAnnualSaleFlag == null
+    ? "Not yet available"
+    : ds.scavengerOrAnnualSaleFlag
+      ? [
+          "Yes",
+          cluster.latestTaxSaleYear != null ? `latest tax-sale year ${cluster.latestTaxSaleYear}` : null,
+          cluster.taxSaleSoldCount != null
+            ? `${cluster.taxSaleSoldCount} matched entr${cluster.taxSaleSoldCount === 1 ? "y" : "ies"} sold at auction`
+            : null,
+        ].filter(Boolean).join(" — ")
+      : "No sale exposure found in the loaded records";
   const distressRows: [string, string][] = [
     ["Building violations", ds.buildingViolationCount != null ? String(ds.buildingViolationCount) : "Not yet available"],
     ["Vacant-building violations", ds.vacantBuildingViolationCount != null ? String(ds.vacantBuildingViolationCount) : "Not yet available"],
-    ["Delinquent-tax count", ds.delinquentTaxCount != null ? String(ds.delinquentTaxCount) : "Not yet available"],
-    ["Scavenger/annual tax sale exposure", ds.scavengerOrAnnualSaleFlag != null ? (ds.scavengerOrAnnualSaleFlag ? "Yes" : "No") : "Not yet available"],
-    ["Cook County Land Bank inventory", ds.cclbaInventoryFlag != null ? (ds.cclbaInventoryFlag ? "Yes" : "No") : "Not yet available"],
+    [
+      "Delinquent-tax exposure",
+      "Requires the Cook County Clerk's monthly delinquency file (manual import) — sale-exposure below is the public signal in the meantime.",
+    ],
+    ["Scavenger/annual tax sale exposure", saleExposureValue],
+    [
+      "Cook County Land Bank inventory",
+      "CCLBA publishes no public API — needs a periodic manual snapshot import.",
+    ],
   ];
   for (const [label, value] of distressRows) {
     y = fieldRow(doc, y, label, value);
