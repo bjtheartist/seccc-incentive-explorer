@@ -106,6 +106,8 @@ describe("OwnerFilesLandingPage gating", () => {
     expect(html).toContain("Enter admin password");
     expect(html).toContain('value="/admin/owner-files"');
     expect(listOwnerClustersMock).not.toHaveBeenCalled();
+    // Single sign-on hint: an analytics session should also open this gate.
+    expect(html).toContain("Your analytics admin session also opens Owner Files");
   });
 
   it("shows the auth-error message when redirected back with error=1", async () => {
@@ -143,6 +145,8 @@ describe("OwnerFilesLandingPage gating", () => {
     expect(html).toContain("2 clusters");
     expect(html).toContain("7 vacant parcels");
     expect(html).toContain(`href="/admin/owner-files/60617"`);
+    // Cross-nav back to the analytics dashboard.
+    expect(html).toContain(`href="/admin/analytics"`);
   });
 });
 
@@ -168,6 +172,7 @@ describe("OwnerFilesIndexPage ([zip]) gating", () => {
     );
     expect(html).toContain("Enter admin password");
     expect(html).toContain('value="/admin/owner-files/60624"');
+    expect(html).toContain("Your analytics admin session also opens Owner Files");
   });
 
   it("renders the neighborhood name in the header/breadcrumb and the switcher for a valid session", async () => {
