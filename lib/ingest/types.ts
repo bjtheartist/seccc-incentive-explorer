@@ -23,6 +23,15 @@ export interface FetchOpts {
    * broadly and filter in `normalize()` (returning `null` to drop).
    */
   zips: string[];
+  /**
+   * Cook County parcel PINs (14-digit, digits-only — the `parcels.pin`
+   * convention) to scope a fetch to. For PIN-keyed sources with no ZIP or
+   * address column upstream (e.g. the Treasurer scavenger/annual tax-sale
+   * datasets — see lib/ingest/pin-batch.ts), the sync script reads
+   * `SELECT DISTINCT pin FROM parcels` for the `zips` footprint and passes
+   * the result here. Adapters that don't need PIN scoping ignore it.
+   */
+  pins?: string[];
 }
 
 /**
