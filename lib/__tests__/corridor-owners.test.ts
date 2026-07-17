@@ -44,29 +44,40 @@ describe("loadStaticOwnerClusters", () => {
    * still satisfy the current OwnerCluster shape rather than leaving the new
    * fields undefined.
    */
-  it("the shipped export carries pins and the MVP distress signal for every ZIP", () => {
-    // The 2026-07-16 nine-ZIP export populates pins[] and
-    // buildingViolationCount; the Phase-2 signals (vacant-violation count,
-    // sale flag, and the two tax-sale copy fields) stay null until the
-    // export is regenerated on a refresh branch with the new adapters
-    // synced. Old-shape defaulting stays covered by the synthetic
-    // normalizeDistressSignals tests below.
+  it("the shipped export carries pins and the live distress signals for every ZIP", () => {
+    // The regenerated 2026-07-16 nine-ZIP export populates pins[],
+    // buildingViolationCount, and the Phase-2 signals (vacant-violation
+    // count + tax-sale exposure). Delinquent-tax and CCLBA stay null until
+    // their manual-import sources exist. Old-shape defaulting stays covered
+    // by the synthetic normalizeDistressSignals tests below.
     const zips = ["60617", "60619", "60649", "60624", "60623", "60644", "60651", "60621", "60636"];
+    let exposedSomewhere = 0;
     for (const zip of zips) {
       const clusters = loadStaticOwnerClusters(zip, 50)!;
       expect(clusters.length).toBeGreaterThan(0);
       for (const cluster of clusters) {
         expect(Array.isArray(cluster.pins)).toBe(true);
         const ds = cluster.distressSignals;
-        expect(ds.buildingViolationCount === null || typeof ds.buildingViolationCount === "number").toBe(true);
-        expect(ds.vacantBuildingViolationCount).toBeNull();
+        expect(typeof ds.buildingViolationCount).toBe("number");
+        expect(typeof ds.vacantBuildingViolationCount).toBe("number");
+        expect(typeof ds.scavengerOrAnnualSaleFlag).toBe("boolean");
         expect(ds.delinquentTaxCount).toBeNull();
-        expect(ds.scavengerOrAnnualSaleFlag).toBeNull();
         expect(ds.cclbaInventoryFlag).toBeNull();
-        expect(cluster.latestTaxSaleYear).toBeNull();
-        expect(cluster.taxSaleSoldCount).toBeNull();
+        if (ds.scavengerOrAnnualSaleFlag) {
+          exposedSomewhere++;
+          expect(typeof cluster.latestTaxSaleYear).toBe("number");
+          expect(typeof cluster.taxSaleSoldCount).toBe("number");
+        } else {
+          expect(cluster.latestTaxSaleYear).toBeNull();
+          // Non-exposed clusters carry an honest 0 (join ran, none sold)
+          // when the tables were available, or null when they weren't.
+          expect(cluster.taxSaleSoldCount === null || cluster.taxSaleSoldCount === 0).toBe(true);
+        }
       }
     }
+    // The pilot footprint genuinely contains sale-exposed clusters — a
+    // regenerated export that silently lost the join would zero this out.
+    expect(exposedSomewhere).toBeGreaterThan(0);
   });
 });
 
