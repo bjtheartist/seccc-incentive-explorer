@@ -10,14 +10,16 @@ import type { NeonQueryFunction } from "@neondatabase/serverless";
  */
 
 /**
- * MVP distress overlay (Phase 2 populates the rest — see 22u3-xenr, ydgz-vkrp,
- * 55ju-2fs9, CCLBA in the plan). Only `buildingViolationCount` is computed
- * today, by joining the already-ingested `building_violations` table
- * (lib/ingest/violations.ts) by normalized address, the same technique this
- * file already uses to link business licenses. Every other field is a
- * literal `null` — never a silent zero — until its adapter ships. `null`
- * always means "not yet available," while `buildingViolationCount: 0` is a
- * real, confirmed zero once the join could run.
+ * Distress overlay. Phase 1 shipped `buildingViolationCount`. Phase 2 adds
+ * `vacantBuildingViolationCount` (joined from `vacant_building_violations`,
+ * u7si-yh3t, by normalized address — same technique as buildingViolationCount)
+ * and `scavengerOrAnnualSaleFlag` (joined from `scavenger_sale_entries` /
+ * `annual_tax_sale_entries`, ydgz-vkrp / 55ju-2fs9, by PIN). `delinquentTaxCount`
+ * and `cclbaInventoryFlag` stay a literal `null` — never a silent zero —
+ * until their manual-import sources ship (Cook County Clerk delinquency
+ * file; CCLBA inventory snapshot; neither publishes a public API). `null`
+ * always means "not yet available," while `0`/`false` is a real, confirmed
+ * value once the join could run.
  */
 export interface OwnerClusterDistressSignals {
   buildingViolationCount: number | null;
@@ -59,6 +61,17 @@ export interface OwnerCluster {
   confidence: string;
   evidence: string;
   distressSignals: OwnerClusterDistressSignals;
+  /**
+   * Richer copy alongside `distressSignals.scavengerOrAnnualSaleFlag`: the
+   * most recent `tax_sale_year` across any cluster-pin match in either
+   * scavenger or annual tax-sale table, and how many of those matched
+   * entries were actually `sold_at_sale`. Optional (like `pins[]` was) so
+   * older committed exports and existing fixtures/tests that predate this
+   * field keep type-checking — normalizeLoadedCluster defaults both to
+   * `null` when loading an export that doesn't carry them.
+   */
+  latestTaxSaleYear?: number | null;
+  taxSaleSoldCount?: number | null;
 }
 
 interface OwnerClusterRow {
@@ -109,7 +122,8 @@ export function normalizeOwnerAddress(address: string | null | undefined): strin
 function serialize(
   row: OwnerClusterRow,
   businessNames: string[],
-  distressSignals: OwnerClusterDistressSignals
+  distressSignals: OwnerClusterDistressSignals,
+  taxSaleSignals: { latestTaxSaleYear: number | null; taxSaleSoldCount: number | null }
 ): OwnerCluster {
   const evidenceParts = [
     row.evidence,
@@ -133,6 +147,8 @@ function serialize(
     confidence: row.confidence,
     evidence: evidenceParts.join("; "),
     distressSignals,
+    latestTaxSaleYear: taxSaleSignals.latestTaxSaleYear,
+    taxSaleSoldCount: taxSaleSignals.taxSaleSoldCount,
   };
 }
 
@@ -154,6 +170,47 @@ export function buildingViolationCountForCluster(
     total += violationCountsByAddress.get(addr) ?? 0;
   }
   return total;
+}
+
+export interface TaxSaleEntrySummary {
+  years: number[];
+  soldCount: number;
+}
+
+/**
+ * Tax-sale exposure for a cluster: true when ANY of the cluster's PINs
+ * appears in `saleEntriesByPin` (built from `scavenger_sale_entries` +
+ * `annual_tax_sale_entries` combined), plus the richer-copy fields —
+ * `latestTaxSaleYear` (max `tax_sale_year` across matched entries) and
+ * `taxSaleSoldCount` (how many of the matched entries were actually
+ * `sold_at_sale`, a stronger signal than merely being listed).
+ *
+ * `saleEntriesByPin === null` means the join could not run at all (tables
+ * not migrated on this branch yet) — degrades every field to `null`, never
+ * a silent `false`/`0`. Once the join DID run, a real no-match cluster gets
+ * `flag: false`, `latestTaxSaleYear: null`, `taxSaleSoldCount: 0` — a
+ * confirmed "no exposure found," not "pending."
+ */
+export function taxSaleSignalsForCluster(
+  pins: string[] | null | undefined,
+  saleEntriesByPin: Map<string, TaxSaleEntrySummary> | null
+): { flag: boolean | null; latestTaxSaleYear: number | null; taxSaleSoldCount: number | null } {
+  if (saleEntriesByPin === null) return { flag: null, latestTaxSaleYear: null, taxSaleSoldCount: null };
+  if (!pins || pins.length === 0) return { flag: false, latestTaxSaleYear: null, taxSaleSoldCount: 0 };
+
+  let matched = false;
+  let latestTaxSaleYear: number | null = null;
+  let taxSaleSoldCount = 0;
+  for (const pin of pins) {
+    const entry = saleEntriesByPin.get(pin);
+    if (!entry) continue;
+    matched = true;
+    taxSaleSoldCount += entry.soldCount;
+    for (const year of entry.years) {
+      if (latestTaxSaleYear === null || year > latestTaxSaleYear) latestTaxSaleYear = year;
+    }
+  }
+  return { flag: matched, latestTaxSaleYear, taxSaleSoldCount };
 }
 
 /** Normalize a static-export or DB-fallback distress-signals value, defaulting every field to null. */
@@ -331,6 +388,70 @@ export async function fetchOwnerClusters(
     violationCountsByAddress = null;
   }
 
+  // Phase 2: vacant-building-violation counts, same normalized-address
+  // technique/degradation as building_violations above (see
+  // buildingViolationCountForCluster — reused directly, the logic doesn't
+  // care which violation table the counts came from).
+  let vacantViolationCountsByAddress: Map<string, number> | null = null;
+  try {
+    const vacantViolationRows = (await sql`
+      SELECT regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g') AS norm_address
+      FROM vacant_building_violations
+      WHERE address IS NOT NULL AND address <> ''
+    `) as { norm_address: string }[];
+    vacantViolationCountsByAddress = new Map();
+    for (const violation of vacantViolationRows) {
+      if (!violation.norm_address) continue;
+      vacantViolationCountsByAddress.set(
+        violation.norm_address,
+        (vacantViolationCountsByAddress.get(violation.norm_address) ?? 0) + 1
+      );
+    }
+  } catch (err) {
+    console.warn(
+      "fetchOwnerClusters: vacant_building_violations join unavailable (table likely not migrated on this branch):",
+      err instanceof Error ? err.message : err
+    );
+    vacantViolationCountsByAddress = null;
+  }
+
+  // Phase 2: scavenger/annual tax-sale exposure, joined by PIN (both tables
+  // are PIN-keyed with no ZIP/address column upstream — see
+  // lib/ingest/scavenger-sale.ts and lib/ingest/annual-tax-sale.ts). Combined
+  // into one pin -> {years, soldCount} map so a PIN's exposure counts
+  // regardless of which sale table it came from. Degrades to `null` (never a
+  // silent false/0) when either table isn't migrated yet on this branch.
+  let saleEntriesByPin: Map<string, TaxSaleEntrySummary> | null = null;
+  try {
+    type SaleEntryRow = { pin: string; tax_sale_year: number | string | null; sold_at_sale: boolean | null };
+    const scavengerRows = (await sql`
+      SELECT pin, tax_sale_year, sold_at_sale
+      FROM scavenger_sale_entries
+      WHERE pin IS NOT NULL AND pin <> ''
+    `) as SaleEntryRow[];
+    const annualRows = (await sql`
+      SELECT pin, tax_sale_year, sold_at_sale
+      FROM annual_tax_sale_entries
+      WHERE pin IS NOT NULL AND pin <> ''
+    `) as SaleEntryRow[];
+    saleEntriesByPin = new Map();
+    for (const entry of [...scavengerRows, ...annualRows]) {
+      const summary = saleEntriesByPin.get(entry.pin) ?? { years: [], soldCount: 0 };
+      if (entry.tax_sale_year != null) {
+        const year = Number(entry.tax_sale_year);
+        if (Number.isFinite(year)) summary.years.push(year);
+      }
+      if (entry.sold_at_sale === true) summary.soldCount += 1;
+      saleEntriesByPin.set(entry.pin, summary);
+    }
+  } catch (err) {
+    console.warn(
+      "fetchOwnerClusters: scavenger/annual tax-sale join unavailable (tables likely not migrated on this branch):",
+      err instanceof Error ? err.message : err
+    );
+    saleEntriesByPin = null;
+  }
+
   return rows.map((row) => {
     const names = new Set<string>();
     for (const key of row.norm_addresses ?? []) {
@@ -339,11 +460,17 @@ export async function fetchOwnerClusters(
     for (const key of row.norm_owners ?? []) {
       for (const name of licensesByLegal.get(key) ?? []) names.add(name);
     }
+    const taxSale = taxSaleSignalsForCluster(row.pins, saleEntriesByPin);
     const distressSignals: OwnerClusterDistressSignals = {
       ...EMPTY_DISTRESS_SIGNALS,
       buildingViolationCount: buildingViolationCountForCluster(row.norm_addresses, violationCountsByAddress),
+      vacantBuildingViolationCount: buildingViolationCountForCluster(row.norm_addresses, vacantViolationCountsByAddress),
+      scavengerOrAnnualSaleFlag: taxSale.flag,
     };
-    return serialize(row, Array.from(names).slice(0, 5), distressSignals);
+    return serialize(row, Array.from(names).slice(0, 5), distressSignals, {
+      latestTaxSaleYear: taxSale.latestTaxSaleYear,
+      taxSaleSoldCount: taxSale.taxSaleSoldCount,
+    });
   });
 }
 
@@ -481,8 +608,9 @@ export interface OwnerClustersExport {
 /**
  * Backward compatibility: normalizes a cluster loaded from the committed
  * static export (or any older snapshot) that predates `pins[]`/
- * `distressSignals` — defaults `pins` to `[]` and every distress-signal
- * field to `null` rather than leaving them `undefined`.
+ * `distressSignals`/`latestTaxSaleYear`/`taxSaleSoldCount` — defaults `pins`
+ * to `[]`, every distress-signal field to `null`, and the two Phase-2
+ * tax-sale copy fields to `null` rather than leaving them `undefined`.
  */
 function normalizeLoadedCluster(raw: unknown): OwnerCluster {
   const cluster = (raw ?? {}) as Partial<OwnerCluster> & Record<string, unknown>;
@@ -490,6 +618,8 @@ function normalizeLoadedCluster(raw: unknown): OwnerCluster {
     ...(cluster as OwnerCluster),
     pins: Array.isArray(cluster.pins) ? (cluster.pins as string[]) : [],
     distressSignals: normalizeDistressSignals(cluster.distressSignals),
+    latestTaxSaleYear: typeof cluster.latestTaxSaleYear === "number" ? cluster.latestTaxSaleYear : null,
+    taxSaleSoldCount: typeof cluster.taxSaleSoldCount === "number" ? cluster.taxSaleSoldCount : null,
   };
 }
 
