@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import {
   OWNER_FILES_ADMIN_COOKIE,
@@ -8,8 +7,7 @@ import {
 } from "@/lib/owner-files-admin-auth";
 import { listOwnerClusters } from "@/lib/owner-file";
 import { loadStaticOwnerClustersGeneratedAt } from "@/lib/corridor-owners";
-import { PILOT_ZIPS, getPilotZipEntry } from "@/lib/pilot-zips";
-import OwnerClusterListClient from "@/components/owner-file/OwnerClusterListClient";
+import { PILOT_ZIPS } from "@/lib/pilot-zips";
 
 export const dynamic = "force-dynamic";
 
@@ -19,16 +17,19 @@ function paramValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
 }
 
-export default async function OwnerFilesIndexPage({
-  params,
+/**
+ * Owner Files landing page — the neighborhood-first entry point above the
+ * 9 pilot-ZIP dossier lists (app/admin/owner-files/[zip]/page.tsx). Gated
+ * identically to every other Owner Files route (shared-password session,
+ * lib/owner-files-admin-auth.ts); the per-ZIP cluster counts/vacant totals
+ * come from the same listOwnerClusters data source as the ZIP page and the
+ * admin map layer (live DB first, then the committed static export).
+ */
+export default async function OwnerFilesLandingPage({
   searchParams,
 }: {
-  params: Promise<{ zip: string }>;
   searchParams: SearchParams;
 }) {
-  const { zip } = await params;
-  if (!/^\d{5}$/.test(zip)) notFound();
-
   const sp = await searchParams;
   const hasAuthError = paramValue(sp.error) === "1";
 
@@ -64,7 +65,7 @@ export default async function OwnerFilesIndexPage({
             Owner Files carry named ownership records — mailing addresses, IL SOS lookups, and outreach
             history. Access is restricted to corridor-management partners.
           </p>
-          <input type="hidden" name="redirectTo" value={`/admin/owner-files/${zip}`} />
+          <input type="hidden" name="redirectTo" value="/admin/owner-files" />
           <input
             name="password"
             type="password"
@@ -83,14 +84,14 @@ export default async function OwnerFilesIndexPage({
     );
   }
 
-  // Same data source as /api/corridor/owners (lib/corridor-owners.ts) — live
-  // DB first, then the committed static export.
-  const clusters = (await listOwnerClusters(zip, 200))
-    .slice()
-    .sort((a, b) => b.vacantParcelCount - a.vacantParcelCount);
+  const zipSummaries = await Promise.all(
+    PILOT_ZIPS.map(async (entry) => {
+      const clusters = await listOwnerClusters(entry.zip, 200);
+      const totalVacant = clusters.reduce((sum, cluster) => sum + cluster.vacantParcelCount, 0);
+      return { ...entry, clusterCount: clusters.length, totalVacant };
+    })
+  );
   const snapshotGeneratedAt = loadStaticOwnerClustersGeneratedAt();
-  const pilotEntry = getPilotZipEntry(zip);
-  const neighborhoodLabel = pilotEntry ? pilotEntry.primaryNeighborhood : `ZIP ${zip}`;
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
@@ -100,27 +101,17 @@ export default async function OwnerFilesIndexPage({
             Admin
           </Link>
           <span>/</span>
-          <Link href="/admin/owner-files" className="hover:text-[#2563EB]">
-            Owner Files
-          </Link>
-          <span>/</span>
-          <span className="text-[#0C1B33]/80">{neighborhoodLabel}</span>
+          <span className="text-[#0C1B33]/80">Owner Files</span>
         </nav>
 
         <span className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#2563EB]">
           Who Owns It?
         </span>
-        <h1 className="mt-3 font-editorial text-[44px] leading-none sm:text-[56px]">
-          {pilotEntry ? `${pilotEntry.primaryNeighborhood} — ${zip}` : `Owner Files — ZIP ${zip}`}
-        </h1>
-        {pilotEntry && pilotEntry.secondaryAreas.length > 0 && (
-          <p className="mt-2 text-[13px] text-[#0C1B33]/40">
-            Also covers {pilotEntry.secondaryAreas.join(" · ")}
-          </p>
-        )}
+        <h1 className="mt-3 font-editorial text-[44px] leading-none sm:text-[56px]">Owner Files</h1>
         <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/45">
-          Ownership clusters over vacant parcels in this ZIP, ranked by vacant-parcel footprint. Records
-          indicate — verify before relying; each Owner File carries its own confidence tier.
+          Named ownership clusters over vacant parcels across the nine pilot ZIPs, organized by
+          neighborhood. Records indicate — verify before relying; each Owner File carries its own
+          confidence tier.
         </p>
         <p className="mt-2 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
           {snapshotGeneratedAt
@@ -128,27 +119,31 @@ export default async function OwnerFilesIndexPage({
             : "Records snapshot date unavailable — records indicate, verify before relying."}
         </p>
 
-        {/* Neighborhood switcher — pill row across all 9 pilot ZIPs */}
-        <div className="mt-6 flex flex-wrap gap-1.5">
-          {PILOT_ZIPS.map((entry) => {
-            const active = entry.zip === zip;
-            return (
-              <Link
-                key={entry.zip}
-                href={`/admin/owner-files/${entry.zip}`}
-                className={`px-2.5 py-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] border transition-colors ${
-                  active
-                    ? "bg-[#0C1B33] text-white border-[#0C1B33]"
-                    : "bg-white text-[#0C1B33]/55 border-[#0C1B33]/15 hover:border-[#2563EB]/40 hover:text-[#2563EB]"
-                }`}
-              >
+        <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {zipSummaries.map((entry) => (
+            <Link
+              key={entry.zip}
+              href={`/admin/owner-files/${entry.zip}`}
+              className="flex flex-col border border-[#0C1B33]/10 bg-white p-5 transition-colors hover:border-[#2563EB]/40 hover:bg-[#FAF9F6]"
+            >
+              <p className="font-editorial text-[26px] leading-tight text-[#0C1B33]">
                 {entry.primaryNeighborhood}
-              </Link>
-            );
-          })}
+              </p>
+              <p className="mt-1 font-mono-bureau text-[11px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                ZIP {entry.zip}
+              </p>
+              {entry.secondaryAreas.length > 0 && (
+                <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/40">
+                  Also covers {entry.secondaryAreas.join(" · ")}
+                </p>
+              )}
+              <div className="mt-4 flex items-center gap-3 font-mono-bureau text-[11px] uppercase tracking-[0.1em] text-[#0C1B33]/60">
+                <span>{entry.clusterCount} clusters</span>
+                <span>{entry.totalVacant} vacant parcels</span>
+              </div>
+            </Link>
+          ))}
         </div>
-
-        <OwnerClusterListClient zip={zip} clusters={clusters} />
       </div>
     </main>
   );

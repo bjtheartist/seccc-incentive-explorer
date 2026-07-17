@@ -230,12 +230,30 @@ function escapePopupHtml(value: string): string {
   })[character] as string);
 }
 
+/** Inline-style (bg;color) pair for a cluster's confidence badge, mirroring the CONFIDENCE_BADGE Tailwind map in app/admin/owner-files/[zip]/page.tsx — Low is the safe default for any unrecognized value. */
+function confidenceBadgeStyle(confidence: string): string {
+  if (confidence === "High") return "background:#DCFCE7;color:#16A34A";
+  if (confidence === "Medium") return "background:#FEF3C7;color:#D97706";
+  return "background:rgba(12,27,51,0.05);color:rgba(12,27,51,0.45)";
+}
+
 /**
  * Popup body for a clicked ownership-cluster parcel (MapView's
  * `map.on("click", "owner-clusters-unclustered")`). Extracted from the
- * inline handler so the content contract — owner name, owner-type chip,
- * "X of Y parcels vacant", address, and the percent-encoded Owner File
- * link (cluster keys contain ':') — is unit-testable without a live map.
+ * inline handler so the content contract is unit-testable without a live
+ * map. Row order mirrors the Owner Files cluster card
+ * (app/admin/owner-files/[zip]/page.tsx / OwnerClusterListClient):
+ *   1. owner name (bold) + owner-type chip, confidence badge right-aligned
+ *   2. "X vacant / Y parcels" metric line
+ *   3. this parcel's address
+ *   4. the percent-encoded Owner File link (cluster keys contain ':')
+ * Two card rows have no popup equivalent and are intentionally omitted:
+ * taxpayer mailing address and building-violation count aren't part of
+ * OwnerClusterGeoFeatureProperties (lib/owner-cluster-geo.ts) — the
+ * per-parcel geo export is deliberately leaner than the full OwnerCluster
+ * the card reads, so there's nothing to show without a data-pipeline
+ * change (out of scope here). `address` here is this one parcel's site
+ * address, not the cluster's sample-addresses list.
  * Owner-type labels/colors come from lib/owner-classify.ts, mirroring the
  * vacant-properties popup.
  */
@@ -248,13 +266,21 @@ export function buildOwnerClusterPopupHtml(p: OwnerClusterPopupProperties): stri
   const ownerFileHref = `/admin/owner-files/${zip}/${encodeURIComponent(clusterKey)}`;
   const ownerName = escapePopupHtml(p.ownerName || "Owner record unavailable");
   const address = p.address ? escapePopupHtml(p.address) : "";
+  const confidenceBadge = p.confidence
+    ? `<span style="flex-shrink:0;display:inline-block;${confidenceBadgeStyle(p.confidence)};padding:2px 6px;border-radius:2px;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;margin-left:8px">${escapePopupHtml(p.confidence)}</span>`
+    : "";
 
   return `<div style="font-family:Inter,sans-serif">
     <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#7C3AED;margin-bottom:4px;font-weight:500">Admin · Ownership Cluster</div>
-    <div style="font-size:14px;font-weight:600;color:#0C1B33">${ownerName}</div>
-    <span style="display:inline-block;margin-top:4px;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapePopupHtml(ownerLabel)}</span>
-    <div style="font-size:11px;color:#5A6478;margin-top:6px">${p.clusterVacantCount ?? 0} of ${p.clusterParcelCount ?? 0} parcels vacant</div>
-    ${address ? `<div style="font-size:12px;color:#0C1B33;margin-top:3px">${address}</div>` : ""}
+    <div style="display:flex;align-items:flex-start;justify-content:space-between">
+      <div style="min-width:0">
+        <div style="font-size:14px;font-weight:600;color:#0C1B33">${ownerName}</div>
+        <span style="display:inline-block;margin-top:4px;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapePopupHtml(ownerLabel)}</span>
+      </div>
+      ${confidenceBadge}
+    </div>
+    <div style="font-size:11px;color:#5A6478;margin-top:8px;font-weight:600">${p.clusterVacantCount ?? 0} vacant / ${p.clusterParcelCount ?? 0} parcels</div>
+    ${address ? `<div style="font-size:11px;color:#8A93A6;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${address}</div>` : ""}
     <a href="${ownerFileHref}" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">Open Owner File &rarr;</a>
   </div>`;
 }

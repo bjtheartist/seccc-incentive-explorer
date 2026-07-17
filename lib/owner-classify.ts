@@ -21,6 +21,54 @@ export const OWNER_TYPE_COLORS: Record<OwnerType, string> = {
   unknown: "#9CA3AF",          // gray
 };
 
+/**
+ * Canonical display order for owner types wherever they're listed together
+ * (map legend color key, filter chips) — Corporate/LLC first as the most
+ * actionable outreach target, Unknown last as the least informative.
+ */
+export const OWNER_TYPE_ORDER: OwnerType[] = [
+  "corporate_llc",
+  "out_of_state",
+  "local_private",
+  "city_public",
+  "unknown",
+];
+
+/**
+ * Narrow an arbitrary/possibly-stale owner-type string (e.g. from an older
+ * static export, or a value that predates a classifyOwner change) to a known
+ * OwnerType, defaulting to "unknown" rather than throwing or rendering a raw
+ * string. Used wherever a persisted OwnerCluster.ownerType (typed as
+ * `string | null` since it round-trips through JSON/SQL) needs to key into
+ * OWNER_TYPE_COLORS/LABELS.
+ */
+export function normalizeOwnerType(value: string | null | undefined): OwnerType {
+  return value != null && (OWNER_TYPE_ORDER as string[]).includes(value)
+    ? (value as OwnerType)
+    : "unknown";
+}
+
+/**
+ * Given the owner types present in a loaded dataset (e.g. every feature in
+ * the ownership-cluster map layer), returns the distinct types that actually
+ * occur, in OWNER_TYPE_ORDER. Backs the map legend's data-driven color key —
+ * it only shows a dot for a type genuinely present rather than always
+ * listing all five. Each value is normalized via normalizeOwnerType first
+ * (null/unrecognized -> "unknown"), matching the map paint expression's own
+ * fallback, so a cluster with a missing ownerType still shows an "Unknown"
+ * key row when one is actually on the map. An empty input yields an empty
+ * key (nothing loaded yet), never a stray "Unknown" row.
+ */
+export function presentOwnerTypesInOrder(
+  types: Array<string | null | undefined>
+): OwnerType[] {
+  const present = new Set<OwnerType>();
+  for (const type of types) {
+    present.add(normalizeOwnerType(type));
+  }
+  return OWNER_TYPE_ORDER.filter((key) => present.has(key));
+}
+
 /** Known public/government entity patterns (case-insensitive). */
 const PUBLIC_PATTERNS = [
   /\bcity of chicago\b/i,

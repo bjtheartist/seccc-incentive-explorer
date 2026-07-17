@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import MapLegendPanel from "../MapLegendPanel";
 import { ZONE_KEYS, VACANT_LABELS, ZONING_CATEGORIES } from "@/lib/constants";
 import { POI_LAYERS } from "../map-helpers";
+import { OWNER_TYPE_LABELS, presentOwnerTypesInOrder } from "@/lib/owner-classify";
 
 /**
  * The ADMIN ownership-cluster legend section is probe-driven
@@ -99,5 +100,59 @@ describe("MapLegendPanel admin ownership-cluster section", () => {
       />
     );
     expect(errorHtml).toContain("Ownership clusters could not be loaded.");
+  });
+
+  describe("color key", () => {
+    it("renders nothing extra when the toggle is off, even with present types computed", () => {
+      const html = renderToStaticMarkup(
+        <MapLegendPanel
+          {...baseProps()}
+          adminSessionActive={true}
+          ownerClustersVisible={false}
+          ownerClustersPresentTypes={["corporate_llc", "local_private"]}
+        />
+      );
+      expect(html).not.toContain(OWNER_TYPE_LABELS.corporate_llc);
+      expect(html).not.toContain("Dot size");
+    });
+
+    it("renders nothing when the toggle is on but no data has loaded yet (empty present types)", () => {
+      const html = renderToStaticMarkup(
+        <MapLegendPanel
+          {...baseProps()}
+          adminSessionActive={true}
+          ownerClustersVisible={true}
+          ownerClustersPresentTypes={[]}
+        />
+      );
+      expect(html).not.toContain(OWNER_TYPE_LABELS.corporate_llc);
+      // The dot-size hint still shows once the layer is toggled on, independent of the key rows.
+      expect(html).toContain("Dot size = vacant parcels in cluster");
+    });
+
+    it("renders one dot + label per owner type actually present, in canonical legend order", () => {
+      const presentTypes = presentOwnerTypesInOrder(["local_private", "corporate_llc", "corporate_llc", "unknown"]);
+      const html = renderToStaticMarkup(
+        <MapLegendPanel
+          {...baseProps()}
+          adminSessionActive={true}
+          ownerClustersVisible={true}
+          ownerClustersPresentTypes={presentTypes}
+        />
+      );
+      // Present, deduped, and in order: Corporate/LLC, Local Private, Unknown.
+      expect(html).toContain(OWNER_TYPE_LABELS.corporate_llc);
+      expect(html).toContain(OWNER_TYPE_LABELS.local_private);
+      expect(html).toContain(OWNER_TYPE_LABELS.unknown);
+      const corporateIdx = html.indexOf(OWNER_TYPE_LABELS.corporate_llc);
+      const localIdx = html.indexOf(OWNER_TYPE_LABELS.local_private);
+      const unknownIdx = html.indexOf(OWNER_TYPE_LABELS.unknown);
+      expect(localIdx).toBeGreaterThan(corporateIdx);
+      expect(unknownIdx).toBeGreaterThan(localIdx);
+      // Absent types don't appear.
+      expect(html).not.toContain(OWNER_TYPE_LABELS.out_of_state);
+      expect(html).not.toContain(OWNER_TYPE_LABELS.city_public);
+      expect(html).toContain("Dot size = vacant parcels in cluster");
+    });
   });
 });

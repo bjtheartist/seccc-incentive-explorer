@@ -18,6 +18,7 @@ import {
 } from "@/lib/constants";
 import type { ProgramLevel } from "@/lib/types";
 import {
+  OWNER_TYPE_COLORS,
   OWNER_TYPE_LABELS,
   type OwnerType,
 } from "@/lib/owner-classify";
@@ -41,6 +42,8 @@ interface MapLegendPanelProps {
   ownerClustersVisible: boolean;
   ownerClustersLoading?: boolean;
   ownerClustersError?: string | null;
+  /** Owner types actually present in the loaded ownership-cluster data, in legend order — drives the color key below the toggle. */
+  ownerClustersPresentTypes?: OwnerType[];
   onClose: () => void;
   onToggleZone: (key: string) => void;
   onTogglePoi: (key: string) => void;
@@ -73,6 +76,7 @@ export default function MapLegendPanel({
   ownerClustersVisible,
   ownerClustersLoading,
   ownerClustersError,
+  ownerClustersPresentTypes = [],
   onClose,
   onToggleZone,
   onTogglePoi,
@@ -499,6 +503,26 @@ export default function MapLegendPanel({
             <p className="text-[9px] text-[#0C1B33]/35 mt-1.5 ml-6">
               Owner Files pilot ZIPs · admin-only, never shown to public visitors
             </p>
+            {ownerClustersVisible && ownerClustersPresentTypes.length > 0 && (
+              <div className="mt-2.5 ml-6 space-y-1">
+                {ownerClustersPresentTypes.map((type) => (
+                  <div key={type} className="flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                      style={{ backgroundColor: OWNER_TYPE_COLORS[type] }}
+                    />
+                    <span className="text-[10px] text-[#0C1B33]/60 leading-tight">
+                      {OWNER_TYPE_LABELS[type]}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {ownerClustersVisible && (
+              <p className="text-[9px] text-[#0C1B33]/35 mt-1.5 ml-6">
+                Dot size = vacant parcels in cluster
+              </p>
+            )}
             {ownerClustersLoading && (
               <p className="text-[9px] text-[#0C1B33]/40 mt-1.5 ml-6">Loading ownership clusters…</p>
             )}
