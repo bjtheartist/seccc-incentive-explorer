@@ -4,9 +4,15 @@ import {
   hasValidOwnerFilesAdminSession,
   isOwnerFilesAdminConfigured,
 } from "@/lib/owner-files-admin-auth";
+import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 
+// A valid analytics admin session also satisfies this gate (single sign-on
+// — see lib/owner-files-admin-auth.ts module doc).
 function isAuthorized(req: NextRequest): boolean {
-  return hasValidOwnerFilesAdminSession(req.cookies.get(OWNER_FILES_ADMIN_COOKIE)?.value);
+  return hasValidOwnerFilesAdminSession(
+    req.cookies.get(OWNER_FILES_ADMIN_COOKIE)?.value,
+    req.cookies.get(ANALYTICS_ADMIN_COOKIE)?.value
+  );
 }
 
 /**
