@@ -6,6 +6,7 @@ import {
   hasValidOwnerFilesAdminSession,
   isOwnerFilesAdminConfigured,
 } from "@/lib/owner-files-admin-auth";
+import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { listOwnerClusters } from "@/lib/owner-file";
 import { loadStaticOwnerClustersGeneratedAt } from "@/lib/corridor-owners";
 import { PILOT_ZIPS, getPilotZipEntry } from "@/lib/pilot-zips";
@@ -46,7 +47,10 @@ export default async function OwnerFilesIndexPage({
   }
 
   const cookieStore = await cookies();
-  const hasSession = hasValidOwnerFilesAdminSession(cookieStore.get(OWNER_FILES_ADMIN_COOKIE)?.value);
+  const hasSession = hasValidOwnerFilesAdminSession(
+    cookieStore.get(OWNER_FILES_ADMIN_COOKIE)?.value,
+    cookieStore.get(ANALYTICS_ADMIN_COOKIE)?.value
+  );
 
   if (!hasSession) {
     return (
@@ -75,6 +79,10 @@ export default async function OwnerFilesIndexPage({
           {hasAuthError ? (
             <p className="mt-3 text-[12px] text-red-600">That password did not match. Try again.</p>
           ) : null}
+          <p className="mt-3 text-[12px] leading-relaxed text-[#0C1B33]/45">
+            Your analytics admin session also opens Owner Files — log in there once and this gate
+            disappears.
+          </p>
           <button className="mt-4 w-full bg-[#0C1B33] px-4 py-3 font-mono-bureau text-[11px] uppercase tracking-[0.16em] text-white">
             Open Owner Files
           </button>
