@@ -5,6 +5,7 @@ import {
   hasValidOwnerFilesAdminSession,
   isOwnerFilesAdminConfigured,
 } from "@/lib/owner-files-admin-auth";
+import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { listOwnerClusters } from "@/lib/owner-file";
 import { loadStaticOwnerClustersGeneratedAt } from "@/lib/corridor-owners";
 import { PILOT_ZIPS } from "@/lib/pilot-zips";
@@ -47,7 +48,10 @@ export default async function OwnerFilesLandingPage({
   }
 
   const cookieStore = await cookies();
-  const hasSession = hasValidOwnerFilesAdminSession(cookieStore.get(OWNER_FILES_ADMIN_COOKIE)?.value);
+  const hasSession = hasValidOwnerFilesAdminSession(
+    cookieStore.get(OWNER_FILES_ADMIN_COOKIE)?.value,
+    cookieStore.get(ANALYTICS_ADMIN_COOKIE)?.value
+  );
 
   if (!hasSession) {
     return (
@@ -76,6 +80,10 @@ export default async function OwnerFilesLandingPage({
           {hasAuthError ? (
             <p className="mt-3 text-[12px] text-red-600">That password did not match. Try again.</p>
           ) : null}
+          <p className="mt-3 text-[12px] leading-relaxed text-[#0C1B33]/45">
+            Your analytics admin session also opens Owner Files — log in there once and this gate
+            disappears.
+          </p>
           <button className="mt-4 w-full bg-[#0C1B33] px-4 py-3 font-mono-bureau text-[11px] uppercase tracking-[0.16em] text-white">
             Open Owner Files
           </button>
@@ -96,12 +104,17 @@ export default async function OwnerFilesLandingPage({
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
       <div className="mx-auto max-w-5xl">
-        <nav className="mb-6 flex items-center gap-1.5 font-mono-bureau text-[12px] text-[#0C1B33]/50">
-          <Link href="/admin" className="hover:text-[#2563EB]">
-            Admin
+        <nav className="mb-6 flex items-center justify-between gap-1.5 font-mono-bureau text-[12px] text-[#0C1B33]/50">
+          <div className="flex items-center gap-1.5">
+            <Link href="/admin" className="hover:text-[#2563EB]">
+              Admin
+            </Link>
+            <span>/</span>
+            <span className="text-[#0C1B33]/80">Owner Files</span>
+          </div>
+          <Link href="/admin/analytics" className="hover:text-[#2563EB]">
+            Analytics
           </Link>
-          <span>/</span>
-          <span className="text-[#0C1B33]/80">Owner Files</span>
         </nav>
 
         <span className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#2563EB]">

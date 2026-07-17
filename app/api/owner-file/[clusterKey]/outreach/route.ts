@@ -4,6 +4,7 @@ import {
   hasValidOwnerFilesAdminSession,
   isOwnerFilesAdminConfigured,
 } from "@/lib/owner-files-admin-auth";
+import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { getSQL } from "@/lib/db";
 import {
   OWNER_FILE_OUTREACH_EVENT_TYPES,
@@ -21,8 +22,13 @@ import { resolveParcelProgramContext } from "@/lib/owner-file-letter-context";
 
 type Params = { params: Promise<{ clusterKey: string }> };
 
+// A valid analytics admin session also satisfies this gate (single sign-on
+// — see lib/owner-files-admin-auth.ts module doc).
 function isAuthorized(req: NextRequest): boolean {
-  return hasValidOwnerFilesAdminSession(req.cookies.get(OWNER_FILES_ADMIN_COOKIE)?.value);
+  return hasValidOwnerFilesAdminSession(
+    req.cookies.get(OWNER_FILES_ADMIN_COOKIE)?.value,
+    req.cookies.get(ANALYTICS_ADMIN_COOKIE)?.value
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

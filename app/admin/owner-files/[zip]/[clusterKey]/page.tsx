@@ -7,6 +7,7 @@ import {
   hasValidOwnerFilesAdminSession,
   isOwnerFilesAdminConfigured,
 } from "@/lib/owner-files-admin-auth";
+import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { getOwnerFile } from "@/lib/owner-file";
 import { DataPendingRow, DataRow } from "@/components/corridors/CorridorSignalsUI";
 import { OwnerFileViewTracker } from "@/components/owner-file/OwnerFileViewTracker";
@@ -52,7 +53,10 @@ export default async function OwnerFileDetailPage({ params }: { params: Params }
   }
 
   const cookieStore = await cookies();
-  const hasSession = hasValidOwnerFilesAdminSession(cookieStore.get(OWNER_FILES_ADMIN_COOKIE)?.value);
+  const hasSession = hasValidOwnerFilesAdminSession(
+    cookieStore.get(OWNER_FILES_ADMIN_COOKIE)?.value,
+    cookieStore.get(ANALYTICS_ADMIN_COOKIE)?.value
+  );
 
   if (!hasSession) {
     return (
@@ -78,6 +82,10 @@ export default async function OwnerFileDetailPage({ params }: { params: Params }
             className="mt-5 w-full border border-[#0C1B33]/15 bg-white px-4 py-3 text-[14px] outline-none focus:border-[#2563EB]"
             placeholder="Owner Files password"
           />
+          <p className="mt-3 text-[12px] leading-relaxed text-[#0C1B33]/45">
+            Your analytics admin session also opens Owner Files — log in there once and this gate
+            disappears.
+          </p>
           <button className="mt-4 w-full bg-[#0C1B33] px-4 py-3 font-mono-bureau text-[11px] uppercase tracking-[0.16em] text-white">
             Open Owner Files
           </button>

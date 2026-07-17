@@ -542,26 +542,34 @@ export default async function AdminAnalyticsPage({
           </div>
         </div>
 
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href={dashboardHref(days, "founder")}
+              className={`border px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] ${
+                mode === "founder"
+                  ? "border-[#2563EB] bg-[#2563EB] text-white"
+                  : "border-[#0C1B33]/12 bg-white text-[#0C1B33]/45"
+              }`}
+            >
+              Founder View
+            </Link>
+            <Link
+              href={dashboardHref(days, "partner")}
+              className={`border px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] ${
+                mode === "partner"
+                  ? "border-[#2563EB] bg-[#2563EB] text-white"
+                  : "border-[#0C1B33]/12 bg-white text-[#0C1B33]/45"
+              }`}
+            >
+              Partner Summary
+            </Link>
+          </div>
           <Link
-            href={dashboardHref(days, "founder")}
-            className={`border px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] ${
-              mode === "founder"
-                ? "border-[#2563EB] bg-[#2563EB] text-white"
-                : "border-[#0C1B33]/12 bg-white text-[#0C1B33]/45"
-            }`}
+            href="/admin/owner-files"
+            className="border border-[#0C1B33]/12 bg-white px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/45"
           >
-            Founder View
-          </Link>
-          <Link
-            href={dashboardHref(days, "partner")}
-            className={`border px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] ${
-              mode === "partner"
-                ? "border-[#2563EB] bg-[#2563EB] text-white"
-                : "border-[#0C1B33]/12 bg-white text-[#0C1B33]/45"
-            }`}
-          >
-            Partner Summary
+            Owner Files
           </Link>
         </div>
 
