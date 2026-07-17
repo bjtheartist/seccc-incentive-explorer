@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import { Layers } from "lucide-react";
 import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
-import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
+import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, presentOwnerTypesInOrder, type OwnerType } from "@/lib/owner-classify";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { describeClassCode, describeParcelType } from "@/lib/parcel-classes";
 import { normalizeZoneCheckResponse } from "@/lib/zone-response";
@@ -121,6 +121,10 @@ export default function MapView() {
   const [ownerClustersLoaded, setOwnerClustersLoaded] = useState(false);
   const [ownerClustersLoading, setOwnerClustersLoading] = useState(false);
   const [ownerClustersError, setOwnerClustersError] = useState<string | null>(null);
+  // Owner types actually present in the loaded ownership-cluster data, for
+  // MapLegendPanel's data-driven color key — recomputed once per fetch, not
+  // on every render.
+  const [ownerClustersPresentTypes, setOwnerClustersPresentTypes] = useState<OwnerType[]>([]);
 
   // Polygon draw tool
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -1850,6 +1854,7 @@ export default function MapView() {
         const src = map.getSource("owner-clusters") as mapboxgl.GeoJSONSource | undefined;
         if (src) src.setData(EMPTY_FC);
         setOwnerClustersLoaded(false);
+        setOwnerClustersPresentTypes([]);
       }
       return;
     }
@@ -1871,6 +1876,10 @@ export default function MapView() {
         const src = m.getSource("owner-clusters") as mapboxgl.GeoJSONSource | undefined;
         if (src) src.setData(data);
         setOwnerClustersLoaded(true);
+        const ownerTypes = (data.features ?? []).map(
+          (feature) => (feature.properties as { ownerType?: string } | null)?.ownerType
+        );
+        setOwnerClustersPresentTypes(presentOwnerTypesInOrder(ownerTypes));
       })
       .catch((err) => {
         if (err?.name === "AbortError") return;
@@ -1980,6 +1989,7 @@ export default function MapView() {
           ownerClustersVisible={ownerClustersVisible}
           ownerClustersLoading={ownerClustersLoading}
           ownerClustersError={ownerClustersError}
+          ownerClustersPresentTypes={ownerClustersPresentTypes}
           onClose={() => setLegendOpen(false)}
           onToggleZone={toggleZone}
           onTogglePoi={togglePoi}
