@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-20T09:35:41.397Z",
+  "generatedAt": "2026-07-20T09:54:47.333Z",
   "sources": {
     "trackedInventory": "Chicago City-Owned Land Inventory (aksk-kvfp) + 311 Vacant/Abandoned Building Complaints (v6vf-nfxy)",
     "vacantLandOwnership": "Cook County Assessor parcels (classified owner type; complete vacant-land universe)",
@@ -30738,6 +30738,7 @@
       ],
       "landPointsTruncated": false,
       "landPointsTotal": 1735,
+      "directoryCount": 2165,
       "boundary": {
         "rings": [
           [
@@ -61648,6 +61649,7 @@
       ],
       "landPointsTruncated": false,
       "landPointsTotal": 1149,
+      "directoryCount": 1816,
       "boundary": {
         "rings": [
           [
@@ -96973,6 +96975,7 @@
       ],
       "landPointsTruncated": true,
       "landPointsTotal": 2971,
+      "directoryCount": 3823,
       "boundary": {
         "rings": [
           [
@@ -130695,6 +130698,7 @@
       ],
       "landPointsTruncated": false,
       "landPointsTotal": 1471,
+      "directoryCount": 2511,
       "boundary": {
         "rings": [
           [
@@ -162957,6 +162961,7 @@
       ],
       "landPointsTruncated": false,
       "landPointsTotal": 1657,
+      "directoryCount": 2784,
       "boundary": {
         "rings": [
           [
@@ -197170,6 +197175,7 @@
       ],
       "landPointsTruncated": true,
       "landPointsTotal": 2900,
+      "directoryCount": 3083,
       "boundary": {
         "rings": [
           [
@@ -218818,6 +218824,7 @@
       ],
       "landPointsTruncated": false,
       "landPointsTotal": 869,
+      "directoryCount": 1539,
       "boundary": {
         "rings": [
           [
@@ -229953,6 +229960,7 @@
       ],
       "landPointsTruncated": false,
       "landPointsTotal": 366,
+      "directoryCount": 692,
       "boundary": {
         "rings": [
           [
@@ -244152,6 +244160,7 @@
       ],
       "landPointsTruncated": false,
       "landPointsTotal": 582,
+      "directoryCount": 954,
       "boundary": {
         "rings": [
           [

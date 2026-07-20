@@ -50,6 +50,7 @@ import { toDigitsOnlyPin } from "../lib/ingest/pin-batch";
 import {
   addressHasViolation,
   assignQuantileDots,
+  buildDirectoryRows,
   computeSitePriority,
   countAddressesInSet,
   latestSaleYearForPin,
@@ -60,6 +61,8 @@ import {
   tallyOwnerTypeCounts,
   taxSaleExposureForVacantPins,
   type OwnerTypeCount,
+  type VacancyDirectoryFile,
+  type VacancyDirectoryRow,
   type VacancyDistressSignals,
   type VacancyIndexEdition,
   type VacancyIndexExport,
@@ -123,6 +126,10 @@ const BOUNDARY_MAX_POINTS = 300; // simplified ZIP-boundary budget (D8)
 const TRANSPORT_MAX_POINTS_PER_LINE = 60; // per clipped transport polyline
 const TRANSPORT_NETWORK_PATH = join(process.cwd(), "public", "data", "transport-network.geojson");
 const OUT_PATH = join(process.cwd(), "public", "data", "vacancy-index.json");
+// Per-ZIP site directory files live here (one {zip}.json each). They lazy-load
+// on the web report so the main index JSON stays lean. A subset --zips= run
+// rewrites ONLY the requested ZIPs' files (merge-not-clobber, like OUT_PATH).
+const DIRECTORY_DIR = join(process.cwd(), "public", "data", "vacancy-directory");
 const ZIP_BOUNDARIES_URL = "https://data.cityofchicago.org/resource/unjd-c2ca.json";
 
 // ── Geometry helpers (copied per the standalone convention of
@@ -665,7 +672,7 @@ function buildEdition(
   transport: { kind: "expressway" | "rail"; points: [number, number][] }[],
   saleYearsByPin: Map<string, number[]> | null,
   violationAddressSet: Set<string> | null,
-): VacancyIndexEdition {
+): { edition: VacancyIndexEdition; directoryRows: VacancyDirectoryRow[]; excludedNoAddressCount: number } {
   const entryIndex = PILOT_ZIPS.findIndex((entry) => entry.zip === zip);
   const entry = PILOT_ZIPS[entryIndex];
 
@@ -794,6 +801,22 @@ function buildEdition(
   const sitePointsTruncated = sitePointsFull.length > SITE_POINTS_CAP;
   const sitePoints = sitePointsFull.slice(0, SITE_POINTS_CAP);
 
+  // Full site directory (the web report's online index): EVERY tracked row with
+  // a usable address, anonymized (owner TYPE only). `sites` is rows.map(...) so
+  // it index-aligns with `rows` — pass the RAW nullable address so a missing one
+  // is excluded + counted rather than coerced to the site-index "Unknown".
+  const { rows: directoryRows, excludedNoAddressCount } = buildDirectoryRows(
+    sites.map((s, i) => ({
+      address: rows[i]?.address ?? null,
+      ownerType: s.ownerType,
+      propertyType: s.propertyType,
+      priorityTier: s.priorityTier,
+      priorityScore: s.priorityScore,
+      saleYear: s.saleYear,
+      violation: s.violation,
+    })),
+  );
+
   const siteIndex: VacancySiteIndexRow[] = ranked.slice(0, SITE_INDEX_DEPTH).map((s, i) => ({
     markerNumber: i < MARKER_COUNT ? i + 1 : null,
     address: s.address,
@@ -809,7 +832,7 @@ function buildEdition(
     lon: s.lon,
   }));
 
-  return {
+  const edition: VacancyIndexEdition = {
     zip,
     neighborhood: entry.primaryNeighborhood,
     secondaryAreas: entry.secondaryAreas,
@@ -836,10 +859,13 @@ function buildEdition(
     landPoints,
     landPointsTruncated,
     landPointsTotal,
+    directoryCount: directoryRows.length,
     boundary: geo ? buildBoundary(geo) : null,
     centroid: geo ? editionCentroid(geo) : { lat: 0, lon: 0 },
     transport,
   };
+
+  return { edition, directoryRows, excludedNoAddressCount };
 }
 
 // ── Comparison matrix (recomputed over the merged edition set) ──
@@ -990,16 +1016,45 @@ async function main() {
       `  ·  vacant-building violations: ${violationAddressSet === null ? "unavailable (pending)" : `${violationAddressSet.size} addresses`}`,
   );
 
-  // Build each requested edition.
+  // One timestamp for this run — shared by the main export and every per-ZIP
+  // directory file written below, so they agree on generatedAt.
+  const generatedAt = new Date().toISOString();
+
+  // Build each requested edition. Each edition's full site directory is written
+  // to its own file here (merge-not-clobber: only requested ZIPs are rewritten).
   console.log("\nBuilding editions...");
+  mkdirSync(DIRECTORY_DIR, { recursive: true });
   const builtEditions: Record<string, VacancyIndexEdition> = {};
   for (const zip of requestedZips) {
     const rows = rowsByZip.get(zip) ?? [];
     const geo = geoByZip.get(zip);
     const parcels = await fetchVacantLandParcels(sql, zip);
     const transport = geo ? clipTransportForEdition(transportFeatures, geo.bbox) : [];
-    const edition = buildEdition(zip, rows, parcels, geo, transport, saleYearsByPin, violationAddressSet);
+    const { edition, directoryRows, excludedNoAddressCount } = buildEdition(
+      zip,
+      rows,
+      parcels,
+      geo,
+      transport,
+      saleYearsByPin,
+      violationAddressSet,
+    );
     builtEditions[zip] = edition;
+
+    // Write the per-ZIP site directory file (anonymized like the main export;
+    // the same hard assert runs on it before write).
+    const directoryFile: VacancyDirectoryFile = {
+      zip,
+      neighborhood: edition.neighborhood,
+      generatedAt,
+      rows: directoryRows,
+      excludedNoAddressCount,
+    };
+    const directorySerialized = JSON.stringify(directoryFile, null, 2) + "\n";
+    assertAnonymized(directorySerialized);
+    const directoryPath = join(DIRECTORY_DIR, `${zip}.json`);
+    writeFileSync(directoryPath, directorySerialized);
+
     console.log(
       `  ${zip} ${edition.neighborhood}: ${edition.headline.vacantPropertyCount} tracked ` +
         `(${edition.headline.cityOwnedCount} city-owned, ${edition.headline.inIncentiveZoneCount} in incentive zones), ` +
@@ -1022,6 +1077,10 @@ async function main() {
         : `    distress: tax-sale exposed ${edition.distress.taxSaleExposedCount ?? "pending"}` +
             ` (latest ${edition.distress.latestTaxSaleYear ?? "n/a"}), violations ${edition.distress.violationMatchCount ?? "pending"}`,
     );
+    console.log(
+      `    directory: ${directoryRows.length} addresses written to vacancy-directory/${zip}.json` +
+        `${excludedNoAddressCount > 0 ? ` (${excludedNoAddressCount} rows omitted for no usable address)` : ""}`,
+    );
     if (edition.headline.vacantPropertyCount === 0) {
       console.warn(`  warning: 0 tracked vacant properties bucketed to ${zip} — did db:sync:vacant run, and does the boundary resolve?`);
     }
@@ -1031,7 +1090,7 @@ async function main() {
   const editions: Record<string, VacancyIndexEdition> = { ...(existing?.editions ?? {}), ...builtEditions };
 
   const out: VacancyIndexExport = {
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     sources: {
       trackedInventory:
         "Chicago City-Owned Land Inventory (aksk-kvfp) + 311 Vacant/Abandoned Building Complaints (v6vf-nfxy)",
@@ -1039,7 +1098,7 @@ async function main() {
       corridorMetrics: "Explorer corridor-metrics citywide export (vacancy rate, local ownership, incentive coverage)",
       zipBoundaries: "Chicago ZIP Code boundaries (unjd-c2ca)",
       transportNetwork: "Chicago transportation network (expressways + rail)",
-      asOf: new Date().toISOString().slice(0, 10),
+      asOf: generatedAt.slice(0, 10),
     },
     editions,
     matrix: buildMatrix(editions),

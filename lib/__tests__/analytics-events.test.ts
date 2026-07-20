@@ -24,6 +24,20 @@ describe("analytics events", () => {
     expect(isAnalyticsEventType("vacancy_map_view_toggled")).toBe(true);
   });
 
+  it("accepts the vacancy site-directory open event and keeps its metadata", () => {
+    expect(isAnalyticsEventType("vacancy_directory_opened")).toBe(true);
+
+    const event = sanitizeAnalyticsEventPayload("vacancy_directory_opened", {
+      source: "vacancy_web_report",
+      metadata: { zip: "60617", total: 2165 },
+    });
+    expect(event).toMatchObject({
+      eventType: "vacancy_directory_opened",
+      source: "vacancy_web_report",
+      metadata: { zip: "60617", total: 2165 },
+    });
+  });
+
   it("accepts the report-funnel instrumentation events added for the 2026-07 audit", () => {
     // Tier 0 "measure first" events: wizard step / refine exposure & click,
     // silent-engine-failure visibility, and save/email click-level telemetry.

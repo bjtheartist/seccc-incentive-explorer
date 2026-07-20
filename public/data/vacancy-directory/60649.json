@@ -1,0 +1,6236 @@
+{
+  "zip": "60649",
+  "neighborhood": "South Shore",
+  "generatedAt": "2026-07-20T09:54:47.333Z",
+  "rows": [
+    {
+      "address": "2440 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 8,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2445 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 8,
+      "saleYear": 2013,
+      "violation": false
+    },
+    {
+      "address": "2605 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 8,
+      "saleYear": 2013,
+      "violation": false
+    },
+    {
+      "address": "7117 S EUCLID AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 8,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7600 S COLFAX AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 8,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1744 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 7,
+      "saleYear": 2013,
+      "violation": false
+    },
+    {
+      "address": "2212 E 68TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 7,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6717 S CLYDE AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 7,
+      "saleYear": 2014,
+      "violation": false
+    },
+    {
+      "address": "7619 S KINGSTON AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 7,
+      "saleYear": 2013,
+      "violation": false
+    },
+    {
+      "address": "7619 S PAXTON AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 7,
+      "saleYear": 2013,
+      "violation": false
+    },
+    {
+      "address": "1636 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1638 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1640 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1668 E 71ST ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1701 E 71ST ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1705 E 71ST ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1708 E 71ST ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1710 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1711 E 71ST ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1712 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1715 E 71ST ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1738 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1740 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1744 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": 2013,
+      "violation": false
+    },
+    {
+      "address": "1744 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1748 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1749 E 74TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1840 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1844 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1908 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1916 E 73RD ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1953 E 72ND PL",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2151 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2157 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2200 E 71ST ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2212 E 71ST ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2216 E 71ST ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2301 E 71ST ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2301 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2445 E 74TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2455 E 72ND ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2456 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2474 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2501 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2524 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2547 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2600 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2662 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2665 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2700 E 75TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2715 E 75TH PL",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2716 E 76TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2719 E 75TH PL",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2731 E 76TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2733 E 76TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2738 E 76TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2808 E 78TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2825 E 77TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2826 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2827 E 77TH PL",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2828 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2838 E 77TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": 2014,
+      "violation": false
+    },
+    {
+      "address": "2858 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2859 E 77TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": 2013,
+      "violation": false
+    },
+    {
+      "address": "2860 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2864 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2866 E 79TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2906 E 78TH PL",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2925 E 78TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2925 E 78TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "3025 E 78TH ST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6836 S SOUTH SHORE DR",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6913 S CORNELL AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6919 S CORNELL AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6929 S CORNELL AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6930 S CORNELL AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6941 S STONY ISLAND AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6948 S EAST END AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": 2013,
+      "violation": false
+    },
+    {
+      "address": "7004 S EAST END AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7018 S CORNELL AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7021 S MERRILL AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7038 S PAXTON AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7047 S EAST END AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7103 S PAXTON AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7121 S EUCLID AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7124 S RIDGELAND AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7128 S RIDGELAND AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7218 S STONY ISLAND AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7231 S STONY ISLAND AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7244 S MERRILL AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7245 S STONY ISLAND AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7301 S LUELLA AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7305 S KINGSTON AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7345 S PHILLIPS AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7347 S BENNETT AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7408 S COLFAX AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7414 S PHILLIPS AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7416 S PHILLIPS AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7419 S KINGSTON AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7421 S KINGSTON AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7459 S BALDWIN AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7500 S MERRILL AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7502 S MERRILL AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7511 S SOUTH SHORE DR",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7512 S COLFAX AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7515 S KINGSTON AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7520 S LUELLA AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7539 S COLFAX AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7565 S EXCHANGE AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7607 S SAGINAW AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7611 S COLFAX AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7627 S SAGINAW AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7714 S EXCHANGE AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7716 S EXCHANGE AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": 2014,
+      "violation": false
+    },
+    {
+      "address": "7741 S RIDGELAND AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7747 S BURNHAM AVE",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7827 S STONY ISLAND AVE EAST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7829 S STONY ISLAND AVE EAST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7839 S STONY ISLAND AVE EAST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7841 S STONY ISLAND AVE EAST",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7850 S SOUTH SHORE DR",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7870 S SOUTH SHORE DR",
+      "ownerType": "city_public",
+      "propertyType": "vacant_land",
+      "priorityTier": "high",
+      "priorityScore": 6,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1758 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2039 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2236 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2240 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2821 E 77TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6911 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7036 S CLYDE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7100 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7133 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7144 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7241 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7254 S EUCLID AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7310 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7425 S YATES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7446 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7606 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7610 S ESSEX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7631 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7650 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7727 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7809 S BURNHAM AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7811 S BURNHAM AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7825 S YATES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7849 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7881 S CREGIER AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 5,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1600 E 77TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1613 E 74TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1618 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1620 E 67TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1621 E 74TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1625 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1625 E 74TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1626 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1634 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "1641 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1642 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1646 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1647 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1649 E 77TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1653 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1700 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1701 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1713 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1724 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1732 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1736 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1742 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1747 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1749 E 72ND PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1752 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1754 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1755 E 72ND PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1758 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "1800 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1814 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "1818 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1832 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1840 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1850 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "1856 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1900 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1910 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1942 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1944 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1949 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1950 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1950 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1950 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1951 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1959 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1960 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "1962 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2000 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2001 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2011 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2018 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2034 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2037 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2039 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2040 E 68TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2041 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2042 E 68TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2045 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2054 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2060 E 72ND PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2104 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2116 E 70TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2118 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2122 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2122 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2124 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2124 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2131 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2132 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2136 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2138 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2139 E 67TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2149 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2150 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2154 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2154 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2159 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2159 E HAYES DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2160 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2200 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2206 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2211 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2212 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2218 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2223 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2232 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2236 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2238 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2239 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2240 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2240 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2242 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2244 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2250 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2300 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2306 E 71ST ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2314 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2315 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2320 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2322 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2338 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2347 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2351 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2401 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2404 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2414 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2415 E 77TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2416 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2416 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2420 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2425 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2426 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2444 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2444 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2445 E 74TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2451 E 74TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2453 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2459 E 74TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2462 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2471 E 74TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2473 E 74TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2474 E 74TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2475 E 74TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2506 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2509 E 73RD PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2510 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2512 E 72ND PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2514 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2517 E 73RD ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2517 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2518 E 72ND ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2524 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2528 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2532 E 76TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2541 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2549 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2554 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2600 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2604 E 74TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2604 E 76TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2606 E 74TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2607 E 77TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2614 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2615 E 76TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2616 E 74TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2620 E 74TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2621 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2638 E 74TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2638 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2650 E 77TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2658 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2660 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2704 E 75TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2706 E 75TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2708 E 75TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2710 E 76TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2714 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2720 E 76TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2721 E 76TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2723 E 75TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2725 E 76TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2727 E 75TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2800 E 76TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "2800 E 76TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2801 E 77TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2802 E 77TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2803 E 76TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2808 E 76TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2808 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2809 E 76TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2811 E 76TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2813 E 77TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2814 E 76TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2814 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2817 E 77TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2822 E 76TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2823 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2824 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2825 E 76TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2825 E 77TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2826 E 77TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2826 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2844 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2872 E 77TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2902 E 77TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2912 E 78TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2915 E 78TH PL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2918 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "2920 E 79TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "3002 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "3008 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "3012 E 78TH ST",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6300 S LAKE SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6559 S CORNELL DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6700 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6700 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6701 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6706 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6707 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6711 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6714 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6715 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "6725 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6733 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6736 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6740 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6740 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6742 S CRANDON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6751 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6755 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6755 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6800 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6801 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "6805 S EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6815 S JEFFERY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6825 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6835 S CLYDE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "6840 S RIDGELAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6846 S RIDGELAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6858 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6917 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6921 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6921 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6923 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6925 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6927 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6928 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6933 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6939 S JEFFERY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6939 S JEFFERY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6939 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "6949 S STONY ISLAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7000 S EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7000 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7015 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7019 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7025 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7031 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7034 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7038 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7038 S CLYDE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7040 S CLYDE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7040 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7041 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7043 S EAST  END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7044 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7045 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7100 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7100 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7100 S RIDGELAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7110 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7117 S EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7119 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7120 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7122 S RIDGELAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7123 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7125 S EUCLID AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7126 S EUCLID AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7126 S RIDGELAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7129 S EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7129 S EUCLID AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7132 S EAST  END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7133 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7133 S EAST  EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7133 S EAST  END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7133 S EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7133 S EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7135 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7136 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7139 S RIDGELAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7140 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7140 S EUCLID AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7141 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7141 S YATES BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7144 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7144 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7158 S YATES BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7159 S YATES BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7200 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7200 S RIDGELAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7201 S YATES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7209 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7210 S JEFFERY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7211 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7214 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7215 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7218 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7226 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7228 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7229 S STONY ISLAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7230 S YATES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7234 S EAST  EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7237 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7237 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7239 S EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7239 S END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7241 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7242 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7243 S EAST  EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7243 S EAST  END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7244 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7247 S EAST  END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7247 S EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7247 S STONY ISLAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7251 S STONY ISLAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7252 S EUCLID AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7254 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7257 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7259 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7260 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7264 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7300 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7301 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7310 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7310 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7318 S RIDGELAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7327 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7328 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7331 S EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7336 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7337 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7339 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7341 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7346 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7347 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7347 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7350 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7351 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7382 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7400 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7408 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7408 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7408 S YATES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7412 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7417 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7425 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7425 S YATES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7428 S YATES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7435 S YATES BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7438 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7444 S BALDWIN AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7444 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7447 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7450 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7452 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7452 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7454 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7455 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7456 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7456 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7472 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7500 S CRANDON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7500 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7500 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7500 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7501 S CRANDON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7501 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7501 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7509 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7512 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7515 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7515 S CRANDON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7515 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7519 S CLYDE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7521 S RIDGELAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7522 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7523 S ESSEX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7524 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7525 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7527 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7531 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7533 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7535 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7541 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7543 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7545 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7552 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7553 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7556 S EAST END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7556 S SAGINAW AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7563 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7573 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7600 S CREGIER AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7601 S CREGIER AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7602 S CREGIER AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7604 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7606 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7606 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7606 S PAXTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7608 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7608 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7609 S EUCLID AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7617 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7620 S CLYDE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7621 S CLYDE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7621 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7622 S CLYDE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7626 S CLYDE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7626 S YATES BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7628 S MERRILL",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7628 S YATES BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7629 S YATES BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7631 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7631 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7631 S SAGINAW AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7632 S YATES BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7634 S YATES BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7637 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7638 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7639 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7639 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7640 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7641 S BENNETT",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7641 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7641 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7641 S ESSEX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7642 S ESSEX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7643 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7643 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7645 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7645 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7646 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7646 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7647 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7650 S ESSEX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7650 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7650 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7656 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7658 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7659 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7661 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7670 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7700 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7700 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7701 S STONY ISLAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7702 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7703 S STONY ISLAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7708 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7710 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7712 S CLYDE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7715 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7716 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7717 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7717 S SAGINAW AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7719 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7720 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7721 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7723 S CRANDON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7725 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7726 S CRANDON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7726 S ESSEX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7726 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7726 S MUSKEGON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7727 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7727 S SAGINAW AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7727 S SAGINAW AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7728 S CRANDON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7728 S ESSEX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7728 S JEFFERY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7729 S ESSEX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7731 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7731 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7731 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7732 S MUSKEGON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7732 S SAGINAW AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7733 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7736 S MUSKEGON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7736 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7740 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7741 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7741 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7742 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7746 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7747 S CREGIER AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7748 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7748 S MUSKEGON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7751 S CHAPPEL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7755 S EAST  END AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7756 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7758 S BURNHAM AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7758 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7767 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7800 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7800 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7800 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7800 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7800 S MUSKEGON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7800 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7801 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7802 S MUSKEGON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7805 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7806 S COLFAX AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7807 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7809 S BURNHAM AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7810 S CRANDON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7810 S ESCANABA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7811 S MUSKEGON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7811 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7812 S JEFFERY BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7813 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7815 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7815 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7816 S JEFFERY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7816 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7818 S JEFFERY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7819 S BENNETT AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7823 S MUSKEGON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7824 S EUCLID AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7825 S CORNELL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7825 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7825 S YATES BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7827 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7827 S KINGSTON AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7827 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7828 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7829 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7829 S ESCANABA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7829 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7829 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7830 S LUELLA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7830 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7832 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7834 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7836 S SOUTH SHORE DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7837 S MARQUETTE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7840 S YATES BLVD",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7842 S SAGINAW AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7843 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7843 S PHILLIPS AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7844 S SAGINAW AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7845 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7845 S YATES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7846 S EXCHANGE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7847 S BURNHAM AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7847 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7849 S COLES AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7849 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7849 S ESCANABA AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7850 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7850 S CREGIER AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": true
+    },
+    {
+      "address": "7851 S CONSTANCE AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7853 S FARRAGUT DR",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7855 S RIDGELAND AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7859 S MERRILL AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    },
+    {
+      "address": "7905 S OGLESBY AVE",
+      "ownerType": "unknown",
+      "propertyType": "vacant_building",
+      "priorityTier": "medium",
+      "priorityScore": 4,
+      "saleYear": null,
+      "violation": false
+    }
+  ],
+  "excludedNoAddressCount": 0
+}

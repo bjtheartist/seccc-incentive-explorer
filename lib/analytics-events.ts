@@ -59,6 +59,7 @@ export const ANALYTICS_EVENT_TYPES = [
   "vacancy_index_pdf_downloaded",
   "vacancy_web_report_viewed",
   "vacancy_map_view_toggled",
+  "vacancy_directory_opened",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];
