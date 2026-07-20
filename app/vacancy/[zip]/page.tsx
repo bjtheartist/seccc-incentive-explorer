@@ -28,6 +28,7 @@ import type {
   VacancySiteIndexRow,
 } from "@/lib/vacancy-index";
 import VacancyReportMap from "@/components/vacancy/VacancyReportMap";
+import VacancyDirectory from "@/components/vacancy/VacancyDirectory";
 import { VacancyIndexPdfButton } from "@/components/owner-file/VacancyIndexPdfButton";
 
 export const dynamic = "force-dynamic";
@@ -223,6 +224,10 @@ export default async function VacancyReportPage({
 
   const siteIndex: VacancySiteIndexRow[] = edition.siteIndex;
   const additionalSites = Math.max(0, headline.vacantPropertyCount - siteIndex.length);
+  // Total addresses in the lazy-loaded site directory. Guarded for exports that
+  // predate the directory field (the orchestrator re-export sets it); the
+  // directory section only renders once it's a real positive count.
+  const directoryCount = edition.directoryCount ?? 0;
 
   const stats = [
     { label: "Tracked vacant properties", value: pdfInput.counts.total },
@@ -611,10 +616,24 @@ export default async function VacancyReportPage({
           </div>
           {additionalSites > 0 && (
             <p className="mt-2 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/40">
-              + {additionalSites.toLocaleString("en-US")} additional tracked sites not shown
+              + {additionalSites.toLocaleString("en-US")} additional sites in the directory below
             </p>
           )}
         </section>
+
+        {/* Site directory — the full online index (lazy-loaded) */}
+        {directoryCount > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-4 font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#0C1B33]/50">
+              Site directory — every tracked address
+            </h2>
+            <VacancyDirectory
+              zip={zip}
+              neighborhood={pilotEntry.primaryNeighborhood}
+              directoryCount={directoryCount}
+            />
+          </section>
+        )}
 
         {/* Footer */}
         <footer className="mt-12 border-t border-[#0C1B33]/10 pt-6">

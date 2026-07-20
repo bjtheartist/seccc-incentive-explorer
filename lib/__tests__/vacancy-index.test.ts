@@ -1,10 +1,12 @@
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { OWNER_TYPE_ORDER } from "../owner-classify";
 import {
   addressHasViolation,
   assignQuantileDots,
+  buildDirectoryRows,
+  compareDirectoryRows,
   compareRankableSites,
   computeSitePriority,
   countAddressesInSet,
@@ -20,8 +22,12 @@ import {
   reconcileVacantLandOwnership,
   tallyOwnerTypeCounts,
   taxSaleExposureForVacantPins,
+  type DirectoryInputSite,
   type RankableSite,
+  type VacancyDirectoryFile,
+  type VacancyDirectoryRow,
   type VacancyIndexExport,
+  type VacancyPriorityTier,
   type VacancyPropertyType,
 } from "../vacancy-index";
 import type { OwnerType } from "../owner-classify";
@@ -240,6 +246,80 @@ describe("rankSites (deterministic ordering)", () => {
         { id: "y", priorityScore: 1, incentiveCount: 0, squareFeet: 10 },
       ),
     ).toBeGreaterThan(0);
+  });
+});
+
+describe("compareDirectoryRows / buildDirectoryRows", () => {
+  const dirSite = (over: Partial<DirectoryInputSite>): DirectoryInputSite => ({
+    address: "100 N Main St",
+    ownerType: "unknown" as OwnerType,
+    propertyType: "vacant_land" as VacancyPropertyType,
+    priorityTier: "low" as VacancyPriorityTier,
+    priorityScore: 0,
+    saleYear: null,
+    violation: false,
+    ...over,
+  });
+
+  it("compareDirectoryRows sorts priorityScore desc then address asc", () => {
+    const a: VacancyDirectoryRow = {
+      address: "900 W End Ave",
+      ownerType: "unknown",
+      propertyType: "vacant_land",
+      priorityTier: "low",
+      priorityScore: 2,
+      saleYear: null,
+      violation: false,
+    };
+    const b: VacancyDirectoryRow = { ...a, address: "100 A St", priorityScore: 5 };
+    const c: VacancyDirectoryRow = { ...a, address: "050 A St", priorityScore: 5 };
+    // Higher score first.
+    expect(compareDirectoryRows(a, b)).toBeGreaterThan(0);
+    expect(compareDirectoryRows(b, a)).toBeLessThan(0);
+    // Same score -> address asc.
+    expect(compareDirectoryRows(b, c)).toBeGreaterThan(0); // "100" after "050"
+    expect(compareDirectoryRows(c, c)).toBe(0);
+  });
+
+  it("keeps rows with a usable address, sorted, and counts the excluded ones", () => {
+    const { rows, excludedNoAddressCount } = buildDirectoryRows([
+      dirSite({ address: "300 Low St", priorityScore: 1 }),
+      dirSite({ address: "  ", priorityScore: 9 }), // whitespace -> excluded
+      dirSite({ address: null, priorityScore: 9 }), // null -> excluded
+      dirSite({ address: "100 High St", priorityScore: 6 }),
+      dirSite({ address: "200 High St", priorityScore: 6 }),
+    ]);
+    expect(excludedNoAddressCount).toBe(2);
+    expect(rows.map((r) => r.address)).toEqual(["100 High St", "200 High St", "300 Low St"]);
+    // Address is trimmed on the way in and only allowed keys survive.
+    for (const r of rows) {
+      expect(Object.keys(r).sort()).toEqual([
+        "address",
+        "ownerType",
+        "priorityScore",
+        "priorityTier",
+        "propertyType",
+        "saleYear",
+        "violation",
+      ]);
+    }
+  });
+
+  it("trims surrounding whitespace on retained addresses", () => {
+    const { rows, excludedNoAddressCount } = buildDirectoryRows([
+      dirSite({ address: "  742 Evergreen Terrace  " }),
+    ]);
+    expect(excludedNoAddressCount).toBe(0);
+    expect(rows[0].address).toBe("742 Evergreen Terrace");
+  });
+
+  it("returns an empty directory (no throw) for an all-excluded input", () => {
+    const { rows, excludedNoAddressCount } = buildDirectoryRows([
+      dirSite({ address: null }),
+      dirSite({ address: "" }),
+    ]);
+    expect(rows).toEqual([]);
+    expect(excludedNoAddressCount).toBe(2);
   });
 });
 
@@ -480,6 +560,10 @@ describe("printed-copy constants", () => {
 const EXPORT_PATH = path.join(process.cwd(), "public/data/vacancy-index.json");
 const EXPORT_EXISTS = existsSync(EXPORT_PATH);
 
+const DIRECTORY_DIR = path.join(process.cwd(), "public/data/vacancy-directory");
+const DIRECTORY_60617_PATH = path.join(DIRECTORY_DIR, "60617.json");
+const DIRECTORY_EXISTS = existsSync(DIRECTORY_60617_PATH);
+
 const PILOT_ZIP_KEYS = [
   "60617",
   "60619",
@@ -521,6 +605,7 @@ const ALLOWED_KEYS = new Set<string>([
   "landPoints",
   "landPointsTruncated",
   "landPointsTotal",
+  "directoryCount",
   "boundary",
   "centroid",
   "transport",
@@ -776,6 +861,141 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
       expect(series === null || Array.isArray(series)).toBe(true);
       expect(edition.boundary === null || typeof edition.boundary === "object").toBe(true);
       expect(edition.ownership.vacantLandParcelTotal === null || typeof edition.ownership.vacantLandParcelTotal === "number").toBe(true);
+    }
+  });
+
+  it("carries directoryCount as a non-negative integer on every edition", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      expect(Number.isInteger(edition.directoryCount), `${zip} directoryCount integer`).toBe(true);
+      expect(edition.directoryCount, `${zip} directoryCount >= 0`).toBeGreaterThanOrEqual(0);
+      // Never more than the full tracked universe (rows w/o a usable address drop out).
+      expect(edition.directoryCount).toBeLessThanOrEqual(edition.headline.vacantPropertyCount);
+    }
+  });
+});
+
+// ── Committed per-ZIP site-directory file guards ─────────────────────────────
+// EXPECTED-RED until scripts/export-vacancy-index.ts re-runs and writes
+// public/data/vacancy-directory/{zip}.json for all nine editions; gated on the
+// 60617 file's existence so they hard-run only after the orchestrator exports.
+
+/** Every key any object in a directory file is allowed to carry. */
+const DIRECTORY_ALLOWED_KEYS = new Set<string>([
+  // file
+  "zip",
+  "neighborhood",
+  "generatedAt",
+  "rows",
+  "excludedNoAddressCount",
+  // row
+  "address",
+  "ownerType",
+  "propertyType",
+  "priorityTier",
+  "priorityScore",
+  "saleYear",
+  "violation",
+]);
+
+function walkDirectoryKeys(node: unknown, offenders: Set<string>): void {
+  if (Array.isArray(node)) {
+    for (const item of node) walkDirectoryKeys(item, offenders);
+    return;
+  }
+  if (node && typeof node === "object") {
+    for (const [key, value] of Object.entries(node)) {
+      if (!DIRECTORY_ALLOWED_KEYS.has(key)) offenders.add(key);
+      walkDirectoryKeys(value, offenders);
+    }
+  }
+}
+
+describe.skipIf(!DIRECTORY_EXISTS)("committed vacancy-directory/{zip}.json files", () => {
+  const loadDirectory = (zip: string): VacancyDirectoryFile =>
+    JSON.parse(readFileSync(path.join(DIRECTORY_DIR, `${zip}.json`), "utf8")) as VacancyDirectoryFile;
+
+  const mainExport = EXPORT_EXISTS
+    ? (JSON.parse(readFileSync(EXPORT_PATH, "utf8")) as VacancyIndexExport)
+    : null;
+
+  it("has a directory file for every pilot ZIP when the main export has nine editions", () => {
+    if (mainExport && Object.keys(mainExport.editions).length === 9) {
+      for (const zip of PILOT_ZIP_KEYS) {
+        expect(existsSync(path.join(DIRECTORY_DIR, `${zip}.json`)), `directory file ${zip}`).toBe(true);
+      }
+    }
+  });
+
+  it("contains none of the forbidden owner-identifying substrings", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      if (!existsSync(path.join(DIRECTORY_DIR, `${zip}.json`))) continue;
+      const serialized = JSON.stringify(loadDirectory(zip));
+      for (const forbidden of [
+        "ownerName",
+        "owner_name",
+        "ownerMailingAddress",
+        "owner_mailing_address",
+        "clusterKey",
+        '"pins"',
+      ]) {
+        expect(serialized.includes(forbidden), `${zip}: forbidden substring ${forbidden}`).toBe(false);
+      }
+    }
+  });
+
+  it("carries only allowed keys (guards against field creep / leaks)", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      if (!existsSync(path.join(DIRECTORY_DIR, `${zip}.json`))) continue;
+      const offenders = new Set<string>();
+      walkDirectoryKeys(loadDirectory(zip), offenders);
+      expect([...offenders], `${zip}: unexpected keys`).toEqual([]);
+    }
+  });
+
+  it("has a well-formed header, a non-negative excluded count, and count agreeing with the main export", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      if (!existsSync(path.join(DIRECTORY_DIR, `${zip}.json`))) continue;
+      const dir = loadDirectory(zip);
+      expect(dir.zip).toBe(zip);
+      expect(typeof dir.neighborhood).toBe("string");
+      expect(typeof dir.generatedAt).toBe("string");
+      expect(Array.isArray(dir.rows)).toBe(true);
+      expect(Number.isInteger(dir.excludedNoAddressCount)).toBe(true);
+      expect(dir.excludedNoAddressCount).toBeGreaterThanOrEqual(0);
+      // rows.length is exactly the edition's directoryCount headline.
+      if (mainExport?.editions[zip]) {
+        expect(dir.rows.length).toBe(mainExport.editions[zip].directoryCount);
+      }
+    }
+  });
+
+  it("rows are sorted (priorityScore desc, address asc) — spot-check the first 50", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      if (!existsSync(path.join(DIRECTORY_DIR, `${zip}.json`))) continue;
+      const rows = loadDirectory(zip).rows.slice(0, 50);
+      for (let i = 1; i < rows.length; i++) {
+        expect(compareDirectoryRows(rows[i - 1], rows[i]), `${zip} row ${i} order`).toBeLessThanOrEqual(0);
+      }
+    }
+  });
+
+  it("every row has a non-empty address, a valid ownerType, and honest distress flags", () => {
+    const validOwner = new Set<string>(OWNER_TYPE_ORDER);
+    const validTier = new Set(["high", "medium", "low"]);
+    const validType = new Set(["vacant_land", "vacant_building"]);
+    for (const zip of PILOT_ZIP_KEYS) {
+      if (!existsSync(path.join(DIRECTORY_DIR, `${zip}.json`))) continue;
+      for (const row of loadDirectory(zip).rows) {
+        expect(typeof row.address === "string" && row.address.trim().length > 0, `${zip} address`).toBe(true);
+        expect(validOwner.has(row.ownerType), `${zip} ownerType ${row.ownerType}`).toBe(true);
+        expect(validType.has(row.propertyType), `${zip} propertyType`).toBe(true);
+        expect(validTier.has(row.priorityTier), `${zip} priorityTier`).toBe(true);
+        expect(Number.isFinite(row.priorityScore), `${zip} priorityScore`).toBe(true);
+        expect(row.saleYear === null || typeof row.saleYear === "number", `${zip} saleYear`).toBe(true);
+        expect(typeof row.violation, `${zip} violation`).toBe("boolean");
+      }
     }
   });
 });

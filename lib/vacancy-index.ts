@@ -145,6 +145,42 @@ export interface VacancyLandPoint {
   saleYear: number | null;
 }
 
+/**
+ * One row of the full site directory (the web report's online index — EVERY
+ * tracked vacant property with a usable address, not just the top-N site
+ * index). Anonymized: owner TYPE only, never owner names or mailing addresses.
+ * Written to a per-ZIP directory file (public/data/vacancy-directory/{zip}.json)
+ * that lazy-loads on the client so the main export JSON stays lean.
+ */
+export interface VacancyDirectoryRow {
+  address: string;
+  /** Tracked-universe (COLS + 311) classification — city_public / unknown mostly. */
+  ownerType: OwnerType;
+  propertyType: VacancyPropertyType;
+  priorityTier: VacancyPriorityTier;
+  priorityScore: number;
+  /** Same pin-derived tax-sale flag the matching sitePoint carries; `null` for
+   * 311 rows (no PIN) and when the tax-sale tables were absent on the branch. */
+  saleYear: number | null;
+  /** Same address-match violation flag the matching sitePoint carries; `false`
+   * when the violations table was absent on the branch. */
+  violation: boolean;
+}
+
+/**
+ * The lazy-loaded per-ZIP site directory file. Holds EVERY tracked row with a
+ * non-empty address, sorted priorityScore desc then address asc, plus an
+ * honest count of the rows dropped for a missing/empty address.
+ */
+export interface VacancyDirectoryFile {
+  zip: string;
+  neighborhood: string;
+  generatedAt: string;
+  rows: VacancyDirectoryRow[];
+  /** Tracked rows dropped from `rows` for a missing/empty address (honest). */
+  excludedNoAddressCount: number;
+}
+
 /** One row of the page-04 site index (top-N by priority ranking). */
 export interface VacancySiteIndexRow {
   markerNumber: number | null;
@@ -214,6 +250,12 @@ export interface VacancyIndexEdition {
    * landPoints may be fewer (2000 cap, or parcels lacking coordinates). `null`
    * exactly when landPoints is `null`. */
   landPointsTotal: number | null;
+  /** Total rows written to this edition's lazy-loaded site directory file
+   * (public/data/vacancy-directory/{zip}.json) — every tracked row WITH a
+   * usable address. Drives the collapsed "Browse all N tracked addresses" row
+   * on the web report without loading the directory itself. Always a number
+   * once the edition builds (the directory is written alongside it). */
+  directoryCount: number;
   boundary: { rings: [number, number][][]; bbox: [number, number, number, number] } | null;
   centroid: { lat: number; lon: number };
   transport: { kind: TransportKind; points: [number, number][] }[];
@@ -349,6 +391,64 @@ export function compareRankableSites(a: RankableSite, b: RankableSite): number {
 /** Rank a copy of `sites` by compareRankableSites (non-mutating). */
 export function rankSites<T extends RankableSite>(sites: readonly T[]): T[] {
   return [...sites].sort(compareRankableSites);
+}
+
+// ── Site directory (pure) ──────────────────────────────────────────────────
+
+/** Minimal shape buildDirectoryRows reads off a scored tracked site. `address`
+ * is the RAW value (nullable) so a missing/empty address can be excluded and
+ * counted rather than coerced to a placeholder. */
+export interface DirectoryInputSite {
+  address: string | null | undefined;
+  ownerType: OwnerType;
+  propertyType: VacancyPropertyType;
+  priorityTier: VacancyPriorityTier;
+  priorityScore: number;
+  saleYear: number | null;
+  violation: boolean;
+}
+
+/**
+ * Directory ordering: priorityScore desc, then address asc (plain lexical).
+ * The same total order the site index leads with, but keyed on address rather
+ * than the id tiebreak (the directory never exposes ids). Deterministic across
+ * export runs.
+ */
+export function compareDirectoryRows(a: VacancyDirectoryRow, b: VacancyDirectoryRow): number {
+  if (b.priorityScore !== a.priorityScore) return b.priorityScore - a.priorityScore;
+  return a.address < b.address ? -1 : a.address > b.address ? 1 : 0;
+}
+
+/**
+ * Build the site directory rows from the tracked scored sites: keep every site
+ * whose address is non-empty (after trim), drop and count the rest, and sort by
+ * compareDirectoryRows. Pure — unit-tested without a DB. The `excludedNoAddress
+ * Count` is the honest "records without a usable address omitted" figure the
+ * web report footer prints.
+ */
+export function buildDirectoryRows(
+  sites: readonly DirectoryInputSite[],
+): { rows: VacancyDirectoryRow[]; excludedNoAddressCount: number } {
+  const rows: VacancyDirectoryRow[] = [];
+  let excludedNoAddressCount = 0;
+  for (const s of sites) {
+    const address = (s.address ?? "").trim();
+    if (!address) {
+      excludedNoAddressCount += 1;
+      continue;
+    }
+    rows.push({
+      address,
+      ownerType: s.ownerType,
+      propertyType: s.propertyType,
+      priorityTier: s.priorityTier,
+      priorityScore: s.priorityScore,
+      saleYear: s.saleYear,
+      violation: s.violation,
+    });
+  }
+  rows.sort(compareDirectoryRows);
+  return { rows, excludedNoAddressCount };
 }
 
 // ── Quintile dots (pure) ───────────────────────────────────────────────────
