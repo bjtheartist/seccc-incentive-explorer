@@ -34,8 +34,19 @@ import {
   type OwnerType,
 } from "@/lib/owner-classify";
 import { trackEvent } from "@/lib/analytics-events";
+// Client-safe imports ONLY: lib/vacancy-zoning and lib/vacancy-portfolio carry
+// no fs — value-importing lib/vacancy-index here would drag its node:fs loader
+// into the client bundle (the leak that broke the build before).
+import { zoningGloss } from "@/lib/vacancy-zoning";
+import {
+  PORTFOLIO_LABELS,
+  portfolioForSite,
+  portfolioReason,
+} from "@/lib/vacancy-portfolio";
+import { setFocusBbox } from "./vacancy-focus";
 import type {
   CorridorKind,
+  OwnerConfidence,
   VacancyAnchor,
   VacancyCluster,
   VacancyLandPoint,
@@ -70,18 +81,258 @@ const PROPERTY_TYPE_LABELS: Record<VacancyPropertyType, string> = {
   vacant_building: "Vacant Building",
 };
 
-const PRIORITY_TIER_LABELS: Record<VacancyPriorityTier, string> = {
-  high: "High priority",
-  medium: "Medium priority",
-  low: "Low priority",
-};
-
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+// ── Site-card composition (the decision-oriented popup) ──────────────────────
+// A structured card answering: what is this site, who controls it, why it
+// matters, and what to do next — never a bare priority score. All templated
+// from real fields; empty facts are omitted, never invented.
+
+const CARD_INK = "#0C1B33";
+const CARD_MUTED = "#5A6478";
+const CARD_FAINT = "#8A93A6";
+const CARD_BLUE = "#2563EB";
+const MONO_STACK = "ui-monospace,SFMono-Regular,Menlo,monospace";
+
+/** The one-line ownership-confidence disclosure (never a name). */
+const OWNER_CONFIDENCE_LINE: Record<OwnerConfidence, string> = {
+  pin_matched: "Ownership: PIN-matched (City inventory)",
+  inferred: "Ownership: inferred from taxpayer records",
+  needs_verification: "Ownership: needs verification",
+};
+
+/** Lead adjective phrase for the "why it matters" sentence, by owner class. */
+const WHY_LEAD: Record<OwnerType, string> = {
+  city_public: "Publicly controlled",
+  local_private: "Locally owned",
+  corporate_llc: "Corporate/investor-held",
+  out_of_state: "Corporate/investor-held",
+  unknown: "Ownership-unverified",
+};
+
+/** A plain land-use noun for the "why it matters" sentence — from the zoning
+ *  prefix when present, else the property type. Longest prefixes first. */
+function landUseNoun(zoningClass: string | null, propertyType: VacancyPropertyType): string {
+  if (zoningClass) {
+    const u = zoningClass.trim().toUpperCase();
+    if (u.startsWith("PMD")) return "industrial parcel";
+    if (u.startsWith("POS")) return "open-space parcel";
+    if (u.startsWith("PD")) return "planned-development parcel";
+    if (u.startsWith("D")) return "downtown parcel";
+    if (u.startsWith("R")) return "residential parcel";
+    if (u.startsWith("B")) return "commercial/mixed-use parcel";
+    if (u.startsWith("C")) return "commercial parcel";
+    if (u.startsWith("M")) return "industrial parcel";
+  }
+  return propertyType === "vacant_building" ? "vacant building" : "vacant parcel";
+}
+
+/** Everything the card needs about one site, normalized from feature props. */
+interface CardData {
+  isLand: boolean;
+  markerNumber: number | null;
+  address: string | null;
+  ownerType: OwnerType;
+  propertyType: VacancyPropertyType;
+  priorityTier: VacancyPriorityTier | null;
+  pin: string | null;
+  squareFeet: number | null;
+  zoningClass: string | null;
+  incentiveCount: number;
+  ownerConfidence: OwnerConfidence;
+  clusterId: number | null;
+  saleYear: number | null;
+  violation: boolean;
+  /** The resolved kept cluster this point sits in (for the corridor/cluster
+   *  line, the "why" clause, and the View-cluster bbox), or null. */
+  cluster: VacancyCluster | null;
+  /** Neighborhood fallback for the corridor/cluster line when the cluster has
+   *  no named corridor. */
+  neighborhood: string | null;
+}
+
+/** One grammatical "why it matters" sentence, composed of true clauses only. */
+function whyItMattersSentence(d: CardData): string {
+  const lead = WHY_LEAD[d.ownerType] ?? WHY_LEAD.unknown;
+  const sqftClause = d.squareFeet != null ? `, ${d.squareFeet.toLocaleString("en-US")} sq ft` : "";
+  const noun = ` ${landUseNoun(d.zoningClass, d.propertyType)}`;
+  const clusterClause = d.cluster ? ` in a ${d.cluster.count}-site vacancy cluster` : "";
+  const incentiveClause =
+    d.incentiveCount > 0
+      ? ` intersecting ${d.incentiveCount} incentive ${d.incentiveCount === 1 ? "geography" : "geographies"}`
+      : "";
+  const ending =
+    d.cluster && d.cluster.count >= 10 ? " — may support assembly with nearby parcels." : ".";
+  return `${lead}${sqftClause}${noun}${clusterClause}${incentiveClause}${ending}`;
+}
+
+/** The meaningful condition lines (max 3, priority order), each with a red-ring
+ *  or neutral glyph. */
+function conditionLines(d: CardData): { text: string; red: boolean }[] {
+  const out: { text: string; red: boolean }[] = [];
+  if (d.saleYear != null) {
+    out.push({
+      text: `Tax-sale exposed · latest ${d.saleYear} — historical record; verify current status.`,
+      red: true,
+    });
+  }
+  if (d.violation) {
+    out.push({ text: "Vacant-building violation record — verify current condition.", red: true });
+  }
+  if (d.ownerConfidence === "needs_verification") {
+    out.push({ text: "Ownership verification needed.", red: false });
+  }
+  if (d.squareFeet == null) out.push({ text: "Lot size not recorded.", red: false });
+  if (d.zoningClass == null) out.push({ text: "Zoning not recorded.", red: false });
+  return out.slice(0, 3);
+}
+
+/** The recommended-next-step action text (Billy's phrasing), same owner→action
+ *  mapping as nextStepForSite, with the tax-sale-exposed non-city override. */
+function nextStepAction(d: CardData): string {
+  if (d.saleYear != null && d.ownerType !== "city_public") {
+    return "Complete tax and title review before outreach.";
+  }
+  switch (d.ownerType) {
+    case "city_public":
+      return (
+        "Begin a City/CCLBA disposition inquiry" +
+        (d.clusterId != null ? " and review adjacent parcels for assembly." : ".")
+      );
+    case "local_private":
+      return "Verify ownership and prepare local-owner outreach.";
+    case "corporate_llc":
+      return "Identify the entity's decision-maker and related holdings.";
+    case "out_of_state":
+      return "Verify ownership and initiate targeted outreach.";
+    case "unknown":
+    default:
+      return "Complete title and taxpayer-record verification.";
+  }
+}
+
+/** Build the full structured site-card HTML. `zip` powers the Owner Files link;
+ *  `asOf` (optional) prints the records-as-of line. Action buttons are wired by
+ *  the caller via data-attributes after the popup mounts. */
+function buildSiteCardHtml(d: CardData, zip: string, asOf: string | null): string {
+  const ownerLabel = OWNER_TYPE_LABELS[d.ownerType] ?? OWNER_TYPE_LABELS.unknown;
+  const ownerColor = OWNER_TYPE_COLORS[d.ownerType] ?? OWNER_TYPE_COLORS.unknown;
+  const propertyLabel = PROPERTY_TYPE_LABELS[d.propertyType] ?? "Vacant site";
+
+  const kicker = d.isLand
+    ? "Vacant land parcel"
+    : d.markerNumber != null
+      ? `Priority site #${d.markerNumber}`
+      : "Tracked vacant site";
+  const kickerColor = d.markerNumber != null && !d.isLand ? CARD_BLUE : CARD_FAINT;
+  const addressText = d.address && d.address.trim() ? d.address.trim() : "Address not recorded";
+
+  const label = (text: string) =>
+    `<div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${CARD_FAINT};font-weight:600;margin-bottom:5px">${escapeHtml(text)}</div>`;
+
+  // 1 · Identity
+  const pinLine = d.pin
+    ? `<span style="font-family:${MONO_STACK};font-size:10px;color:${CARD_FAINT}">PIN ${escapeHtml(d.pin)}</span>`
+    : "";
+  const identity = `
+    <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${kickerColor};font-weight:600;margin-bottom:4px">${escapeHtml(kicker)}</div>
+    <div style="font-size:13px;font-weight:600;color:${CARD_INK};line-height:1.3">${escapeHtml(addressText)}</div>
+    <div style="font-size:11px;color:${CARD_MUTED};margin-top:3px">${escapeHtml(propertyLabel)}${pinLine ? " · " + pinLine : ""}</div>
+    ${asOf ? `<div style="font-size:10px;color:${CARD_FAINT};margin-top:3px">Records as of ${escapeHtml(asOf)}</div>` : ""}
+  `;
+
+  // 2 · Snapshot
+  const snapshotRows: string[] = [];
+  if (d.squareFeet != null) {
+    snapshotRows.push(
+      `<div style="font-size:11px;color:${CARD_INK}">${d.squareFeet.toLocaleString("en-US")} sq ft</div>`,
+    );
+  }
+  const gloss = zoningGloss(d.zoningClass);
+  if (gloss) {
+    snapshotRows.push(`<div style="font-size:11px;color:${CARD_MUTED};line-height:1.35">${escapeHtml(gloss)}</div>`);
+  }
+  if (d.cluster) {
+    const place = d.cluster.corridorName ?? d.neighborhood ?? "This area";
+    snapshotRows.push(
+      `<div style="font-size:11px;color:${CARD_MUTED};line-height:1.35">${escapeHtml(place)} · Cluster ${d.cluster.id} (${d.cluster.count.toLocaleString("en-US")} nearby vacant sites)</div>`,
+    );
+  }
+  const snapshot =
+    snapshotRows.length > 0
+      ? `<div style="margin-top:10px;display:flex;flex-direction:column;gap:3px">${snapshotRows.join("")}</div>`
+      : "";
+
+  // 3 · Ownership
+  const ownership = `
+    <div style="margin-top:10px">
+      <span style="display:inline-block;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapeHtml(ownerLabel)}</span>
+      <div style="font-size:11px;color:${CARD_MUTED};margin-top:5px">${escapeHtml(OWNER_CONFIDENCE_LINE[d.ownerConfidence])}</div>
+    </div>
+  `;
+
+  // 4 · Why it matters
+  const why = `
+    <div style="margin-top:11px">
+      ${label("Why it matters")}
+      <div style="font-size:11px;color:${CARD_INK};line-height:1.4">${escapeHtml(whyItMattersSentence(d))}</div>
+    </div>
+  `;
+
+  // 5 · Conditions
+  const conds = conditionLines(d);
+  const conditions =
+    conds.length > 0
+      ? `<div style="margin-top:11px">${label("Conditions")}<div style="display:flex;flex-direction:column;gap:4px">${conds
+          .map((c) => {
+            const glyphColor = c.red ? DISTRESS_RED : CARD_FAINT;
+            const glyph = c.red ? "◉" : "◦";
+            return `<div style="font-size:11px;color:${c.red ? DISTRESS_RED : CARD_MUTED};line-height:1.35"><span style="color:${glyphColor};margin-right:5px">${glyph}</span>${escapeHtml(c.text)}</div>`;
+          })
+          .join("")}</div></div>`
+      : "";
+
+  // 6 · Recommended next step (visually strongest block)
+  const tierForPortfolio: VacancyPriorityTier = d.priorityTier ?? "low";
+  const portfolio = portfolioForSite({
+    ownerType: d.ownerType,
+    priorityTier: tierForPortfolio,
+    saleYear: d.saleYear,
+    violation: d.violation,
+  });
+  const reason = portfolioReason({
+    ownerType: d.ownerType,
+    priorityTier: tierForPortfolio,
+    saleYear: d.saleYear,
+    violation: d.violation,
+  });
+  const nextStep = `
+    <div style="margin-top:12px;border:1px solid ${CARD_INK}25;border-left:3px solid ${CARD_INK};padding:8px 9px;background:${CARD_INK}05">
+      ${label("Recommended next step")}
+      <div style="font-size:12px;color:${CARD_INK};line-height:1.4"><span style="font-weight:700">${escapeHtml(PORTFOLIO_LABELS[portfolio])} —</span> ${escapeHtml(nextStepAction(d))}</div>
+      <div style="font-size:10px;color:${CARD_MUTED};margin-top:5px;line-height:1.35">${escapeHtml(reason)}</div>
+    </div>
+  `;
+
+  // 7 · Actions (only features that exist)
+  const btnStyle = `display:inline-block;font-size:10px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;color:${CARD_BLUE};background:white;border:1px solid ${CARD_BLUE}40;padding:4px 8px;border-radius:2px;cursor:pointer;text-decoration:none`;
+  const actionParts: string[] = [];
+  if (d.cluster) {
+    actionParts.push(`<button type="button" data-vac-action="cluster" style="${btnStyle}">View cluster</button>`);
+  }
+  actionParts.push(`<button type="button" data-vac-action="directory" style="${btnStyle}">View in directory</button>`);
+  actionParts.push(
+    `<a href="/admin/owner-files/${encodeURIComponent(zip)}" data-vac-action="owner-files" style="${btnStyle}">Owner Files →</a>`,
+  );
+  const actions = `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">${actionParts.join("")}</div>`;
+
+  return `<div style="font-family:Inter,sans-serif;max-width:300px">${identity}${snapshot}${ownership}${why}${conditions}${nextStep}${actions}</div>`;
 }
 
 /** One LineString feature per corridor ring (only for corridors that carry
@@ -171,6 +422,12 @@ interface VacancyReportMapProps {
   /** When set (or changed), the map fits these bounds and outlines the box —
    *  the cluster-card → map deep-link target. `null` clears the outline. */
   focusBbox?: [number, number, number, number] | null;
+  /** Human "as of" date for the site card's "Records as of" line; omitted from
+   *  the card when absent. */
+  asOf?: string;
+  /** Primary neighborhood name, the corridor/cluster line's fallback when a
+   *  cluster carries no named corridor. */
+  neighborhood?: string;
 }
 
 /** Feature properties carried on every dot (both views), keyed identically so
@@ -186,6 +443,12 @@ interface DotProps {
   sale: boolean;
   violation: boolean;
   distressed: boolean;
+  pin: string | null;
+  squareFeet: number | null;
+  zoningClass: string | null;
+  incentiveCount: number;
+  ownerConfidence: OwnerConfidence;
+  clusterId: number | null;
 }
 
 export default function VacancyReportMap({
@@ -199,9 +462,12 @@ export default function VacancyReportMap({
   landPoints,
   landPointsTruncated,
   landPointsTotal,
+  clusters,
   corridors,
   anchors,
   focusBbox,
+  asOf,
+  neighborhood,
 }: VacancyReportMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -275,8 +541,8 @@ export default function VacancyReportMap({
 
   // Latest props for the mount-once init effect (read through a ref so the
   // effect can stay dependency-free without going stale).
-  const dataRef = useRef({ boundary, bbox, centroid, sitePoints, siteIndex, landPoints, corridors, anchors });
-  dataRef.current = { boundary, bbox, centroid, sitePoints, siteIndex, landPoints, corridors, anchors };
+  const dataRef = useRef({ zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood });
+  dataRef.current = { zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood };
 
   // Current view read through a ref so the mount-once popup handler stays fresh.
   const viewRef = useRef(view);
@@ -292,15 +558,24 @@ export default function VacancyReportMap({
     if (!containerRef.current || !token) return;
 
     const {
+      zip: zipForLinks,
       boundary: bnd,
       bbox: bb,
       centroid: ctr,
       sitePoints: pts,
       siteIndex: idx,
       landPoints: land,
+      clusters: cls,
       corridors: cor,
       anchors: anc,
+      asOf: asOfLabel,
+      neighborhood: nbhd,
     } = dataRef.current;
+
+    // Kept clusters keyed by id, for the site card's cluster/corridor line, the
+    // "why it matters" clause, and the View-cluster deep-link bbox.
+    const clusterById = new Map<number, VacancyCluster>();
+    for (const c of cls ?? []) clusterById.set(c.id, c);
 
     mapboxgl.accessToken = token;
     const map = new mapboxgl.Map({
@@ -325,12 +600,19 @@ export default function VacancyReportMap({
         propertyType: p.propertyType,
         priorityTier: p.priorityTier,
         markerNumber: p.markerNumber ?? null,
-        address: joined?.address ?? null,
+        // Prefer the point's own address; fall back to the joined marker row.
+        address: p.address ?? joined?.address ?? null,
         nextStep: joined?.nextStep ?? null,
         saleYear: p.saleYear,
         sale,
         violation: p.violation,
         distressed: sale || p.violation,
+        pin: p.pin,
+        squareFeet: p.squareFeet,
+        zoningClass: p.zoningClass,
+        incentiveCount: p.incentiveCount,
+        ownerConfidence: p.ownerConfidence,
+        clusterId: p.clusterId,
       };
       return {
         type: "Feature",
@@ -346,12 +628,18 @@ export default function VacancyReportMap({
         propertyType: "vacant_land",
         priorityTier: null,
         markerNumber: null,
-        address: null,
+        address: p.address,
         nextStep: null,
         saleYear: p.saleYear,
         sale,
         violation: false,
         distressed: sale,
+        pin: p.pin,
+        squareFeet: p.squareFeet,
+        zoningClass: null,
+        incentiveCount: 0,
+        ownerConfidence: p.ownerConfidence,
+        clusterId: null,
       };
       return {
         type: "Feature",
@@ -362,34 +650,40 @@ export default function VacancyReportMap({
 
     featuresRef.current = { tracked: trackedFeatures, land: landFeatures };
 
-    // Distress flags live on sitePoints, not siteIndex — join by markerNumber.
-    const distressByMarker = new Map<number, { saleYear: number | null; violation: boolean }>();
+    // The enriched fields (pin, sqft, zoning, incentives, confidence, cluster,
+    // distress) live on sitePoints, not siteIndex — join by markerNumber.
+    const pointByMarker = new Map<number, VacancySitePoint>();
     for (const p of pts) {
-      if (p.markerNumber != null) {
-        distressByMarker.set(p.markerNumber, { saleYear: p.saleYear, violation: p.violation });
-      }
+      if (p.markerNumber != null) pointByMarker.set(p.markerNumber, p);
     }
 
     const markerFeatures: GeoJSON.Feature[] = markerRows.map((r) => {
-      const d = r.markerNumber != null ? distressByMarker.get(r.markerNumber) : undefined;
-      const saleYear = d?.saleYear ?? null;
-      const violation = d?.violation ?? false;
+      const sp = r.markerNumber != null ? pointByMarker.get(r.markerNumber) : undefined;
+      const saleYear = sp?.saleYear ?? null;
+      const violation = sp?.violation ?? false;
       const sale = saleYear != null;
+      const props: DotProps = {
+        ownerType: r.ownerType,
+        propertyType: r.propertyType,
+        priorityTier: r.priorityTier,
+        markerNumber: r.markerNumber,
+        address: r.address,
+        nextStep: r.nextStep,
+        saleYear,
+        sale,
+        violation,
+        distressed: sale || violation,
+        pin: sp?.pin ?? null,
+        squareFeet: sp?.squareFeet ?? r.squareFeet,
+        zoningClass: sp?.zoningClass ?? r.zoningClass,
+        incentiveCount: sp?.incentiveCount ?? r.incentiveCount,
+        ownerConfidence: sp?.ownerConfidence ?? "inferred",
+        clusterId: sp?.clusterId ?? null,
+      };
       return {
         type: "Feature",
         geometry: { type: "Point", coordinates: [r.lon, r.lat] },
-        properties: {
-          ownerType: r.ownerType,
-          propertyType: r.propertyType,
-          priorityTier: r.priorityTier,
-          markerNumber: r.markerNumber,
-          address: r.address,
-          nextStep: r.nextStep,
-          saleYear,
-          sale,
-          violation,
-          distressed: sale || violation,
-        },
+        properties: props as unknown as GeoJSON.GeoJsonProperties,
       };
     });
 
@@ -599,63 +893,62 @@ export default function VacancyReportMap({
         );
       }
 
-      // ── Popups (view-aware via viewRef) ──
+      // ── Popups: the structured decision card (view-aware via viewRef) ──
       const openSitePopup = (
         lngLat: mapboxgl.LngLatLike,
         p: Record<string, unknown>,
       ) => {
         const isLand = viewRef.current === "land";
         const ownerType = (p.ownerType as OwnerType) ?? "unknown";
-        const ownerLabel = OWNER_TYPE_LABELS[ownerType] ?? OWNER_TYPE_LABELS.unknown;
-        const ownerColor = OWNER_TYPE_COLORS[ownerType] ?? OWNER_TYPE_COLORS.unknown;
-        const propertyLabel =
-          PROPERTY_TYPE_LABELS[p.propertyType as VacancyPropertyType] ?? "Vacant site";
-        const tierLabel =
-          PRIORITY_TIER_LABELS[p.priorityTier as VacancyPriorityTier] ?? "Priority n/a";
-        const markerNumber = p.markerNumber == null ? null : Number(p.markerNumber);
-        const address = typeof p.address === "string" ? p.address : null;
-        const nextStep = typeof p.nextStep === "string" ? p.nextStep : null;
-        const saleYear = p.saleYear == null ? null : Number(p.saleYear);
-        const violation = p.violation === true;
+        const clusterId = p.clusterId == null ? null : Number(p.clusterId);
+        const cluster = clusterId != null ? clusterById.get(clusterId) ?? null : null;
+        const squareFeet =
+          p.squareFeet == null || !Number.isFinite(Number(p.squareFeet)) ? null : Number(p.squareFeet);
+        const data: CardData = {
+          isLand,
+          markerNumber: p.markerNumber == null ? null : Number(p.markerNumber),
+          address: typeof p.address === "string" ? p.address : null,
+          ownerType,
+          propertyType: (p.propertyType as VacancyPropertyType) ?? "vacant_land",
+          priorityTier: (p.priorityTier as VacancyPriorityTier | null) ?? null,
+          pin: typeof p.pin === "string" && p.pin ? p.pin : null,
+          squareFeet,
+          zoningClass: typeof p.zoningClass === "string" && p.zoningClass ? p.zoningClass : null,
+          incentiveCount: Number.isFinite(Number(p.incentiveCount)) ? Number(p.incentiveCount) : 0,
+          ownerConfidence: (p.ownerConfidence as OwnerConfidence) ?? "inferred",
+          clusterId,
+          saleYear: p.saleYear == null ? null : Number(p.saleYear),
+          violation: p.violation === true,
+          cluster,
+          neighborhood: nbhd ?? null,
+        };
 
-        const distressLines = `${
-          saleYear != null
-            ? `<div style="font-size:11px;color:${DISTRESS_RED};margin-top:6px;font-weight:500">Tax-sale exposed · latest ${saleYear}</div>`
-            : ""
-        }${
-          violation
-            ? `<div style="font-size:11px;color:${DISTRESS_RED};margin-top:4px;font-weight:500">Matched vacant-building violation record</div>`
-            : ""
-        }`;
-
-        let html: string;
-        if (isLand) {
-          html = `<div style="font-family:Inter,sans-serif;min-width:180px">
-            <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#8A93A6;margin-bottom:4px;font-weight:600">Vacant land parcel</div>
-            <span style="display:inline-block;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapeHtml(ownerLabel)}</span>
-            <div style="font-size:11px;color:#5A6478;margin-top:8px">Assessor vacant land · reconciled classification</div>
-            ${distressLines}
-          </div>`;
-        } else {
-          const header =
-            markerNumber != null && address
-              ? `<div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#2563EB;margin-bottom:4px;font-weight:600">Priority site #${markerNumber}</div>
-                 <div style="font-size:13px;font-weight:600;color:#0C1B33">${escapeHtml(address)}</div>`
-              : `<div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#8A93A6;margin-bottom:4px;font-weight:600">Tracked vacant site</div>
-                 <div style="font-size:13px;font-weight:600;color:#0C1B33">${escapeHtml(propertyLabel)}</div>`;
-          html = `<div style="font-family:Inter,sans-serif;min-width:180px">
-            ${header}
-            <span style="display:inline-block;margin-top:6px;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapeHtml(ownerLabel)}</span>
-            <div style="font-size:11px;color:#5A6478;margin-top:8px">${escapeHtml(propertyLabel)} · ${escapeHtml(tierLabel)}</div>
-            ${nextStep ? `<div style="font-size:11px;color:#8A93A6;margin-top:6px;line-height:1.35">${escapeHtml(nextStep)}</div>` : ""}
-            ${distressLines}
-          </div>`;
-        }
-
-        new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
+        const html = buildSiteCardHtml(data, zipForLinks, asOfLabel ?? null);
+        const popup = new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" })
           .setLngLat(lngLat)
           .setHTML(html)
           .addTo(map);
+
+        // Wire the action buttons (mapbox renders the HTML into the DOM).
+        const el = popup.getElement();
+        if (el) {
+          const clusterBtn = el.querySelector('[data-vac-action="cluster"]');
+          if (clusterBtn && cluster) {
+            clusterBtn.addEventListener("click", () => {
+              setFocusBbox(cluster.bbox);
+              popup.remove();
+            });
+          }
+          const dirBtn = el.querySelector('[data-vac-action="directory"]');
+          if (dirBtn) {
+            dirBtn.addEventListener("click", () => {
+              document
+                .getElementById("site-directory")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+          }
+          // The Owner Files control is a plain <a href> — no wiring needed.
+        }
       };
 
       for (const layerId of ["vacancy-unclustered", "vacancy-marker-disc"]) {

@@ -480,6 +480,8 @@ export default async function VacancyReportPage({
             landPoints={edition.landPoints ?? null}
             landPointsTruncated={edition.landPointsTruncated ?? false}
             landPointsTotal={edition.landPointsTotal ?? null}
+            asOf={asOf}
+            neighborhood={pilotEntry.primaryNeighborhood}
             clusters={edition.clusters ?? null}
             corridors={loadCorridorRings(edition.corridors ?? null)}
             anchors={edition.anchors ?? null}
@@ -860,7 +862,7 @@ export default async function VacancyReportPage({
 
         {/* Site directory — the full online index (lazy-loaded) */}
         {directoryCount > 0 && (
-          <section className="mt-10">
+          <section id="site-directory" className="mt-10">
             <h2 className="mb-4 font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#0C1B33]/50">
               Site directory — every tracked address
             </h2>

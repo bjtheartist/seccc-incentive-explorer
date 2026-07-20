@@ -53,13 +53,14 @@ import {
   assignQuantileDots,
   buildDirectoryRows,
   CLUSTERS_NOTE,
-  clusterVacantSites,
+  clusterVacantSitesWithMembership,
   computeSitePriority,
   corridorRefsIntersectingBbox,
   countAddressesInSet,
   latestSaleYearForPin,
   nearestCorridorName,
   nextStepForSite,
+  ownerConfidenceForPoint,
   portfolioForSite,
   rankSites,
   reconcileOwnerTypeForPin,
@@ -70,6 +71,7 @@ import {
   type CorridorKind,
   type CorridorPolygon,
   type CorridorRef,
+  type OwnerConfidence,
   type OwnerTypeCount,
   type VacancyAnchor,
   type VacancyCluster,
@@ -705,16 +707,34 @@ async function fetchAllVacantRows(sql: NeonQueryFunction<false, false>): Promise
 async function fetchVacantLandParcels(
   sql: NeonQueryFunction<false, false>,
   zip: string,
-): Promise<{ pin: string; ownerType: string | null; lat: number | null; lon: number | null }[] | null> {
+): Promise<
+  {
+    pin: string;
+    ownerType: string | null;
+    lat: number | null;
+    lon: number | null;
+    address: string | null;
+    squareFeet: number | null;
+  }[] | null
+> {
   try {
     // Anonymized still — pin/owner_type only, plus lat/lon for the reconciled
-    // land-dot layer. NEVER owner names. Rows without coordinates stay in the
-    // series/total but drop out of landPoints (excluded at build time).
+    // land-dot layer and address/land_sqft for the site card. NEVER owner names.
+    // land_sqft is null-written historically — emitted null-safe, never a 0.
+    // Rows without coordinates stay in the series/total but drop out of
+    // landPoints (excluded at build time).
     const rows = (await sql`
-      SELECT pin, COALESCE(owner_type, 'unknown') AS owner_type, lat, lon
+      SELECT pin, COALESCE(owner_type, 'unknown') AS owner_type, lat, lon, address, land_sqft
       FROM parcels
       WHERE zip = ${zip} AND is_vacant IS TRUE
-    `) as { pin: string | null; owner_type: string | null; lat: number | string | null; lon: number | string | null }[];
+    `) as {
+      pin: string | null;
+      owner_type: string | null;
+      lat: number | string | null;
+      lon: number | string | null;
+      address: string | null;
+      land_sqft: number | string | null;
+    }[];
 
     if (rows.length === 0) {
       console.warn(`  ${zip}: parcels vacant-land ownership returned 0 rows — treating as unavailable (did SYNC_ZIPS cover this ZIP?)`);
@@ -726,6 +746,8 @@ async function fetchVacantLandParcels(
       ownerType: r.owner_type,
       lat: toNumOrNull(r.lat),
       lon: toNumOrNull(r.lon),
+      address: r.address ?? null,
+      squareFeet: toNumOrNull(r.land_sqft),
     }));
   } catch (err) {
     console.warn(
@@ -809,8 +831,15 @@ interface ScoredSite {
   id: string;
   lat: number;
   lon: number;
+  /** The site-index display address (`r.address ?? "Unknown"`). */
   address: string;
+  /** The RAW nullable address for the site card / directory (null when missing,
+   * never coerced to "Unknown"). */
+  rawAddress: string | null;
+  /** Digits-only 14-digit PIN for a COLS row; null for 311 rows. */
+  pin: string | null;
   ownerType: ReturnType<typeof normalizeOwnerType>;
+  ownerConfidence: OwnerConfidence;
   propertyType: VacancyPropertyType;
   status: string | null;
   squareFeet: number | null;
@@ -820,12 +849,24 @@ interface ScoredSite {
   priorityTier: "high" | "medium" | "low";
   saleYear: number | null;
   violation: boolean;
+  /** Kept-cluster id (1..12) the site landed in, else null. Set after
+   * clustering, read from the same object refs by `ranked`. */
+  clusterId: number | null;
 }
 
 function buildEdition(
   zip: string,
   rows: VacantRow[],
-  parcels: { pin: string; ownerType: string | null; lat: number | null; lon: number | null }[] | null,
+  parcels:
+    | {
+        pin: string;
+        ownerType: string | null;
+        lat: number | null;
+        lon: number | null;
+        address: string | null;
+        squareFeet: number | null;
+      }[]
+    | null,
   geo: ZipGeometry | undefined,
   transport: { kind: "expressway" | "rail"; points: [number, number][] }[],
   saleYearsByPin: Map<string, number[]> | null,
@@ -863,6 +904,8 @@ function buildEdition(
       ownerType: p.ownerType,
       lat: p.lat,
       lon: p.lon,
+      address: p.address,
+      squareFeet: p.squareFeet,
     }));
     for (const r of normRows) if (r.pin) assessorVacantPins.add(r.pin);
     rawSeries = tallyOwnerTypeCounts(normRows.map((r) => r.ownerType));
@@ -878,12 +921,19 @@ function buildEdition(
     const withCoords = normRows
       .filter((r) => r.lat != null && r.lon != null)
       .sort((a, b) => (a.pin < b.pin ? -1 : a.pin > b.pin ? 1 : 0));
-    const allLandPoints: VacancyLandPoint[] = withCoords.map((r) => ({
-      lat: r.lat as number,
-      lon: r.lon as number,
-      ownerType: reconcileOwnerTypeForPin(r.pin, r.ownerType, inventoryPins),
-      saleYear: latestSaleYearForPin(r.pin, saleYearsByPin),
-    }));
+    const allLandPoints: VacancyLandPoint[] = withCoords.map((r) => {
+      const reconciledType = reconcileOwnerTypeForPin(r.pin, r.ownerType, inventoryPins);
+      return {
+        lat: r.lat as number,
+        lon: r.lon as number,
+        ownerType: reconciledType,
+        address: r.address ?? null,
+        pin: r.pin,
+        squareFeet: r.squareFeet ?? null,
+        ownerConfidence: ownerConfidenceForPoint(r.pin, reconciledType, inventoryPins),
+        saleYear: latestSaleYearForPin(r.pin, saleYearsByPin),
+      };
+    });
     landPointsTruncated = allLandPoints.length > SITE_POINTS_CAP;
     landPoints = allLandPoints.slice(0, SITE_POINTS_CAP);
   }
@@ -926,7 +976,10 @@ function buildEdition(
       lat: toNum(r.lat),
       lon: toNum(r.lon),
       address: r.address ?? "Unknown",
+      rawAddress: r.address ?? null,
+      pin,
       ownerType,
+      ownerConfidence: ownerConfidenceForPoint(pin, ownerType, inventoryPins),
       propertyType,
       status: r.status,
       squareFeet,
@@ -936,8 +989,45 @@ function buildEdition(
       priorityTier: tier,
       saleYear,
       violation,
+      clusterId: null,
     };
   });
+
+  // ── Spatial layer (D2/D3): proximity clusters over the FULL tracked universe
+  //    (`sites`, pre-cap), each carrying its portfolio + distress flags. Top 12
+  //    by count; corridorName resolved per cluster centroid. Corridors listed
+  //    for the edition are those whose bbox overlaps the ZIP bbox. Computed here
+  //    (before ranking/cap) so each site can be annotated with the kept-cluster
+  //    id it landed in — `ranked` and `sitePoints` read it off the same refs. ──
+  const clusterInput: ClusterInputSite[] = sites.map((s) => ({
+    lat: s.lat,
+    lon: s.lon,
+    ownerType: s.ownerType,
+    portfolio: portfolioForSite({
+      ownerType: s.ownerType,
+      priorityTier: s.priorityTier,
+      saleYear: s.saleYear,
+      violation: s.violation,
+    }),
+    taxSale: s.saleYear != null,
+    violation: s.violation,
+    propertyType: s.propertyType,
+  }));
+  const clusterLinkMeters = Number(process.env.VACANCY_CLUSTER_LINK_METERS) || 150;
+  const { clusters: allClusters, membership } = clusterVacantSitesWithMembership(clusterInput, {
+    linkMeters: clusterLinkMeters,
+  });
+  // Only the kept top-12 clusters (ids 1..12, since they sort count-desc) get an
+  // id on their sites; a point in a cluster ranked outside the top 12 -> null.
+  sites.forEach((s, i) => {
+    const id = membership[i];
+    s.clusterId = id != null && id <= CLUSTER_COUNT ? id : null;
+  });
+  const clusters: VacancyCluster[] = allClusters.slice(0, CLUSTER_COUNT).map((cl) => ({
+    ...cl,
+    corridorName: nearestCorridorName(cl.centroid.lat, cl.centroid.lon, corridorPolygons, 400),
+  }));
+  const corridors: CorridorRef[] = geo ? corridorRefsIntersectingBbox(corridorPolygons, geo.bbox) : [];
 
   // Headline counts — full universe, computed BEFORE any site-point cap.
   const vacantLandCount = sites.filter((s) => s.propertyType === "vacant_land").length;
@@ -955,6 +1045,13 @@ function buildEdition(
     propertyType: s.propertyType,
     priorityTier: s.priorityTier,
     markerNumber: i < MARKER_COUNT ? i + 1 : null,
+    address: s.rawAddress,
+    pin: s.pin,
+    squareFeet: s.squareFeet,
+    zoningClass: s.zoningClass,
+    incentiveCount: s.incentiveCount,
+    ownerConfidence: s.ownerConfidence,
+    clusterId: s.clusterId,
     saleYear: s.saleYear,
     violation: s.violation,
   }));
@@ -976,33 +1073,6 @@ function buildEdition(
       violation: s.violation,
     })),
   );
-
-  // ── Spatial layer (D2/D3): proximity clusters over the FULL tracked universe
-  //    (`sites`, pre-cap), each carrying its portfolio + distress flags. Top 12
-  //    by count; corridorName resolved per cluster centroid. Corridors listed
-  //    for the edition are those whose bbox overlaps the ZIP bbox. ──
-  const clusterInput: ClusterInputSite[] = sites.map((s) => ({
-    lat: s.lat,
-    lon: s.lon,
-    ownerType: s.ownerType,
-    portfolio: portfolioForSite({
-      ownerType: s.ownerType,
-      priorityTier: s.priorityTier,
-      saleYear: s.saleYear,
-      violation: s.violation,
-    }),
-    taxSale: s.saleYear != null,
-    violation: s.violation,
-    propertyType: s.propertyType,
-  }));
-  const clusterLinkMeters = Number(process.env.VACANCY_CLUSTER_LINK_METERS) || 150;
-  const clusters: VacancyCluster[] = clusterVacantSites(clusterInput, { linkMeters: clusterLinkMeters })
-    .slice(0, CLUSTER_COUNT)
-    .map((cl) => ({
-      ...cl,
-      corridorName: nearestCorridorName(cl.centroid.lat, cl.centroid.lon, corridorPolygons, 400),
-    }));
-  const corridors: CorridorRef[] = geo ? corridorRefsIntersectingBbox(corridorPolygons, geo.bbox) : [];
 
   const siteIndex: VacancySiteIndexRow[] = ranked.slice(0, SITE_INDEX_DEPTH).map((s, i) => ({
     markerNumber: i < MARKER_COUNT ? i + 1 : null,

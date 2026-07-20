@@ -9,6 +9,7 @@ import {
   buildDirectoryRows,
   CLUSTERS_NOTE,
   clusterVacantSites,
+  clusterVacantSitesWithMembership,
   compareDirectoryRows,
   compareRankableSites,
   computeSitePriority,
@@ -22,10 +23,12 @@ import {
   MATRIX_METHOD_NOTE,
   nearestCorridorName,
   nextStepForSite,
+  ownerConfidenceForPoint,
   PORTFOLIO_LABELS,
   PORTFOLIO_ORDER,
   PORTFOLIO_RUBRIC_NOTE,
   portfolioForSite,
+  portfolioReason,
   priorityTierForScore,
   rankSites,
   reconcileOwnerTypeForPin,
@@ -44,6 +47,7 @@ import {
   type VacancyPriorityTier,
   type VacancyPropertyType,
 } from "../vacancy-index";
+import { zoningGloss } from "../vacancy-zoning";
 import type { OwnerType } from "../owner-classify";
 
 // ── Pure-function units ──────────────────────────────────────────────────────
@@ -635,6 +639,103 @@ describe("tallyPortfolioCounts", () => {
   });
 });
 
+describe("portfolioReason (alignment with portfolioForSite)", () => {
+  const owners: OwnerType[] = ["city_public", "local_private", "corporate_llc", "out_of_state", "unknown"];
+  const tiers: VacancyPriorityTier[] = ["high", "medium", "low"];
+  const saleYears: (number | null)[] = [null, 2019];
+
+  it("always leads with PORTFOLIO_LABELS[portfolioForSite(x)] across a full input grid", () => {
+    for (const ownerType of owners) {
+      for (const priorityTier of tiers) {
+        for (const saleYear of saleYears) {
+          for (const violation of [false, true]) {
+            const site = { ownerType, priorityTier, saleYear, violation };
+            const label = PORTFOLIO_LABELS[portfolioForSite(site)];
+            const reason = portfolioReason(site);
+            expect(reason.startsWith(label), `${ownerType}/${priorityTier}/${saleYear}: "${reason}" vs "${label}"`).toBe(true);
+          }
+        }
+      }
+    }
+  });
+
+  it("distinguishes the two verify branches (unknown owner vs tax-sale non-city)", () => {
+    const unknownReason = portfolioReason({ ownerType: "unknown", priorityTier: "low", saleYear: null, violation: false });
+    const taxSaleReason = portfolioReason({ ownerType: "corporate_llc", priorityTier: "high", saleYear: 2020, violation: false });
+    // Both are the "Verify" portfolio…
+    expect(portfolioForSite({ ownerType: "unknown", priorityTier: "low", saleYear: null, violation: false })).toBe("verify");
+    expect(portfolioForSite({ ownerType: "corporate_llc", priorityTier: "high", saleYear: 2020, violation: false })).toBe("verify");
+    // …but carry different reasons.
+    expect(unknownReason).toContain("ownership is not sufficiently resolved");
+    expect(taxSaleReason).toContain("tax-sale exposure");
+    expect(unknownReason).not.toBe(taxSaleReason);
+  });
+
+  it("gives the expected reason for the move_now / organize_next / long_term branches", () => {
+    expect(portfolioReason({ ownerType: "city_public", priorityTier: "high", saleYear: null, violation: false })).toBe(
+      "Move now — publicly controlled with a clear disposition pathway.",
+    );
+    expect(portfolioReason({ ownerType: "corporate_llc", priorityTier: "high", saleYear: null, violation: false })).toBe(
+      "Organize next — a known private owner and a workable outreach pathway.",
+    );
+    expect(portfolioReason({ ownerType: "city_public", priorityTier: "low", saleYear: null, violation: false })).toBe(
+      "Long-term — limited near-term leverage; revisit as conditions change.",
+    );
+  });
+});
+
+describe("ownerConfidenceForPoint (per-point confidence derivation)", () => {
+  const inv = new Set(["12345678901234"]);
+
+  it("is pin_matched when the PIN is in the City inventory (any owner type)", () => {
+    expect(ownerConfidenceForPoint("12345678901234", "corporate_llc", inv)).toBe("pin_matched");
+    expect(ownerConfidenceForPoint("12345678901234", "unknown", inv)).toBe("pin_matched");
+  });
+
+  it("is needs_verification for an unknown owner not in the inventory", () => {
+    expect(ownerConfidenceForPoint("99999999999999", "unknown", inv)).toBe("needs_verification");
+    expect(ownerConfidenceForPoint(null, "unknown", inv)).toBe("needs_verification");
+  });
+
+  it("is inferred for a known non-city taxpayer type not in the inventory", () => {
+    expect(ownerConfidenceForPoint("99999999999999", "corporate_llc", inv)).toBe("inferred");
+    expect(ownerConfidenceForPoint(null, "local_private", inv)).toBe("inferred");
+  });
+});
+
+describe("zoningGloss (Chicago district prefixes)", () => {
+  it("glosses the single-letter families with the eligibility caution", () => {
+    expect(zoningGloss("C1-1")).toBe("C1-1 — neighborhood commercial uses; verify project-specific eligibility.");
+    expect(zoningGloss("B3-2")).toBe("B3-2 — Neighborhood/community shopping and mixed-use; verify project-specific eligibility.");
+    expect(zoningGloss("M1-2")).toBe("M1-2 — Manufacturing/industrial; verify project-specific eligibility.");
+  });
+
+  it("glosses residential and downtown families", () => {
+    expect(zoningGloss("RS-3")).toContain("Residential");
+    expect(zoningGloss("RT-4")).toContain("Residential");
+    expect(zoningGloss("RM-5")).toContain("Residential");
+    expect(zoningGloss("DX-7")).toContain("Downtown");
+    expect(zoningGloss("DC-16")).toContain("Downtown");
+    expect(zoningGloss("DR-3")).toContain("Downtown");
+  });
+
+  it("glosses the multi-letter districts, longest-prefix-first (PMD/POS/PD win over P.. families)", () => {
+    expect(zoningGloss("PMD-11")).toBe("PMD-11 — Planned Manufacturing District; verify project-specific eligibility.");
+    expect(zoningGloss("PD-1234")).toBe("PD-1234 — Planned Development — site-specific terms; verify project-specific eligibility.");
+    expect(zoningGloss("POS-4")).toBe("POS-4 — Parks/open space; verify project-specific eligibility.");
+  });
+
+  it("returns the generic 'verify allowable uses' line for an unrecognized prefix", () => {
+    expect(zoningGloss("XZ-9")).toBe("Zoning XZ-9 — verify allowable uses.");
+  });
+
+  it("returns null for null / empty / whitespace", () => {
+    expect(zoningGloss(null)).toBeNull();
+    expect(zoningGloss("")).toBeNull();
+    expect(zoningGloss("   ")).toBeNull();
+  });
+});
+
 // ── Spatial helpers ──────────────────────────────────────────────────────────
 
 describe("haversineMeters", () => {
@@ -866,6 +967,69 @@ describe("clusterVacantSites", () => {
   });
 });
 
+describe("clusterVacantSitesWithMembership", () => {
+  const site = (
+    lat: number,
+    lon: number,
+    over: Partial<ClusterInputSite> = {},
+  ): ClusterInputSite => ({
+    lat,
+    lon,
+    ownerType: "unknown",
+    portfolio: "long_term",
+    taxSale: false,
+    violation: false,
+    propertyType: "vacant_building",
+    ...over,
+  });
+
+  const groupA = Array.from({ length: 6 }, (_, i) => site(41.85 + i * 0.0002, -87.65 + i * 0.0002));
+  const groupB = Array.from({ length: 5 }, (_, i) => site(41.88 + i * 0.0002, -87.62 + i * 0.0002));
+  const noise = [site(41.9, -87.7), site(41.7, -87.55)];
+
+  it("returns clusters identical to clusterVacantSites plus an aligned membership array", () => {
+    const input = [...groupA, ...noise, ...groupB];
+    const { clusters, membership } = clusterVacantSitesWithMembership(input);
+    // Same clusters the membership-free wrapper produces.
+    expect(JSON.stringify(clusters)).toBe(JSON.stringify(clusterVacantSites(input)));
+    // membership is aligned to input length.
+    expect(membership).toHaveLength(input.length);
+    // Every groupA index maps to cluster 1 (6 sites, ranked first); groupB -> 2.
+    for (let i = 0; i < groupA.length; i++) expect(membership[i]).toBe(1);
+    // The two noise points fall in no cluster.
+    expect(membership[groupA.length]).toBeNull();
+    expect(membership[groupA.length + 1]).toBeNull();
+    for (let i = 0; i < groupB.length; i++) {
+      expect(membership[groupA.length + noise.length + i]).toBe(2);
+    }
+  });
+
+  it("assigns each membership id to a real cluster in the returned array", () => {
+    const input = [...groupA, ...noise, ...groupB];
+    const { clusters, membership } = clusterVacantSitesWithMembership(input);
+    const ids = new Set(clusters.map((c) => c.id));
+    for (const m of membership) expect(m === null || ids.has(m)).toBe(true);
+    // Each cluster's member count matches how many inputs map to its id.
+    for (const c of clusters) {
+      const n = membership.filter((m) => m === c.id).length;
+      expect(n).toBe(c.count);
+    }
+  });
+
+  it("is deterministic under input shuffling", () => {
+    const input = [...groupA, ...noise, ...groupB];
+    const a = clusterVacantSitesWithMembership(input);
+    const b = clusterVacantSitesWithMembership([...input].reverse());
+    // Clusters are shuffle-invariant; membership tracks the (reversed) input order.
+    expect(JSON.stringify(b.clusters)).toBe(JSON.stringify(a.clusters));
+    expect(b.membership).toHaveLength(input.length);
+  });
+
+  it("returns empty clusters and empty membership for empty input", () => {
+    expect(clusterVacantSitesWithMembership([])).toEqual({ clusters: [], membership: [] });
+  });
+});
+
 // ── Committed-export guards ──────────────────────────────────────────────────
 // These mirror lib/__tests__/corridor-owners.test.ts's committed-export guard.
 // They stay skipped until scripts/export-vacancy-index.ts is run on a refresh
@@ -970,16 +1134,19 @@ const ALLOWED_KEYS = new Set<string>([
   "taxSaleExposedCount",
   "latestTaxSaleYear",
   "violationMatchCount",
-  // site point / site index row
+  // site point / site index row / land point
   "lat",
   "lon",
   "propertyType",
   "priorityTier",
   "markerNumber",
   "address",
+  "pin",
   "zoningClass",
   "squareFeet",
   "incentiveCount",
+  "ownerConfidence",
+  "clusterId",
   "priorityScore",
   "nextStep",
   "saleYear",
@@ -1102,8 +1269,13 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
     }
   });
 
-  it("carries landPoints null exactly when the raw parcels series is null, total matching, only {lat,lon,ownerType,saleYear} keys", () => {
+  // EXPECTED-RED until the export re-runs with the enriched land-point payload
+  // (the committed file predates the address/pin/squareFeet/ownerConfidence
+  // fields, so the exact-keys assertion fails against it — hard-green after the
+  // orchestrator re-exports).
+  it("carries landPoints null exactly when the raw parcels series is null, total matching, enriched {address,lat,lon,ownerConfidence,ownerType,pin,saleYear,squareFeet} keys [EXPECTED-RED pre-re-export]", () => {
     const valid = new Set<string>(OWNER_TYPE_ORDER);
+    const validConfidence = new Set(["pin_matched", "inferred", "needs_verification"]);
     for (const zip of PILOT_ZIP_KEYS) {
       const edition = data.editions[zip];
       if (!edition) continue;
@@ -1122,10 +1294,23 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
         expect(lp.length).toBeLessThanOrEqual(2000);
         expect(edition.landPointsTotal === null || lp.length <= edition.landPointsTotal).toBe(true);
         for (const p of lp) {
-          expect(Object.keys(p).sort()).toEqual(["lat", "lon", "ownerType", "saleYear"]);
+          expect(Object.keys(p).sort()).toEqual([
+            "address",
+            "lat",
+            "lon",
+            "ownerConfidence",
+            "ownerType",
+            "pin",
+            "saleYear",
+            "squareFeet",
+          ]);
           expect(typeof p.lat).toBe("number");
           expect(typeof p.lon).toBe("number");
           expect(valid.has(p.ownerType)).toBe(true);
+          expect(p.address === null || typeof p.address === "string").toBe(true);
+          expect(typeof p.pin).toBe("string");
+          expect(p.squareFeet === null || typeof p.squareFeet === "number").toBe(true);
+          expect(validConfidence.has(p.ownerConfidence)).toBe(true);
           expect(p.saleYear === null || typeof p.saleYear === "number").toBe(true);
         }
       }
@@ -1139,6 +1324,32 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
       for (const p of edition.sitePoints) {
         expect(p.saleYear === null || typeof p.saleYear === "number", `${zip} sitePoint.saleYear`).toBe(true);
         expect(typeof p.violation, `${zip} sitePoint.violation`).toBe("boolean");
+      }
+    }
+  });
+
+  // EXPECTED-RED until the export re-runs with the enriched site-point payload
+  // (address/pin/squareFeet/zoningClass/incentiveCount/ownerConfidence/clusterId
+  // are absent on the committed file — hard-green after the orchestrator
+  // re-exports).
+  it("carries the enriched decision-card fields on every sitePoint [EXPECTED-RED pre-re-export]", () => {
+    const validConfidence = new Set(["pin_matched", "inferred", "needs_verification"]);
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      for (const p of edition.sitePoints) {
+        expect(p.address === null || typeof p.address === "string", `${zip} sitePoint.address`).toBe(true);
+        expect(p.pin === null || typeof p.pin === "string", `${zip} sitePoint.pin`).toBe(true);
+        expect(p.squareFeet === null || typeof p.squareFeet === "number", `${zip} sitePoint.squareFeet`).toBe(true);
+        expect(p.zoningClass === null || typeof p.zoningClass === "string", `${zip} sitePoint.zoningClass`).toBe(true);
+        expect(Number.isFinite(p.incentiveCount), `${zip} sitePoint.incentiveCount`).toBe(true);
+        expect(validConfidence.has(p.ownerConfidence), `${zip} sitePoint.ownerConfidence`).toBe(true);
+        // clusterId is null or a kept cluster id (1..number of clusters).
+        expect(p.clusterId === null || Number.isInteger(p.clusterId), `${zip} sitePoint.clusterId`).toBe(true);
+        if (p.clusterId !== null) {
+          expect(p.clusterId).toBeGreaterThanOrEqual(1);
+          expect(p.clusterId).toBeLessThanOrEqual(edition.clusters.length);
+        }
       }
     }
   });
