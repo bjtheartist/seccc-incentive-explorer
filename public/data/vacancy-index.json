@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-20T00:49:15.044Z",
+  "generatedAt": "2026-07-20T05:43:44.818Z",
   "sources": {
     "trackedInventory": "Chicago City-Owned Land Inventory (aksk-kvfp) + 311 Vacant/Abandoned Building Complaints (v6vf-nfxy)",
     "vacantLandOwnership": "Cook County Assessor parcels (classified owner type; complete vacant-land universe)",
@@ -75,7 +75,39 @@
             "ownerType": "unknown",
             "count": 1301
           }
-        ]
+        ],
+        "reconciledVacantLandByOwnerType": [
+          {
+            "ownerType": "corporate_llc",
+            "count": 294
+          },
+          {
+            "ownerType": "out_of_state",
+            "count": 444
+          },
+          {
+            "ownerType": "local_private",
+            "count": 782
+          },
+          {
+            "ownerType": "city_public",
+            "count": 135
+          },
+          {
+            "ownerType": "unknown",
+            "count": 80
+          }
+        ],
+        "reconciliation": {
+          "cityPinMatches": 132,
+          "reclassifiedCount": 132,
+          "inventoryUnmatchedCount": 732
+        }
+      },
+      "distress": {
+        "taxSaleExposedCount": 846,
+        "latestTaxSaleYear": 2015,
+        "violationMatchCount": 184
       },
       "sitePoints": [
         {
@@ -21895,7 +21927,39 @@
             "ownerType": "unknown",
             "count": 1413
           }
-        ]
+        ],
+        "reconciledVacantLandByOwnerType": [
+          {
+            "ownerType": "corporate_llc",
+            "count": 133
+          },
+          {
+            "ownerType": "out_of_state",
+            "count": 177
+          },
+          {
+            "ownerType": "local_private",
+            "count": 733
+          },
+          {
+            "ownerType": "city_public",
+            "count": 41
+          },
+          {
+            "ownerType": "unknown",
+            "count": 65
+          }
+        ],
+        "reconciliation": {
+          "cityPinMatches": 41,
+          "reclassifiedCount": 41,
+          "inventoryUnmatchedCount": 362
+        }
+      },
+      "distress": {
+        "taxSaleExposedCount": 644,
+        "latestTaxSaleYear": 2015,
+        "violationMatchCount": 178
       },
       "sitePoints": [
         {
@@ -39712,7 +39776,39 @@
             "ownerType": "unknown",
             "count": 1536
           }
-        ]
+        ],
+        "reconciledVacantLandByOwnerType": [
+          {
+            "ownerType": "corporate_llc",
+            "count": 449
+          },
+          {
+            "ownerType": "out_of_state",
+            "count": 306
+          },
+          {
+            "ownerType": "local_private",
+            "count": 1713
+          },
+          {
+            "ownerType": "city_public",
+            "count": 391
+          },
+          {
+            "ownerType": "unknown",
+            "count": 112
+          }
+        ],
+        "reconciliation": {
+          "cityPinMatches": 389,
+          "reclassifiedCount": 389,
+          "inventoryUnmatchedCount": 1898
+        }
+      },
+      "distress": {
+        "taxSaleExposedCount": 2010,
+        "latestTaxSaleYear": 2015,
+        "violationMatchCount": 215
       },
       "sitePoints": [
         {
@@ -60572,7 +60668,39 @@
             "ownerType": "unknown",
             "count": 1306
           }
-        ]
+        ],
+        "reconciledVacantLandByOwnerType": [
+          {
+            "ownerType": "corporate_llc",
+            "count": 183
+          },
+          {
+            "ownerType": "out_of_state",
+            "count": 129
+          },
+          {
+            "ownerType": "local_private",
+            "count": 884
+          },
+          {
+            "ownerType": "city_public",
+            "count": 227
+          },
+          {
+            "ownerType": "unknown",
+            "count": 48
+          }
+        ],
+        "reconciliation": {
+          "cityPinMatches": 226,
+          "reclassifiedCount": 226,
+          "inventoryUnmatchedCount": 979
+        }
+      },
+      "distress": {
+        "taxSaleExposedCount": 762,
+        "latestTaxSaleYear": 2015,
+        "violationMatchCount": 117
       },
       "sitePoints": [
         {
@@ -78856,7 +78984,39 @@
             "ownerType": "unknown",
             "count": 1445
           }
-        ]
+        ],
+        "reconciledVacantLandByOwnerType": [
+          {
+            "ownerType": "corporate_llc",
+            "count": 273
+          },
+          {
+            "ownerType": "out_of_state",
+            "count": 146
+          },
+          {
+            "ownerType": "local_private",
+            "count": 929
+          },
+          {
+            "ownerType": "city_public",
+            "count": 257
+          },
+          {
+            "ownerType": "unknown",
+            "count": 52
+          }
+        ],
+        "reconciliation": {
+          "cityPinMatches": 257,
+          "reclassifiedCount": 255,
+          "inventoryUnmatchedCount": 1082
+        }
+      },
+      "distress": {
+        "taxSaleExposedCount": 827,
+        "latestTaxSaleYear": 2015,
+        "violationMatchCount": 110
       },
       "sitePoints": [
         {
@@ -97033,7 +97193,39 @@
             "ownerType": "unknown",
             "count": 1682
           }
-        ]
+        ],
+        "reconciledVacantLandByOwnerType": [
+          {
+            "ownerType": "corporate_llc",
+            "count": 398
+          },
+          {
+            "ownerType": "out_of_state",
+            "count": 312
+          },
+          {
+            "ownerType": "local_private",
+            "count": 1831
+          },
+          {
+            "ownerType": "city_public",
+            "count": 229
+          },
+          {
+            "ownerType": "unknown",
+            "count": 130
+          }
+        ],
+        "reconciliation": {
+          "cityPinMatches": 225,
+          "reclassifiedCount": 225,
+          "inventoryUnmatchedCount": 1176
+        }
+      },
+      "distress": {
+        "taxSaleExposedCount": 2165,
+        "latestTaxSaleYear": 2015,
+        "violationMatchCount": 274
       },
       "sitePoints": [
         {
@@ -114041,7 +114233,39 @@
             "ownerType": "unknown",
             "count": 930
           }
-        ]
+        ],
+        "reconciledVacantLandByOwnerType": [
+          {
+            "ownerType": "corporate_llc",
+            "count": 111
+          },
+          {
+            "ownerType": "out_of_state",
+            "count": 73
+          },
+          {
+            "ownerType": "local_private",
+            "count": 528
+          },
+          {
+            "ownerType": "city_public",
+            "count": 135
+          },
+          {
+            "ownerType": "unknown",
+            "count": 22
+          }
+        ],
+        "reconciliation": {
+          "cityPinMatches": 135,
+          "reclassifiedCount": 135,
+          "inventoryUnmatchedCount": 474
+        }
+      },
+      "distress": {
+        "taxSaleExposedCount": 540,
+        "latestTaxSaleYear": 2014,
+        "violationMatchCount": 76
       },
       "sitePoints": [
         {
@@ -128336,7 +128560,39 @@
             "ownerType": "unknown",
             "count": 570
           }
-        ]
+        ],
+        "reconciledVacantLandByOwnerType": [
+          {
+            "ownerType": "corporate_llc",
+            "count": 76
+          },
+          {
+            "ownerType": "out_of_state",
+            "count": 61
+          },
+          {
+            "ownerType": "local_private",
+            "count": 205
+          },
+          {
+            "ownerType": "city_public",
+            "count": 15
+          },
+          {
+            "ownerType": "unknown",
+            "count": 9
+          }
+        ],
+        "reconciliation": {
+          "cityPinMatches": 15,
+          "reclassifiedCount": 15,
+          "inventoryUnmatchedCount": 107
+        }
+      },
+      "distress": {
+        "taxSaleExposedCount": 164,
+        "latestTaxSaleYear": 2015,
+        "violationMatchCount": 66
       },
       "sitePoints": [
         {
@@ -135003,7 +135259,39 @@
             "ownerType": "unknown",
             "count": 729
           }
-        ]
+        ],
+        "reconciledVacantLandByOwnerType": [
+          {
+            "ownerType": "corporate_llc",
+            "count": 83
+          },
+          {
+            "ownerType": "out_of_state",
+            "count": 19
+          },
+          {
+            "ownerType": "local_private",
+            "count": 410
+          },
+          {
+            "ownerType": "city_public",
+            "count": 56
+          },
+          {
+            "ownerType": "unknown",
+            "count": 14
+          }
+        ],
+        "reconciliation": {
+          "cityPinMatches": 56,
+          "reclassifiedCount": 56,
+          "inventoryUnmatchedCount": 169
+        }
+      },
+      "distress": {
+        "taxSaleExposedCount": 245,
+        "latestTaxSaleYear": 2015,
+        "violationMatchCount": 49
       },
       "sitePoints": [
         {
