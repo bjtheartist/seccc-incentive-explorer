@@ -19,7 +19,7 @@ export function VacancyIndexPdfButton({
 }: {
   zip: string;
   neighborhood: string;
-  source: "owner_files_zip" | "owner_files_landing";
+  source: "owner_files_zip" | "owner_files_landing" | "vacancy_web_report";
 }) {
   const [state, setState] = useState<"idle" | "working" | "error">("idle");
 
