@@ -6,12 +6,17 @@ import {
   verifyAnalyticsAdminPassword,
 } from "@/lib/analytics-admin-auth";
 
+const ALLOWED_ADMIN_REDIRECTS = new Set([
+  "/admin/analytics",
+  "/admin/future-of-commerce",
+]);
+
 function safeDashboardRedirect(req: NextRequest, value: FormDataEntryValue | null) {
   const fallback = new URL("/admin/analytics", req.url);
   if (typeof value !== "string" || !value.trim()) return fallback;
 
   const url = new URL(value, req.url);
-  if (url.origin !== req.nextUrl.origin || url.pathname !== "/admin/analytics") {
+  if (url.origin !== req.nextUrl.origin || !ALLOWED_ADMIN_REDIRECTS.has(url.pathname)) {
     return fallback;
   }
   return url;
