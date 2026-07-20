@@ -161,6 +161,15 @@ export interface VacancyMatrixRow {
   cityOwnedShare: VacancyMatrixCell;
 }
 
+/**
+ * How firmly a map dot's owner type is established, for the site card's honesty
+ * line (never a name): `pin_matched` = the parcel PIN is in the City's own land
+ * inventory (authoritative city_public); `needs_verification` = owner type is
+ * unknown; `inferred` = a taxpayer-record classification we accept but have not
+ * PIN-confirmed. See ownerConfidenceForPoint for the derivation.
+ */
+export type OwnerConfidence = "pin_matched" | "inferred" | "needs_verification";
+
 /** A single vacant site as a map dot. `markerNumber` is 1–12 on the top-12
  * priority sites and `null` on the rest. */
 export interface VacancySitePoint {
@@ -170,6 +179,23 @@ export interface VacancySitePoint {
   propertyType: VacancyPropertyType;
   priorityTier: VacancyPriorityTier;
   markerNumber: number | null;
+  /** Street address from the tracked row; `null` when the row carried none. */
+  address: string | null;
+  /** Digits-only 14-digit PIN for a COLS inventory row; `null` for 311 rows
+   * (which carry no PIN — honest) and any COLS row without a real 14-digit PIN. */
+  pin: string | null;
+  /** Lot size in square feet (COLS rows carry it; 311 rows do not -> null). */
+  squareFeet: number | null;
+  /** Chicago zoning district code (COLS rows only; 311 rows -> null). */
+  zoningClass: string | null;
+  /** Number of incentive geographies this site intersects (0 when none). */
+  incentiveCount: number;
+  /** Owner-type confidence (see OwnerConfidence): COLS City-inventory rows are
+   * `pin_matched`, unknown-owner rows `needs_verification`, else `inferred`. */
+  ownerConfidence: OwnerConfidence;
+  /** The kept proximity-cluster id (1..12) this point landed in, or `null` when
+   * it fell in no cluster or in one ranked outside the edition's kept top 12. */
+  clusterId: number | null;
   /** Latest tax-sale year when this point's parcel (a COLS row's PIN) is in the
    * scavenger/annual sale set; `null` for 311 rows (which carry no PIN — honest)
    * and when the tax-sale tables were absent on the refresh branch. */
@@ -193,6 +219,19 @@ export interface VacancyLandPoint {
   lat: number;
   lon: number;
   ownerType: OwnerType;
+  /** Parcel street address from `parcels.address`; `null` when the column was
+   * null for this parcel. */
+  address: string | null;
+  /** Digits-only parcel PIN (every assessor parcel has one; may be "" if the
+   * source row's PIN was blank). */
+  pin: string;
+  /** Lot size in square feet from `parcels.land_sqft`; `null` when the column
+   * was null (historically common — emitted null-safe, never coerced to 0). */
+  squareFeet: number | null;
+  /** Owner-type confidence (see OwnerConfidence): City-inventory PIN match is
+   * `pin_matched`, unknown taxpayer type `needs_verification`, else `inferred`.
+   * Land parcels are not clustered, so they carry no clusterId. */
+  ownerConfidence: OwnerConfidence;
   saleYear: number | null;
 }
 
@@ -607,6 +646,25 @@ export function reconcileOwnerTypeForPin(
   return normalizeOwnerType(rawOwnerType);
 }
 
+/**
+ * How firmly ONE point's owner type is established, for the site card's honesty
+ * line. First match wins:
+ *   1. PIN in the City land inventory        -> "pin_matched" (authoritative)
+ *   2. otherwise, owner type is "unknown"     -> "needs_verification"
+ *   3. otherwise (a known taxpayer type)      -> "inferred"
+ * Pure — the per-point analogue of reconcileOwnerTypeForPin: a `pin_matched`
+ * point is exactly one reconcileOwnerTypeForPin sends to city_public.
+ */
+export function ownerConfidenceForPoint(
+  pin: string | null | undefined,
+  ownerType: OwnerType,
+  inventoryPins: ReadonlySet<string>,
+): OwnerConfidence {
+  if (pin && inventoryPins.has(pin)) return "pin_matched";
+  if (ownerType === "unknown") return "needs_verification";
+  return "inferred";
+}
+
 export function reconcileVacantLandOwnership(
   assessorRows: readonly { pin: string; ownerType: string | null | undefined }[],
   inventoryPins: ReadonlySet<string>,
@@ -752,6 +810,7 @@ import {
   PORTFOLIO_ORDER,
   PORTFOLIO_RUBRIC_NOTE,
   portfolioForSite,
+  portfolioReason,
   tallyPortfolioCounts,
   type VacancyPortfolio,
 } from "./vacancy-portfolio";
@@ -761,6 +820,7 @@ export {
   PORTFOLIO_ORDER,
   PORTFOLIO_RUBRIC_NOTE,
   portfolioForSite,
+  portfolioReason,
   tallyPortfolioCounts,
 };
 export type { VacancyPortfolio };
@@ -961,16 +1021,22 @@ export interface ClusterInputSite {
  *
  * `corridorName` is left `null` here (this function has no corridor geometry);
  * the export fills it in via nearestCorridorName (D3).
+ *
+ * This variant also returns `membership`: an array aligned with `rows` giving,
+ * per input site, the FINAL cluster id (1..N in the returned order) it landed
+ * in, or `null` when the site fell in no kept cluster (noise, or a sub-minSize
+ * piece). The export threads it onto each VacancySitePoint's `clusterId`.
+ * clusterVacantSites is the thin, membership-free wrapper below.
  */
-export function clusterVacantSites(
+export function clusterVacantSitesWithMembership(
   rows: readonly ClusterInputSite[],
   opts: { linkMeters?: number; minSize?: number; maxExtentMeters?: number } = {},
-): VacancyCluster[] {
+): { clusters: VacancyCluster[]; membership: (number | null)[] } {
   const linkMeters = opts.linkMeters ?? 100;
   const minSize = opts.minSize ?? 5;
   const maxExtentMeters = opts.maxExtentMeters ?? 500;
   const n = rows.length;
-  if (n === 0) return [];
+  if (n === 0) return { clusters: [], membership: [] };
 
   // Union-find (path halving; union toward the smaller root for stability).
   const parent = Array.from({ length: n }, (_, i) => i);
@@ -1068,7 +1134,9 @@ export function clusterVacantSites(
   const pieces: number[][] = [];
   for (const idxs of groups.values()) pieces.push(...splitGroup(idxs));
 
-  const built: Omit<VacancyCluster, "id">[] = [];
+  // Each kept piece is carried with its input indices so membership can be
+  // resolved after the final sort/renumber.
+  const built: { cluster: Omit<VacancyCluster, "id">; idxs: number[] }[] = [];
   for (const idxs of pieces) {
     if (idxs.length < minSize) continue;
     // Aggregate in a canonical coordinate order so the centroid's floating-point
@@ -1106,26 +1174,49 @@ export function clusterVacantSites(
     }
     const count = ordered.length;
     built.push({
-      centroid: { lat: sumLat / count, lon: sumLon / count },
-      bbox: [minLon, minLat, maxLon, maxLat],
-      count,
-      ownerTypeCounts: tallyOwnerTypeCounts(ownerTypes),
-      portfolioCounts: tallyPortfolioCounts(portfolios),
-      taxSaleCount,
-      violationCount,
-      vacantLandCount,
-      vacantBuildingCount,
-      corridorName: null,
+      cluster: {
+        centroid: { lat: sumLat / count, lon: sumLon / count },
+        bbox: [minLon, minLat, maxLon, maxLat],
+        count,
+        ownerTypeCounts: tallyOwnerTypeCounts(ownerTypes),
+        portfolioCounts: tallyPortfolioCounts(portfolios),
+        taxSaleCount,
+        violationCount,
+        vacantLandCount,
+        vacantBuildingCount,
+        corridorName: null,
+      },
+      idxs,
     });
   }
 
   built.sort(
     (a, b) =>
-      b.count - a.count ||
-      a.centroid.lat - b.centroid.lat ||
-      a.centroid.lon - b.centroid.lon,
+      b.cluster.count - a.cluster.count ||
+      a.cluster.centroid.lat - b.cluster.centroid.lat ||
+      a.cluster.centroid.lon - b.cluster.centroid.lon,
   );
-  return built.map((c, i) => ({ id: i + 1, ...c }));
+
+  const membership: (number | null)[] = new Array(n).fill(null);
+  const clusters = built.map((entry, i) => {
+    const id = i + 1;
+    for (const idx of entry.idxs) membership[idx] = id;
+    return { id, ...entry.cluster };
+  });
+  return { clusters, membership };
+}
+
+/**
+ * Membership-free proximity clustering — the canonical entry point for callers
+ * that only need the clusters (the PDF/comparison paths and every unit test).
+ * Delegates to clusterVacantSitesWithMembership; see that function for the full
+ * method (union-find, extent cap, deterministic ordering).
+ */
+export function clusterVacantSites(
+  rows: readonly ClusterInputSite[],
+  opts: { linkMeters?: number; minSize?: number; maxExtentMeters?: number } = {},
+): VacancyCluster[] {
+  return clusterVacantSitesWithMembership(rows, opts).clusters;
 }
 
 // ── Static-only loader (D7) ────────────────────────────────────────────────
