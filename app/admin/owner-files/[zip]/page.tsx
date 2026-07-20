@@ -146,6 +146,12 @@ export default async function OwnerFilesIndexPage({
               neighborhood={pilotEntry.primaryNeighborhood}
               source="owner_files_zip"
             />
+            <Link
+              href={`/vacancy/${zip}`}
+              className="font-mono-bureau text-[11px] uppercase tracking-[0.12em] text-[#2563EB] hover:underline"
+            >
+              Open web report &rarr;
+            </Link>
             <p className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
               Shareable edition — owner types only, no names. Safe to hand to partners.
             </p>

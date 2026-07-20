@@ -18,6 +18,11 @@ describe("analytics events", () => {
     expect(isAnalyticsEventType("not_real")).toBe(false);
   });
 
+  it("accepts the vacancy web report view event", () => {
+    expect(isAnalyticsEventType("vacancy_web_report_viewed")).toBe(true);
+    expect(isAnalyticsEventType("vacancy_index_pdf_downloaded")).toBe(true);
+  });
+
   it("accepts the report-funnel instrumentation events added for the 2026-07 audit", () => {
     // Tier 0 "measure first" events: wizard step / refine exposure & click,
     // silent-engine-failure visibility, and save/email click-level telemetry.

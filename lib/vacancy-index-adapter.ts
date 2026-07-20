@@ -36,8 +36,10 @@ function toCell(label: string, cell: VacancyMatrixCell, fmt: (v: number | null) 
   return { label, value: fmt(cell.value), dots: cell.dots };
 }
 
-/** Fixed copy templates driven only by real fields — no projections, ever. */
-function buildDecisions(edition: VacancyIndexEdition): VacancyIndexDecision[] {
+/** Fixed copy templates driven only by real fields — no projections, ever.
+ * Exported so the web report (app/vacancy/[zip]/page.tsx) renders the same
+ * three decisions as the PDF without duplicating the copy logic. */
+export function buildDecisions(edition: VacancyIndexEdition): VacancyIndexDecision[] {
   const { headline } = edition;
   const candidates: VacancyIndexDecision[] = [];
 
