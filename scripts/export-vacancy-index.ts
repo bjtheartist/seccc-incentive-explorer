@@ -42,25 +42,37 @@ import { neon, type NeonQueryFunction } from "@neondatabase/serverless";
 import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { socrataHeaders } from "../lib/socrata";
-import { PILOT_ZIPS } from "../lib/pilot-zips";
+import { PILOT_ZIPS, type PilotZipEntry } from "../lib/pilot-zips";
 import { getCorridorCitywideMetric } from "../lib/corridor-citywide";
 import { normalizeOwnerType } from "../lib/owner-classify";
 import { normalizeOwnerAddress } from "../lib/corridor-owners";
 import { toDigitsOnlyPin } from "../lib/ingest/pin-batch";
+import { CHICAGO_COMMUNITY_AREAS } from "../lib/community-areas";
 import {
   addressHasViolation,
   assignQuantileDots,
   buildDirectoryRows,
+  CLUSTERS_NOTE,
+  clusterVacantSites,
   computeSitePriority,
+  corridorRefsIntersectingBbox,
   countAddressesInSet,
   latestSaleYearForPin,
+  nearestCorridorName,
   nextStepForSite,
+  portfolioForSite,
   rankSites,
   reconcileOwnerTypeForPin,
   reconcileVacantLandOwnership,
   tallyOwnerTypeCounts,
   taxSaleExposureForVacantPins,
+  type ClusterInputSite,
+  type CorridorKind,
+  type CorridorPolygon,
+  type CorridorRef,
   type OwnerTypeCount,
+  type VacancyAnchor,
+  type VacancyCluster,
   type VacancyDirectoryFile,
   type VacancyDirectoryRow,
   type VacancyDistressSignals,
@@ -121,6 +133,7 @@ if (requestedZips.length === 0) {
 
 const SITE_POINTS_CAP = 2000; // per edition, priority-ordered
 const MARKER_COUNT = 12; // numbered markers on the map / site index
+const CLUSTER_COUNT = 12; // top-N proximity clusters attached per edition (D2)
 const SITE_INDEX_DEPTH = 15; // rendering band 10–20
 const BOUNDARY_MAX_POINTS = 300; // simplified ZIP-boundary budget (D8)
 const TRANSPORT_MAX_POINTS_PER_LINE = 60; // per clipped transport polyline
@@ -481,6 +494,151 @@ function clipTransportForEdition(
   return out;
 }
 
+// ── Corridors (static geojson, D3) ──
+// Three named-corridor layers, loaded once per run. bbox-overlap decides which
+// corridors an edition lists; point-in-polygon / nearest-within-400m decides a
+// cluster's corridorName (see lib/vacancy-index.ts spatial helpers).
+
+const ZONES_DIR = join(process.cwd(), "public", "data", "zones");
+const CORRIDOR_SOURCES: { path: string; kind: CorridorKind }[] = [
+  { path: join(ZONES_DIR, "special-service-areas.geojson"), kind: "ssa" },
+  { path: join(ZONES_DIR, "ccsa-corridors.geojson"), kind: "commercial" },
+  { path: join(ZONES_DIR, "industrial-corridors.geojson"), kind: "industrial" },
+];
+
+function loadCorridorPolygons(): CorridorPolygon[] {
+  const out: CorridorPolygon[] = [];
+  for (const src of CORRIDOR_SOURCES) {
+    try {
+      if (!existsSync(src.path)) {
+        console.warn(`  corridor layer missing at ${src.path} — skipped`);
+        continue;
+      }
+      const gj = JSON.parse(readFileSync(src.path, "utf8")) as {
+        features?: Array<{
+          geometry?: { type?: string; coordinates?: unknown } | null;
+          properties?: { name?: string } | null;
+        }>;
+      };
+      let added = 0;
+      for (const f of gj.features ?? []) {
+        const name = f.properties?.name?.trim();
+        if (!name || !f.geometry) continue;
+        const rings: Ring[] = [];
+        if (f.geometry.type === "Polygon") {
+          const coords = f.geometry.coordinates as Ring[];
+          if (Array.isArray(coords[0])) rings.push(coords[0]);
+        } else if (f.geometry.type === "MultiPolygon") {
+          for (const poly of f.geometry.coordinates as Ring[][]) {
+            if (Array.isArray(poly[0])) rings.push(poly[0]);
+          }
+        } else {
+          continue;
+        }
+        if (rings.length === 0) continue;
+        let minLon = Infinity;
+        let minLat = Infinity;
+        let maxLon = -Infinity;
+        let maxLat = -Infinity;
+        for (const ring of rings) {
+          for (const [lon, lat] of ring) {
+            if (lon < minLon) minLon = lon;
+            if (lon > maxLon) maxLon = lon;
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+          }
+        }
+        out.push({ name, kind: src.kind, bbox: [minLon, minLat, maxLon, maxLat], rings });
+        added += 1;
+      }
+      console.log(`  corridors (${src.kind}): ${added} polygons`);
+    } catch (err) {
+      console.warn(`  failed to read ${src.path}:`, err instanceof Error ? err.message : err);
+    }
+  }
+  return out;
+}
+
+// ── Anchors (static json, D3) ──
+// The anchor dataset is COMMUNITY-AREA-native and carries NO per-anchor
+// coordinate, so each anchor is placed at its community-area CENTROID
+// (lib/community-areas.ts) — an area-level locator, never an exact address.
+// Only public institutional name + category travel into the export.
+
+const ANCHORS_PATH = join(
+  process.cwd(),
+  "data",
+  "exports",
+  "chicago-neighborhood-economics",
+  "neighborhood_anchors_by_community_area.json",
+);
+
+/** Normalize a community-area name for matching: drop any "(…)" gloss, trim,
+ * lowercase (so pilot "South Lawndale (Little Village)" meets dataset
+ * "South Lawndale"). */
+function normalizeCaName(name: string): string {
+  const paren = name.indexOf("(");
+  return (paren >= 0 ? name.slice(0, paren) : name).trim().toLowerCase();
+}
+
+/** Map of normalized CA name -> anchors placed at that CA's centroid. Anchors
+ * whose CA has no centroid in lib/community-areas.ts are dropped (can't place
+ * them honestly). */
+function loadAnchorsByCommunityArea(): Map<string, VacancyAnchor[]> {
+  const byCa = new Map<string, VacancyAnchor[]>();
+  try {
+    if (!existsSync(ANCHORS_PATH)) {
+      console.warn(`  anchors dataset missing at ${ANCHORS_PATH} — anchors null for every edition`);
+      return byCa;
+    }
+    const data = JSON.parse(readFileSync(ANCHORS_PATH, "utf8")) as {
+      byCommunityArea?: Record<
+        string,
+        { communityArea?: string; anchors?: Array<{ name?: string; category?: string; type?: string }> }
+      >;
+    };
+    const centroidByName = new Map<string, { lat: number; lon: number }>();
+    for (const ca of CHICAGO_COMMUNITY_AREAS) {
+      centroidByName.set(ca.name.toLowerCase(), { lat: ca.lat, lon: ca.lon });
+    }
+    for (const entry of Object.values(data.byCommunityArea ?? {})) {
+      const caName = entry.communityArea?.trim();
+      if (!caName) continue;
+      const centroid = centroidByName.get(caName.toLowerCase());
+      if (!centroid) continue; // no centroid -> cannot place -> skip honestly
+      const key = normalizeCaName(caName);
+      const list = byCa.get(key) ?? [];
+      for (const a of entry.anchors ?? []) {
+        const name = (a.name ?? "").trim();
+        if (!name) continue;
+        const category = (a.category ?? a.type ?? "").trim() || "Community anchor";
+        list.push({ name, category, lat: centroid.lat, lon: centroid.lon });
+      }
+      byCa.set(key, list);
+    }
+  } catch (err) {
+    console.warn(`  failed to read ${ANCHORS_PATH}:`, err instanceof Error ? err.message : err);
+  }
+  return byCa;
+}
+
+/** Anchors for one edition: the union over its primary + secondary community
+ * areas (deduped by CA), or `null` when none matched. */
+function anchorsForEdition(
+  entry: PilotZipEntry,
+  byCa: Map<string, VacancyAnchor[]>,
+): VacancyAnchor[] | null {
+  const out: VacancyAnchor[] = [];
+  const seen = new Set<string>();
+  for (const raw of [entry.primaryNeighborhood, ...entry.secondaryAreas]) {
+    const key = normalizeCaName(raw);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    for (const a of byCa.get(key) ?? []) out.push(a);
+  }
+  return out.length > 0 ? out : null;
+}
+
 // ── DB: vacant inventory + complete ownership ──
 
 interface VacantRow {
@@ -672,6 +830,8 @@ function buildEdition(
   transport: { kind: "expressway" | "rail"; points: [number, number][] }[],
   saleYearsByPin: Map<string, number[]> | null,
   violationAddressSet: Set<string> | null,
+  corridorPolygons: CorridorPolygon[],
+  anchors: VacancyAnchor[] | null,
 ): { edition: VacancyIndexEdition; directoryRows: VacancyDirectoryRow[]; excludedNoAddressCount: number } {
   const entryIndex = PILOT_ZIPS.findIndex((entry) => entry.zip === zip);
   const entry = PILOT_ZIPS[entryIndex];
@@ -817,6 +977,33 @@ function buildEdition(
     })),
   );
 
+  // ── Spatial layer (D2/D3): proximity clusters over the FULL tracked universe
+  //    (`sites`, pre-cap), each carrying its portfolio + distress flags. Top 12
+  //    by count; corridorName resolved per cluster centroid. Corridors listed
+  //    for the edition are those whose bbox overlaps the ZIP bbox. ──
+  const clusterInput: ClusterInputSite[] = sites.map((s) => ({
+    lat: s.lat,
+    lon: s.lon,
+    ownerType: s.ownerType,
+    portfolio: portfolioForSite({
+      ownerType: s.ownerType,
+      priorityTier: s.priorityTier,
+      saleYear: s.saleYear,
+      violation: s.violation,
+    }),
+    taxSale: s.saleYear != null,
+    violation: s.violation,
+    propertyType: s.propertyType,
+  }));
+  const clusterLinkMeters = Number(process.env.VACANCY_CLUSTER_LINK_METERS) || 150;
+  const clusters: VacancyCluster[] = clusterVacantSites(clusterInput, { linkMeters: clusterLinkMeters })
+    .slice(0, CLUSTER_COUNT)
+    .map((cl) => ({
+      ...cl,
+      corridorName: nearestCorridorName(cl.centroid.lat, cl.centroid.lon, corridorPolygons, 400),
+    }));
+  const corridors: CorridorRef[] = geo ? corridorRefsIntersectingBbox(corridorPolygons, geo.bbox) : [];
+
   const siteIndex: VacancySiteIndexRow[] = ranked.slice(0, SITE_INDEX_DEPTH).map((s, i) => ({
     markerNumber: i < MARKER_COUNT ? i + 1 : null,
     address: s.address,
@@ -863,6 +1050,10 @@ function buildEdition(
     boundary: geo ? buildBoundary(geo) : null,
     centroid: geo ? editionCentroid(geo) : { lat: 0, lon: 0 },
     transport,
+    clusters,
+    clustersNote: CLUSTERS_NOTE,
+    corridors,
+    anchors,
   };
 
   return { edition, directoryRows, excludedNoAddressCount };
@@ -1004,6 +1195,16 @@ async function main() {
   // Transport network (clipped per edition bbox).
   const transportFeatures = loadTransportFeatures();
 
+  // Spatial-intelligence static inputs (D3): corridor polygons + anchors,
+  // loaded once for the whole run.
+  console.log("\nLoading corridor polygons + anchors (static geojson/json)...");
+  const corridorPolygons = loadCorridorPolygons();
+  const anchorsByCa = loadAnchorsByCommunityArea();
+  console.log(
+    `  ${corridorPolygons.length} corridor polygons` +
+      `  ·  anchors across ${anchorsByCa.size} community areas`,
+  );
+
   // Distress overlays: built once for the whole run (both are citywide pulls,
   // filtered per-edition by PIN/address). Each degrades to null when its
   // table(s) are absent on this branch — a plain vacant+parcels branch still
@@ -1030,6 +1231,8 @@ async function main() {
     const geo = geoByZip.get(zip);
     const parcels = await fetchVacantLandParcels(sql, zip);
     const transport = geo ? clipTransportForEdition(transportFeatures, geo.bbox) : [];
+    const editionEntry = PILOT_ZIPS.find((e) => e.zip === zip);
+    const anchors = editionEntry ? anchorsForEdition(editionEntry, anchorsByCa) : null;
     const { edition, directoryRows, excludedNoAddressCount } = buildEdition(
       zip,
       rows,
@@ -1038,6 +1241,8 @@ async function main() {
       transport,
       saleYearsByPin,
       violationAddressSet,
+      corridorPolygons,
+      anchors,
     );
     builtEditions[zip] = edition;
 
@@ -1080,6 +1285,12 @@ async function main() {
     console.log(
       `    directory: ${directoryRows.length} addresses written to vacancy-directory/${zip}.json` +
         `${excludedNoAddressCount > 0 ? ` (${excludedNoAddressCount} rows omitted for no usable address)` : ""}`,
+    );
+    console.log(
+      `    spatial: ${edition.clusters.length} clusters` +
+        `${edition.clusters.length > 0 ? ` (largest ${edition.clusters[0].count})` : ""}, ` +
+        `${edition.corridors.length} corridors, ` +
+        `${edition.anchors === null ? "no anchors" : `${edition.anchors.length} anchors`}`,
     );
     if (edition.headline.vacantPropertyCount === 0) {
       console.warn(`  warning: 0 tracked vacant properties bucketed to ${zip} — did db:sync:vacant run, and does the boundary resolve?`);

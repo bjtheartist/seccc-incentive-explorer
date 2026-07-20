@@ -35,6 +35,7 @@ import { trackEvent } from "@/lib/analytics-events";
 import type {
   VacancyDirectoryFile,
   VacancyDirectoryRow,
+  VacancyPortfolio,
   VacancyPriorityTier,
   VacancyPropertyType,
 } from "@/lib/vacancy-index";
@@ -62,10 +63,59 @@ const PROPERTY_TYPE_ABBREV: Record<VacancyPropertyType, string> = {
   vacant_building: "BLDG",
 };
 
+const PORTFOLIO_ORDER: VacancyPortfolio[] = ["move_now", "organize_next", "verify", "long_term"];
+
+/** Readiness-portfolio labels — MUST match PORTFOLIO_LABELS in
+ * lib/vacancy-index.ts. Inlined so this client bundle never imports the
+ * fs-backed lib module (same convention as comparePriority below). */
+const PORTFOLIO_LABELS: Record<VacancyPortfolio, string> = {
+  move_now: "Move now",
+  organize_next: "Organize next",
+  verify: "Verify",
+  long_term: "Long-term",
+};
+
+/** Chip styling — mirrors the site-index PORTFOLIO chips on the web report:
+ * move_now = filled ink, organize_next = blue outline, verify = yellow,
+ * long_term = gray. */
+const PORTFOLIO_CHIP: Record<VacancyPortfolio, { bg: string; fg: string; border: string }> = {
+  move_now: { bg: "#0C1B33", fg: "#FFFFFF", border: "#0C1B33" },
+  organize_next: { bg: "transparent", fg: "#2563EB", border: "#2563EB" },
+  verify: { bg: "#EAB308", fg: "#111111", border: "#EAB308" },
+  long_term: { bg: "#D9D9D9", fg: "#4B4B4B", border: "#D9D9D9" },
+};
+
+/** Readiness portfolio for one directory row — MUST match portfolioForSite in
+ * lib/vacancy-index.ts, evaluated in this exact order (first match wins):
+ *   1. unknown owner                                  -> verify
+ *   2. tax-sale-exposed non-city parcel               -> verify
+ *   3. city_public at high|medium priority            -> move_now
+ *   4. known private/entity owner at high|medium prio -> organize_next
+ *   5. everything else                                -> long_term
+ * `violation` is carried on the row but is NOT a determinant. Inlined so this
+ * client bundle never imports the fs-backed lib module (same convention as
+ * comparePriority below). */
+function portfolioForRow(row: VacancyDirectoryRow): VacancyPortfolio {
+  const ownerType = normalizeOwnerType(row.ownerType);
+  const priority = row.priorityTier === "high" || row.priorityTier === "medium";
+  if (ownerType === "unknown") return "verify";
+  if (row.saleYear != null && ownerType !== "city_public") return "verify";
+  if (ownerType === "city_public" && priority) return "move_now";
+  if (
+    priority &&
+    (ownerType === "local_private" ||
+      ownerType === "corporate_llc" ||
+      ownerType === "out_of_state")
+  ) {
+    return "organize_next";
+  }
+  return "long_term";
+}
+
 type FlagValue = "tax_sale" | "violation" | "none";
 type SortKey = "priority" | "address";
 type SortDir = "asc" | "desc";
-type DropdownColumn = "owner" | "type" | "pri" | "flags";
+type DropdownColumn = "owner" | "type" | "pri" | "portfolio" | "flags";
 
 const PRIORITY_TIERS: VacancyPriorityTier[] = ["high", "medium", "low"];
 const PROPERTY_TYPES: VacancyPropertyType[] = ["vacant_land", "vacant_building"];
@@ -115,6 +165,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
   const [ownerFilter, setOwnerFilter] = useState<Set<OwnerType>>(new Set());
   const [typeFilter, setTypeFilter] = useState<Set<VacancyPropertyType>>(new Set());
   const [priFilter, setPriFilter] = useState<Set<VacancyPriorityTier>>(new Set());
+  const [portfolioFilter, setPortfolioFilter] = useState<Set<VacancyPortfolio>>(new Set());
   const [flagFilter, setFlagFilter] = useState<Set<FlagValue>>(new Set());
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("priority");
@@ -191,6 +242,14 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
     for (const r of allRows) for (const f of rowFlags(r)) counts.set(f, (counts.get(f) ?? 0) + 1);
     return counts;
   }, [allRows]);
+  const portfolioCounts = useMemo(() => {
+    const counts = new Map<VacancyPortfolio, number>();
+    for (const r of allRows) {
+      const p = portfolioForRow(r);
+      counts.set(p, (counts.get(p) ?? 0) + 1);
+    }
+    return counts;
+  }, [allRows]);
 
   // AND across columns, OR within each; empty column = pass. Search is a
   // case-insensitive substring on address.
@@ -200,6 +259,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
       if (ownerFilter.size > 0 && !ownerFilter.has(r.ownerType)) return false;
       if (typeFilter.size > 0 && !typeFilter.has(r.propertyType)) return false;
       if (priFilter.size > 0 && !priFilter.has(r.priorityTier)) return false;
+      if (portfolioFilter.size > 0 && !portfolioFilter.has(portfolioForRow(r))) return false;
       if (flagFilter.size > 0 && !rowFlags(r).some((f) => flagFilter.has(f))) return false;
       if (needle && !r.address.toLowerCase().includes(needle)) return false;
       return true;
@@ -214,7 +274,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
       if (sortDir === "asc") sorted.reverse();
     }
     return sorted;
-  }, [allRows, ownerFilter, typeFilter, priFilter, flagFilter, search, sortKey, sortDir]);
+  }, [allRows, ownerFilter, typeFilter, priFilter, portfolioFilter, flagFilter, search, sortKey, sortDir]);
 
   // Reset pagination whenever the filtered/sorted result changes.
   useEffect(() => {
@@ -225,6 +285,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
     ownerFilter.size > 0 ||
     typeFilter.size > 0 ||
     priFilter.size > 0 ||
+    portfolioFilter.size > 0 ||
     flagFilter.size > 0 ||
     search.trim().length > 0;
 
@@ -232,6 +293,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
     setOwnerFilter(new Set());
     setTypeFilter(new Set());
     setPriFilter(new Set());
+    setPortfolioFilter(new Set());
     setFlagFilter(new Set());
     setSearch("");
   }
@@ -330,7 +392,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
       </div>
 
       <div className="overflow-x-auto border border-[#0C1B33]/10 bg-white">
-        <table className="w-full min-w-[760px] border-collapse text-left">
+        <table className="w-full min-w-[880px] border-collapse text-left">
           <thead>
             <tr className="border-b border-[#0C1B33]/10 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
               <th className="px-3 py-2.5 w-10">#</th>
@@ -409,6 +471,23 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
                 )}
               </th>
               <FilterHeader
+                label="Portfolio"
+                column="portfolio"
+                active={portfolioFilter.size}
+                openDropdown={openDropdown}
+                setOpenDropdown={setOpenDropdown}
+              >
+                {PORTFOLIO_ORDER.map((p) => (
+                  <FilterCheckbox
+                    key={p}
+                    checked={portfolioFilter.has(p)}
+                    onChange={() => toggle(setPortfolioFilter, p)}
+                    count={portfolioCounts.get(p) ?? 0}
+                    label={PORTFOLIO_LABELS[p]}
+                  />
+                ))}
+              </FilterHeader>
+              <FilterHeader
                 label="Flags"
                 column="flags"
                 active={flagFilter.size}
@@ -431,7 +510,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-8 text-center text-[13px] text-[#0C1B33]/45">
+                <td colSpan={7} className="px-3 py-8 text-center text-[13px] text-[#0C1B33]/45">
                   No addresses match the current filters.
                 </td>
               </tr>
@@ -464,6 +543,20 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
                       >
                         {chip.label}
                       </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      {(() => {
+                        const p = portfolioForRow(row);
+                        const pc = PORTFOLIO_CHIP[p];
+                        return (
+                          <span
+                            className="inline-block border px-2 py-0.5 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.08em]"
+                            style={{ backgroundColor: pc.bg, color: pc.fg, borderColor: pc.border }}
+                          >
+                            {PORTFOLIO_LABELS[p]}
+                          </span>
+                        );
+                      })()}
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-1">

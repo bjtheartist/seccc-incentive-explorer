@@ -35,6 +35,9 @@ import {
 } from "@/lib/owner-classify";
 import { trackEvent } from "@/lib/analytics-events";
 import type {
+  CorridorKind,
+  VacancyAnchor,
+  VacancyCluster,
   VacancyLandPoint,
   VacancyPriorityTier,
   VacancyPropertyType,
@@ -44,6 +47,21 @@ import type {
 
 const INK = "#111111";
 const DISTRESS_RED = "#DC2626";
+/** Neutral ink for the anchor diamonds — deliberately NOT an owner-type color
+ *  (anchors are context, not vacant-site data). */
+const ANCHOR_INK = "#475569";
+
+/**
+ * A corridor for the map's optional outline layer. The lean export edition
+ * carries only {name, kind}; supply `rings` (loaded server-side from
+ * public/data/zones/*.geojson) to also DRAW the dashed outline + label. Passing
+ * {name, kind} alone is valid and simply renders no outline.
+ */
+export interface VacancyReportMapCorridor {
+  name: string;
+  kind: CorridorKind;
+  rings?: [number, number][][] | null;
+}
 
 type MapView = "tracked" | "land";
 
@@ -66,6 +84,62 @@ function escapeHtml(value: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/** One LineString feature per corridor ring (only for corridors that carry
+ *  geometry — {name,kind}-only corridors contribute nothing). */
+function buildCorridorLineFeatures(
+  corridors: VacancyReportMapCorridor[] | null | undefined,
+): GeoJSON.Feature[] {
+  const out: GeoJSON.Feature[] = [];
+  for (const c of corridors ?? []) {
+    for (const ring of c.rings ?? []) {
+      if (!Array.isArray(ring) || ring.length < 2) continue;
+      out.push({
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: ring },
+        properties: { name: c.name },
+      });
+    }
+  }
+  return out;
+}
+
+/**
+ * Anchor point features. The anchor dataset is community-area-native, so many
+ * anchors share their CA centroid; coincident anchors are spread on a small
+ * deterministic ring (~150 m) purely so each stays visible and clickable. This
+ * is a DISPLAY convention — the popup discloses the location is an approximate
+ * community-area locator, not an exact address.
+ */
+function buildAnchorFeatures(anchors: VacancyAnchor[] | null | undefined): GeoJSON.Feature[] {
+  const groups = new Map<string, VacancyAnchor[]>();
+  for (const a of anchors ?? []) {
+    const key = `${a.lat.toFixed(5)},${a.lon.toFixed(5)}`;
+    const g = groups.get(key);
+    if (g) g.push(a);
+    else groups.set(key, [a]);
+  }
+  const RING_DEG = 0.0016; // ~150–180 m
+  const out: GeoJSON.Feature[] = [];
+  for (const list of groups.values()) {
+    const nn = list.length;
+    list.forEach((a, i) => {
+      let lon = a.lon;
+      let lat = a.lat;
+      if (nn > 1) {
+        const ang = (2 * Math.PI * i) / nn;
+        lon += RING_DEG * Math.cos(ang);
+        lat += RING_DEG * 0.75 * Math.sin(ang);
+      }
+      out.push({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [lon, lat] },
+        properties: { name: a.name, category: a.category },
+      });
+    });
+  }
+  return out;
+}
+
 interface VacancyReportMapProps {
   zip: string;
   boundary: { rings: [number, number][][]; bbox: [number, number, number, number] } | null;
@@ -83,6 +157,20 @@ interface VacancyReportMapProps {
   /** Full vacant-land universe count (= vacantLandParcelTotal); drives the land
    *  view's SHOWING line. null exactly when landPoints is null. */
   landPointsTotal: number | null;
+  // ── Spatial-intelligence overlays (D4, all OPTIONAL + backward-compatible —
+  //    the page passes them once the orchestrator wires the spatial layer). ──
+  /** Proximity clusters for this edition. Not drawn as shapes by default; a
+   *  cluster's bbox is outlined only when `focusBbox` targets it (deep-link). */
+  clusters?: VacancyCluster[] | null;
+  /** Named corridors. Supply `rings` to draw the dashed outline + label;
+   *  {name,kind} alone renders nothing (valid). */
+  corridors?: VacancyReportMapCorridor[] | null;
+  /** Community-impact anchors (community-area locators — approximate). Rendered
+   *  as neutral-ink diamonds with a name/category popup. */
+  anchors?: VacancyAnchor[] | null;
+  /** When set (or changed), the map fits these bounds and outlines the box —
+   *  the cluster-card → map deep-link target. `null` clears the outline. */
+  focusBbox?: [number, number, number, number] | null;
 }
 
 /** Feature properties carried on every dot (both views), keyed identically so
@@ -111,6 +199,9 @@ export default function VacancyReportMap({
   landPoints,
   landPointsTruncated,
   landPointsTotal,
+  corridors,
+  anchors,
+  focusBbox,
 }: VacancyReportMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -184,8 +275,8 @@ export default function VacancyReportMap({
 
   // Latest props for the mount-once init effect (read through a ref so the
   // effect can stay dependency-free without going stale).
-  const dataRef = useRef({ boundary, bbox, centroid, sitePoints, siteIndex, landPoints });
-  dataRef.current = { boundary, bbox, centroid, sitePoints, siteIndex, landPoints };
+  const dataRef = useRef({ boundary, bbox, centroid, sitePoints, siteIndex, landPoints, corridors, anchors });
+  dataRef.current = { boundary, bbox, centroid, sitePoints, siteIndex, landPoints, corridors, anchors };
 
   // Current view read through a ref so the mount-once popup handler stays fresh.
   const viewRef = useRef(view);
@@ -207,6 +298,8 @@ export default function VacancyReportMap({
       sitePoints: pts,
       siteIndex: idx,
       landPoints: land,
+      corridors: cor,
+      anchors: anc,
     } = dataRef.current;
 
     mapboxgl.accessToken = token;
@@ -301,6 +394,64 @@ export default function VacancyReportMap({
     });
 
     map.on("load", () => {
+      // ── Corridor outlines (dashed INK, BENEATH the dots) + line labels.
+      //    Added first so the dot layers draw on top. Only corridors carrying
+      //    `rings` contribute geometry. ──
+      const corridorFeatures = buildCorridorLineFeatures(cor);
+      if (corridorFeatures.length > 0) {
+        map.addSource("vacancy-corridors", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: corridorFeatures },
+        });
+        map.addLayer({
+          id: "vacancy-corridor-line",
+          type: "line",
+          source: "vacancy-corridors",
+          layout: { "line-join": "round", "line-cap": "round" },
+          paint: {
+            "line-color": INK,
+            "line-width": 1,
+            "line-dasharray": [2, 2],
+            "line-opacity": 0.35,
+          },
+        });
+        map.addLayer({
+          id: "vacancy-corridor-label",
+          type: "symbol",
+          source: "vacancy-corridors",
+          layout: {
+            "symbol-placement": "line",
+            "text-field": ["get", "name"],
+            "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+            "text-size": 10,
+            "text-letter-spacing": 0.06,
+          },
+          paint: {
+            "text-color": INK,
+            "text-opacity": 0.45,
+            "text-halo-color": "#ffffff",
+            "text-halo-width": 1,
+          },
+        });
+      }
+
+      // ── Focus-rect source (empty until a cluster deep-link sets focusBbox). ──
+      map.addSource("vacancy-focus", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "vacancy-focus-rect",
+        type: "line",
+        source: "vacancy-focus",
+        paint: {
+          "line-color": INK,
+          "line-width": 1.5,
+          "line-dasharray": [1, 1],
+          "line-opacity": 0.6,
+        },
+      });
+
       // ── Clustered dot source (CommuniData playbook). Starts on the tracked
       //    view; toggling swaps this source's data. ──
       map.addSource("vacancy-sites", {
@@ -410,6 +561,33 @@ export default function VacancyReportMap({
         paint: { "text-color": "#ffffff" },
       });
 
+      // ── Community-impact anchors (neutral-ink diamonds, ON TOP of the dots
+      //    so they stay clickable). A "◆" glyph keeps them visually distinct
+      //    from the round owner-type dots. ──
+      const anchorFeatures = buildAnchorFeatures(anc);
+      if (anchorFeatures.length > 0) {
+        map.addSource("vacancy-anchors", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: anchorFeatures },
+        });
+        map.addLayer({
+          id: "vacancy-anchor-marker",
+          type: "symbol",
+          source: "vacancy-anchors",
+          layout: {
+            "text-field": "◆",
+            "text-size": 13,
+            "text-font": ["Arial Unicode MS Regular"],
+            "text-allow-overlap": true,
+          },
+          paint: {
+            "text-color": ANCHOR_INK,
+            "text-halo-color": "#ffffff",
+            "text-halo-width": 1.5,
+          },
+        });
+      }
+
       // ── fitBounds to the edition bbox ──
       if (bb) {
         map.fitBounds(
@@ -493,6 +671,30 @@ export default function VacancyReportMap({
         });
       }
 
+      // Anchor popup (name + category; discloses the approximate CA-level locator).
+      map.on("click", "vacancy-anchor-marker", (e) => {
+        if (!e.features?.length) return;
+        const p = e.features[0].properties ?? {};
+        const name = typeof p.name === "string" ? p.name : "Community anchor";
+        const category = typeof p.category === "string" ? p.category : "";
+        const html = `<div style="font-family:Inter,sans-serif;min-width:180px">
+          <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${ANCHOR_INK};margin-bottom:4px;font-weight:600">Community anchor</div>
+          <div style="font-size:13px;font-weight:600;color:#0C1B33">${escapeHtml(name)}</div>
+          ${category ? `<div style="font-size:11px;color:#5A6478;margin-top:6px">${escapeHtml(category)}</div>` : ""}
+          <div style="font-size:10px;color:#8A93A6;margin-top:8px;line-height:1.35">Approximate — community-area locator, not an exact address.</div>
+        </div>`;
+        new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
+          .setLngLat(e.lngLat)
+          .setHTML(html)
+          .addTo(map);
+      });
+      map.on("mouseenter", "vacancy-anchor-marker", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", "vacancy-anchor-marker", () => {
+        map.getCanvas().style.cursor = "";
+      });
+
       // Cluster click → expand (CommuniData pattern).
       map.on("click", "vacancy-clusters", (e) => {
         const features = map.queryRenderedFeatures(e.point, { layers: ["vacancy-clusters"] });
@@ -570,6 +772,43 @@ export default function VacancyReportMap({
       map.setFilter(layerId, markerFilter);
     }
   }, [view, activeTypes, saleFilter, violationFilter, presentTypes, loaded]);
+
+  // ── Cluster deep-link: fit + outline focusBbox whenever it changes ──
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    const src = map.getSource("vacancy-focus") as mapboxgl.GeoJSONSource | undefined;
+    if (!focusBbox) {
+      if (src) src.setData({ type: "FeatureCollection", features: [] });
+      return;
+    }
+    const [w, s, e, n] = focusBbox;
+    if (src) {
+      src.setData({
+        type: "Feature",
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [w, s],
+              [e, s],
+              [e, n],
+              [w, n],
+              [w, s],
+            ],
+          ],
+        },
+        properties: {},
+      });
+    }
+    map.fitBounds(
+      [
+        [w, s],
+        [e, n],
+      ],
+      { padding: 80, duration: 600, maxZoom: 16 },
+    );
+  }, [focusBbox, loaded]);
 
   function switchView(next: MapView) {
     if (next === view) return;

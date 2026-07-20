@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-20T09:54:47.333Z",
+  "generatedAt": "2026-07-20T14:51:59.678Z",
   "sources": {
     "trackedInventory": "Chicago City-Owned Land Inventory (aksk-kvfp) + 311 Vacant/Abandoned Building Complaints (v6vf-nfxy)",
     "vacantLandOwnership": "Cook County Assessor parcels (classified owner type; complete vacant-land universe)",
@@ -36274,6 +36274,653 @@
             ]
           ]
         }
+      ],
+      "clusters": [
+        {
+          "id": 1,
+          "centroid": {
+            "lat": 41.7411949207359,
+            "lon": -87.54396803290338
+          },
+          "bbox": [
+            -87.54508377705992,
+            41.73942600093994,
+            -87.54213544768501,
+            41.74360795591553
+          ],
+          "count": 79,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 43
+            },
+            {
+              "ownerType": "unknown",
+              "count": 36
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 43,
+            "organize_next": 0,
+            "verify": 36,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 6,
+          "vacantLandCount": 43,
+          "vacantBuildingCount": 36,
+          "corridorName": null
+        },
+        {
+          "id": 2,
+          "centroid": {
+            "lat": 41.67567705044669,
+            "lon": -87.55963400403573
+          },
+          "bbox": [
+            -87.56015364270542,
+            41.6739601324131,
+            -87.55960243652571,
+            41.678298734877444
+          ],
+          "count": 48,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 48
+            },
+            {
+              "ownerType": "unknown",
+              "count": 0
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 48,
+            "organize_next": 0,
+            "verify": 0,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 0,
+          "vacantLandCount": 48,
+          "vacantBuildingCount": 0,
+          "corridorName": "Calumet"
+        },
+        {
+          "id": 3,
+          "centroid": {
+            "lat": 41.72983189049916,
+            "lon": -87.54260935707838
+          },
+          "bbox": [
+            -87.54381794336761,
+            41.729259114635795,
+            -87.54036743132954,
+            41.73101344138201
+          ],
+          "count": 40,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 36
+            },
+            {
+              "ownerType": "unknown",
+              "count": 4
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 36,
+            "organize_next": 0,
+            "verify": 4,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 3,
+          "vacantLandCount": 36,
+          "vacantBuildingCount": 4,
+          "corridorName": "South Chicago CCSA Corridor"
+        },
+        {
+          "id": 4,
+          "centroid": {
+            "lat": 41.73618736243458,
+            "lon": -87.54428578693302
+          },
+          "bbox": [
+            -87.54556500000193,
+            41.73520420519688,
+            -87.54323142282676,
+            41.73880500093995
+          ],
+          "count": 40,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 31
+            },
+            {
+              "ownerType": "unknown",
+              "count": 9
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 31,
+            "organize_next": 0,
+            "verify": 9,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 2,
+          "vacantLandCount": 31,
+          "vacantBuildingCount": 9,
+          "corridorName": null
+        },
+        {
+          "id": 5,
+          "centroid": {
+            "lat": 41.737512664483695,
+            "lon": -87.54963709317673
+          },
+          "bbox": [
+            -87.55140270430333,
+            41.73543000093995,
+            -87.54861121705846,
+            41.73906990439789
+          ],
+          "count": 40,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 20
+            },
+            {
+              "ownerType": "unknown",
+              "count": 20
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 20,
+            "organize_next": 0,
+            "verify": 20,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 6,
+          "vacantLandCount": 20,
+          "vacantBuildingCount": 20,
+          "corridorName": "Commercial Avenue"
+        },
+        {
+          "id": 6,
+          "centroid": {
+            "lat": 41.75052510570434,
+            "lon": -87.54982338287923
+          },
+          "bbox": [
+            -87.55198863878171,
+            41.74903800094,
+            -87.547054500002,
+            41.75171100094
+          ],
+          "count": 40,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 7
+            },
+            {
+              "ownerType": "unknown",
+              "count": 33
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 7,
+            "organize_next": 0,
+            "verify": 33,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 7,
+          "vacantLandCount": 7,
+          "vacantBuildingCount": 33,
+          "corridorName": null
+        },
+        {
+          "id": 7,
+          "centroid": {
+            "lat": 41.75055638338311,
+            "lon": -87.55559069539045
+          },
+          "bbox": [
+            -87.5579089999616,
+            41.74909200093996,
+            -87.55252040796773,
+            41.751861857404656
+          ],
+          "count": 40,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 15
+            },
+            {
+              "ownerType": "unknown",
+              "count": 25
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 15,
+            "organize_next": 0,
+            "verify": 25,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 3,
+          "vacantLandCount": 15,
+          "vacantBuildingCount": 25,
+          "corridorName": null
+        },
+        {
+          "id": 8,
+          "centroid": {
+            "lat": 41.72856530037733,
+            "lon": -87.54540415037822
+          },
+          "bbox": [
+            -87.54811826607774,
+            41.72801135285602,
+            -87.54298909799827,
+            41.72925366827214
+          ],
+          "count": 39,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 30
+            },
+            {
+              "ownerType": "unknown",
+              "count": 9
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 30,
+            "organize_next": 0,
+            "verify": 9,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 3,
+          "vacantLandCount": 30,
+          "vacantBuildingCount": 9,
+          "corridorName": "Commercial Avenue"
+        },
+        {
+          "id": 9,
+          "centroid": {
+            "lat": 41.73013978970099,
+            "lon": -87.54522386218127
+          },
+          "bbox": [
+            -87.54748330377245,
+            41.72927400094,
+            -87.54383239935473,
+            41.73101108122206
+          ],
+          "count": 39,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 29
+            },
+            {
+              "ownerType": "unknown",
+              "count": 10
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 29,
+            "organize_next": 0,
+            "verify": 10,
+            "long_term": 0
+          },
+          "taxSaleCount": 6,
+          "violationCount": 1,
+          "vacantLandCount": 29,
+          "vacantBuildingCount": 10,
+          "corridorName": "South Chicago CCSA Corridor"
+        },
+        {
+          "id": 10,
+          "centroid": {
+            "lat": 41.73237917888551,
+            "lon": -87.5429233637685
+          },
+          "bbox": [
+            -87.54394647305482,
+            41.73116694385081,
+            -87.5399915600142,
+            41.734013108793
+          ],
+          "count": 39,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 39
+            },
+            {
+              "ownerType": "unknown",
+              "count": 0
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 39,
+            "organize_next": 0,
+            "verify": 0,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 0,
+          "vacantLandCount": 39,
+          "vacantBuildingCount": 0,
+          "corridorName": "South Chicago CCSA Corridor"
+        },
+        {
+          "id": 11,
+          "centroid": {
+            "lat": 41.73240091209236,
+            "lon": -87.54563373861907
+          },
+          "bbox": [
+            -87.54731795264163,
+            41.73103866160721,
+            -87.54395149744497,
+            41.733971189783496
+          ],
+          "count": 39,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 35
+            },
+            {
+              "ownerType": "unknown",
+              "count": 4
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 35,
+            "organize_next": 0,
+            "verify": 4,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 35,
+          "vacantBuildingCount": 4,
+          "corridorName": "South Chicago CCSA Corridor"
+        },
+        {
+          "id": 12,
+          "centroid": {
+            "lat": 41.732416434782394,
+            "lon": -87.54886113858672
+          },
+          "bbox": [
+            -87.5509133421758,
+            41.73122700094,
+            -87.54821079537457,
+            41.73353133370217
+          ],
+          "count": 39,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 32
+            },
+            {
+              "ownerType": "unknown",
+              "count": 7
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 32,
+            "organize_next": 0,
+            "verify": 7,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 1,
+          "vacantLandCount": 32,
+          "vacantBuildingCount": 7,
+          "corridorName": "Commercial Avenue"
+        }
+      ],
+      "clustersNote": "Proximity clusters: tracked sites within ~100 m linked; contiguous areas larger than ~500 m are divided into sub-areas for intervention planning; minimum five sites. Boundaries are analytical, not parcel-contiguous.",
+      "corridors": [
+        {
+          "name": "71st - Stony Island",
+          "kind": "ssa"
+        },
+        {
+          "name": "Commercial Avenue",
+          "kind": "ssa"
+        },
+        {
+          "name": "Chatham",
+          "kind": "ssa"
+        },
+        {
+          "name": "Calumet Hts/Avalon",
+          "kind": "ssa"
+        },
+        {
+          "name": "South Chicago CCSA Corridor",
+          "kind": "commercial"
+        },
+        {
+          "name": "Burnside",
+          "kind": "industrial"
+        },
+        {
+          "name": "Calumet",
+          "kind": "industrial"
+        }
+      ],
+      "anchors": [
+        {
+          "name": "Illinois Quantum and Microelectronics Park / PsiQuantum at former U.S. Steel South Works",
+          "category": "Pipeline / construction anchor",
+          "lat": 41.739,
+          "lon": -87.556
+        },
+        {
+          "name": "Chicago Family Health Center - South Chicago Health Center",
+          "category": "Current operating anchor",
+          "lat": 41.739,
+          "lon": -87.556
+        },
+        {
+          "name": "East Side Chamber / Calumet Avenue–95th Street local business corridor",
+          "category": "Local business ecosystem + destination retail anchor",
+          "lat": 41.707,
+          "lon": -87.537
+        },
+        {
+          "name": "Chicago Skyway / Skyway Concession Company",
+          "category": "Transportation infrastructure anchor",
+          "lat": 41.707,
+          "lon": -87.537
+        },
+        {
+          "name": "Illinois International Port District / Iroquois Landing freight system",
+          "category": "Freight, logistics, and industrial infrastructure anchor",
+          "lat": 41.702,
+          "lon": -87.567
+        },
+        {
+          "name": "Big Marsh Park / Ford Calumet Environmental Center",
+          "category": "Environmental, recreation, and visitor/civic anchor",
+          "lat": 41.702,
+          "lon": -87.567
+        },
+        {
+          "name": "Advocate Trinity Hospital",
+          "category": "Current operating anchor",
+          "lat": 41.728,
+          "lon": -87.579
+        },
+        {
+          "name": "Bronzeville Children's Museum",
+          "category": "Current operating anchor",
+          "lat": 41.728,
+          "lon": -87.579
+        }
       ]
     },
     "60619": {
@@ -64657,6 +65304,657 @@
               41.76615075413817
             ]
           ]
+        }
+      ],
+      "clusters": [
+        {
+          "id": 1,
+          "centroid": {
+            "lat": 41.748249605149375,
+            "lon": -87.60170979430507
+          },
+          "bbox": [
+            -87.604004444853,
+            41.746461550694725,
+            -87.59817450000192,
+            41.74983000093997
+          ],
+          "count": 50,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 5
+            },
+            {
+              "ownerType": "unknown",
+              "count": 45
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 5,
+            "organize_next": 0,
+            "verify": 45,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 5,
+          "vacantLandCount": 5,
+          "vacantBuildingCount": 45,
+          "corridorName": "Chatham"
+        },
+        {
+          "id": 2,
+          "centroid": {
+            "lat": 41.75643647991309,
+            "lon": -87.60050374589387
+          },
+          "bbox": [
+            -87.60323250000191,
+            41.754289621935904,
+            -87.59764227111118,
+            41.75803420881726
+          ],
+          "count": 50,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 15
+            },
+            {
+              "ownerType": "unknown",
+              "count": 35
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 15,
+            "organize_next": 0,
+            "verify": 35,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 6,
+          "vacantLandCount": 15,
+          "vacantBuildingCount": 35,
+          "corridorName": "Chatham"
+        },
+        {
+          "id": 3,
+          "centroid": {
+            "lat": 41.75160053287702,
+            "lon": -87.60060775723262
+          },
+          "bbox": [
+            -87.603255000002,
+            41.750001000939974,
+            -87.5976416328233,
+            41.753825939198336
+          ],
+          "count": 49,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 6
+            },
+            {
+              "ownerType": "unknown",
+              "count": 43
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 6,
+            "organize_next": 0,
+            "verify": 43,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 6,
+          "vacantLandCount": 6,
+          "vacantBuildingCount": 43,
+          "corridorName": "Chatham"
+        },
+        {
+          "id": 4,
+          "centroid": {
+            "lat": 41.75247647716167,
+            "lon": -87.60619815537956
+          },
+          "bbox": [
+            -87.609258000002,
+            41.750073000940034,
+            -87.60368681910553,
+            41.75432100094002
+          ],
+          "count": 49,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 2
+            },
+            {
+              "ownerType": "unknown",
+              "count": 47
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 2,
+            "organize_next": 0,
+            "verify": 47,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 7,
+          "vacantLandCount": 2,
+          "vacantBuildingCount": 47,
+          "corridorName": "Chatham"
+        },
+        {
+          "id": 5,
+          "centroid": {
+            "lat": 41.72403301925182,
+            "lon": -87.60576436195919
+          },
+          "bbox": [
+            -87.6068491857372,
+            41.72229900094,
+            -87.60412461640534,
+            41.725358465411375
+          ],
+          "count": 25,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 11
+            },
+            {
+              "ownerType": "unknown",
+              "count": 14
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 11,
+            "organize_next": 0,
+            "verify": 14,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 11,
+          "vacantBuildingCount": 14,
+          "corridorName": "Chatham"
+        },
+        {
+          "id": 6,
+          "centroid": {
+            "lat": 41.72627341957648,
+            "lon": -87.59802024366454
+          },
+          "bbox": [
+            -87.60019950000193,
+            41.72455800094,
+            -87.59631402141284,
+            41.728275000939895
+          ],
+          "count": 25,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 6
+            },
+            {
+              "ownerType": "unknown",
+              "count": 19
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 6,
+            "organize_next": 0,
+            "verify": 19,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 1,
+          "vacantLandCount": 6,
+          "vacantBuildingCount": 19,
+          "corridorName": "Chatham"
+        },
+        {
+          "id": 7,
+          "centroid": {
+            "lat": 41.72661191085473,
+            "lon": -87.60605316256489
+          },
+          "bbox": [
+            -87.607915269823,
+            41.725478829326576,
+            -87.6042495000019,
+            41.72851432184561
+          ],
+          "count": 25,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 6
+            },
+            {
+              "ownerType": "unknown",
+              "count": 19
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 6,
+            "organize_next": 0,
+            "verify": 19,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 3,
+          "vacantLandCount": 6,
+          "vacantBuildingCount": 19,
+          "corridorName": "Chatham"
+        },
+        {
+          "id": 8,
+          "centroid": {
+            "lat": 41.727076600733795,
+            "lon": -87.6098615885038
+          },
+          "bbox": [
+            -87.61235194243726,
+            41.725572040774,
+            -87.607975500002,
+            41.72855400094
+          ],
+          "count": 25,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 5
+            },
+            {
+              "ownerType": "unknown",
+              "count": 20
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 5,
+            "organize_next": 0,
+            "verify": 20,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 3,
+          "vacantLandCount": 5,
+          "vacantBuildingCount": 20,
+          "corridorName": "Chatham"
+        },
+        {
+          "id": 9,
+          "centroid": {
+            "lat": 41.72723990808268,
+            "lon": -87.59429698761774
+          },
+          "bbox": [
+            -87.59617587738822,
+            41.72592908511177,
+            -87.59177822191504,
+            41.72839695389274
+          ],
+          "count": 25,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 11
+            },
+            {
+              "ownerType": "unknown",
+              "count": 14
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 11,
+            "organize_next": 0,
+            "verify": 14,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 4,
+          "vacantLandCount": 11,
+          "vacantBuildingCount": 14,
+          "corridorName": "Burnside"
+        },
+        {
+          "id": 10,
+          "centroid": {
+            "lat": 41.727560205998905,
+            "lon": -87.61505987885252
+          },
+          "bbox": [
+            -87.617986057984,
+            41.726848916471,
+            -87.612462000002,
+            41.72868000093989
+          ],
+          "count": 25,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 2
+            },
+            {
+              "ownerType": "unknown",
+              "count": 23
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 2,
+            "organize_next": 0,
+            "verify": 23,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 3,
+          "vacantLandCount": 2,
+          "vacantBuildingCount": 23,
+          "corridorName": null
+        },
+        {
+          "id": 11,
+          "centroid": {
+            "lat": 41.729911008659975,
+            "lon": -87.59635231668693
+          },
+          "bbox": [
+            -87.59896297175852,
+            41.72864182267454,
+            -87.59377810107318,
+            41.7318750009399
+          ],
+          "count": 25,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 12
+            },
+            {
+              "ownerType": "unknown",
+              "count": 13
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 12,
+            "organize_next": 0,
+            "verify": 13,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 1,
+          "vacantLandCount": 12,
+          "vacantBuildingCount": 13,
+          "corridorName": "Burnside"
+        },
+        {
+          "id": 12,
+          "centroid": {
+            "lat": 41.73123610764059,
+            "lon": -87.60650962403706
+          },
+          "bbox": [
+            -87.6087593806834,
+            41.72954189015472,
+            -87.60419607102978,
+            41.73271012096885
+          ],
+          "count": 25,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 11
+            },
+            {
+              "ownerType": "unknown",
+              "count": 14
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 11,
+            "organize_next": 0,
+            "verify": 14,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 11,
+          "vacantBuildingCount": 14,
+          "corridorName": "Chatham"
+        }
+      ],
+      "clustersNote": "Proximity clusters: tracked sites within ~100 m linked; contiguous areas larger than ~500 m are divided into sub-areas for intervention planning; minimum five sites. Boundaries are analytical, not parcel-contiguous.",
+      "corridors": [
+        {
+          "name": "71st - Stony Island",
+          "kind": "ssa"
+        },
+        {
+          "name": "Chatham",
+          "kind": "ssa"
+        },
+        {
+          "name": "Calumet Hts/Avalon",
+          "kind": "ssa"
+        },
+        {
+          "name": "South Shore CCSA Corridor",
+          "kind": "commercial"
+        },
+        {
+          "name": "Chatham CCSA Corridor",
+          "kind": "commercial"
+        },
+        {
+          "name": "Roseland CCSA Corridor",
+          "kind": "commercial"
+        },
+        {
+          "name": "Burnside",
+          "kind": "industrial"
+        },
+        {
+          "name": "Calumet",
+          "kind": "industrial"
+        }
+      ],
+      "anchors": [
+        {
+          "name": "Capital One / Discover Chatham Customer Care Center + Shine Bright Community Center",
+          "category": "Current operating anchor",
+          "lat": 41.741,
+          "lon": -87.612
+        },
+        {
+          "name": "Chatham Business Association / 79th-Cottage Grove business ecosystem",
+          "category": "Current ecosystem anchor",
+          "lat": 41.741,
+          "lon": -87.612
+        },
+        {
+          "name": "Chicago Vocational Career Academy",
+          "category": "Current operating anchor",
+          "lat": 41.745,
+          "lon": -87.588
+        },
+        {
+          "name": "Avalon Regal Theater / 79th-Stony Island cultural redevelopment",
+          "category": "Pipeline / reopening anchor",
+          "lat": 41.745,
+          "lon": -87.588
+        },
+        {
+          "name": "Gary Comer Youth Center / Comer Education Campus",
+          "category": "Youth, education, and community anchor",
+          "lat": 41.761,
+          "lon": -87.617
+        },
+        {
+          "name": "75th Street / Renaissance Row / Greater Stony Island commercial corridor",
+          "category": "Commercial corridor / small business ecosystem",
+          "lat": 41.761,
+          "lon": -87.617
+        },
+        {
+          "name": "Stony Island Commercial / Burnside Industrial Corridors TIF",
+          "category": "Current district anchor",
+          "lat": 41.733,
+          "lon": -87.604
+        },
+        {
+          "name": "91st Street/Chesterfield Metra node + 95th Street corridor spillover",
+          "category": "Current transit + pipeline corridor anchor",
+          "lat": 41.733,
+          "lon": -87.604
         }
       ]
     },
@@ -101553,6 +102851,597 @@
             ]
           ]
         }
+      ],
+      "clusters": [
+        {
+          "id": 1,
+          "centroid": {
+            "lat": 41.7843230377028,
+            "lon": -87.65181249876571
+          },
+          "bbox": [
+            -87.6545971662589,
+            41.78214717060998,
+            -87.648903000002,
+            41.7859491328421
+          ],
+          "count": 119,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 78
+            },
+            {
+              "ownerType": "unknown",
+              "count": 41
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 78,
+            "organize_next": 0,
+            "verify": 41,
+            "long_term": 0
+          },
+          "taxSaleCount": 7,
+          "violationCount": 6,
+          "vacantLandCount": 78,
+          "vacantBuildingCount": 41,
+          "corridorName": null
+        },
+        {
+          "id": 2,
+          "centroid": {
+            "lat": 41.78460594382392,
+            "lon": -87.6456826724316
+          },
+          "bbox": [
+            -87.64886137364664,
+            41.783133148833514,
+            -87.64394400000191,
+            41.78594951294277
+          ],
+          "count": 119,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 93
+            },
+            {
+              "ownerType": "unknown",
+              "count": 26
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 93,
+            "organize_next": 0,
+            "verify": 26,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 2,
+          "vacantLandCount": 93,
+          "vacantBuildingCount": 26,
+          "corridorName": "Englewood"
+        },
+        {
+          "id": 3,
+          "centroid": {
+            "lat": 41.78562227603378,
+            "lon": -87.64144084458032
+          },
+          "bbox": [
+            -87.6439185236836,
+            41.78384305262596,
+            -87.63792005657487,
+            41.78752881008167
+          ],
+          "count": 119,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 75
+            },
+            {
+              "ownerType": "unknown",
+              "count": 44
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 75,
+            "organize_next": 0,
+            "verify": 44,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 8,
+          "vacantLandCount": 75,
+          "vacantBuildingCount": 44,
+          "corridorName": null
+        },
+        {
+          "id": 4,
+          "centroid": {
+            "lat": 41.78722150585242,
+            "lon": -87.64663111071489
+          },
+          "bbox": [
+            -87.649596000002,
+            41.785956000940125,
+            -87.644025000002,
+            41.789229946067806
+          ],
+          "count": 119,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 82
+            },
+            {
+              "ownerType": "unknown",
+              "count": 37
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 82,
+            "organize_next": 0,
+            "verify": 37,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 9,
+          "vacantLandCount": 82,
+          "vacantBuildingCount": 37,
+          "corridorName": null
+        },
+        {
+          "id": 5,
+          "centroid": {
+            "lat": 41.7888913862693,
+            "lon": -87.62796532737717
+          },
+          "bbox": [
+            -87.63030428354843,
+            41.78755747828613,
+            -87.62572911170322,
+            41.790041618680995
+          ],
+          "count": 119,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 102
+            },
+            {
+              "ownerType": "unknown",
+              "count": 17
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 102,
+            "organize_next": 0,
+            "verify": 17,
+            "long_term": 0
+          },
+          "taxSaleCount": 4,
+          "violationCount": 5,
+          "vacantLandCount": 102,
+          "vacantBuildingCount": 17,
+          "corridorName": null
+        },
+        {
+          "id": 6,
+          "centroid": {
+            "lat": 41.79155684933749,
+            "lon": -87.65236183191114
+          },
+          "bbox": [
+            -87.654777853137,
+            41.78955600094,
+            -87.649650000002,
+            41.793818705242
+          ],
+          "count": 119,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 56
+            },
+            {
+              "ownerType": "unknown",
+              "count": 63
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 56,
+            "organize_next": 0,
+            "verify": 63,
+            "long_term": 0
+          },
+          "taxSaleCount": 7,
+          "violationCount": 9,
+          "vacantLandCount": 56,
+          "vacantBuildingCount": 63,
+          "corridorName": null
+        },
+        {
+          "id": 7,
+          "centroid": {
+            "lat": 41.792168618059584,
+            "lon": -87.62826360103283
+          },
+          "bbox": [
+            -87.630327000002,
+            41.79006274687393,
+            -87.62569254018885,
+            41.794223214198
+          ],
+          "count": 119,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 91
+            },
+            {
+              "ownerType": "unknown",
+              "count": 28
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 91,
+            "organize_next": 0,
+            "verify": 28,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 0,
+          "vacantLandCount": 91,
+          "vacantBuildingCount": 28,
+          "corridorName": null
+        },
+        {
+          "id": 8,
+          "centroid": {
+            "lat": 41.77195860587877,
+            "lon": -87.65199574115985
+          },
+          "bbox": [
+            -87.654241479217,
+            41.769657000940086,
+            -87.64910550000191,
+            41.77377000094
+          ],
+          "count": 118,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 49
+            },
+            {
+              "ownerType": "unknown",
+              "count": 69
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 49,
+            "organize_next": 0,
+            "verify": 69,
+            "long_term": 0
+          },
+          "taxSaleCount": 5,
+          "violationCount": 17,
+          "vacantLandCount": 49,
+          "vacantBuildingCount": 69,
+          "corridorName": null
+        },
+        {
+          "id": 9,
+          "centroid": {
+            "lat": 41.78027185468684,
+            "lon": -87.651974275922
+          },
+          "bbox": [
+            -87.654289500002,
+            41.7784410009401,
+            -87.64889226436094,
+            41.78212984482949
+          ],
+          "count": 118,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 84
+            },
+            {
+              "ownerType": "unknown",
+              "count": 34
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 84,
+            "organize_next": 0,
+            "verify": 34,
+            "long_term": 0
+          },
+          "taxSaleCount": 5,
+          "violationCount": 7,
+          "vacantLandCount": 84,
+          "vacantBuildingCount": 34,
+          "corridorName": "Englewood"
+        },
+        {
+          "id": 10,
+          "centroid": {
+            "lat": 41.78758436865543,
+            "lon": -87.65226284749346
+          },
+          "bbox": [
+            -87.65456916141102,
+            41.78599049733379,
+            -87.65010607245483,
+            41.7895546318761
+          ],
+          "count": 118,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 81
+            },
+            {
+              "ownerType": "unknown",
+              "count": 37
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 81,
+            "organize_next": 0,
+            "verify": 37,
+            "long_term": 0
+          },
+          "taxSaleCount": 4,
+          "violationCount": 6,
+          "vacantLandCount": 81,
+          "vacantBuildingCount": 37,
+          "corridorName": null
+        },
+        {
+          "id": 11,
+          "centroid": {
+            "lat": 41.76332616927786,
+            "lon": -87.64490303739572
+          },
+          "bbox": [
+            -87.6478050000019,
+            41.76226053352973,
+            -87.64289837200482,
+            41.764403696659976
+          ],
+          "count": 60,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 28
+            },
+            {
+              "ownerType": "unknown",
+              "count": 32
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 28,
+            "organize_next": 0,
+            "verify": 32,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 8,
+          "vacantLandCount": 28,
+          "vacantBuildingCount": 32,
+          "corridorName": null
+        },
+        {
+          "id": 12,
+          "centroid": {
+            "lat": 41.765746692382656,
+            "lon": -87.62789322961869
+          },
+          "bbox": [
+            -87.6301380000019,
+            41.763879000940044,
+            -87.62493704080947,
+            41.7672869384754
+          ],
+          "count": 60,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 17
+            },
+            {
+              "ownerType": "unknown",
+              "count": 43
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 17,
+            "organize_next": 0,
+            "verify": 43,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 11,
+          "vacantLandCount": 17,
+          "vacantBuildingCount": 43,
+          "corridorName": null
+        }
+      ],
+      "clustersNote": "Proximity clusters: tracked sites within ~100 m linked; contiguous areas larger than ~500 m are divided into sub-areas for intervention planning; minimum five sites. Boundaries are analytical, not parcel-contiguous.",
+      "corridors": [
+        {
+          "name": "Englewood",
+          "kind": "ssa"
+        },
+        {
+          "name": "Auburn Gresham/79th St",
+          "kind": "ssa"
+        }
+      ],
+      "anchors": [
+        {
+          "name": "St. Bernard Hospital / Ambulatory Care Center",
+          "category": "Healthcare and community development anchor",
+          "lat": 41.779,
+          "lon": -87.644
+        },
+        {
+          "name": "Kennedy-King College / Washburne Culinary Institute",
+          "category": "Higher education and workforce anchor",
+          "lat": 41.779,
+          "lon": -87.644
+        }
       ]
     },
     "60623": {
@@ -132701,6 +134590,621 @@
               41.84539073442601
             ]
           ]
+        }
+      ],
+      "clusters": [
+        {
+          "id": 1,
+          "centroid": {
+            "lat": 41.85647775017354,
+            "lon": -87.71106498334461
+          },
+          "bbox": [
+            -87.713518500002,
+            41.854998623737124,
+            -87.70921821885094,
+            41.85839700094035
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 51
+            },
+            {
+              "ownerType": "unknown",
+              "count": 22
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 51,
+            "organize_next": 0,
+            "verify": 22,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 2,
+          "vacantLandCount": 51,
+          "vacantBuildingCount": 22,
+          "corridorName": null
+        },
+        {
+          "id": 2,
+          "centroid": {
+            "lat": 41.856668566439325,
+            "lon": -87.70779095949558
+          },
+          "bbox": [
+            -87.709166390577,
+            41.85451800094036,
+            -87.70638907580333,
+            41.858390177936705
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 46
+            },
+            {
+              "ownerType": "unknown",
+              "count": 27
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 46,
+            "organize_next": 0,
+            "verify": 27,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 2,
+          "vacantLandCount": 46,
+          "vacantBuildingCount": 27,
+          "corridorName": null
+        },
+        {
+          "id": 3,
+          "centroid": {
+            "lat": 41.85671634875682,
+            "lon": -87.7152043433787
+          },
+          "bbox": [
+            -87.71730750000192,
+            41.85486000094,
+            -87.71354624966385,
+            41.85836100094038
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 36
+            },
+            {
+              "ownerType": "unknown",
+              "count": 37
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 36,
+            "organize_next": 0,
+            "verify": 37,
+            "long_term": 0
+          },
+          "taxSaleCount": 4,
+          "violationCount": 3,
+          "vacantLandCount": 36,
+          "vacantBuildingCount": 37,
+          "corridorName": null
+        },
+        {
+          "id": 4,
+          "centroid": {
+            "lat": 41.85771213295082,
+            "lon": -87.72302193368624
+          },
+          "bbox": [
+            -87.72474164757081,
+            41.85621763435036,
+            -87.72037817531559,
+            41.859594240324974
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 50
+            },
+            {
+              "ownerType": "unknown",
+              "count": 23
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 50,
+            "organize_next": 0,
+            "verify": 23,
+            "long_term": 0
+          },
+          "taxSaleCount": 4,
+          "violationCount": 0,
+          "vacantLandCount": 50,
+          "vacantBuildingCount": 23,
+          "corridorName": null
+        },
+        {
+          "id": 5,
+          "centroid": {
+            "lat": 41.85798520862226,
+            "lon": -87.71913702670422
+          },
+          "bbox": [
+            -87.7203636459387,
+            41.85612614386337,
+            -87.7174813024896,
+            41.859666556992664
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 45
+            },
+            {
+              "ownerType": "unknown",
+              "count": 28
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 45,
+            "organize_next": 0,
+            "verify": 28,
+            "long_term": 0
+          },
+          "taxSaleCount": 4,
+          "violationCount": 2,
+          "vacantLandCount": 45,
+          "vacantBuildingCount": 28,
+          "corridorName": null
+        },
+        {
+          "id": 6,
+          "centroid": {
+            "lat": 41.85813698662898,
+            "lon": -87.72671608406787
+          },
+          "bbox": [
+            -87.728962500002,
+            41.856002515416804,
+            -87.72474164757081,
+            41.85967500094
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 29
+            },
+            {
+              "ownerType": "unknown",
+              "count": 44
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 29,
+            "organize_next": 0,
+            "verify": 44,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 3,
+          "vacantLandCount": 29,
+          "vacantBuildingCount": 44,
+          "corridorName": null
+        },
+        {
+          "id": 7,
+          "centroid": {
+            "lat": 41.85992900115694,
+            "lon": -87.71169776957173
+          },
+          "bbox": [
+            -87.71365800000191,
+            41.85846900094,
+            -87.70999418019609,
+            41.86145083641323
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 31
+            },
+            {
+              "ownerType": "unknown",
+              "count": 42
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 31,
+            "organize_next": 0,
+            "verify": 42,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 5,
+          "vacantLandCount": 31,
+          "vacantBuildingCount": 42,
+          "corridorName": null
+        },
+        {
+          "id": 8,
+          "centroid": {
+            "lat": 41.86012378164582,
+            "lon": -87.70829672006488
+          },
+          "bbox": [
+            -87.70999220287523,
+            41.85842672904572,
+            -87.70673267463356,
+            41.861831525515036
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 42
+            },
+            {
+              "ownerType": "unknown",
+              "count": 31
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 42,
+            "organize_next": 0,
+            "verify": 31,
+            "long_term": 0
+          },
+          "taxSaleCount": 4,
+          "violationCount": 0,
+          "vacantLandCount": 42,
+          "vacantBuildingCount": 31,
+          "corridorName": null
+        },
+        {
+          "id": 9,
+          "centroid": {
+            "lat": 41.86018799358869,
+            "lon": -87.71545454526702
+          },
+          "bbox": [
+            -87.71732935101707,
+            41.85843290660569,
+            -87.71367284519543,
+            41.86150075701298
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 40
+            },
+            {
+              "ownerType": "unknown",
+              "count": 33
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 40,
+            "organize_next": 0,
+            "verify": 33,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 1,
+          "vacantLandCount": 40,
+          "vacantBuildingCount": 33,
+          "corridorName": null
+        },
+        {
+          "id": 10,
+          "centroid": {
+            "lat": 41.86041138818194,
+            "lon": -87.70500429929142
+          },
+          "bbox": [
+            -87.70644450000191,
+            41.858621287270715,
+            -87.700754678244,
+            41.861790084194816
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 51
+            },
+            {
+              "ownerType": "unknown",
+              "count": 22
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 51,
+            "organize_next": 0,
+            "verify": 22,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 1,
+          "vacantLandCount": 51,
+          "vacantBuildingCount": 22,
+          "corridorName": null
+        },
+        {
+          "id": 11,
+          "centroid": {
+            "lat": 41.8610980785628,
+            "lon": -87.72039211812368
+          },
+          "bbox": [
+            -87.72240150000191,
+            41.859730602679406,
+            -87.71733410268465,
+            41.86301400094036
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 31
+            },
+            {
+              "ownerType": "unknown",
+              "count": 42
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 31,
+            "organize_next": 0,
+            "verify": 42,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 5,
+          "vacantLandCount": 31,
+          "vacantBuildingCount": 42,
+          "corridorName": null
+        },
+        {
+          "id": 12,
+          "centroid": {
+            "lat": 41.86138469787372,
+            "lon": -87.72911233546596
+          },
+          "bbox": [
+            -87.73091333714063,
+            41.85969740175848,
+            -87.72724350000192,
+            41.86293237486241
+          ],
+          "count": 73,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 37
+            },
+            {
+              "ownerType": "unknown",
+              "count": 36
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 37,
+            "organize_next": 0,
+            "verify": 36,
+            "long_term": 0
+          },
+          "taxSaleCount": 6,
+          "violationCount": 4,
+          "vacantLandCount": 37,
+          "vacantBuildingCount": 36,
+          "corridorName": null
+        }
+      ],
+      "clustersNote": "Proximity clusters: tracked sites within ~100 m linked; contiguous areas larger than ~500 m are divided into sub-areas for intervention planning; minimum five sites. Boundaries are analytical, not parcel-contiguous.",
+      "corridors": [
+        {
+          "name": "Little Village",
+          "kind": "ssa"
+        },
+        {
+          "name": "Little Village CCSA Corridor",
+          "kind": "commercial"
+        },
+        {
+          "name": "Western / Ogden",
+          "kind": "industrial"
+        },
+        {
+          "name": "Roosevelt/Cicero",
+          "kind": "industrial"
+        },
+        {
+          "name": "Stevenson",
+          "kind": "industrial"
+        }
+      ],
+      "anchors": [
+        {
+          "name": "Mount Sinai Hospital / Sinai Chicago",
+          "category": "Healthcare employment + service-gap closure",
+          "lat": 41.861,
+          "lon": -87.719
+        },
+        {
+          "name": "Lawndale Christian Health Center",
+          "category": "Healthcare + local hiring + community wealth",
+          "lat": 41.861,
+          "lon": -87.719
+        },
+        {
+          "name": "26th Street / Little Village Commercial Corridor",
+          "category": "Retail, restaurants, immigrant entrepreneurship",
+          "lat": 41.843,
+          "lon": -87.712
+        },
+        {
+          "name": "Saint Anthony Hospital / Focal Point Community Campus",
+          "category": "Healthcare employment + redevelopment pipeline",
+          "lat": 41.843,
+          "lon": -87.712
         }
       ]
     },
@@ -164857,6 +167361,613 @@
               41.88827330492014
             ]
           ]
+        }
+      ],
+      "clusters": [
+        {
+          "id": 1,
+          "centroid": {
+            "lat": 41.87301407033167,
+            "lon": -87.72837815273812
+          },
+          "bbox": [
+            -87.731743500002,
+            41.87152741265692,
+            -87.726246900635,
+            41.87505533042274
+          ],
+          "count": 87,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 28
+            },
+            {
+              "ownerType": "unknown",
+              "count": 59
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 28,
+            "organize_next": 0,
+            "verify": 59,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 4,
+          "vacantLandCount": 28,
+          "vacantBuildingCount": 59,
+          "corridorName": "West Garfield Park"
+        },
+        {
+          "id": 2,
+          "centroid": {
+            "lat": 41.87646384129528,
+            "lon": -87.72872947667527
+          },
+          "bbox": [
+            -87.73115400000192,
+            41.8750650009404,
+            -87.72613410479931,
+            41.877722008309235
+          ],
+          "count": 87,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 52
+            },
+            {
+              "ownerType": "unknown",
+              "count": 35
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 52,
+            "organize_next": 0,
+            "verify": 35,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 3,
+          "vacantLandCount": 52,
+          "vacantBuildingCount": 35,
+          "corridorName": "West Garfield Park"
+        },
+        {
+          "id": 3,
+          "centroid": {
+            "lat": 41.877991227452256,
+            "lon": -87.72353454098378
+          },
+          "bbox": [
+            -87.72613200000191,
+            41.87646000094044,
+            -87.72073792951534,
+            41.87990265512876
+          ],
+          "count": 87,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 29
+            },
+            {
+              "ownerType": "unknown",
+              "count": 58
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 29,
+            "organize_next": 0,
+            "verify": 58,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 2,
+          "vacantLandCount": 29,
+          "vacantBuildingCount": 58,
+          "corridorName": "West Garfield Park"
+        },
+        {
+          "id": 4,
+          "centroid": {
+            "lat": 41.87882190551576,
+            "lon": -87.72846159599405
+          },
+          "bbox": [
+            -87.73117151358989,
+            41.87772320436103,
+            -87.72613680498833,
+            41.879827493486545
+          ],
+          "count": 87,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 31
+            },
+            {
+              "ownerType": "unknown",
+              "count": 56
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 31,
+            "organize_next": 0,
+            "verify": 56,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 7,
+          "vacantLandCount": 31,
+          "vacantBuildingCount": 56,
+          "corridorName": "West Garfield Park CCSA Corridor"
+        },
+        {
+          "id": 5,
+          "centroid": {
+            "lat": 41.88609247382046,
+            "lon": -87.70796482588453
+          },
+          "bbox": [
+            -87.71004000000191,
+            41.88468198508218,
+            -87.70641750000192,
+            41.888643251707414
+          ],
+          "count": 87,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 40
+            },
+            {
+              "ownerType": "unknown",
+              "count": 47
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 40,
+            "organize_next": 0,
+            "verify": 47,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 2,
+          "vacantLandCount": 40,
+          "vacantBuildingCount": 47,
+          "corridorName": "Kinzie"
+        },
+        {
+          "id": 6,
+          "centroid": {
+            "lat": 41.8903621985324,
+            "lon": -87.71803096807501
+          },
+          "bbox": [
+            -87.72086250000191,
+            41.88872850399967,
+            -87.71487717554994,
+            41.89159800094
+          ],
+          "count": 86,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 41
+            },
+            {
+              "ownerType": "unknown",
+              "count": 45
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 41,
+            "organize_next": 0,
+            "verify": 45,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 0,
+          "vacantLandCount": 41,
+          "vacantBuildingCount": 45,
+          "corridorName": null
+        },
+        {
+          "id": 7,
+          "centroid": {
+            "lat": 41.87051436684221,
+            "lon": -87.72038593855724
+          },
+          "bbox": [
+            -87.72258150000191,
+            41.867936999396896,
+            -87.71762445530369,
+            41.87197826900877
+          ],
+          "count": 44,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 19
+            },
+            {
+              "ownerType": "unknown",
+              "count": 25
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 19,
+            "organize_next": 0,
+            "verify": 25,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 4,
+          "vacantLandCount": 19,
+          "vacantBuildingCount": 25,
+          "corridorName": null
+        },
+        {
+          "id": 8,
+          "centroid": {
+            "lat": 41.8741158660501,
+            "lon": -87.73420442367234
+          },
+          "bbox": [
+            -87.7371120000019,
+            41.87231096613778,
+            -87.731833500002,
+            41.87500200094
+          ],
+          "count": 44,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 12
+            },
+            {
+              "ownerType": "unknown",
+              "count": 32
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 12,
+            "organize_next": 0,
+            "verify": 32,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 2,
+          "vacantLandCount": 12,
+          "vacantBuildingCount": 32,
+          "corridorName": "Roosevelt/Cicero"
+        },
+        {
+          "id": 9,
+          "centroid": {
+            "lat": 41.877805709808676,
+            "lon": -87.71010426600203
+          },
+          "bbox": [
+            -87.71138382709292,
+            41.87570710339095,
+            -87.70851044947362,
+            41.87988055901562
+          ],
+          "count": 44,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 27
+            },
+            {
+              "ownerType": "unknown",
+              "count": 17
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 27,
+            "organize_next": 0,
+            "verify": 17,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 2,
+          "vacantLandCount": 27,
+          "vacantBuildingCount": 17,
+          "corridorName": null
+        },
+        {
+          "id": 10,
+          "centroid": {
+            "lat": 41.8779414854989,
+            "lon": -87.71339072115587
+          },
+          "bbox": [
+            -87.71484848488237,
+            41.87632056135866,
+            -87.71140333691447,
+            41.87991847283781
+          ],
+          "count": 44,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 24
+            },
+            {
+              "ownerType": "unknown",
+              "count": 20
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 24,
+            "organize_next": 0,
+            "verify": 20,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 0,
+          "vacantLandCount": 24,
+          "vacantBuildingCount": 20,
+          "corridorName": null
+        },
+        {
+          "id": 11,
+          "centroid": {
+            "lat": 41.878525227805575,
+            "lon": -87.73339594036936
+          },
+          "bbox": [
+            -87.7355025972038,
+            41.87706795133326,
+            -87.73126256678857,
+            41.87990700094048
+          ],
+          "count": 44,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 8
+            },
+            {
+              "ownerType": "unknown",
+              "count": 36
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 8,
+            "organize_next": 0,
+            "verify": 36,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 3,
+          "vacantLandCount": 8,
+          "vacantBuildingCount": 36,
+          "corridorName": "West Garfield Park CCSA Corridor"
+        },
+        {
+          "id": 12,
+          "centroid": {
+            "lat": 41.88384839316847,
+            "lon": -87.72320192774991
+          },
+          "bbox": [
+            -87.72598471533253,
+            41.88276900094,
+            -87.721141500002,
+            41.88541834754386
+          ],
+          "count": 44,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 22
+            },
+            {
+              "ownerType": "unknown",
+              "count": 22
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 22,
+            "organize_next": 0,
+            "verify": 22,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 0,
+          "vacantLandCount": 22,
+          "vacantBuildingCount": 22,
+          "corridorName": "West Garfield Park"
+        }
+      ],
+      "clustersNote": "Proximity clusters: tracked sites within ~100 m linked; contiguous areas larger than ~500 m are divided into sub-areas for intervention planning; minimum five sites. Boundaries are analytical, not parcel-contiguous.",
+      "corridors": [
+        {
+          "name": "West Humboldt Park",
+          "kind": "ssa"
+        },
+        {
+          "name": "West Garfield Park",
+          "kind": "ssa"
+        },
+        {
+          "name": "West Garfield Park CCSA Corridor",
+          "kind": "commercial"
+        },
+        {
+          "name": "Roosevelt/Cicero",
+          "kind": "industrial"
+        },
+        {
+          "name": "Northwest",
+          "kind": "industrial"
+        },
+        {
+          "name": "Kinzie",
+          "kind": "industrial"
+        }
+      ],
+      "anchors": [
+        {
+          "name": "Sankofa Wellness Village",
+          "category": "Community health and economic development campus",
+          "lat": 41.881,
+          "lon": -87.729
+        },
+        {
+          "name": "Madison-Pulaski corridor / Garfield Park Rite to Wellness ecosystem",
+          "category": "Commercial corridor + community wealth-building ecosystem",
+          "lat": 41.881,
+          "lon": -87.729
         }
       ]
     },
@@ -197903,6 +201014,609 @@
             ]
           ]
         }
+      ],
+      "clusters": [
+        {
+          "id": 1,
+          "centroid": {
+            "lat": 41.766380395749316,
+            "lon": -87.65646430965107
+          },
+          "bbox": [
+            -87.65835750000191,
+            41.76430200094007,
+            -87.65432550000189,
+            41.76831600094005
+          ],
+          "count": 92,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 32
+            },
+            {
+              "ownerType": "unknown",
+              "count": 60
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 32,
+            "organize_next": 0,
+            "verify": 60,
+            "long_term": 0
+          },
+          "taxSaleCount": 4,
+          "violationCount": 11,
+          "vacantLandCount": 32,
+          "vacantBuildingCount": 60,
+          "corridorName": null
+        },
+        {
+          "id": 2,
+          "centroid": {
+            "lat": 41.76777796887524,
+            "lon": -87.6668515238377
+          },
+          "bbox": [
+            -87.66981863908956,
+            41.76590059079478,
+            -87.664873500002,
+            41.76932593934397
+          ],
+          "count": 92,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 68
+            },
+            {
+              "ownerType": "unknown",
+              "count": 24
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 68,
+            "organize_next": 0,
+            "verify": 24,
+            "long_term": 0
+          },
+          "taxSaleCount": 5,
+          "violationCount": 4,
+          "vacantLandCount": 68,
+          "vacantBuildingCount": 24,
+          "corridorName": null
+        },
+        {
+          "id": 3,
+          "centroid": {
+            "lat": 41.77013097836091,
+            "lon": -87.65653962837335
+          },
+          "bbox": [
+            -87.6590135250885,
+            41.76836019710818,
+            -87.654267167126,
+            41.77175413531106
+          ],
+          "count": 92,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 49
+            },
+            {
+              "ownerType": "unknown",
+              "count": 43
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 49,
+            "organize_next": 0,
+            "verify": 43,
+            "long_term": 0
+          },
+          "taxSaleCount": 4,
+          "violationCount": 4,
+          "vacantLandCount": 49,
+          "vacantBuildingCount": 43,
+          "corridorName": null
+        },
+        {
+          "id": 4,
+          "centroid": {
+            "lat": 41.78029358598412,
+            "lon": -87.65713104222364
+          },
+          "bbox": [
+            -87.6595815000019,
+            41.778258962670684,
+            -87.65457910217106,
+            41.78196380331766
+          ],
+          "count": 92,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 59
+            },
+            {
+              "ownerType": "unknown",
+              "count": 33
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 59,
+            "organize_next": 0,
+            "verify": 33,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 5,
+          "vacantLandCount": 59,
+          "vacantBuildingCount": 33,
+          "corridorName": "Englewood"
+        },
+        {
+          "id": 5,
+          "centroid": {
+            "lat": 41.78379508366504,
+            "lon": -87.6569487338483
+          },
+          "bbox": [
+            -87.65909742183757,
+            41.78203242075213,
+            -87.65464883930137,
+            41.78637000094
+          ],
+          "count": 92,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 49
+            },
+            {
+              "ownerType": "unknown",
+              "count": 43
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 49,
+            "organize_next": 0,
+            "verify": 43,
+            "long_term": 0
+          },
+          "taxSaleCount": 7,
+          "violationCount": 12,
+          "vacantLandCount": 49,
+          "vacantBuildingCount": 43,
+          "corridorName": null
+        },
+        {
+          "id": 6,
+          "centroid": {
+            "lat": 41.78835564261519,
+            "lon": -87.65716698261778
+          },
+          "bbox": [
+            -87.65920668811485,
+            41.786564618441275,
+            -87.65495550000192,
+            41.79019500094
+          ],
+          "count": 92,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 65
+            },
+            {
+              "ownerType": "unknown",
+              "count": 27
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 65,
+            "organize_next": 0,
+            "verify": 27,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 6,
+          "vacantLandCount": 65,
+          "vacantBuildingCount": 27,
+          "corridorName": null
+        },
+        {
+          "id": 7,
+          "centroid": {
+            "lat": 41.79181272895446,
+            "lon": -87.66587219110356
+          },
+          "bbox": [
+            -87.669466352345,
+            41.789904701486584,
+            -87.66364253872362,
+            41.793620705242
+          ],
+          "count": 92,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 52
+            },
+            {
+              "ownerType": "unknown",
+              "count": 40
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 52,
+            "organize_next": 0,
+            "verify": 40,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 11,
+          "vacantLandCount": 52,
+          "vacantBuildingCount": 40,
+          "corridorName": "Englewood"
+        },
+        {
+          "id": 8,
+          "centroid": {
+            "lat": 41.79198324701637,
+            "lon": -87.65709945951836
+          },
+          "bbox": [
+            -87.6599100000019,
+            41.79022200094,
+            -87.65489813403202,
+            41.79372854170437
+          ],
+          "count": 92,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 30
+            },
+            {
+              "ownerType": "unknown",
+              "count": 62
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 30,
+            "organize_next": 0,
+            "verify": 62,
+            "long_term": 0
+          },
+          "taxSaleCount": 5,
+          "violationCount": 6,
+          "vacantLandCount": 30,
+          "vacantBuildingCount": 62,
+          "corridorName": null
+        },
+        {
+          "id": 9,
+          "centroid": {
+            "lat": 41.77018213422908,
+            "lon": -87.66164499491715
+          },
+          "bbox": [
+            -87.66486000000192,
+            41.7683473683838,
+            -87.65902502330134,
+            41.7719788689918
+          ],
+          "count": 91,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 42
+            },
+            {
+              "ownerType": "unknown",
+              "count": 49
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 42,
+            "organize_next": 0,
+            "verify": 49,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 7,
+          "vacantLandCount": 42,
+          "vacantBuildingCount": 49,
+          "corridorName": null
+        },
+        {
+          "id": 10,
+          "centroid": {
+            "lat": 41.77913651940442,
+            "lon": -87.66734112120615
+          },
+          "bbox": [
+            -87.66942643322676,
+            41.77820201983665,
+            -87.66454993033587,
+            41.78020194563176
+          ],
+          "count": 91,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 64
+            },
+            {
+              "ownerType": "unknown",
+              "count": 27
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 64,
+            "organize_next": 0,
+            "verify": 27,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 6,
+          "vacantLandCount": 64,
+          "vacantBuildingCount": 27,
+          "corridorName": "Englewood"
+        },
+        {
+          "id": 11,
+          "centroid": {
+            "lat": 41.779869389589265,
+            "lon": -87.66144969995503
+          },
+          "bbox": [
+            -87.66357208638183,
+            41.77817100094,
+            -87.65958412205474,
+            41.782028428144486
+          ],
+          "count": 91,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 61
+            },
+            {
+              "ownerType": "unknown",
+              "count": 30
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 61,
+            "organize_next": 0,
+            "verify": 30,
+            "long_term": 0
+          },
+          "taxSaleCount": 2,
+          "violationCount": 5,
+          "vacantLandCount": 61,
+          "vacantBuildingCount": 30,
+          "corridorName": "Englewood"
+        },
+        {
+          "id": 12,
+          "centroid": {
+            "lat": 41.78465653642083,
+            "lon": -87.6611177247705
+          },
+          "bbox": [
+            -87.66360900000191,
+            41.7821289046023,
+            -87.65910269145824,
+            41.78652132785047
+          ],
+          "count": 91,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 26
+            },
+            {
+              "ownerType": "unknown",
+              "count": 65
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 26,
+            "organize_next": 0,
+            "verify": 65,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 10,
+          "vacantLandCount": 26,
+          "vacantBuildingCount": 65,
+          "corridorName": "Englewood"
+        }
+      ],
+      "clustersNote": "Proximity clusters: tracked sites within ~100 m linked; contiguous areas larger than ~500 m are divided into sub-areas for intervention planning; minimum five sites. Boundaries are analytical, not parcel-contiguous.",
+      "corridors": [
+        {
+          "name": "63rd Street",
+          "kind": "ssa"
+        },
+        {
+          "name": "59th Street",
+          "kind": "ssa"
+        },
+        {
+          "name": "Englewood",
+          "kind": "ssa"
+        },
+        {
+          "name": "Auburn Gresham/79th St",
+          "kind": "ssa"
+        },
+        {
+          "name": "Greater Southwest",
+          "kind": "industrial"
+        }
+      ],
+      "anchors": [
+        {
+          "name": "Growing Home Urban Farm & Workforce Development",
+          "category": "Food / workforce social enterprise",
+          "lat": 41.778,
+          "lon": -87.668
+        },
+        {
+          "name": "Lindblom Math and Science Academy",
+          "category": "Education / talent anchor",
+          "lat": 41.778,
+          "lon": -87.668
+        }
       ]
     },
     "60644": {
@@ -220527,6 +224241,605 @@
             ]
           ]
         }
+      ],
+      "clusters": [
+        {
+          "id": 1,
+          "centroid": {
+            "lat": 41.892641481832406,
+            "lon": -87.74476716832397
+          },
+          "bbox": [
+            -87.74734431936103,
+            41.890500145902415,
+            -87.74136429706468,
+            41.89477500094
+          ],
+          "count": 94,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 55
+            },
+            {
+              "ownerType": "unknown",
+              "count": 39
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 55,
+            "organize_next": 0,
+            "verify": 39,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 1,
+          "vacantLandCount": 55,
+          "vacantBuildingCount": 39,
+          "corridorName": "Village:AustinChgoAvCCorr"
+        },
+        {
+          "id": 2,
+          "centroid": {
+            "lat": 41.87019348820424,
+            "lon": -87.74554323024284
+          },
+          "bbox": [
+            -87.74891100000191,
+            41.86887110031799,
+            -87.74367644292175,
+            41.87292300094
+          ],
+          "count": 47,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 11
+            },
+            {
+              "ownerType": "unknown",
+              "count": 36
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 11,
+            "organize_next": 0,
+            "verify": 36,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 4,
+          "vacantLandCount": 11,
+          "vacantBuildingCount": 36,
+          "corridorName": "Roosevelt/Cicero"
+        },
+        {
+          "id": 3,
+          "centroid": {
+            "lat": 41.870237436360135,
+            "lon": -87.74231650708012
+          },
+          "bbox": [
+            -87.743637000002,
+            41.86889458343111,
+            -87.74077898732416,
+            41.87282901063337
+          ],
+          "count": 47,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 35
+            },
+            {
+              "ownerType": "unknown",
+              "count": 12
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 35,
+            "organize_next": 0,
+            "verify": 12,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 0,
+          "vacantLandCount": 35,
+          "vacantBuildingCount": 12,
+          "corridorName": "Roosevelt/Cicero"
+        },
+        {
+          "id": 4,
+          "centroid": {
+            "lat": 41.87458148139374,
+            "lon": -87.74663625412384
+          },
+          "bbox": [
+            -87.7489255731404,
+            41.87308511212851,
+            -87.7448610000019,
+            41.87612696597574
+          ],
+          "count": 47,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 19
+            },
+            {
+              "ownerType": "unknown",
+              "count": 28
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 19,
+            "organize_next": 0,
+            "verify": 28,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 2,
+          "vacantLandCount": 19,
+          "vacantBuildingCount": 28,
+          "corridorName": null
+        },
+        {
+          "id": 5,
+          "centroid": {
+            "lat": 41.8746603659837,
+            "lon": -87.74317322876254
+          },
+          "bbox": [
+            -87.74485200000191,
+            41.87292300094,
+            -87.74067840082,
+            41.876223095945086
+          ],
+          "count": 47,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 17
+            },
+            {
+              "ownerType": "unknown",
+              "count": 30
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 17,
+            "organize_next": 0,
+            "verify": 30,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 3,
+          "vacantLandCount": 17,
+          "vacantBuildingCount": 30,
+          "corridorName": "Roosevelt/Cicero"
+        },
+        {
+          "id": 6,
+          "centroid": {
+            "lat": 41.877950103224876,
+            "lon": -87.74317961208143
+          },
+          "bbox": [
+            -87.74530914766821,
+            41.876232494385924,
+            -87.74063206944432,
+            41.87960043104711
+          ],
+          "count": 47,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 9
+            },
+            {
+              "ownerType": "unknown",
+              "count": 38
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 9,
+            "organize_next": 0,
+            "verify": 38,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 6,
+          "vacantLandCount": 9,
+          "vacantBuildingCount": 38,
+          "corridorName": "West Garfield Park"
+        },
+        {
+          "id": 7,
+          "centroid": {
+            "lat": 41.87802547839371,
+            "lon": -87.74696292940479
+          },
+          "bbox": [
+            -87.74893114199159,
+            41.87652932151983,
+            -87.74532612956328,
+            41.879586744866366
+          ],
+          "count": 47,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 11
+            },
+            {
+              "ownerType": "unknown",
+              "count": 36
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 11,
+            "organize_next": 0,
+            "verify": 36,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 2,
+          "vacantLandCount": 11,
+          "vacantBuildingCount": 36,
+          "corridorName": null
+        },
+        {
+          "id": 8,
+          "centroid": {
+            "lat": 41.88126887853977,
+            "lon": -87.74300483062257
+          },
+          "bbox": [
+            -87.74445600000193,
+            41.87963768510999,
+            -87.7405635000019,
+            41.88348900094045
+          ],
+          "count": 47,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 9
+            },
+            {
+              "ownerType": "unknown",
+              "count": 38
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 9,
+            "organize_next": 0,
+            "verify": 38,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 3,
+          "vacantLandCount": 9,
+          "vacantBuildingCount": 38,
+          "corridorName": "West Garfield Park"
+        },
+        {
+          "id": 9,
+          "centroid": {
+            "lat": 41.881702061568845,
+            "lon": -87.7519324639738
+          },
+          "bbox": [
+            -87.755072678772,
+            41.87967300094043,
+            -87.7490564436659,
+            41.88346200094047
+          ],
+          "count": 47,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 11
+            },
+            {
+              "ownerType": "unknown",
+              "count": 36
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 11,
+            "organize_next": 0,
+            "verify": 36,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 11,
+          "vacantBuildingCount": 36,
+          "corridorName": null
+        },
+        {
+          "id": 10,
+          "centroid": {
+            "lat": 41.88171270777484,
+            "lon": -87.74704502992546
+          },
+          "bbox": [
+            -87.74886917711675,
+            41.879601447116805,
+            -87.74457496360145,
+            41.88353400094
+          ],
+          "count": 47,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 13
+            },
+            {
+              "ownerType": "unknown",
+              "count": 34
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 13,
+            "organize_next": 0,
+            "verify": 34,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 4,
+          "vacantLandCount": 13,
+          "vacantBuildingCount": 34,
+          "corridorName": null
+        },
+        {
+          "id": 11,
+          "centroid": {
+            "lat": 41.88218667100833,
+            "lon": -87.75739673024808
+          },
+          "bbox": [
+            -87.76023849416823,
+            41.88043395538648,
+            -87.75541350000191,
+            41.88356100094
+          ],
+          "count": 47,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 10
+            },
+            {
+              "ownerType": "unknown",
+              "count": 37
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 10,
+            "organize_next": 0,
+            "verify": 37,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 10,
+          "vacantBuildingCount": 37,
+          "corridorName": null
+        },
+        {
+          "id": 12,
+          "centroid": {
+            "lat": 41.88266762783028,
+            "lon": -87.76198233408255
+          },
+          "bbox": [
+            -87.76278892218463,
+            41.88173405390474,
+            -87.760476000002,
+            41.88352500094
+          ],
+          "count": 47,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 40
+            },
+            {
+              "ownerType": "unknown",
+              "count": 7
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 40,
+            "organize_next": 0,
+            "verify": 7,
+            "long_term": 0
+          },
+          "taxSaleCount": 33,
+          "violationCount": 1,
+          "vacantLandCount": 40,
+          "vacantBuildingCount": 7,
+          "corridorName": null
+        }
+      ],
+      "clustersNote": "Proximity clusters: tracked sites within ~100 m linked; contiguous areas larger than ~500 m are divided into sub-areas for intervention planning; minimum five sites. Boundaries are analytical, not parcel-contiguous.",
+      "corridors": [
+        {
+          "name": "West Garfield Park",
+          "kind": "ssa"
+        },
+        {
+          "name": "Village:AustinChgoAvCCorr",
+          "kind": "ssa"
+        },
+        {
+          "name": "Roosevelt/Cicero",
+          "kind": "industrial"
+        },
+        {
+          "name": "Northwest",
+          "kind": "industrial"
+        }
+      ],
+      "anchors": [
+        {
+          "name": "The Loretto Hospital",
+          "category": "Hospital / major neighborhood employer",
+          "lat": 41.893,
+          "lon": -87.765
+        },
+        {
+          "name": "Former Mars Wrigley Galewood factory redevelopment / 2019 N. Oak Park Ave.",
+          "category": "Industrial redevelopment / property-activation opportunity",
+          "lat": 41.893,
+          "lon": -87.765
+        }
       ]
     },
     "60649": {
@@ -230810,6 +235123,605 @@
               41.76613
             ]
           ]
+        }
+      ],
+      "clusters": [
+        {
+          "id": 1,
+          "centroid": {
+            "lat": 41.753530435742576,
+            "lon": -87.55803797610523
+          },
+          "bbox": [
+            -87.560779500002,
+            41.75205300093998,
+            -87.5559330000019,
+            41.75515777821055
+          ],
+          "count": 40,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 4
+            },
+            {
+              "ownerType": "unknown",
+              "count": 36
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 4,
+            "organize_next": 0,
+            "verify": 36,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 11,
+          "vacantLandCount": 4,
+          "vacantBuildingCount": 36,
+          "corridorName": null
+        },
+        {
+          "id": 2,
+          "centroid": {
+            "lat": 41.764200731671394,
+            "lon": -87.58395863944432
+          },
+          "bbox": [
+            -87.58549800000192,
+            41.76150581554037,
+            -87.58248946552804,
+            41.76581146444479
+          ],
+          "count": 40,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 7
+            },
+            {
+              "ownerType": "unknown",
+              "count": 33
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 7,
+            "organize_next": 0,
+            "verify": 33,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 7,
+          "vacantBuildingCount": 33,
+          "corridorName": "South Shore CCSA Corridor"
+        },
+        {
+          "id": 3,
+          "centroid": {
+            "lat": 41.75364334294812,
+            "lon": -87.55198004762458
+          },
+          "bbox": [
+            -87.55402805679488,
+            41.75191802030506,
+            -87.54840951230875,
+            41.75501400094002
+          ],
+          "count": 21,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 6
+            },
+            {
+              "ownerType": "unknown",
+              "count": 15
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 6,
+            "organize_next": 0,
+            "verify": 15,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 6,
+          "vacantBuildingCount": 15,
+          "corridorName": null
+        },
+        {
+          "id": 4,
+          "centroid": {
+            "lat": 41.75712600280343,
+            "lon": -87.56265610370049
+          },
+          "bbox": [
+            -87.5641905000019,
+            41.75511825879106,
+            -87.5612070000019,
+            41.75878015176437
+          ],
+          "count": 21,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 6
+            },
+            {
+              "ownerType": "unknown",
+              "count": 15
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 6,
+            "organize_next": 0,
+            "verify": 15,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 2,
+          "vacantLandCount": 6,
+          "vacantBuildingCount": 15,
+          "corridorName": null
+        },
+        {
+          "id": 5,
+          "centroid": {
+            "lat": 41.75890278944927,
+            "lon": -87.57102127661977
+          },
+          "bbox": [
+            -87.57225000000192,
+            41.7582517487063,
+            -87.5696265000019,
+            41.75942400094
+          ],
+          "count": 21,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 3
+            },
+            {
+              "ownerType": "unknown",
+              "count": 18
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 3,
+            "organize_next": 0,
+            "verify": 18,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 2,
+          "vacantLandCount": 3,
+          "vacantBuildingCount": 18,
+          "corridorName": null
+        },
+        {
+          "id": 6,
+          "centroid": {
+            "lat": 41.75945960517291,
+            "lon": -87.56311643204879
+          },
+          "bbox": [
+            -87.5645910000019,
+            41.75881200094003,
+            -87.56123603060723,
+            41.76035117212051
+          ],
+          "count": 21,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 6
+            },
+            {
+              "ownerType": "unknown",
+              "count": 15
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 6,
+            "organize_next": 0,
+            "verify": 15,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 2,
+          "vacantLandCount": 6,
+          "vacantBuildingCount": 15,
+          "corridorName": null
+        },
+        {
+          "id": 7,
+          "centroid": {
+            "lat": 41.7594810089796,
+            "lon": -87.55921888336118
+          },
+          "bbox": [
+            -87.5611935000019,
+            41.75811000094005,
+            -87.557589000002,
+            41.76162740283253
+          ],
+          "count": 21,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 6
+            },
+            {
+              "ownerType": "unknown",
+              "count": 15
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 6,
+            "organize_next": 0,
+            "verify": 15,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 3,
+          "vacantLandCount": 6,
+          "vacantBuildingCount": 15,
+          "corridorName": null
+        },
+        {
+          "id": 8,
+          "centroid": {
+            "lat": 41.763630160934454,
+            "lon": -87.57566443664135
+          },
+          "bbox": [
+            -87.57807386363329,
+            41.76225000094,
+            -87.5722410000019,
+            41.76558900094004
+          ],
+          "count": 21,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 4
+            },
+            {
+              "ownerType": "unknown",
+              "count": 17
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 4,
+            "organize_next": 0,
+            "verify": 17,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 4,
+          "vacantBuildingCount": 17,
+          "corridorName": "South Shore CCSA Corridor"
+        },
+        {
+          "id": 9,
+          "centroid": {
+            "lat": 41.75188437347798,
+            "lon": -87.58310109042554
+          },
+          "bbox": [
+            -87.58558200319649,
+            41.75158153835918,
+            -87.5812455000019,
+            41.75253900094
+          ],
+          "count": 20,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 10
+            },
+            {
+              "ownerType": "unknown",
+              "count": 10
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 10,
+            "organize_next": 0,
+            "verify": 10,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 10,
+          "vacantBuildingCount": 10,
+          "corridorName": "Calumet Hts/Avalon"
+        },
+        {
+          "id": 10,
+          "centroid": {
+            "lat": 41.75193704950476,
+            "lon": -87.57973890213265
+          },
+          "bbox": [
+            -87.58118250000193,
+            41.751626255542,
+            -87.5775420000019,
+            41.752620000939984
+          ],
+          "count": 20,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 2
+            },
+            {
+              "ownerType": "unknown",
+              "count": 18
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 2,
+            "organize_next": 0,
+            "verify": 18,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 5,
+          "vacantLandCount": 2,
+          "vacantBuildingCount": 18,
+          "corridorName": "Calumet Hts/Avalon"
+        },
+        {
+          "id": 11,
+          "centroid": {
+            "lat": 41.753195520843775,
+            "lon": -87.5628689480048
+          },
+          "bbox": [
+            -87.56468550000191,
+            41.751874158147324,
+            -87.5611935000019,
+            41.75463600094
+          ],
+          "count": 20,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 1
+            },
+            {
+              "ownerType": "unknown",
+              "count": 19
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 1,
+            "organize_next": 0,
+            "verify": 19,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 0,
+          "vacantLandCount": 1,
+          "vacantBuildingCount": 19,
+          "corridorName": null
+        },
+        {
+          "id": 12,
+          "centroid": {
+            "lat": 41.75332695619049,
+            "lon": -87.566899999313
+          },
+          "bbox": [
+            -87.569617500002,
+            41.751722307816,
+            -87.5647485000019,
+            41.75465626655034
+          ],
+          "count": 20,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 0
+            },
+            {
+              "ownerType": "unknown",
+              "count": 20
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 0,
+            "organize_next": 0,
+            "verify": 20,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 2,
+          "vacantLandCount": 0,
+          "vacantBuildingCount": 20,
+          "corridorName": "Calumet Hts/Avalon"
+        }
+      ],
+      "clustersNote": "Proximity clusters: tracked sites within ~100 m linked; contiguous areas larger than ~500 m are divided into sub-areas for intervention planning; minimum five sites. Boundaries are analytical, not parcel-contiguous.",
+      "corridors": [
+        {
+          "name": "71st - Stony Island",
+          "kind": "ssa"
+        },
+        {
+          "name": "Chatham",
+          "kind": "ssa"
+        },
+        {
+          "name": "Calumet Hts/Avalon",
+          "kind": "ssa"
+        },
+        {
+          "name": "South Shore CCSA Corridor",
+          "kind": "commercial"
+        }
+      ],
+      "anchors": [
+        {
+          "name": "South Shore Hospital",
+          "category": "Current operating anchor",
+          "lat": 41.762,
+          "lon": -87.578
+        },
+        {
+          "name": "South Shore Cultural Center / Cultural Center Park",
+          "category": "Current operating anchor",
+          "lat": 41.762,
+          "lon": -87.578
         }
       ]
     },
@@ -244392,6 +249304,605 @@
               41.89683530937642
             ]
           ]
+        }
+      ],
+      "clusters": [
+        {
+          "id": 1,
+          "centroid": {
+            "lat": 41.89762677829395,
+            "lon": -87.72224773924458
+          },
+          "bbox": [
+            -87.724678500002,
+            41.89550210735838,
+            -87.71998258863869,
+            41.89974612849149
+          ],
+          "count": 63,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 30
+            },
+            {
+              "ownerType": "unknown",
+              "count": 33
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 30,
+            "organize_next": 0,
+            "verify": 33,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 2,
+          "vacantLandCount": 30,
+          "vacantBuildingCount": 33,
+          "corridorName": "West Humboldt Park"
+        },
+        {
+          "id": 2,
+          "centroid": {
+            "lat": 41.89973746335879,
+            "lon": -87.74847395528158
+          },
+          "bbox": [
+            -87.75176683890918,
+            41.89850997191551,
+            -87.74598414244099,
+            41.90236017910598
+          ],
+          "count": 37,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 8
+            },
+            {
+              "ownerType": "unknown",
+              "count": 29
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 8,
+            "organize_next": 0,
+            "verify": 29,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 8,
+          "vacantBuildingCount": 29,
+          "corridorName": "Northwest"
+        },
+        {
+          "id": 3,
+          "centroid": {
+            "lat": 41.89620312690957,
+            "lon": -87.75516351151731
+          },
+          "bbox": [
+            -87.758159944649,
+            41.89496356248116,
+            -87.75230975589311,
+            41.89842033322606
+          ],
+          "count": 36,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 11
+            },
+            {
+              "ownerType": "unknown",
+              "count": 25
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 11,
+            "organize_next": 0,
+            "verify": 25,
+            "long_term": 0
+          },
+          "taxSaleCount": 3,
+          "violationCount": 3,
+          "vacantLandCount": 11,
+          "vacantBuildingCount": 25,
+          "corridorName": "Village:AustinChgoAvCCorr"
+        },
+        {
+          "id": 4,
+          "centroid": {
+            "lat": 41.89657751795587,
+            "lon": -87.74856083069503
+          },
+          "bbox": [
+            -87.7512555000019,
+            41.895039296639,
+            -87.74550861131944,
+            41.89844802317088
+          ],
+          "count": 36,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 17
+            },
+            {
+              "ownerType": "unknown",
+              "count": 19
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 17,
+            "organize_next": 0,
+            "verify": 19,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 3,
+          "vacantLandCount": 17,
+          "vacantBuildingCount": 19,
+          "corridorName": "Village:AustinChgoAvCCorr"
+        },
+        {
+          "id": 5,
+          "centroid": {
+            "lat": 41.89658914183588,
+            "lon": -87.71034666412207
+          },
+          "bbox": [
+            -87.71112546924564,
+            41.89554959827124,
+            -87.707376000002,
+            41.898501000940534
+          ],
+          "count": 32,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 8
+            },
+            {
+              "ownerType": "unknown",
+              "count": 24
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 8,
+            "organize_next": 0,
+            "verify": 24,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 0,
+          "vacantLandCount": 8,
+          "vacantBuildingCount": 24,
+          "corridorName": "West Humboldt Park"
+        },
+        {
+          "id": 6,
+          "centroid": {
+            "lat": 41.89673084931788,
+            "lon": -87.71528170113707
+          },
+          "bbox": [
+            -87.7179806582046,
+            41.895549661011025,
+            -87.71366700000192,
+            41.89848353861772
+          ],
+          "count": 32,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 9
+            },
+            {
+              "ownerType": "unknown",
+              "count": 23
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 9,
+            "organize_next": 0,
+            "verify": 23,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 2,
+          "vacantLandCount": 9,
+          "vacantBuildingCount": 23,
+          "corridorName": "West Humboldt Park"
+        },
+        {
+          "id": 7,
+          "centroid": {
+            "lat": 41.89696625735213,
+            "lon": -87.71226652705711
+          },
+          "bbox": [
+            -87.71365800000191,
+            41.89572347156722,
+            -87.71112997982543,
+            41.898491570932286
+          ],
+          "count": 32,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 4
+            },
+            {
+              "ownerType": "unknown",
+              "count": 28
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 4,
+            "organize_next": 0,
+            "verify": 28,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 4,
+          "vacantBuildingCount": 28,
+          "corridorName": "West Humboldt Park"
+        },
+        {
+          "id": 8,
+          "centroid": {
+            "lat": 41.90105393548668,
+            "lon": -87.72226776228355
+          },
+          "bbox": [
+            -87.72467187206341,
+            41.89981474722503,
+            -87.72021318396527,
+            41.90242442958996
+          ],
+          "count": 32,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 8
+            },
+            {
+              "ownerType": "unknown",
+              "count": 24
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 8,
+            "organize_next": 0,
+            "verify": 24,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 3,
+          "vacantLandCount": 8,
+          "vacantBuildingCount": 24,
+          "corridorName": null
+        },
+        {
+          "id": 9,
+          "centroid": {
+            "lat": 41.896725202237064,
+            "lon": -87.71891146657806
+          },
+          "bbox": [
+            -87.71987824318443,
+            41.895639000941,
+            -87.71845050000191,
+            41.898492000941
+          ],
+          "count": 31,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 8
+            },
+            {
+              "ownerType": "unknown",
+              "count": 23
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 8,
+            "organize_next": 0,
+            "verify": 23,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 2,
+          "vacantLandCount": 8,
+          "vacantBuildingCount": 23,
+          "corridorName": "West Humboldt Park"
+        },
+        {
+          "id": 10,
+          "centroid": {
+            "lat": 41.897291409729384,
+            "lon": -87.72625531091232
+          },
+          "bbox": [
+            -87.727792500002,
+            41.89537550205197,
+            -87.72486420430334,
+            41.89939781940232
+          ],
+          "count": 31,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 11
+            },
+            {
+              "ownerType": "unknown",
+              "count": 20
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 11,
+            "organize_next": 0,
+            "verify": 20,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 1,
+          "vacantLandCount": 11,
+          "vacantBuildingCount": 20,
+          "corridorName": "West Humboldt Park"
+        },
+        {
+          "id": 11,
+          "centroid": {
+            "lat": 41.90030275385767,
+            "lon": -87.71738011086966
+          },
+          "bbox": [
+            -87.719873105266,
+            41.898771000941,
+            -87.71521754263652,
+            41.901255000941
+          ],
+          "count": 31,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 5
+            },
+            {
+              "ownerType": "unknown",
+              "count": 26
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 5,
+            "organize_next": 0,
+            "verify": 26,
+            "long_term": 0
+          },
+          "taxSaleCount": 0,
+          "violationCount": 1,
+          "vacantLandCount": 5,
+          "vacantBuildingCount": 26,
+          "corridorName": "Kinzie"
+        },
+        {
+          "id": 12,
+          "centroid": {
+            "lat": 41.904275396063895,
+            "lon": -87.74966938278267
+          },
+          "bbox": [
+            -87.751300500002,
+            41.90259600094054,
+            -87.746346000002,
+            41.906718000941
+          ],
+          "count": 25,
+          "ownerTypeCounts": [
+            {
+              "ownerType": "corporate_llc",
+              "count": 0
+            },
+            {
+              "ownerType": "out_of_state",
+              "count": 0
+            },
+            {
+              "ownerType": "local_private",
+              "count": 0
+            },
+            {
+              "ownerType": "city_public",
+              "count": 1
+            },
+            {
+              "ownerType": "unknown",
+              "count": 24
+            }
+          ],
+          "portfolioCounts": {
+            "move_now": 1,
+            "organize_next": 0,
+            "verify": 24,
+            "long_term": 0
+          },
+          "taxSaleCount": 1,
+          "violationCount": 1,
+          "vacantLandCount": 1,
+          "vacantBuildingCount": 24,
+          "corridorName": "Northwest"
+        }
+      ],
+      "clustersNote": "Proximity clusters: tracked sites within ~100 m linked; contiguous areas larger than ~500 m are divided into sub-areas for intervention planning; minimum five sites. Boundaries are analytical, not parcel-contiguous.",
+      "corridors": [
+        {
+          "name": "West Humboldt Park",
+          "kind": "ssa"
+        },
+        {
+          "name": "Village:AustinChgoAvCCorr",
+          "kind": "ssa"
+        },
+        {
+          "name": "Northwest",
+          "kind": "industrial"
+        },
+        {
+          "name": "Kinzie",
+          "kind": "industrial"
+        }
+      ],
+      "anchors": [
+        {
+          "name": "Humboldt Park Health / Wellness Center",
+          "category": "Hospital / healthcare anchor",
+          "lat": 41.902,
+          "lon": -87.722
+        },
+        {
+          "name": "Paseo Boricua / Division Street cultural-business corridor",
+          "category": "Cultural commercial corridor / legacy business ecosystem",
+          "lat": 41.902,
+          "lon": -87.722
         }
       ]
     }
