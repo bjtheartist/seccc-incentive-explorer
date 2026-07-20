@@ -48,11 +48,14 @@ import { normalizeOwnerType } from "../lib/owner-classify";
 import { normalizeOwnerAddress } from "../lib/corridor-owners";
 import { toDigitsOnlyPin } from "../lib/ingest/pin-batch";
 import {
+  addressHasViolation,
   assignQuantileDots,
   computeSitePriority,
   countAddressesInSet,
+  latestSaleYearForPin,
   nextStepForSite,
   rankSites,
+  reconcileOwnerTypeForPin,
   reconcileVacantLandOwnership,
   tallyOwnerTypeCounts,
   taxSaleExposureForVacantPins,
@@ -60,6 +63,7 @@ import {
   type VacancyDistressSignals,
   type VacancyIndexEdition,
   type VacancyIndexExport,
+  type VacancyLandPoint,
   type VacancyMatrixRow,
   type VacancyPropertyType,
   type VacancySiteIndexRow,
@@ -536,20 +540,28 @@ async function fetchAllVacantRows(sql: NeonQueryFunction<false, false>): Promise
 async function fetchVacantLandParcels(
   sql: NeonQueryFunction<false, false>,
   zip: string,
-): Promise<{ pin: string; ownerType: string | null }[] | null> {
+): Promise<{ pin: string; ownerType: string | null; lat: number | null; lon: number | null }[] | null> {
   try {
+    // Anonymized still — pin/owner_type only, plus lat/lon for the reconciled
+    // land-dot layer. NEVER owner names. Rows without coordinates stay in the
+    // series/total but drop out of landPoints (excluded at build time).
     const rows = (await sql`
-      SELECT pin, COALESCE(owner_type, 'unknown') AS owner_type
+      SELECT pin, COALESCE(owner_type, 'unknown') AS owner_type, lat, lon
       FROM parcels
       WHERE zip = ${zip} AND is_vacant IS TRUE
-    `) as { pin: string | null; owner_type: string | null }[];
+    `) as { pin: string | null; owner_type: string | null; lat: number | string | null; lon: number | string | null }[];
 
     if (rows.length === 0) {
       console.warn(`  ${zip}: parcels vacant-land ownership returned 0 rows — treating as unavailable (did SYNC_ZIPS cover this ZIP?)`);
       return null;
     }
 
-    return rows.map((r) => ({ pin: r.pin ?? "", ownerType: r.owner_type }));
+    return rows.map((r) => ({
+      pin: r.pin ?? "",
+      ownerType: r.owner_type,
+      lat: toNumOrNull(r.lat),
+      lon: toNumOrNull(r.lon),
+    }));
   } catch (err) {
     console.warn(
       `  ${zip}: parcels vacant-land ownership join unavailable (table likely not migrated on this branch):`,
@@ -641,12 +653,14 @@ interface ScoredSite {
   incentiveCount: number;
   priorityScore: number;
   priorityTier: "high" | "medium" | "low";
+  saleYear: number | null;
+  violation: boolean;
 }
 
 function buildEdition(
   zip: string,
   rows: VacantRow[],
-  parcels: { pin: string; ownerType: string | null }[] | null,
+  parcels: { pin: string; ownerType: string | null; lat: number | null; lon: number | null }[] | null,
   geo: ZipGeometry | undefined,
   transport: { kind: "expressway" | "rail"; points: [number, number][] }[],
   saleYearsByPin: Map<string, number[]> | null,
@@ -666,20 +680,45 @@ function buildEdition(
     if (pin.length === 14) inventoryPins.add(pin);
   }
 
-  // Raw + reconciled vacant-land ownership share the parcels pull's availability.
+  // Raw + reconciled vacant-land ownership + the land-dot layer all share the
+  // parcels pull's availability (null iff parcels === null).
   let rawSeries: OwnerTypeCount[] | null = null;
   let rawTotal: number | null = null;
   let reconciledSeries: OwnerTypeCount[] | null = null;
   let reconciliation: VacancyIndexEdition["ownership"]["reconciliation"] = null;
+  let landPoints: VacancyLandPoint[] | null = null;
+  let landPointsTruncated = false;
+  let landPointsTotal: number | null = null;
   const assessorVacantPins = new Set<string>();
   if (parcels !== null) {
-    const normRows = parcels.map((p) => ({ pin: toDigitsOnlyPin(p.pin), ownerType: p.ownerType }));
+    const normRows = parcels.map((p) => ({
+      pin: toDigitsOnlyPin(p.pin),
+      ownerType: p.ownerType,
+      lat: p.lat,
+      lon: p.lon,
+    }));
     for (const r of normRows) if (r.pin) assessorVacantPins.add(r.pin);
     rawSeries = tallyOwnerTypeCounts(normRows.map((r) => r.ownerType));
     rawTotal = normRows.length;
     const reconciled = reconcileVacantLandOwnership(normRows, inventoryPins);
     reconciledSeries = reconciled.series;
     reconciliation = reconciled.stats;
+
+    // Land dots: coord-bearing parcels only (rows without lat/lon stay in the
+    // series/total but drop out here), reconciled owner type + per-point
+    // tax-sale flag, deterministic pin-asc order, capped. Total = full universe.
+    landPointsTotal = rawTotal;
+    const withCoords = normRows
+      .filter((r) => r.lat != null && r.lon != null)
+      .sort((a, b) => (a.pin < b.pin ? -1 : a.pin > b.pin ? 1 : 0));
+    const allLandPoints: VacancyLandPoint[] = withCoords.map((r) => ({
+      lat: r.lat as number,
+      lon: r.lon as number,
+      ownerType: reconcileOwnerTypeForPin(r.pin, r.ownerType, inventoryPins),
+      saleYear: latestSaleYearForPin(r.pin, saleYearsByPin),
+    }));
+    landPointsTruncated = allLandPoints.length > SITE_POINTS_CAP;
+    landPoints = allLandPoints.slice(0, SITE_POINTS_CAP);
   }
 
   // Distress overlays — null only when NEITHER source table loaded.
@@ -708,6 +747,13 @@ function buildEdition(
       status: r.status,
       propertyType,
     });
+    // Per-point distress flags. COLS rows carry their PIN in the id (`cols-<pin>`);
+    // 311 rows do not, so their saleYear stays null (honest). Violation matches
+    // the same normalized address the edition-level violationMatchCount counts.
+    const colsPin = r.id.startsWith("cols-") ? toDigitsOnlyPin(r.id.slice("cols-".length)) : "";
+    const pin = colsPin.length === 14 ? colsPin : null;
+    const saleYear = latestSaleYearForPin(pin, saleYearsByPin);
+    const violation = addressHasViolation(normalizeOwnerAddress(r.address), violationAddressSet);
     return {
       id: r.id,
       lat: toNum(r.lat),
@@ -721,6 +767,8 @@ function buildEdition(
       incentiveCount,
       priorityScore: score,
       priorityTier: tier,
+      saleYear,
+      violation,
     };
   });
 
@@ -740,6 +788,8 @@ function buildEdition(
     propertyType: s.propertyType,
     priorityTier: s.priorityTier,
     markerNumber: i < MARKER_COUNT ? i + 1 : null,
+    saleYear: s.saleYear,
+    violation: s.violation,
   }));
   const sitePointsTruncated = sitePointsFull.length > SITE_POINTS_CAP;
   const sitePoints = sitePointsFull.slice(0, SITE_POINTS_CAP);
@@ -783,6 +833,9 @@ function buildEdition(
     sitePoints,
     sitePointsTruncated,
     siteIndex,
+    landPoints,
+    landPointsTruncated,
+    landPointsTotal,
     boundary: geo ? buildBoundary(geo) : null,
     centroid: geo ? editionCentroid(geo) : { lat: 0, lon: 0 },
     transport,
@@ -951,6 +1004,7 @@ async function main() {
       `  ${zip} ${edition.neighborhood}: ${edition.headline.vacantPropertyCount} tracked ` +
         `(${edition.headline.cityOwnedCount} city-owned, ${edition.headline.inIncentiveZoneCount} in incentive zones), ` +
         `${edition.sitePoints.length} site points${edition.sitePointsTruncated ? " (truncated)" : ""}, ` +
+        `${edition.landPoints === null ? "no land dots" : `${edition.landPoints.length}/${edition.landPointsTotal ?? "?"} land dots${edition.landPointsTruncated ? " (truncated)" : ""}`}, ` +
         `${transport.length} transport lines`,
     );
     const rec = edition.ownership.reconciliation;

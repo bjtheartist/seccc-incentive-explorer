@@ -314,6 +314,9 @@ export default async function VacancyReportPage({
             sitePoints={edition.sitePoints}
             siteIndex={edition.siteIndex}
             totalCount={headline.vacantPropertyCount}
+            landPoints={edition.landPoints ?? null}
+            landPointsTruncated={edition.landPointsTruncated ?? false}
+            landPointsTotal={edition.landPointsTotal ?? null}
           />
         </section>
 

@@ -9,6 +9,16 @@
  * a match-expression color ramp keyed on ownerType, a ZIP boundary line
  * layer, numbered priority markers, and a collapsible owner-type legend.
  *
+ * Two views share ONE clustered source (data swapped via source.setData on
+ * toggle, so every cluster/dot layer + the match-expression colors work
+ * unchanged for both):
+ *   1. TRACKED INVENTORY — COLS + 311 sitePoints; numbered priority markers.
+ *   2. VACANT LAND (RECONCILED) — assessor vacant-land parcels colored by their
+ *      reconciled owner type; no numbered markers.
+ * Distressed dots (tax-sale-exposed parcels, violation-matched buildings) carry
+ * an always-on red ring in both views, and two legend checkbox filters narrow
+ * the plotted universe (filtering rebuilds the source data so clusters recount).
+ *
  * Raw mapbox-gl (repo convention — react-map-gl is NOT a dependency). All
  * data arrives as props from the server component; this component NEVER
  * fetches the multi-megabyte vacancy-index.json client-side. mapbox-gl's CSS
@@ -25,6 +35,7 @@ import {
 } from "@/lib/owner-classify";
 import { trackEvent } from "@/lib/analytics-events";
 import type {
+  VacancyLandPoint,
   VacancyPriorityTier,
   VacancyPropertyType,
   VacancySiteIndexRow,
@@ -32,6 +43,9 @@ import type {
 } from "@/lib/vacancy-index";
 
 const INK = "#111111";
+const DISTRESS_RED = "#DC2626";
+
+type MapView = "tracked" | "land";
 
 const PROPERTY_TYPE_LABELS: Record<VacancyPropertyType, string> = {
   vacant_land: "Vacant Land",
@@ -62,6 +76,28 @@ interface VacancyReportMapProps {
   /** The true total tracked-site count for the ZIP; sitePoints is capped at
    *  2000, so this drives the "SHOWING N OF TOTAL" honesty line. */
   totalCount: number;
+  /** Reconciled vacant-land parcels as dots (view 2), or null when the export
+   *  could not build the parcels series for this ZIP (toggle disabled). */
+  landPoints: VacancyLandPoint[] | null;
+  landPointsTruncated: boolean;
+  /** Full vacant-land universe count (= vacantLandParcelTotal); drives the land
+   *  view's SHOWING line. null exactly when landPoints is null. */
+  landPointsTotal: number | null;
+}
+
+/** Feature properties carried on every dot (both views), keyed identically so
+ *  the shared layers/paint expressions/filters work for tracked and land. */
+interface DotProps {
+  ownerType: OwnerType;
+  propertyType: VacancyPropertyType | null;
+  priorityTier: VacancyPriorityTier | null;
+  markerNumber: number | null;
+  address: string | null;
+  nextStep: string | null;
+  saleYear: number | null;
+  sale: boolean;
+  violation: boolean;
+  distressed: boolean;
 }
 
 export default function VacancyReportMap({
@@ -72,6 +108,9 @@ export default function VacancyReportMap({
   sitePoints,
   siteIndex,
   totalCount,
+  landPoints,
+  landPointsTruncated,
+  landPointsTotal,
 }: VacancyReportMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -80,21 +119,52 @@ export default function VacancyReportMap({
   const token =
     typeof process !== "undefined" ? process.env.NEXT_PUBLIC_MAPBOX_TOKEN : undefined;
 
-  // Owner types genuinely present in this edition's dots (OWNER_TYPE_ORDER).
-  const presentTypes = useMemo(
+  const landDisabled = landPoints == null;
+
+  const [view, setView] = useState<MapView>("tracked");
+
+  // Owner types genuinely present in each view's dots (OWNER_TYPE_ORDER).
+  const trackedPresent = useMemo(
     () => presentOwnerTypesInOrder(sitePoints.map((p) => p.ownerType)),
     [sitePoints],
   );
+  const landPresent = useMemo(
+    () => (landPoints ? presentOwnerTypesInOrder(landPoints.map((p) => p.ownerType)) : []),
+    [landPoints],
+  );
+  const presentTypes = useMemo(
+    () => (view === "land" ? landPresent : trackedPresent),
+    [view, landPresent, trackedPresent],
+  );
 
   // Live per-type counts for the legend (from the loaded points, not a query).
-  const typeCounts = useMemo(() => {
+  const trackedCounts = useMemo(() => {
     const counts = new Map<OwnerType, number>();
     for (const p of sitePoints) counts.set(p.ownerType, (counts.get(p.ownerType) ?? 0) + 1);
     return counts;
   }, [sitePoints]);
+  const landCounts = useMemo(() => {
+    const counts = new Map<OwnerType, number>();
+    for (const p of landPoints ?? []) counts.set(p.ownerType, (counts.get(p.ownerType) ?? 0) + 1);
+    return counts;
+  }, [landPoints]);
+  const typeCounts = view === "land" ? landCounts : trackedCounts;
+
+  // Distress counts for the current view's points.
+  const saleCount = useMemo(() => {
+    const pts = view === "land" ? landPoints ?? [] : sitePoints;
+    return pts.filter((p) => p.saleYear != null).length;
+  }, [view, landPoints, sitePoints]);
+  const violationCount = useMemo(
+    () => sitePoints.filter((p) => p.violation).length,
+    [sitePoints],
+  );
 
   const [activeTypes, setActiveTypes] = useState<Set<OwnerType>>(new Set());
-  // Seed the active set once the present types are known (all on by default).
+  const [saleFilter, setSaleFilter] = useState(false);
+  const [violationFilter, setViolationFilter] = useState(false);
+  // Seed / reset the active set whenever the present types change (i.e. on
+  // toggle) — reset-on-toggle: owner-type selections do not carry across views.
   useEffect(() => {
     setActiveTypes(new Set(presentTypes));
   }, [presentTypes]);
@@ -114,14 +184,30 @@ export default function VacancyReportMap({
 
   // Latest props for the mount-once init effect (read through a ref so the
   // effect can stay dependency-free without going stale).
-  const dataRef = useRef({ boundary, bbox, centroid, sitePoints, siteIndex });
-  dataRef.current = { boundary, bbox, centroid, sitePoints, siteIndex };
+  const dataRef = useRef({ boundary, bbox, centroid, sitePoints, siteIndex, landPoints });
+  dataRef.current = { boundary, bbox, centroid, sitePoints, siteIndex, landPoints };
+
+  // Current view read through a ref so the mount-once popup handler stays fresh.
+  const viewRef = useRef(view);
+  viewRef.current = view;
+
+  // Both views' full (unfiltered) feature collections, built once at init.
+  const featuresRef = useRef<{ tracked: GeoJSON.Feature[]; land: GeoJSON.Feature[] }>({
+    tracked: [],
+    land: [],
+  });
 
   useEffect(() => {
     if (!containerRef.current || !token) return;
 
-    const { boundary: bnd, bbox: bb, centroid: ctr, sitePoints: pts, siteIndex: idx } =
-      dataRef.current;
+    const {
+      boundary: bnd,
+      bbox: bb,
+      centroid: ctr,
+      sitePoints: pts,
+      siteIndex: idx,
+      landPoints: land,
+    } = dataRef.current;
 
     mapboxgl.accessToken = token;
     const map = new mapboxgl.Map({
@@ -138,40 +224,88 @@ export default function VacancyReportMap({
     const markerByNumber = new Map<number, VacancySiteIndexRow>();
     for (const r of markerRows) if (r.markerNumber != null) markerByNumber.set(r.markerNumber, r);
 
-    const dotFeatures: GeoJSON.Feature[] = pts.map((p) => {
+    const trackedFeatures: GeoJSON.Feature[] = pts.map((p) => {
       const joined = p.markerNumber != null ? markerByNumber.get(p.markerNumber) : undefined;
+      const sale = p.saleYear != null;
+      const props: DotProps = {
+        ownerType: p.ownerType,
+        propertyType: p.propertyType,
+        priorityTier: p.priorityTier,
+        markerNumber: p.markerNumber ?? null,
+        address: joined?.address ?? null,
+        nextStep: joined?.nextStep ?? null,
+        saleYear: p.saleYear,
+        sale,
+        violation: p.violation,
+        distressed: sale || p.violation,
+      };
       return {
         type: "Feature",
         geometry: { type: "Point", coordinates: [p.lon, p.lat] },
+        properties: props as unknown as GeoJSON.GeoJsonProperties,
+      };
+    });
+
+    const landFeatures: GeoJSON.Feature[] = (land ?? []).map((p) => {
+      const sale = p.saleYear != null;
+      const props: DotProps = {
+        ownerType: p.ownerType,
+        propertyType: "vacant_land",
+        priorityTier: null,
+        markerNumber: null,
+        address: null,
+        nextStep: null,
+        saleYear: p.saleYear,
+        sale,
+        violation: false,
+        distressed: sale,
+      };
+      return {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [p.lon, p.lat] },
+        properties: props as unknown as GeoJSON.GeoJsonProperties,
+      };
+    });
+
+    featuresRef.current = { tracked: trackedFeatures, land: landFeatures };
+
+    // Distress flags live on sitePoints, not siteIndex — join by markerNumber.
+    const distressByMarker = new Map<number, { saleYear: number | null; violation: boolean }>();
+    for (const p of pts) {
+      if (p.markerNumber != null) {
+        distressByMarker.set(p.markerNumber, { saleYear: p.saleYear, violation: p.violation });
+      }
+    }
+
+    const markerFeatures: GeoJSON.Feature[] = markerRows.map((r) => {
+      const d = r.markerNumber != null ? distressByMarker.get(r.markerNumber) : undefined;
+      const saleYear = d?.saleYear ?? null;
+      const violation = d?.violation ?? false;
+      const sale = saleYear != null;
+      return {
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [r.lon, r.lat] },
         properties: {
-          ownerType: p.ownerType,
-          propertyType: p.propertyType,
-          priorityTier: p.priorityTier,
-          markerNumber: p.markerNumber ?? null,
-          address: joined?.address ?? null,
-          nextStep: joined?.nextStep ?? null,
+          ownerType: r.ownerType,
+          propertyType: r.propertyType,
+          priorityTier: r.priorityTier,
+          markerNumber: r.markerNumber,
+          address: r.address,
+          nextStep: r.nextStep,
+          saleYear,
+          sale,
+          violation,
+          distressed: sale || violation,
         },
       };
     });
 
-    const markerFeatures: GeoJSON.Feature[] = markerRows.map((r) => ({
-      type: "Feature",
-      geometry: { type: "Point", coordinates: [r.lon, r.lat] },
-      properties: {
-        ownerType: r.ownerType,
-        propertyType: r.propertyType,
-        priorityTier: r.priorityTier,
-        markerNumber: r.markerNumber,
-        address: r.address,
-        nextStep: r.nextStep,
-      },
-    }));
-
     map.on("load", () => {
-      // ── Clustered dot source (CommuniData playbook) ──
+      // ── Clustered dot source (CommuniData playbook). Starts on the tracked
+      //    view; toggling swaps this source's data. ──
       map.addSource("vacancy-sites", {
         type: "geojson",
-        data: { type: "FeatureCollection", features: dotFeatures },
+        data: { type: "FeatureCollection", features: trackedFeatures },
         cluster: true,
         clusterMaxZoom: 14,
         clusterRadius: 50,
@@ -183,6 +317,7 @@ export default function VacancyReportMap({
         source: "vacancy-sites",
         filter: ["has", "point_count"],
         paint: {
+          // Clusters stay INK — no distress aggregation at the cluster level.
           "circle-color": INK,
           "circle-opacity": 0.9,
           "circle-radius": ["step", ["get", "point_count"], 16, 25, 22, 100, 28],
@@ -220,8 +355,9 @@ export default function VacancyReportMap({
             OWNER_TYPE_COLORS.unknown,
           ],
           "circle-radius": 7,
-          "circle-stroke-width": 1.5,
-          "circle-stroke-color": "#ffffff",
+          // Distressed dots (tax-sale exposed OR violation-matched) get a red ring.
+          "circle-stroke-width": ["case", ["==", ["get", "distressed"], true], 2, 1.5],
+          "circle-stroke-color": ["case", ["==", ["get", "distressed"], true], DISTRESS_RED, "#ffffff"],
         },
       });
 
@@ -243,7 +379,8 @@ export default function VacancyReportMap({
         });
       }
 
-      // ── Numbered priority markers (distinct dark-disc + number overlay) ──
+      // ── Numbered priority markers (tracked view only; hidden on the land
+      //    view via setLayoutProperty). ──
       map.addSource("vacancy-markers", {
         type: "geojson",
         data: { type: "FeatureCollection", features: markerFeatures },
@@ -256,7 +393,8 @@ export default function VacancyReportMap({
           "circle-color": INK,
           "circle-radius": 11,
           "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
+          // Distressed priority sites ring red too (else white).
+          "circle-stroke-color": ["case", ["==", ["get", "distressed"], true], DISTRESS_RED, "#ffffff"],
         },
       });
       map.addLayer({
@@ -283,11 +421,12 @@ export default function VacancyReportMap({
         );
       }
 
-      // ── Popups ──
+      // ── Popups (view-aware via viewRef) ──
       const openSitePopup = (
         lngLat: mapboxgl.LngLatLike,
         p: Record<string, unknown>,
       ) => {
+        const isLand = viewRef.current === "land";
         const ownerType = (p.ownerType as OwnerType) ?? "unknown";
         const ownerLabel = OWNER_TYPE_LABELS[ownerType] ?? OWNER_TYPE_LABELS.unknown;
         const ownerColor = OWNER_TYPE_COLORS[ownerType] ?? OWNER_TYPE_COLORS.unknown;
@@ -298,20 +437,42 @@ export default function VacancyReportMap({
         const markerNumber = p.markerNumber == null ? null : Number(p.markerNumber);
         const address = typeof p.address === "string" ? p.address : null;
         const nextStep = typeof p.nextStep === "string" ? p.nextStep : null;
+        const saleYear = p.saleYear == null ? null : Number(p.saleYear);
+        const violation = p.violation === true;
 
-        const header =
-          markerNumber != null && address
-            ? `<div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#2563EB;margin-bottom:4px;font-weight:600">Priority site #${markerNumber}</div>
-               <div style="font-size:13px;font-weight:600;color:#0C1B33">${escapeHtml(address)}</div>`
-            : `<div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#8A93A6;margin-bottom:4px;font-weight:600">Tracked vacant site</div>
-               <div style="font-size:13px;font-weight:600;color:#0C1B33">${escapeHtml(propertyLabel)}</div>`;
+        const distressLines = `${
+          saleYear != null
+            ? `<div style="font-size:11px;color:${DISTRESS_RED};margin-top:6px;font-weight:500">Tax-sale exposed · latest ${saleYear}</div>`
+            : ""
+        }${
+          violation
+            ? `<div style="font-size:11px;color:${DISTRESS_RED};margin-top:4px;font-weight:500">Matched vacant-building violation record</div>`
+            : ""
+        }`;
 
-        const html = `<div style="font-family:Inter,sans-serif;min-width:180px">
-          ${header}
-          <span style="display:inline-block;margin-top:6px;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapeHtml(ownerLabel)}</span>
-          <div style="font-size:11px;color:#5A6478;margin-top:8px">${escapeHtml(propertyLabel)} · ${escapeHtml(tierLabel)}</div>
-          ${nextStep ? `<div style="font-size:11px;color:#8A93A6;margin-top:6px;line-height:1.35">${escapeHtml(nextStep)}</div>` : ""}
-        </div>`;
+        let html: string;
+        if (isLand) {
+          html = `<div style="font-family:Inter,sans-serif;min-width:180px">
+            <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#8A93A6;margin-bottom:4px;font-weight:600">Vacant land parcel</div>
+            <span style="display:inline-block;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapeHtml(ownerLabel)}</span>
+            <div style="font-size:11px;color:#5A6478;margin-top:8px">Assessor vacant land · reconciled classification</div>
+            ${distressLines}
+          </div>`;
+        } else {
+          const header =
+            markerNumber != null && address
+              ? `<div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#2563EB;margin-bottom:4px;font-weight:600">Priority site #${markerNumber}</div>
+                 <div style="font-size:13px;font-weight:600;color:#0C1B33">${escapeHtml(address)}</div>`
+              : `<div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#8A93A6;margin-bottom:4px;font-weight:600">Tracked vacant site</div>
+                 <div style="font-size:13px;font-weight:600;color:#0C1B33">${escapeHtml(propertyLabel)}</div>`;
+          html = `<div style="font-family:Inter,sans-serif;min-width:180px">
+            ${header}
+            <span style="display:inline-block;margin-top:6px;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapeHtml(ownerLabel)}</span>
+            <div style="font-size:11px;color:#5A6478;margin-top:8px">${escapeHtml(propertyLabel)} · ${escapeHtml(tierLabel)}</div>
+            ${nextStep ? `<div style="font-size:11px;color:#8A93A6;margin-top:6px;line-height:1.35">${escapeHtml(nextStep)}</div>` : ""}
+            ${distressLines}
+          </div>`;
+        }
 
         new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
           .setLngLat(lngLat)
@@ -363,32 +524,66 @@ export default function VacancyReportMap({
     // Mount-once: all data is read from dataRef; token drives the guard above.
   }, [token]);
 
-  // ── Owner-type visibility toggles (layer filter expressions) ──
+  // ── Source swap + filters + marker visibility (single coherent effect) ──
+  // Filtering rebuilds the clustered source data (setData) — NOT a layer
+  // filter — so clusters recount correctly for the plotted subset.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
 
-    const active = Array.from(activeTypes);
-    // "match" over the active list returns true for a kept type, false otherwise.
-    const typeMatch =
-      active.length === presentTypes.length
-        ? null
-        : (["match", ["get", "ownerType"], active.length ? active : ["__none__"], true, false] as unknown as mapboxgl.FilterSpecification);
+    const base = view === "land" ? featuresRef.current.land : featuresRef.current.tracked;
+    const filtered = base.filter((f) => {
+      const p = (f.properties ?? {}) as unknown as DotProps;
+      if (!activeTypes.has(p.ownerType)) return false;
+      if (saleFilter && !p.sale) return false;
+      if (view === "tracked" && violationFilter && !p.violation) return false;
+      return true;
+    });
 
-    if (map.getLayer("vacancy-unclustered")) {
-      map.setFilter(
-        "vacancy-unclustered",
-        typeMatch
-          ? (["all", ["!", ["has", "point_count"]], typeMatch] as unknown as mapboxgl.FilterSpecification)
-          : (["!", ["has", "point_count"]] as unknown as mapboxgl.FilterSpecification),
-      );
+    const src = map.getSource("vacancy-sites") as mapboxgl.GeoJSONSource | undefined;
+    if (src) src.setData({ type: "FeatureCollection", features: filtered });
+
+    // Marker layers: visible only on the tracked view, filtered by the same
+    // owner-type + distress predicates (a separate, unclustered source).
+    const markerClauses: unknown[] = [];
+    if (activeTypes.size !== presentTypes.length) {
+      const active = Array.from(activeTypes);
+      markerClauses.push([
+        "match",
+        ["get", "ownerType"],
+        active.length ? active : ["__none__"],
+        true,
+        false,
+      ]);
     }
+    if (saleFilter) markerClauses.push(["==", ["get", "sale"], true]);
+    if (violationFilter) markerClauses.push(["==", ["get", "violation"], true]);
+    const markerFilter =
+      markerClauses.length === 0
+        ? null
+        : (["all", ...markerClauses] as unknown as mapboxgl.FilterSpecification);
+
+    const markerVisible = view === "tracked";
     for (const layerId of ["vacancy-marker-disc", "vacancy-marker-number"]) {
-      if (map.getLayer(layerId)) {
-        map.setFilter(layerId, typeMatch);
-      }
+      if (!map.getLayer(layerId)) continue;
+      map.setLayoutProperty(layerId, "visibility", markerVisible ? "visible" : "none");
+      map.setFilter(layerId, markerFilter);
     }
-  }, [activeTypes, presentTypes, loaded]);
+  }, [view, activeTypes, saleFilter, violationFilter, presentTypes, loaded]);
+
+  function switchView(next: MapView) {
+    if (next === view) return;
+    if (next === "land" && landDisabled) return;
+    setView(next);
+    // Reset filters — owner-type + distress selections do not carry across views.
+    setSaleFilter(false);
+    setViolationFilter(false);
+    setActiveTypes(new Set(next === "land" ? landPresent : trackedPresent));
+    trackEvent("vacancy_map_view_toggled", {
+      source: "vacancy_web_report",
+      metadata: { zip, view: next },
+    });
+  }
 
   function toggleType(type: OwnerType) {
     setActiveTypes((prev) => {
@@ -399,7 +594,13 @@ export default function VacancyReportMap({
     });
   }
 
-  const truncated = sitePoints.length < totalCount;
+  // ── SHOWING line: about the view universe (not the filtered subset) ──
+  const distressFilterActive = saleFilter || (view === "tracked" && violationFilter);
+  const shown = view === "land" ? landPoints?.length ?? 0 : sitePoints.length;
+  const universeTotal = view === "land" ? landPointsTotal ?? shown : totalCount;
+  const truncatedOrPartial =
+    view === "land" ? landPointsTruncated || shown < universeTotal : shown < universeTotal;
+  const noun = view === "land" ? "parcels" : "sites";
 
   if (!token) {
     return (
@@ -421,8 +622,32 @@ export default function VacancyReportMap({
     <div className="relative h-[560px] w-full overflow-hidden border border-[#0C1B33]/15 bg-white">
       <div ref={containerRef} className="absolute inset-0 h-full w-full" />
 
-      {/* Collapsible owner-type legend (top-right) */}
-      <div className="absolute right-3 top-3 z-10 w-[210px] border border-[#0C1B33]/15 bg-white/95 backdrop-blur-sm">
+      {/* Collapsible legend + view toggle (top-right) */}
+      <div className="absolute right-3 top-3 z-10 w-[230px] border border-[#0C1B33]/15 bg-white/95 backdrop-blur-sm">
+        {/* Segmented view toggle — top of the overlay */}
+        <div className="flex gap-px border-b border-[#0C1B33]/10 bg-[#0C1B33]/10">
+          <button
+            type="button"
+            onClick={() => switchView("tracked")}
+            className={`flex-1 px-2 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.08em] transition-colors ${
+              view === "tracked" ? "bg-[#0C1B33] text-white" : "bg-white text-[#0C1B33]/55 hover:text-[#2563EB]"
+            }`}
+          >
+            Tracked inventory
+          </button>
+          <button
+            type="button"
+            onClick={() => switchView("land")}
+            disabled={landDisabled}
+            title={landDisabled ? "Vacant-land parcels not yet exported for this ZIP" : undefined}
+            className={`flex-1 px-2 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.08em] transition-colors ${
+              view === "land" ? "bg-[#0C1B33] text-white" : "bg-white text-[#0C1B33]/55 hover:text-[#2563EB]"
+            } ${landDisabled ? "cursor-not-allowed opacity-40 hover:text-[#0C1B33]/55" : ""}`}
+          >
+            Vacant land (reconciled)
+          </button>
+        </div>
+
         <button
           type="button"
           onClick={() => setLegendOpen((o) => !o)}
@@ -467,16 +692,81 @@ export default function VacancyReportMap({
                 })}
               </ul>
             )}
+
+            {/* Distress filters */}
+            {(saleCount > 0 || (view === "tracked" && violationCount > 0)) && (
+              <div className="mt-2.5 border-t border-[#0C1B33]/10 pt-2">
+                <p className="mb-1.5 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                  Distress
+                </p>
+                <ul className="space-y-1.5">
+                  <li>
+                    <button
+                      type="button"
+                      onClick={() => setSaleFilter((v) => !v)}
+                      className="flex w-full items-center gap-2 text-left"
+                    >
+                      <span
+                        className="inline-block h-3 w-3 flex-shrink-0 rounded-full border-2"
+                        style={{
+                          backgroundColor: saleFilter ? DISTRESS_RED : "transparent",
+                          borderColor: DISTRESS_RED,
+                        }}
+                      />
+                      <span className={`flex-1 text-[11px] ${saleFilter ? "text-[#0C1B33]" : "text-[#0C1B33]/55"}`}>
+                        Tax-sale exposed
+                      </span>
+                      <span className="font-mono-bureau text-[10px] text-[#0C1B33]/45">
+                        {saleCount.toLocaleString("en-US")}
+                      </span>
+                    </button>
+                  </li>
+                  {view === "tracked" && (
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => setViolationFilter((v) => !v)}
+                        className="flex w-full items-center gap-2 text-left"
+                      >
+                        <span
+                          className="inline-block h-3 w-3 flex-shrink-0 rounded-full border-2"
+                          style={{
+                            backgroundColor: violationFilter ? DISTRESS_RED : "transparent",
+                            borderColor: DISTRESS_RED,
+                          }}
+                        />
+                        <span
+                          className={`flex-1 text-[11px] ${violationFilter ? "text-[#0C1B33]" : "text-[#0C1B33]/55"}`}
+                        >
+                          Building violations
+                        </span>
+                        <span className="font-mono-bureau text-[10px] text-[#0C1B33]/45">
+                          {violationCount.toLocaleString("en-US")}
+                        </span>
+                      </button>
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
+
             <div className="mt-2.5 border-t border-[#0C1B33]/10 pt-2">
               <p className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/40">
-                {truncated
-                  ? `Showing ${sitePoints.length.toLocaleString("en-US")} of ${totalCount.toLocaleString("en-US")}`
-                  : `Showing all ${sitePoints.length.toLocaleString("en-US")} sites`}
+                {truncatedOrPartial
+                  ? `Showing ${shown.toLocaleString("en-US")} of ${universeTotal.toLocaleString("en-US")}`
+                  : `Showing all ${shown.toLocaleString("en-US")} ${noun}`}
+                {distressFilterActive ? " · filtered" : ""}
               </p>
-              <p className="mt-1.5 text-[10px] leading-snug text-[#0C1B33]/45">
-                Numbered discs are the top {siteIndex.filter((r) => r.markerNumber != null).length}{" "}
-                priority sites (see the site index below).
-              </p>
+              {view === "tracked" ? (
+                <p className="mt-1.5 text-[10px] leading-snug text-[#0C1B33]/45">
+                  Numbered discs are the top {siteIndex.filter((r) => r.markerNumber != null).length}{" "}
+                  priority sites (see the site index below).
+                </p>
+              ) : (
+                <p className="mt-1.5 text-[10px] leading-snug text-[#0C1B33]/45">
+                  City/Public via City-inventory PIN match; private types from taxpayer records.
+                </p>
+              )}
             </div>
           </div>
         )}
