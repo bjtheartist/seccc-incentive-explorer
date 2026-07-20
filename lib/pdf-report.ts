@@ -204,7 +204,7 @@ function sanitizeForPdfDeep<T>(value: T): T {
  * final `doc.text`) matters: wrapping and right-alignment must measure the
  * same string that eventually gets drawn, or the layout drifts.
  */
-function createSanitizedDoc(): jsPDF {
+export function createSanitizedDoc(): jsPDF {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "letter" });
   const originalText = doc.text.bind(doc);
   const originalSplitTextToSize = doc.splitTextToSize.bind(doc);

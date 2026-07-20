@@ -10,7 +10,9 @@ import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { listOwnerClusters } from "@/lib/owner-file";
 import { loadStaticOwnerClustersGeneratedAt } from "@/lib/corridor-owners";
 import { PILOT_ZIPS, getPilotZipEntry } from "@/lib/pilot-zips";
+import { getVacancyIndexEdition } from "@/lib/vacancy-index";
 import OwnerClusterListClient from "@/components/owner-file/OwnerClusterListClient";
+import { VacancyIndexPdfButton } from "@/components/owner-file/VacancyIndexPdfButton";
 
 export const dynamic = "force-dynamic";
 
@@ -98,6 +100,7 @@ export default async function OwnerFilesIndexPage({
     .sort((a, b) => b.vacantParcelCount - a.vacantParcelCount);
   const snapshotGeneratedAt = loadStaticOwnerClustersGeneratedAt();
   const pilotEntry = getPilotZipEntry(zip);
+  const vacancyEdition = getVacancyIndexEdition(zip);
   const neighborhoodLabel = pilotEntry ? pilotEntry.primaryNeighborhood : `ZIP ${zip}`;
 
   return (
@@ -135,6 +138,19 @@ export default async function OwnerFilesIndexPage({
             ? `Records snapshot as of ${new Date(snapshotGeneratedAt).toLocaleDateString("en-US")} — records indicate, verify before relying.`
             : "Records snapshot date unavailable — records indicate, verify before relying."}
         </p>
+
+        {vacancyEdition && pilotEntry && (
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <VacancyIndexPdfButton
+              zip={zip}
+              neighborhood={pilotEntry.primaryNeighborhood}
+              source="owner_files_zip"
+            />
+            <p className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
+              Shareable edition — owner types only, no names. Safe to hand to partners.
+            </p>
+          </div>
+        )}
 
         {/* Neighborhood switcher — pill row across all 9 pilot ZIPs */}
         <div className="mt-6 flex flex-wrap gap-1.5">

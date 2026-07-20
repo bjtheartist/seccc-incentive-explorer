@@ -157,4 +157,18 @@ describe("analytics events", () => {
       metadata: { clusterKey: "mail:foo", zip: "60617", status: "verified", resolvedTier: "A" },
     });
   });
+
+  it("accepts the Vacancy Opportunity Index PDF download event", () => {
+    expect(isAnalyticsEventType("vacancy_index_pdf_downloaded")).toBe(true);
+
+    const event = sanitizeAnalyticsEventPayload("vacancy_index_pdf_downloaded", {
+      source: "owner_files_zip",
+      metadata: { zip: "60624", siteCount: 15, truncated: false },
+    });
+    expect(event).toMatchObject({
+      eventType: "vacancy_index_pdf_downloaded",
+      source: "owner_files_zip",
+      metadata: { zip: "60624", siteCount: 15, truncated: false },
+    });
+  });
 });
