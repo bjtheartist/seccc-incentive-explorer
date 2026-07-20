@@ -848,14 +848,14 @@ function drawSystemOverview(doc: jsPDF, input: VacancyIndexInput) {
   let y = 44;
 
   // Ownership of tracked inventory (reconciles with the headline count).
-  eyebrow(doc, "OWNERSHIP — TRACKED VACANT INVENTORY (COLS + 311)", MARGIN, y, 7, INK_45, 0.4);
+  eyebrow(doc, "CITY'S TRACKED INVENTORY (COLS + 311)", MARGIN, y, 7, INK_45, 0.4);
   y += 6;
   y = drawOwnershipBars(doc, MARGIN, y, 90, input.trackedInventoryByOwnerType);
   y += 2;
 
   // Reconciled vacant-land ownership — City/Public taken from the City's own
   // land inventory (PIN-matched, authoritative), the rest from taxpayer records.
-  eyebrow(doc, "VACANT LAND BY OWNER (RECONCILED)", MARGIN, y, 7, INK_45, 0.4);
+  eyebrow(doc, "ASSESSOR-CLASSED VACANT LAND (RECONCILED)", MARGIN, y, 7, INK_45, 0.4);
   y += 5;
   if (input.reconciledOwnerTypeDistribution == null) {
     drawPendingChip(doc, MARGIN, y, CONTENT_W, "PARCEL-LEVEL OWNERSHIP DATASET");

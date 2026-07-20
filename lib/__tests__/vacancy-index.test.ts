@@ -5,28 +5,42 @@ import { OWNER_TYPE_ORDER } from "../owner-classify";
 import {
   addressHasViolation,
   assignQuantileDots,
+  bboxIntersects,
   buildDirectoryRows,
+  CLUSTERS_NOTE,
+  clusterVacantSites,
   compareDirectoryRows,
   compareRankableSites,
   computeSitePriority,
+  corridorRefsIntersectingBbox,
   countAddressesInSet,
   editionGeographyNote,
   getVacancyIndexEdition,
+  haversineMeters,
   latestSaleYearForPin,
   loadVacancyIndex,
   MATRIX_METHOD_NOTE,
+  nearestCorridorName,
   nextStepForSite,
+  PORTFOLIO_LABELS,
+  PORTFOLIO_ORDER,
+  PORTFOLIO_RUBRIC_NOTE,
+  portfolioForSite,
   priorityTierForScore,
   rankSites,
   reconcileOwnerTypeForPin,
   reconcileVacantLandOwnership,
   tallyOwnerTypeCounts,
+  tallyPortfolioCounts,
   taxSaleExposureForVacantPins,
+  type ClusterInputSite,
+  type CorridorPolygon,
   type DirectoryInputSite,
   type RankableSite,
   type VacancyDirectoryFile,
   type VacancyDirectoryRow,
   type VacancyIndexExport,
+  type VacancyPortfolio,
   type VacancyPriorityTier,
   type VacancyPropertyType,
 } from "../vacancy-index";
@@ -552,6 +566,306 @@ describe("printed-copy constants", () => {
   });
 });
 
+// ── Portfolios (D1) ──────────────────────────────────────────────────────────
+
+describe("portfolioForSite (every branch)", () => {
+  const base = {
+    ownerType: "corporate_llc" as OwnerType,
+    priorityTier: "high" as VacancyPriorityTier,
+    saleYear: null as number | null,
+    violation: false,
+  };
+
+  it("routes an unknown owner to verify regardless of priority or tax sale", () => {
+    expect(portfolioForSite({ ...base, ownerType: "unknown" })).toBe("verify");
+    expect(portfolioForSite({ ...base, ownerType: "unknown", priorityTier: "low", saleYear: 2020 })).toBe("verify");
+  });
+
+  it("routes a tax-sale-exposed non-city parcel to verify (title risk before outreach)", () => {
+    expect(portfolioForSite({ ...base, ownerType: "corporate_llc", saleYear: 2019 })).toBe("verify");
+    expect(portfolioForSite({ ...base, ownerType: "local_private", saleYear: 2021 })).toBe("verify");
+    // A tax-sale-exposed CITY parcel is NOT diverted to verify (city carve-out).
+    expect(portfolioForSite({ ...base, ownerType: "city_public", saleYear: 2019 })).toBe("move_now");
+  });
+
+  it("routes city_public at high|medium priority to move_now", () => {
+    expect(portfolioForSite({ ...base, ownerType: "city_public", priorityTier: "high" })).toBe("move_now");
+    expect(portfolioForSite({ ...base, ownerType: "city_public", priorityTier: "medium" })).toBe("move_now");
+  });
+
+  it("routes a known private/entity owner at high|medium priority to organize_next", () => {
+    for (const ownerType of ["local_private", "corporate_llc", "out_of_state"] as OwnerType[]) {
+      expect(portfolioForSite({ ...base, ownerType, priorityTier: "high" })).toBe("organize_next");
+      expect(portfolioForSite({ ...base, ownerType, priorityTier: "medium" })).toBe("organize_next");
+    }
+  });
+
+  it("routes everything else to long_term (low-priority known owners, low-priority city)", () => {
+    expect(portfolioForSite({ ...base, ownerType: "corporate_llc", priorityTier: "low" })).toBe("long_term");
+    expect(portfolioForSite({ ...base, ownerType: "local_private", priorityTier: "low" })).toBe("long_term");
+    expect(portfolioForSite({ ...base, ownerType: "out_of_state", priorityTier: "low" })).toBe("long_term");
+    expect(portfolioForSite({ ...base, ownerType: "city_public", priorityTier: "low" })).toBe("long_term");
+  });
+
+  it("violation does not change the bucket (not a determinant in the current rubric)", () => {
+    expect(portfolioForSite({ ...base, ownerType: "corporate_llc", priorityTier: "low", violation: true })).toBe(
+      "long_term",
+    );
+    expect(portfolioForSite({ ...base, ownerType: "city_public", priorityTier: "high", violation: true })).toBe(
+      "move_now",
+    );
+  });
+
+  it("labels, order, and rubric note are coherent", () => {
+    expect(PORTFOLIO_ORDER).toEqual(["move_now", "organize_next", "verify", "long_term"]);
+    expect(PORTFOLIO_LABELS).toEqual({
+      move_now: "Move now",
+      organize_next: "Organize next",
+      verify: "Verify",
+      long_term: "Long-term",
+    });
+    for (const label of Object.values(PORTFOLIO_LABELS)) expect(PORTFOLIO_RUBRIC_NOTE).toContain(label);
+  });
+});
+
+describe("tallyPortfolioCounts", () => {
+  it("covers all four portfolios with honest zeros", () => {
+    const counts = tallyPortfolioCounts(["verify", "verify", "move_now"] as VacancyPortfolio[]);
+    expect(counts).toEqual({ move_now: 1, organize_next: 0, verify: 2, long_term: 0 });
+  });
+});
+
+// ── Spatial helpers ──────────────────────────────────────────────────────────
+
+describe("haversineMeters", () => {
+  it("is ~0 for identical points and symmetric", () => {
+    expect(haversineMeters(41.85, -87.65, 41.85, -87.65)).toBeCloseTo(0, 5);
+    expect(haversineMeters(41.85, -87.65, 41.86, -87.64)).toBeCloseTo(
+      haversineMeters(41.86, -87.64, 41.85, -87.65),
+      6,
+    );
+  });
+
+  it("measures a ~111 m north step of 0.001° latitude", () => {
+    const d = haversineMeters(41.85, -87.65, 41.851, -87.65);
+    expect(d).toBeGreaterThan(105);
+    expect(d).toBeLessThan(117);
+  });
+});
+
+describe("bboxIntersects", () => {
+  it("detects overlap, touching, and separation", () => {
+    expect(bboxIntersects([0, 0, 2, 2], [1, 1, 3, 3])).toBe(true);
+    expect(bboxIntersects([0, 0, 2, 2], [2, 2, 4, 4])).toBe(true); // touching counts
+    expect(bboxIntersects([0, 0, 1, 1], [2, 2, 3, 3])).toBe(false);
+    expect(bboxIntersects([0, 0, 1, 1], [0.5, 5, 1.5, 6])).toBe(false); // lat-disjoint
+  });
+});
+
+describe("corridorRefsIntersectingBbox / nearestCorridorName", () => {
+  // A unit square corridor around (−87.65, 41.85), ±0.01°.
+  const square: CorridorPolygon = {
+    name: "Test Corridor",
+    kind: "commercial",
+    bbox: [-87.66, 41.84, -87.64, 41.86],
+    rings: [
+      [
+        [-87.66, 41.84],
+        [-87.64, 41.84],
+        [-87.64, 41.86],
+        [-87.66, 41.86],
+        [-87.66, 41.84],
+      ],
+    ],
+  };
+  const faraway: CorridorPolygon = {
+    name: "Faraway SSA",
+    kind: "ssa",
+    bbox: [-87.5, 41.7, -87.49, 41.71],
+    rings: [
+      [
+        [-87.5, 41.7],
+        [-87.49, 41.7],
+        [-87.49, 41.71],
+        [-87.5, 41.71],
+        [-87.5, 41.7],
+      ],
+    ],
+  };
+
+  it("lists corridors whose bbox overlaps and dedupes by name", () => {
+    const dupe = { ...square, kind: "industrial" as const };
+    const refs = corridorRefsIntersectingBbox([square, dupe, faraway], [-87.655, 41.845, -87.645, 41.855]);
+    expect(refs).toEqual([{ name: "Test Corridor", kind: "commercial" }]);
+  });
+
+  it("returns the containing corridor's name for an interior point", () => {
+    expect(nearestCorridorName(41.85, -87.65, [square, faraway])).toBe("Test Corridor");
+  });
+
+  it("returns the nearest corridor within maxMeters for an exterior point", () => {
+    // ~100 m east of the square's right edge (0.001° lon ≈ 83 m at this lat).
+    expect(nearestCorridorName(41.85, -87.639, [square], 400)).toBe("Test Corridor");
+  });
+
+  it("returns null when nothing is within maxMeters", () => {
+    // ~1 km east — outside the 400 m threshold.
+    expect(nearestCorridorName(41.85, -87.628, [square], 400)).toBeNull();
+    expect(nearestCorridorName(41.85, -87.65, [], 400)).toBeNull();
+  });
+});
+
+// ── Vacancy clusters (D2) ────────────────────────────────────────────────────
+
+describe("clusterVacantSites", () => {
+  const site = (
+    lat: number,
+    lon: number,
+    over: Partial<ClusterInputSite> = {},
+  ): ClusterInputSite => ({
+    lat,
+    lon,
+    ownerType: "unknown",
+    portfolio: "long_term",
+    taxSale: false,
+    violation: false,
+    propertyType: "vacant_building",
+    ...over,
+  });
+
+  // Two tight groups ~4 km apart, plus two isolated noise points.
+  const groupA = Array.from({ length: 6 }, (_, i) => site(41.8500 + i * 0.0002, -87.6500 + i * 0.0002));
+  const groupB = Array.from({ length: 5 }, (_, i) => site(41.8800 + i * 0.0002, -87.6200 + i * 0.0002));
+  const noise = [site(41.9000, -87.7000), site(41.7000, -87.5500)];
+
+  it("finds two clusters, drops sub-minSize noise", () => {
+    const clusters = clusterVacantSites([...groupA, ...noise, ...groupB]);
+    expect(clusters).toHaveLength(2);
+    // Ordered by count desc: groupA (6) before groupB (5).
+    expect(clusters[0].count).toBe(6);
+    expect(clusters[1].count).toBe(5);
+    expect(clusters[0].id).toBe(1);
+    expect(clusters[1].id).toBe(2);
+    // Every plotted site is land or building accounted for.
+    for (const c of clusters) {
+      expect(c.vacantLandCount + c.vacantBuildingCount).toBe(c.count);
+      expect(c.bbox[0]).toBeLessThanOrEqual(c.bbox[2]);
+      expect(c.bbox[1]).toBeLessThanOrEqual(c.bbox[3]);
+      expect(c.corridorName).toBeNull(); // filled by the export, not this fn
+    }
+  });
+
+  it("is deterministic under input shuffling (same clusters, same order)", () => {
+    const input = [...groupA, ...noise, ...groupB];
+    const shuffled = [...input].reverse();
+    const a = clusterVacantSites(input);
+    const b = clusterVacantSites(shuffled);
+    expect(JSON.stringify(b)).toBe(JSON.stringify(a));
+  });
+
+  it("honors a custom minSize (drops a group that no longer qualifies)", () => {
+    // minSize 6 keeps only groupA.
+    const clusters = clusterVacantSites([...groupA, ...groupB], { minSize: 6 });
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].count).toBe(6);
+  });
+
+  it("honors a tighter linkMeters (splits a loose group)", () => {
+    // Points spaced ~50 m apart; a 10 m link can't join them → no cluster.
+    const loose = Array.from({ length: 6 }, (_, i) => site(41.85 + i * 0.0005, -87.65));
+    expect(clusterVacantSites(loose, { linkMeters: 10 })).toHaveLength(0);
+  });
+
+  it("aggregates owner types, portfolios, and distress within a cluster", () => {
+    const rows = [
+      site(41.85, -87.65, { ownerType: "city_public", portfolio: "move_now", taxSale: true, propertyType: "vacant_land" }),
+      site(41.8501, -87.6501, { ownerType: "corporate_llc", portfolio: "organize_next", violation: true }),
+      site(41.8502, -87.6502, { ownerType: "unknown", portfolio: "verify" }),
+      site(41.8503, -87.6503, { ownerType: "local_private", portfolio: "long_term" }),
+      site(41.8504, -87.6504, { ownerType: "unknown", portfolio: "verify", taxSale: true }),
+    ];
+    const [c] = clusterVacantSites(rows);
+    expect(c.count).toBe(5);
+    expect(c.taxSaleCount).toBe(2);
+    expect(c.violationCount).toBe(1);
+    expect(c.vacantLandCount).toBe(1);
+    expect(c.vacantBuildingCount).toBe(4);
+    expect(c.portfolioCounts).toEqual({ move_now: 1, organize_next: 1, verify: 2, long_term: 1 });
+    // ownerTypeCounts lists all five owner types (honest zeros).
+    expect(c.ownerTypeCounts.map((o) => o.ownerType)).toEqual(OWNER_TYPE_ORDER);
+    const byOwner = Object.fromEntries(c.ownerTypeCounts.map((o) => [o.ownerType, o.count]));
+    expect(byOwner.city_public).toBe(1);
+    expect(byOwner.corporate_llc).toBe(1);
+    expect(byOwner.unknown).toBe(2);
+  });
+
+  it("returns an empty array for empty input", () => {
+    expect(clusterVacantSites([])).toEqual([]);
+  });
+
+  // ── Extent cap (anti-chaining) ──
+
+  /** Bbox extents in metres (lat axis, lon axis via cos(midLat)). */
+  const bboxExtentsMeters = (bbox: [number, number, number, number]) => {
+    const [w, s, e, n] = bbox;
+    const midLat = (s + n) / 2;
+    return {
+      latM: (n - s) * 111320,
+      lonM: (e - w) * 111320 * Math.cos((midLat * Math.PI) / 180),
+    };
+  };
+
+  // A straight north–south chain: 24 points at 50 m spacing (~1,150 m long),
+  // placed well away from groupA/groupB/noise so it stays its own linkage
+  // group. Every adjacent pair links at the default 100 m, so single-linkage
+  // would union the whole chain into one blob without the extent cap.
+  const LAT_STEP_50M = 50 / 111320;
+  const chain = Array.from({ length: 24 }, (_, i) => site(41.95 + i * LAT_STEP_50M, -87.73));
+
+  it("splits an over-extent chain into sub-areas, each within maxExtentMeters", () => {
+    const clusters = clusterVacantSites(chain);
+    expect(clusters.length).toBeGreaterThanOrEqual(2);
+    const EPS = 1; // metre slack on the extent assertion
+    let accounted = 0;
+    for (const c of clusters) {
+      const { latM, lonM } = bboxExtentsMeters(c.bbox);
+      expect(latM).toBeLessThanOrEqual(500 + EPS);
+      expect(lonM).toBeLessThanOrEqual(500 + EPS);
+      expect(c.count).toBeGreaterThanOrEqual(5); // every kept piece >= minSize
+      accounted += c.count;
+    }
+    // Every point is either in a >= minSize piece or dropped, never duplicated.
+    expect(accounted).toBeLessThanOrEqual(chain.length);
+    // For this even chain the floor(n/2) bisection yields 4 pieces of 6 —
+    // all >= minSize, so nothing drops.
+    expect(accounted).toBe(24);
+    expect(clusters.map((c) => c.count)).toEqual([6, 6, 6, 6]);
+  });
+
+  it("honors a custom maxExtentMeters (no split when the cap allows the chain)", () => {
+    const clusters = clusterVacantSites(chain, { maxExtentMeters: 2000 });
+    expect(clusters).toHaveLength(1);
+    expect(clusters[0].count).toBe(24);
+  });
+
+  it("is deterministic under input shuffling WITH splitting engaged", () => {
+    const input = [...chain, ...groupA, ...noise];
+    const shuffled = [...input].reverse();
+    const a = clusterVacantSites(input);
+    const b = clusterVacantSites(shuffled);
+    expect(a.length).toBeGreaterThanOrEqual(5); // 4 chain pieces + groupA
+    expect(JSON.stringify(b)).toBe(JSON.stringify(a));
+  });
+
+  it("CLUSTERS_NOTE discloses the link distance, extent cap, and analytical boundary", () => {
+    expect(CLUSTERS_NOTE).toContain("100");
+    expect(CLUSTERS_NOTE).toContain("500");
+    expect(CLUSTERS_NOTE).toContain("sub-areas");
+    expect(CLUSTERS_NOTE).toContain("analytical");
+    expect(CLUSTERS_NOTE).toContain("five");
+  });
+});
+
 // ── Committed-export guards ──────────────────────────────────────────────────
 // These mirror lib/__tests__/corridor-owners.test.ts's committed-export guard.
 // They stay skipped until scripts/export-vacancy-index.ts is run on a refresh
@@ -609,6 +923,27 @@ const ALLOWED_KEYS = new Set<string>([
   "boundary",
   "centroid",
   "transport",
+  // spatial-intelligence layer (D2/D3)
+  "clusters",
+  "clustersNote",
+  "corridors",
+  "anchors",
+  // cluster
+  "id",
+  "portfolioCounts",
+  "taxSaleCount",
+  "violationCount",
+  "vacantLandCount",
+  "vacantBuildingCount",
+  "corridorName",
+  "ownerTypeCounts",
+  "move_now",
+  "organize_next",
+  "verify",
+  "long_term",
+  // corridor ref / anchor
+  "name",
+  "category",
   // headline
   "vacantPropertyCount",
   "vacantLandCount",
@@ -872,6 +1207,70 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
       expect(edition.directoryCount, `${zip} directoryCount >= 0`).toBeGreaterThanOrEqual(0);
       // Never more than the full tracked universe (rows w/o a usable address drop out).
       expect(edition.directoryCount).toBeLessThanOrEqual(edition.headline.vacantPropertyCount);
+    }
+  });
+
+  // ── Spatial layer (D2/D3): EXPECTED-RED until the export re-runs. ──
+
+  it("carries clusters as a well-formed, count-desc array (<= 12) with a note", () => {
+    const validOwner = new Set<string>(OWNER_TYPE_ORDER);
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      expect(Array.isArray(edition.clusters), `${zip} clusters is array`).toBe(true);
+      expect(edition.clusters.length, `${zip} <= 12 clusters`).toBeLessThanOrEqual(12);
+      expect(typeof edition.clustersNote, `${zip} clustersNote string`).toBe("string");
+      let prevCount = Infinity;
+      edition.clusters.forEach((c, i) => {
+        expect(c.id, `${zip} cluster id`).toBe(i + 1); // 1..N by sort order
+        expect(c.count).toBeGreaterThanOrEqual(5); // minSize
+        expect(c.count).toBeLessThanOrEqual(prevCount); // count desc
+        prevCount = c.count;
+        expect(c.vacantLandCount + c.vacantBuildingCount, `${zip} cluster land+building = count`).toBe(c.count);
+        expect(c.taxSaleCount).toBeGreaterThanOrEqual(0);
+        expect(c.violationCount).toBeGreaterThanOrEqual(0);
+        expect(c.bbox[0]).toBeLessThanOrEqual(c.bbox[2]);
+        expect(c.bbox[1]).toBeLessThanOrEqual(c.bbox[3]);
+        expect(c.corridorName === null || typeof c.corridorName === "string").toBe(true);
+        for (const o of c.ownerTypeCounts) expect(validOwner.has(o.ownerType)).toBe(true);
+        for (const key of ["move_now", "organize_next", "verify", "long_term"] as const) {
+          expect(Number.isInteger(c.portfolioCounts[key]), `${zip} portfolioCounts.${key}`).toBe(true);
+        }
+      });
+    }
+  });
+
+  it("carries corridors as a name/kind array (deduped, valid kinds)", () => {
+    const validKind = new Set(["ssa", "commercial", "industrial"]);
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      expect(Array.isArray(edition.corridors), `${zip} corridors is array`).toBe(true);
+      const names = new Set<string>();
+      for (const c of edition.corridors) {
+        expect(typeof c.name).toBe("string");
+        expect(validKind.has(c.kind), `${zip} corridor kind ${c.kind}`).toBe(true);
+        expect(names.has(c.name), `${zip} corridor dedupe ${c.name}`).toBe(false);
+        names.add(c.name);
+      }
+    }
+  });
+
+  it("carries anchors as an array-or-null of {name,category,lat,lon}", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      const anchors = edition.anchors;
+      expect(anchors === null || Array.isArray(anchors), `${zip} anchors array-or-null`).toBe(true);
+      if (anchors === null) continue;
+      expect(anchors.length, `${zip} non-null anchors non-empty`).toBeGreaterThan(0);
+      for (const a of anchors) {
+        expect(Object.keys(a).sort()).toEqual(["category", "lat", "lon", "name"]);
+        expect(typeof a.name).toBe("string");
+        expect(typeof a.category).toBe("string");
+        expect(typeof a.lat).toBe("number");
+        expect(typeof a.lon).toBe("number");
+      }
     }
   });
 });

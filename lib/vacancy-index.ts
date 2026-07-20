@@ -33,6 +33,57 @@ export type VacancyPropertyType = "vacant_land" | "vacant_building";
 export type TransportKind = "expressway" | "rail";
 
 /**
+ * Intervention portfolio for one vacant site — the four coordinated-action
+ * buckets the spatial layer sorts sites into (see PORTFOLIO_RUBRIC_NOTE).
+ */
+
+/** A named corridor (kind distinguishes the three source layers). */
+export type CorridorKind = "ssa" | "commercial" | "industrial";
+export interface CorridorRef {
+  name: string;
+  kind: CorridorKind;
+}
+
+/**
+ * A community-impact anchor as a map point. Placed at its COMMUNITY-AREA
+ * centroid — the source dataset (data/exports/chicago-neighborhood-economics)
+ * is community-area-native and carries NO per-anchor coordinate, so lat/lon is
+ * an area-level locator, never an exact address. Anonymization-safe: public
+ * institutional names only.
+ */
+export interface VacancyAnchor {
+  name: string;
+  category: string;
+  lat: number;
+  lon: number;
+}
+
+/** [minLon, minLat, maxLon, maxLat] — the w,s,e,n convention the edition
+ * boundary and cluster bboxes both use. */
+export type VacancyBbox = [number, number, number, number];
+
+/**
+ * One proximity cluster of tracked vacant sites (D2). Boundaries are analytical
+ * (single-linkage over ~150 m), never parcel-contiguous. `ownerTypeCounts`
+ * lists all five owner types in OWNER_TYPE_ORDER (honest zeros); `portfolioCounts`
+ * carries all four portfolios. `corridorName` is the containing or nearest named
+ * corridor within ~400 m, else `null`.
+ */
+export interface VacancyCluster {
+  id: number; // 1..N, ordered by count desc then centroid lat/lon
+  centroid: { lat: number; lon: number };
+  bbox: VacancyBbox;
+  count: number;
+  ownerTypeCounts: OwnerTypeCount[];
+  portfolioCounts: Record<VacancyPortfolio, number>;
+  taxSaleCount: number;
+  violationCount: number;
+  vacantLandCount: number;
+  vacantBuildingCount: number;
+  corridorName: string | null;
+}
+
+/**
  * One owner-type tally in an ownership distribution. A `count` of `0` is a
  * real, honest zero (the query ran and this type simply wasn't present) — the
  * distributions in this export list every OwnerType in OWNER_TYPE_ORDER, so a
@@ -259,6 +310,22 @@ export interface VacancyIndexEdition {
   boundary: { rings: [number, number][][]; bbox: [number, number, number, number] } | null;
   centroid: { lat: number; lon: number };
   transport: { kind: TransportKind; points: [number, number][] }[];
+  /** Spatial-intelligence layer (D2/D3). Proximity clusters over the FULL
+   * tracked universe (pre-cap), top 12 by count; ALWAYS an array once the
+   * edition builds (empty when no cluster reaches the minimum size), never
+   * null — see CLUSTERS_NOTE for the method. */
+  clusters: VacancyCluster[];
+  /** The printable clustering-method note (= CLUSTERS_NOTE). */
+  clustersNote: string;
+  /** Named corridors (SSA / commercial CCSA / industrial) whose polygon bbox
+   * overlaps this edition's bbox, deduped by name. Always an array. */
+  corridors: CorridorRef[];
+  /** Community-impact anchors in this edition's community areas (primary +
+   * secondary), placed at their COMMUNITY-AREA centroid (the source dataset is
+   * community-area-native and carries no per-anchor coordinate — the lat/lon is
+   * an area-level locator, NOT an exact address). `null` when no anchor matched
+   * any of the edition's community areas. */
+  anchors: VacancyAnchor[] | null;
 }
 
 /** Human-readable source + as-of labels for the sheet footers. */
@@ -675,6 +742,390 @@ export const MATRIX_METHOD_NOTE =
  */
 export function editionGeographyNote(zip: string, neighborhood: string): string {
   return `Edition geography: ZIP ${zip} (primarily ${neighborhood}). ZIP and community-area boundaries do not align exactly.`;
+}
+
+// ── Intervention portfolios (pure, D1) ─────────────────────────────────────
+
+/** Display labels for the four portfolios. */
+import {
+  PORTFOLIO_LABELS,
+  PORTFOLIO_ORDER,
+  PORTFOLIO_RUBRIC_NOTE,
+  portfolioForSite,
+  tallyPortfolioCounts,
+  type VacancyPortfolio,
+} from "./vacancy-portfolio";
+
+export {
+  PORTFOLIO_LABELS,
+  PORTFOLIO_ORDER,
+  PORTFOLIO_RUBRIC_NOTE,
+  portfolioForSite,
+  tallyPortfolioCounts,
+};
+export type { VacancyPortfolio };
+
+// ── Spatial helpers (pure) ──────────────────────────────────────────────────
+
+/** Great-circle distance in metres between two lon/lat points. */
+export function haversineMeters(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+}
+
+/** True when two [minLon,minLat,maxLon,maxLat] boxes overlap (touching counts). */
+export function bboxIntersects(a: VacancyBbox, b: VacancyBbox): boolean {
+  return !(a[2] < b[0] || a[0] > b[2] || a[3] < b[1] || a[1] > b[3]);
+}
+
+/** Ray-cast point-in-ring test. `ring` is [lon,lat] pairs. */
+function pointInLonLatRing(lon: number, lat: number, ring: readonly [number, number][]): boolean {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i];
+    const [xj, yj] = ring[j];
+    if (yi > lat !== yj > lat && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/** Metres from a query point to a segment, via a local equirectangular
+ * projection centred on the query point (accurate at the ~400 m scale used
+ * for corridor labelling). Segment endpoints are [lon,lat]. */
+function distancePointToSegmentMeters(
+  lat: number,
+  lon: number,
+  aLon: number,
+  aLat: number,
+  bLon: number,
+  bLat: number,
+): number {
+  const mPerDegLat = 111320;
+  const mPerDegLon = 111320 * Math.cos((lat * Math.PI) / 180);
+  const ax = (aLon - lon) * mPerDegLon;
+  const ay = (aLat - lat) * mPerDegLat;
+  const bx = (bLon - lon) * mPerDegLon;
+  const by = (bLat - lat) * mPerDegLat;
+  const dx = bx - ax;
+  const dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  let t = len2 === 0 ? 0 : (-ax * dx + -ay * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  const cx = ax + t * dx;
+  const cy = ay + t * dy;
+  return Math.hypot(cx, cy);
+}
+
+/**
+ * A corridor polygon parsed for spatial tests: its name, kind, bounding box,
+ * and outer ring(s) as [lon,lat] pairs. Built by the export from the corridor
+ * geojsons; kept here so the spatial helpers stay pure and unit-testable.
+ */
+export interface CorridorPolygon {
+  name: string;
+  kind: CorridorKind;
+  bbox: VacancyBbox;
+  rings: [number, number][][];
+}
+
+/**
+ * The named corridors whose bbox overlaps `bbox`, deduped by name (first kind
+ * wins on a name collision). A bbox-overlap test is deliberately sufficient
+ * here — an edition lists a corridor as "nearby context", not as a strict
+ * geometric containment, so the cheap rectangle test is the intended contract.
+ */
+export function corridorRefsIntersectingBbox(
+  corridors: readonly CorridorPolygon[],
+  bbox: VacancyBbox,
+): CorridorRef[] {
+  const seen = new Set<string>();
+  const out: CorridorRef[] = [];
+  for (const c of corridors) {
+    if (!bboxIntersects(c.bbox, bbox)) continue;
+    if (seen.has(c.name)) continue;
+    seen.add(c.name);
+    out.push({ name: c.name, kind: c.kind });
+  }
+  return out;
+}
+
+/**
+ * Name of the corridor CONTAINING the point, else the NEAREST corridor whose
+ * edge is within `maxMeters` (default 400), else `null`. Containment is checked
+ * first in array order (first hit wins); the nearest fallback breaks ties by
+ * array order (strict `<`), so the result is deterministic.
+ */
+export function nearestCorridorName(
+  lat: number,
+  lon: number,
+  corridors: readonly CorridorPolygon[],
+  maxMeters = 400,
+): string | null {
+  for (const c of corridors) {
+    for (const ring of c.rings) {
+      if (pointInLonLatRing(lon, lat, ring)) return c.name;
+    }
+  }
+  const padLat = maxMeters / 111320;
+  const padLon = maxMeters / (111320 * Math.cos((lat * Math.PI) / 180));
+  let best: string | null = null;
+  let bestD = maxMeters;
+  for (const c of corridors) {
+    if (
+      lon < c.bbox[0] - padLon ||
+      lon > c.bbox[2] + padLon ||
+      lat < c.bbox[1] - padLat ||
+      lat > c.bbox[3] + padLat
+    ) {
+      continue;
+    }
+    for (const ring of c.rings) {
+      for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+        const d = distancePointToSegmentMeters(
+          lat,
+          lon,
+          ring[i][0],
+          ring[i][1],
+          ring[j][0],
+          ring[j][1],
+        );
+        if (d < bestD) {
+          bestD = d;
+          best = c.name;
+        }
+      }
+    }
+  }
+  return best;
+}
+
+// ── Vacancy clusters (pure, D2) ─────────────────────────────────────────────
+
+/** The printable clustering-method note (honest about the analytical boundary
+ * AND the extent cap that divides contiguous vacancy fields into sub-areas —
+ * without the cap, dense-vacancy ZIPs chain into one useless multi-thousand-site
+ * blob). */
+export const CLUSTERS_NOTE =
+  "Proximity clusters: tracked sites within ~100 m linked; contiguous areas " +
+  "larger than ~500 m are divided into sub-areas for intervention planning; " +
+  "minimum five sites. Boundaries are analytical, not parcel-contiguous.";
+
+/** One tracked site fed to clusterVacantSites — coordinate plus the flags the
+ * cluster aggregates. `taxSale` is `saleYear != null`; `portfolio` is
+ * portfolioForSite's output. */
+export interface ClusterInputSite {
+  lat: number;
+  lon: number;
+  ownerType: OwnerType;
+  portfolio: VacancyPortfolio;
+  taxSale: boolean;
+  violation: boolean;
+  propertyType: VacancyPropertyType;
+}
+
+/**
+ * Deterministic single-linkage proximity clustering via a grid-bucketed
+ * union-find, with an EXTENT CAP that divides oversized contiguous groups into
+ * sub-areas. Two sites link when their haversine distance is <= `linkMeters`;
+ * the grid (cell ≈ linkMeters) restricts the pairwise test to the same and
+ * adjacent cells, so any two points within `linkMeters` are guaranteed to be
+ * compared.
+ *
+ * Extent cap (`maxExtentMeters`, default 500): single-linkage chains degenerate
+ * blobs in dense-vacancy ZIPs (a contiguous vacancy field can union thousands
+ * of sites — useless for sub-corridor intervention planning), so after grouping
+ * and BEFORE the minSize filter, any group whose bbox exceeds `maxExtentMeters`
+ * on either axis (lon extent measured in metres via cos(midLat)) is recursively
+ * bisected: points sorted along the LONGER geographic axis (ties broken by the
+ * other axis, then original index), split at floor(n/2), both halves recursed.
+ * Pieces smaller than `minSize` after splitting are dropped (same noise rule).
+ *
+ * Ordering is stable and input-order-independent: clusters are sorted by count
+ * desc, then centroid lat asc, then centroid lon asc, and numbered 1..N. The
+ * transitive closure a single-linkage partition produces is independent of the
+ * scan order, the bisection sorts on coordinates, and each piece aggregates in
+ * canonical coordinate order — so a shuffled input yields byte-identical output.
+ *
+ * `corridorName` is left `null` here (this function has no corridor geometry);
+ * the export fills it in via nearestCorridorName (D3).
+ */
+export function clusterVacantSites(
+  rows: readonly ClusterInputSite[],
+  opts: { linkMeters?: number; minSize?: number; maxExtentMeters?: number } = {},
+): VacancyCluster[] {
+  const linkMeters = opts.linkMeters ?? 100;
+  const minSize = opts.minSize ?? 5;
+  const maxExtentMeters = opts.maxExtentMeters ?? 500;
+  const n = rows.length;
+  if (n === 0) return [];
+
+  // Union-find (path halving; union toward the smaller root for stability).
+  const parent = Array.from({ length: n }, (_, i) => i);
+  const find = (x: number): number => {
+    let root = x;
+    while (parent[root] !== root) {
+      parent[root] = parent[parent[root]];
+      root = parent[root];
+    }
+    return root;
+  };
+  const union = (a: number, b: number): void => {
+    const ra = find(a);
+    const rb = find(b);
+    if (ra === rb) return;
+    if (ra < rb) parent[rb] = ra;
+    else parent[ra] = rb;
+  };
+
+  // Grid buckets. Cell ≈ linkMeters at Chicago's latitude.
+  const REF_LAT = 41.85;
+  const mPerDegLat = 111320;
+  const mPerDegLon = 111320 * Math.cos((REF_LAT * Math.PI) / 180);
+  const cellLat = linkMeters / mPerDegLat;
+  const cellLon = linkMeters / mPerDegLon;
+  const rowOf = (i: number) => Math.floor(rows[i].lat / cellLat);
+  const colOf = (i: number) => Math.floor(rows[i].lon / cellLon);
+  const key = (r: number, c: number) => `${r}:${c}`;
+  const buckets = new Map<string, number[]>();
+  for (let i = 0; i < n; i++) {
+    const k = key(rowOf(i), colOf(i));
+    const arr = buckets.get(k);
+    if (arr) arr.push(i);
+    else buckets.set(k, [i]);
+  }
+
+  for (let i = 0; i < n; i++) {
+    const r = rowOf(i);
+    const c = colOf(i);
+    for (let dr = -1; dr <= 1; dr++) {
+      for (let dc = -1; dc <= 1; dc++) {
+        const arr = buckets.get(key(r + dr, c + dc));
+        if (!arr) continue;
+        for (const j of arr) {
+          if (j <= i) continue; // each unordered pair once
+          if (haversineMeters(rows[i].lat, rows[i].lon, rows[j].lat, rows[j].lon) <= linkMeters) {
+            union(i, j);
+          }
+        }
+      }
+    }
+  }
+
+  const groups = new Map<number, number[]>();
+  for (let i = 0; i < n; i++) {
+    const root = find(i);
+    const g = groups.get(root);
+    if (g) g.push(i);
+    else groups.set(root, [i]);
+  }
+
+  // ── Extent cap: recursively bisect any group whose bbox exceeds
+  //    maxExtentMeters on either axis (BEFORE the minSize filter). ──
+  const splitGroup = (idxs: number[]): number[][] => {
+    if (idxs.length < 2) return [idxs];
+    let minLon = Infinity;
+    let minLat = Infinity;
+    let maxLon = -Infinity;
+    let maxLat = -Infinity;
+    for (const i of idxs) {
+      const { lat, lon } = rows[i];
+      if (lon < minLon) minLon = lon;
+      if (lon > maxLon) maxLon = lon;
+      if (lat < minLat) minLat = lat;
+      if (lat > maxLat) maxLat = lat;
+    }
+    const midLat = (minLat + maxLat) / 2;
+    const latExtentM = (maxLat - minLat) * mPerDegLat;
+    const lonExtentM = (maxLon - minLon) * mPerDegLat * Math.cos((midLat * Math.PI) / 180);
+    if (latExtentM <= maxExtentMeters && lonExtentM <= maxExtentMeters) return [idxs];
+
+    // Bisect along the LONGER geographic axis; ties broken by the other axis,
+    // then original index (stable, coordinate-driven → shuffle-invariant for
+    // distinct coordinates).
+    const byLat = latExtentM >= lonExtentM;
+    const sorted = [...idxs].sort((a, b) =>
+      byLat
+        ? rows[a].lat - rows[b].lat || rows[a].lon - rows[b].lon || a - b
+        : rows[a].lon - rows[b].lon || rows[a].lat - rows[b].lat || a - b,
+    );
+    const mid = Math.floor(sorted.length / 2);
+    return [...splitGroup(sorted.slice(0, mid)), ...splitGroup(sorted.slice(mid))];
+  };
+
+  const pieces: number[][] = [];
+  for (const idxs of groups.values()) pieces.push(...splitGroup(idxs));
+
+  const built: Omit<VacancyCluster, "id">[] = [];
+  for (const idxs of pieces) {
+    if (idxs.length < minSize) continue;
+    // Aggregate in a canonical coordinate order so the centroid's floating-point
+    // summation is identical regardless of the input row order (the partition
+    // itself is already order-independent).
+    const ordered = [...idxs].sort(
+      (a, b) => rows[a].lat - rows[b].lat || rows[a].lon - rows[b].lon,
+    );
+    let sumLat = 0;
+    let sumLon = 0;
+    let minLon = Infinity;
+    let minLat = Infinity;
+    let maxLon = -Infinity;
+    let maxLat = -Infinity;
+    let taxSaleCount = 0;
+    let violationCount = 0;
+    let vacantLandCount = 0;
+    let vacantBuildingCount = 0;
+    const ownerTypes: OwnerType[] = [];
+    const portfolios: VacancyPortfolio[] = [];
+    for (const i of ordered) {
+      const row = rows[i];
+      sumLat += row.lat;
+      sumLon += row.lon;
+      if (row.lon < minLon) minLon = row.lon;
+      if (row.lon > maxLon) maxLon = row.lon;
+      if (row.lat < minLat) minLat = row.lat;
+      if (row.lat > maxLat) maxLat = row.lat;
+      if (row.taxSale) taxSaleCount += 1;
+      if (row.violation) violationCount += 1;
+      if (row.propertyType === "vacant_land") vacantLandCount += 1;
+      else vacantBuildingCount += 1;
+      ownerTypes.push(row.ownerType);
+      portfolios.push(row.portfolio);
+    }
+    const count = ordered.length;
+    built.push({
+      centroid: { lat: sumLat / count, lon: sumLon / count },
+      bbox: [minLon, minLat, maxLon, maxLat],
+      count,
+      ownerTypeCounts: tallyOwnerTypeCounts(ownerTypes),
+      portfolioCounts: tallyPortfolioCounts(portfolios),
+      taxSaleCount,
+      violationCount,
+      vacantLandCount,
+      vacantBuildingCount,
+      corridorName: null,
+    });
+  }
+
+  built.sort(
+    (a, b) =>
+      b.count - a.count ||
+      a.centroid.lat - b.centroid.lat ||
+      a.centroid.lon - b.centroid.lon,
+  );
+  return built.map((c, i) => ({ id: i + 1, ...c }));
 }
 
 // ── Static-only loader (D7) ────────────────────────────────────────────────

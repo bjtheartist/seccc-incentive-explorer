@@ -113,7 +113,7 @@ export function buildVacancyIndexPdfInput(
   const reclassifiedCount = ownership.reconciliation?.reclassifiedCount ?? 0;
   const inventoryUnmatched = ownership.reconciliation?.inventoryUnmatchedCount ?? 0;
   const reconciliationNote = ownership.reconciledVacantLandByOwnerType
-    ? `City/Public from the City's own land inventory (PIN-matched); private classifications from taxpayer-of-record patterns. ${reclassifiedCount.toLocaleString("en-US")} parcels reclassified from stale assessor records; ${inventoryUnmatched.toLocaleString("en-US")} City-inventory parcels are not classed as vacant land by the assessor (city land is mostly tax-exempt) and appear only in the tracked inventory.`
+    ? `City/Public from the City's own land inventory (PIN-matched); private classifications from taxpayer-of-record patterns. ${reclassifiedCount.toLocaleString("en-US")} parcels reclassified from stale assessor records; ${inventoryUnmatched.toLocaleString("en-US")} City-inventory parcels are not classed as vacant land by the assessor (city land is mostly tax-exempt) and appear only in the tracked inventory. These are different analytical universes and should not be compared as if one is a breakdown of the other.`
     : null;
   const rawCityCount =
     ownership.vacantLandParcelsByOwnerType?.find((entry) => entry.ownerType === "city_public")?.count ?? null;
