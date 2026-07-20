@@ -21,6 +21,7 @@ describe("analytics events", () => {
   it("accepts the vacancy web report view event", () => {
     expect(isAnalyticsEventType("vacancy_web_report_viewed")).toBe(true);
     expect(isAnalyticsEventType("vacancy_index_pdf_downloaded")).toBe(true);
+    expect(isAnalyticsEventType("vacancy_map_view_toggled")).toBe(true);
   });
 
   it("accepts the report-funnel instrumentation events added for the 2026-07 audit", () => {

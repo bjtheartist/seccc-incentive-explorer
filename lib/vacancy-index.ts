@@ -119,6 +119,30 @@ export interface VacancySitePoint {
   propertyType: VacancyPropertyType;
   priorityTier: VacancyPriorityTier;
   markerNumber: number | null;
+  /** Latest tax-sale year when this point's parcel (a COLS row's PIN) is in the
+   * scavenger/annual sale set; `null` for 311 rows (which carry no PIN — honest)
+   * and when the tax-sale tables were absent on the refresh branch. */
+  saleYear: number | null;
+  /** True when this tracked row's normalized address matched ≥1 vacant-building-
+   * violation record (the same match the edition-level violationMatchCount
+   * counts); `false` when the violations table was absent on the branch. */
+  violation: boolean;
+}
+
+/**
+ * One reconciled assessor vacant-land parcel as a map dot: its coordinate and
+ * its RECONCILED owner type (city_public from the City-inventory PIN match,
+ * otherwise the taxpayer-record classification). `saleYear` is the latest
+ * tax-sale year when the parcel's PIN is in the scavenger/annual sale set (else
+ * `null`, and `null` when the tax-sale tables were absent). Building violations
+ * are intentionally NOT flagged on land parcels (a building violation on vacant
+ * land is semantically wrong).
+ */
+export interface VacancyLandPoint {
+  lat: number;
+  lon: number;
+  ownerType: OwnerType;
+  saleYear: number | null;
 }
 
 /** One row of the page-04 site index (top-N by priority ranking). */
@@ -180,6 +204,16 @@ export interface VacancyIndexEdition {
   sitePoints: VacancySitePoint[]; // capped 2000, priority-ordered
   sitePointsTruncated: boolean;
   siteIndex: VacancySiteIndexRow[]; // top 15 (band 10–20, set at export)
+  /** Reconciled assessor vacant-land parcels as map dots (view 2 of the web
+   * map's owner-type toggle), colored by reconciled owner type. Deterministic
+   * pin-asc order, capped 2000. `null` exactly when the raw parcels series
+   * (ownership.vacantLandParcelsByOwnerType) is `null` — identical availability. */
+  landPoints: VacancyLandPoint[] | null;
+  landPointsTruncated: boolean;
+  /** Full vacant-land universe count (= ownership.vacantLandParcelTotal);
+   * landPoints may be fewer (2000 cap, or parcels lacking coordinates). `null`
+   * exactly when landPoints is `null`. */
+  landPointsTotal: number | null;
   boundary: { rings: [number, number][][]; bbox: [number, number, number, number] } | null;
   centroid: { lat: number; lon: number };
   transport: { kind: TransportKind; points: [number, number][] }[];
@@ -389,6 +423,23 @@ export function tallyOwnerTypeCounts(
  * contract in lib/corridor-owners.ts. The `series` covers all five owner types
  * in OWNER_TYPE_ORDER (honest zeros included). Pure — unit-tests without a DB.
  */
+/**
+ * Reconcile ONE parcel's owner type: a parcel whose PIN is in the City's land
+ * inventory is authoritative city_public (the City knows it owns the parcel
+ * even when the stale taxpayer record classifies it otherwise); otherwise keep
+ * the taxpayer-record classification (normalized via normalizeOwnerType). A
+ * blank PIN never matches. Pure — the per-point classifier the export uses to
+ * color each land dot, and the same rule reconcileVacantLandOwnership tallies.
+ */
+export function reconcileOwnerTypeForPin(
+  pin: string | null | undefined,
+  rawOwnerType: string | null | undefined,
+  inventoryPins: ReadonlySet<string>,
+): OwnerType {
+  if (pin && inventoryPins.has(pin)) return "city_public";
+  return normalizeOwnerType(rawOwnerType);
+}
+
 export function reconcileVacantLandOwnership(
   assessorRows: readonly { pin: string; ownerType: string | null | undefined }[],
   inventoryPins: ReadonlySet<string>,
@@ -404,14 +455,10 @@ export function reconcileVacantLandOwnership(
     const pin = row.pin;
     if (pin) assessorPins.add(pin);
     const original = normalizeOwnerType(row.ownerType);
-    const matched = pin ? inventoryPins.has(pin) : false;
-    let effective: OwnerType;
-    if (matched) {
+    const effective = reconcileOwnerTypeForPin(pin, row.ownerType, inventoryPins);
+    if (pin && inventoryPins.has(pin)) {
       cityPinMatches += 1;
-      effective = "city_public";
       if (original !== "city_public") reclassifiedCount += 1;
-    } else {
-      effective = original;
     }
     counts.set(effective, (counts.get(effective) ?? 0) + 1);
   }
@@ -454,6 +501,26 @@ export function taxSaleExposureForVacantPins(
 }
 
 /**
+ * Latest tax-sale year for ONE parcel's PIN, or `null` when the PIN is blank,
+ * has no tax-sale record, has only null-year records, or the tables were absent
+ * (`saleYearsByPin === null`). The per-point analogue of
+ * taxSaleExposureForVacantPins — colors a single map dot's distress flag.
+ */
+export function latestSaleYearForPin(
+  pin: string | null | undefined,
+  saleYearsByPin: ReadonlyMap<string, readonly number[]> | null,
+): number | null {
+  if (!pin || saleYearsByPin === null) return null;
+  const years = saleYearsByPin.get(pin);
+  if (years === undefined) return null;
+  let latest: number | null = null;
+  for (const year of years) {
+    if (Number.isFinite(year) && (latest === null || year > latest)) latest = year;
+  }
+  return latest;
+}
+
+/**
  * Count how many of `normAddresses` (one normalized address per tracked vacant
  * row — may repeat) are present in `addressSet` (normalized addresses of
  * vacant-building violations). Blank addresses never match. `addressSet ===
@@ -469,6 +536,20 @@ export function countAddressesInSet(
     if (addr && addressSet.has(addr)) matches += 1;
   }
   return matches;
+}
+
+/**
+ * True when ONE tracked row's normalized address matched a vacant-building-
+ * violation record. A blank address never matches; `addressSet === null` (table
+ * absent) → `false`, never a fabricated flag. The per-point analogue of
+ * countAddressesInSet — flags a single tracked map dot.
+ */
+export function addressHasViolation(
+  normAddress: string,
+  addressSet: ReadonlySet<string> | null,
+): boolean {
+  if (addressSet === null || !normAddress) return false;
+  return addressSet.has(normAddress);
 }
 
 // ── Printed-copy constants ─────────────────────────────────────────────────

@@ -3,17 +3,20 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { OWNER_TYPE_ORDER } from "../owner-classify";
 import {
+  addressHasViolation,
   assignQuantileDots,
   compareRankableSites,
   computeSitePriority,
   countAddressesInSet,
   editionGeographyNote,
   getVacancyIndexEdition,
+  latestSaleYearForPin,
   loadVacancyIndex,
   MATRIX_METHOD_NOTE,
   nextStepForSite,
   priorityTierForScore,
   rankSites,
+  reconcileOwnerTypeForPin,
   reconcileVacantLandOwnership,
   tallyOwnerTypeCounts,
   taxSaleExposureForVacantPins,
@@ -335,6 +338,83 @@ describe("reconcileVacantLandOwnership", () => {
   });
 });
 
+describe("reconcileOwnerTypeForPin (per-point classifier)", () => {
+  it("returns city_public when the pin is in the inventory, overriding the taxpayer type", () => {
+    const inv = new Set(["123"]);
+    expect(reconcileOwnerTypeForPin("123", "corporate_llc", inv)).toBe("city_public");
+    expect(reconcileOwnerTypeForPin("123", "local_private", inv)).toBe("city_public");
+    expect(reconcileOwnerTypeForPin("123", null, inv)).toBe("city_public");
+  });
+
+  it("keeps the normalized taxpayer type when the pin is not in the inventory", () => {
+    const inv = new Set(["123"]);
+    expect(reconcileOwnerTypeForPin("999", "corporate_llc", inv)).toBe("corporate_llc");
+    expect(reconcileOwnerTypeForPin("999", "bogus_value", inv)).toBe("unknown");
+    expect(reconcileOwnerTypeForPin("999", null, inv)).toBe("unknown");
+  });
+
+  it("never matches a blank/nullish pin", () => {
+    expect(reconcileOwnerTypeForPin("", "corporate_llc", new Set([""]))).toBe("corporate_llc");
+    expect(reconcileOwnerTypeForPin(null, "local_private", new Set(["1"]))).toBe("local_private");
+  });
+
+  it("agrees with reconcileVacantLandOwnership's tally on the same rows", () => {
+    const rows = [
+      { pin: "10", ownerType: "corporate_llc" },
+      { pin: "13", ownerType: "out_of_state" },
+    ];
+    const inv = new Set(["10"]);
+    const perPoint = rows.map((r) => reconcileOwnerTypeForPin(r.pin, r.ownerType, inv));
+    expect(perPoint).toEqual(["city_public", "out_of_state"]);
+    const { series } = reconcileVacantLandOwnership(rows, inv);
+    const byType = Object.fromEntries(series.map((c) => [c.ownerType, c.count]));
+    expect(byType.city_public).toBe(1);
+    expect(byType.out_of_state).toBe(1);
+  });
+});
+
+describe("latestSaleYearForPin (per-point tax-sale flag)", () => {
+  const map = new Map<string, number[]>([
+    ["a", [2019, 2021, 2015]],
+    ["b", []], // record exists but no parseable year
+  ]);
+
+  it("returns the max year for a matched pin", () => {
+    expect(latestSaleYearForPin("a", map)).toBe(2021);
+  });
+
+  it("returns null for a record with no parseable year", () => {
+    expect(latestSaleYearForPin("b", map)).toBeNull();
+  });
+
+  it("returns null for an unmatched, blank, or nullish pin", () => {
+    expect(latestSaleYearForPin("z", map)).toBeNull();
+    expect(latestSaleYearForPin("", map)).toBeNull();
+    expect(latestSaleYearForPin(null, map)).toBeNull();
+  });
+
+  it("returns null when the tables were absent (map null)", () => {
+    expect(latestSaleYearForPin("a", null)).toBeNull();
+  });
+});
+
+describe("addressHasViolation (per-point violation flag)", () => {
+  const set = new Set(["100nmainst", "200noakst"]);
+
+  it("is true for a matching normalized address", () => {
+    expect(addressHasViolation("100nmainst", set)).toBe(true);
+  });
+
+  it("is false for a non-matching or blank address", () => {
+    expect(addressHasViolation("999nowhere", set)).toBe(false);
+    expect(addressHasViolation("", set)).toBe(false);
+  });
+
+  it("is false (never fabricated) when the set is absent", () => {
+    expect(addressHasViolation("100nmainst", null)).toBe(false);
+  });
+});
+
 describe("taxSaleExposureForVacantPins", () => {
   it("returns null fields when the tables are absent (map null)", () => {
     expect(taxSaleExposureForVacantPins(new Set(["1"]), null)).toEqual({
@@ -438,6 +518,9 @@ const ALLOWED_KEYS = new Set<string>([
   "sitePoints",
   "sitePointsTruncated",
   "siteIndex",
+  "landPoints",
+  "landPointsTruncated",
+  "landPointsTotal",
   "boundary",
   "centroid",
   "transport",
@@ -479,6 +562,8 @@ const ALLOWED_KEYS = new Set<string>([
   "incentiveCount",
   "priorityScore",
   "nextStep",
+  "saleYear",
+  "violation",
   // boundary / centroid / transport
   "rings",
   "bbox",
@@ -593,6 +678,47 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
         // Reclassified is a subset of the matched parcels.
         expect(reconciliation.reclassifiedCount).toBeLessThanOrEqual(reconciliation.cityPinMatches);
         expect(reconciliation.inventoryUnmatchedCount).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  it("carries landPoints null exactly when the raw parcels series is null, total matching, only {lat,lon,ownerType,saleYear} keys", () => {
+    const valid = new Set<string>(OWNER_TYPE_ORDER);
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      const raw = edition.ownership.vacantLandParcelsByOwnerType;
+      const lp = edition.landPoints;
+      // Array-or-null, never undefined; null iff the raw parcels series is null.
+      expect(lp === null || Array.isArray(lp)).toBe(true);
+      expect(lp === null).toBe(raw === null);
+      expect(typeof edition.landPointsTruncated).toBe("boolean");
+      if (lp === null) {
+        expect(edition.landPointsTotal).toBeNull();
+      } else {
+        // Full universe count matches the raw parcels total.
+        expect(edition.landPointsTotal).toBe(edition.ownership.vacantLandParcelTotal);
+        // Capped at 2000 and never more than the universe.
+        expect(lp.length).toBeLessThanOrEqual(2000);
+        expect(edition.landPointsTotal === null || lp.length <= edition.landPointsTotal).toBe(true);
+        for (const p of lp) {
+          expect(Object.keys(p).sort()).toEqual(["lat", "lon", "ownerType", "saleYear"]);
+          expect(typeof p.lat).toBe("number");
+          expect(typeof p.lon).toBe("number");
+          expect(valid.has(p.ownerType)).toBe(true);
+          expect(p.saleYear === null || typeof p.saleYear === "number").toBe(true);
+        }
+      }
+    }
+  });
+
+  it("carries per-point distress on sitePoints (saleYear number-or-null, violation boolean)", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      for (const p of edition.sitePoints) {
+        expect(p.saleYear === null || typeof p.saleYear === "number", `${zip} sitePoint.saleYear`).toBe(true);
+        expect(typeof p.violation, `${zip} sitePoint.violation`).toBe("boolean");
       }
     }
   });
