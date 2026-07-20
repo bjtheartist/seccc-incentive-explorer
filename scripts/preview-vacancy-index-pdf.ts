@@ -303,6 +303,14 @@ function assembleEdition(neighborhood: string): VacancyIndexInput {
       },
     ],
     ownerTypeDistribution: vacantLand > 0 ? landOwnerType : null,
+    reconciledOwnerTypeDistribution: vacantLand > 0 ? landOwnerType : null,
+    reconciliationNote:
+      vacantLand > 0
+        ? "City/Public from the City's own land inventory (PIN-matched); private classifications from taxpayer-of-record patterns. 128 parcels reclassified from stale assessor records."
+        : null,
+    rawOwnerComparisonNote:
+      vacantLand > 0 ? "Raw taxpayer records alone would show City/Public 3 — see methodology." : null,
+    distress: { taxSaleExposedCount: 214, latestTaxSaleYear: 2023, violationMatchCount: 47 },
     trackedInventoryByOwnerType,
     propertyTypeBreakdown: { vacantLand, vacantBuilding },
     priorityDistribution,
@@ -381,6 +389,10 @@ function stressFixture(): VacancyIndexInput {
       { title: "Decision three", body: "Another body to fill the third 28mm band and confirm the hairline separators line up." },
     ],
     ownerTypeDistribution: null, // exercises the NOT-YET-AVAILABLE state
+    reconciledOwnerTypeDistribution: null, // exercises the reconciled pending state
+    reconciliationNote: null,
+    rawOwnerComparisonNote: null,
+    distress: null, // exercises the hollow "NOT YET AVAILABLE" distress chips
     trackedInventoryByOwnerType: { unknown: 900, city_public: 402, corporate_llc: 3 },
     propertyTypeBreakdown: { vacantLand: 402, vacantBuilding: 885 },
     priorityDistribution: { high: 40, medium: 900, low: 347 },

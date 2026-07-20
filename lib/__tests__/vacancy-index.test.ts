@@ -6,6 +6,7 @@ import {
   assignQuantileDots,
   compareRankableSites,
   computeSitePriority,
+  countAddressesInSet,
   editionGeographyNote,
   getVacancyIndexEdition,
   loadVacancyIndex,
@@ -13,7 +14,9 @@ import {
   nextStepForSite,
   priorityTierForScore,
   rankSites,
+  reconcileVacantLandOwnership,
   tallyOwnerTypeCounts,
+  taxSaleExposureForVacantPins,
   type RankableSite,
   type VacancyIndexExport,
   type VacancyPropertyType,
@@ -250,6 +253,132 @@ describe("tallyOwnerTypeCounts", () => {
   });
 });
 
+describe("reconcileVacantLandOwnership", () => {
+  const byType = (series: { ownerType: OwnerType; count: number }[]) =>
+    Object.fromEntries(series.map((c) => [c.ownerType, c.count])) as Record<OwnerType, number>;
+
+  it("covers all five owner types in order with honest zeros", () => {
+    const { series } = reconcileVacantLandOwnership([], new Set());
+    expect(series.map((c) => c.ownerType)).toEqual(OWNER_TYPE_ORDER);
+    for (const c of series) expect(c.count).toBe(0);
+  });
+
+  it("empty inventory leaves every classification untouched (no reclassification)", () => {
+    const rows = [
+      { pin: "1", ownerType: "corporate_llc" },
+      { pin: "2", ownerType: "local_private" },
+      { pin: "3", ownerType: "city_public" },
+    ];
+    const { series, stats } = reconcileVacantLandOwnership(rows, new Set());
+    const counts = byType(series);
+    expect(counts.corporate_llc).toBe(1);
+    expect(counts.local_private).toBe(1);
+    expect(counts.city_public).toBe(1);
+    expect(stats.cityPinMatches).toBe(0);
+    expect(stats.reclassifiedCount).toBe(0);
+    expect(stats.inventoryUnmatchedCount).toBe(0);
+  });
+
+  it("reclassifies matched non-city parcels to city_public and counts them", () => {
+    const rows = [
+      { pin: "10", ownerType: "corporate_llc" }, // in inventory -> reclassified
+      { pin: "11", ownerType: "local_private" }, // in inventory -> reclassified
+      { pin: "12", ownerType: "city_public" }, // in inventory but ALREADY city -> matched, not reclassified
+      { pin: "13", ownerType: "out_of_state" }, // not in inventory -> unchanged
+    ];
+    const inventory = new Set(["10", "11", "12"]);
+    const { series, stats } = reconcileVacantLandOwnership(rows, inventory);
+    const counts = byType(series);
+    expect(counts.city_public).toBe(3); // 10, 11, 12 all city now
+    expect(counts.corporate_llc).toBe(0);
+    expect(counts.local_private).toBe(0);
+    expect(counts.out_of_state).toBe(1); // 13 kept
+    expect(stats.cityPinMatches).toBe(3); // 10, 11, 12
+    expect(stats.reclassifiedCount).toBe(2); // 10, 11 (12 was already city)
+    expect(stats.inventoryUnmatchedCount).toBe(0); // every inventory pin has an assessor parcel
+  });
+
+  it("full overlap reclassifies the whole taxpayer series to city_public", () => {
+    const rows = [
+      { pin: "a", ownerType: "corporate_llc" },
+      { pin: "b", ownerType: "unknown" },
+    ];
+    const { series, stats } = reconcileVacantLandOwnership(rows, new Set(["a", "b"]));
+    expect(byType(series).city_public).toBe(2);
+    expect(stats.cityPinMatches).toBe(2);
+    expect(stats.reclassifiedCount).toBe(2);
+    expect(stats.inventoryUnmatchedCount).toBe(0);
+  });
+
+  it("counts inventory pins with no assessor parcel as inventoryUnmatchedCount", () => {
+    // South-Chicago shape: many City-inventory pins, few assessor vacant parcels.
+    const rows = [{ pin: "100", ownerType: "corporate_llc" }];
+    const inventory = new Set(["100", "200", "300", "400"]); // 3 have no assessor row
+    const { stats } = reconcileVacantLandOwnership(rows, inventory);
+    expect(stats.cityPinMatches).toBe(1); // only 100 matched
+    expect(stats.reclassifiedCount).toBe(1); // 100 was corporate -> city
+    expect(stats.inventoryUnmatchedCount).toBe(3); // 200, 300, 400
+  });
+
+  it("normalizes unrecognized/blank taxpayer types to unknown and ignores blank pins", () => {
+    const rows = [
+      { pin: "", ownerType: "corporate_llc" }, // blank pin never matches inventory
+      { pin: "x", ownerType: null }, // null -> unknown
+      { pin: "y", ownerType: "bogus_value" }, // unrecognized -> unknown
+    ];
+    const { series, stats } = reconcileVacantLandOwnership(rows, new Set(["z"]));
+    const counts = byType(series);
+    expect(counts.corporate_llc).toBe(1); // blank-pin row kept its type
+    expect(counts.unknown).toBe(2);
+    expect(stats.cityPinMatches).toBe(0);
+    expect(stats.inventoryUnmatchedCount).toBe(1); // z had no assessor parcel
+  });
+});
+
+describe("taxSaleExposureForVacantPins", () => {
+  it("returns null fields when the tables are absent (map null)", () => {
+    expect(taxSaleExposureForVacantPins(new Set(["1"]), null)).toEqual({
+      taxSaleExposedCount: null,
+      latestTaxSaleYear: null,
+    });
+  });
+
+  it("counts membership (even a null-year record) and finds the latest year", () => {
+    const map = new Map<string, number[]>([
+      ["a", [2019, 2021]],
+      ["b", []], // record exists but no parseable year
+      ["c", [2015]],
+    ]);
+    const res = taxSaleExposureForVacantPins(new Set(["a", "b", "d"]), map);
+    expect(res.taxSaleExposedCount).toBe(2); // a and b (d absent)
+    expect(res.latestTaxSaleYear).toBe(2021);
+  });
+
+  it("is an honest zero when the map ran but no vacant pin matched", () => {
+    const map = new Map<string, number[]>([["x", [2020]]]);
+    expect(taxSaleExposureForVacantPins(new Set(["y", "z"]), map)).toEqual({
+      taxSaleExposedCount: 0,
+      latestTaxSaleYear: null,
+    });
+  });
+});
+
+describe("countAddressesInSet", () => {
+  it("returns null when the violation set is absent", () => {
+    expect(countAddressesInSet(["abc"], null)).toBeNull();
+  });
+
+  it("counts one per matching row (repeats count), skipping blanks", () => {
+    const set = new Set(["100nmainst", "200noakst"]);
+    const rows = ["100nmainst", "100nmainst", "999nowhere", "", "200noakst"];
+    expect(countAddressesInSet(rows, set)).toBe(3); // two hits on main + one on oak
+  });
+
+  it("is an honest zero when the set ran but nothing matched", () => {
+    expect(countAddressesInSet(["a", "b"], new Set(["c"]))).toBe(0);
+  });
+});
+
 describe("printed-copy constants", () => {
   it("MATRIX_METHOD_NOTE states the quintiles-are-not-grades caveat", () => {
     expect(MATRIX_METHOD_NOTE).toContain("quintiles");
@@ -326,8 +455,18 @@ const ALLOWED_KEYS = new Set<string>([
   "vacantLandParcelsByOwnerType",
   "vacantLandParcelTotal",
   "trackedInventoryByOwnerType",
+  "reconciledVacantLandByOwnerType",
+  "reconciliation",
+  "cityPinMatches",
+  "reclassifiedCount",
+  "inventoryUnmatchedCount",
   "ownerType",
   "count",
+  // distress
+  "distress",
+  "taxSaleExposedCount",
+  "latestTaxSaleYear",
+  "violationMatchCount",
   // site point / site index row
   "lat",
   "lon",
@@ -428,6 +567,47 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
       for (const c of edition.ownership.trackedInventoryByOwnerType) expect(valid.has(c.ownerType)).toBe(true);
       if (edition.ownership.vacantLandParcelsByOwnerType) {
         for (const c of edition.ownership.vacantLandParcelsByOwnerType) expect(valid.has(c.ownerType)).toBe(true);
+      }
+      if (edition.ownership.reconciledVacantLandByOwnerType) {
+        for (const c of edition.ownership.reconciledVacantLandByOwnerType) expect(valid.has(c.ownerType)).toBe(true);
+      }
+    }
+  });
+
+  it("keeps reconciled ownership null exactly when the raw parcels series is null, with sane stats", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      const raw = edition.ownership.vacantLandParcelsByOwnerType;
+      const reconciled = edition.ownership.reconciledVacantLandByOwnerType;
+      const reconciliation = edition.ownership.reconciliation;
+      // Array-or-null, never undefined.
+      expect(reconciled === null || Array.isArray(reconciled)).toBe(true);
+      // Reconciliation is null iff the raw parcels series is null.
+      expect(reconciled === null).toBe(raw === null);
+      expect((reconciliation === null) === (raw === null)).toBe(true);
+      if (reconciliation !== null) {
+        expect(Number.isInteger(reconciliation.cityPinMatches)).toBe(true);
+        expect(reconciliation.cityPinMatches).toBeGreaterThanOrEqual(0);
+        expect(reconciliation.reclassifiedCount).toBeGreaterThanOrEqual(0);
+        // Reclassified is a subset of the matched parcels.
+        expect(reconciliation.reclassifiedCount).toBeLessThanOrEqual(reconciliation.cityPinMatches);
+        expect(reconciliation.inventoryUnmatchedCount).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  it("carries distress as an object-or-null with number-or-null fields (never undefined)", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      const distress = edition.distress;
+      expect(distress === null || typeof distress === "object").toBe(true);
+      if (distress !== null) {
+        for (const key of ["taxSaleExposedCount", "latestTaxSaleYear", "violationMatchCount"] as const) {
+          const v = distress[key];
+          expect(v === null || typeof v === "number", `${zip} distress.${key}`).toBe(true);
+        }
       }
     }
   });

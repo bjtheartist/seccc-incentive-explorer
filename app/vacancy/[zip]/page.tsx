@@ -205,8 +205,14 @@ export default async function VacancyReportPage({
     }));
   const trackedMax = Math.max(1, ...trackedRows.map((r) => r.count));
 
-  const parcelRows = ownership.vacantLandParcelsByOwnerType;
-  const parcelMax = parcelRows ? Math.max(1, ...parcelRows.map((r) => r.count)) : 1;
+  const reconciledRows = ownership.reconciledVacantLandByOwnerType;
+  const reconciledMax = reconciledRows ? Math.max(1, ...reconciledRows.map((r) => r.count)) : 1;
+  const reclassifiedCount = ownership.reconciliation?.reclassifiedCount ?? 0;
+  const inventoryUnmatchedCount = ownership.reconciliation?.inventoryUnmatchedCount ?? 0;
+  const rawCityCount =
+    ownership.vacantLandParcelsByOwnerType?.find((r) => normalizeOwnerType(r.ownerType) === "city_public")
+      ?.count ?? null;
+  const distress = edition.distress;
 
   const propTotal = headline.vacantLandCount + headline.vacantBuildingCount;
   const landPct = propTotal > 0 ? Math.round((headline.vacantLandCount / propTotal) * 100) : 0;
@@ -363,20 +369,37 @@ export default async function VacancyReportPage({
             </div>
             <div>
               <h3 className="mb-3 text-[13px] font-semibold text-[#0C1B33]">
-                Complete vacant-land parcels by owner
+                Vacant land by owner (reconciled)
                 <span className="ml-2 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
-                  Assessor parcels
+                  City inventory + assessor
                 </span>
               </h3>
-              {parcelRows ? (
-                <div className="space-y-2.5">
-                  {OWNER_TYPE_ORDER.map((type) => {
-                    const row = parcelRows.find((r) => normalizeOwnerType(r.ownerType) === type);
-                    return (
-                      <OwnerBar key={type} ownerType={type} count={row?.count ?? 0} max={parcelMax} />
-                    );
-                  })}
-                </div>
+              {reconciledRows ? (
+                <>
+                  <div className="space-y-2.5">
+                    {OWNER_TYPE_ORDER.map((type) => {
+                      const row = reconciledRows.find((r) => normalizeOwnerType(r.ownerType) === type);
+                      return (
+                        <OwnerBar key={type} ownerType={type} count={row?.count ?? 0} max={reconciledMax} />
+                      );
+                    })}
+                  </div>
+                  <p className="mt-3 text-[11px] leading-relaxed text-[#0C1B33]/45">
+                    City/Public from the City&rsquo;s own land inventory (PIN-matched); private
+                    classifications from taxpayer-of-record patterns.{" "}
+                    {reclassifiedCount.toLocaleString("en-US")} parcels reclassified from stale
+                    assessor records; {inventoryUnmatchedCount.toLocaleString("en-US")} City-inventory
+                    parcels are not classed as vacant land by the assessor (city land is mostly
+                    tax-exempt) and appear only in the tracked inventory.
+                    {rawCityCount != null && (
+                      <>
+                        {" "}
+                        Raw taxpayer records alone would show City/Public{" "}
+                        {rawCityCount.toLocaleString("en-US")}.
+                      </>
+                    )}
+                  </p>
+                </>
               ) : (
                 <div className="border border-dashed border-[#0C1B33]/20 bg-white px-4 py-6 text-center">
                   <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
@@ -419,17 +442,45 @@ export default async function VacancyReportPage({
             <div>
               <h3 className="mb-3 text-[13px] font-semibold text-[#0C1B33]">Distress signals</h3>
               <div className="flex flex-wrap gap-2">
-                {["Tax-sale / delinquency", "Code-violation density"].map((label) => (
-                  <span
-                    key={label}
-                    className="inline-flex items-center gap-1.5 border border-dashed border-[#0C1B33]/20 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/45"
-                  >
-                    {label}
+                {distress && distress.taxSaleExposedCount != null ? (
+                  <span className="inline-flex items-center gap-1.5 border border-[#0C1B33]/25 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/80">
+                    <span
+                      className="inline-block h-2 w-2 flex-shrink-0 rounded-full"
+                      style={{ backgroundColor: "#DC2626" }}
+                    />
+                    Tax-sale exposure
+                    <span className="font-mono-bureau text-[11px] font-semibold text-[#0C1B33]">
+                      {distress.taxSaleExposedCount.toLocaleString("en-US")} parcels
+                      {distress.latestTaxSaleYear != null ? ` · latest ${distress.latestTaxSaleYear}` : ""}
+                    </span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 border border-dashed border-[#0C1B33]/20 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/45">
+                    Tax-sale / delinquency
                     <span className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/35">
                       Not yet available
                     </span>
                   </span>
-                ))}
+                )}
+                {distress && distress.violationMatchCount != null ? (
+                  <span className="inline-flex items-center gap-1.5 border border-[#0C1B33]/25 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/80">
+                    <span
+                      className="inline-block h-2 w-2 flex-shrink-0 rounded-full"
+                      style={{ backgroundColor: "#DC2626" }}
+                    />
+                    Vacant-building violations
+                    <span className="font-mono-bureau text-[11px] font-semibold text-[#0C1B33]">
+                      {distress.violationMatchCount.toLocaleString("en-US")} tracked sites
+                    </span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 border border-dashed border-[#0C1B33]/20 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/45">
+                    Code-violation density
+                    <span className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/35">
+                      Not yet available
+                    </span>
+                  </span>
+                )}
               </div>
             </div>
           </div>

@@ -91,9 +91,28 @@ export interface VacancyIndexInput {
   };
   brief: string;
   decisions?: VacancyIndexDecision[]; // capped at 3
-  /** COMPLETE vacant-land ownership from the parcels dataset. `null` = not yet
-   *  available (renders the honesty-rail state), never an empty/zero series. */
+  /** RAW COMPLETE vacant-land ownership from the parcels dataset (taxpayer-of-
+   *  record classification). `null` = not yet available (renders the honesty-
+   *  rail state), never an empty/zero series. Kept for the methodology
+   *  comparison line; the reconciled series below is what the panel renders. */
   ownerTypeDistribution: Partial<Record<OwnerType, number>> | null;
+  /** RECONCILED vacant-land ownership: City/Public from the City's own land
+   *  inventory (PIN-matched), the remainder from taxpayer records. `null`
+   *  exactly when `ownerTypeDistribution` is null. Rendered by the panel. */
+  reconciledOwnerTypeDistribution: Partial<Record<OwnerType, number>> | null;
+  /** Source note printed under the reconciled panel (caller-supplied so this
+   *  builder never invents copy). `null` when there is no reconciled series. */
+  reconciliationNote: string | null;
+  /** One-line raw-vs-reconciled comparison for the methodology block. `null`
+   *  when there is no reconciled series. */
+  rawOwnerComparisonNote: string | null;
+  /** Phase-2 distress overlays, or `null` when no distress source table was
+   *  present on the refresh branch (chips stay hollow / NOT YET AVAILABLE). */
+  distress: {
+    taxSaleExposedCount: number | null;
+    latestTaxSaleYear: number | null;
+    violationMatchCount: number | null;
+  } | null;
   /** Tracked inventory (COLS + 311) — the same universe as the headline count,
    *  map dots, and site index, so these bars reconcile with everything else. */
   trackedInventoryByOwnerType: Partial<Record<OwnerType, number>>;
@@ -573,6 +592,23 @@ function drawPendingChip(doc: jsPDF, x: number, y: number, w: number, label: str
   doc.text("NOT YET AVAILABLE", x + 2, y + 8.4);
 }
 
+/** Filled chip carrying a real distress value — INK label over a bold value,
+ *  with a solid INK rule so it reads as live data next to the hollow pending
+ *  chips. Same 11mm footprint as drawPendingChip. */
+function drawFilledChip(doc: jsPDF, x: number, y: number, w: number, label: string, value: string) {
+  const h = 11;
+  strokeRect(doc, x, y, w, h, INK, 0.3);
+  fillRect(doc, x, y, 1.4, h, SWISS_RED); // live-data accent spine
+  doc.setFont("courier", "bold");
+  doc.setFontSize(6);
+  setColor(doc, INK_70);
+  doc.text(clampLine(doc, label.toUpperCase(), w - 6), x + 3.4, y + 4.4);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7.5);
+  setColor(doc, INK);
+  doc.text(clampLine(doc, value, w - 6), x + 3.4, y + 8.6);
+}
+
 /* ── Page furniture ── */
 
 function drawSwissHeader(doc: jsPDF, neighborhood: string, sheetNumber: number, sectionEyebrow: string) {
@@ -817,17 +853,18 @@ function drawSystemOverview(doc: jsPDF, input: VacancyIndexInput) {
   y = drawOwnershipBars(doc, MARGIN, y, 90, input.trackedInventoryByOwnerType);
   y += 2;
 
-  // Complete vacant-land ownership (all parcels) — a distinct, labeled universe.
-  eyebrow(doc, "COMPLETE VACANT-LAND OWNERSHIP (ALL PARCELS)", MARGIN, y, 7, INK_45, 0.4);
+  // Reconciled vacant-land ownership — City/Public taken from the City's own
+  // land inventory (PIN-matched, authoritative), the rest from taxpayer records.
+  eyebrow(doc, "VACANT LAND BY OWNER (RECONCILED)", MARGIN, y, 7, INK_45, 0.4);
   y += 5;
-  if (input.ownerTypeDistribution == null) {
+  if (input.reconciledOwnerTypeDistribution == null) {
     drawPendingChip(doc, MARGIN, y, CONTENT_W, "PARCEL-LEVEL OWNERSHIP DATASET");
     y += 15;
   } else {
     doc.setFont("courier", "normal");
     doc.setFontSize(6.6);
     const parts = OWNER_TYPE_ORDER.map(
-      (t) => `${OWNER_TYPE_ABBR[t]} ${input.ownerTypeDistribution?.[t] ?? 0}`
+      (t) => `${OWNER_TYPE_ABBR[t]} ${input.reconciledOwnerTypeDistribution?.[t] ?? 0}`
     );
     let px = MARGIN;
     OWNER_TYPE_ORDER.forEach((t, i) => {
@@ -836,7 +873,16 @@ function drawSystemOverview(doc: jsPDF, input: VacancyIndexInput) {
       doc.text(parts[i], px + 3, y);
       px += doc.getTextWidth(parts[i]) + 10;
     });
-    y += 8;
+    y += 5;
+    if (input.reconciliationNote) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(5.6);
+      setColor(doc, INK_45);
+      fit(doc, input.reconciliationNote, CONTENT_W, 2).forEach((line) => {
+        doc.text(line, MARGIN, y);
+        y += 3;
+      });
+    }
   }
   y += 2;
 
@@ -846,12 +892,23 @@ function drawSystemOverview(doc: jsPDF, input: VacancyIndexInput) {
   drawPropertyTypeBar(doc, MARGIN, y, CONTENT_W, input.propertyTypeBreakdown);
   y += 20;
 
-  // Data-pending strip.
-  eyebrow(doc, "DISTRESS OVERLAYS — PENDING", MARGIN, y, 7, INK_45, 0.4);
+  // Distress overlays — real filled chips when the joins ran, hollow
+  // NOT-YET-AVAILABLE chips (per field) when the source table was absent.
+  eyebrow(doc, "DISTRESS OVERLAYS", MARGIN, y, 7, INK_45, 0.4);
   y += 5;
   const chipW = (CONTENT_W - 8) / 2;
-  drawPendingChip(doc, MARGIN, y, chipW, "DELINQUENT-TAX EXPOSURE");
-  drawPendingChip(doc, MARGIN + chipW + 8, y, chipW, "CCLBA INVENTORY");
+  const distress = input.distress;
+  if (distress && distress.taxSaleExposedCount != null) {
+    const latest = distress.latestTaxSaleYear != null ? ` · LATEST ${distress.latestTaxSaleYear}` : "";
+    drawFilledChip(doc, MARGIN, y, chipW, "TAX-SALE EXPOSURE", `${distress.taxSaleExposedCount.toLocaleString("en-US")} PARCELS${latest}`);
+  } else {
+    drawPendingChip(doc, MARGIN, y, chipW, "TAX-SALE EXPOSURE");
+  }
+  if (distress && distress.violationMatchCount != null) {
+    drawFilledChip(doc, MARGIN + chipW + 8, y, chipW, "VACANT-BUILDING VIOLATIONS", `${distress.violationMatchCount.toLocaleString("en-US")} TRACKED SITES`);
+  } else {
+    drawPendingChip(doc, MARGIN + chipW + 8, y, chipW, "VACANT-BUILDING VIOLATIONS");
+  }
   y += 17;
 
   // Comparison matrix (9 rows x 5 quintile-dot metrics).
@@ -1284,6 +1341,13 @@ function drawMethodology(doc: jsPDF, input: VacancyIndexInput, top: number) {
     doc.text(line, MARGIN, y);
     y += 3;
   });
+  if (input.rawOwnerComparisonNote) {
+    y += 1;
+    fit(doc, input.rawOwnerComparisonNote, CONTENT_W, 2).forEach((line) => {
+      doc.text(line, MARGIN, y);
+      y += 3;
+    });
+  }
   y += 1;
   doc.setFont("courier", "normal");
   doc.setFontSize(5.6);

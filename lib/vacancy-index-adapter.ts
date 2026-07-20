@@ -103,6 +103,32 @@ export function buildVacancyIndexPdfInput(
         ownership.vacantLandParcelsByOwnerType.map((entry) => [entry.ownerType, entry.count]),
       )
     : null;
+  const reconciledOwnerTypeDistribution = ownership.reconciledVacantLandByOwnerType
+    ? Object.fromEntries(
+        ownership.reconciledVacantLandByOwnerType.map((entry) => [entry.ownerType, entry.count]),
+      )
+    : null;
+
+  // Reconciliation copy — caller-supplied so the PDF builder never invents it.
+  const reclassifiedCount = ownership.reconciliation?.reclassifiedCount ?? 0;
+  const inventoryUnmatched = ownership.reconciliation?.inventoryUnmatchedCount ?? 0;
+  const reconciliationNote = ownership.reconciledVacantLandByOwnerType
+    ? `City/Public from the City's own land inventory (PIN-matched); private classifications from taxpayer-of-record patterns. ${reclassifiedCount.toLocaleString("en-US")} parcels reclassified from stale assessor records; ${inventoryUnmatched.toLocaleString("en-US")} City-inventory parcels are not classed as vacant land by the assessor (city land is mostly tax-exempt) and appear only in the tracked inventory.`
+    : null;
+  const rawCityCount =
+    ownership.vacantLandParcelsByOwnerType?.find((entry) => entry.ownerType === "city_public")?.count ?? null;
+  const rawOwnerComparisonNote =
+    ownership.reconciledVacantLandByOwnerType && rawCityCount != null
+      ? `Raw taxpayer records alone would show City/Public ${rawCityCount.toLocaleString("en-US")} — see methodology.`
+      : null;
+
+  const distress = edition.distress
+    ? {
+        taxSaleExposedCount: edition.distress.taxSaleExposedCount,
+        latestTaxSaleYear: edition.distress.latestTaxSaleYear,
+        violationMatchCount: edition.distress.violationMatchCount,
+      }
+    : null;
 
   // Largest outer ring; the export writes hole rings after their shell.
   const boundary = edition.boundary
@@ -142,6 +168,10 @@ export function buildVacancyIndexPdfInput(
     brief,
     decisions: buildDecisions(edition),
     ownerTypeDistribution,
+    reconciledOwnerTypeDistribution,
+    reconciliationNote,
+    rawOwnerComparisonNote,
+    distress,
     trackedInventoryByOwnerType,
     propertyTypeBreakdown: {
       vacantLand: headline.vacantLandCount,

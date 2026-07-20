@@ -44,14 +44,20 @@ import { dirname, join } from "node:path";
 import { socrataHeaders } from "../lib/socrata";
 import { PILOT_ZIPS } from "../lib/pilot-zips";
 import { getCorridorCitywideMetric } from "../lib/corridor-citywide";
-import { normalizeOwnerType, OWNER_TYPE_ORDER } from "../lib/owner-classify";
+import { normalizeOwnerType } from "../lib/owner-classify";
+import { normalizeOwnerAddress } from "../lib/corridor-owners";
+import { toDigitsOnlyPin } from "../lib/ingest/pin-batch";
 import {
   assignQuantileDots,
   computeSitePriority,
+  countAddressesInSet,
   nextStepForSite,
   rankSites,
+  reconcileVacantLandOwnership,
   tallyOwnerTypeCounts,
+  taxSaleExposureForVacantPins,
   type OwnerTypeCount,
+  type VacancyDistressSignals,
   type VacancyIndexEdition,
   type VacancyIndexExport,
   type VacancyMatrixRow,
@@ -514,49 +520,109 @@ async function fetchAllVacantRows(sql: NeonQueryFunction<false, false>): Promise
 }
 
 /**
- * COMPLETE vacant-land ownership distribution from `parcels` (D2a) — a
- * different universe from the tracked COLS/311 inventory. Per-ZIP try/catch:
- * degrades to `{ series: null, total: null }` (never a fabricated all-zero
- * series) when the query cannot run (parcels not migrated on this branch) OR
- * returns zero rows — a pilot ZIP with genuinely zero vacant parcels is
- * implausible and almost always means the parcels/enrichment sync did not
- * cover this ZIP (the SYNC_ZIPS footgun), which is "not yet available", not a
- * true zero.
+ * COMPLETE vacant-land ownership from `parcels` (D2a), one anonymized row per
+ * vacant parcel (PIN + owner TYPE only — never owner names/mailing) so the same
+ * pull drives BOTH the raw taxpayer-record series (tallied) AND the reconciled
+ * series (PIN-matched against the City inventory). A single fetch keeps the two
+ * series' availability identical (the "reconciliation null iff raw series null"
+ * contract holds by construction).
+ *
+ * Per-ZIP try/catch: degrades to `null` (never a fabricated all-zero series)
+ * when the query cannot run (parcels not migrated on this branch) OR returns
+ * zero rows — a pilot ZIP with genuinely zero vacant parcels is implausible and
+ * almost always means the parcels/enrichment sync did not cover this ZIP (the
+ * SYNC_ZIPS footgun), which is "not yet available", not a true zero.
  */
-async function fetchVacantLandOwnership(
+async function fetchVacantLandParcels(
   sql: NeonQueryFunction<false, false>,
   zip: string,
-): Promise<{ series: OwnerTypeCount[] | null; total: number | null }> {
+): Promise<{ pin: string; ownerType: string | null }[] | null> {
   try {
     const rows = (await sql`
-      SELECT COALESCE(owner_type, 'unknown') AS owner_type, COUNT(*)::int AS cnt
+      SELECT pin, COALESCE(owner_type, 'unknown') AS owner_type
       FROM parcels
       WHERE zip = ${zip} AND is_vacant IS TRUE
-      GROUP BY owner_type
-    `) as { owner_type: string | null; cnt: number | string }[];
+    `) as { pin: string | null; owner_type: string | null }[];
 
     if (rows.length === 0) {
       console.warn(`  ${zip}: parcels vacant-land ownership returned 0 rows — treating as unavailable (did SYNC_ZIPS cover this ZIP?)`);
-      return { series: null, total: null };
+      return null;
     }
 
-    const counts = new Map<string, number>();
-    for (const key of OWNER_TYPE_ORDER) counts.set(key, 0);
-    let total = 0;
-    for (const row of rows) {
-      const key = normalizeOwnerType(row.owner_type);
-      const c = toNum(row.cnt);
-      counts.set(key, (counts.get(key) ?? 0) + c);
-      total += c;
-    }
-    const series = OWNER_TYPE_ORDER.map((ownerType) => ({ ownerType, count: counts.get(ownerType) ?? 0 }));
-    return { series, total };
+    return rows.map((r) => ({ pin: r.pin ?? "", ownerType: r.owner_type }));
   } catch (err) {
     console.warn(
       `  ${zip}: parcels vacant-land ownership join unavailable (table likely not migrated on this branch):`,
       err instanceof Error ? err.message : err,
     );
-    return { series: null, total: null };
+    return null;
+  }
+}
+
+/**
+ * Once-per-run map of PIN -> tax_sale_year[] combining scavenger + annual
+ * tax-sale entries (both PIN-keyed, digits-only `parcels.pin` convention after
+ * their adapters' normalize()). A key exists for every PIN with ANY record
+ * (even a null-year one, whose value is `[]`), so membership = exposure —
+ * mirrors lib/corridor-owners.ts's saleEntriesByPin build. Returns `null` when
+ * the tables are absent on this branch (42P01), so distress degrades to the
+ * pending state instead of a fabricated zero.
+ */
+async function fetchSaleYearsByPin(
+  sql: NeonQueryFunction<false, false>,
+): Promise<Map<string, number[]> | null> {
+  try {
+    type SaleRow = { pin: string; tax_sale_year: number | string | null };
+    const scavenger = (await sql`
+      SELECT pin, tax_sale_year FROM scavenger_sale_entries WHERE pin IS NOT NULL AND pin <> ''
+    `) as SaleRow[];
+    const annual = (await sql`
+      SELECT pin, tax_sale_year FROM annual_tax_sale_entries WHERE pin IS NOT NULL AND pin <> ''
+    `) as SaleRow[];
+
+    const map = new Map<string, number[]>();
+    for (const entry of [...scavenger, ...annual]) {
+      const years = map.get(entry.pin) ?? [];
+      if (entry.tax_sale_year != null) {
+        const year = Number(entry.tax_sale_year);
+        if (Number.isFinite(year)) years.push(year);
+      }
+      map.set(entry.pin, years); // ensure the key exists even with a null year
+    }
+    return map;
+  } catch (err) {
+    console.warn(
+      "  scavenger/annual tax-sale tables unavailable (not migrated on this branch) — tax-sale distress degrades to pending:",
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  }
+}
+
+/**
+ * Once-per-run set of normalized vacant-building-violation addresses (u7si-yh3t)
+ * using the exact SQL normalization lib/corridor-owners.ts joins by. Returns
+ * `null` when the table is absent on this branch, so the violation chip
+ * degrades to pending rather than a fabricated zero.
+ */
+async function fetchViolationAddressSet(
+  sql: NeonQueryFunction<false, false>,
+): Promise<Set<string> | null> {
+  try {
+    const rows = (await sql`
+      SELECT DISTINCT regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g') AS norm_address
+      FROM vacant_building_violations
+      WHERE address IS NOT NULL AND address <> ''
+    `) as { norm_address: string }[];
+    const set = new Set<string>();
+    for (const row of rows) if (row.norm_address) set.add(row.norm_address);
+    return set;
+  } catch (err) {
+    console.warn(
+      "  vacant_building_violations table unavailable (not migrated on this branch) — violation distress degrades to pending:",
+      err instanceof Error ? err.message : err,
+    );
+    return null;
   }
 }
 
@@ -580,12 +646,55 @@ interface ScoredSite {
 function buildEdition(
   zip: string,
   rows: VacantRow[],
-  ownership: { series: OwnerTypeCount[] | null; total: number | null },
+  parcels: { pin: string; ownerType: string | null }[] | null,
   geo: ZipGeometry | undefined,
   transport: { kind: "expressway" | "rail"; points: [number, number][] }[],
+  saleYearsByPin: Map<string, number[]> | null,
+  violationAddressSet: Set<string> | null,
 ): VacancyIndexEdition {
   const entryIndex = PILOT_ZIPS.findIndex((entry) => entry.zip === zip);
   const entry = PILOT_ZIPS[entryIndex];
+
+  // City-owned land inventory PINs within this ZIP: the COLS rows carry the PIN
+  // in their id (`cols-<pin>`, sync-vacant-properties.ts). Normalize dashed/
+  // digits-only to the `parcels.pin` convention (pin-batch.ts) and keep only
+  // real 14-digit PINs — the lat/lon-fallback ids (`cols-<lat>-<lon>`) drop out.
+  const inventoryPins = new Set<string>();
+  for (const r of rows) {
+    if (!r.id.startsWith("cols-")) continue;
+    const pin = toDigitsOnlyPin(r.id.slice("cols-".length));
+    if (pin.length === 14) inventoryPins.add(pin);
+  }
+
+  // Raw + reconciled vacant-land ownership share the parcels pull's availability.
+  let rawSeries: OwnerTypeCount[] | null = null;
+  let rawTotal: number | null = null;
+  let reconciledSeries: OwnerTypeCount[] | null = null;
+  let reconciliation: VacancyIndexEdition["ownership"]["reconciliation"] = null;
+  const assessorVacantPins = new Set<string>();
+  if (parcels !== null) {
+    const normRows = parcels.map((p) => ({ pin: toDigitsOnlyPin(p.pin), ownerType: p.ownerType }));
+    for (const r of normRows) if (r.pin) assessorVacantPins.add(r.pin);
+    rawSeries = tallyOwnerTypeCounts(normRows.map((r) => r.ownerType));
+    rawTotal = normRows.length;
+    const reconciled = reconcileVacantLandOwnership(normRows, inventoryPins);
+    reconciledSeries = reconciled.series;
+    reconciliation = reconciled.stats;
+  }
+
+  // Distress overlays — null only when NEITHER source table loaded.
+  let distress: VacancyDistressSignals | null = null;
+  if (saleYearsByPin !== null || violationAddressSet !== null) {
+    const vacantPins = new Set<string>(inventoryPins);
+    for (const p of assessorVacantPins) vacantPins.add(p);
+    const taxSale = taxSaleExposureForVacantPins(vacantPins, saleYearsByPin);
+    const normAddresses = rows.map((r) => normalizeOwnerAddress(r.address));
+    distress = {
+      taxSaleExposedCount: taxSale.taxSaleExposedCount,
+      latestTaxSaleYear: taxSale.latestTaxSaleYear,
+      violationMatchCount: countAddressesInSet(normAddresses, violationAddressSet),
+    };
+  }
 
   const sites: ScoredSite[] = rows.map((r) => {
     const propertyType = toPropertyType(r.property_type);
@@ -664,10 +773,13 @@ function buildEdition(
       priorityMix,
     },
     ownership: {
-      vacantLandParcelsByOwnerType: ownership.series,
-      vacantLandParcelTotal: ownership.total,
+      vacantLandParcelsByOwnerType: rawSeries,
+      vacantLandParcelTotal: rawTotal,
       trackedInventoryByOwnerType: tallyOwnerTypeCounts(sites.map((s) => s.ownerType)),
+      reconciledVacantLandByOwnerType: reconciledSeries,
+      reconciliation,
     },
+    distress,
     sitePoints,
     sitePointsTruncated,
     siteIndex,
@@ -813,21 +925,48 @@ async function main() {
   // Transport network (clipped per edition bbox).
   const transportFeatures = loadTransportFeatures();
 
+  // Distress overlays: built once for the whole run (both are citywide pulls,
+  // filtered per-edition by PIN/address). Each degrades to null when its
+  // table(s) are absent on this branch — a plain vacant+parcels branch still
+  // exports, with the distress chips staying "not yet available".
+  console.log("\nLoading distress overlays (tax-sale + vacant-building violations)...");
+  const saleYearsByPin = await fetchSaleYearsByPin(sql);
+  const violationAddressSet = await fetchViolationAddressSet(sql);
+  console.log(
+    `  tax-sale entries: ${saleYearsByPin === null ? "unavailable (pending)" : `${saleYearsByPin.size} PINs`}` +
+      `  ·  vacant-building violations: ${violationAddressSet === null ? "unavailable (pending)" : `${violationAddressSet.size} addresses`}`,
+  );
+
   // Build each requested edition.
   console.log("\nBuilding editions...");
   const builtEditions: Record<string, VacancyIndexEdition> = {};
   for (const zip of requestedZips) {
     const rows = rowsByZip.get(zip) ?? [];
     const geo = geoByZip.get(zip);
-    const ownership = await fetchVacantLandOwnership(sql, zip);
+    const parcels = await fetchVacantLandParcels(sql, zip);
     const transport = geo ? clipTransportForEdition(transportFeatures, geo.bbox) : [];
-    const edition = buildEdition(zip, rows, ownership, geo, transport);
+    const edition = buildEdition(zip, rows, parcels, geo, transport, saleYearsByPin, violationAddressSet);
     builtEditions[zip] = edition;
     console.log(
       `  ${zip} ${edition.neighborhood}: ${edition.headline.vacantPropertyCount} tracked ` +
         `(${edition.headline.cityOwnedCount} city-owned, ${edition.headline.inIncentiveZoneCount} in incentive zones), ` +
         `${edition.sitePoints.length} site points${edition.sitePointsTruncated ? " (truncated)" : ""}, ` +
         `${transport.length} transport lines`,
+    );
+    const rec = edition.ownership.reconciliation;
+    const rawCity = edition.ownership.vacantLandParcelsByOwnerType?.find((c) => c.ownerType === "city_public")?.count ?? null;
+    const recCity = edition.ownership.reconciledVacantLandByOwnerType?.find((c) => c.ownerType === "city_public")?.count ?? null;
+    console.log(
+      rec === null
+        ? `    reconciliation: parcels series unavailable (pending)`
+        : `    reconciliation: City/Public ${rawCity} raw -> ${recCity} reconciled ` +
+            `(${rec.cityPinMatches} PIN matches, ${rec.reclassifiedCount} reclassified, ${rec.inventoryUnmatchedCount} inventory PINs unmatched)`,
+    );
+    console.log(
+      edition.distress === null
+        ? `    distress: all sources unavailable (pending)`
+        : `    distress: tax-sale exposed ${edition.distress.taxSaleExposedCount ?? "pending"}` +
+            ` (latest ${edition.distress.latestTaxSaleYear ?? "n/a"}), violations ${edition.distress.violationMatchCount ?? "pending"}`,
     );
     if (edition.headline.vacantPropertyCount === 0) {
       console.warn(`  warning: 0 tracked vacant properties bucketed to ${zip} — did db:sync:vacant run, and does the boundary resolve?`);
