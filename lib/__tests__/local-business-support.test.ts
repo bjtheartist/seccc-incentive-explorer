@@ -21,6 +21,24 @@ describe("local business support data", () => {
     expect(southChicago.organizations[0].relationships).toContain("primary_access_point");
   });
 
+  it("uses Calumet Area Industrial Commission as the current SSA 5 provider", () => {
+    const southChicago = supportData.byCommunityArea["46"];
+    const caic = southChicago.organizations.find(
+      (org) => org.name === "Calumet Area Industrial Commission",
+    );
+
+    expect(southChicago.coverage.ssa).toBe(
+      "SSA #5 Commercial Ave. (Calumet Area Industrial Commission)",
+    );
+    expect(caic?.relationships).toContain("ssa_provider");
+    expect(caic?.sourceUrls).toContain("https://calumetareaindustrial.com/ssa5");
+    expect(
+      southChicago.organizations.some(
+        (org) => org.name === "South Chicago Parents and Friends, Inc.",
+      ),
+    ).toBe(false);
+  });
+
   it("keeps citywide LANE data separate from the community-area workbook export", () => {
     const lane = citywideSupportData.organizations.find((org) =>
       org.name.includes("Legal Aid for New Entrepreneurs")
@@ -157,7 +175,7 @@ describe("rankLocalBusinessSupport", () => {
     // Storefront remodel inside an SSA/CCSA corridor: the SSA provider (the
     // CCSA/corridor-program front door) leads, above the primary access point.
     const corridorRemodel = rank({ ...base, projectType: "rehab", storefrontCorridor: true });
-    expect(corridorRemodel[0]).toBe("South Chicago Parents and Friends, Inc.");
+    expect(corridorRemodel[0]).toBe("Calumet Area Industrial Commission");
 
     // Same remodel outside a corridor: default ordering holds.
     const plainRemodel = rank({ ...base, projectType: "rehab", storefrontCorridor: false });

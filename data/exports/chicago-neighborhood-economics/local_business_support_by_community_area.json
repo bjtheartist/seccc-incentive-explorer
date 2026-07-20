@@ -6602,7 +6602,7 @@
         "corridor": "Strong corridor/chamber",
         "nbdcOfficial": "Calumet Area Industrial Commission (CAIC); Center for Changing Lives (CCL); Entrepreneurs Academy",
         "cbcHub": "Calumet Area Industrial Commission (Far South hub)",
-        "ssa": "SSA #5 Commercial Ave. (South Chicago Parents and Friends, Inc.)"
+        "ssa": "SSA #5 Commercial Ave. (Calumet Area Industrial Commission)"
       },
       "organizations": [
         {
@@ -6639,7 +6639,8 @@
           "relationships": [
             "secondary_access_point",
             "nbdc_2025",
-            "cbc_hub"
+            "cbc_hub",
+            "ssa_provider"
           ],
           "officeCommunityArea": "Roseland / Pullman / Southeast",
           "address": "1000 E. 111th St., 7th Floor, Chicago, IL 60628",
@@ -6652,6 +6653,7 @@
           "currentStatus": "Active SSA provider 2026",
           "sourceYear": "2025/2026",
           "sourceUrls": [
+            "https://calumetareaindustrial.com/ssa5",
             "https://calumetareaindustrial.com/",
             "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
             "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
@@ -6706,35 +6708,11 @@
             "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html",
             "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html"
           ]
-        },
-        {
-          "id": "PRV-118",
-          "name": "South Chicago Parents and Friends, Inc.",
-          "primaryType": "EDO / Corridor Manager",
-          "programSubtype": "SSA #5 service provider - Commercial Ave.",
-          "relationships": [
-            "ssa_provider"
-          ],
-          "address": "10241 S. Commercial Ave., Chicago, IL 60617",
-          "phone": "773.734.2222",
-          "website": "https://www.scpf-inc.org",
-          "supportTypes": "Corridor management, beautification, business attraction/retention, events, facade/SBIF navigation",
-          "serviceGeography": "South Chicago",
-          "citywideOrRegional": "Neighborhood",
-          "validationLevel": "Verified: DPD SSA provider list",
-          "currentStatus": "Active SSA provider 2026",
-          "sourceYear": "2026",
-          "sourceUrls": [
-            "https://www.chicago.gov/content/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
-            "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
-            "https://calumetareaindustrial.com/",
-            "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",
-            "https://www.chicago.gov/city/en/depts/bacp/supp_info/chicagobusinesscenters.html"
-          ]
         }
       ],
       "sourceLabel": "Chicago Small Business Resource Map, Phase 2 validated workbook",
       "sourceUrls": [
+        "https://calumetareaindustrial.com/ssa5",
         "https://resources.somercor.com/hubfs/SBIF/NBDC_Program_2021_Grantees_List-V-07-28-2021.pdf",
         "https://calumetareaindustrial.com/",
         "https://www.chicago.gov/content/dam/city/depts/bacp/nbdc/nbdcflyerfulllistv3.pdf",

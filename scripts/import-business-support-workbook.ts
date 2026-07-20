@@ -26,6 +26,17 @@ const PROVIDER_SHEET = "Provider Directory";
 const OUT_DIR = resolve(process.cwd(), "data/exports/chicago-neighborhood-economics");
 const OUT_FILE = resolve(OUT_DIR, "local_business_support_by_community_area.json");
 
+const SSA_PROVIDER_OVERRIDES: Record<
+  string,
+  { coverage: string; providers: string[]; sourceUrls: string[] }
+> = {
+  "46": {
+    coverage: "SSA #5 Commercial Ave. (Calumet Area Industrial Commission)",
+    providers: ["Calumet Area Industrial Commission"],
+    sourceUrls: ["https://calumetareaindustrial.com/ssa5"],
+  },
+};
+
 function argValue(name: string): string | null {
   const prefix = `--${name}=`;
   return process.argv.slice(2).find((a) => a.startsWith(prefix))?.slice(prefix.length) ?? null;
@@ -266,27 +277,30 @@ function main() {
     const communityArea = value(row, cols.caName);
     if (caNumber == null || !communityArea) continue;
 
+    const key = String(caNumber);
+    const ssaOverride = SSA_PROVIDER_OVERRIDES[key];
     const rowSourceUrls = splitUrls(value(row, cols.urls));
+    const sourceUrls = mergeUrls(rowSourceUrls, ssaOverride?.sourceUrls ?? []);
     const orgs = new Map<string, LocalBusinessSupportOrganization>();
 
     addOrganization(
       orgs,
-      makeOrganization(value(row, cols.primary), "primary_access_point", providerIndex, rowSourceUrls)
+      makeOrganization(value(row, cols.primary), "primary_access_point", providerIndex, sourceUrls)
     );
     addOrganization(
       orgs,
-      makeOrganization(value(row, cols.secondary), "secondary_access_point", providerIndex, rowSourceUrls)
+      makeOrganization(value(row, cols.secondary), "secondary_access_point", providerIndex, sourceUrls)
     );
     for (const name of parseList(value(row, cols.nbdcOfficial))) {
-      addOrganization(orgs, makeOrganization(name, "nbdc_2025", providerIndex, rowSourceUrls));
+      addOrganization(orgs, makeOrganization(name, "nbdc_2025", providerIndex, sourceUrls));
     }
     const cbcHub = value(row, cols.cbcHub).replace(/\s*\([^)]*\)\s*$/, "");
-    addOrganization(orgs, makeOrganization(cbcHub, "cbc_hub", providerIndex, rowSourceUrls));
-    for (const name of parseSsaProviders(value(row, cols.ssa))) {
-      addOrganization(orgs, makeOrganization(name, "ssa_provider", providerIndex, rowSourceUrls));
+    addOrganization(orgs, makeOrganization(cbcHub, "cbc_hub", providerIndex, sourceUrls));
+    const ssaProviders = ssaOverride?.providers ?? parseSsaProviders(value(row, cols.ssa));
+    for (const name of ssaProviders) {
+      addOrganization(orgs, makeOrganization(name, "ssa_provider", providerIndex, sourceUrls));
     }
 
-    const key = String(caNumber);
     byCommunityArea[key] = {
       communityAreaNumber: key,
       communityArea,
@@ -301,11 +315,11 @@ function main() {
         corridor: value(row, cols.corridor) || undefined,
         nbdcOfficial: value(row, cols.nbdcOfficial) || undefined,
         cbcHub: value(row, cols.cbcHub) || undefined,
-        ssa: value(row, cols.ssa) || undefined,
+        ssa: (ssaOverride?.coverage ?? value(row, cols.ssa)) || undefined,
       },
       organizations: rankLocalBusinessSupport(Array.from(orgs.values()), 8),
       sourceLabel: "Chicago Small Business Resource Map, Phase 2 validated workbook",
-      sourceUrls: rowSourceUrls,
+      sourceUrls,
     };
   }
 
