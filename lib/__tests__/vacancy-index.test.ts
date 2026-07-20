@@ -15,6 +15,7 @@ import {
   computeSitePriority,
   corridorRefsIntersectingBbox,
   countAddressesInSet,
+  deriveLandUniverse,
   editionGeographyNote,
   getVacancyIndexEdition,
   haversineMeters,
@@ -42,6 +43,7 @@ import {
   type RankableSite,
   type VacancyDirectoryFile,
   type VacancyDirectoryRow,
+  type VacancyIndexEdition,
   type VacancyIndexExport,
   type VacancyPortfolio,
   type VacancyPriorityTier,
@@ -433,6 +435,211 @@ describe("reconcileVacantLandOwnership", () => {
     expect(counts.unknown).toBe(2);
     expect(stats.cityPinMatches).toBe(0);
     expect(stats.inventoryUnmatchedCount).toBe(1); // z had no assessor parcel
+  });
+});
+
+describe("deriveLandUniverse", () => {
+  /** Build a full five-row owner series in OWNER_TYPE_ORDER from a partial map. */
+  function series(counts: Partial<Record<OwnerType, number>>) {
+    return OWNER_TYPE_ORDER.map((ownerType) => ({ ownerType, count: counts[ownerType] ?? 0 }));
+  }
+
+  /** Minimal edition carrying only the fields deriveLandUniverse reads. */
+  function makeEdition(opts: {
+    zip?: string;
+    vacantLandCount: number;
+    vacantLandParcelTotal: number | null;
+    parcelsByOwnerType: { ownerType: OwnerType; count: number }[] | null;
+    reconciled: { ownerType: OwnerType; count: number }[] | null;
+    reconciliation:
+      | { cityPinMatches: number; reclassifiedCount: number; inventoryUnmatchedCount: number }
+      | null;
+  }): VacancyIndexEdition {
+    return {
+      zip: opts.zip ?? "60617",
+      headline: {
+        vacantPropertyCount: 0,
+        vacantLandCount: opts.vacantLandCount,
+        vacantBuildingCount: 0,
+        cityOwnedCount: 0,
+        inIncentiveZoneCount: 0,
+        priorityMix: { high: 0, medium: 0, low: 0 },
+      },
+      ownership: {
+        vacantLandParcelsByOwnerType: opts.parcelsByOwnerType,
+        vacantLandParcelTotal: opts.vacantLandParcelTotal,
+        trackedInventoryByOwnerType: series({}),
+        reconciledVacantLandByOwnerType: opts.reconciled,
+        reconciliation: opts.reconciliation,
+      },
+    } as unknown as VacancyIndexEdition;
+  }
+
+  /** The committed 60617 shape (the worked example in the directive). */
+  const edition60617 = makeEdition({
+    zip: "60617",
+    vacantLandCount: 864,
+    vacantLandParcelTotal: 1735,
+    parcelsByOwnerType: series({
+      corporate_llc: 302,
+      out_of_state: 478,
+      local_private: 871,
+      city_public: 3,
+      unknown: 81,
+    }),
+    reconciled: series({
+      corporate_llc: 294,
+      out_of_state: 444,
+      local_private: 782,
+      city_public: 135,
+      unknown: 80,
+    }),
+    reconciliation: { cityPinMatches: 132, reclassifiedCount: 132, inventoryUnmatchedCount: 732 },
+  });
+
+  it("derives the 60617 union total, components, and city fold (864 + 1735 − 132 = 2467, city 867)", () => {
+    const u = deriveLandUniverse(edition60617);
+    expect(u).not.toBeNull();
+    expect(u!.total).toBe(2467);
+    expect(u!.components).toEqual({
+      inventoryTotal: 864,
+      assessorTotal: 1735,
+      pinMatches: 132,
+      inventoryOnly: 732,
+      assessorOnly: 1603,
+    });
+    const byType = Object.fromEntries(u!.byOwnerType.map((r) => [r.ownerType, r.count]));
+    expect(byType.city_public).toBe(867); // 864 + (135 − 132)
+    expect(byType.local_private).toBe(782);
+    expect(byType.out_of_state).toBe(444);
+    expect(byType.corporate_llc).toBe(294);
+    expect(byType.unknown).toBe(80);
+  });
+
+  it("returns byOwnerType in OWNER_TYPE_ORDER summing to the union total", () => {
+    const u = deriveLandUniverse(edition60617)!;
+    expect(u.byOwnerType.map((r) => r.ownerType)).toEqual(OWNER_TYPE_ORDER);
+    expect(u.byOwnerType.reduce((s, r) => s + r.count, 0)).toBe(u.total);
+    // The governing identity, spelled out.
+    expect(u.total).toBe(u.components.inventoryTotal + u.components.assessorOnly);
+  });
+
+  it("folds the city row with pinMatches so a reclassifiedCount ≠ pinMatches edition still closes (60624 shape)", () => {
+    // 60624: pinMatches 257, reclassifiedCount 255 — using pinMatches keeps the
+    // partition closed on the true union (1339 + 1657 − 257 = 2739).
+    const u = deriveLandUniverse(
+      makeEdition({
+        zip: "60624",
+        vacantLandCount: 1339,
+        vacantLandParcelTotal: 1657,
+        parcelsByOwnerType: series({ city_public: 1 }),
+        reconciled: series({
+          corporate_llc: 300,
+          out_of_state: 400,
+          local_private: 700,
+          city_public: 257,
+          unknown: 0,
+        }),
+        reconciliation: { cityPinMatches: 257, reclassifiedCount: 255, inventoryUnmatchedCount: 1082 },
+      }),
+    )!;
+    expect(u.total).toBe(2739);
+    const byType = Object.fromEntries(u.byOwnerType.map((r) => [r.ownerType, r.count]));
+    expect(byType.city_public).toBe(1339); // 1339 + (257 − 257)
+    expect(u.byOwnerType.reduce((s, r) => s + r.count, 0)).toBe(2739);
+  });
+
+  it("returns null when the raw parcels series is null", () => {
+    expect(
+      deriveLandUniverse(
+        makeEdition({
+          vacantLandCount: 864,
+          vacantLandParcelTotal: null,
+          parcelsByOwnerType: null,
+          reconciled: null,
+          reconciliation: null,
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it("returns null when the reconciliation is null even if a series is present", () => {
+    expect(
+      deriveLandUniverse(
+        makeEdition({
+          vacantLandCount: 864,
+          vacantLandParcelTotal: 1735,
+          parcelsByOwnerType: series({ city_public: 3 }),
+          reconciled: series({ city_public: 135 }),
+          reconciliation: null,
+        }),
+      ),
+    ).toBeNull();
+  });
+
+  it("throws when the reconciled series does not sum to the assessor total", () => {
+    expect(() =>
+      deriveLandUniverse(
+        makeEdition({
+          vacantLandCount: 864,
+          vacantLandParcelTotal: 1735,
+          parcelsByOwnerType: series({ city_public: 3 }),
+          // Sums to 1000, not 1735 — corruption.
+          reconciled: series({ local_private: 900, city_public: 100 }),
+          reconciliation: { cityPinMatches: 132, reclassifiedCount: 132, inventoryUnmatchedCount: 732 },
+        }),
+      ),
+    ).toThrow(/identity violation/i);
+  });
+
+  it("throws when inventoryOnly disagrees with the reported inventoryUnmatchedCount", () => {
+    expect(() =>
+      deriveLandUniverse(
+        makeEdition({
+          vacantLandCount: 864,
+          vacantLandParcelTotal: 1735,
+          parcelsByOwnerType: series({ city_public: 3 }),
+          reconciled: series({
+            corporate_llc: 294,
+            out_of_state: 444,
+            local_private: 782,
+            city_public: 135,
+            unknown: 80,
+          }),
+          // inventoryOnly should be 864 − 132 = 732; claim 999.
+          reconciliation: { cityPinMatches: 132, reclassifiedCount: 132, inventoryUnmatchedCount: 999 },
+        }),
+      ),
+    ).toThrow(/identity violation/i);
+  });
+
+  it("throws when pinMatches exceeds the inventory total", () => {
+    expect(() =>
+      deriveLandUniverse(
+        makeEdition({
+          vacantLandCount: 100,
+          vacantLandParcelTotal: 1735,
+          parcelsByOwnerType: series({ city_public: 3 }),
+          reconciled: series({ city_public: 1735 }),
+          reconciliation: { cityPinMatches: 200, reclassifiedCount: 200, inventoryUnmatchedCount: -100 },
+        }),
+      ),
+    ).toThrow(/identity violation/i);
+  });
+
+  it("throws when reconciled city_public is below pinMatches", () => {
+    expect(() =>
+      deriveLandUniverse(
+        makeEdition({
+          vacantLandCount: 864,
+          vacantLandParcelTotal: 1735,
+          parcelsByOwnerType: series({ city_public: 3 }),
+          // city_public 100 < pinMatches 132 — impossible (would negate the fold).
+          reconciled: series({ local_private: 1503, city_public: 100, corporate_llc: 132 }),
+          reconciliation: { cityPinMatches: 132, reclassifiedCount: 132, inventoryUnmatchedCount: 732 },
+        }),
+      ),
+    ).toThrow(/identity violation/i);
   });
 });
 
@@ -1265,6 +1472,28 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
         // Reclassified is a subset of the matched parcels.
         expect(reconciliation.reclassifiedCount).toBeLessThanOrEqual(reconciliation.cityPinMatches);
         expect(reconciliation.inventoryUnmatchedCount).toBeGreaterThanOrEqual(0);
+      }
+    }
+  });
+
+  it("deriveLandUniverse succeeds for all nine editions with every identity holding", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      // Every committed edition carries a full ownership series, so the universe
+      // must derive (never null) and never throw an identity violation.
+      const u = deriveLandUniverse(edition);
+      expect(u, `land universe for ${zip}`).not.toBeNull();
+      const c = u!.components;
+      // Ledger identities.
+      expect(c.inventoryOnly, `${zip} inventoryOnly`).toBe(c.inventoryTotal - c.pinMatches);
+      expect(c.assessorOnly, `${zip} assessorOnly`).toBe(c.assessorTotal - c.pinMatches);
+      expect(u!.total, `${zip} total`).toBe(c.inventoryTotal + c.assessorOnly);
+      // Ownership partition closes on the union total, in canonical order.
+      expect(u!.byOwnerType.map((r) => r.ownerType)).toEqual(OWNER_TYPE_ORDER);
+      expect(u!.byOwnerType.reduce((s, r) => s + r.count, 0), `${zip} owner sum`).toBe(u!.total);
+      for (const r of u!.byOwnerType) {
+        expect(Number.isInteger(r.count) && r.count >= 0, `${zip} ${r.ownerType} count`).toBe(true);
       }
     }
   });

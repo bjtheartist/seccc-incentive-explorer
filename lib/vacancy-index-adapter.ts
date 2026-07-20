@@ -93,6 +93,11 @@ export function buildVacancyIndexPdfInput(
   if (!edition) return null;
 
   const { headline, ownership } = edition;
+  // The non-city tracked records. In practice this equals the 311-reported
+  // vacant buildings (cityOwnedCount === vacantLandCount for every pilot ZIP),
+  // whose ownership is UNVERIFIED — never assert "privately held" in display
+  // copy. The field name is kept for the PDF contract; its label is
+  // "Ownership unverified".
   const privatelyHeld = headline.vacantPropertyCount - headline.cityOwnedCount;
 
   const trackedInventoryByOwnerType = Object.fromEntries(
@@ -152,7 +157,7 @@ export function buildVacancyIndexPdfInput(
   });
 
   const total = headline.vacantPropertyCount;
-  const brief = `${edition.neighborhood} carries ${total.toLocaleString("en-US")} tracked vacant properties across ZIP ${edition.zip}. ${headline.cityOwnedCount.toLocaleString("en-US")} are City/Public-owned and ${privatelyHeld.toLocaleString("en-US")} are privately held; ${headline.inIncentiveZoneCount.toLocaleString("en-US")} sit inside at least one mapped incentive zone. The site index ranks the highest-opportunity parcels by incentive coverage, size, and owner type so a corridor manager can start with the clearest next contact.`;
+  const brief = `${edition.neighborhood} carries ${total.toLocaleString("en-US")} tracked vacant properties across ZIP ${edition.zip}. ${headline.cityOwnedCount.toLocaleString("en-US")} are City/Public-owned and ${privatelyHeld.toLocaleString("en-US")} carry unverified ownership (311-reported vacant buildings not yet parcel-matched); ${headline.inIncentiveZoneCount.toLocaleString("en-US")} sit inside at least one mapped incentive zone. The site index ranks the highest-opportunity parcels by incentive coverage, size, and owner type so a corridor manager can start with the clearest next contact.`;
 
   return {
     neighborhood: edition.neighborhood,

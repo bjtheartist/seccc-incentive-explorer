@@ -16,6 +16,7 @@ import {
   PORTFOLIO_RUBRIC_NOTE,
   portfolioForSite,
   editionGeographyNote,
+  deriveLandUniverse,
   loadVacancyIndex,
 } from "@/lib/vacancy-index";
 import { buildVacancyIndexPdfInput } from "@/lib/vacancy-index-adapter";
@@ -284,13 +285,34 @@ export default async function VacancyReportPage({
   // ── Scale-of-the-challenge headline measures (computed from headline counts) ──
   const total = pdfInput.counts.total;
   const cityOwned = pdfInput.counts.cityOwned;
-  const privatelyHeld = pdfInput.counts.privatelyHeld;
+  // Non-city tracked records — in practice the 311-reported vacant buildings,
+  // whose ownership is UNVERIFIED. Never labeled "privately held" (Billy's fix).
+  const ownershipUnverified = pdfInput.counts.privatelyHeld;
   const inIncentive = headline.inIncentiveZoneCount;
-  const privatePct = total > 0 ? Math.round((privatelyHeld / total) * 100) : 0;
+  const unverifiedPct = total > 0 ? Math.round((ownershipUnverified / total) * 100) : 0;
   const cityPct = total > 0 ? Math.round((cityOwned / total) * 100) : 0;
   const allInIncentive = total > 0 && inIncentive === total;
 
-  // ── Ownership universes (the two panels — deliberately NOT a breakdown pair) ──
+  // ── Reconciled LAND universe (part 2–3 of "Vacancy Sources, Ownership, and
+  // Control"). Null when the ownership source series could not be built — the
+  // section degrades to tracked-inventory context rather than fabricating one. ──
+  const landUniverse = deriveLandUniverse(edition);
+  const landOwnerMax = landUniverse
+    ? Math.max(1, ...landUniverse.byOwnerType.map((r) => r.count))
+    : 1;
+  const knownPrivateLand = landUniverse
+    ? landUniverse.byOwnerType
+        .filter((r) => r.ownerType === "local_private" || r.ownerType === "out_of_state" || r.ownerType === "corporate_llc")
+        .reduce((sum, r) => sum + r.count, 0)
+    : 0;
+  const unknownLand = landUniverse
+    ? landUniverse.byOwnerType.find((r) => r.ownerType === "unknown")?.count ?? 0
+    : 0;
+  const publicLand = landUniverse
+    ? landUniverse.byOwnerType.find((r) => r.ownerType === "city_public")?.count ?? 0
+    : 0;
+
+  // Part 1 context: the tracked operational list broken out by source.
   const trackedRows: Array<{ ownerType: OwnerType; count: number }> =
     ownership.trackedInventoryByOwnerType.map((r) => ({
       ownerType: normalizeOwnerType(r.ownerType),
@@ -298,13 +320,6 @@ export default async function VacancyReportPage({
     }));
   const trackedMax = Math.max(1, ...trackedRows.map((r) => r.count));
 
-  const reconciledRows = ownership.reconciledVacantLandByOwnerType;
-  const reconciledMax = reconciledRows ? Math.max(1, ...reconciledRows.map((r) => r.count)) : 1;
-  const reconciledTotal = reconciledRows
-    ? reconciledRows.reduce((sum, r) => sum + r.count, 0)
-    : null;
-  const reclassifiedCount = ownership.reconciliation?.reclassifiedCount ?? 0;
-  const inventoryUnmatchedCount = ownership.reconciliation?.inventoryUnmatchedCount ?? 0;
   const rawCityCount =
     ownership.vacantLandParcelsByOwnerType?.find((r) => normalizeOwnerType(r.ownerType) === "city_public")
       ?.count ?? null;
@@ -353,9 +368,9 @@ export default async function VacancyReportPage({
     "en-US",
   )} tracked vacant properties. ${cityOwned.toLocaleString(
     "en-US",
-  )} are City- or public-controlled and can move toward disposition without owner outreach; the remaining ${privatelyHeld.toLocaleString(
+  )} are City- or public-controlled and can move toward disposition without owner outreach; the remaining ${ownershipUnverified.toLocaleString(
     "en-US",
-  )} are privately held and start with direct contact or ownership verification. ${
+  )} carry unverified ownership (311-reported buildings) and start with parcel matching and ownership verification. ${
     allInIncentive
       ? "Every tracked site sits inside at least one incentive geography"
       : `${inIncentive.toLocaleString("en-US")} of ${total.toLocaleString(
@@ -433,9 +448,12 @@ export default async function VacancyReportPage({
               </div>
             </div>
             <div className="bg-white px-4 py-4">
-              <div className="font-editorial text-[34px] leading-none">{privatePct}%</div>
+              <div className="font-editorial text-[34px] leading-none">{unverifiedPct}%</div>
               <div className="mt-2 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
-                Privately held
+                Ownership unverified
+              </div>
+              <div className="mt-1 text-[10px] leading-tight text-[#0C1B33]/40">
+                311-reported vacant buildings, not yet parcel-matched
               </div>
             </div>
             <div className="bg-white px-4 py-4">
@@ -488,161 +506,360 @@ export default async function VacancyReportPage({
           />
         </section>
 
-        {/* 4 · Who controls the opportunity */}
+        {/* 4 · Vacancy Sources, Ownership, and Control */}
         <section className="mt-10">
-          <h2 className="mb-4 font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#0C1B33]/50">
-            Who controls the opportunity
+          <h2 className="mb-6 font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#0C1B33]/50">
+            Vacancy Sources, Ownership, and Control
           </h2>
-          <div className="grid gap-8 lg:grid-cols-2">
-            <div>
-              <h3 className="mb-3 text-[13px] font-semibold text-[#0C1B33]">
-                City&rsquo;s tracked inventory — {total.toLocaleString("en-US")} properties
-                <span className="ml-2 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
-                  COLS + 311
-                </span>
-              </h3>
-              <div className="space-y-2.5">
-                {OWNER_TYPE_ORDER.map((type) => {
-                  const row = trackedRows.find((r) => r.ownerType === type);
-                  return (
-                    <OwnerBar key={type} ownerType={type} count={row?.count ?? 0} max={trackedMax} />
-                  );
-                })}
+
+          {/* Part 1 — What is being counted */}
+          <div>
+            <h3 className="flex items-baseline gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/55">
+              <span className="text-[#2563EB]">01</span> What is being counted
+            </h3>
+            <div className="mt-3 border border-[#0C1B33]/10 bg-white">
+              {[
+                {
+                  tag: "a",
+                  label: "City-inventory vacant-land parcels",
+                  sub: "City-Owned Land Server (COLS)",
+                  value: headline.vacantLandCount,
+                },
+                {
+                  tag: "b",
+                  label: "311-reported vacant-building sites",
+                  sub: "Service requests — ownership not attached",
+                  value: headline.vacantBuildingCount,
+                },
+                {
+                  tag: "c",
+                  label: "Assessor-classed vacant-land parcels",
+                  sub: "Cook County Assessor vacant-land classification",
+                  value: ownership.vacantLandParcelTotal,
+                },
+              ].map((s) => (
+                <div
+                  key={s.tag}
+                  className="flex items-baseline gap-3 border-b border-[#0C1B33]/5 px-4 py-3 last:border-b-0"
+                >
+                  <span className="font-mono-bureau text-[11px] text-[#2563EB]">({s.tag})</span>
+                  <span className="flex-1">
+                    <span className="text-[13px] text-[#0C1B33]">{s.label}</span>
+                    <span className="mt-0.5 block font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/35">
+                      {s.sub}
+                    </span>
+                  </span>
+                  <span className="flex-shrink-0 font-mono-bureau text-[14px] font-semibold text-[#0C1B33]">
+                    {s.value != null ? s.value.toLocaleString("en-US") : "—"}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="mt-3 text-[12px] leading-relaxed text-[#0C1B33]/60">
+              Sources (a) and (b) together form the{" "}
+              <span className="font-semibold text-[#0C1B33]">
+                {headline.vacantPropertyCount.toLocaleString("en-US")}-record
+              </span>{" "}
+              operational tracking list — the properties a corridor manager actively works.{" "}
+              <span className="font-semibold text-[#0C1B33]">
+                That list is not the complete vacant-land universe.
+              </span>{" "}
+              The land universe reconciles the two land sources, (a) and (c), below.
+            </p>
+
+            {/* Compact reference: the tracked list's owner-type mix + land/building split */}
+            <div className="mt-5 grid gap-6 lg:grid-cols-2">
+              <div>
+                <h4 className="mb-2 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                  Tracked list by owner type (COLS + 311)
+                </h4>
+                <div className="space-y-2">
+                  {OWNER_TYPE_ORDER.map((type) => {
+                    const row = trackedRows.find((r) => r.ownerType === type);
+                    return (
+                      <OwnerBar key={type} ownerType={type} count={row?.count ?? 0} max={trackedMax} />
+                    );
+                  })}
+                </div>
+              </div>
+              <div>
+                <h4 className="mb-2 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                  Tracked list — land vs. building
+                </h4>
+                <div className="flex h-4 w-full overflow-hidden border border-[#0C1B33]/10">
+                  <div
+                    className="h-4 bg-[#111111]"
+                    style={{ width: `${landPct}%` }}
+                    title={`Tracked as vacant land ${landPct}%`}
+                  />
+                  <div
+                    className="h-4 bg-[#8A8A8A]"
+                    style={{ width: `${buildingPct}%` }}
+                    title={`Reported vacant buildings ${buildingPct}%`}
+                  />
+                </div>
+                <div className="mt-2 flex justify-between font-mono-bureau text-[10px] text-[#0C1B33]/55">
+                  <span>
+                    {headline.vacantLandCount.toLocaleString("en-US")} vacant land ({landPct}%)
+                  </span>
+                  <span>
+                    {headline.vacantBuildingCount.toLocaleString("en-US")} reported buildings (311) (
+                    {buildingPct}%)
+                  </span>
+                </div>
               </div>
             </div>
-            <div>
-              <h3 className="mb-3 text-[13px] font-semibold text-[#0C1B33]">
-                Assessor-classed vacant land
-                {reconciledTotal != null ? ` — ${reconciledTotal.toLocaleString("en-US")} parcels` : ""}
-                <span className="ml-2 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
-                  Reconciled
-                </span>
-              </h3>
-              {reconciledRows ? (
-                <>
-                  <div className="space-y-2.5">
-                    {OWNER_TYPE_ORDER.map((type) => {
-                      const row = reconciledRows.find((r) => normalizeOwnerType(r.ownerType) === type);
-                      return (
-                        <OwnerBar key={type} ownerType={type} count={row?.count ?? 0} max={reconciledMax} />
-                      );
-                    })}
+          </div>
+
+          {landUniverse ? (
+            <>
+              {/* Part 2 — How the land sources overlap */}
+              <div className="mt-10">
+                <h3 className="flex items-baseline gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/55">
+                  <span className="text-[#2563EB]">02</span> How the land sources overlap
+                </h3>
+                <div className="mt-3 border border-[#0C1B33]/10 bg-white">
+                  {[
+                    {
+                      label: "City-inventory vacant-land parcels",
+                      op: "",
+                      value: landUniverse.components.inventoryTotal,
+                    },
+                    {
+                      label: "Assessor-classed vacant-land parcels",
+                      op: "+",
+                      value: landUniverse.components.assessorTotal,
+                    },
+                    {
+                      label: "Parcels counted in both sources (City PIN matches)",
+                      op: "−",
+                      value: landUniverse.components.pinMatches,
+                    },
+                  ].map((r) => (
+                    <div
+                      key={r.label}
+                      className="flex items-baseline gap-3 border-b border-[#0C1B33]/5 px-4 py-2.5"
+                    >
+                      <span className="w-4 flex-shrink-0 text-center font-mono-bureau text-[13px] text-[#0C1B33]/50">
+                        {r.op}
+                      </span>
+                      <span className="flex-1 text-[13px] text-[#0C1B33]/75">{r.label}</span>
+                      <span className="flex-shrink-0 font-mono-bureau text-[14px] font-semibold text-[#0C1B33]">
+                        {r.value.toLocaleString("en-US")}
+                      </span>
+                    </div>
+                  ))}
+                  <div className="flex items-baseline gap-3 bg-[#0C1B33]/[0.03] px-4 py-3">
+                    <span className="w-4 flex-shrink-0" />
+                    <span className="flex-1 text-[13px] font-semibold text-[#0C1B33]">
+                      Unique land parcels (deduplicated union)
+                    </span>
+                    <span className="flex-shrink-0 font-editorial text-[22px] leading-none text-[#0C1B33]">
+                      {landUniverse.total.toLocaleString("en-US")}
+                    </span>
                   </div>
-                  <p className="mt-3 text-[11px] leading-relaxed text-[#0C1B33]/45">
-                    City/Public from the City&rsquo;s own land inventory (PIN-matched); private
-                    classifications from taxpayer-of-record patterns.{" "}
-                    {reclassifiedCount.toLocaleString("en-US")} parcels reclassified from stale
-                    assessor records; {inventoryUnmatchedCount.toLocaleString("en-US")} City-inventory
-                    parcels are not classed as vacant land by the assessor (city land is mostly
-                    tax-exempt) and appear only in the tracked inventory.
-                    {rawCityCount != null && (
-                      <>
-                        {" "}
-                        Raw taxpayer records alone would show City/Public{" "}
-                        {rawCityCount.toLocaleString("en-US")}.
-                      </>
-                    )}
-                  </p>
-                </>
+                </div>
+                <ul className="mt-3 space-y-1.5 text-[12px] leading-relaxed text-[#0C1B33]/60">
+                  <li>
+                    <span className="font-mono-bureau font-semibold text-[#0C1B33]">
+                      {landUniverse.components.pinMatches.toLocaleString("en-US")}
+                    </span>{" "}
+                    City PIN matches — parcels present in both land sources.
+                  </li>
+                  <li>
+                    <span className="font-mono-bureau font-semibold text-[#0C1B33]">
+                      {landUniverse.components.inventoryOnly.toLocaleString("en-US")}
+                    </span>{" "}
+                    City-inventory parcels outside the Assessor&rsquo;s vacant-land classification
+                    (city land is mostly tax-exempt).
+                  </li>
+                  <li>
+                    <span className="font-mono-bureau font-semibold text-[#0C1B33]">
+                      {landUniverse.components.assessorOnly.toLocaleString("en-US")}
+                    </span>{" "}
+                    Assessor parcels not found in the City inventory.
+                  </li>
+                </ul>
+              </div>
+
+              {/* Part 3 — Who controls the vacant land */}
+              <div className="mt-10">
+                <h3 className="flex items-baseline gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/55">
+                  <span className="text-[#2563EB]">03</span> Who controls the vacant land
+                </h3>
+                <p className="mt-2 text-[12px] leading-relaxed text-[#0C1B33]/55">
+                  Ownership across the{" "}
+                  <span className="font-semibold text-[#0C1B33]">
+                    {landUniverse.total.toLocaleString("en-US")}
+                  </span>{" "}
+                  unique land parcels above — the single &ldquo;who controls&rdquo; claim.
+                </p>
+                <div className="mt-3 space-y-2.5">
+                  {landUniverse.byOwnerType.map((row) => (
+                    <OwnerBar
+                      key={row.ownerType}
+                      ownerType={row.ownerType}
+                      count={row.count}
+                      max={landOwnerMax}
+                    />
+                  ))}
+                  <div className="flex items-center gap-3 border-t border-[#0C1B33]/10 pt-2">
+                    <span className="w-[132px] flex-shrink-0 text-[12px] font-semibold text-[#0C1B33]">
+                      Total
+                    </span>
+                    <div className="flex-1" />
+                    <span className="w-[52px] flex-shrink-0 text-right font-mono-bureau text-[11px] font-semibold text-[#0C1B33]">
+                      {landUniverse.total.toLocaleString("en-US")}
+                    </span>
+                  </div>
+                </div>
+                <p className="mt-3 text-[11px] leading-relaxed text-[#0C1B33]/45">
+                  City / Public = City-inventory parcels plus additional public parcels identified
+                  through assessor taxpayer records. Private and unknown counts are the reconciled
+                  taxpayer-of-record classifications over the same land universe.
+                  {rawCityCount != null && (
+                    <>
+                      {" "}
+                      Raw taxpayer records alone would show City/Public{" "}
+                      {rawCityCount.toLocaleString("en-US")}.
+                    </>
+                  )}
+                </p>
+              </div>
+            </>
+          ) : (
+            <div className="mt-10 border border-dashed border-[#0C1B33]/20 bg-white px-4 py-6 text-center">
+              <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                Land universe not yet available
+              </span>
+              <p className="mt-2 text-[12px] leading-relaxed text-[#0C1B33]/45">
+                The complete assessor-parcel ownership series could not be built for this ZIP on the
+                last refresh, so the reconciled land universe and its ownership table are withheld.
+              </p>
+            </div>
+          )}
+
+          {/* Part 4 — Vacant buildings requiring verification */}
+          <div className="mt-10">
+            <h3 className="flex items-baseline gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/55">
+              <span className="text-[#2563EB]">04</span> Vacant buildings requiring verification
+            </h3>
+            <div className="mt-3 flex flex-wrap items-baseline gap-3">
+              <span className="font-editorial text-[30px] leading-none text-[#0C1B33]">
+                {headline.vacantBuildingCount.toLocaleString("en-US")}
+              </span>
+              <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
+                311-reported vacant-building sites
+              </span>
+              <span className="border border-[#0C1B33]/30 bg-[#0C1B33]/[0.03] px-2 py-0.5 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.08em] text-[#0C1B33]/75">
+                Ownership unverified
+              </span>
+            </div>
+            <p className="mt-3 text-[12px] leading-relaxed text-[#0C1B33]/60">
+              These are service-request sites, not owner-verified holdings — they are{" "}
+              <span className="font-semibold text-[#0C1B33]">not &ldquo;privately held.&rdquo;</span>{" "}
+              An exact land-plus-building total should not be published until these sites are
+              parcel-matched and deduplicated against the land universe above.
+            </p>
+            {/* Distress signals (preserved) */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              {distress && distress.taxSaleExposedCount != null ? (
+                <span className="inline-flex items-center gap-1.5 border border-[#0C1B33]/25 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/80">
+                  <span
+                    className="inline-block h-2 w-2 flex-shrink-0 rounded-full"
+                    style={{ backgroundColor: DISTRESS_RED }}
+                  />
+                  Tax-sale exposure
+                  <span className="font-mono-bureau text-[11px] font-semibold text-[#0C1B33]">
+                    {distress.taxSaleExposedCount.toLocaleString("en-US")} parcels
+                    {distress.latestTaxSaleYear != null ? ` · latest ${distress.latestTaxSaleYear}` : ""}
+                  </span>
+                </span>
               ) : (
-                <div className="border border-dashed border-[#0C1B33]/20 bg-white px-4 py-6 text-center">
-                  <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                <span className="inline-flex items-center gap-1.5 border border-dashed border-[#0C1B33]/20 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/45">
+                  Tax-sale / delinquency
+                  <span className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/35">
                     Not yet available
                   </span>
-                  <p className="mt-2 text-[12px] leading-relaxed text-[#0C1B33]/45">
-                    The complete assessor-parcel ownership series could not be built for this ZIP on
-                    the last refresh.
-                  </p>
-                </div>
+                </span>
+              )}
+              {distress && distress.violationMatchCount != null ? (
+                <span className="inline-flex items-center gap-1.5 border border-[#0C1B33]/25 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/80">
+                  <span
+                    className="inline-block h-2 w-2 flex-shrink-0 rounded-full"
+                    style={{ backgroundColor: DISTRESS_RED }}
+                  />
+                  Vacant-building violations
+                  <span className="font-mono-bureau text-[11px] font-semibold text-[#0C1B33]">
+                    {distress.violationMatchCount.toLocaleString("en-US")} tracked sites
+                  </span>
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 border border-dashed border-[#0C1B33]/20 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/45">
+                  Code-violation density
+                  <span className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/35">
+                    Not yet available
+                  </span>
+                </span>
               )}
             </div>
           </div>
 
-          {/* Not-a-breakdown caveat (verbatim) */}
-          <p className="mt-5 border-l-2 border-[#0C1B33]/25 pl-3 text-[12px] leading-relaxed text-[#0C1B33]/60">
-            These are different analytical universes and should not be compared as if one is a
-            breakdown of the other.
-          </p>
+          {/* Part 5 — What this means for action */}
+          <div className="mt-10">
+            <h3 className="flex items-baseline gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/55">
+              <span className="text-[#2563EB]">05</span> What this means for action
+            </h3>
+            <div className="mt-3 overflow-x-auto border border-[#0C1B33]/10 bg-white">
+              <table className="w-full min-w-[560px] border-collapse text-left">
+                <tbody>
+                  {[
+                    {
+                      label: "Public land parcels",
+                      count: landUniverse ? publicLand : null,
+                      action: "Disposition · RFP · CCLBA coordination · land assembly",
+                    },
+                    {
+                      label: "Known private land parcels",
+                      count: landUniverse ? knownPrivateLand : null,
+                      action: "Owner outreach and development partnerships",
+                    },
+                    {
+                      label: "Unknown land parcels",
+                      count: landUniverse ? unknownLand : null,
+                      action: "Ownership and title verification",
+                    },
+                    {
+                      label: "Reported buildings",
+                      count: headline.vacantBuildingCount,
+                      action: "Parcel matching · ownership verification · active-status confirmation",
+                    },
+                  ].map((r) => (
+                    <tr key={r.label} className="border-b border-[#0C1B33]/5 align-top last:border-b-0">
+                      <td className="px-3 py-2.5 text-[12px] font-semibold text-[#0C1B33]">
+                        {r.label}
+                        {r.count != null && (
+                          <span className="ml-2 font-mono-bureau text-[11px] font-normal text-[#0C1B33]/55">
+                            {r.count.toLocaleString("en-US")}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2.5 text-[12px] leading-snug text-[#0C1B33]/70">
+                        {r.action}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-          {/* Property-type split + distress chips */}
-          <div className="mt-8 grid gap-8 lg:grid-cols-2">
-            <div>
-              <h3 className="mb-3 text-[13px] font-semibold text-[#0C1B33]">Property-type split</h3>
-              <div className="flex h-4 w-full overflow-hidden border border-[#0C1B33]/10">
-                <div
-                  className="h-4 bg-[#111111]"
-                  style={{ width: `${landPct}%` }}
-                  title={`Tracked as vacant land ${landPct}%`}
-                />
-                <div
-                  className="h-4 bg-[#8A8A8A]"
-                  style={{ width: `${buildingPct}%` }}
-                  title={`Reported vacant buildings ${buildingPct}%`}
-                />
-              </div>
-              <div className="mt-2 flex justify-between font-mono-bureau text-[10px] text-[#0C1B33]/55">
-                <span>
-                  {headline.vacantLandCount.toLocaleString("en-US")} tracked as vacant land in the
-                  City inventory ({landPct}%)
-                </span>
-                <span>
-                  {headline.vacantBuildingCount.toLocaleString("en-US")} reported vacant buildings
-                  (311) ({buildingPct}%)
-                </span>
-              </div>
-            </div>
-            <div>
-              <h3 className="mb-3 text-[13px] font-semibold text-[#0C1B33]">Distress signals</h3>
-              <div className="flex flex-wrap gap-2">
-                {distress && distress.taxSaleExposedCount != null ? (
-                  <span className="inline-flex items-center gap-1.5 border border-[#0C1B33]/25 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/80">
-                    <span
-                      className="inline-block h-2 w-2 flex-shrink-0 rounded-full"
-                      style={{ backgroundColor: DISTRESS_RED }}
-                    />
-                    Tax-sale exposure
-                    <span className="font-mono-bureau text-[11px] font-semibold text-[#0C1B33]">
-                      {distress.taxSaleExposedCount.toLocaleString("en-US")} parcels
-                      {distress.latestTaxSaleYear != null ? ` · latest ${distress.latestTaxSaleYear}` : ""}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 border border-dashed border-[#0C1B33]/20 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/45">
-                    Tax-sale / delinquency
-                    <span className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/35">
-                      Not yet available
-                    </span>
-                  </span>
-                )}
-                {distress && distress.violationMatchCount != null ? (
-                  <span className="inline-flex items-center gap-1.5 border border-[#0C1B33]/25 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/80">
-                    <span
-                      className="inline-block h-2 w-2 flex-shrink-0 rounded-full"
-                      style={{ backgroundColor: DISTRESS_RED }}
-                    />
-                    Vacant-building violations
-                    <span className="font-mono-bureau text-[11px] font-semibold text-[#0C1B33]">
-                      {distress.violationMatchCount.toLocaleString("en-US")} tracked sites
-                    </span>
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1.5 border border-dashed border-[#0C1B33]/20 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/45">
-                    Code-violation density
-                    <span className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/35">
-                      Not yet available
-                    </span>
-                  </span>
-                )}
-              </div>
-            </div>
+            {/* Section takeaway (verbatim) — closes part 5 */}
+            <p className="mt-8 text-[15px] font-semibold leading-relaxed text-[#0C1B33]">
+              Revitalization cannot depend on one acquisition strategy. It requires public-land
+              disposition, local-owner partnerships, absentee-owner outreach, and targeted ownership
+              verification.
+            </p>
           </div>
-
-          {/* Section takeaway (verbatim) */}
-          <p className="mt-8 text-[15px] font-semibold leading-relaxed text-[#0C1B33]">
-            Revitalization cannot depend on one acquisition strategy. It requires public-land
-            disposition, local-owner partnerships, absentee-owner outreach, and targeted ownership
-            verification.
-          </p>
         </section>
 
         {/* 5 · Ownership → action pathways */}
