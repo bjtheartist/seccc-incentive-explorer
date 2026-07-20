@@ -769,7 +769,7 @@ function drawExecutiveBrief(doc: jsPDF, input: VacancyIndexInput) {
   const miniX = 118;
   const minis: [string, number][] = [
     ["CITY-OWNED", counts.cityOwned],
-    ["PRIVATELY HELD", counts.privatelyHeld],
+    ["OWNERSHIP UNVERIFIED", counts.privatelyHeld],
     ["IN INCENTIVE ZONES", counts.inIncentiveZones],
   ];
   let my = y - 4;

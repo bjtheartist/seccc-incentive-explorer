@@ -461,6 +461,162 @@ export function nextStepForSite(
   }
 }
 
+// ── Reconciled land universe (pure derivation) ─────────────────────────────
+
+/** One owner-type row of the reconciled land-universe ownership table. */
+export interface LandUniverseOwnerRow {
+  ownerType: OwnerType;
+  count: number;
+}
+
+/** The reconciliation arithmetic behind the land universe — a small ledger the
+ * report renders line by line. `inventoryTotal + assessorOnly === total`, and
+ * `inventoryTotal === pinMatches + inventoryOnly`. */
+export interface LandUniverseComponents {
+  /** City-inventory vacant-land parcels (= headline.vacantLandCount). */
+  inventoryTotal: number;
+  /** Assessor-classed vacant-land parcels (= ownership.vacantLandParcelTotal). */
+  assessorTotal: number;
+  /** Parcels present in BOTH land sources (= reconciliation.cityPinMatches). */
+  pinMatches: number;
+  /** City-inventory parcels the Assessor does not class as vacant land
+   * (= inventoryTotal − pinMatches, verified against inventoryUnmatchedCount). */
+  inventoryOnly: number;
+  /** Assessor parcels absent from the City inventory (= assessorTotal − pinMatches). */
+  assessorOnly: number;
+}
+
+/**
+ * The reconciled LAND universe: the deduplicated union of the City land
+ * inventory and the Assessor's vacant-land classification, with a five-row
+ * ownership table that partitions that union. This is the single "who controls
+ * the vacant land" claim — distinct from the tracked operational list (COLS +
+ * 311) and from the 311-reported buildings (unverified ownership).
+ *
+ * Arithmetic (South Chicago / 60617 as the worked example):
+ *   inventory 864 + assessor 1735 − both 132 = 2467 unique land parcels.
+ * Ownership table over that 2467: City/Public = inventory (864) + the assessor
+ * parcels already classed public that are NOT in the City inventory
+ * (reconciled city 135 − pinMatches 132 = 3) = 867; the four private/unknown
+ * rows keep their reconciled counts. The table sums to the union total.
+ */
+export interface LandUniverse {
+  /** Deduplicated union parcel count (= inventoryTotal + assessorOnly). */
+  total: number;
+  /** Five ownership rows in OWNER_TYPE_ORDER; sums to `total`. */
+  byOwnerType: LandUniverseOwnerRow[];
+  components: LandUniverseComponents;
+}
+
+/**
+ * Derive the reconciled land universe for one edition (pure). Returns `null`
+ * exactly when the ownership source series or the reconciliation is missing
+ * (the same availability the raw parcels series carries) — the report degrades
+ * to the tracked-inventory context rather than fabricating a universe.
+ *
+ * The City/Public union row folds in `pinMatches` (parcels present in both land
+ * sources), NOT the taxpayer-reclassification count: pinMatches is the overlap
+ * that both the ledger subtraction and the ownership partition must use for the
+ * table to close on the union total. (`reconciliation.reclassifiedCount`
+ * equals pinMatches on eight of the nine committed editions and diverges by two
+ * only on 60624, where using pinMatches is the arithmetically correct closing
+ * value — see the footnote copy: "City-inventory parcels plus additional public
+ * parcels identified through assessor taxpayer records", i.e. reconciled city
+ * minus the matches already counted inside the inventory.)
+ *
+ * Enforces the arithmetic identities at call time and THROWS on any violation:
+ * an identity break means upstream data corruption, and a loud failure is
+ * safer than a silently wrong "who controls" claim.
+ */
+export function deriveLandUniverse(edition: VacancyIndexEdition): LandUniverse | null {
+  const { headline, ownership } = edition;
+  const reconciled = ownership.reconciledVacantLandByOwnerType;
+  const reconciliation = ownership.reconciliation;
+
+  // Null iff the ownership source series / reconciliation could not be built.
+  if (
+    ownership.vacantLandParcelsByOwnerType == null ||
+    reconciliation == null ||
+    reconciled == null ||
+    ownership.vacantLandParcelTotal == null
+  ) {
+    return null;
+  }
+
+  const inventoryTotal = headline.vacantLandCount;
+  const assessorTotal = ownership.vacantLandParcelTotal;
+  const pinMatches = reconciliation.cityPinMatches;
+  const inventoryOnly = inventoryTotal - pinMatches;
+  const assessorOnly = assessorTotal - pinMatches;
+  const total = inventoryTotal + assessorOnly; // = inventory + assessor − both
+
+  const rec = new Map<OwnerType, number>();
+  for (const r of reconciled) rec.set(normalizeOwnerType(r.ownerType), r.count);
+  const reconciledCity = rec.get("city_public") ?? 0;
+
+  // City/Public over the union = all City-inventory parcels + assessor parcels
+  // already classed public that fall outside the inventory (reconciledCity minus
+  // the overlap already counted in inventoryTotal).
+  const cityUnion = inventoryTotal + (reconciledCity - pinMatches);
+
+  const byOwnerType: LandUniverseOwnerRow[] = OWNER_TYPE_ORDER.map((ownerType) =>
+    ownerType === "city_public"
+      ? { ownerType, count: cityUnion }
+      : { ownerType, count: rec.get(ownerType) ?? 0 },
+  );
+
+  // ── Dev-time identity enforcement (throw on corruption) ──
+  const reconciledSum = reconciled.reduce((s, r) => s + r.count, 0);
+  const ownerSum = byOwnerType.reduce((s, r) => s + r.count, 0);
+  const problems: string[] = [];
+
+  for (const [name, v] of [
+    ["inventoryTotal", inventoryTotal],
+    ["assessorTotal", assessorTotal],
+    ["pinMatches", pinMatches],
+  ] as const) {
+    if (!Number.isInteger(v) || v < 0) problems.push(`${name} not a non-negative integer (${v})`);
+  }
+  if (pinMatches > inventoryTotal) problems.push(`pinMatches ${pinMatches} exceeds inventoryTotal ${inventoryTotal}`);
+  if (pinMatches > assessorTotal) problems.push(`pinMatches ${pinMatches} exceeds assessorTotal ${assessorTotal}`);
+  if (inventoryOnly !== reconciliation.inventoryUnmatchedCount) {
+    problems.push(
+      `inventoryOnly ${inventoryOnly} (inventoryTotal − pinMatches) != reported inventoryUnmatchedCount ${reconciliation.inventoryUnmatchedCount}`,
+    );
+  }
+  if (reconciledSum !== assessorTotal) {
+    problems.push(`reconciled series sums to ${reconciledSum}, not assessorTotal ${assessorTotal}`);
+  }
+  if (reconciledCity < pinMatches) {
+    problems.push(`reconciled city_public ${reconciledCity} is below pinMatches ${pinMatches}`);
+  }
+  for (const row of byOwnerType) {
+    if (!Number.isInteger(row.count) || row.count < 0) {
+      problems.push(`byOwnerType ${row.ownerType} not a non-negative integer (${row.count})`);
+    }
+  }
+  // The governing identity: the union total is the ledger total AND the
+  // ownership table total — no leading with two competing figures.
+  if (total !== inventoryTotal + assessorOnly) {
+    problems.push(`total ${total} != inventoryTotal + assessorOnly ${inventoryTotal + assessorOnly}`);
+  }
+  if (total !== ownerSum) {
+    problems.push(`ownership table sums to ${ownerSum}, not the union total ${total}`);
+  }
+
+  if (problems.length > 0) {
+    throw new Error(
+      `deriveLandUniverse: land-universe identity violation for ZIP ${edition.zip} — ${problems.join("; ")}`,
+    );
+  }
+
+  return {
+    total,
+    byOwnerType,
+    components: { inventoryTotal, assessorTotal, pinMatches, inventoryOnly, assessorOnly },
+  };
+}
+
 // ── Ranking (pure) ─────────────────────────────────────────────────────────
 
 /** Minimal shape rankSites needs. */
