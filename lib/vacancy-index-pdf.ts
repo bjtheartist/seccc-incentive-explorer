@@ -1132,6 +1132,18 @@ function drawMapLegend(doc: jsPDF, input: VacancyIndexInput, top: number) {
     doc.text(String(counts[type]), MARGIN + 40, ly, { align: "right" });
     ly += 4;
   });
+  // Truncated editions plot a priority-ordered subset; say so rather than
+  // letting the per-type dot counts read as the full inventory.
+  if (input.sitePoints.length < input.counts.total) {
+    doc.setFont("courier", "normal");
+    doc.setFontSize(5.8);
+    setColor(doc, INK_45);
+    doc.text(
+      `SHOWING ${input.sitePoints.length.toLocaleString("en-US")} OF ${input.counts.total.toLocaleString("en-US")}`,
+      MARGIN,
+      ly,
+    );
+  }
 
   // Numbered site key (two columns on the right).
   const keyX = MARGIN + 52;

@@ -17,7 +17,7 @@
  *      footprint only (same footgun class as the corridor-owners clobber):
  *                npm run db:sync:vacant
  *                SYNC_ZIPS="60617,60619,60649,60624,60623,60644,60651,60621,60636" npm run db:sync:parcels
- *                SYNC_ZIPS="...same nine..." npm run db:enrich:parcel-ownership
+ *                ZIPS="...same nine..." npm run db:enrich:parcel-ownership   (NOTE: enrichment reads ZIPS, not SYNC_ZIPS)
  *   4. Export (default = all nine ZIPs; a subset MERGES, see below):
  *                DATABASE_URL="postgresql://..." npx tsx scripts/export-vacancy-index.ts
  *      or a single edition refresh:
@@ -683,7 +683,7 @@ const METRIC_KEYS = [
   "trackedVacantCount",
   "vacancyRate",
   "localOwnershipShare",
-  "incentiveCoverage",
+  "reportedBuildingShare",
   "cityOwnedShare",
 ] as const;
 type MetricKey = (typeof METRIC_KEYS)[number];
@@ -697,7 +697,10 @@ function metricValuesForEdition(edition: VacancyIndexEdition): Record<MetricKey,
     trackedVacantCount: tracked,
     vacancyRate: cm?.details?.vacancy?.vacancyRate ?? cm?.vacancyRate ?? null,
     localOwnershipShare: cm?.localOwnershipShare ?? null,
-    incentiveCoverage: cm?.incentiveCoverage ?? null,
+    // 311-reported vacant-building share of the tracked inventory — the
+    // citywide corridor-metrics incentiveCoverage field is null everywhere,
+    // so this edition-computed share replaces it (still recomputes on merge).
+    reportedBuildingShare: tracked > 0 ? edition.headline.vacantBuildingCount / tracked : null,
     cityOwnedShare: tracked > 0 ? edition.headline.cityOwnedCount / tracked : null,
   };
 }
@@ -726,7 +729,7 @@ function buildMatrix(editions: Record<string, VacancyIndexEdition>): VacancyMatr
       trackedVacantCount: cell("trackedVacantCount"),
       vacancyRate: cell("vacancyRate"),
       localOwnershipShare: cell("localOwnershipShare"),
-      incentiveCoverage: cell("incentiveCoverage"),
+      reportedBuildingShare: cell("reportedBuildingShare"),
       cityOwnedShare: cell("cityOwnedShare"),
     };
   });

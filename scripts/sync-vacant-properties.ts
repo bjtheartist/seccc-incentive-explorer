@@ -436,35 +436,51 @@ async function upsertBatch(
 async function crossReferenceZones() {
   console.log("\nCross-referencing against zone geometries...");
 
-  // For each vacant property, find all zones that contain its point
-  const result = await sql`
-    UPDATE vacant_properties vp
-    SET
-      zone_matches = COALESCE(
-        (
-          SELECT jsonb_agg(jsonb_build_object('zoneKey', z.zone_key, 'zoneName', COALESCE(z.feature_name, z.zone_key)))
-          FROM zones z
-          WHERE ST_Intersects(z.geom, vp.geom)
+  // For each vacant property, find all zones that contain its point. Batched
+  // by keyset pagination: a single UPDATE across the full table exceeds the
+  // Neon HTTP driver's headers timeout on small refresh-branch computes.
+  const BATCH = 500;
+  let cursor = "";
+  let updated = 0;
+  for (;;) {
+    const rows = await sql`
+      UPDATE vacant_properties vp
+      SET
+        zone_matches = COALESCE(
+          (
+            SELECT jsonb_agg(jsonb_build_object('zoneKey', z.zone_key, 'zoneName', COALESCE(z.feature_name, z.zone_key)))
+            FROM zones z
+            WHERE ST_Intersects(z.geom, vp.geom)
+          ),
+          '[]'::jsonb
         ),
-        '[]'::jsonb
-      ),
-      incentive_count = COALESCE(
-        (
-          SELECT COUNT(*)::integer
-          FROM zones z
-          WHERE ST_Intersects(z.geom, vp.geom)
-        ),
-        0
+        incentive_count = COALESCE(
+          (
+            SELECT COUNT(*)::integer
+            FROM zones z
+            WHERE ST_Intersects(z.geom, vp.geom)
+          ),
+          0
+        )
+      WHERE vp.id IN (
+        SELECT id FROM vacant_properties WHERE id > ${cursor} ORDER BY id LIMIT ${BATCH}
       )
-    WHERE TRUE
-    RETURNING id
-  `;
+      RETURNING vp.id
+    `;
+    if (rows.length === 0) break;
+    updated += rows.length;
+    cursor = rows.reduce((max, row) => {
+      const id = String(row.id);
+      return id > max ? id : max;
+    }, cursor);
+    if (updated % 2000 === 0) console.log(`  Cross-referenced ${updated}...`);
+  }
 
   const withIncentives = await sql`
     SELECT COUNT(*) as cnt FROM vacant_properties WHERE incentive_count > 0
   `;
 
-  console.log(`  Updated ${result.length} properties`);
+  console.log(`  Updated ${updated} properties`);
   console.log(`  ${withIncentives[0]?.cnt || 0} properties have incentive zone matches`);
 }
 

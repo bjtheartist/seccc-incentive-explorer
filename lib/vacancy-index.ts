@@ -66,7 +66,7 @@ export interface VacancyMatrixRow {
   trackedVacantCount: VacancyMatrixCell;
   vacancyRate: VacancyMatrixCell;
   localOwnershipShare: VacancyMatrixCell;
-  incentiveCoverage: VacancyMatrixCell;
+  reportedBuildingShare: VacancyMatrixCell;
   cityOwnedShare: VacancyMatrixCell;
 }
 

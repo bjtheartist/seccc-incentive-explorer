@@ -9,9 +9,9 @@
  * Invariant (the builder depends on it): `sitePoints[0..N]` positionally
  * align with `topSites[0..N]` — the map's numbered markers take coordinates
  * from sitePoints and labels from topSites at the same index. Site-index rows
- * therefore lead the sitePoints array, followed by the remaining unmarkered
- * dots (rows 13+ may duplicate an unmarkered dot at identical coordinates,
- * which draws invisibly).
+ * therefore lead the sitePoints array; the remaining dots are deduped against
+ * them by coordinate so the map legend's per-type counts stay consistent with
+ * the page-01 numbers.
  */
 
 import { OWNER_TYPE_LABELS } from "./owner-classify";
@@ -109,10 +109,11 @@ export function buildVacancyIndexPdfInput(
         .sort((a, b) => b.length - a.length)[0] ?? null)
     : null;
 
+  const siteIndexCoords = new Set(edition.siteIndex.map((row) => `${row.lat},${row.lon}`));
   const sitePoints = [
     ...edition.siteIndex.map((row) => ({ lat: row.lat, lon: row.lon, ownerType: row.ownerType })),
     ...edition.sitePoints
-      .filter((point) => point.markerNumber === null)
+      .filter((point) => !siteIndexCoords.has(`${point.lat},${point.lon}`))
       .map((point) => ({ lat: point.lat, lon: point.lon, ownerType: point.ownerType })),
   ];
 
@@ -156,7 +157,7 @@ export function buildVacancyIndexPdfInput(
           toCell("Tracked Vacant", row.trackedVacantCount, fmtCount),
           toCell("Vacancy Rate", row.vacancyRate, fmtShare),
           toCell("Local Ownership", row.localOwnershipShare, fmtShare),
-          toCell("Incentive Coverage", row.incentiveCoverage, fmtShare),
+          toCell("Building Share", row.reportedBuildingShare, fmtShare),
           toCell("City-Owned Share", row.cityOwnedShare, fmtShare),
         ],
       })),

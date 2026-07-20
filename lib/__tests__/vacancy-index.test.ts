@@ -350,7 +350,7 @@ const ALLOWED_KEYS = new Set<string>([
   "trackedVacantCount",
   "vacancyRate",
   "localOwnershipShare",
-  "incentiveCoverage",
+  "reportedBuildingShare",
   "cityOwnedShare",
   "value",
   "dots",
@@ -363,6 +363,15 @@ function walkKeys(node: unknown, offenders: Set<string>): void {
   }
   if (node && typeof node === "object") {
     for (const [key, value] of Object.entries(node)) {
+      // `editions` is a ZIP-keyed map — its immediate keys are data (ZIP
+      // codes), not field names; validate the format and walk the values.
+      if (key === "editions" && value && typeof value === "object" && !Array.isArray(value)) {
+        for (const [zipKey, edition] of Object.entries(value)) {
+          if (!/^\d{5}$/.test(zipKey)) offenders.add(zipKey);
+          walkKeys(edition, offenders);
+        }
+        continue;
+      }
       if (!ALLOWED_KEYS.has(key)) offenders.add(key);
       walkKeys(value, offenders);
     }
@@ -429,7 +438,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
       "trackedVacantCount",
       "vacancyRate",
       "localOwnershipShare",
-      "incentiveCoverage",
+      "reportedBuildingShare",
       "cityOwnedShare",
     ] as const;
     for (const row of data.matrix) {
