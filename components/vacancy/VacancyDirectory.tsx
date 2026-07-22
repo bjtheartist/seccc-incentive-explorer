@@ -27,6 +27,15 @@ import {
   normalizeOwnerType,
   type OwnerType,
 } from "@/lib/owner-classify";
+import {
+  OWNER_STRUCTURE_ABBREV,
+  OWNER_STRUCTURE_COLORS,
+  OWNER_STRUCTURE_LABELS,
+  OWNER_STRUCTURE_ORDER,
+  normalizeOwnerStructure,
+  type OwnerStructure,
+} from "@/lib/owner-taxonomy";
+import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import { trackEvent } from "@/lib/analytics-events";
 // Type-only import: pulling a runtime value from lib/vacancy-index.ts would drag
 // its fs-backed loader (node:fs) into this client bundle. Mirrors the
@@ -115,7 +124,14 @@ function portfolioForRow(row: VacancyDirectoryRow): VacancyPortfolio {
 type FlagValue = "tax_sale" | "violation" | "none";
 type SortKey = "priority" | "address";
 type SortDir = "asc" | "desc";
-type DropdownColumn = "owner" | "type" | "pri" | "portfolio" | "flags";
+type DropdownColumn = "owner" | "structure" | "type" | "pri" | "portfolio" | "flags";
+
+/** A row's v2 structure, treating a row that predates the taxonomy as
+ * "unresolved" (normalizeOwnerStructure(undefined)) — consistent across the
+ * filter, the per-value counts, and the STRUCTURE cell. */
+function rowStructure(row: VacancyDirectoryRow): OwnerStructure {
+  return normalizeOwnerStructure(row.ownerStructure);
+}
 
 const PRIORITY_TIERS: VacancyPriorityTier[] = ["high", "medium", "low"];
 const PROPERTY_TYPES: VacancyPropertyType[] = ["vacant_land", "vacant_building"];
@@ -163,6 +179,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
 
   // Column multifilter state (empty set = no filter on that column).
   const [ownerFilter, setOwnerFilter] = useState<Set<OwnerType>>(new Set());
+  const [structureFilter, setStructureFilter] = useState<Set<OwnerStructure>>(new Set());
   const [typeFilter, setTypeFilter] = useState<Set<VacancyPropertyType>>(new Set());
   const [priFilter, setPriFilter] = useState<Set<VacancyPriorityTier>>(new Set());
   const [portfolioFilter, setPortfolioFilter] = useState<Set<VacancyPortfolio>>(new Set());
@@ -227,6 +244,14 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
     for (const r of allRows) counts.set(r.ownerType, (counts.get(r.ownerType) ?? 0) + 1);
     return counts;
   }, [allRows]);
+  const structureCounts = useMemo(() => {
+    const counts = new Map<OwnerStructure, number>();
+    for (const r of allRows) {
+      const s = rowStructure(r);
+      counts.set(s, (counts.get(s) ?? 0) + 1);
+    }
+    return counts;
+  }, [allRows]);
   const typeCounts = useMemo(() => {
     const counts = new Map<VacancyPropertyType, number>();
     for (const r of allRows) counts.set(r.propertyType, (counts.get(r.propertyType) ?? 0) + 1);
@@ -257,6 +282,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
     const needle = search.trim().toLowerCase();
     const out = allRows.filter((r) => {
       if (ownerFilter.size > 0 && !ownerFilter.has(r.ownerType)) return false;
+      if (structureFilter.size > 0 && !structureFilter.has(rowStructure(r))) return false;
       if (typeFilter.size > 0 && !typeFilter.has(r.propertyType)) return false;
       if (priFilter.size > 0 && !priFilter.has(r.priorityTier)) return false;
       if (portfolioFilter.size > 0 && !portfolioFilter.has(portfolioForRow(r))) return false;
@@ -274,7 +300,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
       if (sortDir === "asc") sorted.reverse();
     }
     return sorted;
-  }, [allRows, ownerFilter, typeFilter, priFilter, portfolioFilter, flagFilter, search, sortKey, sortDir]);
+  }, [allRows, ownerFilter, structureFilter, typeFilter, priFilter, portfolioFilter, flagFilter, search, sortKey, sortDir]);
 
   // Reset pagination whenever the filtered/sorted result changes.
   useEffect(() => {
@@ -283,6 +309,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
 
   const anyFilterActive =
     ownerFilter.size > 0 ||
+    structureFilter.size > 0 ||
     typeFilter.size > 0 ||
     priFilter.size > 0 ||
     portfolioFilter.size > 0 ||
@@ -291,6 +318,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
 
   function clearFilters() {
     setOwnerFilter(new Set());
+    setStructureFilter(new Set());
     setTypeFilter(new Set());
     setPriFilter(new Set());
     setPortfolioFilter(new Set());
@@ -392,7 +420,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
       </div>
 
       <div className="overflow-x-auto border border-[#0C1B33]/10 bg-white">
-        <table className="w-full min-w-[880px] border-collapse text-left">
+        <table className="w-full min-w-[1080px] border-collapse text-left">
           <thead>
             <tr className="border-b border-[#0C1B33]/10 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
               <th className="px-3 py-2.5 w-10">#</th>
@@ -420,6 +448,24 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
                     count={ownerCounts.get(t) ?? 0}
                     dotColor={OWNER_TYPE_COLORS[t]}
                     label={OWNER_TYPE_LABELS[t]}
+                  />
+                ))}
+              </FilterHeader>
+              <FilterHeader
+                label="Structure"
+                column="structure"
+                active={structureFilter.size}
+                openDropdown={openDropdown}
+                setOpenDropdown={setOpenDropdown}
+              >
+                {OWNER_STRUCTURE_ORDER.map((s) => (
+                  <FilterCheckbox
+                    key={s}
+                    checked={structureFilter.has(s)}
+                    onChange={() => toggle(setStructureFilter, s)}
+                    count={structureCounts.get(s) ?? 0}
+                    dotColor={OWNER_STRUCTURE_COLORS[s]}
+                    label={OWNER_STRUCTURE_LABELS[s]}
                   />
                 ))}
               </FilterHeader>
@@ -505,18 +551,26 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
                   />
                 ))}
               </FilterHeader>
+              <th className="px-3 py-2.5 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
+                Verify
+              </th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-[13px] text-[#0C1B33]/45">
+                <td colSpan={9} className="px-3 py-8 text-center text-[13px] text-[#0C1B33]/45">
                   No addresses match the current filters.
                 </td>
               </tr>
             ) : (
               filtered.slice(0, visibleCount).map((row, i) => {
                 const ownerType = normalizeOwnerType(row.ownerType);
+                const structure = rowStructure(row);
+                // Back-search links resolve only when the row carries a real PIN
+                // (COLS inventory or a uniquely address-matched 311 parcel).
+                const cookViewer = cookViewerUrl(row.pin);
+                const clerk = clerkRecordsUrl(row.pin);
                 const chip = PRIORITY_CHIP[row.priorityTier];
                 return (
                   <tr key={`${row.address}-${i}`} className="border-b border-[#0C1B33]/5 align-top">
@@ -531,6 +585,18 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
                           style={{ backgroundColor: OWNER_TYPE_COLORS[ownerType] }}
                         />
                         {OWNER_TYPE_ABBREV[ownerType]}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2">
+                      <span
+                        className="inline-flex items-center gap-1.5 font-mono-bureau text-[11px] text-[#0C1B33]/70"
+                        title={`Structure: ${OWNER_STRUCTURE_LABELS[structure]} (taxpayer name)`}
+                      >
+                        <span
+                          className="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                          style={{ backgroundColor: OWNER_STRUCTURE_COLORS[structure] }}
+                        />
+                        {OWNER_STRUCTURE_ABBREV[structure]}
                       </span>
                     </td>
                     <td className="px-3 py-2 font-mono-bureau text-[11px] text-[#0C1B33]/60">
@@ -580,6 +646,37 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
                           <span className="font-mono-bureau text-[10px] text-[#0C1B33]/25">&mdash;</span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      {cookViewer ? (
+                        <span className="font-mono-bureau text-[10px] uppercase tracking-[0.06em]">
+                          <a
+                            href={cookViewer}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Opens Cook County's official parcel record in a new tab."
+                            className="text-[#2563EB] hover:underline"
+                          >
+                            CookViewer ↗
+                          </a>
+                          {clerk && (
+                            <>
+                              <span className="text-[#0C1B33]/30"> · </span>
+                              <a
+                                href={clerk}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Review recorded deeds, grantors, grantees, liens, releases, and other documents associated with this parcel."
+                                className="text-[#2563EB] hover:underline"
+                              >
+                                Clerk ↗
+                              </a>
+                            </>
+                          )}
+                        </span>
+                      ) : (
+                        <span className="font-mono-bureau text-[10px] text-[#0C1B33]/30">—</span>
+                      )}
                     </td>
                   </tr>
                 );

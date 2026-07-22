@@ -170,7 +170,7 @@ const PRIORITY_RUBRIC_NOTE =
   "Priority score = incentive count (up to 4) + size bonus (2 at 10,000+ sq ft, 1 at 5,000+, 0 if unknown) + 2 if a City/Public owner or city-owned status + 1 if a vacant building with an open 311 report. Sites rank by score, then incentive count, then size (largest first, unknowns last).";
 
 const OWNER_CLASSIFICATION_NOTE =
-  "Owner type is inferred from public taxpayer-of-record patterns and is anonymized: no owner names or mailing addresses appear in this document. Records indicate — verify before relying.";
+  "Owner type is inferred from public taxpayer-of-record patterns and is anonymized: no owner names or mailing addresses appear in this document. Ownership structure (individual, entity, trust, government) and geography are classified from public taxpayer-of-record patterns. Records indicate — verify before relying.";
 
 // One link per address cell (CookViewer); the Clerk's recordings search is
 // referenced in copy only — the Explorer links out and never implies it

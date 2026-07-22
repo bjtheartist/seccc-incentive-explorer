@@ -45,6 +45,16 @@ import { socrataHeaders } from "../lib/socrata";
 import { PILOT_ZIPS, type PilotZipEntry } from "../lib/pilot-zips";
 import { getCorridorCitywideMetric } from "../lib/corridor-citywide";
 import { normalizeOwnerType } from "../lib/owner-classify";
+import {
+  classifyOwnerStructure,
+  ownerGeographyFromMailingAddress,
+  tallyOwnerStructureCounts,
+  tallyStructureGeography,
+  type OwnerGeography,
+  type OwnerStructure,
+  type OwnerStructureCount,
+  type StructureGeographyCell,
+} from "../lib/owner-taxonomy";
 import { normalizeOwnerAddress } from "../lib/corridor-owners";
 import { toDigitsOnlyPin } from "../lib/ingest/pin-batch";
 import { CHICAGO_COMMUNITY_AREAS } from "../lib/community-areas";
@@ -80,6 +90,8 @@ import {
   type VacancyDistressSignals,
   type VacancyIndexEdition,
   type VacancyIndexExport,
+  type BuildingPinMatchStats,
+  type PinMatchKind,
   type VacancyLandPoint,
   type VacancyMatrixRow,
   type VacancyPropertyType,
@@ -715,16 +727,22 @@ async function fetchVacantLandParcels(
     lon: number | null;
     address: string | null;
     squareFeet: number | null;
+    /** Taxpayer name/mailing — read to CLASSIFY the v2 structure/geography axes
+     * at export time; NEVER emitted (the anonymization assert guards output). */
+    ownerName: string | null;
+    ownerMailingAddress: string | null;
   }[] | null
 > {
   try {
-    // Anonymized still — pin/owner_type only, plus lat/lon for the reconciled
-    // land-dot layer and address/land_sqft for the site card. NEVER owner names.
-    // land_sqft is null-written historically — emitted null-safe, never a 0.
-    // Rows without coordinates stay in the series/total but drop out of
-    // landPoints (excluded at build time).
+    // Anonymized OUTPUT still — the emitted series carries pin/owner_type/axes
+    // only. owner_name/owner_mailing_address are read here solely to classify the
+    // v2 structure (name) + geography (mailing state) axes and never travel into
+    // the export (the hard assert before write enforces it). land_sqft is
+    // null-written historically — emitted null-safe, never a 0. Rows without
+    // coordinates stay in the series/total but drop out of landPoints.
     const rows = (await sql`
-      SELECT pin, COALESCE(owner_type, 'unknown') AS owner_type, lat, lon, address, land_sqft
+      SELECT pin, COALESCE(owner_type, 'unknown') AS owner_type, lat, lon, address, land_sqft,
+             owner_name, owner_mailing_address
       FROM parcels
       WHERE zip = ${zip} AND is_vacant IS TRUE
     `) as {
@@ -734,6 +752,8 @@ async function fetchVacantLandParcels(
       lon: number | string | null;
       address: string | null;
       land_sqft: number | string | null;
+      owner_name: string | null;
+      owner_mailing_address: string | null;
     }[];
 
     if (rows.length === 0) {
@@ -748,10 +768,64 @@ async function fetchVacantLandParcels(
       lon: toNumOrNull(r.lon),
       address: r.address ?? null,
       squareFeet: toNumOrNull(r.land_sqft),
+      ownerName: r.owner_name,
+      ownerMailingAddress: r.owner_mailing_address,
     }));
   } catch (err) {
     console.warn(
       `  ${zip}: parcels vacant-land ownership join unavailable (table likely not migrated on this branch):`,
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  }
+}
+
+/** One parcel address-index row: the join key (normalized address, exactly the
+ * corridor-owners convention) plus the PIN and the taxpayer fields the v2 axes
+ * classify from. */
+interface ParcelIndexRow {
+  pin: string;
+  normAddress: string;
+  ownerName: string | null;
+  ownerMailingAddress: string | null;
+}
+
+/**
+ * ALL parcels in a ZIP as an address index for 311-building parcel-matching
+ * (D2). Uses the EXACT SQL normalization corridor-owners joins by
+ * (`regexp_replace(lower(coalesce(address,'')),'[^a-z0-9]','','g')`) so a 311
+ * row's normalized address can find its unique parcel. Covers buildings too (not
+ * just vacant land), so the SELECT is not filtered on is_vacant. owner_name /
+ * owner_mailing_address are read ONLY to classify the v2 axes and never emitted.
+ * Returns `null` when the parcels table is absent on this branch — 311 matching
+ * then cannot run and every 311 row stays unmatched (honest), not fabricated.
+ */
+async function fetchParcelAddressIndex(
+  sql: NeonQueryFunction<false, false>,
+  zip: string,
+): Promise<ParcelIndexRow[] | null> {
+  try {
+    const rows = (await sql`
+      SELECT pin,
+             regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g') AS norm_address,
+             owner_name, owner_mailing_address
+      FROM parcels
+      WHERE zip = ${zip}
+    `) as {
+      pin: string | null;
+      norm_address: string | null;
+      owner_name: string | null;
+      owner_mailing_address: string | null;
+    }[];
+    return rows.map((r) => ({
+      pin: toDigitsOnlyPin(r.pin ?? ""),
+      normAddress: r.norm_address ?? "",
+      ownerName: r.owner_name,
+      ownerMailingAddress: r.owner_mailing_address,
+    }));
+  } catch (err) {
+    console.warn(
+      `  ${zip}: parcels address index unavailable (table likely not migrated on this branch) — 311 building rows stay unmatched:`,
       err instanceof Error ? err.message : err,
     );
     return null;
@@ -849,6 +923,12 @@ interface ScoredSite {
   priorityTier: "high" | "medium" | "low";
   saleYear: number | null;
   violation: boolean;
+  /** v2 STRUCTURE axis (from the resolved parcel's taxpayer name). */
+  ownerStructure: OwnerStructure;
+  /** v2 GEOGRAPHY axis (from the resolved parcel's taxpayer mailing state). */
+  ownerGeography: OwnerGeography;
+  /** How this row's PIN was established (inventory / address_matched / unmatched). */
+  pinMatch: PinMatchKind;
   /** Kept-cluster id (1..12) the site landed in, else null. Set after
    * clustering, read from the same object refs by `ranked`. */
   clusterId: number | null;
@@ -865,8 +945,11 @@ function buildEdition(
         lon: number | null;
         address: string | null;
         squareFeet: number | null;
+        ownerName: string | null;
+        ownerMailingAddress: string | null;
       }[]
     | null,
+  parcelIndex: ParcelIndexRow[] | null,
   geo: ZipGeometry | undefined,
   transport: { kind: "expressway" | "rail"; points: [number, number][] }[],
   saleYearsByPin: Map<string, number[]> | null,
@@ -888,6 +971,34 @@ function buildEdition(
     if (pin.length === 14) inventoryPins.add(pin);
   }
 
+  // ── v2 two-axis wiring: parcel lookups for structure/geography + 311 matching.
+  //    byPin resolves a COLS row's taxpayer fields; byNormAddress resolves a 311
+  //    row to a UNIQUE parcel (exactly-one match). Both are empty when the parcel
+  //    index is absent (parcelIndex === null) — COLS rows then fall back to the
+  //    government/in-state city-inventory default, and every 311 row is unmatched.
+  const parcelByPin = new Map<string, ParcelIndexRow>();
+  const parcelsByNormAddress = new Map<string, ParcelIndexRow[]>();
+  for (const p of parcelIndex ?? []) {
+    if (p.pin) parcelByPin.set(p.pin, p);
+    if (p.normAddress) {
+      const arr = parcelsByNormAddress.get(p.normAddress);
+      if (arr) arr.push(p);
+      else parcelsByNormAddress.set(p.normAddress, [p]);
+    }
+  }
+  /** Structure/geography from a resolved parcel's taxpayer fields (or the
+   * government/in-state city default when the row is City-inventory land). */
+  const axesFromParcel = (
+    p: ParcelIndexRow | undefined,
+    cityInventory: boolean,
+  ): { structure: OwnerStructure; geography: OwnerGeography } => {
+    if (cityInventory && !p) return { structure: "government", geography: "in_state" };
+    return {
+      structure: classifyOwnerStructure(p?.ownerName),
+      geography: ownerGeographyFromMailingAddress(p?.ownerMailingAddress),
+    };
+  };
+
   // Raw + reconciled vacant-land ownership + the land-dot layer all share the
   // parcels pull's availability (null iff parcels === null).
   let rawSeries: OwnerTypeCount[] | null = null;
@@ -897,6 +1008,10 @@ function buildEdition(
   let landPoints: VacancyLandPoint[] | null = null;
   let landPointsTruncated = false;
   let landPointsTotal: number | null = null;
+  // v2 land-universe structure breakdown + structure×geography cross-tab (null
+  // iff the raw parcels series is null — same availability as reconciledSeries).
+  let landUniverseStructure: OwnerStructureCount[] | null = null;
+  let landUniverseByGeography: StructureGeographyCell[] | null = null;
   const assessorVacantPins = new Set<string>();
   if (parcels !== null) {
     const normRows = parcels.map((p) => ({
@@ -906,6 +1021,8 @@ function buildEdition(
       lon: p.lon,
       address: p.address,
       squareFeet: p.squareFeet,
+      ownerName: p.ownerName,
+      ownerMailingAddress: p.ownerMailingAddress,
     }));
     for (const r of normRows) if (r.pin) assessorVacantPins.add(r.pin);
     rawSeries = tallyOwnerTypeCounts(normRows.map((r) => r.ownerType));
@@ -913,6 +1030,25 @@ function buildEdition(
     const reconciled = reconcileVacantLandOwnership(normRows, inventoryPins);
     reconciledSeries = reconciled.series;
     reconciliation = reconciled.stats;
+
+    // Per-parcel v2 axes: a City-inventory PIN match forces government / in-state
+    // (mirroring reconcileOwnerTypeForPin's city_public override); otherwise the
+    // structure comes from the taxpayer name and the geography from the mailing
+    // state. Same universe (assessor vacant-land parcels) as reconciledSeries, so
+    // the structure breakdown sums to rawTotal.
+    const landAxes = (r: {
+      pin: string;
+      ownerName: string | null;
+      ownerMailingAddress: string | null;
+    }): { structure: OwnerStructure; geography: OwnerGeography } =>
+      inventoryPins.has(r.pin)
+        ? { structure: "government", geography: "in_state" }
+        : {
+            structure: classifyOwnerStructure(r.ownerName),
+            geography: ownerGeographyFromMailingAddress(r.ownerMailingAddress),
+          };
+    landUniverseStructure = tallyOwnerStructureCounts(normRows.map((r) => landAxes(r).structure));
+    landUniverseByGeography = tallyStructureGeography(normRows.map((r) => landAxes(r)));
 
     // Land dots: coord-bearing parcels only (rows without lat/lon stay in the
     // series/total but drop out here), reconciled owner type + per-point
@@ -923,6 +1059,7 @@ function buildEdition(
       .sort((a, b) => (a.pin < b.pin ? -1 : a.pin > b.pin ? 1 : 0));
     const allLandPoints: VacancyLandPoint[] = withCoords.map((r) => {
       const reconciledType = reconcileOwnerTypeForPin(r.pin, r.ownerType, inventoryPins);
+      const axes = landAxes(r);
       return {
         lat: r.lat as number,
         lon: r.lon as number,
@@ -932,6 +1069,8 @@ function buildEdition(
         squareFeet: r.squareFeet ?? null,
         ownerConfidence: ownerConfidenceForPoint(r.pin, reconciledType, inventoryPins),
         saleYear: latestSaleYearForPin(r.pin, saleYearsByPin),
+        ownerStructure: axes.structure,
+        ownerGeography: axes.geography,
       };
     });
     landPointsTruncated = allLandPoints.length > SITE_POINTS_CAP;
@@ -952,6 +1091,13 @@ function buildEdition(
     };
   }
 
+  // 311-building parcel-matching tallies (see PinMatchKind / buildingPinMatch).
+  // Only 311 building rows are counted here — COLS inventory rows carry their PIN
+  // natively. Left as `null` below when the parcel index was absent (matching
+  // could not run), never a fabricated all-unmatched zero.
+  let buildingMatched = 0;
+  let buildingUnmatched = 0;
+
   const sites: ScoredSite[] = rows.map((r) => {
     const propertyType = toPropertyType(r.property_type);
     const ownerType = normalizeOwnerType(r.owner_type);
@@ -964,11 +1110,40 @@ function buildEdition(
       status: r.status,
       propertyType,
     });
-    // Per-point distress flags. COLS rows carry their PIN in the id (`cols-<pin>`);
-    // 311 rows do not, so their saleYear stays null (honest). Violation matches
-    // the same normalized address the edition-level violationMatchCount counts.
-    const colsPin = r.id.startsWith("cols-") ? toDigitsOnlyPin(r.id.slice("cols-".length)) : "";
-    const pin = colsPin.length === 14 ? colsPin : null;
+    // ── Back-search resolution (D2): every tracked row gets a PIN pathway.
+    //    COLS rows carry the PIN in their id (`cols-<pin>`) -> pinMatch "inventory"
+    //    and government/in-state axes (or the taxpayer axes if the parcel index
+    //    resolves the PIN). 311 rows attempt an EXACT unique normalized-address
+    //    match against the ZIP's parcels -> pinMatch "address_matched" with the
+    //    matched parcel's PIN + taxpayer axes, else "unmatched" (pin null,
+    //    unresolved/unknown). Same normalization corridor-owners joins by. ──
+    const isCols = r.id.startsWith("cols-");
+    const colsPin = isCols ? toDigitsOnlyPin(r.id.slice("cols-".length)) : "";
+    let pin: string | null;
+    let pinMatch: PinMatchKind;
+    let axes: { structure: OwnerStructure; geography: OwnerGeography };
+    if (isCols) {
+      pin = colsPin.length === 14 ? colsPin : null;
+      pinMatch = "inventory";
+      axes = axesFromParcel(pin ? parcelByPin.get(pin) : undefined, true);
+    } else {
+      const norm = normalizeOwnerAddress(r.address);
+      const matches = norm ? parcelsByNormAddress.get(norm) ?? [] : [];
+      const unique = matches.length === 1 ? matches[0] : null;
+      if (unique && unique.pin) {
+        pin = unique.pin;
+        pinMatch = "address_matched";
+        axes = axesFromParcel(unique, false);
+        buildingMatched += 1;
+      } else {
+        pin = null;
+        pinMatch = "unmatched";
+        axes = { structure: "unresolved", geography: "unknown" };
+        buildingUnmatched += 1;
+      }
+    }
+    // Per-point distress flags now key on the resolved PIN (COLS or address-
+    // matched), so a back-searched building can surface its own tax-sale signal.
     const saleYear = latestSaleYearForPin(pin, saleYearsByPin);
     const violation = addressHasViolation(normalizeOwnerAddress(r.address), violationAddressSet);
     return {
@@ -989,9 +1164,17 @@ function buildEdition(
       priorityTier: tier,
       saleYear,
       violation,
+      ownerStructure: axes.structure,
+      ownerGeography: axes.geography,
+      pinMatch,
       clusterId: null,
     };
   });
+
+  // 311-building match tally — null when the parcel index was absent (matching
+  // could not run at all), never an all-unmatched fabrication.
+  const buildingPinMatch: BuildingPinMatchStats | null =
+    parcelIndex === null ? null : { matched: buildingMatched, unmatched: buildingUnmatched };
 
   // ── Spatial layer (D2/D3): proximity clusters over the FULL tracked universe
   //    (`sites`, pre-cap), each carrying its portfolio + distress flags. Top 12
@@ -1054,6 +1237,9 @@ function buildEdition(
     clusterId: s.clusterId,
     saleYear: s.saleYear,
     violation: s.violation,
+    ownerStructure: s.ownerStructure,
+    ownerGeography: s.ownerGeography,
+    pinMatch: s.pinMatch,
   }));
   const sitePointsTruncated = sitePointsFull.length > SITE_POINTS_CAP;
   const sitePoints = sitePointsFull.slice(0, SITE_POINTS_CAP);
@@ -1071,6 +1257,9 @@ function buildEdition(
       priorityScore: s.priorityScore,
       saleYear: s.saleYear,
       violation: s.violation,
+      pin: s.pin,
+      ownerStructure: s.ownerStructure,
+      ownerGeography: s.ownerGeography,
     })),
   );
 
@@ -1087,6 +1276,9 @@ function buildEdition(
     nextStep: nextStepForSite(s),
     lat: s.lat,
     lon: s.lon,
+    pin: s.pin,
+    ownerStructure: s.ownerStructure,
+    ownerGeography: s.ownerGeography,
   }));
 
   const edition: VacancyIndexEdition = {
@@ -1108,6 +1300,14 @@ function buildEdition(
       trackedInventoryByOwnerType: tallyOwnerTypeCounts(sites.map((s) => s.ownerType)),
       reconciledVacantLandByOwnerType: reconciledSeries,
       reconciliation,
+      // Additive v2 two-axis breakdown. landUniverse/landUniverseByGeography share
+      // the raw parcels series' availability; trackedInventory (COLS + 311) is
+      // always present. The legacy series/deriveLandUniverse above are untouched.
+      structureBreakdown: {
+        landUniverse: landUniverseStructure,
+        landUniverseByGeography,
+        trackedInventory: tallyOwnerStructureCounts(sites.map((s) => s.ownerStructure)),
+      },
     },
     distress,
     sitePoints,
@@ -1117,6 +1317,7 @@ function buildEdition(
     landPointsTruncated,
     landPointsTotal,
     directoryCount: directoryRows.length,
+    buildingPinMatch,
     boundary: geo ? buildBoundary(geo) : null,
     centroid: geo ? editionCentroid(geo) : { lat: 0, lon: 0 },
     transport,
@@ -1300,6 +1501,8 @@ async function main() {
     const rows = rowsByZip.get(zip) ?? [];
     const geo = geoByZip.get(zip);
     const parcels = await fetchVacantLandParcels(sql, zip);
+    // ALL parcels in the ZIP, as the address index for 311-building matching (D2).
+    const parcelIndex = await fetchParcelAddressIndex(sql, zip);
     const transport = geo ? clipTransportForEdition(transportFeatures, geo.bbox) : [];
     const editionEntry = PILOT_ZIPS.find((e) => e.zip === zip);
     const anchors = editionEntry ? anchorsForEdition(editionEntry, anchorsByCa) : null;
@@ -1307,6 +1510,7 @@ async function main() {
       zip,
       rows,
       parcels,
+      parcelIndex,
       geo,
       transport,
       saleYearsByPin,
@@ -1362,6 +1566,19 @@ async function main() {
         `${edition.corridors.length} corridors, ` +
         `${edition.anchors === null ? "no anchors" : `${edition.anchors.length} anchors`}`,
     );
+    // 311-building parcel-match rate — a low matched share signals an address-
+    // normalization mismatch between the 311 rows and the parcels table.
+    const bpm = edition.buildingPinMatch;
+    if (bpm === null) {
+      console.log("    311 pin-match: parcels index unavailable (all 311 rows unmatched)");
+    } else {
+      const denom = bpm.matched + bpm.unmatched;
+      const rate = denom > 0 ? (bpm.matched / denom) * 100 : 0;
+      console.log(
+        `    311 pin-match: ${bpm.matched}/${denom} matched (${rate.toFixed(0)}%)` +
+          `${denom > 0 && rate < 50 ? " ⚠ low — check 311/parcel address normalization" : ""}`,
+      );
+    }
     if (edition.headline.vacantPropertyCount === 0) {
       console.warn(`  warning: 0 tracked vacant properties bucketed to ${zip} — did db:sync:vacant run, and does the boundary resolve?`);
     }

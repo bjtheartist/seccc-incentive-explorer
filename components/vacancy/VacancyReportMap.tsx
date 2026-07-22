@@ -40,6 +40,12 @@ import { trackEvent } from "@/lib/analytics-events";
 import { zoningGloss } from "@/lib/vacancy-zoning";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import {
+  OWNER_GEOGRAPHY_LABELS,
+  OWNER_STRUCTURE_LABELS,
+  type OwnerGeography,
+  type OwnerStructure,
+} from "@/lib/owner-taxonomy";
+import {
   PORTFOLIO_LABELS,
   portfolioForSite,
   portfolioReason,
@@ -147,6 +153,10 @@ interface CardData {
   zoningClass: string | null;
   incentiveCount: number;
   ownerConfidence: OwnerConfidence;
+  /** v2 STRUCTURE / GEOGRAPHY axes — optional (a committed export that predates
+   *  the two-axis taxonomy omits them; the card line is then simply not shown). */
+  ownerStructure: OwnerStructure | null;
+  ownerGeography: OwnerGeography | null;
   clusterId: number | null;
   saleYear: number | null;
   violation: boolean;
@@ -270,11 +280,18 @@ function buildSiteCardHtml(d: CardData, zip: string, asOf: string | null): strin
       ? `<div style="margin-top:10px;display:flex;flex-direction:column;gap:3px">${snapshotRows.join("")}</div>`
       : "";
 
-  // 3 · Ownership
+  // 3 · Ownership. The v2 two-axis line renders only when the axes are present
+  // (a committed export predating the taxonomy omits them) — the geography is
+  // always disclosed as coming from the taxpayer mailing address.
+  const axisLine =
+    d.ownerStructure && d.ownerGeography
+      ? `<div style="font-size:11px;color:${CARD_MUTED};margin-top:4px">Ownership: ${escapeHtml(OWNER_STRUCTURE_LABELS[d.ownerStructure])} · ${escapeHtml(OWNER_GEOGRAPHY_LABELS[d.ownerGeography])} <span style="color:${CARD_FAINT}">(taxpayer mailing)</span></div>`
+      : "";
   const ownership = `
     <div style="margin-top:10px">
       <span style="display:inline-block;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapeHtml(ownerLabel)}</span>
       <div style="font-size:11px;color:${CARD_MUTED};margin-top:5px">${escapeHtml(OWNER_CONFIDENCE_LINE[d.ownerConfidence])}</div>
+      ${axisLine}
     </div>
   `;
 
@@ -465,6 +482,8 @@ interface DotProps {
   zoningClass: string | null;
   incentiveCount: number;
   ownerConfidence: OwnerConfidence;
+  ownerStructure: OwnerStructure | null;
+  ownerGeography: OwnerGeography | null;
   clusterId: number | null;
 }
 
@@ -629,6 +648,8 @@ export default function VacancyReportMap({
         zoningClass: p.zoningClass,
         incentiveCount: p.incentiveCount,
         ownerConfidence: p.ownerConfidence,
+        ownerStructure: p.ownerStructure ?? null,
+        ownerGeography: p.ownerGeography ?? null,
         clusterId: p.clusterId,
       };
       return {
@@ -656,6 +677,8 @@ export default function VacancyReportMap({
         zoningClass: null,
         incentiveCount: 0,
         ownerConfidence: p.ownerConfidence,
+        ownerStructure: p.ownerStructure ?? null,
+        ownerGeography: p.ownerGeography ?? null,
         clusterId: null,
       };
       return {
@@ -695,6 +718,8 @@ export default function VacancyReportMap({
         zoningClass: sp?.zoningClass ?? r.zoningClass,
         incentiveCount: sp?.incentiveCount ?? r.incentiveCount,
         ownerConfidence: sp?.ownerConfidence ?? "inferred",
+        ownerStructure: sp?.ownerStructure ?? r.ownerStructure ?? null,
+        ownerGeography: sp?.ownerGeography ?? r.ownerGeography ?? null,
         clusterId: sp?.clusterId ?? null,
       };
       return {
@@ -933,6 +958,8 @@ export default function VacancyReportMap({
           zoningClass: typeof p.zoningClass === "string" && p.zoningClass ? p.zoningClass : null,
           incentiveCount: Number.isFinite(Number(p.incentiveCount)) ? Number(p.incentiveCount) : 0,
           ownerConfidence: (p.ownerConfidence as OwnerConfidence) ?? "inferred",
+          ownerStructure: (p.ownerStructure as OwnerStructure | null) ?? null,
+          ownerGeography: (p.ownerGeography as OwnerGeography | null) ?? null,
           clusterId,
           saleYear: p.saleYear == null ? null : Number(p.saleYear),
           violation: p.violation === true,
