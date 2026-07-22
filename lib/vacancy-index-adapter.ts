@@ -142,6 +142,13 @@ export function buildVacancyIndexPdfInput(
         .sort((a, b) => b.length - a.length)[0] ?? null)
     : null;
 
+  // Site-index rows carry no PIN, but the aligned sitePoints do. Recover each
+  // row's PIN by coordinate (the same join the web report uses) so the PDF's
+  // ADDRESS cell can link out to CookViewer; 311 rows carry no PIN -> null.
+  const pinByCoord = new Map<string, string | null>(
+    edition.sitePoints.map((p) => [`${p.lat},${p.lon}`, p.pin]),
+  );
+
   const siteIndexCoords = new Set(edition.siteIndex.map((row) => `${row.lat},${row.lon}`));
   const sitePoints = [
     ...edition.siteIndex.map((row) => ({ lat: row.lat, lon: row.lon, ownerType: row.ownerType })),
@@ -210,6 +217,7 @@ export function buildVacancyIndexPdfInput(
       sqft: row.squareFeet,
       priority: row.priorityTier,
       nextStep: row.nextStep,
+      pin: pinByCoord.get(`${row.lat},${row.lon}`) ?? null,
     })),
     sources: [
       exportData.sources.trackedInventory,

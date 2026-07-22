@@ -20,6 +20,7 @@ import {
   loadVacancyIndex,
 } from "@/lib/vacancy-index";
 import { buildVacancyIndexPdfInput } from "@/lib/vacancy-index-adapter";
+import { cookViewerUrl } from "@/lib/cook-viewer";
 import {
   OWNER_TYPE_COLORS,
   OWNER_TYPE_LABELS,
@@ -957,6 +958,7 @@ export default async function VacancyReportPage({
                   <th className="px-3 py-2.5">Priority</th>
                   <th className="px-3 py-2.5">Portfolio</th>
                   <th className="px-3 py-2.5">Next step</th>
+                  <th className="px-3 py-2.5">Verify</th>
                 </tr>
               </thead>
               <tbody>
@@ -964,6 +966,7 @@ export default async function VacancyReportPage({
                   const ownerType = normalizeOwnerType(row.ownerType);
                   const chip = PRIORITY_CHIP[row.priorityTier];
                   const sitePoint = sitePointByCoord.get(`${row.lat},${row.lon}`);
+                  const cookViewer = cookViewerUrl(sitePoint?.pin);
                   const portfolio = portfolioForSite({
                     ownerType,
                     priorityTier: row.priorityTier,
@@ -1007,6 +1010,21 @@ export default async function VacancyReportPage({
                       </td>
                       <td className="px-3 py-2.5 text-[11px] leading-snug text-[#0C1B33]/55">
                         {row.nextStep}
+                      </td>
+                      <td className="px-3 py-2.5 whitespace-nowrap">
+                        {cookViewer ? (
+                          <a
+                            href={cookViewer}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title="Opens Cook County's official parcel record in a new tab."
+                            className="font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#2563EB] hover:underline"
+                          >
+                            CookViewer ↗
+                          </a>
+                        ) : (
+                          <span className="font-mono-bureau text-[10px] text-[#0C1B33]/30">—</span>
+                        )}
                       </td>
                     </tr>
                   );
