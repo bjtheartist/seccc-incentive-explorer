@@ -25,6 +25,22 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { OwnerType } from "./owner-classify";
 import { OWNER_TYPE_ORDER, normalizeOwnerType } from "./owner-classify";
+import type {
+  OwnerGeography,
+  OwnerStructure,
+  OwnerStructureCount,
+  StructureGeographyCell,
+} from "./owner-taxonomy";
+
+/**
+ * How a tracked row's PIN was established, for the directory's "back-search"
+ * (CookViewer/Clerk) pathway. `inventory` = a City-Owned Land Server row that
+ * carries its 14-digit PIN natively; `address_matched` = a 311 building row
+ * whose normalized address matched EXACTLY ONE parcel at export time (the PIN,
+ * structure, and geography are taken from that parcel); `unmatched` = a 311 row
+ * with no unique parcel match (pin stays null, structure/geography unresolved).
+ */
+export type PinMatchKind = "inventory" | "address_matched" | "unmatched";
 
 // ── Data contract ────────────────────────────────────────────────────────
 
@@ -136,6 +152,37 @@ export interface VacancyDistressSignals {
   violationMatchCount: number | null;
 }
 
+/**
+ * The additive v2 two-axis ownership breakdown for one edition. Computed at
+ * export time ALONGSIDE the legacy owner-type series (deriveLandUniverse and the
+ * legacy city-fold logic are untouched — this never re-derives them):
+ *   • `landUniverse`          — the reconciled vacant-land parcels tallied by
+ *                                STRUCTURE (a City-inventory PIN match counts as
+ *                                government), honest zeros. `null` exactly when
+ *                                the raw parcels series is `null`.
+ *   • `landUniverseByGeography`— the same parcels as a full STRUCTURE × GEOGRAPHY
+ *                                cross-tab (the two-axis table). `null` with the
+ *                                same availability as `landUniverse`.
+ *   • `trackedInventory`      — the tracked operational list (COLS + 311) tallied
+ *                                by STRUCTURE, always available (COLS rows are
+ *                                government; unmatched 311 rows are unresolved).
+ */
+export interface OwnershipStructureBreakdown {
+  landUniverse: OwnerStructureCount[] | null;
+  landUniverseByGeography: StructureGeographyCell[] | null;
+  trackedInventory: OwnerStructureCount[];
+}
+
+/** Per-edition 311-building parcel-matching tally (see PinMatchKind): how many
+ * 311 building rows resolved to a unique parcel (`matched`) vs did not
+ * (`unmatched`). `null` when the parcels table was absent on the refresh branch
+ * (no matching could run) — never a fabricated zero. COLS inventory rows are not
+ * counted here (they carry their PIN natively). */
+export interface BuildingPinMatchStats {
+  matched: number;
+  unmatched: number;
+}
+
 /** One matrix cell: a raw metric `value` and its 1–5 within-cohort quintile
  * `dots`. Both are `null` when the metric is unavailable for the edition
  * (`dots` is non-null exactly when `value` is non-null). */
@@ -204,6 +251,18 @@ export interface VacancySitePoint {
    * violation record (the same match the edition-level violationMatchCount
    * counts); `false` when the violations table was absent on the branch. */
   violation: boolean;
+  /** v2 STRUCTURE axis (from the taxpayer name of the resolved parcel): COLS
+   * inventory rows are `government`; 311 rows take the matched parcel's structure
+   * when `pinMatch === "address_matched"`, else `unresolved`. */
+  ownerStructure: OwnerStructure;
+  /** v2 GEOGRAPHY axis — FROM THE TAXPAYER MAILING ADDRESS, always surfaced as
+   * such. COLS rows are `in_state`; 311 rows take the matched parcel's geography
+   * when matched, else `unknown`. */
+  ownerGeography: OwnerGeography;
+  /** How this row's PIN was established (see PinMatchKind). Gives every tracked
+   * row its back-search pathway: `inventory`/`address_matched` carry a real PIN
+   * (CookViewer + Clerk links resolve), `unmatched` has none. */
+  pinMatch: PinMatchKind;
 }
 
 /**
@@ -233,6 +292,12 @@ export interface VacancyLandPoint {
    * Land parcels are not clustered, so they carry no clusterId. */
   ownerConfidence: OwnerConfidence;
   saleYear: number | null;
+  /** v2 STRUCTURE axis, from the parcel's taxpayer name (a City-inventory PIN
+   * match forces `government`, mirroring the reconciled owner type). */
+  ownerStructure: OwnerStructure;
+  /** v2 GEOGRAPHY axis — FROM THE TAXPAYER MAILING ADDRESS (a City-inventory PIN
+   * match forces `in_state`). Always surfaced as "taxpayer mailing". */
+  ownerGeography: OwnerGeography;
 }
 
 /**
@@ -255,6 +320,14 @@ export interface VacancyDirectoryRow {
   /** Same address-match violation flag the matching sitePoint carries; `false`
    * when the violations table was absent on the branch. */
   violation: boolean;
+  /** Digits-only 14-digit PIN from either source (COLS inventory or a
+   * uniquely address-matched 311 parcel); `null` when unmatched. Lights the
+   * directory's Verify column (CookViewer/Clerk back-search). */
+  pin: string | null;
+  /** v2 STRUCTURE axis (same derivation as the matching sitePoint). */
+  ownerStructure: OwnerStructure;
+  /** v2 GEOGRAPHY axis — FROM THE TAXPAYER MAILING ADDRESS. */
+  ownerGeography: OwnerGeography;
 }
 
 /**
@@ -285,6 +358,14 @@ export interface VacancySiteIndexRow {
   nextStep: string;
   lat: number;
   lon: number;
+  /** Digits-only 14-digit PIN (COLS inventory or a uniquely address-matched 311
+   * parcel); `null` when unmatched. Lets the web report's Verify column link out
+   * without re-joining by coordinate. */
+  pin: string | null;
+  /** v2 STRUCTURE axis (same derivation as the matching sitePoint). */
+  ownerStructure: OwnerStructure;
+  /** v2 GEOGRAPHY axis — FROM THE TAXPAYER MAILING ADDRESS. */
+  ownerGeography: OwnerGeography;
 }
 
 /**
@@ -323,6 +404,11 @@ export interface VacancyIndexEdition {
     /** How the reconciliation moved the numbers; `null` exactly when the raw
      * parcels series is `null`. */
     reconciliation: VacantLandReconciliation | null;
+    /** The additive v2 two-axis breakdown (structure, and structure × geography);
+     * `null` only when NO ownership series/tracked context could be built at all.
+     * Its `landUniverse`/`landUniverseByGeography` share the raw parcels series'
+     * availability; `trackedInventory` is always present. */
+    structureBreakdown: OwnershipStructureBreakdown | null;
   };
   /** Phase-2 distress overlays for this edition, or `null` when no distress
    * source table was present on the refresh branch (degrade gracefully). */
@@ -346,6 +432,11 @@ export interface VacancyIndexEdition {
    * on the web report without loading the directory itself. Always a number
    * once the edition builds (the directory is written alongside it). */
   directoryCount: number;
+  /** Per-edition 311-building parcel-matching counts (see BuildingPinMatchStats);
+   * `null` when the parcels table was absent on the refresh branch. Sanity-check
+   * the matched rate after an export — a low rate signals a normalization
+   * mismatch between the 311 and parcel address forms. */
+  buildingPinMatch: BuildingPinMatchStats | null;
   boundary: { rings: [number, number][][]; bbox: [number, number, number, number] } | null;
   centroid: { lat: number; lon: number };
   transport: { kind: TransportKind; points: [number, number][] }[];
@@ -668,6 +759,10 @@ export interface DirectoryInputSite {
   priorityScore: number;
   saleYear: number | null;
   violation: boolean;
+  /** v2 back-search + two-axis fields threaded onto the directory row. */
+  pin: string | null;
+  ownerStructure: OwnerStructure;
+  ownerGeography: OwnerGeography;
 }
 
 /**
@@ -707,6 +802,9 @@ export function buildDirectoryRows(
       priorityScore: s.priorityScore,
       saleYear: s.saleYear,
       violation: s.violation,
+      pin: s.pin,
+      ownerStructure: s.ownerStructure,
+      ownerGeography: s.ownerGeography,
     });
   }
   rows.sort(compareDirectoryRows);
@@ -980,6 +1078,16 @@ export {
   tallyPortfolioCounts,
 };
 export type { VacancyPortfolio };
+
+// Re-export the v2 taxonomy types so consumers that already pull from
+// lib/vacancy-index can reach them without a second import (the client-safe
+// module lib/owner-taxonomy is the canonical home for the runtime values).
+export type {
+  OwnerGeography,
+  OwnerStructure,
+  OwnerStructureCount,
+  StructureGeographyCell,
+} from "./owner-taxonomy";
 
 // ── Spatial helpers (pure) ──────────────────────────────────────────────────
 

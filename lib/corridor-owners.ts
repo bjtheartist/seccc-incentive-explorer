@@ -1,4 +1,10 @@
 import type { NeonQueryFunction } from "@neondatabase/serverless";
+import {
+  classifyOwnerStructure,
+  ownerGeographyFromMailingAddress,
+  type OwnerGeography,
+  type OwnerStructure,
+} from "./owner-taxonomy";
 
 /**
  * Owner & Operator cluster computation for corridor reports.
@@ -72,6 +78,18 @@ export interface OwnerCluster {
    */
   latestTaxSaleYear?: number | null;
   taxSaleSoldCount?: number | null;
+  /**
+   * v2 two-axis ownership taxonomy (lib/owner-taxonomy.ts), OPTIONAL because the
+   * committed public/data/corridor-owners.json predates them and is NOT
+   * regenerated this round (a faithful owners re-export needs the transfers +
+   * business-license syncs, out of scope here). fetchOwnerClusters computes them
+   * fresh (structure from the owner name, geography from the taxpayer mailing
+   * state); a loaded export that lacks them leaves both `undefined`, and the
+   * dossier renders the axes only when present (graceful absence — never a
+   * fabricated "unresolved"/"unknown").
+   */
+  ownerStructure?: OwnerStructure;
+  ownerGeography?: OwnerGeography;
 }
 
 interface OwnerClusterRow {
@@ -149,6 +167,10 @@ function serialize(
     distressSignals,
     latestTaxSaleYear: taxSaleSignals.latestTaxSaleYear,
     taxSaleSoldCount: taxSaleSignals.taxSaleSoldCount,
+    // v2 axes: structure from the owner name, geography from the taxpayer mailing
+    // state (labeled as taxpayer mailing wherever surfaced).
+    ownerStructure: classifyOwnerStructure(row.owner_name),
+    ownerGeography: ownerGeographyFromMailingAddress(row.owner_mailing_address),
   };
 }
 

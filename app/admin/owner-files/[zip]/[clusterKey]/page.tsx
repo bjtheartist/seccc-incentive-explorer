@@ -15,6 +15,12 @@ import { OwnerFileVerificationForm } from "@/components/owner-file/OwnerFileVeri
 import { OwnerFileDossierButton } from "@/components/owner-file/OwnerFileDossierButton";
 import { OutreachLog } from "@/components/owner-file/OutreachLog";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
+import {
+  OWNER_GEOGRAPHY_LABELS,
+  OWNER_STRUCTURE_LABELS,
+  normalizeOwnerGeography,
+  normalizeOwnerStructure,
+} from "@/lib/owner-taxonomy";
 
 export const dynamic = "force-dynamic";
 
@@ -135,6 +141,16 @@ export default async function OwnerFileDetailPage({ params }: { params: Params }
               <p className="mt-1 font-mono-bureau text-[11px] uppercase tracking-[0.12em] text-[#0C1B33]/35">
                 {cluster.ownerType || "Owner type not recorded"}
               </p>
+              {/* v2 two-axis taxonomy — rendered only when the loaded export
+                  carries it (the committed corridor-owners.json predates it;
+                  graceful absence, never a fabricated "unresolved"/"unknown"). */}
+              {cluster.ownerStructure != null && cluster.ownerGeography != null && (
+                <p className="mt-1 font-mono-bureau text-[11px] uppercase tracking-[0.12em] text-[#0C1B33]/50">
+                  {OWNER_STRUCTURE_LABELS[normalizeOwnerStructure(cluster.ownerStructure)]} ·{" "}
+                  {OWNER_GEOGRAPHY_LABELS[normalizeOwnerGeography(cluster.ownerGeography)]}{" "}
+                  <span className="text-[#0C1B33]/30">(taxpayer mailing)</span>
+                </p>
+              )}
             </div>
             <div className={`shrink-0 border px-4 py-3 text-center ${TIER_STYLES[resolvedTier]}`}>
               <p className="font-mono-bureau text-[10px] uppercase tracking-[0.14em]">Confidence tier</p>

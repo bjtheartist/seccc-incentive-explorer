@@ -278,6 +278,9 @@ describe("compareDirectoryRows / buildDirectoryRows", () => {
     priorityScore: 0,
     saleYear: null,
     violation: false,
+    pin: null,
+    ownerStructure: "unresolved",
+    ownerGeography: "unknown",
     ...over,
   });
 
@@ -290,6 +293,9 @@ describe("compareDirectoryRows / buildDirectoryRows", () => {
       priorityScore: 2,
       saleYear: null,
       violation: false,
+      pin: null,
+      ownerStructure: "unresolved",
+      ownerGeography: "unknown",
     };
     const b: VacancyDirectoryRow = { ...a, address: "100 A St", priorityScore: 5 };
     const c: VacancyDirectoryRow = { ...a, address: "050 A St", priorityScore: 5 };
@@ -315,7 +321,10 @@ describe("compareDirectoryRows / buildDirectoryRows", () => {
     for (const r of rows) {
       expect(Object.keys(r).sort()).toEqual([
         "address",
+        "ownerGeography",
+        "ownerStructure",
         "ownerType",
+        "pin",
         "priorityScore",
         "priorityTier",
         "propertyType",
@@ -1336,6 +1345,17 @@ const ALLOWED_KEYS = new Set<string>([
   "inventoryUnmatchedCount",
   "ownerType",
   "count",
+  // v2 two-axis ownership breakdown + building pin-match
+  "structureBreakdown",
+  "landUniverse",
+  "landUniverseByGeography",
+  "trackedInventory",
+  "ownerStructure",
+  "ownerGeography",
+  "buildingPinMatch",
+  "matched",
+  "unmatched",
+  "pinMatch",
   // distress
   "distress",
   "taxSaleExposedCount",
@@ -1502,7 +1522,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
   // (the committed file predates the address/pin/squareFeet/ownerConfidence
   // fields, so the exact-keys assertion fails against it — hard-green after the
   // orchestrator re-exports).
-  it("carries landPoints null exactly when the raw parcels series is null, total matching, enriched {address,lat,lon,ownerConfidence,ownerType,pin,saleYear,squareFeet} keys [EXPECTED-RED pre-re-export]", () => {
+  it("carries landPoints null exactly when the raw parcels series is null, total matching, enriched {address,lat,lon,ownerConfidence,ownerType,pin,saleYear,squareFeet} keys", () => {
     const valid = new Set<string>(OWNER_TYPE_ORDER);
     const validConfidence = new Set(["pin_matched", "inferred", "needs_verification"]);
     for (const zip of PILOT_ZIP_KEYS) {
@@ -1523,16 +1543,13 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
         expect(lp.length).toBeLessThanOrEqual(2000);
         expect(edition.landPointsTotal === null || lp.length <= edition.landPointsTotal).toBe(true);
         for (const p of lp) {
-          expect(Object.keys(p).sort()).toEqual([
-            "address",
-            "lat",
-            "lon",
-            "ownerConfidence",
-            "ownerType",
-            "pin",
-            "saleYear",
-            "squareFeet",
-          ]);
+          // Base (pre-v2) key set. v2 axes (ownerStructure/ownerGeography) are
+          // validated tolerantly in the separate "v2 two-axis fields" guard
+          // below — the committed file predates them until the orchestrator
+          // re-exports, so they are NOT asserted present here.
+          for (const k of ["address", "lat", "lon", "ownerConfidence", "ownerType", "pin", "saleYear", "squareFeet"]) {
+            expect(Object.prototype.hasOwnProperty.call(p, k), `landPoint missing ${k}`).toBe(true);
+          }
           expect(typeof p.lat).toBe("number");
           expect(typeof p.lon).toBe("number");
           expect(valid.has(p.ownerType)).toBe(true);
@@ -1561,7 +1578,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
   // (address/pin/squareFeet/zoningClass/incentiveCount/ownerConfidence/clusterId
   // are absent on the committed file — hard-green after the orchestrator
   // re-exports).
-  it("carries the enriched decision-card fields on every sitePoint [EXPECTED-RED pre-re-export]", () => {
+  it("carries the enriched decision-card fields on every sitePoint", () => {
     const validConfidence = new Set(["pin_matched", "inferred", "needs_verification"]);
     for (const zip of PILOT_ZIP_KEYS) {
       const edition = data.editions[zip];
@@ -1579,6 +1596,77 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
           expect(p.clusterId).toBeGreaterThanOrEqual(1);
           expect(p.clusterId).toBeLessThanOrEqual(edition.clusters.length);
         }
+      }
+    }
+  });
+
+  // ── v2 two-axis + back-search guards (TOLERANT of absence) ──
+  // The committed vacancy-index.json predates ownerStructure / ownerGeography /
+  // pinMatch / structureBreakdown / buildingPinMatch — they populate only when
+  // the orchestrator re-exports. Each assertion therefore fires ONLY when its
+  // field is present, so CI stays green now and the guard tightens automatically
+  // after the re-export. (Not skipIf-gated on a data probe because different
+  // editions may re-export at different times; per-field presence is the honest
+  // gate.)
+  const V2_STRUCTURE = new Set(["individual", "entity", "trust", "government", "unresolved"]);
+  const V2_GEOGRAPHY = new Set(["in_state", "out_of_state", "unknown"]);
+  const V2_PIN_MATCH = new Set(["inventory", "address_matched", "unmatched"]);
+  const V2_STRUCTURE_ORDER = ["entity", "individual", "trust", "government", "unresolved"];
+
+  it("validates the v2 two-axis + pinMatch fields on points/rows WHEN PRESENT", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      for (const p of edition.sitePoints) {
+        if ("ownerStructure" in p) expect(V2_STRUCTURE.has(p.ownerStructure), `${zip} sitePoint.ownerStructure`).toBe(true);
+        if ("ownerGeography" in p) expect(V2_GEOGRAPHY.has(p.ownerGeography), `${zip} sitePoint.ownerGeography`).toBe(true);
+        if ("pinMatch" in p) {
+          expect(V2_PIN_MATCH.has(p.pinMatch), `${zip} sitePoint.pinMatch`).toBe(true);
+          if (p.pinMatch === "unmatched") expect(p.pin, `${zip} unmatched sitePoint has no pin`).toBeNull();
+        }
+      }
+      for (const p of edition.landPoints ?? []) {
+        if ("ownerStructure" in p) expect(V2_STRUCTURE.has(p.ownerStructure)).toBe(true);
+        if ("ownerGeography" in p) expect(V2_GEOGRAPHY.has(p.ownerGeography)).toBe(true);
+      }
+      for (const r of edition.siteIndex) {
+        if ("ownerStructure" in r) expect(V2_STRUCTURE.has(r.ownerStructure)).toBe(true);
+        if ("ownerGeography" in r) expect(V2_GEOGRAPHY.has(r.ownerGeography)).toBe(true);
+        if ("pin" in r) expect(r.pin === null || typeof r.pin === "string").toBe(true);
+      }
+    }
+  });
+
+  it("validates the v2 structureBreakdown + buildingPinMatch WHEN PRESENT", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      const edition = data.editions[zip];
+      if (!edition) continue;
+      const sb = edition.ownership.structureBreakdown;
+      if (sb != null) {
+        expect(sb.trackedInventory.map((c) => c.ownerStructure)).toEqual(V2_STRUCTURE_ORDER);
+        for (const c of sb.trackedInventory) {
+          expect(V2_STRUCTURE.has(c.ownerStructure)).toBe(true);
+          expect(Number.isInteger(c.count) && c.count >= 0).toBe(true);
+        }
+        const raw = edition.ownership.vacantLandParcelsByOwnerType;
+        // landUniverse shares the raw parcels availability.
+        expect((sb.landUniverse === null) === (raw === null), `${zip} landUniverse availability`).toBe(true);
+        expect((sb.landUniverseByGeography === null) === (raw === null)).toBe(true);
+        if (sb.landUniverse !== null) {
+          expect(sb.landUniverse.map((c) => c.ownerStructure)).toEqual(V2_STRUCTURE_ORDER);
+          const sum = sb.landUniverse.reduce((s, c) => s + c.count, 0);
+          expect(sum, `${zip} landUniverse sum`).toBe(edition.ownership.vacantLandParcelTotal);
+        }
+        if (sb.landUniverseByGeography !== null) {
+          expect(sb.landUniverseByGeography.length).toBe(15); // 5 structures × 3 geographies
+          const sum = sb.landUniverseByGeography.reduce((s, c) => s + c.count, 0);
+          expect(sum, `${zip} cross-tab sum`).toBe(edition.ownership.vacantLandParcelTotal);
+        }
+      }
+      const bpm = edition.buildingPinMatch;
+      if (bpm != null) {
+        expect(Number.isInteger(bpm.matched) && bpm.matched >= 0).toBe(true);
+        expect(Number.isInteger(bpm.unmatched) && bpm.unmatched >= 0).toBe(true);
       }
     }
   });
@@ -1736,6 +1824,10 @@ const DIRECTORY_ALLOWED_KEYS = new Set<string>([
   "priorityScore",
   "saleYear",
   "violation",
+  // v2 back-search + two-axis fields
+  "pin",
+  "ownerStructure",
+  "ownerGeography",
 ]);
 
 function walkDirectoryKeys(node: unknown, offenders: Set<string>): void {
@@ -1824,6 +1916,8 @@ describe.skipIf(!DIRECTORY_EXISTS)("committed vacancy-directory/{zip}.json files
     const validOwner = new Set<string>(OWNER_TYPE_ORDER);
     const validTier = new Set(["high", "medium", "low"]);
     const validType = new Set(["vacant_land", "vacant_building"]);
+    const validStructure = new Set(["individual", "entity", "trust", "government", "unresolved"]);
+    const validGeography = new Set(["in_state", "out_of_state", "unknown"]);
     for (const zip of PILOT_ZIP_KEYS) {
       if (!existsSync(path.join(DIRECTORY_DIR, `${zip}.json`))) continue;
       for (const row of loadDirectory(zip).rows) {
@@ -1834,6 +1928,11 @@ describe.skipIf(!DIRECTORY_EXISTS)("committed vacancy-directory/{zip}.json files
         expect(Number.isFinite(row.priorityScore), `${zip} priorityScore`).toBe(true);
         expect(row.saleYear === null || typeof row.saleYear === "number", `${zip} saleYear`).toBe(true);
         expect(typeof row.violation, `${zip} violation`).toBe("boolean");
+        // v2 back-search + two-axis fields — TOLERANT: the committed directory
+        // files predate them until the orchestrator re-exports.
+        if ("pin" in row) expect(row.pin === null || typeof row.pin === "string", `${zip} pin`).toBe(true);
+        if ("ownerStructure" in row) expect(validStructure.has(row.ownerStructure), `${zip} ownerStructure`).toBe(true);
+        if ("ownerGeography" in row) expect(validGeography.has(row.ownerGeography), `${zip} ownerGeography`).toBe(true);
       }
     }
   });

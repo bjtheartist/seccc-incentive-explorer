@@ -28,6 +28,15 @@ import {
   normalizeOwnerType,
   type OwnerType,
 } from "@/lib/owner-classify";
+import {
+  OWNER_GEOGRAPHY_LABELS,
+  OWNER_GEOGRAPHY_ORDER,
+  OWNER_STRUCTURE_ABBREV,
+  OWNER_STRUCTURE_COLORS,
+  OWNER_STRUCTURE_LABELS,
+  OWNER_STRUCTURE_ORDER,
+  normalizeOwnerStructure,
+} from "@/lib/owner-taxonomy";
 import type {
   VacancyPortfolio,
   VacancyPriorityTier,
@@ -298,6 +307,17 @@ export default async function VacancyReportPage({
   // Control"). Null when the ownership source series could not be built — the
   // section degrades to tracked-inventory context rather than fabricating one. ──
   const landUniverse = deriveLandUniverse(edition);
+  // v2 two-axis (structure × geography) land table — additive, rendered only
+  // when the export carries it (a committed file predating the taxonomy omits
+  // it). The geography axis is the taxpayer MAILING address, disclosed as such.
+  const landCrossTab = ownership.structureBreakdown?.landUniverseByGeography ?? null;
+  const crossTabAt = (structure: string, geography: string): number =>
+    landCrossTab?.find((c) => c.ownerStructure === structure && c.ownerGeography === geography)?.count ?? 0;
+  const crossTabStructureTotal = (structure: string): number =>
+    OWNER_GEOGRAPHY_ORDER.reduce((sum, g) => sum + crossTabAt(structure, g), 0);
+  const crossTabGeographyTotal = (geography: string): number =>
+    OWNER_STRUCTURE_ORDER.reduce((sum, s) => sum + crossTabAt(s, geography), 0);
+  const crossTabGrandTotal = landCrossTab?.reduce((sum, c) => sum + c.count, 0) ?? 0;
   const landOwnerMax = landUniverse
     ? Math.max(1, ...landUniverse.byOwnerType.map((r) => r.count))
     : 1;
@@ -727,6 +747,81 @@ export default async function VacancyReportPage({
                   )}
                 </p>
               </div>
+
+              {/* Part 3b — Two-axis ownership (structure × geography) */}
+              {landCrossTab && (
+                <div className="mt-10">
+                  <h3 className="flex items-baseline gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/55">
+                    <span className="text-[#2563EB]">03b</span> Owner structure × geography
+                  </h3>
+                  <p className="mt-2 text-[12px] leading-relaxed text-[#0C1B33]/55">
+                    The same assessor vacant-land parcels, cross-tabulated by owner{" "}
+                    <span className="font-semibold text-[#0C1B33]">structure</span> (from the taxpayer
+                    name) and <span className="font-semibold text-[#0C1B33]">geography</span> (from the
+                    taxpayer mailing address).
+                  </p>
+                  <div className="mt-3 overflow-x-auto border border-[#0C1B33]/10 bg-white">
+                    <table className="w-full min-w-[520px] border-collapse text-left">
+                      <thead>
+                        <tr className="border-b border-[#0C1B33]/10 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
+                          <th className="px-3 py-2.5">Structure</th>
+                          {OWNER_GEOGRAPHY_ORDER.map((g) => (
+                            <th key={g} className="px-3 py-2.5 text-right">
+                              {OWNER_GEOGRAPHY_LABELS[g]}
+                            </th>
+                          ))}
+                          <th className="px-3 py-2.5 text-right">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {OWNER_STRUCTURE_ORDER.map((s) => (
+                          <tr key={s} className="border-b border-[#0C1B33]/5">
+                            <td className="px-3 py-2.5">
+                              <span className="inline-flex items-center gap-1.5 text-[12px] text-[#0C1B33]/75">
+                                <span
+                                  className="inline-block h-2.5 w-2.5 flex-shrink-0 rounded-full"
+                                  style={{ backgroundColor: OWNER_STRUCTURE_COLORS[s] }}
+                                />
+                                {OWNER_STRUCTURE_LABELS[s]}
+                              </span>
+                            </td>
+                            {OWNER_GEOGRAPHY_ORDER.map((g) => (
+                              <td
+                                key={g}
+                                className="px-3 py-2.5 text-right font-mono-bureau text-[12px] text-[#0C1B33]/70"
+                              >
+                                {crossTabAt(s, g).toLocaleString("en-US")}
+                              </td>
+                            ))}
+                            <td className="px-3 py-2.5 text-right font-mono-bureau text-[12px] font-semibold text-[#0C1B33]">
+                              {crossTabStructureTotal(s).toLocaleString("en-US")}
+                            </td>
+                          </tr>
+                        ))}
+                        <tr className="bg-[#0C1B33]/[0.03]">
+                          <td className="px-3 py-2.5 text-[12px] font-semibold text-[#0C1B33]">Total</td>
+                          {OWNER_GEOGRAPHY_ORDER.map((g) => (
+                            <td
+                              key={g}
+                              className="px-3 py-2.5 text-right font-mono-bureau text-[12px] font-semibold text-[#0C1B33]"
+                            >
+                              {crossTabGeographyTotal(g).toLocaleString("en-US")}
+                            </td>
+                          ))}
+                          <td className="px-3 py-2.5 text-right font-mono-bureau text-[12px] font-semibold text-[#0C1B33]">
+                            {crossTabGrandTotal.toLocaleString("en-US")}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/45">
+                    Geography is the taxpayer mailing address&rsquo;s state, not a claim about where an
+                    owner physically resides. Structure is inferred from public taxpayer-of-record
+                    name patterns.
+                  </p>
+                </div>
+              )}
             </>
           ) : (
             <div className="mt-10 border border-dashed border-[#0C1B33]/20 bg-white px-4 py-6 text-center">
@@ -964,6 +1059,8 @@ export default async function VacancyReportPage({
               <tbody>
                 {siteIndex.map((row, i) => {
                   const ownerType = normalizeOwnerType(row.ownerType);
+                  // v2 structure abbrev, rendered only when the export carries it.
+                  const structure = row.ownerStructure ? normalizeOwnerStructure(row.ownerStructure) : null;
                   const chip = PRIORITY_CHIP[row.priorityTier];
                   const sitePoint = sitePointByCoord.get(`${row.lat},${row.lon}`);
                   const cookViewer = cookViewerUrl(sitePoint?.pin);
@@ -986,6 +1083,15 @@ export default async function VacancyReportPage({
                             style={{ backgroundColor: OWNER_TYPE_COLORS[ownerType] }}
                           />
                           {OWNER_TYPE_LABELS[ownerType]}
+                          {structure && (
+                            <span
+                              className="ml-1 border px-1 py-0.5 font-mono-bureau text-[8px] font-semibold uppercase tracking-[0.06em]"
+                              style={{ color: OWNER_STRUCTURE_COLORS[structure], borderColor: `${OWNER_STRUCTURE_COLORS[structure]}55` }}
+                              title={`Structure: ${OWNER_STRUCTURE_LABELS[structure]} (taxpayer name)`}
+                            >
+                              {OWNER_STRUCTURE_ABBREV[structure]}
+                            </span>
+                          )}
                         </span>
                       </td>
                       <td className="px-3 py-2.5 text-[12px] text-[#0C1B33]/60">
