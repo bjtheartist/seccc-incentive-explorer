@@ -58,6 +58,7 @@ import {
 import { normalizeOwnerAddress } from "../lib/corridor-owners";
 import { toDigitsOnlyPin } from "../lib/ingest/pin-batch";
 import { CHICAGO_COMMUNITY_AREAS } from "../lib/community-areas";
+import type { ExemptionReferralFile, ExemptionReferralRow } from "../lib/exemption-anomalies";
 import {
   addressHasViolation,
   assignQuantileDots,
@@ -90,7 +91,13 @@ import {
   type VacancyDistressSignals,
   type VacancyIndexEdition,
   type VacancyIndexExport,
+  deriveExemptionAnomalies,
+  hasOccupancyExemption,
   type BuildingPinMatchStats,
+  type ExemptionAnomalies,
+  type ExemptionAnomalyParcel,
+  type ExemptionEavs,
+  type ExemptionUniverse,
   type PinMatchKind,
   type VacancyLandPoint,
   type VacancyMatrixRow,
@@ -157,6 +164,10 @@ const OUT_PATH = join(process.cwd(), "public", "data", "vacancy-index.json");
 // on the web report so the main index JSON stays lean. A subset --zips= run
 // rewrites ONLY the requested ZIPs' files (merge-not-clobber, like OUT_PATH).
 const DIRECTORY_DIR = join(process.cwd(), "public", "data", "vacancy-directory");
+// The PRIVATE exemption-anomaly referral packet — parcel-level rows for the
+// Treasurer/Clerk/Assessor. NEVER under public/ (committed-private, exactly the
+// data/private/owner-clusters-geo.json precedent). Merge-not-clobber on --zips=.
+const REFERRAL_PATH = join(process.cwd(), "data", "private", "exemption-anomalies.json");
 const ZIP_BOUNDARIES_URL = "https://data.cityofchicago.org/resource/unjd-c2ca.json";
 
 // ── Geometry helpers (copied per the standalone convention of
@@ -788,6 +799,9 @@ interface ParcelIndexRow {
   normAddress: string;
   ownerName: string | null;
   ownerMailingAddress: string | null;
+  /** Cook County class code (drives the exemption-anomaly land/building split
+   * — class 1xx = land, 2xx = building). Null when the parcel row lacks one. */
+  classCode: string | null;
 }
 
 /**
@@ -808,7 +822,7 @@ async function fetchParcelAddressIndex(
     const rows = (await sql`
       SELECT pin,
              regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g') AS norm_address,
-             owner_name, owner_mailing_address
+             owner_name, owner_mailing_address, class_code
       FROM parcels
       WHERE zip = ${zip}
     `) as {
@@ -816,12 +830,14 @@ async function fetchParcelAddressIndex(
       norm_address: string | null;
       owner_name: string | null;
       owner_mailing_address: string | null;
+      class_code: string | null;
     }[];
     return rows.map((r) => ({
       pin: toDigitsOnlyPin(r.pin ?? ""),
       normAddress: r.norm_address ?? "",
       ownerName: r.owner_name,
       ownerMailingAddress: r.owner_mailing_address,
+      classCode: r.class_code,
     }));
   } catch (err) {
     console.warn(
@@ -899,6 +915,97 @@ async function fetchViolationAddressSet(
   }
 }
 
+/**
+ * Once-per-run map of PIN -> consolidated occupancy-exemption EAVs from
+ * parcel_exemptions (the PTAXSIM overlay, latest tax year on the branch). Also
+ * returns that tax year. Returns `null` when the table is absent on this branch
+ * (42P01), so the whole exemption-anomaly overlay degrades to "not yet
+ * available" rather than a fabricated zero — mirrors fetchSaleYearsByPin.
+ */
+async function fetchExemptionsByPin(
+  sql: NeonQueryFunction<false, false>,
+): Promise<{ byPin: Map<string, ExemptionEavs>; taxYear: number } | null> {
+  try {
+    const rows = (await sql`
+      SELECT pin, tax_year, exe_homeowner, exe_senior, exe_freeze,
+             exe_disabled, exe_vet, exe_longtime
+      FROM parcel_exemptions
+      WHERE tax_year = (SELECT MAX(tax_year) FROM parcel_exemptions)
+    `) as {
+      pin: string | null;
+      tax_year: number | string | null;
+      exe_homeowner: number | string | null;
+      exe_senior: number | string | null;
+      exe_freeze: number | string | null;
+      exe_disabled: number | string | null;
+      exe_vet: number | string | null;
+      exe_longtime: number | string | null;
+    }[];
+
+    if (rows.length === 0) {
+      console.warn("  parcel_exemptions returned 0 rows — exemption-anomaly overlay treated as unavailable (did db:sync:exemptions run?)");
+      return null;
+    }
+
+    const byPin = new Map<string, ExemptionEavs>();
+    let taxYear = 0;
+    for (const r of rows) {
+      const pin = toDigitsOnlyPin(r.pin ?? "");
+      if (pin.length !== 14) continue;
+      const ty = Number(r.tax_year);
+      if (Number.isFinite(ty)) taxYear = Math.max(taxYear, Math.trunc(ty));
+      byPin.set(pin, {
+        homeowner: toNum(r.exe_homeowner),
+        senior: toNum(r.exe_senior),
+        freeze: toNum(r.exe_freeze),
+        disabled: toNum(r.exe_disabled),
+        vet: toNum(r.exe_vet),
+        longtime: toNum(r.exe_longtime),
+      });
+    }
+    return { byPin, taxYear };
+  } catch (err) {
+    console.warn(
+      "  parcel_exemptions table unavailable (not migrated on this branch) — exemption-anomaly overlay degrades to pending:",
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  }
+}
+
+/**
+ * Once-per-run map of PIN -> latest recorded transfer date (YYYY-MM-DD) from
+ * property_transfers (the MyDec deed/instrument series). Backs the "no transfer
+ * in ≥10y" exemption-anomaly subset. Returns `null` when the table is absent on
+ * this branch (42P01), so that subset degrades to null rather than a fabricated
+ * "no transfer" everywhere. Coverage caveat: MyDec transfer records only reach
+ * ~2009, so a missing PIN is a FLOOR, not proof of no sale.
+ */
+async function fetchLatestTransferByPin(
+  sql: NeonQueryFunction<false, false>,
+): Promise<Map<string, string> | null> {
+  try {
+    const rows = (await sql`
+      SELECT pin, MAX(recorded_date)::text AS latest
+      FROM property_transfers
+      WHERE pin IS NOT NULL AND pin <> '' AND recorded_date IS NOT NULL
+      GROUP BY pin
+    `) as { pin: string | null; latest: string | null }[];
+    const map = new Map<string, string>();
+    for (const r of rows) {
+      const pin = toDigitsOnlyPin(r.pin ?? "");
+      if (pin.length === 14 && r.latest) map.set(pin, r.latest.slice(0, 10));
+    }
+    return map;
+  } catch (err) {
+    console.warn(
+      "  property_transfers table unavailable (not migrated on this branch) — exemption-anomaly no-transfer subset degrades to null:",
+      err instanceof Error ? err.message : err,
+    );
+    return null;
+  }
+}
+
 // ── Edition builder ──
 
 interface ScoredSite {
@@ -956,7 +1063,14 @@ function buildEdition(
   violationAddressSet: Set<string> | null,
   corridorPolygons: CorridorPolygon[],
   anchors: VacancyAnchor[] | null,
-): { edition: VacancyIndexEdition; directoryRows: VacancyDirectoryRow[]; excludedNoAddressCount: number } {
+  exemptions: { byPin: Map<string, ExemptionEavs>; taxYear: number } | null,
+  latestTransferByPin: Map<string, string> | null,
+): {
+  edition: VacancyIndexEdition;
+  directoryRows: VacancyDirectoryRow[];
+  excludedNoAddressCount: number;
+  referralRows: ExemptionReferralRow[];
+} {
   const entryIndex = PILOT_ZIPS.findIndex((entry) => entry.zip === zip);
   const entry = PILOT_ZIPS[entryIndex];
 
@@ -1281,6 +1395,80 @@ function buildEdition(
     ownerGeography: s.ownerGeography,
   }));
 
+  // ── Exemption-anomaly overlay (D-exempt): occupancy-premised exemptions still
+  //    attached to a vacant parcel — RECORD ANOMALIES warranting official review
+  //    (never fraud/intent/wrongdoing). Two universes kept strictly separate:
+  //    land (class-1xx vacant land + COLS inventory = impossible-on-its-face)
+  //    vs building (311-matched vacant buildings = plausible-but-stale). Public
+  //    JSON carries AGGREGATES ONLY; parcel rows go to the private referral
+  //    packet. `null` when parcel_exemptions was absent on the branch. ──
+  let exemptionAnomalies: ExemptionAnomalies | null = null;
+  const referralRows: ExemptionReferralRow[] = [];
+  if (exemptions !== null) {
+    const { byPin: exemptionsByPin, taxYear: exemptionTaxYear } = exemptions;
+    // Class lookup (land vs building) from the ZIP parcel index; empty when the
+    // parcels index was absent (universe then falls back to membership).
+    const classByPin = new Map<string, string>();
+    for (const p of parcelIndex ?? []) if (p.pin && p.classCode) classByPin.set(p.pin, p.classCode);
+    // Address lookup: assessor vacant-land parcel address first, then the
+    // tracked row's raw address (COLS + address-matched 311). NO owner names.
+    const addressByPin = new Map<string, string | null>();
+    for (const p of parcels ?? []) {
+      const pin = toDigitsOnlyPin(p.pin);
+      if (pin.length === 14 && !addressByPin.has(pin)) addressByPin.set(pin, p.address ?? null);
+    }
+    for (const s of sites) {
+      if (s.pin && !addressByPin.has(s.pin)) addressByPin.set(s.pin, s.rawAddress);
+    }
+    // Universe resolution: class wins when present (1xx→land, 2xx→building),
+    // else the caller's membership fallback (assessor/COLS land, 311 building).
+    const universeFor = (pin: string, fallback: ExemptionUniverse): ExemptionUniverse => {
+      const cls = classByPin.get(pin);
+      if (cls) {
+        if (cls.startsWith("1")) return "land";
+        if (cls.startsWith("2")) return "building";
+      }
+      return fallback;
+    };
+
+    const candidates: ExemptionAnomalyParcel[] = [];
+    const seen = new Set<string>();
+    const addCandidate = (pin: string | null, fallback: ExemptionUniverse) => {
+      if (!pin || pin.length !== 14 || seen.has(pin)) return;
+      seen.add(pin);
+      const e = exemptionsByPin.get(pin);
+      if (!e) return; // no exemption row for this PIN
+      const universe = universeFor(pin, fallback);
+      const latestTransferDate = latestTransferByPin ? latestTransferByPin.get(pin) ?? null : null;
+      candidates.push({ pin, universe, exemptions: e, latestTransferDate });
+      if (hasOccupancyExemption(e)) {
+        referralRows.push({
+          pin,
+          address: addressByPin.get(pin) ?? null,
+          classCode: classByPin.get(pin) ?? null,
+          universe,
+          exemptions: { ...e },
+          taxYear: exemptionTaxYear,
+          latestTransferDate,
+        });
+      }
+    };
+
+    // Land candidates: assessor vacant-land parcels (class-1xx) ∪ COLS City land
+    // inventory PINs. Building candidates: address-matched 311 vacant buildings.
+    for (const pin of assessorVacantPins) addCandidate(pin, "land");
+    for (const pin of inventoryPins) addCandidate(pin, "land");
+    for (const s of sites) {
+      if (s.pin && s.pinMatch === "address_matched" && s.propertyType === "vacant_building") {
+        addCandidate(s.pin, "building");
+      }
+    }
+
+    // Deterministic order for the private packet (pin-asc).
+    referralRows.sort((a, b) => (a.pin < b.pin ? -1 : a.pin > b.pin ? 1 : 0));
+    exemptionAnomalies = deriveExemptionAnomalies(candidates, exemptionTaxYear);
+  }
+
   const edition: VacancyIndexEdition = {
     zip,
     neighborhood: entry.primaryNeighborhood,
@@ -1310,6 +1498,7 @@ function buildEdition(
       },
     },
     distress,
+    exemptionAnomalies,
     sitePoints,
     sitePointsTruncated,
     siteIndex,
@@ -1327,7 +1516,7 @@ function buildEdition(
     anchors,
   };
 
-  return { edition, directoryRows, excludedNoAddressCount };
+  return { edition, directoryRows, excludedNoAddressCount, referralRows };
 }
 
 // ── Comparison matrix (recomputed over the merged edition set) ──
@@ -1411,6 +1600,30 @@ function assertAnonymized(serialized: string): void {
   }
 }
 
+/** The private referral packet is admin-gated, but it must STILL carry no owner
+ * identity — the reviewing office pulls the parcel itself. Assert the absence of
+ * any owner-name / mailing / taxpayer substring before writing (exit 1 on any
+ * hit), mirroring the public anonymization assert. */
+const REFERRAL_FORBIDDEN_SUBSTRINGS = [
+  "ownerName",
+  "owner_name",
+  "ownerMailingAddress",
+  "owner_mailing_address",
+  "taxpayer",
+];
+
+function assertReferralAnonymized(serialized: string): void {
+  const found = REFERRAL_FORBIDDEN_SUBSTRINGS.filter((needle) => serialized.includes(needle));
+  if (found.length > 0) {
+    console.error("\n════════════════════════════════════════════════════════════════");
+    console.error("REFERRAL ANONYMIZATION FAILURE — refusing to write data/private/exemption-anomalies.json");
+    console.error(`Serialized JSON contains owner-identifying key(s): ${found.join(", ")}`);
+    console.error("The referral packet must carry PIN/address/exemption detail only — never owner identity.");
+    console.error("════════════════════════════════════════════════════════════════\n");
+    process.exit(1);
+  }
+}
+
 // ── Main ──
 
 const sql = neon(DATABASE_URL);
@@ -1488,6 +1701,16 @@ async function main() {
       `  ·  vacant-building violations: ${violationAddressSet === null ? "unavailable (pending)" : `${violationAddressSet.size} addresses`}`,
   );
 
+  // Exemption-anomaly overlay inputs: parcel_exemptions (PTAXSIM) + the latest
+  // transfer per PIN (MyDec). Both degrade to null when their table is absent.
+  console.log("\nLoading exemption-anomaly overlay (PTAXSIM exemptions + MyDec transfers)...");
+  const exemptions = await fetchExemptionsByPin(sql);
+  const latestTransferByPin = await fetchLatestTransferByPin(sql);
+  console.log(
+    `  exemptions: ${exemptions === null ? "unavailable (pending)" : `${exemptions.byPin.size} PINs at tax year ${exemptions.taxYear}`}` +
+      `  ·  transfers: ${latestTransferByPin === null ? "unavailable (pending)" : `${latestTransferByPin.size} PINs`}`,
+  );
+
   // One timestamp for this run — shared by the main export and every per-ZIP
   // directory file written below, so they agree on generatedAt.
   const generatedAt = new Date().toISOString();
@@ -1497,6 +1720,9 @@ async function main() {
   console.log("\nBuilding editions...");
   mkdirSync(DIRECTORY_DIR, { recursive: true });
   const builtEditions: Record<string, VacancyIndexEdition> = {};
+  // Accumulated per-ZIP private referral rows for this run (merge-not-clobber
+  // into the existing packet below).
+  const referralByZip: Record<string, ExemptionReferralRow[]> = {};
   for (const zip of requestedZips) {
     const rows = rowsByZip.get(zip) ?? [];
     const geo = geoByZip.get(zip);
@@ -1506,7 +1732,7 @@ async function main() {
     const transport = geo ? clipTransportForEdition(transportFeatures, geo.bbox) : [];
     const editionEntry = PILOT_ZIPS.find((e) => e.zip === zip);
     const anchors = editionEntry ? anchorsForEdition(editionEntry, anchorsByCa) : null;
-    const { edition, directoryRows, excludedNoAddressCount } = buildEdition(
+    const { edition, directoryRows, excludedNoAddressCount, referralRows } = buildEdition(
       zip,
       rows,
       parcels,
@@ -1517,8 +1743,11 @@ async function main() {
       violationAddressSet,
       corridorPolygons,
       anchors,
+      exemptions,
+      latestTransferByPin,
     );
     builtEditions[zip] = edition;
+    referralByZip[zip] = referralRows;
 
     // Write the per-ZIP site directory file (anonymized like the main export;
     // the same hard assert runs on it before write).
@@ -1559,6 +1788,15 @@ async function main() {
     console.log(
       `    directory: ${directoryRows.length} addresses written to vacancy-directory/${zip}.json` +
         `${excludedNoAddressCount > 0 ? ` (${excludedNoAddressCount} rows omitted for no usable address)` : ""}`,
+    );
+    const ea = edition.exemptionAnomalies;
+    console.log(
+      ea === null
+        ? `    exemptions: parcel_exemptions unavailable (pending)`
+        : `    exemptions (TY ${ea.taxYear}): land-impossible ${ea.landImpossible.any} (${ea.landImpossible.senior} senior, ${ea.landImpossible.noTransfer10y} no-transfer≥10y), ` +
+            `building-stale ${ea.buildingStale.any} (${ea.buildingStale.senior} senior), ` +
+            `land EAV ~${ea.exemptEavLandTotal === null ? "n/a" : ea.exemptEavLandTotal.toLocaleString("en-US")}, ` +
+            `${referralRows.length} referral rows`,
     );
     console.log(
       `    spatial: ${edition.clusters.length} clusters` +
@@ -1610,6 +1848,41 @@ async function main() {
   console.log(`\nWrote ${OUT_PATH}`);
   console.log(`  editions in file: ${Object.keys(editions).sort().join(", ")}`);
   console.log(`  matrix rows: ${out.matrix.length}`);
+
+  // ── Private referral packet (data/private/, NEVER public/) ────────────────
+  // Only written when the exemption overlay actually ran on this branch —
+  // otherwise the existing packet is left untouched (degrade, never clobber a
+  // good packet with empty arrays). Merge-not-clobber on --zips= like OUT_PATH.
+  if (exemptions !== null) {
+    let existingReferral: ExemptionReferralFile | null = null;
+    if (existsSync(REFERRAL_PATH)) {
+      try {
+        existingReferral = JSON.parse(readFileSync(REFERRAL_PATH, "utf8")) as ExemptionReferralFile;
+      } catch {
+        console.warn("  existing exemption-anomalies.json is unparseable — starting fresh");
+        existingReferral = null;
+      }
+    }
+    const mergedByZip: Record<string, ExemptionReferralRow[]> = {
+      ...(existingReferral?.byZip ?? {}),
+      ...referralByZip,
+    };
+    const referralFile: ExemptionReferralFile = {
+      generatedAt,
+      taxYear: exemptions.taxYear,
+      byZip: mergedByZip,
+    };
+    const referralSerialized = JSON.stringify(referralFile, null, 2) + "\n";
+    assertReferralAnonymized(referralSerialized);
+    mkdirSync(dirname(REFERRAL_PATH), { recursive: true });
+    writeFileSync(REFERRAL_PATH, referralSerialized);
+    const totalReferral = Object.values(mergedByZip).reduce((n, arr) => n + arr.length, 0);
+    console.log(`\nWrote ${REFERRAL_PATH} (PRIVATE — never public/)`);
+    console.log(`  ZIPs in packet: ${Object.keys(mergedByZip).sort().join(", ")}`);
+    console.log(`  referral rows (all ZIPs): ${totalReferral}`);
+  } else {
+    console.log("\nExemption overlay unavailable on this branch — private referral packet left untouched.");
+  }
 }
 
 main().catch((err) => {

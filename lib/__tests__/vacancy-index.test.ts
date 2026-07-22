@@ -15,7 +15,12 @@ import {
   computeSitePriority,
   corridorRefsIntersectingBbox,
   countAddressesInSet,
+  deriveExemptionAnomalies,
   deriveLandUniverse,
+  hasOccupancyExemption,
+  isSeniorExemption,
+  noTransferInDecade,
+  totalExemptionEav,
   editionGeographyNote,
   getVacancyIndexEdition,
   haversineMeters,
@@ -40,6 +45,8 @@ import {
   type ClusterInputSite,
   type CorridorPolygon,
   type DirectoryInputSite,
+  type ExemptionAnomalyParcel,
+  type ExemptionEavs,
   type RankableSite,
   type VacancyDirectoryFile,
   type VacancyDirectoryRow,
@@ -773,6 +780,82 @@ describe("countAddressesInSet", () => {
   });
 });
 
+describe("exemption-anomaly classifiers (pure)", () => {
+  const zero: ExemptionEavs = { homeowner: 0, senior: 0, freeze: 0, disabled: 0, vet: 0, longtime: 0 };
+
+  it("hasOccupancyExemption is true iff any of the six EAVs is > 0", () => {
+    expect(hasOccupancyExemption(zero)).toBe(false);
+    expect(hasOccupancyExemption({ ...zero, homeowner: 1 })).toBe(true);
+    expect(hasOccupancyExemption({ ...zero, longtime: 500 })).toBe(true);
+    expect(hasOccupancyExemption({ ...zero, vet: 2500 })).toBe(true);
+  });
+
+  it("isSeniorExemption is true only for senior OR senior-freeze", () => {
+    expect(isSeniorExemption(zero)).toBe(false);
+    expect(isSeniorExemption({ ...zero, senior: 8000 })).toBe(true);
+    expect(isSeniorExemption({ ...zero, freeze: 12000 })).toBe(true);
+    // homeowner alone is an anomaly but NOT a senior anomaly
+    expect(isSeniorExemption({ ...zero, homeowner: 10000 })).toBe(false);
+  });
+
+  it("totalExemptionEav sums all six", () => {
+    expect(totalExemptionEav({ homeowner: 1, senior: 2, freeze: 3, disabled: 4, vet: 5, longtime: 6 })).toBe(21);
+  });
+
+  it("noTransferInDecade: null date, unparseable, or older than taxYear-10 all count", () => {
+    expect(noTransferInDecade(null, 2024)).toBe(true);
+    expect(noTransferInDecade("", 2024)).toBe(true);
+    expect(noTransferInDecade("2013-06-01", 2024)).toBe(true); // 2013 < 2014
+    expect(noTransferInDecade("2014-01-01", 2024)).toBe(false); // 2014 is NOT < 2014
+    expect(noTransferInDecade("2020-12-31", 2024)).toBe(false);
+  });
+});
+
+describe("deriveExemptionAnomalies", () => {
+  const zero: ExemptionEavs = { homeowner: 0, senior: 0, freeze: 0, disabled: 0, vet: 0, longtime: 0 };
+  function parcel(over: Partial<ExemptionAnomalyParcel> & { pin: string; universe: "land" | "building" }): ExemptionAnomalyParcel {
+    return { exemptions: zero, latestTransferDate: null, ...over };
+  }
+
+  it("keeps the two universes strictly separate and ignores non-anomalies", () => {
+    const out = deriveExemptionAnomalies(
+      [
+        // land anomaly, senior + no transfer (null date)
+        parcel({ pin: "1".repeat(14), universe: "land", exemptions: { ...zero, senior: 8000 } }),
+        // land anomaly, homeowner only, recent transfer
+        parcel({ pin: "2".repeat(14), universe: "land", exemptions: { ...zero, homeowner: 7000 }, latestTransferDate: "2022-01-01" }),
+        // building anomaly, freeze (senior), old transfer
+        parcel({ pin: "3".repeat(14), universe: "building", exemptions: { ...zero, freeze: 5000 }, latestTransferDate: "2011-05-05" }),
+        // NOT an anomaly (all zero) — ignored
+        parcel({ pin: "4".repeat(14), universe: "land" }),
+      ],
+      2024,
+    );
+    expect(out.taxYear).toBe(2024);
+    expect(out.landImpossible).toEqual({ any: 2, senior: 1, noTransfer10y: 1 });
+    expect(out.buildingStale).toEqual({ any: 1, senior: 1, noTransfer10y: 1 });
+    // land EAV total = 8000 + 7000 (building 5000 excluded)
+    expect(out.exemptEavLandTotal).toBe(15000);
+  });
+
+  it("returns null exemptEavLandTotal when there is no land anomaly", () => {
+    const out = deriveExemptionAnomalies(
+      [parcel({ pin: "3".repeat(14), universe: "building", exemptions: { ...zero, homeowner: 9000 } })],
+      2024,
+    );
+    expect(out.landImpossible).toEqual({ any: 0, senior: 0, noTransfer10y: 0 });
+    expect(out.buildingStale.any).toBe(1);
+    expect(out.exemptEavLandTotal).toBeNull();
+  });
+
+  it("empty input yields honest zeros and a null land EAV", () => {
+    const out = deriveExemptionAnomalies([], 2024);
+    expect(out.landImpossible).toEqual({ any: 0, senior: 0, noTransfer10y: 0 });
+    expect(out.buildingStale).toEqual({ any: 0, senior: 0, noTransfer10y: 0 });
+    expect(out.exemptEavLandTotal).toBeNull();
+  });
+});
+
 describe("printed-copy constants", () => {
   it("MATRIX_METHOD_NOTE states the quintiles-are-not-grades caveat", () => {
     expect(MATRIX_METHOD_NOTE).toContain("quintiles");
@@ -1361,6 +1444,15 @@ const ALLOWED_KEYS = new Set<string>([
   "taxSaleExposedCount",
   "latestTaxSaleYear",
   "violationMatchCount",
+  // exemption anomalies (public aggregates — counts only, no pins)
+  "exemptionAnomalies",
+  "taxYear",
+  "landImpossible",
+  "buildingStale",
+  "exemptEavLandTotal",
+  "any",
+  "senior",
+  "noTransfer10y",
   // site point / site index row / land point
   "lat",
   "lon",
@@ -1421,6 +1513,13 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
     ? require("../../public/data/vacancy-index.json") // eslint-disable-line @typescript-eslint/no-require-imports
     : null;
   const data = raw as VacancyIndexExport;
+
+  // Presence gate for the exemption-anomaly overlay — the committed file predates
+  // it, so these assertions stay skipped (EXPECTED-RED / pending) until the
+  // orchestrator re-exports with the parcel_exemptions overlay populated.
+  const HAS_EXEMPTION_ANOMALIES =
+    EXPORT_EXISTS &&
+    PILOT_ZIP_KEYS.some((z) => data?.editions?.[z]?.exemptionAnomalies != null);
 
   it("loads via the static loader and exposes every pilot edition", () => {
     const loaded = loadVacancyIndex();
@@ -1517,6 +1616,35 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
       }
     }
   });
+
+  // EXPECTED-RED (pending) until the exemption-anomaly overlay is exported — the
+  // committed file predates exemptionAnomalies. Guards the public aggregate shape:
+  // counts only, two separate universes, subsets bounded by `any`, NO pins.
+  it.skipIf(!HAS_EXEMPTION_ANOMALIES)(
+    "carries well-formed exemptionAnomalies aggregates (counts only, no pins, subsets ⊆ any)",
+    () => {
+      const validSplit = (s: { any: number; senior: number; noTransfer10y: number }, label: string) => {
+        for (const k of ["any", "senior", "noTransfer10y"] as const) {
+          expect(Number.isInteger(s[k]) && s[k] >= 0, `${label}.${k} nonneg int`).toBe(true);
+        }
+        expect(s.senior, `${label} senior ⊆ any`).toBeLessThanOrEqual(s.any);
+        expect(s.noTransfer10y, `${label} noTransfer10y ⊆ any`).toBeLessThanOrEqual(s.any);
+      };
+      for (const zip of PILOT_ZIP_KEYS) {
+        const ea = data.editions[zip]?.exemptionAnomalies;
+        if (ea == null) continue; // per-edition null is allowed (table absent)
+        expect(Number.isInteger(ea.taxYear) && ea.taxYear > 2000, `${zip} taxYear`).toBe(true);
+        validSplit(ea.landImpossible, `${zip} landImpossible`);
+        validSplit(ea.buildingStale, `${zip} buildingStale`);
+        expect(
+          ea.exemptEavLandTotal === null || ea.exemptEavLandTotal >= 0,
+          `${zip} exemptEavLandTotal`,
+        ).toBe(true);
+        // No pins ever leak into the public aggregate object.
+        expect(JSON.stringify(ea).includes('"pin"')).toBe(false);
+      }
+    },
+  );
 
   // EXPECTED-RED until the export re-runs with the enriched land-point payload
   // (the committed file predates the address/pin/squareFeet/ownerConfidence
