@@ -1,5 +1,6 @@
 import { jsPDF, GState } from "jspdf";
 import { createSanitizedDoc, sanitizeForPdf } from "./pdf-report";
+import { cookViewerUrl } from "./cook-viewer";
 import {
   OWNER_TYPE_COLORS,
   OWNER_TYPE_LABELS,
@@ -76,6 +77,10 @@ export interface VacancyIndexTopSite {
   sqft: number | null;
   priority: VacancyPriorityTier;
   nextStep: string;
+  /** Digits-only 14-digit parcel PIN when this site carries one (COLS rows do;
+   *  311 rows do not -> null). Threaded through by the adapter from the aligned
+   *  sitePoint so the site-index ADDRESS cell can link out to CookViewer. */
+  pin?: string | null;
 }
 
 export interface VacancyIndexInput {
@@ -166,6 +171,12 @@ const PRIORITY_RUBRIC_NOTE =
 
 const OWNER_CLASSIFICATION_NOTE =
   "Owner type is inferred from public taxpayer-of-record patterns and is anonymized: no owner names or mailing addresses appear in this document. Records indicate — verify before relying.";
+
+// One link per address cell (CookViewer); the Clerk's recordings search is
+// referenced in copy only — the Explorer links out and never implies it
+// performed a title search.
+const COOKVIEWER_NOTE =
+  "Addresses link to CookViewer, Cook County's official parcel record; deed and ownership history is available from the Cook County Clerk's recordings search by PIN.";
 
 /* ── Owner-type abbreviations for the tight site-index column ── */
 const OWNER_TYPE_ABBR: Record<OwnerType, string> = {
@@ -1269,7 +1280,14 @@ function drawSiteIndex(doc: jsPDF, input: VacancyIndexInput) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     setColor(doc, INK);
-    fit(doc, site.address, 45, 2).forEach((line, li) => doc.text(line, cAddr, y + li * 3.2));
+    // Same visual, now clickable: link the ADDRESS cell to CookViewer (the
+    // official parcel record) when a real 14-digit PIN resolves. 311 rows carry
+    // no PIN, so their address stays plain text.
+    const addrUrl = cookViewerUrl(site.pin);
+    fit(doc, site.address, 45, 2).forEach((line, li) => {
+      if (addrUrl) doc.textWithLink(line, cAddr, y + li * 3.2, { url: addrUrl });
+      else doc.text(line, cAddr, y + li * 3.2);
+    });
 
     // Owner: 2mm dot + abbreviation.
     fillCircle(doc, cOwner + 0.9, y - 0.9, 0.9, OWNER_TYPE_COLORS[ot]);
@@ -1341,6 +1359,15 @@ function drawMethodology(doc: jsPDF, input: VacancyIndexInput, top: number) {
     doc.text(line, MARGIN, y);
     y += 3;
   });
+  // Only claim the CookViewer link exists when at least one site-index row
+  // actually resolved a linkable PIN.
+  if (input.topSites.some((s) => cookViewerUrl(s.pin) != null)) {
+    y += 1;
+    fit(doc, COOKVIEWER_NOTE, CONTENT_W, 2).forEach((line) => {
+      doc.text(line, MARGIN, y);
+      y += 3;
+    });
+  }
   if (input.rawOwnerComparisonNote) {
     y += 1;
     fit(doc, input.rawOwnerComparisonNote, CONTENT_W, 2).forEach((line) => {

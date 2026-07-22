@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import type { OwnerFile } from "./owner-file";
+import { clerkRecordsUrl, cookViewerUrl } from "./cook-viewer";
 
 /**
  * Owner File dossier PDF — the two-tier jsPDF builder convention from
@@ -214,6 +215,49 @@ function _buildOwnerFileDossierPdf(ownerFile: OwnerFile): { doc: jsPDF; slug: st
   y = fieldRow(doc, y, "Parcel / vacant-parcel footprint", `${cluster.parcelCount} parcels, ${cluster.vacantParcelCount} carrying a vacancy signal`);
   y = fieldRow(doc, y, `PINs on file (${cluster.pins.length})`, cluster.pins.length > 0 ? cluster.pins.join(", ") : "Not available in this snapshot");
   y = fieldRow(doc, y, "Sample addresses", cluster.sampleAddresses.length > 0 ? cluster.sampleAddresses.join("; ") : "Not available");
+
+  // Per-parcel record links — paired official destinations: CookViewer (the
+  // parcel record) and the Cook County Clerk recordings search (recorded deeds,
+  // grantors, grantees, liens, releases). Each PIN that normalizes to 14 digits
+  // gets both links side by side (plain text is ASCII-only; jsPDF's standard
+  // fonts don't carry an arrow glyph). Links only — no scraped owners, no
+  // implied title search.
+  const cookViewerPins = cluster.pins.filter((pin) => cookViewerUrl(pin) != null);
+  if (cookViewerPins.length > 0) {
+    y = checkPage(doc, y, 10);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    setColor(doc, LIGHT_GRAY);
+    doc.text("PROPERTY & OWNERSHIP RECORDS (COOKVIEWER PARCEL RECORD / CLERK RECORDED DEEDS)", MARGIN, y);
+    y += 4.5;
+    doc.setFontSize(8.5);
+    const shownPins = cookViewerPins.slice(0, 12);
+    for (const pin of shownPins) {
+      const viewerUrl = cookViewerUrl(pin)!;
+      const clerkUrl = clerkRecordsUrl(pin)!;
+      y = checkPage(doc, y, 5);
+      const viewerLabel = `${pin} — CookViewer`;
+      setColor(doc, BLUE);
+      doc.textWithLink(viewerLabel, MARGIN, y, { url: viewerUrl });
+      const sepX = MARGIN + doc.getTextWidth(viewerLabel);
+      setColor(doc, MEDIUM_GRAY);
+      doc.text(" | ", sepX, y);
+      setColor(doc, BLUE);
+      doc.textWithLink("Clerk records", sepX + doc.getTextWidth(" | "), y, { url: clerkUrl });
+      y += 4.5;
+    }
+    if (cookViewerPins.length > shownPins.length) {
+      y = checkPage(doc, y, 5);
+      doc.setFontSize(7.5);
+      setColor(doc, MEDIUM_GRAY);
+      doc.text(
+        `+${cookViewerPins.length - shownPins.length} more PIN(s) verifiable in CookViewer and the Clerk's recordings search — see the PINs-on-file list above.`,
+        MARGIN,
+        y,
+      );
+      y += 4.5;
+    }
+  }
   y += 4;
 
   /* ── Distress signals ── */

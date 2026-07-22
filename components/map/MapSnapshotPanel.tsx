@@ -7,6 +7,7 @@ import type { ProgramCheckResult } from "@/lib/types";
 import type { TifFinanceContext } from "@/lib/tif-finance";
 import type { LocationContextMapSummary } from "@/lib/location-context";
 import { formatMiles } from "@/lib/transport-access";
+import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
 
 interface MapSnapshotPanelProps {
@@ -330,6 +331,44 @@ export default function MapSnapshotPanel({
                 {areaStats.parcelTaxCode && <span>Tax Code {areaStats.parcelTaxCode}</span>}
                 {areaStats.parcelTownship && <span>{areaStats.parcelTownship}</span>}
                 {areaStats.parcelType && <span>{areaStats.parcelType}</span>}
+              </div>
+            )}
+            {/* Property & ownership records — paired official destinations:
+                CookViewer (parcel record) + Cook County Clerk (recorded deeds).
+                Links only — the Explorer never scrapes or displays owners and
+                never implies it performed a title search. */}
+            {cookViewerUrl(areaStats.parcelPin) && (
+              <div className="mt-2">
+                <div className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/35">
+                  Property &amp; ownership records
+                </div>
+                <div className="mt-1">
+                  <a
+                    href={cookViewerUrl(areaStats.parcelPin)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-[#2563EB] hover:underline"
+                  >
+                    View parcel &amp; ownership details in CookViewer ↗
+                  </a>
+                  <div className="text-[9px] text-[#0C1B33]/40 mt-0.5">
+                    Opens Cook County&rsquo;s official parcel record in a new tab.
+                  </div>
+                </div>
+                <div className="mt-1.5">
+                  <a
+                    href={clerkRecordsUrl(areaStats.parcelPin)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-[#2563EB] hover:underline"
+                  >
+                    View deeds and ownership history at the Cook County Clerk ↗
+                  </a>
+                  <div className="text-[9px] text-[#0C1B33]/40 mt-0.5">
+                    Review recorded deeds, grantors, grantees, liens, releases, and other documents
+                    associated with this parcel.
+                  </div>
+                </div>
               </div>
             )}
           </div>
