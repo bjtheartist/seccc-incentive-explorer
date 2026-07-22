@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cookViewerUrl, normalizePin14 } from "../cook-viewer";
+import { clerkRecordsUrl, cookViewerUrl, normalizePin14 } from "../cook-viewer";
 
 describe("normalizePin14", () => {
   it("returns a digits-only 14-digit PIN unchanged", () => {
@@ -68,5 +68,38 @@ describe("cookViewerUrl", () => {
     expect(cookViewerUrl(20363230080000)).toBeNull();
     expect(cookViewerUrl(null)).toBeNull();
     expect(cookViewerUrl(undefined)).toBeNull();
+  });
+});
+
+describe("clerkRecordsUrl", () => {
+  it("builds the id1 recordings-search deep-link for a digits-only PIN", () => {
+    expect(clerkRecordsUrl("21322110390000")).toBe(
+      "https://crs.cookcountyclerkil.gov/Search/ResultByPin?id1=21322110390000",
+    );
+  });
+
+  it("builds the deep-link from a dashed PIN (normalized to digits)", () => {
+    expect(clerkRecordsUrl("21-32-211-039-0000")).toBe(
+      "https://crs.cookcountyclerkil.gov/Search/ResultByPin?id1=21322110390000",
+    );
+  });
+
+  it("strips whitespace like the shared normalizer", () => {
+    expect(clerkRecordsUrl("  20-36-323-008-0000 ")).toBe(
+      "https://crs.cookcountyclerkil.gov/Search/ResultByPin?id1=20363230080000",
+    );
+  });
+
+  it("returns null for an invalid-length PIN", () => {
+    expect(clerkRecordsUrl("2036323008000")).toBeNull();
+    expect(clerkRecordsUrl("203632300800000")).toBeNull();
+  });
+
+  it("returns null for garbage, number, and nullish input", () => {
+    expect(clerkRecordsUrl("not-a-pin")).toBeNull();
+    expect(clerkRecordsUrl(20363230080000)).toBeNull();
+    expect(clerkRecordsUrl(null)).toBeNull();
+    expect(clerkRecordsUrl(undefined)).toBeNull();
+    expect(clerkRecordsUrl({})).toBeNull();
   });
 });

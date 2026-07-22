@@ -38,7 +38,7 @@ import { trackEvent } from "@/lib/analytics-events";
 // no fs — value-importing lib/vacancy-index here would drag its node:fs loader
 // into the client bundle (the leak that broke the build before).
 import { zoningGloss } from "@/lib/vacancy-zoning";
-import { cookViewerUrl } from "@/lib/cook-viewer";
+import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import {
   PORTFOLIO_LABELS,
   portfolioForSite,
@@ -331,12 +331,20 @@ function buildSiteCardHtml(d: CardData, zip: string, asOf: string | null): strin
   actionParts.push(
     `<a href="/admin/owner-files/${encodeURIComponent(zip)}" data-vac-action="owner-files" style="${btnStyle}">Owner Files →</a>`,
   );
-  // CookViewer — official ownership-verification destination (only when a real
-  // 14-digit PIN resolves; 311 rows carry no PIN so the link is simply omitted).
+  // Paired official record destinations (only when a real 14-digit PIN
+  // resolves; 311 rows carry no PIN so both links are simply omitted).
+  // CookViewer = the parcel record; Clerk = recorded deeds/ownership history.
+  // Links only — the Explorer never scrapes owners or implies a title search.
   const cookViewer = cookViewerUrl(d.pin);
+  const clerkRecords = clerkRecordsUrl(d.pin);
   if (cookViewer) {
     actionParts.push(
       `<a href="${escapeHtml(cookViewer)}" target="_blank" rel="noopener noreferrer" title="Opens Cook County's official parcel record in a new tab." style="${btnStyle}">CookViewer ↗</a>`,
+    );
+  }
+  if (clerkRecords) {
+    actionParts.push(
+      `<a href="${escapeHtml(clerkRecords)}" target="_blank" rel="noopener noreferrer" title="Review recorded deeds, grantors, grantees, liens, releases, and other documents associated with this parcel." style="${btnStyle}">Clerk ↗</a>`,
     );
   }
   const actions = `<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:6px">${actionParts.join("")}</div>`;

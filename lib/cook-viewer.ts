@@ -44,3 +44,26 @@ export function cookViewerUrl(pin: unknown): string | null {
   if (pin14 === null) return null;
   return `${COOK_VIEWER_BASE}?pin14=${encodeURIComponent(pin14)}`;
 }
+
+const CLERK_RECORDS_BASE = "https://crs.cookcountyclerkil.gov/Search/ResultByPin";
+
+/**
+ * Build the Cook County Clerk recordings-search deep-link for a parcel PIN —
+ * the parcel's recorded-documents list (deeds, grantors, grantees, liens,
+ * releases) — or `null` when the PIN is not a valid 14-digit string (see
+ * {@link normalizePin14}). Same rules as {@link cookViewerUrl}: string-only,
+ * NEVER a number, always built from a PIN and never from an address.
+ *
+ * Verified live in a real browser:
+ *   ?id1=21322110390000 -> PIN + address + recorded-document table.
+ *
+ * Governance: the Explorer only LINKS to the Clerk's search — it never scrapes
+ * or auto-displays owners, and never implies it performed a title search. Any
+ * future copy referencing what the Clerk shows must say "latest recorded
+ * grantee", never a title determination.
+ */
+export function clerkRecordsUrl(pin: unknown): string | null {
+  const pin14 = normalizePin14(pin);
+  if (pin14 === null) return null;
+  return `${CLERK_RECORDS_BASE}?id1=${encodeURIComponent(pin14)}`;
+}

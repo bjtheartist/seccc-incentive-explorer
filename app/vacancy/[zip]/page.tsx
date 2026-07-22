@@ -20,7 +20,7 @@ import {
   loadVacancyIndex,
 } from "@/lib/vacancy-index";
 import { buildVacancyIndexPdfInput } from "@/lib/vacancy-index-adapter";
-import { cookViewerUrl } from "@/lib/cook-viewer";
+import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import {
   OWNER_TYPE_COLORS,
   OWNER_TYPE_LABELS,
@@ -1013,15 +1013,27 @@ export default async function VacancyReportPage({
                       </td>
                       <td className="px-3 py-2.5 whitespace-nowrap">
                         {cookViewer ? (
-                          <a
-                            href={cookViewer}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title="Opens Cook County's official parcel record in a new tab."
-                            className="font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#2563EB] hover:underline"
-                          >
-                            CookViewer ↗
-                          </a>
+                          <span className="font-mono-bureau text-[10px] uppercase tracking-[0.06em]">
+                            <a
+                              href={cookViewer}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Opens Cook County's official parcel record in a new tab."
+                              className="text-[#2563EB] hover:underline"
+                            >
+                              CookViewer ↗
+                            </a>
+                            <span className="text-[#0C1B33]/30"> · </span>
+                            <a
+                              href={clerkRecordsUrl(sitePoint?.pin)!}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Review recorded deeds, grantors, grantees, liens, releases, and other documents associated with this parcel."
+                              className="text-[#2563EB] hover:underline"
+                            >
+                              Clerk ↗
+                            </a>
+                          </span>
                         ) : (
                           <span className="font-mono-bureau text-[10px] text-[#0C1B33]/30">—</span>
                         )}

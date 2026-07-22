@@ -14,7 +14,7 @@ import { OwnerFileViewTracker } from "@/components/owner-file/OwnerFileViewTrack
 import { OwnerFileVerificationForm } from "@/components/owner-file/OwnerFileVerificationForm";
 import { OwnerFileDossierButton } from "@/components/owner-file/OwnerFileDossierButton";
 import { OutreachLog } from "@/components/owner-file/OutreachLog";
-import { cookViewerUrl } from "@/lib/cook-viewer";
+import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 
 export const dynamic = "force-dynamic";
 
@@ -186,31 +186,48 @@ export default async function OwnerFileDetailPage({ params }: { params: Params }
               detail={cluster.sampleAddresses.length > 2 ? `+${cluster.sampleAddresses.length - 2} more sampled` : "All sampled addresses shown."}
             />
           </div>
-          {/* Per-parcel CookViewer links — Cook County's official parcel record
-              is the ownership-verification destination (no owner names leave the
-              admin surface). Only PINs that normalize to 14 digits are linked. */}
+          {/* Per-parcel record links — paired official destinations: CookViewer
+              (parcel record) + Cook County Clerk (recorded deeds). Links only —
+              no owner names leave the admin surface, no scraping, and no implied
+              title search. Only PINs that normalize to 14 digits are linked. */}
           {cluster.pins.some((pin) => cookViewerUrl(pin)) && (
             <div className="mt-4 border border-[#0C1B33]/10 bg-white p-4">
               <p className="font-mono-bureau text-[9px] uppercase tracking-[0.18em] text-[#0C1B33]/40">
-                Verify in CookViewer
+                Property &amp; ownership records
               </p>
               <p className="mt-1 text-[11px] leading-relaxed text-[#0C1B33]/45">
-                Opens Cook County&rsquo;s official parcel record for each PIN in a new tab.
+                CookViewer opens Cook County&rsquo;s official parcel record; Clerk opens the
+                County&rsquo;s recorded deeds, grantors, grantees, liens, and releases for the PIN.
+                Each opens in a new tab.
               </p>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5">
+              <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5">
                 {cluster.pins.map((pin) => {
                   const url = cookViewerUrl(pin);
-                  if (!url) return null;
+                  const clerkUrl = clerkRecordsUrl(pin);
+                  if (!url || !clerkUrl) return null;
                   return (
-                    <a
-                      key={pin}
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-mono-bureau text-[11px] text-[#2563EB] hover:underline"
-                    >
-                      {pin} ↗
-                    </a>
+                    <span key={pin} className="font-mono-bureau text-[11px] text-[#0C1B33]/70">
+                      {pin}{" "}
+                      <a
+                        href={url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Opens Cook County's official parcel record in a new tab."
+                        className="text-[#2563EB] hover:underline"
+                      >
+                        CookViewer ↗
+                      </a>
+                      <span className="text-[#0C1B33]/30"> · </span>
+                      <a
+                        href={clerkUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="Review recorded deeds, grantors, grantees, liens, releases, and other documents associated with this parcel."
+                        className="text-[#2563EB] hover:underline"
+                      >
+                        Clerk ↗
+                      </a>
+                    </span>
                   );
                 })}
               </div>

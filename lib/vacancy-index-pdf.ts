@@ -172,8 +172,11 @@ const PRIORITY_RUBRIC_NOTE =
 const OWNER_CLASSIFICATION_NOTE =
   "Owner type is inferred from public taxpayer-of-record patterns and is anonymized: no owner names or mailing addresses appear in this document. Records indicate — verify before relying.";
 
+// One link per address cell (CookViewer); the Clerk's recordings search is
+// referenced in copy only — the Explorer links out and never implies it
+// performed a title search.
 const COOKVIEWER_NOTE =
-  "Addresses link to CookViewer, Cook County's official parcel record, for ownership verification.";
+  "Addresses link to CookViewer, Cook County's official parcel record; deed and ownership history is available from the Cook County Clerk's recordings search by PIN.";
 
 /* ── Owner-type abbreviations for the tight site-index column ── */
 const OWNER_TYPE_ABBR: Record<OwnerType, string> = {
