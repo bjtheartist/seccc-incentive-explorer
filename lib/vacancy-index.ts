@@ -153,6 +153,77 @@ export interface VacancyDistressSignals {
 }
 
 /**
+ * The six consolidated occupancy-premised exemption EAV amounts carried on one
+ * parcel for a given tax year, mirroring the parcel_exemptions table (the
+ * PTAXSIM veteran columns are already summed into `vet`). Every value is an EAV
+ * amount in dollars; `0` means the exemption is not present. These exemptions
+ * are ALL occupancy-premised — each presumes the parcel is the claimant's
+ * principal residence.
+ */
+export interface ExemptionEavs {
+  homeowner: number;
+  senior: number;
+  freeze: number;
+  disabled: number;
+  vet: number;
+  longtime: number;
+}
+
+/** The two anomaly universes, kept strictly separate (never conflated):
+ *   • `land`     — an occupancy exemption on a class-1xx vacant LAND parcel:
+ *                  IMPOSSIBLE-ON-ITS-FACE (a lot cannot be a principal residence).
+ *   • `building` — an occupancy exemption on a vacant-classed / 311 vacant
+ *                  BUILDING: PLAUSIBLE-BUT-STALE (a home that has since emptied).
+ */
+export type ExemptionUniverse = "land" | "building";
+
+/**
+ * One parcel considered for the exemption-anomaly overlay: its universe, its
+ * exemption EAVs, and the latest recorded transfer date (null when the parcel
+ * has no MyDec transfer on record — MyDec coverage begins ~2009, so a null is a
+ * FLOOR, not a proof of no sale). Pure input to deriveExemptionAnomalies —
+ * carries no owner name or mailing address (those never reach the aggregation).
+ */
+export interface ExemptionAnomalyParcel {
+  pin: string;
+  universe: ExemptionUniverse;
+  exemptions: ExemptionEavs;
+  /** Latest recorded transfer date (YYYY-MM-DD) or null. */
+  latestTransferDate: string | null;
+}
+
+/** One universe's anomaly split: how many anomalous parcels in total (`any`),
+ * how many carry a senior/senior-freeze exemption (`senior` ⊆ `any`), and how
+ * many have had no recorded transfer in ≥10 years (`noTransfer10y` ⊆ `any`). */
+export interface ExemptionAnomalySplit {
+  any: number;
+  senior: number;
+  noTransfer10y: number;
+}
+
+/**
+ * Per-edition exemption-anomaly AGGREGATES (public-safe — counts only, never
+ * pins). `null` on the edition when the parcel_exemptions table was absent on
+ * the refresh branch (degrade to "not yet available", never a fabricated zero).
+ * The two universes are kept separate by design. Every count is a FLOOR:
+ * unmatched 311 rows are invisible, MyDec transfers only reach ~2009, and the
+ * exemption data lags to its tax year.
+ */
+export interface ExemptionAnomalies {
+  /** The exemption tax year these anomalies are measured at (the latest year in
+   * PTAXSIM — 2024 as of the pinned version). */
+  taxYear: number;
+  /** Occupancy exemptions on class-1xx vacant LAND (impossible-on-its-face). */
+  landImpossible: ExemptionAnomalySplit;
+  /** Occupancy exemptions on vacant BUILDINGS (plausible-but-stale). */
+  buildingStale: ExemptionAnomalySplit;
+  /** Total exemption EAV across the LAND anomalies only (condos excluded — the
+   * land universe is class-1xx by construction). Presented as an order-of-
+   * magnitude figure, never to the dollar. `null` when no land anomaly exists. */
+  exemptEavLandTotal: number | null;
+}
+
+/**
  * The additive v2 two-axis ownership breakdown for one edition. Computed at
  * export time ALONGSIDE the legacy owner-type series (deriveLandUniverse and the
  * legacy city-fold logic are untouched — this never re-derives them):
@@ -413,6 +484,11 @@ export interface VacancyIndexEdition {
   /** Phase-2 distress overlays for this edition, or `null` when no distress
    * source table was present on the refresh branch (degrade gracefully). */
   distress: VacancyDistressSignals | null;
+  /** Exemption-anomaly AGGREGATES (public-safe, counts only). `null` when the
+   * parcel_exemptions table was absent on the refresh branch. Parcel-level
+   * detail is NEVER in this file — it lives in the private referral packet
+   * (data/private/exemption-anomalies.json), served only behind the admin gate. */
+  exemptionAnomalies: ExemptionAnomalies | null;
   sitePoints: VacancySitePoint[]; // capped 2000, priority-ordered
   sitePointsTruncated: boolean;
   siteIndex: VacancySiteIndexRow[]; // top 15 (band 10–20, set at export)
@@ -1029,6 +1105,88 @@ export function addressHasViolation(
 ): boolean {
   if (addressSet === null || !normAddress) return false;
   return addressSet.has(normAddress);
+}
+
+// ── Exemption-anomaly aggregation (pure) ───────────────────────────────────
+
+/** True when a parcel carries ANY occupancy-premised exemption (EAV > 0). Each
+ * of the six exemptions presumes the parcel is a principal residence, so any of
+ * them on a vacant parcel is a record anomaly warranting official review. */
+export function hasOccupancyExemption(e: ExemptionEavs): boolean {
+  return (
+    e.homeowner > 0 ||
+    e.senior > 0 ||
+    e.freeze > 0 ||
+    e.disabled > 0 ||
+    e.vet > 0 ||
+    e.longtime > 0
+  );
+}
+
+/** True when a parcel carries a senior OR senior-freeze exemption (EAV > 0) —
+ * the senior subset flagged separately (elderly-claimant occupancy exemptions
+ * on a vacant parcel warrant particular review). */
+export function isSeniorExemption(e: ExemptionEavs): boolean {
+  return e.senior > 0 || e.freeze > 0;
+}
+
+/** Sum of all six occupancy-exemption EAV amounts on one parcel. */
+export function totalExemptionEav(e: ExemptionEavs): number {
+  return e.homeowner + e.senior + e.freeze + e.disabled + e.vet + e.longtime;
+}
+
+/** True when the parcel has had NO recorded transfer in ≥10 years relative to
+ * `taxYear`: either no MyDec transfer on record at all (null — a floor, since
+ * MyDec coverage begins ~2009), or the latest transfer year is < taxYear − 10.
+ * A blank/unparseable date is treated as "no transfer". */
+export function noTransferInDecade(
+  latestTransferDate: string | null,
+  taxYear: number,
+): boolean {
+  if (!latestTransferDate) return true;
+  const year = Number(latestTransferDate.slice(0, 4));
+  if (!Number.isFinite(year)) return true;
+  return year < taxYear - 10;
+}
+
+/**
+ * Aggregate the exemption-anomaly overlay from a list of anomaly-candidate
+ * parcels. Only parcels that actually carry an occupancy exemption
+ * (hasOccupancyExemption) count — the caller may pass a wider list; non-
+ * anomalies are ignored here so the derivation is self-contained. The two
+ * universes (land = impossible-on-its-face; building = plausible-but-stale) are
+ * tallied separately and NEVER conflated. `exemptEavLandTotal` sums the EAV of
+ * the land anomalies only (condos excluded by construction — the land universe
+ * is class-1xx) and is `null` when there is no land anomaly. Pure — unit-tests
+ * without a DB. Every count is a FLOOR (see ExemptionAnomalies).
+ */
+export function deriveExemptionAnomalies(
+  parcels: readonly ExemptionAnomalyParcel[],
+  taxYear: number,
+): ExemptionAnomalies {
+  const land: ExemptionAnomalySplit = { any: 0, senior: 0, noTransfer10y: 0 };
+  const building: ExemptionAnomalySplit = { any: 0, senior: 0, noTransfer10y: 0 };
+  let landEavTotal = 0;
+  let landAnomalyCount = 0;
+
+  for (const p of parcels) {
+    if (!hasOccupancyExemption(p.exemptions)) continue;
+    const split = p.universe === "land" ? land : building;
+    split.any += 1;
+    if (isSeniorExemption(p.exemptions)) split.senior += 1;
+    if (noTransferInDecade(p.latestTransferDate, taxYear)) split.noTransfer10y += 1;
+    if (p.universe === "land") {
+      landAnomalyCount += 1;
+      landEavTotal += totalExemptionEav(p.exemptions);
+    }
+  }
+
+  return {
+    taxYear,
+    landImpossible: land,
+    buildingStale: building,
+    exemptEavLandTotal: landAnomalyCount > 0 ? landEavTotal : null,
+  };
 }
 
 // ── Printed-copy constants ─────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-22T20:17:19.164Z",
+  "generatedAt": "2026-07-22T23:27:47.690Z",
   "sources": {
     "trackedInventory": "Chicago City-Owned Land Inventory (aksk-kvfp) + 311 Vacant/Abandoned Building Complaints (v6vf-nfxy)",
     "vacantLandOwnership": "Cook County Assessor parcels (classified owner type; complete vacant-land universe)",
@@ -231,6 +231,20 @@
         "taxSaleExposedCount": 846,
         "latestTaxSaleYear": 2015,
         "violationMatchCount": 184
+      },
+      "exemptionAnomalies": {
+        "taxYear": 2024,
+        "landImpossible": {
+          "any": 12,
+          "senior": 2,
+          "noTransfer10y": 12
+        },
+        "buildingStale": {
+          "any": 235,
+          "senior": 90,
+          "noTransfer10y": 235
+        },
+        "exemptEavLandTotal": 153163
       },
       "sitePoints": [
         {
@@ -67728,6 +67742,20 @@
         "latestTaxSaleYear": 2015,
         "violationMatchCount": 181
       },
+      "exemptionAnomalies": {
+        "taxYear": 2024,
+        "landImpossible": {
+          "any": 5,
+          "senior": 1,
+          "noTransfer10y": 5
+        },
+        "buildingStale": {
+          "any": 268,
+          "senior": 93,
+          "noTransfer10y": 268
+        },
+        "exemptEavLandTotal": 58000
+      },
       "sitePoints": [
         {
           "lat": 41.72805830256925,
@@ -122244,6 +122272,20 @@
         "taxSaleExposedCount": 2010,
         "latestTaxSaleYear": 2015,
         "violationMatchCount": 216
+      },
+      "exemptionAnomalies": {
+        "taxYear": 2024,
+        "landImpossible": {
+          "any": 3,
+          "senior": 0,
+          "noTransfer10y": 3
+        },
+        "buildingStale": {
+          "any": 156,
+          "senior": 42,
+          "noTransfer10y": 156
+        },
+        "exemptEavLandTotal": 30000
       },
       "sitePoints": [
         {
@@ -191905,6 +191947,20 @@
         "latestTaxSaleYear": 2015,
         "violationMatchCount": 117
       },
+      "exemptionAnomalies": {
+        "taxYear": 2024,
+        "landImpossible": {
+          "any": 4,
+          "senior": 0,
+          "noTransfer10y": 4
+        },
+        "buildingStale": {
+          "any": 199,
+          "senior": 58,
+          "noTransfer10y": 199
+        },
+        "exemptEavLandTotal": 40000
+      },
       "sitePoints": [
         {
           "lat": 41.86439415302114,
@@ -252664,6 +252720,20 @@
         "taxSaleExposedCount": 827,
         "latestTaxSaleYear": 2015,
         "violationMatchCount": 110
+      },
+      "exemptionAnomalies": {
+        "taxYear": 2024,
+        "landImpossible": {
+          "any": 13,
+          "senior": 2,
+          "noTransfer10y": 13
+        },
+        "buildingStale": {
+          "any": 132,
+          "senior": 44,
+          "noTransfer10y": 132
+        },
+        "exemptEavLandTotal": 148000
       },
       "sitePoints": [
         {
@@ -315541,6 +315611,20 @@
         "taxSaleExposedCount": 2165,
         "latestTaxSaleYear": 2015,
         "violationMatchCount": 274
+      },
+      "exemptionAnomalies": {
+        "taxYear": 2024,
+        "landImpossible": {
+          "any": 4,
+          "senior": 0,
+          "noTransfer10y": 4
+        },
+        "buildingStale": {
+          "any": 235,
+          "senior": 74,
+          "noTransfer10y": 235
+        },
+        "exemptEavLandTotal": 40000
       },
       "sitePoints": [
         {
@@ -381362,6 +381446,20 @@
         "latestTaxSaleYear": 2014,
         "violationMatchCount": 76
       },
+      "exemptionAnomalies": {
+        "taxYear": 2024,
+        "landImpossible": {
+          "any": 4,
+          "senior": 1,
+          "noTransfer10y": 4
+        },
+        "buildingStale": {
+          "any": 120,
+          "senior": 44,
+          "noTransfer10y": 120
+        },
+        "exemptEavLandTotal": 48000
+      },
       "sitePoints": [
         {
           "lat": 41.88275768808065,
@@ -425361,6 +425459,20 @@
         "latestTaxSaleYear": 2015,
         "violationMatchCount": 66
       },
+      "exemptionAnomalies": {
+        "taxYear": 2024,
+        "landImpossible": {
+          "any": 0,
+          "senior": 0,
+          "noTransfer10y": 0
+        },
+        "buildingStale": {
+          "any": 54,
+          "senior": 28,
+          "noTransfer10y": 54
+        },
+        "exemptEavLandTotal": null
+      },
       "sitePoints": [
         {
           "lat": 41.758637574438616,
@@ -445551,6 +445663,20 @@
         "taxSaleExposedCount": 245,
         "latestTaxSaleYear": 2015,
         "violationMatchCount": 49
+      },
+      "exemptionAnomalies": {
+        "taxYear": 2024,
+        "landImpossible": {
+          "any": 1,
+          "senior": 0,
+          "noTransfer10y": 1
+        },
+        "buildingStale": {
+          "any": 153,
+          "senior": 58,
+          "noTransfer10y": 153
+        },
+        "exemptEavLandTotal": 10000
       },
       "sitePoints": [
         {

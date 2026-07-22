@@ -48,6 +48,7 @@ import VacancyMapIsland from "@/components/vacancy/VacancyMapIsland";
 import VacancyClustersIsland from "@/components/vacancy/VacancyClustersIsland";
 import { loadCorridorRings } from "@/lib/vacancy-corridor-rings";
 import VacancyDirectory from "@/components/vacancy/VacancyDirectory";
+import { exemptionReferralRowsForZip } from "@/lib/exemption-anomalies";
 import { VacancyIndexPdfButton } from "@/components/owner-file/VacancyIndexPdfButton";
 
 export const dynamic = "force-dynamic";
@@ -345,6 +346,26 @@ export default async function VacancyReportPage({
     ownership.vacantLandParcelsByOwnerType?.find((r) => normalizeOwnerType(r.ownerType) === "city_public")
       ?.count ?? null;
   const distress = edition.distress;
+
+  // ── Exemption-anomaly overlay ──
+  // Public aggregates travel in the committed vacancy-index.json (counts only,
+  // no pins). Guarded with `?? null` for exports that predate the field. The
+  // parcel-level referral rows are read server-side from the PRIVATE packet
+  // (data/private/exemption-anomalies.json), never public — capped to 50 rows.
+  const exemptionAnomalies = edition.exemptionAnomalies ?? null;
+  const referralRows = exemptionReferralRowsForZip(zip);
+  const REFERRAL_ROW_CAP = 50;
+  const referralRowsShown = referralRows.slice(0, REFERRAL_ROW_CAP);
+  // Present the land EAV total as an order-of-magnitude figure (2 significant
+  // figures), never to the dollar — the framing is "a discrepancy of this
+  // scale", not an audited amount.
+  const exemptEavMagnitude = (() => {
+    const v = exemptionAnomalies?.exemptEavLandTotal ?? null;
+    if (v === null || v <= 0) return null;
+    const digits = Math.floor(Math.log10(v));
+    const round = Math.pow(10, Math.max(0, digits - 1));
+    return Math.round(v / round) * round;
+  })();
 
   const propTotal = headline.vacantLandCount + headline.vacantBuildingCount;
   const landPct = propTotal > 0 ? Math.round((headline.vacantLandCount / propTotal) * 100) : 0;
@@ -901,6 +922,70 @@ export default async function VacancyReportPage({
             </div>
           </div>
 
+          {/* Part 4b — Exemption anomalies (public aggregates, counts only) */}
+          <div className="mt-10">
+            <h3 className="flex items-baseline gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/55">
+              <span className="text-[#2563EB]">04b</span> Exemption anomalies — records for review
+            </h3>
+            <p className="mt-3 max-w-3xl text-[13px] leading-relaxed text-[#0C1B33]/70">
+              Record anomalies warranting official review. A vacant land parcel cannot serve as a
+              principal residence; these pairings are records discrepancies for the Assessor,
+              Treasurer, and Clerk to adjudicate — no wrongdoing is asserted.
+            </p>
+            {exemptionAnomalies ? (
+              <>
+                <div className="mt-4 grid grid-cols-1 gap-px border border-[#0C1B33]/10 bg-[#0C1B33]/10 sm:grid-cols-2">
+                  {[
+                    {
+                      key: "land",
+                      label: "Impossible on its face",
+                      sub: "Occupancy exemption on vacant LAND (class 1xx)",
+                      split: exemptionAnomalies.landImpossible,
+                    },
+                    {
+                      key: "building",
+                      label: "Plausible but stale",
+                      sub: "Occupancy exemption on a vacant BUILDING",
+                      split: exemptionAnomalies.buildingStale,
+                    },
+                  ].map((b) => (
+                    <div key={b.key} className="bg-white px-4 py-4">
+                      <div className="font-editorial text-[34px] leading-none">
+                        {b.split.any.toLocaleString("en-US")}
+                      </div>
+                      <div className="mt-1 text-[12px] font-semibold text-[#0C1B33]">{b.label}</div>
+                      <div className="mt-0.5 text-[11px] leading-snug text-[#0C1B33]/55">{b.sub}</div>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/55">
+                        <span>{b.split.senior.toLocaleString("en-US")} senior / freeze</span>
+                        <span>{b.split.noTransfer10y.toLocaleString("en-US")} no transfer ≥10y</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
+                  Exemption tax year {exemptionAnomalies.taxYear}
+                  {exemptEavMagnitude !== null
+                    ? ` · land exempt EAV ~${exemptEavMagnitude.toLocaleString("en-US")} (order of magnitude)`
+                    : ""}
+                </p>
+                <p className="mt-3 max-w-3xl text-[11px] leading-relaxed text-[#0C1B33]/55">
+                  Coverage: every count is a floor. Unmatched 311 building rows carry no parcel and
+                  are invisible here; MyDec transfer records only reach back to roughly 2009, so a
+                  &ldquo;no transfer&rdquo; flag is a floor, not proof of no sale; and exemption data
+                  lags to tax year {exemptionAnomalies.taxYear}. Parcel-level detail is held in the
+                  admin-only referral packet below.
+                </p>
+              </>
+            ) : (
+              <p className="mt-4 inline-flex items-center gap-2 border border-dashed border-[#0C1B33]/20 bg-white px-3 py-1.5 text-[11px] text-[#0C1B33]/45">
+                Exemption anomalies
+                <span className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/35">
+                  Not yet available
+                </span>
+              </p>
+            )}
+          </div>
+
           {/* Part 5 — What this means for action */}
           <div className="mt-10">
             <h3 className="flex items-baseline gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/55">
@@ -1224,6 +1309,137 @@ export default async function VacancyReportPage({
               neighborhood={pilotEntry.primaryNeighborhood}
               directoryCount={directoryCount}
             />
+          </section>
+        )}
+
+        {/* Exemption anomalies — admin-only referral packet (parcel-level) */}
+        {referralRows.length > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-2 font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#0C1B33]/50">
+              Exemption anomalies — referral review
+            </h2>
+            <p className="max-w-3xl text-[13px] leading-relaxed text-[#0C1B33]/70">
+              Record anomalies warranting official review. A vacant land parcel cannot serve as a
+              principal residence; these pairings are records discrepancies for the Assessor,
+              Treasurer, and Clerk to adjudicate — no wrongdoing is asserted.
+            </p>
+            <p className="mt-3 max-w-3xl text-[11px] leading-relaxed text-[#0C1B33]/55">
+              Parcel-level referral detail — admin only, never in the shareable PDF or the public
+              index. Counts are floors: unmatched 311 rows are invisible, MyDec transfers only reach
+              ~2009, and exemption data lags to tax year{" "}
+              {exemptionAnomalies?.taxYear ?? referralRowsShown[0]?.taxYear}. No owner names appear —
+              pull the parcel via CookViewer / Clerk to identify the record holder.
+            </p>
+            <div className="mt-4 overflow-x-auto border border-[#0C1B33]/10 bg-white">
+              <table className="w-full min-w-[860px] border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-[#0C1B33]/10 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
+                    <th className="px-3 py-2.5">PIN</th>
+                    <th className="px-3 py-2.5">Address</th>
+                    <th className="px-3 py-2.5">Class</th>
+                    <th className="px-3 py-2.5">Universe</th>
+                    <th className="px-3 py-2.5">Exemptions (EAV)</th>
+                    <th className="px-3 py-2.5">Last transfer</th>
+                    <th className="px-3 py-2.5">Verify</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {referralRowsShown.map((r) => {
+                    const cookViewer = cookViewerUrl(r.pin);
+                    const clerk = clerkRecordsUrl(r.pin);
+                    const active = (
+                      [
+                        ["Homeowner", r.exemptions.homeowner],
+                        ["Senior", r.exemptions.senior],
+                        ["Senior freeze", r.exemptions.freeze],
+                        ["Disabled", r.exemptions.disabled],
+                        ["Veteran", r.exemptions.vet],
+                        ["Longtime", r.exemptions.longtime],
+                      ] as const
+                    ).filter(([, v]) => v > 0);
+                    return (
+                      <tr key={r.pin} className="border-b border-[#0C1B33]/5 align-top last:border-b-0">
+                        <td className="px-3 py-2.5 font-mono-bureau text-[11px] text-[#0C1B33]/70 whitespace-nowrap">
+                          {r.pin}
+                        </td>
+                        <td className="px-3 py-2.5 text-[12px] text-[#0C1B33]/80">
+                          {r.address ?? "—"}
+                        </td>
+                        <td className="px-3 py-2.5 font-mono-bureau text-[11px] text-[#0C1B33]/55">
+                          {r.classCode ?? "—"}
+                        </td>
+                        <td className="px-3 py-2.5 text-[11px]">
+                          <span
+                            className="inline-block border px-1.5 py-0.5 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.06em]"
+                            style={
+                              r.universe === "land"
+                                ? { color: "#B91C1C", borderColor: "#B91C1C55" }
+                                : { color: "#B45309", borderColor: "#B4530955" }
+                            }
+                            title={
+                              r.universe === "land"
+                                ? "Impossible on its face — occupancy exemption on vacant land"
+                                : "Plausible but stale — occupancy exemption on a vacant building"
+                            }
+                          >
+                            {r.universe === "land" ? "Land" : "Building"}
+                          </span>
+                        </td>
+                        <td className="px-3 py-2.5 text-[11px] leading-snug text-[#0C1B33]/70">
+                          {active.length === 0
+                            ? "—"
+                            : active.map(([label, v], i) => (
+                                <span key={label} className="whitespace-nowrap">
+                                  {label}{" "}
+                                  <span className="font-mono-bureau text-[10px] text-[#0C1B33]/50">
+                                    {v.toLocaleString("en-US")}
+                                  </span>
+                                  {i < active.length - 1 ? ", " : ""}
+                                </span>
+                              ))}
+                        </td>
+                        <td className="px-3 py-2.5 font-mono-bureau text-[11px] text-[#0C1B33]/55 whitespace-nowrap">
+                          {r.latestTransferDate ?? "none on record"}
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          {cookViewer && clerk ? (
+                            <span className="font-mono-bureau text-[10px] uppercase tracking-[0.06em]">
+                              <a
+                                href={cookViewer}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Opens Cook County's official parcel record in a new tab."
+                                className="text-[#2563EB] hover:underline"
+                              >
+                                CookViewer ↗
+                              </a>
+                              <span className="text-[#0C1B33]/30"> · </span>
+                              <a
+                                href={clerk}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="Review recorded deeds, grantors, grantees, liens, releases, and other documents associated with this parcel."
+                                className="text-[#2563EB] hover:underline"
+                              >
+                                Clerk ↗
+                              </a>
+                            </span>
+                          ) : (
+                            <span className="font-mono-bureau text-[10px] text-[#0C1B33]/30">—</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+            {referralRows.length > REFERRAL_ROW_CAP && (
+              <p className="mt-2 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/40">
+                Showing {REFERRAL_ROW_CAP} of {referralRows.length.toLocaleString("en-US")} anomaly
+                parcels — full list in the referral packet (data/private/exemption-anomalies.json)
+              </p>
+            )}
           </section>
         )}
 
