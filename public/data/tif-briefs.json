@@ -1,0 +1,2808 @@
+{
+  "generatedAt": "2026-07-23T13:02:24.018Z",
+  "sources": {
+    "tifBoundaries": "Chicago TIF District boundaries (data.cityofchicago.org, Active districts)",
+    "tifAnnualReport": "Chicago TIF Annual Report — Analysis of Special Tax Allocation Fund (Socrata qm7s-3ctt), latest report year per district",
+    "vacancyIndex": "Explorer Vacancy Opportunity Index edition boundaries + tracked sites (public/data/vacancy-index.json)",
+    "asOf": "2026-07-23"
+  },
+  "districts": {
+    "T-1": {
+      "number": "T-1",
+      "name": "35th/Halsted",
+      "approvalDate": "1997-01-14",
+      "expirationDate": "2033-12-31",
+      "sbif": true,
+      "wards": "11,12",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-45",
+          "relation": "near"
+        },
+        {
+          "number": "T-163",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-9": {
+      "number": "T-9",
+      "name": "95th & Western",
+      "approvalDate": "1995-07-13",
+      "expirationDate": "2031-12-31",
+      "sbif": true,
+      "wards": "19",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-142",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-13": {
+      "number": "T-13",
+      "name": "Bryn Mawr/Broadway",
+      "approvalDate": "1998-11-04",
+      "expirationDate": "2032-12-31",
+      "sbif": true,
+      "wards": "48",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-157",
+          "relation": "touching"
+        },
+        {
+          "number": "T-180",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-23": {
+      "number": "T-23",
+      "name": "Goose Island",
+      "approvalDate": "1996-07-10",
+      "expirationDate": "2032-12-31",
+      "sbif": true,
+      "wards": "27",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-30",
+          "relation": "near"
+        }
+      ]
+    },
+    "T-24": {
+      "number": "T-24",
+      "name": "Homan-Arthington",
+      "approvalDate": "1998-02-05",
+      "expirationDate": "2034-12-31",
+      "sbif": false,
+      "wards": "24",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-95",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-30": {
+      "number": "T-30",
+      "name": "Near North",
+      "approvalDate": "1997-07-30",
+      "expirationDate": "2033-12-31",
+      "sbif": false,
+      "wards": "2,27",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-23",
+          "relation": "near"
+        },
+        {
+          "number": "T-180",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-38": {
+      "number": "T-38",
+      "name": "Roosevelt/Cicero",
+      "approvalDate": "1998-02-05",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "24,29",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-95",
+          "relation": "touching"
+        },
+        {
+          "number": "T-144",
+          "relation": "touching"
+        },
+        {
+          "number": "T-161",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-42": {
+      "number": "T-42",
+      "name": "Sanitary Drainage and Ship Canal",
+      "approvalDate": "1991-07-24",
+      "expirationDate": "2027-12-31",
+      "sbif": false,
+      "wards": "12,22,25",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-149",
+          "relation": "touching"
+        },
+        {
+          "number": "T-152",
+          "relation": "touching"
+        },
+        {
+          "number": "T-164",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-45": {
+      "number": "T-45",
+      "name": "Stockyards Southeast Quadrant Industrial",
+      "approvalDate": "1992-02-26",
+      "expirationDate": "2028-12-31",
+      "sbif": true,
+      "wards": "11,15",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-1",
+          "relation": "near"
+        },
+        {
+          "number": "T-117",
+          "relation": "touching"
+        },
+        {
+          "number": "T-121",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-48": {
+      "number": "T-48",
+      "name": "Western/Ogden",
+      "approvalDate": "1998-02-05",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "24,25,27,28",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-62",
+          "relation": "touching"
+        },
+        {
+          "number": "T-95",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-52": {
+      "number": "T-52",
+      "name": "Kinzie Industrial Conservation Area",
+      "approvalDate": "1998-06-10",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "1,27,34,36",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-86",
+          "relation": "touching"
+        },
+        {
+          "number": "T-95",
+          "relation": "touching"
+        },
+        {
+          "number": "T-107",
+          "relation": "touching"
+        },
+        {
+          "number": "T-115",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-53": {
+      "number": "T-53",
+      "name": "Pilsen",
+      "approvalDate": "1998-06-10",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "11,12,25",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-163",
+          "relation": "touching"
+        },
+        {
+          "number": "T-184",
+          "relation": "touching"
+        },
+        {
+          "number": "T-186",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-54": {
+      "number": "T-54",
+      "name": "Stony Island Avenue Commercial and Burnside Industrial Corridors",
+      "approvalDate": "1998-06-10",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "8",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-60",
+          "relation": "touching"
+        },
+        {
+          "number": "T-103",
+          "relation": "touching"
+        },
+        {
+          "number": "T-127",
+          "relation": "touching"
+        },
+        {
+          "number": "T-166",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-55": {
+      "number": "T-55",
+      "name": "43rd Street/Cottage Grove Avenue",
+      "approvalDate": "1998-07-08",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "3,4",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-61",
+          "relation": "touching"
+        },
+        {
+          "number": "T-118",
+          "relation": "touching"
+        },
+        {
+          "number": "T-126",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-56": {
+      "number": "T-56",
+      "name": "79th Street Corridor",
+      "approvalDate": "1998-07-08",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "6,17",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-66",
+          "relation": "touching"
+        },
+        {
+          "number": "T-155",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-60": {
+      "number": "T-60",
+      "name": "71st & Stony Island",
+      "approvalDate": "1998-10-07",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "5,7,8,20",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-54",
+          "relation": "touching"
+        },
+        {
+          "number": "T-65",
+          "relation": "touching"
+        },
+        {
+          "number": "T-123",
+          "relation": "touching"
+        },
+        {
+          "number": "T-127",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-61": {
+      "number": "T-61",
+      "name": "Bronzeville",
+      "approvalDate": "1998-11-04",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "3,4",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-55",
+          "relation": "touching"
+        },
+        {
+          "number": "T-72",
+          "relation": "touching"
+        },
+        {
+          "number": "T-118",
+          "relation": "touching"
+        },
+        {
+          "number": "T-121",
+          "relation": "touching"
+        },
+        {
+          "number": "T-126",
+          "relation": "touching"
+        },
+        {
+          "number": "T-131",
+          "relation": "touching"
+        },
+        {
+          "number": "T-141",
+          "relation": "touching"
+        },
+        {
+          "number": "T-186",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-62": {
+      "number": "T-62",
+      "name": "Roosevelt/Racine",
+      "approvalDate": "1998-11-04",
+      "expirationDate": "2034-12-31",
+      "sbif": false,
+      "wards": "25,28",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-48",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-63": {
+      "number": "T-63",
+      "name": "Canal/Congress",
+      "approvalDate": "1998-11-12",
+      "expirationDate": "2034-12-31",
+      "sbif": false,
+      "wards": "28,34,42",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-147",
+          "relation": "touching"
+        },
+        {
+          "number": "T-184",
+          "relation": "touching"
+        },
+        {
+          "number": "T-186",
+          "relation": "near"
+        }
+      ]
+    },
+    "T-64": {
+      "number": "T-64",
+      "name": "Northwest Industrial Corridor",
+      "approvalDate": "1998-12-02",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "26,28,31,36,37",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-69",
+          "relation": "touching"
+        },
+        {
+          "number": "T-71",
+          "relation": "touching"
+        },
+        {
+          "number": "T-75",
+          "relation": "touching"
+        },
+        {
+          "number": "T-81",
+          "relation": "touching"
+        },
+        {
+          "number": "T-95",
+          "relation": "touching"
+        },
+        {
+          "number": "T-115",
+          "relation": "touching"
+        },
+        {
+          "number": "T-151",
+          "relation": "touching"
+        },
+        {
+          "number": "T-156",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-65": {
+      "number": "T-65",
+      "name": "Woodlawn",
+      "approvalDate": "1999-01-20",
+      "expirationDate": "2035-12-31",
+      "sbif": true,
+      "wards": "5,6,20",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-60",
+          "relation": "touching"
+        },
+        {
+          "number": "T-171",
+          "relation": "touching"
+        },
+        {
+          "number": "T-174",
+          "relation": "near"
+        }
+      ]
+    },
+    "T-66": {
+      "number": "T-66",
+      "name": "Greater Southwest Industrial (East)",
+      "approvalDate": "1999-03-10",
+      "expirationDate": "2035-12-31",
+      "sbif": true,
+      "wards": "17,18",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-56",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-69": {
+      "number": "T-69",
+      "name": "Pulaski Corridor",
+      "approvalDate": "1999-06-09",
+      "expirationDate": "2035-12-31",
+      "sbif": true,
+      "wards": "26,31,35,36",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-64",
+          "relation": "touching"
+        },
+        {
+          "number": "T-87",
+          "relation": "touching"
+        },
+        {
+          "number": "T-107",
+          "relation": "touching"
+        },
+        {
+          "number": "T-115",
+          "relation": "touching"
+        },
+        {
+          "number": "T-151",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-70": {
+      "number": "T-70",
+      "name": "Clark/Montrose",
+      "approvalDate": "1999-07-07",
+      "expirationDate": "2035-12-31",
+      "sbif": true,
+      "wards": "40,46,47",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-180",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-71": {
+      "number": "T-71",
+      "name": "Galewood/Armitage Industrial",
+      "approvalDate": "1999-07-07",
+      "expirationDate": "2035-12-31",
+      "sbif": true,
+      "wards": "29,36,37",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-64",
+          "relation": "touching"
+        },
+        {
+          "number": "T-81",
+          "relation": "touching"
+        },
+        {
+          "number": "T-129",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-72": {
+      "number": "T-72",
+      "name": "24th/Michigan",
+      "approvalDate": "1999-07-21",
+      "expirationDate": "2035-12-31",
+      "sbif": true,
+      "wards": "3,4,11",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-61",
+          "relation": "touching"
+        },
+        {
+          "number": "T-184",
+          "relation": "touching"
+        },
+        {
+          "number": "T-186",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-73": {
+      "number": "T-73",
+      "name": "111th Street/Kedzie Avenue Business District",
+      "approvalDate": "1999-09-29",
+      "expirationDate": "2035-12-31",
+      "sbif": true,
+      "wards": "19",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-142",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-75": {
+      "number": "T-75",
+      "name": "Madison/Austin Corridor",
+      "approvalDate": "1999-09-29",
+      "expirationDate": "2035-12-31",
+      "sbif": true,
+      "wards": "28,29,37",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-64",
+          "relation": "touching"
+        },
+        {
+          "number": "T-95",
+          "relation": "touching"
+        },
+        {
+          "number": "T-144",
+          "relation": "touching"
+        },
+        {
+          "number": "T-156",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-77": {
+      "number": "T-77",
+      "name": "Lincoln Avenue",
+      "approvalDate": "1999-11-03",
+      "expirationDate": "2035-12-31",
+      "sbif": true,
+      "wards": "40,50",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-177",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-81": {
+      "number": "T-81",
+      "name": "Belmont/Central",
+      "approvalDate": "2000-01-12",
+      "expirationDate": "2036-12-31",
+      "sbif": true,
+      "wards": "30,31,36,38",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-64",
+          "relation": "touching"
+        },
+        {
+          "number": "T-71",
+          "relation": "touching"
+        },
+        {
+          "number": "T-129",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-86": {
+      "number": "T-86",
+      "name": "Central West",
+      "approvalDate": "2000-02-16",
+      "expirationDate": "2036-12-31",
+      "sbif": true,
+      "wards": "27,28,34",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-52",
+          "relation": "touching"
+        },
+        {
+          "number": "T-95",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-87": {
+      "number": "T-87",
+      "name": "Fullerton/Milwaukee",
+      "approvalDate": "2000-02-16",
+      "expirationDate": "2027-12-31",
+      "sbif": true,
+      "wards": "1,26,30,31,35",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-69",
+          "relation": "touching"
+        },
+        {
+          "number": "T-167",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-88": {
+      "number": "T-88",
+      "name": "Lawrence/Kedzie",
+      "approvalDate": "2000-02-16",
+      "expirationDate": "2036-12-31",
+      "sbif": true,
+      "wards": "33,39,40",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-116",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-93": {
+      "number": "T-93",
+      "name": "South Chicago",
+      "approvalDate": "2000-04-12",
+      "expirationDate": "2036-12-31",
+      "sbif": true,
+      "wards": "7,10",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-103",
+          "relation": "touching"
+        },
+        {
+          "number": "T-128",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-95": {
+      "number": "T-95",
+      "name": "Midwest",
+      "approvalDate": "2000-05-17",
+      "expirationDate": "2036-12-31",
+      "sbif": true,
+      "wards": "24,25,27,28,29",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-24",
+          "relation": "touching"
+        },
+        {
+          "number": "T-38",
+          "relation": "touching"
+        },
+        {
+          "number": "T-48",
+          "relation": "touching"
+        },
+        {
+          "number": "T-52",
+          "relation": "touching"
+        },
+        {
+          "number": "T-64",
+          "relation": "touching"
+        },
+        {
+          "number": "T-75",
+          "relation": "touching"
+        },
+        {
+          "number": "T-86",
+          "relation": "touching"
+        },
+        {
+          "number": "T-115",
+          "relation": "touching"
+        },
+        {
+          "number": "T-144",
+          "relation": "touching"
+        },
+        {
+          "number": "T-161",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-98": {
+      "number": "T-98",
+      "name": "63rd/Pulaski",
+      "approvalDate": "2000-05-17",
+      "expirationDate": "2036-12-31",
+      "sbif": true,
+      "wards": "13,23",
+      "status": "Active",
+      "finance": null,
+      "neighbors": [
+        {
+          "number": "T-124",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-103": {
+      "number": "T-103",
+      "name": "Lake Calumet Area Industrial",
+      "approvalDate": "2000-12-13",
+      "expirationDate": "2036-12-31",
+      "sbif": false,
+      "wards": "7,8,9,10",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 22340226,
+        "taxAllocationFundBalance": 25924912,
+        "incrementCurrent": 5893876,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-54",
+          "relation": "touching"
+        },
+        {
+          "number": "T-93",
+          "relation": "touching"
+        },
+        {
+          "number": "T-128",
+          "relation": "touching"
+        },
+        {
+          "number": "T-166",
+          "relation": "touching"
+        },
+        {
+          "number": "T-169",
+          "relation": "touching"
+        },
+        {
+          "number": "T-182",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-106": {
+      "number": "T-106",
+      "name": "Englewood Neighborhood",
+      "approvalDate": "2001-06-27",
+      "expirationDate": "2037-12-31",
+      "sbif": true,
+      "wards": "6,16,17,20",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 26754026,
+        "taxAllocationFundBalance": 28985089,
+        "incrementCurrent": 2893966,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-121",
+          "relation": "touching"
+        },
+        {
+          "number": "T-143",
+          "relation": "touching"
+        },
+        {
+          "number": "T-174",
+          "relation": "touching"
+        },
+        {
+          "number": "T-178",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-107": {
+      "number": "T-107",
+      "name": "Division/Homan",
+      "approvalDate": "2001-06-27",
+      "expirationDate": "2037-12-31",
+      "sbif": true,
+      "wards": "26,27,36",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 17934043,
+        "taxAllocationFundBalance": 13878070,
+        "incrementCurrent": 3932831,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-52",
+          "relation": "touching"
+        },
+        {
+          "number": "T-69",
+          "relation": "touching"
+        },
+        {
+          "number": "T-115",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-109": {
+      "number": "T-109",
+      "name": "Lawrence/Broadway",
+      "approvalDate": "2001-06-27",
+      "expirationDate": "2037-12-31",
+      "sbif": true,
+      "wards": "46,47,48",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 43939660,
+        "taxAllocationFundBalance": 39640687,
+        "incrementCurrent": 8451752,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-157",
+          "relation": "touching"
+        },
+        {
+          "number": "T-180",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-113": {
+      "number": "T-113",
+      "name": "Roseland/Michigan Avenue",
+      "approvalDate": "2002-01-16",
+      "expirationDate": "2026-12-31",
+      "sbif": true,
+      "wards": "9",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 595690,
+        "taxAllocationFundBalance": 1371176,
+        "incrementCurrent": 356947,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-114",
+          "relation": "touching"
+        },
+        {
+          "number": "T-166",
+          "relation": "touching"
+        },
+        {
+          "number": "T-176",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-114": {
+      "number": "T-114",
+      "name": "119th and Halsted",
+      "approvalDate": "2002-02-06",
+      "expirationDate": "2026-12-31",
+      "sbif": true,
+      "wards": "9,21",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 6202584,
+        "taxAllocationFundBalance": 6884699,
+        "incrementCurrent": 1169232,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-113",
+          "relation": "touching"
+        },
+        {
+          "number": "T-125",
+          "relation": "touching"
+        },
+        {
+          "number": "T-176",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-115": {
+      "number": "T-115",
+      "name": "Chicago/Central Park",
+      "approvalDate": "2002-02-27",
+      "expirationDate": "2026-12-31",
+      "sbif": true,
+      "wards": "27,36,37",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 73811723,
+        "taxAllocationFundBalance": 51815491,
+        "incrementCurrent": 10766661,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-52",
+          "relation": "touching"
+        },
+        {
+          "number": "T-64",
+          "relation": "touching"
+        },
+        {
+          "number": "T-69",
+          "relation": "touching"
+        },
+        {
+          "number": "T-95",
+          "relation": "touching"
+        },
+        {
+          "number": "T-107",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-116": {
+      "number": "T-116",
+      "name": "Lawrence/Pulaski",
+      "approvalDate": "2002-02-27",
+      "expirationDate": "2026-12-31",
+      "sbif": true,
+      "wards": "33,39",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 15806592,
+        "taxAllocationFundBalance": 13418076,
+        "incrementCurrent": 2827391,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-88",
+          "relation": "touching"
+        },
+        {
+          "number": "T-181",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-117": {
+      "number": "T-117",
+      "name": "47th/Ashland",
+      "approvalDate": "2002-03-27",
+      "expirationDate": "2026-12-31",
+      "sbif": true,
+      "wards": "11,12,15,16,20",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 18428433,
+        "taxAllocationFundBalance": 13383701,
+        "incrementCurrent": 3812217,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-45",
+          "relation": "touching"
+        },
+        {
+          "number": "T-121",
+          "relation": "touching"
+        },
+        {
+          "number": "T-143",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-118": {
+      "number": "T-118",
+      "name": "47th and King Drive",
+      "approvalDate": "2002-03-27",
+      "expirationDate": "2026-12-31",
+      "sbif": true,
+      "wards": "3,20",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 71029667,
+        "taxAllocationFundBalance": 67980226,
+        "incrementCurrent": 13152666,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-55",
+          "relation": "touching"
+        },
+        {
+          "number": "T-61",
+          "relation": "touching"
+        },
+        {
+          "number": "T-121",
+          "relation": "touching"
+        },
+        {
+          "number": "T-136",
+          "relation": "touching"
+        },
+        {
+          "number": "T-178",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-119": {
+      "number": "T-119",
+      "name": "Lakefront",
+      "approvalDate": "2002-03-27",
+      "expirationDate": "2026-12-31",
+      "sbif": false,
+      "wards": "4",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 2116011,
+        "taxAllocationFundBalance": 1980285,
+        "incrementCurrent": 405076,
+        "surplusDistributed": 0
+      },
+      "neighbors": []
+    },
+    "T-121": {
+      "number": "T-121",
+      "name": "47th/Halsted",
+      "approvalDate": "2002-05-29",
+      "expirationDate": "2026-12-31",
+      "sbif": true,
+      "wards": "3,11,15,16,20",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 17877473,
+        "taxAllocationFundBalance": 24864220,
+        "incrementCurrent": 4098894,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-45",
+          "relation": "touching"
+        },
+        {
+          "number": "T-61",
+          "relation": "touching"
+        },
+        {
+          "number": "T-106",
+          "relation": "touching"
+        },
+        {
+          "number": "T-117",
+          "relation": "touching"
+        },
+        {
+          "number": "T-118",
+          "relation": "touching"
+        },
+        {
+          "number": "T-136",
+          "relation": "touching"
+        },
+        {
+          "number": "T-178",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-123": {
+      "number": "T-123",
+      "name": "Avalon Park/South Shore",
+      "approvalDate": "2002-07-31",
+      "expirationDate": "2026-12-31",
+      "sbif": true,
+      "wards": "7,8",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 3221096,
+        "taxAllocationFundBalance": 2626331,
+        "incrementCurrent": 837757,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-60",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-124": {
+      "number": "T-124",
+      "name": "67th/Cicero",
+      "approvalDate": "2002-10-02",
+      "expirationDate": "2026-12-31",
+      "sbif": false,
+      "wards": "13",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 1579256,
+        "taxAllocationFundBalance": 1412280,
+        "incrementCurrent": 496277,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-98",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-125": {
+      "number": "T-125",
+      "name": "119th Street/I-57",
+      "approvalDate": "2002-11-06",
+      "expirationDate": "2026-12-31",
+      "sbif": true,
+      "wards": "19,21",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 11933591,
+        "taxAllocationFundBalance": 10773335,
+        "incrementCurrent": 2981970,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-114",
+          "relation": "touching"
+        },
+        {
+          "number": "T-142",
+          "relation": "touching"
+        },
+        {
+          "number": "T-176",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-126": {
+      "number": "T-126",
+      "name": "Madden/Wells",
+      "approvalDate": "2002-11-06",
+      "expirationDate": "2038-12-31",
+      "sbif": false,
+      "wards": "4",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 8444167,
+        "taxAllocationFundBalance": 7469787,
+        "incrementCurrent": 1912855,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-55",
+          "relation": "touching"
+        },
+        {
+          "number": "T-61",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-127": {
+      "number": "T-127",
+      "name": "87th/Cottage Grove",
+      "approvalDate": "2002-11-13",
+      "expirationDate": "2026-12-31",
+      "sbif": true,
+      "wards": "5,6,8",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 13037324,
+        "taxAllocationFundBalance": 12343563,
+        "incrementCurrent": 2093730,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-54",
+          "relation": "touching"
+        },
+        {
+          "number": "T-60",
+          "relation": "touching"
+        },
+        {
+          "number": "T-145",
+          "relation": "touching"
+        },
+        {
+          "number": "T-174",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-128": {
+      "number": "T-128",
+      "name": "Commercial Avenue",
+      "approvalDate": "2002-11-13",
+      "expirationDate": "2026-12-31",
+      "sbif": true,
+      "wards": "7,8,10",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 15306161,
+        "taxAllocationFundBalance": 13571783,
+        "incrementCurrent": 1530708,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-93",
+          "relation": "touching"
+        },
+        {
+          "number": "T-103",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-129": {
+      "number": "T-129",
+      "name": "Diversey/Narragansett",
+      "approvalDate": "2003-02-05",
+      "expirationDate": "2027-12-31",
+      "sbif": false,
+      "wards": "29,30,36",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 6168676,
+        "taxAllocationFundBalance": 6610086,
+        "incrementCurrent": 3424119,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-71",
+          "relation": "touching"
+        },
+        {
+          "number": "T-81",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-130": {
+      "number": "T-130",
+      "name": "Edgewater/Ashland",
+      "approvalDate": "2003-10-01",
+      "expirationDate": "2027-12-31",
+      "sbif": false,
+      "wards": "40",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 5528308,
+        "taxAllocationFundBalance": 4563882,
+        "incrementCurrent": 1072300,
+        "surplusDistributed": 152072
+      },
+      "neighbors": []
+    },
+    "T-131": {
+      "number": "T-131",
+      "name": "35th/State",
+      "approvalDate": "2004-01-14",
+      "expirationDate": "2028-12-31",
+      "sbif": false,
+      "wards": "3,11",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 7079316,
+        "taxAllocationFundBalance": 6862604,
+        "incrementCurrent": 1968584,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-61",
+          "relation": "touching"
+        },
+        {
+          "number": "T-186",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-133": {
+      "number": "T-133",
+      "name": "83rd/Stewart",
+      "approvalDate": "2004-03-31",
+      "expirationDate": "2028-12-31",
+      "sbif": false,
+      "wards": "6,21",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 1666688,
+        "taxAllocationFundBalance": 801852,
+        "incrementCurrent": 1465649,
+        "surplusDistributed": 0
+      },
+      "neighbors": []
+    },
+    "T-134": {
+      "number": "T-134",
+      "name": "Devon/Sheridan",
+      "approvalDate": "2004-03-31",
+      "expirationDate": "2028-12-31",
+      "sbif": true,
+      "wards": "48,49",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 8831669,
+        "taxAllocationFundBalance": 7473714,
+        "incrementCurrent": 3554126,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-180",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-135": {
+      "number": "T-135",
+      "name": "Pratt/Ridge Industrial Park Conservation Area",
+      "approvalDate": "2004-06-23",
+      "expirationDate": "2028-12-31",
+      "sbif": false,
+      "wards": "40,49",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 6690373,
+        "taxAllocationFundBalance": 5738836,
+        "incrementCurrent": 887474,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-146",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-136": {
+      "number": "T-136",
+      "name": "47th/State",
+      "approvalDate": "2004-07-21",
+      "expirationDate": "2028-12-31",
+      "sbif": true,
+      "wards": "3,20",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 20701931,
+        "taxAllocationFundBalance": 18899003,
+        "incrementCurrent": 3147342,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-118",
+          "relation": "touching"
+        },
+        {
+          "number": "T-121",
+          "relation": "touching"
+        },
+        {
+          "number": "T-178",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-140": {
+      "number": "T-140",
+      "name": "79th and Cicero",
+      "approvalDate": "2005-06-08",
+      "expirationDate": "2029-12-31",
+      "sbif": false,
+      "wards": "18",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 1154142,
+        "taxAllocationFundBalance": 1150898,
+        "incrementCurrent": 581216,
+        "surplusDistributed": 0
+      },
+      "neighbors": []
+    },
+    "T-141": {
+      "number": "T-141",
+      "name": "26th & King Drive",
+      "approvalDate": "2006-01-11",
+      "expirationDate": "2030-12-31",
+      "sbif": false,
+      "wards": "3,4",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 7249112,
+        "taxAllocationFundBalance": 6147581,
+        "incrementCurrent": 1030755,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-61",
+          "relation": "touching"
+        },
+        {
+          "number": "T-186",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-142": {
+      "number": "T-142",
+      "name": "Western Avenue/Rock Island",
+      "approvalDate": "2006-02-08",
+      "expirationDate": "2030-12-31",
+      "sbif": true,
+      "wards": "19",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 6828099,
+        "taxAllocationFundBalance": 5577567,
+        "incrementCurrent": 1776306,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-9",
+          "relation": "touching"
+        },
+        {
+          "number": "T-73",
+          "relation": "touching"
+        },
+        {
+          "number": "T-125",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-143": {
+      "number": "T-143",
+      "name": "63rd/Ashland",
+      "approvalDate": "2006-03-29",
+      "expirationDate": "2030-12-31",
+      "sbif": true,
+      "wards": "15,16,17",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 5324028,
+        "taxAllocationFundBalance": 5019463,
+        "incrementCurrent": 462049,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-106",
+          "relation": "touching"
+        },
+        {
+          "number": "T-117",
+          "relation": "touching"
+        },
+        {
+          "number": "T-174",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-144": {
+      "number": "T-144",
+      "name": "Harrison/Central",
+      "approvalDate": "2006-07-26",
+      "expirationDate": "2030-12-31",
+      "sbif": false,
+      "wards": "29",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 4115450,
+        "taxAllocationFundBalance": 3466508,
+        "incrementCurrent": 2049522,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-38",
+          "relation": "touching"
+        },
+        {
+          "number": "T-75",
+          "relation": "touching"
+        },
+        {
+          "number": "T-95",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-145": {
+      "number": "T-145",
+      "name": "73rd/University",
+      "approvalDate": "2006-09-13",
+      "expirationDate": "2030-12-31",
+      "sbif": false,
+      "wards": "5",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 1999771,
+        "taxAllocationFundBalance": 2086132,
+        "incrementCurrent": 52938,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-127",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-146": {
+      "number": "T-146",
+      "name": "Touhy/Western",
+      "approvalDate": "2006-09-13",
+      "expirationDate": "2030-12-31",
+      "sbif": true,
+      "wards": "40,50",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 4082028,
+        "taxAllocationFundBalance": 3830285,
+        "incrementCurrent": 1234071,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-135",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-147": {
+      "number": "T-147",
+      "name": "LaSalle Central",
+      "approvalDate": "2006-11-15",
+      "expirationDate": "2030-12-31",
+      "sbif": true,
+      "wards": "34,42",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 362514011,
+        "taxAllocationFundBalance": 247435470,
+        "incrementCurrent": 211363276,
+        "surplusDistributed": 95793442
+      },
+      "neighbors": [
+        {
+          "number": "T-63",
+          "relation": "touching"
+        },
+        {
+          "number": "T-172",
+          "relation": "touching"
+        },
+        {
+          "number": "T-186",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-149": {
+      "number": "T-149",
+      "name": "Stevenson/Brighton",
+      "approvalDate": "2007-04-11",
+      "expirationDate": "2031-12-31",
+      "sbif": true,
+      "wards": "12,14,15,22",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 15855153,
+        "taxAllocationFundBalance": 16066558,
+        "incrementCurrent": 9764143,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-42",
+          "relation": "touching"
+        },
+        {
+          "number": "T-152",
+          "relation": "touching"
+        },
+        {
+          "number": "T-163",
+          "relation": "touching"
+        },
+        {
+          "number": "T-185",
+          "relation": "near"
+        }
+      ]
+    },
+    "T-150": {
+      "number": "T-150",
+      "name": "Addison South",
+      "approvalDate": "2007-05-09",
+      "expirationDate": "2031-12-31",
+      "sbif": true,
+      "wards": "32,35,47",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 24645669,
+        "taxAllocationFundBalance": 15608067,
+        "incrementCurrent": 9571721,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-179",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-151": {
+      "number": "T-151",
+      "name": "Armitage/Pulaski",
+      "approvalDate": "2007-06-13",
+      "expirationDate": "2031-12-31",
+      "sbif": true,
+      "wards": "26,35",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 1432911,
+        "taxAllocationFundBalance": 1690760,
+        "incrementCurrent": 373750,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-64",
+          "relation": "touching"
+        },
+        {
+          "number": "T-69",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-152": {
+      "number": "T-152",
+      "name": "Little Village Industrial Corridor",
+      "approvalDate": "2007-06-13",
+      "expirationDate": "2031-12-31",
+      "sbif": true,
+      "wards": "22",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 10656820,
+        "taxAllocationFundBalance": 7083496,
+        "incrementCurrent": 4158038,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-42",
+          "relation": "touching"
+        },
+        {
+          "number": "T-149",
+          "relation": "touching"
+        },
+        {
+          "number": "T-164",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-153": {
+      "number": "T-153",
+      "name": "Elston/Armstrong Industrial Corridor",
+      "approvalDate": "2007-07-19",
+      "expirationDate": "2031-12-31",
+      "sbif": true,
+      "wards": "39,45",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 7999990,
+        "taxAllocationFundBalance": 6547644,
+        "incrementCurrent": 1711189,
+        "surplusDistributed": 0
+      },
+      "neighbors": []
+    },
+    "T-155": {
+      "number": "T-155",
+      "name": "79th/Vincennes",
+      "approvalDate": "2007-09-27",
+      "expirationDate": "2031-12-31",
+      "sbif": true,
+      "wards": "6,17,21",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 3250658,
+        "taxAllocationFundBalance": 3438349,
+        "incrementCurrent": 235431,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-56",
+          "relation": "touching"
+        },
+        {
+          "number": "T-174",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-156": {
+      "number": "T-156",
+      "name": "Austin Commercial",
+      "approvalDate": "2007-09-27",
+      "expirationDate": "2031-12-31",
+      "sbif": true,
+      "wards": "29,37",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 9495307,
+        "taxAllocationFundBalance": 8181629,
+        "incrementCurrent": 2421067,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-64",
+          "relation": "touching"
+        },
+        {
+          "number": "T-75",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-157": {
+      "number": "T-157",
+      "name": "Hollywood/Sheridan",
+      "approvalDate": "2007-11-07",
+      "expirationDate": "2031-12-31",
+      "sbif": true,
+      "wards": "48",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 13978616,
+        "taxAllocationFundBalance": 9880637,
+        "incrementCurrent": 3852203,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-13",
+          "relation": "touching"
+        },
+        {
+          "number": "T-109",
+          "relation": "touching"
+        },
+        {
+          "number": "T-180",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-160": {
+      "number": "T-160",
+      "name": "Kennedy/Kimball",
+      "approvalDate": "2008-03-12",
+      "expirationDate": "2032-12-31",
+      "sbif": true,
+      "wards": "33,35",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 10185362,
+        "taxAllocationFundBalance": 7753705,
+        "incrementCurrent": 2533876,
+        "surplusDistributed": 0
+      },
+      "neighbors": []
+    },
+    "T-161": {
+      "number": "T-161",
+      "name": "Ogden/Pulaski",
+      "approvalDate": "2008-04-09",
+      "expirationDate": "2032-12-31",
+      "sbif": true,
+      "wards": "22,24,25",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 4986010,
+        "taxAllocationFundBalance": 6465650,
+        "incrementCurrent": 818783,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-38",
+          "relation": "touching"
+        },
+        {
+          "number": "T-95",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-163": {
+      "number": "T-163",
+      "name": "Archer/Western",
+      "approvalDate": "2009-02-11",
+      "expirationDate": "2033-12-31",
+      "sbif": true,
+      "wards": "11,12,15",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 17791966,
+        "taxAllocationFundBalance": 12108384,
+        "incrementCurrent": 4297064,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-1",
+          "relation": "touching"
+        },
+        {
+          "number": "T-53",
+          "relation": "touching"
+        },
+        {
+          "number": "T-149",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-164": {
+      "number": "T-164",
+      "name": "Little Village East",
+      "approvalDate": "2009-04-22",
+      "expirationDate": "2033-12-31",
+      "sbif": true,
+      "wards": "22,24,25",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 2976781,
+        "taxAllocationFundBalance": 2260439,
+        "incrementCurrent": 705038,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-42",
+          "relation": "touching"
+        },
+        {
+          "number": "T-152",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-166": {
+      "number": "T-166",
+      "name": "North Pullman",
+      "approvalDate": "2009-06-30",
+      "expirationDate": "2033-12-31",
+      "sbif": false,
+      "wards": "8,9,10",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 8082602,
+        "taxAllocationFundBalance": 7841447,
+        "incrementCurrent": 2208446,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-54",
+          "relation": "touching"
+        },
+        {
+          "number": "T-103",
+          "relation": "touching"
+        },
+        {
+          "number": "T-113",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-167": {
+      "number": "T-167",
+      "name": "Avondale",
+      "approvalDate": "2009-07-29",
+      "expirationDate": "2033-12-31",
+      "sbif": true,
+      "wards": "30,45",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 2554478,
+        "taxAllocationFundBalance": 2102104,
+        "incrementCurrent": 427616,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-87",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-169": {
+      "number": "T-169",
+      "name": "Ewing Avenue",
+      "approvalDate": "2010-03-10",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "10",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 2322780,
+        "taxAllocationFundBalance": 2100240,
+        "incrementCurrent": 323796,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-103",
+          "relation": "touching"
+        },
+        {
+          "number": "T-182",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-171": {
+      "number": "T-171",
+      "name": "West Woodlawn",
+      "approvalDate": "2010-05-12",
+      "expirationDate": "2034-12-31",
+      "sbif": true,
+      "wards": "6,20",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 3075535,
+        "taxAllocationFundBalance": 515962,
+        "incrementCurrent": 66298,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-65",
+          "relation": "touching"
+        },
+        {
+          "number": "T-174",
+          "relation": "touching"
+        },
+        {
+          "number": "T-178",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-172": {
+      "number": "T-172",
+      "name": "Randolph/Wells",
+      "approvalDate": "2010-06-09",
+      "expirationDate": "2034-12-31",
+      "sbif": false,
+      "wards": "42",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 27411437,
+        "taxAllocationFundBalance": 13126830,
+        "incrementCurrent": 22220667,
+        "surplusDistributed": 7699911
+      },
+      "neighbors": [
+        {
+          "number": "T-147",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-173": {
+      "number": "T-173",
+      "name": "Montrose/Clarendon",
+      "approvalDate": "2010-06-30",
+      "expirationDate": "2034-12-31",
+      "sbif": false,
+      "wards": "46",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 5902369,
+        "taxAllocationFundBalance": 5628811,
+        "incrementCurrent": 1688025,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-180",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-174": {
+      "number": "T-174",
+      "name": "67th and Wentworth",
+      "approvalDate": "2011-05-04",
+      "expirationDate": "2035-12-31",
+      "sbif": true,
+      "wards": "5,6,16,17,20",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 2484700,
+        "taxAllocationFundBalance": 1020460,
+        "incrementCurrent": 0,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-65",
+          "relation": "near"
+        },
+        {
+          "number": "T-106",
+          "relation": "touching"
+        },
+        {
+          "number": "T-127",
+          "relation": "touching"
+        },
+        {
+          "number": "T-143",
+          "relation": "touching"
+        },
+        {
+          "number": "T-155",
+          "relation": "touching"
+        },
+        {
+          "number": "T-171",
+          "relation": "touching"
+        },
+        {
+          "number": "T-178",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-175": {
+      "number": "T-175",
+      "name": "51st and Lake Park",
+      "approvalDate": "2012-11-15",
+      "expirationDate": "2036-12-31",
+      "sbif": false,
+      "wards": "4",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 1636004,
+        "taxAllocationFundBalance": 1522100,
+        "incrementCurrent": 1296341,
+        "surplusDistributed": 0
+      },
+      "neighbors": []
+    },
+    "T-176": {
+      "number": "T-176",
+      "name": "107th/Halsted",
+      "approvalDate": "2014-04-02",
+      "expirationDate": "2038-12-31",
+      "sbif": true,
+      "wards": "9,21",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 4713747,
+        "taxAllocationFundBalance": 3991888,
+        "incrementCurrent": 680312,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-113",
+          "relation": "touching"
+        },
+        {
+          "number": "T-114",
+          "relation": "touching"
+        },
+        {
+          "number": "T-125",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-177": {
+      "number": "T-177",
+      "name": "Foster and California",
+      "approvalDate": "2014-04-02",
+      "expirationDate": "2038-12-31",
+      "sbif": false,
+      "wards": "39,40",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 1368393,
+        "taxAllocationFundBalance": 457263,
+        "incrementCurrent": -243,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-77",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-178": {
+      "number": "T-178",
+      "name": "Washington Park",
+      "approvalDate": "2014-10-08",
+      "expirationDate": "2038-12-31",
+      "sbif": true,
+      "wards": "6,20",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 10635889,
+        "taxAllocationFundBalance": 8634967,
+        "incrementCurrent": 2071969,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-106",
+          "relation": "touching"
+        },
+        {
+          "number": "T-118",
+          "relation": "touching"
+        },
+        {
+          "number": "T-121",
+          "relation": "touching"
+        },
+        {
+          "number": "T-136",
+          "relation": "touching"
+        },
+        {
+          "number": "T-171",
+          "relation": "touching"
+        },
+        {
+          "number": "T-174",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-179": {
+      "number": "T-179",
+      "name": "Diversey/Chicago River",
+      "approvalDate": "2016-10-06",
+      "expirationDate": "2040-12-31",
+      "sbif": false,
+      "wards": "32",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 1629266,
+        "taxAllocationFundBalance": 1524296,
+        "incrementCurrent": 161056,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-150",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-180": {
+      "number": "T-180",
+      "name": "Red and Purple Modernization Phase One Project",
+      "approvalDate": "2016-11-30",
+      "expirationDate": "2052-12-31",
+      "sbif": false,
+      "wards": "2,27,32,43,44,46-48",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 17697865,
+        "taxAllocationFundBalance": 10814690,
+        "incrementCurrent": 75667025,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-13",
+          "relation": "touching"
+        },
+        {
+          "number": "T-30",
+          "relation": "touching"
+        },
+        {
+          "number": "T-70",
+          "relation": "touching"
+        },
+        {
+          "number": "T-109",
+          "relation": "touching"
+        },
+        {
+          "number": "T-134",
+          "relation": "touching"
+        },
+        {
+          "number": "T-157",
+          "relation": "touching"
+        },
+        {
+          "number": "T-173",
+          "relation": "touching"
+        },
+        {
+          "number": "T-183",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-181": {
+      "number": "T-181",
+      "name": "Foster/Edens",
+      "approvalDate": "2018-02-28",
+      "expirationDate": "2042-12-31",
+      "sbif": false,
+      "wards": "39",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 3649540,
+        "taxAllocationFundBalance": 2464231,
+        "incrementCurrent": 2479084,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-116",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-182": {
+      "number": "T-182",
+      "name": "116th/Avenue O",
+      "approvalDate": "2018-10-31",
+      "expirationDate": "2042-12-31",
+      "sbif": false,
+      "wards": "10",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 7895606,
+        "taxAllocationFundBalance": 2741876,
+        "incrementCurrent": 1714241,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-103",
+          "relation": "touching"
+        },
+        {
+          "number": "T-169",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-183": {
+      "number": "T-183",
+      "name": "Cortland and Chicago River",
+      "approvalDate": "2019-04-10",
+      "expirationDate": "2043-12-31",
+      "sbif": false,
+      "wards": "2,32",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 86703090,
+        "taxAllocationFundBalance": 79886185,
+        "incrementCurrent": 5533940,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-180",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-184": {
+      "number": "T-184",
+      "name": "Roosevelt/Clark",
+      "approvalDate": "2019-04-10",
+      "expirationDate": "2043-12-31",
+      "sbif": false,
+      "wards": "3,11,28,34",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 76345151,
+        "taxAllocationFundBalance": 66266605,
+        "incrementCurrent": 4458524,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-53",
+          "relation": "touching"
+        },
+        {
+          "number": "T-63",
+          "relation": "touching"
+        },
+        {
+          "number": "T-72",
+          "relation": "touching"
+        },
+        {
+          "number": "T-186",
+          "relation": "touching"
+        }
+      ]
+    },
+    "T-185": {
+      "number": "T-185",
+      "name": "Cicero/Stevenson",
+      "approvalDate": "2022-07-20",
+      "expirationDate": "2046-12-31",
+      "sbif": false,
+      "wards": "22",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 10398592,
+        "taxAllocationFundBalance": 5069510,
+        "incrementCurrent": 0,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-149",
+          "relation": "near"
+        }
+      ]
+    },
+    "T-186": {
+      "number": "T-186",
+      "name": "Red Line Extension (RLE)",
+      "approvalDate": "2022-12-14",
+      "expirationDate": "2058-12-31",
+      "sbif": false,
+      "wards": "3,4,11,25,28,34,42",
+      "status": "Active",
+      "finance": {
+        "reportYear": 2024,
+        "fundBalance": 6632943,
+        "taxAllocationFundBalance": 2139196,
+        "incrementCurrent": 4645337,
+        "surplusDistributed": 0
+      },
+      "neighbors": [
+        {
+          "number": "T-53",
+          "relation": "touching"
+        },
+        {
+          "number": "T-61",
+          "relation": "touching"
+        },
+        {
+          "number": "T-63",
+          "relation": "near"
+        },
+        {
+          "number": "T-72",
+          "relation": "touching"
+        },
+        {
+          "number": "T-131",
+          "relation": "touching"
+        },
+        {
+          "number": "T-141",
+          "relation": "touching"
+        },
+        {
+          "number": "T-147",
+          "relation": "touching"
+        },
+        {
+          "number": "T-184",
+          "relation": "touching"
+        }
+      ]
+    }
+  },
+  "zips": {
+    "60617": {
+      "districtNumbers": [
+        "T-54",
+        "T-60",
+        "T-93",
+        "T-103",
+        "T-123",
+        "T-128",
+        "T-166",
+        "T-169",
+        "T-182"
+      ],
+      "vacantSiteCounts": {
+        "T-54": 12,
+        "T-60": 4,
+        "T-93": 584,
+        "T-103": 93,
+        "T-123": 59,
+        "T-128": 132,
+        "T-166": 0,
+        "T-169": 98,
+        "T-182": 5
+      }
+    },
+    "60619": {
+      "districtNumbers": [
+        "T-54",
+        "T-60",
+        "T-127",
+        "T-145",
+        "T-174"
+      ],
+      "vacantSiteCounts": {
+        "T-54": 37,
+        "T-60": 65,
+        "T-127": 116,
+        "T-145": 107,
+        "T-174": 54
+      }
+    },
+    "60621": {
+      "districtNumbers": [
+        "T-56",
+        "T-106",
+        "T-121",
+        "T-136",
+        "T-155",
+        "T-174",
+        "T-178"
+      ],
+      "vacantSiteCounts": {
+        "T-56": 0,
+        "T-106": 1175,
+        "T-121": 37,
+        "T-136": 0,
+        "T-155": 0,
+        "T-174": 315,
+        "T-178": 250
+      }
+    },
+    "60623": {
+      "districtNumbers": [
+        "T-38",
+        "T-42",
+        "T-48",
+        "T-95",
+        "T-149",
+        "T-152",
+        "T-161",
+        "T-164"
+      ],
+      "vacantSiteCounts": {
+        "T-38": 55,
+        "T-42": 2,
+        "T-48": 0,
+        "T-95": 829,
+        "T-149": 0,
+        "T-152": 6,
+        "T-161": 1046,
+        "T-164": 7
+      }
+    },
+    "60624": {
+      "districtNumbers": [
+        "T-24",
+        "T-38",
+        "T-52",
+        "T-64",
+        "T-75",
+        "T-95",
+        "T-107",
+        "T-115",
+        "T-161"
+      ],
+      "vacantSiteCounts": {
+        "T-24": 19,
+        "T-38": 40,
+        "T-52": 7,
+        "T-64": 162,
+        "T-75": 104,
+        "T-95": 890,
+        "T-107": 0,
+        "T-115": 638,
+        "T-161": 22
+      }
+    },
+    "60636": {
+      "districtNumbers": [
+        "T-56",
+        "T-66",
+        "T-106",
+        "T-143",
+        "T-174"
+      ],
+      "vacantSiteCounts": {
+        "T-56": 21,
+        "T-66": 0,
+        "T-106": 36,
+        "T-143": 726,
+        "T-174": 26
+      }
+    },
+    "60644": {
+      "districtNumbers": [
+        "T-38",
+        "T-64",
+        "T-75",
+        "T-95",
+        "T-144",
+        "T-156"
+      ],
+      "vacantSiteCounts": {
+        "T-38": 63,
+        "T-64": 81,
+        "T-75": 281,
+        "T-95": 245,
+        "T-144": 112,
+        "T-156": 32
+      }
+    },
+    "60649": {
+      "districtNumbers": [
+        "T-60",
+        "T-65",
+        "T-123"
+      ],
+      "vacantSiteCounts": {
+        "T-60": 68,
+        "T-65": 0,
+        "T-123": 64
+      }
+    },
+    "60651": {
+      "districtNumbers": [
+        "T-52",
+        "T-64",
+        "T-69",
+        "T-107",
+        "T-115",
+        "T-156"
+      ],
+      "vacantSiteCounts": {
+        "T-52": 1,
+        "T-64": 16,
+        "T-69": 27,
+        "T-107": 58,
+        "T-115": 341,
+        "T-156": 102
+      }
+    }
+  }
+}

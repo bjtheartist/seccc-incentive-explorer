@@ -49,6 +49,12 @@ import VacancyClustersIsland from "@/components/vacancy/VacancyClustersIsland";
 import { loadCorridorRings } from "@/lib/vacancy-corridor-rings";
 import VacancyDirectory from "@/components/vacancy/VacancyDirectory";
 import { exemptionReferralRowsForZip } from "@/lib/exemption-anomalies";
+import {
+  buildTifFundingPicture,
+  loadTifBriefs,
+  TIF_PORTING_NOTE,
+  TIF_RELATION_LABELS,
+} from "@/lib/tif-briefs";
 import { VacancyIndexPdfButton } from "@/components/owner-file/VacancyIndexPdfButton";
 
 export const dynamic = "force-dynamic";
@@ -405,6 +411,23 @@ export default async function VacancyReportPage({
     });
     portfolioCounts[portfolio] += 1;
   }
+
+  // ── TIF funding picture ──
+  // Contiguity graph + latest district balances, composed at export time
+  // (public/data/tif-briefs.json). Null when the export is missing or the ZIP
+  // has no intersecting districts — the section then does not render. Every
+  // balance is sourced; a district with no annual-report row shows "not yet
+  // available", never a fabricated zero (discovery, not compliance).
+  const tifBriefs = loadTifBriefs();
+  const tifPicture = tifBriefs ? buildTifFundingPicture(zip, tifBriefs, new Date().getFullYear()) : null;
+  const fmtTifMoney = (v: number | null) =>
+    v == null ? "Not yet available" : `$${Math.round(v).toLocaleString("en-US")}`;
+  const expiresPhrase = (year: number | null, yearsLeft: number | null): string => {
+    if (year == null || yearsLeft == null) return "Expiration not on record";
+    if (yearsLeft < 0) return `Expired ${year}`;
+    if (yearsLeft === 0) return `Expires this year (${year})`;
+    return `Expires in ${yearsLeft} ${yearsLeft === 1 ? "year" : "years"} (${year})`;
+  };
 
   const neighborhoodBrief = `${pilotEntry.primaryNeighborhood} carries ${total.toLocaleString(
     "en-US",
@@ -1297,6 +1320,159 @@ export default async function VacancyReportPage({
           </div>
           <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/45">{MATRIX_METHOD_NOTE}</p>
         </section>
+
+        {/* TIF funding picture — contiguity graph + district balances */}
+        {tifPicture && tifPicture.length > 0 && (
+          <section className="mt-10">
+            <h2 className="mb-2 font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#0C1B33]/50">
+              TIF funding picture
+            </h2>
+            <p className="max-w-3xl text-[13px] leading-relaxed text-[#0C1B33]/70">
+              The tax-increment districts intersecting {pilotEntry.primaryNeighborhood}, ordered by how
+              many tracked vacant sites sit inside each. For every district: its latest reported balance,
+              and the contiguous neighbors it could legally port increment to — with their balances and
+              expirations. Discovery only: what is legally possible, not a promise of funds.
+            </p>
+
+            <div className="mt-4 space-y-px border border-[#0C1B33]/10 bg-[#0C1B33]/10">
+              {tifPicture.map((d) => (
+                <div key={d.number} className="bg-white px-4 py-4">
+                  {/* District header */}
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="font-editorial text-[20px] leading-none text-[#0C1B33]">
+                        {d.name}
+                      </span>
+                      <span className="font-mono-bureau text-[11px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
+                        {d.number}
+                      </span>
+                      {d.sbif ? (
+                        <span
+                          className="border border-[#2563EB]/40 px-2 py-0.5 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.08em] text-[#2563EB]"
+                          title="Carries the Small Business Improvement Fund (SBIF)"
+                        >
+                          SBIF
+                        </span>
+                      ) : (
+                        <span className="border border-dashed border-[#0C1B33]/20 px-2 py-0.5 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.08em] text-[#0C1B33]/35">
+                          No SBIF
+                        </span>
+                      )}
+                    </div>
+                    <span className="font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/50">
+                      {expiresPhrase(d.expirationYear, d.yearsToExpiration)}
+                    </span>
+                  </div>
+
+                  {/* Balance + vacant-site alignment */}
+                  <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <div className="font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                        Latest fund balance
+                        {d.finance ? ` · ${d.finance.reportYear}` : ""}
+                      </div>
+                      <div
+                        className={`mt-1 font-editorial leading-none ${
+                          d.finance ? "text-[26px] text-[#0C1B33]" : "text-[15px] text-[#0C1B33]/45"
+                        }`}
+                      >
+                        {fmtTifMoney(d.finance?.fundBalance ?? null)}
+                      </div>
+                      {d.finance && d.finance.incrementCurrent != null && (
+                        <div className="mt-1 font-mono-bureau text-[10px] text-[#0C1B33]/50">
+                          Increment collected {d.finance.reportYear}: {fmtTifMoney(d.finance.incrementCurrent)}
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                        Tracked vacant sites inside
+                      </div>
+                      <div className="mt-1 font-editorial text-[26px] leading-none text-[#0C1B33]">
+                        {d.vacantSiteCount.toLocaleString("en-US")}
+                      </div>
+                      <div className="mt-1 text-[11px] leading-snug text-[#0C1B33]/55">
+                        Every one of these sites activated feeds this district&rsquo;s increment.
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Contiguous neighbors (the porting picture) */}
+                  <div className="mt-4">
+                    <div className="font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                      Contiguous districts increment could port to
+                    </div>
+                    {d.neighbors.length === 0 ? (
+                      <p className="mt-1.5 text-[11px] text-[#0C1B33]/45">
+                        No contiguous district found in the boundary set.
+                      </p>
+                    ) : (
+                      <div className="mt-2 overflow-x-auto">
+                        <table className="w-full min-w-[520px] border-collapse text-left">
+                          <thead>
+                            <tr className="border-b border-[#0C1B33]/10 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
+                              <th className="py-1.5 pr-3">District</th>
+                              <th className="py-1.5 pr-3">Adjacency</th>
+                              <th className="py-1.5 pr-3 text-right">Fund balance</th>
+                              <th className="py-1.5 pr-3 text-right">Expires</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {d.neighbors.map((n) => (
+                              <tr key={n.number} className="border-b border-[#0C1B33]/5 last:border-b-0 align-baseline">
+                                <td className="py-1.5 pr-3 text-[12px] text-[#0C1B33]/80">
+                                  {n.name}
+                                  <span className="ml-1.5 font-mono-bureau text-[10px] text-[#0C1B33]/40">
+                                    {n.number}
+                                  </span>
+                                </td>
+                                <td className="py-1.5 pr-3">
+                                  <span
+                                    className="inline-block border px-1.5 py-0.5 font-mono-bureau text-[9px] uppercase tracking-[0.06em]"
+                                    style={
+                                      n.relation === "touching"
+                                        ? { color: "#0C1B33", borderColor: "#0C1B3355" }
+                                        : { color: "#B45309", borderColor: "#B4530955" }
+                                    }
+                                  >
+                                    {TIF_RELATION_LABELS[n.relation]}
+                                  </span>
+                                </td>
+                                <td className="py-1.5 pr-3 text-right font-mono-bureau text-[11px] text-[#0C1B33]/70">
+                                  {n.fundBalance == null ? "—" : fmtTifMoney(n.fundBalance)}
+                                </td>
+                                <td className="py-1.5 pr-3 text-right font-mono-bureau text-[11px] text-[#0C1B33]/55">
+                                  {n.expirationYear ?? "—"}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Fixed process copy (verbatim, no generation) */}
+            <p className="mt-4 max-w-3xl text-[12px] leading-relaxed text-[#0C1B33]/60">{TIF_PORTING_NOTE}</p>
+
+            {/* Section sources + as-of */}
+            {tifBriefs && (
+              <div className="mt-4 text-[11px] leading-relaxed text-[#0C1B33]/45">
+                <span className="font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                  Sources · as of {tifBriefs.sources.asOf}
+                </span>
+                <ul className="mt-1 list-inside list-disc">
+                  <li>{tifBriefs.sources.tifBoundaries}</li>
+                  <li>{tifBriefs.sources.tifAnnualReport}</li>
+                  <li>{tifBriefs.sources.vacancyIndex}</li>
+                </ul>
+              </div>
+            )}
+          </section>
+        )}
 
         {/* Site directory — the full online index (lazy-loaded) */}
         {directoryCount > 0 && (

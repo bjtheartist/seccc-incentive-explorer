@@ -51,7 +51,8 @@
     "support:import": "npx tsx scripts/import-business-support-workbook.ts",
     "report:preview": "npx tsx scripts/preview-report-pdf.ts",
     "vacancy:preview": "npx tsx scripts/preview-vacancy-index-pdf.ts",
-    "vacancy:index:export": "npx tsx scripts/export-vacancy-index.ts"
+    "vacancy:index:export": "npx tsx scripts/export-vacancy-index.ts",
+    "tif:briefs:export": "npx tsx scripts/export-tif-briefs.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.16",
