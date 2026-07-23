@@ -6,6 +6,7 @@ import { CLUSTERS_NOTE, loadVacancyIndex } from "@/lib/vacancy-index";
 import {
   AREA_NEXT_STEPS,
   approxSqft,
+  areaCoverageNote,
   opportunityAreaById,
   opportunitySummary,
   streetNameFromAddress,
@@ -151,6 +152,11 @@ export default async function RevitalizationFilePage({
   const memberRows = area.members.filter((m) => m.address && m.address.trim()).slice(0, MEMBER_ROW_CAP);
   const memberRowTotal = area.members.filter((m) => m.address && m.address.trim()).length;
   const ownershipShown = area.ownershipMix.filter((s) => s.count > 0);
+  // Defect C: mapped-member-derived facts (size, zoning, per-site rows) cover
+  // only the mapped members, not the full group, whenever the cap or a data
+  // gap left some sites unmapped. Honest disclosure travels with those facts.
+  const mappedOnly = area.memberCount < area.siteCount;
+  const coverageNote = areaCoverageNote(area);
 
   const combinedSize =
     area.combinedKnownSqft > 0
@@ -177,7 +183,7 @@ export default async function RevitalizationFilePage({
   if (area.corridorContext) supportIndicators.push(`Near the ${area.corridorContext} corridor`);
 
   return (
-    <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
+    <div className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
       <div className="mx-auto max-w-3xl">
         <VacancySubNav zip={zip} active="areas" />
 
@@ -209,7 +215,7 @@ export default async function RevitalizationFilePage({
           )}
           <p className="mt-2">
             <Link
-              href={`/vacancy/${zip}/map`}
+              href={`/vacancy/${zip}/map?area=${area.clusterId}`}
               className="font-mono-bureau text-[11px] uppercase tracking-[0.1em] text-[#2563EB] hover:underline"
             >
               Show these sites on the property map →
@@ -222,9 +228,15 @@ export default async function RevitalizationFilePage({
           <dl className="grid grid-cols-1 gap-px border border-[#0C1B33]/10 bg-[#0C1B33]/10 sm:grid-cols-2">
             {[
               { label: "Parcels in the group", value: area.siteCount.toLocaleString("en-US") },
-              { label: "Combined approximate area", value: combinedSize },
+              {
+                label: `Combined approximate area${mappedOnly ? " (mapped members)" : ""}`,
+                value: combinedSize,
+              },
               { label: "Land / building mix", value: landBuilding || "—" },
-              { label: "Zoning (most common)", value: area.zoningGlossText ?? "Not recorded" },
+              {
+                label: `Zoning (most common)${mappedOnly ? " (mapped members)" : ""}`,
+                value: area.zoningGlossText ?? "Not recorded",
+              },
             ].map((row) => (
               <div key={row.label} className="bg-white px-4 py-3">
                 <dt className="font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
@@ -234,6 +246,9 @@ export default async function RevitalizationFilePage({
               </div>
             ))}
           </dl>
+          {coverageNote && (
+            <p className="mt-2.5 text-[10px] font-semibold leading-snug text-[#A45B00]">{coverageNote}</p>
+          )}
           {supportIndicators.length > 0 && (
             <ul className="mt-3 space-y-1 text-[12px] leading-relaxed text-[#0C1B33]/60">
               {supportIndicators.map((s) => (
@@ -299,6 +314,11 @@ export default async function RevitalizationFilePage({
 
         {/* 7 · Properties in this area */}
         <Section n="07" title="Properties in this area">
+          {coverageNote && (
+            <p className="mb-3 text-[10px] font-semibold leading-snug text-[#A45B00]">
+              {coverageNote} This table lists the mapped members only.
+            </p>
+          )}
           {memberRows.length === 0 ? (
             <p className="text-[12px] text-[#0C1B33]/45">
               Individual addresses are not yet available for this area.
@@ -356,7 +376,7 @@ export default async function RevitalizationFilePage({
               )}
               <p className="mt-2">
                 <Link
-                  href={`/vacancy/${zip}/directory`}
+                  href={`/vacancy/${zip}/directory?area=${area.clusterId}`}
                   className="font-mono-bureau text-[11px] uppercase tracking-[0.1em] text-[#2563EB] hover:underline"
                 >
                   View all in the directory →
@@ -384,6 +404,6 @@ export default async function RevitalizationFilePage({
           </div>
         </Section>
       </div>
-    </main>
+    </div>
   );
 }

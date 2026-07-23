@@ -43,7 +43,6 @@ import type {
   VacancyBbox,
   VacancyCluster,
   VacancyIndexEdition,
-  VacancyPriorityTier,
   VacancyPropertyType,
   VacancySitePoint,
 } from "./vacancy-index";
@@ -74,7 +73,6 @@ export interface OpportunityAreaMember {
   pin: string | null;
   saleYear: number | null;
   violation: boolean;
-  priorityTier: VacancyPriorityTier;
   lat: number;
   lon: number;
 }
@@ -330,6 +328,23 @@ export const AREA_NEXT_STEPS: ReadonlyArray<{ actor: string; step: string }> = [
   { actor: "Development partner", step: "Test zoning and financial feasibility." },
 ];
 
+/**
+ * The prominent mapped-detail coverage disclosure (defect C): whenever an
+ * area's derived per-member facts (size, zoning, per-site rows, incentive
+ * membership) cover only the mapped members rather than the full group,
+ * return the sentence every surface must print BESIDE those facts. `null`
+ * when mapped coverage is complete (memberCount >= siteCount) — no banner
+ * needed. The full-group facts (siteCount, ownership mix, land/building
+ * split, tax-sale/violation counts) come from the cluster itself and are NOT
+ * subject to this floor.
+ */
+export function areaCoverageNote(
+  area: Pick<OpportunityArea, "siteCount" | "memberCount">,
+): string | null {
+  if (area.memberCount >= area.siteCount) return null;
+  return `Detailed site facts (size, zoning, addresses) cover ${area.memberCount} of the ${area.siteCount} sites in this group — the mapped members only. Group totals count all ${area.siteCount} sites.`;
+}
+
 /** The two-sentence opportunity summary (fixed template over real fields). */
 export function opportunitySummary(area: OpportunityArea): string {
   const landBuilding =
@@ -413,7 +428,6 @@ function memberFromPoint(p: VacancySitePoint): OpportunityAreaMember {
     pin: p.pin,
     saleYear: p.saleYear,
     violation: p.violation,
-    priorityTier: p.priorityTier,
     lat: p.lat,
     lon: p.lon,
   };

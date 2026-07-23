@@ -40,7 +40,6 @@ import {
   type VacancyIndexMatrixRow,
   type VacancyIndexTopSite,
   type VacancyIndexTransportLine,
-  type VacancyPriorityTier,
 } from "@/lib/vacancy-index-pdf";
 import { PILOT_ZIPS } from "@/lib/pilot-zips";
 import { normalizeOwnerType, type OwnerType } from "@/lib/owner-classify";
@@ -79,7 +78,9 @@ type Feature = {
   };
 };
 
-/* ── Priority rubric (mirrors the export/adapter — preview stand-in) ── */
+/* ── Internal ordering rubric (mirrors the export/adapter — preview stand-in).
+ * The score is used ONLY to order the preview's sitePoints/topSites arrays and
+ * is never written into the VacancyIndexInput handed to the PDF builder. ── */
 
 function priorityScore(p: Feature["properties"]): number {
   let score = Math.min(p.incentiveCount ?? 0, 4);
@@ -89,12 +90,6 @@ function priorityScore(p: Feature["properties"]): number {
   if (p.ownerType === "city_public" || p.status === "city_owned") score += 2;
   if (p.propertyType === "vacant_building" && p.status === "reported_open") score += 1;
   return score;
-}
-
-function tierOf(score: number): VacancyPriorityTier {
-  if (score >= 6) return "high";
-  if (score >= 3) return "medium";
-  return "low";
 }
 
 function nextStepFor(ownerType: OwnerType, propertyType: string): string {
@@ -224,7 +219,6 @@ function assembleEdition(neighborhood: string): VacancyIndexInput {
       propertyType: f.properties.propertyType,
       zoning: f.properties.zoningClass,
       sqft: f.properties.squareFeet && f.properties.squareFeet > 0 ? f.properties.squareFeet : null,
-      priority: tierOf(priorityScore(f.properties)),
       nextStep: nextStepFor(ot, f.properties.propertyType),
     };
   });
@@ -239,7 +233,6 @@ function assembleEdition(neighborhood: string): VacancyIndexInput {
   const landOwnerType: Partial<Record<OwnerType, number>> = {};
   let vacantLand = 0;
   let vacantBuilding = 0;
-  const priorityDistribution = { high: 0, medium: 0, low: 0 };
   for (const f of features) {
     const ot = normalizeOwnerType(f.properties.ownerType);
     trackedInventoryByOwnerType[ot] = (trackedInventoryByOwnerType[ot] ?? 0) + 1;
@@ -248,7 +241,6 @@ function assembleEdition(neighborhood: string): VacancyIndexInput {
       vacantLand += 1;
       landOwnerType[ot] = (landOwnerType[ot] ?? 0) + 1;
     }
-    priorityDistribution[tierOf(priorityScore(f.properties))] += 1;
   }
 
   const boundary = loadBoundary(neighborhood);
@@ -272,9 +264,8 @@ function assembleEdition(neighborhood: string): VacancyIndexInput {
   const brief =
     `${neighborhood} carries ${total} tracked vacant properties across ZIP ${zipCode}. ` +
     `${cityOwned} are City/Public-owned and ${total - cityOwned} are privately held; ` +
-    `${inIncentiveZones} sit inside at least one mapped incentive zone. The site index ranks the ` +
-    `highest-opportunity parcels by incentive coverage, size, and owner type so a corridor manager ` +
-    `can start with the clearest next contact.`;
+    `${inIncentiveZones} sit inside at least one mapped incentive zone. The site index highlights ` +
+    `featured parcels so a corridor manager can start with the clearest next contact.`;
 
   const largestBloc = (Object.entries(trackedInventoryByOwnerType).sort((a, b) => b[1] - a[1])[0] ?? [
     "unknown",
@@ -298,8 +289,8 @@ function assembleEdition(neighborhood: string): VacancyIndexInput {
         body: `${cityOwned} City/Public parcels can enter a CCLBA/City disposition inquiry without an owner-outreach letter.`,
       },
       {
-        title: "Run a verification sweep on the priority sites",
-        body: `${priorityDistribution.high} high-priority sites warrant an ownership/status verification pass before any letter.`,
+        title: "Run a verification sweep on the reported buildings",
+        body: `${vacantBuilding} 311-reported vacant buildings warrant a parcel-match and ownership/status verification pass before any letter.`,
       },
     ],
     ownerTypeDistribution: vacantLand > 0 ? landOwnerType : null,
@@ -313,7 +304,6 @@ function assembleEdition(neighborhood: string): VacancyIndexInput {
     distress: { taxSaleExposedCount: 214, latestTaxSaleYear: 2023, violationMatchCount: 47 },
     trackedInventoryByOwnerType,
     propertyTypeBreakdown: { vacantLand, vacantBuilding },
-    priorityDistribution,
     matrixRows,
     boundary,
     centroid,
@@ -356,7 +346,6 @@ function stressFixture(): VacancyIndexInput {
     propertyType: i % 2 === 0 ? "vacant_building" : "vacant_land",
     zoning: i % 2 === 0 ? null : "B3-2",
     sqft: i % 2 === 0 ? null : 12000,
-    priority: (["high", "medium", "low"] as VacancyPriorityTier[])[i % 3],
     nextStep:
       i % 2 === 0
         ? "Verify ownership via Assessor/Recorder; check 311 case status and confirm the parcel is genuinely vacant before any outreach"
@@ -395,7 +384,6 @@ function stressFixture(): VacancyIndexInput {
     distress: null, // exercises the hollow "NOT YET AVAILABLE" distress chips
     trackedInventoryByOwnerType: { unknown: 900, city_public: 402, corporate_llc: 3 },
     propertyTypeBreakdown: { vacantLand: 402, vacantBuilding: 885 },
-    priorityDistribution: { high: 40, medium: 900, low: 347 },
     matrixRows,
     boundary: null, // exercises the dot-field silhouette fallback
     centroid: { lat: 41.784, lon: -87.648 },

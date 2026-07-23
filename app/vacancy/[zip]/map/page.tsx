@@ -1,13 +1,26 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPilotZipEntry } from "@/lib/pilot-zips";
 import { loadVacancyIndex } from "@/lib/vacancy-index";
 import { loadCorridorRings } from "@/lib/vacancy-corridor-rings";
+import { opportunityAreaById } from "@/lib/vacancy-opportunity-areas";
 import VacancyMapIsland from "@/components/vacancy/VacancyMapIsland";
 import { VacancySubNav } from "@/components/vacancy/VacancySubNav";
 import { OPPORTUNITY_AREA_DISCLAIMER } from "@/lib/vacancy-public-labels";
 
 export const dynamic = "force-dynamic";
+
+/** Defect B: parse the `?area=` deep link (from a Revitalization File's "Show
+ *  these sites on the property map" link) into a positive integer cluster id.
+ *  Anything else — missing, non-numeric, an array, zero/negative — resolves
+ *  to `null` and the page silently falls back to the unfocused map. */
+function parseAreaParam(raw: string | string[] | undefined): number | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value || !/^\d+$/.test(value)) return null;
+  const n = Number(value);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
 
 export async function generateMetadata({
   params,
@@ -29,10 +42,13 @@ export async function generateMetadata({
  */
 export default async function VacancyMapPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ zip: string }>;
+  searchParams: Promise<{ area?: string | string[] }>;
 }) {
   const { zip } = await params;
+  const { area: areaParam } = await searchParams;
   const pilotEntry = getPilotZipEntry(zip);
   if (!pilotEntry) notFound();
 
@@ -47,8 +63,16 @@ export default async function VacancyMapPage({
       })
     : "";
 
+  // Defect B: resolve the ?area= deep link against this edition's kept
+  // clusters. An id that doesn't resolve (bad param, or an area outside the
+  // kept clusters) is ignored gracefully — the map just renders unfocused.
+  const requestedAreaId = parseAreaParam(areaParam);
+  const focusedArea =
+    edition && requestedAreaId != null ? opportunityAreaById(edition, requestedAreaId) : null;
+  const initialAreaId = focusedArea?.clusterId ?? null;
+
   return (
-    <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
+    <div className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
       <div className="mx-auto max-w-5xl">
         <VacancySubNav zip={zip} active="map" />
 
@@ -58,6 +82,14 @@ export default async function VacancyMapPage({
         <h1 className="mt-3 font-editorial text-[38px] leading-none sm:text-[48px]">
           {pilotEntry.primaryNeighborhood} — tracked vacant sites
         </h1>
+        {focusedArea ? (
+          <p className="mt-2 text-[12px] leading-relaxed text-[#0C1B33]/55">
+            Focused on {focusedArea.name} — {focusedArea.siteCount.toLocaleString("en-US")} sites ·{" "}
+            <Link href={`/vacancy/${zip}/map`} className="text-[#2563EB] hover:underline">
+              Show all sites
+            </Link>
+          </p>
+        ) : null}
         <p className="mt-3 max-w-2xl text-[12px] leading-relaxed text-[#0C1B33]/45">
           {OPPORTUNITY_AREA_DISCLAIMER}
         </p>
@@ -65,6 +97,7 @@ export default async function VacancyMapPage({
         {edition ? (
           <div className="mt-6">
             <VacancyMapIsland
+              key={initialAreaId ?? "all"}
               zip={zip}
               boundary={edition.boundary}
               bbox={edition.boundary?.bbox ?? null}
@@ -80,6 +113,7 @@ export default async function VacancyMapPage({
               clusters={edition.clusters ?? null}
               corridors={loadCorridorRings(edition.corridors ?? null)}
               anchors={edition.anchors ?? null}
+              initialAreaId={initialAreaId}
             />
           </div>
         ) : (
@@ -90,6 +124,6 @@ export default async function VacancyMapPage({
           </div>
         )}
       </div>
-    </main>
+    </div>
   );
 }

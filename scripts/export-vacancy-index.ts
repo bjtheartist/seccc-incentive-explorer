@@ -72,7 +72,6 @@ import {
   nearestCorridorName,
   nextStepForSite,
   ownerConfidenceForPoint,
-  portfolioForSite,
   rankSites,
   reconcileOwnerTypeForPin,
   reconcileVacantLandOwnership,
@@ -1291,7 +1290,7 @@ function buildEdition(
     parcelIndex === null ? null : { matched: buildingMatched, unmatched: buildingUnmatched };
 
   // ── Spatial layer (D2/D3): proximity clusters over the FULL tracked universe
-  //    (`sites`, pre-cap), each carrying its portfolio + distress flags. Top 12
+  //    (`sites`, pre-cap), each carrying its distress flags. Top 12
   //    by count; corridorName resolved per cluster centroid. Corridors listed
   //    for the edition are those whose bbox overlaps the ZIP bbox. Computed here
   //    (before ranking/cap) so each site can be annotated with the kept-cluster
@@ -1300,12 +1299,6 @@ function buildEdition(
     lat: s.lat,
     lon: s.lon,
     ownerType: s.ownerType,
-    portfolio: portfolioForSite({
-      ownerType: s.ownerType,
-      priorityTier: s.priorityTier,
-      saleYear: s.saleYear,
-      violation: s.violation,
-    }),
     taxSale: s.saleYear != null,
     violation: s.violation,
     propertyType: s.propertyType,
@@ -1330,8 +1323,6 @@ function buildEdition(
   const vacantLandCount = sites.filter((s) => s.propertyType === "vacant_land").length;
   const cityOwnedCount = sites.filter((s) => s.ownerType === "city_public" || s.status === "city_owned").length;
   const inIncentiveZoneCount = sites.filter((s) => s.incentiveCount > 0).length;
-  const priorityMix = { high: 0, medium: 0, low: 0 };
-  for (const s of sites) priorityMix[s.priorityTier] += 1;
 
   const ranked = rankSites(sites);
 
@@ -1340,7 +1331,6 @@ function buildEdition(
     lon: s.lon,
     ownerType: s.ownerType,
     propertyType: s.propertyType,
-    priorityTier: s.priorityTier,
     markerNumber: i < MARKER_COUNT ? i + 1 : null,
     address: s.rawAddress,
     pin: s.pin,
@@ -1367,8 +1357,8 @@ function buildEdition(
       address: rows[i]?.address ?? null,
       ownerType: s.ownerType,
       propertyType: s.propertyType,
-      priorityTier: s.priorityTier,
       priorityScore: s.priorityScore,
+      clusterId: s.clusterId,
       saleYear: s.saleYear,
       violation: s.violation,
       pin: s.pin,
@@ -1385,8 +1375,6 @@ function buildEdition(
     zoningClass: s.zoningClass,
     squareFeet: s.squareFeet,
     incentiveCount: s.incentiveCount,
-    priorityScore: s.priorityScore,
-    priorityTier: s.priorityTier,
     nextStep: nextStepForSite(s),
     lat: s.lat,
     lon: s.lon,
@@ -1480,7 +1468,6 @@ function buildEdition(
       vacantBuildingCount: sites.length - vacantLandCount,
       cityOwnedCount,
       inIncentiveZoneCount,
-      priorityMix,
     },
     ownership: {
       vacantLandParcelsByOwnerType: rawSeries,

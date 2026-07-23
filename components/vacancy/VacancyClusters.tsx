@@ -5,8 +5,7 @@
  * Opportunity Index web report (D5). One card per proximity cluster
  * (lib/vacancy-index.ts clusterVacantSites, attached to each edition as
  * `clusters`), each summarising who owns the vacant properties packed into a
- * ~150 m radius, how they sort into the four intervention portfolios, their
- * distress load, and their land/building split — with a deep-link that focuses
+ * ~150 m radius, their distress load, and their land/building split — with a deep-link that focuses
  * the live map on the cluster's bbox.
  *
  * Standalone + presentational: it renders whatever `clusters` it's handed and
@@ -17,23 +16,10 @@
  */
 
 import type { OwnerType } from "@/lib/owner-classify";
-import {
-  PORTFOLIO_LABELS,
-  PORTFOLIO_ORDER,
-  type VacancyPortfolio,
-} from "@/lib/vacancy-portfolio";
 import type { VacancyCluster } from "@/lib/vacancy-index";
 
 const DISTRESS_RED = "#DC2626";
 
-/** Portfolio accent colors (blue = disposition-ready, orange = outreach,
- *  amber = title risk / verify, slate = hold). */
-const PORTFOLIO_COLORS: Record<VacancyPortfolio, string> = {
-  move_now: "#2563EB",
-  organize_next: "#EA580C",
-  verify: "#CA8A04",
-  long_term: "#94A3B8",
-};
 
 interface VacancyClustersProps {
   zip: string;
@@ -57,7 +43,7 @@ function clusterHeadline(c: VacancyCluster): string {
   const publiclyControlled = by.get("city_public") ?? 0;
   const locallyOwned = by.get("local_private") ?? 0;
   const corporate = (by.get("corporate_llc") ?? 0) + (by.get("out_of_state") ?? 0);
-  const requiringVerification = c.portfolioCounts.verify;
+  const requiringVerification = by.get("unknown") ?? 0;
 
   const segments: string[] = [];
   if (publiclyControlled > 0) segments.push(`${publiclyControlled} publicly controlled`);
@@ -72,31 +58,6 @@ function clusterHeadline(c: VacancyCluster): string {
     : `${prefix}This cluster contains ${properties}: ${joinGrammar(segments)}.`;
 }
 
-function PortfolioBars({ counts, total }: { counts: Record<VacancyPortfolio, number>; total: number }) {
-  const present = PORTFOLIO_ORDER.filter((p) => counts[p] > 0);
-  if (present.length === 0) return null;
-  return (
-    <div className="mt-3 space-y-1.5">
-      {present.map((p) => {
-        const n = counts[p];
-        const pct = total > 0 ? Math.max(4, Math.round((n / total) * 100)) : 0;
-        return (
-          <div key={p} className="flex items-center gap-2">
-            <span className="w-[92px] flex-shrink-0 font-mono-bureau text-[9px] uppercase tracking-[0.06em] text-[#0C1B33]/60">
-              {PORTFOLIO_LABELS[p]}
-            </span>
-            <div className="h-2 flex-1 bg-[#0C1B33]/5">
-              <div className="h-2" style={{ width: `${pct}%`, backgroundColor: PORTFOLIO_COLORS[p] }} />
-            </div>
-            <span className="w-[26px] flex-shrink-0 text-right font-mono-bureau text-[10px] text-[#0C1B33]/70">
-              {n.toLocaleString("en-US")}
-            </span>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 function DistressChip({ label, count }: { label: string; count: number }) {
   return (
@@ -143,8 +104,6 @@ function ClusterCard({
       </div>
 
       <p className="mt-3 text-[13px] leading-relaxed text-[#0C1B33]/85">{clusterHeadline(cluster)}</p>
-
-      <PortfolioBars counts={cluster.portfolioCounts} total={cluster.count} />
 
       <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         <span className="font-mono-bureau text-[10px] text-[#0C1B33]/55">

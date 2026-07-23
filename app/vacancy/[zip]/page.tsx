@@ -11,11 +11,6 @@ import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { PILOT_ZIPS, getPilotZipEntry } from "@/lib/pilot-zips";
 import {
   MATRIX_METHOD_NOTE,
-  PRIORITY_RUBRIC_NOTE,
-  PORTFOLIO_LABELS,
-  PORTFOLIO_ORDER,
-  PORTFOLIO_RUBRIC_NOTE,
-  portfolioForSite,
   editionGeographyNote,
   deriveLandUniverse,
   loadVacancyIndex,
@@ -39,8 +34,6 @@ import {
   normalizeOwnerStructure,
 } from "@/lib/owner-taxonomy";
 import type {
-  VacancyPortfolio,
-  VacancyPriorityTier,
   VacancyPropertyType,
   VacancySiteIndexRow,
   VacancySitePoint,
@@ -96,32 +89,6 @@ const PROPERTY_TYPE_LABELS: Record<VacancyPropertyType, string> = {
   vacant_building: "Vacant Building",
 };
 
-const PRIORITY_CHIP: Record<VacancyPriorityTier, { label: string; bg: string; fg: string }> = {
-  high: { label: "HIGH", bg: "#DC2626", fg: "#FFFFFF" },
-  medium: { label: "MEDIUM", bg: "#EAB308", fg: "#111111" },
-  low: { label: "LOW", bg: "#D9D9D9", fg: "#4B4B4B" },
-};
-
-/** Readiness-portfolio chip styling: move_now = filled ink, organize_next =
- *  blue outline, verify = yellow, long_term = gray. */
-const PORTFOLIO_CHIP: Record<VacancyPortfolio, { bg: string; fg: string; border: string }> = {
-  move_now: { bg: "#0C1B33", fg: "#FFFFFF", border: "#0C1B33" },
-  organize_next: { bg: "transparent", fg: "#2563EB", border: "#2563EB" },
-  verify: { bg: "#EAB308", fg: "#111111", border: "#EAB308" },
-  long_term: { bg: "#D9D9D9", fg: "#4B4B4B", border: "#D9D9D9" },
-};
-
-function PortfolioChip({ portfolio }: { portfolio: VacancyPortfolio }) {
-  const s = PORTFOLIO_CHIP[portfolio];
-  return (
-    <span
-      className="inline-block border px-2 py-0.5 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.08em]"
-      style={{ backgroundColor: s.bg, color: s.fg, borderColor: s.border }}
-    >
-      {PORTFOLIO_LABELS[portfolio]}
-    </span>
-  );
-}
 
 /** One labeled horizontal owner-type bar row. */
 function OwnerBar({
@@ -205,7 +172,7 @@ const ACTION_PATHWAYS: Array<{ label: string; color: string; ring: boolean; acti
     actions: "Title and taxpayer verification before outreach",
   },
   {
-    label: "Tax-sale exposed",
+    label: "Tax-sale record on file",
     color: DISTRESS_RED,
     ring: true,
     actions: "Legal review · tax-sale monitoring · acquisition pathway assessment",
@@ -252,7 +219,7 @@ export default async function VacancyReportPage({
 
   if (!exportData || !edition || !pdfInput) {
     return (
-      <main className="min-h-screen bg-[#FAF9F6] px-6 py-12 text-[#0C1B33]">
+      <div className="min-h-screen bg-[#FAF9F6] px-6 py-12 text-[#0C1B33]">
         <div className="mx-auto max-w-2xl border border-[#0C1B33]/10 bg-white p-6">
           <h1 className="font-editorial text-[38px]">Edition not yet available</h1>
           <p className="mt-3 text-[#0C1B33]/45">
@@ -260,7 +227,7 @@ export default async function VacancyReportPage({
             has not been generated yet. Run <code>npm run vacancy:index:export</code> to build it.
           </p>
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -331,7 +298,7 @@ export default async function VacancyReportPage({
   // parcel-level referral rows are read server-side from the PRIVATE packet
   // (data/private/exemption-anomalies.json), never public — capped to 50 rows.
   const exemptionAnomalies = edition.exemptionAnomalies ?? null;
-  const referralRows = exemptionReferralRowsForZip(zip);
+  const referralRows = hasSession ? exemptionReferralRowsForZip(zip) : [];
   const REFERRAL_ROW_CAP = 50;
   const referralRowsShown = referralRows.slice(0, REFERRAL_ROW_CAP);
   // Present the land EAV total as an order-of-magnitude figure (2 significant
@@ -363,31 +330,11 @@ export default async function VacancyReportPage({
   // clusters) — drives the Overview → Opportunity Areas cross-link count.
   const opportunityAreaCount = deriveOpportunityAreas(edition).totalQualifying;
 
-  // ── Readiness portfolios ──
-  // The full tracked universe isn't available page-side, so portfolio counts are
-  // computed across the (capped) mapped sitePoints and honestly labeled as such.
-  // Site-index rows carry no saleYear/violation, so those distress inputs are
-  // recovered by coordinate from the sitePoints that DO carry them.
+  // Site-index rows carry no PIN of their own — recover it by coordinate from
+  // the sitePoints that DO carry one (the same join the PDF adapter uses).
   const sitePointByCoord = new Map<string, VacancySitePoint>(
     edition.sitePoints.map((p) => [`${p.lat},${p.lon}`, p]),
   );
-  const mappedCap = edition.sitePoints.length;
-  const portfolioCounts: Record<VacancyPortfolio, number> = {
-    move_now: 0,
-    organize_next: 0,
-    verify: 0,
-    long_term: 0,
-  };
-  for (const p of edition.sitePoints) {
-    const portfolio = portfolioForSite({
-      ownerType: normalizeOwnerType(p.ownerType),
-      priorityTier: p.priorityTier,
-      saleYear: p.saleYear,
-      violation: p.violation,
-    });
-    portfolioCounts[portfolio] += 1;
-  }
-
   // ── TIF funding picture ──
   // Contiguity graph + latest district balances, composed at export time
   // (public/data/tif-briefs.json). Null when the export is missing or the ZIP
@@ -439,7 +386,7 @@ export default async function VacancyReportPage({
   }, so the location already qualifies for programs before any conversation begins. Revitalization here is not a single deal — it is public-land disposition, local-owner partnerships, absentee-owner outreach, and records verification, run cluster by cluster.`;
 
   return (
-    <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
+    <div className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
       <div className="mx-auto max-w-5xl">
         {/* Section sub-navigation — one workspace, four views */}
         <VacancySubNav zip={zip} active="overview" />
@@ -911,7 +858,7 @@ export default async function VacancyReportPage({
                     className="inline-block h-2 w-2 flex-shrink-0 rounded-full"
                     style={{ backgroundColor: DISTRESS_RED }}
                   />
-                  Tax-sale exposure
+                  Tax-sale records on file
                   <span className="font-mono-bureau text-[11px] font-semibold text-[#0C1B33]">
                     {distress.taxSaleExposedCount.toLocaleString("en-US")} parcels
                     {distress.latestTaxSaleYear != null ? ` · latest ${distress.latestTaxSaleYear}` : ""}
@@ -1125,30 +1072,12 @@ export default async function VacancyReportPage({
           />
         </section>
 
-        {/* 7 · Readiness portfolios */}
+        {/* 7 · Featured site index */}
         <section className="mt-10">
-          <h2 className="mb-4 font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#0C1B33]/50">
-            Readiness portfolios
-          </h2>
-          <div className="grid grid-cols-2 gap-px border border-[#0C1B33]/10 bg-[#0C1B33]/10 sm:grid-cols-4">
-            {PORTFOLIO_ORDER.map((portfolio) => (
-              <div key={portfolio} className="bg-white px-4 py-4">
-                <div className="font-editorial text-[30px] leading-none">
-                  {portfolioCounts[portfolio].toLocaleString("en-US")}
-                </div>
-                <div className="mt-2">
-                  <PortfolioChip portfolio={portfolio} />
-                </div>
-              </div>
-            ))}
-          </div>
-          <p className="mt-2 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/40">
-            of the {mappedCap.toLocaleString("en-US")} mapped sites
-          </p>
 
           {/* Site index */}
           <h3 className="mb-4 mt-8 font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#0C1B33]/50">
-            Site index — top {siteIndex.length} by priority
+            Site index — featured sites
           </h3>
           <div className="overflow-x-auto border border-[#0C1B33]/10 bg-white">
             <table className="w-full min-w-[940px] border-collapse text-left">
@@ -1160,8 +1089,6 @@ export default async function VacancyReportPage({
                   <th className="px-3 py-2.5">Type</th>
                   <th className="px-3 py-2.5">Zoning</th>
                   <th className="px-3 py-2.5 text-right">Sq ft</th>
-                  <th className="px-3 py-2.5">Priority</th>
-                  <th className="px-3 py-2.5">Portfolio</th>
                   <th className="px-3 py-2.5">Next step</th>
                   <th className="px-3 py-2.5">Verify</th>
                 </tr>
@@ -1171,15 +1098,8 @@ export default async function VacancyReportPage({
                   const ownerType = normalizeOwnerType(row.ownerType);
                   // v2 structure abbrev, rendered only when the export carries it.
                   const structure = row.ownerStructure ? normalizeOwnerStructure(row.ownerStructure) : null;
-                  const chip = PRIORITY_CHIP[row.priorityTier];
                   const sitePoint = sitePointByCoord.get(`${row.lat},${row.lon}`);
                   const cookViewer = cookViewerUrl(sitePoint?.pin);
-                  const portfolio = portfolioForSite({
-                    ownerType,
-                    priorityTier: row.priorityTier,
-                    saleYear: sitePoint?.saleYear ?? null,
-                    violation: sitePoint?.violation ?? false,
-                  });
                   return (
                     <tr key={`${row.lat},${row.lon},${i}`} className="border-b border-[#0C1B33]/5 align-top">
                       <td className="px-3 py-2.5 font-mono-bureau text-[11px] text-[#0C1B33]/50">
@@ -1212,17 +1132,6 @@ export default async function VacancyReportPage({
                       </td>
                       <td className="px-3 py-2.5 text-right font-mono-bureau text-[11px] text-[#0C1B33]/55">
                         {row.squareFeet != null ? row.squareFeet.toLocaleString("en-US") : "N/A"}
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <span
-                          className="inline-block px-2 py-0.5 font-mono-bureau text-[9px] font-semibold tracking-[0.08em]"
-                          style={{ backgroundColor: chip.bg, color: chip.fg }}
-                        >
-                          {chip.label}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2.5">
-                        <PortfolioChip portfolio={portfolio} />
                       </td>
                       <td className="px-3 py-2.5 text-[11px] leading-snug text-[#0C1B33]/55">
                         {row.nextStep}
@@ -1722,8 +1631,6 @@ export default async function VacancyReportPage({
           </div>
 
           <div className="mt-6 space-y-3 text-[11px] leading-relaxed text-[#0C1B33]/45">
-            <p>{PRIORITY_RUBRIC_NOTE}</p>
-            <p>{PORTFOLIO_RUBRIC_NOTE}</p>
             <p>{MATRIX_METHOD_NOTE}</p>
             <div>
               <span className="font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
@@ -1746,6 +1653,6 @@ export default async function VacancyReportPage({
           </div>
         </footer>
       </div>
-    </main>
+    </div>
   );
 }

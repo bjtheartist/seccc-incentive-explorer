@@ -36,12 +36,6 @@ function makeCluster(overrides: Partial<VacancyCluster> & { id: number }): Vacan
     bbox: overrides.bbox ?? [-87.55, 41.73, -87.53, 41.75],
     count: overrides.count ?? 5,
     ownerTypeCounts,
-    portfolioCounts: overrides.portfolioCounts ?? {
-      move_now: 0,
-      organize_next: 0,
-      verify: 0,
-      long_term: 0,
-    },
     taxSaleCount: overrides.taxSaleCount ?? 0,
     violationCount: overrides.violationCount ?? 0,
     vacantLandCount: overrides.vacantLandCount ?? 0,
@@ -56,7 +50,6 @@ function makePoint(overrides: Partial<VacancySitePoint> & { clusterId: number })
     lon: overrides.lon ?? -87.54,
     ownerType: overrides.ownerType ?? "city_public",
     propertyType: overrides.propertyType ?? "vacant_land",
-    priorityTier: overrides.priorityTier ?? "high",
     markerNumber: null,
     address: overrides.address === undefined ? "100 S GREEN BAY AVE" : overrides.address,
     pin: overrides.pin ?? "21322110390000",
@@ -97,7 +90,6 @@ function member(over: Partial<OpportunityAreaMember>): OpportunityAreaMember {
     pin: over.pin ?? "21322110390000",
     saleYear: over.saleYear ?? null,
     violation: over.violation ?? false,
-    priorityTier: over.priorityTier ?? "high",
     lat: over.lat ?? 41.74,
     lon: over.lon ?? -87.54,
   };

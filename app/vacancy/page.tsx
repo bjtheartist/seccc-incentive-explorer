@@ -34,7 +34,7 @@ export default function VacantSitesLandingPage() {
     : null;
 
   return (
-    <main className="min-h-screen bg-[#FAF9F6] px-4 py-10 text-[#0C1B33] sm:px-8">
+    <div className="min-h-screen bg-[#FAF9F6] px-4 py-10 text-[#0C1B33] sm:px-8">
       <div className="mx-auto max-w-5xl">
         <span className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#2563EB]">
           Chicago Vacant Sites
@@ -93,6 +93,6 @@ export default function VacantSitesLandingPage() {
           ))}
         </div>
       </div>
-    </main>
+    </div>
   );
 }

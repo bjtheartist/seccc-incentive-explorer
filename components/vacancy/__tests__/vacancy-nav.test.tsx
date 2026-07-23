@@ -10,19 +10,29 @@ vi.mock("next-auth/react", () => ({
   useSession: () => ({ status: "unauthenticated" }),
   signOut: vi.fn(),
 }));
-vi.mock("next/navigation", () => ({ usePathname: () => "/" }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn(), prefetch: vi.fn() }),
+}));
 
 import { VacancySubNav } from "../VacancySubNav";
 import { Header } from "@/components/layout/Header";
 
-describe("VacancySubNav — four views", () => {
-  it("renders all four tabs with the correct per-ZIP hrefs", () => {
+describe("VacancySubNav — five views", () => {
+  it("renders all five tabs with the correct per-ZIP hrefs", () => {
     const html = renderToStaticMarkup(<VacancySubNav zip="60617" active="overview" />);
     expect(html).toContain('href="/vacancy/60617"'); // Overview
     expect(html).toContain('href="/vacancy/60617/areas"'); // Opportunity Areas
     expect(html).toContain('href="/vacancy/60617/map"'); // Property Map
     expect(html).toContain('href="/vacancy/60617/directory"'); // All Properties
-    for (const label of ["Overview", "Opportunity Areas", "Property Map", "All Properties"]) {
+    expect(html).toContain('href="/vacancy/60617/cases"'); // Case Workbench
+    for (const label of [
+      "Overview",
+      "Opportunity Areas",
+      "Property Map",
+      "All Properties",
+      "Case Workbench",
+    ]) {
       expect(html).toContain(label);
     }
   });
@@ -32,6 +42,26 @@ describe("VacancySubNav — four views", () => {
     // The switcher for another pilot ZIP keeps the areas view.
     expect(html).toContain('href="/vacancy/60619/areas"');
     expect(html).toContain('href="/vacancy/60636/areas"');
+  });
+
+  it("preserves the active view when the Case Workbench tab is active", () => {
+    const html = renderToStaticMarkup(<VacancySubNav zip="60617" active="cases" />);
+    expect(html).toContain('href="/vacancy/60619/cases"');
+    expect(html).toContain('aria-current="page"');
+  });
+
+  it("hides the desktop pill row on mobile and shows the NeighborhoodSelect dropdown instead", () => {
+    const html = renderToStaticMarkup(<VacancySubNav zip="60617" active="overview" />);
+    // Desktop pill row: hidden by default, shown from md.
+    expect(html).toMatch(/class="mb-4 hidden flex-wrap gap-1\.5 md:flex"/);
+    // Mobile select: a labeled <select> listing all nine pilot ZIPs.
+    expect(html).toContain('aria-label="Neighborhood"');
+    expect(html).toContain("<select");
+    expect(html).toContain('value="60617"');
+    for (const zip of ["60617", "60619", "60649", "60624", "60623", "60644", "60651", "60621", "60636"]) {
+      expect(html).toContain(`<option`);
+      expect(html).toMatch(new RegExp(`value="${zip}"`));
+    }
   });
 });
 

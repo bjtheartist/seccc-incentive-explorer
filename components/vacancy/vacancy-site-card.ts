@@ -25,15 +25,11 @@ import {
   type OwnerGeography,
   type OwnerStructure,
 } from "@/lib/owner-taxonomy";
-import {
-  PRIORITY_BADGE_LABELS,
-  PUBLIC_OWNER_TYPE_LABELS,
-} from "@/lib/vacancy-public-labels";
+import { PUBLIC_OWNER_TYPE_LABELS } from "@/lib/vacancy-public-labels";
 import { approxSqft } from "@/lib/vacancy-opportunity-areas";
 import type {
   OwnerConfidence,
   VacancyCluster,
-  VacancyPriorityTier,
   VacancyPropertyType,
 } from "@/lib/vacancy-index";
 
@@ -71,7 +67,6 @@ export interface CardData {
   address: string | null;
   ownerType: OwnerType;
   propertyType: VacancyPropertyType;
-  priorityTier: VacancyPriorityTier | null;
   pin: string | null;
   squareFeet: number | null;
   zoningClass: string | null;
@@ -133,7 +128,7 @@ export function significanceSentence(d: CardData): string {
 /** At most ONE consequential caution, only when present (tax-sale first, then a
  * building violation). No positive empty states. */
 export function cautionLine(d: CardData): string | null {
-  if (d.saleYear != null) return `Recent tax-sale exposure (latest ${d.saleYear}) — verify current status.`;
+  if (d.saleYear != null) return `Tax-sale record on file (latest ${d.saleYear}) — verify current tax and title status.`;
   if (d.violation) return "Open building-violation record — verify current condition.";
   return null;
 }
@@ -184,7 +179,7 @@ function flagReasons(d: CardData): string[] {
     );
   }
   if (d.squareFeet != null && d.squareFeet >= 10000) reasons.push("Larger lot (10,000+ sq ft).");
-  if (d.saleYear != null) reasons.push(`Tax-sale exposure on record (latest ${d.saleYear}).`);
+  if (d.saleYear != null) reasons.push(`Tax-sale record on file (latest ${d.saleYear}).`);
   if (d.violation) reasons.push("Building-violation record on file.");
   if (reasons.length === 0) reasons.push("Flagged as a tracked vacant site for follow-up.");
   return reasons;
@@ -293,16 +288,12 @@ export function buildSiteCardHtml(d: CardData, zip: string, asOf: string | null)
     programsRows.map((r) => `<div>${r}</div>`).join(""),
   );
 
-  // 6c · Why it was flagged (priority badge + reasons)
-  const badge =
-    d.priorityTier != null
-      ? `<span style="display:inline-block;background:${CARD_INK};color:white;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:600;letter-spacing:0.04em">${escapeHtml(PRIORITY_BADGE_LABELS[d.priorityTier])}</span>`
-      : "";
+  // 6c · Why it was flagged (real-field reasons only — no rank or badge)
   const whyFlagged = detail(
     "Why it was flagged",
-    `${badge ? `<div style="margin-bottom:5px">${badge}</div>` : ""}${flagReasons(d)
+    flagReasons(d)
       .map((r) => `<div>• ${escapeHtml(r)}</div>`)
-      .join("")}`,
+      .join(""),
   );
 
   // 6d · Data and sources (ownership type lives here — off the headline)

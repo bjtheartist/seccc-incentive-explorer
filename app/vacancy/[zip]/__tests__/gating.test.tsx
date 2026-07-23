@@ -166,6 +166,8 @@ describe("public vacancy report + admin-only referral table", () => {
     expect(html).not.toContain("Exemption anomalies — referral review");
     // The public aggregate block heading still renders for everyone.
     expect(html).toContain("Exemption anomalies — records for review");
+    // Defect F: the private-packet fs read must not even run for anonymous requests.
+    expect(referralMock).not.toHaveBeenCalled();
   });
 
   it("SHOWS the referral table (with its PIN) for a valid admin session", async () => {
@@ -174,6 +176,7 @@ describe("public vacancy report + admin-only referral table", () => {
     expect(html).toContain("Exemption anomalies — referral review");
     expect(html).toContain("Admin only");
     expect(html).toContain("21322110390000");
+    expect(referralMock).toHaveBeenCalledWith("60617");
   });
 
   it("keeps the table hidden even for an admin when the admin gate is unconfigured", async () => {
