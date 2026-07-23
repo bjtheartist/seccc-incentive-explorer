@@ -5,6 +5,7 @@ import { getPilotZipEntry } from "@/lib/pilot-zips";
 import { loadVacancyIndex } from "@/lib/vacancy-index";
 import {
   approxSqft,
+  areaCoverageNote,
   deriveOpportunityAreas,
   type OpportunityArea,
 } from "@/lib/vacancy-opportunity-areas";
@@ -64,7 +65,7 @@ export default async function OpportunityAreasPage({
     : { areas: [], hiddenCount: 0 };
 
   return (
-    <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
+    <div className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
       <div className="mx-auto max-w-5xl">
         <VacancySubNav zip={zip} active="areas" />
 
@@ -116,6 +117,11 @@ export default async function OpportunityAreasPage({
                     {areaSize(area)}
                     {landBuildingMix(area) ? ` · ${landBuildingMix(area)}` : ""}
                   </p>
+                  {areaCoverageNote(area) && (
+                    <p className="mt-1.5 text-[10px] font-semibold leading-snug text-[#A45B00]">
+                      {areaCoverageNote(area)}
+                    </p>
+                  )}
 
                   <dl className="mt-4 space-y-2.5 text-[12px] leading-snug">
                     <div>
@@ -150,7 +156,7 @@ export default async function OpportunityAreasPage({
                       View file →
                     </Link>
                     <Link
-                      href={`/vacancy/${zip}/map`}
+                      href={`/vacancy/${zip}/map?area=${area.clusterId}`}
                       className="font-mono-bureau text-[11px] uppercase tracking-[0.1em] text-[#0C1B33]/55 hover:text-[#2563EB]"
                     >
                       Show on map
@@ -170,6 +176,6 @@ export default async function OpportunityAreasPage({
           </>
         )}
       </div>
-    </main>
+    </div>
   );
 }

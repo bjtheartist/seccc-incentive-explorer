@@ -15,7 +15,6 @@
  */
 
 import type { OwnerType } from "./owner-classify";
-import type { VacancyPriorityTier } from "./vacancy-index";
 
 /**
  * Public ownership-TYPE labels. "Not yet classified" replaces "Unknown"
@@ -32,17 +31,6 @@ export const PUBLIC_OWNER_TYPE_LABELS: Record<OwnerType, string> = {
 
 /** The public column/section header for an ownership-type value. */
 export const PUBLIC_OWNERSHIP_TYPE_HEADER = "Ownership type";
-
-/**
- * Priority tiers rendered as plain-language badges (never a raw "HIGH" chip on
- * a public surface). Shown only inside the card's "Why it was flagged"
- * disclosure, never in the glance layer.
- */
-export const PRIORITY_BADGE_LABELS: Record<VacancyPriorityTier, string> = {
-  high: "Start here",
-  medium: "Worth a look",
-  low: "Needs more research",
-};
 
 /** The standing discovery-not-availability disclaimer every public Opportunity
  * Area surface carries (rail 3). */

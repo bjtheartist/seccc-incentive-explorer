@@ -10,7 +10,7 @@ import {
   CLUSTERS_NOTE,
   clusterVacantSites,
   clusterVacantSitesWithMembership,
-  compareDirectoryRows,
+  compareDirectoryInputs,
   compareRankableSites,
   computeSitePriority,
   corridorRefsIntersectingBbox,
@@ -30,17 +30,11 @@ import {
   nearestCorridorName,
   nextStepForSite,
   ownerConfidenceForPoint,
-  PORTFOLIO_LABELS,
-  PORTFOLIO_ORDER,
-  PORTFOLIO_RUBRIC_NOTE,
-  portfolioForSite,
-  portfolioReason,
   priorityTierForScore,
   rankSites,
   reconcileOwnerTypeForPin,
   reconcileVacantLandOwnership,
   tallyOwnerTypeCounts,
-  tallyPortfolioCounts,
   taxSaleExposureForVacantPins,
   type ClusterInputSite,
   type CorridorPolygon,
@@ -49,13 +43,20 @@ import {
   type ExemptionEavs,
   type RankableSite,
   type VacancyDirectoryFile,
-  type VacancyDirectoryRow,
   type VacancyIndexEdition,
   type VacancyIndexExport,
-  type VacancyPortfolio,
   type VacancyPriorityTier,
   type VacancyPropertyType,
 } from "../vacancy-index";
+import {
+  PORTFOLIO_LABELS,
+  PORTFOLIO_ORDER,
+  PORTFOLIO_RUBRIC_NOTE,
+  portfolioForSite,
+  portfolioReason,
+  tallyPortfolioCounts,
+  type VacancyPortfolio,
+} from "../vacancy-portfolio";
 import { zoningGloss } from "../vacancy-zoning";
 import type { OwnerType } from "../owner-classify";
 
@@ -276,13 +277,13 @@ describe("rankSites (deterministic ordering)", () => {
   });
 });
 
-describe("compareDirectoryRows / buildDirectoryRows", () => {
+describe("compareDirectoryInputs / buildDirectoryRows", () => {
   const dirSite = (over: Partial<DirectoryInputSite>): DirectoryInputSite => ({
     address: "100 N Main St",
     ownerType: "unknown" as OwnerType,
     propertyType: "vacant_land" as VacancyPropertyType,
-    priorityTier: "low" as VacancyPriorityTier,
     priorityScore: 0,
+    clusterId: null,
     saleYear: null,
     violation: false,
     pin: null,
@@ -291,30 +292,19 @@ describe("compareDirectoryRows / buildDirectoryRows", () => {
     ...over,
   });
 
-  it("compareDirectoryRows sorts priorityScore desc then address asc", () => {
-    const a: VacancyDirectoryRow = {
-      address: "900 W End Ave",
-      ownerType: "unknown",
-      propertyType: "vacant_land",
-      priorityTier: "low",
-      priorityScore: 2,
-      saleYear: null,
-      violation: false,
-      pin: null,
-      ownerStructure: "unresolved",
-      ownerGeography: "unknown",
-    };
-    const b: VacancyDirectoryRow = { ...a, address: "100 A St", priorityScore: 5 };
-    const c: VacancyDirectoryRow = { ...a, address: "050 A St", priorityScore: 5 };
+  it("compareDirectoryInputs sorts the internal priorityScore desc then address asc", () => {
+    const a = { priorityScore: 2, address: "900 W End Ave" };
+    const b = { priorityScore: 5, address: "100 A St" };
+    const c = { priorityScore: 5, address: "050 A St" };
     // Higher score first.
-    expect(compareDirectoryRows(a, b)).toBeGreaterThan(0);
-    expect(compareDirectoryRows(b, a)).toBeLessThan(0);
+    expect(compareDirectoryInputs(a, b)).toBeGreaterThan(0);
+    expect(compareDirectoryInputs(b, a)).toBeLessThan(0);
     // Same score -> address asc.
-    expect(compareDirectoryRows(b, c)).toBeGreaterThan(0); // "100" after "050"
-    expect(compareDirectoryRows(c, c)).toBe(0);
+    expect(compareDirectoryInputs(b, c)).toBeGreaterThan(0); // "100" after "050"
+    expect(compareDirectoryInputs(c, c)).toBe(0);
   });
 
-  it("keeps rows with a usable address, sorted, and counts the excluded ones", () => {
+  it("keeps rows with a usable address, sorted by the internal score, and counts the excluded ones", () => {
     const { rows, excludedNoAddressCount } = buildDirectoryRows([
       dirSite({ address: "300 Low St", priorityScore: 1 }),
       dirSite({ address: "  ", priorityScore: 9 }), // whitespace -> excluded
@@ -324,20 +314,22 @@ describe("compareDirectoryRows / buildDirectoryRows", () => {
     ]);
     expect(excludedNoAddressCount).toBe(2);
     expect(rows.map((r) => r.address)).toEqual(["100 High St", "200 High St", "300 Low St"]);
-    // Address is trimmed on the way in and only allowed keys survive.
+    // Address is trimmed on the way in and only the public keys survive — the
+    // internal priorityScore ordering input is NEVER emitted onto a row.
     for (const r of rows) {
       expect(Object.keys(r).sort()).toEqual([
         "address",
+        "clusterId",
         "ownerGeography",
         "ownerStructure",
         "ownerType",
         "pin",
-        "priorityScore",
-        "priorityTier",
         "propertyType",
         "saleYear",
         "violation",
       ]);
+      expect(r).not.toHaveProperty("priorityScore");
+      expect(r).not.toHaveProperty("priorityTier");
     }
   });
 
@@ -479,7 +471,6 @@ describe("deriveLandUniverse", () => {
         vacantBuildingCount: 0,
         cityOwnedCount: 0,
         inIncentiveZoneCount: 0,
-        priorityMix: { high: 0, medium: 0, low: 0 },
       },
       ownership: {
         vacantLandParcelsByOwnerType: opts.parcelsByOwnerType,
@@ -1126,7 +1117,6 @@ describe("clusterVacantSites", () => {
     lat,
     lon,
     ownerType: "unknown",
-    portfolio: "long_term",
     taxSale: false,
     violation: false,
     propertyType: "vacant_building",
@@ -1176,13 +1166,17 @@ describe("clusterVacantSites", () => {
     expect(clusterVacantSites(loose, { linkMeters: 10 })).toHaveLength(0);
   });
 
-  it("aggregates owner types, portfolios, and distress within a cluster", () => {
+  it("aggregates owner types and distress within a cluster", () => {
     const rows = [
-      site(41.85, -87.65, { ownerType: "city_public", portfolio: "move_now", taxSale: true, propertyType: "vacant_land" }),
-      site(41.8501, -87.6501, { ownerType: "corporate_llc", portfolio: "organize_next", violation: true }),
-      site(41.8502, -87.6502, { ownerType: "unknown", portfolio: "verify" }),
-      site(41.8503, -87.6503, { ownerType: "local_private", portfolio: "long_term" }),
-      site(41.8504, -87.6504, { ownerType: "unknown", portfolio: "verify", taxSale: true }),
+      site(41.85, -87.65, {
+        ownerType: "city_public",
+        taxSale: true,
+        propertyType: "vacant_land",
+      }),
+      site(41.8501, -87.6501, { ownerType: "corporate_llc", violation: true }),
+      site(41.8502, -87.6502, { ownerType: "unknown" }),
+      site(41.8503, -87.6503, { ownerType: "local_private" }),
+      site(41.8504, -87.6504, { ownerType: "unknown", taxSale: true }),
     ];
     const [c] = clusterVacantSites(rows);
     expect(c.count).toBe(5);
@@ -1190,7 +1184,6 @@ describe("clusterVacantSites", () => {
     expect(c.violationCount).toBe(1);
     expect(c.vacantLandCount).toBe(1);
     expect(c.vacantBuildingCount).toBe(4);
-    expect(c.portfolioCounts).toEqual({ move_now: 1, organize_next: 1, verify: 2, long_term: 1 });
     // ownerTypeCounts lists all five owner types (honest zeros).
     expect(c.ownerTypeCounts.map((o) => o.ownerType)).toEqual(OWNER_TYPE_ORDER);
     const byOwner = Object.fromEntries(c.ownerTypeCounts.map((o) => [o.ownerType, o.count]));
@@ -1275,7 +1268,6 @@ describe("clusterVacantSitesWithMembership", () => {
     lat,
     lon,
     ownerType: "unknown",
-    portfolio: "long_term",
     taxSale: false,
     violation: false,
     propertyType: "vacant_building",
@@ -1393,17 +1385,12 @@ const ALLOWED_KEYS = new Set<string>([
   "anchors",
   // cluster
   "id",
-  "portfolioCounts",
   "taxSaleCount",
   "violationCount",
   "vacantLandCount",
   "vacantBuildingCount",
   "corridorName",
   "ownerTypeCounts",
-  "move_now",
-  "organize_next",
-  "verify",
-  "long_term",
   // corridor ref / anchor
   "name",
   "category",
@@ -1413,10 +1400,6 @@ const ALLOWED_KEYS = new Set<string>([
   "vacantBuildingCount",
   "cityOwnedCount",
   "inIncentiveZoneCount",
-  "priorityMix",
-  "high",
-  "medium",
-  "low",
   // ownership
   "vacantLandParcelsByOwnerType",
   "vacantLandParcelTotal",
@@ -1457,7 +1440,6 @@ const ALLOWED_KEYS = new Set<string>([
   "lat",
   "lon",
   "propertyType",
-  "priorityTier",
   "markerNumber",
   "address",
   "pin",
@@ -1466,7 +1448,6 @@ const ALLOWED_KEYS = new Set<string>([
   "incentiveCount",
   "ownerConfidence",
   "clusterId",
-  "priorityScore",
   "nextStep",
   "saleYear",
   "violation",
@@ -1889,9 +1870,6 @@ describe.skipIf(!EXPORT_EXISTS)("committed vacancy-index.json", () => {
         expect(c.bbox[1]).toBeLessThanOrEqual(c.bbox[3]);
         expect(c.corridorName === null || typeof c.corridorName === "string").toBe(true);
         for (const o of c.ownerTypeCounts) expect(validOwner.has(o.ownerType)).toBe(true);
-        for (const key of ["move_now", "organize_next", "verify", "long_term"] as const) {
-          expect(Number.isInteger(c.portfolioCounts[key]), `${zip} portfolioCounts.${key}`).toBe(true);
-        }
       });
     }
   });
@@ -1948,8 +1926,7 @@ const DIRECTORY_ALLOWED_KEYS = new Set<string>([
   "address",
   "ownerType",
   "propertyType",
-  "priorityTier",
-  "priorityScore",
+  "clusterId",
   "saleYear",
   "violation",
   // v2 back-search + two-axis fields
@@ -2030,19 +2007,20 @@ describe.skipIf(!DIRECTORY_EXISTS)("committed vacancy-directory/{zip}.json files
     }
   });
 
-  it("rows are sorted (priorityScore desc, address asc) — spot-check the first 50", () => {
+  it("does not serialize internal ordering fields", () => {
     for (const zip of PILOT_ZIP_KEYS) {
       if (!existsSync(path.join(DIRECTORY_DIR, `${zip}.json`))) continue;
-      const rows = loadDirectory(zip).rows.slice(0, 50);
-      for (let i = 1; i < rows.length; i++) {
-        expect(compareDirectoryRows(rows[i - 1], rows[i]), `${zip} row ${i} order`).toBeLessThanOrEqual(0);
+      const rows = loadDirectory(zip).rows;
+      for (const row of rows) {
+        expect(row).not.toHaveProperty("priorityScore");
+        expect(row).not.toHaveProperty("priorityTier");
+        expect(row).not.toHaveProperty("portfolio");
       }
     }
   });
 
   it("every row has a non-empty address, a valid ownerType, and honest distress flags", () => {
     const validOwner = new Set<string>(OWNER_TYPE_ORDER);
-    const validTier = new Set(["high", "medium", "low"]);
     const validType = new Set(["vacant_land", "vacant_building"]);
     const validStructure = new Set(["individual", "entity", "trust", "government", "unresolved"]);
     const validGeography = new Set(["in_state", "out_of_state", "unknown"]);
@@ -2052,8 +2030,10 @@ describe.skipIf(!DIRECTORY_EXISTS)("committed vacancy-directory/{zip}.json files
         expect(typeof row.address === "string" && row.address.trim().length > 0, `${zip} address`).toBe(true);
         expect(validOwner.has(row.ownerType), `${zip} ownerType ${row.ownerType}`).toBe(true);
         expect(validType.has(row.propertyType), `${zip} propertyType`).toBe(true);
-        expect(validTier.has(row.priorityTier), `${zip} priorityTier`).toBe(true);
-        expect(Number.isFinite(row.priorityScore), `${zip} priorityScore`).toBe(true);
+        expect(
+          row.clusterId === null || (Number.isInteger(row.clusterId) && row.clusterId > 0),
+          `${zip} clusterId`,
+        ).toBe(true);
         expect(row.saleYear === null || typeof row.saleYear === "number", `${zip} saleYear`).toBe(true);
         expect(typeof row.violation, `${zip} violation`).toBe("boolean");
         // v2 back-search + two-axis fields — TOLERANT: the committed directory

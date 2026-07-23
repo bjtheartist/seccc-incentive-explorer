@@ -9,14 +9,23 @@
  * Collapsed by default (a single bordered "Browse all N tracked addresses" row)
  * so the multi-hundred-row directory file only loads on demand. On expand it
  * fetches /data/vacancy-directory/{zip}.json ONCE (cached in state) and renders
- * a spreadsheet-style table with per-column multifilters (OWNER / TYPE / PRI /
- * FLAGS), an ADDRESS search, click-to-sort on ADDRESS and PRI, and simple
- * 100-row pagination. Anonymized end to end — owner TYPE only, never names.
+ * a spreadsheet-style table with per-column multifilters (OWNER / STRUCTURE /
+ * TYPE / FLAGS), an ADDRESS search, an address-order toggle,
+ * and simple 100-row pagination. Below the sm breakpoint the dense table gives
+ * way to stacked cards — same filtered/sorted/paginated array, just a
+ * different rendering — since the table is unusable on a phone. Anonymized
+ * end to end — owner TYPE only, never names.
  *
  * Filter semantics: OR within a column (any checked value matches), AND across
  * columns. An empty column selection is NO filter (all rows pass) — never
  * match-nothing. Pagination applies AFTER filtering. Mirrors the sort/filter
  * idioms in components/owner-file/OwnerClusterListClient.tsx.
+ *
+ * Area handoff: when the caller (app/vacancy/[zip]/directory/page.tsx, from a
+ * `?area=` query param) passes initialAreaId, the directory auto-expands and
+ * pre-filters to that Opportunity Area's clusterId, with a dismissible banner.
+ * clusterId only tags rows whose mapped site landed in a kept proximity
+ * cluster, so the banner says plainly that unmapped rows aren't tagged.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -39,13 +48,10 @@ import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import { trackEvent } from "@/lib/analytics-events";
 // Type-only import: pulling a runtime value from lib/vacancy-index.ts would drag
 // its fs-backed loader (node:fs) into this client bundle. Mirrors the
-// type-only convention VacancyReportMap uses; the priority comparator is inlined
-// below (it must stay identical to compareDirectoryRows in lib/vacancy-index.ts).
+// type-only convention VacancyReportMap uses.
 import type {
   VacancyDirectoryFile,
   VacancyDirectoryRow,
-  VacancyPortfolio,
-  VacancyPriorityTier,
   VacancyPropertyType,
 } from "@/lib/vacancy-index";
 
@@ -61,70 +67,21 @@ const OWNER_TYPE_ABBREV: Record<OwnerType, string> = {
   unknown: "UNK",
 };
 
-const PRIORITY_CHIP: Record<VacancyPriorityTier, { label: string; bg: string; fg: string }> = {
-  high: { label: "HIGH", bg: "#DC2626", fg: "#FFFFFF" },
-  medium: { label: "MEDIUM", bg: "#EAB308", fg: "#111111" },
-  low: { label: "LOW", bg: "#D9D9D9", fg: "#4B4B4B" },
-};
-
 const PROPERTY_TYPE_ABBREV: Record<VacancyPropertyType, string> = {
   vacant_land: "LAND",
   vacant_building: "BLDG",
 };
 
-const PORTFOLIO_ORDER: VacancyPortfolio[] = ["move_now", "organize_next", "verify", "long_term"];
-
-/** Readiness-portfolio labels — MUST match PORTFOLIO_LABELS in
- * lib/vacancy-index.ts. Inlined so this client bundle never imports the
- * fs-backed lib module (same convention as comparePriority below). */
-const PORTFOLIO_LABELS: Record<VacancyPortfolio, string> = {
-  move_now: "Move now",
-  organize_next: "Organize next",
-  verify: "Verify",
-  long_term: "Long-term",
+/** Full property-type labels, for the mobile card's plain-language line. */
+const PROPERTY_TYPE_LABELS: Record<VacancyPropertyType, string> = {
+  vacant_land: "Vacant land",
+  vacant_building: "Vacant building",
 };
 
-/** Chip styling — mirrors the site-index PORTFOLIO chips on the web report:
- * move_now = filled ink, organize_next = blue outline, verify = yellow,
- * long_term = gray. */
-const PORTFOLIO_CHIP: Record<VacancyPortfolio, { bg: string; fg: string; border: string }> = {
-  move_now: { bg: "#0C1B33", fg: "#FFFFFF", border: "#0C1B33" },
-  organize_next: { bg: "transparent", fg: "#2563EB", border: "#2563EB" },
-  verify: { bg: "#EAB308", fg: "#111111", border: "#EAB308" },
-  long_term: { bg: "#D9D9D9", fg: "#4B4B4B", border: "#D9D9D9" },
-};
-
-/** Readiness portfolio for one directory row — MUST match portfolioForSite in
- * lib/vacancy-index.ts, evaluated in this exact order (first match wins):
- *   1. unknown owner                                  -> verify
- *   2. tax-sale-exposed non-city parcel               -> verify
- *   3. city_public at high|medium priority            -> move_now
- *   4. known private/entity owner at high|medium prio -> organize_next
- *   5. everything else                                -> long_term
- * `violation` is carried on the row but is NOT a determinant. Inlined so this
- * client bundle never imports the fs-backed lib module (same convention as
- * comparePriority below). */
-function portfolioForRow(row: VacancyDirectoryRow): VacancyPortfolio {
-  const ownerType = normalizeOwnerType(row.ownerType);
-  const priority = row.priorityTier === "high" || row.priorityTier === "medium";
-  if (ownerType === "unknown") return "verify";
-  if (row.saleYear != null && ownerType !== "city_public") return "verify";
-  if (ownerType === "city_public" && priority) return "move_now";
-  if (
-    priority &&
-    (ownerType === "local_private" ||
-      ownerType === "corporate_llc" ||
-      ownerType === "out_of_state")
-  ) {
-    return "organize_next";
-  }
-  return "long_term";
-}
 
 type FlagValue = "tax_sale" | "violation" | "none";
-type SortKey = "priority" | "address";
 type SortDir = "asc" | "desc";
-type DropdownColumn = "owner" | "structure" | "type" | "pri" | "portfolio" | "flags";
+type DropdownColumn = "owner" | "structure" | "type" | "flags";
 
 /** A row's v2 structure, treating a row that predates the taxonomy as
  * "unresolved" (normalizeOwnerStructure(undefined)) — consistent across the
@@ -133,23 +90,14 @@ function rowStructure(row: VacancyDirectoryRow): OwnerStructure {
   return normalizeOwnerStructure(row.ownerStructure);
 }
 
-const PRIORITY_TIERS: VacancyPriorityTier[] = ["high", "medium", "low"];
 const PROPERTY_TYPES: VacancyPropertyType[] = ["vacant_land", "vacant_building"];
 const FLAG_VALUES: FlagValue[] = ["tax_sale", "violation", "none"];
 
 const FLAG_LABELS: Record<FlagValue, string> = {
-  tax_sale: "Tax-sale exposed",
+  tax_sale: "Tax-sale record on file",
   violation: "Violation",
   none: "No flags",
 };
-
-/** Directory ordering — MUST match compareDirectoryRows in lib/vacancy-index.ts
- * (priorityScore desc, then address asc). Inlined here so this client bundle
- * never imports the fs-backed lib module. */
-function comparePriority(a: VacancyDirectoryRow, b: VacancyDirectoryRow): number {
-  if (b.priorityScore !== a.priorityScore) return b.priorityScore - a.priorityScore;
-  return a.address < b.address ? -1 : a.address > b.address ? 1 : 0;
-}
 
 /** Two-digit tax-sale year suffix, e.g. 2015 -> "'15". */
 function saleYearSuffix(year: number): string {
@@ -164,14 +112,47 @@ function rowFlags(row: VacancyDirectoryRow): FlagValue[] {
   return flags;
 }
 
+/** Careful public-record wording for the mobile card's evidence line — never
+ * "exposed"/"exposure" (implies current risk), just what's on file. */
+function rowEvidenceLine(row: VacancyDirectoryRow): string {
+  const parts: string[] = [];
+  if (row.saleYear != null) parts.push(`Tax-sale record on file (${saleYearSuffix(row.saleYear)})`);
+  if (row.violation) parts.push("Violation on file");
+  return parts.length > 0 ? parts.join(" · ") : "No flags on file";
+}
+
+/** Strip a `?area=` query param from the URL bar without a navigation, once
+ * the area filter it seeded has been cleared. Best-effort: no-ops if there's
+ * no window (SSR) or no such param. */
+function stripAreaParamFromUrl() {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has("area")) return;
+  url.searchParams.delete("area");
+  window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+}
+
 interface VacancyDirectoryProps {
   zip: string;
   neighborhood: string;
   directoryCount: number;
+  /** Opportunity-Area handoff: when set (from the directory page's `?area=`
+   * query param), the directory auto-expands and pre-filters to rows whose
+   * clusterId matches, with a dismissible banner. */
+  initialAreaId?: number | null;
+  /** The area's display name, resolved server-side via opportunityAreaById;
+   * null when it doesn't resolve (the banner falls back to "area {id}"). */
+  initialAreaName?: string | null;
 }
 
-export default function VacancyDirectory({ zip, neighborhood, directoryCount }: VacancyDirectoryProps) {
-  const [open, setOpen] = useState(false);
+export default function VacancyDirectory({
+  zip,
+  neighborhood,
+  directoryCount,
+  initialAreaId = null,
+  initialAreaName = null,
+}: VacancyDirectoryProps) {
+  const [open, setOpen] = useState(initialAreaId != null);
   const [data, setData] = useState<VacancyDirectoryFile | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -181,14 +162,15 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
   const [ownerFilter, setOwnerFilter] = useState<Set<OwnerType>>(new Set());
   const [structureFilter, setStructureFilter] = useState<Set<OwnerStructure>>(new Set());
   const [typeFilter, setTypeFilter] = useState<Set<VacancyPropertyType>>(new Set());
-  const [priFilter, setPriFilter] = useState<Set<VacancyPriorityTier>>(new Set());
-  const [portfolioFilter, setPortfolioFilter] = useState<Set<VacancyPortfolio>>(new Set());
   const [flagFilter, setFlagFilter] = useState<Set<FlagValue>>(new Set());
   const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("priority");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [openDropdown, setOpenDropdown] = useState<DropdownColumn | null>(null);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Opportunity-Area handoff filter — seeded from the `?area=` query param,
+  // clearable independently of the other column filters.
+  const [areaFilterId, setAreaFilterId] = useState<number | null>(initialAreaId);
 
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -209,6 +191,13 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
 
   function handleExpand() {
     setOpen(true);
+  }
+
+  // Fetch on first expand, whether that's a manual click (handleExpand) or an
+  // auto-expand from an area handoff (initialAreaId set at mount). Fires the
+  // open-tracking event exactly once, same as the old click-handler logic.
+  useEffect(() => {
+    if (!open) return;
     if (!firedOpenEvent.current) {
       firedOpenEvent.current = true;
       trackEvent("vacancy_directory_opened", {
@@ -216,8 +205,8 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
         metadata: { zip, total: directoryCount },
       });
     }
-    if (!data && !loading) void fetchDirectory();
-  }
+    if (!data && !loading && !error) void fetchDirectory();
+  }, [open, data, loading, error, fetchDirectory, zip, directoryCount]);
 
   // Close any open column dropdown on outside click or Escape.
   useEffect(() => {
@@ -257,50 +246,48 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
     for (const r of allRows) counts.set(r.propertyType, (counts.get(r.propertyType) ?? 0) + 1);
     return counts;
   }, [allRows]);
-  const priCounts = useMemo(() => {
-    const counts = new Map<VacancyPriorityTier, number>();
-    for (const r of allRows) counts.set(r.priorityTier, (counts.get(r.priorityTier) ?? 0) + 1);
-    return counts;
-  }, [allRows]);
   const flagCounts = useMemo(() => {
     const counts = new Map<FlagValue, number>();
     for (const r of allRows) for (const f of rowFlags(r)) counts.set(f, (counts.get(f) ?? 0) + 1);
     return counts;
   }, [allRows]);
-  const portfolioCounts = useMemo(() => {
-    const counts = new Map<VacancyPortfolio, number>();
-    for (const r of allRows) {
-      const p = portfolioForRow(r);
-      counts.set(p, (counts.get(p) ?? 0) + 1);
-    }
-    return counts;
-  }, [allRows]);
+
+  // How many rows carry the handoff area's clusterId, independent of every
+  // other filter — the number the banner reports.
+  const areaMatchCount = useMemo(() => {
+    if (areaFilterId == null) return 0;
+    return allRows.filter((r) => r.clusterId === areaFilterId).length;
+  }, [allRows, areaFilterId]);
 
   // AND across columns, OR within each; empty column = pass. Search is a
   // case-insensitive substring on address.
   const filtered = useMemo(() => {
     const needle = search.trim().toLowerCase();
     const out = allRows.filter((r) => {
+      if (areaFilterId != null && r.clusterId !== areaFilterId) return false;
       if (ownerFilter.size > 0 && !ownerFilter.has(r.ownerType)) return false;
       if (structureFilter.size > 0 && !structureFilter.has(rowStructure(r))) return false;
       if (typeFilter.size > 0 && !typeFilter.has(r.propertyType)) return false;
-      if (priFilter.size > 0 && !priFilter.has(r.priorityTier)) return false;
-      if (portfolioFilter.size > 0 && !portfolioFilter.has(portfolioForRow(r))) return false;
       if (flagFilter.size > 0 && !rowFlags(r).some((f) => flagFilter.has(f))) return false;
       if (needle && !r.address.toLowerCase().includes(needle)) return false;
       return true;
     });
-    // Sort a copy (never mutate the cached data.rows).
+    // Keep the public directory neutral: address order is explicit and does
+    // not reveal or imply the export's private ordering inputs.
     const sorted = [...out];
-    if (sortKey === "address") {
-      sorted.sort((a, b) => (a.address < b.address ? -1 : a.address > b.address ? 1 : 0));
-      if (sortDir === "desc") sorted.reverse();
-    } else {
-      sorted.sort(comparePriority); // priorityScore desc, then address asc
-      if (sortDir === "asc") sorted.reverse();
-    }
+    sorted.sort((a, b) => (a.address < b.address ? -1 : a.address > b.address ? 1 : 0));
+    if (sortDir === "desc") sorted.reverse();
     return sorted;
-  }, [allRows, ownerFilter, structureFilter, typeFilter, priFilter, portfolioFilter, flagFilter, search, sortKey, sortDir]);
+  }, [
+    allRows,
+    areaFilterId,
+    ownerFilter,
+    structureFilter,
+    typeFilter,
+    flagFilter,
+    search,
+    sortDir,
+  ]);
 
   // Reset pagination whenever the filtered/sorted result changes.
   useEffect(() => {
@@ -311,19 +298,23 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
     ownerFilter.size > 0 ||
     structureFilter.size > 0 ||
     typeFilter.size > 0 ||
-    priFilter.size > 0 ||
-    portfolioFilter.size > 0 ||
     flagFilter.size > 0 ||
-    search.trim().length > 0;
+    search.trim().length > 0 ||
+    areaFilterId != null;
 
   function clearFilters() {
     setOwnerFilter(new Set());
     setStructureFilter(new Set());
     setTypeFilter(new Set());
-    setPriFilter(new Set());
-    setPortfolioFilter(new Set());
     setFlagFilter(new Set());
     setSearch("");
+    setAreaFilterId(null);
+    stripAreaParamFromUrl();
+  }
+
+  function clearAreaFilter() {
+    setAreaFilterId(null);
+    stripAreaParamFromUrl();
   }
 
   function toggle<T>(setter: React.Dispatch<React.SetStateAction<Set<T>>>, value: T) {
@@ -335,18 +326,11 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
     });
   }
 
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      // Sensible defaults: priority high-first, address A–Z.
-      setSortDir(key === "priority" ? "desc" : "asc");
-    }
+  function toggleAddressSort() {
+    setSortDir((direction) => (direction === "asc" ? "desc" : "asc"));
   }
 
-  function sortIndicator(key: SortKey) {
-    if (sortKey !== key) return "";
+  function sortIndicator() {
     return sortDir === "asc" ? " ↑" : " ↓";
   }
 
@@ -396,10 +380,28 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
 
   const shown = Math.min(visibleCount, filtered.length);
   const total = allRows.length;
+  const areaLabel = initialAreaName ?? (areaFilterId != null ? `area ${areaFilterId}` : "");
 
   return (
     <div ref={rootRef}>
-      {/* Search + clear */}
+      {/* Area handoff banner */}
+      {areaFilterId != null && (
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border border-[#2563EB]/25 bg-[#2563EB]/5 px-4 py-3">
+          <p className="text-[12px] leading-relaxed text-[#0C1B33]/70">
+            Showing {areaMatchCount.toLocaleString("en-US")} tracked addresses in {areaLabel} —
+            mapped members only; unmapped rows in this group are not tagged.
+          </p>
+          <button
+            type="button"
+            onClick={clearAreaFilter}
+            className="flex-shrink-0 border border-[#0C1B33]/20 bg-white px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/70 hover:border-[#DC2626]/50 hover:text-[#DC2626]"
+          >
+            Clear area filter
+          </button>
+        </div>
+      )}
+
+      {/* Search + sort + clear */}
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <input
           type="text"
@@ -408,6 +410,18 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
           placeholder="Search address"
           className="flex-1 min-w-[180px] border border-[#0C1B33]/15 bg-white px-3 py-2 text-[13px] text-[#0C1B33] outline-none focus:border-[#2563EB]"
         />
+        <div className="flex items-center gap-1.5">
+          <span className="font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
+            Sort
+          </span>
+          <button
+            type="button"
+            onClick={toggleAddressSort}
+            className="border border-[#2563EB] bg-[#2563EB] px-2 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-white"
+          >
+            Address{sortIndicator()}
+          </button>
+        </div>
         {anyFilterActive && (
           <button
             type="button"
@@ -419,7 +433,8 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
         )}
       </div>
 
-      <div className="overflow-x-auto border border-[#0C1B33]/10 bg-white">
+      {/* Desktop / tablet: dense spreadsheet-style table (sm and up). */}
+      <div className="hidden overflow-x-auto border border-[#0C1B33]/10 bg-white sm:block">
         <table className="w-full min-w-[1080px] border-collapse text-left">
           <thead>
             <tr className="border-b border-[#0C1B33]/10 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
@@ -427,10 +442,10 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
               <th className="px-3 py-2.5">
                 <button
                   type="button"
-                  onClick={() => toggleSort("address")}
+                  onClick={toggleAddressSort}
                   className="font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/60 hover:text-[#2563EB]"
                 >
-                  Address{sortIndicator("address")}
+                  Address{sortIndicator()}
                 </button>
               </th>
               <FilterHeader
@@ -486,53 +501,6 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
                   />
                 ))}
               </FilterHeader>
-              <th className="px-3 py-2.5 relative">
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => toggleSort("priority")}
-                    className="font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/60 hover:text-[#2563EB]"
-                  >
-                    Pri{sortIndicator("priority")}
-                  </button>
-                  <FilterFunnel
-                    column="pri"
-                    active={priFilter.size}
-                    openDropdown={openDropdown}
-                    setOpenDropdown={setOpenDropdown}
-                  />
-                </div>
-                {openDropdown === "pri" && (
-                  <FilterPanel>
-                    {PRIORITY_TIERS.map((t) => (
-                      <FilterCheckbox
-                        key={t}
-                        checked={priFilter.has(t)}
-                        onChange={() => toggle(setPriFilter, t)}
-                        count={priCounts.get(t) ?? 0}
-                        label={PRIORITY_CHIP[t].label}
-                      />
-                    ))}
-                  </FilterPanel>
-                )}
-              </th>
-              <FilterHeader
-                label="Portfolio"
-                column="portfolio"
-                active={portfolioFilter.size}
-                openDropdown={openDropdown}
-                setOpenDropdown={setOpenDropdown}
-              >
-                {PORTFOLIO_ORDER.map((p) => (
-                  <FilterCheckbox
-                    key={p}
-                    checked={portfolioFilter.has(p)}
-                    onChange={() => toggle(setPortfolioFilter, p)}
-                    count={portfolioCounts.get(p) ?? 0}
-                    label={PORTFOLIO_LABELS[p]}
-                  />
-                ))}
-              </FilterHeader>
               <FilterHeader
                 label="Flags"
                 column="flags"
@@ -559,7 +527,7 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-3 py-8 text-center text-[13px] text-[#0C1B33]/45">
+                <td colSpan={7} className="px-3 py-8 text-center text-[13px] text-[#0C1B33]/45">
                   No addresses match the current filters.
                 </td>
               </tr>
@@ -571,7 +539,6 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
                 // (COLS inventory or a uniquely address-matched 311 parcel).
                 const cookViewer = cookViewerUrl(row.pin);
                 const clerk = clerkRecordsUrl(row.pin);
-                const chip = PRIORITY_CHIP[row.priorityTier];
                 return (
                   <tr key={`${row.address}-${i}`} className="border-b border-[#0C1B33]/5 align-top">
                     <td className="px-3 py-2 font-mono-bureau text-[11px] text-[#0C1B33]/40">
@@ -601,28 +568,6 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
                     </td>
                     <td className="px-3 py-2 font-mono-bureau text-[11px] text-[#0C1B33]/60">
                       {PROPERTY_TYPE_ABBREV[row.propertyType]}
-                    </td>
-                    <td className="px-3 py-2">
-                      <span
-                        className="inline-block px-2 py-0.5 font-mono-bureau text-[9px] font-semibold tracking-[0.08em]"
-                        style={{ backgroundColor: chip.bg, color: chip.fg }}
-                      >
-                        {chip.label}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2">
-                      {(() => {
-                        const p = portfolioForRow(row);
-                        const pc = PORTFOLIO_CHIP[p];
-                        return (
-                          <span
-                            className="inline-block border px-2 py-0.5 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.08em]"
-                            style={{ backgroundColor: pc.bg, color: pc.fg, borderColor: pc.border }}
-                          >
-                            {PORTFOLIO_LABELS[p]}
-                          </span>
-                        );
-                      })()}
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap gap-1">
@@ -686,6 +631,20 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
         </table>
       </div>
 
+      {/* Mobile: stacked cards (below sm) — same filtered/sorted/paginated
+          array as the table, just a different rendering. */}
+      <div className="space-y-3 sm:hidden">
+        {filtered.length === 0 ? (
+          <div className="border border-[#0C1B33]/10 bg-white px-4 py-8 text-center text-[13px] text-[#0C1B33]/45">
+            No addresses match the current filters.
+          </div>
+        ) : (
+          filtered
+            .slice(0, visibleCount)
+            .map((row, i) => <DirectoryCard key={`${row.address}-${i}`} row={row} />)
+        )}
+      </div>
+
       {shown < filtered.length && (
         <button
           type="button"
@@ -711,14 +670,65 @@ export default function VacancyDirectory({ zip, neighborhood, directoryCount }: 
   );
 }
 
+// ── Mobile card ──────────────────────────────────────────────────────────────
+
+/** One tracked address, stacked-card form (below sm). Mirrors the table row's
+ * fields but in a plain-language, thumb-friendly layout: address, property
+ * type + ownership-type line, evidence line, Verify links. */
+function DirectoryCard({ row }: { row: VacancyDirectoryRow }) {
+  const ownerType = normalizeOwnerType(row.ownerType);
+  const cookViewer = cookViewerUrl(row.pin);
+  const clerk = clerkRecordsUrl(row.pin);
+
+  return (
+    <div className="border border-[#0C1B33]/10 bg-white p-4">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-[14px] font-semibold leading-snug text-[#0C1B33]">{row.address}</p>
+      </div>
+      <p className="mt-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/55">
+        {PROPERTY_TYPE_LABELS[row.propertyType]} &middot; {OWNER_TYPE_LABELS[ownerType]}
+      </p>
+      <p className="mt-1.5 text-[12px] leading-relaxed text-[#0C1B33]/60">{rowEvidenceLine(row)}</p>
+      {(cookViewer || clerk) && (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {cookViewer && (
+            <a
+              href={cookViewer}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Opens Cook County's official parcel record in a new tab."
+              className="flex min-h-[44px] items-center border border-[#2563EB]/30 px-3 font-mono-bureau text-[11px] uppercase tracking-[0.06em] text-[#2563EB]"
+            >
+              CookViewer ↗
+            </a>
+          )}
+          {clerk && (
+            <a
+              href={clerk}
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Review recorded deeds, grantors, grantees, liens, releases, and other documents associated with this parcel."
+              className="flex min-h-[44px] items-center border border-[#2563EB]/30 px-3 font-mono-bureau text-[11px] uppercase tracking-[0.06em] text-[#2563EB]"
+            >
+              Clerk ↗
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Header + dropdown primitives ─────────────────────────────────────────────
 
 function FilterFunnel({
+  label,
   column,
   active,
   openDropdown,
   setOpenDropdown,
 }: {
+  label: string;
   column: DropdownColumn;
   active: number;
   openDropdown: DropdownColumn | null;
@@ -727,7 +737,7 @@ function FilterFunnel({
   return (
     <button
       type="button"
-      aria-label={`Filter column${active > 0 ? ` (${active} active)` : ""}`}
+      aria-label={`Filter ${label}${active > 0 ? ` (${active} active)` : ""}`}
       onClick={() => setOpenDropdown(openDropdown === column ? null : column)}
       className={`inline-flex items-center gap-0.5 border px-1 py-0.5 font-mono-bureau text-[9px] transition-colors ${
         active > 0
@@ -771,6 +781,7 @@ function FilterHeader({
           {label}
         </span>
         <FilterFunnel
+          label={label}
           column={column}
           active={active}
           openDropdown={openDropdown}

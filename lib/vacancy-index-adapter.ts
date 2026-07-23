@@ -65,13 +65,10 @@ export function buildDecisions(edition: VacancyIndexEdition): VacancyIndexDecisi
     });
   }
 
-  const sweepCount =
-    headline.priorityMix.high > 0 ? headline.priorityMix.high : headline.priorityMix.medium;
-  const sweepTier = headline.priorityMix.high > 0 ? "high" : "medium";
-  if (sweepCount > 0) {
+  if (headline.vacantBuildingCount > 0) {
     candidates.push({
-      title: "Run a verification sweep on the priority sites",
-      body: `${sweepCount.toLocaleString("en-US")} ${sweepTier}-priority sites warrant an ownership/status verification pass before any letter.`,
+      title: "Run a verification sweep on the reported buildings",
+      body: `${headline.vacantBuildingCount.toLocaleString("en-US")} 311-reported vacant buildings warrant a parcel-match and ownership/status verification pass before any letter.`,
     });
   }
 
@@ -164,7 +161,7 @@ export function buildVacancyIndexPdfInput(
   });
 
   const total = headline.vacantPropertyCount;
-  const brief = `${edition.neighborhood} carries ${total.toLocaleString("en-US")} tracked vacant properties across ZIP ${edition.zip}. ${headline.cityOwnedCount.toLocaleString("en-US")} are City/Public-owned and ${privatelyHeld.toLocaleString("en-US")} carry unverified ownership (311-reported vacant buildings not yet parcel-matched); ${headline.inIncentiveZoneCount.toLocaleString("en-US")} sit inside at least one mapped incentive zone. The site index ranks the highest-opportunity parcels by incentive coverage, size, and owner type so a corridor manager can start with the clearest next contact.`;
+  const brief = `${edition.neighborhood} carries ${total.toLocaleString("en-US")} tracked vacant properties across ZIP ${edition.zip}. ${headline.cityOwnedCount.toLocaleString("en-US")} are City/Public-owned and ${privatelyHeld.toLocaleString("en-US")} carry unverified ownership (311-reported vacant buildings not yet parcel-matched); ${headline.inIncentiveZoneCount.toLocaleString("en-US")} sit inside at least one mapped incentive zone. The site index highlights featured parcels so a corridor manager can start with the clearest next contact.`;
 
   return {
     neighborhood: edition.neighborhood,
@@ -189,7 +186,6 @@ export function buildVacancyIndexPdfInput(
       vacantLand: headline.vacantLandCount,
       vacantBuilding: headline.vacantBuildingCount,
     },
-    priorityDistribution: headline.priorityMix,
     matrixRows: exportData.matrix
       .slice()
       .sort((a, b) => a.editionNumber - b.editionNumber)
@@ -215,7 +211,6 @@ export function buildVacancyIndexPdfInput(
       propertyType: row.propertyType,
       zoning: row.zoningClass,
       sqft: row.squareFeet,
-      priority: row.priorityTier,
       nextStep: row.nextStep,
       pin: pinByCoord.get(`${row.lat},${row.lon}`) ?? null,
     })),

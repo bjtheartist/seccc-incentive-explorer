@@ -34,7 +34,6 @@ import {
 /* ── Input contract (meets the export adapter in lib/vacancy-index.ts) ── */
 
 export type VacancyPropertyType = "vacant_land" | "vacant_building";
-export type VacancyPriorityTier = "high" | "medium" | "low";
 
 /** Page-01 decision band. Copy is caller-supplied (fixed templates driven only
  *  by real fields upstream) — this builder never invents a projection. */
@@ -75,7 +74,6 @@ export interface VacancyIndexTopSite {
   propertyType: VacancyPropertyType;
   zoning: string | null;
   sqft: number | null;
-  priority: VacancyPriorityTier;
   nextStep: string;
   /** Digits-only 14-digit parcel PIN when this site carries one (COLS rows do;
    *  311 rows do not -> null). Threaded through by the adapter from the aligned
@@ -122,14 +120,14 @@ export interface VacancyIndexInput {
    *  map dots, and site index, so these bars reconcile with everything else. */
   trackedInventoryByOwnerType: Partial<Record<OwnerType, number>>;
   propertyTypeBreakdown: { vacantLand: number; vacantBuilding: number };
-  priorityDistribution: { high: number; medium: number; low: number };
   matrixRows: VacancyIndexMatrixRow[]; // 9 rows (all editions), subject flagged
   /** Pre-simplified outer boundary ring as [lon, lat][]. `null` -> the cover
    *  falls back to a dot-field silhouette built from sitePoints alone. */
   boundary: [number, number][] | null;
   centroid: { lat: number; lon: number };
-  /** Priority-ordered; sitePoints[0..11] positionally align with
-   *  topSites[0..11] so the map's numbered markers carry the index addresses. */
+  /** Featured-site-ordered (an internal, unserialized ordering rubric);
+   *  sitePoints[0..11] positionally align with topSites[0..11] so the map's
+   *  numbered markers carry the index addresses. */
   sitePoints: VacancyIndexSitePoint[];
   transport: VacancyIndexTransportLine[];
   topSites: VacancyIndexTopSite[];
@@ -144,8 +142,8 @@ const INK_45 = "#8A8A8A"; // captions / tertiary
 const INK_15 = "#D9D9D9"; // empty-dot outlines, low segments, gray fills
 const PAPER = "#FFFFFF";
 const SWISS_BLUE = "#2563EB"; // cover silhouette, decision numerals, subject row, footer mark ONLY
-const SWISS_RED = "#DC2626"; // locator dot, HIGH segments/chips ONLY
-const SWISS_YELLOW = "#EAB308"; // scale chip, subject-row tick, MEDIUM ONLY
+const SWISS_RED = "#DC2626"; // locator dot, live-data accent spine ONLY
+const SWISS_YELLOW = "#EAB308"; // scale chip, subject-row tick ONLY
 const GRID_GRAY = "#EEF1F5"; // coordinate grid
 const EXPRESSWAY_GRAY = "#C9CFDA";
 
@@ -165,9 +163,6 @@ const DISCLAIMER =
 
 const QUINTILE_NOTE =
   "Dot ratings rank the nine pilot editions against each other (quintiles). They are not citywide scores or grades.";
-
-const PRIORITY_RUBRIC_NOTE =
-  "Priority score = incentive count (up to 4) + size bonus (2 at 10,000+ sq ft, 1 at 5,000+, 0 if unknown) + 2 if a City/Public owner or city-owned status + 1 if a vacant building with an open 311 report. Sites rank by score, then incentive count, then size (largest first, unknowns last).";
 
 const OWNER_CLASSIFICATION_NOTE =
   "Owner type is inferred from public taxpayer-of-record patterns and is anonymized: no owner names or mailing addresses appear in this document. Ownership structure (individual, entity, trust, government) and geography are classified from public taxpayer-of-record patterns. Records indicate — verify before relying.";
@@ -478,83 +473,6 @@ function drawDotRating(doc: jsPDF, x: number, y: number, value: number | null, f
   }
 }
 
-/** Priority chip 10x4mm: HIGH red-filled/white, MED yellow-filled/ink, LOW stroked. */
-function drawPriorityChip(doc: jsPDF, x: number, y: number, tier: VacancyPriorityTier) {
-  const w = 10;
-  const h = 4;
-  const label = tier.toUpperCase();
-  if (tier === "high") {
-    fillRect(doc, x, y, w, h, SWISS_RED);
-    setColor(doc, PAPER);
-  } else if (tier === "medium") {
-    fillRect(doc, x, y, w, h, SWISS_YELLOW);
-    setColor(doc, INK);
-  } else {
-    strokeRect(doc, x, y, w, h, INK_45, 0.25);
-    setColor(doc, INK_70);
-  }
-  doc.setFont("courier", "bold");
-  doc.setFontSize(5.4);
-  doc.text(tier === "medium" ? "MED" : label, x + w / 2, y + 2.7, { align: "center" });
-}
-
-/** Segmented bar: HIGH red / MEDIUM yellow / LOW gray, paper gaps, count labels;
- *  labels fold to a legend line when a segment is narrower than 22mm. */
-function drawSegmentedBar(
-  doc: jsPDF,
-  x: number,
-  y: number,
-  width: number,
-  dist: { high: number; medium: number; low: number }
-): number {
-  const total = dist.high + dist.medium + dist.low;
-  const segs: { key: string; count: number; hex: string; textHex: string }[] = [
-    { key: "HIGH", count: dist.high, hex: SWISS_RED, textHex: PAPER },
-    { key: "MEDIUM", count: dist.medium, hex: SWISS_YELLOW, textHex: INK },
-    { key: "LOW", count: dist.low, hex: INK_15, textHex: INK_70 },
-  ];
-  const barH = 9;
-  const gap = 0.6;
-  const legendParts: string[] = [];
-  if (total === 0) {
-    strokeRect(doc, x, y, width, barH, INK_15, 0.3);
-    doc.setFont("courier", "normal");
-    doc.setFontSize(6);
-    setColor(doc, INK_45);
-    doc.text("NO PRIORITY DATA", x + width / 2, y + barH / 2 + 1, { align: "center" });
-    return y + barH + 6;
-  }
-  let cx = x;
-  const active = segs.filter((s) => s.count > 0);
-  const totalGap = gap * Math.max(0, active.length - 1);
-  const usable = width - totalGap;
-  active.forEach((s) => {
-    const segW = (s.count / total) * usable;
-    fillRect(doc, cx, y, segW, barH, s.hex);
-    const pct = Math.round((s.count / total) * 100);
-    if (segW >= 22) {
-      doc.setFont("courier", "bold");
-      doc.setFontSize(6);
-      setColor(doc, s.textHex);
-      doc.text(`${s.key} ${s.count}`, cx + 1.6, y + 3.6);
-      doc.setFont("courier", "normal");
-      doc.setFontSize(5.6);
-      doc.text(`${pct}%`, cx + 1.6, y + 6.6);
-    } else {
-      legendParts.push(`${s.key} ${s.count} (${pct}%)`);
-    }
-    cx += segW + gap;
-  });
-  let ny = y + barH + 4;
-  if (legendParts.length > 0) {
-    doc.setFont("courier", "normal");
-    doc.setFontSize(5.6);
-    setColor(doc, INK_45);
-    doc.text(legendParts.join("   "), x, ny);
-    ny += 4;
-  }
-  return ny;
-}
 
 /** Horizontal INK bar for an owner-type count over a fixed scale. Bars stay INK
  *  (only the 2mm swatch carries the owner-type color) to keep it Swiss. */
@@ -842,12 +760,6 @@ function drawExecutiveBrief(doc: jsPDF, input: VacancyIndexInput) {
     });
     y = bandTop + 28;
   });
-
-  // Priority distribution.
-  y = Math.max(y, 210);
-  eyebrow(doc, "PRIORITY DISTRIBUTION", MARGIN, y, 7, INK_45, 0.5);
-  y += 4;
-  drawSegmentedBar(doc, MARGIN, y, CONTENT_W, input.priorityDistribution);
 
   drawSwissFooter(doc, 1, input.sources, input.asOf);
 }
@@ -1200,8 +1112,9 @@ function drawMapLegend(doc: jsPDF, input: VacancyIndexInput, top: number) {
     doc.text(String(counts[type]), MARGIN + 40, ly, { align: "right" });
     ly += 4;
   });
-  // Truncated editions plot a priority-ordered subset; say so rather than
-  // letting the per-type dot counts read as the full inventory.
+  // Truncated editions plot a featured subset (an internal, unserialized
+  // ordering); say so rather than letting the per-type dot counts read as
+  // the full inventory.
   if (input.sitePoints.length < input.counts.total) {
     doc.setFont("courier", "normal");
     doc.setFontSize(5.8);
@@ -1238,7 +1151,7 @@ function drawSiteIndex(doc: jsPDF, input: VacancyIndexInput) {
   drawSwissHeader(doc, input.neighborhood, 4, "SITE INDEX");
   let y = 44;
 
-  eyebrow(doc, "PRIORITY SITE INDEX", MARGIN, y, 7, INK_45, 0.5);
+  eyebrow(doc, "FEATURED SITE INDEX", MARGIN, y, 7, INK_45, 0.5);
   y += 6;
 
   // Column geometry.
@@ -1248,8 +1161,7 @@ function drawSiteIndex(doc: jsPDF, input: VacancyIndexInput) {
   const cType = cOwner + 24; // TYPE
   const cZone = cType + 14; // ZONING
   const cArea = cZone + 16; // AREA (sqft)
-  const cPri = cArea + 16; // PRI chip
-  const cNext = cPri + 14; // NEXT STEP
+  const cNext = cArea + 16; // NEXT STEP
   const nextW = RIGHT - cNext;
 
   // Table head.
@@ -1262,7 +1174,6 @@ function drawSiteIndex(doc: jsPDF, input: VacancyIndexInput) {
   doc.text("TYPE", cType, y);
   doc.text("ZONING", cZone, y);
   doc.text("AREA", cArea, y);
-  doc.text("PRI", cPri, y);
   doc.text("NEXT STEP", cNext, y);
   y += 2;
   hLine(doc, MARGIN, RIGHT, y, INK, 0.2);
@@ -1314,8 +1225,6 @@ function drawSiteIndex(doc: jsPDF, input: VacancyIndexInput) {
       doc.text("N/A", cArea, y);
     }
 
-    drawPriorityChip(doc, cPri, y - 3, site.priority);
-
     doc.setFont("courier", "normal");
     doc.setFontSize(6);
     setColor(doc, INK_70);
@@ -1350,11 +1259,6 @@ function drawMethodology(doc: jsPDF, input: VacancyIndexInput, top: number) {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(5.8);
   setColor(doc, INK_70);
-  fit(doc, PRIORITY_RUBRIC_NOTE, CONTENT_W, 3).forEach((line) => {
-    doc.text(line, MARGIN, y);
-    y += 3;
-  });
-  y += 1;
   fit(doc, OWNER_CLASSIFICATION_NOTE, CONTENT_W, 2).forEach((line) => {
     doc.text(line, MARGIN, y);
     y += 3;

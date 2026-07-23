@@ -7,12 +7,12 @@
  * CommuniData playbook the admin owner-cluster map uses (see
  * components/map/MapView.tsx lines ~1176–1275): a clustered GeoJSON source,
  * a match-expression color ramp keyed on ownerType, a ZIP boundary line
- * layer, numbered priority markers, and a collapsible owner-type legend.
+ * layer, numbered featured-site markers, and a collapsible owner-type legend.
  *
  * Two views share ONE clustered source (data swapped via source.setData on
  * toggle, so every cluster/dot layer + the match-expression colors work
  * unchanged for both):
- *   1. TRACKED INVENTORY — COLS + 311 sitePoints; numbered priority markers.
+ *   1. TRACKED INVENTORY — COLS + 311 sitePoints; numbered featured-site markers.
  *   2. VACANT LAND (RECONCILED) — assessor vacant-land parcels colored by their
  *      reconciled owner type; no numbered markers.
  * Distressed dots (tax-sale-exposed parcels, violation-matched buildings) carry
@@ -45,7 +45,6 @@ import type {
   VacancyAnchor,
   VacancyCluster,
   VacancyLandPoint,
-  VacancyPriorityTier,
   VacancyPropertyType,
   VacancySiteIndexRow,
   VacancySitePoint,
@@ -165,6 +164,12 @@ interface VacancyReportMapProps {
   /** Primary neighborhood name, the corridor/cluster line's fallback when a
    *  cluster carries no named corridor. */
   neighborhood?: string;
+  /** Defect B (URL-addressable area focus): when set and a `clusters` entry
+   *  with this id exists, the map fits to that cluster's bbox and outlines it
+   *  on load — the same visual the cluster-card → map deep-link produces, but
+   *  driven by the page's `?area=` query param instead of a click. `null`/
+   *  `undefined`/an id with no matching cluster are all ignored gracefully. */
+  initialAreaId?: number | null;
 }
 
 /** Feature properties carried on every dot (both views), keyed identically so
@@ -172,7 +177,6 @@ interface VacancyReportMapProps {
 interface DotProps {
   ownerType: OwnerType;
   propertyType: VacancyPropertyType | null;
-  priorityTier: VacancyPriorityTier | null;
   markerNumber: number | null;
   address: string | null;
   nextStep: string | null;
@@ -207,6 +211,7 @@ export default function VacancyReportMap({
   focusBbox,
   asOf,
   neighborhood,
+  initialAreaId,
 }: VacancyReportMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -267,6 +272,18 @@ export default function VacancyReportMap({
 
   const [legendOpen, setLegendOpen] = useState(true);
 
+  // Defect E: on narrow viewports the legend defaults OPEN and can obstruct
+  // the map beneath it — collapse it on mount there. Desktop keeps the
+  // default-open behavior unchanged. A one-time check (not a live media-query
+  // subscription) is enough since this only decides the INITIAL state.
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    if (window.matchMedia("(max-width: 640px)").matches) {
+      setLegendOpen(false);
+    }
+    // Mount-once: only sets the initial state for narrow viewports.
+  }, []);
+
   // Fire the view event once on mount (client-side; mirrors the PDF button's
   // trackEvent shape and the funnel's other view events).
   useEffect(() => {
@@ -280,8 +297,8 @@ export default function VacancyReportMap({
 
   // Latest props for the mount-once init effect (read through a ref so the
   // effect can stay dependency-free without going stale).
-  const dataRef = useRef({ zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood });
-  dataRef.current = { zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood };
+  const dataRef = useRef({ zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood, initialAreaId });
+  dataRef.current = { zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood, initialAreaId };
 
   // Current view read through a ref so the mount-once popup handler stays fresh.
   const viewRef = useRef(view);
@@ -309,6 +326,7 @@ export default function VacancyReportMap({
       anchors: anc,
       asOf: asOfLabel,
       neighborhood: nbhd,
+      initialAreaId: initialAreaIdVal,
     } = dataRef.current;
 
     // Kept clusters keyed by id, for the site card's cluster/corridor line, the
@@ -337,7 +355,6 @@ export default function VacancyReportMap({
       const props: DotProps = {
         ownerType: p.ownerType,
         propertyType: p.propertyType,
-        priorityTier: p.priorityTier,
         markerNumber: p.markerNumber ?? null,
         // Prefer the point's own address; fall back to the joined marker row.
         address: p.address ?? joined?.address ?? null,
@@ -367,7 +384,6 @@ export default function VacancyReportMap({
       const props: DotProps = {
         ownerType: p.ownerType,
         propertyType: "vacant_land",
-        priorityTier: null,
         markerNumber: null,
         address: p.address,
         nextStep: null,
@@ -408,7 +424,6 @@ export default function VacancyReportMap({
       const props: DotProps = {
         ownerType: r.ownerType,
         propertyType: r.propertyType,
-        priorityTier: r.priorityTier,
         markerNumber: r.markerNumber,
         address: r.address,
         nextStep: r.nextStep,
@@ -569,7 +584,7 @@ export default function VacancyReportMap({
         });
       }
 
-      // ── Numbered priority markers (tracked view only; hidden on the land
+      // ── Numbered featured-site markers (tracked view only; hidden on the land
       //    view via setLayoutProperty). ──
       map.addSource("vacancy-markers", {
         type: "geojson",
@@ -583,7 +598,7 @@ export default function VacancyReportMap({
           "circle-color": INK,
           "circle-radius": 11,
           "circle-stroke-width": 2,
-          // Distressed priority sites ring red too (else white).
+          // Distressed featured sites ring red too (else white).
           "circle-stroke-color": ["case", ["==", ["get", "distressed"], true], DISTRESS_RED, "#ffffff"],
         },
       });
@@ -638,6 +653,44 @@ export default function VacancyReportMap({
         );
       }
 
+      // ── Defect B: URL-addressable area focus (?area= on the map page). If the
+      //    id resolves to a kept cluster, override the edition-bbox fit above
+      //    with a tighter fit to that cluster's bbox and outline it on the SAME
+      //    "vacancy-focus" source/layer the cluster-card deep-link uses (added
+      //    just above) — one visual language for "this is the focused area"
+      //    whether it was reached by URL or by clicking a card. An unresolved
+      //    id (bad param, or an area outside the kept clusters) is ignored. ──
+      if (initialAreaIdVal != null) {
+        const initialCluster = clusterById.get(initialAreaIdVal);
+        if (initialCluster) {
+          const [w, s, e, n] = initialCluster.bbox;
+          const focusSrc = map.getSource("vacancy-focus") as mapboxgl.GeoJSONSource | undefined;
+          focusSrc?.setData({
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [w, s],
+                  [e, s],
+                  [e, n],
+                  [w, n],
+                  [w, s],
+                ],
+              ],
+            },
+            properties: {},
+          });
+          map.fitBounds(
+            [
+              [w, s],
+              [e, n],
+            ],
+            { padding: 80, duration: 0, maxZoom: 16 },
+          );
+        }
+      }
+
       // ── Popups: the structured decision card (view-aware via viewRef) ──
       const openSitePopup = (
         lngLat: mapboxgl.LngLatLike,
@@ -655,7 +708,6 @@ export default function VacancyReportMap({
           address: typeof p.address === "string" ? p.address : null,
           ownerType,
           propertyType: (p.propertyType as VacancyPropertyType) ?? "vacant_land",
-          priorityTier: (p.priorityTier as VacancyPriorityTier | null) ?? null,
           pin: typeof p.pin === "string" && p.pin ? p.pin : null,
           squareFeet,
           zoningClass: typeof p.zoningClass === "string" && p.zoningClass ? p.zoningClass : null,
@@ -917,7 +969,7 @@ export default function VacancyReportMap({
           <span className="text-[#0C1B33]/40">{legendOpen ? "–" : "+"}</span>
         </button>
         {legendOpen && (
-          <div className="border-t border-[#0C1B33]/10 px-3 py-2.5">
+          <div className="max-h-[45vh] overflow-y-auto border-t border-[#0C1B33]/10 px-3 py-2.5 sm:max-h-none sm:overflow-visible">
             {presentTypes.length === 0 ? (
               <p className="text-[11px] text-[#0C1B33]/45">No sites plotted.</p>
             ) : (
@@ -974,7 +1026,7 @@ export default function VacancyReportMap({
                         }}
                       />
                       <span className={`flex-1 text-[11px] ${saleFilter ? "text-[#0C1B33]" : "text-[#0C1B33]/55"}`}>
-                        Tax-sale exposed
+                        Tax-sale record on file
                       </span>
                       <span className="font-mono-bureau text-[10px] text-[#0C1B33]/45">
                         {saleCount.toLocaleString("en-US")}
@@ -1019,8 +1071,8 @@ export default function VacancyReportMap({
               </p>
               {view === "tracked" ? (
                 <p className="mt-1.5 text-[10px] leading-snug text-[#0C1B33]/45">
-                  Numbered discs are the top {siteIndex.filter((r) => r.markerNumber != null).length}{" "}
-                  priority sites (see the site index below).
+                  Numbered discs are the {siteIndex.filter((r) => r.markerNumber != null).length}{" "}
+                  featured sites in the site index below.
                 </p>
               ) : (
                 <p className="mt-1.5 text-[10px] leading-snug text-[#0C1B33]/45">

@@ -14,7 +14,6 @@ function cluster(count: number): VacancyCluster {
     bbox: [-87.55, 41.73, -87.53, 41.75],
     count,
     ownerTypeCounts: [],
-    portfolioCounts: { move_now: 0, organize_next: 0, verify: 0, long_term: 0 },
     taxSaleCount: 0,
     violationCount: 0,
     vacantLandCount: count,
@@ -30,7 +29,6 @@ function card(over: Partial<CardData>): CardData {
     address: over.address ?? "8131 S EXCHANGE AVE",
     ownerType: over.ownerType ?? "city_public",
     propertyType: over.propertyType ?? "vacant_land",
-    priorityTier: over.priorityTier ?? "high",
     pin: over.pin ?? "21322110390000",
     squareFeet: over.squareFeet ?? 6234,
     zoningClass: over.zoningClass ?? "C1-1",
@@ -69,8 +67,10 @@ describe("cautionLine", () => {
   it("returns null when there is no consequential condition (no positive empty state)", () => {
     expect(cautionLine(card({ saleYear: null, violation: false }))).toBeNull();
   });
-  it("surfaces tax-sale exposure first", () => {
-    expect(cautionLine(card({ saleYear: 2015, violation: true }))).toMatch(/tax-sale exposure \(latest 2015\)/i);
+  it("surfaces the tax-sale record first", () => {
+    expect(cautionLine(card({ saleYear: 2015, violation: true }))).toMatch(
+      /tax-sale record on file \(latest 2015\) — verify current tax and title status/i,
+    );
   });
   it("surfaces a building violation when there is no tax sale", () => {
     expect(cautionLine(card({ saleYear: null, violation: true }))).toMatch(/building-violation/i);

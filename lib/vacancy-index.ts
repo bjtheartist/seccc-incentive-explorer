@@ -48,11 +48,6 @@ export type VacancyPriorityTier = "high" | "medium" | "low";
 export type VacancyPropertyType = "vacant_land" | "vacant_building";
 export type TransportKind = "expressway" | "rail";
 
-/**
- * Intervention portfolio for one vacant site — the four coordinated-action
- * buckets the spatial layer sorts sites into (see PORTFOLIO_RUBRIC_NOTE).
- */
-
 /** A named corridor (kind distinguishes the three source layers). */
 export type CorridorKind = "ssa" | "commercial" | "industrial";
 export interface CorridorRef {
@@ -81,8 +76,8 @@ export type VacancyBbox = [number, number, number, number];
 /**
  * One proximity cluster of tracked vacant sites (D2). Boundaries are analytical
  * (single-linkage over ~150 m), never parcel-contiguous. `ownerTypeCounts`
- * lists all five owner types in OWNER_TYPE_ORDER (honest zeros); `portfolioCounts`
- * carries all four portfolios. `corridorName` is the containing or nearest named
+ * lists all five owner types in OWNER_TYPE_ORDER (honest zeros).
+ * `corridorName` is the containing or nearest named
  * corridor within ~400 m, else `null`.
  */
 export interface VacancyCluster {
@@ -91,7 +86,6 @@ export interface VacancyCluster {
   bbox: VacancyBbox;
   count: number;
   ownerTypeCounts: OwnerTypeCount[];
-  portfolioCounts: Record<VacancyPortfolio, number>;
   taxSaleCount: number;
   violationCount: number;
   vacantLandCount: number;
@@ -288,14 +282,15 @@ export interface VacancyMatrixRow {
  */
 export type OwnerConfidence = "pin_matched" | "inferred" | "needs_verification";
 
-/** A single vacant site as a map dot. `markerNumber` is 1–12 on the top-12
- * priority sites and `null` on the rest. */
+/** A single vacant site as a map dot. `markerNumber` is 1–12 on the featured
+ * site-index sites and `null` on the rest. The internal ordering rubric that
+ * selects them NEVER serializes — public rows carry source evidence only,
+ * never a rank, score, or derived bucket. */
 export interface VacancySitePoint {
   lat: number;
   lon: number;
   ownerType: OwnerType;
   propertyType: VacancyPropertyType;
-  priorityTier: VacancyPriorityTier;
   markerNumber: number | null;
   /** Street address from the tracked row; `null` when the row carried none. */
   address: string | null;
@@ -383,8 +378,10 @@ export interface VacancyDirectoryRow {
   /** Tracked-universe (COLS + 311) classification — city_public / unknown mostly. */
   ownerType: OwnerType;
   propertyType: VacancyPropertyType;
-  priorityTier: VacancyPriorityTier;
-  priorityScore: number;
+  /** The kept proximity-cluster id this row's mapped site landed in, or `null`
+   * when unmapped / in no kept cluster. Lets the directory restore an
+   * Opportunity-Area filter from a URL. */
+  clusterId: number | null;
   /** Same pin-derived tax-sale flag the matching sitePoint carries; `null` for
    * 311 rows (no PIN) and when the tax-sale tables were absent on the branch. */
   saleYear: number | null;
@@ -403,8 +400,9 @@ export interface VacancyDirectoryRow {
 
 /**
  * The lazy-loaded per-ZIP site directory file. Holds EVERY tracked row with a
- * non-empty address, sorted priorityScore desc then address asc, plus an
- * honest count of the rows dropped for a missing/empty address.
+ * non-empty address, in a deterministic decision-first order (internal ordering
+ * applied at export time, then address asc — the criteria are not serialized),
+ * plus an honest count of the rows dropped for a missing/empty address.
  */
 export interface VacancyDirectoryFile {
   zip: string;
@@ -415,7 +413,9 @@ export interface VacancyDirectoryFile {
   excludedNoAddressCount: number;
 }
 
-/** One row of the page-04 site index (top-N by priority ranking). */
+/** One row of the page-04 site index (the featured sites — selected by an
+ * internal deterministic ordering at export time; the criteria never
+ * serialize). */
 export interface VacancySiteIndexRow {
   markerNumber: number | null;
   address: string;
@@ -424,8 +424,6 @@ export interface VacancySiteIndexRow {
   zoningClass: string | null; // COLS only; 311 rows have none -> null -> "PENDING"
   squareFeet: number | null;
   incentiveCount: number;
-  priorityScore: number;
-  priorityTier: VacancyPriorityTier;
   nextStep: string;
   lat: number;
   lon: number;
@@ -455,7 +453,6 @@ export interface VacancyIndexEdition {
     vacantBuildingCount: number;
     cityOwnedCount: number;
     inIncentiveZoneCount: number;
-    priorityMix: { high: number; medium: number; low: number };
   };
   ownership: {
     /** RAW COMPLETE vacant-land ownership from `parcels` (D2a), straight from
@@ -551,7 +548,14 @@ export interface VacancyIndexExport {
   matrix: VacancyMatrixRow[]; // 9 rows × 5 metric cells
 }
 
-// ── Priority rubric (pure) ─────────────────────────────────────────────────
+// ── Priority rubric (pure, EXPORT-SIDE INTERNAL) ───────────────────────────
+//
+// The rubric below orders sites at export time (which sites lead the
+// directory, which become the featured site index). It is INTERNAL: the
+// score, tier, and rubric copy must never be serialized into a public
+// artifact (vacancy-index.json, the directory files, the shareable PDF) or
+// shipped to the browser. Public rows carry only the resulting order and
+// source evidence fields.
 
 /** Fields computeSitePriority / nextStepForSite read off a site. */
 export interface VacancySiteScoreFields {
@@ -563,8 +567,8 @@ export interface VacancySiteScoreFields {
 }
 
 /**
- * Priority score + tier for one vacant site (printed verbatim as
- * PRIORITY_RUBRIC_NOTE on page 04):
+ * Priority score + tier for one vacant site (internal ordering only — never
+ * printed or serialized):
  *   + min(incentiveCount, 4)
  *   + 2 if squareFeet >= 10000, + 1 if >= 5000, + 0 if null / 0 / < 5000
  *   + 2 if ownerType === "city_public" OR status === "city_owned"
@@ -826,13 +830,16 @@ export function rankSites<T extends RankableSite>(sites: readonly T[]): T[] {
 
 /** Minimal shape buildDirectoryRows reads off a scored tracked site. `address`
  * is the RAW value (nullable) so a missing/empty address can be excluded and
- * counted rather than coerced to a placeholder. */
+ * counted rather than coerced to a placeholder. `priorityScore` is the
+ * INTERNAL ordering input — it decides the emitted row order but is never
+ * copied onto the public row. */
 export interface DirectoryInputSite {
   address: string | null | undefined;
   ownerType: OwnerType;
   propertyType: VacancyPropertyType;
-  priorityTier: VacancyPriorityTier;
+  /** Internal ordering input (export-side only; not emitted). */
   priorityScore: number;
+  clusterId: number | null;
   saleYear: number | null;
   violation: boolean;
   /** v2 back-search + two-axis fields threaded onto the directory row. */
@@ -842,27 +849,31 @@ export interface DirectoryInputSite {
 }
 
 /**
- * Directory ordering: priorityScore desc, then address asc (plain lexical).
- * The same total order the site index leads with, but keyed on address rather
- * than the id tiebreak (the directory never exposes ids). Deterministic across
- * export runs.
+ * Directory ordering: internal priorityScore desc, then address asc (plain
+ * lexical). The same total order the site index leads with, but keyed on
+ * address rather than the id tiebreak (the directory never exposes ids).
+ * Deterministic across export runs; the score itself never serializes.
  */
-export function compareDirectoryRows(a: VacancyDirectoryRow, b: VacancyDirectoryRow): number {
+export function compareDirectoryInputs(
+  a: Pick<DirectoryInputSite, "priorityScore"> & { address: string },
+  b: Pick<DirectoryInputSite, "priorityScore"> & { address: string },
+): number {
   if (b.priorityScore !== a.priorityScore) return b.priorityScore - a.priorityScore;
   return a.address < b.address ? -1 : a.address > b.address ? 1 : 0;
 }
 
 /**
  * Build the site directory rows from the tracked scored sites: keep every site
- * whose address is non-empty (after trim), drop and count the rest, and sort by
- * compareDirectoryRows. Pure — unit-tested without a DB. The `excludedNoAddress
+ * whose address is non-empty (after trim), drop and count the rest, and order
+ * by compareDirectoryInputs — the internal score orders the rows but is NOT
+ * emitted onto them. Pure — unit-tested without a DB. The `excludedNoAddress
  * Count` is the honest "records without a usable address omitted" figure the
  * web report footer prints.
  */
 export function buildDirectoryRows(
   sites: readonly DirectoryInputSite[],
 ): { rows: VacancyDirectoryRow[]; excludedNoAddressCount: number } {
-  const rows: VacancyDirectoryRow[] = [];
+  const kept: (DirectoryInputSite & { address: string })[] = [];
   let excludedNoAddressCount = 0;
   for (const s of sites) {
     const address = (s.address ?? "").trim();
@@ -870,20 +881,20 @@ export function buildDirectoryRows(
       excludedNoAddressCount += 1;
       continue;
     }
-    rows.push({
-      address,
-      ownerType: s.ownerType,
-      propertyType: s.propertyType,
-      priorityTier: s.priorityTier,
-      priorityScore: s.priorityScore,
-      saleYear: s.saleYear,
-      violation: s.violation,
-      pin: s.pin,
-      ownerStructure: s.ownerStructure,
-      ownerGeography: s.ownerGeography,
-    });
+    kept.push({ ...s, address });
   }
-  rows.sort(compareDirectoryRows);
+  kept.sort(compareDirectoryInputs);
+  const rows: VacancyDirectoryRow[] = kept.map((s) => ({
+    address: s.address,
+    ownerType: s.ownerType,
+    propertyType: s.propertyType,
+    clusterId: s.clusterId,
+    saleYear: s.saleYear,
+    violation: s.violation,
+    pin: s.pin,
+    ownerStructure: s.ownerStructure,
+    ownerGeography: s.ownerGeography,
+  }));
   return { rows, excludedNoAddressCount };
 }
 
@@ -1191,15 +1202,6 @@ export function deriveExemptionAnomalies(
 
 // ── Printed-copy constants ─────────────────────────────────────────────────
 
-/** The priority rubric, printed verbatim on page 04. */
-export const PRIORITY_RUBRIC_NOTE =
-  "Priority score = min(incentive programs, 4) + size (+2 if lot >= 10,000 sq ft, " +
-  "+1 if >= 5,000, +0 if unknown or smaller) + 2 if city-owned or public land " +
-  "+ 1 if a vacant building with an active 311 case. Tiers: HIGH >= 6, MEDIUM 3–5, " +
-  "LOW 0–2. Unknown lot size scores 0 for the size term and renders as \"—\". " +
-  "Sites are ranked by priority score, then incentive count, then lot size " +
-  "(largest first, unknown last).";
-
 /** The quintile-methodology note printed beneath the comparison matrix. */
 export const MATRIX_METHOD_NOTE =
   "Dot ratings rank the nine pilot editions against each other (quintiles). " +
@@ -1213,29 +1215,6 @@ export const MATRIX_METHOD_NOTE =
 export function editionGeographyNote(zip: string, neighborhood: string): string {
   return `Edition geography: ZIP ${zip} (primarily ${neighborhood}). ZIP and community-area boundaries do not align exactly.`;
 }
-
-// ── Intervention portfolios (pure, D1) ─────────────────────────────────────
-
-/** Display labels for the four portfolios. */
-import {
-  PORTFOLIO_LABELS,
-  PORTFOLIO_ORDER,
-  PORTFOLIO_RUBRIC_NOTE,
-  portfolioForSite,
-  portfolioReason,
-  tallyPortfolioCounts,
-  type VacancyPortfolio,
-} from "./vacancy-portfolio";
-
-export {
-  PORTFOLIO_LABELS,
-  PORTFOLIO_ORDER,
-  PORTFOLIO_RUBRIC_NOTE,
-  portfolioForSite,
-  portfolioReason,
-  tallyPortfolioCounts,
-};
-export type { VacancyPortfolio };
 
 // Re-export the v2 taxonomy types so consumers that already pull from
 // lib/vacancy-index can reach them without a second import (the client-safe
@@ -1406,13 +1385,11 @@ export const CLUSTERS_NOTE =
   "minimum five sites. Boundaries are analytical, not parcel-contiguous.";
 
 /** One tracked site fed to clusterVacantSites — coordinate plus the flags the
- * cluster aggregates. `taxSale` is `saleYear != null`; `portfolio` is
- * portfolioForSite's output. */
+ * cluster aggregates. `taxSale` is `saleYear != null`. */
 export interface ClusterInputSite {
   lat: number;
   lon: number;
   ownerType: OwnerType;
-  portfolio: VacancyPortfolio;
   taxSale: boolean;
   violation: boolean;
   propertyType: VacancyPropertyType;
@@ -1578,7 +1555,6 @@ export function clusterVacantSitesWithMembership(
     let vacantLandCount = 0;
     let vacantBuildingCount = 0;
     const ownerTypes: OwnerType[] = [];
-    const portfolios: VacancyPortfolio[] = [];
     for (const i of ordered) {
       const row = rows[i];
       sumLat += row.lat;
@@ -1592,7 +1568,6 @@ export function clusterVacantSitesWithMembership(
       if (row.propertyType === "vacant_land") vacantLandCount += 1;
       else vacantBuildingCount += 1;
       ownerTypes.push(row.ownerType);
-      portfolios.push(row.portfolio);
     }
     const count = ordered.length;
     built.push({
@@ -1601,7 +1576,6 @@ export function clusterVacantSitesWithMembership(
         bbox: [minLon, minLat, maxLon, maxLat],
         count,
         ownerTypeCounts: tallyOwnerTypeCounts(ownerTypes),
-        portfolioCounts: tallyPortfolioCounts(portfolios),
         taxSaleCount,
         violationCount,
         vacantLandCount,
@@ -1685,4 +1659,37 @@ export function getVacancyIndexEdition(zip: string): VacancyIndexEdition | null 
   const data = loadVacancyIndex();
   if (!data) return null;
   return data.editions[zip] ?? null;
+}
+
+// Per-ZIP directory-file cache (same undefined/null convention as `cache`).
+const directoryCache = new Map<string, VacancyDirectoryFile | null>();
+
+/**
+ * Read and parse one ZIP's committed site-directory file
+ * (public/data/vacancy-directory/{zip}.json) once per process. Static-only,
+ * mirroring loadVacancyIndex: returns `null` when the file is absent or
+ * unparseable so callers render an empty state rather than throwing. The zip
+ * is validated to digits before touching the filesystem.
+ */
+export function loadVacancyDirectory(zip: string): VacancyDirectoryFile | null {
+  if (!/^\d{5}$/.test(zip)) return null;
+  const cached = directoryCache.get(zip);
+  if (cached !== undefined) return cached;
+
+  let parsed: VacancyDirectoryFile | null = null;
+  try {
+    const filePath = path.join(process.cwd(), "public/data/vacancy-directory", `${zip}.json`);
+    if (existsSync(filePath)) {
+      const raw = JSON.parse(readFileSync(filePath, "utf8")) as unknown;
+      parsed =
+        raw && typeof raw === "object" && Array.isArray((raw as VacancyDirectoryFile).rows)
+          ? (raw as VacancyDirectoryFile)
+          : null;
+    }
+  } catch {
+    parsed = null;
+  }
+
+  directoryCache.set(zip, parsed);
+  return parsed;
 }
