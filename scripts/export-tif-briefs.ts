@@ -37,12 +37,15 @@ import {
   computeTifContiguity,
   countPointsInDistrict,
   districtIntersectsZip,
+  findForbiddenFigureKeys,
   latestFinanceByTif,
   normalizeTifNumber,
+  projectionsByTif,
   type TifAnnualReportRow,
   type TifBriefsExport,
   type TifDistrictBrief,
   type TifPolygon,
+  type TifProjectionRow,
   type TifZipBrief,
 } from "../lib/tif-briefs";
 
@@ -52,6 +55,20 @@ const TIF_GEOJSON_PATH = join(process.cwd(), "public", "data", "zones", "tif-dis
 const VACANCY_INDEX_PATH = join(process.cwd(), "public", "data", "vacancy-index.json");
 const OUT_PATH = join(process.cwd(), "public", "data", "tif-briefs.json");
 const TIF_ANNUAL_REPORT_URL = "https://data.cityofchicago.org/resource/qm7s-3ctt.json";
+// DPD 10-Year TIF Projections (2025–2034), published 2025-10-15. 2,246 line items.
+const TIF_PROJECTIONS_URL = "https://data.cityofchicago.org/resource/fpsv-qjg3.json";
+const PROJECTION_YEAR_COLUMNS = [
+  "_2025",
+  "_2026",
+  "_2027",
+  "_2028",
+  "_2029",
+  "_2030",
+  "_2031",
+  "_2032",
+  "_2033",
+  "_2034",
+] as const;
 
 // ── Number parsing ──────────────────────────────────────────────────────────
 
@@ -168,6 +185,36 @@ async function fetchTifAnnualReport(): Promise<TifAnnualReportRow[]> {
   return out;
 }
 
+// ── Socrata DPD 10-Year TIF Projections ─────────────────────────────────────
+
+interface SodaProjectionRow {
+  tif_district_id?: string | null;
+  tif_district_name?: string | null;
+  category_description?: string | null;
+  fund_and_project_balances?: string | null;
+  through_end_date?: string | null;
+  [year: string]: string | null | undefined;
+}
+
+async function fetchTifProjections(): Promise<TifProjectionRow[]> {
+  const params = new URLSearchParams({ $limit: "50000" });
+  const url = `${TIF_PROJECTIONS_URL}?${params.toString()}`;
+  const res = await fetch(url, { headers: socrataHeaders(), signal: AbortSignal.timeout(60000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  const rows = (await res.json()) as SodaProjectionRow[];
+  const out: TifProjectionRow[] = [];
+  for (const r of rows) {
+    out.push({
+      tifNumber: r.tif_district_id ?? "",
+      categoryDescription: (r.category_description ?? "").trim(),
+      fundAndProjectBalances: toNumOrNull(r.fund_and_project_balances),
+      years: PROJECTION_YEAR_COLUMNS.map((col) => toNumOrNull(r[col])),
+      throughEndDate: toNumOrNull(r.through_end_date),
+    });
+  }
+  return out;
+}
+
 // ── ZIP boundaries (from the committed vacancy index) ───────────────────────
 
 function loadZipBoundaries(): Map<string, [number, number][][]> {
@@ -212,6 +259,13 @@ async function main() {
   const financeByTif = latestFinanceByTif(annualRows);
   console.log(`  ${annualRows.length} report rows -> ${financeByTif.size} districts with a latest-year row`);
 
+  console.log("\nFetching DPD 10-Year TIF Projections (Socrata fpsv-qjg3)...");
+  const projectionRows = await fetchTifProjections();
+  const projectionsByDistrict = projectionsByTif(projectionRows);
+  console.log(
+    `  ${projectionRows.length} projection line items -> ${projectionsByDistrict.size} districts with a programming outlook`,
+  );
+
   console.log("\nComputing contiguity graph (touching / near ≤60 m)...");
   const contiguity = computeTifContiguity(
     districts.map((d) => ({ number: d.number, polygons: d.polygons })),
@@ -233,10 +287,13 @@ async function main() {
   const districtBriefs: Record<string, TifDistrictBrief> = {};
   let withFinance = 0;
   let withoutFinance = 0;
+  let withProjections = 0;
   for (const d of districts) {
     const finance = financeByTif.get(d.number) ?? null;
     if (finance) withFinance += 1;
     else withoutFinance += 1;
+    const projections = projectionsByDistrict.get(d.number) ?? null;
+    if (projections) withProjections += 1;
     districtBriefs[d.number] = {
       number: d.number,
       name: d.name,
@@ -246,10 +303,12 @@ async function main() {
       wards: d.wards,
       status: d.status,
       finance,
+      projections,
       neighbors: contiguity.get(d.number) ?? [],
     };
   }
   console.log(`  finance rows: ${withFinance} matched, ${withoutFinance} null (render "not yet available")`);
+  console.log(`  programming outlook: ${withProjections} districts with DPD projection line items`);
 
   // ZIP membership + per-district vacant-site counts.
   console.log("\nComputing ZIP membership + vacant-site counts...");
@@ -293,6 +352,8 @@ async function main() {
       tifBoundaries: "Chicago TIF District boundaries (data.cityofchicago.org, Active districts)",
       tifAnnualReport:
         "Chicago TIF Annual Report — Analysis of Special Tax Allocation Fund (Socrata qm7s-3ctt), latest report year per district",
+      tifProjections:
+        "DPD 10-Year TIF Projections 2025–2034 (Socrata fpsv-qjg3), published 2025-10-15, aggregated per district per source category",
       vacancyIndex: "Explorer Vacancy Opportunity Index edition boundaries + tracked sites (public/data/vacancy-index.json)",
       asOf: generatedAt.slice(0, 10),
     },
@@ -300,11 +361,37 @@ async function main() {
     zips,
   };
 
+  // Rule 1 (structural): no key ANYWHERE in the output may name a derived
+  // "available / remaining / uncommitted" figure. The projections categories are
+  // the only source-driven keys, so this catches a renamed category that implied
+  // a computed remainder. Hard-fail before writing — never ship a violation.
+  const forbidden = findForbiddenFigureKeys(out);
+  if (forbidden.length > 0) {
+    throw new Error(
+      `Forbidden derived-figure key(s) in output (rule 1): ${[...new Set(forbidden)].join(", ")}`,
+    );
+  }
+  console.log("\n  rule 1 OK: no available/remaining/uncommitted key in the output");
+
   const serialized = JSON.stringify(out, null, 2) + "\n";
   mkdirSync(dirname(OUT_PATH), { recursive: true });
   writeFileSync(OUT_PATH, serialized);
   console.log(`\nWrote ${OUT_PATH}`);
   console.log(`  districts: ${Object.keys(orderedDistricts).length}, ZIPs: ${Object.keys(zips).length}`);
+
+  // Spot-check T-115 (Chicago/Central Park) programming outlook categories — the
+  // spec's worked example. Logs the exact per-category totals the JSON carries.
+  const t115 = orderedDistricts["T-115"];
+  if (t115?.projections) {
+    console.log(
+      `\n  T-115 ${t115.name} programming outlook (published ${t115.projections.publishedDate}):`,
+    );
+    for (const [category, total] of Object.entries(t115.projections.categories)) {
+      console.log(`    ${category}: ${total.toLocaleString("en-US")}`);
+    }
+  } else {
+    console.log("\n  T-115: no programming outlook (check the projections join)");
+  }
 
   // Spot-check the worked example (60617) using the same pure view builder the
   // page uses, so the export logs what the report will show.

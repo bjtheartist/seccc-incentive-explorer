@@ -1,8 +1,9 @@
 {
-  "generatedAt": "2026-07-23T13:02:24.018Z",
+  "generatedAt": "2026-07-23T19:16:20.279Z",
   "sources": {
     "tifBoundaries": "Chicago TIF District boundaries (data.cityofchicago.org, Active districts)",
     "tifAnnualReport": "Chicago TIF Annual Report — Analysis of Special Tax Allocation Fund (Socrata qm7s-3ctt), latest report year per district",
+    "tifProjections": "DPD 10-Year TIF Projections 2025–2034 (Socrata fpsv-qjg3), published 2025-10-15, aggregated per district per source category",
     "vacancyIndex": "Explorer Vacancy Opportunity Index edition boundaries + tracked sites (public/data/vacancy-index.json)",
     "asOf": "2026-07-23"
   },
@@ -16,6 +17,7 @@
       "wards": "11,12",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-45",
@@ -36,6 +38,7 @@
       "wards": "19",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-142",
@@ -52,6 +55,7 @@
       "wards": "48",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-157",
@@ -72,6 +76,7 @@
       "wards": "27",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-30",
@@ -88,6 +93,7 @@
       "wards": "24",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-95",
@@ -104,6 +110,7 @@
       "wards": "2,27",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-23",
@@ -124,6 +131,7 @@
       "wards": "24,29",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-95",
@@ -148,6 +156,7 @@
       "wards": "12,22,25",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-149",
@@ -172,6 +181,7 @@
       "wards": "11,15",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-1",
@@ -196,6 +206,7 @@
       "wards": "24,25,27,28",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-62",
@@ -216,6 +227,7 @@
       "wards": "1,27,34,36",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-86",
@@ -244,6 +256,7 @@
       "wards": "11,12,25",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-163",
@@ -268,6 +281,7 @@
       "wards": "8",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-60",
@@ -296,6 +310,7 @@
       "wards": "3,4",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-61",
@@ -320,6 +335,7 @@
       "wards": "6,17",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-66",
@@ -340,6 +356,7 @@
       "wards": "5,7,8,20",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-54",
@@ -368,6 +385,7 @@
       "wards": "3,4",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-55",
@@ -412,6 +430,7 @@
       "wards": "25,28",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-48",
@@ -428,6 +447,7 @@
       "wards": "28,34,42",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-147",
@@ -452,6 +472,7 @@
       "wards": "26,28,31,36,37",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-69",
@@ -496,6 +517,7 @@
       "wards": "5,6,20",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-60",
@@ -520,6 +542,7 @@
       "wards": "17,18",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-56",
@@ -536,6 +559,7 @@
       "wards": "26,31,35,36",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-64",
@@ -568,6 +592,7 @@
       "wards": "40,46,47",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-180",
@@ -584,6 +609,7 @@
       "wards": "29,36,37",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-64",
@@ -608,6 +634,7 @@
       "wards": "3,4,11",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-61",
@@ -632,6 +659,7 @@
       "wards": "19",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-142",
@@ -648,6 +676,7 @@
       "wards": "28,29,37",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-64",
@@ -676,6 +705,7 @@
       "wards": "40,50",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-177",
@@ -692,6 +722,7 @@
       "wards": "30,31,36,38",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-64",
@@ -716,6 +747,7 @@
       "wards": "27,28,34",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-52",
@@ -736,6 +768,7 @@
       "wards": "1,26,30,31,35",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-69",
@@ -756,6 +789,7 @@
       "wards": "33,39,40",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-116",
@@ -772,6 +806,7 @@
       "wards": "7,10",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-103",
@@ -792,6 +827,7 @@
       "wards": "24,25,27,28,29",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-24",
@@ -844,6 +880,7 @@
       "wards": "13,23",
       "status": "Active",
       "finance": null,
+      "projections": null,
       "neighbors": [
         {
           "number": "T-124",
@@ -865,6 +902,17 @@
         "taxAllocationFundBalance": 25924912,
         "incrementCurrent": 5893876,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -14616568,
+          "Fund Balance": 19743026,
+          "Revenue": 143040306,
+          "Surplus": -9373773,
+          "Transfers Between TIF Districts": -6268089
+        }
       },
       "neighbors": [
         {
@@ -908,6 +956,16 @@
         "incrementCurrent": 2893966,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -40113606,
+          "Fund Balance": 25881985,
+          "Revenue": 70569841,
+          "Surplus": -6685494
+        }
+      },
       "neighbors": [
         {
           "number": "T-121",
@@ -942,6 +1000,17 @@
         "incrementCurrent": 3932831,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -19822760,
+          "Fund Balance": 9712020,
+          "Revenue": 51791323,
+          "Surplus": -4858228,
+          "TRR - Preliminary Agenda": -1427200
+        }
+      },
       "neighbors": [
         {
           "number": "T-52",
@@ -972,6 +1041,16 @@
         "incrementCurrent": 8451752,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -39212121,
+          "Fund Balance": 43011266,
+          "Revenue": 113481611,
+          "Surplus": -11861995
+        }
+      },
       "neighbors": [
         {
           "number": "T-157",
@@ -997,6 +1076,16 @@
         "taxAllocationFundBalance": 1371176,
         "incrementCurrent": 356947,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -1482025,
+          "Fund Balance": 560260,
+          "Revenue": 1327015,
+          "Transfers Between TIF Districts": 455000
+        }
       },
       "neighbors": [
         {
@@ -1028,6 +1117,17 @@
         "incrementCurrent": 1169232,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -2847748,
+          "Fund Balance": 6062575,
+          "Revenue": 4004736,
+          "Surplus": -2924452,
+          "Transfers Between TIF Districts": -750000
+        }
+      },
       "neighbors": [
         {
           "number": "T-113",
@@ -1057,6 +1157,17 @@
         "taxAllocationFundBalance": 51815491,
         "incrementCurrent": 10766661,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -92273755,
+          "Fund Balance": 68744348,
+          "Revenue": 26654742,
+          "Surplus": -17378572,
+          "Transfers Between TIF Districts": 15815736
+        }
       },
       "neighbors": [
         {
@@ -1096,6 +1207,17 @@
         "incrementCurrent": 2827391,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -7514924,
+          "Fund Balance": 15370597,
+          "Revenue": 6499832,
+          "TRR - Hold": -8000000,
+          "Transfers Between TIF Districts": -1250000
+        }
+      },
       "neighbors": [
         {
           "number": "T-88",
@@ -1121,6 +1243,17 @@
         "taxAllocationFundBalance": 13383701,
         "incrementCurrent": 3812217,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -24451768,
+          "Fund Balance": 15928888,
+          "Revenue": 10012795,
+          "Surplus": -929937,
+          "Transfers Between TIF Districts": 1000000
+        }
       },
       "neighbors": [
         {
@@ -1151,6 +1284,17 @@
         "taxAllocationFundBalance": 67980226,
         "incrementCurrent": 13152666,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -36726261,
+          "Fund Balance": 69873436,
+          "Revenue": 38746098,
+          "Surplus": -27678960,
+          "Transfers Between TIF Districts": -25000000
+        }
       },
       "neighbors": [
         {
@@ -1190,6 +1334,16 @@
         "incrementCurrent": 405076,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -1533622,
+          "Fund Balance": 2086910,
+          "Revenue": 1083432,
+          "Surplus": -290040
+        }
+      },
       "neighbors": []
     },
     "T-121": {
@@ -1206,6 +1360,18 @@
         "taxAllocationFundBalance": 24864220,
         "incrementCurrent": 4098894,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -8766839,
+          "Fund Balance": 17237073,
+          "Proposed Projects": -400000,
+          "Revenue": 10689327,
+          "Surplus": -11310651,
+          "Transfers Between TIF Districts": -1000000
+        }
       },
       "neighbors": [
         {
@@ -1253,6 +1419,17 @@
         "incrementCurrent": 837757,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -18187258,
+          "Fund Balance": 3134585,
+          "Revenue": 2483723,
+          "Surplus": -1416551,
+          "Transfers Between TIF Districts": 15548000
+        }
+      },
       "neighbors": [
         {
           "number": "T-60",
@@ -1275,6 +1452,16 @@
         "incrementCurrent": 496277,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -811553,
+          "Fund Balance": 1334465,
+          "Revenue": 811722,
+          "Surplus": -122130
+        }
+      },
       "neighbors": [
         {
           "number": "T-98",
@@ -1296,6 +1483,16 @@
         "taxAllocationFundBalance": 10773335,
         "incrementCurrent": 2981970,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -10849657,
+          "Fund Balance": 11611523,
+          "Revenue": 7706779,
+          "Surplus": -6873159
+        }
       },
       "neighbors": [
         {
@@ -1327,6 +1524,16 @@
         "incrementCurrent": 1912855,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -5076378,
+          "Fund Balance": 8253105,
+          "Revenue": 30793155,
+          "Surplus": -5854085
+        }
+      },
       "neighbors": [
         {
           "number": "T-55",
@@ -1352,6 +1559,17 @@
         "taxAllocationFundBalance": 12343563,
         "incrementCurrent": 2093730,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -5873374,
+          "Fund Balance": 12801204,
+          "Revenue": 5039328,
+          "Surplus": -5416833,
+          "Transfers Between TIF Districts": -2500000
+        }
       },
       "neighbors": [
         {
@@ -1387,6 +1605,17 @@
         "incrementCurrent": 1530708,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -20079214,
+          "Fund Balance": 15052637,
+          "Revenue": 4284490,
+          "Surplus": -5945414,
+          "Transfers Between TIF Districts": 8250000
+        }
+      },
       "neighbors": [
         {
           "number": "T-93",
@@ -1412,6 +1641,16 @@
         "taxAllocationFundBalance": 6610086,
         "incrementCurrent": 3424119,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -18878797,
+          "Fund Balance": 5616949,
+          "Revenue": 9620715,
+          "Transfers Between TIF Districts": 4500000
+        }
       },
       "neighbors": [
         {
@@ -1439,6 +1678,16 @@
         "incrementCurrent": 1072300,
         "surplusDistributed": 152072
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -2431284,
+          "Fund Balance": 5461614,
+          "Revenue": 3806829,
+          "Surplus": -2772431
+        }
+      },
       "neighbors": []
     },
     "T-131": {
@@ -1455,6 +1704,15 @@
         "taxAllocationFundBalance": 6862604,
         "incrementCurrent": 1968584,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -11141627,
+          "Fund Balance": 6912841,
+          "Revenue": 11819180
+        }
       },
       "neighbors": [
         {
@@ -1482,6 +1740,15 @@
         "incrementCurrent": 1465649,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -5003146,
+          "Fund Balance": 1293119,
+          "Revenue": 5609109
+        }
+      },
       "neighbors": []
     },
     "T-134": {
@@ -1498,6 +1765,15 @@
         "taxAllocationFundBalance": 7473714,
         "incrementCurrent": 3554126,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -8193507,
+          "Fund Balance": 8279519,
+          "Revenue": 15392986
+        }
       },
       "neighbors": [
         {
@@ -1521,6 +1797,16 @@
         "incrementCurrent": 887474,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -6398016,
+          "Fund Balance": 6219502,
+          "Revenue": 3811862,
+          "Surplus": -857803
+        }
+      },
       "neighbors": [
         {
           "number": "T-146",
@@ -1542,6 +1828,16 @@
         "taxAllocationFundBalance": 18899003,
         "incrementCurrent": 3147342,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -29187030,
+          "Fund Balance": 20352798,
+          "Revenue": 13410220,
+          "Transfers Between TIF Districts": 5000000
+        }
       },
       "neighbors": [
         {
@@ -1573,6 +1869,15 @@
         "incrementCurrent": 581216,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -2816609,
+          "Fund Balance": 1011118,
+          "Revenue": 3118853
+        }
+      },
       "neighbors": []
     },
     "T-141": {
@@ -1589,6 +1894,15 @@
         "taxAllocationFundBalance": 6147581,
         "incrementCurrent": 1030755,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -135180,
+          "Fund Balance": 7175204,
+          "Revenue": 5729787
+        }
       },
       "neighbors": [
         {
@@ -1615,6 +1929,16 @@
         "taxAllocationFundBalance": 5577567,
         "incrementCurrent": 1776306,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -4210580,
+          "Fund Balance": 6492538,
+          "Revenue": 18585880,
+          "Surplus": -3802635
+        }
       },
       "neighbors": [
         {
@@ -1646,6 +1970,15 @@
         "incrementCurrent": 462049,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -6816752,
+          "Fund Balance": 5234732,
+          "Revenue": 7755338
+        }
+      },
       "neighbors": [
         {
           "number": "T-106",
@@ -1675,6 +2008,16 @@
         "taxAllocationFundBalance": 3466508,
         "incrementCurrent": 2049522,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -2362445,
+          "Fund Balance": 3899786,
+          "Revenue": 11044608,
+          "Surplus": -1901806
+        }
       },
       "neighbors": [
         {
@@ -1706,6 +2049,16 @@
         "incrementCurrent": 52938,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -1400067,
+          "Fund Balance": 1995377,
+          "Revenue": 3911283,
+          "TRR - Preliminary Agenda": -750000
+        }
+      },
       "neighbors": [
         {
           "number": "T-127",
@@ -1728,6 +2081,15 @@
         "incrementCurrent": 1234071,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -8375840,
+          "Fund Balance": 3489951,
+          "Revenue": 8879678
+        }
+      },
       "neighbors": [
         {
           "number": "T-135",
@@ -1749,6 +2111,16 @@
         "taxAllocationFundBalance": 247435470,
         "incrementCurrent": 211363276,
         "surplusDistributed": 95793442
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -687076939,
+          "Fund Balance": 244415230,
+          "Revenue": 789762801,
+          "Surplus": -51079822
+        }
       },
       "neighbors": [
         {
@@ -1779,6 +2151,16 @@
         "taxAllocationFundBalance": 16066558,
         "incrementCurrent": 9764143,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -29902401,
+          "Fund Balance": 13776550,
+          "Revenue": 104829893,
+          "Surplus": -4513650
+        }
       },
       "neighbors": [
         {
@@ -1814,6 +2196,17 @@
         "incrementCurrent": 9571721,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -8283809,
+          "Fund Balance": 15585208,
+          "Revenue": 77759162,
+          "Surplus": -8271536,
+          "Transfers Between TIF Districts": -36500000
+        }
+      },
       "neighbors": [
         {
           "number": "T-179",
@@ -1835,6 +2228,15 @@
         "taxAllocationFundBalance": 1690760,
         "incrementCurrent": 373750,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -1471749,
+          "Fund Balance": 1367225,
+          "Revenue": 5079223
+        }
       },
       "neighbors": [
         {
@@ -1861,6 +2263,16 @@
         "taxAllocationFundBalance": 7083496,
         "incrementCurrent": 4158038,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -17080563,
+          "Fund Balance": 8593949,
+          "Revenue": 40361524,
+          "Surplus": -3863736
+        }
       },
       "neighbors": [
         {
@@ -1892,6 +2304,15 @@
         "incrementCurrent": 1711189,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -5894566,
+          "Fund Balance": 7746472,
+          "Revenue": 17003725
+        }
+      },
       "neighbors": []
     },
     "T-155": {
@@ -1908,6 +2329,16 @@
         "taxAllocationFundBalance": 3438349,
         "incrementCurrent": 235431,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -3114795,
+          "Fund Balance": 3219555,
+          "Revenue": 5189694,
+          "Transfers Between TIF Districts": -500000
+        }
       },
       "neighbors": [
         {
@@ -1935,6 +2366,16 @@
         "incrementCurrent": 2421067,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -28442287,
+          "Fund Balance": 9181144,
+          "Revenue": 21478515,
+          "Transfers Between TIF Districts": 11600000
+        }
+      },
       "neighbors": [
         {
           "number": "T-64",
@@ -1960,6 +2401,16 @@
         "taxAllocationFundBalance": 9880637,
         "incrementCurrent": 3852203,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -38038185,
+          "Fund Balance": 13314549,
+          "Revenue": 39936636,
+          "Transfers Between TIF Districts": 11500000
+        }
       },
       "neighbors": [
         {
@@ -1991,6 +2442,16 @@
         "incrementCurrent": 2533876,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -9918126,
+          "Fund Balance": 7344403,
+          "Revenue": 23478740,
+          "Surplus": -2848088
+        }
+      },
       "neighbors": []
     },
     "T-161": {
@@ -2007,6 +2468,17 @@
         "taxAllocationFundBalance": 6465650,
         "incrementCurrent": 818783,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -9858866,
+          "Fund Balance": 4888961,
+          "Proposed Transfers": 450000,
+          "Revenue": 42130100,
+          "Transfers Between TIF Districts": 13299053
+        }
       },
       "neighbors": [
         {
@@ -2033,6 +2505,17 @@
         "taxAllocationFundBalance": 12108384,
         "incrementCurrent": 4297064,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -16514903,
+          "Fund Balance": 17093291,
+          "Revenue": 51699979,
+          "Surplus": -15535562,
+          "Transfers Between TIF Districts": 10421534
+        }
       },
       "neighbors": [
         {
@@ -2064,6 +2547,15 @@
         "incrementCurrent": 705038,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -2759315,
+          "Fund Balance": 2747384,
+          "Revenue": 11305644
+        }
+      },
       "neighbors": [
         {
           "number": "T-42",
@@ -2089,6 +2581,16 @@
         "taxAllocationFundBalance": 7841447,
         "incrementCurrent": 2208446,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -34761959,
+          "Fund Balance": 7875558,
+          "Revenue": 35266953,
+          "Transfers Between TIF Districts": 5863089
+        }
       },
       "neighbors": [
         {
@@ -2120,6 +2622,15 @@
         "incrementCurrent": 427616,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -2337506,
+          "Fund Balance": 2500281,
+          "Revenue": 7213920
+        }
+      },
       "neighbors": [
         {
           "number": "T-87",
@@ -2141,6 +2652,15 @@
         "taxAllocationFundBalance": 2100240,
         "incrementCurrent": 323796,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -2533660,
+          "Fund Balance": 2257142,
+          "Revenue": 4627936
+        }
       },
       "neighbors": [
         {
@@ -2167,6 +2687,16 @@
         "taxAllocationFundBalance": 515962,
         "incrementCurrent": 66298,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -3321285,
+          "Fund Balance": 3072744,
+          "Revenue": 21222407,
+          "Transfers Between TIF Districts": 176000
+        }
       },
       "neighbors": [
         {
@@ -2198,6 +2728,16 @@
         "incrementCurrent": 22220667,
         "surplusDistributed": 7699911
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -5568034,
+          "Fund Balance": 6426640,
+          "Revenue": 108533176,
+          "Surplus": -14613020
+        }
+      },
       "neighbors": [
         {
           "number": "T-147",
@@ -2220,6 +2760,16 @@
         "incrementCurrent": 1688025,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -27425938,
+          "Fund Balance": 5802152,
+          "Revenue": 18573544,
+          "Transfers Between TIF Districts": 6000000
+        }
+      },
       "neighbors": [
         {
           "number": "T-180",
@@ -2241,6 +2791,16 @@
         "taxAllocationFundBalance": 1020460,
         "incrementCurrent": 0,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -3188423,
+          "Fund Balance": 2484700,
+          "Revenue": 5188609,
+          "Transfers Between TIF Districts": 1000000
+        }
       },
       "neighbors": [
         {
@@ -2288,6 +2848,15 @@
         "incrementCurrent": 1296341,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -15974008,
+          "Fund Balance": 1636004,
+          "Revenue": 15634800
+        }
+      },
       "neighbors": []
     },
     "T-176": {
@@ -2304,6 +2873,16 @@
         "taxAllocationFundBalance": 3991888,
         "incrementCurrent": 680312,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -3468394,
+          "Fund Balance": 4529073,
+          "Revenue": 34040718,
+          "TRR - First Look Hold": -1241
+        }
       },
       "neighbors": [
         {
@@ -2335,6 +2914,15 @@
         "incrementCurrent": -243,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -827434,
+          "Fund Balance": 1368393,
+          "Revenue": 0
+        }
+      },
       "neighbors": [
         {
           "number": "T-77",
@@ -2356,6 +2944,15 @@
         "taxAllocationFundBalance": 8634967,
         "incrementCurrent": 2071969,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -3393204,
+          "Fund Balance": 10351622,
+          "Revenue": 65942920
+        }
       },
       "neighbors": [
         {
@@ -2399,6 +2996,16 @@
         "incrementCurrent": 161056,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -36768893,
+          "Fund Balance": 1546368,
+          "Revenue": 5139310,
+          "Transfers Between TIF Districts": 36500000
+        }
+      },
       "neighbors": [
         {
           "number": "T-150",
@@ -2420,6 +3027,15 @@
         "taxAllocationFundBalance": 10814690,
         "incrementCurrent": 75667025,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -500185847,
+          "Fund Balance": 6534090,
+          "Revenue": 3426688779
+        }
       },
       "neighbors": [
         {
@@ -2471,6 +3087,16 @@
         "incrementCurrent": 2479084,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -9399901,
+          "Fund Balance": 3528888,
+          "Revenue": 51481196,
+          "Transfers Between TIF Districts": 1250000
+        }
+      },
       "neighbors": [
         {
           "number": "T-116",
@@ -2492,6 +3118,16 @@
         "taxAllocationFundBalance": 2741876,
         "incrementCurrent": 1714241,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -19232367,
+          "Fund Balance": 7895232,
+          "Revenue": 50396730,
+          "Surplus": -2837421
+        }
       },
       "neighbors": [
         {
@@ -2519,6 +3155,16 @@
         "incrementCurrent": 5533940,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -171250680,
+          "Fund Balance": 83366308,
+          "Revenue": 173238994,
+          "Surplus": -33853847
+        }
+      },
       "neighbors": [
         {
           "number": "T-180",
@@ -2540,6 +3186,19 @@
         "taxAllocationFundBalance": 66266605,
         "incrementCurrent": 4458524,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -117333384,
+          "Fund Balance": 75221405,
+          "Proposed Projects": -255000000,
+          "Proposed Transfers": 180200000,
+          "Revenue": 130717522,
+          "Surplus": -6998681,
+          "Transfers Between TIF Districts": 87000000
+        }
       },
       "neighbors": [
         {
@@ -2575,6 +3234,14 @@
         "incrementCurrent": 0,
         "surplusDistributed": 0
       },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -7461519,
+          "Fund Balance": 10398592
+        }
+      },
       "neighbors": [
         {
           "number": "T-149",
@@ -2596,6 +3263,15 @@
         "taxAllocationFundBalance": 2139196,
         "incrementCurrent": 4645337,
         "surplusDistributed": 0
+      },
+      "projections": {
+        "publishedDate": "2025-10-15",
+        "source": "DPD 10-Year TIF Projections (2025–2034)",
+        "categories": {
+          "Current Obligations": -1076749200,
+          "Fund Balance": 6072061,
+          "Revenue": 1766874729
+        }
       },
       "neighbors": [
         {
