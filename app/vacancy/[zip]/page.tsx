@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import {
@@ -56,13 +57,23 @@ import {
   TIF_RELATION_LABELS,
 } from "@/lib/tif-briefs";
 import { VacancyIndexPdfButton } from "@/components/owner-file/VacancyIndexPdfButton";
+import { VacancySubNav } from "@/components/vacancy/VacancySubNav";
+import { deriveOpportunityAreas } from "@/lib/vacancy-opportunity-areas";
 
 export const dynamic = "force-dynamic";
 
-type SearchParams = Promise<Record<string, string | string[] | undefined>>;
-
-function paramValue(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ zip: string }>;
+}): Promise<Metadata> {
+  const { zip } = await params;
+  const entry = getPilotZipEntry(zip);
+  if (!entry) return { title: "Vacant Sites" };
+  return {
+    title: `${entry.primaryNeighborhood} vacant sites (ZIP ${zip})`,
+    description: `Vacant-property overview for ${entry.primaryNeighborhood} (ZIP ${zip}) — tracked vacant land and buildings, opportunity areas, and public-record context. Early possibilities, not availability listings.`,
+  };
 }
 
 const DISTRESS_RED = "#DC2626";
@@ -200,79 +211,27 @@ const CORRIDOR_AGENDA: string[] = [
 
 export default async function VacancyReportPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ zip: string }>;
-  searchParams: SearchParams;
 }) {
   const { zip } = await params;
   // Vacancy report is scoped to the nine pilot ZIPs only.
   if (!getPilotZipEntry(zip)) notFound();
 
-  const sp = await searchParams;
-  const hasAuthError = paramValue(sp.error) === "1";
-
-  // ── Gate: exact Owner Files admin pattern ──
-  if (!isOwnerFilesAdminConfigured()) {
-    return (
-      <main className="min-h-screen bg-[#FAF9F6] px-6 py-12 text-[#0C1B33]">
-        <div className="mx-auto max-w-2xl border border-[#0C1B33]/10 bg-white p-6">
-          <h1 className="font-editorial text-[38px]">Vacancy report not configured</h1>
-          <p className="mt-3 text-[#0C1B33]/45">
-            Set <code>OWNER_FILES_ADMIN_PASSWORD</code> before using the admin Vacancy
-            Opportunity Index.
-          </p>
-        </div>
-      </main>
-    );
-  }
-
+  // ── Public page. Admin detection is retained SERVER-SIDE only to decide
+  //    whether to render the parcel-level exemption referral table (rail 2 —
+  //    that table stays admin-only even though the page is now public). A valid
+  //    Owner Files OR analytics admin cookie satisfies the check; everyone else
+  //    sees the public report without it. ──
   const cookieStore = await cookies();
-  const hasSession = hasValidOwnerFilesAdminSession(
-    cookieStore.get(OWNER_FILES_ADMIN_COOKIE)?.value,
-    cookieStore.get(ANALYTICS_ADMIN_COOKIE)?.value,
-  );
-
-  if (!hasSession) {
-    return (
-      <main className="min-h-screen bg-[#FAF9F6] px-6 py-12 text-[#0C1B33]">
-        <form
-          method="post"
-          action="/api/admin/owner-files/login"
-          className="mx-auto max-w-md border border-[#0C1B33]/10 bg-white p-6"
-        >
-          <span className="font-mono-bureau text-[10px] tracking-[0.18em] uppercase text-[#2563EB]">
-            Vacancy Opportunity Index
-          </span>
-          <h1 className="mt-4 font-editorial text-[38px]">Enter admin password</h1>
-          <p className="mt-3 text-[13px] leading-relaxed text-[#0C1B33]/45">
-            The web report is admin-gated alongside Owner Files. The shareable PDF edition it
-            produces is anonymized (owner types only, no names) and safe to hand to partners.
-          </p>
-          <input type="hidden" name="redirectTo" value={`/vacancy/${zip}`} />
-          <input
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            className="mt-5 w-full border border-[#0C1B33]/15 bg-white px-4 py-3 text-[14px] outline-none focus:border-[#2563EB]"
-            placeholder="Owner Files password"
-          />
-          {hasAuthError ? (
-            <p className="mt-3 text-[12px] text-red-600">That password did not match. Try again.</p>
-          ) : null}
-          <p className="mt-3 text-[12px] leading-relaxed text-[#0C1B33]/45">
-            Your analytics admin session also opens this report — log in there once and this gate
-            disappears.
-          </p>
-          <button className="mt-4 w-full bg-[#0C1B33] px-4 py-3 font-mono-bureau text-[11px] uppercase tracking-[0.16em] text-white">
-            Open Vacancy Report
-          </button>
-        </form>
-      </main>
+  const hasSession =
+    isOwnerFilesAdminConfigured() &&
+    hasValidOwnerFilesAdminSession(
+      cookieStore.get(OWNER_FILES_ADMIN_COOKIE)?.value,
+      cookieStore.get(ANALYTICS_ADMIN_COOKIE)?.value,
     );
-  }
 
-  // ── Authed: load the edition + the shared adapter output ──
+  // ── Load the edition + the shared adapter output ──
   const exportData = loadVacancyIndex();
   const edition = exportData?.editions[zip] ?? null;
   const pdfInput = exportData ? buildVacancyIndexPdfInput(exportData, zip) : null;
@@ -387,6 +346,10 @@ export default async function VacancyReportPage({
   // directory section only renders once it's a real positive count.
   const directoryCount = edition.directoryCount ?? 0;
 
+  // Public Opportunity Areas count (derived at render from the committed
+  // clusters) — drives the Overview → Opportunity Areas cross-link count.
+  const opportunityAreaCount = deriveOpportunityAreas(edition).totalQualifying;
+
   // ── Readiness portfolios ──
   // The full tracked universe isn't available page-side, so portfolio counts are
   // computed across the (capped) mapped sitePoints and honestly labeled as such.
@@ -446,38 +409,8 @@ export default async function VacancyReportPage({
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
       <div className="mx-auto max-w-5xl">
-        {/* Breadcrumb */}
-        <nav className="mb-6 flex items-center gap-1.5 font-mono-bureau text-[12px] text-[#0C1B33]/50">
-          <Link href="/admin" className="hover:text-[#2563EB]">
-            Admin
-          </Link>
-          <span>/</span>
-          <Link href="/admin/owner-files" className="hover:text-[#2563EB]">
-            Owner Files
-          </Link>
-          <span>/</span>
-          <span className="text-[#0C1B33]/80">Vacancy Report</span>
-        </nav>
-
-        {/* Neighborhood switcher */}
-        <div className="mb-6 flex flex-wrap gap-1.5">
-          {PILOT_ZIPS.map((entry) => {
-            const active = entry.zip === zip;
-            return (
-              <Link
-                key={entry.zip}
-                href={`/vacancy/${entry.zip}`}
-                className={`px-2.5 py-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] border transition-colors ${
-                  active
-                    ? "bg-[#0C1B33] text-white border-[#0C1B33]"
-                    : "bg-white text-[#0C1B33]/55 border-[#0C1B33]/15 hover:border-[#2563EB]/40 hover:text-[#2563EB]"
-                }`}
-              >
-                {entry.primaryNeighborhood}
-              </Link>
-            );
-          })}
-        </div>
+        {/* Section sub-navigation — one workspace, four views */}
+        <VacancySubNav zip={zip} active="overview" />
 
         {/* 1 · Place-first header */}
         <span className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#2563EB]">
@@ -499,6 +432,43 @@ export default async function VacancyReportPage({
         <p className="mt-2 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
           {editionGeographyNote(zip, pilotEntry.primaryNeighborhood)}
         </p>
+
+        {/* Cross-links to the other three views (real counts) */}
+        <div className="mt-6 grid grid-cols-1 gap-px border border-[#0C1B33]/10 bg-[#0C1B33]/10 sm:grid-cols-3">
+          <Link
+            href={`/vacancy/${zip}/areas`}
+            className="group bg-white px-4 py-3.5 transition-colors hover:bg-[#FAF9F6]"
+          >
+            <span className="font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">
+              Opportunity Areas
+            </span>
+            <span className="mt-1 block text-[13px] font-semibold text-[#0C1B33] group-hover:text-[#2563EB]">
+              View {opportunityAreaCount} opportunity {opportunityAreaCount === 1 ? "area" : "areas"} →
+            </span>
+          </Link>
+          <Link
+            href={`/vacancy/${zip}/map`}
+            className="group bg-white px-4 py-3.5 transition-colors hover:bg-[#FAF9F6]"
+          >
+            <span className="font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">
+              Property Map
+            </span>
+            <span className="mt-1 block text-[13px] font-semibold text-[#0C1B33] group-hover:text-[#2563EB]">
+              Explore the property map →
+            </span>
+          </Link>
+          <Link
+            href={`/vacancy/${zip}/directory`}
+            className="group bg-white px-4 py-3.5 transition-colors hover:bg-[#FAF9F6]"
+          >
+            <span className="font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">
+              All Properties
+            </span>
+            <span className="mt-1 block text-[13px] font-semibold text-[#0C1B33] group-hover:text-[#2563EB]">
+              Browse all {(directoryCount || total).toLocaleString("en-US")} properties →
+            </span>
+          </Link>
+        </div>
 
         {/* 2 · Scale of the challenge */}
         <section className="mt-8">
@@ -1488,11 +1458,17 @@ export default async function VacancyReportPage({
           </section>
         )}
 
-        {/* Exemption anomalies — admin-only referral packet (parcel-level) */}
-        {referralRows.length > 0 && (
+        {/* Exemption anomalies — ADMIN-ONLY referral packet (parcel-level).
+            Rail 2: this table stays admin-gated now that the page is public.
+            Guarded by the server-side `hasSession` check; the public aggregate
+            block (part 4b above) remains visible to everyone. */}
+        {hasSession && referralRows.length > 0 && (
           <section className="mt-10">
             <h2 className="mb-2 font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#0C1B33]/50">
               Exemption anomalies — referral review
+              <span className="ml-2 border border-[#0C1B33]/30 bg-[#0C1B33]/[0.03] px-1.5 py-0.5 font-mono-bureau text-[8px] font-semibold uppercase tracking-[0.08em] text-[#0C1B33]/60">
+                Admin only
+              </span>
             </h2>
             <p className="max-w-3xl text-[13px] leading-relaxed text-[#0C1B33]/70">
               Record anomalies warranting official review. A vacant land parcel cannot serve as a
