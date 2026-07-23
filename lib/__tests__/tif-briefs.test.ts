@@ -7,17 +7,26 @@ import {
   computeTifContiguity,
   countPointsInDistrict,
   districtIntersectsZip,
+  findForbiddenFigureKeys,
   latestFinanceByTif,
   normalizeTifNumber,
   pointInTifPolygons,
+  projectionsByTif,
   tifExpirationYear,
-  TIF_PORTING_NOTE,
+  TIF_ADJACENCY_HEADING,
+  TIF_BALANCE_CAVEAT,
+  TIF_DPD_AUTHORITY_HEADING,
+  TIF_FORBIDDEN_FIGURE_KEY_RE,
+  TIF_PROJECTIONS_PUBLISHED_DATE,
+  TIF_PROJECTIONS_SOURCE,
   TIF_RELATION_LABELS,
+  TIF_STANDING_EXPLAINER,
   type TifAnnualReportRow,
   type TifBriefsExport,
   type TifContiguityInput,
   type TifDistrictBrief,
   type TifPolygon,
+  type TifProjectionRow,
   type TifRing,
 } from "../tif-briefs";
 
@@ -234,6 +243,7 @@ describe("buildTifFundingPicture", () => {
       wards: "",
       status: "Active",
       finance: null,
+      projections: null,
       neighbors: [],
       ...over,
     };
@@ -249,6 +259,11 @@ describe("buildTifFundingPicture", () => {
         expirationDate: "2030-12-31",
         sbif: true,
         finance: { reportYear: 2024, fundBalance: 1000, taxAllocationFundBalance: 900, incrementCurrent: 200, surplusDistributed: 0 },
+        projections: {
+          publishedDate: TIF_PROJECTIONS_PUBLISHED_DATE,
+          source: TIF_PROJECTIONS_SOURCE,
+          categories: { "Current Obligations": -500, "Fund Balance": 1000 },
+        },
         neighbors: [
           { number: "T-2", relation: "touching" },
           { number: "T-3", relation: "near" },
@@ -301,18 +316,129 @@ describe("buildTifFundingPicture", () => {
     expect(alpha.neighbors[1].fundBalance).toBeNull();
     expect(alpha.sbif).toBe(true);
   });
+
+  it("carries the programming outlook and the raw expiration date through to the view", () => {
+    const views = buildTifFundingPicture("60617", briefs, 2026)!;
+    const alpha = views.find((v) => v.number === "T-1")!;
+    expect(alpha.expirationDate).toBe("2030-12-31");
+    expect(alpha.projections).toEqual({
+      publishedDate: TIF_PROJECTIONS_PUBLISHED_DATE,
+      source: TIF_PROJECTIONS_SOURCE,
+      categories: { "Current Obligations": -500, "Fund Balance": 1000 },
+    });
+    // A district with no projection line items carries null (renders the null note).
+    const gamma = views.find((v) => v.number === "T-3")!;
+    expect(gamma.projections).toBeNull();
+  });
 });
 
 describe("printed-copy constants", () => {
-  it("the porting note names the DPD/CDC/City Council process and the verify caveat", () => {
-    expect(TIF_PORTING_NOTE).toContain("Department of Planning and Development");
-    expect(TIF_PORTING_NOTE).toContain("Community Development Commission");
-    expect(TIF_PORTING_NOTE).toContain("City Council");
-    expect(TIF_PORTING_NOTE).toContain("legally possible, not what is likely");
+  it("the balance caveat carries the exact 'not a current estimate of funds available' framing", () => {
+    expect(TIF_BALANCE_CAVEAT).toBe(
+      "Year-end accounting balance — not a current estimate of funds available for new projects.",
+    );
+  });
+  it("the standing explainer (§2B) frames balance vs. programming vs. DPD confirmation", () => {
+    expect(TIF_STANDING_EXPLAINER).toContain("TIF finances change between annual reports");
+    expect(TIF_STANDING_EXPLAINER).toContain("not the amount open for new projects");
+    expect(TIF_STANDING_EXPLAINER).toContain("DPD must confirm current funding capacity");
+    expect(TIF_STANDING_EXPLAINER).toContain("prepare a conversation, not to predict an award");
+  });
+  it("the adjacency and authority headings match the consult verbatim", () => {
+    expect(TIF_ADJACENCY_HEADING).toBe("Use in a neighboring TIF may be legally possible");
+    expect(TIF_DPD_AUTHORITY_HEADING).toBe("Official next step: confirm with DPD");
   });
   it("relation labels distinguish contiguous from ROW-adjacent", () => {
     expect(TIF_RELATION_LABELS.touching).toBe("contiguous");
     expect(TIF_RELATION_LABELS.near).toContain("public way");
+  });
+});
+
+// ── Projections aggregation ──────────────────────────────────────────────────
+
+describe("projectionsByTif", () => {
+  const prow = (
+    over: Partial<TifProjectionRow> & { tifNumber: string; categoryDescription: string },
+  ): TifProjectionRow => ({
+    fundAndProjectBalances: null,
+    years: [null, null, null, null, null, null, null, null, null, null],
+    throughEndDate: null,
+    ...over,
+  });
+
+  it("aggregates per district per category = balances + Σ(years) + through_end_date", () => {
+    const map = projectionsByTif([
+      prow({
+        tifNumber: "T-115",
+        categoryDescription: "Fund Balance",
+        fundAndProjectBalances: 100,
+        years: [1, 2, 3, 0, 0, 0, 0, 0, 0, 0],
+        throughEndDate: 4,
+      }),
+      prow({
+        tifNumber: "T-115",
+        categoryDescription: "Fund Balance",
+        fundAndProjectBalances: 10,
+        years: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        throughEndDate: 0,
+      }),
+    ]);
+    // 100+1+2+3+4 = 110, plus 10 = 120.
+    expect(map.get("T-115")!.categories["Fund Balance"]).toBe(120);
+    expect(map.get("T-115")!.publishedDate).toBe(TIF_PROJECTIONS_PUBLISHED_DATE);
+    expect(map.get("T-115")!.source).toBe(TIF_PROJECTIONS_SOURCE);
+  });
+
+  it("passes category names through VERBATIM (no normalization) and preserves negatives", () => {
+    const map = projectionsByTif([
+      prow({
+        tifNumber: "T- 115",
+        categoryDescription: "Transfers Between TIF Districts",
+        fundAndProjectBalances: 5,
+      }),
+      prow({
+        tifNumber: "T-115",
+        categoryDescription: "Current Obligations",
+        fundAndProjectBalances: -92273755,
+      }),
+    ]);
+    const cats = map.get("T-115")!.categories;
+    expect(Object.keys(cats).sort()).toEqual(["Current Obligations", "Transfers Between TIF Districts"]);
+    expect(cats["Current Obligations"]).toBe(-92273755);
+    expect(cats["Transfers Between TIF Districts"]).toBe(5);
+  });
+
+  it("drops rows with an unusable number or a blank category", () => {
+    const map = projectionsByTif([
+      prow({ tifNumber: "", categoryDescription: "Revenue", fundAndProjectBalances: 1 }),
+      prow({ tifNumber: "T-5", categoryDescription: "", fundAndProjectBalances: 1 }),
+    ]);
+    expect(map.has("")).toBe(false);
+    expect(map.has("T-5")).toBe(false);
+  });
+});
+
+// ── Forbidden derived-figure key rail (rule 1) ──────────────────────────────
+
+describe("findForbiddenFigureKeys", () => {
+  it("matches available / remaining / uncommitted case-insensitively", () => {
+    expect(TIF_FORBIDDEN_FIGURE_KEY_RE.test("availableFunds")).toBe(true);
+    expect(TIF_FORBIDDEN_FIGURE_KEY_RE.test("Remaining")).toBe(true);
+    expect(TIF_FORBIDDEN_FIGURE_KEY_RE.test("uncommitted")).toBe(true);
+    expect(TIF_FORBIDDEN_FIGURE_KEY_RE.test("Fund Balance")).toBe(false);
+  });
+
+  it("walks nested objects/arrays and returns the offending keys ([] when clean)", () => {
+    expect(
+      findForbiddenFigureKeys({
+        districts: { "T-1": { projections: { categories: { "Fund Balance": 1, Revenue: 2 } } } },
+      }),
+    ).toEqual([]);
+    expect(
+      findForbiddenFigureKeys({
+        districts: { "T-1": { categories: { availableForNewProjects: 5 } } },
+      }),
+    ).toEqual(["availableForNewProjects"]);
   });
 });
 
@@ -376,6 +502,32 @@ describe.skipIf(!EXPORT_EXISTS)("committed tif-briefs.json", () => {
         expect(v === null || typeof v === "number", `${d.number}.${k}`).toBe(true);
       }
     }
+  });
+
+  it("projections are a full outlook or null, with numeric category totals", () => {
+    for (const d of Object.values(data.districts)) {
+      if (d.projections == null) continue;
+      expect(d.projections.publishedDate).toBe(TIF_PROJECTIONS_PUBLISHED_DATE);
+      expect(d.projections.source).toBe(TIF_PROJECTIONS_SOURCE);
+      const entries = Object.entries(d.projections.categories);
+      expect(entries.length, `${d.number} has ≥1 category`).toBeGreaterThan(0);
+      for (const [category, total] of entries) {
+        expect(typeof total, `${d.number}.${category}`).toBe("number");
+      }
+    }
+  });
+
+  it("rule 1: no key anywhere in the export names a derived available/remaining/uncommitted figure", () => {
+    expect(findForbiddenFigureKeys(data)).toEqual([]);
+  });
+
+  it("T-115 carries the DPD programming outlook with its verbatim source categories", () => {
+    const t115 = data.districts["T-115"];
+    expect(t115, "T-115 present").toBeDefined();
+    expect(t115.projections, "T-115 has projections").not.toBeNull();
+    const cats = Object.keys(t115.projections!.categories);
+    expect(cats).toContain("Current Obligations");
+    expect(cats).toContain("Fund Balance");
   });
 
   it("60617 intersects real districts, each with a sorted neighbor list", () => {

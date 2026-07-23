@@ -72,9 +72,33 @@ export interface TifFinance {
 }
 
 /**
+ * The City's forward-looking programming outlook for one district, aggregated
+ * from DPD's 10-Year TIF Projections (Socrata fpsv-qjg3), per the source's own
+ * `category_description` — VERBATIM, never normalized (observed: "Current
+ * Obligations", "Fund Balance", "Revenue", "Surplus", "Transfers Between TIF
+ * Districts"). Each category total is the sum of that district's line items'
+ * `fund_and_project_balances + Σ(_2025.._2034) + through_end_date`. Negatives
+ * are carried as the source publishes them. `null` when the district has no
+ * line items in the projections dataset.
+ *
+ * This is a DIFFERENT report, vintage, and source than `TifFinance` above — the
+ * two are never reconciled or subtracted (that would fabricate an
+ * "available-funds" figure the data cannot support).
+ */
+export interface TifProjections {
+  /** DPD publication date of the projections report (fixed constant). */
+  publishedDate: string;
+  /** Human-readable source label (fixed constant). */
+  source: string;
+  /** Source `category_description` (verbatim) -> aggregated total. */
+  categories: Record<string, number>;
+}
+
+/**
  * One TIF district's brief: its administrative facts, its latest financial
- * snapshot (or null), and its contiguity neighbors (canonically sorted by
- * number). This is the porting picture, per district.
+ * snapshot (or null), the City's programming outlook (or null), and its
+ * contiguity neighbors (canonically sorted by number). This is the porting
+ * picture, per district.
  */
 export interface TifDistrictBrief {
   /** Normalized TIF number, e.g. "T-87" (source "T- 87" has the space stripped). */
@@ -91,6 +115,9 @@ export interface TifDistrictBrief {
   status: string;
   /** Latest-year finance, or `null` when the district has no annual-report row. */
   finance: TifFinance | null;
+  /** City programming outlook (DPD projections), or `null` when the district
+   * has no line items in the projections dataset. */
+  projections: TifProjections | null;
   /** Contiguity neighbors (relation-labeled), canonically sorted by number. */
   neighbors: TifNeighbor[];
 }
@@ -109,6 +136,9 @@ export interface TifZipBrief {
 export interface TifBriefsSources {
   tifBoundaries: string;
   tifAnnualReport: string;
+  /** DPD 10-Year TIF Projections provenance. Optional so a committed file that
+   * predates the programming-outlook join still parses. */
+  tifProjections?: string;
   vacancyIndex: string;
   asOf: string;
 }
@@ -130,18 +160,103 @@ export const TIF_RELATION_LABELS: Record<TifRelation, string> = {
   near: "adjacent across a public way (verify)",
 };
 
+// ── Fixed, verbatim copy blocks ────────────────────────────────────────────
+// Ship-ready wording from the DPD-informed editorial consult. These are the
+// single source of truth for the "TIF funding picture" section's honesty copy;
+// the page imports them rather than inlining strings so they stay auditable and
+// testable. Rule: NEVER label a figure "available/free/unused/sitting/unspent",
+// and NEVER present a derived "available/remaining/uncommitted" number.
+
+/** DPD projections report metadata (published date + source label). */
+export const TIF_PROJECTIONS_PUBLISHED_DATE = "2025-10-15";
+export const TIF_PROJECTIONS_SOURCE = "DPD 10-Year TIF Projections (2025–2034)";
+
+/** Rule 2 — the visible caveat printed beside the reported year-end balance. */
+export const TIF_BALANCE_CAVEAT =
+  "Year-end accounting balance — not a current estimate of funds available for new projects.";
+
+/** Rule 7 — shown in the balance slot when the district has no annual-report row
+ * (an honest "no row", never a fabricated $0). */
+export const TIF_BALANCE_MISSING = "No annual report row published";
+
+/** Consult §2B — the standing explainer that frames the whole section. */
+export const TIF_STANDING_EXPLAINER =
+  "TIF finances change between annual reports. The reported balance is a year-end " +
+  "accounting snapshot, not the amount open for new projects. The City’s programming " +
+  "outlook includes known obligations, proposed projects, and estimated future revenue" +
+  "—not all of which are final commitments. DPD must confirm current funding capacity, " +
+  "project fit, and the approvals required. Use these figures to prepare a conversation, " +
+  "not to predict an award.";
+
+/** Rule 8 — printed under the programming outlook so the two vintages are never
+ * read as reconcilable. */
+export const TIF_VINTAGE_NOTE =
+  "These figures come from different reports and dates; they do not add up to an " +
+  "available-funds number, and none is shown here.";
+
+/** Shown in place of the programming outlook when the district has no line items
+ * in DPD's latest projections. */
+export const TIF_PROJECTIONS_NULL_NOTE =
+  "No line items published for this district in DPD’s latest projections.";
+
+/** Rule 5 — the adjacency heading and body (consult §2D, verbatim) plus map note. */
+export const TIF_ADJACENCY_HEADING = "Use in a neighboring TIF may be legally possible";
+export const TIF_ADJACENCY_BODY =
+  "Illinois law permits—but does not require—eligible TIF revenues to support " +
+  "eligible costs in certain contiguous districts. Any transfer depends on current funding " +
+  "capacity, plan and project eligibility, City review, and required approvals. Adjacency " +
+  "does not create an entitlement, and no transfer is shown or promised here.";
+export const TIF_ADJACENCY_MAP_NOTE =
+  "Mapped proximity is a screening signal, not a legal determination of transfer eligibility.";
+
+/** Rule 6 — appended to the vacancy-count line. */
+export const TIF_VACANCY_DISCLAIMER =
+  "Location does not establish ownership, project eligibility, or funding.";
+
+/** Consult §4 — DPD-as-authority framing that replaces the old who-decides note. */
+export const TIF_DPD_AUTHORITY_HEADING = "Official next step: confirm with DPD";
+export const TIF_DPD_AUTHORITY_BODY =
+  "This page assembles published district information for an informed first conversation. " +
+  "DPD can confirm current commitments, whether a proposal fits the district plan and " +
+  "eligible-use rules, and which review and approval steps apply. The Explorer does not " +
+  "reserve funds, determine eligibility, or predict a City decision.";
+export const TIF_DPD_AUTHORITY_CTA = "Prepare a TIF inquiry for DPD";
+export const TIF_PROCESS_LINE =
+  "Published record → DPD fit and capacity conversation → applicable public review " +
+  "→ City Council approval when required.";
+export const TIF_PARTNERS_NOTE =
+  "The ward office is a local-context and coordination partner, not a substitute for program " +
+  "review; the Community Development Commission reviews and recommends certain TIF financing " +
+  "to City Council where applicable.";
+
 /**
- * The fixed process/legibility copy printed verbatim beneath the section — no
- * generation. States what is legally possible without promising an outcome
- * (the discovery-not-compliance rail).
+ * Structural rail for rule 1: no key anywhere in the committed export may name a
+ * derived "available / remaining / uncommitted" figure. The projections
+ * categories are the only source-driven (dynamic) keys, so a renamed or
+ * hand-edited category that implied a computed remainder is caught here.
  */
-export const TIF_PORTING_NOTE =
-  "State law permits transfers of increment between contiguous districts when " +
-  "both district plans provide for it. Transfers are discretionary: decisions " +
-  "run through the Department of Planning and Development, the Community " +
-  "Development Commission, and City Council, and ward offices are the practical " +
-  "starting point. This page shows what is legally possible, not what is likely. " +
-  "Verify current balances with the city's TIF annual reports.";
+export const TIF_FORBIDDEN_FIGURE_KEY_RE = /available|remaining|uncommitted/i;
+
+/** Recursively collect every object key in `value` that matches the forbidden
+ * figure-name rail. Returns [] when clean. Pure — used by the export assert and
+ * unit-tested directly. */
+export function findForbiddenFigureKeys(value: unknown): string[] {
+  const hits: string[] = [];
+  const walk = (v: unknown): void => {
+    if (Array.isArray(v)) {
+      for (const item of v) walk(item);
+      return;
+    }
+    if (v && typeof v === "object") {
+      for (const [k, child] of Object.entries(v)) {
+        if (TIF_FORBIDDEN_FIGURE_KEY_RE.test(k)) hits.push(k);
+        walk(child);
+      }
+    }
+  };
+  walk(value);
+  return hits;
+}
 
 // ── Normalization (pure) ───────────────────────────────────────────────────
 
@@ -560,6 +675,69 @@ export function latestFinanceByTif(rows: readonly TifAnnualReportRow[]): Map<str
   return out;
 }
 
+// ── Projections aggregation (pure) ─────────────────────────────────────────
+
+/** One DPD-projections line item after string parsing (network-free input).
+ * `years` is the ten `_2025.._2034` columns in order; any blank/unparseable
+ * cell is null and contributes 0 to the aggregate. */
+export interface TifProjectionRow {
+  tifNumber: string;
+  categoryDescription: string;
+  fundAndProjectBalances: number | null;
+  years: (number | null)[];
+  throughEndDate: number | null;
+}
+
+/** Coerce a nullable figure to 0 for summation — an absent line-item cell adds
+ * nothing to its category total (it never becomes a fabricated value). */
+function sumTerm(v: number | null): number {
+  return v == null ? 0 : v;
+}
+
+/**
+ * Build number -> programming outlook from the projections line items. Rows are
+ * grouped by NORMALIZED tif number; within a district, each row's total
+ * (`fundAndProjectBalances + Σ(years) + throughEndDate`) is added to its
+ * `categoryDescription` bucket VERBATIM (the source category name is never
+ * normalized). Category keys are inserted in canonical (sorted) order so the
+ * serialized JSON is byte-stable. Rows with an unusable number or a blank
+ * category are dropped. A district with no rows never appears (the caller stores
+ * `null` for it). Pure — unit-tested without a network call.
+ */
+export function projectionsByTif(rows: readonly TifProjectionRow[]): Map<string, TifProjections> {
+  const byNumber = new Map<string, Map<string, number>>();
+  for (const row of rows) {
+    const number = normalizeTifNumber(row.tifNumber);
+    if (!number) continue;
+    const category = row.categoryDescription?.trim();
+    if (!category) continue;
+    const rowTotal =
+      sumTerm(row.fundAndProjectBalances) +
+      row.years.reduce<number>((acc, y) => acc + sumTerm(y), 0) +
+      sumTerm(row.throughEndDate);
+    let cats = byNumber.get(number);
+    if (!cats) {
+      cats = new Map<string, number>();
+      byNumber.set(number, cats);
+    }
+    cats.set(category, (cats.get(category) ?? 0) + rowTotal);
+  }
+
+  const out = new Map<string, TifProjections>();
+  for (const [number, cats] of byNumber) {
+    const categories: Record<string, number> = {};
+    for (const name of [...cats.keys()].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0))) {
+      categories[name] = cats.get(name)!;
+    }
+    out.set(number, {
+      publishedDate: TIF_PROJECTIONS_PUBLISHED_DATE,
+      source: TIF_PROJECTIONS_SOURCE,
+      categories,
+    });
+  }
+  return out;
+}
+
 // ── View model (pure) ──────────────────────────────────────────────────────
 
 /** The four-digit year of a YYYY-MM-DD date, or null. */
@@ -583,13 +761,19 @@ export interface TifNeighborView {
 export interface TifDistrictView {
   number: string;
   name: string;
+  /** Statutory end date (YYYY-MM-DD) or null — drives the "Current scheduled
+   * end: Dec 31, YYYY" label without re-deriving month/day. */
+  expirationDate: string | null;
   expirationYear: number | null;
-  /** expirationYear − currentYear (negative = already expired), or null. */
+  /** expirationYear − currentYear (negative = already past), or null. */
   yearsToExpiration: number | null;
   sbif: boolean;
   finance: TifFinance | null;
+  /** City programming outlook (DPD projections), or null. */
+  projections: TifProjections | null;
   vacantSiteCount: number;
-  /** Contiguous neighbors with their balances, sorted by fundBalance desc. */
+  /** Contiguous / ROW-adjacent neighbors, canonically ordered. No dollar
+   * capacity or transfer direction is implied by this list. */
   neighbors: TifNeighborView[];
 }
 
@@ -629,10 +813,12 @@ export function buildTifFundingPicture(
     views.push({
       number: district.number,
       name: district.name,
+      expirationDate: district.expirationDate,
       expirationYear,
       yearsToExpiration: expirationYear != null ? expirationYear - currentYear : null,
       sbif: district.sbif,
       finance: district.finance,
+      projections: district.projections ?? null,
       vacantSiteCount: zipBrief.vacantSiteCounts[number] ?? 0,
       neighbors,
     });

@@ -41,8 +41,21 @@ vi.mock("@/lib/vacancy-index-adapter", () => ({
 vi.mock("@/lib/tif-briefs", () => ({
   loadTifBriefs: () => null,
   buildTifFundingPicture: () => [],
-  TIF_PORTING_NOTE: "",
   TIF_RELATION_LABELS: { touching: "Touching", near: "Near" },
+  TIF_STANDING_EXPLAINER: "",
+  TIF_BALANCE_CAVEAT: "",
+  TIF_BALANCE_MISSING: "",
+  TIF_VINTAGE_NOTE: "",
+  TIF_PROJECTIONS_NULL_NOTE: "",
+  TIF_ADJACENCY_HEADING: "",
+  TIF_ADJACENCY_BODY: "",
+  TIF_ADJACENCY_MAP_NOTE: "",
+  TIF_VACANCY_DISCLAIMER: "",
+  TIF_DPD_AUTHORITY_HEADING: "",
+  TIF_DPD_AUTHORITY_BODY: "",
+  TIF_DPD_AUTHORITY_CTA: "",
+  TIF_PROCESS_LINE: "",
+  TIF_PARTNERS_NOTE: "",
 }));
 vi.mock("@/lib/vacancy-corridor-rings", () => ({ loadCorridorRings: () => null }));
 vi.mock("@/lib/exemption-anomalies", () => ({ exemptionReferralRowsForZip: referralMock }));
