@@ -444,10 +444,10 @@ describe("findForbiddenFigureKeys", () => {
 
 // ── Committed-file guard ─────────────────────────────────────────────────────
 // Mirrors lib/__tests__/vacancy-index.test.ts's committed-export guard: skipped
-// until scripts/export-tif-briefs.ts is run and public/data/tif-briefs.json is
+// until scripts/export-tif-briefs.ts is run and data/private/tif-briefs.json is
 // committed; then it hard-runs.
 
-const EXPORT_PATH = path.join(process.cwd(), "public/data/tif-briefs.json");
+const EXPORT_PATH = path.join(process.cwd(), "data/private/tif-briefs.json");
 const EXPORT_EXISTS = existsSync(EXPORT_PATH);
 
 const PILOT_ZIP_KEYS = ["60617", "60619", "60649", "60624", "60623", "60644", "60651", "60621", "60636"];

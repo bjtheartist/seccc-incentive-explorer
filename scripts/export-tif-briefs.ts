@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Export the TIF funding picture to public/data/tif-briefs.json — the committed
+ * Export the TIF funding picture to data/private/tif-briefs.json — the committed
  * source for the "TIF funding picture" section on the per-ZIP vacancy web
  * report (app/vacancy/[zip]/page.tsx). Consumed by lib/tif-briefs.ts's
  * static-only loader. Reads only committed/static + public-Socrata inputs, so
@@ -8,7 +8,7 @@
  *
  * ── Runbook ────────────────────────────────────────────────────────────────
  *   npx tsx scripts/export-tif-briefs.ts      (or: npm run tif:briefs:export)
- *   git add public/data/tif-briefs.json && commit.
+ *   git add data/private/tif-briefs.json && commit.
  *
  * ── Inputs (all verified live 7/23) ────────────────────────────────────────
  *   1. public/data/zones/tif-districts.geojson — 100 Active districts.
@@ -53,7 +53,7 @@ import {
 
 const TIF_GEOJSON_PATH = join(process.cwd(), "public", "data", "zones", "tif-districts.geojson");
 const VACANCY_INDEX_PATH = join(process.cwd(), "public", "data", "vacancy-index.json");
-const OUT_PATH = join(process.cwd(), "public", "data", "tif-briefs.json");
+const OUT_PATH = join(process.cwd(), "data", "private", "tif-briefs.json");
 const TIF_ANNUAL_REPORT_URL = "https://data.cityofchicago.org/resource/qm7s-3ctt.json";
 // DPD 10-Year TIF Projections (2025–2034), published 2025-10-15. 2,246 line items.
 const TIF_PROJECTIONS_URL = "https://data.cityofchicago.org/resource/fpsv-qjg3.json";

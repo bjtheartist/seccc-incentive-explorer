@@ -14,7 +14,7 @@
  *
  *   scripts/export-tif-briefs.ts (reads the committed TIF geojson + Socrata
  *     TIF annual report + the committed vacancy-index.json edition boundaries)
- *     -> public/data/tif-briefs.json (committed)
+ *     -> data/private/tif-briefs.json (committed-private — NOT publicly served)
  *     -> loadTifBriefs() here (static-only, no DB)
  *     -> buildTifFundingPicture() (pure view model)
  *     -> the "TIF funding picture" section on app/vacancy/[zip]/page.tsx.
@@ -844,7 +844,7 @@ function compareByBalanceDesc(a: number | null, b: number | null): number {
 
 // ── Static-only loader ─────────────────────────────────────────────────────
 
-const TIF_BRIEFS_PATH = path.join(process.cwd(), "public/data/tif-briefs.json");
+const TIF_BRIEFS_PATH = path.join(process.cwd(), "data/private/tif-briefs.json");
 
 // Module-level cache, read once per process. `undefined` = not attempted;
 // `null` = attempted and the file is absent/unparseable (the expected state
