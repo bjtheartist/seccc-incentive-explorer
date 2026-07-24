@@ -20,18 +20,20 @@ import { Header } from "@/components/layout/Header";
 
 describe("VacancySubNav — five views", () => {
   it("renders all five tabs with the correct per-ZIP hrefs", () => {
-    const html = renderToStaticMarkup(<VacancySubNav zip="60617" active="overview" />);
-    expect(html).toContain('href="/vacancy/60617"'); // Overview
+    const html = renderToStaticMarkup(<VacancySubNav zip="60617" active="workbench" />);
+    expect(html).toContain('href="/vacancy/60617"'); // Workbench (ZIP root)
+    expect(html).toContain('href="/vacancy/60617/report"'); // Report
     expect(html).toContain('href="/vacancy/60617/areas"'); // Opportunity Areas
     expect(html).toContain('href="/vacancy/60617/map"'); // Property Map
     expect(html).toContain('href="/vacancy/60617/directory"'); // All Properties
-    expect(html).toContain('href="/vacancy/60617/cases"'); // Case Workbench
+    // The retired standalone Case Workbench route is gone.
+    expect(html).not.toContain('href="/vacancy/60617/cases"');
     for (const label of [
-      "Overview",
+      "Workbench",
+      "Report",
       "Opportunity Areas",
       "Property Map",
       "All Properties",
-      "Case Workbench",
     ]) {
       expect(html).toContain(label);
     }
@@ -44,14 +46,14 @@ describe("VacancySubNav — five views", () => {
     expect(html).toContain('href="/vacancy/60636/areas"');
   });
 
-  it("preserves the active view when the Case Workbench tab is active", () => {
-    const html = renderToStaticMarkup(<VacancySubNav zip="60617" active="cases" />);
-    expect(html).toContain('href="/vacancy/60619/cases"');
+  it("preserves the active view when the Report tab is active", () => {
+    const html = renderToStaticMarkup(<VacancySubNav zip="60617" active="report" />);
+    expect(html).toContain('href="/vacancy/60619/report"');
     expect(html).toContain('aria-current="page"');
   });
 
   it("hides the desktop pill row on mobile and shows the NeighborhoodSelect dropdown instead", () => {
-    const html = renderToStaticMarkup(<VacancySubNav zip="60617" active="overview" />);
+    const html = renderToStaticMarkup(<VacancySubNav zip="60617" active="workbench" />);
     // Desktop pill row: hidden by default, shown from md.
     expect(html).toMatch(/class="mb-4 hidden flex-wrap gap-1\.5 md:flex"/);
     // Mobile select: a labeled <select> listing all nine pilot ZIPs.

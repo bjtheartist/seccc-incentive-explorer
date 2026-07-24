@@ -1,234 +1,261 @@
 /**
- * Case Workbench — server-only data layer for /vacancy/[zip]/cases (all nine
- * pilot ZIPs, not just 60617). Ports the interaction-prototype's buildRecords()
- * (app/vacancy/ux-lab/page.tsx, now a redirect) to the real per-ZIP data
- * sources: loadVacancyIndex() for the edition (land points, mapped site
- * points, opportunity-area clusters) and loadVacancyDirectory(zip) for the
- * full tracked-row directory (every land/building row with an address).
+ * Case Workbench — CLIENT-SAFE case model (no fs). Mirrors the
+ * lib/vacancy-portfolio.ts precedent: the server record loader
+ * (lib/vacancy-cases-data.ts) re-exports everything here, so server code can
+ * import from either module, while this module stays free of node:fs and the
+ * vacancy-index loader — keeping it importable from a client component and
+ * testable without a filesystem.
  *
- * Honesty rails carried over from the prototype and the rest of the vacancy
- * section:
- *  - Land and reported buildings stay two distinct universes until parcel
- *    matching can support a deduplicated total (never summed together).
- *  - A VacancyCaseRecord carries evidence fields ONLY — no ranking. Directory
- *    rows carry a clusterId for URL-addressable area handoffs, but no score,
- *    tier, or derived rank reaches this client-facing record.
- *  - Opportunity areas are read verbatim from deriveOpportunityAreas (the
- *    same public, place-led derivation the Opportunity Areas pages use) —
- *    this module never re-derives clustering.
+ * A "case" is a decision the user is trying to move forward. Each case is a
+ * pure PREDICATE over the tracked record set plus fixed editorial copy
+ * (name / definition / caveat). Counts are derived, never stored: every
+ * number on the workbench is recomputable from the same records.
  *
- * Also carries the searchParams <-> UI-state codec so the URL is the single
- * source of truth for a shared case link (view/case/goal/records/tax/
- * violations/sel), testable without a browser.
+ * Honesty rails (shared with the rest of the vacancy section):
+ *  - Records carry owner CATEGORIES only — never a name, taxpayer, or mailing
+ *    address. The VacancyCaseRecord shape has no field for one, and the unit
+ *    tests string-assert that no name-bearing key ever appears.
+ *  - Land (the reconciled land universe) and reported buildings (the 311
+ *    universe) stay two distinct universes: a case reports a land count and a
+ *    building count, never a single summed total across the two.
+ *  - The dot preview shows only the MAPPED subset of a case's matches, capped,
+ *    with an honest "N of M mapped matches shown" line — the count is the full
+ *    match count, the dots are what actually carries a coordinate.
  */
 
-import { loadVacancyDirectory, loadVacancyIndex, type VacancyDirectoryFile } from "@/lib/vacancy-index";
-import { deriveOpportunityAreas } from "@/lib/vacancy-opportunity-areas";
-import type {
-  BuilderGoal,
-  BuilderUniverse,
-  PresetId,
-  VacancyCaseArea,
-  VacancyCaseRecord,
-  VacancyWorkbenchInitialState,
-  WorkbenchMode,
-} from "@/lib/vacancy-case-state";
+import type { OwnerType } from "./owner-classify";
+import type { OwnerGeography, OwnerStructure } from "./owner-taxonomy";
 
-export { buildCaseSearchParams } from "@/lib/vacancy-case-state";
-export type {
-  BuilderGoal,
-  BuilderUniverse,
-  CaseUrlState,
-  PresetId,
-  VacancyCaseArea,
-  VacancyCaseRecord,
-  VacancyWorkbenchInitialState,
-  WorkbenchMode,
-} from "@/lib/vacancy-case-state";
+/** One tracked vacant record in a case's universe. Evidence fields ONLY — no
+ *  rank, score, tier, or owner name. `universe` keeps land and reported
+ *  buildings distinct so counts are never summed across the two. */
+export interface VacancyCaseRecord {
+  id: string;
+  address: string;
+  pin: string | null;
+  universe: "land" | "building_report";
+  ownerType: OwnerType;
+  ownerStructure: OwnerStructure | null;
+  ownerGeography: OwnerGeography | null;
+  saleYear: number | null;
+  violation: boolean;
+  squareFeet: number | null;
+  lat: number | null;
+  lon: number | null;
+}
 
-const MODES: WorkbenchMode[] = ["paths", "builder", "compare"];
-const PRESET_IDS: PresetId[] = [
+/** One Opportunity Area for the workbench rail (a projection of the public,
+ *  place-led deriveOpportunityAreas output — geography only, no ownership). */
+export interface VacancyCaseArea {
+  id: number;
+  name: string;
+  siteCount: number;
+  mappedCount: number;
+  corridor: string | null;
+  scenario: string;
+  needsChecking: string;
+}
+
+/** The five case keys. Stable URL contract (`?case=<key>`) and shared with the
+ *  prototype's param names so older shared links keep resolving. */
+export type CaseKey =
+  | "public-land"
+  | "private-outreach"
+  | "ownership-check"
+  | "building-review"
+  | "tax-title";
+
+export const CASE_KEYS: readonly CaseKey[] = [
   "public-land",
   "private-outreach",
   "ownership-check",
   "building-review",
   "tax-title",
-];
-const GOALS: BuilderGoal[] = ["all", "public", "private", "verify", "conditions"];
-const UNIVERSES: BuilderUniverse[] = ["all", "land", "building_report"];
+] as const;
 
-const MAX_SELECTED = 3;
+/** The default active case when `?case=` is absent or unrecognized. */
+export const DEFAULT_CASE_KEY: CaseKey = "public-land";
 
-function normalizedPin(pin: string | null | undefined): string | null {
-  if (!pin) return null;
-  const digits = pin.replace(/\D/g, "");
-  return digits.length >= 10 ? digits : null;
+/** Fixed editorial copy for one case. `definition` is the one-line "what this
+ *  is"; `caveat` is the honest limit, and every caveat NAMES the record field
+ *  its predicate keys off so the count is auditable from the caveat alone. */
+export interface CaseType {
+  key: CaseKey;
+  /** Short mono label for the icon chip (2 chars, uppercase). */
+  chip: string;
+  name: string;
+  definition: string;
+  caveat: string;
 }
 
-function addressKey(address: string | null | undefined): string {
-  return (address ?? "").trim().toUpperCase().replace(/\s+/g, " ");
+/** The five case types, in display order (public-land first / default). Copy is
+ *  fixed here so it never drifts per-ZIP; only the counts change. */
+export const CASE_TYPES: readonly CaseType[] = [
+  {
+    key: "public-land",
+    chip: "PL",
+    name: "Public-land pathway",
+    definition: "Start with land that has a public disposition pathway.",
+    caveat: "Vacant land classified as City or public control. Verify current status before relying.",
+  },
+  {
+    key: "private-outreach",
+    chip: "PO",
+    name: "Private-owner outreach",
+    definition: "Sites where the next step is finding and contacting the record owner.",
+    caveat: "Ownership types come from taxpayer records and require verification.",
+  },
+  {
+    key: "ownership-check",
+    chip: "OF",
+    name: "Ownership follow-up",
+    definition: "Sites where the record holder is not yet identified.",
+    caveat:
+      "Ownership is not yet classified from taxpayer records. Start with the county parcel record and deed history.",
+  },
+  {
+    key: "building-review",
+    chip: "BC",
+    name: "Building condition review",
+    definition: "Reported vacant buildings that need condition and status checks.",
+    caveat: "Building vacancy comes from resident reports and is unverified.",
+  },
+  {
+    key: "tax-title",
+    chip: "TT",
+    name: "Tax and title review",
+    definition: "Sites with signals worth checking against county tax and title records.",
+    caveat: "Signals are indicators, not determinations. County records are authoritative.",
+  },
+] as const;
+
+const CASE_TYPE_BY_KEY: Record<CaseKey, CaseType> = CASE_TYPES.reduce(
+  (acc, c) => {
+    acc[c.key] = c;
+    return acc;
+  },
+  {} as Record<CaseKey, CaseType>,
+);
+
+/** Look up a case's fixed copy by key. */
+export function caseTypeFor(key: CaseKey): CaseType {
+  return CASE_TYPE_BY_KEY[key];
 }
+
+/** Parse a raw `?case=` value into a known CaseKey, falling back to the
+ *  default for anything missing or unrecognized (a tampered/stale URL can
+ *  never select an out-of-range case). */
+export function parseCaseParam(value: string | string[] | undefined): CaseKey {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return (CASE_KEYS as readonly string[]).includes(raw ?? "")
+    ? (raw as CaseKey)
+    : DEFAULT_CASE_KEY;
+}
+
+const KNOWN_PRIVATE: ReadonlySet<OwnerType> = new Set<OwnerType>([
+  "local_private",
+  "corporate_llc",
+  "out_of_state",
+]);
 
 /**
- * Build the case-workbench record set, opportunity areas, and as-of date for
- * one pilot ZIP. Returns an honest empty result (no records/areas, empty
- * recordsAsOf) when the export or the ZIP's edition is missing — callers
- * render an empty state rather than throwing.
+ * The single source of truth for which records belong to a case (pure,
+ * deterministic). Every count on the workbench flows through this predicate,
+ * so the caveat copy and the number can never drift.
+ *
+ *  - public-land      → land the report reconciles to City / public control.
+ *  - private-outreach → land with a KNOWN non-government owner type.
+ *  - ownership-check  → any record whose owner type is "Not yet classified"
+ *                       (ownerType unknown) — the field the caveat names.
+ *  - building-review  → the 311 reported-building universe.
+ *  - tax-title        → any record carrying a distress signal (a tax-sale year
+ *                       on its parcel, or a matched vacant-building violation).
  */
-export function buildCaseRecords(zip: string): {
-  records: VacancyCaseRecord[];
-  areas: VacancyCaseArea[];
-  recordsAsOf: string;
-} {
-  const data = loadVacancyIndex();
-  const edition = data?.editions[zip];
-  if (!data || !edition) {
-    return { records: [], areas: [], recordsAsOf: "" };
+export function caseMatches(key: CaseKey, record: VacancyCaseRecord): boolean {
+  switch (key) {
+    case "public-land":
+      return record.universe === "land" && record.ownerType === "city_public";
+    case "private-outreach":
+      return record.universe === "land" && KNOWN_PRIVATE.has(record.ownerType);
+    case "ownership-check":
+      return record.ownerType === "unknown";
+    case "building-review":
+      return record.universe === "building_report";
+    case "tax-title":
+      return record.saleYear != null || record.violation === true;
   }
-  const directory: VacancyDirectoryFile | null = loadVacancyDirectory(zip);
-  const directoryRows = directory?.rows ?? [];
+}
 
-  // Build the deduplicated land union used by the public reconciliation:
-  // assessor vacant-land rows plus directory land rows not already present.
-  const landByKey = new Map<string, VacancyCaseRecord>();
-  for (const point of edition.landPoints ?? []) {
-    const pin = normalizedPin(point.pin);
-    const key = pin ?? addressKey(point.address);
-    if (!key) continue;
-    landByKey.set(key, {
-      id: `land-${key}`,
-      address: point.address?.trim() || "Address not recorded",
-      pin,
-      universe: "land",
-      ownerType: point.ownerType,
-      ownerStructure: point.ownerStructure ?? null,
-      ownerGeography: point.ownerGeography ?? null,
-      saleYear: point.saleYear,
-      violation: false,
-      squareFeet: point.squareFeet,
-      lat: point.lat,
-      lon: point.lon,
-    });
+/** One mapped point for the dot preview — coordinate + universe (for the dot
+ *  color) only. No address, PIN, or owner detail travels to the SVG. */
+export interface CasePoint {
+  lat: number;
+  lon: number;
+  universe: "land" | "building_report";
+}
+
+/** A fully computed case: fixed copy + real counts + the capped mapped points
+ *  for the geographic preview. `landCount + buildingCount === matches` always
+ *  (the two universes partition the match set); the tests assert it. */
+export interface DerivedCase {
+  key: CaseKey;
+  name: string;
+  definition: string;
+  caveat: string;
+  chip: string;
+  /** Total matching records (land + building). */
+  matches: number;
+  landCount: number;
+  buildingCount: number;
+  /** Matches that carry a usable coordinate (the dot preview's honest denom). */
+  mappedTotal: number;
+  /** Mapped points for the SVG, capped at `pointCap`. */
+  points: CasePoint[];
+}
+
+/** Default dot-preview cap — enough to read the geographic spread, few enough
+ *  to render as inline SVG without weight. */
+export const CASE_POINT_CAP = 400;
+
+const hasCoord = (r: { lat: number | null; lon: number | null }): boolean =>
+  Number.isFinite(r.lat) && Number.isFinite(r.lon);
+
+/** Compute one case from the full record set (pure). */
+export function deriveCase(
+  key: CaseKey,
+  records: readonly VacancyCaseRecord[],
+  pointCap: number = CASE_POINT_CAP,
+): DerivedCase {
+  const type = caseTypeFor(key);
+  const matched = records.filter((r) => caseMatches(key, r));
+  let landCount = 0;
+  let buildingCount = 0;
+  const mapped: CasePoint[] = [];
+  for (const r of matched) {
+    if (r.universe === "land") landCount += 1;
+    else buildingCount += 1;
+    if (hasCoord(r)) {
+      mapped.push({ lat: r.lat as number, lon: r.lon as number, universe: r.universe });
+    }
   }
-  const mappedLand = new Map(
-    edition.sitePoints
-      .filter((point) => point.propertyType === "vacant_land")
-      .map((point) => [normalizedPin(point.pin) ?? addressKey(point.address), point]),
-  );
-  for (const row of directoryRows.filter((item) => item.propertyType === "vacant_land")) {
-    const pin = normalizedPin(row.pin);
-    const key = pin ?? addressKey(row.address);
-    if (!key || landByKey.has(key)) continue;
-    const mapped = mappedLand.get(key);
-    landByKey.set(key, {
-      id: `land-${key}`,
-      address: row.address,
-      pin,
-      universe: "land",
-      ownerType: row.ownerType,
-      ownerStructure: row.ownerStructure ?? null,
-      ownerGeography: row.ownerGeography ?? null,
-      saleYear: row.saleYear,
-      violation: false,
-      squareFeet: mapped?.squareFeet ?? null,
-      lat: mapped?.lat ?? null,
-      lon: mapped?.lon ?? null,
-    });
-  }
-
-  // Keep reported buildings as a distinct universe. The product explicitly
-  // avoids adding land and 311 building counts before parcel reconciliation.
-  const mappedBuildings = new Map(
-    edition.sitePoints
-      .filter((point) => point.propertyType === "vacant_building")
-      .map((point) => [addressKey(point.address), point]),
-  );
-  const buildingRecords: VacancyCaseRecord[] = directoryRows
-    .filter((row) => row.propertyType === "vacant_building")
-    .map((row, index) => {
-      const mapped = mappedBuildings.get(addressKey(row.address));
-      return {
-        id: `building-${addressKey(row.address)}-${index}`,
-        address: row.address,
-        pin: normalizedPin(row.pin),
-        universe: "building_report" as const,
-        ownerType: row.ownerType,
-        ownerStructure: row.ownerStructure ?? null,
-        ownerGeography: row.ownerGeography ?? null,
-        saleYear: row.saleYear,
-        violation: row.violation,
-        squareFeet: null,
-        lat: mapped?.lat ?? null,
-        lon: mapped?.lon ?? null,
-      };
-    });
-
-  const areas: VacancyCaseArea[] = deriveOpportunityAreas(edition).areas.map((area) => ({
-    id: area.clusterId,
-    name: area.name,
-    siteCount: area.siteCount,
-    mappedCount: area.memberCount,
-    corridor: area.corridorContext,
-    scenario: area.scenarios[0],
-    needsChecking: area.needsChecking[0],
-  }));
-
   return {
-    records: [...landByKey.values(), ...buildingRecords],
-    areas,
-    recordsAsOf: new Date(data.generatedAt).toLocaleDateString("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    }),
+    key,
+    name: type.name,
+    definition: type.definition,
+    caveat: type.caveat,
+    chip: type.chip,
+    matches: matched.length,
+    landCount,
+    buildingCount,
+    mappedTotal: mapped.length,
+    points: mapped.slice(0, Math.max(0, pointCap)),
   };
 }
 
-function oneParam(value: string | string[] | undefined): string | undefined {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-/**
- * Parse a route's searchParams into the workbench's initial UI state.
- * Unrecognized/missing values fall back to the same defaults the prototype
- * used (paths / public-land / all / all / off / off). `sel` is a comma-joined
- * list of record ids: ids not present in `validRecordIds` are dropped, and
- * the result is deduplicated and capped at 3 so a tampered or stale URL can
- * never seed more than the Compare view holds.
- */
-export function initialStateFromParams(
-  params: Record<string, string | string[] | undefined>,
-  validRecordIds: ReadonlySet<string> | readonly string[],
-): VacancyWorkbenchInitialState {
-  const validIds = validRecordIds instanceof Set ? validRecordIds : new Set(validRecordIds);
-
-  const rawMode = oneParam(params.view);
-  const rawPreset = oneParam(params.case);
-  const rawGoal = oneParam(params.goal);
-  const rawUniverse = oneParam(params.records);
-  const rawSel = oneParam(params.sel);
-
-  const seen = new Set<string>();
-  const initialSelectedIds: string[] = [];
-  for (const rawId of (rawSel ?? "").split(",")) {
-    const id = rawId.trim();
-    if (!id || seen.has(id) || !validIds.has(id)) continue;
-    seen.add(id);
-    initialSelectedIds.push(id);
-    if (initialSelectedIds.length >= MAX_SELECTED) break;
-  }
-
-  return {
-    mode: MODES.includes(rawMode as WorkbenchMode) ? (rawMode as WorkbenchMode) : "paths",
-    activePreset: PRESET_IDS.includes(rawPreset as PresetId)
-      ? (rawPreset as PresetId)
-      : "public-land",
-    goal: GOALS.includes(rawGoal as BuilderGoal) ? (rawGoal as BuilderGoal) : "all",
-    universe: UNIVERSES.includes(rawUniverse as BuilderUniverse)
-      ? (rawUniverse as BuilderUniverse)
-      : "all",
-    taxSaleOnly: oneParam(params.tax) === "1",
-    violationsOnly: oneParam(params.violations) === "1",
-    initialSelectedIds,
-  };
+/** Compute all five cases, in CASE_TYPES order. */
+export function deriveAllCases(
+  records: readonly VacancyCaseRecord[],
+  pointCap: number = CASE_POINT_CAP,
+): DerivedCase[] {
+  return CASE_KEYS.map((key) => deriveCase(key, records, pointCap));
 }
