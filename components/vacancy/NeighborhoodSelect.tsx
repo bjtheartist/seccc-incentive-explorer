@@ -20,15 +20,15 @@ import { PILOT_ZIPS } from "@/lib/pilot-zips";
 import type { VacancyView } from "@/components/vacancy/VacancySubNav";
 
 const VIEW_HREF: Record<VacancyView, (zip: string) => string> = {
-  overview: (zip) => `/vacancy/${zip}`,
+  workbench: (zip) => `/vacancy/${zip}`,
+  report: (zip) => `/vacancy/${zip}/report`,
   areas: (zip) => `/vacancy/${zip}/areas`,
   map: (zip) => `/vacancy/${zip}/map`,
   directory: (zip) => `/vacancy/${zip}/directory`,
-  cases: (zip) => `/vacancy/${zip}/cases`,
 };
 
 function hrefFor(view: VacancyView, zip: string): string {
-  return (VIEW_HREF[view] ?? VIEW_HREF.overview)(zip);
+  return (VIEW_HREF[view] ?? VIEW_HREF.workbench)(zip);
 }
 
 export function NeighborhoodSelect({ zip, active }: { zip: string; active: VacancyView }) {

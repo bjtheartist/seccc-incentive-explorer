@@ -5,7 +5,8 @@ import { NeighborhoodSelect } from "@/components/vacancy/NeighborhoodSelect";
 
 /**
  * The consistent sub-navigation header shown on every /vacancy/[zip]* page — one
- * area workspace, five views (GPT-5.6 IA consult §3, plus the Case Workbench).
+ * area workspace, five views. The ZIP root is the decision-first Case Workbench
+ * ("Workbench"); the long narrative report lives at /report.
  * Server component: the active view is passed in, so no client hooks are
  * needed. The neighborhood switcher preserves the current view when switching
  * ZIPs (reuses the pilot-ZIP chip-row pattern from the admin Owner Files page).
@@ -13,14 +14,14 @@ import { NeighborhoodSelect } from "@/components/vacancy/NeighborhoodSelect";
  * equivalent NeighborhoodSelect dropdown (`md:hidden`, defect E).
  */
 
-export type VacancyView = "overview" | "areas" | "map" | "directory" | "cases";
+export type VacancyView = "workbench" | "report" | "areas" | "map" | "directory";
 
 const TABS: { key: VacancyView; label: string; href: (zip: string) => string }[] = [
-  { key: "overview", label: "Overview", href: (z) => `/vacancy/${z}` },
+  { key: "workbench", label: "Workbench", href: (z) => `/vacancy/${z}` },
+  { key: "report", label: "Report", href: (z) => `/vacancy/${z}/report` },
   { key: "areas", label: "Opportunity Areas", href: (z) => `/vacancy/${z}/areas` },
   { key: "map", label: "Property Map", href: (z) => `/vacancy/${z}/map` },
   { key: "directory", label: "All Properties", href: (z) => `/vacancy/${z}/directory` },
-  { key: "cases", label: "Case Workbench", href: (z) => `/vacancy/${z}/cases` },
 ];
 
 export function hrefFor(view: VacancyView, zip: string): string {

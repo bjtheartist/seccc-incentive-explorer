@@ -1,13 +1,13 @@
 import { permanentRedirect } from "next/navigation";
+import { parseCaseParam } from "@/lib/vacancy-cases";
 
 /**
- * app/vacancy/ux-lab/ was the interaction prototype for the Case Workbench
- * (Quick Paths / Build a Case / Compare). It shipped to production as
- * /vacancy/[zip]/cases, generalized to all nine pilot ZIPs. This route now
- * permanently redirects so any review links that were shared against ux-lab
- * keep working — translating the prototype's ux-lab-only params (view/case/
- * goal/records/tax/violations/sel) straight through, since the production
- * route reads the exact same param names.
+ * app/vacancy/ux-lab/ was the interaction prototype for the Case Workbench. The
+ * Case Workbench is now the Vacant Sites per-ZIP landing itself
+ * (/vacancy/[zip]), so this route permanently redirects there — carrying the
+ * prototype's `case` param through when it names one of the five real cases,
+ * and dropping the retired builder/compare params (goal/records/tax/violations/
+ * sel), which the decision-first landing no longer models.
  */
 export default async function VacancyUxLabRedirect({
   searchParams,
@@ -16,14 +16,10 @@ export default async function VacancyUxLabRedirect({
 }) {
   const params = await searchParams;
   const query = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value === undefined) continue;
-    if (Array.isArray(value)) {
-      if (value[0] !== undefined) query.set(key, value[0]);
-    } else {
-      query.set(key, value);
-    }
+  // Only `case` survives, and only when it maps to a known case key.
+  if (params.case !== undefined) {
+    query.set("case", parseCaseParam(params.case));
   }
   const search = query.toString();
-  permanentRedirect(`/vacancy/60617/cases${search ? `?${search}` : ""}`);
+  permanentRedirect(`/vacancy/60617${search ? `?${search}` : ""}`);
 }

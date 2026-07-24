@@ -119,7 +119,7 @@ function cookieStore() {
   return { get: () => undefined };
 }
 
-import VacancyReportPage from "../page";
+import VacancyReportPage from "../report/page";
 
 beforeEach(() => {
   isConfiguredMock.mockReset().mockReturnValue(true);
