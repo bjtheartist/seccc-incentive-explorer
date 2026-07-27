@@ -52,7 +52,8 @@
     "report:preview": "npx tsx scripts/preview-report-pdf.ts",
     "vacancy:preview": "npx tsx scripts/preview-vacancy-index-pdf.ts",
     "vacancy:index:export": "npx tsx scripts/export-vacancy-index.ts",
-    "tif:briefs:export": "npx tsx scripts/export-tif-briefs.ts"
+    "tif:briefs:export": "npx tsx scripts/export-tif-briefs.ts",
+    "data:export:investment": "npx tsx scripts/export-community-investment.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.16",
