@@ -32,12 +32,28 @@ import {
   fetchZoneGeoJSON,
   POI_LAYERS, jsonToGeoJSON, MAP_PRESETS,
   buildOwnerClusterPopupHtml,
+  buildInvestmentPopupHtml,
   type AreaStats, DEFAULT_STATS,
 } from "./map-helpers";
 import {
   loadStoredOwnerClustersVisible,
   storeOwnerClustersVisible,
 } from "@/lib/owner-clusters-toggle";
+import {
+  loadStoredCommunityInvestmentVisible,
+  storeCommunityInvestmentVisible,
+} from "@/lib/community-investment-toggle";
+import {
+  fetchCommunityInvestmentLayer,
+  filterInvestmentPointFeatures,
+  investmentFeatureCollection,
+  DEFAULT_INVESTMENT_YEAR_RANGE,
+  FUNDER_TYPE_COLORS,
+  FUNDER_TYPE_ORDER,
+  INVESTMENT_FALLBACK_COLOR,
+  type InvestmentPointFeature,
+} from "@/lib/community-investment-layer";
+import type { FunderType } from "@/lib/community-investment";
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -125,6 +141,39 @@ export default function MapView() {
   // MapLegendPanel's data-driven color key — recomputed once per fetch, not
   // on every render.
   const [ownerClustersPresentTypes, setOwnerClustersPresentTypes] = useState<OwnerType[]>([]);
+
+  // Admin-gated "Community investment" layer (public + private dollars sited
+  // citywide). Same gating precedent as the ownership-cluster layer above:
+  // rendered only when adminSessionActive, fetched once per toggle-on from the
+  // gated /api/owner-file/investment endpoint (a small static export, not a
+  // per-viewport query), and sessionStorage-backed so the toggle survives the
+  // /report round-trip that remounts MapView. Circle layer, colored by
+  // funderType and sized by amountAwarded; citywide records never plot.
+  const [communityInvestmentVisible, setCommunityInvestmentVisible] = useState<boolean>(() =>
+    loadStoredCommunityInvestmentVisible()
+  );
+  const setCommunityInvestmentVisiblePersistent = useCallback((value: boolean) => {
+    setCommunityInvestmentVisible(value);
+    storeCommunityInvestmentVisible(value);
+  }, []);
+  const [communityInvestmentLoaded, setCommunityInvestmentLoaded] = useState(false);
+  const [communityInvestmentLoading, setCommunityInvestmentLoading] = useState(false);
+  const [communityInvestmentError, setCommunityInvestmentError] = useState<string | null>(null);
+  const [investmentPresentFunderTypes, setInvestmentPresentFunderTypes] = useState<FunderType[]>([]);
+  const [investmentYearRange, setInvestmentYearRange] = useState<string>(DEFAULT_INVESTMENT_YEAR_RANGE);
+  const [investmentFunderTypes, setInvestmentFunderTypes] = useState<Record<FunderType, boolean>>(
+    () => Object.fromEntries(FUNDER_TYPE_ORDER.map((k) => [k, true])) as Record<FunderType, boolean>
+  );
+  const [investmentCitywide, setInvestmentCitywide] = useState<{ count: number; totalDollars: number } | null>(
+    null
+  );
+  // All plotted point features from the last fetch, kept in a ref so the
+  // year/funderType filter effect can rebuild the source (setData) without a
+  // re-fetch — mirrors VacancyReportMap's featuresRef distress-filter pattern.
+  const investmentFeaturesRef = useRef<InvestmentPointFeature[]>([]);
+  const toggleInvestmentFunderType = useCallback((key: FunderType) => {
+    setInvestmentFunderTypes((prev) => ({ ...prev, [key]: !prev[key] }));
+  }, []);
 
   // Polygon draw tool
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -1274,6 +1323,55 @@ export default function MapView() {
       map.on("mouseenter", "owner-clusters-unclustered", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "owner-clusters-unclustered", () => { map.getCanvas().style.cursor = ""; });
 
+      /* ── Admin community-investment layer (Community Investment) ──
+         Gated + toggled exactly like the ownership-cluster layer: only
+         rendered/toggleable when adminSessionActive, only fetched when toggled
+         on (the "Community investment layer: toggle + one-time fetch" effect
+         below). A single unclustered circle layer — colored by funderType,
+         radius scaled by amountAwarded (sqrt, clamped 4–18px), slight opacity.
+         Citywide records never reach this source (excluded client-side); they
+         surface only in the legend's "Citywide commitments" note. */
+      map.addSource("community-investment", { type: "geojson", data: EMPTY_FC });
+
+      map.addLayer({
+        id: "community-investment-points",
+        type: "circle",
+        source: "community-investment",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": [
+            "match", ["get", "funderType"],
+            "government", FUNDER_TYPE_COLORS.government,
+            "philanthropic", FUNDER_TYPE_COLORS.philanthropic,
+            "private_development", FUNDER_TYPE_COLORS.private_development,
+            INVESTMENT_FALLBACK_COLOR,
+          ],
+          // sqrt scale on amountAwarded, clamped 4–18px (interpolate clamps to
+          // the first/last stop output outside the input domain). to-number
+          // coerces a null amount to 0 → the minimum 4px radius.
+          "circle-radius": [
+            "interpolate", ["linear"], ["sqrt", ["to-number", ["get", "amountAwarded"]]],
+            50, 4,
+            2500, 18,
+          ],
+          "circle-opacity": 0.7,
+          "circle-stroke-width": 1,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+
+      map.on("click", "community-investment-points", (e) => {
+        if (!e.features?.length) return;
+        const p = e.features[0].properties || {};
+        new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" })
+          .setLngLat(e.lngLat)
+          .setHTML(buildInvestmentPopupHtml(p))
+          .addTo(map);
+      });
+
+      map.on("mouseenter", "community-investment-points", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "community-investment-points", () => { map.getCanvas().style.cursor = ""; });
+
       // ── Polygon draw control ──
       const draw = new MapboxDraw({
         displayControlsDefault: false,
@@ -1891,6 +1989,91 @@ export default function MapView() {
     return () => controller.abort();
   }, [ownerClustersVisible, adminSessionActive, loaded, ownerClustersLoaded]);
 
+  /* ── Community-investment layer: toggle + one-time fetch ──
+     Mirrors the ownership-cluster effect above: set layer visibility from the
+     toggle; when off, clear the source and reset the loaded flag so a later
+     toggle-on refetches; when on (and admin) and not yet loaded, fetch the
+     gated export ONCE and stash the plotted point features in a ref. The
+     year/funderType filter effect below turns those features into the rendered
+     source (setData), so this effect never touches the source data itself
+     beyond clearing it. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+
+    const vis = communityInvestmentVisible ? "visible" : "none";
+    if (map.getLayer("community-investment-points")) {
+      map.setLayoutProperty("community-investment-points", "visibility", vis);
+    }
+
+    if (!adminSessionActive || !communityInvestmentVisible) {
+      if (!communityInvestmentVisible) {
+        const src = map.getSource("community-investment") as mapboxgl.GeoJSONSource | undefined;
+        if (src) src.setData(EMPTY_FC);
+        investmentFeaturesRef.current = [];
+        setCommunityInvestmentLoaded(false);
+        setInvestmentPresentFunderTypes([]);
+        setInvestmentCitywide(null);
+      }
+      return;
+    }
+
+    if (communityInvestmentLoaded) return;
+
+    const controller = new AbortController();
+    setCommunityInvestmentLoading(true);
+    setCommunityInvestmentError(null);
+
+    fetchCommunityInvestmentLayer({ signal: controller.signal })
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        if (result.status === "ready") {
+          investmentFeaturesRef.current = result.pointFeatures;
+          setInvestmentPresentFunderTypes(result.presentFunderTypes);
+          setInvestmentCitywide(result.citywide);
+          setCommunityInvestmentLoaded(true);
+        } else if (result.status === "unauthorized") {
+          setCommunityInvestmentError("Community investment is admin-only.");
+        } else {
+          setCommunityInvestmentError("Community investment data could not be loaded.");
+        }
+      })
+      .catch((err) => {
+        if (err?.name === "AbortError") return;
+        console.warn("[CommunityInvestment] fetch error:", err);
+        setCommunityInvestmentError("Community investment data could not be loaded.");
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setCommunityInvestmentLoading(false);
+      });
+
+    return () => controller.abort();
+  }, [communityInvestmentVisible, adminSessionActive, loaded, communityInvestmentLoaded]);
+
+  /* ── Community-investment layer: client-side year + funderType filter ──
+     Rebuilds the clustered-free source data (setData) from the cached point
+     features whenever the year range or funderType checkboxes change — the
+     distress-filter pattern from VacancyReportMap (source re-set, not a layer
+     filter). Runs only while the layer is visible and loaded. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded || !communityInvestmentVisible || !communityInvestmentLoaded) return;
+    const src = map.getSource("community-investment") as mapboxgl.GeoJSONSource | undefined;
+    if (!src) return;
+    const activeFunderTypes = new Set<FunderType>(FUNDER_TYPE_ORDER.filter((k) => investmentFunderTypes[k]));
+    const filtered = filterInvestmentPointFeatures(investmentFeaturesRef.current, {
+      yearRangeId: investmentYearRange,
+      activeFunderTypes,
+    });
+    src.setData(investmentFeatureCollection(filtered));
+  }, [
+    communityInvestmentVisible,
+    communityInvestmentLoaded,
+    investmentYearRange,
+    investmentFunderTypes,
+    loaded,
+  ]);
+
   return (
     <div className="relative w-full h-[calc(100dvh-56px)] md:h-[calc(100vh-220px)] min-h-[520px]">
       {/* Map container */}
@@ -1990,6 +2173,16 @@ export default function MapView() {
           ownerClustersLoading={ownerClustersLoading}
           ownerClustersError={ownerClustersError}
           ownerClustersPresentTypes={ownerClustersPresentTypes}
+          communityInvestmentVisible={communityInvestmentVisible}
+          communityInvestmentLoading={communityInvestmentLoading}
+          communityInvestmentError={communityInvestmentError}
+          investmentPresentFunderTypes={investmentPresentFunderTypes}
+          investmentYearRange={investmentYearRange}
+          investmentFunderTypes={investmentFunderTypes}
+          investmentCitywide={investmentCitywide}
+          onSetCommunityInvestmentVisible={setCommunityInvestmentVisiblePersistent}
+          onSetInvestmentYearRange={setInvestmentYearRange}
+          onToggleInvestmentFunderType={toggleInvestmentFunderType}
           onClose={() => setLegendOpen(false)}
           onToggleZone={toggleZone}
           onTogglePoi={togglePoi}

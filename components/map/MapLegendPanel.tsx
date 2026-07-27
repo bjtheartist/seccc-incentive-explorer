@@ -23,7 +23,14 @@ import {
   type OwnerType,
 } from "@/lib/owner-classify";
 import { CLASS_CODE_MAP } from "@/lib/parcel-classes";
-import { MAP_PRESETS, POI_LAYERS } from "./map-helpers";
+import { MAP_PRESETS, POI_LAYERS, formatAwardedAmount } from "./map-helpers";
+import {
+  DEFAULT_INVESTMENT_YEAR_RANGE,
+  FUNDER_TYPE_COLORS,
+  FUNDER_TYPE_LABELS,
+  INVESTMENT_YEAR_RANGES,
+} from "@/lib/community-investment-layer";
+import type { FunderType } from "@/lib/community-investment";
 
 interface MapLegendPanelProps {
   zoneVisible: Record<string, boolean>;
@@ -44,6 +51,21 @@ interface MapLegendPanelProps {
   ownerClustersError?: string | null;
   /** Owner types actually present in the loaded ownership-cluster data, in legend order — drives the color key below the toggle. */
   ownerClustersPresentTypes?: OwnerType[];
+  /* ── Admin "Community investment" layer (gated on the same adminSessionActive) ── */
+  communityInvestmentVisible?: boolean;
+  communityInvestmentLoading?: boolean;
+  communityInvestmentError?: string | null;
+  /** Funder types actually present among the plotted points, in FUNDER_TYPE_ORDER — drives the funderType checkboxes. */
+  investmentPresentFunderTypes?: FunderType[];
+  /** Active year-range chip id (INVESTMENT_YEAR_RANGES); defaults to "all". */
+  investmentYearRange?: string;
+  /** Per-funderType checkbox state (client-side filter). */
+  investmentFunderTypes?: Record<FunderType, boolean>;
+  /** Citywide-geometry summary (count + total awarded dollars) — records that never plot as dots. */
+  investmentCitywide?: { count: number; totalDollars: number } | null;
+  onSetCommunityInvestmentVisible?: (value: boolean) => void;
+  onSetInvestmentYearRange?: (id: string) => void;
+  onToggleInvestmentFunderType?: (key: FunderType) => void;
   onClose: () => void;
   onToggleZone: (key: string) => void;
   onTogglePoi: (key: string) => void;
@@ -77,6 +99,16 @@ export default function MapLegendPanel({
   ownerClustersLoading,
   ownerClustersError,
   ownerClustersPresentTypes = [],
+  communityInvestmentVisible = false,
+  communityInvestmentLoading,
+  communityInvestmentError,
+  investmentPresentFunderTypes = [],
+  investmentYearRange = DEFAULT_INVESTMENT_YEAR_RANGE,
+  investmentFunderTypes = {} as Record<FunderType, boolean>,
+  investmentCitywide = null,
+  onSetCommunityInvestmentVisible = () => {},
+  onSetInvestmentYearRange = () => {},
+  onToggleInvestmentFunderType = () => {},
   onClose,
   onToggleZone,
   onTogglePoi,
@@ -92,6 +124,9 @@ export default function MapLegendPanel({
   onApplyPreset,
   onSetOwnerClustersVisible,
 }: MapLegendPanelProps) {
+  // Local collapse for the "Citywide commitments" note — purely presentational,
+  // no need to lift into MapView (mirrors ZoneLayerSection's local useState).
+  const [citywideOpen, setCitywideOpen] = useState(false);
   return (
     <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-3 md:right-auto z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100vh-280px)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
       {/* Mobile drag handle + close */}
@@ -528,6 +563,146 @@ export default function MapLegendPanel({
             )}
             {ownerClustersError && (
               <p className="text-[9px] text-red-600 mt-1.5 ml-6">{ownerClustersError}</p>
+            )}
+          </div>
+
+          {/* Community investment — public + private dollars sited citywide (gated on adminSessionActive) */}
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 pt-3 pb-3">
+            <label className="flex items-center gap-2.5 py-1 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={communityInvestmentVisible}
+                onChange={() => onSetCommunityInvestmentVisible(!communityInvestmentVisible)}
+                className="sr-only"
+              />
+              <span
+                className="w-3.5 h-3.5 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors"
+                style={{
+                  borderColor: "#2563EB",
+                  backgroundColor: communityInvestmentVisible ? "#2563EB30" : "transparent",
+                }}
+              >
+                {communityInvestmentVisible && (
+                  <span className="w-2 h-2 rounded-full block" style={{ backgroundColor: "#2563EB" }} />
+                )}
+              </span>
+              <span className="text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight">
+                Community investment
+              </span>
+            </label>
+            <p className="text-[9px] text-[#0C1B33]/35 mt-1.5 ml-6">
+              Public + private dollars sited citywide · admin-only, never shown to public visitors
+            </p>
+
+            {communityInvestmentVisible && (
+              <div className="mt-3 ml-6 space-y-3">
+                {/* Year-range chips — client-side filter over the plotted points */}
+                <div>
+                  <div className="font-mono-bureau text-[8px] tracking-[0.15em] uppercase text-[#0C1B33]/40 mb-1.5">
+                    Year
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {INVESTMENT_YEAR_RANGES.map((range) => {
+                      const active = investmentYearRange === range.id;
+                      return (
+                        <button
+                          key={range.id}
+                          onClick={() => onSetInvestmentYearRange(range.id)}
+                          className="font-mono-bureau text-[8px] tracking-[0.08em] uppercase px-2 py-1 rounded-full border transition-colors"
+                          style={{
+                            color: active ? "#fff" : "#2563EB",
+                            backgroundColor: active ? "#2563EB" : "transparent",
+                            borderColor: active ? "#2563EB" : "#2563EB40",
+                          }}
+                        >
+                          {range.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Funder-type checkboxes — only for types actually present (doubles as the color key) */}
+                {investmentPresentFunderTypes.length > 0 && (
+                  <div>
+                    <div className="font-mono-bureau text-[8px] tracking-[0.15em] uppercase text-[#0C1B33]/40 mb-1.5">
+                      Funder type
+                    </div>
+                    <div className="space-y-0.5">
+                      {investmentPresentFunderTypes.map((type) => {
+                        const checked = investmentFunderTypes[type] ?? true;
+                        return (
+                          <label key={type} className="flex items-center gap-2.5 py-1 cursor-pointer group">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => onToggleInvestmentFunderType(type)}
+                              className="sr-only"
+                            />
+                            <span
+                              className="w-3.5 h-3.5 rounded-full border flex-shrink-0 flex items-center justify-center transition-colors"
+                              style={{
+                                borderColor: FUNDER_TYPE_COLORS[type],
+                                backgroundColor: checked ? FUNDER_TYPE_COLORS[type] + "30" : "transparent",
+                              }}
+                            >
+                              {checked && (
+                                <span
+                                  className="w-2 h-2 rounded-full block"
+                                  style={{ backgroundColor: FUNDER_TYPE_COLORS[type] }}
+                                />
+                              )}
+                            </span>
+                            <span className="text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight">
+                              {FUNDER_TYPE_LABELS[type]}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-[9px] text-[#0C1B33]/35">Dot size = amount awarded</p>
+
+                {communityInvestmentLoading && (
+                  <p className="text-[9px] text-[#0C1B33]/40">Loading community investment…</p>
+                )}
+                {communityInvestmentError && (
+                  <p className="text-[9px] text-red-600">{communityInvestmentError}</p>
+                )}
+
+                {/* Citywide commitments — records that NEVER plot as dots (intermediary /
+                    unmappable). Collapsible note with count + total awarded dollars. */}
+                {investmentCitywide && investmentCitywide.count > 0 && (
+                  <div>
+                    <button
+                      onClick={() => setCitywideOpen((v) => !v)}
+                      className="flex items-center gap-1.5 font-mono-bureau text-[8px] tracking-[0.12em] uppercase text-[#0C1B33]/45 hover:text-[#0C1B33]/70 transition-colors"
+                    >
+                      <svg
+                        className={`w-2.5 h-2.5 transition-transform ${citywideOpen ? "rotate-90" : ""}`}
+                        viewBox="0 0 6 10"
+                        fill="currentColor"
+                      >
+                        <path d="M1 1l4 4-4 4" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                      </svg>
+                      Citywide commitments ({investmentCitywide.count})
+                    </button>
+                    {citywideOpen && (
+                      <p className="text-[9px] text-[#0C1B33]/50 mt-1 leading-relaxed">
+                        {investmentCitywide.count} commitment{investmentCitywide.count === 1 ? "" : "s"} held
+                        citywide rather than plotted — intermediary or unmappable grants
+                        {investmentCitywide.totalDollars > 0
+                          ? ` · ${formatAwardedAmount(investmentCitywide.totalDollars)} awarded`
+                          : ""}
+                        .
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </>

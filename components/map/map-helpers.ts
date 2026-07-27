@@ -6,6 +6,8 @@
 import mapboxgl from "mapbox-gl";
 import { POINT_DATA_ZONE_KEYS, ZONE_META, ZONING_CATEGORIES } from "@/lib/constants";
 import { OWNER_TYPE_COLORS, OWNER_TYPE_LABELS, type OwnerType } from "@/lib/owner-classify";
+import { FUNDER_TYPE_COLORS, FUNDER_TYPE_LABELS, INVESTMENT_FALLBACK_COLOR } from "@/lib/community-investment-layer";
+import type { FunderType } from "@/lib/community-investment";
 import type { DistrictData } from "@/lib/types";
 import type { SiteSignals } from "@/lib/site-signals";
 import type { TransportAccess } from "@/lib/transport-access";
@@ -282,6 +284,78 @@ export function buildOwnerClusterPopupHtml(p: OwnerClusterPopupProperties): stri
     <div style="font-size:11px;color:#5A6478;margin-top:8px;font-weight:600">${p.clusterVacantCount ?? 0} vacant / ${p.clusterParcelCount ?? 0} parcels</div>
     ${address ? `<div style="font-size:11px;color:#8A93A6;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${address}</div>` : ""}
     <a href="${ownerFileHref}" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">Open Owner File &rarr;</a>
+  </div>`;
+}
+
+/* ── Admin community-investment popup (Community Investment layer) ───── */
+
+/**
+ * Feature properties for one clicked community-investment point, as they arrive
+ * from Mapbox's feature.properties (JSON-primitive coerced). Matches
+ * InvestmentPointProps (lib/community-investment-layer.ts) with every field
+ * optional/nullable to tolerate the coercion.
+ */
+export interface InvestmentPopupProperties {
+  recipient?: string;
+  funderName?: string;
+  funderType?: string;
+  amountAwarded?: number | null;
+  logLine?: string | null;
+  year?: number | null;
+  status?: string;
+  sourceLink?: string;
+}
+
+/**
+ * Format an awarded dollar figure for display. Real awarded dollars only —
+ * a null/absent amount renders "Not disclosed" rather than a fabricated $0 or
+ * any word implying a balance was received/remaining. Whole dollars, grouped.
+ */
+export function formatAwardedAmount(amount: number | null | undefined): string {
+  if (amount == null || !Number.isFinite(amount)) return "Not disclosed";
+  return `$${Math.round(amount).toLocaleString("en-US")}`;
+}
+
+/**
+ * Popup body for a clicked community-investment point (MapView's
+ * `map.on("click", "community-investment-points")`). Extracted so the content
+ * contract is unit-testable without a live map, and styled to match the
+ * ownership-cluster popup above (same Inter stack, admin eyebrow, ink/slate
+ * scale, funder-type chip in place of the owner-type chip).
+ *
+ * The dollar figure is labeled "Awarded" — deliberately NEVER "received": every
+ * amount here is a real awarded/reported figure, and the received/available/
+ * remaining/unspent vocabulary is banned repo-wide (see the banned-figure rail
+ * in lib/community-investment.ts). Funder label/color come from
+ * lib/community-investment-layer.ts.
+ */
+export function buildInvestmentPopupHtml(p: InvestmentPopupProperties): string {
+  const funderType = (p.funderType ?? "") as FunderType;
+  const accent = FUNDER_TYPE_COLORS[funderType] ?? INVESTMENT_FALLBACK_COLOR;
+  const funderTypeLabel = FUNDER_TYPE_LABELS[funderType] ?? "Investment";
+  const recipient = escapePopupHtml(p.recipient || "Recipient unavailable");
+  const funderName = p.funderName ? escapePopupHtml(p.funderName) : "";
+  const amount = escapePopupHtml(formatAwardedAmount(p.amountAwarded));
+  const year = p.year != null ? String(p.year) : "";
+  const status = p.status ? escapePopupHtml(String(p.status)) : "";
+  const logLine = p.logLine ? escapePopupHtml(p.logLine) : "";
+  const link = p.sourceLink && /^https?:\/\//i.test(p.sourceLink) ? p.sourceLink : "";
+  const metaRow = [year, status].filter(Boolean);
+
+  return `<div style="font-family:Inter,sans-serif">
+    <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${accent};margin-bottom:4px;font-weight:500">Admin · Community Investment</div>
+    <div style="font-size:14px;font-weight:600;color:#0C1B33">${recipient}</div>
+    ${funderName ? `<div style="font-size:11px;color:#5A6478;margin-top:4px">${funderName}</div>` : ""}
+    <div style="display:flex;align-items:baseline;gap:6px;margin-top:8px">
+      <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8A93A6">Awarded</span>
+      <span style="font-size:14px;font-weight:700;color:#0C1B33">${amount}</span>
+    </div>
+    <div style="margin-top:8px">
+      <span style="display:inline-block;background:${accent}15;color:${accent};border:1px solid ${accent}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapePopupHtml(funderTypeLabel)}</span>
+      ${metaRow.length ? `<span style="font-size:11px;color:#5A6478;margin-left:6px;text-transform:capitalize">${metaRow.join(" · ")}</span>` : ""}
+    </div>
+    ${logLine ? `<div style="font-size:11px;color:#8A93A6;margin-top:6px;line-height:1.4">${logLine}</div>` : ""}
+    ${link ? `<a href="${escapePopupHtml(link)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">Source &rarr;</a>` : ""}
   </div>`;
 }
 
