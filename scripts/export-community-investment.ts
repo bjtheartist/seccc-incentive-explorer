@@ -11,7 +11,7 @@
  * row->record mapping, the Census geocoding of city-grant addresses that lack
  * coordinates, and the cross-source dedupe, then writes the committed JSON.
  *
- * Inputs (produced by prior agents, read from the scratchpad by default):
+ * Inputs (committed under data/curated/investment-inputs/, read from there by default):
  *   nof_small.json / nof_large.json / sbif.json  — Socrata completion rows
  *   cdg_awards.csv                               — CDG award rounds 2022–2025
  *   foundation_grants_geocoded.csv               — 990 grants w/ lat/lng + locType
@@ -28,7 +28,7 @@
  *     and counted (meta.droppedNoGeocode) — never plotted at 0,0 or guessed.
  *
  * Usage:
- *   npx tsx scripts/export-community-investment.ts
+ *   npx tsx scripts/export-community-investment.ts            # repo inputs (default)
  *   INPUT_DIR=/some/dir npx tsx scripts/export-community-investment.ts
  */
 
@@ -48,10 +48,15 @@ import { assignCommunityArea, loadCommunityAreaPolygons } from "../lib/community
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
-const SCRATCH =
-  "/private/tmp/claude-502/-Users-billyndizeye-Desktop/b9c151f4-b8dc-40ba-b72f-92b827fa50d4/scratchpad";
-const INPUT_DIR = process.env.INPUT_DIR || SCRATCH;
-const GEOCODE_CACHE_PATH = join(SCRATCH, "geocode-cache.json");
+// Canonical inputs live IN the repo (committed under data/curated/investment-inputs/;
+// public-record data only, kept out of public/ so they are never web-served) so a
+// regen never depends on the ephemeral session scratchpad. INPUT_DIR overrides the
+// default for a one-off run against a different input set; the geocode cache is read
+// AND written back within the same input dir so a cached re-run stays fully offline
+// and deterministic. Provenance for each file is in PROVENANCE_LABELS below.
+const REPO_INPUT_DIR = join(process.cwd(), "data", "curated", "investment-inputs");
+const INPUT_DIR = process.env.INPUT_DIR || REPO_INPUT_DIR;
+const GEOCODE_CACHE_PATH = join(INPUT_DIR, "geocode-cache.json");
 const OUT_PATH = join(process.cwd(), "data", "private", "community-investment.json");
 /** Coordinate-less capital CONTEXT (per-district TIF series, CRA/CDFI, state awards). */
 const CONTEXT_OUT_PATH = join(process.cwd(), "data", "private", "capital-context.json");
