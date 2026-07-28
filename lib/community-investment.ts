@@ -183,6 +183,15 @@ export interface CommunityInvestmentMeta {
   /** Records whose source amount was negative (a 990 correction / return-of-grant)
    * and was set to null rather than quietly reducing the awarded total. */
   negativeAmountsNulled: number;
+  /**
+   * Point-geometry records whose coordinates fell OUTSIDE every one of Chicago's
+   * 77 community areas during the export's point-in-polygon stamping (a point on
+   * the lake, an inter-CA gap, or a slightly-off geocode near the city edge).
+   * They keep NO communityArea and are excluded from any per-community total —
+   * counted here so the drop is visible rather than silent. Citywide-geometry
+   * records are never point-stamped and are NOT included in this figure.
+   */
+  outsideCommunityAreas: number;
   /** Human-readable source/provenance labels for the section footer. */
   sources: string[];
 }
@@ -547,6 +556,7 @@ export function buildCommunityInvestmentExport(
     droppedNoCoords?: number;
     outOfBoundsGeocodes?: number;
     negativeAmountsNulled?: number;
+    outsideCommunityAreas?: number;
   },
 ): CommunityInvestmentExport {
   const pointCount = records.filter((r) => r.geometry.kind === "point").length;
@@ -565,6 +575,7 @@ export function buildCommunityInvestmentExport(
       droppedNoCoords: stats.droppedNoCoords ?? 0,
       outOfBoundsGeocodes: stats.outOfBoundsGeocodes ?? 0,
       negativeAmountsNulled: stats.negativeAmountsNulled ?? 0,
+      outsideCommunityAreas: stats.outsideCommunityAreas ?? 0,
       sources: stats.sources,
     },
     records,

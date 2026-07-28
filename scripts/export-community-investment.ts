@@ -34,6 +34,7 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { bbox, booleanPointInPolygon } from "@turf/turf";
 import {
   buildCommunityInvestmentExport,
   dedupeInvestmentRecords,
@@ -41,6 +42,7 @@ import {
   type CommunityInvestmentRecord,
   type InvestmentGeometry,
 } from "../lib/community-investment";
+import { CHICAGO_COMMUNITY_AREAS } from "../lib/community-areas";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +51,8 @@ const SCRATCH =
 const INPUT_DIR = process.env.INPUT_DIR || SCRATCH;
 const GEOCODE_CACHE_PATH = join(SCRATCH, "geocode-cache.json");
 const OUT_PATH = join(process.cwd(), "data", "private", "community-investment.json");
+/** Committed City of Chicago Community Area boundaries (dataset igwz-8jzy). */
+const CA_GEOJSON_PATH = join(process.cwd(), "public", "data", "community-areas.geojson");
 
 const NOF_PROGRAM = "Neighborhood Opportunity Fund (City of Chicago)";
 const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
@@ -63,6 +67,7 @@ const PROVENANCE_LABELS = [
   "Major development projects — Ellen's Developments map (Google My Maps)",
   "Neighborhood Opportunity Fund corridor awards 2017–2020 — Jim's South Shore list (award records)",
   "Address geocoding: U.S. Census Bureau Geocoder (Public_AR_Current benchmark)",
+  "Community-area assignment: City of Chicago Community Area boundaries (Chicago Data Portal dataset igwz-8jzy), point-in-polygon",
 ];
 
 // ── Small parse helpers ──────────────────────────────────────────────────────
@@ -269,6 +274,92 @@ async function geocodeBatch(queries: string[], cache: GeocodeCache): Promise<Map
 
 function point(lat: number, lng: number): InvestmentGeometry {
   return { kind: "point", lat, lng };
+}
+
+// ── Community-area point-in-polygon stamping ─────────────────────────────────
+
+/**
+ * One community-area polygon, keyed to the canonical title-case name used
+ * everywhere else in the app (lib/community-areas.ts). A cached bbox lets the
+ * per-point stamping skip non-candidate areas before the expensive ray-cast.
+ */
+interface CommunityAreaPolygon {
+  name: string;
+  /** [minLng, minLat, maxLng, maxLat] */
+  bounds: [number, number, number, number];
+  feature: GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>;
+}
+
+/** Canonical CA name by official area number (1..77). */
+const CA_NAME_BY_NUMBER = new Map<number, string>(CHICAGO_COMMUNITY_AREAS.map((ca) => [ca.id, ca.name]));
+/** Canonical CA name by UPPER-CASED name (fallback if the area number is unmapped). */
+const CA_NAME_BY_UPPER = new Map<string, string>(
+  CHICAGO_COMMUNITY_AREAS.map((ca) => [ca.name.toUpperCase(), ca.name]),
+);
+
+/**
+ * Load Chicago's 77 community-area polygons from the committed city boundary
+ * file (public/data/community-areas.geojson, dataset igwz-8jzy), each mapped to
+ * the canonical title-case name via its official area number. Throws if the file
+ * is missing so the export fails loudly rather than silently stamping nothing.
+ */
+function loadCommunityAreaPolygons(): CommunityAreaPolygon[] {
+  const raw = JSON.parse(readFileSync(CA_GEOJSON_PATH, "utf8")) as {
+    features?: Array<GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon, Record<string, unknown>>>;
+  };
+  const features = raw.features ?? [];
+  const out: CommunityAreaPolygon[] = [];
+  for (const feature of features) {
+    const props = feature.properties ?? {};
+    const num = Number(props.area_numbe ?? props.area_num_1);
+    const upperName = typeof props.community === "string" ? props.community.trim().toUpperCase() : "";
+    const name = CA_NAME_BY_NUMBER.get(num) ?? CA_NAME_BY_UPPER.get(upperName) ?? null;
+    if (!name || !feature.geometry) continue;
+    out.push({
+      name,
+      bounds: bbox(feature) as [number, number, number, number],
+      feature,
+    });
+  }
+  return out;
+}
+
+/**
+ * Point-in-polygon stamp EVERY point record with its Chicago community area,
+ * overwriting whatever the source supplied so all records key off the canonical
+ * 77-name set (the Socrata `community_area` field is inconsistent — 100+ distinct
+ * spellings/neighborhoods — and the foundation/CDG/development/corridor points
+ * carry none at all). A point outside every CA (lake, inter-CA gap, edge geocode)
+ * keeps NO communityArea and is counted. Citywide-geometry records are never
+ * touched. Mutates in place; returns the inside/outside tallies. Deterministic.
+ */
+function stampCommunityAreas(
+  records: CommunityInvestmentRecord[],
+  polygons: CommunityAreaPolygon[],
+): { inside: number; outside: number } {
+  let inside = 0;
+  let outside = 0;
+  for (const r of records) {
+    if (r.geometry.kind !== "point") continue; // citywide records never get a CA
+    const { lat, lng } = r.geometry;
+    let match: string | null = null;
+    for (const ca of polygons) {
+      const [minLng, minLat, maxLng, maxLat] = ca.bounds;
+      if (lng < minLng || lng > maxLng || lat < minLat || lat > maxLat) continue;
+      if (booleanPointInPolygon([lng, lat], ca.feature)) {
+        match = ca.name;
+        break;
+      }
+    }
+    if (match) {
+      r.communityArea = match;
+      inside++;
+    } else {
+      delete r.communityArea; // outside every CA → keep none (never guess)
+      outside++;
+    }
+  }
+  return { inside, outside };
 }
 
 // ── Source mappers ───────────────────────────────────────────────────────────
@@ -613,7 +704,16 @@ async function main() {
   const { records: deduped, removedCount } = dedupeInvestmentRecords(all);
   console.log(`Deduped: ${all.length} -> ${deduped.length} (removed ${removedCount})`);
 
-  // 5) Assemble + structural banned-figure assert + write.
+  // 5) Point-in-polygon community-area stamping for EVERY point record. Runs on
+  //    the final deduped set so the tallies describe the kept records.
+  const caPolygons = loadCommunityAreaPolygons();
+  const caStamp = stampCommunityAreas(deduped, caPolygons);
+  console.log(
+    `Community-area stamp: ${caPolygons.length} CA polygons · ${caStamp.inside} points inside a CA · ` +
+      `${caStamp.outside} outside (kept, no CA)`,
+  );
+
+  // 6) Assemble + structural banned-figure assert + write.
   const out = buildCommunityInvestmentExport(deduped, generatedAt, {
     droppedNoGeocode,
     dedupedRows: removedCount,
@@ -622,6 +722,7 @@ async function main() {
     droppedNoCoords,
     outOfBoundsGeocodes: foundationStats.outOfBoundsGeocodes,
     negativeAmountsNulled: foundationStats.negativeAmountsNulled,
+    outsideCommunityAreas: caStamp.outside,
     sources: PROVENANCE_LABELS,
   });
 
