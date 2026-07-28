@@ -28,13 +28,6 @@ import {
   type InvestmentGeometry,
 } from "../community-investment";
 
-/** The committed baseline awarded total — READ FROM the committed export BEFORE
- * the capital-spine sources were added and PINNED here. The capital-spine work
- * (TIF/HUD/LIHTC/NMTC all carry amountAwarded=null) must leave this EXACTLY
- * unchanged; a regen that moves it by a cent means a non-grant dollar leaked into
- * the awarded total. */
-const BASELINE_TOTAL_DOLLARS_AWARDED = 1787353617.66;
-
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 
 const POINT = (lat: number, lng: number): InvestmentGeometry => ({ kind: "point", lat, lng });
@@ -703,9 +696,23 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
 
   // ── Capital-spine invariants over the committed export ──────────────────────
 
-  it("PIN: the awarded total is EXACTLY the pre-capital-spine baseline (no non-grant dollar leaked in)", () => {
+  it("no non-grant dollar leaked: awarded total is EXACTLY the grant-class amountAwarded sum, and every non-grant record has null amountAwarded", () => {
     const data = loadCommunityInvestment()!;
-    expect(data.meta.totalDollarsAwarded).toBe(BASELINE_TOTAL_DOLLARS_AWARDED);
+    // (a) totalDollarsAwarded === Σ amountAwarded over capitalClass==="grant" records
+    //     EXACTLY. This is the real invariant "no non-grant dollar leaked" — and it
+    //     is refresh-proof: a legitimate grant-data refresh moves BOTH sides together,
+    //     whereas a non-grant dollar folded into the awarded total would move only the
+    //     left side and trip this. (A pinned dollar constant tripped on every clean
+    //     grant refresh and taught the reader to blindly re-pin it — removed.)
+    const grantAwarded = data.records
+      .filter((r) => r.capitalClass === "grant")
+      .reduce((sum, r) => sum + (r.amountAwarded ?? 0), 0);
+    expect(data.meta.totalDollarsAwarded).toBe(grantAwarded);
+    // (b) every non-grant record contributes 0 because its amountAwarded is null —
+    //     so a subsidy/federal/tax-credit dollar cannot enter the awarded total.
+    for (const r of data.records) {
+      if (r.capitalClass !== "grant") expect(r.amountAwarded).toBeNull();
+    }
   });
 
   it("carries all four capital classes and each record's money lives in exactly one field", () => {
