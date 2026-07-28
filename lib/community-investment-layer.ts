@@ -333,6 +333,219 @@ export function investmentRecordsToPointFeatures(
   return features;
 }
 
+// ── Megaprojects view mode ────────────────────────────────────────────────────
+
+/**
+ * The four STATUS GROUPS the Megaprojects view colors development dots by,
+ * collapsing the nine granular InvestmentStatus lifecycle states into the four
+ * buckets a reader tracks at a glance. In legend/control order (the lifecycle
+ * arc — open, building, planned — with stalled last):
+ *   • open     — opened | partially_open | completed  (ground open / occupied)
+ *   • building — under_construction                    (actively being built)
+ *   • planned  — announced | proposed | awarded        (committed, not started)
+ *   • stalled  — stalled | cancelled                   (paused / dead)
+ */
+export const MEGAPROJECT_STATUS_GROUPS = ["open", "building", "planned", "stalled"] as const;
+export type MegaprojectStatusGroup = (typeof MEGAPROJECT_STATUS_GROUPS)[number];
+
+export const MEGAPROJECT_STATUS_GROUP_LABELS: Record<MegaprojectStatusGroup, string> = {
+  open: "Open",
+  building: "Building",
+  planned: "Planned",
+  stalled: "Stalled",
+};
+
+/**
+ * Status-group colors — four hues from the app palette family, VALIDATED with the
+ * dataviz palette checker
+ * (`validate_palette.js "#059669,#2563EB,#D97706,#DB2777" --mode light`
+ * → ALL CHECKS PASS: normal-vision floor worst-adjacent ΔE 20.3, CVD ΔE 14.1
+ * deutan / 6.6 tritan, all inside the L band + chroma floor + 3:1 surface
+ * contrast). The legend swatches + labels supply the secondary encoding:
+ *   • open     #059669 — the app's community / completion green.
+ *   • building #2563EB — the canonical City / active blue.
+ *   • planned  #D97706 — the "authorized / on the horizon" amber.
+ *   • stalled  #DB2777 — a hot magenta alert, off the three funder-type hues so it
+ *     never reads as a funder type (amber↔red was too close for normal vision).
+ */
+export const MEGAPROJECT_STATUS_GROUP_COLORS: Record<MegaprojectStatusGroup, string> = {
+  open: "#059669",
+  building: "#2563EB",
+  planned: "#D97706",
+  stalled: "#DB2777",
+};
+
+/**
+ * Exhaustive InvestmentStatus → status-group mapping — every one of the nine
+ * lifecycle states folds into exactly one group (guarded by the
+ * `Record<InvestmentStatus, …>` type and a unit test that iterates
+ * INVESTMENT_STATUSES). Kept as data (not a switch) so the completeness check is
+ * a plain key comparison.
+ */
+export const MEGAPROJECT_STATUS_GROUP_BY_STATUS: Record<InvestmentStatus, MegaprojectStatusGroup> = {
+  opened: "open",
+  partially_open: "open",
+  completed: "open",
+  under_construction: "building",
+  announced: "planned",
+  proposed: "planned",
+  awarded: "planned",
+  stalled: "stalled",
+  cancelled: "stalled",
+};
+
+/** Map a status to its group; an off-enum status folds to "planned" (the neutral
+ * middle bucket) rather than throwing. Pure. */
+export function megaprojectStatusGroup(status: string | null | undefined): MegaprojectStatusGroup {
+  return (status && MEGAPROJECT_STATUS_GROUP_BY_STATUS[status as InvestmentStatus]) || "planned";
+}
+
+/** Megaprojects circle-radius bounds (px), sized by announcedInvestment. Wider
+ * than the Dots-mode development scale (4–18px) so a $7B megasite reads boldly. */
+export const MEGAPROJECT_RADIUS_MIN = 6;
+export const MEGAPROJECT_RADIUS_MAX = 24;
+
+/**
+ * sqrt-domain radius scale over the ACTUAL announced-capital domain of the
+ * megaproject set: sqrt(announcedInvestment) normalized between the set's min and
+ * max, mapped to [6, 24] px — the same approach as makeArcWidthScale /
+ * makeDevelopmentDotRadiusScale. A null/negative announcedInvestment counts as 0
+ * → the 6px floor (the many development rows with no published price tag; e.g. the
+ * Fire-stadium subset row, whose popup explains the null). A degenerate domain
+ * (one project / all-equal amounts) renders at the midpoint. Pure / deterministic.
+ */
+export function makeMegaprojectRadiusScale(
+  amounts: readonly (number | null | undefined)[],
+): (amount: number | null | undefined) => number {
+  const roots = amounts.map((a) => Math.sqrt(Math.max(0, a ?? 0)));
+  const lo = roots.length ? Math.min(...roots) : 0;
+  const hi = roots.length ? Math.max(...roots) : 0;
+  const span = hi - lo;
+  if (span <= 0) return () => (MEGAPROJECT_RADIUS_MIN + MEGAPROJECT_RADIUS_MAX) / 2;
+  return (amount) => {
+    const v = Math.sqrt(Math.max(0, amount ?? 0));
+    const t = Math.min(1, Math.max(0, (v - lo) / span));
+    return MEGAPROJECT_RADIUS_MIN + t * (MEGAPROJECT_RADIUS_MAX - MEGAPROJECT_RADIUS_MIN);
+  };
+}
+
+/** Max characters for a megaproject's on-map symbol label before truncation. */
+export const MEGAPROJECT_LABEL_MAX_CHARS = 24;
+
+/** Truncate a project name for the on-map label (…-suffixed past the ~24-char cap). Pure. */
+export function truncateMegaprojectLabel(name: string | null | undefined): string {
+  const s = (name ?? "").trim();
+  if (s.length <= MEGAPROJECT_LABEL_MAX_CHARS) return s;
+  return `${s.slice(0, MEGAPROJECT_LABEL_MAX_CHARS - 1).trimEnd()}…`;
+}
+
+/**
+ * Megaproject feature props — the plotted development point's InvestmentPointProps
+ * plus the two fields the mapbox megaproject layers read directly: `statusGroup`
+ * (the circle-color match key) and `label` (the truncated symbol-label text).
+ * `radiusPx` (already on InvestmentPointProps) is recomputed here on the wider
+ * megaproject 6–24px scale, so the reused popup contract is otherwise unchanged.
+ */
+export interface MegaprojectPointProps extends InvestmentPointProps {
+  statusGroup: MegaprojectStatusGroup;
+  label: string;
+}
+
+export type MegaprojectPointFeature = GeoJSON.Feature<GeoJSON.Point, MegaprojectPointProps>;
+
+/**
+ * Build the Megaprojects-mode features from the full plotted point set: keep ONLY
+ * the development records (funderType "private_development" — the client-side
+ * equivalent of source "development", the ONLY source that maps to that funder
+ * type; the client features carry no `source` field), stamp each with its status
+ * GROUP + a truncated label, and size each by announcedInvestment on the shared
+ * 6–24px sqrt scale. Order-preserving. Pure / deterministic.
+ */
+export function buildMegaprojectFeatures(
+  features: readonly InvestmentPointFeature[],
+): MegaprojectPointFeature[] {
+  const dev = features.filter((f) => f.properties.funderType === "private_development");
+  const radiusOf = makeMegaprojectRadiusScale(dev.map((f) => f.properties.announcedInvestment));
+  return dev.map((f) => ({
+    ...f,
+    properties: {
+      ...f.properties,
+      statusGroup: megaprojectStatusGroup(f.properties.status),
+      label: truncateMegaprojectLabel(f.properties.recipient),
+      radiusPx: radiusOf(f.properties.announcedInvestment),
+    },
+  }));
+}
+
+/** A FeatureCollection wrapper for the megaproject GeoJSONSource.setData. Pure. */
+export function megaprojectFeatureCollection(
+  features: readonly MegaprojectPointFeature[],
+): GeoJSON.FeatureCollection<GeoJSON.Point, MegaprojectPointProps> {
+  return { type: "FeatureCollection", features: features as MegaprojectPointFeature[] };
+}
+
+/**
+ * EXACT legend line for the megaproject announced-capital total. "Announced" is
+ * deliberate — these are self-reported private project price tags, never grants a
+ * public/philanthropic body awarded — and the "not awarded dollars" clause makes
+ * the distinction explicit at the figure. Shared constant so the legend and its
+ * unit test can never drift.
+ */
+export const MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL = "Announced private capital — not awarded dollars";
+
+export interface MegaprojectSummary {
+  /** Plotted development point count (the map dots). */
+  plottedCount: number;
+  /** Per-status-group counts over the plotted development points. */
+  groupCounts: Record<MegaprojectStatusGroup, number>;
+  /**
+   * Sum of announcedInvestment over the plotted development points (null → 0). A
+   * total of ANNOUNCED private capital — never awarded, never a derived figure.
+   */
+  totalAnnounced: number;
+}
+
+/**
+ * Summarize the plotted megaproject features for the legend: plotted count,
+ * per-status-group counts, and the total ANNOUNCED private capital (a plain sum of
+ * announcedInvestment, null → 0 — never an awarded/derived figure). Pure.
+ */
+export function summarizeMegaprojects(
+  features: readonly MegaprojectPointFeature[],
+): MegaprojectSummary {
+  const groupCounts: Record<MegaprojectStatusGroup, number> = {
+    open: 0,
+    building: 0,
+    planned: 0,
+    stalled: 0,
+  };
+  let totalAnnounced = 0;
+  for (const f of features) {
+    groupCounts[f.properties.statusGroup] += 1;
+    if (f.properties.announcedInvestment != null) totalAnnounced += f.properties.announcedInvestment;
+  }
+  return { plottedCount: features.length, groupCounts, totalAnnounced };
+}
+
+/**
+ * Recipient names of the CITYWIDE development records (funderType
+ * "private_development", geometry "citywide") — the megaprojects that carry no
+ * plottable point (an entity-wide / multi-site commitment, e.g. Advocate's South
+ * Side investment). The Megaprojects legend lists them under a "not plotted" note.
+ * Order-preserving. Pure.
+ */
+export function citywideDevelopmentProjectNames(
+  records: readonly CommunityInvestmentRecord[],
+): string[] {
+  const out: string[] = [];
+  for (const r of records) {
+    if (r.geometry.kind === "citywide" && r.funderType === "private_development") {
+      out.push(r.recipient);
+    }
+  }
+  return out;
+}
+
 const FUNDER_TYPE_ORDER_STRINGS: readonly string[] = FUNDER_TYPE_ORDER;
 
 /**
@@ -488,6 +701,12 @@ export interface CommunityInvestmentLayerResult {
   /** Filterable citywide entries so the legend note re-scopes with the filters. */
   citywideEntries: CitywideInvestmentEntry[];
   /**
+   * Recipient names of the citywide (non-plotting) DEVELOPMENT records — the
+   * megaprojects held citywide rather than plotted (e.g. Advocate's South Side
+   * investment). Powers the Megaprojects legend's "N projects not plotted" note.
+   */
+  citywideDevelopmentNames: string[];
+  /**
    * Foundation-HQ coordinates the gated route attaches (read server-side from
    * data/curated/foundation-hqs.csv). Seeds the Arcs view mode (funder HQ →
    * recipient); empty when the layer is unauthorized/unavailable or the CSV is
@@ -503,6 +722,7 @@ const EMPTY_LAYER_RESULT = (status: CommunityInvestmentLayerStatus): CommunityIn
   presentCapitalClasses: [],
   citywide: { count: 0, totalDollars: 0 },
   citywideEntries: [],
+  citywideDevelopmentNames: [],
   funderHqs: [],
 });
 
@@ -545,6 +765,7 @@ export async function fetchCommunityInvestmentLayer(opts?: {
     ),
     citywide: summarizeCitywideEntries(citywideEntries, null),
     citywideEntries,
+    citywideDevelopmentNames: citywideDevelopmentProjectNames(records),
     funderHqs: Array.isArray(data?.funderHqs) ? data.funderHqs : [],
   };
 }

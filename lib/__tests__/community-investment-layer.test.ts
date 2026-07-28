@@ -14,6 +14,18 @@ import {
   presentFunderTypesInOrder,
   summarizeCitywideEntries,
   summarizeCitywideInvestment,
+  buildMegaprojectFeatures,
+  citywideDevelopmentProjectNames,
+  makeMegaprojectRadiusScale,
+  megaprojectStatusGroup,
+  summarizeMegaprojects,
+  truncateMegaprojectLabel,
+  MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL,
+  MEGAPROJECT_LABEL_MAX_CHARS,
+  MEGAPROJECT_RADIUS_MAX,
+  MEGAPROJECT_RADIUS_MIN,
+  MEGAPROJECT_STATUS_GROUPS,
+  MEGAPROJECT_STATUS_GROUP_BY_STATUS,
   type InvestmentPointFeature,
 } from "@/lib/community-investment-layer";
 
@@ -240,6 +252,9 @@ describe("fetchCommunityInvestmentLayer", () => {
     ]);
     expect(result.presentFunderTypes).toEqual(["government", "philanthropic", "private_development"]);
     expect(result.citywide).toEqual({ count: 2, totalDollars: 250_000 });
+    // The two citywide rows here are philanthropic + government, not development,
+    // so the megaproject "not plotted" list is empty for this fixture.
+    expect(result.citywideDevelopmentNames).toEqual([]);
   });
 
   it("maps a 401 to 'unauthorized' with no features", async () => {
@@ -404,5 +419,182 @@ describe("INVESTMENT_STATUS_LABELS", () => {
     expect(investmentStatusLabel("opened")).toBe("Opened");
     expect(investmentStatusLabel("")).toBe("");
     expect(investmentStatusLabel("mystery")).toBe("mystery");
+  });
+});
+
+// ── Megaprojects view mode ────────────────────────────────────────────────────
+
+const megaRecords: CommunityInvestmentRecord[] = [
+  record({
+    id: "dev-open",
+    source: "development",
+    funderType: "private_development",
+    status: "opened",
+    amountAwarded: null,
+    announcedInvestment: 1_000_000_000,
+    geometry: { kind: "point", lat: 41.7, lng: -87.6 },
+    recipient: "The 78",
+    year: null,
+  }),
+  record({
+    id: "dev-build",
+    source: "development",
+    funderType: "private_development",
+    status: "under_construction",
+    amountAwarded: null,
+    announcedInvestment: 250_000_000,
+    geometry: { kind: "point", lat: 41.71, lng: -87.61 },
+    recipient: "Some Under-Construction Megaproject With A Very Long Name",
+    year: null,
+  }),
+  record({
+    id: "dev-plan-nullcapital",
+    source: "development",
+    funderType: "private_development",
+    status: "announced",
+    amountAwarded: null,
+    announcedInvestment: null, // e.g. the Fire-stadium subset row — floors at min
+    geometry: { kind: "point", lat: 41.72, lng: -87.62 },
+    recipient: "Announced No Price Tag",
+    year: null,
+  }),
+  record({
+    id: "dev-stall",
+    source: "development",
+    funderType: "private_development",
+    status: "stalled",
+    amountAwarded: null,
+    announcedInvestment: 40_000_000,
+    geometry: { kind: "point", lat: 41.73, lng: -87.63 },
+    recipient: "Stalled Project",
+    year: null,
+  }),
+  // A non-development POINT — must be excluded from the megaproject set.
+  record({ id: "gov-point", funderType: "government", status: "awarded", geometry: { kind: "point", lat: 41.74, lng: -87.64 } }),
+  // A CITYWIDE development — never plots; surfaces only in the "not plotted" note.
+  record({
+    id: "dev-citywide",
+    source: "development",
+    funderType: "private_development",
+    status: "announced",
+    amountAwarded: null,
+    announcedInvestment: 500_000_000,
+    geometry: { kind: "citywide" },
+    address: null,
+    recipient: "Advocate South Side Investment",
+    year: null,
+  }),
+];
+
+describe("megaproject status-group mapping", () => {
+  it("maps every INVESTMENT_STATUS to one of the four groups (exhaustive)", () => {
+    const groups = new Set<string>(MEGAPROJECT_STATUS_GROUPS);
+    for (const s of INVESTMENT_STATUSES) {
+      const group = MEGAPROJECT_STATUS_GROUP_BY_STATUS[s];
+      expect(group, `${s} has a group`).toBeTruthy();
+      expect(groups.has(group), `${s} → known group`).toBe(true);
+    }
+    // The mapping's keys are EXACTLY the status enum — no missing / extra keys.
+    expect(Object.keys(MEGAPROJECT_STATUS_GROUP_BY_STATUS).sort()).toEqual([...INVESTMENT_STATUSES].sort());
+  });
+
+  it("buckets the lifecycle states into open / building / planned / stalled", () => {
+    expect(["opened", "partially_open", "completed"].map(megaprojectStatusGroup)).toEqual(["open", "open", "open"]);
+    expect(megaprojectStatusGroup("under_construction")).toBe("building");
+    expect(["announced", "proposed", "awarded"].map(megaprojectStatusGroup)).toEqual([
+      "planned",
+      "planned",
+      "planned",
+    ]);
+    expect(["stalled", "cancelled"].map(megaprojectStatusGroup)).toEqual(["stalled", "stalled"]);
+  });
+
+  it("folds an off-enum / empty status to 'planned' rather than throwing", () => {
+    expect(megaprojectStatusGroup("mystery")).toBe("planned");
+    expect(megaprojectStatusGroup(null)).toBe("planned");
+    expect(megaprojectStatusGroup(undefined)).toBe("planned");
+  });
+});
+
+describe("makeMegaprojectRadiusScale", () => {
+  it("maps the largest to MAX, a null/zero amount to MIN, clamped 6–24px", () => {
+    const scale = makeMegaprojectRadiusScale([1_000_000_000, 250_000_000, null, 40_000_000]);
+    expect(scale(1_000_000_000)).toBe(MEGAPROJECT_RADIUS_MAX);
+    expect(scale(null)).toBe(MEGAPROJECT_RADIUS_MIN);
+    expect(scale(0)).toBe(MEGAPROJECT_RADIUS_MIN);
+    const mid = scale(250_000_000);
+    expect(mid).toBeGreaterThan(MEGAPROJECT_RADIUS_MIN);
+    expect(mid).toBeLessThan(MEGAPROJECT_RADIUS_MAX);
+  });
+
+  it("renders a degenerate (all-equal) domain at the midpoint radius", () => {
+    const flat = makeMegaprojectRadiusScale([5, 5, 5]);
+    expect(flat(5)).toBe((MEGAPROJECT_RADIUS_MIN + MEGAPROJECT_RADIUS_MAX) / 2);
+  });
+});
+
+describe("truncateMegaprojectLabel", () => {
+  it("passes a short name through and truncates a long one to the cap with an ellipsis", () => {
+    expect(truncateMegaprojectLabel("The 78")).toBe("The 78");
+    const long = truncateMegaprojectLabel("Some Under-Construction Megaproject With A Very Long Name");
+    expect(long.length).toBeLessThanOrEqual(MEGAPROJECT_LABEL_MAX_CHARS);
+    expect(long.endsWith("…")).toBe(true);
+    expect(truncateMegaprojectLabel(null)).toBe("");
+  });
+});
+
+describe("buildMegaprojectFeatures", () => {
+  it("keeps ONLY development points, stamping status group + label + a 6–24px radius", () => {
+    const points = investmentRecordsToPointFeatures(megaRecords); // citywide already excluded
+    const mega = buildMegaprojectFeatures(points);
+
+    // gov-point (non-development) and the citywide dev are both excluded.
+    expect(mega.map((f) => f.properties.id)).toEqual([
+      "dev-open",
+      "dev-build",
+      "dev-plan-nullcapital",
+      "dev-stall",
+    ]);
+    expect(mega.map((f) => f.properties.id)).not.toContain("gov-point");
+    expect(mega.map((f) => f.properties.id)).not.toContain("dev-citywide");
+
+    const byId = Object.fromEntries(mega.map((f) => [f.properties.id, f.properties]));
+    expect(byId["dev-open"].statusGroup).toBe("open");
+    expect(byId["dev-build"].statusGroup).toBe("building");
+    expect(byId["dev-plan-nullcapital"].statusGroup).toBe("planned");
+    expect(byId["dev-stall"].statusGroup).toBe("stalled");
+
+    // Radius sized by announcedInvestment: largest → 24, null-capital → 6 (floor).
+    expect(byId["dev-open"].radiusPx).toBe(MEGAPROJECT_RADIUS_MAX);
+    expect(byId["dev-plan-nullcapital"].radiusPx).toBe(MEGAPROJECT_RADIUS_MIN);
+
+    // The reused popup contract is intact (development → "Announced" branch reads these).
+    expect(byId["dev-open"].announcedInvestment).toBe(1_000_000_000);
+    expect(byId["dev-build"].label.length).toBeLessThanOrEqual(MEGAPROJECT_LABEL_MAX_CHARS);
+  });
+});
+
+describe("summarizeMegaprojects", () => {
+  it("counts per status group and totals ANNOUNCED capital (null → 0), never awarded", () => {
+    const mega = buildMegaprojectFeatures(investmentRecordsToPointFeatures(megaRecords));
+    const summary = summarizeMegaprojects(mega);
+    expect(summary.plottedCount).toBe(4);
+    expect(summary.groupCounts).toEqual({ open: 1, building: 1, planned: 1, stalled: 1 });
+    // 1B + 250M + 0 (null) + 40M — announcedInvestment only, amountAwarded ignored.
+    expect(summary.totalAnnounced).toBe(1_290_000_000);
+  });
+});
+
+describe("citywideDevelopmentProjectNames", () => {
+  it("returns the citywide DEVELOPMENT names and excludes point-dev + non-dev citywide", () => {
+    expect(citywideDevelopmentProjectNames(megaRecords)).toEqual(["Advocate South Side Investment"]);
+    // The philanthropic + government citywide rows in the other fixture never appear.
+    expect(citywideDevelopmentProjectNames(records)).toEqual([]);
+  });
+});
+
+describe("MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL", () => {
+  it("is the exact legend string (Announced, never Awarded)", () => {
+    expect(MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL).toBe("Announced private capital — not awarded dollars");
   });
 });
