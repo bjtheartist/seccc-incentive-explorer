@@ -66,7 +66,7 @@ import {
   storeInvestmentViewMode,
   buildInvestmentArcData,
   indexFunderHqsByName,
-  arcWidthFromAmount,
+  makeArcWidthScale,
   PHILANTHROPIC_ARC_COLOR,
   DENSITY_COLOR_RANGE,
   HEXAGON_RADIUS_M,
@@ -216,6 +216,7 @@ export default function MapView() {
   const investmentFunderHqsRef = useRef<FunderHq[]>([]);
   // The one deck.gl overlay (created on first entry into a non-Dots mode, torn
   // down when the layer is hidden / mode returns to Dots / on unmount).
+  const prevInvestmentViewModeRef = useRef<string | null>(null);
   const deckOverlayRef = useRef<MapboxOverlay | null>(null);
   // The shared mapbox dot popup, kept in a ref so the deck effect can close it
   // when entering a non-Dots mode (deck's picking tooltip takes over there).
@@ -2224,8 +2225,14 @@ export default function MapView() {
     if (map.getLayer(baseId)) {
       map.setLayoutProperty(baseId, "visibility", layerVisible && mode === "dots" ? "visible" : "none");
     }
-    // Non-Dots modes hand picking to deck — close the shared mapbox dot popup.
-    if (mode !== "dots") sharedDotPopupRef.current?.remove();
+    // Non-Dots modes hand picking to deck — close the shared mapbox dot popup,
+    // but ONLY on the actual transition into a non-Dots mode: this effect also
+    // re-runs on unrelated filter changes, and the popup instance is shared with
+    // the vacant-property and owner-cluster layers, which must keep theirs open.
+    if (mode !== "dots" && prevInvestmentViewModeRef.current !== mode) {
+      sharedDotPopupRef.current?.remove();
+    }
+    prevInvestmentViewModeRef.current = mode;
 
     const removeOverlay = () => {
       if (deckOverlayRef.current) {
@@ -2255,6 +2262,10 @@ export default function MapView() {
     if (mode === "arcs") {
       const hqIndex = indexFunderHqsByName(investmentFunderHqsRef.current);
       const { arcs, fallbackFeatures, missingHqCount } = buildInvestmentArcData(filtered, hqIndex);
+      const fallbackDotRadius = (() => {
+        const scale = makeArcWidthScale(fallbackFeatures.map((f) => f.properties.amountAwarded));
+        return (f: InvestmentPointFeature) => scale(f.properties.amountAwarded);
+      })();
       setInvestmentArcMissingHqCount(missingHqCount);
       layers = [
         new ArcLayer<InvestmentArcDatum>({
@@ -2274,7 +2285,7 @@ export default function MapView() {
           id: "investment-arc-fallback",
           data: fallbackFeatures,
           getPosition: (f) => f.geometry.coordinates as [number, number],
-          getRadius: (f) => arcWidthFromAmount(f.properties.amountAwarded),
+          getRadius: fallbackDotRadius,
           radiusUnits: "pixels",
           radiusMinPixels: 3,
           radiusMaxPixels: 8,

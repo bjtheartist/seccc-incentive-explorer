@@ -160,16 +160,25 @@ export const ARC_WIDTH_MIN = 1;
 export const ARC_WIDTH_MAX = 8;
 
 /**
- * Stroke width for one arc: sqrt(amountAwarded) clamped to [1, 8] px, per the
- * task spec. A null/negative amount coerces to 0 → the minimum 1px. NOTE: the
- * committed philanthropic grants all have sqrt(amount) ≥ ~8.7, so under the real
- * dataset every arc renders at the 8px maximum — the clamp is applied exactly as
- * specified; visual width variation would require re-scaling the domain (flagged
- * for a follow-up, not changed here). Pure/deterministic.
+ * Build a stroke-width scale across the ACTUAL dollar domain of the arcs being
+ * drawn: sqrt(amount) normalized between the dataset min and max, mapped to
+ * [1, 8] px. A raw sqrt-then-clamp saturated at 8px for every real grant (all
+ * philanthropic grants exceed $64), so width carried no information. Degenerate
+ * domains (one arc / all-equal amounts) render at the midpoint width.
+ * Null/negative amounts count as 0. Pure/deterministic.
  */
-export function arcWidthFromAmount(amount: number | null | undefined): number {
-  const value = Math.sqrt(Math.max(0, amount ?? 0));
-  return Math.min(ARC_WIDTH_MAX, Math.max(ARC_WIDTH_MIN, value));
+export function makeArcWidthScale(
+  amounts: readonly (number | null | undefined)[],
+): (amount: number | null | undefined) => number {
+  const roots = amounts.map((a) => Math.sqrt(Math.max(0, a ?? 0)));
+  const lo = roots.length ? Math.min(...roots) : 0;
+  const hi = roots.length ? Math.max(...roots) : 0;
+  const span = hi - lo;
+  if (span <= 0) return () => (ARC_WIDTH_MIN + ARC_WIDTH_MAX) / 2;
+  return (amount) => {
+    const v = Math.sqrt(Math.max(0, amount ?? 0));
+    return ARC_WIDTH_MIN + ((v - lo) / span) * (ARC_WIDTH_MAX - ARC_WIDTH_MIN);
+  };
 }
 
 /**
@@ -238,9 +247,11 @@ export function buildInvestmentArcData(
       amountAwarded: p.amountAwarded,
       sourcePosition: [hq.lng, hq.lat],
       targetPosition: [f.geometry.coordinates[0], f.geometry.coordinates[1]],
-      width: arcWidthFromAmount(p.amountAwarded),
+      width: 0, // sized in the second pass, once the full arc domain is known
     });
   }
+  const widthOf = makeArcWidthScale(arcs.map((a) => a.amountAwarded));
+  for (const a of arcs) a.width = widthOf(a.amountAwarded);
   return { arcs, fallbackFeatures, missingHqCount: fallbackFeatures.length };
 }
 

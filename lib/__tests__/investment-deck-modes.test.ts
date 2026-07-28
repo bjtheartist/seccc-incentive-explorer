@@ -9,7 +9,7 @@ import {
   DENSITY_RAMP_HEXES,
   INVESTMENT_VIEW_MODES,
   INVESTMENT_VIEW_MODE_STORAGE_KEY,
-  arcWidthFromAmount,
+  makeArcWidthScale,
   buildInvestmentArcData,
   hexToRgbArray,
   indexFunderHqsByName,
@@ -204,17 +204,29 @@ describe("funder-name normalization + HQ join", () => {
 
 // ── Arc width clamp ───────────────────────────────────────────────────────────
 
-describe("arcWidthFromAmount", () => {
-  it("clamps sqrt(amount) into [1, 8]", () => {
-    expect(arcWidthFromAmount(9)).toBe(3); // sqrt(9) = 3, inside range
-    expect(arcWidthFromAmount(1_000_000)).toBe(ARC_WIDTH_MAX); // sqrt huge → clamp 8
-    expect(arcWidthFromAmount(0)).toBe(ARC_WIDTH_MIN); // sqrt(0) → clamp 1
+describe("makeArcWidthScale", () => {
+  it("spreads widths across the actual sqrt-dollar domain", () => {
+    const scale = makeArcWidthScale([10_000, 250_000, 1_000_000]);
+    expect(scale(10_000)).toBe(ARC_WIDTH_MIN); // domain min -> 1px
+    expect(scale(1_000_000)).toBe(ARC_WIDTH_MAX); // domain max -> 8px
+    const mid = scale(250_000);
+    expect(mid).toBeGreaterThan(ARC_WIDTH_MIN);
+    expect(mid).toBeLessThan(ARC_WIDTH_MAX);
   });
 
-  it("coerces null/negative to the minimum width", () => {
-    expect(arcWidthFromAmount(null)).toBe(ARC_WIDTH_MIN);
-    expect(arcWidthFromAmount(undefined)).toBe(ARC_WIDTH_MIN);
-    expect(arcWidthFromAmount(-500)).toBe(ARC_WIDTH_MIN);
+  it("degenerate domains render at the midpoint width", () => {
+    const single = makeArcWidthScale([500_000]);
+    expect(single(500_000)).toBe((ARC_WIDTH_MIN + ARC_WIDTH_MAX) / 2);
+    const equal = makeArcWidthScale([75_000, 75_000, 75_000]);
+    expect(equal(75_000)).toBe((ARC_WIDTH_MIN + ARC_WIDTH_MAX) / 2);
+  });
+
+  it("null/negative amounts count as zero-dollar (domain floor)", () => {
+    const scale = makeArcWidthScale([null, 1_000_000]);
+    expect(scale(null)).toBe(ARC_WIDTH_MIN);
+    expect(scale(undefined)).toBe(ARC_WIDTH_MIN);
+    expect(scale(-500)).toBe(ARC_WIDTH_MIN);
+    expect(scale(1_000_000)).toBe(ARC_WIDTH_MAX);
   });
 });
 

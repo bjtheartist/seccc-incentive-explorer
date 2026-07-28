@@ -1,4 +1,4 @@
-import { formatCount } from "./format";
+import { formatCount, formatFullDollars } from "./format";
 import { CountUpDollars } from "./CountUpDollars";
 
 /**
@@ -12,11 +12,18 @@ export function HeroStat({
   recordCount,
   spanMax,
   eyebrow,
+  animate = true,
 }: {
   total: number;
   recordCount: number;
   spanMax: number | null;
   eyebrow: string;
+  /**
+   * false on the print brief: a headless PDF snapshot can land mid-animation
+   * and freeze a WRONG dollar figure into the exported document. Print always
+   * renders the final value statically.
+   */
+  animate?: boolean;
 }) {
   const rangeLabel = spanMax && spanMax > 2020 ? `2020–${spanMax}` : "2020";
   return (
@@ -28,7 +35,7 @@ export function HeroStat({
         className="mt-3 text-[clamp(44px,8vw,76px)] font-semibold leading-none text-[#0C1B33] tracking-tight"
         style={{ fontVariantNumeric: "proportional-nums" }}
       >
-        <CountUpDollars value={total} />
+        {animate ? <CountUpDollars value={total} /> : <span>{formatFullDollars(total)}</span>}
       </div>
       <p className="mt-4 text-[14px] leading-relaxed text-[#0C1B33]/55">
         {`awarded · ${formatCount(recordCount)} grants & projects · ${rangeLabel}`}

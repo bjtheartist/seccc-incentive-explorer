@@ -187,6 +187,7 @@ export default async function InvestmentBriefPrintPage({
                   recordCount={analysis.recordCount}
                   spanMax={analysis.span?.max ?? null}
                   eyebrow="Awarded since 2020"
+                  animate={false}
                 />
               </div>
 
