@@ -7,6 +7,7 @@ import {
   DEFAULT_INVESTMENT_VIEW_MODE,
   DENSITY_COLOR_RANGE,
   DENSITY_RAMP_HEXES,
+  densityColorWeight,
   INVESTMENT_VIEW_MODES,
   INVESTMENT_VIEW_MODE_STORAGE_KEY,
   makeArcWidthScale,
@@ -34,6 +35,7 @@ function feature(overrides: {
   funderName?: string;
   funderType?: FunderType;
   amountAwarded?: number | null;
+  announcedInvestment?: number | null;
   lng?: number;
   lat?: number;
 }): InvestmentPointFeature {
@@ -45,7 +47,8 @@ function feature(overrides: {
       recipient: overrides.recipient ?? "Example Recipient",
       funderName: overrides.funderName ?? "Joyce Foundation",
       funderType: overrides.funderType ?? "philanthropic",
-      amountAwarded: overrides.amountAwarded ?? 100_000,
+      amountAwarded: "amountAwarded" in overrides ? (overrides.amountAwarded ?? null) : 100_000,
+      announcedInvestment: overrides.announcedInvestment ?? null,
       logLine: null,
       year: 2021,
       status: "awarded",
@@ -242,5 +245,23 @@ describe("density sequential palette", () => {
   it("parses hex to an RGB tuple", () => {
     expect(hexToRgbArray("#2563EB")).toEqual([37, 99, 235]);
     expect(hexToRgbArray("2563eb")).toEqual([37, 99, 235]);
+  });
+});
+
+describe("densityColorWeight (heat map weight)", () => {
+  it("weights a density bin by AWARDED dollars, null → 0", () => {
+    expect(densityColorWeight(feature({ amountAwarded: 250_000 }))).toBe(250_000);
+    expect(densityColorWeight(feature({ amountAwarded: null }))).toBe(0);
+  });
+
+  it("NEVER reads announcedInvestment — a development contributes 0 to a bin", () => {
+    // A development carries a multi-billion announced figure but NO awarded dollars;
+    // density is a picture of awarded grants, so its weight must be 0.
+    const dev = feature({
+      funderType: "private_development",
+      amountAwarded: null,
+      announcedInvestment: 9_000_000_000,
+    });
+    expect(densityColorWeight(dev)).toBe(0);
   });
 });

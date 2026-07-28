@@ -82,6 +82,31 @@ describe("buildFunderFlow — totals & exclusions", () => {
     expect(linkValue("s:sbif", "r:R1")).toBe(800000);
     expect(linkValue("f:F2", "s:foundation")).toBe(250000);
   });
+
+  it("EXCLUDES an enriched development from the flow (announced capital is never a flow width)", () => {
+    // A megadev now carries a real year + a multi-billion announcedInvestment, but
+    // its amountAwarded is null — the sankey is awarded-dollars only, so it must
+    // add no node, no link, and no dollars.
+    const withDev = buildFunderFlow(
+      [
+        rec({ id: "a", funderName: "F1", recipient: "R1", source: "sbif", amountAwarded: 800000 }),
+        rec({
+          id: "mega",
+          funderName: "United Center JV",
+          recipient: "1901 Project",
+          source: "development",
+          funderType: "private_development",
+          year: 2024,
+          amountAwarded: null,
+          announcedInvestment: 7_000_000_000,
+        }),
+      ],
+      "Zeta",
+    );
+    expect(withDev.total).toBe(800000);
+    expect(withDev.nodes.some((n) => n.key === "1901 Project" || n.key === "development")).toBe(false);
+    expect(withDev.nodes.some((n) => n.key === "United Center JV")).toBe(false);
+  });
 });
 
 describe("buildFunderFlow — folding", () => {

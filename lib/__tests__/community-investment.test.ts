@@ -17,6 +17,7 @@ import {
   normalizeAddressForDedupe,
   normalizeRecipientForDedupe,
   SOURCE_FUNDER_TYPE,
+  sumAnnouncedInvestment,
   sumAwardedDollars,
   type CommunityInvestmentExport,
   type CommunityInvestmentRecord,
@@ -69,7 +70,17 @@ describe("source / funderType / status enums", () => {
   it("the enum arrays carry exactly the documented members", () => {
     expect([...INVESTMENT_SOURCES]).toEqual(["nof-small", "nof-large", "sbif", "cdg", "foundation", "development"]);
     expect([...FUNDER_TYPES]).toEqual(["government", "philanthropic", "private_development"]);
-    expect([...INVESTMENT_STATUSES]).toEqual(["completed", "awarded", "announced", "proposed"]);
+    expect([...INVESTMENT_STATUSES]).toEqual([
+      "completed",
+      "awarded",
+      "announced",
+      "proposed",
+      "under_construction",
+      "partially_open",
+      "opened",
+      "stalled",
+      "cancelled",
+    ]);
   });
 });
 
@@ -335,6 +346,116 @@ describe("countBySource / sumAwardedDollars / buildCommunityInvestmentExport", (
   });
 });
 
+// ── Announced private capital is a SEPARATE truth from awarded dollars ─────────
+
+describe("announcedInvestment vs amountAwarded separation", () => {
+  const dev = (over: Partial<CommunityInvestmentRecord> & { id: string }) =>
+    rec({
+      source: "development",
+      funderType: "private_development",
+      amountAwarded: null, // developments are NEVER awarded
+      status: "under_construction",
+      ...over,
+    });
+
+  it("sumAnnouncedInvestment totals only announcedInvestment (never amountAwarded)", () => {
+    const records = [
+      rec({ id: "g", amountAwarded: 250_000 }), // government award, no announced figure
+      dev({ id: "d1", announcedInvestment: 7_000_000_000 }),
+      dev({ id: "d2", announcedInvestment: 9_000_000_000 }),
+      dev({ id: "d3", announcedInvestment: null }), // subset/blank → not counted
+    ];
+    expect(sumAnnouncedInvestment(records)).toBe(16_000_000_000);
+    // The awarded sum ignores announcedInvestment entirely.
+    expect(sumAwardedDollars(records)).toBe(250_000);
+  });
+
+  it("meta.totalDollarsAwarded EXCLUDES announcedInvestment; announcedCapitalTotal sums it", () => {
+    const records = [
+      rec({ id: "g", amountAwarded: 250_000 }),
+      dev({ id: "d1", announcedInvestment: 7_000_000_000 }),
+      dev({ id: "d2", announcedInvestment: 500_000_000 }),
+    ];
+    const out = buildCommunityInvestmentExport(records, "2026-07-27T00:00:00.000Z", {
+      droppedNoGeocode: 0,
+      dedupedRows: 0,
+      sources: [],
+      subsetExcluded: 1,
+      privateLedExcluded: 0,
+    });
+    // The awarded total is the government award ALONE — the $7.5B announced is not in it.
+    expect(out.meta.totalDollarsAwarded).toBe(250_000);
+    expect(out.meta.announcedCapitalTotal).toBe(7_500_000_000);
+    expect(out.meta.subsetExcluded).toBe(1);
+    expect(out.meta.privateLedExcluded).toBe(0);
+  });
+
+  it("recomputes totalDollarsAwarded from records and matches an amountAwarded-only sum", () => {
+    const records = [
+      rec({ id: "a", amountAwarded: 100_000 }),
+      rec({ id: "b", source: "foundation", funderType: "philanthropic", amountAwarded: 50_000 }),
+      dev({ id: "c", announcedInvestment: 1_000_000_000 }),
+    ];
+    const out = buildCommunityInvestmentExport(records, "2026-07-27T00:00:00.000Z", {
+      droppedNoGeocode: 0,
+      dedupedRows: 0,
+      sources: [],
+    });
+    const awardedOnly = records.reduce((s, r) => s + (r.amountAwarded ?? 0), 0);
+    expect(out.meta.totalDollarsAwarded).toBe(awardedOnly);
+    expect(out.meta.totalDollarsAwarded).toBe(150_000);
+  });
+
+  it("NEVER dedupes a private_development row, even at a shared address+amount", () => {
+    // Two developments sharing an address; developments are excluded from dedupe
+    // (funderType private_development is ineligible), so both survive regardless
+    // of their new lifecycle statuses.
+    const { records, removedCount } = dedupeInvestmentRecords([
+      dev({ id: "d1", recipient: "Megasite A", address: "100 Main St", announcedInvestment: 1_000_000, status: "under_construction" }),
+      dev({ id: "d2", recipient: "Megasite B", address: "100 Main St", announcedInvestment: 1_000_000, status: "opened" }),
+    ]);
+    expect(removedCount).toBe(0);
+    expect(records.map((r) => r.id)).toEqual(["d1", "d2"]);
+  });
+});
+
+// ── Grep rail: no code ever adds announcedInvestment + amountAwarded together ──
+
+describe("source rail: announcedInvestment is never summed with amountAwarded", () => {
+  it("no source line combines the two fields with arithmetic", () => {
+    const roots = ["lib", "components", "scripts", "app"];
+    const files: string[] = [];
+    const walk = (dir: string) => {
+      const abs = path.join(process.cwd(), dir);
+      if (!existsSync(abs)) return;
+      for (const entry of readdirSync(abs, { withFileTypes: true })) {
+        const rel = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          if (entry.name === "node_modules" || entry.name === "__tests__") continue;
+          walk(rel);
+        } else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) {
+          files.push(path.join(process.cwd(), rel));
+        }
+      }
+    };
+    for (const r of roots) walk(r);
+
+    // Flag any single expression that puts both identifiers on the same side of
+    // a '+' (either order) — the exact "combine the two truths" mistake the rail
+    // exists to prevent.
+    const offend =
+      /announcedInvestment[^\n;]*\+[^\n;]*amountAwarded|amountAwarded[^\n;]*\+[^\n;]*announcedInvestment/;
+    const hits: string[] = [];
+    for (const f of files) {
+      const text = readFileSync(f, "utf8");
+      for (const line of text.split("\n")) {
+        if (offend.test(line)) hits.push(`${path.relative(process.cwd(), f)}: ${line.trim()}`);
+      }
+    }
+    expect(hits).toEqual([]);
+  });
+});
+
 describe("filterInvestmentBySources", () => {
   const data: CommunityInvestmentExport = buildCommunityInvestmentExport(
     [rec({ id: "1", source: "cdg" }), rec({ id: "2", source: "foundation", funderType: "philanthropic" })],
@@ -431,6 +552,30 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     const summed = Object.values(data.meta.counts).reduce((a, b) => a + b, 0);
     expect(summed).toBe(data.records.length);
     expect(data.meta.totalDollarsAwarded).toBe(sumAwardedDollars(data.records));
+  });
+
+  it("announcedCapitalTotal matches the announcedInvestment sum and is a DIFFERENT figure from awarded", () => {
+    const data = loadCommunityInvestment()!;
+    expect(data.meta.announcedCapitalTotal).toBe(sumAnnouncedInvestment(data.records));
+    // The two are truly separate — announced private capital dwarfs awarded grants
+    // and is never folded in.
+    expect(data.meta.announcedCapitalTotal).toBeGreaterThan(data.meta.totalDollarsAwarded);
+    // announced capital lands in the expected ~$67–75B band.
+    expect(data.meta.announcedCapitalTotal).toBeGreaterThan(60_000_000_000);
+    expect(data.meta.announcedCapitalTotal).toBeLessThan(80_000_000_000);
+  });
+
+  it("every development record carries NO awarded dollars (announced capital only)", () => {
+    const data = loadCommunityInvestment()!;
+    for (const r of data.records) {
+      if (r.source === "development") {
+        expect(r.amountAwarded).toBeNull();
+      }
+      // announcedInvestment only ever lives on development records.
+      if (r.announcedInvestment != null) {
+        expect(r.source).toBe("development");
+      }
+    }
   });
 
   it("IRON RULE: the raw committed text carries no banned derived-figure key", () => {

@@ -5,6 +5,7 @@ import {
   buildInvestmentIndex,
   median,
   SINCE_YEAR,
+  summarizeMajorDevelopments,
 } from "../investment-analysis";
 
 const GEN = "2026-07-27T00:00:00.000Z";
@@ -155,6 +156,84 @@ describe("analyzeCommunityArea — edge cases", () => {
 
   it("returns null for an unknown community", () => {
     expect(analyzeCommunityArea(RECORDS, "Nowhere", GEN)).toBeNull();
+  });
+});
+
+// ── Major private developments summary (announced capital — a SEPARATE measure) ─
+
+describe("summarizeMajorDevelopments", () => {
+  const dev = (over: Partial<CommunityInvestmentRecord> & { id: string }) =>
+    rec({
+      source: "development",
+      funderType: "private_development",
+      funderName: "Developer",
+      amountAwarded: null,
+      announcedInvestment: null,
+      status: "under_construction",
+      ...over,
+    });
+
+  const DEV_RECORDS: CommunityInvestmentRecord[] = [
+    dev({ id: "d1", recipient: "Megasite A", announcedInvestment: 7_000_000_000, communityArea: "Alpha", links: ["https://a.example"] }),
+    dev({ id: "d2", recipient: "Megasite B", announcedInvestment: 500_000_000, communityArea: "Alpha" }),
+    dev({ id: "d3", recipient: "Beta Tower", announcedInvestment: 1_000_000_000, communityArea: "Beta" }),
+    dev({ id: "d4", recipient: "Fire Stadium (subset)", announcedInvestment: null, communityArea: "Alpha" }), // excluded (null)
+    dev({ id: "d5", recipient: "Advocate multi-site", announcedInvestment: 1_000_000_000, geometry: { kind: "citywide" }, communityArea: undefined }),
+    // A legacy KML development with no announced figure — excluded.
+    dev({ id: "d6", recipient: "Community POP Court", announcedInvestment: null, communityArea: "Alpha" }),
+    // A NON-development record with a stray amount — never counted here.
+    rec({ id: "g1", source: "cdg", funderType: "government", amountAwarded: 250_000, communityArea: "Alpha" }),
+  ];
+
+  it("citywide: counts + totals only developments with a real announced figure, ranked desc", () => {
+    const s = summarizeMajorDevelopments(DEV_RECORDS);
+    expect(s.count).toBe(4); // d1, d2, d3, d5 (d4/d6 null, g1 non-dev)
+    expect(s.totalAnnounced).toBe(7_000_000_000 + 500_000_000 + 1_000_000_000 + 1_000_000_000);
+    expect(s.developments.map((d) => d.recipient)).toEqual([
+      "Megasite A", // 7B
+      "Advocate multi-site", // 1B (name tiebreak: "Advocate" < "Beta")
+      "Beta Tower", // 1B
+      "Megasite B", // 500M
+    ]);
+    expect(s.developments[0].sourceLink).toBe("https://a.example");
+  });
+
+  it("scopes to a community area (point-stamped) and honors a limit", () => {
+    const s = summarizeMajorDevelopments(DEV_RECORDS, { communityArea: "Alpha", limit: 1 });
+    // Alpha has d1 (7B) and d2 (500M); citywide d5 has no communityArea and is excluded.
+    expect(s.count).toBe(2);
+    expect(s.totalAnnounced).toBe(7_500_000_000);
+    expect(s.developments).toHaveLength(1); // limited
+    expect(s.developments[0].recipient).toBe("Megasite A");
+  });
+
+  it("never combines announcedInvestment with amountAwarded (no banned figure key)", () => {
+    const s = summarizeMajorDevelopments(DEV_RECORDS);
+    expect(findBannedFigureKeys(s)).toEqual([]);
+  });
+});
+
+// ── HERO INVARIANT: megadev integration must not move the awarded total ───────
+
+describe("awarded hero is unchanged by megadev announced capital", () => {
+  it("citywideTotal equals an amountAwarded-only recompute even with billions in announced dev capital", () => {
+    const withDevs: CommunityInvestmentRecord[] = [
+      ...RECORDS,
+      rec({ id: "m1", source: "development", funderType: "private_development", year: 2024, amountAwarded: null, announcedInvestment: 7_000_000_000, communityArea: "Alpha", recipient: "1901" }),
+      rec({ id: "m2", source: "development", funderType: "private_development", year: 2022, amountAwarded: null, announcedInvestment: 9_000_000_000, communityArea: "Beta", recipient: "IQMP" }),
+    ];
+    const index = buildInvestmentIndex(withDevs, GEN);
+
+    // The awarded hero (citywideTotal) sums only real awarded dollars — the
+    // $16B announced never enters it.
+    const awardedOnlyInWindow = withDevs
+      .filter((r) => r.communityArea != null && r.year != null && r.year >= SINCE_YEAR && r.amountAwarded != null)
+      .reduce((s, r) => s + (r.amountAwarded as number), 0);
+    expect(index.citywideTotal).toBe(awardedOnlyInWindow);
+
+    // And it matches the hero with the developments removed entirely.
+    const withoutDevs = buildInvestmentIndex(RECORDS, GEN);
+    expect(index.citywideTotal).toBe(withoutDevs.citywideTotal);
   });
 });
 
