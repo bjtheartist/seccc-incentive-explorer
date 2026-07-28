@@ -156,9 +156,12 @@ export interface CommunityInvestmentAnalysis {
   /** All-time tax-credit capital (LIHTC + NMTC) stamped to this community — a
    * SEPARATE measure from totalAwarded, never summed with awarded dollars. */
   creditCapital: number;
-  /** In-window yeared records + unYeared records — the hero's "grants & projects". */
+  /** GRANT-CLASS records in the since-2020 view (in-window yeared + unYeared) —
+   * the hero's "grants & projects". Excludes the non-grant capital classes
+   * (tif_subsidy / federal_program / tax_credit), which have their own count-free
+   * capital row and are never labeled "grants". */
   recordCount: number;
-  /** Records with a null year — counted, never dollared. */
+  /** Grant-class records with a null year — counted, never dollared. */
   unYeared: number;
   /** [min, max] in-window year present, or null when no in-window yeared record. */
   span: { min: number; max: number } | null;
@@ -391,9 +394,20 @@ export function analyzeCommunityArea(
   const inView = mine.filter(isInSinceView);
   if (inView.length === 0) return null;
 
-  const inWindow = inView.filter(isInWindow);
+  // GRANT-CLASS FIREWALL: every AWARDED-dollar breakdown and every "grants &
+  // projects" count below is computed over grant-class records ONLY. The four
+  // non-grant capital classes (tif_subsidy / federal_program / tax_credit) carry
+  // amountAwarded=null; they have their OWN StatusCards capital row + the print
+  // brief's Capital-class context (fed from `mine` via authorizedTif /
+  // federalProgram / creditCapital below), so they must NEVER surface in an
+  // "Awarded dollars by program / funder type / year" chart as a $0 bar, nor be
+  // counted as "grants & projects". `development` is grant-class (its money is
+  // announcedInvestment, surfaced separately) so it stays in — a real "project".
+  const grantInView = inView.filter((r) => r.capitalClass === "grant");
+
+  const inWindow = grantInView.filter(isInWindow);
   const totalAwarded = sumInWindowAwarded(inWindow);
-  const unYeared = inView.filter((r) => r.year == null).length;
+  const unYeared = grantInView.filter((r) => r.year == null).length;
   const medianAward = median(
     inWindow.filter((r) => r.amountAwarded != null && r.amountAwarded > 0).map((r) => r.amountAwarded as number),
   );
@@ -430,13 +444,15 @@ export function analyzeCommunityArea(
     // measure, summed over every record (not the since-2020 window), never folded
     // into totalAwarded.
     creditCapital: sumCreditCapital(mine),
-    recordCount: inView.length,
+    // "N grants & projects" — grant-class records ONLY (non-grant capital classes
+    // are counted in the capital row, never here).
+    recordCount: grantInView.length,
     unYeared,
     span,
     latestYear,
-    byFunderType: funderTypeBreakdown(inView, totalAwarded),
+    byFunderType: funderTypeBreakdown(grantInView, totalAwarded),
     byYear: yearBreakdown(inWindow, latestYear),
-    bySource: sourceBreakdown(inView),
+    bySource: sourceBreakdown(grantInView),
     topRecipients: topRecipients(inWindow, 10),
     topFunders: topFunders(inWindow, 8),
     equity,

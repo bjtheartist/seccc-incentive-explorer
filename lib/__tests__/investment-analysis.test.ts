@@ -341,6 +341,54 @@ describe("analysis carries the non-grant capital measures + median award", () =>
   });
 });
 
+// ── GRANT-CLASS FIREWALL: non-grant capital never enters awarded breakdowns ───
+
+describe("analyzeCommunityArea grant-class firewall (SourceBars / recordCount)", () => {
+  // Alpha's 5 grant records + one of each non-grant capital class, all stamped to
+  // Alpha and in the since-2020 view (amountAwarded null by design).
+  const WITH_CAPITAL: CommunityInvestmentRecord[] = [
+    ...RECORDS,
+    rec({ id: "tif1", source: "tif", capitalClass: "tif_subsidy", funderType: "government", amountAwarded: null, authorizedAmount: 44_000_000, year: 2023, communityArea: "Alpha", recipient: "TIF RDA" }),
+    rec({ id: "hud1", source: "cdbg-home", capitalClass: "federal_program", funderType: "government", amountAwarded: null, authorizedAmount: 2_000_000, year: 2022, communityArea: "Alpha", recipient: "CDBG activity" }),
+    rec({ id: "lih1", source: "lihtc", capitalClass: "tax_credit", funderType: "government", amountAwarded: null, creditAmount: 1_500_000, year: 2021, communityArea: "Alpha", recipient: "LIHTC placement" }),
+  ];
+
+  const a = analyzeCommunityArea(WITH_CAPITAL, "Alpha", GEN)!;
+
+  it("bySource excludes the non-grant capital sources entirely (no $0 program bars)", () => {
+    const sources = a.bySource.map((s) => s.source);
+    expect(sources).not.toContain("tif");
+    expect(sources).not.toContain("cdbg-home");
+    expect(sources).not.toContain("lihtc");
+    expect(sources).not.toContain("nmtc");
+    // The grant sources it should surface are still present.
+    expect(sources).toContain("nof-small");
+    expect(sources).toContain("development");
+  });
+
+  it("recordCount + unYeared count grant-class records only (not TIF/CDBG/LIHTC)", () => {
+    // Grant-class in-view for Alpha is unchanged from the base fixture (5), even
+    // though three non-grant capital records are now stamped to Alpha.
+    expect(a.recordCount).toBe(5);
+    expect(a.unYeared).toBe(2);
+  });
+
+  it("byFunderType counts government grant records only (non-grant government excluded)", () => {
+    const gov = a.byFunderType.find((f) => f.funderType === "government")!;
+    // a1 + a2 only — the TIF/CDBG/LIHTC government records are NOT counted.
+    expect(gov.count).toBe(2);
+    expect(gov.awardedDollars).toBe(300000);
+  });
+
+  it("keeps the non-grant capital totals (from `mine`) intact beside the firewall", () => {
+    expect(a.authorizedTif).toBe(44_000_000);
+    expect(a.federalProgram).toBe(2_000_000);
+    expect(a.creditCapital).toBe(1_500_000);
+    // The awarded total stays grant-only.
+    expect(a.totalAwarded).toBe(350000);
+  });
+});
+
 describe("computeInvestmentFindings", () => {
   const a = analyzeCommunityArea(RECORDS, "Alpha", GEN)!;
   const findings = computeInvestmentFindings(a);
