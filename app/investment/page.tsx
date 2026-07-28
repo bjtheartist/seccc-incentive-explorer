@@ -120,7 +120,14 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                           <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#0C1B33]/[0.06]">
                             <div
                               className="h-full rounded-full"
-                              style={{ width: `${Math.max(pct * 100, 0.5)}%`, backgroundColor: MAGNITUDE_HUE }}
+                              style={{
+                                // Honest linear width — no shared floor that would render a
+                                // >100x dollar spread as identical bars; 1px minWidth only keeps
+                                // a nonzero value from vanishing entirely (the $ text is the read).
+                                width: `${pct * 100}%`,
+                                minWidth: row.totalAwarded > 0 ? "1px" : 0,
+                                backgroundColor: MAGNITUDE_HUE,
+                              }}
                             />
                           </div>
                           <span className="shrink-0 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/40">

@@ -157,3 +157,18 @@ describe("analyzeCommunityArea — edge cases", () => {
     expect(analyzeCommunityArea(RECORDS, "Nowhere", GEN)).toBeNull();
   });
 });
+
+// Regression: review finding — 999.5K..999.99K must roll to $1.0M, never "$1000K".
+import { formatCompactDollars } from "../../components/investment/format";
+
+describe("formatCompactDollars boundary rollover", () => {
+  it("rolls 999,750 over to $1.0M instead of $1000K", () => {
+    expect(formatCompactDollars(999_750)).toBe("$1.0M");
+  });
+  it("keeps 999,400 as $999K", () => {
+    expect(formatCompactDollars(999_400)).toBe("$999K");
+  });
+  it("negative boundary mirrors", () => {
+    expect(formatCompactDollars(-999_900)).toBe("$-1.0M");
+  });
+});

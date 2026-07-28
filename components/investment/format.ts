@@ -17,7 +17,12 @@ export function formatCompactDollars(n: number | null | undefined): string {
   const abs = Math.abs(n);
   if (abs >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
   if (abs >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `$${Math.round(n / 1_000)}K`;
+  if (abs >= 1_000) {
+    const k = Math.round(n / 1_000);
+    // Rounding can carry 999.5K over the boundary — roll to $1.0M, never "$1000K".
+    if (Math.abs(k) >= 1_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+    return `$${k}K`;
+  }
   return `$${Math.round(n)}`;
 }
 
