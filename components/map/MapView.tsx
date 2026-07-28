@@ -59,6 +59,7 @@ import {
   INVESTMENT_FALLBACK_COLOR,
   CAPITAL_CLASS_OUTLINE,
   buildMegaprojectFeatures,
+  excludeMegaprojectFeatures,
   megaprojectFeatureCollection,
   summarizeMegaprojects,
   MEGAPROJECT_STATUS_GROUP_COLORS,
@@ -79,6 +80,8 @@ import {
 import {
   loadStoredInvestmentViewMode,
   storeInvestmentViewMode,
+  loadStoredInvestmentMegaprojectsVisible,
+  storeInvestmentMegaprojectsVisible,
   buildInvestmentArcData,
   indexFunderHqsByName,
   makeArcWidthScale,
@@ -181,13 +184,13 @@ export default function MapView() {
   // on every render.
   const [ownerClustersPresentTypes, setOwnerClustersPresentTypes] = useState<OwnerType[]>([]);
 
-  // Admin-gated "Community investment" layer (public + private dollars sited
-  // citywide). Same gating precedent as the ownership-cluster layer above:
+  // Admin-gated "Community investment" layer with public/philanthropic base
+  // views and an independent private-development overlay. Same gating precedent:
   // rendered only when adminSessionActive, fetched once per toggle-on from the
   // gated /api/owner-file/investment endpoint (a small static export, not a
   // per-viewport query), and sessionStorage-backed so the toggle survives the
-  // /report round-trip that remounts MapView. Circle layer, colored by
-  // funderType and sized by amountAwarded; citywide records never plot.
+  // /report round-trip that remounts MapView. Base circles are colored by
+  // funderType and sized by their own capital field; citywide records never plot.
   const [communityInvestmentVisible, setCommunityInvestmentVisible] = useState<boolean>(() =>
     loadStoredCommunityInvestmentVisible()
   );
@@ -259,11 +262,19 @@ export default function MapView() {
     setInvestmentViewMode(mode);
     storeInvestmentViewMode(mode);
   }, []);
+  const [investmentMegaprojectsVisible, setInvestmentMegaprojectsVisible] = useState<boolean>(() =>
+    loadStoredInvestmentMegaprojectsVisible()
+  );
+  const setInvestmentMegaprojectsVisiblePersistent = useCallback((visible: boolean) => {
+    setInvestmentMegaprojectsVisible(visible);
+    storeInvestmentMegaprojectsVisible(visible);
+  }, []);
   // Foundation-HQ coordinates from the last gated fetch — the Arcs source.
   const investmentFunderHqsRef = useRef<FunderHq[]>([]);
   // The one deck.gl overlay (created on first entry into a non-Dots mode, torn
   // down when the layer is hidden / mode returns to Dots / on unmount).
   const prevInvestmentViewModeRef = useRef<string | null>(null);
+  const prevInvestmentMegaprojectsVisibleRef = useRef<boolean | null>(null);
   const deckOverlayRef = useRef<MapboxOverlay | null>(null);
   // The shared mapbox dot popup, kept in a ref so the deck effect can close it
   // when entering a non-Dots mode (deck's picking tooltip takes over there).
@@ -271,14 +282,14 @@ export default function MapView() {
   // "N grants without a mapped funder HQ shown as dots" — the Arcs fallback count.
   const [investmentArcMissingHqCount, setInvestmentArcMissingHqCount] = useState(0);
 
-  // Megaprojects mode: the mapbox-only view of the major-development point
+  // Megaprojects overlay: the mapbox-only layer of the major-development point
   // records. Built once per fetch (funderType private_development subset, sized
   // 6–24px by announcedInvestment, stamped with status group + truncated label)
   // and stashed in a ref for the source; its summary (per-group counts + total
   // ANNOUNCED capital) and the citywide (non-plotting) development names feed the
-  // legend. Rendered independent of the year/funderType filters — development
-  // rows carry a null year, so a bounded year window would empty the view, and the
-  // set is by definition the whole private-development layer.
+  // legend. It can sit over any base view and is independent of the
+  // year/funderType filters. Development rows carry a null year, so a bounded
+  // year window would empty the view.
   const megaprojectFeaturesRef = useRef<MegaprojectPointFeature[]>([]);
   const [megaprojectSummary, setMegaprojectSummary] = useState<MegaprojectSummary | null>(null);
   const [investmentCitywideDevelopmentNames, setInvestmentCitywideDevelopmentNames] = useState<string[]>([]);
@@ -1526,13 +1537,13 @@ export default function MapView() {
       map.on("mouseenter", "community-investment-points", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "community-investment-points", () => { map.getCanvas().style.cursor = ""; });
 
-      /* ── Megaprojects view mode (mapbox-only) ──
-         A SECOND source/layer pair for the admin Megaprojects view: ONLY the
+      /* ── Megaprojects overlay (mapbox-only) ──
+         A SECOND source/layer pair for the admin Megaprojects overlay: ONLY the
          major-development point records, circles colored by status GROUP and
          sized by announcedInvestment (radiusPx, 6–24px, precomputed in
          buildMegaprojectFeatures), plus a zoom-gated project-name label layer.
-         Hidden by default; the deck view-mode effect shows this pair (and hides
-         the base dots) only in "megaprojects" mode. No deck.gl — plain mapbox. */
+         Hidden by default; the view-mode effect shows this pair independently
+         of the selected base view. No deck.gl — plain mapbox. */
       map.addSource("community-investment-megaprojects", { type: "geojson", data: EMPTY_FC });
 
       map.addLayer({
@@ -1956,12 +1967,23 @@ export default function MapView() {
     if (fromUrl.yearWindow) setInvestmentYearRange(fromUrl.yearWindow);
     if ("funderTypes" in fromUrl) {
       setInvestmentFunderTypes(funderTypeRecordFromSession(fromUrl.funderTypes));
+      if (fromUrl.funderTypes?.includes("private_development")) {
+        setInvestmentMegaprojectsVisiblePersistent(true);
+      }
     }
 
-    // Optional view mode (e.g. /map?investment=1&mode=megaprojects). Validated
-    // against the known modes and persisted so it survives the /report remount.
+    // Optional base view mode. The former mode=megaprojects deep link migrates
+    // to Dots + the independent overlay so existing links keep their meaning.
     const modeParam = params.get("mode");
-    if (isInvestmentViewMode(modeParam)) setInvestmentViewModePersistent(modeParam);
+    if (modeParam === "megaprojects") {
+      setInvestmentViewModePersistent("dots");
+      setInvestmentMegaprojectsVisiblePersistent(true);
+    } else if (isInvestmentViewMode(modeParam)) {
+      setInvestmentViewModePersistent(modeParam);
+    }
+    const megaprojectsParam = params.get("megaprojects");
+    if (megaprojectsParam === "1") setInvestmentMegaprojectsVisiblePersistent(true);
+    if (megaprojectsParam === "0") setInvestmentMegaprojectsVisiblePersistent(false);
 
     setCommunityInvestmentVisiblePersistent(true);
 
@@ -1974,7 +1996,12 @@ export default function MapView() {
         mapRef.current.flyTo({ center: [ca.lon, ca.lat], zoom: 12.5, duration: 1500 });
       }
     }
-  }, [loaded, setCommunityInvestmentVisiblePersistent, setInvestmentViewModePersistent]);
+  }, [
+    loaded,
+    setCommunityInvestmentVisiblePersistent,
+    setInvestmentMegaprojectsVisiblePersistent,
+    setInvestmentViewModePersistent,
+  ]);
 
   const handleGenerateSnapshot = useCallback(async () => {
     if (isGeneratingSnapshot) return;
@@ -2318,13 +2345,15 @@ export default function MapView() {
           investmentFeaturesRef.current = result.pointFeatures;
           investmentCitywideEntriesRef.current = result.citywideEntries;
           investmentFunderHqsRef.current = result.funderHqs;
-          // Megaprojects mode: the development subset, built once and summarized
+          // Megaprojects overlay: the development subset, built once and summarized
           // for the legend (unaffected by the year/funderType filters below).
           const megaFeatures = buildMegaprojectFeatures(result.pointFeatures);
           megaprojectFeaturesRef.current = megaFeatures;
           setMegaprojectSummary(summarizeMegaprojects(megaFeatures));
           setInvestmentCitywideDevelopmentNames(result.citywideDevelopmentNames);
-          setInvestmentPresentFunderTypes(result.presentFunderTypes);
+          setInvestmentPresentFunderTypes(
+            result.presentFunderTypes.filter((type) => type !== "private_development")
+          );
           setInvestmentPresentCapitalClasses(result.presentCapitalClasses);
           setInvestmentFunderHqCount(result.funderHqs.length);
           setInvestmentCitywide(result.citywide);
@@ -2357,11 +2386,15 @@ export default function MapView() {
     if (!map || !loaded || !communityInvestmentVisible || !communityInvestmentLoaded) return;
     const src = map.getSource("community-investment") as mapboxgl.GeoJSONSource | undefined;
     if (!src) return;
-    const activeFunderTypes = new Set<FunderType>(FUNDER_TYPE_ORDER.filter((k) => investmentFunderTypes[k]));
-    const filtered = filterInvestmentPointFeatures(investmentFeaturesRef.current, {
-      yearRangeId: investmentYearRange,
-      activeFunderTypes,
-    });
+    const activeFunderTypes = new Set<FunderType>(
+      FUNDER_TYPE_ORDER.filter((k) => k !== "private_development" && investmentFunderTypes[k])
+    );
+    const filtered = excludeMegaprojectFeatures(
+      filterInvestmentPointFeatures(investmentFeaturesRef.current, {
+        yearRangeId: investmentYearRange,
+        activeFunderTypes,
+      })
+    );
     src.setData(investmentFeatureCollection(filtered));
     // Re-scope the legend's citywide figure to the SAME filters as the dots, so
     // narrowing to one year never leaves an unfiltered "$X awarded" reading as if
@@ -2436,7 +2469,8 @@ export default function MapView() {
   }, [investmentDensityMetric]);
 
   /* ── Community-investment layer: deck.gl view modes (Arcs / Density) ──
-     Owns the base circle layer's visibility (visible ONLY in Dots mode) and the
+     Owns the base circle layer's visibility (visible ONLY in Dots mode), the
+     independent Megaprojects mapbox overlay, and the
      single deck.gl MapboxOverlay lifecycle. The overlay is created lazily on
      first entry into a non-Dots mode and FULLY removed (removeControl → deck
      finalize) when the layer is hidden, the mode returns to Dots, or the
@@ -2456,12 +2490,13 @@ export default function MapView() {
     if (map.getLayer(baseId)) {
       map.setLayoutProperty(baseId, "visibility", layerVisible && mode === "dots" ? "visible" : "none");
     }
-    // Megaprojects mode (mapbox-only, NO deck): show the megaproject circle +
-    // label layers and feed their source ONLY in that mode. Rendered independent
+    // Megaprojects overlay (mapbox-only, NO deck): show the circle + label
+    // layers independently of the selected base view. Rendered independent
     // of the year/funderType filters — development rows carry a null year, so a
     // bounded window would empty the view, and the set is by definition the whole
     // private-development layer.
-    const megaVisible = layerVisible && communityInvestmentLoaded && mode === "megaprojects";
+    const megaVisible =
+      layerVisible && communityInvestmentLoaded && investmentMegaprojectsVisible;
     for (const id of [
       "community-investment-megaproject-points",
       "community-investment-megaproject-labels",
@@ -2474,17 +2509,22 @@ export default function MapView() {
       const megaSrc = map.getSource("community-investment-megaprojects") as mapboxgl.GeoJSONSource | undefined;
       megaSrc?.setData(megaprojectFeatureCollection(megaprojectFeaturesRef.current));
     }
-    // Non-Dots modes hand picking to deck — close the shared mapbox dot popup,
-    // but ONLY on the actual transition into a non-Dots mode: this effect also
+    // Close the shared mapbox popup on an actual view or overlay transition.
+    // This effect also
     // re-runs on unrelated filter changes, and the popup instance is shared with
     // the vacant-property and owner-cluster layers, which must keep theirs open.
-    // Dismiss on ANY mode transition (review finding: Megaprojects→Dots left an
-    // orphaned popup when a year filter hides the underlying development dot).
     // Unrelated re-runs (filter changes) still keep other layers' popups open.
-    if (prevInvestmentViewModeRef.current !== null && prevInvestmentViewModeRef.current !== mode) {
+    const modeChanged =
+      prevInvestmentViewModeRef.current !== null &&
+      prevInvestmentViewModeRef.current !== mode;
+    const megaprojectsChanged =
+      prevInvestmentMegaprojectsVisibleRef.current !== null &&
+      prevInvestmentMegaprojectsVisibleRef.current !== investmentMegaprojectsVisible;
+    if (modeChanged || megaprojectsChanged) {
       sharedDotPopupRef.current?.remove();
     }
     prevInvestmentViewModeRef.current = mode;
+    prevInvestmentMegaprojectsVisibleRef.current = investmentMegaprojectsVisible;
 
     const removeOverlay = () => {
       if (deckOverlayRef.current) {
@@ -2498,7 +2538,7 @@ export default function MapView() {
     };
 
     // The deck.gl overlay drives ONLY Arcs + Density. Dots and Megaprojects are
-    // mapbox-only, so neither creates an overlay (Megaprojects handled above).
+    // mapbox-only, so neither creates the deck overlay.
     const overlayActive = layerVisible && communityInvestmentLoaded && (mode === "arcs" || mode === "density");
     if (!overlayActive) {
       removeOverlay();
@@ -2506,11 +2546,15 @@ export default function MapView() {
       return;
     }
 
-    const activeFunderTypes = new Set<FunderType>(FUNDER_TYPE_ORDER.filter((k) => investmentFunderTypes[k]));
-    const filtered = filterInvestmentPointFeatures(investmentFeaturesRef.current, {
-      yearRangeId: investmentYearRange,
-      activeFunderTypes,
-    });
+    const activeFunderTypes = new Set<FunderType>(
+      FUNDER_TYPE_ORDER.filter((k) => k !== "private_development" && investmentFunderTypes[k])
+    );
+    const filtered = excludeMegaprojectFeatures(
+      filterInvestmentPointFeatures(investmentFeaturesRef.current, {
+        yearRangeId: investmentYearRange,
+        activeFunderTypes,
+      })
+    );
 
     let layers: Layer[] = [];
     if (mode === "arcs") {
@@ -2601,6 +2645,7 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     investmentViewMode,
+    investmentMegaprojectsVisible,
     investmentYearRange,
     investmentFunderTypes,
     investmentDensityMetric,
@@ -2720,10 +2765,12 @@ export default function MapView() {
           investmentArcMissingHqCount={investmentArcMissingHqCount}
           investmentMegaprojectSummary={megaprojectSummary}
           investmentMegaprojectCitywideNames={investmentCitywideDevelopmentNames}
+          investmentMegaprojectsVisible={investmentMegaprojectsVisible}
           onSetCommunityInvestmentVisible={setCommunityInvestmentVisiblePersistent}
           onSetInvestmentYearRange={setInvestmentYearRangePersistent}
           onSetInvestmentViewMode={setInvestmentViewModePersistent}
           onSetInvestmentDensityMetric={setInvestmentDensityMetric}
+          onSetInvestmentMegaprojectsVisible={setInvestmentMegaprojectsVisiblePersistent}
           onToggleInvestmentFunderType={toggleInvestmentFunderType}
           onClose={() => setLegendOpen(false)}
           onToggleZone={toggleZone}

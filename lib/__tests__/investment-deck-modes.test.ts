@@ -11,6 +11,8 @@ import {
   densityRecordWeight,
   densityWeightForMetric,
   INVESTMENT_DENSITY_METRICS,
+  DEFAULT_INVESTMENT_MEGAPROJECTS_VISIBLE,
+  INVESTMENT_MEGAPROJECTS_STORAGE_KEY,
   INVESTMENT_VIEW_MODES,
   INVESTMENT_VIEW_MODE_STORAGE_KEY,
   makeArcWidthScale,
@@ -18,10 +20,12 @@ import {
   hexToRgbArray,
   indexFunderHqsByName,
   isInvestmentViewMode,
+  loadStoredInvestmentMegaprojectsVisible,
   loadStoredInvestmentViewMode,
   normalizeFunderNameForHqJoin,
   parseFunderHqCsv,
   storeInvestmentViewMode,
+  storeInvestmentMegaprojectsVisible,
   type FunderHq,
 } from "@/lib/investment-deck-modes";
 
@@ -73,8 +77,8 @@ function feature(overrides: {
 describe("investment view-mode state", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("exposes exactly four modes with dots as the default and megaprojects last", () => {
-    expect(INVESTMENT_VIEW_MODES).toEqual(["dots", "arcs", "density", "megaprojects"]);
+  it("exposes exactly three base modes with dots as the default", () => {
+    expect(INVESTMENT_VIEW_MODES).toEqual(["dots", "arcs", "density"]);
     expect(DEFAULT_INVESTMENT_VIEW_MODE).toBe("dots");
   });
 
@@ -86,7 +90,7 @@ describe("investment view-mode state", () => {
   it("guards the mode enum", () => {
     expect(isInvestmentViewMode("arcs")).toBe(true);
     expect(isInvestmentViewMode("density")).toBe(true);
-    expect(isInvestmentViewMode("megaprojects")).toBe(true);
+    expect(isInvestmentViewMode("megaprojects")).toBe(false);
     expect(isInvestmentViewMode("heatmap")).toBe(false);
     expect(isInvestmentViewMode(null)).toBe(false);
     expect(isInvestmentViewMode(2)).toBe(false);
@@ -110,11 +114,6 @@ describe("investment view-mode state", () => {
     expect(store.get(INVESTMENT_VIEW_MODE_STORAGE_KEY)).toBe("arcs");
     expect(loadStoredInvestmentViewMode()).toBe("arcs");
 
-    // The fourth mode round-trips identically (the deep-link mode=megaprojects seam).
-    storeInvestmentViewMode("megaprojects");
-    expect(store.get(INVESTMENT_VIEW_MODE_STORAGE_KEY)).toBe("megaprojects");
-    expect(loadStoredInvestmentViewMode()).toBe("megaprojects");
-
     // Default is persisted as REMOVAL (mirrors the toggle's "off = removed").
     storeInvestmentViewMode("dots");
     expect(store.has(INVESTMENT_VIEW_MODE_STORAGE_KEY)).toBe(false);
@@ -131,6 +130,52 @@ describe("investment view-mode state", () => {
       },
     });
     expect(loadStoredInvestmentViewMode()).toBe("dots");
+  });
+});
+
+describe("investment Megaprojects overlay state", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("uses its own tab-scoped key and defaults off", () => {
+    expect(INVESTMENT_MEGAPROJECTS_STORAGE_KEY).toBe("cie_investment_megaprojects_visible");
+    expect(INVESTMENT_MEGAPROJECTS_STORAGE_KEY).not.toBe(INVESTMENT_VIEW_MODE_STORAGE_KEY);
+    expect(DEFAULT_INVESTMENT_MEGAPROJECTS_VISIBLE).toBe(false);
+    expect(loadStoredInvestmentMegaprojectsVisible()).toBe(false);
+  });
+
+  it("round-trips independently and stores off as key-removal", () => {
+    const store = new Map<string, string>();
+    vi.stubGlobal("window", {
+      sessionStorage: {
+        getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
+        setItem: (k: string, v: string) => void store.set(k, String(v)),
+        removeItem: (k: string) => void store.delete(k),
+      },
+    });
+
+    storeInvestmentMegaprojectsVisible(true);
+    expect(store.get(INVESTMENT_MEGAPROJECTS_STORAGE_KEY)).toBe("1");
+    expect(loadStoredInvestmentMegaprojectsVisible()).toBe(true);
+
+    storeInvestmentMegaprojectsVisible(false);
+    expect(store.has(INVESTMENT_MEGAPROJECTS_STORAGE_KEY)).toBe(false);
+    expect(loadStoredInvestmentMegaprojectsVisible()).toBe(false);
+  });
+
+  it("migrates the former fourth view mode to Dots plus overlay-on", () => {
+    const store = new Map<string, string>([[INVESTMENT_VIEW_MODE_STORAGE_KEY, "megaprojects"]]);
+    vi.stubGlobal("window", {
+      sessionStorage: {
+        getItem: (k: string) => (store.has(k) ? store.get(k)! : null),
+        setItem: (k: string, v: string) => void store.set(k, String(v)),
+        removeItem: (k: string) => void store.delete(k),
+      },
+    });
+
+    expect(loadStoredInvestmentViewMode()).toBe("dots");
+    expect(loadStoredInvestmentMegaprojectsVisible()).toBe(true);
+    expect(store.get(INVESTMENT_MEGAPROJECTS_STORAGE_KEY)).toBe("1");
+    expect(store.has(INVESTMENT_VIEW_MODE_STORAGE_KEY)).toBe(false);
   });
 });
 

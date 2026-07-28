@@ -9,7 +9,7 @@
  * palettes), mirroring the split between lib/community-investment-layer.ts
  * (client transforms) and MapView (imperative map wiring).
  *
- * Four modes, sessionStorage-persisted exactly like the layer toggle
+ * Three base modes, sessionStorage-persisted exactly like the layer toggle
  * (lib/community-investment-toggle.ts):
  *   • dots        — the existing mapbox circle layer, unchanged (the default).
  *   • arcs        — a deck.gl ArcLayer of PHILANTHROPIC grants drawn from the
@@ -18,14 +18,11 @@
  *                   whose funder has no HQ row fall back to dots and are counted.
  *   • density     — a deck.gl HexagonLayer over ALL point records weighted by
  *                   amountAwarded (null → 0), 250m bins, 2D (elevation off).
- *   • megaprojects— a mapbox-only view (no deck.gl) of ONLY the major-development
- *                   point records (source "development"), circles sized by
- *                   announcedInvestment and colored by status GROUP, with a
- *                   zoom-gated project-name label layer. The megaproject render
- *                   model (status groups, colors, radius scale, feature builder,
- *                   summary) lives in lib/community-investment-layer.ts next to
- *                   the other map-layer transforms; this module only owns the
- *                   mode enum + persistence + captions.
+ *
+ * Megaprojects is an independent, session-persisted map overlay rather than a
+ * fourth mutually exclusive mode. It can be shown over any base view and uses a
+ * mapbox-only layer of major-development records, sized by announcedInvestment
+ * and colored by status group.
  */
 
 import type { InvestmentPointFeature } from "./community-investment-layer";
@@ -33,8 +30,8 @@ import type { FunderType } from "./community-investment";
 
 // ── View-mode state model ────────────────────────────────────────────────────
 
-/** The four view modes, in control order. `dots` first (the unchanged default). */
-export const INVESTMENT_VIEW_MODES = ["dots", "arcs", "density", "megaprojects"] as const;
+/** The three mutually exclusive base views, in control order. */
+export const INVESTMENT_VIEW_MODES = ["dots", "arcs", "density"] as const;
 export type InvestmentViewMode = (typeof INVESTMENT_VIEW_MODES)[number];
 
 export const DEFAULT_INVESTMENT_VIEW_MODE: InvestmentViewMode = "dots";
@@ -44,7 +41,6 @@ export const INVESTMENT_VIEW_MODE_LABELS: Record<InvestmentViewMode, string> = {
   dots: "Dots",
   arcs: "Arcs",
   density: "Density",
-  megaprojects: "Megaprojects",
 };
 
 /**
@@ -55,7 +51,7 @@ export const INVESTMENT_VIEW_MODE_LABELS: Record<InvestmentViewMode, string> = {
  */
 export const INVESTMENT_VIEW_MODE_STORAGE_KEY = "cie_investment_view_mode";
 
-/** Type guard: is `value` one of the three known modes. */
+/** Type guard: is `value` one of the three known base modes. */
 export function isInvestmentViewMode(value: unknown): value is InvestmentViewMode {
   return typeof value === "string" && (INVESTMENT_VIEW_MODES as readonly string[]).includes(value);
 }
@@ -82,6 +78,51 @@ export function storeInvestmentViewMode(mode: InvestmentViewMode): void {
       window.sessionStorage.removeItem(INVESTMENT_VIEW_MODE_STORAGE_KEY);
     } else {
       window.sessionStorage.setItem(INVESTMENT_VIEW_MODE_STORAGE_KEY, mode);
+    }
+  } catch {
+    // Persistence is best-effort; a full/blocked store must never break the map.
+  }
+}
+
+// ── Megaproject overlay state ────────────────────────────────────────────────
+
+export const INVESTMENT_MEGAPROJECTS_STORAGE_KEY = "cie_investment_megaprojects_visible";
+export const DEFAULT_INVESTMENT_MEGAPROJECTS_VISIBLE = false;
+const LEGACY_MEGAPROJECT_VIEW_MODE = "megaprojects";
+
+/**
+ * Read the independent Megaprojects overlay preference. The final branch
+ * migrates the former fourth view mode into Dots + overlay-on so saved sessions
+ * and existing `mode=megaprojects` behavior do not silently disappear.
+ */
+export function loadStoredInvestmentMegaprojectsVisible(): boolean {
+  if (typeof window === "undefined") return DEFAULT_INVESTMENT_MEGAPROJECTS_VISIBLE;
+  try {
+    if (window.sessionStorage.getItem(INVESTMENT_MEGAPROJECTS_STORAGE_KEY) === "1") {
+      return true;
+    }
+    if (window.sessionStorage.getItem(INVESTMENT_VIEW_MODE_STORAGE_KEY) === LEGACY_MEGAPROJECT_VIEW_MODE) {
+      window.sessionStorage.setItem(INVESTMENT_MEGAPROJECTS_STORAGE_KEY, "1");
+      window.sessionStorage.removeItem(INVESTMENT_VIEW_MODE_STORAGE_KEY);
+      return true;
+    }
+    return DEFAULT_INVESTMENT_MEGAPROJECTS_VISIBLE;
+  } catch {
+    return DEFAULT_INVESTMENT_MEGAPROJECTS_VISIBLE;
+  }
+}
+
+/** Persist the overlay; off is represented by key removal like the other map toggles. */
+export function storeInvestmentMegaprojectsVisible(visible: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (visible) {
+      window.sessionStorage.setItem(INVESTMENT_MEGAPROJECTS_STORAGE_KEY, "1");
+    } else {
+      window.sessionStorage.removeItem(INVESTMENT_MEGAPROJECTS_STORAGE_KEY);
+    }
+    if (window.sessionStorage.getItem(INVESTMENT_VIEW_MODE_STORAGE_KEY) === LEGACY_MEGAPROJECT_VIEW_MODE) {
+      window.sessionStorage.removeItem(INVESTMENT_VIEW_MODE_STORAGE_KEY);
     }
   } catch {
     // Persistence is best-effort; a full/blocked store must never break the map.

@@ -65,32 +65,34 @@ describe("MapLegendPanel investment view-mode control", () => {
     expect(html).not.toContain(CONTROL_MARKER);
   });
 
-  it("renders the four-mode control only when admin AND toggle on", () => {
+  it("renders one compact three-mode control only when admin AND toggle on", () => {
     const html = renderToStaticMarkup(
       <MapLegendPanel {...baseProps()} adminSessionActive={true} communityInvestmentVisible={true} />
     );
     expect(html).toContain(CONTROL_MARKER);
+    expect(html).toContain("grid-cols-3");
     expect(html).toContain(INVESTMENT_VIEW_MODE_LABELS.dots);
     expect(html).toContain(INVESTMENT_VIEW_MODE_LABELS.arcs);
     expect(html).toContain(INVESTMENT_VIEW_MODE_LABELS.density);
-    expect(html).toContain(INVESTMENT_VIEW_MODE_LABELS.megaprojects);
   });
 
-  it("renders the fourth Megaprojects mode admin-only (absent for non-admin / toggle off)", () => {
+  it("renders Megaprojects as a separate admin-only overlay switch", () => {
     const nonAdmin = renderToStaticMarkup(
       <MapLegendPanel {...baseProps()} adminSessionActive={false} communityInvestmentVisible={true} />
     );
-    expect(nonAdmin).not.toContain(INVESTMENT_VIEW_MODE_LABELS.megaprojects);
+    expect(nonAdmin).not.toContain("Toggle Megaprojects overlay");
 
     const toggleOff = renderToStaticMarkup(
       <MapLegendPanel {...baseProps()} adminSessionActive={true} communityInvestmentVisible={false} />
     );
-    expect(toggleOff).not.toContain(INVESTMENT_VIEW_MODE_LABELS.megaprojects);
+    expect(toggleOff).not.toContain("Toggle Megaprojects overlay");
 
     const on = renderToStaticMarkup(
       <MapLegendPanel {...baseProps()} adminSessionActive={true} communityInvestmentVisible={true} />
     );
-    expect(on).toContain(INVESTMENT_VIEW_MODE_LABELS.megaprojects);
+    expect(on).toContain("Toggle Megaprojects overlay");
+    expect(on).toContain("Additional layer");
+    expect(on).toContain("Major private developments");
   });
 
   it("shows the dot-size hint in Dots mode only", () => {
@@ -198,7 +200,7 @@ describe("MapLegendPanel investment view-mode control", () => {
     expect(records).not.toContain("$ awarded (hex bins, 250m)");
   });
 
-  it("Megaprojects renders the 4-status legend with counts, the EXACT announced-capital label, and the not-plotted note", () => {
+  it("Megaprojects overlay renders the status legend, announced-capital label, and not-plotted note", () => {
     const summary: MegaprojectSummary = {
       plottedCount: 106,
       groupCounts: { open: 12, building: 16, planned: 75, stalled: 3 },
@@ -209,7 +211,8 @@ describe("MapLegendPanel investment view-mode control", () => {
         {...baseProps()}
         adminSessionActive={true}
         communityInvestmentVisible={true}
-        investmentViewMode="megaprojects"
+        investmentViewMode="dots"
+        investmentMegaprojectsVisible={true}
         investmentMegaprojectSummary={summary}
         investmentMegaprojectCitywideNames={["Advocate Health Care South Side Investment"]}
       />
@@ -232,7 +235,28 @@ describe("MapLegendPanel investment view-mode control", () => {
     expect(html).toContain("Advocate Health Care South Side Investment");
   });
 
-  it("does not leak the megaproject announced-capital label into the other modes", () => {
+  it("can combine Megaprojects with another base view", () => {
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        communityInvestmentVisible={true}
+        investmentViewMode="arcs"
+        investmentFunderHqCount={12}
+        investmentMegaprojectsVisible={true}
+        investmentMegaprojectSummary={{
+          plottedCount: 1,
+          groupCounts: { open: 1, building: 0, planned: 0, stalled: 0 },
+          totalAnnounced: 1,
+        }}
+      />
+    );
+    expect(html).toContain("Foundation flows (12 tracked HQs)");
+    expect(html).toContain("Major developments (1 plotted)");
+    expect(html).toContain(MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL);
+  });
+
+  it("does not show the megaproject detail legend while the overlay is off", () => {
     for (const mode of ["dots", "arcs", "density"] as const) {
       const html = renderToStaticMarkup(
         <MapLegendPanel
@@ -240,6 +264,7 @@ describe("MapLegendPanel investment view-mode control", () => {
           adminSessionActive={true}
           communityInvestmentVisible={true}
           investmentViewMode={mode}
+          investmentMegaprojectsVisible={false}
           investmentMegaprojectSummary={{
             plottedCount: 1,
             groupCounts: { open: 1, building: 0, planned: 0, stalled: 0 },

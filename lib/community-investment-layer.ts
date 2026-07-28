@@ -477,6 +477,18 @@ export function buildMegaprojectFeatures(
   }));
 }
 
+/**
+ * Remove the private-development records rendered by the independent
+ * Megaprojects overlay from a base dots/arcs/density feed. This keeps the
+ * overlay switch honest: off removes those projects instead of leaving a
+ * second, less descriptive purple dot at the same coordinates.
+ */
+export function excludeMegaprojectFeatures(
+  features: readonly InvestmentPointFeature[],
+): InvestmentPointFeature[] {
+  return features.filter((f) => f.properties.funderType !== "private_development");
+}
+
 /** A FeatureCollection wrapper for the megaproject GeoJSONSource.setData. Pure. */
 export function megaprojectFeatureCollection(
   features: readonly MegaprojectPointFeature[],
