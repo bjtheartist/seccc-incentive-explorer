@@ -184,7 +184,12 @@ export function mapHrefForSession(session: InvestmentSession, area?: string): st
 /**
  * Extract investment context out of a URLSearchParams (the map deep-link). Only
  * present + valid keys appear on the result; `types` present with a full/absent
- * set leaves funderTypes off (= "all"), an empty `types=` yields the empty set.
+ * set leaves funderTypes off (= "all"). A `types=` that carries NO valid token —
+ * an empty `…&types=`, a truncated `…&types=phi`, or all-unknown tokens — is
+ * treated as the "all types" default rather than the empty set, so a hand-edited
+ * or clipped shared link never lands the recipient on a blank, seemingly-broken
+ * layer with every dot filtered off. (The deliberate all-off state is only ever
+ * reached through the map's own checkboxes / sessionStorage, not this URL seam.)
  */
 export function sessionFromQuery(params: URLSearchParams): InvestmentSession {
   const out: InvestmentSession = {};
@@ -197,7 +202,9 @@ export function sessionFromQuery(params: URLSearchParams): InvestmentSession {
     const ft = coerceFunderTypes(
       types.split(",").map((s) => s.trim()).filter((s) => s !== ""),
     );
-    if (ft !== undefined) out.funderTypes = ft;
+    // Only apply a real, non-empty subset. undefined (full/unusable set) OR an
+    // empty subset (no valid token) both fall through to the "all types" default.
+    if (ft !== undefined && ft.length > 0) out.funderTypes = ft;
   }
   return out;
 }

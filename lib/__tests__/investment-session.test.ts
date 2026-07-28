@@ -128,12 +128,27 @@ describe("investment-session URL helpers", () => {
     expect(sessionFromQuery(bad).yearWindow).toBeUndefined();
   });
 
-  it("treats a full type set in the query as 'all' (funderTypes absent), empty as none", () => {
+  it("treats a full type set in the query as 'all' (funderTypes absent)", () => {
     const full = new URLSearchParams("types=government,philanthropic,private_development");
     expect(sessionFromQuery(full).funderTypes).toBeUndefined();
+  });
 
-    const none = new URLSearchParams("types=");
-    expect(sessionFromQuery(none).funderTypes).toEqual([]);
+  it("treats an empty or malformed types= as the 'all types' default, never a blank layer", () => {
+    // A clipped shared link ending in `&types=` — no valid token → all types on.
+    const empty = new URLSearchParams("types=");
+    expect(sessionFromQuery(empty).funderTypes).toBeUndefined();
+
+    // A truncated token (`&types=phi`) or purely-unknown tokens → still all on,
+    // rather than the empty subset that would filter every dot off the map.
+    const truncated = new URLSearchParams("types=phi");
+    expect(sessionFromQuery(truncated).funderTypes).toBeUndefined();
+
+    const garbage = new URLSearchParams("types=foo,bar");
+    expect(sessionFromQuery(garbage).funderTypes).toBeUndefined();
+
+    // A single VALID token is still honored as a real subset.
+    const one = new URLSearchParams("types=philanthropic");
+    expect(sessionFromQuery(one).funderTypes).toEqual(["philanthropic"]);
   });
 });
 
