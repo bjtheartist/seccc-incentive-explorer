@@ -58,8 +58,14 @@ import {
   FUNDER_TYPE_ORDER,
   INVESTMENT_FALLBACK_COLOR,
   CAPITAL_CLASS_OUTLINE,
+  buildMegaprojectFeatures,
+  megaprojectFeatureCollection,
+  summarizeMegaprojects,
+  MEGAPROJECT_STATUS_GROUP_COLORS,
   type InvestmentPointFeature,
   type CitywideInvestmentEntry,
+  type MegaprojectPointFeature,
+  type MegaprojectSummary,
 } from "@/lib/community-investment-layer";
 import type { CapitalClass, FunderType } from "@/lib/community-investment";
 import { CHICAGO_COMMUNITY_AREAS } from "@/lib/community-areas";
@@ -81,6 +87,7 @@ import {
   HEXAGON_RADIUS_M,
   densityWeightForMetric,
   DEFAULT_INVESTMENT_DENSITY_METRIC,
+  isInvestmentViewMode,
   type InvestmentViewMode,
   type InvestmentDensityMetric,
   type InvestmentArcDatum,
@@ -263,6 +270,18 @@ export default function MapView() {
   const sharedDotPopupRef = useRef<mapboxgl.Popup | null>(null);
   // "N grants without a mapped funder HQ shown as dots" — the Arcs fallback count.
   const [investmentArcMissingHqCount, setInvestmentArcMissingHqCount] = useState(0);
+
+  // Megaprojects mode: the mapbox-only view of the major-development point
+  // records. Built once per fetch (funderType private_development subset, sized
+  // 6–24px by announcedInvestment, stamped with status group + truncated label)
+  // and stashed in a ref for the source; its summary (per-group counts + total
+  // ANNOUNCED capital) and the citywide (non-plotting) development names feed the
+  // legend. Rendered independent of the year/funderType filters — development
+  // rows carry a null year, so a bounded year window would empty the view, and the
+  // set is by definition the whole private-development layer.
+  const megaprojectFeaturesRef = useRef<MegaprojectPointFeature[]>([]);
+  const [megaprojectSummary, setMegaprojectSummary] = useState<MegaprojectSummary | null>(null);
+  const [investmentCitywideDevelopmentNames, setInvestmentCitywideDevelopmentNames] = useState<string[]>([]);
 
   // Polygon draw tool
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -1507,6 +1526,80 @@ export default function MapView() {
       map.on("mouseenter", "community-investment-points", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "community-investment-points", () => { map.getCanvas().style.cursor = ""; });
 
+      /* ── Megaprojects view mode (mapbox-only) ──
+         A SECOND source/layer pair for the admin Megaprojects view: ONLY the
+         major-development point records, circles colored by status GROUP and
+         sized by announcedInvestment (radiusPx, 6–24px, precomputed in
+         buildMegaprojectFeatures), plus a zoom-gated project-name label layer.
+         Hidden by default; the deck view-mode effect shows this pair (and hides
+         the base dots) only in "megaprojects" mode. No deck.gl — plain mapbox. */
+      map.addSource("community-investment-megaprojects", { type: "geojson", data: EMPTY_FC });
+
+      map.addLayer({
+        id: "community-investment-megaproject-points",
+        type: "circle",
+        source: "community-investment-megaprojects",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": [
+            "match", ["get", "statusGroup"],
+            "open", MEGAPROJECT_STATUS_GROUP_COLORS.open,
+            "building", MEGAPROJECT_STATUS_GROUP_COLORS.building,
+            "planned", MEGAPROJECT_STATUS_GROUP_COLORS.planned,
+            "stalled", MEGAPROJECT_STATUS_GROUP_COLORS.stalled,
+            INVESTMENT_FALLBACK_COLOR,
+          ],
+          // Precomputed 6–24px sqrt-domain radius (announcedInvestment); a
+          // null-capital development (e.g. the Fire-stadium subset row) sits at
+          // the 6px floor and its popup explains the null.
+          "circle-radius": ["to-number", ["get", "radiusPx"], 6],
+          "circle-opacity": 0.75,
+          "circle-stroke-width": 1.5,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+
+      map.addLayer({
+        id: "community-investment-megaproject-labels",
+        type: "symbol",
+        source: "community-investment-megaprojects",
+        // Labels appear only once zoomed in (>= 10.5) so the citywide view is not
+        // a wall of overlapping text; mapbox collision handling drops the rest.
+        minzoom: 10.5,
+        layout: {
+          visibility: "none",
+          "text-field": ["get", "label"],
+          "text-size": 11,
+          "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+          "text-anchor": "top",
+          "text-offset": [0, 0.7],
+          "text-allow-overlap": false,
+          "text-optional": true,
+          "text-max-width": 10,
+        },
+        paint: {
+          // Text wears TEXT tokens (ink + white halo), never the status color, so
+          // the label reads as a name and only the dot carries the status hue.
+          "text-color": "#0C1B33",
+          "text-halo-color": "#ffffff",
+          "text-halo-width": 1.5,
+        },
+      });
+
+      // Reuse the SAME development popup (buildInvestmentPopupHtml → "Announced")
+      // via the shared dot popup instance — click + hover wired exactly like the
+      // base community-investment-points layer.
+      map.on("click", "community-investment-megaproject-points", (e) => {
+        if (!e.features?.length) return;
+        const p = e.features[0].properties || {};
+        sharedDotPopup
+          .setLngLat(e.lngLat)
+          .setHTML(buildInvestmentPopupHtml(p))
+          .addTo(map);
+      });
+      map.on("mouseenter", "community-investment-megaproject-points", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "community-investment-megaproject-points", () => { map.getCanvas().style.cursor = ""; });
+
       // ── Polygon draw control ──
       const draw = new MapboxDraw({
         displayControlsDefault: false,
@@ -1865,6 +1958,11 @@ export default function MapView() {
       setInvestmentFunderTypes(funderTypeRecordFromSession(fromUrl.funderTypes));
     }
 
+    // Optional view mode (e.g. /map?investment=1&mode=megaprojects). Validated
+    // against the known modes and persisted so it survives the /report remount.
+    const modeParam = params.get("mode");
+    if (isInvestmentViewMode(modeParam)) setInvestmentViewModePersistent(modeParam);
+
     setCommunityInvestmentVisiblePersistent(true);
 
     const area = params.get("area");
@@ -1876,7 +1974,7 @@ export default function MapView() {
         mapRef.current.flyTo({ center: [ca.lon, ca.lat], zoom: 12.5, duration: 1500 });
       }
     }
-  }, [loaded, setCommunityInvestmentVisiblePersistent]);
+  }, [loaded, setCommunityInvestmentVisiblePersistent, setInvestmentViewModePersistent]);
 
   const handleGenerateSnapshot = useCallback(async () => {
     if (isGeneratingSnapshot) return;
@@ -2189,15 +2287,20 @@ export default function MapView() {
       if (!communityInvestmentVisible) {
         const src = map.getSource("community-investment") as mapboxgl.GeoJSONSource | undefined;
         if (src) src.setData(EMPTY_FC);
+        const megaSrc = map.getSource("community-investment-megaprojects") as mapboxgl.GeoJSONSource | undefined;
+        if (megaSrc) megaSrc.setData(EMPTY_FC);
         investmentFeaturesRef.current = [];
         investmentCitywideEntriesRef.current = [];
         investmentFunderHqsRef.current = [];
+        megaprojectFeaturesRef.current = [];
         setCommunityInvestmentLoaded(false);
         setInvestmentPresentFunderTypes([]);
         setInvestmentPresentCapitalClasses([]);
         setInvestmentFunderHqCount(0);
         setInvestmentCitywide(null);
         setInvestmentArcMissingHqCount(0);
+        setMegaprojectSummary(null);
+        setInvestmentCitywideDevelopmentNames([]);
       }
       return;
     }
@@ -2215,6 +2318,12 @@ export default function MapView() {
           investmentFeaturesRef.current = result.pointFeatures;
           investmentCitywideEntriesRef.current = result.citywideEntries;
           investmentFunderHqsRef.current = result.funderHqs;
+          // Megaprojects mode: the development subset, built once and summarized
+          // for the legend (unaffected by the year/funderType filters below).
+          const megaFeatures = buildMegaprojectFeatures(result.pointFeatures);
+          megaprojectFeaturesRef.current = megaFeatures;
+          setMegaprojectSummary(summarizeMegaprojects(megaFeatures));
+          setInvestmentCitywideDevelopmentNames(result.citywideDevelopmentNames);
           setInvestmentPresentFunderTypes(result.presentFunderTypes);
           setInvestmentPresentCapitalClasses(result.presentCapitalClasses);
           setInvestmentFunderHqCount(result.funderHqs.length);
@@ -2347,6 +2456,24 @@ export default function MapView() {
     if (map.getLayer(baseId)) {
       map.setLayoutProperty(baseId, "visibility", layerVisible && mode === "dots" ? "visible" : "none");
     }
+    // Megaprojects mode (mapbox-only, NO deck): show the megaproject circle +
+    // label layers and feed their source ONLY in that mode. Rendered independent
+    // of the year/funderType filters — development rows carry a null year, so a
+    // bounded window would empty the view, and the set is by definition the whole
+    // private-development layer.
+    const megaVisible = layerVisible && communityInvestmentLoaded && mode === "megaprojects";
+    for (const id of [
+      "community-investment-megaproject-points",
+      "community-investment-megaproject-labels",
+    ]) {
+      if (map.getLayer(id)) {
+        map.setLayoutProperty(id, "visibility", megaVisible ? "visible" : "none");
+      }
+    }
+    if (megaVisible) {
+      const megaSrc = map.getSource("community-investment-megaprojects") as mapboxgl.GeoJSONSource | undefined;
+      megaSrc?.setData(megaprojectFeatureCollection(megaprojectFeaturesRef.current));
+    }
     // Non-Dots modes hand picking to deck — close the shared mapbox dot popup,
     // but ONLY on the actual transition into a non-Dots mode: this effect also
     // re-runs on unrelated filter changes, and the popup instance is shared with
@@ -2367,7 +2494,9 @@ export default function MapView() {
       }
     };
 
-    const overlayActive = layerVisible && communityInvestmentLoaded && mode !== "dots";
+    // The deck.gl overlay drives ONLY Arcs + Density. Dots and Megaprojects are
+    // mapbox-only, so neither creates an overlay (Megaprojects handled above).
+    const overlayActive = layerVisible && communityInvestmentLoaded && (mode === "arcs" || mode === "density");
     if (!overlayActive) {
       removeOverlay();
       if (mode !== "arcs") setInvestmentArcMissingHqCount(0);
@@ -2586,6 +2715,8 @@ export default function MapView() {
           investmentViewMode={investmentViewMode}
           investmentDensityMetric={investmentDensityMetric}
           investmentArcMissingHqCount={investmentArcMissingHqCount}
+          investmentMegaprojectSummary={megaprojectSummary}
+          investmentMegaprojectCitywideNames={investmentCitywideDevelopmentNames}
           onSetCommunityInvestmentVisible={setCommunityInvestmentVisiblePersistent}
           onSetInvestmentYearRange={setInvestmentYearRangePersistent}
           onSetInvestmentViewMode={setInvestmentViewModePersistent}

@@ -9,15 +9,23 @@
  * palettes), mirroring the split between lib/community-investment-layer.ts
  * (client transforms) and MapView (imperative map wiring).
  *
- * Three modes, sessionStorage-persisted exactly like the layer toggle
+ * Four modes, sessionStorage-persisted exactly like the layer toggle
  * (lib/community-investment-toggle.ts):
- *   • dots    — the existing mapbox circle layer, unchanged (the default).
- *   • arcs    — a deck.gl ArcLayer of PHILANTHROPIC grants drawn from the
- *               funder's HQ (data/curated/foundation-hqs.csv, served through the
- *               gated API) to the recipient point. Philanthropic grants whose
- *               funder has no HQ row fall back to dots and are counted.
- *   • density — a deck.gl HexagonLayer over ALL point records weighted by
- *               amountAwarded (null → 0), 250m bins, 2D (elevation off).
+ *   • dots        — the existing mapbox circle layer, unchanged (the default).
+ *   • arcs        — a deck.gl ArcLayer of PHILANTHROPIC grants drawn from the
+ *                   funder's HQ (data/curated/foundation-hqs.csv, served through
+ *                   the gated API) to the recipient point. Philanthropic grants
+ *                   whose funder has no HQ row fall back to dots and are counted.
+ *   • density     — a deck.gl HexagonLayer over ALL point records weighted by
+ *                   amountAwarded (null → 0), 250m bins, 2D (elevation off).
+ *   • megaprojects— a mapbox-only view (no deck.gl) of ONLY the major-development
+ *                   point records (source "development"), circles sized by
+ *                   announcedInvestment and colored by status GROUP, with a
+ *                   zoom-gated project-name label layer. The megaproject render
+ *                   model (status groups, colors, radius scale, feature builder,
+ *                   summary) lives in lib/community-investment-layer.ts next to
+ *                   the other map-layer transforms; this module only owns the
+ *                   mode enum + persistence + captions.
  */
 
 import type { InvestmentPointFeature } from "./community-investment-layer";
@@ -25,8 +33,8 @@ import type { FunderType } from "./community-investment";
 
 // ── View-mode state model ────────────────────────────────────────────────────
 
-/** The three view modes, in control order. `dots` first (the unchanged default). */
-export const INVESTMENT_VIEW_MODES = ["dots", "arcs", "density"] as const;
+/** The four view modes, in control order. `dots` first (the unchanged default). */
+export const INVESTMENT_VIEW_MODES = ["dots", "arcs", "density", "megaprojects"] as const;
 export type InvestmentViewMode = (typeof INVESTMENT_VIEW_MODES)[number];
 
 export const DEFAULT_INVESTMENT_VIEW_MODE: InvestmentViewMode = "dots";
@@ -36,6 +44,7 @@ export const INVESTMENT_VIEW_MODE_LABELS: Record<InvestmentViewMode, string> = {
   dots: "Dots",
   arcs: "Arcs",
   density: "Density",
+  megaprojects: "Megaprojects",
 };
 
 /**

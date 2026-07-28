@@ -4,6 +4,11 @@ import MapLegendPanel from "../MapLegendPanel";
 import { ZONE_KEYS, VACANT_LABELS, ZONING_CATEGORIES } from "@/lib/constants";
 import { POI_LAYERS } from "../map-helpers";
 import { INVESTMENT_VIEW_MODE_LABELS } from "@/lib/investment-deck-modes";
+import {
+  MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL,
+  MEGAPROJECT_STATUS_GROUP_LABELS,
+  type MegaprojectSummary,
+} from "@/lib/community-investment-layer";
 
 /**
  * The admin view-mode control (Dots | Arcs | Density) must appear ONLY when the
@@ -60,7 +65,7 @@ describe("MapLegendPanel investment view-mode control", () => {
     expect(html).not.toContain(CONTROL_MARKER);
   });
 
-  it("renders the three-mode control only when admin AND toggle on", () => {
+  it("renders the four-mode control only when admin AND toggle on", () => {
     const html = renderToStaticMarkup(
       <MapLegendPanel {...baseProps()} adminSessionActive={true} communityInvestmentVisible={true} />
     );
@@ -68,6 +73,24 @@ describe("MapLegendPanel investment view-mode control", () => {
     expect(html).toContain(INVESTMENT_VIEW_MODE_LABELS.dots);
     expect(html).toContain(INVESTMENT_VIEW_MODE_LABELS.arcs);
     expect(html).toContain(INVESTMENT_VIEW_MODE_LABELS.density);
+    expect(html).toContain(INVESTMENT_VIEW_MODE_LABELS.megaprojects);
+  });
+
+  it("renders the fourth Megaprojects mode admin-only (absent for non-admin / toggle off)", () => {
+    const nonAdmin = renderToStaticMarkup(
+      <MapLegendPanel {...baseProps()} adminSessionActive={false} communityInvestmentVisible={true} />
+    );
+    expect(nonAdmin).not.toContain(INVESTMENT_VIEW_MODE_LABELS.megaprojects);
+
+    const toggleOff = renderToStaticMarkup(
+      <MapLegendPanel {...baseProps()} adminSessionActive={true} communityInvestmentVisible={false} />
+    );
+    expect(toggleOff).not.toContain(INVESTMENT_VIEW_MODE_LABELS.megaprojects);
+
+    const on = renderToStaticMarkup(
+      <MapLegendPanel {...baseProps()} adminSessionActive={true} communityInvestmentVisible={true} />
+    );
+    expect(on).toContain(INVESTMENT_VIEW_MODE_LABELS.megaprojects);
   });
 
   it("shows the dot-size hint in Dots mode only", () => {
@@ -173,5 +196,58 @@ describe("MapLegendPanel investment view-mode control", () => {
     );
     expect(records).toContain("record count (hex bins, 250m)");
     expect(records).not.toContain("$ awarded (hex bins, 250m)");
+  });
+
+  it("Megaprojects renders the 4-status legend with counts, the EXACT announced-capital label, and the not-plotted note", () => {
+    const summary: MegaprojectSummary = {
+      plottedCount: 106,
+      groupCounts: { open: 12, building: 16, planned: 75, stalled: 3 },
+      totalAnnounced: 73_906_800_000,
+    };
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        communityInvestmentVisible={true}
+        investmentViewMode="megaprojects"
+        investmentMegaprojectSummary={summary}
+        investmentMegaprojectCitywideNames={["Advocate Health Care South Side Investment"]}
+      />
+    );
+    // Four status-group labels + their counts.
+    expect(html).toContain(MEGAPROJECT_STATUS_GROUP_LABELS.open);
+    expect(html).toContain(MEGAPROJECT_STATUS_GROUP_LABELS.building);
+    expect(html).toContain(MEGAPROJECT_STATUS_GROUP_LABELS.planned);
+    expect(html).toContain(MEGAPROJECT_STATUS_GROUP_LABELS.stalled);
+    expect(html).toContain("12");
+    expect(html).toContain("16");
+    expect(html).toContain("75");
+    // Announced total: formatted figure + the EXACT label (Announced, never Awarded).
+    expect(html).toContain("$73,906,800,000");
+    expect(html).toContain(MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL);
+    expect(MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL).toBe("Announced private capital — not awarded dollars");
+    // Citywide / multi-site "not plotted" note + the name in the hover title.
+    expect(html).toContain("1 citywide/multi-site");
+    expect(html).toContain("not plotted");
+    expect(html).toContain("Advocate Health Care South Side Investment");
+  });
+
+  it("does not leak the megaproject announced-capital label into the other modes", () => {
+    for (const mode of ["dots", "arcs", "density"] as const) {
+      const html = renderToStaticMarkup(
+        <MapLegendPanel
+          {...baseProps()}
+          adminSessionActive={true}
+          communityInvestmentVisible={true}
+          investmentViewMode={mode}
+          investmentMegaprojectSummary={{
+            plottedCount: 1,
+            groupCounts: { open: 1, building: 0, planned: 0, stalled: 0 },
+            totalAnnounced: 1,
+          }}
+        />
+      );
+      expect(html).not.toContain(MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL);
+    }
   });
 });

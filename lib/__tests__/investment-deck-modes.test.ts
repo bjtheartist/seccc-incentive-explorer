@@ -73,8 +73,8 @@ function feature(overrides: {
 describe("investment view-mode state", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("exposes exactly three modes with dots as the default", () => {
-    expect(INVESTMENT_VIEW_MODES).toEqual(["dots", "arcs", "density"]);
+  it("exposes exactly four modes with dots as the default and megaprojects last", () => {
+    expect(INVESTMENT_VIEW_MODES).toEqual(["dots", "arcs", "density", "megaprojects"]);
     expect(DEFAULT_INVESTMENT_VIEW_MODE).toBe("dots");
   });
 
@@ -86,6 +86,7 @@ describe("investment view-mode state", () => {
   it("guards the mode enum", () => {
     expect(isInvestmentViewMode("arcs")).toBe(true);
     expect(isInvestmentViewMode("density")).toBe(true);
+    expect(isInvestmentViewMode("megaprojects")).toBe(true);
     expect(isInvestmentViewMode("heatmap")).toBe(false);
     expect(isInvestmentViewMode(null)).toBe(false);
     expect(isInvestmentViewMode(2)).toBe(false);
@@ -108,6 +109,11 @@ describe("investment view-mode state", () => {
     storeInvestmentViewMode("arcs");
     expect(store.get(INVESTMENT_VIEW_MODE_STORAGE_KEY)).toBe("arcs");
     expect(loadStoredInvestmentViewMode()).toBe("arcs");
+
+    // The fourth mode round-trips identically (the deep-link mode=megaprojects seam).
+    storeInvestmentViewMode("megaprojects");
+    expect(store.get(INVESTMENT_VIEW_MODE_STORAGE_KEY)).toBe("megaprojects");
+    expect(loadStoredInvestmentViewMode()).toBe("megaprojects");
 
     // Default is persisted as REMOVAL (mirrors the toggle's "off = removed").
     storeInvestmentViewMode("dots");

@@ -33,6 +33,11 @@ import {
   CAPITAL_CLASS_LABELS,
   CAPITAL_CLASS_MONEY_NOUN,
   CAPITAL_CLASS_OUTLINE,
+  MEGAPROJECT_STATUS_GROUPS,
+  MEGAPROJECT_STATUS_GROUP_LABELS,
+  MEGAPROJECT_STATUS_GROUP_COLORS,
+  MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL,
+  type MegaprojectSummary,
 } from "@/lib/community-investment-layer";
 import {
   DEFAULT_INVESTMENT_VIEW_MODE,
@@ -88,6 +93,10 @@ interface MapLegendPanelProps {
   investmentDensityMetric?: InvestmentDensityMetric;
   /** Arcs-mode fallback: philanthropic grants with no mapped funder HQ, shown as dots. */
   investmentArcMissingHqCount?: number;
+  /** Megaprojects-mode summary: per-status-group counts + total announced capital. */
+  investmentMegaprojectSummary?: MegaprojectSummary | null;
+  /** Megaprojects-mode: names of the citywide (non-plotting) development projects. */
+  investmentMegaprojectCitywideNames?: string[];
   onSetCommunityInvestmentVisible?: (value: boolean) => void;
   onSetInvestmentYearRange?: (id: string) => void;
   onSetInvestmentViewMode?: (mode: InvestmentViewMode) => void;
@@ -138,6 +147,8 @@ export default function MapLegendPanel({
   investmentViewMode = DEFAULT_INVESTMENT_VIEW_MODE,
   investmentDensityMetric = DEFAULT_INVESTMENT_DENSITY_METRIC,
   investmentArcMissingHqCount = 0,
+  investmentMegaprojectSummary = null,
+  investmentMegaprojectCitywideNames = [],
   onSetCommunityInvestmentVisible = () => {},
   onSetInvestmentYearRange = () => {},
   onSetInvestmentViewMode = () => {},
@@ -638,7 +649,7 @@ export default function MapLegendPanel({
                   <div className="font-mono-bureau text-[8px] tracking-[0.15em] uppercase text-[#0C1B33]/40 mb-1.5">
                     View
                   </div>
-                  <div className="flex gap-1" role="group" aria-label="Investment view mode">
+                  <div className="grid grid-cols-2 gap-1" role="group" aria-label="Investment view mode">
                     {INVESTMENT_VIEW_MODES.map((mode) => {
                       const active = investmentViewMode === mode;
                       return (
@@ -647,7 +658,7 @@ export default function MapLegendPanel({
                           type="button"
                           aria-pressed={active}
                           onClick={() => onSetInvestmentViewMode(mode)}
-                          className="flex-1 font-mono-bureau text-[8px] tracking-[0.08em] uppercase px-2 py-1 rounded border transition-colors"
+                          className="font-mono-bureau text-[8px] tracking-[0.08em] uppercase px-2 py-1 rounded border transition-colors"
                           style={{
                             color: active ? "#fff" : "#2563EB",
                             backgroundColor: active ? "#2563EB" : "transparent",
@@ -824,6 +835,63 @@ export default function MapLegendPanel({
                         ? `record count (hex bins, ${HEXAGON_RADIUS_M}m)`
                         : `$ awarded (hex bins, ${HEXAGON_RADIUS_M}m)`}
                     </p>
+                  </div>
+                )}
+
+                {/* Megaprojects: the 4-status color legend with per-group counts,
+                    the total ANNOUNCED private capital (exact label, never
+                    "awarded"), and the citywide/multi-site "not plotted" note. */}
+                {investmentViewMode === "megaprojects" && (
+                  <div className="space-y-2">
+                    <div className="font-mono-bureau text-[9px] tracking-[0.08em] uppercase text-[#0C1B33]/55">
+                      Major developments
+                      {investmentMegaprojectSummary
+                        ? ` (${investmentMegaprojectSummary.plottedCount} plotted)`
+                        : ""}
+                    </div>
+                    {/* 4-status color legend + per-group counts. */}
+                    <div className="space-y-0.5">
+                      {MEGAPROJECT_STATUS_GROUPS.map((group) => (
+                        <div key={group} className="flex items-center gap-2.5 py-0.5">
+                          <span
+                            className="w-3 h-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: MEGAPROJECT_STATUS_GROUP_COLORS[group] }}
+                          />
+                          <span className="text-[11px] text-[#0C1B33]/70 leading-tight flex-1">
+                            {MEGAPROJECT_STATUS_GROUP_LABELS[group]}
+                          </span>
+                          <span className="font-mono-bureau text-[10px] text-[#0C1B33]/45 tabular-nums">
+                            {investmentMegaprojectSummary?.groupCounts[group] ?? 0}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {/* Total ANNOUNCED private capital — EXACT label, never "awarded". */}
+                    {investmentMegaprojectSummary && (
+                      <div className="pt-0.5">
+                        <div className="text-[13px] font-semibold text-[#0C1B33] tabular-nums">
+                          {formatAwardedAmount(investmentMegaprojectSummary.totalAnnounced)}
+                        </div>
+                        <div className="text-[9px] text-[#0C1B33]/40 leading-snug">
+                          {MEGAPROJECT_ANNOUNCED_CAPITAL_LABEL}
+                        </div>
+                      </div>
+                    )}
+                    <p className="text-[9px] text-[#0C1B33]/35 leading-snug">
+                      Dot size = announced capital · color = status · every major
+                      development (year / funder filters do not apply)
+                    </p>
+                    {/* Citywide / multi-site projects that never plot — names on hover. */}
+                    {investmentMegaprojectCitywideNames.length > 0 && (
+                      <p
+                        className="text-[9px] text-[#0C1B33]/40 leading-snug cursor-help"
+                        title={investmentMegaprojectCitywideNames.join("\n")}
+                      >
+                        {investmentMegaprojectCitywideNames.length} citywide/multi-site
+                        {investmentMegaprojectCitywideNames.length === 1 ? " project" : " projects"} not
+                        plotted
+                      </p>
+                    )}
                   </div>
                 )}
 
