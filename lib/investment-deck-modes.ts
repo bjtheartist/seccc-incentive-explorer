@@ -257,6 +257,18 @@ export function buildInvestmentArcData(
 
 // ── Density (Hexagon) palette + config ───────────────────────────────────────
 
+/**
+ * Density-mode color weight for one point feature — AWARDED dollars only
+ * (amountAwarded, null → 0). Named + exported (rather than an inline lambda) so
+ * a unit test can pin the invariant that the HexagonLayer weight NEVER reads
+ * announcedInvestment: development records (amountAwarded null, announcedInvestment
+ * in the billions) must contribute 0 to a density bin, keeping the heat map a
+ * pure picture of awarded grant dollars, not announced development capital. Pure.
+ */
+export function densityColorWeight(f: InvestmentPointFeature): number {
+  return f.properties.amountAwarded ?? 0;
+}
+
 /** Hexagon bin radius in meters (2D bins; elevation is off). */
 export const HEXAGON_RADIUS_M = 250;
 

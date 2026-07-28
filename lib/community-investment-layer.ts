@@ -43,6 +43,31 @@ export const FUNDER_TYPE_LABELS: Record<FunderType, string> = {
 };
 
 /**
+ * Display labels for every InvestmentStatus — the ONE place status text is
+ * humanized, shared by the map popup, the analysis "Major private developments"
+ * section, and the print brief so the raw snake_case enum ("under_construction")
+ * never reaches a reader. Exhaustive over INVESTMENT_STATUSES (a unit test guards
+ * completeness).
+ */
+export const INVESTMENT_STATUS_LABELS: Record<InvestmentStatus, string> = {
+  completed: "Completed",
+  awarded: "Awarded",
+  announced: "Announced",
+  proposed: "Proposed",
+  under_construction: "Under construction",
+  partially_open: "Partially open",
+  opened: "Opened",
+  stalled: "Stalled",
+  cancelled: "Cancelled",
+};
+
+/** Humanize a status for display; falls back to the raw value for an off-enum string. */
+export function investmentStatusLabel(status: string | null | undefined): string {
+  if (!status) return "";
+  return INVESTMENT_STATUS_LABELS[status as InvestmentStatus] ?? status;
+}
+
+/**
  * Funder-type dot colors, drawn from the app's existing palette so the layer
  * reads as part of the same system:
  *   • government          #2563EB — the app's canonical government / City blue
@@ -100,14 +125,59 @@ export interface InvestmentPointProps {
   funderType: FunderType;
   /** Real awarded dollars, or null — NEVER a derived figure. */
   amountAwarded: number | null;
+  /**
+   * Announced private DEVELOPMENT capital, or null — a SEPARATE measure from
+   * amountAwarded, carried so the popup can label a development's figure
+   * "Announced" (never "Awarded") and the Dots-mode radius can size a
+   * development dot by it. Never combined with amountAwarded.
+   */
+  announcedInvestment: number | null;
   logLine: string | null;
   year: number | null;
   status: InvestmentStatus;
   /** First http(s) source link, or "" when the record carries none. */
   sourceLink: string;
+  /**
+   * Precomputed Dots-mode circle radius (px) for a DEVELOPMENT record, sized by
+   * announcedInvestment over the development records only (sqrt-domain, 4–18px).
+   * Absent on non-development points (they size by amountAwarded in the mapbox
+   * paint). Stamped here rather than in the paint because a domain-normalized
+   * scale needs the whole development set, which a per-feature mapbox expression
+   * cannot see.
+   */
+  radiusPx?: number;
 }
 
 export type InvestmentPointFeature = GeoJSON.Feature<GeoJSON.Point, InvestmentPointProps>;
+
+/** Dots-mode radius bounds for a DEVELOPMENT dot (px), sized by announcedInvestment. */
+export const DEV_DOT_RADIUS_MIN = 4;
+export const DEV_DOT_RADIUS_MAX = 18;
+
+/**
+ * Build a Dots-mode radius scale across the ACTUAL announced-capital domain of
+ * the development records being plotted: sqrt(announcedInvestment) normalized
+ * between the set's min and max, mapped to [4, 18] px. Mirrors
+ * makeArcWidthScale (lib/investment-deck-modes.ts) but for circle radius, so a
+ * $7B megasite dot reads visibly larger than a $30M hotel while a null-capital
+ * development (subset/blank) sits at the 4px floor. A degenerate domain (one
+ * development / all-equal amounts) renders at the midpoint radius. Null/negative
+ * amounts count as 0. Pure / deterministic.
+ */
+export function makeDevelopmentDotRadiusScale(
+  amounts: readonly (number | null | undefined)[],
+): (amount: number | null | undefined) => number {
+  const roots = amounts.map((a) => Math.sqrt(Math.max(0, a ?? 0)));
+  const lo = roots.length ? Math.min(...roots) : 0;
+  const hi = roots.length ? Math.max(...roots) : 0;
+  const span = hi - lo;
+  if (span <= 0) return () => (DEV_DOT_RADIUS_MIN + DEV_DOT_RADIUS_MAX) / 2;
+  return (amount) => {
+    const v = Math.sqrt(Math.max(0, amount ?? 0));
+    const t = Math.min(1, Math.max(0, (v - lo) / span));
+    return DEV_DOT_RADIUS_MIN + t * (DEV_DOT_RADIUS_MAX - DEV_DOT_RADIUS_MIN);
+  };
+}
 
 /**
  * Convert canonical records to plottable GeoJSON point features. Citywide
@@ -131,12 +201,26 @@ export function investmentRecordsToPointFeatures(
         funderName: r.funderName,
         funderType: r.funderType,
         amountAwarded: r.amountAwarded,
+        announcedInvestment: r.announcedInvestment ?? null,
         logLine: r.logLine,
         year: r.year,
         status: r.status,
         sourceLink: r.links.find((l) => /^https?:\/\//i.test(l)) ?? "",
       },
     });
+  }
+  // Size DEVELOPMENT dots by announcedInvestment over the development records
+  // ONLY (sqrt-domain, 4–18px). Stamped here so the mapbox paint can read a
+  // ready radius without a domain-normalization it cannot express. A development
+  // with null announcedInvestment (subset/blank) resolves to the 4px floor.
+  const devAmounts = features
+    .filter((f) => f.properties.funderType === "private_development")
+    .map((f) => f.properties.announcedInvestment);
+  const radiusOf = makeDevelopmentDotRadiusScale(devAmounts);
+  for (const f of features) {
+    if (f.properties.funderType === "private_development") {
+      f.properties.radiusPx = radiusOf(f.properties.announcedInvestment);
+    }
   }
   return features;
 }

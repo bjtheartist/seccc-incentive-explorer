@@ -70,6 +70,7 @@ import {
   PHILANTHROPIC_ARC_COLOR,
   DENSITY_COLOR_RANGE,
   HEXAGON_RADIUS_M,
+  densityColorWeight,
   type InvestmentViewMode,
   type InvestmentArcDatum,
   type FunderHq,
@@ -1407,13 +1408,24 @@ export default function MapView() {
             "private_development", FUNDER_TYPE_COLORS.private_development,
             INVESTMENT_FALLBACK_COLOR,
           ],
-          // sqrt scale on amountAwarded, clamped 4–18px (interpolate clamps to
-          // the first/last stop output outside the input domain). to-number
-          // coerces a null amount to 0 → the minimum 4px radius.
+          // Radius encodes MAGNITUDE, but from different fields by funder type:
+          //   • DEVELOPMENT dots read `radiusPx` — a precomputed 4–18px radius
+          //     sized by announcedInvestment over the development set (a
+          //     domain-normalized sqrt scale a mapbox expression can't express;
+          //     stamped in investmentRecordsToPointFeatures). A null-capital
+          //     development carries radiusPx=4 (the floor). NEVER amountAwarded.
+          //   • everything else keeps the sqrt(amountAwarded) scale, clamped
+          //     4–18px (interpolate clamps outside the domain; to-number coerces
+          //     a null amount to 0 → the 4px floor).
           "circle-radius": [
-            "interpolate", ["linear"], ["sqrt", ["to-number", ["get", "amountAwarded"]]],
-            50, 4,
-            2500, 18,
+            "case",
+            ["==", ["get", "funderType"], "private_development"],
+            ["to-number", ["get", "radiusPx"], 4],
+            [
+              "interpolate", ["linear"], ["sqrt", ["to-number", ["get", "amountAwarded"]]],
+              50, 4,
+              2500, 18,
+            ],
           ],
           "circle-opacity": 0.7,
           "circle-stroke-width": 1,
@@ -2304,7 +2316,9 @@ export default function MapView() {
           id: "investment-hexagons",
           data: filtered,
           getPosition: (f) => f.geometry.coordinates as [number, number],
-          getColorWeight: (f) => f.properties.amountAwarded ?? 0,
+          // AWARDED dollars only — never announcedInvestment (a development's
+          // announced capital must not heat a density bin). See densityColorWeight.
+          getColorWeight: densityColorWeight,
           colorAggregation: "SUM",
           radius: HEXAGON_RADIUS_M,
           extruded: false,
