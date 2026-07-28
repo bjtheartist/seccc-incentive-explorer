@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import { Lock } from "lucide-react";
 import {
   ZONE_COLORS,
@@ -702,6 +703,14 @@ export default function MapLegendPanel({
                     )}
                   </div>
                 )}
+
+                {/* Cross-nav to the per-community Investment & Impact analysis (admin-only, same gate) */}
+                <Link
+                  href="/investment"
+                  className="inline-flex items-center gap-1 font-mono-bureau text-[9px] tracking-[0.12em] uppercase text-[#2563EB] hover:text-[#0C1B33] transition-colors"
+                >
+                  Investment analysis →
+                </Link>
               </div>
             )}
           </div>

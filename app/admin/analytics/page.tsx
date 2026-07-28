@@ -573,6 +573,12 @@ export default async function AdminAnalyticsPage({
               Owner Files
             </Link>
             <Link
+              href="/investment"
+              className="border border-[#0C1B33]/12 bg-white px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/45"
+            >
+              Investment Analysis
+            </Link>
+            <Link
               href="/admin/future-of-commerce"
               className="border border-[#0C1B33]/12 bg-white px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/45"
             >

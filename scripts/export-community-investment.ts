@@ -41,6 +41,7 @@ import {
   type CommunityInvestmentRecord,
   type InvestmentGeometry,
 } from "../lib/community-investment";
+import { assignCommunityArea, loadCommunityAreaPolygons } from "../lib/community-area-stamp";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,8 @@ const SCRATCH =
 const INPUT_DIR = process.env.INPUT_DIR || SCRATCH;
 const GEOCODE_CACHE_PATH = join(SCRATCH, "geocode-cache.json");
 const OUT_PATH = join(process.cwd(), "data", "private", "community-investment.json");
+/** Committed City of Chicago Community Area boundaries (dataset igwz-8jzy). */
+const CA_GEOJSON_PATH = join(process.cwd(), "public", "data", "community-areas.geojson");
 
 const NOF_PROGRAM = "Neighborhood Opportunity Fund (City of Chicago)";
 const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
@@ -63,6 +66,7 @@ const PROVENANCE_LABELS = [
   "Major development projects — Ellen's Developments map (Google My Maps)",
   "Neighborhood Opportunity Fund corridor awards 2017–2020 — Jim's South Shore list (award records)",
   "Address geocoding: U.S. Census Bureau Geocoder (Public_AR_Current benchmark)",
+  "Community-area assignment: City of Chicago Community Area boundaries (Chicago Data Portal dataset igwz-8jzy), point-in-polygon",
 ];
 
 // ── Small parse helpers ──────────────────────────────────────────────────────
@@ -269,6 +273,39 @@ async function geocodeBatch(queries: string[], cache: GeocodeCache): Promise<Map
 
 function point(lat: number, lng: number): InvestmentGeometry {
   return { kind: "point", lat, lng };
+}
+
+// ── Community-area point-in-polygon stamping ─────────────────────────────────
+
+/**
+ * Point-in-polygon stamp EVERY point record with its Chicago community area,
+ * overwriting whatever the source supplied so all records key off the canonical
+ * 77-name set (the Socrata `community_area` field is inconsistent — 100+ distinct
+ * spellings/neighborhoods — and the foundation/CDG/development/corridor points
+ * carry none at all). A point outside every CA (lake, inter-CA gap, edge geocode)
+ * keeps NO communityArea and is counted. Citywide-geometry records are never
+ * touched. The polygon load + per-point assignment live in
+ * lib/community-area-stamp.ts (pure + unit-tested). Mutates in place; returns the
+ * inside/outside tallies. Deterministic.
+ */
+function stampCommunityAreas(
+  records: CommunityInvestmentRecord[],
+  polygons: ReturnType<typeof loadCommunityAreaPolygons>,
+): { inside: number; outside: number } {
+  let inside = 0;
+  let outside = 0;
+  for (const r of records) {
+    if (r.geometry.kind !== "point") continue; // citywide records never get a CA
+    const match = assignCommunityArea(r.geometry.lng, r.geometry.lat, polygons);
+    if (match) {
+      r.communityArea = match;
+      inside++;
+    } else {
+      delete r.communityArea; // outside every CA → keep none (never guess)
+      outside++;
+    }
+  }
+  return { inside, outside };
 }
 
 // ── Source mappers ───────────────────────────────────────────────────────────
@@ -613,7 +650,16 @@ async function main() {
   const { records: deduped, removedCount } = dedupeInvestmentRecords(all);
   console.log(`Deduped: ${all.length} -> ${deduped.length} (removed ${removedCount})`);
 
-  // 5) Assemble + structural banned-figure assert + write.
+  // 5) Point-in-polygon community-area stamping for EVERY point record. Runs on
+  //    the final deduped set so the tallies describe the kept records.
+  const caPolygons = loadCommunityAreaPolygons(CA_GEOJSON_PATH);
+  const caStamp = stampCommunityAreas(deduped, caPolygons);
+  console.log(
+    `Community-area stamp: ${caPolygons.length} CA polygons · ${caStamp.inside} points inside a CA · ` +
+      `${caStamp.outside} outside (kept, no CA)`,
+  );
+
+  // 6) Assemble + structural banned-figure assert + write.
   const out = buildCommunityInvestmentExport(deduped, generatedAt, {
     droppedNoGeocode,
     dedupedRows: removedCount,
@@ -622,6 +668,7 @@ async function main() {
     droppedNoCoords,
     outOfBoundsGeocodes: foundationStats.outOfBoundsGeocodes,
     negativeAmountsNulled: foundationStats.negativeAmountsNulled,
+    outsideCommunityAreas: caStamp.outside,
     sources: PROVENANCE_LABELS,
   });
 
