@@ -2,6 +2,10 @@
 
 import { useEffect, useRef, useState, useCallback, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
+import { MapboxOverlay } from "@deck.gl/mapbox";
+import { ArcLayer, ScatterplotLayer } from "@deck.gl/layers";
+import { HexagonLayer } from "@deck.gl/aggregation-layers";
+import type { Layer, PickingInfo } from "@deck.gl/core";
 import { Layers } from "lucide-react";
 import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, presentOwnerTypesInOrder, type OwnerType } from "@/lib/owner-classify";
@@ -33,6 +37,7 @@ import {
   POI_LAYERS, jsonToGeoJSON, MAP_PRESETS,
   buildOwnerClusterPopupHtml,
   buildInvestmentPopupHtml,
+  formatAwardedAmount,
   type AreaStats, DEFAULT_STATS,
 } from "./map-helpers";
 import {
@@ -56,6 +61,19 @@ import {
   type CitywideInvestmentEntry,
 } from "@/lib/community-investment-layer";
 import type { FunderType } from "@/lib/community-investment";
+import {
+  loadStoredInvestmentViewMode,
+  storeInvestmentViewMode,
+  buildInvestmentArcData,
+  indexFunderHqsByName,
+  arcWidthFromAmount,
+  PHILANTHROPIC_ARC_COLOR,
+  DENSITY_COLOR_RANGE,
+  HEXAGON_RADIUS_M,
+  type InvestmentViewMode,
+  type InvestmentArcDatum,
+  type FunderHq,
+} from "@/lib/investment-deck-modes";
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -180,6 +198,30 @@ export default function MapView() {
   const toggleInvestmentFunderType = useCallback((key: FunderType) => {
     setInvestmentFunderTypes((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
+
+  // Admin-only VIEW MODES for the investment layer (Dots | Arcs | Density).
+  // sessionStorage-persisted like the toggle so the choice survives the /report
+  // remount; Dots is the unchanged default (the existing mapbox circle layer).
+  // Arcs/Density render through a single deck.gl MapboxOverlay (created lazily,
+  // fully removed when the layer is hidden or the component unmounts — no leaked
+  // WebGL contexts). All three share the same year/funderType filters.
+  const [investmentViewMode, setInvestmentViewMode] = useState<InvestmentViewMode>(() =>
+    loadStoredInvestmentViewMode()
+  );
+  const setInvestmentViewModePersistent = useCallback((mode: InvestmentViewMode) => {
+    setInvestmentViewMode(mode);
+    storeInvestmentViewMode(mode);
+  }, []);
+  // Foundation-HQ coordinates from the last gated fetch — the Arcs source.
+  const investmentFunderHqsRef = useRef<FunderHq[]>([]);
+  // The one deck.gl overlay (created on first entry into a non-Dots mode, torn
+  // down when the layer is hidden / mode returns to Dots / on unmount).
+  const deckOverlayRef = useRef<MapboxOverlay | null>(null);
+  // The shared mapbox dot popup, kept in a ref so the deck effect can close it
+  // when entering a non-Dots mode (deck's picking tooltip takes over there).
+  const sharedDotPopupRef = useRef<mapboxgl.Popup | null>(null);
+  // "N grants without a mapped funder HQ shown as dots" — the Arcs fallback count.
+  const [investmentArcMissingHqCount, setInvestmentArcMissingHqCount] = useState(0);
 
   // Polygon draw tool
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -1164,6 +1206,9 @@ export default function MapView() {
          setHTML + addTo moves and re-fills the same element — guarantees exactly
          one dot popup on screen at a time. */
       const sharedDotPopup = new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" });
+      // Exposed via ref so the deck view-mode effect can close it when entering
+      // Arcs/Density (deck's picking tooltip replaces the mapbox dot popup there).
+      sharedDotPopupRef.current = sharedDotPopup;
 
       // Click handler for unclustered vacant points
       map.on("click", "vacant-unclustered", (e) => {
@@ -1445,6 +1490,17 @@ export default function MapView() {
       resizeObserver.disconnect();
       window.visualViewport?.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
+      // Tear down the deck overlay BEFORE map.remove() so its GL resources are
+      // finalized cleanly rather than orphaned on the destroyed map.
+      if (deckOverlayRef.current) {
+        try {
+          map.removeControl(deckOverlayRef.current as unknown as mapboxgl.IControl);
+        } catch {
+          // Already removed / map mid-teardown — nothing to free.
+        }
+        deckOverlayRef.current = null;
+      }
+      sharedDotPopupRef.current = null;
       map.remove();
       mapRef.current = null;
     };
@@ -2016,20 +2072,19 @@ export default function MapView() {
     const map = mapRef.current;
     if (!map || !loaded) return;
 
-    const vis = communityInvestmentVisible ? "visible" : "none";
-    if (map.getLayer("community-investment-points")) {
-      map.setLayoutProperty("community-investment-points", "visibility", vis);
-    }
-
+    // Base-circle visibility is owned by the deck view-mode effect below (so
+    // Arcs/Density can hide it); this effect only fetches + clears data.
     if (!adminSessionActive || !communityInvestmentVisible) {
       if (!communityInvestmentVisible) {
         const src = map.getSource("community-investment") as mapboxgl.GeoJSONSource | undefined;
         if (src) src.setData(EMPTY_FC);
         investmentFeaturesRef.current = [];
         investmentCitywideEntriesRef.current = [];
+        investmentFunderHqsRef.current = [];
         setCommunityInvestmentLoaded(false);
         setInvestmentPresentFunderTypes([]);
         setInvestmentCitywide(null);
+        setInvestmentArcMissingHqCount(0);
       }
       return;
     }
@@ -2046,6 +2101,7 @@ export default function MapView() {
         if (result.status === "ready") {
           investmentFeaturesRef.current = result.pointFeatures;
           investmentCitywideEntriesRef.current = result.citywideEntries;
+          investmentFunderHqsRef.current = result.funderHqs;
           setInvestmentPresentFunderTypes(result.presentFunderTypes);
           setInvestmentCitywide(result.citywide);
           setCommunityInvestmentLoaded(true);
@@ -2098,6 +2154,175 @@ export default function MapView() {
     investmentYearRange,
     investmentFunderTypes,
     loaded,
+  ]);
+
+  /* ── deck.gl picking tooltip for the Arcs/Density overlay ──
+     Returns a plain-text tooltip (deck sets it as innerText, so recipient /
+     funder strings need no HTML escaping). Never labels a dollar figure as
+     "received/available" — Awarded only (repo iron rule). Stable identity so
+     the overlay is created once. */
+  const getInvestmentDeckTooltip = useCallback((info: PickingInfo) => {
+    const object = info.object as unknown;
+    if (!object) return null;
+    const layerId = info.layer?.id;
+    const style = {
+      backgroundColor: "#0C1B33",
+      color: "#ffffff",
+      fontSize: "11px",
+      lineHeight: "1.4",
+      padding: "6px 8px",
+      borderRadius: "4px",
+      fontFamily: "Inter, sans-serif",
+      whiteSpace: "pre-line" as const,
+      maxWidth: "220px",
+    };
+    if (layerId === "investment-arcs") {
+      const d = object as InvestmentArcDatum;
+      return { text: `${d.recipient}\n${d.funderName}\nAwarded: ${formatAwardedAmount(d.amountAwarded)}`, style };
+    }
+    if (layerId === "investment-arc-fallback") {
+      const p = (object as InvestmentPointFeature).properties;
+      return { text: `${p.recipient}\n${p.funderName}\nAwarded: ${formatAwardedAmount(p.amountAwarded)}`, style };
+    }
+    if (layerId === "investment-hexagons") {
+      const bin = object as {
+        points?: unknown[];
+        pointIndices?: unknown[];
+        count?: number;
+        colorValue?: number;
+        value?: number;
+        elevationValue?: number;
+      };
+      const count = bin.count ?? bin.points?.length ?? bin.pointIndices?.length ?? 0;
+      const total = bin.colorValue ?? bin.value ?? bin.elevationValue ?? 0;
+      return {
+        text: `${formatAwardedAmount(total)} awarded\n${count} grant${count === 1 ? "" : "s"} in this bin`,
+        style,
+      };
+    }
+    return null;
+  }, []);
+
+  /* ── Community-investment layer: deck.gl view modes (Arcs / Density) ──
+     Owns the base circle layer's visibility (visible ONLY in Dots mode) and the
+     single deck.gl MapboxOverlay lifecycle. The overlay is created lazily on
+     first entry into a non-Dots mode and FULLY removed (removeControl → deck
+     finalize) when the layer is hidden, the mode returns to Dots, or the
+     component unmounts (see the map-init cleanup) — no leaked WebGL contexts.
+     Arcs/Density draw from the SAME year/funderType-filtered feature set as the
+     dots, and use deck's picking tooltip (not the mapbox popup, which is closed
+     on entry) so the two popup systems never fight. WebGL rendering cannot be
+     visually verified in a sandboxed pane — covered by unit tests + build. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+
+    const baseId = "community-investment-points";
+    const mode = investmentViewMode;
+    const layerVisible = adminSessionActive && communityInvestmentVisible;
+
+    if (map.getLayer(baseId)) {
+      map.setLayoutProperty(baseId, "visibility", layerVisible && mode === "dots" ? "visible" : "none");
+    }
+    // Non-Dots modes hand picking to deck — close the shared mapbox dot popup.
+    if (mode !== "dots") sharedDotPopupRef.current?.remove();
+
+    const removeOverlay = () => {
+      if (deckOverlayRef.current) {
+        try {
+          map.removeControl(deckOverlayRef.current as unknown as mapboxgl.IControl);
+        } catch {
+          // Already detached / map mid-teardown — nothing to free.
+        }
+        deckOverlayRef.current = null;
+      }
+    };
+
+    const overlayActive = layerVisible && communityInvestmentLoaded && mode !== "dots";
+    if (!overlayActive) {
+      removeOverlay();
+      if (mode !== "arcs") setInvestmentArcMissingHqCount(0);
+      return;
+    }
+
+    const activeFunderTypes = new Set<FunderType>(FUNDER_TYPE_ORDER.filter((k) => investmentFunderTypes[k]));
+    const filtered = filterInvestmentPointFeatures(investmentFeaturesRef.current, {
+      yearRangeId: investmentYearRange,
+      activeFunderTypes,
+    });
+
+    let layers: Layer[] = [];
+    if (mode === "arcs") {
+      const hqIndex = indexFunderHqsByName(investmentFunderHqsRef.current);
+      const { arcs, fallbackFeatures, missingHqCount } = buildInvestmentArcData(filtered, hqIndex);
+      setInvestmentArcMissingHqCount(missingHqCount);
+      layers = [
+        new ArcLayer<InvestmentArcDatum>({
+          id: "investment-arcs",
+          data: arcs,
+          getSourcePosition: (d) => d.sourcePosition,
+          getTargetPosition: (d) => d.targetPosition,
+          getSourceColor: PHILANTHROPIC_ARC_COLOR,
+          getTargetColor: PHILANTHROPIC_ARC_COLOR,
+          getWidth: (d) => d.width,
+          widthUnits: "pixels",
+          greatCircle: true,
+          pickable: true,
+        }),
+        // Philanthropic grants with no mapped funder HQ fall back to dots.
+        new ScatterplotLayer<InvestmentPointFeature>({
+          id: "investment-arc-fallback",
+          data: fallbackFeatures,
+          getPosition: (f) => f.geometry.coordinates as [number, number],
+          getRadius: (f) => arcWidthFromAmount(f.properties.amountAwarded),
+          radiusUnits: "pixels",
+          radiusMinPixels: 3,
+          radiusMaxPixels: 8,
+          getFillColor: PHILANTHROPIC_ARC_COLOR,
+          stroked: true,
+          getLineColor: [255, 255, 255, 220],
+          lineWidthMinPixels: 1,
+          pickable: true,
+        }),
+      ];
+    } else {
+      // density
+      setInvestmentArcMissingHqCount(0);
+      layers = [
+        new HexagonLayer<InvestmentPointFeature>({
+          id: "investment-hexagons",
+          data: filtered,
+          getPosition: (f) => f.geometry.coordinates as [number, number],
+          getColorWeight: (f) => f.properties.amountAwarded ?? 0,
+          colorAggregation: "SUM",
+          radius: HEXAGON_RADIUS_M,
+          extruded: false,
+          colorRange: DENSITY_COLOR_RANGE,
+          opacity: 0.65,
+          pickable: true,
+        }),
+      ];
+    }
+
+    if (!deckOverlayRef.current) {
+      deckOverlayRef.current = new MapboxOverlay({
+        interleaved: true,
+        layers,
+        getTooltip: getInvestmentDeckTooltip,
+      });
+      map.addControl(deckOverlayRef.current as unknown as mapboxgl.IControl);
+    } else {
+      deckOverlayRef.current.setProps({ layers });
+    }
+  }, [
+    loaded,
+    adminSessionActive,
+    communityInvestmentVisible,
+    communityInvestmentLoaded,
+    investmentViewMode,
+    investmentYearRange,
+    investmentFunderTypes,
+    getInvestmentDeckTooltip,
   ]);
 
   return (
@@ -2206,8 +2431,11 @@ export default function MapView() {
           investmentYearRange={investmentYearRange}
           investmentFunderTypes={investmentFunderTypes}
           investmentCitywide={investmentCitywide}
+          investmentViewMode={investmentViewMode}
+          investmentArcMissingHqCount={investmentArcMissingHqCount}
           onSetCommunityInvestmentVisible={setCommunityInvestmentVisiblePersistent}
           onSetInvestmentYearRange={setInvestmentYearRange}
+          onSetInvestmentViewMode={setInvestmentViewModePersistent}
           onToggleInvestmentFunderType={toggleInvestmentFunderType}
           onClose={() => setLegendOpen(false)}
           onToggleZone={toggleZone}

@@ -31,6 +31,14 @@ import {
   FUNDER_TYPE_LABELS,
   INVESTMENT_YEAR_RANGES,
 } from "@/lib/community-investment-layer";
+import {
+  DEFAULT_INVESTMENT_VIEW_MODE,
+  INVESTMENT_VIEW_MODES,
+  INVESTMENT_VIEW_MODE_LABELS,
+  DENSITY_RAMP_HEXES,
+  HEXAGON_RADIUS_M,
+  type InvestmentViewMode,
+} from "@/lib/investment-deck-modes";
 import type { FunderType } from "@/lib/community-investment";
 
 interface MapLegendPanelProps {
@@ -64,8 +72,13 @@ interface MapLegendPanelProps {
   investmentFunderTypes?: Record<FunderType, boolean>;
   /** Citywide-geometry summary (count + total awarded dollars) — records that never plot as dots. */
   investmentCitywide?: { count: number; totalDollars: number } | null;
+  /** Active admin view mode (Dots | Arcs | Density); defaults to "dots". */
+  investmentViewMode?: InvestmentViewMode;
+  /** Arcs-mode fallback: philanthropic grants with no mapped funder HQ, shown as dots. */
+  investmentArcMissingHqCount?: number;
   onSetCommunityInvestmentVisible?: (value: boolean) => void;
   onSetInvestmentYearRange?: (id: string) => void;
+  onSetInvestmentViewMode?: (mode: InvestmentViewMode) => void;
   onToggleInvestmentFunderType?: (key: FunderType) => void;
   onClose: () => void;
   onToggleZone: (key: string) => void;
@@ -107,8 +120,11 @@ export default function MapLegendPanel({
   investmentYearRange = DEFAULT_INVESTMENT_YEAR_RANGE,
   investmentFunderTypes = {} as Record<FunderType, boolean>,
   investmentCitywide = null,
+  investmentViewMode = DEFAULT_INVESTMENT_VIEW_MODE,
+  investmentArcMissingHqCount = 0,
   onSetCommunityInvestmentVisible = () => {},
   onSetInvestmentYearRange = () => {},
+  onSetInvestmentViewMode = () => {},
   onToggleInvestmentFunderType = () => {},
   onClose,
   onToggleZone,
@@ -598,6 +614,36 @@ export default function MapLegendPanel({
 
             {communityInvestmentVisible && (
               <div className="mt-3 ml-6 space-y-3">
+                {/* View-mode control (admin only, appears with the toggle on) —
+                    Dots (default, mapbox circles) · Arcs (deck.gl philanthropic
+                    HQ→recipient) · Density (deck.gl $ hex bins). */}
+                <div>
+                  <div className="font-mono-bureau text-[8px] tracking-[0.15em] uppercase text-[#0C1B33]/40 mb-1.5">
+                    View
+                  </div>
+                  <div className="flex gap-1" role="group" aria-label="Investment view mode">
+                    {INVESTMENT_VIEW_MODES.map((mode) => {
+                      const active = investmentViewMode === mode;
+                      return (
+                        <button
+                          key={mode}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() => onSetInvestmentViewMode(mode)}
+                          className="flex-1 font-mono-bureau text-[8px] tracking-[0.08em] uppercase px-2 py-1 rounded border transition-colors"
+                          style={{
+                            color: active ? "#fff" : "#2563EB",
+                            backgroundColor: active ? "#2563EB" : "transparent",
+                            borderColor: active ? "#2563EB" : "#2563EB40",
+                          }}
+                        >
+                          {INVESTMENT_VIEW_MODE_LABELS[mode]}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 {/* Year-range chips — client-side filter over the plotted points */}
                 <div>
                   <div className="font-mono-bureau text-[8px] tracking-[0.15em] uppercase text-[#0C1B33]/40 mb-1.5">
@@ -665,7 +711,43 @@ export default function MapLegendPanel({
                   </div>
                 )}
 
-                <p className="text-[9px] text-[#0C1B33]/35">Dot size = amount awarded</p>
+                {/* Mode-specific caption / mini legend. */}
+                {investmentViewMode === "dots" && (
+                  <p className="text-[9px] text-[#0C1B33]/35">Dot size = amount awarded</p>
+                )}
+
+                {investmentViewMode === "arcs" && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-block h-[2px] w-6 flex-shrink-0 rounded-full"
+                        style={{ backgroundColor: FUNDER_TYPE_COLORS.philanthropic }}
+                      />
+                      <span className="text-[9px] text-[#0C1B33]/45">
+                        Arc: funder HQ &rarr; grant recipient
+                      </span>
+                    </div>
+                    {investmentArcMissingHqCount > 0 && (
+                      <p className="text-[9px] text-[#0C1B33]/35">
+                        {investmentArcMissingHqCount} grant{investmentArcMissingHqCount === 1 ? "" : "s"} without a
+                        mapped funder HQ shown as dots
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {investmentViewMode === "density" && (
+                  <div className="space-y-1">
+                    <div className="flex h-2 w-full overflow-hidden rounded-full">
+                      {DENSITY_RAMP_HEXES.map((hex) => (
+                        <span key={hex} className="flex-1" style={{ backgroundColor: hex }} />
+                      ))}
+                    </div>
+                    <p className="text-[9px] text-[#0C1B33]/35">
+                      $ awarded (hex bins, {HEXAGON_RADIUS_M}m)
+                    </p>
+                  </div>
+                )}
 
                 {communityInvestmentLoading && (
                   <p className="text-[9px] text-[#0C1B33]/40">Loading community investment…</p>
