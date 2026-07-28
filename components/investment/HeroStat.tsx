@@ -1,4 +1,5 @@
-import { formatCount, formatFullDollars } from "./format";
+import { formatCount } from "./format";
+import { CountUpDollars } from "./CountUpDollars";
 
 /**
  * Hero stat tile (NOT a chart) — the single figure the analysis leads with:
@@ -27,7 +28,7 @@ export function HeroStat({
         className="mt-3 text-[clamp(44px,8vw,76px)] font-semibold leading-none text-[#0C1B33] tracking-tight"
         style={{ fontVariantNumeric: "proportional-nums" }}
       >
-        {formatFullDollars(total)}
+        <CountUpDollars value={total} />
       </div>
       <p className="mt-4 text-[14px] leading-relaxed text-[#0C1B33]/55">
         {`awarded · ${formatCount(recordCount)} grants & projects · ${rangeLabel}`}

@@ -7,6 +7,7 @@ import {
   formatAsOf,
   MAGNITUDE_HUE,
 } from "@/components/investment/format";
+import { CountUpDollars } from "@/components/investment/CountUpDollars";
 import { getInvestmentAdminState, InvestmentLoginForm, InvestmentNotConfigured } from "./gate";
 
 export const dynamic = "force-dynamic";
@@ -78,7 +79,7 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                 className="mt-3 text-[clamp(44px,8vw,76px)] font-semibold leading-none tracking-tight text-[#0C1B33]"
                 style={{ fontVariantNumeric: "proportional-nums" }}
               >
-                {formatFullDollars(index.citywideTotal)}
+                <CountUpDollars value={index.citywideTotal} />
               </div>
               <p className="mt-4 text-[14px] leading-relaxed text-[#0C1B33]/55">
                 awarded across{" "}
