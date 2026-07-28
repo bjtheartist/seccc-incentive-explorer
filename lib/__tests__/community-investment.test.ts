@@ -1,0 +1,441 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
+import path from "node:path";
+import { describe, expect, it } from "vitest";
+import {
+  assertNoBannedFigureKeys,
+  BANNED_FIGURE_KEY_RE,
+  buildCommunityInvestmentExport,
+  countBySource,
+  dedupeInvestmentRecords,
+  filterInvestmentBySources,
+  findBannedFigureKeys,
+  FUNDER_TYPES,
+  INVESTMENT_SOURCES,
+  INVESTMENT_STATUSES,
+  isRoundCapAmount,
+  loadCommunityInvestment,
+  normalizeAddressForDedupe,
+  normalizeRecipientForDedupe,
+  SOURCE_FUNDER_TYPE,
+  sumAwardedDollars,
+  type CommunityInvestmentExport,
+  type CommunityInvestmentRecord,
+  type InvestmentGeometry,
+} from "../community-investment";
+
+// ── Fixtures ─────────────────────────────────────────────────────────────────
+
+const POINT = (lat: number, lng: number): InvestmentGeometry => ({ kind: "point", lat, lng });
+
+function rec(over: Partial<CommunityInvestmentRecord> & { id: string }): CommunityInvestmentRecord {
+  return {
+    source: "nof-small",
+    funderType: "government",
+    funderName: "Neighborhood Opportunity Fund (City of Chicago)",
+    recipient: "Test Grantee",
+    amountAwarded: 100000,
+    logLine: null,
+    year: 2022,
+    geometry: POINT(41.7, -87.6),
+    address: "1 MAIN ST",
+    status: "completed",
+    links: [],
+    ...over,
+  };
+}
+
+// ── Enums are complete + internally consistent ───────────────────────────────
+
+describe("source / funderType / status enums", () => {
+  it("SOURCE_FUNDER_TYPE covers every source and maps to a valid funderType", () => {
+    for (const source of INVESTMENT_SOURCES) {
+      const ft = SOURCE_FUNDER_TYPE[source];
+      expect(ft, `${source} has a funderType`).toBeDefined();
+      expect(FUNDER_TYPES).toContain(ft);
+    }
+    // No stray keys beyond the declared sources.
+    expect(Object.keys(SOURCE_FUNDER_TYPE).sort()).toEqual([...INVESTMENT_SOURCES].sort());
+  });
+
+  it("the government/philanthropic/private split matches the spec", () => {
+    expect(SOURCE_FUNDER_TYPE["nof-small"]).toBe("government");
+    expect(SOURCE_FUNDER_TYPE["nof-large"]).toBe("government");
+    expect(SOURCE_FUNDER_TYPE.sbif).toBe("government");
+    expect(SOURCE_FUNDER_TYPE.cdg).toBe("government");
+    expect(SOURCE_FUNDER_TYPE.foundation).toBe("philanthropic");
+    expect(SOURCE_FUNDER_TYPE.development).toBe("private_development");
+  });
+
+  it("the enum arrays carry exactly the documented members", () => {
+    expect([...INVESTMENT_SOURCES]).toEqual(["nof-small", "nof-large", "sbif", "cdg", "foundation", "development"]);
+    expect([...FUNDER_TYPES]).toEqual(["government", "philanthropic", "private_development"]);
+    expect([...INVESTMENT_STATUSES]).toEqual(["completed", "awarded", "announced", "proposed"]);
+  });
+});
+
+// ── IRON RULE: banned derived-figure key rail ────────────────────────────────
+
+describe("banned-figure key rail", () => {
+  it("matches received / available / remaining / unspent case-insensitively", () => {
+    expect(BANNED_FIGURE_KEY_RE.test("amountReceived")).toBe(true);
+    expect(BANNED_FIGURE_KEY_RE.test("Available")).toBe(true);
+    expect(BANNED_FIGURE_KEY_RE.test("remainingBalance")).toBe(true);
+    expect(BANNED_FIGURE_KEY_RE.test("unspentFunds")).toBe(true);
+    // The legitimate keys we DO ship must not trip the rail.
+    expect(BANNED_FIGURE_KEY_RE.test("amountAwarded")).toBe(false);
+    expect(BANNED_FIGURE_KEY_RE.test("totalDollarsAwarded")).toBe(false);
+  });
+
+  it("findBannedFigureKeys walks nested objects/arrays ([] when clean)", () => {
+    expect(findBannedFigureKeys({ records: [{ amountAwarded: 5, meta: { totalDollarsAwarded: 5 } }] })).toEqual([]);
+    expect(findBannedFigureKeys({ records: [{ amountReceived: 5 }] })).toEqual(["amountReceived"]);
+    expect(findBannedFigureKeys({ a: { b: { remainingToDraw: 1, unspent: 2 } } }).sort()).toEqual([
+      "remainingToDraw",
+      "unspent",
+    ]);
+  });
+
+  it("assertNoBannedFigureKeys throws with the offending key, passes when clean", () => {
+    expect(() => assertNoBannedFigureKeys({ ok: 1, records: [] })).not.toThrow();
+    expect(() => assertNoBannedFigureKeys({ availableFunds: 1 })).toThrow(/availableFunds/);
+  });
+
+  it("buildCommunityInvestmentExport hard-fails if a record smuggles in a banned key", () => {
+    const dirty = { ...rec({ id: "x" }), amountRemaining: 5 } as unknown as CommunityInvestmentRecord;
+    expect(() =>
+      buildCommunityInvestmentExport([dirty], "2026-07-27T00:00:00.000Z", {
+        droppedNoGeocode: 0,
+        dedupedRows: 0,
+        sources: [],
+      }),
+    ).toThrow(/amountRemaining/);
+  });
+});
+
+// ── Normalization helpers ────────────────────────────────────────────────────
+
+describe("normalizeAddressForDedupe / normalizeRecipientForDedupe", () => {
+  it("folds punctuation + whitespace so period-variant addresses match", () => {
+    expect(normalizeAddressForDedupe("212 E. 79th St.")).toBe("212 E 79TH ST");
+    expect(normalizeAddressForDedupe("212 E 79th St")).toBe("212 E 79TH ST");
+    expect(normalizeAddressForDedupe(null)).toBe("");
+    expect(normalizeAddressForDedupe("   ")).toBe("");
+  });
+
+  it("canonicalizes the trailing street-type so Av / Ave. / Avenue fold together", () => {
+    expect(normalizeAddressForDedupe("8126 S Stony Island Av")).toBe("8126 S STONY ISLAND AVE");
+    expect(normalizeAddressForDedupe("8126 S. Stony Island Ave.")).toBe("8126 S STONY ISLAND AVE");
+    expect(normalizeAddressForDedupe("8126 S Stony Island Avenue")).toBe("8126 S STONY ISLAND AVE");
+    // A different street type does NOT fold into another.
+    expect(normalizeAddressForDedupe("123 Main St")).toBe("123 MAIN ST");
+    expect(normalizeAddressForDedupe("123 Main Street")).toBe("123 MAIN ST");
+    expect(normalizeAddressForDedupe("123 Main St")).not.toBe(normalizeAddressForDedupe("123 Main Ave"));
+  });
+
+  it("strips legal suffixes so entity-name variants match", () => {
+    expect(normalizeRecipientForDedupe("Marina Cartage, Inc.")).toBe("MARINA CARTAGE");
+    expect(normalizeRecipientForDedupe("Marina Cartage Inc")).toBe("MARINA CARTAGE");
+    expect(normalizeRecipientForDedupe("The Park Manor 75, LLC")).toBe("THE PARK MANOR 75");
+    expect(normalizeRecipientForDedupe("David & Jonathan Consulting LLC")).toBe("DAVID JONATHAN CONSULTING");
+    expect(normalizeRecipientForDedupe(null)).toBe("");
+  });
+});
+
+// ── Dedupe behavior ──────────────────────────────────────────────────────────
+
+describe("dedupeInvestmentRecords", () => {
+  it("collapses an award shadowed by a completion, keeping the completed record", () => {
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "c", source: "nof-small", status: "completed", recipient: "Urban Core", address: "1840 E 71st St", amountAwarded: 250000 }),
+      rec({ id: "a", source: "nof-small", status: "awarded", recipient: "Urban Core", address: "1840 E. 71st St.", amountAwarded: 250000 }),
+    ]);
+    expect(removedCount).toBe(1);
+    expect(records).toHaveLength(1);
+    expect(records[0].id).toBe("c");
+    expect(records[0].status).toBe("completed");
+  });
+
+  it("keeps the completion even when the awarded row is seen FIRST", () => {
+    const { records } = dedupeInvestmentRecords([
+      rec({ id: "a", source: "cdg", status: "awarded", recipient: "Rise Training Academy", address: "8300 S Halsted St", amountAwarded: 250000 }),
+      rec({ id: "c", source: "nof-small", status: "completed", recipient: "Rise Training Academy", address: "8300 S Halsted St", amountAwarded: 250000 }),
+    ]);
+    expect(records).toHaveLength(1);
+    expect(records[0].status).toBe("completed");
+  });
+
+  it("KEEPS distinct businesses that share a multi-tenant address + standardized amount", () => {
+    // The 6212 N Lincoln Ave case: four different SBIF grantees, each $62,500.
+    const four = ["David & Jonathan Consulting LLC", "PreroLaw P.C", "Rena Meystel Photography LLC", "Handoff Returns, Inc."].map(
+      (name, i) => rec({ id: `l${i}`, source: "sbif", status: "completed", recipient: name, address: "6212 N Lincoln Ave", amountAwarded: 62500 }),
+    );
+    const { records, removedCount } = dedupeInvestmentRecords(four);
+    expect(removedCount).toBe(0);
+    expect(records).toHaveLength(4);
+  });
+
+  it("collapses a true duplicate row (same name, same status, same address+amount)", () => {
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "m1", source: "sbif", status: "completed", recipient: "Marina Cartage, Inc.", address: "4450 S Morgan St", amountAwarded: 110802 }),
+      rec({ id: "m2", source: "sbif", status: "completed", recipient: "Marina Cartage Inc", address: "4450 S Morgan St", amountAwarded: 110802 }),
+    ]);
+    expect(removedCount).toBe(1);
+    expect(records).toHaveLength(1);
+  });
+
+  it("KEEPS two same-name completions at the same address+amount on DIFFERENT dates", () => {
+    // House 2 Home LLC: two real $75,000 SBIF completion cycles at 655 W 59th St,
+    // 9 months apart — two events, not a duplicated row. Both must survive.
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "h1", source: "sbif", status: "completed", recipient: "House 2 Home LLC", address: "655 W 59th St", amountAwarded: 75000, recordDate: "2023-02-24T00:00:00.000" }),
+      rec({ id: "h2", source: "sbif", status: "completed", recipient: "House 2 Home LLC", address: "655 W 59th St", amountAwarded: 75000, recordDate: "2023-11-14T00:00:00.000" }),
+    ]);
+    expect(removedCount).toBe(0);
+    expect(records.map((r) => r.id)).toEqual(["h1", "h2"]);
+  });
+
+  it("COLLAPSES a partner-list re-statement of an official award (Huddle House), keeping the official row", () => {
+    // Jim's corridor sheet re-states the NOF Large award with an expanded name
+    // and no date; the official record wins even though both rows carry the
+    // same status and a round-cap amount.
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "jim-huddle", source: "nof-small", status: "awarded", recipient: "Huddle House Diner", address: "9401 S. Stony Island Ave.", amountAwarded: 1100000, recordProvenance: "partner-list" }),
+      rec({ id: "official-huddle", source: "nof-large", status: "awarded", recipient: "Huddle House", address: "9401 S Stony Island Av", amountAwarded: 1100000, recordDate: "2021-06-01T00:00:00.000", recordProvenance: "official" }),
+    ]);
+    expect(removedCount).toBe(1);
+    expect(records.map((r) => r.id)).toEqual(["official-huddle"]);
+  });
+
+  it("COLLAPSES a partner-list re-statement whose street NUMBER is off but sits within 150m (real Huddle House case)", () => {
+    // Jim's sheet says 9401, the official award says 9421 — different dedupe
+    // keys, but same $1.1M, prefix names, and points ~40m apart.
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "official-huddle", source: "nof-large", status: "awarded", recipient: "Huddle House", address: "9421 S Stony Island Ave", amountAwarded: 1100000, recordDate: "2021-05-28T00:00:00.000", recordProvenance: "official", geometry: { kind: "point", lat: 41.723734068, lng: -87.584991129 } }),
+      rec({ id: "jim-huddle", source: "nof-small", status: "awarded", recipient: "Huddle House Diner", address: "9401 S. Stony Island Ave.", amountAwarded: 1100000, recordProvenance: "partner-list", geometry: { kind: "point", lat: 41.723312670502, lng: -87.585069012587 } }),
+    ]);
+    expect(removedCount).toBe(1);
+    expect(records.map((r) => r.id)).toEqual(["official-huddle"]);
+  });
+
+  it("KEEPS a partner-list row when the nearby official row's name is unrelated (proximity alone is not enough)", () => {
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "official-x", source: "nof-small", status: "completed", recipient: "Bronze Gallery Inc", address: "9421 S Stony Island Ave", amountAwarded: 250000, recordDate: "2022-01-01T00:00:00.000", recordProvenance: "official", geometry: { kind: "point", lat: 41.723734068, lng: -87.584991129 } }),
+      rec({ id: "jim-y", source: "nof-small", status: "awarded", recipient: "Strawberry Cafe", address: "9401 S. Stony Island Ave.", amountAwarded: 250000, recordProvenance: "partner-list", geometry: { kind: "point", lat: 41.723312670502, lng: -87.585069012587 } }),
+    ]);
+    expect(removedCount).toBe(0);
+    expect(records.map((r) => r.id).sort()).toEqual(["jim-y", "official-x"]);
+  });
+
+  it("KEEPS a cross-provenance pair of UNRELATED businesses at a shared round cap", () => {
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "jim-a", source: "nof-small", status: "awarded", recipient: "Strawberry Cafe", address: "1652 E 79th St", amountAwarded: 250000, recordProvenance: "partner-list" }),
+      rec({ id: "official-b", source: "nof-small", status: "completed", recipient: "Bronze Gallery Inc", address: "1652 E 79th St", amountAwarded: 250000, recordDate: "2022-03-01T00:00:00.000", recordProvenance: "official" }),
+    ]);
+    expect(removedCount).toBe(0);
+    expect(records.map((r) => r.id).sort()).toEqual(["jim-a", "official-b"]);
+  });
+
+  it("collapses an identical-date same-name completion pair (a genuine Socrata duplicate)", () => {
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "d1", source: "sbif", status: "completed", recipient: "Marina Cartage, Inc.", address: "4450 S Morgan St", amountAwarded: 110802, recordDate: "2020-12-17T00:00:00.000" }),
+      rec({ id: "d2", source: "sbif", status: "completed", recipient: "Marina Cartage Inc", address: "4450 S Morgan St", amountAwarded: 110802, recordDate: "2020-12-17T00:00:00.000" }),
+    ]);
+    expect(removedCount).toBe(1);
+    expect(records).toHaveLength(1);
+  });
+
+  it("KEEPS two DIFFERENT businesses that share an address and a round program cap ($250,000)", () => {
+    // Acme (NOF completion) and Zenith (CDG award) at one multi-tenant address,
+    // both at the $250k cap — a coincidental collision, NOT the same project.
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "acme", source: "nof-small", status: "completed", recipient: "Acme Bakery LLC", address: "5500 S King Dr", amountAwarded: 250000, recordDate: "2022-05-01T00:00:00.000" }),
+      rec({ id: "zenith", source: "cdg", status: "awarded", recipient: "Zenith Auto Repair Inc", address: "5500 S King Dr", amountAwarded: 250000 }),
+    ]);
+    expect(removedCount).toBe(0);
+    expect(records.map((r) => r.id).sort()).toEqual(["acme", "zenith"]);
+  });
+
+  it("COLLAPSES a DBA award/completion pair with divergent names at a non-round amount", () => {
+    // "Legacy, etc" (NOF completion) vs "Mikkey's Retro Grill" (Jim's corridor
+    // award) at 8126 S Stony Island Ave, both $139,058.77 — one rebranded project.
+    // The distinctive non-round amount is enough to collapse despite the names
+    // and the "Av"/"Ave." spelling difference.
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "legacy", source: "nof-small", status: "completed", recipient: "Legacy, etc", address: "8126 S Stony Island Av", amountAwarded: 139058.77, recordDate: "2018-06-30T00:00:00.000" }),
+      rec({ id: "mikkey", source: "nof-small", status: "awarded", recipient: "Mikkey's Retro Grill", address: "8126 S. Stony Island Ave.", amountAwarded: 139058.77 }),
+    ]);
+    expect(removedCount).toBe(1);
+    expect(records).toHaveLength(1);
+    expect(records[0].id).toBe("legacy"); // completion holds the slot
+    expect(records[0].status).toBe("completed");
+  });
+
+  it("isRoundCapAmount flags whole $25k multiples only", () => {
+    expect(isRoundCapAmount(250000)).toBe(true);
+    expect(isRoundCapAmount(25000)).toBe(true);
+    expect(isRoundCapAmount(139058.77)).toBe(false);
+    expect(isRoundCapAmount(62500)).toBe(false);
+    expect(isRoundCapAmount(0)).toBe(false);
+    expect(isRoundCapAmount(null)).toBe(false);
+  });
+
+  it("NEVER dedupes philanthropic (foundation) rows, even at a shared intermediary address", () => {
+    const a = rec({ id: "f1", source: "foundation", funderType: "philanthropic", funderName: "Foundation A", recipient: "Chicago Community Foundation", address: "33 S State St", amountAwarded: 5000, status: "awarded" });
+    const b = rec({ id: "f2", source: "foundation", funderType: "philanthropic", funderName: "Foundation B", recipient: "Chicago Community Foundation", address: "33 S State St", amountAwarded: 5000, status: "awarded" });
+    const { records, removedCount } = dedupeInvestmentRecords([a, b]);
+    expect(removedCount).toBe(0);
+    expect(records).toHaveLength(2);
+  });
+
+  it("passes ineligible rows through untouched (citywide geometry, null amount, blank address)", () => {
+    const citywide = rec({ id: "cw", source: "foundation", funderType: "philanthropic", geometry: { kind: "citywide" }, address: null });
+    const noAmount = rec({ id: "na", source: "cdg", amountAwarded: null, recipient: "Pre-dev grant", address: "1 A ST" });
+    const noAddr = rec({ id: "nd", source: "cdg", address: null });
+    const { records, removedCount } = dedupeInvestmentRecords([citywide, noAmount, noAddr]);
+    expect(removedCount).toBe(0);
+    expect(records.map((r) => r.id)).toEqual(["cw", "na", "nd"]);
+  });
+});
+
+// ── Aggregation + export assembly ────────────────────────────────────────────
+
+describe("countBySource / sumAwardedDollars / buildCommunityInvestmentExport", () => {
+  it("counts every source and sums only non-null amounts", () => {
+    const records = [
+      rec({ id: "1", source: "cdg", amountAwarded: 100 }),
+      rec({ id: "2", source: "cdg", amountAwarded: null }),
+      rec({ id: "3", source: "foundation", funderType: "philanthropic", amountAwarded: 50 }),
+    ];
+    const counts = countBySource(records);
+    expect(counts.cdg).toBe(2);
+    expect(counts.foundation).toBe(1);
+    expect(counts["nof-small"]).toBe(0);
+    expect(sumAwardedDollars(records)).toBe(150);
+  });
+
+  it("assembles the export shape with point/citywide split and provenance", () => {
+    const records = [
+      rec({ id: "p", geometry: POINT(41.7, -87.6) }),
+      rec({ id: "c", source: "foundation", funderType: "philanthropic", geometry: { kind: "citywide" }, amountAwarded: 25 }),
+    ];
+    const out = buildCommunityInvestmentExport(records, "2026-07-27T00:00:00.000Z", {
+      droppedNoGeocode: 3,
+      dedupedRows: 2,
+      sources: ["src label"],
+    });
+    expect(out.generatedAt).toBe("2026-07-27T00:00:00.000Z");
+    expect(out.meta.totalRecords).toBe(2);
+    expect(out.meta.pointCount).toBe(1);
+    expect(out.meta.citywideCount).toBe(1);
+    expect(out.meta.totalDollarsAwarded).toBe(100025);
+    expect(out.meta.droppedNoGeocode).toBe(3);
+    expect(out.meta.dedupedRows).toBe(2);
+    expect(out.meta.sources).toEqual(["src label"]);
+    expect(findBannedFigureKeys(out)).toEqual([]);
+  });
+});
+
+describe("filterInvestmentBySources", () => {
+  const data: CommunityInvestmentExport = buildCommunityInvestmentExport(
+    [rec({ id: "1", source: "cdg" }), rec({ id: "2", source: "foundation", funderType: "philanthropic" })],
+    "2026-07-27T00:00:00.000Z",
+    { droppedNoGeocode: 0, dedupedRows: 0, sources: [] },
+  );
+
+  it("returns the export unfiltered for null/empty sources", () => {
+    expect(filterInvestmentBySources(data, null).records).toHaveLength(2);
+    expect(filterInvestmentBySources(data, []).records).toHaveLength(2);
+  });
+
+  it("filters records down to the requested sources, meta unchanged", () => {
+    const filtered = filterInvestmentBySources(data, ["cdg"]);
+    expect(filtered.records.map((r) => r.source)).toEqual(["cdg"]);
+    expect(filtered.meta).toEqual(data.meta);
+  });
+});
+
+// ── File-location guard: the export must NEVER live under public/ ─────────────
+
+describe("private-data location guard", () => {
+  const PRIVATE_PATH = path.join(process.cwd(), "data/private/community-investment.json");
+  const PUBLIC_DIR = path.join(process.cwd(), "public");
+
+  /** Recursively list every file basename under a directory (empty if absent). */
+  function walkFiles(dir: string): string[] {
+    if (!existsSync(dir)) return [];
+    const out: string[] = [];
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) out.push(...walkFiles(full));
+      else out.push(entry.name);
+    }
+    return out;
+  }
+
+  it("no community-investment.json is served from anywhere under public/", () => {
+    expect(walkFiles(PUBLIC_DIR)).not.toContain("community-investment.json");
+  });
+
+  it("the committed export lives under data/private/", () => {
+    // (Skips gracefully before the export has been generated.)
+    if (existsSync(PRIVATE_PATH)) {
+      expect(PRIVATE_PATH.includes(`${path.sep}data${path.sep}private${path.sep}`)).toBe(true);
+    } else {
+      expect(existsSync(PRIVATE_PATH)).toBe(false);
+    }
+  });
+});
+
+// ── Committed-file smoke test (hard-runs once the export is committed) ────────
+
+const EXPORT_PATH = path.join(process.cwd(), "data/private/community-investment.json");
+const EXPORT_EXISTS = existsSync(EXPORT_PATH);
+
+describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
+  it("loadCommunityInvestment returns the documented top-level shape", () => {
+    const data = loadCommunityInvestment();
+    expect(data).not.toBeNull();
+    expect(typeof data!.generatedAt).toBe("string");
+    expect(Array.isArray(data!.records)).toBe(true);
+    expect(data!.records.length).toBeGreaterThan(0);
+    expect(data!.meta.totalRecords).toBe(data!.records.length);
+    // point + citywide partition the records exactly.
+    expect(data!.meta.pointCount + data!.meta.citywideCount).toBe(data!.records.length);
+  });
+
+  it("every record uses only valid enum members and a coherent geometry", () => {
+    const data = loadCommunityInvestment()!;
+    for (const r of data.records) {
+      expect(INVESTMENT_SOURCES).toContain(r.source);
+      expect(FUNDER_TYPES).toContain(r.funderType);
+      expect(INVESTMENT_STATUSES).toContain(r.status);
+      expect(SOURCE_FUNDER_TYPE[r.source]).toBe(r.funderType);
+      expect(r.amountAwarded === null || typeof r.amountAwarded === "number").toBe(true);
+      if (r.geometry.kind === "point") {
+        expect(typeof r.geometry.lat).toBe("number");
+        expect(typeof r.geometry.lng).toBe("number");
+      } else {
+        expect(r.geometry).toEqual({ kind: "citywide" });
+      }
+    }
+  });
+
+  it("record ids are unique", () => {
+    const data = loadCommunityInvestment()!;
+    const ids = data.records.map((r) => r.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("counts sum to the record total and dollars match the awarded sum", () => {
+    const data = loadCommunityInvestment()!;
+    const summed = Object.values(data.meta.counts).reduce((a, b) => a + b, 0);
+    expect(summed).toBe(data.records.length);
+    expect(data.meta.totalDollarsAwarded).toBe(sumAwardedDollars(data.records));
+  });
+
+  it("IRON RULE: the raw committed text carries no banned derived-figure key", () => {
+    // Read the raw file (not the typed loader) so a hand-edit can't slip past.
+    const parsed = JSON.parse(readFileSync(EXPORT_PATH, "utf8"));
+    expect(findBannedFigureKeys(parsed)).toEqual([]);
+  });
+});
