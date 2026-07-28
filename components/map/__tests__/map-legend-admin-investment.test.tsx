@@ -152,6 +152,33 @@ describe("MapLegendPanel community-investment admin section", () => {
     expect(html).not.toContain("Dot size = amount awarded");
     expect(html).not.toContain("Citywide commitments");
   });
+
+  it("shows the capital-class sub-legend only when a NON-grant class is present", () => {
+    const withNonGrant = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        communityInvestmentVisible={true}
+        investmentPresentCapitalClasses={["grant", "tif_subsidy", "tax_credit"]}
+      />
+    );
+    expect(withNonGrant).toContain("Capital class");
+    expect(withNonGrant).toContain("TIF subsidy");
+    expect(withNonGrant).toContain("Authorized");
+    expect(withNonGrant).toContain("Tax credit");
+    expect(withNonGrant).toContain("Tax-credit allocation");
+
+    // Grant-only → no sub-legend (it would be noise).
+    const grantOnly = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        communityInvestmentVisible={true}
+        investmentPresentCapitalClasses={["grant"]}
+      />
+    );
+    expect(grantOnly).not.toContain("Capital class");
+  });
 });
 
 describe("buildInvestmentPopupHtml", () => {
@@ -229,6 +256,70 @@ describe("buildInvestmentPopupHtml", () => {
   it("drops a non-http(s) source link", () => {
     const html = buildInvestmentPopupHtml({ ...full, sourceLink: "javascript:alert(1)" });
     expect(html).not.toContain("<a ");
+  });
+
+  // The money-NOUN span (the label directly in front of the dollar figure) is
+  // rendered with this style fragment; asserting against it isolates the money
+  // noun from the separate lifecycle-status badge (which may itself read
+  // "Awarded" for a TIF/tax-credit record — a different, legitimate axis).
+  const MONEY_LABEL = (label: string) => `color:#8A93A6">${label}</span>`;
+
+  it("labels a TIF ceiling 'Authorized' (never the 'Awarded' money noun), reading authorizedAmount", () => {
+    const html = buildInvestmentPopupHtml({
+      recipient: "5039 N Kimball",
+      funderName: "City of Chicago — TIF",
+      funderType: "government",
+      capitalClass: "tif_subsidy",
+      amountAwarded: null,
+      authorizedAmount: 2_500_000,
+      status: "awarded",
+      year: 2021,
+    });
+    expect(html).toContain(MONEY_LABEL("Authorized"));
+    expect(html).toContain("$2,500,000");
+    expect(html).not.toContain(MONEY_LABEL("Awarded"));
+    expect(html.toLowerCase()).not.toContain("received");
+  });
+
+  it("labels a HUD CDBG/HOME allocation with the 'Federal program funding' money noun", () => {
+    const html = buildInvestmentPopupHtml({
+      recipient: "3403 W Lawrence",
+      funderName: "City of Chicago — CDBG/HOME",
+      funderType: "government",
+      capitalClass: "federal_program",
+      amountAwarded: null,
+      authorizedAmount: 68_868,
+      status: "completed",
+    });
+    expect(html).toContain(MONEY_LABEL("Federal program funding"));
+    expect(html).toContain("$68,868");
+    expect(html).not.toContain(MONEY_LABEL("Awarded"));
+  });
+
+  it("labels a LIHTC/NMTC figure with the 'Tax-credit allocation' money noun, reading creditAmount", () => {
+    const html = buildInvestmentPopupHtml({
+      recipient: "901 W 63rd St",
+      funderName: "IHDA — LIHTC",
+      funderType: "government",
+      capitalClass: "tax_credit",
+      amountAwarded: null,
+      creditAmount: 9_107_089,
+      status: "awarded",
+    });
+    expect(html).toContain(MONEY_LABEL("Tax-credit allocation"));
+    expect(html).toContain("$9,107,089");
+    expect(html).not.toContain(MONEY_LABEL("Awarded"));
+  });
+
+  it("adds an 'Analyze this community →' link to the record's community area", () => {
+    const html = buildInvestmentPopupHtml({ ...full, communityArea: "Auburn Gresham" });
+    expect(html).toContain("Analyze this community");
+    expect(html).toContain('href="/investment/Auburn%20Gresham"');
+  });
+
+  it("omits the Analyze link when the record has no community area", () => {
+    const html = buildInvestmentPopupHtml(full);
+    expect(html).not.toContain("Analyze this community");
   });
 });
 

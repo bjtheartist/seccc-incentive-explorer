@@ -8,6 +8,9 @@ import {
   DENSITY_COLOR_RANGE,
   DENSITY_RAMP_HEXES,
   densityColorWeight,
+  densityRecordWeight,
+  densityWeightForMetric,
+  INVESTMENT_DENSITY_METRICS,
   INVESTMENT_VIEW_MODES,
   INVESTMENT_VIEW_MODE_STORAGE_KEY,
   makeArcWidthScale,
@@ -34,8 +37,12 @@ function feature(overrides: {
   recipient?: string;
   funderName?: string;
   funderType?: FunderType;
+  capitalClass?: import("@/lib/community-investment").CapitalClass;
   amountAwarded?: number | null;
+  authorizedAmount?: number | null;
+  creditAmount?: number | null;
   announcedInvestment?: number | null;
+  communityArea?: string;
   lng?: number;
   lat?: number;
 }): InvestmentPointFeature {
@@ -47,8 +54,12 @@ function feature(overrides: {
       recipient: overrides.recipient ?? "Example Recipient",
       funderName: overrides.funderName ?? "Joyce Foundation",
       funderType: overrides.funderType ?? "philanthropic",
+      capitalClass: overrides.capitalClass ?? "grant",
       amountAwarded: "amountAwarded" in overrides ? (overrides.amountAwarded ?? null) : 100_000,
+      authorizedAmount: overrides.authorizedAmount ?? null,
+      creditAmount: overrides.creditAmount ?? null,
       announcedInvestment: overrides.announcedInvestment ?? null,
+      communityArea: overrides.communityArea ?? "",
       logLine: null,
       year: 2021,
       status: "awarded",
@@ -263,5 +274,34 @@ describe("densityColorWeight (heat map weight)", () => {
       announcedInvestment: 9_000_000_000,
     });
     expect(densityColorWeight(dev)).toBe(0);
+  });
+});
+
+describe("density metric (dollars | records)", () => {
+  it("exposes both metrics with dollars first (the default)", () => {
+    expect(INVESTMENT_DENSITY_METRICS).toEqual(["dollars", "records"]);
+  });
+
+  it("records weight is 1 for EVERY point (a plain count), never a dollar field", () => {
+    expect(densityRecordWeight(feature({ amountAwarded: 250_000 }))).toBe(1);
+    expect(densityRecordWeight(feature({ amountAwarded: null }))).toBe(1);
+    // Even a billion-dollar development counts as exactly one record.
+    expect(
+      densityRecordWeight(
+        feature({ funderType: "private_development", amountAwarded: null, announcedInvestment: 9_000_000_000 }),
+      ),
+    ).toBe(1);
+  });
+
+  it("densityWeightForMetric selects the awarded-dollars weight for 'dollars' (unchanged)", () => {
+    const w = densityWeightForMetric("dollars");
+    expect(w(feature({ amountAwarded: 250_000 }))).toBe(250_000);
+    expect(w).toBe(densityColorWeight);
+  });
+
+  it("densityWeightForMetric selects the count weight for 'records'", () => {
+    const w = densityWeightForMetric("records");
+    expect(w(feature({ amountAwarded: 250_000 }))).toBe(1);
+    expect(w).toBe(densityRecordWeight);
   });
 });

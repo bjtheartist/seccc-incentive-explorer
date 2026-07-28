@@ -19,6 +19,8 @@ import { Methodology } from "@/components/investment/Methodology";
 import { StatusCards } from "@/components/investment/StatusCards";
 import { WorkingSetPanel } from "@/components/investment/Shortlist";
 import { ComparePinBar, PinButton } from "@/components/investment/PinControls";
+import { ShowOnMapLink } from "@/components/investment/ShowOnMapLink";
+import { RecordDrawerProvider } from "@/components/investment/RecordDrawer";
 import { getInvestmentAdminState, InvestmentLoginForm, InvestmentNotConfigured } from "../gate";
 
 export const dynamic = "force-dynamic";
@@ -130,6 +132,7 @@ export default async function InvestmentAreaPage({
           {analysis ? (
             <div className="flex items-center gap-2 no-print">
               <PinButton area={name} />
+              <ShowOnMapLink area={name} />
               <Link
                 href={`/print/investment/${encodeURIComponent(name)}`}
                 className="inline-flex items-center rounded-[3px] border border-[#0C1B33]/15 bg-white px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-[#0C1B33]/60 hover:border-[#0C1B33]/30 hover:text-[#0C1B33]"
@@ -216,9 +219,12 @@ export default async function InvestmentAreaPage({
               <MajorDevelopments summary={developments} scope="area" />
             </Section>
 
-            {/* 5 — Top recipients + working set */}
-            <Section title="Top recipients" description="The largest single awards on record since 2020. Save rows to build a working set.">
-              <TopRecipientsTable recipients={analysis.topRecipients} saveEnabled area={name} />
+            {/* 5 — Top recipients + working set. Wrapped in the drawer provider so a
+                 row click opens the full-record side drawer (Sol #1) with no nav. */}
+            <Section title="Top recipients" description="The largest single awards on record since 2020. Click a recipient for the full record; save rows to build a working set.">
+              <RecordDrawerProvider>
+                <TopRecipientsTable recipients={analysis.topRecipients} saveEnabled drawerEnabled area={name} />
+              </RecordDrawerProvider>
               <div className="mt-4">
                 <WorkingSetPanel />
               </div>

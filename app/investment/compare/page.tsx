@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { CHICAGO_COMMUNITY_AREAS } from "@/lib/community-areas";
 import { loadInvestmentAnalysis, type CommunityInvestmentAnalysis } from "@/lib/investment-analysis";
 import { CompareView } from "@/components/investment/CompareView";
+import { ShowOnMapLink } from "@/components/investment/ShowOnMapLink";
 import { getInvestmentAdminState, InvestmentLoginForm, InvestmentNotConfigured } from "../gate";
 
 /**
@@ -114,6 +115,14 @@ export default async function InvestmentComparePage({ searchParams }: { searchPa
         ) : (
           <div className="mt-8">
             <CompareView analyses={analyses} />
+            <div className="mt-5 flex flex-wrap items-center gap-2">
+              <span className="font-mono-bureau text-[10px] uppercase tracking-[0.12em] text-[#0C1B33]/40">
+                Show on map:
+              </span>
+              {analyses.map((a) => (
+                <ShowOnMapLink key={a.communityArea} area={a.communityArea} label={`${a.communityArea} →`} />
+              ))}
+            </div>
             <p className="mt-6 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
               Per-resident awarded dollars are withheld — this dataset has no community-area population join, so a
               per-capita figure would be fabricated. Awarded, announced, and tax-credit capital are separate

@@ -129,4 +129,46 @@ describe("MapLegendPanel investment view-mode control", () => {
     );
     expect(html).toContain("$ awarded (hex bins, 250m)");
   });
+
+  it("labels Arcs honestly as 'Foundation flows (N tracked HQs)'", () => {
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        communityInvestmentVisible={true}
+        investmentViewMode="arcs"
+        investmentFunderHqCount={12}
+      />
+    );
+    expect(html).toContain("Foundation flows (12 tracked HQs)");
+    // The existing caption stays alongside the honest label.
+    expect(html).toContain("Arc: funder HQ");
+  });
+
+  it("Density gets a dollars|records metric toggle; records swaps the caption", () => {
+    const dollars = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        communityInvestmentVisible={true}
+        investmentViewMode="density"
+        investmentDensityMetric="dollars"
+      />
+    );
+    expect(dollars).toContain('aria-label="Density metric"');
+    expect(dollars).toContain("$ awarded (hex bins, 250m)");
+    expect(dollars).not.toContain("grant count (hex bins, 250m)");
+
+    const records = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        communityInvestmentVisible={true}
+        investmentViewMode="density"
+        investmentDensityMetric="records"
+      />
+    );
+    expect(records).toContain("grant count (hex bins, 250m)");
+    expect(records).not.toContain("$ awarded (hex bins, 250m)");
+  });
 });

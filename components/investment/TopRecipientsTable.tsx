@@ -1,6 +1,7 @@
 import type { TopRecipient } from "@/lib/investment-analysis";
 import { formatFullDollars, SOURCE_LABELS_SHORT, truncate } from "./format";
 import { SaveRecordButton } from "./Shortlist";
+import { RecordRowButton } from "./RecordDrawer";
 
 /**
  * "Top recipients" — the biggest single awards in the community since 2020.
@@ -10,15 +11,20 @@ import { SaveRecordButton } from "./Shortlist";
  *
  * When `saveEnabled` + `area` are supplied (the on-screen area page), each row
  * carries a client Save toggle that flags it into the localStorage working set
- * (Sol #3). The print brief omits both, so no interactive control reaches paper.
+ * (Sol #3). When `drawerEnabled` (also the area page, wrapped in
+ * <RecordDrawerProvider>), the recipient cell is a client button that opens the
+ * full-record side drawer (Sol #1) — no navigation away. The print brief omits
+ * both, so no interactive control reaches paper.
  */
 export function TopRecipientsTable({
   recipients,
   saveEnabled = false,
+  drawerEnabled = false,
   area,
 }: {
   recipients: TopRecipient[];
   saveEnabled?: boolean;
+  drawerEnabled?: boolean;
   area?: string;
 }) {
   const showSave = saveEnabled && !!area;
@@ -47,7 +53,13 @@ export function TopRecipientsTable({
           {recipients.map((r, i) => (
             <tr key={`${r.id}-${i}`} className="border-b border-[#0C1B33]/5 align-top last:border-b-0">
               <td className="px-4 py-3 text-[#0C1B33]/40 [font-variant-numeric:tabular-nums]">{i + 1}</td>
-              <td className="px-4 py-3 font-medium text-[#0C1B33]">{r.recipient}</td>
+              <td className="px-4 py-3 font-medium text-[#0C1B33]">
+                {drawerEnabled ? (
+                  <RecordRowButton record={r}>{r.recipient}</RecordRowButton>
+                ) : (
+                  r.recipient
+                )}
+              </td>
               <td className="px-4 py-3 text-[#0C1B33]/55">{SOURCE_LABELS_SHORT[r.source]}</td>
               <td className="px-4 py-3 text-[#0C1B33]/55 [font-variant-numeric:tabular-nums]">{r.year ?? "—"}</td>
               <td className="px-4 py-3 text-right font-semibold text-[#0C1B33] [font-variant-numeric:tabular-nums]">

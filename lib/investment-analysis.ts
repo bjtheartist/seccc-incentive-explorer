@@ -37,6 +37,7 @@ import {
   sumAnnouncedInvestment,
   sumAuthorizedByClass,
   sumCreditCapital,
+  type CapitalClass,
   type CommunityInvestmentRecord,
   type FunderType,
   type InvestmentSource,
@@ -85,6 +86,19 @@ export interface TopRecipient {
   year: number | null;
   amountAwarded: number;
   logLine: string | null;
+  /** Lifecycle stage of the award (drawer status badge). Top recipients are all
+   * grant-class awards, so this is a grant status ("awarded" / "completed" / …). */
+  status: InvestmentStatus;
+  /** Capital class — always "grant" here (top recipients are amountAwarded>0
+   * grant records), surfaced so the drawer can name the class honestly. */
+  capitalClass: CapitalClass;
+  /** Street address as published, or null (the drawer's location line). */
+  address: string | null;
+  /** Whether the record plots at a real address ("sited") or is held citywide
+   * ("citywide", e.g. an intermediary grant) — the drawer's location-confidence. */
+  locationConfidence: "sited" | "citywide";
+  /** Source/project links (http(s)), for the drawer. */
+  links: string[];
 }
 
 /** One of the top-dollar funders — the funder-profile seed. */
@@ -330,6 +344,11 @@ function topRecipients(
       year: r.year,
       amountAwarded: r.amountAwarded as number,
       logLine: r.logLine,
+      status: r.status,
+      capitalClass: r.capitalClass,
+      address: r.address,
+      locationConfidence: r.geometry.kind === "point" ? ("sited" as const) : ("citywide" as const),
+      links: r.links,
     }))
     .sort((a, b) => b.amountAwarded - a.amountAwarded || a.recipient.localeCompare(b.recipient))
     .slice(0, limit);
