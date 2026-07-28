@@ -40,6 +40,7 @@
     "db:sync:transfers": "npx tsx scripts/sync-transfers.ts",
     "db:sync:exemptions": "npx tsx scripts/sync-exemptions.ts",
     "db:sync:distress": "npx tsx scripts/sync-distress-overlay.ts",
+    "db:sync:partners": "npx tsx scripts/sync-capital-partners.ts",
     "db:enrich:parcel-ownership": "npx tsx scripts/enrich-parcel-ownership.ts",
     "db:compute:corridor": "npx tsx scripts/compute-corridor.ts",
     "corridor:owners:export": "npx tsx scripts/export-corridor-owners.ts",

@@ -29,6 +29,7 @@ describe("project goal fit", () => {
     ["edge", "hiring"],
     ["sbif", "rehab"],
     ["enterprise", "equipment"],
+    ["sbaMicroloan", "equipment"],
   ])("recognizes %s as a strong match for %s", (programId, goal) => {
     expect(projectGoalFit(program(programId), goal)?.level).toBe("strong");
   });

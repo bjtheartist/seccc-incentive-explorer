@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-07-14",
-  "sourceLabel": "Official organization websites and the U.S. Treasury CDFI Fund certified list, reviewed for the Chicago project financing pilot",
+  "generatedAt": "2026-07-27",
+  "sourceLabel": "Official organization websites, U.S. Treasury CDFI Fund records, current SBA microlender and Certified Development Company lists, the SBA Community Advantage SBLC list, and SBA 7(a)/504 activity data through June 30, 2026",
   "partners": [
     {
       "id": "allies-for-community-business",
@@ -55,9 +55,15 @@
       "sourceDate": "2026-07-13",
       "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
       "active": true,
+      "sbaRoles": [
+        "7a_lender",
+        "community_advantage_sblc"
+      ],
       "certifications": [
-        "U.S. Treasury CDFI Fund certified"
-      ]
+        "U.S. Treasury CDFI Fund certified",
+        "SBA Community Advantage Small Business Lending Company authorized in Illinois"
+      ],
+      "notes": "SBA role cross-checked against the current SBA Community Advantage SBLC list."
     },
     {
       "id": "accion-opportunity-fund",
@@ -140,9 +146,15 @@
       "sourceDate": "2026-07-14",
       "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
       "active": true,
+      "sbaRoles": [
+        "7a_lender",
+        "community_advantage_sblc"
+      ],
       "certifications": [
-        "U.S. Treasury CDFI Fund certified (as NYBDC Local Development Corporation)"
-      ]
+        "U.S. Treasury CDFI Fund certified (as NYBDC Local Development Corporation)",
+        "SBA Community Advantage Small Business Lending Company authorized in Illinois"
+      ],
+      "notes": "SBA role cross-checked against the current SBA Community Advantage SBLC list."
     },
     {
       "id": "jewish-free-loan-chicago",
@@ -440,6 +452,24 @@
       ],
       "products": [
         {
+          "id": "somercor-community-advantage",
+          "productType": "term_loan",
+          "productName": "SBA 7(a) Community Advantage financing",
+          "publicFitNote": "Illinois small businesses exploring financing for working capital, equipment, inventory, tenant improvements, business acquisition, startup, or expansion. SomerCor and SBA program rules determine project fit and terms.",
+          "projectTypes": [
+            "startup",
+            "expansion",
+            "equipment",
+            "hiring",
+            "relocation",
+            "other"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://somercor.com/",
+          "sourceDate": "2026-07-27",
+          "active": true
+        },
+        {
           "id": "somercor-fixed-assets",
           "productType": "commercial_real_estate",
           "productName": "SBA fixed-asset financing",
@@ -472,9 +502,85 @@
       ],
       "verificationStatus": "verified",
       "sourceUrl": "https://somercor.com/sba-504-loans/",
-      "sourceDate": "2026-07-13",
-      "lastVerifiedAt": "2026-07-13T00:00:00.000Z",
-      "active": true
+      "sourceDate": "2026-07-27",
+      "lastVerifiedAt": "2026-07-27T00:00:00.000Z",
+      "active": true,
+      "sbaRoles": [
+        "7a_lender",
+        "community_advantage_sblc",
+        "certified_development_company"
+      ],
+      "certifications": [
+        "SBA Certified Development Company for 504 financing",
+        "SBA Community Advantage Small Business Lending Company authorized in Illinois"
+      ],
+      "notes": "SBA roles cross-checked against the current SBA Certified Development Company and Community Advantage SBLC lists."
+    },
+    {
+      "id": "small-business-growth-corporation",
+      "name": "Small Business Growth Corporation",
+      "partnerType": "mission_lender",
+      "website": "https://www.growthcorp.com/",
+      "intakeUrl": "https://www.growthcorp.com/contact-us/",
+      "contactEmail": "oneill@growthcorp.com",
+      "phone": "312-852-8545",
+      "address": "3540 Seven Bridges Dr, Suite 320, Woodridge, IL 60517",
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "requiresProjectContext": true,
+      "products": [
+        {
+          "id": "growth-corp-fixed-assets",
+          "productType": "commercial_real_estate",
+          "productName": "SBA 504 fixed-asset financing",
+          "publicFitNote": "Operating businesses planning an owner-occupied real estate purchase, construction project, property improvement, or eligible refinance. SBA 504 financing is not for working capital, inventory, or speculative rental real estate.",
+          "projectTypes": [
+            "relocation",
+            "expansion",
+            "new-construction",
+            "vacant-acquisition",
+            "rehab"
+          ],
+          "proposedUses": [
+            "commercial",
+            "mixed-use",
+            "industrial-maker"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.growthcorp.com/about-growth-corp/territory/",
+          "sourceDate": "2026-07-27",
+          "active": true
+        },
+        {
+          "id": "growth-corp-equipment",
+          "productType": "equipment_financing",
+          "productName": "SBA 504 long-lived equipment financing",
+          "publicFitNote": "Operating businesses planning a long-lived machinery or equipment investment that fits SBA 504 fixed-asset rules. The CDC confirms whether the asset and project structure fit.",
+          "projectTypes": [
+            "equipment",
+            "energy"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.growthcorp.com/about-growth-corp/territory/",
+          "sourceDate": "2026-07-27",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.sba.gov/funding-programs/loans/504-loans/list-certified-development-companies",
+      "sourceDate": "2026-07-27",
+      "lastVerifiedAt": "2026-07-27T00:00:00.000Z",
+      "active": true,
+      "sbaRoles": [
+        "certified_development_company"
+      ],
+      "certifications": [
+        "SBA Certified Development Company for 504 financing"
+      ],
+      "notes": "Chicago-area contact and Illinois service territory verified on Growth Corp's official site; CDC status cross-checked against SBA's current list."
     },
     {
       "id": "community-investment-corporation",
@@ -603,6 +709,56 @@
       "sourceDate": "2026-07-14",
       "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
       "active": true
+    },
+    {
+      "id": "justine-petersen",
+      "name": "Justine PETERSEN",
+      "partnerType": "cdfi",
+      "website": "https://justinepetersen.org/",
+      "intakeUrl": "https://justinepetersen.org/what-we-do/small-business/",
+      "contactEmail": "sflanigan@justinepetersen.org",
+      "phone": "314-533-2411 ext. 2411",
+      "address": "1023 N Grand Blvd, St. Louis, MO 63106",
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "reportTypes": [
+        "site-incentives"
+      ],
+      "products": [
+        {
+          "id": "justine-petersen-sba-microloan",
+          "productType": "microloan",
+          "productName": "SBA Microloan financing and business support",
+          "publicFitNote": "Illinois startups and existing small businesses exploring smaller financing for working capital, inventory, supplies, furniture, fixtures, or equipment. The intermediary confirms Chicago service, underwriting requirements, and terms.",
+          "projectTypes": [
+            "startup",
+            "expansion",
+            "equipment",
+            "hiring",
+            "other"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.sba.gov/funding-programs/loans/microloans/list-microlenders",
+          "sourceDate": "2026-07-27",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.sba.gov/funding-programs/loans/microloans/list-microlenders",
+      "sourceDate": "2026-07-27",
+      "lastVerifiedAt": "2026-07-27T00:00:00.000Z",
+      "active": true,
+      "sbaRoles": [
+        "microloan_intermediary"
+      ],
+      "certifications": [
+        "SBA-authorized Microloan intermediary serving Illinois",
+        "U.S. Treasury CDFI Fund certified"
+      ],
+      "notes": "Illinois service and contact details cross-checked against SBA's current authorized microlender list; borrowers should confirm current Chicago intake directly."
     },
     {
       "id": "cinnaire-lending",
@@ -761,7 +917,293 @@
       "sourceUrl": "https://www.febank.com/business/commercial-lending",
       "sourceDate": "2026-07-14",
       "lastVerifiedAt": "2026-07-14T00:00:00.000Z",
-      "active": true
+      "active": true,
+      "sbaRoles": [
+        "7a_lender"
+      ],
+      "notes": "SBA 7(a) role cross-checked against SBA loan activity data through June 30, 2026."
+    },
+    {
+      "id": "byline-bank",
+      "name": "Byline Bank",
+      "partnerType": "community_bank",
+      "website": "https://www.bylinebank.com/",
+      "intakeUrl": "https://www.bylinebank.com/business/small-business-loans/",
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "reportTypes": [
+        "site-incentives"
+      ],
+      "products": [
+        {
+          "id": "byline-sba-7a",
+          "productType": "term_loan",
+          "productName": "SBA 7(a) and SBA Express financing",
+          "publicFitNote": "Chicago-area operating businesses exploring SBA-backed financing for working capital, equipment, inventory, business acquisition, real estate, or expansion. The bank determines credit fit and terms.",
+          "projectTypes": [
+            "startup",
+            "expansion",
+            "equipment",
+            "hiring",
+            "relocation",
+            "other"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.bylinebank.com/business/small-business-loans/",
+          "sourceDate": "2026-07-27",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.bylinebank.com/business/small-business-loans/",
+      "sourceDate": "2026-07-27",
+      "lastVerifiedAt": "2026-07-27T00:00:00.000Z",
+      "active": true,
+      "sbaRoles": [
+        "7a_lender"
+      ],
+      "notes": "SBA 7(a) role verified on the bank's official site and cross-checked against Chicago borrower activity in SBA data through June 30, 2026."
+    },
+    {
+      "id": "huntington-national-bank",
+      "name": "Huntington National Bank",
+      "partnerType": "community_bank",
+      "website": "https://www.huntington.com/",
+      "intakeUrl": "https://www.huntington.com/SmallBusiness/loans/sba-guarantee-business-loans",
+      "phone": "800-480-2001",
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "reportTypes": [
+        "site-incentives"
+      ],
+      "products": [
+        {
+          "id": "huntington-sba-7a",
+          "productType": "term_loan",
+          "productName": "SBA 7(a) financing",
+          "publicFitNote": "Small businesses exploring SBA-backed financing for startup, expansion, acquisition, working capital, equipment, or owner-occupied real estate. The bank determines credit fit and terms.",
+          "projectTypes": [
+            "startup",
+            "expansion",
+            "equipment",
+            "hiring",
+            "relocation",
+            "other"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.huntington.com/SmallBusiness/loans/sba-guarantee-business-loans",
+          "sourceDate": "2026-07-27",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.huntington.com/SmallBusiness/loans/sba-guarantee-business-loans",
+      "sourceDate": "2026-07-27",
+      "lastVerifiedAt": "2026-07-27T00:00:00.000Z",
+      "active": true,
+      "sbaRoles": [
+        "7a_lender"
+      ],
+      "certifications": [
+        "SBA Preferred Lender"
+      ],
+      "notes": "SBA 7(a) role verified on the bank's official site and cross-checked against Chicago borrower activity in SBA data through June 30, 2026."
+    },
+    {
+      "id": "wintrust-bank",
+      "name": "Wintrust Bank",
+      "partnerType": "community_bank",
+      "website": "https://www.wintrust.com/",
+      "intakeUrl": "https://www.wintrust.com/business-solutions/business/lending/sba.html",
+      "contactEmail": "thuffman@wintrust.com",
+      "phone": "847-590-7030",
+      "address": "231 S LaSalle St, Chicago, IL 60604",
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "reportTypes": [
+        "site-incentives"
+      ],
+      "products": [
+        {
+          "id": "wintrust-sba-7a",
+          "productType": "term_loan",
+          "productName": "SBA 7(a) and SBA Express financing",
+          "publicFitNote": "Chicago-area businesses exploring SBA-backed financing for expansion, acquisition, cash-flow needs, inventory, equipment, or owner-occupied real estate. The bank determines credit fit and terms.",
+          "projectTypes": [
+            "startup",
+            "expansion",
+            "equipment",
+            "hiring",
+            "relocation",
+            "other"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.wintrust.com/business-solutions/business/lending/sba.html",
+          "sourceDate": "2026-07-27",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.wintrust.com/business-solutions/business/lending/sba.html",
+      "sourceDate": "2026-07-27",
+      "lastVerifiedAt": "2026-07-27T00:00:00.000Z",
+      "active": true,
+      "sbaRoles": [
+        "7a_lender"
+      ],
+      "certifications": [
+        "SBA Preferred Lender"
+      ],
+      "notes": "Chicago SBA lending contact verified on Wintrust's official site; 7(a) role cross-checked against SBA data through June 30, 2026."
+    },
+    {
+      "id": "jpmorgan-chase-bank",
+      "name": "JPMorgan Chase Bank",
+      "partnerType": "community_bank",
+      "website": "https://www.chase.com/business",
+      "intakeUrl": "https://www.chase.com/business/banking/loans/sba-financing",
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "reportTypes": [
+        "site-incentives"
+      ],
+      "products": [
+        {
+          "id": "chase-sba-7a",
+          "productType": "term_loan",
+          "productName": "SBA 7(a) financing",
+          "publicFitNote": "Small businesses exploring SBA-backed financing for launch, expansion, inventory, equipment, tenant improvements, business acquisition, working capital, or owner-occupied real estate. The bank determines credit fit and terms.",
+          "projectTypes": [
+            "startup",
+            "expansion",
+            "equipment",
+            "hiring",
+            "relocation",
+            "other"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.chase.com/business/banking/loans/sba-financing",
+          "sourceDate": "2026-07-27",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.chase.com/business/banking/loans/sba-financing",
+      "sourceDate": "2026-07-27",
+      "lastVerifiedAt": "2026-07-27T00:00:00.000Z",
+      "active": true,
+      "sbaRoles": [
+        "7a_lender"
+      ],
+      "certifications": [
+        "SBA Preferred Lender"
+      ],
+      "notes": "SBA 7(a) role verified on the bank's official site and cross-checked against Chicago borrower activity in SBA data through June 30, 2026."
+    },
+    {
+      "id": "us-bank",
+      "name": "U.S. Bank",
+      "partnerType": "community_bank",
+      "website": "https://www.usbank.com/business-banking.html",
+      "intakeUrl": "https://www.usbank.com/business-banking/banking-products/business-lending/business-loans/sba-loan.html",
+      "phone": "866-280-3751",
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "reportTypes": [
+        "site-incentives"
+      ],
+      "products": [
+        {
+          "id": "us-bank-sba-7a",
+          "productType": "term_loan",
+          "productName": "SBA 7(a) financing",
+          "publicFitNote": "Small businesses exploring SBA-backed financing for acquisition, equipment, debt refinance, working capital, expansion, or owner-occupied commercial real estate. The bank determines credit fit and terms.",
+          "projectTypes": [
+            "startup",
+            "expansion",
+            "equipment",
+            "hiring",
+            "relocation",
+            "other"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://www.usbank.com/business-banking/banking-products/business-lending/business-loans/sba-loan.html",
+          "sourceDate": "2026-07-27",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://www.usbank.com/business-banking/banking-products/business-lending/business-loans/sba-loan.html",
+      "sourceDate": "2026-07-27",
+      "lastVerifiedAt": "2026-07-27T00:00:00.000Z",
+      "active": true,
+      "sbaRoles": [
+        "7a_lender"
+      ],
+      "certifications": [
+        "SBA Preferred Lender"
+      ],
+      "notes": "SBA 7(a) role verified on the bank's official site and cross-checked against Chicago borrower activity in SBA data through June 30, 2026."
+    },
+    {
+      "id": "cibc-bank-usa",
+      "name": "CIBC Bank USA",
+      "partnerType": "community_bank",
+      "website": "https://us.cibc.com/",
+      "intakeUrl": "https://us.cibc.com/en/small-business/sba-loans.html",
+      "phone": "877-448-6500",
+      "serviceAreas": [
+        {
+          "scope": "citywide"
+        }
+      ],
+      "reportTypes": [
+        "site-incentives"
+      ],
+      "products": [
+        {
+          "id": "cibc-sba-7a",
+          "productType": "term_loan",
+          "productName": "SBA 7(a) and SBA Express financing",
+          "publicFitNote": "Small businesses exploring SBA-backed financing for business acquisition, real estate, equipment, expansion, inventory, leasehold improvements, debt refinance, or working capital. The bank determines credit fit and terms.",
+          "projectTypes": [
+            "startup",
+            "expansion",
+            "equipment",
+            "hiring",
+            "relocation",
+            "other"
+          ],
+          "verificationStatus": "verified",
+          "sourceUrl": "https://us.cibc.com/en/small-business/sba-loans.html",
+          "sourceDate": "2026-07-27",
+          "active": true
+        }
+      ],
+      "verificationStatus": "verified",
+      "sourceUrl": "https://us.cibc.com/en/small-business/sba-loans.html",
+      "sourceDate": "2026-07-27",
+      "lastVerifiedAt": "2026-07-27T00:00:00.000Z",
+      "active": true,
+      "sbaRoles": [
+        "7a_lender"
+      ],
+      "notes": "SBA 7(a) role verified on the bank's official site and cross-checked against Chicago borrower activity in SBA data through June 30, 2026."
     },
     {
       "id": "international-bank-of-chicago",
