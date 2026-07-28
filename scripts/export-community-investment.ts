@@ -297,28 +297,54 @@ interface SocrataRow {
   street_name?: string;
   street_type?: string;
   community_area?: string;
+  approval_date?: string;
   completion_date?: string;
   project_description?: string;
   incentive_amount?: string;
   location?: { type?: string; coordinates?: [number, number] };
 }
 
-/** Map Socrata NOF/SBIF completion rows kept at or after `minYear`. */
+interface SocrataDrops {
+  preWindow: number;
+  noCoords: number;
+}
+
+/**
+ * Map Socrata NOF/SBIF rows. A row with a real completion_date ships as a
+ * "completed" record; a row with NO completion_date but a valid approval_date
+ * ships as an "awarded" record (year taken from the approval), so large awarded-
+ * but-not-yet-completed grants (e.g. Huddle House $1.1M) are no longer silently
+ * lost. A row with neither date is kept with year=null. Rows are dropped only
+ * when their (completion or approval) year predates `minYear`, or when they
+ * carry no usable coordinates — both counted in `drops`.
+ */
 function mapSocrata(
   rows: SocrataRow[],
   source: "nof-small" | "nof-large" | "sbif",
   funderName: string,
   minYear: number,
-): CommunityInvestmentRecord[] {
+): { records: CommunityInvestmentRecord[]; drops: SocrataDrops } {
   const out: CommunityInvestmentRecord[] = [];
+  const drops: SocrataDrops = { preWindow: 0, noCoords: 0 };
   let idx = 0;
   for (const r of rows) {
-    const year = yearOfDate(r.completion_date);
-    if (year == null || year < minYear) continue;
+    const completionYear = yearOfDate(r.completion_date);
+    const approvalYear = yearOfDate(r.approval_date);
+    const effectiveYear = completionYear ?? approvalYear;
+    // Drop only rows dated BEFORE the inclusion window; an undated row (year
+    // null) is kept rather than guessed.
+    if (effectiveYear != null && effectiveYear < minYear) {
+      drops.preWindow++;
+      continue;
+    }
     const coords = r.location?.coordinates;
-    if (!coords || !Number.isFinite(coords[0]) || !Number.isFinite(coords[1])) continue; // completion rows all carry coords
+    if (!coords || !Number.isFinite(coords[0]) || !Number.isFinite(coords[1])) {
+      drops.noCoords++;
+      continue;
+    }
     const recipient = nullableStr(r.project_name) || nullableStr(r.applicant_name) || "(unnamed)";
     const communityArea = nullableStr(r.community_area);
+    const completed = completionYear != null;
     out.push({
       id: `${source}-${idx++}`,
       source,
@@ -327,23 +353,78 @@ function mapSocrata(
       recipient,
       amountAwarded: parseAmount(r.incentive_amount),
       logLine: nullableStr(r.project_description),
-      year,
+      year: effectiveYear ?? null,
       geometry: point(coords[1], coords[0]),
       address: socrataAddress(r as Record<string, unknown>),
       ...(communityArea ? { communityArea } : {}),
-      status: "completed",
+      status: completed ? "completed" : "awarded",
+      recordDate: nullableStr(r.completion_date) ?? nullableStr(r.approval_date),
       links: [],
     });
   }
-  return out;
+  return { records: out, drops };
+}
+
+/**
+ * Chicago bounding box for the foundation geocode sanity check. A sited grant
+ * whose recipient address geocodes outside this box (e.g. a University of
+ * Illinois recipient in Champaign, or a far-suburban shelter) is held citywide
+ * rather than plotted as a Chicago neighborhood dot — a bad geocode is not a
+ * bad grant, so the dollars still count. Bounds per the task spec (~the city
+ * envelope, generous at the edges).
+ */
+const CHICAGO_BOUNDS = { minLat: 41.6, maxLat: 42.1, minLng: -87.95, maxLng: -87.5 };
+
+function inChicagoBounds(lat: number, lng: number): boolean {
+  return (
+    lat >= CHICAGO_BOUNDS.minLat &&
+    lat <= CHICAGO_BOUNDS.maxLat &&
+    lng >= CHICAGO_BOUNDS.minLng &&
+    lng <= CHICAGO_BOUNDS.maxLng
+  );
+}
+
+/** Placeholder rows the 990 parser captured as a whole grant-SCHEDULE aggregate
+ * rather than a single grant: recipient/address literally "SEE ATTACHED", or a
+ * 99999-style filler zip/address. Rejected so a $120M "grant to SEE ATTACHED"
+ * never counts as a real award. */
+function isPlaceholderFoundationRow(r: Record<string, string>): boolean {
+  const recipient = (r.recipient || "").trim();
+  const addr1 = (r.address_line1 || "").trim();
+  const zip = (r.zip || "").trim();
+  return (
+    /see attached/i.test(recipient) ||
+    /see attached/i.test(addr1) ||
+    /^9{5}$/.test(zip) ||
+    /^9{5}$/.test(addr1)
+  );
+}
+
+interface FoundationStats {
+  citywideFallback: number;
+  droppedPlaceholder: number;
+  outOfBoundsGeocodes: number;
+  negativeAmountsNulled: number;
 }
 
 /** Map foundation grant rows — geometry from locType (intermediary -> citywide). */
-function mapFoundations(rows: Record<string, string>[]): { records: CommunityInvestmentRecord[]; citywideFallback: number } {
+function mapFoundations(rows: Record<string, string>[]): {
+  records: CommunityInvestmentRecord[];
+  stats: FoundationStats;
+} {
   const out: CommunityInvestmentRecord[] = [];
+  const stats: FoundationStats = {
+    citywideFallback: 0,
+    droppedPlaceholder: 0,
+    outOfBoundsGeocodes: 0,
+    negativeAmountsNulled: 0,
+  };
   let idx = 0;
-  let citywideFallback = 0;
   for (const r of rows) {
+    if (isPlaceholderFoundationRow(r)) {
+      stats.droppedPlaceholder++;
+      continue;
+    }
     let geometry: InvestmentGeometry;
     if (r.locType === "intermediary_or_citywide") {
       geometry = { kind: "citywide" };
@@ -351,11 +432,24 @@ function mapFoundations(rows: Record<string, string>[]): { records: CommunityInv
       const lat = Number(r.lat);
       const lng = Number(r.lng);
       if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
-        geometry = point(lat, lng);
+        if (inChicagoBounds(lat, lng)) {
+          geometry = point(lat, lng);
+        } else {
+          geometry = { kind: "citywide" }; // out-of-Chicago geocode -> honest citywide, never a misplaced dot
+          stats.outOfBoundsGeocodes++;
+        }
       } else {
         geometry = { kind: "citywide" }; // sited row with unusable coords -> honest citywide, not 0,0
-        citywideFallback++;
+        stats.citywideFallback++;
       }
+    }
+    // A negative "amount awarded" (a 990 correction / return-of-grant) is
+    // semantically impossible for a grant — null it (keep the record) so it never
+    // quietly reduces the awarded total.
+    let amountAwarded = parseAmount(r.amount);
+    if (amountAwarded != null && amountAwarded < 0) {
+      amountAwarded = null;
+      stats.negativeAmountsNulled++;
     }
     const addr = [r.address_line1, r.city, r.state, r.zip].map((s) => (s || "").trim()).filter(Boolean).join(", ");
     out.push({
@@ -364,16 +458,17 @@ function mapFoundations(rows: Record<string, string>[]): { records: CommunityInv
       funderType: SOURCE_FUNDER_TYPE.foundation,
       funderName: nullableStr(r.foundation) || "(unnamed foundation)",
       recipient: nullableStr(r.recipient) || "(unnamed recipient)",
-      amountAwarded: parseAmount(r.amount),
+      amountAwarded,
       logLine: nullableStr(r.purpose),
       year: Number.isInteger(Number(r.tax_year)) ? Number(r.tax_year) : null,
       geometry,
       address: addr || null,
       status: "awarded",
+      recordDate: null,
       links: [],
     });
   }
-  return { records: out, citywideFallback };
+  return { records: out, stats };
 }
 
 /** Map development projects — announced unless the category is "Proposed Projects". */
@@ -398,6 +493,7 @@ function mapDevelopments(rows: Record<string, string>[]): CommunityInvestmentRec
       geometry: point(lat, lng),
       address: null,
       status,
+      recordDate: null,
       links: parseLinks(r.link),
     });
   }
@@ -410,15 +506,26 @@ async function main() {
   const generatedAt = new Date().toISOString();
 
   // 1) Sources that already carry coordinates (or resolve citywide by locType).
-  const nofSmall = mapSocrata(JSON.parse(readFileSync(join(INPUT_DIR, "nof_small.json"), "utf8")), "nof-small", NOF_PROGRAM, 2017);
-  const nofLarge = mapSocrata(JSON.parse(readFileSync(join(INPUT_DIR, "nof_large.json"), "utf8")), "nof-large", NOF_PROGRAM, 2017);
-  const sbif = mapSocrata(JSON.parse(readFileSync(join(INPUT_DIR, "sbif.json"), "utf8")), "sbif", SBIF_PROGRAM, 2020);
-  const { records: foundations, citywideFallback } = mapFoundations(readCsv("foundation_grants_geocoded.csv"));
+  const nofSmallR = mapSocrata(JSON.parse(readFileSync(join(INPUT_DIR, "nof_small.json"), "utf8")), "nof-small", NOF_PROGRAM, 2017);
+  const nofLargeR = mapSocrata(JSON.parse(readFileSync(join(INPUT_DIR, "nof_large.json"), "utf8")), "nof-large", NOF_PROGRAM, 2017);
+  const sbifR = mapSocrata(JSON.parse(readFileSync(join(INPUT_DIR, "sbif.json"), "utf8")), "sbif", SBIF_PROGRAM, 2020);
+  const nofSmall = nofSmallR.records;
+  const nofLarge = nofLargeR.records;
+  const sbif = sbifR.records;
+  const { records: foundations, stats: foundationStats } = mapFoundations(readCsv("foundation_grants_geocoded.csv"));
   const developments = mapDevelopments(readCsv("developments.csv"));
+
+  // Aggregate the Socrata drop tallies across the three completion sources.
+  // (Sited foundation rows with unusable coords are NOT dropped — they are held
+  // citywide, already reflected in citywideCount, so they are excluded here.)
+  const droppedPreWindow = nofSmallR.drops.preWindow + nofLargeR.drops.preWindow + sbifR.drops.preWindow;
+  const droppedNoCoords = nofSmallR.drops.noCoords + nofLargeR.drops.noCoords + sbifR.drops.noCoords;
 
   console.log(
     `Mapped (pre-geocode): nof-small=${nofSmall.length} nof-large=${nofLarge.length} sbif=${sbif.length} ` +
-      `foundation=${foundations.length} development=${developments.length} (foundation citywide-fallback=${citywideFallback})`,
+      `foundation=${foundations.length} development=${developments.length} ` +
+      `(placeholder-dropped=${foundationStats.droppedPlaceholder} out-of-bounds->citywide=${foundationStats.outOfBoundsGeocodes} ` +
+      `negative-nulled=${foundationStats.negativeAmountsNulled} preWindow-dropped=${droppedPreWindow})`,
   );
 
   // 2) City-grant sources that need geocoding (CDG + Jim's corridor list).
@@ -463,6 +570,7 @@ async function main() {
       geometry: point(hit.lat, hit.lng),
       address: addr,
       status: "awarded",
+      recordDate: null, // CDG rounds carry only a round label, no per-record date
       links,
     });
   }
@@ -488,6 +596,7 @@ async function main() {
       geometry: point(hit.lat, hit.lng),
       address: addr,
       status: "awarded",
+      recordDate: null, // Jim's corridor list carries only a year, no per-record date
       links: [],
     });
   }
@@ -506,6 +615,11 @@ async function main() {
   const out = buildCommunityInvestmentExport(deduped, generatedAt, {
     droppedNoGeocode,
     dedupedRows: removedCount,
+    droppedPlaceholder: foundationStats.droppedPlaceholder,
+    droppedPreWindow,
+    droppedNoCoords,
+    outOfBoundsGeocodes: foundationStats.outOfBoundsGeocodes,
+    negativeAmountsNulled: foundationStats.negativeAmountsNulled,
     sources: PROVENANCE_LABELS,
   });
 

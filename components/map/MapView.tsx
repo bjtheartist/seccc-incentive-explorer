@@ -47,11 +47,13 @@ import {
   fetchCommunityInvestmentLayer,
   filterInvestmentPointFeatures,
   investmentFeatureCollection,
+  summarizeCitywideEntries,
   DEFAULT_INVESTMENT_YEAR_RANGE,
   FUNDER_TYPE_COLORS,
   FUNDER_TYPE_ORDER,
   INVESTMENT_FALLBACK_COLOR,
   type InvestmentPointFeature,
+  type CitywideInvestmentEntry,
 } from "@/lib/community-investment-layer";
 import type { FunderType } from "@/lib/community-investment";
 
@@ -171,6 +173,10 @@ export default function MapView() {
   // year/funderType filter effect can rebuild the source (setData) without a
   // re-fetch — mirrors VacancyReportMap's featuresRef distress-filter pattern.
   const investmentFeaturesRef = useRef<InvestmentPointFeature[]>([]);
+  // Citywide (non-plotting) entries from the last fetch, kept in a ref so the
+  // same filter effect can re-scope the legend's "Citywide commitments" figure
+  // to the active year/funderType instead of freezing it at the unfiltered total.
+  const investmentCitywideEntriesRef = useRef<CitywideInvestmentEntry[]>([]);
   const toggleInvestmentFunderType = useCallback((key: FunderType) => {
     setInvestmentFunderTypes((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
@@ -1150,6 +1156,15 @@ export default function MapView() {
         },
       });
 
+      /* One shared popup instance for ALL unclustered-dot layers (vacant,
+         ownership clusters, community investment). Mapbox fires every
+         layer-scoped click handler with a rendered feature under the pointer, so
+         a single click where two admin dot layers overlap would otherwise open
+         (and stack) a separate popup per layer. Reusing ONE popup — setLngLat +
+         setHTML + addTo moves and re-fills the same element — guarantees exactly
+         one dot popup on screen at a time. */
+      const sharedDotPopup = new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" });
+
       // Click handler for unclustered vacant points
       map.on("click", "vacant-unclustered", (e) => {
         if (!e.features?.length) return;
@@ -1177,7 +1192,7 @@ export default function MapView() {
             </div>`
           : "";
 
-        new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" })
+        sharedDotPopup
           .setLngLat(e.lngLat)
           .setHTML(
             `<div style="font-family:Inter,sans-serif">
@@ -1298,7 +1313,7 @@ export default function MapView() {
       map.on("click", "owner-clusters-unclustered", (e) => {
         if (!e.features?.length) return;
         const p = e.features[0].properties || {};
-        new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" })
+        sharedDotPopup
           .setLngLat(e.lngLat)
           .setHTML(buildOwnerClusterPopupHtml(p))
           .addTo(map);
@@ -1363,7 +1378,7 @@ export default function MapView() {
       map.on("click", "community-investment-points", (e) => {
         if (!e.features?.length) return;
         const p = e.features[0].properties || {};
-        new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" })
+        sharedDotPopup
           .setLngLat(e.lngLat)
           .setHTML(buildInvestmentPopupHtml(p))
           .addTo(map);
@@ -2011,6 +2026,7 @@ export default function MapView() {
         const src = map.getSource("community-investment") as mapboxgl.GeoJSONSource | undefined;
         if (src) src.setData(EMPTY_FC);
         investmentFeaturesRef.current = [];
+        investmentCitywideEntriesRef.current = [];
         setCommunityInvestmentLoaded(false);
         setInvestmentPresentFunderTypes([]);
         setInvestmentCitywide(null);
@@ -2029,6 +2045,7 @@ export default function MapView() {
         if (controller.signal.aborted) return;
         if (result.status === "ready") {
           investmentFeaturesRef.current = result.pointFeatures;
+          investmentCitywideEntriesRef.current = result.citywideEntries;
           setInvestmentPresentFunderTypes(result.presentFunderTypes);
           setInvestmentCitywide(result.citywide);
           setCommunityInvestmentLoaded(true);
@@ -2066,6 +2083,15 @@ export default function MapView() {
       activeFunderTypes,
     });
     src.setData(investmentFeatureCollection(filtered));
+    // Re-scope the legend's citywide figure to the SAME filters as the dots, so
+    // narrowing to one year never leaves an unfiltered "$X awarded" reading as if
+    // it belonged to that year.
+    setInvestmentCitywide(
+      summarizeCitywideEntries(investmentCitywideEntriesRef.current, {
+        yearRangeId: investmentYearRange,
+        activeFunderTypes,
+      })
+    );
   }, [
     communityInvestmentVisible,
     communityInvestmentLoaded,

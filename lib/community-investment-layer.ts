@@ -140,30 +140,59 @@ export function investmentRecordsToPointFeatures(
   return features;
 }
 
+const FUNDER_TYPE_ORDER_STRINGS: readonly string[] = FUNDER_TYPE_ORDER;
+
+/**
+ * Whether a record's funderType is active under the current checkbox set. A
+ * CANONICAL type is active iff its checkbox is on. An UNKNOWN (off-enum)
+ * funderType — the same case the paint `match` and popup render grey via
+ * INVESTMENT_FALLBACK_COLOR — has no checkbox of its own, so it follows the
+ * "all on" state: visible exactly when every canonical checkbox is checked, and
+ * hidden the moment any is unchecked. This keeps the grey fallback dot reachable
+ * instead of silently filtered off the map with no control to bring it back.
+ */
+function funderTypeActive(funderType: string, activeSet: ReadonlySet<FunderType>): boolean {
+  if (FUNDER_TYPE_ORDER_STRINGS.includes(funderType)) {
+    return activeSet.has(funderType as FunderType);
+  }
+  return FUNDER_TYPE_ORDER.every((t) => activeSet.has(t));
+}
+
+/** Whether a record's year satisfies the (possibly unbounded) year range. */
+function yearInRange(year: number | null, range: InvestmentYearRange | null): boolean {
+  if (range && range.min != null && range.max != null) {
+    if (year == null) return false;
+    if (year < range.min || year > range.max) return false;
+  }
+  return true;
+}
+
+function toActiveSet(
+  activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[]
+): ReadonlySet<FunderType> {
+  return activeFunderTypes instanceof Set
+    ? activeFunderTypes
+    : new Set(activeFunderTypes as readonly FunderType[]);
+}
+
 /**
  * Client-side filter over already-built point features, mirroring the vacancy
  * distress-filter pattern (components/vacancy/VacancyReportMap.tsx) that
  * rebuilds the source data with setData rather than a layer filter. A feature
- * passes when its funderType is active AND (the year range is unbounded, or the
- * feature's year falls inside the inclusive window). Pure / deterministic.
+ * passes when its funderType is active (see funderTypeActive — unknown types
+ * follow the "all on" state) AND (the year range is unbounded, or the feature's
+ * year falls inside the inclusive window). Pure / deterministic.
  */
 export function filterInvestmentPointFeatures(
   features: readonly InvestmentPointFeature[],
   opts: { yearRangeId: string; activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[] }
 ): InvestmentPointFeature[] {
   const range = INVESTMENT_YEAR_RANGES.find((r) => r.id === opts.yearRangeId) ?? null;
-  const activeSet =
-    opts.activeFunderTypes instanceof Set
-      ? opts.activeFunderTypes
-      : new Set(opts.activeFunderTypes as readonly FunderType[]);
+  const activeSet = toActiveSet(opts.activeFunderTypes);
   return features.filter((f) => {
     const p = f.properties;
-    if (!activeSet.has(p.funderType)) return false;
-    if (range && range.min != null && range.max != null) {
-      if (p.year == null) return false;
-      if (p.year < range.min || p.year > range.max) return false;
-    }
-    return true;
+    if (!funderTypeActive(p.funderType, activeSet)) return false;
+    return yearInRange(p.year, range);
   });
 }
 
@@ -192,6 +221,32 @@ export interface CitywideInvestmentSummary {
 }
 
 /**
+ * The just-enough fields of a citywide record to re-filter it client-side by the
+ * active year window / funderType checkboxes (citywide records never plot, so
+ * their full geometry/props are not needed). Keeps the legend's "Citywide
+ * commitments" figure in lockstep with the plotted dots under the same filters.
+ */
+export interface CitywideInvestmentEntry {
+  funderType: FunderType;
+  year: number | null;
+  /** Real awarded dollars, or null — NEVER a derived figure. */
+  amountAwarded: number | null;
+}
+
+/** Extract the filterable fields of every citywide (non-plotting) record. Pure. */
+export function citywideInvestmentEntries(
+  records: readonly CommunityInvestmentRecord[]
+): CitywideInvestmentEntry[] {
+  const out: CitywideInvestmentEntry[] = [];
+  for (const r of records) {
+    if (r.geometry.kind === "citywide") {
+      out.push({ funderType: r.funderType, year: r.year, amountAwarded: r.amountAwarded });
+    }
+  }
+  return out;
+}
+
+/**
  * Count + total awarded dollars of the citywide-geometry records (the ones that
  * never plot). `totalDollars` sums only non-null amountAwarded — a plain total
  * of AWARDED dollars, never a derived received/available/remaining figure. Pure.
@@ -199,13 +254,29 @@ export interface CitywideInvestmentSummary {
 export function summarizeCitywideInvestment(
   records: readonly CommunityInvestmentRecord[]
 ): CitywideInvestmentSummary {
+  return summarizeCitywideEntries(citywideInvestmentEntries(records), null);
+}
+
+/**
+ * Summarize citywide entries under the SAME year/funderType filter applied to
+ * the plotted dots, so the legend's "Citywide commitments (N) · $X awarded" note
+ * re-scopes with the active filters instead of freezing at the unfiltered total
+ * (which reads as "$X in the selected year" when it is not). `opts === null`
+ * summarizes everything (the unfiltered total). Pure / deterministic.
+ */
+export function summarizeCitywideEntries(
+  entries: readonly CitywideInvestmentEntry[],
+  opts: { yearRangeId: string; activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[] } | null
+): CitywideInvestmentSummary {
+  const range = opts ? INVESTMENT_YEAR_RANGES.find((r) => r.id === opts.yearRangeId) ?? null : null;
+  const activeSet = opts ? toActiveSet(opts.activeFunderTypes) : null;
   let count = 0;
   let totalDollars = 0;
-  for (const r of records) {
-    if (r.geometry.kind === "citywide") {
-      count += 1;
-      if (r.amountAwarded != null) totalDollars += r.amountAwarded;
-    }
+  for (const e of entries) {
+    if (activeSet && !funderTypeActive(e.funderType, activeSet)) continue;
+    if (!yearInRange(e.year, range)) continue;
+    count += 1;
+    if (e.amountAwarded != null) totalDollars += e.amountAwarded;
   }
   return { count, totalDollars };
 }
@@ -216,7 +287,10 @@ export interface CommunityInvestmentLayerResult {
   status: CommunityInvestmentLayerStatus;
   pointFeatures: InvestmentPointFeature[];
   presentFunderTypes: FunderType[];
+  /** Unfiltered citywide summary (initial legend state, all years / all types). */
   citywide: CitywideInvestmentSummary;
+  /** Filterable citywide entries so the legend note re-scopes with the filters. */
+  citywideEntries: CitywideInvestmentEntry[];
 }
 
 const EMPTY_LAYER_RESULT = (status: CommunityInvestmentLayerStatus): CommunityInvestmentLayerResult => ({
@@ -224,6 +298,7 @@ const EMPTY_LAYER_RESULT = (status: CommunityInvestmentLayerStatus): CommunityIn
   pointFeatures: [],
   presentFunderTypes: [],
   citywide: { count: 0, totalDollars: 0 },
+  citywideEntries: [],
 });
 
 /**
@@ -255,10 +330,12 @@ export async function fetchCommunityInvestmentLayer(opts?: {
   const data = (await res.json()) as CommunityInvestmentExport;
   const records = Array.isArray(data?.records) ? data.records : [];
   const pointFeatures = investmentRecordsToPointFeatures(records);
+  const citywideEntries = citywideInvestmentEntries(records);
   return {
     status: "ready",
     pointFeatures,
     presentFunderTypes: presentFunderTypesInOrder(pointFeatures.map((f) => f.properties.funderType)),
-    citywide: summarizeCitywideInvestment(records),
+    citywide: summarizeCitywideEntries(citywideEntries, null),
+    citywideEntries,
   };
 }

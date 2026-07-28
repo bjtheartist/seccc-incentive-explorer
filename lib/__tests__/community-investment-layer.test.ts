@@ -1,12 +1,15 @@
 import { describe, expect, it, vi } from "vitest";
 import type { CommunityInvestmentRecord } from "@/lib/community-investment";
 import {
+  citywideInvestmentEntries,
   COMMUNITY_INVESTMENT_ENDPOINT,
   fetchCommunityInvestmentLayer,
   filterInvestmentPointFeatures,
   investmentRecordsToPointFeatures,
   presentFunderTypesInOrder,
+  summarizeCitywideEntries,
   summarizeCitywideInvestment,
+  type InvestmentPointFeature,
 } from "@/lib/community-investment-layer";
 
 /**
@@ -128,6 +131,72 @@ describe("filterInvestmentPointFeatures", () => {
       activeFunderTypes: ["philanthropic"],
     });
     expect(out.map((f) => f.properties.id)).toEqual(["phil-2022"]);
+  });
+
+  it("keeps an unknown (off-enum) funderType only while EVERY funder checkbox is on", () => {
+    // A future/off-enum funderType has no checkbox and paints grey via the paint
+    // fallback; it must stay visible under "all on" and hide when any box is off,
+    // never silently filtered out with no control to bring it back.
+    const unknown = {
+      type: "Feature",
+      geometry: { type: "Point", coordinates: [-87.6, 41.75] },
+      properties: {
+        id: "unknown-1",
+        recipient: "Mystery",
+        funderName: "Mystery",
+        funderType: "other" as unknown as "government",
+        amountAwarded: 1000,
+        logLine: null,
+        year: 2022,
+        status: "awarded" as const,
+        sourceLink: "",
+      },
+    } as InvestmentPointFeature;
+
+    const allOn = filterInvestmentPointFeatures([unknown], {
+      yearRangeId: "all",
+      activeFunderTypes: ["government", "philanthropic", "private_development"],
+    });
+    expect(allOn.map((f) => f.properties.id)).toEqual(["unknown-1"]);
+
+    const oneOff = filterInvestmentPointFeatures([unknown], {
+      yearRangeId: "all",
+      activeFunderTypes: ["government", "philanthropic"],
+    });
+    expect(oneOff).toEqual([]);
+  });
+});
+
+describe("citywideInvestmentEntries / summarizeCitywideEntries", () => {
+  const entries = citywideInvestmentEntries(records);
+
+  it("extracts only the citywide records' filterable fields", () => {
+    expect(entries).toEqual([
+      { funderType: "philanthropic", year: 2021, amountAwarded: 250_000 },
+      { funderType: "government", year: 2020, amountAwarded: null },
+    ]);
+  });
+
+  it("unfiltered (opts null) matches summarizeCitywideInvestment", () => {
+    expect(summarizeCitywideEntries(entries, null)).toEqual(summarizeCitywideInvestment(records));
+  });
+
+  it("re-scopes the citywide figure to the active year window", () => {
+    // Narrowing to 2017–2019 excludes both citywide records (2021, 2020).
+    const scoped = summarizeCitywideEntries(entries, {
+      yearRangeId: "2017-2019",
+      activeFunderTypes: ["government", "philanthropic", "private_development"],
+    });
+    expect(scoped).toEqual({ count: 0, totalDollars: 0 });
+  });
+
+  it("re-scopes the citywide figure to the active funderType checkboxes", () => {
+    const govOnly = summarizeCitywideEntries(entries, {
+      yearRangeId: "all",
+      activeFunderTypes: ["government"],
+    });
+    // Only the (null-amount) government citywide record remains.
+    expect(govOnly).toEqual({ count: 1, totalDollars: 0 });
   });
 });
 

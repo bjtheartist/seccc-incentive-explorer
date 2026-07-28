@@ -12,6 +12,7 @@ import {
   FUNDER_TYPES,
   INVESTMENT_SOURCES,
   INVESTMENT_STATUSES,
+  isRoundCapAmount,
   loadCommunityInvestment,
   normalizeAddressForDedupe,
   normalizeRecipientForDedupe,
@@ -121,6 +122,16 @@ describe("normalizeAddressForDedupe / normalizeRecipientForDedupe", () => {
     expect(normalizeAddressForDedupe("   ")).toBe("");
   });
 
+  it("canonicalizes the trailing street-type so Av / Ave. / Avenue fold together", () => {
+    expect(normalizeAddressForDedupe("8126 S Stony Island Av")).toBe("8126 S STONY ISLAND AVE");
+    expect(normalizeAddressForDedupe("8126 S. Stony Island Ave.")).toBe("8126 S STONY ISLAND AVE");
+    expect(normalizeAddressForDedupe("8126 S Stony Island Avenue")).toBe("8126 S STONY ISLAND AVE");
+    // A different street type does NOT fold into another.
+    expect(normalizeAddressForDedupe("123 Main St")).toBe("123 MAIN ST");
+    expect(normalizeAddressForDedupe("123 Main Street")).toBe("123 MAIN ST");
+    expect(normalizeAddressForDedupe("123 Main St")).not.toBe(normalizeAddressForDedupe("123 Main Ave"));
+  });
+
   it("strips legal suffixes so entity-name variants match", () => {
     expect(normalizeRecipientForDedupe("Marina Cartage, Inc.")).toBe("MARINA CARTAGE");
     expect(normalizeRecipientForDedupe("Marina Cartage Inc")).toBe("MARINA CARTAGE");
@@ -170,6 +181,61 @@ describe("dedupeInvestmentRecords", () => {
     ]);
     expect(removedCount).toBe(1);
     expect(records).toHaveLength(1);
+  });
+
+  it("KEEPS two same-name completions at the same address+amount on DIFFERENT dates", () => {
+    // House 2 Home LLC: two real $75,000 SBIF completion cycles at 655 W 59th St,
+    // 9 months apart — two events, not a duplicated row. Both must survive.
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "h1", source: "sbif", status: "completed", recipient: "House 2 Home LLC", address: "655 W 59th St", amountAwarded: 75000, recordDate: "2023-02-24T00:00:00.000" }),
+      rec({ id: "h2", source: "sbif", status: "completed", recipient: "House 2 Home LLC", address: "655 W 59th St", amountAwarded: 75000, recordDate: "2023-11-14T00:00:00.000" }),
+    ]);
+    expect(removedCount).toBe(0);
+    expect(records.map((r) => r.id)).toEqual(["h1", "h2"]);
+  });
+
+  it("collapses an identical-date same-name completion pair (a genuine Socrata duplicate)", () => {
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "d1", source: "sbif", status: "completed", recipient: "Marina Cartage, Inc.", address: "4450 S Morgan St", amountAwarded: 110802, recordDate: "2020-12-17T00:00:00.000" }),
+      rec({ id: "d2", source: "sbif", status: "completed", recipient: "Marina Cartage Inc", address: "4450 S Morgan St", amountAwarded: 110802, recordDate: "2020-12-17T00:00:00.000" }),
+    ]);
+    expect(removedCount).toBe(1);
+    expect(records).toHaveLength(1);
+  });
+
+  it("KEEPS two DIFFERENT businesses that share an address and a round program cap ($250,000)", () => {
+    // Acme (NOF completion) and Zenith (CDG award) at one multi-tenant address,
+    // both at the $250k cap — a coincidental collision, NOT the same project.
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "acme", source: "nof-small", status: "completed", recipient: "Acme Bakery LLC", address: "5500 S King Dr", amountAwarded: 250000, recordDate: "2022-05-01T00:00:00.000" }),
+      rec({ id: "zenith", source: "cdg", status: "awarded", recipient: "Zenith Auto Repair Inc", address: "5500 S King Dr", amountAwarded: 250000 }),
+    ]);
+    expect(removedCount).toBe(0);
+    expect(records.map((r) => r.id).sort()).toEqual(["acme", "zenith"]);
+  });
+
+  it("COLLAPSES a DBA award/completion pair with divergent names at a non-round amount", () => {
+    // "Legacy, etc" (NOF completion) vs "Mikkey's Retro Grill" (Jim's corridor
+    // award) at 8126 S Stony Island Ave, both $139,058.77 — one rebranded project.
+    // The distinctive non-round amount is enough to collapse despite the names
+    // and the "Av"/"Ave." spelling difference.
+    const { records, removedCount } = dedupeInvestmentRecords([
+      rec({ id: "legacy", source: "nof-small", status: "completed", recipient: "Legacy, etc", address: "8126 S Stony Island Av", amountAwarded: 139058.77, recordDate: "2018-06-30T00:00:00.000" }),
+      rec({ id: "mikkey", source: "nof-small", status: "awarded", recipient: "Mikkey's Retro Grill", address: "8126 S. Stony Island Ave.", amountAwarded: 139058.77 }),
+    ]);
+    expect(removedCount).toBe(1);
+    expect(records).toHaveLength(1);
+    expect(records[0].id).toBe("legacy"); // completion holds the slot
+    expect(records[0].status).toBe("completed");
+  });
+
+  it("isRoundCapAmount flags whole $25k multiples only", () => {
+    expect(isRoundCapAmount(250000)).toBe(true);
+    expect(isRoundCapAmount(25000)).toBe(true);
+    expect(isRoundCapAmount(139058.77)).toBe(false);
+    expect(isRoundCapAmount(62500)).toBe(false);
+    expect(isRoundCapAmount(0)).toBe(false);
+    expect(isRoundCapAmount(null)).toBe(false);
   });
 
   it("NEVER dedupes philanthropic (foundation) rows, even at a shared intermediary address", () => {

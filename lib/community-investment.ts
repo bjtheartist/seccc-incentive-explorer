@@ -121,6 +121,16 @@ export interface CommunityInvestmentRecord {
   /** Chicago community area when the source supplies it (Socrata NOF/SBIF). */
   communityArea?: string;
   status: InvestmentStatus;
+  /**
+   * Raw completion/approval date the record attaches to (Socrata completion_date,
+   * or the approval_date fallback), or null when the source carries none. Named
+   * neutrally — it is provenance, NOT a derived received/available/remaining
+   * figure. Threaded through so the dedupe can tell a genuine duplicate ROW from
+   * two REAL completions of the same grantee on DIFFERENT dates (which must both
+   * survive). Sources without a per-record date (CDG rounds, foundations,
+   * developments) leave it null.
+   */
+  recordDate?: string | null;
   /** Source/project links (deduped, http(s) only). */
   links: string[];
 }
@@ -145,6 +155,25 @@ export interface CommunityInvestmentMeta {
   droppedNoGeocode: number;
   /** Cross-source rows removed by the address+amount dedupe. */
   dedupedRows: number;
+  /**
+   * Foundation rows rejected as placeholders (recipient/address literally
+   * "SEE ATTACHED", or a 99999-style filler zip/address) — a 990-PF grant-schedule
+   * aggregate the parser captured, NOT a real single grant. Counted, never silently
+   * kept, so nothing inflates totalDollarsAwarded.
+   */
+  droppedPlaceholder: number;
+  /** Socrata completion/approval rows dropped because their year predates the
+   * source's inclusion window (nof 2017 / sbif 2020). */
+  droppedPreWindow: number;
+  /** Socrata/development rows dropped because they carry no usable coordinates. */
+  droppedNoCoords: number;
+  /** Sited foundation points whose geocode fell OUTSIDE Chicago bounds and were
+   * held citywide instead of plotted at a misleading out-of-city location (a bad
+   * geocode is not a bad grant — the dollars still count). */
+  outOfBoundsGeocodes: number;
+  /** Records whose source amount was negative (a 990 correction / return-of-grant)
+   * and was set to null rather than quietly reducing the awarded total. */
+  negativeAmountsNulled: number;
   /** Human-readable source/provenance labels for the section footer. */
   sources: string[];
 }
@@ -204,18 +233,47 @@ export function assertNoBannedFigureKeys(value: unknown): void {
 // ── Dedupe (pure) ────────────────────────────────────────────────────────────
 
 /**
+ * Canonical spellings for the trailing street-type token, so a completion row
+ * written "…Stony Island Av" and a corridor-award row written "…Stony Island
+ * Ave." fold to the same dedupe key. Only the LAST token is canonicalized (the
+ * street-type position in this data), so a street NAMED "Court"/"Park" is never
+ * rewritten.
+ */
+const STREET_TYPE_CANON: Record<string, string> = {
+  AV: "AVE", AVE: "AVE", AVEN: "AVE", AVENUE: "AVE",
+  ST: "ST", STR: "ST", STREET: "ST",
+  BLV: "BLVD", BLVD: "BLVD", BOULEVARD: "BLVD",
+  RD: "RD", ROAD: "RD",
+  DR: "DR", DRIVE: "DR",
+  LN: "LN", LANE: "LN",
+  CT: "CT", COURT: "CT",
+  PL: "PL", PLACE: "PL",
+  PKY: "PKWY", PKWY: "PKWY", PARKWAY: "PKWY",
+  TER: "TER", TERR: "TER", TERRACE: "TER",
+  SQ: "SQ", SQUARE: "SQ",
+  HWY: "HWY", HIGHWAY: "HWY",
+};
+
+/**
  * Normalize a street address for dedupe comparison: upper-case, strip
- * punctuation, collapse whitespace. "212 E. 79th St." and "212 E 79th St" fold
- * to the same key so Jim's corridor award and the Socrata NOF completion of the
- * same project match. Returns "" for a null/blank input (an unusable key).
+ * punctuation, collapse whitespace, and canonicalize the trailing street-type
+ * abbreviation. "212 E. 79th St." and "212 E 79th St" fold to the same key, as
+ * do "8126 S Stony Island Av" and "8126 S. Stony Island Ave." — so Jim's
+ * corridor award and the Socrata NOF completion of the same project match.
+ * Returns "" for a null/blank input (an unusable key).
  */
 export function normalizeAddressForDedupe(address: string | null | undefined): string {
   if (!address) return "";
-  return address
+  const base = address
     .toUpperCase()
     .replace(/[.,#]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+  if (base === "") return "";
+  const tokens = base.split(" ");
+  const canon = STREET_TYPE_CANON[tokens[tokens.length - 1]];
+  if (canon) tokens[tokens.length - 1] = canon;
+  return tokens.join(" ");
 }
 
 /** Common legal/entity suffixes stripped when comparing recipient names. */
@@ -249,14 +307,45 @@ const DEDUPE_STATUS_RANK: Record<InvestmentStatus, number> = {
 };
 
 /**
+ * A "round cap" grant amount — a positive whole multiple of $25,000. These are
+ * program ceilings (the $250,000 NOF-small cap, common CDG award sizes) that two
+ * UNRELATED businesses can independently land on, so an amount match alone is NOT
+ * evidence two award/completion rows describe the same project. A distinctive
+ * non-round figure (e.g. $139,058.77) effectively never collides by chance.
+ */
+export function isRoundCapAmount(amount: number | null | undefined): boolean {
+  return amount != null && amount > 0 && amount % 25000 === 0;
+}
+
+/** The date portion (YYYY-MM-DD) of a raw record date, "" when absent. */
+function normalizeRecordDate(raw: string | null | undefined): string {
+  if (!raw) return "";
+  return String(raw).slice(0, 10);
+}
+
+/** True when two records carry the same completion/approval date (both absent
+ * counts as equal — an undated pair can still be a true duplicate row). */
+function recordDatesEqual(a: string | null | undefined, b: string | null | undefined): boolean {
+  return normalizeRecordDate(a) === normalizeRecordDate(b);
+}
+
+/**
  * Collapse rows that describe the SAME grant, keeping ONE and preferring the
  * completion record. Two government point-records at the same normalized
- * address and amount are treated as the same grant only when EITHER
- *   • their normalized recipient names match (a true duplicate row, or the same
- *     business listed twice), OR
- *   • one is an "awarded" record and the other a "completed" record (the
- *     completion supersedes the mere award — e.g. Jim's NOF corridor "awarded"
- *     row vs the Socrata NOF "completed" row of the same project).
+ * address and amount are treated as the same grant only when:
+ *   • SAME lifecycle status (both completed, or both awarded) — a true duplicate
+ *     ROW requires the normalized recipient names to match AND the record dates
+ *     to be identical. Two same-name completions on DIFFERENT completion dates
+ *     are two REAL grant cycles and BOTH survive (e.g. House 2 Home LLC's two
+ *     $75,000 SBIF completions at 655 W 59th St, 2023-02-24 vs 2023-11-14).
+ *   • DIFFERENT status (one awarded, one completed) — the completion supersedes
+ *     the award when the names match OR the shared amount is a distinctive
+ *     non-round figure. A name match handles "Legacy, etc" (NOF completion) vs
+ *     "Mikkey's Retro Grill" (Jim's corridor award) at 8126 S Stony Island Ave —
+ *     a DBA rebrand of one project at $139,058.77. The non-round-amount test
+ *     catches the same case even when the names diverge; but when the names
+ *     DIFFER and the amount is a round program cap ($250,000), the two rows are
+ *     assumed to be two DIFFERENT businesses and BOTH are kept.
  * When neither holds — DIFFERENT businesses that merely share a multi-tenant
  * address and the same standardized grant amount (e.g. four separate SBIF
  * grantees at one building each capped at $62,500) — BOTH rows are kept.
@@ -304,8 +393,16 @@ export function dedupeInvestmentRecords(records: readonly CommunityInvestmentRec
     for (const idx of group) {
       const k = kept[idx];
       const sameName = rName !== "" && rName === normalizeRecipientForDedupe(k.recipient);
-      const awardVsCompletion = r.status !== k.status; // government status ∈ {completed, awarded}
-      if (sameName || awardVsCompletion) {
+      const statusDiffers = r.status !== k.status; // government status ∈ {completed, awarded}
+      const isMatch = statusDiffers
+        ? // award ↔ completion supersede: same project when the names match, or
+          // when the shared amount is a distinctive (non-round-cap) figure that a
+          // coincidental two-business collision is vanishingly unlikely to hit.
+          sameName || !isRoundCapAmount(r.amountAwarded)
+        : // same status: a genuine duplicate ROW needs the same name AND the same
+          // completion/record date — different dates mean two real grant cycles.
+          sameName && recordDatesEqual(r.recordDate, k.recordDate);
+      if (isMatch) {
         matchIdx = idx;
         break;
       }
@@ -351,7 +448,16 @@ export function countBySource(records: readonly CommunityInvestmentRecord[]): Re
 export function buildCommunityInvestmentExport(
   records: CommunityInvestmentRecord[],
   generatedAt: string,
-  stats: { droppedNoGeocode: number; dedupedRows: number; sources: string[] },
+  stats: {
+    droppedNoGeocode: number;
+    dedupedRows: number;
+    sources: string[];
+    droppedPlaceholder?: number;
+    droppedPreWindow?: number;
+    droppedNoCoords?: number;
+    outOfBoundsGeocodes?: number;
+    negativeAmountsNulled?: number;
+  },
 ): CommunityInvestmentExport {
   const pointCount = records.filter((r) => r.geometry.kind === "point").length;
   const out: CommunityInvestmentExport = {
@@ -364,6 +470,11 @@ export function buildCommunityInvestmentExport(
       totalDollarsAwarded: sumAwardedDollars(records),
       droppedNoGeocode: stats.droppedNoGeocode,
       dedupedRows: stats.dedupedRows,
+      droppedPlaceholder: stats.droppedPlaceholder ?? 0,
+      droppedPreWindow: stats.droppedPreWindow ?? 0,
+      droppedNoCoords: stats.droppedNoCoords ?? 0,
+      outOfBoundsGeocodes: stats.outOfBoundsGeocodes ?? 0,
+      negativeAmountsNulled: stats.negativeAmountsNulled ?? 0,
       sources: stats.sources,
     },
     records,
