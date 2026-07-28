@@ -2478,7 +2478,10 @@ export default function MapView() {
     // but ONLY on the actual transition into a non-Dots mode: this effect also
     // re-runs on unrelated filter changes, and the popup instance is shared with
     // the vacant-property and owner-cluster layers, which must keep theirs open.
-    if (mode !== "dots" && prevInvestmentViewModeRef.current !== mode) {
+    // Dismiss on ANY mode transition (review finding: Megaprojects→Dots left an
+    // orphaned popup when a year filter hides the underlying development dot).
+    // Unrelated re-runs (filter changes) still keep other layers' popups open.
+    if (prevInvestmentViewModeRef.current !== null && prevInvestmentViewModeRef.current !== mode) {
       sharedDotPopupRef.current?.remove();
     }
     prevInvestmentViewModeRef.current = mode;
