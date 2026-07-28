@@ -173,29 +173,53 @@ describe("buildInvestmentPopupHtml", () => {
     expect(html.toLowerCase()).not.toContain("received");
   });
 
-  it("renders recipient, funder, funder-type chip, year, status, log line, and source link", () => {
+  it("renders recipient, funder, funder-type chip, year, humanized status, log line, and source link", () => {
     const html = buildInvestmentPopupHtml(full);
     expect(html).toContain("Auburn Gresham GDC");
     expect(html).toContain("MacArthur Foundation — Chicago Prize");
     expect(html).toContain(FUNDER_TYPE_LABELS.philanthropic);
     expect(html).toContain("2020");
-    expect(html).toContain("completed");
+    // Status is humanized — "Completed", never the raw enum value.
+    expect(html).toContain("Completed");
     expect(html).toContain("Healthy Lifestyle Hub build-out");
     expect(html).toContain('href="https://example.org/grant"');
   });
 
-  it("renders 'Not disclosed' for a null amount, still 'Awarded', still never 'received'", () => {
+  it("labels a DEVELOPMENT figure 'Announced' (never 'Awarded'), reads announcedInvestment, humanizes status", () => {
+    const html = buildInvestmentPopupHtml({
+      recipient: "1901 Project",
+      funderName: "United Center Joint Venture",
+      funderType: "private_development",
+      amountAwarded: null,
+      announcedInvestment: 7_000_000_000,
+      logLine: "55-acre entertainment district",
+      year: 2024,
+      status: "under_construction",
+      sourceLink: "https://example.org/1901",
+    });
+    expect(html).toContain("Announced");
+    expect(html).toContain("$7,000,000,000");
+    // A development NEVER shows the "Awarded" label.
+    expect(html).not.toContain("Awarded");
+    expect(html.toLowerCase()).not.toContain("received");
+    // Raw snake_case status must be humanized to "Under construction".
+    expect(html).toContain("Under construction");
+    expect(html).not.toContain("under_construction");
+  });
+
+  it("renders 'Not disclosed' for a development with no announced figure (still 'Announced', never 'received')", () => {
     const html = buildInvestmentPopupHtml({
       recipient: "Some Development",
       funderName: "Invest South/West",
       funderType: "private_development",
       amountAwarded: null,
+      announcedInvestment: null,
       logLine: null,
       year: null,
       status: "announced",
       sourceLink: "",
     });
-    expect(html).toContain("Awarded");
+    expect(html).toContain("Announced");
     expect(html).toContain("Not disclosed");
     expect(html.toLowerCase()).not.toContain("received");
     // No source anchor when there is no link.

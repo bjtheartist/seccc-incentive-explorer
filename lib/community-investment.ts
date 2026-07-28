@@ -64,13 +64,30 @@ export type FunderType = (typeof FUNDER_TYPES)[number];
 /**
  * Lifecycle stage of the dollar, chosen to be HONEST about what each source
  * actually records:
- *   • completed — a finished build-out (NOF/SBIF completion records).
- *   • awarded   — money committed/granted (CDG rounds, foundation grants, and
- *     Jim's NOF corridor list of awards without a completion record).
- *   • announced — a development publicly announced / underway.
- *   • proposed  — a development still at the proposal stage.
+ *   • completed          — a finished build-out (NOF/SBIF completion records).
+ *   • awarded            — money committed/granted (CDG rounds, foundation
+ *     grants, Chicago Prize awards, Jim's NOF corridor awards w/o a completion).
+ *   • announced          — a development publicly announced, no ground broken.
+ *   • proposed           — a development still at the proposal stage.
+ *   • under_construction — a development actively being built.
+ *   • partially_open     — a phased development with some phases open/occupied.
+ *   • opened             — a development fully open / complete.
+ *   • stalled            — an announced development paused / on hold.
+ *   • cancelled          — an announced development formally cancelled.
+ * The last five are the granular megadevelopment lifecycle states
+ * (developments_major.csv status_2026); the first four are unchanged.
  */
-export const INVESTMENT_STATUSES = ["completed", "awarded", "announced", "proposed"] as const;
+export const INVESTMENT_STATUSES = [
+  "completed",
+  "awarded",
+  "announced",
+  "proposed",
+  "under_construction",
+  "partially_open",
+  "opened",
+  "stalled",
+  "cancelled",
+] as const;
 export type InvestmentStatus = (typeof INVESTMENT_STATUSES)[number];
 
 /** Canonical source -> funderType mapping. Exhaustive over INVESTMENT_SOURCES
@@ -107,6 +124,21 @@ export interface CommunityInvestmentRecord {
   recipient: string;
   /** Real awarded/reported dollars, or null — NEVER a derived figure. */
   amountAwarded: number | null;
+  /**
+   * Announced private DEVELOPMENT capital (developments_major.csv
+   * announced_investment_usd) — the publicly reported total project cost of a
+   * major private development, or null. This is a DIFFERENT TRUTH from
+   * amountAwarded: it is a self-reported project price tag, NOT a grant a public
+   * or philanthropic body awarded. It must NEVER be summed into
+   * totalDollarsAwarded, any awarded aggregate, or the density-mode weight —
+   * awarded grants and announced development capital are separate measures that
+   * are never combined. Only ever populated on `development` records; null
+   * everywhere else. Enforced structurally: buildCommunityInvestmentExport()
+   * recomputes totalDollarsAwarded from amountAwarded alone and hard-fails if it
+   * ever diverges, and a grep-level test forbids any code that adds the two
+   * fields together.
+   */
+  announcedInvestment?: number | null;
   /** A one-line project description, or null when the source has none. */
   logLine: string | null;
   /**
@@ -160,6 +192,29 @@ export interface CommunityInvestmentMeta {
    * key name is deliberately chosen to pass the banned-figure rail.
    */
   totalDollarsAwarded: number;
+  /**
+   * Sum of every non-null announcedInvestment — the announced PRIVATE development
+   * capital across the major-development records. A SEPARATE MEASURE from
+   * totalDollarsAwarded: announced project price tags, never awarded grants. The
+   * two are reported side by side but are never added together (a UI note makes
+   * the distinction explicit). Excludes the subset-capital record(s) counted in
+   * `subsetExcluded`. Passes the banned-figure rail (no
+   * received/available/remaining/unspent token).
+   */
+  announcedCapitalTotal: number;
+  /**
+   * Megadevelopment records whose announcedInvestment was deliberately left null
+   * because the figure is a SUBSET of another development's already-counted total
+   * (e.g. the Chicago Fire stadium's $650M sits inside The 78's $7B). Kept on the
+   * map for context, excluded from announcedCapitalTotal so nothing double-counts.
+   */
+  subsetExcluded: number;
+  /**
+   * Major-development rows dropped because they are NOT private-led (public
+   * infrastructure) — this layer models private development only. 0 when every
+   * retained megadevelopment is genuinely a private (or private-anchored) project.
+   */
+  privateLedExcluded: number;
   /** City-grant rows dropped because geocoding failed and they carry no coords. */
   droppedNoGeocode: number;
   /** Cross-source rows removed by the address+amount dedupe. */
@@ -316,12 +371,28 @@ export function normalizeRecipientForDedupe(recipient: string | null | undefined
     .trim();
 }
 
-/** completed beats awarded beats announced beats proposed. */
+/**
+ * completed beats awarded beats announced beats proposed. The dedupe only ever
+ * consults this rank for GOVERNMENT point records (see dedupeInvestmentRecords'
+ * `eligible` guard: funderType === "government"), whose status is always
+ * "completed" or "awarded". The five megadevelopment lifecycle states
+ * (under_construction … cancelled) belong exclusively to private_development
+ * records, which are structurally excluded from dedupe — so their ranks here are
+ * inert and only satisfy the exhaustive `Record<InvestmentStatus, …>` type.
+ * They are given ranks strictly BELOW the government statuses (higher numbers)
+ * so that, even in a hypothetical future where a development row became
+ * dedupe-eligible, a real completed/awarded government record would always win.
+ */
 const DEDUPE_STATUS_RANK: Record<InvestmentStatus, number> = {
   completed: 0,
   awarded: 1,
   announced: 2,
   proposed: 3,
+  under_construction: 4,
+  partially_open: 5,
+  opened: 6,
+  stalled: 7,
+  cancelled: 8,
 };
 
 /**
@@ -531,6 +602,18 @@ export function sumAwardedDollars(records: readonly CommunityInvestmentRecord[])
   return total;
 }
 
+/**
+ * Sum every non-null announcedInvestment (announced private DEVELOPMENT capital).
+ * A SEPARATE total from sumAwardedDollars — the two are never added together.
+ * Reads a field the awarded sum deliberately ignores, so no dollar is ever
+ * counted in both. Pure.
+ */
+export function sumAnnouncedInvestment(records: readonly CommunityInvestmentRecord[]): number {
+  let total = 0;
+  for (const r of records) if (r.announcedInvestment != null) total += r.announcedInvestment;
+  return total;
+}
+
 /** Per-source kept-record counts, exhaustive over INVESTMENT_SOURCES. */
 export function countBySource(records: readonly CommunityInvestmentRecord[]): Record<InvestmentSource, number> {
   const counts = Object.fromEntries(INVESTMENT_SOURCES.map((s) => [s, 0])) as Record<InvestmentSource, number>;
@@ -557,9 +640,29 @@ export function buildCommunityInvestmentExport(
     outOfBoundsGeocodes?: number;
     negativeAmountsNulled?: number;
     outsideCommunityAreas?: number;
+    subsetExcluded?: number;
+    privateLedExcluded?: number;
   },
 ): CommunityInvestmentExport {
   const pointCount = records.filter((r) => r.geometry.kind === "point").length;
+  const totalDollarsAwarded = sumAwardedDollars(records);
+
+  // STRUCTURAL GUARD (announced-vs-awarded separation): the awarded total must be
+  // computable from amountAwarded ALONE. Recompute it the long way, summing only
+  // amountAwarded and NEVER announcedInvestment, and hard-fail on any divergence —
+  // so a future edit that folds announced development capital into the awarded
+  // total cannot be committed. (sumAwardedDollars already ignores
+  // announcedInvestment; this asserts that invariant explicitly at build time.)
+  let awardedOnly = 0;
+  for (const r of records) if (r.amountAwarded != null) awardedOnly += r.amountAwarded;
+  if (awardedOnly !== totalDollarsAwarded) {
+    throw new Error(
+      `Community Investment export: totalDollarsAwarded (${totalDollarsAwarded}) diverges from the ` +
+        `amountAwarded-only recompute (${awardedOnly}) — announced development capital must NEVER be ` +
+        `summed into the awarded total.`,
+    );
+  }
+
   const out: CommunityInvestmentExport = {
     generatedAt,
     meta: {
@@ -567,7 +670,10 @@ export function buildCommunityInvestmentExport(
       totalRecords: records.length,
       pointCount,
       citywideCount: records.length - pointCount,
-      totalDollarsAwarded: sumAwardedDollars(records),
+      totalDollarsAwarded,
+      announcedCapitalTotal: sumAnnouncedInvestment(records),
+      subsetExcluded: stats.subsetExcluded ?? 0,
+      privateLedExcluded: stats.privateLedExcluded ?? 0,
       droppedNoGeocode: stats.droppedNoGeocode,
       dedupedRows: stats.dedupedRows,
       droppedPlaceholder: stats.droppedPlaceholder ?? 0,

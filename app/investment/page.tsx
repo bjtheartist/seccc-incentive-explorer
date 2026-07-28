@@ -1,12 +1,14 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { loadInvestmentIndex } from "@/lib/investment-analysis";
+import { loadInvestmentIndex, loadMajorDevelopments } from "@/lib/investment-analysis";
 import {
   formatCount,
   formatFullDollars,
   formatAsOf,
   MAGNITUDE_HUE,
 } from "@/components/investment/format";
+import { CountUpDollars } from "@/components/investment/CountUpDollars";
+import { MajorDevelopments } from "@/components/investment/MajorDevelopments";
 import { getInvestmentAdminState, InvestmentLoginForm, InvestmentNotConfigured } from "./gate";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +33,7 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
   if (!hasSession) return <InvestmentLoginForm redirectTo="/investment" hasAuthError={hasAuthError} />;
 
   const index = loadInvestmentIndex();
+  const topDevelopments = loadMajorDevelopments({ limit: 10 });
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
@@ -78,7 +81,7 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                 className="mt-3 text-[clamp(44px,8vw,76px)] font-semibold leading-none tracking-tight text-[#0C1B33]"
                 style={{ fontVariantNumeric: "proportional-nums" }}
               >
-                {formatFullDollars(index.citywideTotal)}
+                <CountUpDollars value={index.citywideTotal} />
               </div>
               <p className="mt-4 text-[14px] leading-relaxed text-[#0C1B33]/55">
                 awarded across{" "}
@@ -140,6 +143,19 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                 })}
               </div>
             </div>
+
+            {/* Major private developments — citywide top 10 by announced capital */}
+            {topDevelopments.count > 0 ? (
+              <div className="mt-12">
+                <div className="mb-3 flex items-baseline justify-between">
+                  <h2 className="font-editorial text-[26px]">Major private developments</h2>
+                  <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                    Top 10 by announced $
+                  </span>
+                </div>
+                <MajorDevelopments summary={topDevelopments} scope="citywide" />
+              </div>
+            ) : null}
 
             <p className="mt-6 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
               Data as of {formatAsOf(index.generatedAt)} · dollars are awarded amounts, not confirmed receipts

@@ -1,11 +1,16 @@
 import { describe, expect, it, vi } from "vitest";
-import type { CommunityInvestmentRecord } from "@/lib/community-investment";
+import { INVESTMENT_STATUSES, type CommunityInvestmentRecord } from "@/lib/community-investment";
 import {
   citywideInvestmentEntries,
   COMMUNITY_INVESTMENT_ENDPOINT,
+  DEV_DOT_RADIUS_MAX,
+  DEV_DOT_RADIUS_MIN,
   fetchCommunityInvestmentLayer,
   filterInvestmentPointFeatures,
+  INVESTMENT_STATUS_LABELS,
   investmentRecordsToPointFeatures,
+  investmentStatusLabel,
+  makeDevelopmentDotRadiusScale,
   presentFunderTypesInOrder,
   summarizeCitywideEntries,
   summarizeCitywideInvestment,
@@ -255,5 +260,98 @@ describe("fetchCommunityInvestmentLayer", () => {
     const fetchImpl = fetchStub(200, { records: [] });
     await fetchCommunityInvestmentLayer({ fetchImpl, source: "cdg" });
     expect(String(fetchImpl.mock.calls[0][0])).toBe(`${COMMUNITY_INVESTMENT_ENDPOINT}?source=cdg`);
+  });
+});
+
+// ── Development dot: announcedInvestment carried + radius sized by it ──────────
+
+describe("development dots: announcedInvestment + radiusPx", () => {
+  const dev = (id: string, announcedInvestment: number | null, lat = 41.8, lng = -87.62) =>
+    ({
+      id,
+      source: "development",
+      funderType: "private_development",
+      funderName: "Developer",
+      recipient: id,
+      amountAwarded: null,
+      announcedInvestment,
+      logLine: null,
+      year: 2024,
+      geometry: { kind: "point", lat, lng },
+      address: null,
+      status: "under_construction",
+      links: [],
+    }) satisfies CommunityInvestmentRecord;
+
+  it("carries announcedInvestment onto the feature and stamps a radiusPx on dev dots only", () => {
+    const features = investmentRecordsToPointFeatures([
+      dev("big", 9_000_000_000),
+      dev("small", 22_000_000),
+      dev("subset", null),
+      {
+        id: "gov",
+        source: "cdg",
+        funderType: "government",
+        funderName: "City",
+        recipient: "Grant",
+        amountAwarded: 250_000,
+        announcedInvestment: null,
+        logLine: null,
+        year: 2022,
+        geometry: { kind: "point", lat: 41.75, lng: -87.6 },
+        address: "1 Main St",
+        status: "awarded",
+        links: [],
+      },
+    ]);
+    const byId = new Map(features.map((f) => [f.properties.id, f]));
+    // announcedInvestment is carried through on every point feature.
+    expect(byId.get("big")!.properties.announcedInvestment).toBe(9_000_000_000);
+    expect(byId.get("gov")!.properties.announcedInvestment).toBeNull();
+
+    // A development dot gets a radius in [4,18]; the biggest ≥ the smallest, and a
+    // null-capital development sits at the floor.
+    const big = byId.get("big")!.properties.radiusPx!;
+    const small = byId.get("small")!.properties.radiusPx!;
+    const subset = byId.get("subset")!.properties.radiusPx!;
+    expect(big).toBeGreaterThanOrEqual(small);
+    expect(big).toBeLessThanOrEqual(DEV_DOT_RADIUS_MAX);
+    expect(small).toBeGreaterThanOrEqual(DEV_DOT_RADIUS_MIN);
+    expect(subset).toBe(DEV_DOT_RADIUS_MIN);
+
+    // Non-development dots never get a radiusPx (they size by amountAwarded in the paint).
+    expect(byId.get("gov")!.properties.radiusPx).toBeUndefined();
+  });
+
+  it("makeDevelopmentDotRadiusScale: null/0 → min, max amount → max, monotonic", () => {
+    const scale = makeDevelopmentDotRadiusScale([null, 22_000_000, 9_000_000_000]);
+    expect(scale(null)).toBe(DEV_DOT_RADIUS_MIN);
+    expect(scale(0)).toBe(DEV_DOT_RADIUS_MIN);
+    expect(scale(9_000_000_000)).toBe(DEV_DOT_RADIUS_MAX);
+    expect(scale(22_000_000)).toBeGreaterThan(DEV_DOT_RADIUS_MIN);
+    expect(scale(22_000_000)).toBeLessThan(DEV_DOT_RADIUS_MAX);
+    // Degenerate domain (all equal) → midpoint.
+    const flat = makeDevelopmentDotRadiusScale([5, 5, 5]);
+    expect(flat(5)).toBe((DEV_DOT_RADIUS_MIN + DEV_DOT_RADIUS_MAX) / 2);
+  });
+});
+
+// ── Status labels are exhaustive + humanized ──────────────────────────────────
+
+describe("INVESTMENT_STATUS_LABELS", () => {
+  it("covers every INVESTMENT_STATUS with a humanized (non snake_case) label", () => {
+    for (const s of INVESTMENT_STATUSES) {
+      const label = INVESTMENT_STATUS_LABELS[s];
+      expect(label, `${s} has a label`).toBeTruthy();
+      expect(label).not.toContain("_");
+    }
+    expect(Object.keys(INVESTMENT_STATUS_LABELS).sort()).toEqual([...INVESTMENT_STATUSES].sort());
+  });
+
+  it("investmentStatusLabel humanizes a known status and passes an unknown one through", () => {
+    expect(investmentStatusLabel("under_construction")).toBe("Under construction");
+    expect(investmentStatusLabel("opened")).toBe("Opened");
+    expect(investmentStatusLabel("")).toBe("");
+    expect(investmentStatusLabel("mystery")).toBe("mystery");
   });
 });

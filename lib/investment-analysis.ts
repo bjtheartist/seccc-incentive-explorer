@@ -35,6 +35,7 @@ import {
   type CommunityInvestmentRecord,
   type FunderType,
   type InvestmentSource,
+  type InvestmentStatus,
 } from "./community-investment";
 
 /** The since-anchor year. Dollar math and breakdowns cover year >= this. */
@@ -361,6 +362,80 @@ export function analyzeCommunityArea(
   };
 }
 
+// ── Major private developments (announced capital — a SEPARATE measure) ───────
+
+/** One major private development for the "Major private developments" section. */
+export interface MajorDevelopment {
+  recipient: string;
+  funderName: string;
+  /** Announced private DEVELOPMENT capital (non-null; the section only lists
+   * developments that carry a real announced figure). NEVER an awarded grant. */
+  announcedInvestment: number;
+  year: number | null;
+  status: InvestmentStatus;
+  logLine: string | null;
+  /** First http(s) source link, or "" when the record carries none. */
+  sourceLink: string;
+  communityArea?: string;
+}
+
+/** The developments roll-up for a scope (citywide or one community area). */
+export interface MajorDevelopmentsSummary {
+  /** Number of major developments in scope (with a non-null announced figure). */
+  count: number;
+  /**
+   * Sum of announcedInvestment across the in-scope developments — ANNOUNCED
+   * private capital, a different measure from awarded grants; the two are never
+   * added together (the UI states this inline). Named to pass the banned-figure
+   * rail.
+   */
+  totalAnnounced: number;
+  /** The developments, ranked by announced capital desc (name tiebreak), then sliced. */
+  developments: MajorDevelopment[];
+}
+
+/**
+ * Summarize the major private developments for a scope. A "major development" is
+ * a `development`-source record carrying a non-null announcedInvestment (the
+ * enriched megaprojects — the ~68 legacy KML rows and the subset/blank megadevs
+ * have null announced capital and are excluded). When `communityArea` is given,
+ * only that area's point-stamped developments count; otherwise it is citywide
+ * (both point- and citywide-geometry developments, e.g. Advocate's multi-site
+ * investment). `count`/`totalAnnounced` cover ALL in-scope developments; the
+ * returned `developments` array is ranked desc by announcedInvestment (recipient
+ * name tiebreak) and sliced to `limit` when provided. Pure / deterministic —
+ * announcedInvestment is NEVER combined with amountAwarded.
+ */
+export function summarizeMajorDevelopments(
+  records: readonly CommunityInvestmentRecord[],
+  opts?: { communityArea?: string; limit?: number },
+): MajorDevelopmentsSummary {
+  const scoped = records.filter(
+    (r) =>
+      r.source === "development" &&
+      r.announcedInvestment != null &&
+      (opts?.communityArea == null || r.communityArea === opts.communityArea),
+  );
+  const totalAnnounced = scoped.reduce((sum, r) => sum + (r.announcedInvestment as number), 0);
+  const ranked = scoped
+    .map((r): MajorDevelopment => ({
+      recipient: r.recipient,
+      funderName: r.funderName,
+      announcedInvestment: r.announcedInvestment as number,
+      year: r.year,
+      status: r.status,
+      logLine: r.logLine,
+      sourceLink: r.links.find((l) => /^https?:\/\//i.test(l)) ?? "",
+      ...(r.communityArea ? { communityArea: r.communityArea } : {}),
+    }))
+    .sort((a, b) => b.announcedInvestment - a.announcedInvestment || a.recipient.localeCompare(b.recipient));
+  return {
+    count: scoped.length,
+    totalAnnounced,
+    developments: opts?.limit != null ? ranked.slice(0, opts.limit) : ranked,
+  };
+}
+
 // ── Server-only loaders (fs) ──────────────────────────────────────────────────
 
 /**
@@ -384,4 +459,20 @@ export function loadInvestmentAnalysis(communityArea: string): CommunityInvestme
   if (!data) return null;
   const index = buildInvestmentIndex(data.records, data.generatedAt);
   return analyzeCommunityArea(data.records, communityArea, data.generatedAt, index);
+}
+
+/**
+ * Load the major private developments for a scope from the committed export.
+ * Omit `communityArea` for the citywide roll-up (the landing page passes
+ * `{ limit: 10 }` for the top-10 by announced capital); pass a community name for
+ * that area's developments. Returns an empty summary when the export is absent.
+ * Server-only.
+ */
+export function loadMajorDevelopments(opts?: {
+  communityArea?: string;
+  limit?: number;
+}): MajorDevelopmentsSummary {
+  const data = loadCommunityInvestment();
+  if (!data) return { count: 0, totalAnnounced: 0, developments: [] };
+  return summarizeMajorDevelopments(data.records, opts);
 }

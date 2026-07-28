@@ -3,11 +3,13 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CHICAGO_COMMUNITY_AREAS } from "@/lib/community-areas";
 import { loadCommunityInvestment } from "@/lib/community-investment";
-import { loadInvestmentAnalysis } from "@/lib/investment-analysis";
+import { loadInvestmentAnalysis, loadMajorDevelopments } from "@/lib/investment-analysis";
 import { HeroStat } from "@/components/investment/HeroStat";
 import { FunderDonut } from "@/components/investment/FunderDonut";
 import { YearBars } from "@/components/investment/YearBars";
 import { SourceBars } from "@/components/investment/SourceBars";
+import { FunderFlowSankey } from "@/components/investment/FunderFlowSankey";
+import { MajorDevelopments } from "@/components/investment/MajorDevelopments";
 import { TopRecipientsTable } from "@/components/investment/TopRecipientsTable";
 import { TopFunders } from "@/components/investment/TopFunders";
 import { EquityContext } from "@/components/investment/EquityContext";
@@ -86,6 +88,7 @@ export default async function InvestmentAreaPage({
   if (!name) notFound();
 
   const analysis = loadInvestmentAnalysis(name);
+  const developments = loadMajorDevelopments({ communityArea: name });
   const meta = loadCommunityInvestment()?.meta;
   const sources = meta?.sources ?? [];
 
@@ -157,6 +160,22 @@ export default async function InvestmentAreaPage({
               description="Awarded dollars by funding program. Development projects are counted, not dollared."
             >
               <SourceBars bySource={analysis.bySource} />
+            </Section>
+
+            {/* 4b — Flow (funder → program → recipient) */}
+            <Section
+              title="How the money flowed"
+              description="Awarded dollars from funders, through programs, to the recipients on record since 2020."
+            >
+              <FunderFlowSankey communityArea={name} />
+            </Section>
+
+            {/* 4c — Major private developments (announced capital — a separate measure) */}
+            <Section
+              title="Major private developments"
+              description="Announced private capital sited in this community — a different measure from the awarded grants above, and never combined with them."
+            >
+              <MajorDevelopments summary={developments} scope="area" />
             </Section>
 
             {/* 5 — Top recipients */}

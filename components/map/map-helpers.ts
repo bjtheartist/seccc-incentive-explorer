@@ -6,7 +6,12 @@
 import mapboxgl from "mapbox-gl";
 import { POINT_DATA_ZONE_KEYS, ZONE_META, ZONING_CATEGORIES } from "@/lib/constants";
 import { OWNER_TYPE_COLORS, OWNER_TYPE_LABELS, type OwnerType } from "@/lib/owner-classify";
-import { FUNDER_TYPE_COLORS, FUNDER_TYPE_LABELS, INVESTMENT_FALLBACK_COLOR } from "@/lib/community-investment-layer";
+import {
+  FUNDER_TYPE_COLORS,
+  FUNDER_TYPE_LABELS,
+  INVESTMENT_FALLBACK_COLOR,
+  investmentStatusLabel,
+} from "@/lib/community-investment-layer";
 import type { FunderType } from "@/lib/community-investment";
 import type { DistrictData } from "@/lib/types";
 import type { SiteSignals } from "@/lib/site-signals";
@@ -300,6 +305,8 @@ export interface InvestmentPopupProperties {
   funderName?: string;
   funderType?: string;
   amountAwarded?: number | null;
+  /** Announced private DEVELOPMENT capital — a SEPARATE measure from amountAwarded. */
+  announcedInvestment?: number | null;
   logLine?: string | null;
   year?: number | null;
   status?: string;
@@ -335,9 +342,19 @@ export function buildInvestmentPopupHtml(p: InvestmentPopupProperties): string {
   const funderTypeLabel = FUNDER_TYPE_LABELS[funderType] ?? "Investment";
   const recipient = escapePopupHtml(p.recipient || "Recipient unavailable");
   const funderName = p.funderName ? escapePopupHtml(p.funderName) : "";
-  const amount = escapePopupHtml(formatAwardedAmount(p.amountAwarded));
+
+  // A DEVELOPMENT record reports ANNOUNCED private capital, a different measure
+  // from an awarded grant — its money row is labeled "Announced" and reads
+  // announcedInvestment; awarded grants keep the "Awarded" label + amountAwarded.
+  // The two figures are never combined in a single row.
+  const isDevelopment = funderType === "private_development";
+  const moneyLabel = isDevelopment ? "Announced" : "Awarded";
+  const amount = escapePopupHtml(
+    formatAwardedAmount(isDevelopment ? p.announcedInvestment : p.amountAwarded),
+  );
+
   const year = p.year != null ? String(p.year) : "";
-  const status = p.status ? escapePopupHtml(String(p.status)) : "";
+  const status = p.status ? escapePopupHtml(investmentStatusLabel(String(p.status))) : "";
   const logLine = p.logLine ? escapePopupHtml(p.logLine) : "";
   const link = p.sourceLink && /^https?:\/\//i.test(p.sourceLink) ? p.sourceLink : "";
   const metaRow = [year, status].filter(Boolean);
@@ -347,12 +364,12 @@ export function buildInvestmentPopupHtml(p: InvestmentPopupProperties): string {
     <div style="font-size:14px;font-weight:600;color:#0C1B33">${recipient}</div>
     ${funderName ? `<div style="font-size:11px;color:#5A6478;margin-top:4px">${funderName}</div>` : ""}
     <div style="display:flex;align-items:baseline;gap:6px;margin-top:8px">
-      <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8A93A6">Awarded</span>
+      <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8A93A6">${moneyLabel}</span>
       <span style="font-size:14px;font-weight:700;color:#0C1B33">${amount}</span>
     </div>
     <div style="margin-top:8px">
       <span style="display:inline-block;background:${accent}15;color:${accent};border:1px solid ${accent}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapePopupHtml(funderTypeLabel)}</span>
-      ${metaRow.length ? `<span style="font-size:11px;color:#5A6478;margin-left:6px;text-transform:capitalize">${metaRow.join(" · ")}</span>` : ""}
+      ${metaRow.length ? `<span style="font-size:11px;color:#5A6478;margin-left:6px">${metaRow.join(" · ")}</span>` : ""}
     </div>
     ${logLine ? `<div style="font-size:11px;color:#8A93A6;margin-top:6px;line-height:1.4">${logLine}</div>` : ""}
     ${link ? `<a href="${escapePopupHtml(link)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">Source &rarr;</a>` : ""}
