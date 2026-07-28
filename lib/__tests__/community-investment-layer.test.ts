@@ -6,6 +6,7 @@ import {
   DEV_DOT_RADIUS_MAX,
   DEV_DOT_RADIUS_MIN,
   fetchCommunityInvestmentLayer,
+  excludeMegaprojectFeatures,
   filterInvestmentPointFeatures,
   INVESTMENT_STATUS_LABELS,
   investmentRecordsToPointFeatures,
@@ -571,6 +572,13 @@ describe("buildMegaprojectFeatures", () => {
     // The reused popup contract is intact (development → "Announced" branch reads these).
     expect(byId["dev-open"].announcedInvestment).toBe(1_000_000_000);
     expect(byId["dev-build"].label.length).toBeLessThanOrEqual(MEGAPROJECT_LABEL_MAX_CHARS);
+  });
+});
+
+describe("excludeMegaprojectFeatures", () => {
+  it("keeps the base feed free of private-development records", () => {
+    const points = investmentRecordsToPointFeatures(megaRecords);
+    expect(excludeMegaprojectFeatures(points).map((f) => f.properties.id)).toEqual(["gov-point"]);
   });
 });
 
