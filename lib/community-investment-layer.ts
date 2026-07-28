@@ -24,6 +24,7 @@ import type {
   FunderType,
   InvestmentStatus,
 } from "@/lib/community-investment";
+import type { FunderHq } from "@/lib/investment-deck-modes";
 
 /** The gated dataset endpoint the layer fetches when toggled on. */
 export const COMMUNITY_INVESTMENT_ENDPOINT = "/api/owner-file/investment";
@@ -291,6 +292,13 @@ export interface CommunityInvestmentLayerResult {
   citywide: CitywideInvestmentSummary;
   /** Filterable citywide entries so the legend note re-scopes with the filters. */
   citywideEntries: CitywideInvestmentEntry[];
+  /**
+   * Foundation-HQ coordinates the gated route attaches (read server-side from
+   * data/curated/foundation-hqs.csv). Seeds the Arcs view mode (funder HQ →
+   * recipient); empty when the layer is unauthorized/unavailable or the CSV is
+   * absent. The client never fetches the raw CSV — it only ever sees this array.
+   */
+  funderHqs: FunderHq[];
 }
 
 const EMPTY_LAYER_RESULT = (status: CommunityInvestmentLayerStatus): CommunityInvestmentLayerResult => ({
@@ -299,6 +307,7 @@ const EMPTY_LAYER_RESULT = (status: CommunityInvestmentLayerStatus): CommunityIn
   presentFunderTypes: [],
   citywide: { count: 0, totalDollars: 0 },
   citywideEntries: [],
+  funderHqs: [],
 });
 
 /**
@@ -327,7 +336,7 @@ export async function fetchCommunityInvestmentLayer(opts?: {
   if (res.status === 401) return EMPTY_LAYER_RESULT("unauthorized");
   if (!res.ok) return EMPTY_LAYER_RESULT("unavailable");
 
-  const data = (await res.json()) as CommunityInvestmentExport;
+  const data = (await res.json()) as CommunityInvestmentExport & { funderHqs?: FunderHq[] };
   const records = Array.isArray(data?.records) ? data.records : [];
   const pointFeatures = investmentRecordsToPointFeatures(records);
   const citywideEntries = citywideInvestmentEntries(records);
@@ -337,5 +346,6 @@ export async function fetchCommunityInvestmentLayer(opts?: {
     presentFunderTypes: presentFunderTypesInOrder(pointFeatures.map((f) => f.properties.funderType)),
     citywide: summarizeCitywideEntries(citywideEntries, null),
     citywideEntries,
+    funderHqs: Array.isArray(data?.funderHqs) ? data.funderHqs : [],
   };
 }

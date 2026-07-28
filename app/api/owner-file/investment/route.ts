@@ -1,3 +1,5 @@
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import { NextRequest, NextResponse } from "next/server";
 import {
   OWNER_FILES_ADMIN_COOKIE,
@@ -6,6 +8,7 @@ import {
 } from "@/lib/owner-files-admin-auth";
 import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { INVESTMENT_SOURCES, filterInvestmentBySources, loadCommunityInvestment } from "@/lib/community-investment";
+import { parseFunderHqCsv, type FunderHq } from "@/lib/investment-deck-modes";
 
 // A valid analytics admin session also satisfies this gate (single sign-on
 // — see lib/owner-files-admin-auth.ts module doc). Identical auth check to
@@ -18,6 +21,29 @@ function isAuthorized(req: NextRequest): boolean {
 }
 
 const VALID_SOURCES = new Set<string>(INVESTMENT_SOURCES);
+
+/**
+ * The 12 foundation headquarters (data/curated/foundation-hqs.csv) that seed the
+ * map layer's Arcs mode (source = funder HQ → target = recipient point). Read
+ * and parsed ONCE per process, server-side only, so the client receives the
+ * coordinates inside this gated JSON response and never fetches a raw data-file
+ * path. `undefined` = not attempted yet; a missing/unparseable file degrades to
+ * an empty array (Arcs mode simply has nothing to draw arcs from).
+ */
+const FUNDER_HQS_PATH = path.join(process.cwd(), "data/curated/foundation-hqs.csv");
+let funderHqsCache: FunderHq[] | undefined;
+
+function loadFunderHqs(): FunderHq[] {
+  if (funderHqsCache !== undefined) return funderHqsCache;
+  try {
+    funderHqsCache = existsSync(FUNDER_HQS_PATH)
+      ? parseFunderHqCsv(readFileSync(FUNDER_HQS_PATH, "utf8"))
+      : [];
+  } catch {
+    funderHqsCache = [];
+  }
+  return funderHqsCache;
+}
 
 /**
  * GET /api/owner-file/investment?source=cdg,foundation — the private Community
@@ -55,5 +81,12 @@ export async function GET(req: NextRequest) {
     : null;
 
   const filtered = filterInvestmentBySources(data, sources);
-  return NextResponse.json(filtered, { headers: { "Cache-Control": "private, no-store" } });
+  // Attach the funder-HQ coordinates so the client's Arcs mode can draw HQ →
+  // recipient arcs without ever fetching the raw CSV path. `funderHqs` is
+  // additive to the CommunityInvestmentExport shape and ignored by clients that
+  // don't read it (e.g. the existing dots layer).
+  return NextResponse.json(
+    { ...filtered, funderHqs: loadFunderHqs() },
+    { headers: { "Cache-Control": "private, no-store" } }
+  );
 }
