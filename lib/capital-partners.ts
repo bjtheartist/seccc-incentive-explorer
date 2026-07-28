@@ -15,7 +15,22 @@
  * source provenance, and never promise approvals, dollars, or eligibility.
  */
 
-export type PartnerType = "cdfi" | "mission_lender" | "community_bank" | "public_program";
+export type PartnerType =
+  | "cdfi"
+  | "mission_lender"
+  | "community_bank"
+  | "public_program"
+  | "development_advisor";
+
+/**
+ * Current SBA delivery roles used for directory filtering and handoff routing.
+ * These are factual designations, not approval signals or Explorer rankings.
+ */
+export type SbaPartnerRole =
+  | "7a_lender"
+  | "community_advantage_sblc"
+  | "microloan_intermediary"
+  | "certified_development_company";
 
 export type PartnerVerificationStatus = "verified" | "unverified" | "stale";
 
@@ -72,6 +87,8 @@ export interface CapitalPartner {
   reportTypes?: string[];
   /** Hard-gate specialist organizations to a declared project type or end use. */
   requiresProjectContext?: boolean;
+  /** Internal/queryable SBA delivery roles. Never serialized into report matches. */
+  sbaRoles?: SbaPartnerRole[];
   /**
    * Factual, public certifications (e.g. the U.S. Treasury CDFI Fund certified
    * list). Rendered verbatim as provenance; never an Explorer endorsement.

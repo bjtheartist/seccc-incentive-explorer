@@ -1727,11 +1727,11 @@
   },
   {
     "id": "ccsa",
-    "name": "Commercial Corridor Storefront Activation (CCSA)",
+    "name": "Commercial Corridor Storefront Activation Program (CCSAP)",
     "level": "City",
     "zoneKey": "ccsa",
-    "summary": "The City of Chicago is investing $30.5 million across 12 commercial corridors over 3 years through the CCSA program. It provides reimbursable grants for capital improvements to vacant and existing commercial spaces, plus free wraparound technical assistance at no cost to corridor businesses.",
-    "whoQualifies": "Business owners, property owners, or nonprofits in good standing with the State of Illinois and City of Chicago whose physical property is located within an approved CCSA corridor boundary. Applicant must have site control (ownership or permission from property owner).",
+    "summary": "The Commercial Corridor Storefront Activation Program supports capital improvements to vacant and existing commercial spaces in selected Chicago corridors and pairs the work with technical assistance. Awards, eligible costs, and current corridor availability must be confirmed with the program administrator.",
+    "whoQualifies": "Business owners, property owners, or nonprofits in good standing with the State of Illinois and City of Chicago whose physical property is located within an approved CCSAP corridor boundary. Applicant must have site control (ownership or permission from property owner).",
     "benefits": [
       "Reimbursable grants for capital improvements to storefronts",
       "Covers vacant and existing commercial spaces",
@@ -1740,7 +1740,7 @@
       "Grants awarded quarterly on a rolling basis"
     ],
     "howToApply": [
-      "Verify your property is within one of the 12 approved CCSA corridor boundaries",
+      "Verify your property is within a currently approved CCSAP corridor boundary",
       "Visit Chicago.gov/CCSA for application details",
       "Contact Program Administrator Allies for Community Business for grant questions",
       "Connect with your Corridor Lead Agency for technical assistance",
@@ -1779,7 +1779,7 @@
     "eligibilityRules": [
       {
         "criterion": "location",
-        "description": "Property must be within one of 12 approved CCSA corridor boundaries",
+        "description": "Property must be within a currently approved CCSAP corridor boundary",
         "verifiedBy": "location",
         "required": true
       },
@@ -1803,14 +1803,14 @@
       }
     ],
     "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "Reimbursable grants (from $30.5M total fund)",
+    "benefitRange": "Reimbursement terms vary; confirm eligible costs and current availability before committing funds",
     "fastestConfirmingStep": "Contact Allies for Community Business at granthelp@a4cb.org or (312) 275-3000 to confirm corridor eligibility",
     "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/supp_info/ccsa.html",
     "status": "active",
     "applicationPortals": [
       {
         "type": "submittable",
-        "label": "CCSA Grant Application",
+        "label": "CCSAP Grant Application",
         "url": "https://cocdpd.submittable.com/submit/343419/commercial-corridor-storefront-activation-grant",
         "language": "en"
       }
@@ -2258,21 +2258,23 @@
   },
   {
     "id": "sba7a504",
-    "name": "SBA 7(a) and 504 Loans (Cumulative Cap Doubled to $10M)",
+    "name": "SBA 7(a) and 504 Financing",
     "level": "Federal",
     "zoneKey": "",
-    "summary": "Effective July 4, 2026, the SBA cumulative combined limit for 7(a) plus 504 loans doubled from $5M to $10M (up to $5M per program, stackable to $10M total for qualified borrowers). FY2026 fee waiver for manufacturers (NAICS-code eligible) expires September 30, 2026. 7(a) is the flagship general-purpose loan; 504 finances fixed assets (real estate, heavy equipment) at long-term fixed rates.",
-    "whoQualifies": "For-profit small businesses meeting SBA size standards. 504 is for fixed-asset financing with at least 51% owner-occupancy for real estate. Community Advantage SBLC offers loans up to $350K for underserved markets.",
+    "summary": "SBA 7(a) financing can support equipment, working capital, business acquisition, tenant improvements, and owner-occupied real estate. SBA 504 financing is limited to eligible major fixed assets and is delivered through a Certified Development Company (CDC) with a lending partner. A July 4, 2026 policy change revised how 7(a) and 504 exposure is coordinated when both programs are used; it does not establish a project budget or indicate approval.",
+    "whoQualifies": "For-profit small businesses that meet current SBA and lender requirements. Project use, business size, repayment ability, ownership, credit, collateral, and other underwriting factors are reviewed by the lender. A 504 project must fit fixed-asset and occupancy rules; it cannot fund ordinary working capital or inventory.",
     "benefits": [
-      "7(a): up to $5M for general business purposes (working capital, equipment, real estate)",
-      "504: long-term fixed-rate real estate / equipment financing",
-      "Combined cumulative cap raised to $10M as of 7/4/2026",
-      "Community Advantage SBLC: up to $350K for underserved markets"
+      "7(a) can combine equipment with working capital, inventory, tenant work, acquisition, or other eligible business uses",
+      "504 can finance eligible owner-occupied real estate, construction, improvements, and long-lived machinery or equipment",
+      "Community Advantage SBLCs provide a mission-oriented 7(a) pathway",
+      "Current policy permits some projects to coordinate 7(a) and 504 financing when each program's rules are met"
     ],
     "howToApply": [
-      "Identify an SBA Preferred Lender (most major Chicago banks)",
-      "For 504, work with a Certified Development Company (CDC) like SomerCor or Growth Corp",
-      "Lender originates and SBA guarantees a portion"
+      "Define the exact use of funds, installed equipment cost, useful life, timing, and any working-capital or build-out need",
+      "For 7(a), speak with a participating lender or use SBA Lender Match",
+      "For 504, contact an SBA Certified Development Company such as SomerCor or Small Business Growth Corporation",
+      "Prepare current financials, tax returns, a debt schedule, ownership records, project quotes, site-control documents, and projections requested by the lender",
+      "Compare written terms, collateral, guarantees, fees, timing, and prepayment conditions before choosing a financing path"
     ],
     "requiredDocs": [
       "3 years business and personal tax returns",
@@ -2282,21 +2284,28 @@
     ],
     "contact": "SBA Chicago District Office",
     "url": "https://www.sba.gov/funding-programs/loans",
-    "sourceUrl": "https://www.sba.gov/article/2026/05/18/sba-doubles-cumulative-7a-504-loan-limit-10-million",
-    "status": "changed",
+    "sourceUrl": "https://www.sba.gov/document/policy-notice-5000-879058-coordination-7a-504-maximum-loan-limits",
+    "status": "active",
     "contacts": [
       {
         "agency": "SBA Chicago District Office",
         "abbreviation": "SBA",
         "phone": "(312) 353-4528",
-        "url": "https://www.sba.gov/offices/district/il/chicago"
+        "url": "https://www.sba.gov/district/illinois"
       },
       {
         "agency": "SomerCor 504",
         "abbreviation": "SomerCor",
-        "phone": "(312) 360-3384",
+        "phone": "(312) 360-3300",
         "url": "https://somercor.com/",
-        "role": "Local CDC for 504 loans"
+        "role": "SBA Certified Development Company for 504 financing"
+      },
+      {
+        "agency": "Small Business Growth Corporation",
+        "abbreviation": "Growth Corp",
+        "phone": "(312) 852-8545",
+        "url": "https://www.growthcorp.com/contact-us/",
+        "role": "SBA Certified Development Company serving the Chicago area"
       }
     ],
     "eligibilityRules": [
@@ -2307,9 +2316,9 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-07-02",
-    "benefitRange": "Up to $10M cumulative (7a + 504); Community Advantage up to $350K",
-    "fastestConfirmingStep": "Talk to an SBA Preferred Lender or call SBA Chicago at (312) 353-4528",
+    "lastVerifiedAt": "2026-07-27",
+    "benefitRange": "Financing structure and terms vary by project and lender; no approval or amount is implied",
+    "fastestConfirmingStep": "Choose 7(a) for a mixed-use-of-funds conversation or contact a CDC for a fixed-asset 504 conversation",
     "deadlines": [
       {
         "label": "FY2026 manufacturer fee waiver expires",
@@ -2320,6 +2329,85 @@
       "starting",
       "growing",
       "developer"
+    ]
+  },
+  {
+    "id": "sbaMicroloan",
+    "name": "SBA Microloan Program",
+    "level": "Federal",
+    "zoneKey": "",
+    "summary": "SBA funds nonprofit intermediary lenders that make smaller business loans and provide technical assistance. Proceeds can support working capital, inventory, supplies, furniture, fixtures, machinery, and equipment, but cannot be used to purchase real estate or repay existing debt.",
+    "whoQualifies": "Eligible startups, existing small businesses, and certain nonprofit childcare centers apply through an SBA-authorized intermediary. The intermediary sets its own credit, collateral, training, documentation, and repayment requirements within SBA program rules.",
+    "benefits": [
+      "Can support equipment, furniture, fixtures, supplies, inventory, and working-capital needs",
+      "Delivered through a nonprofit intermediary rather than directly by SBA",
+      "Intermediaries pair financing with business guidance and technical assistance",
+      "May be worth comparing when a conventional bank or larger fixed-asset structure does not fit the project"
+    ],
+    "howToApply": [
+      "Define the equipment or business need, timing, vendor quote, and total installed cost",
+      "Contact an SBA-authorized Microloan intermediary serving Illinois, such as Justine PETERSEN, and confirm current Chicago intake",
+      "Prepare the business and personal financial records, tax returns, bank statements, ownership records, business plan or narrative, projections, and vendor quotes requested by the intermediary",
+      "Compare the intermediary's written terms with CDFI, bank, vendor-financing, and equipment-lease options before signing"
+    ],
+    "requiredDocs": [
+      "Business formation and ownership records",
+      "Business and personal tax returns requested by the intermediary",
+      "Current business financial statements and bank statements",
+      "Business plan or project narrative and cash-flow projections",
+      "Equipment, inventory, or supplier quotes",
+      "Debt schedule and explanation of the proposed use of funds"
+    ],
+    "contact": "Justine PETERSEN: (314) 533-2411 ext. 2411",
+    "url": "https://www.sba.gov/funding-programs/loans/microloans",
+    "sourceUrl": "https://www.sba.gov/funding-programs/loans/microloans/list-microlenders",
+    "status": "active",
+    "contacts": [
+      {
+        "agency": "Justine PETERSEN",
+        "abbreviation": "JP",
+        "phone": "(314) 533-2411 ext. 2411",
+        "email": "sflanigan@justinepetersen.org",
+        "url": "https://justinepetersen.org/what-we-do/small-business/",
+        "role": "SBA-authorized Microloan intermediary listed as serving Illinois"
+      },
+      {
+        "agency": "SBA Illinois District Office",
+        "abbreviation": "SBA",
+        "phone": "(312) 353-4528",
+        "url": "https://www.sba.gov/district/illinois"
+      }
+    ],
+    "eligibilityRules": [
+      {
+        "criterion": "businessType",
+        "description": "Applicant must be an eligible small business or qualifying nonprofit childcare center",
+        "verifiedBy": "manual",
+        "required": true
+      },
+      {
+        "criterion": "useOfFunds",
+        "description": "Funds must be used for an SBA-permitted business purpose and not for real-estate purchase or existing-debt repayment",
+        "verifiedBy": "manual",
+        "required": true
+      }
+    ],
+    "lastVerifiedAt": "2026-07-27",
+    "benefitRange": "Terms and amount are determined by the intermediary; no approval or financing amount is implied",
+    "fastestConfirmingStep": "Ask the listed intermediary whether it is currently accepting Chicago applications for your proposed use of funds",
+    "verificationSteps": [
+      {
+        "label": "Confirm current Chicago service and permitted use directly with the intermediary",
+        "agency": "Justine PETERSEN",
+        "url": "https://justinepetersen.org/what-we-do/small-business/",
+        "kind": "preapproval",
+        "appliesBefore": "purchase",
+        "note": "Do not order equipment or rely on financing until the intermediary confirms current intake, required documents, underwriting, and terms."
+      }
+    ],
+    "personas": [
+      "starting",
+      "growing"
     ]
   },
   {

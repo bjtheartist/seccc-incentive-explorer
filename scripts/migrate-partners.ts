@@ -12,9 +12,9 @@
 
 import { neon } from "@neondatabase/serverless";
 
-const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL = process.env.DATABASE_URL || process.env.POSTGRES_URL;
 if (!DATABASE_URL) {
-  console.error("DATABASE_URL environment variable is required");
+  console.error("DATABASE_URL or POSTGRES_URL environment variable is required");
   process.exit(1);
 }
 
@@ -38,6 +38,10 @@ async function migrate() {
       address TEXT,
       lat DOUBLE PRECISION,
       lon DOUBLE PRECISION,
+      report_types JSONB NOT NULL DEFAULT '[]'::jsonb,
+      requires_project_context BOOLEAN NOT NULL DEFAULT FALSE,
+      certifications JSONB NOT NULL DEFAULT '[]'::jsonb,
+      sba_roles JSONB NOT NULL DEFAULT '[]'::jsonb,
       verification_status TEXT NOT NULL DEFAULT 'unverified' CHECK (verification_status IN ('verified', 'unverified', 'stale')),
       source_url TEXT,
       source_date DATE,
@@ -49,6 +53,16 @@ async function migrate() {
     )
   `;
   await sql`ALTER TABLE partners ADD COLUMN IF NOT EXISTS intake_url TEXT`;
+  await sql`ALTER TABLE partners ADD COLUMN IF NOT EXISTS report_types JSONB NOT NULL DEFAULT '[]'::jsonb`;
+  await sql`ALTER TABLE partners ADD COLUMN IF NOT EXISTS requires_project_context BOOLEAN NOT NULL DEFAULT FALSE`;
+  await sql`ALTER TABLE partners ADD COLUMN IF NOT EXISTS certifications JSONB NOT NULL DEFAULT '[]'::jsonb`;
+  await sql`ALTER TABLE partners ADD COLUMN IF NOT EXISTS sba_roles JSONB NOT NULL DEFAULT '[]'::jsonb`;
+  await sql`ALTER TABLE partners DROP CONSTRAINT IF EXISTS partners_partner_type_check`;
+  await sql`
+    ALTER TABLE partners
+    ADD CONSTRAINT partners_partner_type_check
+    CHECK (partner_type IN ('cdfi', 'mission_lender', 'community_bank', 'public_program', 'development_advisor'))
+  `;
 
   console.log("2. Creating partner_service_areas table...");
   await sql`
@@ -71,6 +85,7 @@ async function migrate() {
       product_name TEXT,
       public_fit_note TEXT,
       project_types JSONB NOT NULL DEFAULT '[]'::jsonb,
+      proposed_uses JSONB NOT NULL DEFAULT '[]'::jsonb,
       industries JSONB NOT NULL DEFAULT '[]'::jsonb,
       min_amount_cents BIGINT,
       max_amount_cents BIGINT,
@@ -83,6 +98,7 @@ async function migrate() {
     )
   `;
   await sql`ALTER TABLE partner_products ADD COLUMN IF NOT EXISTS public_fit_note TEXT`;
+  await sql`ALTER TABLE partner_products ADD COLUMN IF NOT EXISTS proposed_uses JSONB NOT NULL DEFAULT '[]'::jsonb`;
 
   console.log("4. Creating referrals table...");
   await sql`
@@ -147,6 +163,7 @@ async function migrate() {
   console.log("5. Creating indexes...");
   await sql`CREATE INDEX IF NOT EXISTS idx_partners_partner_type ON partners (partner_type)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_partners_active ON partners (active)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_partners_sba_roles ON partners USING GIN (sba_roles)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_partner_service_areas_partner_id ON partner_service_areas (partner_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_partner_service_areas_scope_value ON partner_service_areas (scope, area_value)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_partner_products_partner_id ON partner_products (partner_id)`;

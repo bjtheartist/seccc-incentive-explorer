@@ -89,6 +89,7 @@ const GOAL_RULES: Record<string, GoalRule> = {
     relatedProgramIds: ids([
       "catalystGrant",
       "smallBizSource",
+      "sbaMicroloan",
       "kivaChicago",
       "greenwoodArcher",
       "alliesCommunityBusiness",
@@ -110,6 +111,7 @@ const GOAL_RULES: Record<string, GoalRule> = {
       "enterprise",
       "bmec",
       "sba7a504",
+      "sbaMicroloan",
       "catalystGrant",
       "kivaChicago",
       "greenwoodArcher",

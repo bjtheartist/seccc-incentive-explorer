@@ -76,6 +76,7 @@ export const PROGRAM_PERSONA_TAGS: Record<string, PersonaId[]> = {
   hudSection108: ["developer"],
   cdfiBond: ["developer"],
   sba7a504: ["starting", "growing", "developer"],
+  sbaMicroloan: ["starting", "growing"],
   sbaDisasterEidl: ["starting", "growing"],
   chips48d: ["developer"],
   ssbciAdvantageIL: ["starting", "growing"],

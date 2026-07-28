@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import capitalPartnerData from "@/data/curated/capital_partners.json";
 import {
   matchCapitalPartners,
   parseCapitalPartnerRegistry,
   type CapitalMatchRequest,
   type CapitalPartner,
+  type SbaPartnerRole,
 } from "@/lib/capital-partners";
 
 const AS_OF = "2026-07-01T00:00:00.000Z";
@@ -35,6 +37,7 @@ const southSideFund = fixturePartner({
   name: "South Side Community Fund",
   lat: 41.739,
   lon: -87.556,
+  sbaRoles: ["7a_lender"],
 });
 
 const generalLender46 = fixturePartner({
@@ -359,7 +362,51 @@ describe("matchCapitalPartners", () => {
       expect(key).not.toMatch(/score|rank|min|max|amount|dollar|usd|tier|fee/i);
     }
     expect(serialized).not.toContain("$");
+    expect(serialized).not.toContain("7a_lender");
+    expect(keys).not.toContain("sbaRoles");
     expect(result.primary?.reason).not.toMatch(/guarantee|approved|eligible|qualif/i);
+  });
+});
+
+describe("curated SBA capital network", () => {
+  const registry = parseCapitalPartnerRegistry(capitalPartnerData);
+
+  function partnersWithRole(role: SbaPartnerRole) {
+    return registry.partners.filter((partner) => partner.sbaRoles?.includes(role));
+  }
+
+  it("keeps SBA Certified Development Companies distinct from neighborhood CDCs", () => {
+    expect(
+      partnersWithRole("certified_development_company").map((partner) => partner.name).sort()
+    ).toEqual(["Small Business Growth Corporation", "SomerCor"]);
+  });
+
+  it("uses the current SBA-authorized Illinois microlender designation", () => {
+    const microlenders = partnersWithRole("microloan_intermediary");
+    expect(microlenders.map((partner) => partner.name)).toEqual(["Justine PETERSEN"]);
+    expect(microlenders[0]?.sourceUrl).toContain("sba.gov");
+  });
+
+  it("stores current 7(a), Community Advantage, microloan, and 504 roles without public estimates", () => {
+    const requiredRoles = [
+      "7a_lender",
+      "community_advantage_sblc",
+      "microloan_intermediary",
+      "certified_development_company",
+    ] as const;
+
+    for (const role of requiredRoles) {
+      expect(partnersWithRole(role).length).toBeGreaterThan(0);
+    }
+
+    for (const partner of registry.partners.filter((entry) => entry.sbaRoles?.length)) {
+      expect(partner.verificationStatus).toBe("verified");
+      expect(partner.lastVerifiedAt).toBeTruthy();
+      for (const product of partner.products) {
+        expect(product.publicFitNote ?? "").not.toMatch(/\$\s*\d/);
+        expect(product.publicFitNote ?? "").not.toMatch(/\bguaranteed approval\b/i);
+      }
+    }
   });
 });
 
