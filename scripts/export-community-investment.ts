@@ -37,9 +37,11 @@ import { join } from "node:path";
 import {
   buildCommunityInvestmentExport,
   dedupeInvestmentRecords,
+  INVESTMENT_STATUSES,
   SOURCE_FUNDER_TYPE,
   type CommunityInvestmentRecord,
   type InvestmentGeometry,
+  type InvestmentStatus,
 } from "../lib/community-investment";
 import { assignCommunityArea, loadCommunityAreaPolygons } from "../lib/community-area-stamp";
 
@@ -64,6 +66,8 @@ const PROVENANCE_LABELS = [
   "City of Chicago Community Development Grant — award rounds 2022–2025 (chicago.gov press releases)",
   "Private-foundation grants parsed from IRS 990-PF / 990 filings (ProPublica), geocoded to recipient address",
   "Major development projects — Ellen's Developments map (Google My Maps)",
+  "Major private developments — verified/discovered megaprojects w/ announced capital (press coverage, developer filings)",
+  "Chicago Prize — Pritzker Traubert Foundation ($10M community-transformation awards + finalist planning grants)",
   "Neighborhood Opportunity Fund corridor awards 2017–2020 — Jim's South Shore list (award records)",
   "Address geocoding: U.S. Census Bureau Geocoder (Public_AR_Current benchmark)",
   "Community-area assignment: City of Chicago Community Area boundaries (Chicago Data Portal dataset igwz-8jzy), point-in-polygon",
@@ -509,14 +513,233 @@ function mapFoundations(rows: Record<string, string>[]): {
   return { records: out, stats };
 }
 
-/** Map development projects — announced unless the category is "Proposed Projects". */
-function mapDevelopments(rows: Record<string, string>[]): CommunityInvestmentRecord[] {
+// ── Major private developments (developments_major.csv) ──────────────────────
+
+const PRIZE_FUNDER = "Pritzker Traubert Foundation — Chicago Prize";
+
+/**
+ * EXPLICIT join from a VERIFIED megadev row (developments_major.csv `name`) to
+ * its Ellen-KML row (developments.csv `name`). Hand-built — no fuzzy matching —
+ * so a rename on either side fails loudly (validated in main). The KML row
+ * supplies the plottable coordinates; the megadev row supplies the enrichment
+ * (announced capital, status, lead developers, log line, links). Note the two
+ * deliberate KML misspellings preserved verbatim ("Microelectonics", "Interent").
+ */
+const MEGADEV_KML_JOIN: Record<string, string> = {
+  "1901 Project (United Center campus)": "1901 Project",
+  "The 78 (Related Midwest)": "The 78",
+  "Bronzeville Lakefront (former Michael Reese Hospital site)": "Bronzeville Lakefront",
+  "Illinois Quantum and Microelectronics Park / PsiQuantum campus (South Works, 8080 S DuSable Lake Shore)":
+    "Illinois Quantum and Microelectonics Park",
+  "Lincoln Yards (northern parcel now rebranded 'Foundry Park')": "Lincoln Yards",
+  "One Central (Landmark Development)": "One Central",
+  "The River District (700 W Chicago)": "The River District",
+  "Riverline (South Loop river)": "Riverline",
+  "Southbank (Lendlease)": "Southbank",
+  "Lakeshore East (Magellan)": "Lakeshore East",
+  "Chicago Bears Stadium Proposal (formerly lakefront/Arlington Heights, now Hammond, IN)":
+    "Chicago Bears Stadium Proposal",
+  "White Sox South Loop Ballpark Proposal at The 78": "White Sox Deck Park Proposal",
+  "43 Green (Bronzeville Equitable Transit-Oriented Development, 43rd/Calumet-Prairie)": "43 Green",
+  "Bally's Chicago Permanent Casino (River West)": "Bally's Casino",
+  "Chase Tower Renovation (JPMorgan Chase Chicago HQ)": "Chase Tower Redevelopment",
+  "Inherent L3C modular homes (Humboldt Park / Cook County pilot)": "Interent L3C",
+  "James R. Thompson Center redevelopment (Google Chicago HQ)": "James R. Thompson Center",
+  "Obama Presidential Center (Jackson Park)": "Obama Presidential Center",
+  "Pullman hotel (Hampton by Hilton, 111th St./Doty Ave.)": "Pullman Hotel",
+  "SouthBridge (former Harold Ickes Homes, 23rd/State)": "South Bridge",
+  "LaSalle Street Reimagined (program overall)": "La Salle Reimagined Zone",
+  "111 W Monroe conversion (The Monroe)": "111 W Monroe St",
+  "208 S LaSalle conversion": "208 S La Salle St",
+  "30 N LaSalle conversion": "30 N La Salle St",
+  "79 W Monroe conversion (The Bellwether Residences)": "79 W Monroe St",
+  "135 S. LaSalle Street (Field Building) Conversion": "135 S La Salle St",
+  "105 W. Adams Street (Clark Adams / Bankers Building) Conversion": "105 W Adams St",
+};
+
+type DiscoveredGeo =
+  | { kind: "geocode"; address: string }
+  | { kind: "point"; lat: number; lng: number }
+  | { kind: "citywide" };
+
+/**
+ * Geometry resolution for the DISCOVERED megadev rows (no KML coordinates):
+ * geocode a well-known street address (Census geocoder, cached), sit AT another
+ * project's known point (the Fire stadium is inside The 78's footprint), or hold
+ * citywide (Advocate's multi-site South Side investment). Every discovered row
+ * MUST appear here (validated in main).
+ */
+const MEGADEV_DISCOVERED_GEO: Record<string, DiscoveredGeo> = {
+  // A privately-financed stadium physically inside The 78 site — placed at The
+  // 78's KML coordinates; its $650M is a SUBSET of The 78's $7B (announced null).
+  "Chicago Fire FC Stadium at The 78": { kind: "point", lat: 41.8640724, lng: -87.6320745 },
+  "400 Lake Shore Drive": { kind: "geocode", address: "400 N Lake Shore Dr" },
+  "Halsted Landing (Onni Group, Goose Island)": { kind: "geocode", address: "901 N Halsted St" },
+  "Halsted Pointe (Onni Group, Goose Island)": { kind: "geocode", address: "1000 N Halsted St" },
+  "Advocate Health Care South Side Investment / New South Works Hospital": { kind: "citywide" },
+  "Northwestern Memorial Hospital New Patient/Cancer Tower (Streeterville)": {
+    kind: "geocode",
+    address: "250 E Superior St",
+  },
+  "Ogden Commons (North Lawndale)": { kind: "geocode", address: "2653 W Ogden Ave" },
+  "Salesforce Tower Chicago (Wolf Point South)": { kind: "geocode", address: "333 W Wolf Point Plaza" },
+  "One Chicago": { kind: "geocode", address: "1 W Chicago Ave" },
+  "1000M": { kind: "geocode", address: "1000 S Michigan Ave" },
+  "Fulton Labs (Trammell Crow life-sciences campus)": { kind: "geocode", address: "400 N Aberdeen St" },
+  "Bank of America Tower (110 North Wacker)": { kind: "geocode", address: "110 N Wacker Dr" },
+};
+
+/**
+ * Megadev rows whose announced figure is a SUBSET of another project's already-
+ * counted total — kept on the map for context, but announcedInvestment=null and
+ * counted in meta.subsetExcluded so nothing double-counts.
+ */
+const MEGADEV_SUBSET_NAMES = new Set<string>(["Chicago Fire FC Stadium at The 78"]);
+
+/**
+ * private_led=False rows we retain despite the flag: state-initiated public-
+ * private partnerships that are nonetheless ANCHORED by a private developer with
+ * a large private minimum investment (IQMP/PsiQuantum: a $1.09B+ PsiQuantum
+ * commitment on the South Works campus). We model private development; a
+ * genuinely public-infrastructure False row would be dropped and counted in
+ * meta.privateLedExcluded instead. No such pure-public row exists in the 39.
+ */
+const MEGADEV_PRIVATE_LED_KEEP = new Set<string>([
+  "Illinois Quantum and Microelectronics Park / PsiQuantum campus (South Works, 8080 S DuSable Lake Shore)",
+]);
+
+/** True when a megadev row is NOT private-led AND is not one we explicitly keep
+ * (i.e. genuinely public infrastructure) — dropped from this private-development
+ * model and counted in meta.privateLedExcluded. */
+function isDroppableNonPrivate(mega: Record<string, string>): boolean {
+  const priv = (mega.private_led || "").trim().toLowerCase();
+  if (priv === "true") return false;
+  return !MEGADEV_PRIVATE_LED_KEEP.has((mega.name || "").trim());
+}
+
+/** Map a status_2026 string to the enum (identity for valid values; the CSV only
+ * ever carries valid members). An unexpected value degrades to "announced". */
+function mapStatus2026(raw: string | null | undefined): InvestmentStatus {
+  const s = (raw || "").trim();
+  return (INVESTMENT_STATUSES as readonly string[]).includes(s) ? (s as InvestmentStatus) : "announced";
+}
+
+/** Truncate a lead-developers blob to a sensible funderName length on a word
+ * boundary (the raw field can run several sentences). Falls back to the generic
+ * private-development label when blank. */
+function truncateFunder(raw: string | null | undefined, max = 120): string {
+  const t = (raw || "").trim();
+  if (t === "") return DEVELOPMENT_FUNDER;
+  if (t.length <= max) return t;
+  return t.slice(0, max - 1).replace(/\s+\S*$/, "").trim() + "…";
+}
+
+/**
+ * Build the enriched logLine: log_line, then public_subsidy_note when present,
+ * then (for a subset row) the explicit "not counted separately" note — space-
+ * joined and trimmed. Never fabricates text; every piece is a real source field
+ * (or the fixed subset caveat).
+ */
+function enrichedLogLine(mega: Record<string, string>, isSubset: boolean): string | null {
+  const parts: (string | null)[] = [nullableStr(mega.log_line), nullableStr(mega.public_subsidy_note)];
+  if (isSubset) parts.push("$650M within The 78 total — not counted separately");
+  const joined = parts.filter(Boolean).join(" ").trim();
+  return joined || null;
+}
+
+/** Assemble one enriched development record from a megadev row + resolved geometry. */
+function enrichedDevelopmentRecord(
+  mega: Record<string, string>,
+  geometry: InvestmentGeometry,
+  id: string,
+  address: string | null,
+): CommunityInvestmentRecord {
+  const name = (mega.name || "").trim();
+  const isSubset = MEGADEV_SUBSET_NAMES.has(name);
+  const priceTag = parseAmount(mega.announced_investment_usd);
+  const year = Number.isInteger(Number(mega.year_announced)) ? Number(mega.year_announced) : null;
+  return {
+    id,
+    source: "development",
+    funderType: SOURCE_FUNDER_TYPE.development,
+    funderName: truncateFunder(mega.lead_developers),
+    recipient: name || "(unnamed project)",
+    // amountAwarded is ALWAYS null for a development — a private project cost is
+    // NOT a grant awarded to anyone; the announced figure lives in its own field.
+    amountAwarded: null,
+    announcedInvestment: isSubset ? null : priceTag, // subset → null (already inside another total)
+    logLine: enrichedLogLine(mega, isSubset),
+    year,
+    geometry,
+    address,
+    status: mapStatus2026(mega.status_2026),
+    recordDate: null,
+    links: parseLinks(mega.source_urls),
+  };
+}
+
+interface DevelopmentBuild {
+  records: CommunityInvestmentRecord[];
+  stats: {
+    enrichedVerified: number;
+    discoveredAdded: number;
+    discoveredCitywide: number;
+    subsetExcluded: number;
+    privateLedExcluded: number;
+    droppedNoCoords: number;
+  };
+}
+
+/**
+ * Build the development records: REPLACE each Ellen-KML row that matches a
+ * verified megadev row (via MEGADEV_KML_JOIN) with an enriched record keyed on
+ * the KML coordinates; keep the ~68 unmatched KML rows on their current behavior;
+ * then APPEND the discovered megadev rows (geocoded / citywide / at-another-site).
+ * `discoveredGeo` carries the pre-resolved geometry for every geocoded discovered
+ * row. Deterministic — KML input order preserved, discovered rows appended in
+ * CSV order.
+ */
+function mapDevelopments(
+  kmlRows: Record<string, string>[],
+  verifiedByKmlName: Map<string, Record<string, string>>,
+  discoveredRows: Record<string, string>[],
+  discoveredGeo: Map<string, InvestmentGeometry>,
+  droppedKmlNames: Set<string>,
+): DevelopmentBuild {
   const out: CommunityInvestmentRecord[] = [];
+  const stats: DevelopmentBuild["stats"] = {
+    enrichedVerified: 0,
+    discoveredAdded: 0,
+    discoveredCitywide: 0,
+    subsetExcluded: 0,
+    privateLedExcluded: 0,
+    droppedNoCoords: 0,
+  };
   let idx = 0;
-  for (const r of rows) {
+
+  for (const r of kmlRows) {
+    const name = (r.name || "").trim();
+    // A KML row whose matching megadev was dropped as non-private (public infra)
+    // is itself dropped — we do not model it.
+    if (droppedKmlNames.has(name)) continue;
+
     const lat = Number(r.lat);
     const lng = Number(r.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue; // developments all carry coords
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue; // KML rows all carry coords
+
+    const mega = verifiedByKmlName.get(name);
+    if (mega) {
+      const record = enrichedDevelopmentRecord(mega, point(lat, lng), `development-${idx++}`, null);
+      out.push(record);
+      stats.enrichedVerified++;
+      if (record.announcedInvestment === null && MEGADEV_SUBSET_NAMES.has((mega.name || "").trim())) {
+        stats.subsetExcluded++;
+      }
+      continue;
+    }
+
+    // Unmatched KML row → unchanged legacy behavior (announced/proposed, no
+    // announced figure, no year).
     const status = (r.category || "").trim() === "Proposed Projects" ? "proposed" : "announced";
     const logLine = nullableStr(r.description) || nullableStr(r.amount_text);
     out.push({
@@ -524,10 +747,11 @@ function mapDevelopments(rows: Record<string, string>[]): CommunityInvestmentRec
       source: "development",
       funderType: SOURCE_FUNDER_TYPE.development,
       funderName: DEVELOPMENT_FUNDER,
-      recipient: nullableStr(r.name) || "(unnamed project)",
+      recipient: name || "(unnamed project)",
       amountAwarded: null, // amount_text is unparsed prose ("$7 billion"); kept in logLine, never coerced
+      announcedInvestment: null, // legacy KML rows carry no verified announced figure
       logLine,
-      year: null, // developments carry no reliable single year — left null, never guessed
+      year: null, // legacy developments carry no reliable single year
       geometry: point(lat, lng),
       address: null,
       status,
@@ -535,7 +759,122 @@ function mapDevelopments(rows: Record<string, string>[]): CommunityInvestmentRec
       links: parseLinks(r.link),
     });
   }
+
+  // Append the discovered megadev rows.
+  for (const mega of discoveredRows) {
+    const name = (mega.name || "").trim();
+    if (isDroppableNonPrivate(mega)) {
+      stats.privateLedExcluded++;
+      continue;
+    }
+    const geoSpec = MEGADEV_DISCOVERED_GEO[name];
+    let geometry: InvestmentGeometry;
+    let address: string | null = null;
+    if (geoSpec?.kind === "point") {
+      geometry = point(geoSpec.lat, geoSpec.lng);
+    } else if (geoSpec?.kind === "geocode") {
+      const hit = discoveredGeo.get(name);
+      if (hit) {
+        geometry = hit;
+        address = geoSpec.address;
+      } else {
+        geometry = { kind: "citywide" }; // ungeocodable → honest citywide, never a misplaced dot
+        stats.discoveredCitywide++;
+      }
+    } else {
+      geometry = { kind: "citywide" }; // explicit citywide (multi-site)
+      stats.discoveredCitywide++;
+    }
+    const record = enrichedDevelopmentRecord(mega, geometry, `development-disc-${idx++}`, address);
+    out.push(record);
+    stats.discoveredAdded++;
+    if (record.announcedInvestment === null && MEGADEV_SUBSET_NAMES.has(name)) stats.subsetExcluded++;
+  }
+
+  return { records: out, stats };
+}
+
+/**
+ * Map the 18 Chicago Prize rows (Pritzker Traubert Foundation). Filed under the
+ * `foundation` source / philanthropic funderType, so they roll into the awarded
+ * totals (the $10M winners + finalist planning grants). Sited rows plot at their
+ * point; finalist rows without a site are held citywide. A blank amount → null
+ * (never coerced to 0). recordProvenance "official". These never collide with the
+ * government-only dedupe (foundation rows are never dedupe-eligible).
+ */
+function mapChicagoPrize(rows: Record<string, string>[]): CommunityInvestmentRecord[] {
+  const out: CommunityInvestmentRecord[] = [];
+  let idx = 0;
+  for (const r of rows) {
+    let geometry: InvestmentGeometry;
+    if ((r.locType || "").trim() === "sited") {
+      const lat = Number(r.lat);
+      const lng = Number(r.lng);
+      geometry =
+        Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)
+          ? point(lat, lng)
+          : { kind: "citywide" };
+    } else {
+      geometry = { kind: "citywide" };
+    }
+    const purpose = nullableStr(r.purpose);
+    const orgs = nullableStr(r.recipient_orgs);
+    const logLine = [purpose, orgs].filter(Boolean).join(" — ") || null;
+    out.push({
+      id: `prize-${idx++}`,
+      source: "foundation",
+      funderType: SOURCE_FUNDER_TYPE.foundation,
+      funderName: PRIZE_FUNDER,
+      recipient: nullableStr(r.initiative) || "(unnamed initiative)",
+      amountAwarded: parseAmount(r.amount),
+      announcedInvestment: null,
+      logLine,
+      year: Number.isInteger(Number(r.award_year)) ? Number(r.award_year) : null,
+      geometry,
+      address: nullableStr(r.address),
+      status: "awarded",
+      recordDate: null,
+      recordProvenance: "official",
+      links: parseLinks(r.source_url),
+    });
+  }
   return out;
+}
+
+/**
+ * Fail LOUDLY if the hand-built megadev join tables and the CSV drift apart:
+ * every verified row must have a MEGADEV_KML_JOIN entry pointing at a real KML
+ * row, and every discovered row must have a MEGADEV_DISCOVERED_GEO entry. This is
+ * the "no fuzzy magic" guarantee — a rename on either side aborts the export
+ * rather than silently dropping (or mis-joining) a $-billions project.
+ */
+function validateMegadevJoins(
+  verifiedMega: Record<string, string>[],
+  discoveredMega: Record<string, string>[],
+  kmlRows: Record<string, string>[],
+): void {
+  const kmlNames = new Set(kmlRows.map((r) => (r.name || "").trim()));
+  const problems: string[] = [];
+
+  for (const mega of verifiedMega) {
+    const name = (mega.name || "").trim();
+    const kmlName = MEGADEV_KML_JOIN[name];
+    if (!kmlName) problems.push(`verified megadev "${name}" has no MEGADEV_KML_JOIN entry`);
+    else if (!kmlNames.has(kmlName)) problems.push(`join target "${kmlName}" (for "${name}") is not a KML row`);
+  }
+  // Every join key must correspond to an actual verified row (no stale entries).
+  const verifiedNames = new Set(verifiedMega.map((r) => (r.name || "").trim()));
+  for (const key of Object.keys(MEGADEV_KML_JOIN)) {
+    if (!verifiedNames.has(key)) problems.push(`MEGADEV_KML_JOIN key "${key}" matches no verified megadev row`);
+  }
+  for (const mega of discoveredMega) {
+    const name = (mega.name || "").trim();
+    if (!MEGADEV_DISCOVERED_GEO[name]) problems.push(`discovered megadev "${name}" has no MEGADEV_DISCOVERED_GEO entry`);
+  }
+
+  if (problems.length > 0) {
+    throw new Error(`Megadev join validation failed:\n  - ${problems.join("\n  - ")}`);
+  }
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -551,7 +890,29 @@ async function main() {
   const nofLarge = nofLargeR.records;
   const sbif = sbifR.records;
   const { records: foundations, stats: foundationStats } = mapFoundations(readCsv("foundation_grants_geocoded.csv"));
-  const developments = mapDevelopments(readCsv("developments.csv"));
+
+  // Major private developments (developments_major.csv) + Chicago Prize inputs.
+  const kmlRows = readCsv("developments.csv");
+  const megaRows = readCsv("developments_major.csv");
+  const prizeRows = readCsv("chicago_prize.csv");
+  const prize = mapChicagoPrize(prizeRows);
+
+  // Split megadev rows by origin, then validate the explicit join tables LOUDLY
+  // (a stale name aborts the export — see validateMegadevJoins).
+  const verifiedMega = megaRows.filter((r) => (r.origin || "").trim() === "verified");
+  const discoveredMega = megaRows.filter((r) => (r.origin || "").trim() === "discovered");
+  validateMegadevJoins(verifiedMega, discoveredMega, kmlRows);
+
+  // Reverse the verified join to key by KML name; note any KML rows whose matching
+  // megadev is dropped as non-private (mapDevelopments then skips those KML rows).
+  const verifiedByKmlName = new Map<string, Record<string, string>>();
+  const droppedKmlNames = new Set<string>();
+  for (const mega of verifiedMega) {
+    const kmlName = MEGADEV_KML_JOIN[(mega.name || "").trim()];
+    if (!kmlName) continue; // (validateMegadevJoins guarantees presence)
+    if (isDroppableNonPrivate(mega)) droppedKmlNames.add(kmlName);
+    else verifiedByKmlName.set(kmlName, mega);
+  }
 
   // Aggregate the Socrata drop tallies across the three completion sources.
   // (Sited foundation rows with unusable coords are NOT dropped — they are held
@@ -561,7 +922,8 @@ async function main() {
 
   console.log(
     `Mapped (pre-geocode): nof-small=${nofSmall.length} nof-large=${nofLarge.length} sbif=${sbif.length} ` +
-      `foundation=${foundations.length} development=${developments.length} ` +
+      `foundation=${foundations.length} prize=${prize.length} kml=${kmlRows.length} ` +
+      `mega(verified=${verifiedMega.length} discovered=${discoveredMega.length}) ` +
       `(placeholder-dropped=${foundationStats.droppedPlaceholder} out-of-bounds->citywide=${foundationStats.outOfBoundsGeocodes} ` +
       `negative-nulled=${foundationStats.negativeAmountsNulled} preWindow-dropped=${droppedPreWindow})`,
   );
@@ -581,8 +943,28 @@ async function main() {
     if (a) queries.push(cdgQuery(a));
   }
 
+  // Discovered megadev rows that carry a well-known street address to geocode.
+  const discoveredGeocodeQuery = new Map<string, string>(); // megadev name -> census query
+  for (const mega of discoveredMega) {
+    if (isDroppableNonPrivate(mega)) continue;
+    const spec = MEGADEV_DISCOVERED_GEO[(mega.name || "").trim()];
+    if (spec?.kind === "geocode") {
+      const q = cdgQuery(spec.address);
+      discoveredGeocodeQuery.set((mega.name || "").trim(), q);
+      queries.push(q);
+    }
+  }
+
   const cache = loadGeocodeCache();
   const geo = await geocodeBatch(queries, cache);
+
+  // Resolve the discovered megadev geocodes into plottable geometry (a miss →
+  // left absent so mapDevelopments holds that row citywide, counted in meta).
+  const discoveredGeo = new Map<string, InvestmentGeometry>();
+  for (const [name, q] of discoveredGeocodeQuery) {
+    const hit = geo.get(q);
+    if (hit) discoveredGeo.set(name, point(hit.lat, hit.lng));
+  }
 
   let droppedNoGeocode = 0;
 
@@ -642,9 +1024,27 @@ async function main() {
 
   console.log(`Geocoded: cdg kept=${cdg.length} jim kept=${jim.length} droppedNoGeocode=${droppedNoGeocode}`);
 
+  // Build the development records now that discovered geocodes are resolved:
+  // enrich the 27 verified megadevs onto their KML coordinates, keep the ~68
+  // unmatched KML rows, and append the discovered megadevs.
+  const { records: developments, stats: devStats } = mapDevelopments(
+    kmlRows,
+    verifiedByKmlName,
+    discoveredMega,
+    discoveredGeo,
+    droppedKmlNames,
+  );
+  console.log(
+    `Developments: enrichedVerified=${devStats.enrichedVerified} discoveredAdded=${devStats.discoveredAdded} ` +
+      `discoveredCitywide=${devStats.discoveredCitywide} subsetExcluded=${devStats.subsetExcluded} ` +
+      `privateLedExcluded=${devStats.privateLedExcluded} total=${developments.length}`,
+  );
+
   // 3) Concatenate in stable order. Socrata completions precede Jim's awards so a
   //    completed record holds the dedupe slot and the corridor award collapses in.
-  const all = [...nofSmall, ...nofLarge, ...sbif, ...cdg, ...foundations, ...developments, ...jim];
+  //    Chicago Prize rows join the philanthropic (foundation) block; developments
+  //    (private) are never dedupe-eligible so their position is immaterial.
+  const all = [...nofSmall, ...nofLarge, ...sbif, ...cdg, ...foundations, ...prize, ...developments, ...jim];
 
   // 4) Cross-source dedupe (government point rows sharing address+amount).
   const { records: deduped, removedCount } = dedupeInvestmentRecords(all);
@@ -669,6 +1069,8 @@ async function main() {
     outOfBoundsGeocodes: foundationStats.outOfBoundsGeocodes,
     negativeAmountsNulled: foundationStats.negativeAmountsNulled,
     outsideCommunityAreas: caStamp.outside,
+    subsetExcluded: devStats.subsetExcluded,
+    privateLedExcluded: devStats.privateLedExcluded,
     sources: PROVENANCE_LABELS,
   });
 
@@ -677,6 +1079,10 @@ async function main() {
   console.log(
     `  totalRecords=${out.meta.totalRecords} point=${out.meta.pointCount} citywide=${out.meta.citywideCount} ` +
       `totalDollarsAwarded=${out.meta.totalDollarsAwarded.toLocaleString("en-US", { style: "currency", currency: "USD" })}`,
+  );
+  console.log(
+    `  announcedCapitalTotal=${out.meta.announcedCapitalTotal.toLocaleString("en-US", { style: "currency", currency: "USD" })} ` +
+      `subsetExcluded=${out.meta.subsetExcluded} privateLedExcluded=${out.meta.privateLedExcluded}`,
   );
   console.log(`  counts=${JSON.stringify(out.meta.counts)}`);
 }

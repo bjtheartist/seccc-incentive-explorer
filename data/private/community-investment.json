@@ -1,18 +1,21 @@
 {
-  "generatedAt": "2026-07-28T01:11:00.411Z",
+  "generatedAt": "2026-07-28T03:44:29.036Z",
   "meta": {
     "counts": {
       "nof-small": 156,
       "nof-large": 6,
       "sbif": 646,
       "cdg": 273,
-      "foundation": 9824,
-      "development": 95
+      "foundation": 9842,
+      "development": 107
     },
-    "totalRecords": 11000,
-    "pointCount": 8920,
-    "citywideCount": 2080,
-    "totalDollarsAwarded": 1755943617.66,
+    "totalRecords": 11030,
+    "pointCount": 8939,
+    "citywideCount": 2091,
+    "totalDollarsAwarded": 1787353617.66,
+    "announcedCapitalTotal": 74906800000,
+    "subsetExcluded": 1,
+    "privateLedExcluded": 0,
     "droppedNoGeocode": 11,
     "dedupedRows": 11,
     "droppedPlaceholder": 3,
@@ -27,6 +30,8 @@
       "City of Chicago Community Development Grant — award rounds 2022–2025 (chicago.gov press releases)",
       "Private-foundation grants parsed from IRS 990-PF / 990 filings (ProPublica), geocoded to recipient address",
       "Major development projects — Ellen's Developments map (Google My Maps)",
+      "Major private developments — verified/discovered megaprojects w/ announced capital (press coverage, developer filings)",
+      "Chicago Prize — Pritzker Traubert Foundation ($10M community-transformation awards + finalist planning grants)",
       "Neighborhood Opportunity Fund corridor awards 2017–2020 — Jim's South Shore list (award records)",
       "Address geocoding: U.S. Census Bureau Geocoder (Public_AR_Current benchmark)",
       "Community-area assignment: City of Chicago Community Area boundaries (Chicago Data Portal dataset igwz-8jzy), point-in-polygon"
@@ -212302,24 +212307,430 @@
       "communityArea": "Loop"
     },
     {
+      "id": "prize-0",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Always Growing, Auburn Gresham (Chicago Prize winner)",
+      "amountAwarded": 10000000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2020 winner: healthy lifestyle hub at 839 W 79th and renewable-energy urban farm campus. — Greater Auburn Gresham Development Corporation; Urban Growers Collective; Green Era Partners",
+      "year": 2020,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.750559852085,
+        "lng": -87.64574084082
+      },
+      "address": "839 W 79th St",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://blockclubchicago.org/2020/08/06/auburn-gresham-project-wins-10-million-prize-from-charitable-foundation/"
+      ],
+      "communityArea": "Auburn Gresham"
+    },
+    {
+      "id": "prize-1",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Always Growing, Auburn Gresham (finalist planning grant)",
+      "amountAwarded": 100000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize finalist planning grant. — Greater Auburn Gresham Development Corporation",
+      "year": 2019,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.750559852085,
+        "lng": -87.64574084082
+      },
+      "address": "839 W 79th St",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities"
+      ],
+      "communityArea": "Auburn Gresham"
+    },
+    {
+      "id": "prize-2",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "The Aspire Initiative: Building a Stronger Cradle-to-Career Pipeline in Austin (finalist planning grant)",
+      "amountAwarded": 100000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize finalist planning grant. — Westside Health Authority; Austin Coming Together; By the Hand Club; United Way; LISC Chicago; IFF",
+      "year": 2019,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": null,
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities"
+      ]
+    },
+    {
+      "id": "prize-3",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Go Green on Racine: An Englewood Rising Project (finalist planning grant)",
+      "amountAwarded": 100000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize finalist planning grant; 63rd & Racine transformation. — Inner-City Muslim Action Network; Teamwork Englewood; R.A.G.E.; E.G. Woode",
+      "year": 2019,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.779063604372,
+        "lng": -87.654565723563
+      },
+      "address": "6300 S Racine Ave",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities"
+      ],
+      "communityArea": "West Englewood"
+    },
+    {
+      "id": "prize-4",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Creating a Solidarity Economy: Centro de Solidaridad Mi Villita (finalist planning grant)",
+      "amountAwarded": 100000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize finalist planning grant. — Delta Institute; Little Village Environmental Justice Organization",
+      "year": 2019,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": null,
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities"
+      ]
+    },
+    {
+      "id": "prize-5",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Now Is the Time: Advancing North Lawndale Together (finalist planning grant)",
+      "amountAwarded": 100000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize finalist planning grant. — Lawndale Christian Development Corp; LCLC; New Covenant CDC; NLCCC; NLEN; Sinai; Under the Grid",
+      "year": 2019,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": null,
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities"
+      ]
+    },
+    {
+      "id": "prize-6",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "We're Steel Here: Working Together to Reinvigorate South Chicago (finalist planning grant)",
+      "amountAwarded": 100000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize finalist planning grant; nine projects 91st-92nd, Commercial Ave to the river. — Claretian Associates",
+      "year": 2019,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.730017838541,
+        "lng": -87.551331652184
+      },
+      "address": "9100 S Commercial Ave",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities"
+      ],
+      "communityArea": "South Chicago"
+    },
+    {
+      "id": "prize-7",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Sankofa Wellness Village (Chicago Prize winner)",
+      "amountAwarded": 10000000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2023 winner: $50M wellness village anchored by the Sankofa Village Wellness Center (opened 4/2026). — Garfield Park Rite to Wellness Collaborative; The Community Builders; MAAFA Redemption Project",
+      "year": 2023,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.880579856018,
+        "lng": -87.733195508505
+      },
+      "address": "4305 W Madison St",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://www.chicagobusiness.com/nonprofits-philanthropy/pritzker-traubert-foundation-names-winner-2023-chicago-prize"
+      ],
+      "communityArea": "West Garfield Park"
+    },
+    {
+      "id": "prize-8",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Sankofa Wellness Village (finalist planning funds)",
+      "amountAwarded": 135000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2022-23 finalist planning funds; non-winning finalists also shared a $5M follow-on pool (PTF $2.5M + We Rise Together $2.5M; per-org split not published). — Garfield Park Rite to Wellness Collaborative",
+      "year": 2022,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.880579856018,
+        "lng": -87.733195508505
+      },
+      "address": "4305 W Madison St",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/"
+      ],
+      "communityArea": "West Garfield Park"
+    },
+    {
+      "id": "prize-9",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Rooted & Rising (finalist planning funds)",
+      "amountAwarded": 135000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2022-23 finalist planning funds; non-winning finalists also shared a $5M follow-on pool (PTF $2.5M + We Rise Together $2.5M; per-org split not published). — Back of the Yards Neighborhood Council",
+      "year": 2022,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": null,
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/"
+      ]
+    },
+    {
+      "id": "prize-10",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Thrive Exchange (finalist planning funds)",
+      "amountAwarded": 135000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2022-23 finalist planning funds; non-winning finalists also shared a $5M follow-on pool (PTF $2.5M + We Rise Together $2.5M; per-org split not published). — DL3 Realty; Chicago Family Health Center",
+      "year": 2022,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": null,
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/"
+      ]
+    },
+    {
+      "id": "prize-11",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Bringing Communities Back Initiative (finalist planning funds)",
+      "amountAwarded": 135000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2022-23 finalist planning funds; non-winning finalists also shared a $5M follow-on pool (PTF $2.5M + We Rise Together $2.5M; per-org split not published). — Far South Community Development Corporation",
+      "year": 2022,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": null,
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/"
+      ]
+    },
+    {
+      "id": "prize-12",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "The Xchange (finalist planning funds)",
+      "amountAwarded": 135000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2022-23 finalist planning funds; non-winning finalists also shared a $5M follow-on pool (PTF $2.5M + We Rise Together $2.5M; per-org split not published). — Greater Grand Crossing coalition",
+      "year": 2022,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": null,
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/"
+      ]
+    },
+    {
+      "id": "prize-13",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Cultivate Collective (finalist planning funds)",
+      "amountAwarded": 135000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2022-23 finalist planning funds; non-winning finalists also shared a $5M follow-on pool (PTF $2.5M + We Rise Together $2.5M; per-org split not published). — Cultivate Collective",
+      "year": 2022,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.813098652904,
+        "lng": -87.747736526666
+      },
+      "address": "4942 W 44th St",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/"
+      ],
+      "communityArea": "Garfield Ridge"
+    },
+    {
+      "id": "prize-14",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Reclaiming Chicago (Chicago Prize winner)",
+      "amountAwarded": 10000000,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2025 winner: ~125 for-sale affordable homes at 74th & Talman plus revolving fund toward 2,000 homes across four South/West Side neighborhoods. — Southwest Organizing Project; The Resurrection Project; Lawndale Christian Development Corp; Hope Center Foundation; Chicago Neighborhood Initiatives",
+      "year": 2025,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.7592574658,
+        "lng": -87.689545295946
+      },
+      "address": "74th St & Talman Ave (2650 W 74th St)",
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://www.chicagobusiness.com/nonprofits-philanthropy/pritzker-traubert-foundation-names-winner-2025-chicago-prize"
+      ],
+      "communityArea": "Chicago Lawn"
+    },
+    {
+      "id": "prize-15",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Cottage Grove Corridor Collective (finalist)",
+      "amountAwarded": null,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2025 finalist; finalists gain access to matching grants (amounts not published). — Quad Communities Development Corporation",
+      "year": 2025,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": null,
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://www.ptfound.org/chicago-prize/chicago-prize-2025"
+      ]
+    },
+    {
+      "id": "prize-16",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Energizing an Economic Ecosystem in North Lawndale (finalist)",
+      "amountAwarded": null,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2025 finalist; finalists gain access to matching grants (amounts not published). — North Lawndale Employment Network",
+      "year": 2025,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": null,
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://www.ptfound.org/chicago-prize/chicago-prize-2025"
+      ]
+    },
+    {
+      "id": "prize-17",
+      "source": "foundation",
+      "funderType": "philanthropic",
+      "funderName": "Pritzker Traubert Foundation — Chicago Prize",
+      "recipient": "Renaissance 95th (finalist)",
+      "amountAwarded": null,
+      "announcedInvestment": null,
+      "logLine": "Chicago Prize 2025 finalist; finalists gain access to matching grants (amounts not published). — Trinity United Church of Christ",
+      "year": 2025,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": null,
+      "status": "awarded",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://www.ptfound.org/chicago-prize/chicago-prize-2025"
+      ]
+    },
+    {
       "id": "development-0",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "1901 Project",
+      "funderName": "Reinsdorf family (Chicago Bulls) and Wirtz family (Chicago Blackhawks), via the United Center Joint Venture;…",
+      "recipient": "1901 Project (United Center campus)",
       "amountAwarded": null,
-      "logLine": "$7 billion over 10 years, residential, commercial, open space and event. https://www.the1901projectchicago.com/",
-      "year": null,
+      "announcedInvestment": 7000000000,
+      "logLine": "A $7B, decade-long redevelopment of 55 acres of United Center parking lots on Chicago's Near West Side into a mixed-use entertainment district (6,000-seat music hall, hotel, retail, thousands of housing units); groundbreaking was held June 3, 2026 on the roughly $500M first phase. Developers initially said the project would not seek city funding or TIF assistance (as with the original United Center 30 years ago), but in May 2026 City Council approved a Cook County Class 7(b) property tax incentive worth ~$54.7-55M over 12 years to support Phase 1 -- the project's first public-money component. A possible TIF district extension (to help fund a new CTA station) has also been f",
+      "year": 2024,
       "geometry": {
         "kind": "point",
         "lat": 41.8806908,
         "lng": -87.6741759
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
       "links": [
-        "https://www.the1901projectchicago.com/"
+        "https://news.wttw.com/2026/06/03/officials-hold-groundbreaking-7b-project-redevelop-area-surrounding-united-center",
+        "https://chicago.suntimes.com/real-estate/2026/06/03/united-center-owners-wirtz-reinsdorf-break-ground-7-billion-1901-project",
+        "https://chicago.suntimes.com/real-estate/2026/03/23/united-center-owners-wirtz-reinsdorf-1901-project-55-million-property-tax-break",
+        "https://www.chicagobusiness.com/politics-policy/ccb-reinsdorf-wirtz-1901project-20260320/"
       ],
       "communityArea": "Near West Side"
     },
@@ -212327,22 +212738,25 @@
       "id": "development-1",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "The 78",
+      "funderName": "Related Midwest (master developer of the 62-acre site); Chicago Fire FC owner Joe Mansueto (stadium component)",
+      "recipient": "The 78 (Related Midwest)",
       "amountAwarded": null,
-      "logLine": "$7 billion, 13m sq ft of residential/commercial/institutional, 10k residential units, new Red Line stop at 15th, Discovery Partners Institute. https://www.78chicago.com/ https://dpi.uillinois.edu/",
-      "year": null,
+      "announcedInvestment": 7000000000,
+      "logLine": "A 62-acre, $7B mixed-use megaproject on former rail land along the Chicago River just south of the Loop, envisioned as the city's '78th neighborhood'; construction is underway on a privately financed ~22,000-seat Chicago Fire FC stadium (broke ground March 2026, targeted to open for the 2028 MLS season), alongside $425M in public infrastructure financing approved by City Council in July 2026. July 2026: City Council's Finance Committee approved roughly $425M in public infrastructure financing (including about $287M in TIF funds drawn from a nearby district) to reimburse Related Midwest for roads, a parking garage, and other infrastructure supporting the site. The stadium construction itself is privately financed and not part of that public package.",
+      "year": 2018,
       "geometry": {
         "kind": "point",
         "lat": 41.8640724,
         "lng": -87.6320745
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
       "links": [
-        "https://www.78chicago.com/",
-        "https://dpi.uillinois.edu/"
+        "https://therealdeal.com/chicago/2026/07/14/the-78-gets-key-approval-for-425m-tif-deal/",
+        "https://therealdeal.com/chicago/2026/07/13/chicago-proposes-278m-tif-raid-for-relateds-the-78/",
+        "https://news.wttw.com/2026/03/03/chicago-fire-break-ground-new-750m-stadium-site-amid-gentrification-concerns",
+        "https://blockclubchicago.org/2026/07/15/city-council-approves-424-million-in-public-money-for-parking-garage-other-infrastructure-near-new-fire-soccer-stadium/"
       ],
       "communityArea": "Near South Side"
     },
@@ -212350,21 +212764,25 @@
       "id": "development-2",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Bronzeville Lakefront",
+      "funderName": "GRIT Chicago consortium: Farpoint Development, Chicago Neighborhood Initiatives (CNI), McLaurin Development Partners,…",
+      "recipient": "Bronzeville Lakefront (former Michael Reese Hospital site)",
       "amountAwarded": null,
-      "logLine": "$3.8 billion, 500k sq ft life sciences center, senior housing, residential, retail, data center, open space. https://bronzevillelakefront.com/",
-      "year": null,
+      "announcedInvestment": 3800000000,
+      "logLine": "A $3.8B, roughly 7-million-sq-ft mixed-income redevelopment of the former Michael Reese Hospital site on Chicago's South Side lakefront, led by the GRIT Chicago development team; as of 2026 the visibly active work is site infrastructure and a 2-acre public park (completion targeted Q4 2026), while the first vertical phase -- an ARC Innovation Center life-sciences building anchored by Sheba Medical The city-owned land was sold to GRIT for $96.9M under a 2021-approved deal that also included roughly $60M in city-funded public infrastructure support. Additional public financing (e.g., TIF) may apply to individual future phases, but no comprehensive updated public-subsidy figure for 2026 was found.",
+      "year": 2020,
       "geometry": {
         "kind": "point",
         "lat": 41.8425995,
         "lng": -87.6164762
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
       "links": [
-        "https://bronzevillelakefront.com/"
+        "https://www.chicagoconstructionnews.com/officials-break-ground-on-3-8-billion-bronzeville-lakefront-project/",
+        "https://rebusinessonline.com/city-of-chicago-approves-3-8b-mixed-use-project-at-former-michael-reese-hospital-site/",
+        "https://www.chicagobuildexpo.com/industry-news-1/bronzeville-lakefront-breaks-ground",
+        "https://urbanland.uli.org/development-business/bronzeville-lakefront-how-chicago-and-the-grit-development-team-envision-the-3-1-billion-mixed-use-redevelopment"
       ],
       "communityArea": "Douglas"
     },
@@ -212372,21 +212790,25 @@
       "id": "development-3",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Illinois Quantum and Microelectonics Park",
+      "funderName": "Campus is a state-initiated project managed and operated by a University-Related Organization (URO) LLC established by…",
+      "recipient": "Illinois Quantum and Microelectronics Park / PsiQuantum campus (South Works, 8080 S DuSable Lake Shore)",
       "amountAwarded": null,
-      "logLine": "$5 billion campus with anchor tenant, Psi Quantum, other tenants include DARPA, Chicago Quantum Exchange members and a future Supplier Park. https://www.intersectillinois.org/illinois-quantum-park/",
-      "year": null,
+      "announcedInvestment": 9000000000,
+      "logLine": "A roughly $9B, 128-acre 'Quantum Shore' technology campus on the former U.S. Steel South Works site on Chicago's South Side, anchored by PsiQuantum's utility-scale, fault-tolerant quantum computer facility; a state-initiated public-private partnership operated by a University of Illinois-affiliated organization, with private developers (Related Midwest/CRG) and private anchor tenants building out Heavily publicly backed: the Illinois General Assembly approved a $500M state investment (2024) to build out the campus; PsiQuantum receives a $200M state tax-incentive package tied to its ~$1.09B+ minimum investment; the Cook County Board approved an additional $20M investment; the park is operated by a University of Illinois-affiliated University-Related Organization; federal involvement (includ",
+      "year": 2024,
       "geometry": {
         "kind": "point",
         "lat": 41.7375192,
         "lng": -87.5404654
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
       "links": [
-        "https://www.intersectillinois.org/illinois-quantum-park/"
+        "https://chicago.suntimes.com/real-estate/2025/10/01/related-midwest-crg-breaks-ground-illinois-quantum-computing-park-us-steel-south-works",
+        "https://www.hpcwire.com/off-the-wire/psiquantum-launches-construction-of-quantum-facilities-at-chicagos-south-works-site/",
+        "https://www.techtimes.com/articles/321147/20260721/global-quantum-forum-opens-chicago-amid-encryption-countdown-9b-park.htm",
+        "https://en.wikipedia.org/wiki/Illinois_Quantum_and_Microelectronics_Park"
       ],
       "communityArea": "South Chicago"
     },
@@ -212394,11 +212816,12 @@
       "id": "development-4",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Lincoln Yards",
+      "funderName": "Original developer Sterling Bay (2018-2025) lost the northern ~34 acres to lender Bank OZK via foreclosure in March…",
+      "recipient": "Lincoln Yards (northern parcel now rebranded 'Foundry Park')",
       "amountAwarded": null,
-      "logLine": "$6 billion, 6k residential, commercial, open space, event space. https://www.lincolnyards.com/",
-      "year": null,
+      "announcedInvestment": 3000000000,
+      "logLine": "Sterling Bay's original $6B Lincoln Yards vision has effectively collapsed: Bank OZK foreclosed on the northern ~34 acres in 2025, and new owners JDL Development and Kayne Anderson Real Estate rebranded it 'Foundry Park' -- a scaled-back, housing-led ~$3B plan (3,200+ units) that won City Council approval on Feb 18, 2026, with a ~$800M Phase 1 and groundbreaking scheduled for fall 2026. The southe For Foundry Park: developers are reported to contribute directly about $33M while roughly $202M of an estimated ~$235M in infrastructure costs (roads, parks, public improvements) would be reimbursed via TIF; a June 2026 Block Club Chicago report and CoStar separately cite more than $200M in public funding lined up for the project.",
+      "year": 2018,
       "geometry": {
         "kind": "point",
         "lat": 41.9171078,
@@ -212408,7 +212831,10 @@
       "status": "announced",
       "recordDate": null,
       "links": [
-        "https://www.lincolnyards.com/"
+        "https://blockclubchicago.org/2025/03/31/sterling-bay-surrendering-section-of-lincoln-yards-to-lender-in-latest-setback-for-megadevelopment/",
+        "https://therealdeal.com/chicago/2026/01/16/foundry-park-clears-first-approval-for-megaproject/",
+        "https://www.costar.com/article/1190768472/chicagos-3-billion-foundry-park-development-takes-key-step-forward",
+        "https://blockclubchicago.org/2026/06/09/foundry-park-in-line-for-200-million-in-public-funding-at-former-lincoln-yards-site/"
       ],
       "communityArea": "Lincoln Park"
     },
@@ -212416,21 +212842,25 @@
       "id": "development-5",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "One Central",
+      "funderName": "Bob Dunn / Landmark Development (Wisconsin/Chicago-based)",
+      "recipient": "One Central (Landmark Development)",
       "amountAwarded": null,
-      "logLine": "$20 billion, 9k residential, transit hub, 1.5m sq ft retail, 9.45m sq ft office, 1.5m sq ft hotel, 350k sq ft event space https://www.chicago.gov/city/en/depts/dcd/supp_info/one-central.html",
-      "year": null,
+      "announcedInvestment": 20000000000,
+      "logLine": "A long-dormant, once-$20B South Loop megaproject over Metra tracks near Soldier Field, revived in early 2026 alongside the Bears-stadium fight but still with zero construction; the state bond financing Landmark was counting on failed to be enacted in Springfield in the 2026 session and the Bears have since pivoted toward Indiana. CONFIRMED private-led project dependent on a large public financing ask. The 2026 revival was tied to proposed 'NOVA' urban-district bond legislation (an expanded STAR-bond tier authorizing up to ~$1.6B in bonds, crafted with One Central in mind) attached to the Bears/megaprojects effort. Fresh search confirms the megaprojects/stadium financing package failed to be enacted in the spring 2026 sessi",
+      "year": 2019,
       "geometry": {
         "kind": "point",
         "lat": 41.8569819,
         "lng": -87.6172851
       },
       "address": null,
-      "status": "announced",
+      "status": "stalled",
       "recordDate": null,
       "links": [
-        "https://www.chicago.gov/city/en/depts/dcd/supp_info/one-central.html"
+        "https://therealdeal.com/chicago/2026/03/11/bob-dunn-revives-one-central-megaproject/",
+        "https://www.chicagobusiness.com/politics-policy/ccb-one-central-bob-dunn-bears-20260309/",
+        "https://mwcllc.com/2026/06/29/illinois-end-of-session-report-june-2026/",
+        "https://dceo.illinois.gov/content/dam/soi/en/web/dceo/aboutdceo/reportsrequiredbystatute/one-central-feasibility-study-2025.pdf"
       ],
       "communityArea": "Near South Side"
     },
@@ -212438,21 +212868,25 @@
       "id": "development-6",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "The River District",
+      "funderName": "Onni Group (current owner since 2022, advancing 'Halsted Landing'). The original 2017 'River District' office…",
+      "recipient": "The River District (700 W Chicago)",
       "amountAwarded": null,
-      "logLine": "$2.5 billion, 14 mixed-use buildings, 5,900 residential units, offices, public space, Bally's Casino. https://www.architectmagazine.com/project-gallery/the-river-district_o",
-      "year": null,
+      "announcedInvestment": 1100000000,
+      "logLine": "The office-led '700 at the River District' megaproject was scrapped in 2021 after failing to attract tenants; Onni Group now owns the riverfront site and is advancing a $1.1B, 2,451-unit residential replacement ('Halsted Landing') that cleared the Plan Commission in 2024 but has had its City Council zoning vote repeatedly deferred amid a labor dispute, with construction not slated to start until 2 No confirmed TIF or state-incentive package identified in current coverage of either the original 2017 project or the current Halsted Landing proposal; both were/are pitched as privately financed.",
+      "year": 2024,
       "geometry": {
         "kind": "point",
         "lat": 41.8932378,
         "lng": -87.6440848
       },
       "address": null,
-      "status": "announced",
+      "status": "proposed",
       "recordDate": null,
       "links": [
-        "https://www.architectmagazine.com/project-gallery/the-river-district_o"
+        "https://chicagoyimby.com/2021/04/plans-scrapped-for-700-at-the-river-district-megadevelopment-in-river-west.html",
+        "https://therealdeal.com/chicago/2025/05/21/union-blocks-onnis-chicago-multifamily-rezoning/",
+        "https://chicago.urbanize.city/post/11-billion-halsted-landing-would-not-begin-construction-until-2029",
+        "https://chicago.urbanize.city/post/plan-commission-approves-halsted-landing-700-w-chicago"
       ],
       "communityArea": "West Town"
     },
@@ -212460,21 +212894,25 @@
       "id": "development-7",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Riverline",
+      "funderName": "CMK Companies (design architect Gensler)",
+      "recipient": "Riverline (South Loop river)",
       "amountAwarded": null,
-      "logLine": "$1 billion, 4 mixed-use towers and a riverwalk. https://www.riverlinechicago.com/",
-      "year": null,
+      "announcedInvestment": 800000000,
+      "logLine": "CMK's ~$800M half of the former Riverline/Southbank joint venture is now actively under construction in the South Loop: the first 21-story, 388-unit tower (1010 S Wells) is rising above street level after an $83M 2026 Wintrust construction loan, and a second 28-story tower (910 S Wells) secured its foundation/pile permit in July 2026. No confirmed public TIF or state subsidy identified in current reporting; Phase 1 (1010 S Wells, 388 units) was financed via an ~$83M Wintrust Bank construction loan closed Feb/Mar 2026, and the second tower (910 S Wells, 350 units) secured its pile permit in July 2026 on private financing.",
+      "year": 2018,
       "geometry": {
         "kind": "point",
         "lat": 41.8708719,
         "lng": -87.6340166
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
       "links": [
-        "https://www.riverlinechicago.com/"
+        "https://www.chicagobusiness.com/real-estate/commercial/ccb-cmk-riverline-financing-south-loop-20260324/",
+        "https://chicagoyimby.com/2026/07/second-riverline-tower-scores-its-pile-permit-as-residential-floors-rise-on-first-building.html",
+        "https://therealdeal.com/chicago/2026/07/20/cmk-grabs-permit-to-launch-28-story-south-loop-high-rise/",
+        "https://chicagoyimby.com/2026/03/funding-secured-as-south-loop-tower-continues-to-rise.html"
       ],
       "communityArea": "Loop"
     },
@@ -212482,41 +212920,51 @@
       "id": "development-8",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Southbank",
+      "funderName": "Lendlease (original master developer). In May 2024 Lendlease announced it is exiting all U.S. development and selling…",
+      "recipient": "Southbank (Lendlease)",
       "amountAwarded": null,
-      "logLine": "$1 billion, four towers including, The Cooper, The Reed and un-named 3rd tower under construction.",
-      "year": null,
+      "announcedInvestment": 1200000000,
+      "logLine": "A $1.2B, multi-tower South Loop riverfront neighborhood by Lendlease; two towers (Cooper, Reed) are complete and leasing/selling, but Lendlease's 2024 exit from U.S. development has put the 452-unit Cooper up for sale (marketed via CBRE as of May 2026) with no confirmed developer for the remaining phases. No confirmed public TIF or state subsidy identified in current reporting; the project was capitalized privately by Lendlease (with AustralianSuper as an equity partner on parts of the portfolio) and project-level construction loans.",
+      "year": 2018,
       "geometry": {
         "kind": "point",
         "lat": 41.8723651,
         "lng": -87.634718
       },
       "address": null,
-      "status": "announced",
+      "status": "partially_open",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://www.chicagobusiness.com/real-estate/commercial/ccb-cooper-southbank-apartments-78-20260521/",
+        "https://chicagoagentmagazine.com/2024/06/12/lendlease-exits-southbank-project/",
+        "https://crenews.com/2026/05/28/452-unit-apartment-property-in-chicago-comes-to-sales-block/",
+        "https://chicago.urbanize.city/post/lendlease-completes-first-condo-closings-reed"
+      ],
       "communityArea": "Loop"
     },
     {
       "id": "development-9",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Lakeshore East",
+      "funderName": "Magellan Development Group, historically with development partner NNP Residential & Development; South Korean firm…",
+      "recipient": "Lakeshore East (Magellan)",
       "amountAwarded": null,
-      "logLine": "$4 billion, residential towers with mixed-use first floors surrounding a private park. 4,950 residences, 1,500 hotel rooms, 770k sq ft of retail https://www.magellandevelopment.com/projects/the-lakeshore-east-master-plan/",
-      "year": null,
+      "announcedInvestment": 4000000000,
+      "logLine": "Chicago's roughly $4B, 28-acre riverfront master-planned neighborhood is about 60% built and largely occupied (condos, hotels, Mariano's, GEMS World Academy); condo sales at the 47-story Cirrus tower more than doubled in the first half of 2026 while Magellan markets its South Korean partner Hanwha's stake in the final undeveloped tower parcel to bring in fresh capital. No confirmed public TIF or state-incentive component identified in available reporting; Lakeshore East was built on privately held former rail-yard/Illinois Center land, with infrastructure (streets, Lakeshore East Park) reported as developer-funded rather than city-TIF-funded.",
+      "year": 2001,
       "geometry": {
         "kind": "point",
         "lat": 41.8853797,
         "lng": -87.6185836
       },
       "address": null,
-      "status": "announced",
+      "status": "partially_open",
       "recordDate": null,
       "links": [
-        "https://www.magellandevelopment.com/projects/the-lakeshore-east-master-plan/"
+        "https://therealdeal.com/chicago/2026/02/11/magellan-lakeshore-east-stake-hits-market/",
+        "https://therealdeal.com/chicago/2026/07/17/47-story-lake-shore-east-tower-makes-a-sales-comeback/",
+        "https://en.wikipedia.org/wiki/Lakeshore_East",
+        "https://www.neighborhoods.com/blog/lakeshore-east-meet-chicagos-new-master-planned-community"
       ],
       "communityArea": "Loop"
     },
@@ -212524,81 +212972,103 @@
       "id": "development-10",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Chicago Bears Stadium Proposal",
+      "funderName": "Chicago Bears organization (McCaskey family ownership); Hammond, Indiana city/state officials now lead site sponsors…",
+      "recipient": "Chicago Bears Stadium Proposal (formerly lakefront/Arlington Heights, now Hammond, IN)",
       "amountAwarded": null,
-      "logLine": "$7 billion campus, anchored by a $4.7 billion publicly-owned stadium, enhanced lakefront, publicly-owned hotel.",
-      "year": null,
+      "announcedInvestment": 5000000000,
+      "logLine": "The Bears' new-stadium quest has moved decisively out of Illinois: after the state legislature failed by May 2026 to pass property-tax-certainty legislation for the team's 326-acre Arlington Heights site, the Bears' board voted June 5, 2026 to advance a roughly $5 billion domed stadium and mixed-use district in Hammond, Indiana, though an exact site and final commitment are still pending. The Chic Indiana has passed legislation supporters say provides up to $1B in incentives/infrastructure support for a Hammond development anchored by the stadium, which would be owned by a state-created stadium authority (Bears retain revenue with a buyback option in ~40 years once Indiana bonds are paid). In Illinois, the Bears sought roughly $855M in state-funded infrastructure plus property-tax certainty",
+      "year": 2021,
       "geometry": {
         "kind": "point",
         "lat": 41.8623132,
         "lng": -87.6166884
       },
       "address": null,
-      "status": "proposed",
+      "status": "announced",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://chicago.suntimes.com/bears/2026/06/05/bears-hammond-indiana-board-directors-vote-stadium-arlington-heights-nfl",
+        "https://chicago.suntimes.com/bears-stadium/2026/05/31/bears-stadium-bill-springfield-arlington-heights-hammond-indiana",
+        "https://frontofficesports.com/bears-taking-new-5b-stadium-plans-across-state-line-to-indiana/",
+        "https://abc7chicago.com/post/chicago-bears-stadium-news-team-advances-hammond-indiana-exploration-new-soil-testing-wolf-lake/19415729/"
+      ],
       "communityArea": "Near South Side"
     },
     {
       "id": "development-11",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "White Sox Deck Park Proposal",
+      "funderName": "Related Midwest (site master developer); Chicago White Sox, owned by the Reinsdorf family and transitioning to…",
+      "recipient": "White Sox South Loop Ballpark Proposal at The 78",
       "amountAwarded": null,
-      "logLine": "$4 billion phase 1 mixed-use redevelopment anchored by a new publicly-owned stadium, residential units, a hotel, commercial and office space and a transferium deck for transit across the Red Line, Metra and CTA buses that traverses 90/94.",
-      "year": null,
+      "announcedInvestment": 1000000000,
+      "logLine": "The White Sox's proposed ballpark at Related Midwest's The 78 development stalled in 2025 after Illinois lawmakers declined to fund the roughly $1 billion public ask, and the site's near-term stadium priority shifted to the Chicago Fire's privately financed soccer stadium now under construction there. Incoming White Sox owner Justin Ishbia is separately pursuing an alternate South Loop site (the A The proposal sought roughly $1B in Illinois state funding/financing support; the legislature did not act on it, and no subsidy has been secured. This is distinct from the Chicago Fire's stadium at the same site, which is privately financed by owner Joe Mansueto (reported at $650M-$750M; broke ground March 3, 2026, no taxpayer dollars).",
+      "year": 2024,
       "geometry": {
         "kind": "point",
         "lat": 41.8298609,
         "lng": -87.6336684
       },
       "address": null,
-      "status": "proposed",
+      "status": "stalled",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://blockclubchicago.org/2026/05/01/new-plans-for-possible-south-loop-sox-park-revealed-not-so-fast-says-amtrak/",
+        "https://www.forbes.com/sites/philrogers/2025/09/22/white-sox-lose-stadium-direction-with-mls-fire-claiming-the-78/",
+        "https://chicago.suntimes.com/white-sox/2026/03/18/justin-ishbia-stadium-white-sox-the-78-amtrak",
+        "https://therealdeal.com/chicago/2025/06/04/chicago-white-sox-open-to-stadium-move-to-relateds-the-78/"
+      ],
       "communityArea": "Armour Square"
     },
     {
       "id": "development-12",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "43 Green",
+      "funderName": "The Habitat Company and P3 Markets (co-developers)",
+      "recipient": "43 Green (Bronzeville Equitable Transit-Oriented Development, 43rd/Calumet-Prairie)",
       "amountAwarded": null,
-      "logLine": "$200 million led by P3 Markets, 179 units residential, 10k retail space",
-      "year": null,
+      "announcedInvestment": 100000000,
+      "logLine": "43 Green, Chicago's first equitable transit-oriented development, is a three-phase, roughly 300-unit mixed-income apartment project beside the CTA Green Line in Bronzeville; Phases 1 and 2 (99 and 80 units) are complete and fully leased as of mid-2025, while the roughly 70-unit Phase 3 was targeted for an early-2025 groundbreaking but its current construction status could not be confirmed as of Ju City of Chicago TIF support: at least $5M in TIF funds for Phase I (47th/King TIF) and up to $10M in TIF funds allocated for Phase II, alongside private construction financing; built on formerly vacant city-owned land.",
+      "year": 2019,
       "geometry": {
         "kind": "point",
         "lat": 41.8167922,
         "lng": -87.6201091
       },
       "address": null,
-      "status": "announced",
+      "status": "partially_open",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://www.chicago.gov/city/en/depts/doh/provdrs/housing_resources/news/2023/january/new--100-million-project--43-green-phase-ii--to-bring-etod-to-br.html",
+        "https://chicago.urbanize.city/post/habitat-fully-leases-apartments-43-green-phase-2",
+        "https://www.multihousingnews.com/the-habitat-co-p3-markets-secure-financing-for-phase-ii-of-100m-chicago-project/",
+        "https://blockclubchicago.org/2020/09/29/first-phase-of-100-million-bronzeville-project-will-bring-affordable-housing-near-green-line/"
+      ],
       "communityArea": "Grand Boulevard"
     },
     {
       "id": "development-13",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Bally's Casino",
+      "funderName": "Bally's Corporation",
+      "recipient": "Bally's Chicago Permanent Casino (River West)",
       "amountAwarded": null,
-      "logLine": "$1.7 billion, 500 room hotel, 10 food and beverage venues, 3k seat venue, 20k sq ft museum/gallery. https://casinos.ballys.com/chicago/tribune-location.htm",
-      "year": null,
+      "announcedInvestment": 1700000000,
+      "logLine": "Bally's $1.7 billion permanent casino resort at 560 W. Grand Ave. in River West topped off on April 30, 2026, hitting a major construction milestone, with a hotel, 3,400 slot machines, 173 table games, and a 3,000-seat theater now targeted to open in spring 2027 (delayed from earlier 2026 timelines). The temporary casino at Medinah Temple continues operating in the interim, with legislation filed Under the 2022 Host Community Agreement, Bally's paid the city a $40M upfront payment plus $4M in annual fixed host-community impact fees, and agreed never to seek reduction of the site's assessed value below $125M. Separately, Bally's has sought an additional property tax break (potentially worth ~$300M over 10 years) that Mayor Brandon Johnson's administration disputes is authorized by the HCA;",
+      "year": 2022,
       "geometry": {
         "kind": "point",
         "lat": 41.8914042,
         "lng": -87.6431515
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
       "links": [
-        "https://casinos.ballys.com/chicago/tribune-location.htm"
+        "https://blockclubchicago.org/2026/05/01/ballys-casino-hits-construction-milestone-as-opening-moves-to-early-2027/",
+        "https://chicago.suntimes.com/casinos-gambling/2026/04/30/ballys-chicago-casino-construction-opening-2027",
+        "https://www.constructiondive.com/news/ballys-chicago-casino-development-tops-off/819432/",
+        "https://chicago.suntimes.com/casinos-gambling/2025/01/16/ballys-casino-chicago-tax-break-brandon-johnson"
       ],
       "communityArea": "West Town"
     },
@@ -212606,21 +213076,25 @@
       "id": "development-14",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Chase Tower Redevelopment",
+      "funderName": "JPMorgan Chase (owner/financer); Gensler (lead architect)",
+      "recipient": "Chase Tower Renovation (JPMorgan Chase Chicago HQ)",
       "amountAwarded": null,
-      "logLine": "$19 million renovation of all 65 floors https://www.jpmorganchase.com/newsroom/press-releases/2024/chicago-investment",
-      "year": null,
+      "announcedInvestment": null,
+      "logLine": "JPMorgan Chase is carrying out a multi-year, full renovation of its 60-story, 850-foot Chase Tower headquarters in the Loop -- new lobby, plaza, food hall, fitness center, and modernized office floors -- with exterior/plaza work underway through 2025-2026 and completion reported as targeted for around 2026, while the bank temporarily leased additional space at Citadel Center during construction. No public subsidy (TIF or otherwise) was identified in current reporting; this appears to be an entirely privately financed corporate renovation by JPMorgan Chase.",
+      "year": 2024,
       "geometry": {
         "kind": "point",
         "lat": 41.8814746,
         "lng": -87.6296092
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
       "links": [
-        "https://www.jpmorganchase.com/newsroom/press-releases/2024/chicago-investment"
+        "https://www.bisnow.com/chicago/news/office/jpmorgan-gets-first-permits-approved-for-chase-tower-renovation-124090",
+        "https://www.jpmorganchase.com/newsroom/press-releases/2024/chicago-investment",
+        "https://therealdeal.com/chicago/2025/04/11/jpmorgan-chase-leases-five-floors-at-chicagos-citadel-tower/",
+        "https://www.archpaper.com/2024/02/chicago-gensler-chase-towers-first-major-renovation-decades/"
       ],
       "communityArea": "Loop"
     },
@@ -212628,41 +213102,51 @@
       "id": "development-15",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Interent L3C",
+      "funderName": "Inherent L3C (developer/manufacturer), with Cook County (pilot program funder) and Chicago Development Fund (NMTC…",
+      "recipient": "Inherent L3C modular homes (Humboldt Park / Cook County pilot)",
       "amountAwarded": null,
-      "logLine": "a cluster of 23 single-family homes led by developer Ingerent L3C and meant to build off of local ISW projects.",
-      "year": null,
+      "announcedInvestment": 22000000,
+      "logLine": "Small-scale affordable-homeownership initiative: Inherent L3C builds all-electric, factory-built modular single-family homes for Humboldt Park and other West Side/south-suburban sites; first homes opened July 2025 under a $12M Cook County pilot, with a further $10M NMTC deal (June 2026) to scale production toward roughly 120 homes total, not a single mega-project in the stadium/tower sense. $12M Cook County Board pilot program subsidizes land/development costs for up to 120 homes (built on Cook County Land Bank lots); $10M New Markets Tax Credit allocation (June 2026) via Chicago Development Fund for production-facility scale-up. Not TIF; these are county and federal-tax-credit-linked instruments. Buyers also eligible for $25K down-payment assistance. Private developer despite heavy",
+      "year": 2022,
       "geometry": {
         "kind": "point",
         "lat": 41.8931067,
         "lng": -87.7188751
       },
       "address": null,
-      "status": "announced",
+      "status": "partially_open",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://chicago.suntimes.com/real-estate/2025/07/02/modular-homes-open-cook-county-pilot-program-inherent-homeownership",
+        "https://www.chicagobusiness.com/residential-real-estate/inherent-l3c-building-affordable-modular-homes-humboldt-park/",
+        "https://chicagodevelopmentfund.org/portfolio-item/inherent-homes/",
+        "https://therealdeal.com/chicago/2025/07/03/chicagos-cook-county-invests-in-affordable-modular-homes/"
+      ],
       "communityArea": "Humboldt Park"
     },
     {
       "id": "development-16",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "James R. Thompson Center",
+      "funderName": "The Prime Group (Michael Reschke) and Capri Interests/Capri Investment Group (Quintin Primo III) (redevelopment and…",
+      "recipient": "James R. Thompson Center redevelopment (Google Chicago HQ)",
       "amountAwarded": null,
-      "logLine": "$280 m adaptive reuse for new Google HQ for 2k employees https://chicago.suntimes.com/real-estate/2024/05/06/thompson-center-google-prime-capri-redevelopment-loop-headquarters",
-      "year": null,
+      "announcedInvestment": 280000000,
+      "logLine": "Helmut Jahn's 1985 postmodern state office building, sold by Illinois to Google for $105M in 2022, is undergoing a reported ~$280M gut renovation (new glass skin, interior build-out) into Google's Chicago headquarters; commercial leasing began March 2026 and base-building work is nearing completion, with Google occupancy now expected in 2027; the building keeps the Thompson Center name. No confirmed TIF or Class L incentive specifically tied to this redevelopment was found in 2025-2026 coverage reviewed (Cook County's Class L landmark-rehab incentive exists generally but its use here is unconfirmed, flagged not assumed). The core public transaction was the State of Illinois's $105M sale of the building itself in 2022.",
+      "year": 2022,
       "geometry": {
         "kind": "point",
         "lat": 41.8851266,
         "lng": -87.6316896
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
       "links": [
-        "https://chicago.suntimes.com/real-estate/2024/05/06/thompson-center-google-prime-capri-redevelopment-loop-headquarters"
+        "https://chicagoyimby.com/2026/01/google-lands-85-million-permit-for-interior-renovations-at-the-thompson-center.html",
+        "https://chicago.suntimes.com/real-estate/2024/05/06/thompson-center-google-prime-capri-redevelopment-loop-headquarters",
+        "https://blockclubchicago.org/2026/03/17/thompson-center-will-keep-its-name-as-google-eyes-2027-move-in/",
+        "https://blockclubchicago.org/2022/07/27/google-is-buying-thompson-center/"
       ],
       "communityArea": "Loop"
     },
@@ -212670,21 +213154,25 @@
       "id": "development-17",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Obama Presidential Center",
+      "funderName": "Obama Foundation (private nonprofit); architects Tod Williams Billie Tsien; Lakeside Alliance as prime construction…",
+      "recipient": "Obama Presidential Center (Jackson Park)",
       "amountAwarded": null,
-      "logLine": "$850 million library, museum, education and community center. https://www.obama.org/about/financials/annual-reports/2022/obama-presidential-center/",
-      "year": null,
+      "announcedInvestment": 850000000,
+      "logLine": "Barack Obama's $850M presidential center and library complex on 19.3 acres of Jackson Park opened to the public on June 19, 2026 (Juneteenth), combining museum exhibits, a Chicago Public Library branch, athletic facilities, and public gathering space; the most expensive presidential library ever built, at nearly triple its original budget. No direct city/state cash subsidy or TIF for construction; the principal public component is the long-term land-use/ground lease agreement with the Chicago Park District for the Jackson Park site, plus city-funded road and park reconfiguration (closures/rebuilds of roads through Jackson Park) associated with the project. Fully privately funded construction confirmed.",
+      "year": 2016,
       "geometry": {
         "kind": "point",
         "lat": 41.7857299,
         "lng": -87.5858343
       },
       "address": null,
-      "status": "announced",
+      "status": "opened",
       "recordDate": null,
       "links": [
-        "https://www.obama.org/about/financials/annual-reports/2022/obama-presidential-center/"
+        "https://www.cnbc.com/2026/06/04/barack-obama-presidential-library-opening-chicago.html",
+        "https://chicago.suntimes.com/chicago/2026/03/07/obama-presidential-center-opening-juneteenth-chicago",
+        "https://www.archdaily.com/1039482/obama-presidential-center-in-chicagos-jackson-park-set-to-open-on-juneteenth-2026",
+        "https://www.cnn.com/2026/06/04/style/obama-presidential-center-first-look-inside"
       ],
       "communityArea": "Woodlawn"
     },
@@ -212692,11 +213180,12 @@
       "id": "development-18",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "Pullman Hotel",
+      "funderName": "Pullman Hotel Group LLC (developer, Andre Garner); site acquired from Chicago Neighborhood Initiatives (CNI, led by…",
+      "recipient": "Pullman hotel (Hampton by Hilton, 111th St./Doty Ave.)",
       "amountAwarded": null,
-      "logLine": "Backed by the Pullman Hotel Group LLC (CNI and US Bank), upper-midscale limited services hotel with 95-100 guest rooms",
-      "year": null,
+      "announcedInvestment": 30900000,
+      "logLine": "A 101-room, four-story Hampton by Hilton (~$30-31M) planned at 11030 S. Doty Ave. in Pullman, the Far South Side's first nationally branded hotel and the first hotel built south of Hyde Park in over 40 years; fully approved (Plan Commission + CDC) with $2.86M TIF secured Nov 2025 and financing closing pending, construction expected to begin in early 2026 with opening targeted for late 2026/2027 (n $5M City of Chicago Recovery Grant Program grant (announced 2022) helped fund the land purchase from CNI; a further $2.86M TIF grant was approved by City Council (Nov 2025) via the North Pullman/Lake Calumet Area Industrial TIF district. Additional financing includes a $1M We Rise Together grant, $1M equity, a $6M Chicago Community Loan Fund loan, and a $500K Hilton investment. Private developer w",
+      "year": 2022,
       "geometry": {
         "kind": "point",
         "lat": 41.6942454,
@@ -212705,28 +213194,37 @@
       "address": null,
       "status": "announced",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://therealdeal.com/chicago/2025/09/12/chicago-hotel-development-is-far-south-sides-first-in-decades/",
+        "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif/news/2025/november/pullman-hotel-project-approved-for-tif-support.html",
+        "https://blockclubchicago.org/2022/12/08/101-room-pullman-hotel-project-the-far-south-sides-first-in-40-years-gets-5-million-city-grant/",
+        "https://chicago.suntimes.com/real-estate/2025/09/12/chicago-community-development-commission-hampton-hilton-hotel-pullman"
+      ],
       "communityArea": "Pullman"
     },
     {
       "id": "development-19",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "South Bridge",
+      "funderName": "The Community Builders (TCB) and McCaffery Interests, in partnership with the Chicago Housing Authority (CHA), which…",
+      "recipient": "SouthBridge (former Harold Ickes Homes, 23rd/State)",
       "amountAwarded": null,
-      "logLine": "$97 million, 877 residential units, 65k sq ft retail, open space https://southbridgechicago.com/",
-      "year": null,
+      "announcedInvestment": null,
+      "logLine": "Mixed-income redevelopment of the demolished Harold L. Ickes Homes public housing site at 23rd/State in the South Loop; Phases 1A/1B (206 units) completed in 2021 and occupied, and Phase 1C (a 12-story, 80-unit tower, ~$36.5-48.9M) broke ground in April 2026, with the full 877-unit master plan still only partially realized as of mid-2026. City Council approved ~$22M in public financing for the original 11-acre campus in June 2019; Phase 1C alone carries $11.9M in TIF (approved 2025) plus a CHA capital contribution and CHA rental subsidies for reserved units; Illinois Housing Development Authority and HUD financing also involved across phases. Note: this is a public-private redevelopment of a former CHA public-housing site, CHA is t",
+      "year": 2015,
       "geometry": {
         "kind": "point",
         "lat": 41.8528043,
         "lng": -87.6270854
       },
       "address": null,
-      "status": "announced",
+      "status": "partially_open",
       "recordDate": null,
       "links": [
-        "https://southbridgechicago.com/"
+        "https://blockclubchicago.org/2026/04/28/southbridge-development-breaks-ground-on-next-phase-of-mixed-income-housing/",
+        "https://chicagoyimby.com/2026/03/construction-is-underway-for-12-story-residential-tower-at-southbridge-in-near-south-side.html",
+        "https://chicago.suntimes.com/real-estate/2026/04/27/harold-ickes-homes-complex-south-loop-southbridge-80-apartments",
+        "https://therealdeal.com/chicago/2019/06/17/full-speed-ahead-city-approves-millions-in-public-financing-for-long-awaited-ickes-homes-redevelopment/"
       ],
       "communityArea": "Near South Side"
     },
@@ -212734,21 +213232,25 @@
       "id": "development-20",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "La Salle Reimagined Zone",
+      "funderName": "City-facilitated initiative (Chicago Dept. of Planning & Development) with multiple private developers per building:…",
+      "recipient": "LaSalle Street Reimagined (program overall)",
       "amountAwarded": null,
-      "logLine": "$956 million in total investment, 1,714 total residential units, 633 affordable units. https://www.chicago.gov/city/en/sites/lasalle-street/proposals.html",
-      "year": null,
+      "announcedInvestment": 900000000,
+      "logLine": "City-facilitated program launched 2022 to convert vacant/underused Loop office towers along LaSalle Street into mixed-income housing; six subsidized conversions (~1,765 units, $900M+) are moving forward as of mid-2026, with one (79 W. Monroe) pre-leasing and others in demolition/permitting, backed by $315M+ in TIF. More than $315 million in Tax Increment Financing (LaSalle Central TIF district) approved by City Council across the six projects as of January 2026, plus Class L property tax incentives and landmark designations on multiple buildings; program requires ~30% of units affordable at avg. 60% AMI in exchange for subsidy.",
+      "year": 2022,
       "geometry": {
         "kind": "point",
         "lat": 41.88068366245189,
         "lng": -87.63157863327294
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
       "links": [
-        "https://www.chicago.gov/city/en/sites/lasalle-street/proposals.html"
+        "https://blockclubchicago.org/2025/03/27/on-lasalle-street-city-breaks-ground-on-first-office-to-apartments-development/",
+        "https://worldbusinesschicago.com/allnews/a-new-vision-for-lasalle-street-chicagos-next-great-neighborhood/",
+        "https://www.chicago.gov/city/en/sites/lasalle-street/home.html",
+        "https://chicago.urbanize.city/post/mayor-johnson-announces-city-assistance-lasalle-street-conversions"
       ],
       "communityArea": "Loop"
     },
@@ -212756,51 +213258,64 @@
       "id": "development-21",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "111 W Monroe St",
+      "funderName": "The Prime Group (Michael Reschke) and Capri Interests/Capri Investment Group, joint venture (Prime/Capri Interests)",
+      "recipient": "111 W Monroe conversion (The Monroe)",
       "amountAwarded": null,
-      "logLine": "$203 million, 345 residential units and a hotel, ground floor retail",
-      "year": null,
+      "announcedInvestment": 300000000,
+      "logLine": "Conversion of the 610,000-sq-ft former BMO Harris Bank HQ (1910s high-rise) into 345 apartments (~30% affordable) plus a 226-room hotel and rooftop club; renovation/demolition permit approved April 2026 with a ~$300M budget, construction expected to run into the first half of 2027. $50 million TIF loan (uncommon structure: 20-year term, interest-only first 5 years) via the LaSalle Central TIF district, approved by the Community Development Commission ~May 2026 and advanced through City Council by June 2026; a separate ~$40M TIF component supports the residential portion per Urbanize CDC coverage.",
+      "year": 2023,
       "geometry": {
         "kind": "point",
         "lat": 41.8804679,
         "lng": -87.6313559
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://chicagoyimby.com/2026/06/funding-advances-for-conversion-of-111-west-monroe-street-in-loop.html",
+        "https://hoodline.com/2026/04/loop-bank-behemoth-finally-ripped-open-for-homes-and-hotel/",
+        "https://therealdeal.com/chicago/2026/05/14/reschke-primo-seeking-50-million-loan-to-make-old-bmo-harris-bank-building-into-hybrid-hotel-and-apartments/",
+        "https://chicago.urbanize.city/post/interior-demo-permit-issued-111-w-monroe"
+      ],
       "communityArea": "Loop"
     },
     {
       "id": "development-22",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "208 S La Salle St",
+      "funderName": "The Prime Group (Michael Reschke)",
+      "recipient": "208 S LaSalle conversion",
       "amountAwarded": null,
-      "logLine": "$123 million, 226 residential units, upgrades to existing hotel.",
-      "year": null,
+      "announcedInvestment": 122700000,
+      "logLine": "Upper floors of the landmark 1914 Continental & Commercial Bank building (already partly a JW Marriott/LaSalle Hotel on lower/upper floors) being converted into 226 mixed-income apartments; a $122.7M project with $26.2M in TIF, interior demolition permit issued June 2026 (buildout permit still pending, no timeline announced). Up to $26.2 million in TIF (LaSalle Central TIF district) approved by City Council for 68 of the 226 units to be affordable at avg. 60% AMI; also received Class L property tax incentive (landmark designated 2007).",
+      "year": 2023,
       "geometry": {
         "kind": "point",
         "lat": 41.8789847,
         "lng": -87.6324459
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://www.preservationchicago.org/win-adaptive-reuse-of-208-s-lasalle-approved-by-chicago-city-council/",
+        "https://chicago.urbanize.city/post/interior-demo-permit-issued-residential-conversion-208-s-lasalle",
+        "https://www.chicagobuildexpo.com/industry-news-1/renderings-emerge-208-s-lasalle-adaptive-reuse",
+        "https://chicago.urbanize.city/post/cdc-approves-262-million-tif-funding-adaptive-reuse-208-s-lasalle"
+      ],
       "communityArea": "Loop"
     },
     {
       "id": "development-23",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "30 N La Salle St",
+      "funderName": "Golub & Company (building owned with AIG)",
+      "recipient": "30 N LaSalle conversion",
       "amountAwarded": null,
-      "logLine": "$130 million, 349 residential units, ground floor retail.",
-      "year": null,
+      "announcedInvestment": 130000000,
+      "logLine": "Golub & Co.'s planned conversion of the 44-story, 986,000-sq-ft tower (built 1974) into 349 mixed-income apartments (105 affordable); a $130M project backed by $57M in TIF, with landmark designation, Class L incentive and rezoning all secured by mid-2026 but construction not yet underway. Up to $57 million in TIF (LaSalle Central TIF district) approved by City Council; Class L property tax incentive and Chicago Landmark designation also approved by City Council in 2026.",
+      "year": 2023,
       "geometry": {
         "kind": "point",
         "lat": 41.8828058,
@@ -212809,67 +213324,90 @@
       "address": null,
       "status": "announced",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://www.chicago.gov/city/en/depts/dcd/provdrs/planning_and_policydivision/news/2026/may/landmark-designation--tax-incentive-approved-for-30-north-lasall.html",
+        "https://chicagoyimby.com/2026/01/partial-funding-approved-for-conversion-of-30-n-lasalle.html",
+        "https://chicago.urbanize.city/post/city-council-approves-57-million-tif-30-n-lasalle",
+        "https://www.bldup.com/posts/chicago-city-council-approves-57m-tif-for-30-n-lasalle-office-to-residential-conversion"
+      ],
       "communityArea": "Loop"
     },
     {
       "id": "development-24",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "79 W Monroe St",
+      "funderName": "R2 Companies and Lagfin S.C.A.",
+      "recipient": "79 W Monroe conversion (The Bellwether Residences)",
       "amountAwarded": null,
-      "logLine": null,
-      "year": null,
+      "announcedInvestment": 64200000,
+      "logLine": "The first LaSalle Street Reimagined project to break ground (March 2025): conversion of the historic 1905 Rector Building's floors 7-14 into 117 apartments (41 affordable, 35%), rebranded 'The Bellwether Residences'; as of July 2026 it is pre-leasing with move-ins starting August 2026, while some finishing touches (e.g., restoring the building's rooftop bell) were still underway per a July 14, 202 $28 million in TIF (LaSalle Central TIF district) approved to support the project.",
+      "year": 2024,
       "geometry": {
         "kind": "point",
         "lat": 41.8805788,
         "lng": -87.6306532
       },
       "address": null,
-      "status": "announced",
+      "status": "partially_open",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://chicago.suntimes.com/architecture-design/2026/07/14/iconic-loop-weather-bell-rector-bell-federal-savings-loan-shine-again-years-dark",
+        "https://www.thebellwetherresidences.com/",
+        "https://blockclubchicago.org/2025/03/27/on-lasalle-street-city-breaks-ground-on-first-office-to-apartments-development/",
+        "https://www.zillow.com/apartments/chicago-il/the-bellwether-residences/CrbNg4/"
+      ],
       "communityArea": "Loop"
     },
     {
       "id": "development-25",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "135 S La Salle St",
+      "funderName": "Field Building Revitalization Partners LLC — a joint venture of Riverside Investment & Development, AmTrust RE…",
+      "recipient": "135 S. LaSalle Street (Field Building) Conversion",
       "amountAwarded": null,
-      "logLine": "$258 million, 430 units, 80k sq ft of mixed use including retail and cultural space.",
-      "year": null,
+      "announcedInvestment": 241500000,
+      "logLine": "1.35M-sq-ft Art Deco landmark (the Field Building) at LaSalle/Clark/Adams is being converted into 386 apartments (270 market-rate, 116 affordable at 60% AMI) plus 92,000 sq ft of retail/commercial space; City Council approved $98M in TIF/subsidy in fall 2025, and construction was slated to start Q1/spring 2026 with delivery in summer 2027 — the largest and costliest project in the city's LaSalle S $98 million in TIF (tax-increment financing) approved by Chicago City Council (fall 2025; CDC/City Council approvals Oct–Nov 2025), plus federal/state historic tax credits, under the city's 'LaSalle Street Reimagined' office-to-residential conversion program (launched by Mayor Lightfoot in Sept. 2022, continued under Mayor Johnson).",
+      "year": 2022,
       "geometry": {
         "kind": "point",
         "lat": 41.8796772,
         "lng": -87.6321143
       },
       "address": null,
-      "status": "announced",
+      "status": "under_construction",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://chicago.urbanize.city/post/city-council-approves-98-million-tif-135-s-lasalle",
+        "https://www.bisnow.com/chicago/news/office/135-s-lasalle-st-office-to-resi-conversion-131430",
+        "https://blockclubchicago.org/2025/03/27/on-lasalle-street-city-breaks-ground-on-first-office-to-apartments-development/",
+        "https://www.vvco.com/historic-135-south-lasalle-to-undergo-241m-office-to-residential-conversion-in-chicagos-loop/"
+      ],
       "communityArea": "Loop"
     },
     {
       "id": "development-26",
       "source": "development",
       "funderType": "private_development",
-      "funderName": "Private development",
-      "recipient": "105 W Adams St",
+      "funderName": "Disputed as of mid-2026: originally Celadon Partners + Blackwood Group (2023 winning LaSalle Street Reimagined…",
+      "recipient": "105 W. Adams Street (Clark Adams / Bankers Building) Conversion",
       "amountAwarded": null,
-      "logLine": "$178 million, 247 residential units, food market and coffee shop",
-      "year": null,
+      "announcedInvestment": 183500000,
+      "logLine": "41-story 1927 Art Deco tower (Clark Adams/Bankers Building), long largely vacant, has a City-approved $183.5M plan (with $67.5M in TIF) to convert floors 11-40 into ~400 apartments (30% / ~120 units affordable at 60% AMI); as of July 2026 the project is 'blown off course' (Crain's), with its January 2026 groundbreaking target unmet, clouded both by the Celadon/Blackwood ownership lawsuit AND by Bl $67.5 million in TIF approved by Chicago City Council (Sept./Dec. 2025) plus historic tax credits, drawn from the LaSalle Central TIF district under 'LaSalle Street Reimagined'; the building also received preliminary/landmark designation actions in late 2025 that are themselves entangled in the ownership and easement disputes.",
+      "year": 2023,
       "geometry": {
         "kind": "point",
         "lat": 41.879218,
         "lng": -87.6310445
       },
       "address": null,
-      "status": "announced",
+      "status": "stalled",
       "recordDate": null,
-      "links": [],
+      "links": [
+        "https://therealdeal.com/chicago/2026/07/02/lawsuit-leaves-184-million-loop-office-to-resi-conversion-in-limbo/",
+        "https://www.chicagobusiness.com/commercial-real-estate/residential-conversion-clark-adams-building-challenged",
+        "https://chicago.suntimes.com/real-estate/2025/09/12/celadon-blackwood-developers-sue-loop-primera",
+        "https://www.chicago.gov/city/en/depts/dcd/provdrs/ec_dev/news/2025/september/tif-funding-approved-for--183-5-million-clark-adams-building-con.html"
+      ],
       "communityArea": "Loop"
     },
     {
@@ -212879,6 +213417,7 @@
       "funderName": "Private development",
       "recipient": "O'Hare International Airport Revamp",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$8.5 billion project, Terminal 3 upgrade, new International Terminal, expands capacity to 215 gates. https://www.airport-technology.com/news/agreement-finally-reached-on-8-5bn-upgrades-at-chicago-ohare/?cf-view",
       "year": null,
       "geometry": {
@@ -212901,6 +213440,7 @@
       "funderName": "Private development",
       "recipient": "Red Line Extension",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$5.3 billion to add 4 stations. 10rd, 111th, 115th, 130th",
       "year": null,
       "geometry": {
@@ -212921,6 +213461,7 @@
       "funderName": "Private development",
       "recipient": "Union Station Redevelopment",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$1 billion total, $418 million transit costs with Amtrak covering 20% https://chicagounionstation.com/masterplan",
       "year": null,
       "geometry": {
@@ -212943,6 +213484,7 @@
       "funderName": "Private development",
       "recipient": "Always Growing, Auburn Gresham",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "4 buildings led by GAGDC including the Healthy Lifestyle Hub, Green Era Campus and an Urban Farm Campus",
       "year": null,
       "geometry": {
@@ -212963,6 +213505,7 @@
       "funderName": "Private development",
       "recipient": "Aspire Initiative",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Four projects led by Austin Coming Together and Westside Health Authority. Includes the Aspire Center for Workforce Innovation, an Education and Wellness, Campus, Housing by reutilizing vacant properties and the Austin College and Career Academy. https://austincomingtogether.org/aspire/",
       "year": null,
       "geometry": {
@@ -212985,6 +213528,7 @@
       "funderName": "Private development",
       "recipient": "Blue Azul",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Blue Azul is a new construction, multidisciplinary facility in Auburn Gresham, focusing on sports, fitness and mental health. Our focus is on the health and well-being of our community members, while providing a safe space to heal, be, grow, learn and play. We aim for our facility and programs to ha",
       "year": null,
       "geometry": {
@@ -213005,6 +213549,7 @@
       "funderName": "Private development",
       "recipient": "Burst Into Books",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "A bookstore and literacy center on the ground floor with the 1921 incubator on the second floor.",
       "year": null,
       "geometry": {
@@ -213025,6 +213570,7 @@
       "funderName": "Private development",
       "recipient": "Cafe DuBois",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "led by Endeleo Institute, a planned laundromat and employee-owned cafe",
       "year": null,
       "geometry": {
@@ -213045,6 +213591,7 @@
       "funderName": "Private development",
       "recipient": "Centro de Solidaridad Mi Villita",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Little Village Environmental Justice Organization (LVEJO) and Delta Institute will create a new community hub to provide Little Village and Southwest Chicago with food equity and economic development opportunities. They will transform a vacant, former firehouse at 2358 S. Whipple to 1) Offer 150 foo",
       "year": null,
       "geometry": {
@@ -213067,6 +213614,7 @@
       "funderName": "Private development",
       "recipient": "Chicago Eco House",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "9 acres of urban flower farms for workforce development, trauma remediation and entrepreneurial sales of wholesale flowers.",
       "year": null,
       "geometry": {
@@ -213087,6 +213635,7 @@
       "funderName": "Private development",
       "recipient": "Cultivate Collective",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "71k sq ft Cultivate Hub with health care, fresh food access, community gardens, nature-based play scapes, walking trails, education, and vital services https://cultivate-collective.org/",
       "year": null,
       "geometry": {
@@ -213109,6 +213658,7 @@
       "funderName": "Private development",
       "recipient": "Cupid Candies Rehabilitation",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$1.5 million project. Future home of Brown Sugar Life is Sweet candies, modernizing the old Cupid Candies factory.",
       "year": null,
       "geometry": {
@@ -213129,6 +213679,7 @@
       "funderName": "Private development",
       "recipient": "Dust Em Clean Maintenance Co",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "three-story, 9,200 sq ft mixed use building with ground floor retail and 4 residential units.",
       "year": null,
       "geometry": {
@@ -213149,6 +213700,7 @@
       "funderName": "Private development",
       "recipient": "Englewood Hospitality Hub",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Led by EG Woode and the Tadros family, redevelopment of the entire block.",
       "year": null,
       "geometry": {
@@ -213169,6 +213721,7 @@
       "funderName": "Private development",
       "recipient": "enLabs",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "A 40k sq ft space to support minority-owned startups/SMEs to launch physical product businesses, while developing a manufacturing workforce program. Led by the Greater Englewood Chamber, Teamwork Englewood, Krimson Technology and MHub.",
       "year": null,
       "geometry": {
@@ -213189,6 +213742,7 @@
       "funderName": "Private development",
       "recipient": "Firebird Community Arts",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "12k sq ft building for glassblowing workshop with trauma therapy component.",
       "year": null,
       "geometry": {
@@ -213209,6 +213763,7 @@
       "funderName": "Private development",
       "recipient": "The Forum Bronzeville",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Redevelopment for a venue, cafe, recording studio and two other ground-floor retail storefronts.",
       "year": null,
       "geometry": {
@@ -213229,6 +213784,7 @@
       "funderName": "Private development",
       "recipient": "Full Spectrum Features",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Project to purchase building, renovate for office space and a small event space/cinema.",
       "year": null,
       "geometry": {
@@ -213249,6 +213805,7 @@
       "funderName": "Private development",
       "recipient": "Go Green on Racine",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Three projects, the Fresh Market, The Regenerator (a former public school) and Racine Village (mixed-use housing, business incubation and fine dining). Project is a collaboration between IMAN, Teamwork Englewood, RAGE and EG Woode. https://gogreenonracine.com/projectoverview",
       "year": null,
       "geometry": {
@@ -213271,6 +213828,7 @@
       "funderName": "Private development",
       "recipient": "Growing Home Urban Farm",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Expanding to the Wood Street North lot",
       "year": null,
       "geometry": {
@@ -213291,6 +213849,7 @@
       "funderName": "Private development",
       "recipient": "Homan-Harrison Gateway",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "This new, three story, 16,773 square foot mixed use development will combine five unique local businesses and community-based organizations that serve Homan Square and the North Lawndale community in a singular building. The building will house Alderwoman Scott’s office and café on the ground floor,",
       "year": null,
       "geometry": {
@@ -213311,6 +213870,7 @@
       "funderName": "Private development",
       "recipient": "Imani Village",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Senior residences, residences, urban farming center, retail center, community health center, boutique hotel. https://www.imanivillage.com/",
       "year": null,
       "geometry": {
@@ -213333,6 +213893,7 @@
       "funderName": "Private development",
       "recipient": "The K",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "A social innovation hub = business accelerator, incubator and experiential business learning space.",
       "year": null,
       "geometry": {
@@ -213353,6 +213914,7 @@
       "funderName": "Private development",
       "recipient": "Latin United Community Housing Assoc",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Third office space and community space for LUCHA",
       "year": null,
       "geometry": {
@@ -213373,6 +213935,7 @@
       "funderName": "Private development",
       "recipient": "Now Is the Time: Advancing North Lawndale Together",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Multiple projects led by Mt Sinai health and the North Lawndale Community Coordinating Council. Projects include the NL Employment Network Workforce Campus, the Lazarus Apartments",
       "year": null,
       "geometry": {
@@ -213393,6 +213956,7 @@
       "funderName": "Private development",
       "recipient": "Okpara House",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "A 12k sq ft multipurpose Igbo Cultural center.",
       "year": null,
       "geometry": {
@@ -213413,6 +213977,7 @@
       "funderName": "Private development",
       "recipient": "Old Fashioned Donuts",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Update and repair the storefront and units above.",
       "year": null,
       "geometry": {
@@ -213433,6 +213998,7 @@
       "funderName": "Private development",
       "recipient": "One Lawndale",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "A Children's Museum and Family Fun groundfloor experience led by NLCCC with Sinai Health.",
       "year": null,
       "geometry": {
@@ -213453,6 +214019,7 @@
       "funderName": "Private development",
       "recipient": "Pilsen Housing Coopertive Large Site",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "PIHCO already has 3 buildings totalling 18 units to combat displacement in Pilsen. This would partner PIHCO with the City for ~60 of the 432 housing units planned for 18th and Peoria.",
       "year": null,
       "geometry": {
@@ -213473,6 +214040,7 @@
       "funderName": "Private development",
       "recipient": "Policy Kings",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Mixed-Use development from Corey Gilkey and James Daughrity. 18k sq ft with 6 residential units, a restaurant, gym, two storefronts and a frame and printmaking workshop.",
       "year": null,
       "geometry": {
@@ -213493,6 +214061,7 @@
       "funderName": "Private development",
       "recipient": "Practice Space by Floating Museum",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Three buildings for fabrication, staging, recording, broadcasting and artist-in-residence housing",
       "year": null,
       "geometry": {
@@ -213513,6 +214082,7 @@
       "funderName": "Private development",
       "recipient": "The Re-Up",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Led by RAGE, it will be a dine-in restaurant, catering space and offices.",
       "year": null,
       "geometry": {
@@ -213533,6 +214103,7 @@
       "funderName": "Private development",
       "recipient": "Revitalize Communities",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "11,400 sq ft lot turned into 43 residential units and ground floor retail",
       "year": null,
       "geometry": {
@@ -213553,6 +214124,7 @@
       "funderName": "Private development",
       "recipient": "Rooted and Rising",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$69 million, led by BYNC, 7-story building with 99 residential units, performing arts center, 3 community-based service providers, new CPL branch, federal qualified health center, ground floor retail.",
       "year": null,
       "geometry": {
@@ -213573,6 +214145,7 @@
       "funderName": "Private development",
       "recipient": "Roseland Community Medical District",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Estimated ~$500 million, upgrades to Roseland hospital, creation of outpatient facilities https://roselandmedicaldistrict.org/ https://www.chicago.gov/city/en/depts/dcd/supp_info/RoselandMedicalDistrict.html",
       "year": null,
       "geometry": {
@@ -213596,6 +214169,7 @@
       "funderName": "Private development",
       "recipient": "Sankofa Wellness Village",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Medical care, social services, a third space, community-owned credit union https://sankofawellnessvillage.org/",
       "year": null,
       "geometry": {
@@ -213618,6 +214192,7 @@
       "funderName": "Private development",
       "recipient": "South Halsted Gateway",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$60 million , led by Far South Community Dev Corp, a corridor from 95th to 129th. Includes 185 residential units, a POP court, development of vacant land. https://farsouthcdc.org/bcbi",
       "year": null,
       "geometry": {
@@ -213640,6 +214215,7 @@
       "funderName": "Private development",
       "recipient": "Starling by Duo",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Development of 8 commercial spaces, anchored by Monday Coffee Co",
       "year": null,
       "geometry": {
@@ -213660,6 +214236,7 @@
       "funderName": "Private development",
       "recipient": "Twisted Eggrolls",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Commercial/Production kitchen expansion of 6,500 sq ft.",
       "year": null,
       "geometry": {
@@ -213680,6 +214257,7 @@
       "funderName": "Private development",
       "recipient": "We're Steel Here",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "78 units of affordable housing, a grocery store, wellness center with a business incubator, two athletic facilities, a performing arts center and an outdoor play space. Boundaries for the projects are 91st to 92nd, Commercial to the Lake. Partnership between Claretian Associates, Interfaith Housing",
       "year": null,
       "geometry": {
@@ -213700,6 +214278,7 @@
       "funderName": "Private development",
       "recipient": "The Workshop Arts Collaborative",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "Rehearsal and instruction studios, pop-up space for food/bev vendors and flexible event space.",
       "year": null,
       "geometry": {
@@ -213720,6 +214299,7 @@
       "funderName": "Private development",
       "recipient": "Xchange Chicago",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "28k tech hub to train workforce for tech jobs. Led by ComerScience, 933, SDI Presence. https://xchangechicago.org/",
       "year": null,
       "geometry": {
@@ -213742,6 +214322,7 @@
       "funderName": "Private development",
       "recipient": "115th Red Line Stop RFP",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -213762,6 +214343,7 @@
       "funderName": "Private development",
       "recipient": "Auburn Gresham Apartments",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$43 million, Evergreen Imagine, 28 affordable residences and 5,200 sq ft for AYO Foods at 838 w 79th. 30 affordable residences and $3,300 sq ft for KLEO Community Center and The Park Supper Club. Public funds covered $39 million",
       "year": null,
       "geometry": {
@@ -213782,6 +214364,7 @@
       "funderName": "Private development",
       "recipient": "Austin United Alliance",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$38 million, former Laramie Bank Building and adjacent 20k vacant property. Usage includes, a Blues museum, bank branch, cafe, and business incubator in the Laramie Bank Building and a mixed-income, multi-story reental building next door.",
       "year": null,
       "geometry": {
@@ -213802,6 +214385,7 @@
       "funderName": "Private development",
       "recipient": "The Ave",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$25.3 million for a five-story, mixed-use, mixed-income complex with 44 residential units, and 21k sq ft for a restaurant, gym and daycare center.",
       "year": null,
       "geometry": {
@@ -213822,6 +214406,7 @@
       "funderName": "Private development",
       "recipient": "Englewood Connect",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$10.3 million eco-food hub expanding Englewood Square. Adaptive Reuse of Green Street Fire Station as a commercial kitchen, business incubator, event space and outdoor hoop houses for farming. Additional plans for adjacent housing were scrapped.",
       "year": null,
       "geometry": {
@@ -213842,6 +214427,7 @@
       "funderName": "Private development",
       "recipient": "Galeria 89",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$36.4 million for a 4-5 story building with 46 affordable units, 12 market-rate units and 4 ground floor retail spaces across 2 buildings.",
       "year": null,
       "geometry": {
@@ -213862,6 +214448,7 @@
       "funderName": "Private development",
       "recipient": "Gately's People's Store RFP",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -213882,6 +214469,7 @@
       "funderName": "Private development",
       "recipient": "Lawndale Innovation Center",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$38.4 million for a 300k sq ft industrial center/warehouses, and a pair of community centers",
       "year": null,
       "geometry": {
@@ -213902,6 +214490,7 @@
       "funderName": "Private development",
       "recipient": "Lawndale Redefined",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$31.4 million, 64 mixed-income apartments, three market-rate townhomes, retail and restaurant space, a community center with technology and arts programming.",
       "year": null,
       "geometry": {
@@ -213922,6 +214511,7 @@
       "funderName": "Private development",
       "recipient": "The Legacy District",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$19.2 million for a six-story building with 25 residential units and 12k sq ft of commercial space.",
       "year": null,
       "geometry": {
@@ -213942,6 +214532,7 @@
       "funderName": "Private development",
       "recipient": "Roseland Theater RFP",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -213962,6 +214553,7 @@
       "funderName": "Private development",
       "recipient": "Team Pioneros",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$53.9 million rehab of the Pioneer Bank Building with a business incubator, Latinx cultural center and office space for the lead architect. Next door will be a tower with 75 affordable units, offices for Humboldt Park Family Health and a potential library branch.",
       "year": null,
       "geometry": {
@@ -213982,6 +214574,7 @@
       "funderName": "Private development",
       "recipient": "Thrive Exchange",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "~$100-$150 million project that includes 76 luxury workforce apartments, 24 condominiums for sale, a 20k sq ft healthcare center and ground floor retail.",
       "year": null,
       "geometry": {
@@ -214002,6 +214595,7 @@
       "funderName": "Private development",
       "recipient": "United Yards",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": "$51.5 million, four buildings. New building with 50 affordable units, a ground floor business hub and youth programming space. Repurposed 4-story building with 30 senior residences and a ground floor coffee shop. Two three-flat buildings. Enhancing an existing supportive living center with a medical",
       "year": null,
       "geometry": {
@@ -214022,6 +214616,7 @@
       "funderName": "Private development",
       "recipient": "Aspire POPF!t",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214042,6 +214637,7 @@
       "funderName": "Private development",
       "recipient": "Englewood Breakroom - POP",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214062,6 +214658,7 @@
       "funderName": "Private development",
       "recipient": "Go Green Griot Plaza - POP",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214082,6 +214679,7 @@
       "funderName": "Private development",
       "recipient": "Mahalia Jackson Court - POP",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214102,6 +214700,7 @@
       "funderName": "Private development",
       "recipient": "Overton Exchange Plaza - POP",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214122,6 +214721,7 @@
       "funderName": "Private development",
       "recipient": "POPCourts!",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214142,6 +214742,7 @@
       "funderName": "Private development",
       "recipient": "POP Grove",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214162,6 +214763,7 @@
       "funderName": "Private development",
       "recipient": "POP Heights!",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214182,6 +214784,7 @@
       "funderName": "Private development",
       "recipient": "Southside Sanctuary - POP",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214202,6 +214805,7 @@
       "funderName": "Private development",
       "recipient": "WACA Bell Park - POP",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214222,6 +214826,7 @@
       "funderName": "Private development",
       "recipient": "West Humboldt POP!",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214242,6 +214847,7 @@
       "funderName": "Private development",
       "recipient": "Winthrop Garden - POP",
       "amountAwarded": null,
+      "announcedInvestment": null,
       "logLine": null,
       "year": null,
       "geometry": {
@@ -214254,6 +214860,303 @@
       "recordDate": null,
       "links": [],
       "communityArea": "Uptown"
+    },
+    {
+      "id": "development-disc-95",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "Chicago Fire FC (owner Joe Mansueto)",
+      "recipient": "Chicago Fire FC Stadium at The 78",
+      "amountAwarded": null,
+      "announcedInvestment": null,
+      "logLine": "22,000-seat soccer-specific stadium entirely privately financed by Fire owner Joe Mansueto, anchoring the south end of The 78 riverfront site; broke ground March 2026 for a 2028 MLS-season opening. Stadium itself is privately funded; surrounding infrastructure at The 78 is supported by TIF/public dollars. $650M within The 78 total — not counted separately",
+      "year": 2025,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.8640724,
+        "lng": -87.6320745
+      },
+      "address": null,
+      "status": "under_construction",
+      "recordDate": null,
+      "links": [
+        "https://news.wttw.com/2025/06/03/chicago-fire-announces-transformative-privately-financed-650m-soccer-stadium-78",
+        "https://www.espn.com/soccer/story/_/id/45443535/chicago-fire-unveil-plans-new-650m-stadium-2028",
+        "https://www.chicagofirefc.com/news/historic-day-for-the-city-chicago-fire-fc-breaks-ground-on-privately-funded-soccer-stadium-at-the-78"
+      ],
+      "communityArea": "Near South Side"
+    },
+    {
+      "id": "development-disc-96",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "Related Midwest",
+      "recipient": "400 Lake Shore Drive",
+      "amountAwarded": null,
+      "announcedInvestment": 500000000,
+      "logLine": "Two-tower luxury residential development (~1,135 units, 1.1M sf) rising on the long-dormant Chicago Spire hole where the river meets Lake Michigan; the 72-story north tower is under construction, opening ~2027.",
+      "year": 2022,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.890612787612,
+        "lng": -87.614310249186
+      },
+      "address": "400 N Lake Shore Dr",
+      "status": "under_construction",
+      "recordDate": null,
+      "links": [
+        "https://www.constructiondive.com/news/related-group-chicago-towers-spire-site/712397/",
+        "https://chicago.urbanize.city/post/500-million-construction-funding-secured-400-lake-shore-drive",
+        "https://chicago.suntimes.com/real-estate/2025/08/11/chicago-spire-400-lake-shore-related-midwest"
+      ],
+      "communityArea": "Near North Side"
+    },
+    {
+      "id": "development-disc-97",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "Onni Group",
+      "recipient": "Halsted Landing (Onni Group, Goose Island)",
+      "amountAwarded": null,
+      "announcedInvestment": 1100000000,
+      "logLine": "$1.1B riverfront megaproject of ~2,500 apartments across four towers (up to 650 ft), plus retail, an amphitheater and a water-taxi stop, betting on the adjacent Bally's permanent casino.",
+      "year": 2024,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.900090445541,
+        "lng": -87.647845140574
+      },
+      "address": "901 N Halsted St",
+      "status": "proposed",
+      "recordDate": null,
+      "links": [
+        "https://therealdeal.com/chicago/2024/05/20/onni-shapes-1-1b-project-near-ballys-chicago-casino-site/",
+        "https://chicago.suntimes.com/real-estate/2024/05/16/halsted-landing-onni-group-goose-island-renderings-mixed-use-development",
+        "https://www.bldup.com/posts/onni-group-unveils-new-renderings-for-1-1b-halsted-landing-project"
+      ],
+      "communityArea": "Near North Side"
+    },
+    {
+      "id": "development-disc-98",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "Onni Group",
+      "recipient": "Halsted Pointe (Onni Group, Goose Island)",
+      "amountAwarded": null,
+      "announcedInvestment": 220000000,
+      "logLine": "Multi-tower Goose Island masterplan (ultimately ~2,650 units, a 300-key hotel and retail) on the former Greyhound site; Phase 1's 46-story, 500-ft tower broke ground April 2026 for a ~2028 opening.",
+      "year": 2021,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.900088415116,
+        "lng": -87.647999072683
+      },
+      "address": "1000 N Halsted St",
+      "status": "under_construction",
+      "recordDate": null,
+      "links": [
+        "https://chicagoyimby.com/2026/04/halsted-pointe-begins-construction-on-goose-island.html",
+        "https://chicago.urbanize.city/post/onni-group-lands-financing-halsted-pointe-phase-1",
+        "https://chicagoyimby.com/2024/01/initial-funding-secured-for-first-phase-of-halsted-pointe-on-goose-island.html"
+      ],
+      "communityArea": "Near North Side"
+    },
+    {
+      "id": "development-disc-99",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "Advocate Health Care (Advocate Health)",
+      "recipient": "Advocate Health Care South Side Investment / New South Works Hospital",
+      "amountAwarded": null,
+      "announcedInvestment": 1000000000,
+      "logLine": "$1B South Side health-equity investment anchored by a new $300M, 52-bed hospital on 23 acres of the former U.S. Steel South Works site (near 81st St) to replace aging Trinity Hospital, plus $500M in ambulatory care and $200M in chronic/maternal/social spending. Advocate (private nonprofit health system) funds the investment; the broader South Works site redevelopment involves public land and infrastructure.",
+      "year": 2024,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": null,
+      "status": "announced",
+      "recordDate": null,
+      "links": [
+        "https://www.wbez.org/health-medicine/2024/12/17/advocate-health-care-replace-trinity-hospital",
+        "https://chicago.suntimes.com/health/2024/12/17/advocate-health-care-replace-trinity-hospital",
+        "https://blockclubchicago.org/2024/12/17/advocate-building-new-hospital-on-former-south-works-site-will-demolish-trinity-upon-completion/"
+      ]
+    },
+    {
+      "id": "development-disc-100",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "Northwestern Memorial HealthCare",
+      "recipient": "Northwestern Memorial Hospital New Patient/Cancer Tower (Streeterville)",
+      "amountAwarded": null,
+      "announcedInvestment": 1000000000,
+      "logLine": "Proposed ~1.2M-sf hospital tower on the downtown Streeterville campus (278 med-surg + 36 ICU beds, five ORs, cancer care, imaging); full build-out could approach $1B, with construction eyed for 2027.",
+      "year": 2025,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.895834680495,
+        "lng": -87.621253957973
+      },
+      "address": "250 E Superior St",
+      "status": "proposed",
+      "recordDate": null,
+      "links": [
+        "https://chicago.urbanize.city/post/northwestern-medicine-outlines-plan-new-hospital-tower",
+        "https://www.cbsnews.com/chicago/news/northwestern-memorial-hospital-new-tower-cancer-care/",
+        "https://chicagoyimby.com/2025/08/further-details-revealed-for-new-northwestern-hospital-tower-in-streeterville.html"
+      ],
+      "communityArea": "Near North Side"
+    },
+    {
+      "id": "development-disc-101",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "The Habitat Company (with Sinai Health System)",
+      "recipient": "Ogden Commons (North Lawndale)",
+      "amountAwarded": null,
+      "announcedInvestment": 200000000,
+      "logLine": "$200M, 10-acre mixed-use, mixed-income redevelopment of vacant CHA land in North Lawndale — billed as Chicago's largest Opportunity Zone project — delivering 350+ homes plus retail and Sinai health uses across multiple phases. Opportunity Zone project on former CHA land with City of Chicago participation and TIF; substantial affordable-housing component.",
+      "year": 2018,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.862367203312,
+        "lng": -87.692178824237
+      },
+      "address": "2653 W Ogden Ave",
+      "status": "under_construction",
+      "recordDate": null,
+      "links": [
+        "https://www.habitat.com/post/habitat-secures-financing-for-oc-living-phase-2-of-200m-mixed-use-ogden-commons",
+        "https://chicago.urbanize.city/post/habitat-fully-leases-oc-living-phase-i-closes-phase-ii-ogden-commons",
+        "https://www.taylorjohnson.com/tj-news/chicagos-largest-mixed-use-opportunity-zone-project-secures-financing-10-acre-ogden-commons-development-moves-forward/"
+      ],
+      "communityArea": "North Lawndale"
+    },
+    {
+      "id": "development-disc-102",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "Hines (with Joseph P. Kennedy Enterprises)",
+      "recipient": "Salesforce Tower Chicago (Wolf Point South)",
+      "amountAwarded": null,
+      "announcedInvestment": 800000000,
+      "logLine": "60-story, ~1.2M-sf riverfront office tower anchored by Salesforce, the third phase of the Wolf Point development at the Chicago River's main branch; opened 2023-2024.",
+      "year": 2018,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.887947786978,
+        "lng": -87.637037863101
+      },
+      "address": "333 W Wolf Point Plaza",
+      "status": "opened",
+      "recordDate": null,
+      "links": [
+        "https://rejournals.com/salesforce-tower-secures-500-million-construction-loan/",
+        "https://www.hines.com/properties/salesforce-tower-chicago-wolf-point-south-chicago",
+        "https://en.wikipedia.org/wiki/Salesforce_Tower_Chicago"
+      ],
+      "communityArea": "Near North Side"
+    },
+    {
+      "id": "development-disc-103",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "JDL Development",
+      "recipient": "One Chicago",
+      "amountAwarded": null,
+      "announcedInvestment": 850000000,
+      "logLine": "$850M two-tower River North mixed-use complex (76- and 49-story) with 735 apartments, 77 condos, a Whole Foods and Life Time fitness; completed 2022.",
+      "year": 2019,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.896617847428,
+        "lng": -87.628274222909
+      },
+      "address": "1 W Chicago Ave",
+      "status": "opened",
+      "recordDate": null,
+      "links": [
+        "https://rebusinessonline.com/jdl-development-to-break-ground-on-850m-mixed-use-tower-in-chicago/",
+        "https://therealdeal.com/chicago/2019/04/18/jdl-cleared-for-850m-one-chicago-square-mixed-use-project/",
+        "https://chicagoyimby.com/2021/10/crane-down-glass-up-at-jdls-one-chicago.html"
+      ],
+      "communityArea": "Near North Side"
+    },
+    {
+      "id": "development-disc-104",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "Time Equities (with JK Equities and Oak Capitals)",
+      "recipient": "1000M",
+      "amountAwarded": null,
+      "announcedInvestment": 470000000,
+      "logLine": "73-story, 738-unit luxury rental tower on South Michigan Avenue across from Grant Park — Helmut Jahn's final Chicago skyscraper; restarted in 2020 after a pandemic funding pause and opened June 2024.",
+      "year": 2016,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.870013851766,
+        "lng": -87.624282694691
+      },
+      "address": "1000 S Michigan Ave",
+      "status": "opened",
+      "recordDate": null,
+      "links": [
+        "https://chicago.suntimes.com/real-estate/2024/06/14/1000m-michigan-avenue-luxury-apartment-time-equities-greenburger",
+        "https://en.wikipedia.org/wiki/1000M",
+        "https://chicago.urbanize.city/post/1000m-celebrates-grand-opening"
+      ],
+      "communityArea": "Loop"
+    },
+    {
+      "id": "development-disc-105",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "Trammell Crow Company",
+      "recipient": "Fulton Labs (Trammell Crow life-sciences campus)",
+      "amountAwarded": null,
+      "announcedInvestment": 220000000,
+      "logLine": "Fulton Market's first purpose-built life-sciences campus — a pair of lab/office buildings at 400 N Aberdeen and 1375 W Fulton totaling 700,000+ sf — anchoring the neighborhood's biotech pivot; completed ~2023.",
+      "year": 2020,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.889036308362,
+        "lng": -87.654645699351
+      },
+      "address": "400 N Aberdeen St",
+      "status": "opened",
+      "recordDate": null,
+      "links": [
+        "https://therealdeal.com/chicago/2020/01/10/life-sciences-may-be-fulton-markets-new-new-development/",
+        "https://chicago.urbanize.city/post/16-story-life-science-building-tops-fulton-market",
+        "https://therealdeal.com/chicago/2022/08/15/shapack-cashes-in-as-trammell-crow-drops-100m-in-fulton-market/"
+      ],
+      "communityArea": "West Town"
+    },
+    {
+      "id": "development-disc-106",
+      "source": "development",
+      "funderType": "private_development",
+      "funderName": "Riverside Investment & Development and Howard Hughes Corporation",
+      "recipient": "Bank of America Tower (110 North Wacker)",
+      "amountAwarded": null,
+      "announcedInvestment": 722000000,
+      "logLine": "57-story riverfront office tower anchored by Bank of America, replacing the old Morton Salt building on Wacker Drive; opened late 2020 at a developer-stated ~$722M cost.",
+      "year": 2018,
+      "geometry": {
+        "kind": "point",
+        "lat": 41.884630963557,
+        "lng": -87.637144839219
+      },
+      "address": "110 N Wacker Dr",
+      "status": "opened",
+      "recordDate": null,
+      "links": [
+        "https://therealdeal.com/chicago/2018/09/24/riverside-howard-hughes-cleared-to-build-110-north-wacker-office-tower/",
+        "https://en.wikipedia.org/wiki/110_North_Wacker",
+        "https://www.clarkconstruction.com/our-work/projects/bank-america-tower-110-north-wacker"
+      ],
+      "communityArea": "Loop"
     },
     {
       "id": "nof-small-corridor-0",
