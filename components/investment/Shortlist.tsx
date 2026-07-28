@@ -3,7 +3,7 @@
 import { useSyncExternalStore } from "react";
 import {
   type ShortlistRecord,
-  clearShortlist,
+  clearInvestmentWorkingSet,
   downloadCsv,
   getShortlistServerSnapshot,
   getShortlistSnapshot,
@@ -73,10 +73,11 @@ export function WorkingSetPanel() {
             </button>
             <button
               type="button"
-              onClick={clearShortlist}
+              onClick={clearInvestmentWorkingSet}
+              title="Clear saved records, private notes, pinned compare areas, and filters from this browser — use before leaving a shared machine."
               className="font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/40 hover:text-[#0C1B33]/70"
             >
-              Clear
+              Clear working set
             </button>
           </div>
         ) : null}
