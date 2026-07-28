@@ -8,6 +8,7 @@ import { HeroStat } from "@/components/investment/HeroStat";
 import { FunderDonut } from "@/components/investment/FunderDonut";
 import { YearBars } from "@/components/investment/YearBars";
 import { SourceBars } from "@/components/investment/SourceBars";
+import { FunderFlowSankey } from "@/components/investment/FunderFlowSankey";
 import { TopRecipientsTable } from "@/components/investment/TopRecipientsTable";
 import { TopFunders } from "@/components/investment/TopFunders";
 import { EquityContext } from "@/components/investment/EquityContext";
@@ -157,6 +158,14 @@ export default async function InvestmentAreaPage({
               description="Awarded dollars by funding program. Development projects are counted, not dollared."
             >
               <SourceBars bySource={analysis.bySource} />
+            </Section>
+
+            {/* 4b — Flow (funder → program → recipient) */}
+            <Section
+              title="How the money flowed"
+              description="Awarded dollars from funders, through programs, to the recipients on record since 2020."
+            >
+              <FunderFlowSankey communityArea={name} />
             </Section>
 
             {/* 5 — Top recipients */}
