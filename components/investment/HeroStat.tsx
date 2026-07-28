@@ -30,8 +30,7 @@ export function HeroStat({
         {formatFullDollars(total)}
       </div>
       <p className="mt-4 text-[14px] leading-relaxed text-[#0C1B33]/55">
-        awarded <span className="text-[#0C1B33]/30">·</span> {formatCount(recordCount)} grants &amp;
-        projects <span className="text-[#0C1B33]/30">·</span> {rangeLabel}
+        {`awarded · ${formatCount(recordCount)} grants & projects · ${rangeLabel}`}
       </p>
     </div>
   );

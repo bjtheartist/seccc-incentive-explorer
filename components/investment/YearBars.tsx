@@ -118,8 +118,10 @@ export function YearBars({ byYear, unYeared }: { byYear: YearBreakdown[]; unYear
 
       {unYeared > 0 && (
         <p className="mt-3 text-[11px] leading-relaxed text-[#0C1B33]/40">
-          {formatCount(unYeared)} record{unYeared === 1 ? "" : "s"} carry no year (development projects and
-          undated grants) and are not shown in the trend.
+          {unYeared === 1
+            ? "1 record carries no year"
+            : `${formatCount(unYeared)} records carry no year`}{" "}
+          (development projects and undated grants) and {unYeared === 1 ? "is" : "are"} not shown in the trend.
         </p>
       )}
     </div>
