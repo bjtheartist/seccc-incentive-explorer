@@ -131,6 +131,15 @@ export interface CommunityInvestmentRecord {
    * developments) leave it null.
    */
   recordDate?: string | null;
+  /**
+   * Where the row's facts come from: "official" (a city dataset / published
+   * record) or "partner-list" (a hand-kept partner sheet re-stating an award,
+   * e.g. Jim's corridor NOF list). Absent means "official". The dedupe treats a
+   * cross-provenance address+amount collision as the SAME award re-stated (the
+   * official row wins), while two official rows with different record dates are
+   * two REAL grant events and both survive.
+   */
+  recordProvenance?: "official" | "partner-list";
   /** Source/project links (deduped, http(s) only). */
   links: string[];
 }
@@ -388,20 +397,31 @@ export function dedupeInvestmentRecords(records: readonly CommunityInvestmentRec
       continue;
     }
     const rName = normalizeRecipientForDedupe(r.recipient);
+    const rProvenance = r.recordProvenance ?? "official";
     // Does r duplicate an existing group member?
     let matchIdx = -1;
     for (const idx of group) {
       const k = kept[idx];
-      const sameName = rName !== "" && rName === normalizeRecipientForDedupe(k.recipient);
+      const kName = normalizeRecipientForDedupe(k.recipient);
+      const sameName = rName !== "" && rName === kName;
+      // Cross-provenance only: "Huddle House" vs "Huddle House Diner" is the
+      // same award re-stated with a truncated/expanded name.
+      const nameLoose =
+        sameName || (rName !== "" && kName !== "" && (rName.startsWith(kName) || kName.startsWith(rName)));
       const statusDiffers = r.status !== k.status; // government status ∈ {completed, awarded}
-      const isMatch = statusDiffers
-        ? // award ↔ completion supersede: same project when the names match, or
-          // when the shared amount is a distinctive (non-round-cap) figure that a
-          // coincidental two-business collision is vanishingly unlikely to hit.
-          sameName || !isRoundCapAmount(r.amountAwarded)
-        : // same status: a genuine duplicate ROW needs the same name AND the same
-          // completion/record date — different dates mean two real grant cycles.
-          sameName && recordDatesEqual(r.recordDate, k.recordDate);
+      const provenanceDiffers = rProvenance !== (k.recordProvenance ?? "official");
+      const isMatch = provenanceDiffers
+        ? // A partner list re-states an official award: same project when the
+          // names loosely match, or when the shared amount is a distinctive
+          // (non-round-cap) figure — covers DBA-vs-legal-name pairs.
+          nameLoose || !isRoundCapAmount(r.amountAwarded)
+        : statusDiffers
+          ? // award ↔ completion supersede within official data: same project when
+            // the names match, or the shared amount is a distinctive figure.
+            sameName || !isRoundCapAmount(r.amountAwarded)
+          : // same provenance + status: a genuine duplicate ROW needs the same name
+            // AND the same record date — different dates mean two real grant cycles.
+            sameName && recordDatesEqual(r.recordDate, k.recordDate);
       if (isMatch) {
         matchIdx = idx;
         break;
@@ -413,14 +433,84 @@ export function dedupeInvestmentRecords(records: readonly CommunityInvestmentRec
       kept.push(r);
       continue;
     }
-    // Collapse into the matched slot, keeping the better-ranked status.
-    if (DEDUPE_STATUS_RANK[r.status] < DEDUPE_STATUS_RANK[kept[matchIdx].status]) {
+    // Collapse into the matched slot: the official record beats a partner-list
+    // re-statement; within the same provenance, the better-ranked status wins.
+    const matched = kept[matchIdx];
+    const matchedOfficial = (matched.recordProvenance ?? "official") === "official";
+    const rOfficial = rProvenance === "official";
+    const rWins =
+      rOfficial !== matchedOfficial
+        ? rOfficial
+        : DEDUPE_STATUS_RANK[r.status] < DEDUPE_STATUS_RANK[matched.status];
+    if (rWins) {
       kept[matchIdx] = r;
     }
     removedCount += 1;
   }
 
-  return { records: kept, removedCount };
+  // Second pass: a partner-list re-statement can carry a slightly-off street
+  // number (Jim's "9401 S Stony Island" vs the official award's "9421"), which
+  // defeats the address-keyed grouping above. Collapse a partner-list row into
+  // an official row when the names loosely match, the amount is identical, and
+  // the two points sit within PARTNER_RESTATEMENT_RADIUS_M of each other —
+  // unrelated businesses sharing a prefix name, an exact dollar figure, AND a
+  // block is not a real collision mode.
+  const finalRecords: CommunityInvestmentRecord[] = [];
+  const officialByAmount = new Map<number, CommunityInvestmentRecord[]>();
+  for (const r of kept) {
+    if (
+      (r.recordProvenance ?? "official") === "official" &&
+      r.funderType === "government" &&
+      r.geometry.kind === "point" &&
+      r.amountAwarded != null
+    ) {
+      const list = officialByAmount.get(r.amountAwarded);
+      if (list) list.push(r);
+      else officialByAmount.set(r.amountAwarded, [r]);
+    }
+  }
+  for (const r of kept) {
+    const isPartnerPoint =
+      r.recordProvenance === "partner-list" &&
+      r.funderType === "government" &&
+      r.geometry.kind === "point" &&
+      r.amountAwarded != null;
+    if (isPartnerPoint) {
+      const rName = normalizeRecipientForDedupe(r.recipient);
+      const candidates = officialByAmount.get(r.amountAwarded as number) ?? [];
+      const shadowed = candidates.some((o) => {
+        const oName = normalizeRecipientForDedupe(o.recipient);
+        const nameLoose =
+          rName !== "" && oName !== "" && (rName === oName || rName.startsWith(oName) || oName.startsWith(rName));
+        return (
+          nameLoose &&
+          r.geometry.kind === "point" &&
+          o.geometry.kind === "point" &&
+          haversineMeters(r.geometry.lat, r.geometry.lng, o.geometry.lat, o.geometry.lng) <= PARTNER_RESTATEMENT_RADIUS_M
+        );
+      });
+      if (shadowed) {
+        removedCount += 1;
+        continue;
+      }
+    }
+    finalRecords.push(r);
+  }
+
+  return { records: finalRecords, removedCount };
+}
+
+/** Radius within which a partner-list row is treated as re-stating a nearby official award. */
+const PARTNER_RESTATEMENT_RADIUS_M = 150;
+
+function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371000;
+  const toRad = (d: number) => (d * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(a));
 }
 
 // ── Export assembly (pure) ───────────────────────────────────────────────────

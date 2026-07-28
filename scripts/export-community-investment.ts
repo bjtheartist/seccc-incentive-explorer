@@ -359,6 +359,7 @@ function mapSocrata(
       ...(communityArea ? { communityArea } : {}),
       status: completed ? "completed" : "awarded",
       recordDate: nullableStr(r.completion_date) ?? nullableStr(r.approval_date),
+      recordProvenance: "official",
       links: [],
     });
   }
@@ -597,6 +598,7 @@ async function main() {
       address: addr,
       status: "awarded",
       recordDate: null, // Jim's corridor list carries only a year, no per-record date
+      recordProvenance: "partner-list",
       links: [],
     });
   }

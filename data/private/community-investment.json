@@ -1,20 +1,20 @@
 {
-  "generatedAt": "2026-07-28T00:30:17.678Z",
+  "generatedAt": "2026-07-28T00:39:46.795Z",
   "meta": {
     "counts": {
-      "nof-small": 158,
+      "nof-small": 156,
       "nof-large": 6,
       "sbif": 646,
       "cdg": 273,
       "foundation": 9824,
       "development": 95
     },
-    "totalRecords": 11002,
-    "pointCount": 8922,
+    "totalRecords": 11000,
+    "pointCount": 8920,
     "citywideCount": 2080,
-    "totalDollarsAwarded": 1757293617.66,
+    "totalDollarsAwarded": 1755943617.66,
     "droppedNoGeocode": 11,
-    "dedupedRows": 9,
+    "dedupedRows": 11,
     "droppedPlaceholder": 3,
     "droppedPreWindow": 1611,
     "droppedNoCoords": 0,
@@ -49,6 +49,7 @@
       "communityArea": "Calumet Heights",
       "status": "completed",
       "recordDate": "2023-05-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -69,6 +70,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2019-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -89,6 +91,7 @@
       "communityArea": "East Garfield Park",
       "status": "completed",
       "recordDate": "2020-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -109,6 +112,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2022-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -129,6 +133,7 @@
       "communityArea": "Lower West Side",
       "status": "completed",
       "recordDate": "2023-10-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -149,6 +154,7 @@
       "communityArea": "Roseland",
       "status": "completed",
       "recordDate": "2023-04-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -169,6 +175,7 @@
       "communityArea": "Avalon Park",
       "status": "completed",
       "recordDate": "2026-01-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -189,6 +196,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2022-02-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -209,6 +217,7 @@
       "communityArea": "Greater Grand Crossing",
       "status": "completed",
       "recordDate": "2024-05-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -229,6 +238,7 @@
       "communityArea": "East Garfield Park",
       "status": "completed",
       "recordDate": "2021-03-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -249,6 +259,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2022-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -269,6 +280,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2021-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -289,6 +301,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2024-10-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -309,6 +322,7 @@
       "communityArea": "Calumet Heights",
       "status": "completed",
       "recordDate": "2019-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -329,6 +343,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2022-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -349,6 +364,7 @@
       "communityArea": "South Shore",
       "status": "completed",
       "recordDate": "2023-07-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -369,6 +385,7 @@
       "communityArea": "South Shore",
       "status": "completed",
       "recordDate": "2025-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -389,6 +406,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2020-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -409,6 +427,7 @@
       "communityArea": "Auburn Gresham",
       "status": "completed",
       "recordDate": "2020-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -429,6 +448,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2023-10-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -449,6 +469,7 @@
       "communityArea": "Avalon Park",
       "status": "completed",
       "recordDate": "2018-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -469,6 +490,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2021-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -489,6 +511,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2023-04-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -509,6 +532,7 @@
       "communityArea": "Chicago Lawn",
       "status": "completed",
       "recordDate": "2023-09-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -529,6 +553,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2025-12-15T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -549,6 +574,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2024-04-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -569,6 +595,7 @@
       "communityArea": "Kenwood",
       "status": "completed",
       "recordDate": "2023-12-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -589,6 +616,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2025-08-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -609,6 +637,7 @@
       "communityArea": "Woodlawn",
       "status": "completed",
       "recordDate": "2024-04-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -629,6 +658,7 @@
       "communityArea": "Chicago Lawn",
       "status": "completed",
       "recordDate": "2024-07-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -649,6 +679,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2024-06-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -669,6 +700,7 @@
       "communityArea": "Pullman",
       "status": "completed",
       "recordDate": "2023-12-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -689,6 +721,7 @@
       "communityArea": "Roseland",
       "status": "completed",
       "recordDate": "2022-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -709,6 +742,7 @@
       "communityArea": "Kenwood",
       "status": "completed",
       "recordDate": "2021-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -729,6 +763,7 @@
       "communityArea": "Brighton Park",
       "status": "completed",
       "recordDate": "2023-04-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -749,6 +784,7 @@
       "communityArea": "Auburn Gresham",
       "status": "completed",
       "recordDate": "2025-05-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -769,6 +805,7 @@
       "communityArea": "Avalon Park",
       "status": "completed",
       "recordDate": "2020-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -789,6 +826,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2025-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -809,6 +847,7 @@
       "communityArea": "West Garfield Park",
       "status": "completed",
       "recordDate": "2024-12-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -829,6 +868,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2025-07-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -849,6 +889,7 @@
       "communityArea": "Woodlawn",
       "status": "completed",
       "recordDate": "2022-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -869,6 +910,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2021-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -889,6 +931,7 @@
       "communityArea": "South Shore",
       "status": "completed",
       "recordDate": "2024-02-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -909,6 +952,7 @@
       "communityArea": "Washington Park",
       "status": "completed",
       "recordDate": "2023-11-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -929,6 +973,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2024-12-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -949,6 +994,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2022-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -969,6 +1015,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2024-01-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -989,6 +1036,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2022-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1009,6 +1057,7 @@
       "communityArea": "Auburn Gresham",
       "status": "completed",
       "recordDate": "2025-10-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1029,6 +1078,7 @@
       "communityArea": "Chicago Lawn",
       "status": "completed",
       "recordDate": "2023-08-15T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1049,6 +1099,7 @@
       "communityArea": "Washington Park",
       "status": "completed",
       "recordDate": "2024-07-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1069,6 +1120,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2024-08-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1089,6 +1141,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2023-09-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1109,6 +1162,7 @@
       "communityArea": "Avalon Park",
       "status": "completed",
       "recordDate": "2020-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1129,6 +1183,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2021-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1149,6 +1204,7 @@
       "communityArea": "East Garfield Park",
       "status": "completed",
       "recordDate": "2023-01-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1169,6 +1225,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2022-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1189,6 +1246,7 @@
       "communityArea": "Chicago Lawn",
       "status": "completed",
       "recordDate": "2023-04-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1209,6 +1267,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2021-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1229,6 +1288,7 @@
       "communityArea": "Greater Grand Crossing",
       "status": "completed",
       "recordDate": "2024-01-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1249,6 +1309,7 @@
       "communityArea": "Auburn Gresham",
       "status": "completed",
       "recordDate": "2022-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1269,6 +1330,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2022-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1289,6 +1351,7 @@
       "communityArea": "Washington Heights",
       "status": "completed",
       "recordDate": "2023-04-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1309,6 +1372,7 @@
       "communityArea": "Woodlawn",
       "status": "completed",
       "recordDate": "2020-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1329,6 +1393,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1349,6 +1414,7 @@
       "communityArea": "Calumet Heights",
       "status": "completed",
       "recordDate": "2021-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1369,6 +1435,7 @@
       "communityArea": "Gage Park",
       "status": "completed",
       "recordDate": "2019-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1389,6 +1456,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2023-06-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1409,6 +1477,7 @@
       "communityArea": "Auburn Gresham",
       "status": "completed",
       "recordDate": "2024-04-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1429,6 +1498,7 @@
       "communityArea": "Calumet Heights",
       "status": "completed",
       "recordDate": "2022-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1449,6 +1519,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2024-05-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1469,6 +1540,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2021-08-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1489,6 +1561,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2024-07-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1509,6 +1582,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2023-07-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1529,6 +1603,7 @@
       "communityArea": "West Garfield Park",
       "status": "completed",
       "recordDate": "2024-12-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1549,6 +1624,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2024-10-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1569,6 +1645,7 @@
       "communityArea": "Greater Grand Crossing",
       "status": "completed",
       "recordDate": "2025-08-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1589,6 +1666,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2019-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1609,6 +1687,7 @@
       "communityArea": "South Shore",
       "status": "completed",
       "recordDate": "2022-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1629,6 +1708,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2025-03-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1649,6 +1729,7 @@
       "communityArea": "Chicago Lawn",
       "status": "completed",
       "recordDate": "2023-02-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1669,6 +1750,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2024-08-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1689,6 +1771,7 @@
       "communityArea": "South Shore",
       "status": "completed",
       "recordDate": "2022-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1709,6 +1792,7 @@
       "communityArea": "West Englewood",
       "status": "completed",
       "recordDate": "2022-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1729,6 +1813,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2025-11-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1749,6 +1834,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2022-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1769,6 +1855,7 @@
       "communityArea": "Washington Park",
       "status": "completed",
       "recordDate": "2025-01-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1789,6 +1876,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2020-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1809,6 +1897,7 @@
       "communityArea": "Douglas",
       "status": "completed",
       "recordDate": "2022-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1829,6 +1918,7 @@
       "communityArea": "Avalon Park",
       "status": "completed",
       "recordDate": "2023-10-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1849,6 +1939,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2023-09-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1869,6 +1960,7 @@
       "communityArea": "Calumet Heights",
       "status": "completed",
       "recordDate": "2024-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1889,6 +1981,7 @@
       "communityArea": "Avalon Park",
       "status": "completed",
       "recordDate": "2019-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1909,6 +2002,7 @@
       "communityArea": "Englewood",
       "status": "completed",
       "recordDate": "2021-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1929,6 +2023,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2024-04-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1949,6 +2044,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2022-03-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1969,6 +2065,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2023-02-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -1989,6 +2086,7 @@
       "communityArea": "West Pullman",
       "status": "completed",
       "recordDate": "2022-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2009,6 +2107,7 @@
       "communityArea": "South Shore",
       "status": "completed",
       "recordDate": "2021-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2029,6 +2128,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2021-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2049,6 +2149,7 @@
       "communityArea": "Greater Grand Crossing",
       "status": "completed",
       "recordDate": "2020-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2069,6 +2170,7 @@
       "communityArea": "Lower West Side",
       "status": "completed",
       "recordDate": "2024-12-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2089,6 +2191,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2024-07-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2109,6 +2212,7 @@
       "communityArea": "Pullman",
       "status": "completed",
       "recordDate": "2023-01-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2129,6 +2233,7 @@
       "communityArea": "Roseland",
       "status": "completed",
       "recordDate": "2024-01-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2149,6 +2254,7 @@
       "communityArea": "Greater Grand Crossing",
       "status": "completed",
       "recordDate": "2021-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2169,6 +2275,7 @@
       "communityArea": "East Garfield Park",
       "status": "completed",
       "recordDate": "2025-11-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2189,6 +2296,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2019-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2209,6 +2317,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2025-03-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2229,6 +2338,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2017-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2249,6 +2359,7 @@
       "communityArea": "Gage Park",
       "status": "completed",
       "recordDate": "2020-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2269,6 +2380,7 @@
       "communityArea": "Chicago Lawn",
       "status": "completed",
       "recordDate": "2022-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2289,6 +2401,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2022-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2309,6 +2422,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2021-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2329,6 +2443,7 @@
       "communityArea": "Roseland",
       "status": "completed",
       "recordDate": "2021-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2349,6 +2464,7 @@
       "communityArea": "Morgan Park",
       "status": "completed",
       "recordDate": "2019-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2369,6 +2485,7 @@
       "communityArea": "South Shore",
       "status": "completed",
       "recordDate": "2019-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2389,6 +2506,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2023-01-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2409,6 +2527,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2023-09-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2429,6 +2548,7 @@
       "communityArea": "Pullman",
       "status": "completed",
       "recordDate": "2022-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2449,6 +2569,7 @@
       "communityArea": "Roseland",
       "status": "completed",
       "recordDate": "2021-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2469,6 +2590,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2019-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2489,6 +2611,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2024-07-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2509,6 +2632,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2025-12-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2529,6 +2653,7 @@
       "communityArea": "Auburn Gresham",
       "status": "completed",
       "recordDate": "2024-08-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2549,6 +2674,7 @@
       "communityArea": "Chicago Lawn",
       "status": "completed",
       "recordDate": "2021-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2569,6 +2695,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2019-09-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2589,6 +2716,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2022-02-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2609,6 +2737,7 @@
       "communityArea": "Bronzeville",
       "status": "awarded",
       "recordDate": "2018-10-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2629,6 +2758,7 @@
       "communityArea": "North Lawndale",
       "status": "awarded",
       "recordDate": "2020-09-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2649,6 +2779,7 @@
       "communityArea": "Calumet Heights",
       "status": "awarded",
       "recordDate": "2021-05-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2669,6 +2800,7 @@
       "communityArea": "West Englewood",
       "status": "completed",
       "recordDate": "2022-05-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2689,6 +2821,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2020-03-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2709,6 +2842,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2020-05-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2729,6 +2863,7 @@
       "communityArea": "Chatham",
       "status": "completed",
       "recordDate": "2021-03-15T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2749,6 +2884,7 @@
       "communityArea": "Chatham",
       "status": "completed",
       "recordDate": "2021-05-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2769,6 +2905,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2021-09-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2789,6 +2926,7 @@
       "communityArea": "Ashburn",
       "status": "completed",
       "recordDate": "2022-02-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2809,6 +2947,7 @@
       "communityArea": "West Englewood",
       "status": "completed",
       "recordDate": "2022-03-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2829,6 +2968,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2022-07-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2849,6 +2989,7 @@
       "communityArea": "Archer Heights",
       "status": "completed",
       "recordDate": "2023-01-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2869,6 +3010,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2023-01-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2889,6 +3031,7 @@
       "communityArea": "Chatham",
       "status": "completed",
       "recordDate": "2023-03-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2909,6 +3052,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2023-04-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2929,6 +3073,7 @@
       "communityArea": "Uptown",
       "status": "completed",
       "recordDate": "2023-08-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2949,6 +3094,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2023-12-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2969,6 +3115,7 @@
       "communityArea": "Hyde Park",
       "status": "completed",
       "recordDate": "2024-03-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -2989,6 +3136,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2024-09-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3009,6 +3157,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2024-12-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3029,6 +3178,7 @@
       "communityArea": "West Lawn",
       "status": "completed",
       "recordDate": "2025-02-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3049,6 +3199,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-03-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3069,6 +3220,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2025-03-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3089,6 +3241,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2025-04-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3109,6 +3262,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2025-05-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3129,6 +3283,7 @@
       "communityArea": "DOUGLAS",
       "status": "completed",
       "recordDate": "2025-09-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3149,6 +3304,7 @@
       "communityArea": "HUMBOLDT PARK",
       "status": "completed",
       "recordDate": "2025-08-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3169,6 +3325,7 @@
       "communityArea": "WEST TOWN",
       "status": "completed",
       "recordDate": "2025-09-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3189,6 +3346,7 @@
       "communityArea": "IRVING PARK",
       "status": "completed",
       "recordDate": "2025-10-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3209,6 +3367,7 @@
       "communityArea": "ALBANY PARK",
       "status": "completed",
       "recordDate": "2025-12-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3229,6 +3388,7 @@
       "communityArea": "ASHBURN",
       "status": "completed",
       "recordDate": "2026-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3249,6 +3409,7 @@
       "communityArea": "JEFFERSON PARK",
       "status": "completed",
       "recordDate": "2026-06-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3269,6 +3430,7 @@
       "communityArea": "EAST GARFIELD PARK",
       "status": "completed",
       "recordDate": "2026-04-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3289,6 +3451,7 @@
       "communityArea": "EAST GARFIELD PARK",
       "status": "completed",
       "recordDate": "2025-09-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3309,6 +3472,7 @@
       "communityArea": "WEST TOWN",
       "status": "completed",
       "recordDate": "2026-01-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3329,6 +3493,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-08-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3349,6 +3514,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2023-08-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3369,6 +3535,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2021-03-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3389,6 +3556,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3409,6 +3577,7 @@
       "communityArea": "Lower West Side",
       "status": "completed",
       "recordDate": "2023-01-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3429,6 +3598,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2025-04-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3449,6 +3619,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2024-10-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3469,6 +3640,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2020-12-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3489,6 +3661,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-01-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3509,6 +3682,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2024-06-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3529,6 +3703,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2023-10-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3549,6 +3724,7 @@
       "communityArea": "Clearing",
       "status": "completed",
       "recordDate": "2023-02-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3569,6 +3745,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2023-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3589,6 +3766,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2024-04-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3609,6 +3787,7 @@
       "communityArea": "Beverly",
       "status": "completed",
       "recordDate": "2023-01-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3629,6 +3808,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2024-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3649,6 +3829,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2024-02-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3669,6 +3850,7 @@
       "communityArea": "West Garfield Park",
       "status": "completed",
       "recordDate": "2020-10-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3689,6 +3871,7 @@
       "communityArea": "LOGAN SQUARE",
       "status": "completed",
       "recordDate": "2026-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3709,6 +3892,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2023-04-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3729,6 +3913,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2025-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3749,6 +3934,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2023-12-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3769,6 +3955,7 @@
       "communityArea": "ENGLEWOOD",
       "status": "completed",
       "recordDate": "2026-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3789,6 +3976,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-03-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3809,6 +3997,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-02-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3829,6 +4018,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2023-08-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3849,6 +4039,7 @@
       "communityArea": "SOUTH CHICAGO",
       "status": "completed",
       "recordDate": "2026-02-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3869,6 +4060,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-01-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3889,6 +4081,7 @@
       "communityArea": "Irving Park",
       "status": "completed",
       "recordDate": "2023-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3909,6 +4102,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2020-01-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3929,6 +4123,7 @@
       "communityArea": "Avalon Park",
       "status": "completed",
       "recordDate": "2024-01-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3949,6 +4144,7 @@
       "communityArea": "WOODLAWN",
       "status": "completed",
       "recordDate": "2026-06-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3969,6 +4165,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2021-05-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -3989,6 +4186,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-02-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4009,6 +4207,7 @@
       "communityArea": "West Garfield Park",
       "status": "completed",
       "recordDate": "2021-05-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4029,6 +4228,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2025-03-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4049,6 +4249,7 @@
       "communityArea": "Garfield Ridge",
       "status": "completed",
       "recordDate": "2024-04-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4069,6 +4270,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2022-11-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4089,6 +4291,7 @@
       "communityArea": "UPTOWN",
       "status": "completed",
       "recordDate": "2025-12-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4109,6 +4312,7 @@
       "communityArea": "West Garfield Park",
       "status": "completed",
       "recordDate": "2021-01-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4129,6 +4333,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2023-06-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4149,6 +4354,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2022-10-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4169,6 +4375,7 @@
       "communityArea": "Lower West Side",
       "status": "completed",
       "recordDate": "2020-10-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4189,6 +4396,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2020-06-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4209,6 +4417,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2021-11-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4229,6 +4438,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2024-10-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4249,6 +4459,7 @@
       "communityArea": "AVONDALE",
       "status": "completed",
       "recordDate": "2025-11-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4269,6 +4480,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2024-07-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4289,6 +4501,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2025-06-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4309,6 +4522,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2023-08-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4329,6 +4543,7 @@
       "communityArea": "Woodlawn",
       "status": "completed",
       "recordDate": "2024-12-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4349,6 +4564,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2023-12-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4369,6 +4585,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2024-04-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4389,6 +4606,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2022-01-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4409,6 +4627,7 @@
       "communityArea": "Washington Park",
       "status": "completed",
       "recordDate": "2020-04-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4429,6 +4648,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2024-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4449,6 +4669,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2025-06-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4469,6 +4690,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2021-08-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4489,6 +4711,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2023-02-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4509,6 +4732,7 @@
       "communityArea": "WEST GARFIELD PARK",
       "status": "completed",
       "recordDate": "2026-02-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4529,6 +4753,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2022-07-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4549,6 +4774,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2024-09-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4569,6 +4795,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2020-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4589,6 +4816,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2024-08-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4609,6 +4837,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2024-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4629,6 +4858,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2020-05-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4649,6 +4879,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2020-05-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4669,6 +4900,7 @@
       "communityArea": "Ashburn",
       "status": "completed",
       "recordDate": "2023-12-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4689,6 +4921,7 @@
       "communityArea": "West Lawn",
       "status": "completed",
       "recordDate": "2025-02-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4709,6 +4942,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2021-04-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4729,6 +4963,7 @@
       "communityArea": "EAST GARFIELD PARK",
       "status": "completed",
       "recordDate": "2025-10-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4749,6 +4984,7 @@
       "communityArea": "West Lawn",
       "status": "completed",
       "recordDate": "2025-01-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4769,6 +5005,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2023-12-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4789,6 +5026,7 @@
       "communityArea": "Brighton Park",
       "status": "completed",
       "recordDate": "2022-11-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4809,6 +5047,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2025-05-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4829,6 +5068,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2023-10-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4849,6 +5089,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2021-01-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4869,6 +5110,7 @@
       "communityArea": "Uptown",
       "status": "completed",
       "recordDate": "2020-02-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4889,6 +5131,7 @@
       "communityArea": "Roseland",
       "status": "completed",
       "recordDate": "2023-08-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4909,6 +5152,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2023-11-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4929,6 +5173,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2023-09-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4949,6 +5194,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2023-09-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4969,6 +5215,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2020-02-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -4989,6 +5236,7 @@
       "communityArea": "Clearing",
       "status": "completed",
       "recordDate": "2023-05-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5009,6 +5257,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2021-02-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5029,6 +5278,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2022-11-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5049,6 +5299,7 @@
       "communityArea": "Englewood",
       "status": "completed",
       "recordDate": "2024-04-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5069,6 +5320,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2024-12-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5089,6 +5341,7 @@
       "communityArea": "Clearing",
       "status": "completed",
       "recordDate": "2021-12-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5109,6 +5362,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2020-07-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5129,6 +5383,7 @@
       "communityArea": "EDGEWATER",
       "status": "completed",
       "recordDate": "2026-03-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5149,6 +5404,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2023-01-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5169,6 +5425,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2023-02-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5189,6 +5446,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2024-05-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5209,6 +5467,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-04-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5229,6 +5488,7 @@
       "communityArea": "Beverly",
       "status": "completed",
       "recordDate": "2023-12-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5249,6 +5509,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2022-11-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5269,6 +5530,7 @@
       "communityArea": "Hyde Park",
       "status": "completed",
       "recordDate": "2023-10-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5289,6 +5551,7 @@
       "communityArea": "AVALON PARK",
       "status": "completed",
       "recordDate": "2025-08-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5309,6 +5572,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2024-12-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5329,6 +5593,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2021-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5349,6 +5614,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2021-07-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5369,6 +5635,7 @@
       "communityArea": "West Englewood",
       "status": "completed",
       "recordDate": "2024-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5389,6 +5656,7 @@
       "communityArea": "WEST TOWN",
       "status": "completed",
       "recordDate": "2025-09-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5409,6 +5677,7 @@
       "communityArea": "Washington Park",
       "status": "completed",
       "recordDate": "2024-09-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5429,6 +5698,7 @@
       "communityArea": "Washington Park",
       "status": "completed",
       "recordDate": "2020-04-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5449,6 +5719,7 @@
       "communityArea": "Irving Park",
       "status": "completed",
       "recordDate": "2022-02-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5469,6 +5740,7 @@
       "communityArea": "Uptown",
       "status": "completed",
       "recordDate": "2023-01-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5489,6 +5761,7 @@
       "communityArea": "West Garfield Park",
       "status": "completed",
       "recordDate": "2024-03-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5509,6 +5782,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2023-08-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5529,6 +5803,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2023-03-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5549,6 +5824,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2024-08-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5569,6 +5845,7 @@
       "communityArea": "AVONDALE",
       "status": "completed",
       "recordDate": "2025-10-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5589,6 +5866,7 @@
       "communityArea": "NEAR WEST SIDE",
       "status": "completed",
       "recordDate": "2026-03-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5609,6 +5887,7 @@
       "communityArea": "NEAR SOUTH SIDE",
       "status": "completed",
       "recordDate": "2026-03-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5629,6 +5908,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2024-01-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5649,6 +5929,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2020-08-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5669,6 +5950,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2020-03-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5689,6 +5971,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2021-03-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5709,6 +5992,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2024-10-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5729,6 +6013,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-02-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5749,6 +6034,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2023-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5769,6 +6055,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5789,6 +6076,7 @@
       "communityArea": "BRIDGEPORT",
       "status": "completed",
       "recordDate": "2026-03-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5809,6 +6097,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2020-10-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5829,6 +6118,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2023-05-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5849,6 +6139,7 @@
       "communityArea": "Garfield Ridge",
       "status": "completed",
       "recordDate": "2023-05-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5869,6 +6160,7 @@
       "communityArea": "West Garfield Park",
       "status": "completed",
       "recordDate": "2025-03-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5889,6 +6181,7 @@
       "communityArea": "Roseland",
       "status": "completed",
       "recordDate": "2023-01-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5909,6 +6202,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2024-04-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5929,6 +6223,7 @@
       "communityArea": "AUSTIN",
       "status": "completed",
       "recordDate": "2026-06-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5949,6 +6244,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-10-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5969,6 +6265,7 @@
       "communityArea": "Uptown",
       "status": "completed",
       "recordDate": "2024-10-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -5989,6 +6286,7 @@
       "communityArea": "Gage Park",
       "status": "completed",
       "recordDate": "2024-03-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6009,6 +6307,7 @@
       "communityArea": "West Elsdon",
       "status": "completed",
       "recordDate": "2025-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6029,6 +6328,7 @@
       "communityArea": "Garfield Ridge",
       "status": "completed",
       "recordDate": "2024-09-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6049,6 +6349,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2023-03-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6069,6 +6370,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6089,6 +6391,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2024-01-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6109,6 +6412,7 @@
       "communityArea": "West Pullman",
       "status": "completed",
       "recordDate": "2023-10-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6129,6 +6433,7 @@
       "communityArea": "NORTH LAWNDALE",
       "status": "completed",
       "recordDate": "2025-12-15T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6149,6 +6454,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2023-09-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6169,6 +6475,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2022-11-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6189,6 +6496,7 @@
       "communityArea": "Lower West Side",
       "status": "completed",
       "recordDate": "2020-01-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6209,6 +6517,7 @@
       "communityArea": "Burnside",
       "status": "completed",
       "recordDate": "2025-05-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6229,6 +6538,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2024-07-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6249,6 +6559,7 @@
       "communityArea": "LOGAN SQUARE",
       "status": "completed",
       "recordDate": "2026-04-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6269,6 +6580,7 @@
       "communityArea": "Beverly",
       "status": "completed",
       "recordDate": "2025-02-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6289,6 +6601,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2024-01-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6309,6 +6622,7 @@
       "communityArea": "Kenwood",
       "status": "completed",
       "recordDate": "2021-01-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6329,6 +6643,7 @@
       "communityArea": "AVONDALE",
       "status": "completed",
       "recordDate": "2026-01-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6349,6 +6664,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2021-01-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6369,6 +6685,7 @@
       "communityArea": "Hyde Park",
       "status": "completed",
       "recordDate": "2024-04-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6389,6 +6706,7 @@
       "communityArea": "Woodlawn",
       "status": "completed",
       "recordDate": "2023-05-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6409,6 +6727,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2020-05-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6429,6 +6748,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2024-08-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6449,6 +6769,7 @@
       "communityArea": "LOGAN SQUARE",
       "status": "completed",
       "recordDate": "2026-02-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6469,6 +6790,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2020-12-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6489,6 +6811,7 @@
       "communityArea": "LOOP",
       "status": "completed",
       "recordDate": "2025-07-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6509,6 +6832,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2025-03-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6529,6 +6853,7 @@
       "communityArea": "Forest Glen",
       "status": "completed",
       "recordDate": "2024-12-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6549,6 +6874,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2023-12-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6569,6 +6895,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2021-02-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6589,6 +6916,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6609,6 +6937,7 @@
       "communityArea": "Morgan Park",
       "status": "completed",
       "recordDate": "2022-08-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6629,6 +6958,7 @@
       "communityArea": "LOGAN SQUARE",
       "status": "completed",
       "recordDate": "2026-01-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6649,6 +6979,7 @@
       "communityArea": "West Lawn",
       "status": "completed",
       "recordDate": "2025-02-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6669,6 +7000,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2021-05-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6689,6 +7021,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2022-02-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6709,6 +7042,7 @@
       "communityArea": "Roseland",
       "status": "completed",
       "recordDate": "2023-07-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6729,6 +7063,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-01-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6749,6 +7084,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2024-07-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6769,6 +7105,7 @@
       "communityArea": "McKinley Park",
       "status": "completed",
       "recordDate": "2020-03-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6789,6 +7126,7 @@
       "communityArea": "Rogers Park",
       "status": "completed",
       "recordDate": "2021-05-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6809,6 +7147,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2023-10-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6829,6 +7168,7 @@
       "communityArea": "Morgan Park",
       "status": "completed",
       "recordDate": "2021-04-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6849,6 +7189,7 @@
       "communityArea": "AUSTIN",
       "status": "completed",
       "recordDate": "2026-06-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6869,6 +7210,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-10-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6889,6 +7231,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2025-04-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6909,6 +7252,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2025-06-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6929,6 +7273,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2021-09-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6949,6 +7294,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-08-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6969,6 +7315,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2023-01-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -6989,6 +7336,7 @@
       "communityArea": "East Garfield Park",
       "status": "completed",
       "recordDate": "2020-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7009,6 +7357,7 @@
       "communityArea": "Greater Grand Crossing",
       "status": "completed",
       "recordDate": "2025-06-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7029,6 +7378,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2024-10-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7049,6 +7399,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2025-04-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7069,6 +7420,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2024-09-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7089,6 +7441,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2023-08-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7109,6 +7462,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2024-01-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7129,6 +7483,7 @@
       "communityArea": "Ashburn",
       "status": "completed",
       "recordDate": "2023-02-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7149,6 +7504,7 @@
       "communityArea": "Uptown",
       "status": "completed",
       "recordDate": "2023-12-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7169,6 +7525,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2024-03-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7189,6 +7546,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2024-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7209,6 +7567,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2020-10-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7229,6 +7588,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2025-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7249,6 +7609,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2023-01-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7269,6 +7630,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2020-02-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7289,6 +7651,7 @@
       "communityArea": "GRAND BOULEVARD",
       "status": "completed",
       "recordDate": "2026-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7309,6 +7672,7 @@
       "communityArea": "Englewood",
       "status": "completed",
       "recordDate": "2023-02-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7329,6 +7693,7 @@
       "communityArea": "Mount Greenwood",
       "status": "completed",
       "recordDate": "2022-10-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7349,6 +7714,7 @@
       "communityArea": "SOUTH SHORE",
       "status": "completed",
       "recordDate": "2025-10-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7369,6 +7735,7 @@
       "communityArea": "Douglas",
       "status": "completed",
       "recordDate": "2020-06-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7389,6 +7756,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2023-08-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7409,6 +7777,7 @@
       "communityArea": "HUMBOLDT PARK",
       "status": "completed",
       "recordDate": "2026-01-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7429,6 +7798,7 @@
       "communityArea": "WEST TOWN",
       "status": "completed",
       "recordDate": "2026-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7449,6 +7819,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2020-03-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7469,6 +7840,7 @@
       "communityArea": "WEST TOWN",
       "status": "completed",
       "recordDate": "2026-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7489,6 +7861,7 @@
       "communityArea": "West Elsdon",
       "status": "completed",
       "recordDate": "2025-02-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7509,6 +7882,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2021-07-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7529,6 +7903,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2023-12-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7549,6 +7924,7 @@
       "communityArea": "ARCHER HEIGHTS",
       "status": "completed",
       "recordDate": "2026-04-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7569,6 +7945,7 @@
       "communityArea": "Beverly",
       "status": "completed",
       "recordDate": "2024-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7589,6 +7966,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2024-04-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7609,6 +7987,7 @@
       "communityArea": "ENGLEWOOD",
       "status": "completed",
       "recordDate": "2025-07-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7629,6 +8008,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2022-01-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7649,6 +8029,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2025-02-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7669,6 +8050,7 @@
       "communityArea": "West Englewood",
       "status": "completed",
       "recordDate": "2023-04-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7689,6 +8071,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2022-02-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7709,6 +8092,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2022-11-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7729,6 +8113,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2024-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7749,6 +8134,7 @@
       "communityArea": "West Pullman",
       "status": "completed",
       "recordDate": "2024-04-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7769,6 +8155,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2021-03-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7789,6 +8176,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2020-10-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7809,6 +8197,7 @@
       "communityArea": "Calumet",
       "status": "completed",
       "recordDate": "2021-11-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7829,6 +8218,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2020-10-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7849,6 +8239,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2024-09-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7869,6 +8260,7 @@
       "communityArea": "Woodlawn",
       "status": "completed",
       "recordDate": "2024-03-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7889,6 +8281,7 @@
       "communityArea": "Rogers Park",
       "status": "completed",
       "recordDate": "2024-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7909,6 +8302,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7929,6 +8323,7 @@
       "communityArea": "Forest Glen",
       "status": "completed",
       "recordDate": "2021-07-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7949,6 +8344,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2025-01-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7969,6 +8365,7 @@
       "communityArea": "Archer Heights",
       "status": "completed",
       "recordDate": "2025-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -7989,6 +8386,7 @@
       "communityArea": "HYDE PARK",
       "status": "completed",
       "recordDate": "2025-12-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8009,6 +8407,7 @@
       "communityArea": "HUMBOLDT PARK",
       "status": "completed",
       "recordDate": "2026-05-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8029,6 +8428,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2021-01-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8049,6 +8449,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2023-12-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8069,6 +8470,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2024-01-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8089,6 +8491,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2023-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8109,6 +8512,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2022-11-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8129,6 +8533,7 @@
       "communityArea": "ENGLEWOOD",
       "status": "completed",
       "recordDate": "2025-10-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8149,6 +8554,7 @@
       "communityArea": "West Lawn",
       "status": "completed",
       "recordDate": "2025-02-15T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8169,6 +8575,7 @@
       "communityArea": "Mckinley Park",
       "status": "completed",
       "recordDate": "2024-12-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8189,6 +8596,7 @@
       "communityArea": "Garfield Ridge",
       "status": "completed",
       "recordDate": "2025-02-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8209,6 +8617,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2023-09-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8229,6 +8638,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2020-04-15T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8249,6 +8659,7 @@
       "communityArea": "South Shore",
       "status": "completed",
       "recordDate": "2020-01-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8269,6 +8680,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2021-07-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8289,6 +8701,7 @@
       "communityArea": "Avalon Park",
       "status": "completed",
       "recordDate": "2023-01-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8309,6 +8722,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2022-03-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8329,6 +8743,7 @@
       "communityArea": "Brighton Park",
       "status": "completed",
       "recordDate": "2025-04-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8349,6 +8764,7 @@
       "communityArea": "PORTAGE PARK",
       "status": "completed",
       "recordDate": "2025-09-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8369,6 +8785,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2023-02-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8389,6 +8806,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2020-08-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8409,6 +8827,7 @@
       "communityArea": "Beverly",
       "status": "completed",
       "recordDate": "2024-04-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8429,6 +8848,7 @@
       "communityArea": "UPTOWN",
       "status": "completed",
       "recordDate": "2026-04-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8449,6 +8869,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2024-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8469,6 +8890,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2024-08-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8489,6 +8911,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2022-11-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8509,6 +8932,7 @@
       "communityArea": "Ashburn",
       "status": "completed",
       "recordDate": "2024-01-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8529,6 +8953,7 @@
       "communityArea": "Rogers Park",
       "status": "completed",
       "recordDate": "2024-04-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8549,6 +8974,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2023-04-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8569,6 +8995,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2023-08-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8589,6 +9016,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2025-01-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8609,6 +9037,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2021-03-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8629,6 +9058,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2021-03-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8649,6 +9079,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2024-04-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8669,6 +9100,7 @@
       "communityArea": "Rogers Park",
       "status": "completed",
       "recordDate": "2025-05-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8689,6 +9121,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2021-12-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8709,6 +9142,7 @@
       "communityArea": "Irving Park",
       "status": "completed",
       "recordDate": "2020-02-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8729,6 +9163,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2023-04-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8749,6 +9184,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2024-05-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8769,6 +9205,7 @@
       "communityArea": "UPTOWN",
       "status": "completed",
       "recordDate": "2026-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8789,6 +9226,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2023-01-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8809,6 +9247,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2022-03-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8829,6 +9268,7 @@
       "communityArea": "EDGEWATER",
       "status": "completed",
       "recordDate": "2026-02-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8849,6 +9289,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2024-12-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8869,6 +9310,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2020-12-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8889,6 +9331,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2025-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8909,6 +9352,7 @@
       "communityArea": "East Garfield Park",
       "status": "completed",
       "recordDate": "2021-03-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8929,6 +9373,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2023-03-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8949,6 +9394,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8969,6 +9415,7 @@
       "communityArea": "Ashburn",
       "status": "completed",
       "recordDate": "2023-10-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -8989,6 +9436,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2020-08-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9009,6 +9457,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-02-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9029,6 +9478,7 @@
       "communityArea": "WEST GARFIELD PARK",
       "status": "completed",
       "recordDate": "2026-01-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9049,6 +9499,7 @@
       "communityArea": "NEW CITY",
       "status": "completed",
       "recordDate": "2025-12-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9069,6 +9520,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2020-01-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9089,6 +9541,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2024-06-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9109,6 +9562,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2021-05-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9129,6 +9583,7 @@
       "communityArea": "East Garfield Park",
       "status": "completed",
       "recordDate": "2025-03-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9149,6 +9604,7 @@
       "communityArea": "EAST GARFIELD PARK",
       "status": "completed",
       "recordDate": "2026-03-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9169,6 +9625,7 @@
       "communityArea": "Beverly",
       "status": "completed",
       "recordDate": "2025-06-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9189,6 +9646,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2023-11-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9209,6 +9667,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2020-05-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9229,6 +9688,7 @@
       "communityArea": "Clearing",
       "status": "completed",
       "recordDate": "2024-07-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9249,6 +9709,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2021-05-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9269,6 +9730,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2022-01-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9289,6 +9751,7 @@
       "communityArea": "ROSELAND",
       "status": "completed",
       "recordDate": "2025-10-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9309,6 +9772,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2021-10-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9329,6 +9793,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2020-10-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9349,6 +9814,7 @@
       "communityArea": "South Shore",
       "status": "completed",
       "recordDate": "2021-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9369,6 +9835,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2024-03-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9389,6 +9856,7 @@
       "communityArea": "ALBANY PARK",
       "status": "completed",
       "recordDate": "2026-04-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9409,6 +9877,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2024-10-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9429,6 +9898,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2025-06-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9449,6 +9919,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2021-08-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9469,6 +9940,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2024-01-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9489,6 +9961,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2024-10-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9509,6 +9982,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2020-03-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9529,6 +10003,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2023-02-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9549,6 +10024,7 @@
       "communityArea": "Near South Side",
       "status": "completed",
       "recordDate": "2024-12-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9569,6 +10045,7 @@
       "communityArea": "LOOP",
       "status": "completed",
       "recordDate": "2026-01-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9589,6 +10066,7 @@
       "communityArea": "Roseland",
       "status": "completed",
       "recordDate": "2023-08-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9609,6 +10087,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-01-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9629,6 +10108,7 @@
       "communityArea": "Lower West Side",
       "status": "completed",
       "recordDate": "2022-08-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9649,6 +10129,7 @@
       "communityArea": "BRIDGEPORT",
       "status": "completed",
       "recordDate": "2025-12-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9669,6 +10150,7 @@
       "communityArea": "Forest Glen",
       "status": "completed",
       "recordDate": "2020-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9689,6 +10171,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2021-10-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9709,6 +10192,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2020-05-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9729,6 +10213,7 @@
       "communityArea": "Rogers Park",
       "status": "completed",
       "recordDate": "2024-01-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9749,6 +10234,7 @@
       "communityArea": "Mckinley Park",
       "status": "completed",
       "recordDate": "2024-09-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9769,6 +10255,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2022-11-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9789,6 +10276,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2021-01-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9809,6 +10297,7 @@
       "communityArea": "Mount Greenwood",
       "status": "completed",
       "recordDate": "2024-03-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9829,6 +10318,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2025-04-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9849,6 +10339,7 @@
       "communityArea": "AVONDALE",
       "status": "completed",
       "recordDate": "2025-08-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9869,6 +10360,7 @@
       "communityArea": "WEST LAWN",
       "status": "completed",
       "recordDate": "2025-12-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9889,6 +10381,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2022-09-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9909,6 +10402,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2020-09-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9929,6 +10423,7 @@
       "communityArea": "LOGAN SQUARE",
       "status": "completed",
       "recordDate": "2026-01-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9949,6 +10444,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2024-10-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9969,6 +10465,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2021-02-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -9989,6 +10486,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2023-05-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10009,6 +10507,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2020-03-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10029,6 +10528,7 @@
       "communityArea": "West Pullman",
       "status": "completed",
       "recordDate": "2021-05-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10049,6 +10549,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2024-06-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10069,6 +10570,7 @@
       "communityArea": "Dunning",
       "status": "completed",
       "recordDate": "2025-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10089,6 +10591,7 @@
       "communityArea": "HUMBOLDT PARK",
       "status": "completed",
       "recordDate": "2025-09-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10109,6 +10612,7 @@
       "communityArea": "Lower West Side",
       "status": "completed",
       "recordDate": "2022-02-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10129,6 +10633,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2023-10-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10149,6 +10654,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2020-03-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10169,6 +10675,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2025-06-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10189,6 +10696,7 @@
       "communityArea": "Calumet Heights",
       "status": "completed",
       "recordDate": "2020-10-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10209,6 +10717,7 @@
       "communityArea": "Garfield Ridge",
       "status": "completed",
       "recordDate": "2025-01-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10229,6 +10738,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2023-04-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10249,6 +10759,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2025-06-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10269,6 +10780,7 @@
       "communityArea": "NEAR WEST SIDE",
       "status": "completed",
       "recordDate": "2026-01-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10289,6 +10801,7 @@
       "communityArea": "West Lawn",
       "status": "completed",
       "recordDate": "2025-02-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10309,6 +10822,7 @@
       "communityArea": "NEW CITY",
       "status": "completed",
       "recordDate": "2026-01-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10329,6 +10843,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2023-10-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10349,6 +10864,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2023-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10369,6 +10885,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-02-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10389,6 +10906,7 @@
       "communityArea": "HERMOSA",
       "status": "completed",
       "recordDate": "2026-05-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10409,6 +10927,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2024-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10429,6 +10948,7 @@
       "communityArea": "WEST TOWN",
       "status": "completed",
       "recordDate": "2026-04-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10449,6 +10969,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2021-04-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10469,6 +10990,7 @@
       "communityArea": "Clearing",
       "status": "completed",
       "recordDate": "2025-03-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10489,6 +11011,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2022-02-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10509,6 +11032,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2022-11-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10529,6 +11053,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2020-11-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10549,6 +11074,7 @@
       "communityArea": "WEST TOWN",
       "status": "completed",
       "recordDate": "2026-01-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10569,6 +11095,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2024-04-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10589,6 +11116,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2025-01-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10609,6 +11137,7 @@
       "communityArea": "Chatham",
       "status": "completed",
       "recordDate": "2020-08-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10629,6 +11158,7 @@
       "communityArea": "SOUTH CHICAGO",
       "status": "completed",
       "recordDate": "2025-10-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10649,6 +11179,7 @@
       "communityArea": "LOOP",
       "status": "completed",
       "recordDate": "2025-10-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10669,6 +11200,7 @@
       "communityArea": "Roseland",
       "status": "completed",
       "recordDate": "2023-08-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10689,6 +11221,7 @@
       "communityArea": "East Side",
       "status": "completed",
       "recordDate": "2024-09-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10709,6 +11242,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2025-04-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10729,6 +11263,7 @@
       "communityArea": "Beverly",
       "status": "completed",
       "recordDate": "2025-02-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10749,6 +11284,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2020-03-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10769,6 +11305,7 @@
       "communityArea": "Dunning",
       "status": "completed",
       "recordDate": "2024-06-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10789,6 +11326,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2021-05-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10809,6 +11347,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2023-11-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10829,6 +11368,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2023-05-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10849,6 +11389,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2023-02-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10869,6 +11410,7 @@
       "communityArea": "ROSELAND",
       "status": "completed",
       "recordDate": "2026-04-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10889,6 +11431,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2024-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10909,6 +11452,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2023-01-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10929,6 +11473,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2021-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10949,6 +11494,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2020-10-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10969,6 +11515,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -10989,6 +11536,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2023-02-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11009,6 +11557,7 @@
       "communityArea": "Lower West Side",
       "status": "completed",
       "recordDate": "2023-12-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11029,6 +11578,7 @@
       "communityArea": "UPTOWN",
       "status": "completed",
       "recordDate": "2026-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11049,6 +11599,7 @@
       "communityArea": "UPTOWN",
       "status": "completed",
       "recordDate": "2025-08-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11069,6 +11620,7 @@
       "communityArea": "Beverly",
       "status": "completed",
       "recordDate": "2025-01-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11089,6 +11641,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2025-02-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11109,6 +11662,7 @@
       "communityArea": "Uptown",
       "status": "completed",
       "recordDate": "2020-04-15T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11129,6 +11683,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2025-01-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11149,6 +11704,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2022-03-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11169,6 +11725,7 @@
       "communityArea": "JEFFERSON PARK",
       "status": "completed",
       "recordDate": "2026-04-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11189,6 +11746,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2024-09-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11209,6 +11767,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-02-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11229,6 +11788,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2021-04-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11249,6 +11809,7 @@
       "communityArea": "ROGERS PARK",
       "status": "completed",
       "recordDate": "2025-08-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11269,6 +11830,7 @@
       "communityArea": "HUMBOLDT PARK",
       "status": "completed",
       "recordDate": "2026-01-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11289,6 +11851,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2024-04-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11309,6 +11872,7 @@
       "communityArea": "Irving Park",
       "status": "completed",
       "recordDate": "2023-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11329,6 +11893,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2025-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11349,6 +11914,7 @@
       "communityArea": "Mount Greenwood",
       "status": "completed",
       "recordDate": "2024-08-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11369,6 +11935,7 @@
       "communityArea": "Forest Glen",
       "status": "completed",
       "recordDate": "2020-02-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11389,6 +11956,7 @@
       "communityArea": "Garfield Ridge",
       "status": "completed",
       "recordDate": "2025-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11409,6 +11977,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2024-02-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11429,6 +11998,7 @@
       "communityArea": "BRIDGEPORT",
       "status": "completed",
       "recordDate": "2026-04-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11449,6 +12019,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2023-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11469,6 +12040,7 @@
       "communityArea": "Uptown",
       "status": "completed",
       "recordDate": "2020-07-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11489,6 +12061,7 @@
       "communityArea": "Garfield Ridge",
       "status": "completed",
       "recordDate": "2025-02-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11509,6 +12082,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2023-08-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11529,6 +12103,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2021-12-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11549,6 +12124,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-02-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11569,6 +12145,7 @@
       "communityArea": "Englewood",
       "status": "completed",
       "recordDate": "2023-11-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11589,6 +12166,7 @@
       "communityArea": "West Pullman",
       "status": "completed",
       "recordDate": "2024-11-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11609,6 +12187,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2020-10-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11629,6 +12208,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2025-03-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11649,6 +12229,7 @@
       "communityArea": "WEST RIDGE",
       "status": "completed",
       "recordDate": "2026-02-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11669,6 +12250,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2024-04-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11689,6 +12271,7 @@
       "communityArea": "WASHINGTON HEIGHTS",
       "status": "completed",
       "recordDate": "2026-02-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11709,6 +12292,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2024-02-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11729,6 +12313,7 @@
       "communityArea": "Englewood",
       "status": "completed",
       "recordDate": "2023-03-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11749,6 +12334,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2021-07-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11769,6 +12355,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2021-08-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11789,6 +12376,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2022-11-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11809,6 +12397,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2022-02-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11829,6 +12418,7 @@
       "communityArea": "East Side",
       "status": "completed",
       "recordDate": "2025-01-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11849,6 +12439,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2024-03-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11869,6 +12460,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2020-01-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11889,6 +12481,7 @@
       "communityArea": "HYDE PARK",
       "status": "completed",
       "recordDate": "2025-12-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11909,6 +12502,7 @@
       "communityArea": "Washington Park",
       "status": "completed",
       "recordDate": "2025-06-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11929,6 +12523,7 @@
       "communityArea": "South Shore",
       "status": "completed",
       "recordDate": "2024-08-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11949,6 +12544,7 @@
       "communityArea": "Mount Greenwood",
       "status": "completed",
       "recordDate": "2024-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11969,6 +12565,7 @@
       "communityArea": "ROSELAND",
       "status": "completed",
       "recordDate": "2025-10-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -11989,6 +12586,7 @@
       "communityArea": "West Englewood",
       "status": "completed",
       "recordDate": "2021-10-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12009,6 +12607,7 @@
       "communityArea": "AVONDALE",
       "status": "completed",
       "recordDate": "2025-08-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12029,6 +12628,7 @@
       "communityArea": "Chatham",
       "status": "completed",
       "recordDate": "2021-03-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12049,6 +12649,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2025-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12069,6 +12670,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2022-11-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12089,6 +12691,7 @@
       "communityArea": "Near South Side",
       "status": "completed",
       "recordDate": "2024-04-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12109,6 +12712,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2021-03-15T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12129,6 +12733,7 @@
       "communityArea": "HUMBOLDT PARK",
       "status": "completed",
       "recordDate": "2026-01-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12149,6 +12754,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2023-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12169,6 +12775,7 @@
       "communityArea": "Hyde Park",
       "status": "completed",
       "recordDate": "2023-07-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12189,6 +12796,7 @@
       "communityArea": "East Garfield Park",
       "status": "completed",
       "recordDate": "2020-03-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12209,6 +12817,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2022-09-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12229,6 +12838,7 @@
       "communityArea": "HYDE PARK",
       "status": "completed",
       "recordDate": "2026-01-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12249,6 +12859,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2024-04-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12269,6 +12880,7 @@
       "communityArea": "Irving Park",
       "status": "completed",
       "recordDate": "2023-02-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12289,6 +12901,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2022-01-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12309,6 +12922,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2023-10-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12329,6 +12943,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-06-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12349,6 +12964,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2020-10-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12369,6 +12985,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12389,6 +13006,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2024-12-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12409,6 +13027,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2021-07-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12429,6 +13048,7 @@
       "communityArea": "NORTH LAWNDALE",
       "status": "completed",
       "recordDate": "2026-05-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12449,6 +13069,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2024-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12469,6 +13090,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2022-02-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12489,6 +13111,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2023-10-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12509,6 +13132,7 @@
       "communityArea": "Archer Heights",
       "status": "completed",
       "recordDate": "2023-03-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12529,6 +13153,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2025-03-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12549,6 +13174,7 @@
       "communityArea": "Mount Greenwood",
       "status": "completed",
       "recordDate": "2024-04-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12569,6 +13195,7 @@
       "communityArea": "Archer Heights",
       "status": "completed",
       "recordDate": "2022-11-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12589,6 +13216,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2021-01-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12609,6 +13237,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2024-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12629,6 +13258,7 @@
       "communityArea": "Loop",
       "status": "completed",
       "recordDate": "2025-06-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12649,6 +13279,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2024-04-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12669,6 +13300,7 @@
       "communityArea": "Lower West Side",
       "status": "completed",
       "recordDate": "2021-09-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12689,6 +13321,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-09-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12709,6 +13342,7 @@
       "communityArea": "Austin Commercial",
       "status": "completed",
       "recordDate": "2022-11-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12729,6 +13363,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2024-10-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12749,6 +13384,7 @@
       "communityArea": "Mount Greenwood",
       "status": "completed",
       "recordDate": "2024-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12769,6 +13405,7 @@
       "communityArea": "South Lawndale",
       "status": "completed",
       "recordDate": "2023-08-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12789,6 +13426,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2020-01-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12809,6 +13447,7 @@
       "communityArea": "Uptown",
       "status": "completed",
       "recordDate": "2024-08-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12829,6 +13468,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2023-02-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12849,6 +13489,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2023-12-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12869,6 +13510,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-05-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12889,6 +13531,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-02-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12909,6 +13552,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2024-12-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12929,6 +13573,7 @@
       "communityArea": "Mount Greenwood",
       "status": "completed",
       "recordDate": "2024-03-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12949,6 +13594,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2020-10-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12969,6 +13615,7 @@
       "communityArea": "Woodlawn",
       "status": "completed",
       "recordDate": "2024-02-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -12989,6 +13636,7 @@
       "communityArea": "LOOP",
       "status": "completed",
       "recordDate": "2025-12-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13009,6 +13657,7 @@
       "communityArea": "Beverly",
       "status": "completed",
       "recordDate": "2023-01-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13029,6 +13678,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2025-01-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13049,6 +13699,7 @@
       "communityArea": "Englewood",
       "status": "completed",
       "recordDate": "2023-02-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13069,6 +13720,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2023-12-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13089,6 +13741,7 @@
       "communityArea": "West Pullman",
       "status": "completed",
       "recordDate": "2023-03-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13109,6 +13762,7 @@
       "communityArea": "Irving Park",
       "status": "completed",
       "recordDate": "2020-06-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13129,6 +13783,7 @@
       "communityArea": "ASHBURN",
       "status": "completed",
       "recordDate": "2026-02-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13149,6 +13804,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2022-07-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13169,6 +13825,7 @@
       "communityArea": "ASHBURN",
       "status": "completed",
       "recordDate": "2026-01-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13189,6 +13846,7 @@
       "communityArea": "AVALON PARK",
       "status": "completed",
       "recordDate": "2025-12-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13209,6 +13867,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2025-02-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13229,6 +13888,7 @@
       "communityArea": "Beverly",
       "status": "completed",
       "recordDate": "2023-11-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13249,6 +13909,7 @@
       "communityArea": "NORTH LAWNDALE",
       "status": "completed",
       "recordDate": "2026-01-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13269,6 +13930,7 @@
       "communityArea": "Avalon Park",
       "status": "completed",
       "recordDate": "2023-06-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13289,6 +13951,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13309,6 +13972,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2021-05-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13329,6 +13993,7 @@
       "communityArea": "Irving Park",
       "status": "completed",
       "recordDate": "2023-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13349,6 +14014,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2024-06-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13369,6 +14035,7 @@
       "communityArea": "Greater Grand Crossing",
       "status": "completed",
       "recordDate": "2020-05-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13389,6 +14056,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2021-04-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13409,6 +14077,7 @@
       "communityArea": "LOGAN SQUARE",
       "status": "completed",
       "recordDate": "2025-08-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13429,6 +14098,7 @@
       "communityArea": "ALBANY PARK",
       "status": "completed",
       "recordDate": "2025-10-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13449,6 +14119,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2025-02-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13469,6 +14140,7 @@
       "communityArea": "South Chicago",
       "status": "completed",
       "recordDate": "2020-10-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13489,6 +14161,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2020-03-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13509,6 +14182,7 @@
       "communityArea": "UPTOWN",
       "status": "completed",
       "recordDate": "2026-04-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13529,6 +14203,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2023-10-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13549,6 +14224,7 @@
       "communityArea": "Edgewater",
       "status": "completed",
       "recordDate": "2025-05-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13569,6 +14245,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2020-03-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13589,6 +14266,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2024-07-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13609,6 +14287,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2021-08-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13629,6 +14308,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2024-09-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13649,6 +14329,7 @@
       "communityArea": "Belmont Cragin",
       "status": "completed",
       "recordDate": "2023-04-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13669,6 +14350,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2023-01-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13689,6 +14371,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2025-04-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13709,6 +14392,7 @@
       "communityArea": "IRVING PARK",
       "status": "completed",
       "recordDate": "2025-09-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13729,6 +14413,7 @@
       "communityArea": "Uptown",
       "status": "completed",
       "recordDate": "2024-08-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13749,6 +14434,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2023-05-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13769,6 +14455,7 @@
       "communityArea": "East Garfield Park",
       "status": "completed",
       "recordDate": "2020-10-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13789,6 +14476,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-01-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13809,6 +14497,7 @@
       "communityArea": "Dunning",
       "status": "completed",
       "recordDate": "2024-12-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13829,6 +14518,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2022-03-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13849,6 +14539,7 @@
       "communityArea": "HUMBOLDT PARK",
       "status": "completed",
       "recordDate": "2026-01-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13869,6 +14560,7 @@
       "communityArea": "Hermosa",
       "status": "completed",
       "recordDate": "2025-01-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13889,6 +14581,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2021-01-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13909,6 +14602,7 @@
       "communityArea": "NEAR WEST SIDE",
       "status": "completed",
       "recordDate": "2025-07-31T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13929,6 +14623,7 @@
       "communityArea": "AVONDALE",
       "status": "completed",
       "recordDate": "2025-11-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13949,6 +14644,7 @@
       "communityArea": "Jefferson Park",
       "status": "completed",
       "recordDate": "2020-07-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13969,6 +14665,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2025-03-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -13989,6 +14686,7 @@
       "communityArea": "Clearing",
       "status": "completed",
       "recordDate": "2025-02-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14009,6 +14707,7 @@
       "communityArea": "HUMBOLDT PARK",
       "status": "completed",
       "recordDate": "2026-01-20T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14029,6 +14728,7 @@
       "communityArea": "Mckinley Park",
       "status": "completed",
       "recordDate": "2023-10-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14049,6 +14749,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2024-10-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14069,6 +14770,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2024-06-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14089,6 +14791,7 @@
       "communityArea": "Logan Square",
       "status": "completed",
       "recordDate": "2024-09-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14109,6 +14812,7 @@
       "communityArea": "Ashburn",
       "status": "completed",
       "recordDate": "2020-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14129,6 +14833,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2024-07-30T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14149,6 +14854,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2025-06-04T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14169,6 +14875,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2025-03-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14189,6 +14896,7 @@
       "communityArea": "NORTH LAWNDALE",
       "status": "completed",
       "recordDate": "2026-03-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14209,6 +14917,7 @@
       "communityArea": "BURNSIDE",
       "status": "completed",
       "recordDate": "2026-05-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14229,6 +14938,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2020-04-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14249,6 +14959,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-02-11T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14269,6 +14980,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2022-02-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14289,6 +15001,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2021-04-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14309,6 +15022,7 @@
       "communityArea": "Mount Greenwood",
       "status": "completed",
       "recordDate": "2024-02-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14329,6 +15043,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-10-12T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14349,6 +15064,7 @@
       "communityArea": "SOUTH CHICAGO",
       "status": "completed",
       "recordDate": "2025-08-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14369,6 +15085,7 @@
       "communityArea": "EAST SIDE",
       "status": "completed",
       "recordDate": "2026-06-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14389,6 +15106,7 @@
       "communityArea": "WEST ENGLEWOOD",
       "status": "completed",
       "recordDate": "2026-02-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14409,6 +15127,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2020-02-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14429,6 +15148,7 @@
       "communityArea": "West Garfield Park",
       "status": "completed",
       "recordDate": "2024-08-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14449,6 +15169,7 @@
       "communityArea": "Uptown",
       "status": "completed",
       "recordDate": "2024-04-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14469,6 +15190,7 @@
       "communityArea": "Fuller Park",
       "status": "completed",
       "recordDate": "2020-10-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14489,6 +15211,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2025-01-06T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14509,6 +15232,7 @@
       "communityArea": "Avondale",
       "status": "completed",
       "recordDate": "2021-12-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14529,6 +15253,7 @@
       "communityArea": "Garfield Ridge",
       "status": "completed",
       "recordDate": "2023-05-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14549,6 +15274,7 @@
       "communityArea": "ASHBURN",
       "status": "completed",
       "recordDate": "2026-01-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14569,6 +15295,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2024-04-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14589,6 +15316,7 @@
       "communityArea": "Irving Park",
       "status": "completed",
       "recordDate": "2023-01-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14609,6 +15337,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2020-06-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14629,6 +15358,7 @@
       "communityArea": "ALBANY PARK",
       "status": "completed",
       "recordDate": "2025-12-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14649,6 +15379,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-01-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14669,6 +15400,7 @@
       "communityArea": "New City",
       "status": "completed",
       "recordDate": "2022-11-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14689,6 +15421,7 @@
       "communityArea": "Avalon Park",
       "status": "completed",
       "recordDate": "2021-03-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14709,6 +15442,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14729,6 +15463,7 @@
       "communityArea": "Roseland",
       "status": "completed",
       "recordDate": "2023-09-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14749,6 +15484,7 @@
       "communityArea": "WEST TOWN",
       "status": "completed",
       "recordDate": "2026-01-08T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14769,6 +15505,7 @@
       "communityArea": "West Garfield Park",
       "status": "completed",
       "recordDate": "2024-12-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14789,6 +15526,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2024-09-17T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14809,6 +15547,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2023-12-26T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14829,6 +15568,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2025-01-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14849,6 +15589,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2021-07-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14869,6 +15610,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2024-01-19T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14889,6 +15631,7 @@
       "communityArea": "AVALON PARK",
       "status": "completed",
       "recordDate": "2026-05-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14909,6 +15652,7 @@
       "communityArea": "West Elsdon",
       "status": "completed",
       "recordDate": "2025-04-14T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14929,6 +15673,7 @@
       "communityArea": "AVONDALE",
       "status": "completed",
       "recordDate": "2025-08-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14949,6 +15694,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2023-02-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14969,6 +15715,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2024-04-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -14989,6 +15736,7 @@
       "communityArea": "Portage Park",
       "status": "completed",
       "recordDate": "2023-01-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15009,6 +15757,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2024-04-15T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15029,6 +15778,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2023-12-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15049,6 +15799,7 @@
       "communityArea": "Near West Side",
       "status": "completed",
       "recordDate": "2021-03-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15069,6 +15820,7 @@
       "communityArea": "Ashburn",
       "status": "completed",
       "recordDate": "2023-08-29T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15089,6 +15841,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2023-10-18T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15109,6 +15862,7 @@
       "communityArea": "Bridgeport",
       "status": "completed",
       "recordDate": "2023-09-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15129,6 +15883,7 @@
       "communityArea": "Lower West Side",
       "status": "completed",
       "recordDate": "2020-01-21T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15149,6 +15904,7 @@
       "communityArea": "West Ridge",
       "status": "completed",
       "recordDate": "2025-05-16T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15169,6 +15925,7 @@
       "communityArea": "Albany Park",
       "status": "completed",
       "recordDate": "2020-06-10T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15189,6 +15946,7 @@
       "communityArea": "North Park",
       "status": "completed",
       "recordDate": "2024-01-24T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15209,6 +15967,7 @@
       "communityArea": "Uptown",
       "status": "completed",
       "recordDate": "2024-03-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15229,6 +15988,7 @@
       "communityArea": "Grand Boulevard",
       "status": "completed",
       "recordDate": "2024-01-25T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15249,6 +16009,7 @@
       "communityArea": "AUSTIN",
       "status": "completed",
       "recordDate": "2026-01-27T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15269,6 +16030,7 @@
       "communityArea": "Garfield Ridge",
       "status": "completed",
       "recordDate": "2021-06-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15289,6 +16051,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2020-10-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15309,6 +16072,7 @@
       "communityArea": "Lincoln Square",
       "status": "completed",
       "recordDate": "2025-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15329,6 +16093,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2024-09-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15349,6 +16114,7 @@
       "communityArea": "West Town",
       "status": "completed",
       "recordDate": "2023-03-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15369,6 +16135,7 @@
       "communityArea": "Clearing",
       "status": "completed",
       "recordDate": "2025-01-07T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15389,6 +16156,7 @@
       "communityArea": "AUSTIN",
       "status": "completed",
       "recordDate": "2026-04-01T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15409,6 +16177,7 @@
       "communityArea": "Austin",
       "status": "completed",
       "recordDate": "2022-02-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15429,6 +16198,7 @@
       "communityArea": "Ashburn",
       "status": "completed",
       "recordDate": "2023-12-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15449,6 +16219,7 @@
       "communityArea": "AVALON PARK",
       "status": "completed",
       "recordDate": "2025-09-02T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15469,6 +16240,7 @@
       "communityArea": "BELMONT CRAGIN",
       "status": "completed",
       "recordDate": "2025-12-22T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15489,6 +16261,7 @@
       "communityArea": "North Lawndale",
       "status": "completed",
       "recordDate": "2023-01-23T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15509,6 +16282,7 @@
       "communityArea": "North Center",
       "status": "completed",
       "recordDate": "2025-02-13T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15529,6 +16303,7 @@
       "communityArea": "Garfield Ridge",
       "status": "completed",
       "recordDate": "2025-02-03T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15549,6 +16324,7 @@
       "communityArea": "Humboldt Park",
       "status": "completed",
       "recordDate": "2023-12-05T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15569,6 +16345,7 @@
       "communityArea": "UPTOWN",
       "status": "completed",
       "recordDate": "2025-10-09T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -15589,6 +16366,7 @@
       "communityArea": "Ashburn",
       "status": "completed",
       "recordDate": "2023-07-28T00:00:00.000",
+      "recordProvenance": "official",
       "links": []
     },
     {
@@ -205384,6 +206162,7 @@
       "address": "212 E. 79th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205403,6 +206182,7 @@
       "address": "1200 E. 79th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205422,6 +206202,7 @@
       "address": "1642 E. 79th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205441,6 +206222,7 @@
       "address": "1652 E. 79th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205460,6 +206242,7 @@
       "address": "2320 E. 79th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205479,6 +206262,7 @@
       "address": "6948 S. Stony Island Ave.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205498,6 +206282,7 @@
       "address": "352 E. 71st St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205517,6 +206302,7 @@
       "address": "1818 E. 71st St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205536,6 +206322,7 @@
       "address": "1951 E. 71st St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205555,6 +206342,7 @@
       "address": "2100 E. 71st St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205574,6 +206362,7 @@
       "address": "2226 E. 71st St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205593,6 +206382,7 @@
       "address": "1341-53 E. 72nd Street",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205612,6 +206402,7 @@
       "address": "7355 S. Exchange Ave.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205631,25 +206422,7 @@
       "address": "7401 S. South Chicago Ave.",
       "status": "awarded",
       "recordDate": null,
-      "links": []
-    },
-    {
-      "id": "nof-small-corridor-15",
-      "source": "nof-small",
-      "funderType": "government",
-      "funderName": "Neighborhood Opportunity Fund (City of Chicago)",
-      "recipient": "Original Soul Vegetarian",
-      "amountAwarded": 250000,
-      "logLine": null,
-      "year": 2017,
-      "geometry": {
-        "kind": "point",
-        "lat": 41.758264257841,
-        "lng": -87.619802898539
-      },
-      "address": "203 E. 75th St.",
-      "status": "awarded",
-      "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205669,6 +206442,7 @@
       "address": "307 E. 75th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205688,6 +206462,7 @@
       "address": "405 E. 75th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205707,6 +206482,7 @@
       "address": "407 E. 75th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205726,6 +206502,7 @@
       "address": "416-24 E. 75th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205745,6 +206522,7 @@
       "address": "441 E. 75th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205764,6 +206542,7 @@
       "address": "1310 E. 75th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205783,6 +206562,7 @@
       "address": "1701 E. 75th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205802,6 +206582,7 @@
       "address": "2310 E. 75th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205821,6 +206602,7 @@
       "address": "7508 S. Cottage Grove Ave.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205840,6 +206622,7 @@
       "address": "942-44 E. 79th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205859,6 +206642,7 @@
       "address": "8118 S. Stony Island Ave.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205878,6 +206662,7 @@
       "address": "1335 E. 87th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205897,6 +206682,7 @@
       "address": "1718 E. 87th St.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205916,6 +206702,7 @@
       "address": "8734 S. Stony Island Ave.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205935,25 +206722,7 @@
       "address": "9156 S. Stony Island Ave.",
       "status": "awarded",
       "recordDate": null,
-      "links": []
-    },
-    {
-      "id": "nof-small-corridor-34",
-      "source": "nof-small",
-      "funderType": "government",
-      "funderName": "Neighborhood Opportunity Fund (City of Chicago)",
-      "recipient": "Huddle House Diner",
-      "amountAwarded": 1100000,
-      "logLine": null,
-      "year": 2019,
-      "geometry": {
-        "kind": "point",
-        "lat": 41.723312670502,
-        "lng": -87.585069012587
-      },
-      "address": "9401 S. Stony Island Ave.",
-      "status": "awarded",
-      "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     },
     {
@@ -205973,6 +206742,7 @@
       "address": "10658 S. Michigan Ave.",
       "status": "awarded",
       "recordDate": null,
+      "recordProvenance": "partner-list",
       "links": []
     }
   ]
