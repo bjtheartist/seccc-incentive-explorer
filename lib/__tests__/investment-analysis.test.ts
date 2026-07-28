@@ -24,6 +24,7 @@ function rec(over: Partial<CommunityInvestmentRecord> & { id: string }): Communi
     address: "1 MAIN ST",
     status: "completed",
     communityArea: "Alpha",
+    capitalClass: "grant",
     links: [],
     ...over,
   };
@@ -234,6 +235,49 @@ describe("awarded hero is unchanged by megadev announced capital", () => {
     // And it matches the hero with the developments removed entirely.
     const withoutDevs = buildInvestmentIndex(RECORDS, GEN);
     expect(index.citywideTotal).toBe(withoutDevs.citywideTotal);
+  });
+});
+
+// ── NMTC: CA-stamped citywide tax-credit capital appears in CA lists, never plots ─
+
+describe("credit capital in community analysis (NMTC CA-stamped-citywide behavior)", () => {
+  // An NMTC-shaped record: citywide geometry (never plots) but a communityArea
+  // stamped from its 2020 tract centroid, carrying tax-credit capital in creditAmount.
+  const nmtc = (over: Partial<CommunityInvestmentRecord> & { id: string }) =>
+    rec({
+      source: "nmtc",
+      funderType: "government",
+      capitalClass: "tax_credit",
+      amountAwarded: null,
+      creditAmount: 5_000_000,
+      geometry: { kind: "citywide" },
+      status: "awarded",
+      year: 2021,
+      ...over,
+    });
+
+  it("a CA-stamped citywide credit record joins its community's index row without moving the awarded total", () => {
+    const recs: CommunityInvestmentRecord[] = [
+      ...RECORDS,
+      nmtc({ id: "n1", communityArea: "Alpha", creditAmount: 5_000_000 }),
+      nmtc({ id: "n2", communityArea: "Alpha", creditAmount: 3_000_000, year: 2010 }), // pre-2020 but credit is all-time
+    ];
+    const index = buildInvestmentIndex(recs, GEN);
+    const alpha = index.rows.find((r) => r.communityArea === "Alpha")!;
+    // Awarded total for Alpha is UNCHANGED by the credit records (still 350k).
+    expect(alpha.totalAwarded).toBe(350_000);
+    // But their credit capital surfaces in the CA list (all-time: 5M + 3M).
+    expect(alpha.creditCapital).toBe(8_000_000);
+    // The awarded citywide total across communities is unchanged by credit capital.
+    expect(index.citywideTotal).toBe(buildInvestmentIndex(RECORDS, GEN).citywideTotal);
+  });
+
+  it("analyzeCommunityArea surfaces creditCapital (all-time) while keeping totalAwarded grant-only", () => {
+    const recs: CommunityInvestmentRecord[] = [...RECORDS, nmtc({ id: "n1", communityArea: "Alpha", creditAmount: 12_000_000 })];
+    const a = analyzeCommunityArea(recs, "Alpha", GEN)!;
+    expect(a.totalAwarded).toBe(350_000); // grant-only, unchanged
+    expect(a.creditCapital).toBe(12_000_000);
+    expect(findBannedFigureKeys(a)).toEqual([]);
   });
 });
 

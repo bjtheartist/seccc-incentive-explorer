@@ -35,6 +35,7 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  assertNoBannedFigureKeys,
   buildCommunityInvestmentExport,
   dedupeInvestmentRecords,
   INVESTMENT_STATUSES,
@@ -52,6 +53,8 @@ const SCRATCH =
 const INPUT_DIR = process.env.INPUT_DIR || SCRATCH;
 const GEOCODE_CACHE_PATH = join(SCRATCH, "geocode-cache.json");
 const OUT_PATH = join(process.cwd(), "data", "private", "community-investment.json");
+/** Coordinate-less capital CONTEXT (per-district TIF series, CRA/CDFI, state awards). */
+const CONTEXT_OUT_PATH = join(process.cwd(), "data", "private", "capital-context.json");
 /** Committed City of Chicago Community Area boundaries (dataset igwz-8jzy). */
 const CA_GEOJSON_PATH = join(process.cwd(), "public", "data", "community-areas.geojson");
 
@@ -69,6 +72,10 @@ const PROVENANCE_LABELS = [
   "Major private developments — verified/discovered megaprojects w/ announced capital (press coverage, developer filings)",
   "Chicago Prize — Pritzker Traubert Foundation ($10M community-transformation awards + finalist planning grants)",
   "Neighborhood Opportunity Fund corridor awards 2017–2020 — Jim's South Shore list (award records)",
+  "City of Chicago TIF-funded RDA/IGA projects (Socrata mex4-ppfc) — council-authorized TIF assistance ceilings (authorizedAmount, capitalClass tif_subsidy)",
+  "HUD CDBG/HOME activities administered by the City of Chicago — committed federal program allocations (authorizedAmount, capitalClass federal_program)",
+  "Low-Income Housing Tax Credit allocations (HUD LIHTC database) — tax-credit capital (creditAmount, capitalClass tax_credit)",
+  "New Markets Tax Credit QLICIs (CDFI Fund Public Data Release incl. FY2022) — tax-credit capital, community-area stamped from the 2020 census-tract centroid (creditAmount, capitalClass tax_credit)",
   "Address geocoding: U.S. Census Bureau Geocoder (Public_AR_Current benchmark)",
   "Community-area assignment: City of Chicago Community Area boundaries (Chicago Data Portal dataset igwz-8jzy), point-in-polygon",
 ];
@@ -392,6 +399,7 @@ function mapSocrata(
       funderType: SOURCE_FUNDER_TYPE[source],
       funderName,
       recipient,
+      capitalClass: "grant",
       amountAwarded: parseAmount(r.incentive_amount),
       logLine: nullableStr(r.project_description),
       year: effectiveYear ?? null,
@@ -500,6 +508,7 @@ function mapFoundations(rows: Record<string, string>[]): {
       funderType: SOURCE_FUNDER_TYPE.foundation,
       funderName: nullableStr(r.foundation) || "(unnamed foundation)",
       recipient: nullableStr(r.recipient) || "(unnamed recipient)",
+      capitalClass: "grant",
       amountAwarded,
       logLine: nullableStr(r.purpose),
       year: Number.isInteger(Number(r.tax_year)) ? Number(r.tax_year) : null,
@@ -664,6 +673,7 @@ function enrichedDevelopmentRecord(
     funderType: SOURCE_FUNDER_TYPE.development,
     funderName: truncateFunder(mega.lead_developers),
     recipient: name || "(unnamed project)",
+    capitalClass: "grant",
     // amountAwarded is ALWAYS null for a development — a private project cost is
     // NOT a grant awarded to anyone; the announced figure lives in its own field.
     amountAwarded: null,
@@ -748,6 +758,7 @@ function mapDevelopments(
       funderType: SOURCE_FUNDER_TYPE.development,
       funderName: DEVELOPMENT_FUNDER,
       recipient: name || "(unnamed project)",
+      capitalClass: "grant",
       amountAwarded: null, // amount_text is unparsed prose ("$7 billion"); kept in logLine, never coerced
       announcedInvestment: null, // legacy KML rows carry no verified announced figure
       logLine,
@@ -826,6 +837,7 @@ function mapChicagoPrize(rows: Record<string, string>[]): CommunityInvestmentRec
       funderType: SOURCE_FUNDER_TYPE.foundation,
       funderName: PRIZE_FUNDER,
       recipient: nullableStr(r.initiative) || "(unnamed initiative)",
+      capitalClass: "grant",
       amountAwarded: parseAmount(r.amount),
       announcedInvestment: null,
       logLine,
@@ -875,6 +887,415 @@ function validateMegadevJoins(
   if (problems.length > 0) {
     throw new Error(`Megadev join validation failed:\n  - ${problems.join("\n  - ")}`);
   }
+}
+
+// ── Capital-spine sources: TIF / HUD CDBG-HOME / LIHTC / NMTC ─────────────────
+
+const TIF_FUNDER = "Tax Increment Financing (City of Chicago)";
+const HUD_FUNDER = "HUD CDBG/HOME via City of Chicago";
+const LIHTC_FUNDER = "Low-Income Housing Tax Credit (IHDA / HUD)";
+const NMTC_FUNDER = "New Markets Tax Credit (CDFI Fund via CDEs)";
+
+/** Parse a 4-digit calendar year, rejecting the HUD 8888/9999 placeholder codes
+ * and anything that is not a real 4-digit year — returns null (never a guess). */
+function cleanYear(raw: string | null | undefined): number | null {
+  if (!raw) return null;
+  const s = String(raw).trim();
+  if (!/^\d{4}$/.test(s)) return null;
+  const y = Number(s);
+  if (y === 8888 || y === 9999) return null; // HUD placeholder sentinels
+  if (y < 1900 || y > 2100) return null;
+  return y;
+}
+
+/** True when a raw date string parses to a moment at/earlier than `asOf`. */
+function dateIsPast(raw: string | null | undefined, asOf: Date): boolean {
+  if (!raw) return false;
+  const t = Date.parse(String(raw).slice(0, 10));
+  return Number.isFinite(t) && t <= asOf.getTime();
+}
+
+interface TifDrops {
+  noCoords: number;
+}
+
+/**
+ * Map the TIF RDA/IGA point rows (dataset === "rda-iga") to `tif`-source records.
+ * capitalClass "tif_subsidy"; the council-AUTHORIZED assistance ceiling lands in
+ * authorizedAmount (amountAwarded stays null — a TIF ceiling is not a grant to a
+ * business). total_project_cost is context in the logLine only, NEVER a summed
+ * money field. Status: "completed" once a Certificate of Completion (COC) issued,
+ * else "awarded" (CDC-approved). Only rows with real coordinates become points;
+ * the coordinate-less annual-report rows are never records (they feed the context
+ * file). Deterministic.
+ */
+function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentRecord[]; drops: TifDrops } {
+  const out: CommunityInvestmentRecord[] = [];
+  const drops: TifDrops = { noCoords: 0 };
+  let idx = 0;
+  for (const r of rows) {
+    if ((r.dataset || "").trim() !== "rda-iga") continue; // annual-report rows are context, not records
+    const lat = Number(r.lat);
+    const lng = Number(r.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
+      drops.noCoords++;
+      continue;
+    }
+    const district = nullableStr(r.tif_district);
+    const totalCost = parseAmount(r.total_project_cost);
+    const statusText = nullableStr(r.status_text);
+    const logParts = [
+      district ? `TIF district: ${district}` : null,
+      totalCost != null ? `Total project cost $${Math.round(totalCost).toLocaleString("en-US")}` : null,
+      statusText,
+    ].filter(Boolean);
+    out.push({
+      id: `tif-${idx++}`,
+      source: "tif",
+      funderType: SOURCE_FUNDER_TYPE.tif,
+      funderName: TIF_FUNDER,
+      recipient: nullableStr(r.project_name) || nullableStr(r.recipient_or_developer) || "(unnamed project)",
+      capitalClass: "tif_subsidy",
+      amountAwarded: null, // a TIF ceiling is not a grant awarded to a business
+      authorizedAmount: parseAmount(r.authorized_tif_assistance),
+      logLine: logParts.length ? logParts.join(" · ") : null,
+      year: cleanYear(r.approval_or_report_year),
+      geometry: point(lat, lng),
+      address: nullableStr(r.address),
+      status: /COC issued/i.test(statusText || "") ? "completed" : "awarded",
+      recordDate: null,
+      recordProvenance: "official",
+      links: [],
+    });
+  }
+  return { records: out, drops };
+}
+
+interface HudDrops {
+  outOfBbox: number;
+}
+
+/**
+ * Map the geocoded HUD CDBG/HOME activity rows to `cdbg-home`-source records.
+ * capitalClass "federal_program"; funding_amount is a COMMITTED FEDERAL PROGRAM
+ * ALLOCATION, not a discretionary grant award to a named business — it lands in
+ * authorizedAmount, NOT amountAwarded (which stays null). Status is "completed"
+ * once the activity's completion_date is in the past, else "awarded". A row whose
+ * geocode falls OUTSIDE the Chicago bounding box is DROPPED and counted (never
+ * plotted at a misleading suburban/foreign point). Deterministic.
+ */
+function mapHud(
+  rows: Record<string, string>[],
+  asOf: Date,
+): { records: CommunityInvestmentRecord[]; drops: HudDrops } {
+  const out: CommunityInvestmentRecord[] = [];
+  const drops: HudDrops = { outOfBbox: 0 };
+  let idx = 0;
+  for (const r of rows) {
+    const lat = Number(r.lat);
+    const lng = Number(r.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
+      drops.outOfBbox++; // no usable coord → treated as out-of-bounds drop (counted)
+      continue;
+    }
+    if (!inChicagoBounds(lat, lng)) {
+      drops.outOfBbox++;
+      continue;
+    }
+    const program = (r.program || "").trim().toUpperCase();
+    const objective = nullableStr(r.national_objective);
+    const group = nullableStr(r.activity_group);
+    const logParts = [program ? `${program} activity` : null, group, objective].filter(Boolean);
+    out.push({
+      id: `cdbg-home-${idx++}`,
+      source: "cdbg-home",
+      funderType: SOURCE_FUNDER_TYPE["cdbg-home"],
+      funderName: HUD_FUNDER,
+      recipient: nullableStr(r.activity_name) || "(unnamed activity)",
+      capitalClass: "federal_program",
+      amountAwarded: null, // program funding, not a grant award to a business
+      authorizedAmount: parseAmount(r.funding_amount),
+      logLine: logParts.length ? logParts.join(" · ") : null,
+      year: yearOfDate(r.completion_date),
+      geometry: point(lat, lng),
+      address: nullableStr(r.address),
+      status: dateIsPast(r.completion_date, asOf) ? "completed" : "awarded",
+      recordDate: nullableStr(r.completion_date),
+      recordProvenance: "official",
+      links: [],
+    });
+  }
+  return { records: out, drops };
+}
+
+interface LihtcDrops {
+  noCoords: number;
+}
+
+/**
+ * Map the LIHTC rows to `lihtc`-source records. capitalClass "tax_credit"; the
+ * annual_allocated_amount (often blank → null, never coerced) lands in
+ * creditAmount. Year from allocation_year (HUD 8888/9999 sentinels → null).
+ * Status "completed" once placed in service, else "awarded". Only rows with real
+ * coordinates become points. Deterministic.
+ */
+function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmentRecord[]; drops: LihtcDrops } {
+  const out: CommunityInvestmentRecord[] = [];
+  const drops: LihtcDrops = { noCoords: 0 };
+  let idx = 0;
+  for (const r of rows) {
+    const lat = Number(r.lat);
+    const lng = Number(r.lng);
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
+      drops.noCoords++;
+      continue;
+    }
+    const placed = cleanYear(r.placed_in_service_year);
+    const units = nullableStr(r.units_total);
+    const lowInc = nullableStr(r.units_low_income);
+    const logParts = [
+      units ? `${units} units` : null,
+      lowInc ? `${lowInc} low-income` : null,
+      placed != null ? `placed in service ${placed}` : null,
+    ].filter(Boolean);
+    out.push({
+      id: `lihtc-${idx++}`,
+      source: "lihtc",
+      funderType: SOURCE_FUNDER_TYPE.lihtc,
+      funderName: LIHTC_FUNDER,
+      recipient: nullableStr(r.project_name) || "(unnamed project)",
+      capitalClass: "tax_credit",
+      amountAwarded: null,
+      creditAmount: parseAmount(r.annual_allocated_amount),
+      logLine: logParts.length ? logParts.join(" · ") : null,
+      year: cleanYear(r.allocation_year),
+      geometry: point(lat, lng),
+      address: nullableStr(r.address),
+      status: placed != null ? "completed" : "awarded",
+      recordDate: null,
+      recordProvenance: "official",
+      links: [],
+    });
+  }
+  return { records: out, drops };
+}
+
+interface NmtcStamp {
+  stamped: number;
+  unstamped: number;
+}
+
+/**
+ * Map the NMTC rows to `nmtc`-source records. The public NMTC file carries NO
+ * street address, so every record is CITYWIDE geometry and NEVER plots. But each
+ * row DOES carry its project's 2020 census tract, whose gazetteer centroid we
+ * point-in-polygon against the SAME community-area boundaries used for the point
+ * records (assignCommunityArea) to stamp a communityArea — so the record still
+ * appears in that community's credit-capital analysis list without ever being
+ * drawn at the tract centroid (which is not the project's real location).
+ * capitalClass "tax_credit"; project_qlici_amount lands in creditAmount. A row
+ * whose tract has no centroid is kept citywide with NO communityArea (counted).
+ * Deterministic.
+ */
+function mapNmtc(
+  rows: Record<string, string>[],
+  polygons: ReturnType<typeof loadCommunityAreaPolygons>,
+): { records: CommunityInvestmentRecord[]; stamp: NmtcStamp } {
+  const out: CommunityInvestmentRecord[] = [];
+  const stamp: NmtcStamp = { stamped: 0, unstamped: 0 };
+  let idx = 0;
+  for (const r of rows) {
+    const clat = Number(r.tract_centroid_lat);
+    const clng = Number(r.tract_centroid_lng);
+    let communityArea: string | null = null;
+    if (Number.isFinite(clat) && Number.isFinite(clng) && (clat !== 0 || clng !== 0)) {
+      communityArea = assignCommunityArea(clng, clat, polygons);
+    }
+    if (communityArea) stamp.stamped++;
+    else stamp.unstamped++;
+    const cde = nullableStr(r.cde_name);
+    const purpose = nullableStr(r.purpose_text);
+    const cost = parseAmount(r.estimated_total_project_cost);
+    const logParts = [
+      cde ? `CDE: ${cde}` : null,
+      purpose,
+      cost != null ? `Estimated total project cost $${Math.round(cost).toLocaleString("en-US")}` : null,
+    ].filter(Boolean);
+    out.push({
+      id: `nmtc-${idx++}`,
+      source: "nmtc",
+      funderType: SOURCE_FUNDER_TYPE.nmtc,
+      funderName: NMTC_FUNDER,
+      recipient: cde || "(unnamed CDE project)",
+      capitalClass: "tax_credit",
+      amountAwarded: null,
+      creditAmount: parseAmount(r.project_qlici_amount),
+      logLine: logParts.length ? logParts.join(" · ") : null,
+      year: cleanYear(r.year),
+      // Citywide — the public file has no street address; NEVER plotted. The
+      // communityArea below is stamped from the 2020 tract centroid for analysis.
+      geometry: { kind: "citywide" },
+      address: null,
+      ...(communityArea ? { communityArea } : {}),
+      status: "awarded",
+      recordDate: null,
+      recordProvenance: "official",
+      links: [],
+    });
+  }
+  return { records: out, stamp };
+}
+
+// ── Capital context (per-district TIF series, CRA, CDFI, state awards) ────────
+
+/**
+ * Build data/private/capital-context.json — the coordinate-less capital SIGNALS
+ * that would bloat the map with 12k+ un-plottable rows if modeled as records.
+ * Each series keeps DISTINCT money concepts in DISTINCT fields and never derives a
+ * received/available/remaining/unspent figure (banned-figure rail applies here
+ * too). Consumed by the analysis pages as CONTEXT beside the plotted records.
+ */
+function buildCapitalContext(generatedAt: string): unknown {
+  // 1) Per-TIF-district annual-report series (public-funds-to-completion +
+  //    private-funds-to-completion). These are cumulative-to-completion figures
+  //    reported each year, so they are exposed as a per-year series and a
+  //    latest-report-year snapshot — NEVER summed across years (that would double
+  //    count) and the public/private figures are NEVER summed together.
+  const tifRows = readCsv("tif_projects.csv").filter((r) => (r.dataset || "").trim() === "annual-report");
+  const tifByDistrict = new Map<
+    string,
+    Map<number, { cityReportedExpenditure: number; announcedPrivateLeverage: number; projectCount: number }>
+  >();
+  for (const r of tifRows) {
+    const district = nullableStr(r.tif_district) || "(unattributed)";
+    const year = cleanYear(r.approval_or_report_year);
+    if (year == null) continue;
+    const exp = parseAmount(r.city_reported_expenditure) ?? 0;
+    const lev = parseAmount(r.announced_private_leverage) ?? 0;
+    const byYear = tifByDistrict.get(district) ?? new Map();
+    const acc = byYear.get(year) ?? { cityReportedExpenditure: 0, announcedPrivateLeverage: 0, projectCount: 0 };
+    acc.cityReportedExpenditure += exp;
+    acc.announcedPrivateLeverage += lev;
+    acc.projectCount += 1;
+    byYear.set(year, acc);
+    tifByDistrict.set(district, byYear);
+  }
+  const tifDistricts = [...tifByDistrict.entries()]
+    .map(([district, byYear]) => {
+      const series = [...byYear.entries()]
+        .sort((a, b) => a[0] - b[0])
+        .map(([year, v]) => ({ year, ...v }));
+      const latest = series[series.length - 1];
+      return {
+        district,
+        series,
+        latestReportYear: latest?.year ?? null,
+        latestCityReportedExpenditure: latest?.cityReportedExpenditure ?? 0,
+        latestAnnouncedPrivateLeverage: latest?.announcedPrivateLeverage ?? 0,
+      };
+    })
+    .sort((a, b) => b.latestCityReportedExpenditure - a.latestCityReportedExpenditure || a.district.localeCompare(b.district));
+
+  // 2) Per-community-area CRA small-business lending series (originations).
+  const craRows = readCsv("cra_by_community_area.csv");
+  const craByCa = new Map<string, Array<{ year: number; smallBusinessLoanCount: number; smallBusinessLoanDollars: number }>>();
+  for (const r of craRows) {
+    const ca = nullableStr(r.community_area);
+    const year = cleanYear(r.year);
+    if (!ca || year == null) continue;
+    const list = craByCa.get(ca) ?? [];
+    list.push({
+      year,
+      smallBusinessLoanCount: parseAmount(r.sb_loan_count) ?? 0,
+      smallBusinessLoanDollars: parseAmount(r.sb_loan_dollars) ?? 0,
+    });
+    craByCa.set(ca, list);
+  }
+  const craByCommunityArea = [...craByCa.entries()]
+    .map(([communityArea, series]) => ({ communityArea, series: series.sort((a, b) => a.year - b.year) }))
+    .sort((a, b) => a.communityArea.localeCompare(b.communityArea));
+
+  // 3) CDFI transaction series by geography.
+  const cdfiRows = readCsv("cdfi_by_geo.csv");
+  const cdfiByGeo = new Map<
+    string,
+    { geographyLevel: string; series: Array<{ year: number; transactionCount: number; dollars: number; instrumentMixText: string | null; transactionsMissingAmount: number }> }
+  >();
+  for (const r of cdfiRows) {
+    const geo = nullableStr(r.geography);
+    const year = cleanYear(r.year);
+    if (!geo || year == null) continue;
+    const key = `${geo}|${(r.geography_level || "").trim()}`;
+    const entry = cdfiByGeo.get(key) ?? { geographyLevel: (r.geography_level || "").trim(), series: [] };
+    entry.series.push({
+      year,
+      transactionCount: parseAmount(r.transaction_count) ?? 0,
+      dollars: parseAmount(r.dollars) ?? 0,
+      instrumentMixText: nullableStr(r.instrument_mix_text),
+      transactionsMissingAmount: parseAmount(r.transactions_missing_amount) ?? 0,
+    });
+    cdfiByGeo.set(key, entry);
+  }
+  const cdfi = [...cdfiByGeo.entries()]
+    .map(([key, v]) => ({
+      geography: key.split("|")[0],
+      geographyLevel: v.geographyLevel,
+      series: v.series.sort((a, b) => a.year - b.year),
+    }))
+    .sort((a, b) => a.geographyLevel.localeCompare(b.geographyLevel) || a.geography.localeCompare(b.geography));
+
+  // 4) Illinois state-award (GATA/CSFA) SFY2027 snapshot — AWARD amounts, NOT
+  //    payments; the chicago_likely flag is name-based (high precision, LOW
+  //    recall). Both caveats travel with the summary.
+  const stateRows = readCsv("state_awards.csv").filter((r) => (r.chicago_likely || "").trim().toLowerCase() === "true");
+  const byGrantee = new Map<string, { awardDollars: number; awardCount: number }>();
+  let stateTotalAwardDollars = 0;
+  const distinctAwardIds = new Set<string>();
+  for (const r of stateRows) {
+    const grantee = nullableStr(r.grantee_name) || "(unnamed grantee)";
+    const amt = parseAmount(r.award_amount) ?? 0;
+    stateTotalAwardDollars += amt;
+    const id = nullableStr(r.award_id);
+    if (id) distinctAwardIds.add(id);
+    const acc = byGrantee.get(grantee) ?? { awardDollars: 0, awardCount: 0 };
+    acc.awardDollars += amt;
+    acc.awardCount += 1;
+    byGrantee.set(grantee, acc);
+  }
+  const topGrantees = [...byGrantee.entries()]
+    .map(([grantee, v]) => ({ grantee, ...v }))
+    .sort((a, b) => b.awardDollars - a.awardDollars || a.grantee.localeCompare(b.grantee))
+    .slice(0, 25);
+  const stateAwards = {
+    fiscalYear: 2027,
+    amountMeaning:
+      "award/agreement amount the State obligated — NOT money paid, received, or spent by the grantee",
+    snapshotCaveat:
+      "SFY2027 currently-active award pipeline (2026-07-01..2027-06-30); a multi-year award appears in each year it is active, so years must not be naively summed. chicago_likely is a NAME-BASED flag (high precision, low recall) — 'false' does not mean 'not Chicago'.",
+    chicagoLikelyAwardCount: stateRows.length,
+    chicagoLikelyDistinctGrantees: byGrantee.size,
+    chicagoLikelyDistinctAwardIds: distinctAwardIds.size,
+    chicagoLikelyTotalAwardDollars: stateTotalAwardDollars,
+    topGrantees,
+  };
+
+  return {
+    generatedAt,
+    meta: {
+      note:
+        "Coordinate-less capital CONTEXT beside the plotted Community Investment records. Every dollar is a real published figure or 0 where the source publishes 0; distinct money concepts stay in distinct fields and are never summed across concepts or (for cumulative series) across years.",
+      sources: [
+        "City of Chicago TIF Annual Report — Projects (Socrata 72uz-ikdv): public- and private-funds-to-completion per project-year",
+        "FFIEC CRA Aggregate Table A1-1 small-business loan ORIGINATIONS, Cook County tracts → community areas (2022–2024)",
+        "CDFI transaction aggregates by geography (2021–2022)",
+        "Illinois GATA/CSFA active award pipeline SFY2027 (award amounts, not payments)",
+      ],
+    },
+    tifDistricts,
+    craByCommunityArea,
+    cdfi,
+    stateAwards,
+  };
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -984,6 +1405,7 @@ async function main() {
       funderType: SOURCE_FUNDER_TYPE.cdg,
       funderName: CDG_PROGRAM,
       recipient: nullableStr(r.recipient) || "(unnamed recipient)",
+      capitalClass: "grant",
       amountAwarded: parseAmount(r.amount),
       logLine: nullableStr(r.log_line),
       year: yearOfRound(r.round),
@@ -1010,6 +1432,7 @@ async function main() {
       funderType: SOURCE_FUNDER_TYPE["nof-small"],
       funderName: NOF_PROGRAM,
       recipient: nullableStr(r.Project) || "(unnamed project)",
+      capitalClass: "grant",
       amountAwarded: parseAmount(r["Award Amount"]),
       logLine: null,
       year: Number.isInteger(Number(r["Year Awarded"])) ? Number(r["Year Awarded"]) : null,
@@ -1040,19 +1463,41 @@ async function main() {
       `privateLedExcluded=${devStats.privateLedExcluded} total=${developments.length}`,
   );
 
+  // 2b) Capital-spine sources (TIF / HUD CDBG-HOME / LIHTC / NMTC). All carry
+  //     amountAwarded=null (their money lives in authorizedAmount / creditAmount)
+  //     so they are structurally NEVER dedupe-eligible and pass through untouched.
+  //     Load the CA polygons here so NMTC's citywide records can be community-area
+  //     stamped from their 2020 tract centroid (the same polygons stamp the points).
+  const caPolygons = loadCommunityAreaPolygons(CA_GEOJSON_PATH);
+  const { records: tif, drops: tifDrops } = mapTif(readCsv("tif_projects.csv"));
+  const { records: hud, drops: hudDrops } = mapHud(readCsv("hud_cpd_activities.csv"), new Date(generatedAt));
+  const { records: lihtc, drops: lihtcDrops } = mapLihtc(readCsv("lihtc_chicago.csv"));
+  const { records: nmtc, stamp: nmtcStamp } = mapNmtc(readCsv("nmtc_chicago.csv"), caPolygons);
+  console.log(
+    `Capital spine: tif=${tif.length} (noCoords-dropped=${tifDrops.noCoords}) ` +
+      `cdbg-home=${hud.length} (out-of-bbox-dropped=${hudDrops.outOfBbox}) ` +
+      `lihtc=${lihtc.length} (noCoords-dropped=${lihtcDrops.noCoords}) ` +
+      `nmtc=${nmtc.length} (CA-stamped=${nmtcStamp.stamped} unstamped=${nmtcStamp.unstamped})`,
+  );
+
   // 3) Concatenate in stable order. Socrata completions precede Jim's awards so a
   //    completed record holds the dedupe slot and the corridor award collapses in.
   //    Chicago Prize rows join the philanthropic (foundation) block; developments
-  //    (private) are never dedupe-eligible so their position is immaterial.
-  const all = [...nofSmall, ...nofLarge, ...sbif, ...cdg, ...foundations, ...prize, ...developments, ...jim];
+  //    (private) are never dedupe-eligible so their position is immaterial. The
+  //    capital-spine sources append last (also never dedupe-eligible).
+  const all = [
+    ...nofSmall, ...nofLarge, ...sbif, ...cdg, ...foundations, ...prize, ...developments, ...jim,
+    ...tif, ...hud, ...lihtc, ...nmtc,
+  ];
 
   // 4) Cross-source dedupe (government point rows sharing address+amount).
   const { records: deduped, removedCount } = dedupeInvestmentRecords(all);
   console.log(`Deduped: ${all.length} -> ${deduped.length} (removed ${removedCount})`);
 
   // 5) Point-in-polygon community-area stamping for EVERY point record. Runs on
-  //    the final deduped set so the tallies describe the kept records.
-  const caPolygons = loadCommunityAreaPolygons(CA_GEOJSON_PATH);
+  //    the final deduped set so the tallies describe the kept records. NMTC
+  //    citywide records already carry a communityArea (stamped in mapNmtc) and are
+  //    skipped here (they are not point geometry) — never overwritten, never plotted.
   const caStamp = stampCommunityAreas(deduped, caPolygons);
   console.log(
     `Community-area stamp: ${caPolygons.length} CA polygons · ${caStamp.inside} points inside a CA · ` +
@@ -1071,6 +1516,11 @@ async function main() {
     outsideCommunityAreas: caStamp.outside,
     subsetExcluded: devStats.subsetExcluded,
     privateLedExcluded: devStats.privateLedExcluded,
+    droppedHudOutOfBbox: hudDrops.outOfBbox,
+    droppedTifNoCoords: tifDrops.noCoords,
+    droppedLihtcNoCoords: lihtcDrops.noCoords,
+    nmtcCitywideStamped: nmtcStamp.stamped,
+    nmtcUnstamped: nmtcStamp.unstamped,
     sources: PROVENANCE_LABELS,
   });
 
@@ -1084,7 +1534,19 @@ async function main() {
     `  announcedCapitalTotal=${out.meta.announcedCapitalTotal.toLocaleString("en-US", { style: "currency", currency: "USD" })} ` +
       `subsetExcluded=${out.meta.subsetExcluded} privateLedExcluded=${out.meta.privateLedExcluded}`,
   );
+  console.log(
+    `  totalAuthorizedTif=${out.meta.totalAuthorizedTif.toLocaleString("en-US", { style: "currency", currency: "USD" })} ` +
+      `totalFederalProgram=${out.meta.totalFederalProgram.toLocaleString("en-US", { style: "currency", currency: "USD" })} ` +
+      `totalCreditCapital=${out.meta.totalCreditCapital.toLocaleString("en-US", { style: "currency", currency: "USD" })}`,
+  );
   console.log(`  counts=${JSON.stringify(out.meta.counts)}`);
+
+  // 7) Capital CONTEXT file (coordinate-less signals) — per-TIF-district series,
+  //    per-CA CRA lending, CDFI series, and the SFY2027 state-award snapshot.
+  const context = buildCapitalContext(generatedAt);
+  assertNoBannedFigureKeys(context); // same banned-figure rail over the context file
+  writeFileSync(CONTEXT_OUT_PATH, JSON.stringify(context, null, 2) + "\n");
+  console.log(`Wrote ${CONTEXT_OUT_PATH}`);
 }
 
 main().catch((err) => {

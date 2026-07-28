@@ -32,6 +32,7 @@ import {
   FUNDER_TYPES,
   INVESTMENT_SOURCES,
   loadCommunityInvestment,
+  sumCreditCapital,
   type CommunityInvestmentRecord,
   type FunderType,
   type InvestmentSource,
@@ -109,6 +110,9 @@ export interface CommunityInvestmentAnalysis {
   generatedAt: string;
   /** Sum of every in-window (year >= 2020), non-null awarded amount. */
   totalAwarded: number;
+  /** All-time tax-credit capital (LIHTC + NMTC) stamped to this community — a
+   * SEPARATE measure from totalAwarded, never summed with awarded dollars. */
+  creditCapital: number;
   /** In-window yeared records + unYeared records — the hero's "grants & projects". */
   recordCount: number;
   /** Records with a null year — counted, never dollared. */
@@ -131,6 +135,15 @@ export interface CommunityInvestmentRankRow {
   totalAwarded: number;
   recordCount: number;
   unYeared: number;
+  /**
+   * All-time tax-credit capital (LIHTC + NMTC creditAmount) stamped to this
+   * community. A SEPARATE MEASURE from totalAwarded — NOT a grant, never summed
+   * with awarded dollars. Deliberately NOT year-windowed (tax-credit placements
+   * are largely historical); reported beside the since-2020 awarded total, never
+   * added to it. NMTC records reach this list via their tract-centroid community
+   * stamp even though they are citywide geometry and never plot on the map.
+   */
+  creditCapital: number;
 }
 
 /** The all-communities index used by the landing page and by equity ranking. */
@@ -206,6 +219,10 @@ export function buildInvestmentIndex(
       totalAwarded: sumInWindowAwarded(list),
       recordCount: inView.length,
       unYeared: inView.filter((r) => r.year == null).length,
+      // All-time tax-credit capital in this community — a SEPARATE measure, summed
+      // over the full record list (not the since-2020 window) and never folded into
+      // totalAwarded. Citywide-but-CA-stamped NMTC records contribute here.
+      creditCapital: sumCreditCapital(list),
     });
   }
 
@@ -349,6 +366,10 @@ export function analyzeCommunityArea(
     communityArea,
     generatedAt,
     totalAwarded,
+    // All-time tax-credit capital in this community (LIHTC + NMTC) — a separate
+    // measure, summed over every record (not the since-2020 window), never folded
+    // into totalAwarded.
+    creditCapital: sumCreditCapital(mine),
     recordCount: inView.length,
     unYeared,
     span,

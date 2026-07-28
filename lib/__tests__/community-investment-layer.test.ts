@@ -38,6 +38,7 @@ function record(overrides: Partial<CommunityInvestmentRecord>): CommunityInvestm
     geometry: { kind: "point", lat: 41.75, lng: -87.6 },
     address: "100 W Example St",
     status: "awarded",
+    capitalClass: "grant",
     links: ["https://example.gov/round"],
     ...overrides,
   };
@@ -280,6 +281,7 @@ describe("development dots: announcedInvestment + radiusPx", () => {
       geometry: { kind: "point", lat, lng },
       address: null,
       status: "under_construction",
+      capitalClass: "grant",
       links: [],
     }) satisfies CommunityInvestmentRecord;
 
@@ -301,6 +303,7 @@ describe("development dots: announcedInvestment + radiusPx", () => {
         geometry: { kind: "point", lat: 41.75, lng: -87.6 },
         address: "1 Main St",
         status: "awarded",
+        capitalClass: "grant",
         links: [],
       },
     ]);
