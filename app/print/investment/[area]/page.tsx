@@ -85,6 +85,11 @@ const PRINT_CSS = `
   /* Repeat table headers if a table spans the page break. */
   thead { display: table-header-group; }
   tr { break-inside: avoid; }
+  /* Keep the packet at two pages: never orphan a section heading at a page foot,
+     and let long lists (records table, methodology) flow across the break with a
+     few lines held together rather than jumping a whole block to a third page. */
+  section { break-before: avoid; }
+  p, li { orphans: 3; widows: 3; }
 }
 `;
 
@@ -133,9 +138,22 @@ export default async function InvestmentBriefPrintPage({
   const meta = loadCommunityInvestment()?.meta;
   const sources = meta?.sources ?? [];
   const flowRows = loadFlowRows(name);
-  const capitalContext = loadCapitalContextForArea(name);
   const findings = analysis ? computeInvestmentFindings(analysis) : [];
   const selectedRecords = flowRows.slice(0, 15);
+
+  // PAGE-BUDGET CAP: the brief is billed as exactly two letter pages, but page 2
+  // has no height budget, so an unusually deep CRA / CDFI context series could spill
+  // it onto a third page. Cap each coordinate-less context series to its most-recent
+  // rows (the last N of an ascending-by-year series) so a data-heavy community area
+  // stays within the two-page packet. The 15-row selected-records table is already
+  // capped above; these are the only other unbounded page-2 lists.
+  const PRINT_CONTEXT_MAX_ROWS = 6;
+  const rawContext = loadCapitalContextForArea(name);
+  const capitalContext = {
+    ...rawContext,
+    cra: rawContext.cra ? rawContext.cra.slice(-PRINT_CONTEXT_MAX_ROWS) : null,
+    cdfi: rawContext.cdfi ? rawContext.cdfi.slice(-PRINT_CONTEXT_MAX_ROWS) : null,
+  };
 
   // Missing-data warnings — dataset-level honesty for the packet's second page.
   const warnings: string[] = [];
