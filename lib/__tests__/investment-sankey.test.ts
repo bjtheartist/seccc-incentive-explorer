@@ -21,6 +21,7 @@ function rec(over: Partial<CommunityInvestmentRecord> & { id: string }): Communi
     address: "1 MAIN ST",
     status: "completed",
     communityArea: "Zeta",
+    capitalClass: "grant",
     links: [],
     ...over,
   };

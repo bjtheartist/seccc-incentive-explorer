@@ -5,6 +5,7 @@ import {
   isOwnerFilesAdminConfigured,
 } from "@/lib/owner-files-admin-auth";
 import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
+import { InvestmentSessionGuard } from "@/components/investment/SessionGuard";
 
 /**
  * Admin gate for the Investment & Impact Analysis pages (/investment and
@@ -53,6 +54,9 @@ export function InvestmentLoginForm({
 }) {
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-6 py-12 text-[#0C1B33]">
+      {/* No live admin session on this surface → wipe any working set left in this
+          browser (shared-machine hygiene) before anyone re-authenticates. */}
+      <InvestmentSessionGuard />
       <form
         method="post"
         action="/api/admin/investment/login"

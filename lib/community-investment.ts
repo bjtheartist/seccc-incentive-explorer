@@ -46,7 +46,23 @@ import path from "node:path";
 
 // ── Enums (const arrays so completeness is testable) ─────────────────────────
 
-/** The six merged sources. */
+/**
+ * The merged sources. The first six are the original grant/development layer; the
+ * four appended by the capital-spine work carry NON-grant public capital that the
+ * awarded totals must never absorb (see capitalClass + the money-field firewall):
+ *   • tif        — City of Chicago TIF-funded RDA/IGA projects (council-authorized
+ *     TIF assistance ceilings) — capitalClass "tif_subsidy", money in
+ *     authorizedAmount, amountAwarded null.
+ *   • cdbg-home  — HUD CDBG/HOME activities administered by the City of Chicago
+ *     (committed federal allocations) — capitalClass "federal_program", money in
+ *     authorizedAmount, amountAwarded null.
+ *   • lihtc      — Low-Income Housing Tax Credit allocations (tax-credit capital)
+ *     — capitalClass "tax_credit", money in creditAmount.
+ *   • nmtc       — New Markets Tax Credit QLICIs (tax-credit capital) — capitalClass
+ *     "tax_credit", money in creditAmount, citywide geometry (no street address in
+ *     the public file) but community-area-stamped from the project's 2020 census
+ *     tract centroid so it still appears in per-community analysis lists.
+ */
 export const INVESTMENT_SOURCES = [
   "nof-small",
   "nof-large",
@@ -54,12 +70,36 @@ export const INVESTMENT_SOURCES = [
   "cdg",
   "foundation",
   "development",
+  "tif",
+  "cdbg-home",
+  "lihtc",
+  "nmtc",
 ] as const;
 export type InvestmentSource = (typeof INVESTMENT_SOURCES)[number];
 
 /** Who is putting the money in. */
 export const FUNDER_TYPES = ["government", "philanthropic", "private_development"] as const;
 export type FunderType = (typeof FUNDER_TYPES)[number];
+
+/**
+ * A SECOND, ORTHOGONAL axis to funderType: what KIND of capital a record's money
+ * is, so the awarded-grant totals never silently absorb a subsidy, a federal
+ * program allocation, or tax-credit capital. Every record carries exactly one:
+ *   • grant          — a real awarded/reported grant dollar (amountAwarded). The
+ *     default for all six original sources (NOF/SBIF/CDG/foundation) and the
+ *     zero-dollar development records.
+ *   • tif_subsidy    — a council-AUTHORIZED TIF assistance ceiling (authorizedAmount).
+ *     NOT money awarded to a business, NOT money spent — a public-financing ceiling.
+ *   • federal_program— a committed HUD CDBG/HOME federal allocation (authorizedAmount).
+ *     Program funding, not a discretionary grant award to a named business.
+ *   • tax_credit     — LIHTC/NMTC tax-credit capital (creditAmount). A different
+ *     financing instrument again; never a grant, never summed with anything.
+ * The four money-meaning fields (amountAwarded / announcedInvestment /
+ * authorizedAmount / creditAmount) are mutually exclusive per record and are
+ * NEVER added together (enforced structurally in buildCommunityInvestmentExport).
+ */
+export const CAPITAL_CLASSES = ["grant", "tif_subsidy", "federal_program", "tax_credit"] as const;
+export type CapitalClass = (typeof CAPITAL_CLASSES)[number];
 
 /**
  * Lifecycle stage of the dollar, chosen to be HONEST about what each source
@@ -99,6 +139,35 @@ export const SOURCE_FUNDER_TYPE: Record<InvestmentSource, FunderType> = {
   cdg: "government",
   foundation: "philanthropic",
   development: "private_development",
+  // The four capital-spine sources are all PUBLIC-policy capital (City TIF,
+  // HUD CDBG/HOME, and the federal LIHTC/NMTC tax-credit programs administered
+  // through public/quasi-public entities) → funderType "government". The
+  // grant-vs-subsidy-vs-federal-vs-credit distinction lives on the SEPARATE
+  // capitalClass axis, not here.
+  tif: "government",
+  "cdbg-home": "government",
+  lihtc: "government",
+  nmtc: "government",
+};
+
+/**
+ * Canonical source -> capitalClass mapping (the default a record's capitalClass
+ * takes from its source). Exhaustive over INVESTMENT_SOURCES (guarded by the
+ * `Record<InvestmentSource, …>` type and a unit test). A development record is a
+ * "grant" class carrying zero grant dollars — its money lives in the separate
+ * announcedInvestment field, never a grant/subsidy/credit total.
+ */
+export const SOURCE_CAPITAL_CLASS: Record<InvestmentSource, CapitalClass> = {
+  "nof-small": "grant",
+  "nof-large": "grant",
+  sbif: "grant",
+  cdg: "grant",
+  foundation: "grant",
+  development: "grant",
+  tif: "tif_subsidy",
+  "cdbg-home": "federal_program",
+  lihtc: "tax_credit",
+  nmtc: "tax_credit",
 };
 
 // ── Data contract ────────────────────────────────────────────────────────────
@@ -122,8 +191,39 @@ export interface CommunityInvestmentRecord {
   funderName: string;
   /** The grantee / project / development. */
   recipient: string;
-  /** Real awarded/reported dollars, or null — NEVER a derived figure. */
+  /**
+   * Which of the four money-meaning fields carries this record's dollars (see
+   * CAPITAL_CLASSES). "grant" → amountAwarded; "tif_subsidy"/"federal_program" →
+   * authorizedAmount; "tax_credit" → creditAmount. The awarded/announced/
+   * authorized/credit totals are each computed from ONE field, never combined.
+   */
+  capitalClass: CapitalClass;
+  /** Real awarded/reported GRANT dollars, or null — NEVER a derived figure, and
+   * NEVER populated on a tif/cdbg-home/lihtc/nmtc record (whose money lives in
+   * authorizedAmount / creditAmount). */
   amountAwarded: number | null;
+  /**
+   * A council-AUTHORIZED TIF assistance ceiling (capitalClass "tif_subsidy") or a
+   * committed HUD CDBG/HOME federal program allocation (capitalClass
+   * "federal_program"), or null. A DIFFERENT TRUTH from amountAwarded: NOT a grant
+   * awarded to a business, NOT money spent, NOT an announced private price tag. It
+   * must NEVER be summed into totalDollarsAwarded, announcedCapitalTotal, or any
+   * awarded/announced aggregate — it rolls up ONLY into totalAuthorizedTif (the
+   * tif_subsidy subset) and totalFederalProgram (the federal_program subset).
+   * Only ever populated on `tif` / `cdbg-home` records; null everywhere else.
+   * Enforced structurally: buildCommunityInvestmentExport() recomputes the awarded
+   * total from amountAwarded alone and hard-fails on any divergence.
+   */
+  authorizedAmount?: number | null;
+  /**
+   * Tax-credit capital — a LIHTC annual allocated amount or an NMTC project QLICI
+   * amount (capitalClass "tax_credit"), or null. A DIFFERENT financing instrument
+   * again: never a grant, never a subsidy ceiling, never an announced price tag.
+   * It must NEVER be summed with any other money field — it rolls up ONLY into
+   * totalCreditCapital. Only ever populated on `lihtc` / `nmtc` records; null
+   * everywhere else.
+   */
+  creditAmount?: number | null;
   /**
    * Announced private DEVELOPMENT capital (developments_major.csv
    * announced_investment_usd) — the publicly reported total project cost of a
@@ -203,6 +303,26 @@ export interface CommunityInvestmentMeta {
    */
   announcedCapitalTotal: number;
   /**
+   * Sum of every authorizedAmount on a `tif_subsidy`-class record — the total
+   * council-AUTHORIZED TIF assistance across the mapped RDA/IGA projects. A
+   * SEPARATE MEASURE: not awarded grants, not announced private capital, not tax
+   * credits. Computed from authorizedAmount on tif_subsidy records ALONE and never
+   * added into any other total. Passes the banned-figure rail.
+   */
+  totalAuthorizedTif: number;
+  /**
+   * Sum of every authorizedAmount on a `federal_program`-class record — the total
+   * committed HUD CDBG/HOME federal allocation across the mapped activities. A
+   * SEPARATE MEASURE, computed from federal_program authorizedAmount ALONE.
+   */
+  totalFederalProgram: number;
+  /**
+   * Sum of every creditAmount on a `tax_credit`-class record — the total LIHTC +
+   * NMTC tax-credit capital. A SEPARATE MEASURE, computed from creditAmount ALONE
+   * and never combined with awarded/announced/authorized dollars.
+   */
+  totalCreditCapital: number;
+  /**
    * Megadevelopment records whose announcedInvestment was deliberately left null
    * because the figure is a SUBSET of another development's already-counted total
    * (e.g. the Chicago Fire stadium's $650M sits inside The 78's $7B). Kept on the
@@ -215,6 +335,23 @@ export interface CommunityInvestmentMeta {
    * retained megadevelopment is genuinely a private (or private-anchored) project.
    */
   privateLedExcluded: number;
+  /** HUD CDBG/HOME activities dropped because their geocode fell OUTSIDE the
+   * Chicago bounding box (a bad/suburban geocode is not plotted at a misleading
+   * point) — counted here so the drop is visible rather than silent. */
+  droppedHudOutOfBbox: number;
+  /** TIF RDA/IGA rows dropped because the source published no usable coordinates
+   * (this layer only creates a point record for a row with real coords). */
+  droppedTifNoCoords: number;
+  /** LIHTC rows dropped because they carry no usable coordinates. */
+  droppedLihtcNoCoords: number;
+  /** NMTC records (always citywide geometry — the public file has no street
+   * address) whose community area WAS stamped from the project's 2020 census-tract
+   * centroid, so they surface in per-community credit-capital lists without ever
+   * plotting. */
+  nmtcCitywideStamped: number;
+  /** NMTC records whose 2020 census tract had no gazetteer centroid, so no
+   * community area could be assigned (kept citywide, no CA — never guessed). */
+  nmtcUnstamped: number;
   /** City-grant rows dropped because geocoding failed and they carry no coords. */
   droppedNoGeocode: number;
   /** Cross-source rows removed by the address+amount dedupe. */
@@ -614,6 +751,35 @@ export function sumAnnouncedInvestment(records: readonly CommunityInvestmentReco
   return total;
 }
 
+/**
+ * Sum authorizedAmount across records of ONE capitalClass ("tif_subsidy" or
+ * "federal_program"). Reads a field the awarded/announced sums deliberately
+ * ignore, so no dollar is ever double-counted across measures. Restricting by
+ * capitalClass keeps the TIF ceiling total and the HUD federal-allocation total
+ * cleanly separate even though both live in authorizedAmount. Pure.
+ */
+export function sumAuthorizedByClass(
+  records: readonly CommunityInvestmentRecord[],
+  capitalClass: "tif_subsidy" | "federal_program",
+): number {
+  let total = 0;
+  for (const r of records) {
+    if (r.capitalClass === capitalClass && r.authorizedAmount != null) total += r.authorizedAmount;
+  }
+  return total;
+}
+
+/**
+ * Sum every non-null creditAmount (LIHTC + NMTC tax-credit capital). A SEPARATE
+ * total again — never combined with awarded, announced, or authorized dollars.
+ * Pure.
+ */
+export function sumCreditCapital(records: readonly CommunityInvestmentRecord[]): number {
+  let total = 0;
+  for (const r of records) if (r.creditAmount != null) total += r.creditAmount;
+  return total;
+}
+
 /** Per-source kept-record counts, exhaustive over INVESTMENT_SOURCES. */
 export function countBySource(records: readonly CommunityInvestmentRecord[]): Record<InvestmentSource, number> {
   const counts = Object.fromEntries(INVESTMENT_SOURCES.map((s) => [s, 0])) as Record<InvestmentSource, number>;
@@ -642,25 +808,62 @@ export function buildCommunityInvestmentExport(
     outsideCommunityAreas?: number;
     subsetExcluded?: number;
     privateLedExcluded?: number;
+    droppedHudOutOfBbox?: number;
+    droppedTifNoCoords?: number;
+    droppedLihtcNoCoords?: number;
+    nmtcCitywideStamped?: number;
+    nmtcUnstamped?: number;
   },
 ): CommunityInvestmentExport {
   const pointCount = records.filter((r) => r.geometry.kind === "point").length;
   const totalDollarsAwarded = sumAwardedDollars(records);
 
-  // STRUCTURAL GUARD (announced-vs-awarded separation): the awarded total must be
-  // computable from amountAwarded ALONE. Recompute it the long way, summing only
-  // amountAwarded and NEVER announcedInvestment, and hard-fail on any divergence —
-  // so a future edit that folds announced development capital into the awarded
-  // total cannot be committed. (sumAwardedDollars already ignores
-  // announcedInvestment; this asserts that invariant explicitly at build time.)
+  // STRUCTURAL GUARD (money-field firewall): the awarded total must be computable
+  // from amountAwarded ALONE. Recompute it the long way, summing only amountAwarded
+  // and NEVER announcedInvestment / authorizedAmount / creditAmount, and hard-fail
+  // on any divergence — so a future edit that folds announced development capital,
+  // a TIF/federal authorization ceiling, or tax-credit capital into the awarded
+  // total cannot be committed. (sumAwardedDollars already ignores those fields;
+  // this asserts the invariant explicitly at build time.)
   let awardedOnly = 0;
   for (const r of records) if (r.amountAwarded != null) awardedOnly += r.amountAwarded;
   if (awardedOnly !== totalDollarsAwarded) {
     throw new Error(
       `Community Investment export: totalDollarsAwarded (${totalDollarsAwarded}) diverges from the ` +
-        `amountAwarded-only recompute (${awardedOnly}) — announced development capital must NEVER be ` +
-        `summed into the awarded total.`,
+        `amountAwarded-only recompute (${awardedOnly}) — announced development capital, TIF/federal ` +
+        `authorization ceilings, and tax-credit capital must NEVER be summed into the awarded total.`,
     );
+  }
+
+  // FIREWALL ASSERT (per-class field discipline): each capitalClass may populate
+  // ONLY its own money field. A grant/development record never carries an
+  // authorized or credit amount; a tif/federal record carries ONLY authorizedAmount
+  // (amountAwarded null); a tax_credit record carries ONLY creditAmount. This makes
+  // the four totals provably non-overlapping — a dollar can live in exactly one.
+  for (const r of records) {
+    const hasAwarded = r.amountAwarded != null;
+    const hasAuthorized = r.authorizedAmount != null;
+    const hasCredit = r.creditAmount != null;
+    const hasAnnounced = r.announcedInvestment != null;
+    if (r.capitalClass === "grant") {
+      if (hasAuthorized || hasCredit) {
+        throw new Error(`Record ${r.id} (capitalClass grant) must not carry authorizedAmount/creditAmount.`);
+      }
+    } else if (r.capitalClass === "tif_subsidy" || r.capitalClass === "federal_program") {
+      if (hasAwarded || hasCredit || hasAnnounced) {
+        throw new Error(
+          `Record ${r.id} (capitalClass ${r.capitalClass}) may carry ONLY authorizedAmount — not ` +
+            `amountAwarded/creditAmount/announcedInvestment.`,
+        );
+      }
+    } else if (r.capitalClass === "tax_credit") {
+      if (hasAwarded || hasAuthorized || hasAnnounced) {
+        throw new Error(
+          `Record ${r.id} (capitalClass tax_credit) may carry ONLY creditAmount — not ` +
+            `amountAwarded/authorizedAmount/announcedInvestment.`,
+        );
+      }
+    }
   }
 
   const out: CommunityInvestmentExport = {
@@ -672,8 +875,16 @@ export function buildCommunityInvestmentExport(
       citywideCount: records.length - pointCount,
       totalDollarsAwarded,
       announcedCapitalTotal: sumAnnouncedInvestment(records),
+      totalAuthorizedTif: sumAuthorizedByClass(records, "tif_subsidy"),
+      totalFederalProgram: sumAuthorizedByClass(records, "federal_program"),
+      totalCreditCapital: sumCreditCapital(records),
       subsetExcluded: stats.subsetExcluded ?? 0,
       privateLedExcluded: stats.privateLedExcluded ?? 0,
+      droppedHudOutOfBbox: stats.droppedHudOutOfBbox ?? 0,
+      droppedTifNoCoords: stats.droppedTifNoCoords ?? 0,
+      droppedLihtcNoCoords: stats.droppedLihtcNoCoords ?? 0,
+      nmtcCitywideStamped: stats.nmtcCitywideStamped ?? 0,
+      nmtcUnstamped: stats.nmtcUnstamped ?? 0,
       droppedNoGeocode: stats.droppedNoGeocode,
       dedupedRows: stats.dedupedRows,
       droppedPlaceholder: stats.droppedPlaceholder ?? 0,

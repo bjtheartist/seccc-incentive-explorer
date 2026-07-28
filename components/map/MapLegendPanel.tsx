@@ -30,6 +30,9 @@ import {
   FUNDER_TYPE_COLORS,
   FUNDER_TYPE_LABELS,
   INVESTMENT_YEAR_RANGES,
+  CAPITAL_CLASS_LABELS,
+  CAPITAL_CLASS_MONEY_NOUN,
+  CAPITAL_CLASS_OUTLINE,
 } from "@/lib/community-investment-layer";
 import {
   DEFAULT_INVESTMENT_VIEW_MODE,
@@ -37,9 +40,12 @@ import {
   INVESTMENT_VIEW_MODE_LABELS,
   DENSITY_RAMP_HEXES,
   HEXAGON_RADIUS_M,
+  DEFAULT_INVESTMENT_DENSITY_METRIC,
+  INVESTMENT_DENSITY_METRICS,
   type InvestmentViewMode,
+  type InvestmentDensityMetric,
 } from "@/lib/investment-deck-modes";
-import type { FunderType } from "@/lib/community-investment";
+import type { CapitalClass, FunderType } from "@/lib/community-investment";
 
 interface MapLegendPanelProps {
   zoneVisible: Record<string, boolean>;
@@ -66,6 +72,10 @@ interface MapLegendPanelProps {
   communityInvestmentError?: string | null;
   /** Funder types actually present among the plotted points, in FUNDER_TYPE_ORDER — drives the funderType checkboxes. */
   investmentPresentFunderTypes?: FunderType[];
+  /** Capital classes present among plotted dots, in CAPITAL_CLASS_ORDER — drives the capital-class sub-legend. */
+  investmentPresentCapitalClasses?: CapitalClass[];
+  /** Count of tracked foundation HQs — the Arcs "Foundation flows (N tracked HQs)" honest label. */
+  investmentFunderHqCount?: number;
   /** Active year-range chip id (INVESTMENT_YEAR_RANGES); defaults to "all". */
   investmentYearRange?: string;
   /** Per-funderType checkbox state (client-side filter). */
@@ -74,11 +84,14 @@ interface MapLegendPanelProps {
   investmentCitywide?: { count: number; totalDollars: number } | null;
   /** Active admin view mode (Dots | Arcs | Density); defaults to "dots". */
   investmentViewMode?: InvestmentViewMode;
+  /** Active density metric (dollars | records); defaults to "dollars". */
+  investmentDensityMetric?: InvestmentDensityMetric;
   /** Arcs-mode fallback: philanthropic grants with no mapped funder HQ, shown as dots. */
   investmentArcMissingHqCount?: number;
   onSetCommunityInvestmentVisible?: (value: boolean) => void;
   onSetInvestmentYearRange?: (id: string) => void;
   onSetInvestmentViewMode?: (mode: InvestmentViewMode) => void;
+  onSetInvestmentDensityMetric?: (metric: InvestmentDensityMetric) => void;
   onToggleInvestmentFunderType?: (key: FunderType) => void;
   onClose: () => void;
   onToggleZone: (key: string) => void;
@@ -117,14 +130,18 @@ export default function MapLegendPanel({
   communityInvestmentLoading,
   communityInvestmentError,
   investmentPresentFunderTypes = [],
+  investmentPresentCapitalClasses = [],
+  investmentFunderHqCount = 0,
   investmentYearRange = DEFAULT_INVESTMENT_YEAR_RANGE,
   investmentFunderTypes = {} as Record<FunderType, boolean>,
   investmentCitywide = null,
   investmentViewMode = DEFAULT_INVESTMENT_VIEW_MODE,
+  investmentDensityMetric = DEFAULT_INVESTMENT_DENSITY_METRIC,
   investmentArcMissingHqCount = 0,
   onSetCommunityInvestmentVisible = () => {},
   onSetInvestmentYearRange = () => {},
   onSetInvestmentViewMode = () => {},
+  onSetInvestmentDensityMetric = () => {},
   onToggleInvestmentFunderType = () => {},
   onClose,
   onToggleZone,
@@ -711,13 +728,47 @@ export default function MapLegendPanel({
                   </div>
                 )}
 
+                {/* Capital-class sub-legend (Sol #4) — the dot OUTLINE tells the
+                    four capital classes apart (all funderType government share a
+                    blue fill). Shown only when a NON-grant class is on the map. */}
+                {investmentPresentCapitalClasses.some((c) => c !== "grant") && (
+                  <div>
+                    <div className="font-mono-bureau text-[8px] tracking-[0.15em] uppercase text-[#0C1B33]/40 mb-1.5">
+                      Capital class · dot outline
+                    </div>
+                    <div className="space-y-0.5">
+                      {investmentPresentCapitalClasses.map((cls) => (
+                        <div key={cls} className="flex items-center gap-2.5 py-0.5">
+                          <span
+                            className="w-3.5 h-3.5 rounded-full flex-shrink-0"
+                            style={{
+                              backgroundColor: FUNDER_TYPE_COLORS.government,
+                              border: `2px solid ${CAPITAL_CLASS_OUTLINE[cls]}`,
+                              boxShadow: "0 0 0 1px rgba(12,27,51,0.12)",
+                            }}
+                          />
+                          <span className="text-[10px] text-[#0C1B33]/60 leading-tight">
+                            {CAPITAL_CLASS_LABELS[cls]}
+                            <span className="text-[#0C1B33]/35"> · {CAPITAL_CLASS_MONEY_NOUN[cls]}</span>
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Mode-specific caption / mini legend. */}
                 {investmentViewMode === "dots" && (
-                  <p className="text-[9px] text-[#0C1B33]/35">Dot size = amount awarded</p>
+                  <p className="text-[9px] text-[#0C1B33]/35">Dot size = each record&rsquo;s own capital amount</p>
                 )}
 
                 {investmentViewMode === "arcs" && (
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
+                    {/* Honest label (Sol #4): the arcs mode only draws the tracked
+                        foundation HQs, not all capital. */}
+                    <div className="font-mono-bureau text-[9px] tracking-[0.08em] uppercase text-[#0C1B33]/55">
+                      Foundation flows ({investmentFunderHqCount} tracked HQ{investmentFunderHqCount === 1 ? "" : "s"})
+                    </div>
                     <div className="flex items-center gap-2">
                       <span
                         className="inline-block h-[2px] w-6 flex-shrink-0 rounded-full"
@@ -727,6 +778,9 @@ export default function MapLegendPanel({
                         Arc: funder HQ &rarr; grant recipient
                       </span>
                     </div>
+                    <p className="text-[9px] text-[#0C1B33]/35">
+                      Only philanthropic grants from a tracked foundation HQ draw an arc — most capital has no HQ arc.
+                    </p>
                     {investmentArcMissingHqCount > 0 && (
                       <p className="text-[9px] text-[#0C1B33]/35">
                         {investmentArcMissingHqCount} grant{investmentArcMissingHqCount === 1 ? "" : "s"} without a
@@ -737,14 +791,38 @@ export default function MapLegendPanel({
                 )}
 
                 {investmentViewMode === "density" && (
-                  <div className="space-y-1">
+                  <div className="space-y-1.5">
+                    {/* dollars | records metric toggle (Sol #4). */}
+                    <div className="flex gap-1" role="group" aria-label="Density metric">
+                      {INVESTMENT_DENSITY_METRICS.map((metric) => {
+                        const active = investmentDensityMetric === metric;
+                        return (
+                          <button
+                            key={metric}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() => onSetInvestmentDensityMetric(metric)}
+                            className="flex-1 font-mono-bureau text-[8px] tracking-[0.08em] uppercase px-2 py-1 rounded border transition-colors"
+                            style={{
+                              color: active ? "#fff" : "#2563EB",
+                              backgroundColor: active ? "#2563EB" : "transparent",
+                              borderColor: active ? "#2563EB" : "#2563EB40",
+                            }}
+                          >
+                            {metric === "dollars" ? "Dollars" : "Records"}
+                          </button>
+                        );
+                      })}
+                    </div>
                     <div className="flex h-2 w-full overflow-hidden rounded-full">
                       {DENSITY_RAMP_HEXES.map((hex) => (
                         <span key={hex} className="flex-1" style={{ backgroundColor: hex }} />
                       ))}
                     </div>
                     <p className="text-[9px] text-[#0C1B33]/35">
-                      $ awarded (hex bins, {HEXAGON_RADIUS_M}m)
+                      {investmentDensityMetric === "records"
+                        ? `record count (hex bins, ${HEXAGON_RADIUS_M}m)`
+                        : `$ awarded (hex bins, ${HEXAGON_RADIUS_M}m)`}
                     </p>
                   </div>
                 )}

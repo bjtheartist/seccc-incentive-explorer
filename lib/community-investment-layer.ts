@@ -19,6 +19,7 @@
  */
 
 import type {
+  CapitalClass,
   CommunityInvestmentExport,
   CommunityInvestmentRecord,
   FunderType,
@@ -86,6 +87,76 @@ export const FUNDER_TYPE_COLORS: Record<FunderType, string> = {
 /** Fallback dot color for any unrecognized funderType (matches the paint fallback). */
 export const INVESTMENT_FALLBACK_COLOR = "#9CA3AF";
 
+/**
+ * Capital-class axis (lib/community-investment.ts CAPITAL_CLASSES), surfaced on
+ * the map so the four new capital-spine sources (TIF / HUD / LIHTC-NMTC) read as
+ * a DIFFERENT KIND of money than a grant. Order = grant first, then the three
+ * non-grant classes, for the legend sub-key.
+ */
+export const CAPITAL_CLASS_ORDER: CapitalClass[] = [
+  "grant",
+  "tif_subsidy",
+  "federal_program",
+  "tax_credit",
+];
+
+/** Short capital-class labels for the legend sub-key + the record drawer chip. */
+export const CAPITAL_CLASS_LABELS: Record<CapitalClass, string> = {
+  grant: "Grant",
+  tif_subsidy: "TIF subsidy",
+  federal_program: "Federal program",
+  tax_credit: "Tax credit",
+};
+
+/**
+ * The CORRECT money noun for each capital class — the word the popup/drawer puts
+ * in front of the dollar figure so it is NEVER mislabeled. A grant is "Awarded",
+ * a TIF assistance ceiling is "Authorized", a HUD CDBG/HOME allocation is
+ * "Federal program funding", a LIHTC/NMTC placement is a "Tax-credit allocation".
+ * (A `development` record is capitalClass "grant" but is labeled "Announced" by
+ * the popup's own private-development branch, ahead of this map.)
+ */
+export const CAPITAL_CLASS_MONEY_NOUN: Record<CapitalClass, string> = {
+  grant: "Awarded",
+  tif_subsidy: "Authorized",
+  federal_program: "Federal program funding",
+  tax_credit: "Tax-credit allocation",
+};
+
+/**
+ * Distinct DOT-OUTLINE color per capital class (a mapbox circle can't dash, so a
+ * stroke color from the app palette carries the distinction instead). All four
+ * capital-spine sources are funderType `government` → the same blue FILL, so the
+ * OUTLINE is what tells a grant apart from a TIF/federal/tax-credit dot:
+ *   • grant           → white (the unchanged default ring).
+ *   • tif_subsidy     → amber #D97706 (the app's "authorized ceiling" accent).
+ *   • federal_program → navy ink #0C1B33 (a dark program ring).
+ *   • tax_credit      → magenta #DB2777 (a distinct credit ring, off the three
+ *     funder-type hues so it never reads as a funder type).
+ */
+export const CAPITAL_CLASS_OUTLINE: Record<CapitalClass, string> = {
+  grant: "#ffffff",
+  tif_subsidy: "#D97706",
+  federal_program: "#0C1B33",
+  tax_credit: "#DB2777",
+};
+
+const CAPITAL_CLASS_ORDER_STRINGS: readonly string[] = CAPITAL_CLASS_ORDER;
+
+/**
+ * Distinct capital classes actually present among the plotted points, in
+ * CAPITAL_CLASS_ORDER — drives the legend's capital-class sub-legend so a class
+ * with no dots never shows a swatch. Mirrors presentFunderTypesInOrder. An empty
+ * input yields an empty array; unknown classes are dropped.
+ */
+export function presentCapitalClassesInOrder(
+  classes: Array<string | null | undefined>,
+): CapitalClass[] {
+  const present = new Set<string>();
+  for (const c of classes) if (c && CAPITAL_CLASS_ORDER_STRINGS.includes(c)) present.add(c);
+  return CAPITAL_CLASS_ORDER.filter((k) => present.has(k));
+}
+
 export interface InvestmentYearRange {
   id: string;
   label: string;
@@ -123,8 +194,22 @@ export interface InvestmentPointProps {
   recipient: string;
   funderName: string;
   funderType: FunderType;
-  /** Real awarded dollars, or null — NEVER a derived figure. */
+  /**
+   * What KIND of capital this dot's money is (grant / tif_subsidy /
+   * federal_program / tax_credit). Drives the popup's money noun + field and the
+   * dot's outline color, so a TIF ceiling / federal allocation / tax-credit
+   * placement is NEVER mislabeled "Awarded". Defaults to "grant" for the six
+   * original grant/development sources.
+   */
+  capitalClass: CapitalClass;
+  /** Real awarded GRANT dollars, or null — NEVER a derived figure, and null on
+   * every tif/cdbg-home/lihtc/nmtc dot (whose money lives below). */
   amountAwarded: number | null;
+  /** Council-AUTHORIZED TIF ceiling (tif_subsidy) or committed HUD CDBG/HOME
+   * allocation (federal_program), or null. A DIFFERENT truth from amountAwarded. */
+  authorizedAmount: number | null;
+  /** LIHTC/NMTC tax-credit capital (tax_credit), or null. A DIFFERENT instrument. */
+  creditAmount: number | null;
   /**
    * Announced private DEVELOPMENT capital, or null — a SEPARATE measure from
    * amountAwarded, carried so the popup can label a development's figure
@@ -135,6 +220,9 @@ export interface InvestmentPointProps {
   logLine: string | null;
   year: number | null;
   status: InvestmentStatus;
+  /** The stamped Chicago community area (point-in-polygon), or "" — powers the
+   * popup's "Analyze this community →" cross-link to /investment/[area]. */
+  communityArea: string;
   /** First http(s) source link, or "" when the record carries none. */
   sourceLink: string;
   /**
@@ -200,11 +288,15 @@ export function investmentRecordsToPointFeatures(
         recipient: r.recipient,
         funderName: r.funderName,
         funderType: r.funderType,
+        capitalClass: r.capitalClass,
         amountAwarded: r.amountAwarded,
+        authorizedAmount: r.authorizedAmount ?? null,
+        creditAmount: r.creditAmount ?? null,
         announcedInvestment: r.announcedInvestment ?? null,
         logLine: r.logLine,
         year: r.year,
         status: r.status,
+        communityArea: r.communityArea ?? "",
         sourceLink: r.links.find((l) => /^https?:\/\//i.test(l)) ?? "",
       },
     });
@@ -221,6 +313,22 @@ export function investmentRecordsToPointFeatures(
     if (f.properties.funderType === "private_development") {
       f.properties.radiusPx = radiusOf(f.properties.announcedInvestment);
     }
+  }
+  // Size NON-GRANT capital dots (tif_subsidy / federal_program / tax_credit — all
+  // funderType government, amountAwarded=null) by their OWN money field, each on
+  // its own per-class sqrt-domain scale (4–18px). Without this every non-grant dot
+  // collapses to the 4px floor under the amountAwarded paint (to-number(null)=0),
+  // so a $959M TIF ceiling would read identical to a $0 one. tif_subsidy /
+  // federal_program size by authorizedAmount; tax_credit sizes by creditAmount.
+  // A per-CLASS domain keeps each instrument's magnitudes comparable within itself
+  // (the outline color already tells the classes apart).
+  for (const cls of ["tif_subsidy", "federal_program", "tax_credit"] as const) {
+    const ofClass = features.filter((f) => f.properties.capitalClass === cls);
+    if (ofClass.length === 0) continue;
+    const moneyOf = (p: InvestmentPointProps): number | null =>
+      p.capitalClass === "tax_credit" ? p.creditAmount : p.authorizedAmount;
+    const scale = makeDevelopmentDotRadiusScale(ofClass.map((f) => moneyOf(f.properties)));
+    for (const f of ofClass) f.properties.radiusPx = scale(moneyOf(f.properties));
   }
   return features;
 }
@@ -372,6 +480,9 @@ export interface CommunityInvestmentLayerResult {
   status: CommunityInvestmentLayerStatus;
   pointFeatures: InvestmentPointFeature[];
   presentFunderTypes: FunderType[];
+  /** Distinct capital classes present among the plotted dots, in CAPITAL_CLASS_ORDER
+   * — drives the legend's capital-class sub-legend. */
+  presentCapitalClasses: CapitalClass[];
   /** Unfiltered citywide summary (initial legend state, all years / all types). */
   citywide: CitywideInvestmentSummary;
   /** Filterable citywide entries so the legend note re-scopes with the filters. */
@@ -389,6 +500,7 @@ const EMPTY_LAYER_RESULT = (status: CommunityInvestmentLayerStatus): CommunityIn
   status,
   pointFeatures: [],
   presentFunderTypes: [],
+  presentCapitalClasses: [],
   citywide: { count: 0, totalDollars: 0 },
   citywideEntries: [],
   funderHqs: [],
@@ -428,6 +540,9 @@ export async function fetchCommunityInvestmentLayer(opts?: {
     status: "ready",
     pointFeatures,
     presentFunderTypes: presentFunderTypesInOrder(pointFeatures.map((f) => f.properties.funderType)),
+    presentCapitalClasses: presentCapitalClassesInOrder(
+      pointFeatures.map((f) => f.properties.capitalClass),
+    ),
     citywide: summarizeCitywideEntries(citywideEntries, null),
     citywideEntries,
     funderHqs: Array.isArray(data?.funderHqs) ? data.funderHqs : [],

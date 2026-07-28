@@ -1,0 +1,155 @@
+geography,geography_level,year,transaction_count,dollars,instrument_mix_text,transactions_missing_amount
+Austin,community_area,2021,1008,24132215,"TERM: 1008 txn / $24,132,215",0
+Bridgeport,community_area,2021,75,17868520,"TERM: 75 txn / $17,868,520",0
+Armour Square,community_area,2021,59,14977446,"TERM: 59 txn / $14,977,446",0
+South Shore,community_area,2021,657,13441871,"TERM: 657 txn / $13,441,871",0
+Auburn Gresham,community_area,2021,646,12228882,"TERM: 646 txn / $12,228,882",0
+Roseland,community_area,2021,611,11422085,"TERM: 611 txn / $11,422,085",0
+Near West Side,community_area,2021,225,10712199,"TERM: 223 txn / $7,692,199; LOC: 2 txn / $3,020,000",0
+West Pullman,community_area,2021,471,8823165,"TERM: 471 txn / $8,823,165",0
+Greater Grand Crossing,community_area,2021,445,8017872,"TERM: 445 txn / $8,017,872",0
+Mckinley Park,community_area,2021,41,7994226,"TERM: 41 txn / $7,994,226",0
+Humboldt Park,community_area,2021,303,7788278,"TERM: 303 txn / $7,788,278",0
+North Lawndale,community_area,2021,395,7609481,"TERM: 395 txn / $7,609,481",0
+Ashburn,community_area,2021,287,7271801,"TERM: 287 txn / $7,271,801",0
+Chicago Lawn,community_area,2021,382,7093692,"TERM: 382 txn / $7,093,692",0
+West Town,community_area,2021,117,6970243,"TERM: 117 txn / $6,970,243",0
+Garfield Ridge,community_area,2021,58,6967504,"TERM: 58 txn / $6,967,504",0
+West Englewood,community_area,2021,352,6813348,"TERM: 352 txn / $6,813,348",0
+Chatham,community_area,2021,361,6668587,"TERM: 361 txn / $6,668,587",0
+Washington Heights,community_area,2021,347,6550424,"TERM: 347 txn / $6,550,424",0
+Woodlawn,community_area,2021,286,6490525,"TERM: 286 txn / $6,490,525",0
+Englewood,community_area,2021,328,6087189,"TERM: 328 txn / $6,087,189",0
+Loop,community_area,2021,73,5925575,"TERM: 72 txn / $5,425,575; LOC: 1 txn / $500,000",0
+Grand Boulevard,community_area,2021,298,5769595,"TERM: 298 txn / $5,769,595",0
+Douglas,community_area,2021,163,5372117,"TERM: 162 txn / $5,177,117; LOC: 1 txn / $195,000",0
+South Chicago,community_area,2021,286,5238510,"TERM: 286 txn / $5,238,510",0
+Brighton Park,community_area,2021,64,5212027,"TERM: 64 txn / $5,212,027",0
+East Garfield Park,community_area,2021,241,5211146,"TERM: 241 txn / $5,211,146",0
+Hyde Park,community_area,2021,74,4567685,"TERM: 74 txn / $4,567,685",0
+New City,community_area,2021,159,4514242,"TERM: 159 txn / $4,514,242",0
+West Ridge,community_area,2021,184,4429976,"TERM: 184 txn / $4,429,976",0
+West Garfield Park,community_area,2021,202,4328825,"TERM: 201 txn / $4,081,325; LOC: 1 txn / $247,500",0
+Morgan Park,community_area,2021,233,4156749,"TERM: 233 txn / $4,156,749",0
+Uptown,community_area,2021,98,4002511,"TERM: 98 txn / $4,002,511",0
+Avondale,community_area,2021,45,3569591,"TERM: 45 txn / $3,569,591",0
+Logan Square,community_area,2021,99,3427344,"TERM: 99 txn / $3,427,344",0
+Calumet Heights,community_area,2021,176,3211696,"TERM: 176 txn / $3,211,696",0
+Washington Park,community_area,2021,155,3005503,"TERM: 155 txn / $3,005,503",0
+Kenwood,community_area,2021,122,2980795,"TERM: 122 txn / $2,980,795",0
+Edgewater,community_area,2021,80,2846206,"TERM: 80 txn / $2,846,206",0
+Near North Side,community_area,2021,120,2779902,"TERM: 119 txn / $2,484,902; LOC: 1 txn / $295,000",0
+Belmont Cragin,community_area,2021,133,2724162,"TERM: 133 txn / $2,724,162",0
+West Lawn,community_area,2021,54,2588953,"TERM: 54 txn / $2,588,953",0
+Rogers Park,community_area,2021,144,2546495,"TERM: 144 txn / $2,546,495",0
+Lower West Side,community_area,2021,43,2520012,"TERM: 43 txn / $2,520,012",0
+Near South Side,community_area,2021,83,2439128,"TERM: 83 txn / $2,439,128",0
+Avalon Park,community_area,2021,138,2429006,"TERM: 138 txn / $2,429,006",0
+Portage Park,community_area,2021,110,2224630,"TERM: 110 txn / $2,224,630",0
+South Deering,community_area,2021,123,2168650,"TERM: 123 txn / $2,168,650",0
+South Lawndale,community_area,2021,99,1912649,"TERM: 99 txn / $1,912,649",0
+Gage Park,community_area,2021,68,1824453,"TERM: 68 txn / $1,824,453",0
+Archer Heights,community_area,2021,30,1816884,"TERM: 30 txn / $1,816,884",0
+Pullman,community_area,2021,91,1746585,"TERM: 91 txn / $1,746,585",0
+West Elsdon,community_area,2021,30,1656403,"TERM: 30 txn / $1,656,403",0
+Riverdale,community_area,2021,86,1548609,"TERM: 86 txn / $1,548,609",0
+Albany Park,community_area,2021,59,1514801,"TERM: 59 txn / $1,514,801",0
+North Park,community_area,2021,27,1411989,"TERM: 27 txn / $1,411,989",0
+Beverly,community_area,2021,80,1375499,"TERM: 80 txn / $1,375,499",0
+Clearing,community_area,2021,43,1300949,"TERM: 43 txn / $1,300,949",0
+Montclare,community_area,2021,31,1287841,"TERM: 31 txn / $1,287,841",0
+Dunning,community_area,2021,47,1262874,"TERM: 47 txn / $1,262,874",0
+Oakland,community_area,2021,66,1231600,"TERM: 66 txn / $1,231,600",0
+Lake View,community_area,2021,47,1197914,"TERM: 47 txn / $1,197,914",0
+East Side,community_area,2021,42,1146964,"TERM: 42 txn / $1,146,964",0
+Hermosa,community_area,2021,60,1059185,"TERM: 60 txn / $1,059,185",0
+Jefferson Park,community_area,2021,28,931463,"TERM: 28 txn / $931,463",0
+Lincoln Park,community_area,2021,54,905165,"TERM: 54 txn / $905,165",0
+Irving Park,community_area,2021,68,847590,"TERM: 68 txn / $847,590",0
+Burnside,community_area,2021,37,712910,"TERM: 37 txn / $712,910",0
+North Center,community_area,2021,21,673457,"TERM: 21 txn / $673,457",0
+Lincoln Square,community_area,2021,37,667735,"TERM: 37 txn / $667,735",0
+Fuller Park,community_area,2021,30,577946,"TERM: 30 txn / $577,946",0
+Ohare,community_area,2021,28,466834,"TERM: 28 txn / $466,834",0
+Norwood Park,community_area,2021,20,429440,"TERM: 20 txn / $429,440",0
+Hegewisch,community_area,2021,23,371539,"TERM: 23 txn / $371,539",0
+Forest Glen,community_area,2021,9,225341,"TERM: 9 txn / $225,341",0
+Mount Greenwood,community_area,2021,9,108464,"TERM: 9 txn / $108,464",0
+Edison Park,community_area,2021,3,38589,"TERM: 3 txn / $38,589",0
+Near North Side,community_area,2022,53,42700332,"TERM: 38 txn / $30,455,590; LOC: 15 txn / $12,244,742",0
+Near West Side,community_area,2022,56,31569840,"TERM: 40 txn / $22,309,465; LOC: 16 txn / $9,260,375",0
+Bridgeport,community_area,2022,71,30700384,"TERM: 69 txn / $30,662,232; LOC: 2 txn / $38,152",0
+West Town,community_area,2022,43,22575664,"TERM: 33 txn / $12,729,601; LOC: 10 txn / $9,846,063",0
+Lake View,community_area,2022,28,22330207,"TERM: 17 txn / $12,460,148; LOC: 11 txn / $9,870,059",0
+Austin,community_area,2022,107,19281455,"TERM: 99 txn / $19,067,933; LOC: 8 txn / $213,522",0
+South Shore,community_area,2022,39,19262517,"TERM: 34 txn / $18,608,798; LOC: 5 txn / $653,719",0
+Loop,community_area,2022,61,16405054,"TERM: 50 txn / $10,212,056; LOC: 11 txn / $6,192,997",0
+Logan Square,community_area,2022,56,15350790,"TERM: 43 txn / $6,039,836; LOC: 13 txn / $9,310,955",0
+Brighton Park,community_area,2022,64,12719564,"TERM: 59 txn / $11,652,851; LOC: 5 txn / $1,066,713",0
+Mckinley Park,community_area,2022,46,10052799,"TERM: 45 txn / $10,032,578; LOC: 1 txn / $20,221",0
+Armour Square,community_area,2022,36,10017320,"TERM: 36 txn / $10,017,320",0
+Woodlawn,community_area,2022,27,9403101,"TERM: 19 txn / $8,560,142; LOC: 8 txn / $842,959",0
+New City,community_area,2022,65,8655483,"TERM: 62 txn / $8,591,560; LOC: 3 txn / $63,923",0
+Rogers Park,community_area,2022,16,8231298,"TERM: 14 txn / $8,176,077; LOC: 2 txn / $55,221",0
+Kenwood,community_area,2022,21,7477020,"TERM: 16 txn / $7,144,278; LOC: 5 txn / $332,742",0
+Englewood,community_area,2022,23,7356335,"TERM: 18 txn / $6,759,322; LOC: 5 txn / $597,013",0
+Hyde Park,community_area,2022,21,7148567,"TERM: 19 txn / $7,121,926; LOC: 2 txn / $26,641",0
+Uptown,community_area,2022,36,6057723,"TERM: 31 txn / $5,839,365; LOC: 5 txn / $218,358",0
+Humboldt Park,community_area,2022,45,5670872,"TERM: 37 txn / $2,271,716; LOC: 8 txn / $3,399,156",0
+Chatham,community_area,2022,26,5320593,"TERM: 21 txn / $3,657,551; LOC: 5 txn / $1,663,042",0
+Greater Grand Crossing,community_area,2022,17,4730662,"TERM: 13 txn / $4,688,646; LOC: 4 txn / $42,016",0
+South Lawndale,community_area,2022,58,4646246,"TERM: 56 txn / $4,593,700; LOC: 2 txn / $52,546",0
+North Center,community_area,2022,17,4640941,"TERM: 11 txn / $1,493,502; LOC: 6 txn / $3,147,439",0
+East Garfield Park,community_area,2022,29,4630253,"TERM: 24 txn / $4,552,925; LOC: 5 txn / $77,328",0
+North Lawndale,community_area,2022,25,4601949,"TERM: 20 txn / $3,865,861; LOC: 5 txn / $736,088",0
+Chicago Lawn,community_area,2022,75,4564926,"TERM: 71 txn / $3,757,756; LOC: 4 txn / $807,170",0
+West Ridge,community_area,2022,34,4547264,"TERM: 30 txn / $2,571,281; LOC: 4 txn / $1,975,983",0
+Avondale,community_area,2022,29,4234622,"TERM: 25 txn / $1,409,662; LOC: 4 txn / $2,824,960",0
+Grand Boulevard,community_area,2022,20,4193043,"TERM: 15 txn / $3,510,495; LOC: 5 txn / $682,548",0
+West Elsdon,community_area,2022,15,4064111,"TERM: 13 txn / $2,852,900; LOC: 2 txn / $1,211,211",0
+Morgan Park,community_area,2022,14,3552853,"TERM: 14 txn / $3,552,853",0
+West Garfield Park,community_area,2022,26,3352280,"TERM: 18 txn / $3,152,998; LOC: 8 txn / $199,282",0
+Beverly,community_area,2022,14,3318659,"TERM: 11 txn / $3,314,391; LOC: 3 txn / $4,268",0
+Irving Park,community_area,2022,24,3298507,"TERM: 21 txn / $2,619,883; LOC: 3 txn / $678,624",0
+Lincoln Park,community_area,2022,21,3296384,"TERM: 16 txn / $3,096,959; LOC: 5 txn / $199,425",0
+Hermosa,community_area,2022,48,3260135,"TERM: 47 txn / $3,234,864; LOC: 1 txn / $25,271",0
+Belmont Cragin,community_area,2022,106,2984917,"TERM: 103 txn / $2,965,849; LOC: 3 txn / $19,068",0
+Douglas,community_area,2022,10,2869871,"TERM: 9 txn / $2,864,700; LOC: 1 txn / $5,171",0
+West Englewood,community_area,2022,32,2805263,"TERM: 28 txn / $2,769,956; LOC: 4 txn / $35,307",0
+Edgewater,community_area,2022,26,2575844,"TERM: 25 txn / $2,550,073; LOC: 1 txn / $25,771",0
+Portage Park,community_area,2022,57,2541276,"TERM: 54 txn / $2,464,463; LOC: 3 txn / $76,813",0
+Washington Park,community_area,2022,9,2523759,"TERM: 9 txn / $2,523,759",0
+Mount Greenwood,community_area,2022,5,2510592,"TERM: 5 txn / $2,510,592",0
+Near South Side,community_area,2022,25,2466390,"TERM: 20 txn / $2,407,027; LOC: 5 txn / $59,363",0
+Lincoln Square,community_area,2022,24,2249271,"TERM: 21 txn / $2,205,904; LOC: 2 txn / $28,367; EQTYINV: 1 txn / $15,000",0
+Archer Heights,community_area,2022,10,2238441,"TERM: 9 txn / $2,212,670; LOC: 1 txn / $25,771",0
+Auburn Gresham,community_area,2022,30,2211700,"TERM: 24 txn / $2,068,664; LOC: 6 txn / $143,036",0
+Lower West Side,community_area,2022,20,2136872,"TERM: 14 txn / $1,588,492; LOC: 6 txn / $548,380",0
+Gage Park,community_area,2022,27,2091021,"TERM: 26 txn / $2,065,250; LOC: 1 txn / $25,771",0
+Ashburn,community_area,2022,26,2078103,"TERM: 23 txn / $2,039,692; LOC: 3 txn / $38,411",0
+West Lawn,community_area,2022,26,1882471,"TERM: 25 txn / $1,856,700; LOC: 1 txn / $25,771",0
+Roseland,community_area,2022,29,1695202,"TERM: 25 txn / $1,638,198; LOC: 4 txn / $57,004",0
+South Deering,community_area,2022,12,1686316,"TERM: 12 txn / $1,686,316",0
+Dunning,community_area,2022,34,1476428,"TERM: 31 txn / $1,422,790; LOC: 3 txn / $53,638",0
+North Park,community_area,2022,11,1397705,"TERM: 9 txn / $1,346,163; LOC: 2 txn / $51,542",0
+Ohare,community_area,2022,12,1393162,"TERM: 8 txn / $765,620; LOC: 4 txn / $627,542",0
+Washington Heights,community_area,2022,14,1342578,"TERM: 11 txn / $1,103,489; LOC: 3 txn / $239,089",0
+Garfield Ridge,community_area,2022,19,1339630,"TERM: 19 txn / $1,339,630",0
+Norwood Park,community_area,2022,9,1205849,"TERM: 8 txn / $1,186,773; LOC: 1 txn / $19,076",0
+South Chicago,community_area,2022,17,1168927,"TERM: 16 txn / $1,072,927; EQTYINV: 1 txn / $96,000",0
+Jefferson Park,community_area,2022,9,1120311,"TERM: 8 txn / $1,117,765; LOC: 1 txn / $2,546",0
+East Side,community_area,2022,4,928071,"TERM: 4 txn / $928,071",0
+Avalon Park,community_area,2022,9,901033,"TERM: 7 txn / $872,651; LOC: 2 txn / $28,382",0
+Clearing,community_area,2022,21,888117,"TERM: 21 txn / $888,117",0
+Montclare,community_area,2022,12,616717,"TERM: 12 txn / $616,717",0
+Oakland,community_area,2022,5,605742,"TERM: 5 txn / $605,742",0
+Hegewisch,community_area,2022,2,468800,"TERM: 2 txn / $468,800",0
+Albany Park,community_area,2022,27,395421,"TERM: 27 txn / $395,421",0
+Pullman,community_area,2022,7,251354,"TERM: 7 txn / $251,354",0
+Calumet Heights,community_area,2022,8,199892,"TERM: 7 txn / $174,121; LOC: 1 txn / $25,771",0
+West Pullman,community_area,2022,7,185337,"TERM: 6 txn / $182,741; LOC: 1 txn / $2,596",0
+Forest Glen,community_area,2022,2,117596,"TERM: 2 txn / $117,596",0
+Riverdale,community_area,2022,2,16989,"TERM: 2 txn / $16,989",0
+Fuller Park,community_area,2022,2,3496,"TERM: 2 txn / $3,496",0
+Cook County IL - outside Chicago community areas (suburban/unmatched tract),county,2021,8097,227865201,"TERM: 8089 txn / $223,691,201; LOC: 8 txn / $4,174,000",0
+Cook County IL - outside Chicago community areas (suburban/unmatched tract),county,2022,1358,186930104,"TERM: 1206 txn / $137,240,067; LOC: 152 txn / $49,690,037",0

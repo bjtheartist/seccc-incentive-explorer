@@ -57,10 +57,19 @@ import {
   FUNDER_TYPE_COLORS,
   FUNDER_TYPE_ORDER,
   INVESTMENT_FALLBACK_COLOR,
+  CAPITAL_CLASS_OUTLINE,
   type InvestmentPointFeature,
   type CitywideInvestmentEntry,
 } from "@/lib/community-investment-layer";
-import type { FunderType } from "@/lib/community-investment";
+import type { CapitalClass, FunderType } from "@/lib/community-investment";
+import { CHICAGO_COMMUNITY_AREAS } from "@/lib/community-areas";
+import {
+  loadInvestmentSession,
+  patchInvestmentSession,
+  sessionFromQuery,
+  funderTypeRecordFromSession,
+  sessionFunderTypesFromRecord,
+} from "@/lib/investment-session";
 import {
   loadStoredInvestmentViewMode,
   storeInvestmentViewMode,
@@ -70,8 +79,10 @@ import {
   PHILANTHROPIC_ARC_COLOR,
   DENSITY_COLOR_RANGE,
   HEXAGON_RADIUS_M,
-  densityColorWeight,
+  densityWeightForMetric,
+  DEFAULT_INVESTMENT_DENSITY_METRIC,
   type InvestmentViewMode,
+  type InvestmentDensityMetric,
   type InvestmentArcDatum,
   type FunderHq,
 } from "@/lib/investment-deck-modes";
@@ -181,9 +192,25 @@ export default function MapView() {
   const [communityInvestmentLoading, setCommunityInvestmentLoading] = useState(false);
   const [communityInvestmentError, setCommunityInvestmentError] = useState<string | null>(null);
   const [investmentPresentFunderTypes, setInvestmentPresentFunderTypes] = useState<FunderType[]>([]);
-  const [investmentYearRange, setInvestmentYearRange] = useState<string>(DEFAULT_INVESTMENT_YEAR_RANGE);
+  // Capital classes present among plotted dots — drives the legend's capital-class
+  // sub-legend (grant / TIF / federal / tax-credit). Set on each fetch.
+  const [investmentPresentCapitalClasses, setInvestmentPresentCapitalClasses] = useState<CapitalClass[]>([]);
+  // Number of tracked foundation HQs (the Arcs "Foundation flows (N tracked HQs)"
+  // honest label). Set from the gated fetch's funderHqs.length.
+  const [investmentFunderHqCount, setInvestmentFunderHqCount] = useState(0);
+  // Year range + funderType checkboxes seed from the SHARED investment session
+  // (lib/investment-session.ts) so a filter set on the map survives a round-trip
+  // to the /investment analysis pages and back (Sol #1). Same sessionStorage-in-
+  // initializer pattern as the toggle/view-mode above.
+  const [investmentYearRange, setInvestmentYearRange] = useState<string>(
+    () => loadInvestmentSession().yearWindow ?? DEFAULT_INVESTMENT_YEAR_RANGE
+  );
+  const setInvestmentYearRangePersistent = useCallback((id: string) => {
+    setInvestmentYearRange(id);
+    patchInvestmentSession({ yearWindow: id });
+  }, []);
   const [investmentFunderTypes, setInvestmentFunderTypes] = useState<Record<FunderType, boolean>>(
-    () => Object.fromEntries(FUNDER_TYPE_ORDER.map((k) => [k, true])) as Record<FunderType, boolean>
+    () => funderTypeRecordFromSession(loadInvestmentSession().funderTypes)
   );
   const [investmentCitywide, setInvestmentCitywide] = useState<{ count: number; totalDollars: number } | null>(
     null
@@ -197,8 +224,20 @@ export default function MapView() {
   // to the active year/funderType instead of freezing it at the unfiltered total.
   const investmentCitywideEntriesRef = useRef<CitywideInvestmentEntry[]>([]);
   const toggleInvestmentFunderType = useCallback((key: FunderType) => {
-    setInvestmentFunderTypes((prev) => ({ ...prev, [key]: !prev[key] }));
+    setInvestmentFunderTypes((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      // Mirror the new checkbox set into the shared session so it survives a
+      // map ↔ analysis round-trip.
+      patchInvestmentSession({ funderTypes: sessionFunderTypesFromRecord(next) });
+      return next;
+    });
   }, []);
+
+  // Density metric (Sol #4): dollars ($ awarded per bin) | records (grant count
+  // per bin). Component state — the choice is not persisted across the /report
+  // remount (unlike the view mode). Dots is unaffected.
+  const [investmentDensityMetric, setInvestmentDensityMetric] =
+    useState<InvestmentDensityMetric>(DEFAULT_INVESTMENT_DENSITY_METRIC);
 
   // Admin-only VIEW MODES for the investment layer (Dots | Arcs | Density).
   // sessionStorage-persisted like the toggle so the choice survives the /report
@@ -1408,18 +1447,24 @@ export default function MapView() {
             "private_development", FUNDER_TYPE_COLORS.private_development,
             INVESTMENT_FALLBACK_COLOR,
           ],
-          // Radius encodes MAGNITUDE, but from different fields by funder type:
+          // Radius encodes MAGNITUDE, but from different fields by capital kind:
           //   • DEVELOPMENT dots read `radiusPx` — a precomputed 4–18px radius
           //     sized by announcedInvestment over the development set (a
           //     domain-normalized sqrt scale a mapbox expression can't express;
           //     stamped in investmentRecordsToPointFeatures). A null-capital
           //     development carries radiusPx=4 (the floor). NEVER amountAwarded.
-          //   • everything else keeps the sqrt(amountAwarded) scale, clamped
-          //     4–18px (interpolate clamps outside the domain; to-number coerces
-          //     a null amount to 0 → the 4px floor).
+          //   • NON-GRANT capital dots (capitalClass != grant: TIF / federal /
+          //     tax-credit, amountAwarded=null) ALSO read a precomputed `radiusPx`,
+          //     sized by their OWN money field on a per-class sqrt domain — so they
+          //     no longer all collapse to the 4px floor under an amountAwarded paint.
+          //   • grant dots keep the sqrt(amountAwarded) scale, clamped 4–18px
+          //     (interpolate clamps outside the domain; to-number coerces a null
+          //     amount to 0 → the 4px floor).
           "circle-radius": [
             "case",
             ["==", ["get", "funderType"], "private_development"],
+            ["to-number", ["get", "radiusPx"], 4],
+            ["!=", ["get", "capitalClass"], "grant"],
             ["to-number", ["get", "radiusPx"], 4],
             [
               "interpolate", ["linear"], ["sqrt", ["to-number", ["get", "amountAwarded"]]],
@@ -1428,8 +1473,25 @@ export default function MapView() {
             ],
           ],
           "circle-opacity": 0.7,
-          "circle-stroke-width": 1,
-          "circle-stroke-color": "#ffffff",
+          // OUTLINE encodes CAPITAL CLASS (a mapbox circle can't dash, so a
+          // distinct stroke color carries it): a grant keeps the white ring, while
+          // the three non-grant classes — all funderType government / blue fill —
+          // are told apart by an amber / navy / magenta ring (CAPITAL_CLASS_OUTLINE)
+          // + the legend sub-key. Non-grant rings are 1.5px so they read.
+          "circle-stroke-width": [
+            "match", ["get", "capitalClass"],
+            "tif_subsidy", 1.5,
+            "federal_program", 1.5,
+            "tax_credit", 1.5,
+            1,
+          ],
+          "circle-stroke-color": [
+            "match", ["get", "capitalClass"],
+            "tif_subsidy", CAPITAL_CLASS_OUTLINE.tif_subsidy,
+            "federal_program", CAPITAL_CLASS_OUTLINE.federal_program,
+            "tax_credit", CAPITAL_CLASS_OUTLINE.tax_credit,
+            CAPITAL_CLASS_OUTLINE.grant,
+          ],
         },
       });
 
@@ -1780,6 +1842,42 @@ export default function MapView() {
     });
   }, [loaded, handleSearchResult]);
 
+  /* ── Deep link: /map?investment=1[&area=&year=&types=] ── */
+  // The "Show on map →" links from the /investment analysis + compare pages
+  // (Sol #1): enable the admin Community Investment layer, restore the shared
+  // session's year/funderType filters from the URL, and fly to the named
+  // community area. Runs once; the layer only actually renders when the viewer
+  // is admin (the fetch effect gates on adminSessionActive), so a non-admin who
+  // lands on the link simply sees no layer.
+  const investmentDeepLinkHandledRef = useRef(false);
+  useEffect(() => {
+    if (!loaded || investmentDeepLinkHandledRef.current) return;
+    investmentDeepLinkHandledRef.current = true;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("investment") !== "1") return;
+
+    // Merge any filter context carried in the URL into the shared session, then
+    // apply it to the layer state so the analysis → map round-trip restores view.
+    const fromUrl = sessionFromQuery(params);
+    if (Object.keys(fromUrl).length > 0) patchInvestmentSession(fromUrl);
+    if (fromUrl.yearWindow) setInvestmentYearRange(fromUrl.yearWindow);
+    if ("funderTypes" in fromUrl) {
+      setInvestmentFunderTypes(funderTypeRecordFromSession(fromUrl.funderTypes));
+    }
+
+    setCommunityInvestmentVisiblePersistent(true);
+
+    const area = params.get("area");
+    if (area) {
+      const ca = CHICAGO_COMMUNITY_AREAS.find(
+        (c) => c.name.toLowerCase() === area.trim().toLowerCase()
+      );
+      if (ca && mapRef.current) {
+        mapRef.current.flyTo({ center: [ca.lon, ca.lat], zoom: 12.5, duration: 1500 });
+      }
+    }
+  }, [loaded, setCommunityInvestmentVisiblePersistent]);
+
   const handleGenerateSnapshot = useCallback(async () => {
     if (isGeneratingSnapshot) return;
 
@@ -2096,6 +2194,8 @@ export default function MapView() {
         investmentFunderHqsRef.current = [];
         setCommunityInvestmentLoaded(false);
         setInvestmentPresentFunderTypes([]);
+        setInvestmentPresentCapitalClasses([]);
+        setInvestmentFunderHqCount(0);
         setInvestmentCitywide(null);
         setInvestmentArcMissingHqCount(0);
       }
@@ -2116,6 +2216,8 @@ export default function MapView() {
           investmentCitywideEntriesRef.current = result.citywideEntries;
           investmentFunderHqsRef.current = result.funderHqs;
           setInvestmentPresentFunderTypes(result.presentFunderTypes);
+          setInvestmentPresentCapitalClasses(result.presentCapitalClasses);
+          setInvestmentFunderHqCount(result.funderHqs.length);
           setInvestmentCitywide(result.citywide);
           setCommunityInvestmentLoaded(true);
         } else if (result.status === "unauthorized") {
@@ -2207,6 +2309,14 @@ export default function MapView() {
         elevationValue?: number;
       };
       const count = bin.count ?? bin.points?.length ?? bin.pointIndices?.length ?? 0;
+      // RECORDS mode bins EVERY point (grant + non-grant capital), so the honest
+      // noun is "records" and there is NO dollar figure — the bin value is a count.
+      if (investmentDensityMetric === "records") {
+        return { text: `${count} record${count === 1 ? "" : "s"} in this bin`, style };
+      }
+      // DOLLARS mode: the layer data is filtered to amountAwarded>0 grant records
+      // (see the density layer below), so the bin sum is a real awarded total and
+      // every point in it is a grant.
       const total = bin.colorValue ?? bin.value ?? bin.elevationValue ?? 0;
       return {
         text: `${formatAwardedAmount(total)} awarded\n${count} grant${count === 1 ? "" : "s"} in this bin`,
@@ -2214,7 +2324,7 @@ export default function MapView() {
       };
     }
     return null;
-  }, []);
+  }, [investmentDensityMetric]);
 
   /* ── Community-investment layer: deck.gl view modes (Arcs / Density) ──
      Owns the base circle layer's visibility (visible ONLY in Dots mode) and the
@@ -2311,14 +2421,25 @@ export default function MapView() {
     } else {
       // density
       setInvestmentArcMissingHqCount(0);
+      // In DOLLARS mode, exclude the null-amount government points (TIF / CDBG-HOME
+      // / LIHTC — amountAwarded=null) so a bin of only non-grant points does NOT
+      // paint a phantom $0 hexagon under the "$ awarded" ramp (and does not pin the
+      // color domain floor to 0). RECORDS mode keeps every point — it is a plain
+      // record-density count and the honest picture there includes all records.
+      const densityData =
+        investmentDensityMetric === "dollars"
+          ? filtered.filter((f) => (f.properties.amountAwarded ?? 0) > 0)
+          : filtered;
       layers = [
         new HexagonLayer<InvestmentPointFeature>({
           id: "investment-hexagons",
-          data: filtered,
+          data: densityData,
           getPosition: (f) => f.geometry.coordinates as [number, number],
-          // AWARDED dollars only — never announcedInvestment (a development's
-          // announced capital must not heat a density bin). See densityColorWeight.
-          getColorWeight: densityColorWeight,
+          // dollars → AWARDED dollars only (never announcedInvestment — a
+          // development's announced capital must not heat a bin); records → a
+          // plain count (every point weight 1). densityWeightForMetric is the one
+          // selector the legend caption + the deck weight agree on.
+          getColorWeight: densityWeightForMetric(investmentDensityMetric),
           colorAggregation: "SUM",
           radius: HEXAGON_RADIUS_M,
           extruded: false,
@@ -2337,7 +2458,10 @@ export default function MapView() {
       });
       map.addControl(deckOverlayRef.current as unknown as mapboxgl.IControl);
     } else {
-      deckOverlayRef.current.setProps({ layers });
+      // Re-apply getTooltip too: it closes over investmentDensityMetric (records
+      // vs dollars wording), so a metric switch on an existing overlay must refresh
+      // it — otherwise a stale closure keeps the old bin text.
+      deckOverlayRef.current.setProps({ layers, getTooltip: getInvestmentDeckTooltip });
     }
   }, [
     loaded,
@@ -2347,6 +2471,7 @@ export default function MapView() {
     investmentViewMode,
     investmentYearRange,
     investmentFunderTypes,
+    investmentDensityMetric,
     getInvestmentDeckTooltip,
   ]);
 
@@ -2453,14 +2578,18 @@ export default function MapView() {
           communityInvestmentLoading={communityInvestmentLoading}
           communityInvestmentError={communityInvestmentError}
           investmentPresentFunderTypes={investmentPresentFunderTypes}
+          investmentPresentCapitalClasses={investmentPresentCapitalClasses}
+          investmentFunderHqCount={investmentFunderHqCount}
           investmentYearRange={investmentYearRange}
           investmentFunderTypes={investmentFunderTypes}
           investmentCitywide={investmentCitywide}
           investmentViewMode={investmentViewMode}
+          investmentDensityMetric={investmentDensityMetric}
           investmentArcMissingHqCount={investmentArcMissingHqCount}
           onSetCommunityInvestmentVisible={setCommunityInvestmentVisiblePersistent}
-          onSetInvestmentYearRange={setInvestmentYearRange}
+          onSetInvestmentYearRange={setInvestmentYearRangePersistent}
           onSetInvestmentViewMode={setInvestmentViewModePersistent}
+          onSetInvestmentDensityMetric={setInvestmentDensityMetric}
           onToggleInvestmentFunderType={toggleInvestmentFunderType}
           onClose={() => setLegendOpen(false)}
           onToggleZone={toggleZone}

@@ -7,12 +7,13 @@ import mapboxgl from "mapbox-gl";
 import { POINT_DATA_ZONE_KEYS, ZONE_META, ZONING_CATEGORIES } from "@/lib/constants";
 import { OWNER_TYPE_COLORS, OWNER_TYPE_LABELS, type OwnerType } from "@/lib/owner-classify";
 import {
+  CAPITAL_CLASS_MONEY_NOUN,
   FUNDER_TYPE_COLORS,
   FUNDER_TYPE_LABELS,
   INVESTMENT_FALLBACK_COLOR,
   investmentStatusLabel,
 } from "@/lib/community-investment-layer";
-import type { FunderType } from "@/lib/community-investment";
+import type { CapitalClass, FunderType } from "@/lib/community-investment";
 import type { DistrictData } from "@/lib/types";
 import type { SiteSignals } from "@/lib/site-signals";
 import type { TransportAccess } from "@/lib/transport-access";
@@ -304,12 +305,22 @@ export interface InvestmentPopupProperties {
   recipient?: string;
   funderName?: string;
   funderType?: string;
+  /** Capital class — picks the money noun + field so a TIF/federal/tax-credit dot
+   * is never mislabeled "Awarded". Absent → treated as "grant". */
+  capitalClass?: string;
   amountAwarded?: number | null;
+  /** Council-authorized TIF ceiling / committed HUD allocation (tif_subsidy /
+   * federal_program), a SEPARATE measure from amountAwarded. */
+  authorizedAmount?: number | null;
+  /** LIHTC/NMTC tax-credit capital (tax_credit) — a DIFFERENT instrument again. */
+  creditAmount?: number | null;
   /** Announced private DEVELOPMENT capital — a SEPARATE measure from amountAwarded. */
   announcedInvestment?: number | null;
   logLine?: string | null;
   year?: number | null;
   status?: string;
+  /** Stamped Chicago community area — powers the "Analyze this community →" link. */
+  communityArea?: string;
   sourceLink?: string;
 }
 
@@ -343,28 +354,51 @@ export function buildInvestmentPopupHtml(p: InvestmentPopupProperties): string {
   const recipient = escapePopupHtml(p.recipient || "Recipient unavailable");
   const funderName = p.funderName ? escapePopupHtml(p.funderName) : "";
 
-  // A DEVELOPMENT record reports ANNOUNCED private capital, a different measure
-  // from an awarded grant — its money row is labeled "Announced" and reads
-  // announcedInvestment; awarded grants keep the "Awarded" label + amountAwarded.
-  // The two figures are never combined in a single row.
+  // Pick the CORRECT money noun + field per capital class so nothing is ever
+  // mislabeled:
+  //   • private_development → "Announced" + announcedInvestment (a development is
+  //     capitalClass "grant" but reports an announced price tag, not a grant).
+  //   • grant           → "Awarded" + amountAwarded (unchanged).
+  //   • tif_subsidy     → "Authorized" + authorizedAmount (a council ceiling).
+  //   • federal_program → "Federal program funding" + authorizedAmount.
+  //   • tax_credit      → "Tax-credit allocation" + creditAmount.
+  // The four money fields are mutually exclusive per record, so exactly one is
+  // shown — never two, never summed.
   const isDevelopment = funderType === "private_development";
-  const moneyLabel = isDevelopment ? "Announced" : "Awarded";
-  const amount = escapePopupHtml(
-    formatAwardedAmount(isDevelopment ? p.announcedInvestment : p.amountAwarded),
-  );
+  const capitalClass = (p.capitalClass ?? "grant") as CapitalClass;
+  let moneyLabel: string;
+  let moneyValue: number | null | undefined;
+  if (isDevelopment) {
+    moneyLabel = "Announced";
+    moneyValue = p.announcedInvestment;
+  } else if (capitalClass === "tif_subsidy" || capitalClass === "federal_program") {
+    moneyLabel = CAPITAL_CLASS_MONEY_NOUN[capitalClass];
+    moneyValue = p.authorizedAmount;
+  } else if (capitalClass === "tax_credit") {
+    moneyLabel = CAPITAL_CLASS_MONEY_NOUN.tax_credit;
+    moneyValue = p.creditAmount;
+  } else {
+    moneyLabel = CAPITAL_CLASS_MONEY_NOUN.grant; // "Awarded"
+    moneyValue = p.amountAwarded;
+  }
+  const amount = escapePopupHtml(formatAwardedAmount(moneyValue));
 
   const year = p.year != null ? String(p.year) : "";
   const status = p.status ? escapePopupHtml(investmentStatusLabel(String(p.status))) : "";
   const logLine = p.logLine ? escapePopupHtml(p.logLine) : "";
   const link = p.sourceLink && /^https?:\/\//i.test(p.sourceLink) ? p.sourceLink : "";
   const metaRow = [year, status].filter(Boolean);
+  // Cross-link into the per-community analysis (Sol #1). Only when the record was
+  // stamped with a community area — an internal admin route, same Owner Files gate.
+  const communityArea = p.communityArea ? String(p.communityArea).trim() : "";
+  const analyzeHref = communityArea ? `/investment/${encodeURIComponent(communityArea)}` : "";
 
   return `<div style="font-family:Inter,sans-serif">
     <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${accent};margin-bottom:4px;font-weight:500">Admin · Community Investment</div>
     <div style="font-size:14px;font-weight:600;color:#0C1B33">${recipient}</div>
     ${funderName ? `<div style="font-size:11px;color:#5A6478;margin-top:4px">${funderName}</div>` : ""}
     <div style="display:flex;align-items:baseline;gap:6px;margin-top:8px">
-      <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8A93A6">${moneyLabel}</span>
+      <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8A93A6">${escapePopupHtml(moneyLabel)}</span>
       <span style="font-size:14px;font-weight:700;color:#0C1B33">${amount}</span>
     </div>
     <div style="margin-top:8px">
@@ -372,7 +406,10 @@ export function buildInvestmentPopupHtml(p: InvestmentPopupProperties): string {
       ${metaRow.length ? `<span style="font-size:11px;color:#5A6478;margin-left:6px">${metaRow.join(" · ")}</span>` : ""}
     </div>
     ${logLine ? `<div style="font-size:11px;color:#8A93A6;margin-top:6px;line-height:1.4">${logLine}</div>` : ""}
-    ${link ? `<a href="${escapePopupHtml(link)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">Source &rarr;</a>` : ""}
+    <div style="margin-top:8px;display:flex;gap:12px;align-items:baseline">
+      ${analyzeHref ? `<a href="${escapePopupHtml(analyzeHref)}" style="font-size:10px;color:#2563EB;text-decoration:underline;font-weight:600">Analyze this community &rarr;</a>` : ""}
+      ${link ? `<a href="${escapePopupHtml(link)}" target="_blank" rel="noopener noreferrer" style="font-size:10px;color:#2563EB;text-decoration:underline">Source &rarr;</a>` : ""}
+    </div>
   </div>`;
 }
 

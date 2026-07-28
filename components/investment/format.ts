@@ -62,6 +62,10 @@ export const SOURCE_LABELS: Record<InvestmentSource, string> = {
   cdg: "Community Development Grant",
   foundation: "Private foundations",
   development: "Development projects",
+  tif: "TIF-funded RDA/IGA projects",
+  "cdbg-home": "HUD CDBG/HOME activities",
+  lihtc: "Low-Income Housing Tax Credit",
+  nmtc: "New Markets Tax Credit",
 };
 
 /** Short program label for tight table cells. */
@@ -72,6 +76,10 @@ export const SOURCE_LABELS_SHORT: Record<InvestmentSource, string> = {
   cdg: "CDG",
   foundation: "Foundation",
   development: "Development",
+  tif: "TIF",
+  "cdbg-home": "CDBG/HOME",
+  lihtc: "LIHTC",
+  nmtc: "NMTC",
 };
 
 /**

@@ -269,6 +269,40 @@ export function densityColorWeight(f: InvestmentPointFeature): number {
   return f.properties.amountAwarded ?? 0;
 }
 
+/**
+ * The two density metrics (Sol #4: give density both a dollars and a record-count
+ * mode). `dollars` weights each bin by AWARDED dollars (densityColorWeight);
+ * `records` weights every point equally (count of grants in the bin). Persisting
+ * the choice is out of scope — it is component state on the map.
+ */
+export const INVESTMENT_DENSITY_METRICS = ["dollars", "records"] as const;
+export type InvestmentDensityMetric = (typeof INVESTMENT_DENSITY_METRICS)[number];
+
+export const DEFAULT_INVESTMENT_DENSITY_METRIC: InvestmentDensityMetric = "dollars";
+
+/**
+ * Records-mode density weight: EVERY point contributes 1, so a summed bin is a
+ * plain count of records — a picture of grant DENSITY, not dollars. Named +
+ * exported (not an inline `() => 1`) so a unit test can pin that the records
+ * metric never reads a dollar field. Pure.
+ */
+export function densityRecordWeight(_f: InvestmentPointFeature): number {
+  return 1;
+}
+
+/**
+ * Pick the HexagonLayer `getColorWeight` for a density metric. `dollars` →
+ * densityColorWeight (amountAwarded only — a development's announced billions
+ * never heat a bin); `records` → densityRecordWeight (count). Keeping this as the
+ * single selector means the map and its test agree on which weight each metric
+ * uses. Pure.
+ */
+export function densityWeightForMetric(
+  metric: InvestmentDensityMetric,
+): (f: InvestmentPointFeature) => number {
+  return metric === "records" ? densityRecordWeight : densityColorWeight;
+}
+
 /** Hexagon bin radius in meters (2D bins; elevation is off). */
 export const HEXAGON_RADIUS_M = 250;
 

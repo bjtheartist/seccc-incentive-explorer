@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { assertNoBannedFigureKeys, findBannedFigureKeys, type CommunityInvestmentRecord } from "../community-investment";
 import {
   analyzeCommunityArea,
+  buildFlowRows,
   buildInvestmentIndex,
+  computeInvestmentFindings,
   median,
   SINCE_YEAR,
   summarizeMajorDevelopments,
@@ -24,6 +26,7 @@ function rec(over: Partial<CommunityInvestmentRecord> & { id: string }): Communi
     address: "1 MAIN ST",
     status: "completed",
     communityArea: "Alpha",
+    capitalClass: "grant",
     links: [],
     ...over,
   };
@@ -234,6 +237,198 @@ describe("awarded hero is unchanged by megadev announced capital", () => {
     // And it matches the hero with the developments removed entirely.
     const withoutDevs = buildInvestmentIndex(RECORDS, GEN);
     expect(index.citywideTotal).toBe(withoutDevs.citywideTotal);
+  });
+});
+
+// ── NMTC: CA-stamped citywide tax-credit capital appears in CA lists, never plots ─
+
+describe("credit capital in community analysis (NMTC CA-stamped-citywide behavior)", () => {
+  // An NMTC-shaped record: citywide geometry (never plots) but a communityArea
+  // stamped from its 2020 tract centroid, carrying tax-credit capital in creditAmount.
+  const nmtc = (over: Partial<CommunityInvestmentRecord> & { id: string }) =>
+    rec({
+      source: "nmtc",
+      funderType: "government",
+      capitalClass: "tax_credit",
+      amountAwarded: null,
+      creditAmount: 5_000_000,
+      geometry: { kind: "citywide" },
+      status: "awarded",
+      year: 2021,
+      ...over,
+    });
+
+  it("a CA-stamped citywide credit record joins its community's index row without moving the awarded total", () => {
+    const recs: CommunityInvestmentRecord[] = [
+      ...RECORDS,
+      nmtc({ id: "n1", communityArea: "Alpha", creditAmount: 5_000_000 }),
+      nmtc({ id: "n2", communityArea: "Alpha", creditAmount: 3_000_000, year: 2010 }), // pre-2020 but credit is all-time
+    ];
+    const index = buildInvestmentIndex(recs, GEN);
+    const alpha = index.rows.find((r) => r.communityArea === "Alpha")!;
+    // Awarded total for Alpha is UNCHANGED by the credit records (still 350k).
+    expect(alpha.totalAwarded).toBe(350_000);
+    // But their credit capital surfaces in the CA list (all-time: 5M + 3M).
+    expect(alpha.creditCapital).toBe(8_000_000);
+    // The awarded citywide total across communities is unchanged by credit capital.
+    expect(index.citywideTotal).toBe(buildInvestmentIndex(RECORDS, GEN).citywideTotal);
+  });
+
+  it("analyzeCommunityArea surfaces creditCapital (all-time) while keeping totalAwarded grant-only", () => {
+    const recs: CommunityInvestmentRecord[] = [...RECORDS, nmtc({ id: "n1", communityArea: "Alpha", creditAmount: 12_000_000 })];
+    const a = analyzeCommunityArea(recs, "Alpha", GEN)!;
+    expect(a.totalAwarded).toBe(350_000); // grant-only, unchanged
+    expect(a.creditCapital).toBe(12_000_000);
+    expect(findBannedFigureKeys(a)).toEqual([]);
+  });
+});
+
+// ── New status/compare measures on the analysis ──────────────────────────────
+
+describe("analysis carries the non-grant capital measures + median award", () => {
+  it("Alpha: medianAward is the median in-window award; non-grant classes are 0 here", () => {
+    const a = analyzeCommunityArea(RECORDS, "Alpha", GEN)!;
+    // In-window awarded amounts (>0): 100k, 200k, 50k → median 100k.
+    expect(a.medianAward).toBe(100000);
+    // RECORDS carry no announced/TIF/federal capital in Alpha.
+    expect(a.announcedCapital).toBe(0);
+    expect(a.authorizedTif).toBe(0);
+    expect(a.federalProgram).toBe(0);
+  });
+
+  it("surfaces authorizedTif / federalProgram / announcedCapital from the right fields, never summed into totalAwarded", () => {
+    const recs: CommunityInvestmentRecord[] = [
+      ...RECORDS,
+      rec({
+        id: "tif1",
+        source: "tif",
+        capitalClass: "tif_subsidy",
+        funderType: "government",
+        amountAwarded: null,
+        authorizedAmount: 12_000_000,
+        year: 2023,
+        communityArea: "Alpha",
+      }),
+      rec({
+        id: "hud1",
+        source: "cdbg-home",
+        capitalClass: "federal_program",
+        funderType: "government",
+        amountAwarded: null,
+        authorizedAmount: 4_000_000,
+        year: 2022,
+        communityArea: "Alpha",
+      }),
+      rec({
+        id: "dev1",
+        source: "development",
+        capitalClass: "grant",
+        funderType: "private_development",
+        amountAwarded: null,
+        announcedInvestment: 800_000_000,
+        year: null,
+        communityArea: "Alpha",
+        recipient: "Megasite",
+      }),
+    ];
+    const a = analyzeCommunityArea(recs, "Alpha", GEN)!;
+    expect(a.authorizedTif).toBe(12_000_000);
+    expect(a.federalProgram).toBe(4_000_000);
+    expect(a.announcedCapital).toBe(800_000_000);
+    // The awarded total is grant-only — unchanged by any of the above.
+    expect(a.totalAwarded).toBe(350_000);
+    expect(findBannedFigureKeys(a)).toEqual([]);
+  });
+});
+
+// ── GRANT-CLASS FIREWALL: non-grant capital never enters awarded breakdowns ───
+
+describe("analyzeCommunityArea grant-class firewall (SourceBars / recordCount)", () => {
+  // Alpha's 5 grant records + one of each non-grant capital class, all stamped to
+  // Alpha and in the since-2020 view (amountAwarded null by design).
+  const WITH_CAPITAL: CommunityInvestmentRecord[] = [
+    ...RECORDS,
+    rec({ id: "tif1", source: "tif", capitalClass: "tif_subsidy", funderType: "government", amountAwarded: null, authorizedAmount: 44_000_000, year: 2023, communityArea: "Alpha", recipient: "TIF RDA" }),
+    rec({ id: "hud1", source: "cdbg-home", capitalClass: "federal_program", funderType: "government", amountAwarded: null, authorizedAmount: 2_000_000, year: 2022, communityArea: "Alpha", recipient: "CDBG activity" }),
+    rec({ id: "lih1", source: "lihtc", capitalClass: "tax_credit", funderType: "government", amountAwarded: null, creditAmount: 1_500_000, year: 2021, communityArea: "Alpha", recipient: "LIHTC placement" }),
+  ];
+
+  const a = analyzeCommunityArea(WITH_CAPITAL, "Alpha", GEN)!;
+
+  it("bySource excludes the non-grant capital sources entirely (no $0 program bars)", () => {
+    const sources = a.bySource.map((s) => s.source);
+    expect(sources).not.toContain("tif");
+    expect(sources).not.toContain("cdbg-home");
+    expect(sources).not.toContain("lihtc");
+    expect(sources).not.toContain("nmtc");
+    // The grant sources it should surface are still present.
+    expect(sources).toContain("nof-small");
+    expect(sources).toContain("development");
+  });
+
+  it("recordCount + unYeared count grant-class records only (not TIF/CDBG/LIHTC)", () => {
+    // Grant-class in-view for Alpha is unchanged from the base fixture (5), even
+    // though three non-grant capital records are now stamped to Alpha.
+    expect(a.recordCount).toBe(5);
+    expect(a.unYeared).toBe(2);
+  });
+
+  it("byFunderType counts government grant records only (non-grant government excluded)", () => {
+    const gov = a.byFunderType.find((f) => f.funderType === "government")!;
+    // a1 + a2 only — the TIF/CDBG/LIHTC government records are NOT counted.
+    expect(gov.count).toBe(2);
+    expect(gov.awardedDollars).toBe(300000);
+  });
+
+  it("keeps the non-grant capital totals (from `mine`) intact beside the firewall", () => {
+    expect(a.authorizedTif).toBe(44_000_000);
+    expect(a.federalProgram).toBe(2_000_000);
+    expect(a.creditCapital).toBe(1_500_000);
+    // The awarded total stays grant-only.
+    expect(a.totalAwarded).toBe(350000);
+  });
+});
+
+describe("computeInvestmentFindings", () => {
+  const a = analyzeCommunityArea(RECORDS, "Alpha", GEN)!;
+  const findings = computeInvestmentFindings(a);
+
+  it("returns exactly three plain-sentence findings", () => {
+    expect(findings).toHaveLength(3);
+    for (const f of findings) expect(f.length).toBeGreaterThan(10);
+  });
+
+  it("names the largest funder, the biggest swing, and the equity gap", () => {
+    // City of Chicago funds a1 (100k) + a2 (200k) = 300k of the 350k total.
+    expect(findings[0]).toContain("City of Chicago");
+    expect(findings[0]).toContain("largest single funder");
+    // Sharpest swing: 2022 (200k) → 2023 (50k) is a drop of 150k.
+    expect(findings[1]).toContain("drop");
+    expect(findings[1]).toContain("$150,000");
+    expect(findings[1]).toContain("2022 to 2023");
+    // Equity: 350k vs median 425k → below the typical community; rank 2 of 2.
+    expect(findings[2]).toContain("below the typical community");
+    expect(findings[2]).toContain("2 of 2");
+  });
+
+  it("never emits a banned derived-figure phrase", () => {
+    for (const f of findings) expect(f).not.toMatch(FORBIDDEN_FINDINGS);
+  });
+});
+
+const FORBIDDEN_FINDINGS = /\b(received|available|remaining|unspent)\b/i;
+
+describe("buildFlowRows", () => {
+  it("flattens in-window, dollar-valued rows sorted by awarded desc; excludes null/pre-2020/dev", () => {
+    const alpha = RECORDS.filter((r) => r.communityArea === "Alpha");
+    const rows = buildFlowRows(alpha);
+    // a2 200k, a1 100k, a3 50k. a4 (2019), a5 (dev null), a6 (null year) excluded.
+    expect(rows.map((r) => r.amountAwarded)).toEqual([200000, 100000, 50000]);
+    for (const r of rows) {
+      expect(r.id).toBeTruthy();
+      expect(r.year).toBeGreaterThanOrEqual(SINCE_YEAR);
+      expect(r.amountAwarded).toBeGreaterThan(0);
+    }
   });
 });
 
