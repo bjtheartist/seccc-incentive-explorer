@@ -28,16 +28,21 @@
  * lib/community-investment.ts is consumed type-only by lib/community-investment-layer.ts.
  */
 
+import { existsSync, readFileSync } from "node:fs";
+import path from "node:path";
 import {
   FUNDER_TYPES,
   INVESTMENT_SOURCES,
   loadCommunityInvestment,
+  sumAnnouncedInvestment,
+  sumAuthorizedByClass,
   sumCreditCapital,
   type CommunityInvestmentRecord,
   type FunderType,
   type InvestmentSource,
   type InvestmentStatus,
 } from "./community-investment";
+import { formatCount, formatFullDollars, formatMultiple, formatPercent } from "@/components/investment/format";
 
 /** The since-anchor year. Dollar math and breakdowns cover year >= this. */
 export const SINCE_YEAR = 2020;
@@ -72,6 +77,8 @@ export interface SourceBreakdown {
 
 /** One of the top-dollar recipients (in-window, real awarded amount). */
 export interface TopRecipient {
+  /** Stable source record id — lets a client shortlist flag/dedupe this row. */
+  id: string;
   recipient: string;
   funderName: string;
   source: InvestmentSource;
@@ -110,6 +117,28 @@ export interface CommunityInvestmentAnalysis {
   generatedAt: string;
   /** Sum of every in-window (year >= 2020), non-null awarded amount. */
   totalAwarded: number;
+  /** Median in-window awarded grant amount (records with a real, positive award);
+   * 0 when the community has no such record. A SEPARATE statistic from
+   * totalAwarded — a typical-award gauge for the status/compare surfaces. */
+  medianAward: number;
+  /**
+   * Announced private DEVELOPMENT capital sited in this community (a self-reported
+   * project price tag, never a grant). A SEPARATE measure from totalAwarded — the
+   * "Announced private capital" status card reads this; it is NEVER summed with
+   * awarded dollars. Equals sumAnnouncedInvestment over this community's records.
+   */
+  announcedCapital: number;
+  /**
+   * Council-AUTHORIZED TIF assistance ceilings (capitalClass "tif_subsidy") sited
+   * in this community — a SEPARATE measure again, never a grant, never summed with
+   * awarded/announced/credit dollars. Feeds the capital-class status row.
+   */
+  authorizedTif: number;
+  /**
+   * Committed HUD CDBG/HOME federal allocations (capitalClass "federal_program")
+   * sited in this community — a SEPARATE measure, never summed with anything else.
+   */
+  federalProgram: number;
   /** All-time tax-credit capital (LIHTC + NMTC) stamped to this community — a
    * SEPARATE measure from totalAwarded, never summed with awarded dollars. */
   creditCapital: number;
@@ -294,6 +323,7 @@ function topRecipients(
   return inWindow
     .filter((r) => r.amountAwarded != null && r.amountAwarded > 0)
     .map((r) => ({
+      id: r.id,
       recipient: r.recipient,
       funderName: r.funderName,
       source: r.source,
@@ -345,6 +375,9 @@ export function analyzeCommunityArea(
   const inWindow = inView.filter(isInWindow);
   const totalAwarded = sumInWindowAwarded(inWindow);
   const unYeared = inView.filter((r) => r.year == null).length;
+  const medianAward = median(
+    inWindow.filter((r) => r.amountAwarded != null && r.amountAwarded > 0).map((r) => r.amountAwarded as number),
+  );
 
   const years = inWindow.map((r) => r.year as number);
   const span = years.length > 0 ? { min: Math.min(...years), max: Math.max(...years) } : null;
@@ -366,6 +399,14 @@ export function analyzeCommunityArea(
     communityArea,
     generatedAt,
     totalAwarded,
+    medianAward,
+    // Announced private development capital sited here — a SEPARATE measure from
+    // totalAwarded (self-reported project price tags), never summed with grants.
+    announcedCapital: sumAnnouncedInvestment(mine),
+    // Council-authorized TIF ceilings + committed HUD federal allocations sited
+    // here — each a SEPARATE measure, never summed with awarded/announced dollars.
+    authorizedTif: sumAuthorizedByClass(mine, "tif_subsidy"),
+    federalProgram: sumAuthorizedByClass(mine, "federal_program"),
     // All-time tax-credit capital in this community (LIHTC + NMTC) — a separate
     // measure, summed over every record (not the since-2020 window), never folded
     // into totalAwarded.
@@ -457,7 +498,204 @@ export function summarizeMajorDevelopments(
   };
 }
 
+// ── Auto-generated findings (pure, plain sentences) ───────────────────────────
+
+/**
+ * Three plain-language findings for the meeting-brief front page, each computed
+ * straight off the analysis — no adjectives the numbers don't earn:
+ *   1. Largest funder concentration (top funder's share of awarded dollars).
+ *   2. Biggest year-over-year swing in awarded dollars.
+ *   3. Where this community sits against the citywide community median (the
+ *      equity gap), with its rank.
+ * Always returns exactly three sentences; a finding whose inputs are missing
+ * degrades to an honest "not enough data" line rather than a fabricated claim.
+ * Every dollar named is an AWARDED amount. Pure / deterministic.
+ */
+export function computeInvestmentFindings(analysis: CommunityInvestmentAnalysis): string[] {
+  const findings: string[] = [];
+
+  // 1 — Funder concentration.
+  const topFunder = analysis.topFunders.find((f) => f.awardedDollars > 0);
+  if (topFunder && analysis.totalAwarded > 0) {
+    const share = topFunder.awardedDollars / analysis.totalAwarded;
+    findings.push(
+      `${topFunder.funderName} is the largest single funder, accounting for ${formatPercent(share)} of awarded dollars (${formatFullDollars(topFunder.awardedDollars)} across ${formatCount(topFunder.grants)} grant${topFunder.grants === 1 ? "" : "s"}).`,
+    );
+  } else {
+    findings.push("No single funder can be ranked — no dollar-valued awards are on record here since 2020.");
+  }
+
+  // 2 — Biggest year-over-year swing.
+  const yearsWithDollars = analysis.byYear;
+  let swing: { from: number; to: number; delta: number } | null = null;
+  for (let i = 1; i < yearsWithDollars.length; i++) {
+    const delta = yearsWithDollars[i].awardedDollars - yearsWithDollars[i - 1].awardedDollars;
+    if (swing == null || Math.abs(delta) > Math.abs(swing.delta)) {
+      swing = { from: yearsWithDollars[i - 1].year, to: yearsWithDollars[i].year, delta };
+    }
+  }
+  if (swing && swing.delta !== 0) {
+    const dir = swing.delta > 0 ? "a rise" : "a drop";
+    findings.push(
+      `The sharpest year-over-year change was ${dir} of ${formatFullDollars(Math.abs(swing.delta))} from ${swing.from} to ${swing.to}.`,
+    );
+  } else {
+    findings.push("Awarded dollars show no year-over-year swing — too few dated years to compare.");
+  }
+
+  // 3 — Equity gap vs the citywide community median.
+  const { thisVsMedian, rank, totalCAs, citywideMedianCA } = analysis.equity;
+  if (citywideMedianCA > 0) {
+    const relation =
+      thisVsMedian >= 1
+        ? `${formatMultiple(thisVsMedian)} the citywide community median — above the typical community`
+        : `${formatPercent(thisVsMedian)} of the citywide community median — below the typical community`;
+    findings.push(
+      `Awarded dollars here are ${relation}; it ranks ${formatCount(rank)} of ${formatCount(totalCAs)} funded communities.`,
+    );
+  } else {
+    findings.push(
+      `This community ranks ${formatCount(rank)} of ${formatCount(totalCAs)} funded communities by awarded dollars since 2020.`,
+    );
+  }
+
+  return findings;
+}
+
+// ── Flow rows (searchable funder → program → recipient table) ─────────────────
+
+/** One awarded-dollar flow row for the searchable funder→program→recipient table
+ * that fronts the "How the money flowed" section (the sankey moves behind a
+ * disclosure). Every row is an in-window record with a real, positive AWARDED
+ * amount — the same basis as buildFunderFlow / topRecipients. */
+export interface FlowRow {
+  id: string;
+  funderName: string;
+  funderType: FunderType;
+  source: InvestmentSource;
+  recipient: string;
+  year: number;
+  amountAwarded: number;
+}
+
+/**
+ * Flatten one community's in-window, dollar-valued records into flow rows, sorted
+ * by awarded dollars desc (recipient name tiebreak). Null-/zero-amount and
+ * pre-2020 records are excluded — the exact participation rule the sankey uses,
+ * so the table and the diagram never disagree. Pure / deterministic.
+ */
+export function buildFlowRows(records: readonly CommunityInvestmentRecord[]): FlowRow[] {
+  return records
+    .filter((r) => isInWindow(r) && r.amountAwarded != null && r.amountAwarded > 0)
+    .map((r) => ({
+      id: r.id,
+      funderName: r.funderName,
+      funderType: r.funderType,
+      source: r.source,
+      recipient: r.recipient,
+      year: r.year as number,
+      amountAwarded: r.amountAwarded as number,
+    }))
+    .sort((a, b) => b.amountAwarded - a.amountAwarded || a.recipient.localeCompare(b.recipient));
+}
+
+// ── Capital-class context (CRA / CDFI series beside the plotted records) ───────
+
+/** One year of FFIEC CRA small-business lending for a community area. */
+export interface CraYearRow {
+  year: number;
+  smallBusinessLoanCount: number;
+  smallBusinessLoanDollars: number;
+}
+
+/** One year of CDFI transaction activity for a geography. */
+export interface CdfiYearRow {
+  year: number;
+  transactionCount: number;
+  dollars: number;
+  instrumentMixText: string;
+  transactionsMissingAmount: number;
+}
+
+/**
+ * Coordinate-less capital CONTEXT for one community area, read from
+ * data/private/capital-context.json: the FFIEC CRA small-business lending series
+ * (keyed by community area) and the CDFI transaction series (community-area
+ * geography level). These are DIFFERENT MONEY CONCEPTS from the plotted awarded
+ * grants — bank small-business loan originations and CDFI loans/investments,
+ * never grants — shown beside them, never summed with them. TIF district series
+ * in that file are keyed by TIF district (not community area) and are NOT joined
+ * here; the community's authorized-TIF total comes from its point-stamped records
+ * (analysis.authorizedTif) instead.
+ */
+export interface CapitalContextForArea {
+  communityArea: string;
+  cra: CraYearRow[] | null;
+  cdfi: CdfiYearRow[] | null;
+  sources: string[];
+  generatedAt: string | null;
+}
+
+interface RawCapitalContext {
+  generatedAt?: string;
+  meta?: { sources?: string[] };
+  craByCommunityArea?: Array<{ communityArea: string; series: CraYearRow[] }>;
+  cdfi?: Array<{ geography: string; geographyLevel: string; series: CdfiYearRow[] }>;
+}
+
+const CAPITAL_CONTEXT_PATH = path.join(process.cwd(), "data/private/capital-context.json");
+let capitalContextCache: RawCapitalContext | null | undefined = undefined;
+
+/** Read + parse capital-context.json once per process (null when absent/unparseable). */
+function loadCapitalContext(): RawCapitalContext | null {
+  if (capitalContextCache !== undefined) return capitalContextCache;
+  try {
+    if (!existsSync(CAPITAL_CONTEXT_PATH)) {
+      capitalContextCache = null;
+      return capitalContextCache;
+    }
+    capitalContextCache = JSON.parse(readFileSync(CAPITAL_CONTEXT_PATH, "utf8")) as RawCapitalContext;
+  } catch {
+    capitalContextCache = null;
+  }
+  return capitalContextCache;
+}
+
+/** Test-only: reset the capital-context cache after mutating the file. */
+export function __resetCapitalContextCacheForTests(): void {
+  capitalContextCache = undefined;
+}
+
+/**
+ * Look up the CRA + CDFI context series for one community area. Returns null
+ * series when the file is absent or has no row for that area (a clean "context
+ * pending" state, never a fabricated series). Server-only (fs).
+ */
+export function loadCapitalContextForArea(communityArea: string): CapitalContextForArea {
+  const ctx = loadCapitalContext();
+  const cra = ctx?.craByCommunityArea?.find((c) => c.communityArea === communityArea)?.series ?? null;
+  const cdfi =
+    ctx?.cdfi?.find((c) => c.geographyLevel === "community_area" && c.geography === communityArea)?.series ?? null;
+  return {
+    communityArea,
+    cra: cra && cra.length > 0 ? cra : null,
+    cdfi: cdfi && cdfi.length > 0 ? cdfi : null,
+    sources: ctx?.meta?.sources ?? [],
+    generatedAt: ctx?.generatedAt ?? null,
+  };
+}
+
 // ── Server-only loaders (fs) ──────────────────────────────────────────────────
+
+/**
+ * Load one community's flow rows (searchable funder→program→recipient table)
+ * from the committed export. Returns [] when the export is absent. Server-only.
+ */
+export function loadFlowRows(communityArea: string): FlowRow[] {
+  const data = loadCommunityInvestment();
+  if (!data) return [];
+  return buildFlowRows(data.records.filter((r) => r.communityArea === communityArea));
+}
 
 /**
  * Load the all-communities ranking from the committed export. Returns null when

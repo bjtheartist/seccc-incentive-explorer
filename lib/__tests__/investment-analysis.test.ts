@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import { assertNoBannedFigureKeys, findBannedFigureKeys, type CommunityInvestmentRecord } from "../community-investment";
 import {
   analyzeCommunityArea,
+  buildFlowRows,
   buildInvestmentIndex,
+  computeInvestmentFindings,
   median,
   SINCE_YEAR,
   summarizeMajorDevelopments,
@@ -278,6 +280,107 @@ describe("credit capital in community analysis (NMTC CA-stamped-citywide behavio
     expect(a.totalAwarded).toBe(350_000); // grant-only, unchanged
     expect(a.creditCapital).toBe(12_000_000);
     expect(findBannedFigureKeys(a)).toEqual([]);
+  });
+});
+
+// ── New status/compare measures on the analysis ──────────────────────────────
+
+describe("analysis carries the non-grant capital measures + median award", () => {
+  it("Alpha: medianAward is the median in-window award; non-grant classes are 0 here", () => {
+    const a = analyzeCommunityArea(RECORDS, "Alpha", GEN)!;
+    // In-window awarded amounts (>0): 100k, 200k, 50k → median 100k.
+    expect(a.medianAward).toBe(100000);
+    // RECORDS carry no announced/TIF/federal capital in Alpha.
+    expect(a.announcedCapital).toBe(0);
+    expect(a.authorizedTif).toBe(0);
+    expect(a.federalProgram).toBe(0);
+  });
+
+  it("surfaces authorizedTif / federalProgram / announcedCapital from the right fields, never summed into totalAwarded", () => {
+    const recs: CommunityInvestmentRecord[] = [
+      ...RECORDS,
+      rec({
+        id: "tif1",
+        source: "tif",
+        capitalClass: "tif_subsidy",
+        funderType: "government",
+        amountAwarded: null,
+        authorizedAmount: 12_000_000,
+        year: 2023,
+        communityArea: "Alpha",
+      }),
+      rec({
+        id: "hud1",
+        source: "cdbg-home",
+        capitalClass: "federal_program",
+        funderType: "government",
+        amountAwarded: null,
+        authorizedAmount: 4_000_000,
+        year: 2022,
+        communityArea: "Alpha",
+      }),
+      rec({
+        id: "dev1",
+        source: "development",
+        capitalClass: "grant",
+        funderType: "private_development",
+        amountAwarded: null,
+        announcedInvestment: 800_000_000,
+        year: null,
+        communityArea: "Alpha",
+        recipient: "Megasite",
+      }),
+    ];
+    const a = analyzeCommunityArea(recs, "Alpha", GEN)!;
+    expect(a.authorizedTif).toBe(12_000_000);
+    expect(a.federalProgram).toBe(4_000_000);
+    expect(a.announcedCapital).toBe(800_000_000);
+    // The awarded total is grant-only — unchanged by any of the above.
+    expect(a.totalAwarded).toBe(350_000);
+    expect(findBannedFigureKeys(a)).toEqual([]);
+  });
+});
+
+describe("computeInvestmentFindings", () => {
+  const a = analyzeCommunityArea(RECORDS, "Alpha", GEN)!;
+  const findings = computeInvestmentFindings(a);
+
+  it("returns exactly three plain-sentence findings", () => {
+    expect(findings).toHaveLength(3);
+    for (const f of findings) expect(f.length).toBeGreaterThan(10);
+  });
+
+  it("names the largest funder, the biggest swing, and the equity gap", () => {
+    // City of Chicago funds a1 (100k) + a2 (200k) = 300k of the 350k total.
+    expect(findings[0]).toContain("City of Chicago");
+    expect(findings[0]).toContain("largest single funder");
+    // Sharpest swing: 2022 (200k) → 2023 (50k) is a drop of 150k.
+    expect(findings[1]).toContain("drop");
+    expect(findings[1]).toContain("$150,000");
+    expect(findings[1]).toContain("2022 to 2023");
+    // Equity: 350k vs median 425k → below the typical community; rank 2 of 2.
+    expect(findings[2]).toContain("below the typical community");
+    expect(findings[2]).toContain("2 of 2");
+  });
+
+  it("never emits a banned derived-figure phrase", () => {
+    for (const f of findings) expect(f).not.toMatch(FORBIDDEN_FINDINGS);
+  });
+});
+
+const FORBIDDEN_FINDINGS = /\b(received|available|remaining|unspent)\b/i;
+
+describe("buildFlowRows", () => {
+  it("flattens in-window, dollar-valued rows sorted by awarded desc; excludes null/pre-2020/dev", () => {
+    const alpha = RECORDS.filter((r) => r.communityArea === "Alpha");
+    const rows = buildFlowRows(alpha);
+    // a2 200k, a1 100k, a3 50k. a4 (2019), a5 (dev null), a6 (null year) excluded.
+    expect(rows.map((r) => r.amountAwarded)).toEqual([200000, 100000, 50000]);
+    for (const r of rows) {
+      expect(r.id).toBeTruthy();
+      expect(r.year).toBeGreaterThanOrEqual(SINCE_YEAR);
+      expect(r.amountAwarded).toBeGreaterThan(0);
+    }
   });
 });
 

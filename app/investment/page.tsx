@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { loadCommunityInvestment } from "@/lib/community-investment";
 import { loadInvestmentIndex, loadMajorDevelopments } from "@/lib/investment-analysis";
 import {
   formatCount,
@@ -7,8 +8,9 @@ import {
   formatAsOf,
   MAGNITUDE_HUE,
 } from "@/components/investment/format";
-import { CountUpDollars } from "@/components/investment/CountUpDollars";
+import { StatusCards } from "@/components/investment/StatusCards";
 import { MajorDevelopments } from "@/components/investment/MajorDevelopments";
+import { ComparePinBar, PinButton } from "@/components/investment/PinControls";
 import { getInvestmentAdminState, InvestmentLoginForm, InvestmentNotConfigured } from "./gate";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +35,7 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
   if (!hasSession) return <InvestmentLoginForm redirectTo="/investment" hasAuthError={hasAuthError} />;
 
   const index = loadInvestmentIndex();
+  const meta = loadCommunityInvestment()?.meta;
   const topDevelopments = loadMajorDevelopments({ limit: 10 });
 
   return (
@@ -72,26 +75,24 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
           </div>
         ) : (
           <>
-            {/* Hero citywide stat */}
-            <div className="mt-8 border border-[#0C1B33]/10 bg-white px-6 py-8 sm:px-10 sm:py-10">
-              <div className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#2563EB]">
-                Community-sited, awarded since 2020
-              </div>
-              <div
-                className="mt-3 text-[clamp(44px,8vw,76px)] font-semibold leading-none tracking-tight text-[#0C1B33]"
-                style={{ fontVariantNumeric: "proportional-nums" }}
-              >
-                <CountUpDollars value={index.citywideTotal} />
-              </div>
-              <p className="mt-4 text-[14px] leading-relaxed text-[#0C1B33]/55">
-                awarded across{" "}
-                <span className="font-semibold text-[#0C1B33]">{formatCount(index.communityCount)}</span>{" "}
-                communities since 2020
-              </p>
+            {/* Three-status grammar — citywide, community-sited scope */}
+            <div className="mt-8">
+              <StatusCards
+                awarded={index.citywideTotal}
+                announced={meta?.announcedCapitalTotal ?? 0}
+                capital={{
+                  authorizedTif: meta?.totalAuthorizedTif ?? 0,
+                  federalProgram: meta?.totalFederalProgram ?? 0,
+                  creditCapital: meta?.totalCreditCapital ?? 0,
+                }}
+                asOf={index.generatedAt}
+                coverageHref="#coverage"
+                awardedNote={`Community-sited awarded dollars across ${formatCount(index.communityCount)} communities since 2020, from public records. An award is a commitment on paper, not proof of receipt.`}
+              />
             </div>
 
             {/* Ranked community list */}
-            <div className="mt-8">
+            <div className="mt-10">
               <div className="mb-3 flex items-baseline justify-between">
                 <h2 className="font-editorial text-[26px]">Communities by awarded dollars</h2>
                 <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
@@ -102,43 +103,45 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                 {index.rows.map((row, i) => {
                   const pct = index.rows[0].totalAwarded > 0 ? row.totalAwarded / index.rows[0].totalAwarded : 0;
                   return (
-                    <Link
-                      key={row.communityArea}
-                      href={`/investment/${encodeURIComponent(row.communityArea)}`}
-                      className="group flex items-center gap-4 px-4 py-3 transition-colors hover:bg-[#FAF9F6] sm:px-5"
-                    >
-                      <span className="w-7 shrink-0 text-right font-mono-bureau text-[12px] text-[#0C1B33]/35 [font-variant-numeric:tabular-nums]">
-                        {i + 1}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline justify-between gap-3">
-                          <span className="truncate text-[14px] font-medium text-[#0C1B33] group-hover:text-[#2563EB]">
-                            {row.communityArea}
-                          </span>
-                          <span className="shrink-0 text-[14px] font-semibold text-[#0C1B33] [font-variant-numeric:tabular-nums]">
-                            {formatFullDollars(row.totalAwarded)}
-                          </span>
-                        </div>
-                        <div className="mt-1.5 flex items-center gap-3">
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#0C1B33]/[0.06]">
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                // Honest linear width — no shared floor that would render a
-                                // >100x dollar spread as identical bars; 1px minWidth only keeps
-                                // a nonzero value from vanishing entirely (the $ text is the read).
-                                width: `${pct * 100}%`,
-                                minWidth: row.totalAwarded > 0 ? "1px" : 0,
-                                backgroundColor: MAGNITUDE_HUE,
-                              }}
-                            />
+                    <div key={row.communityArea} className="flex items-center gap-2 pr-3 sm:pr-4">
+                      <Link
+                        href={`/investment/${encodeURIComponent(row.communityArea)}`}
+                        className="group flex min-w-0 flex-1 items-center gap-4 px-4 py-3 transition-colors hover:bg-[#FAF9F6] sm:px-5"
+                      >
+                        <span className="w-7 shrink-0 text-right font-mono-bureau text-[12px] text-[#0C1B33]/35 [font-variant-numeric:tabular-nums]">
+                          {i + 1}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-baseline justify-between gap-3">
+                            <span className="truncate text-[14px] font-medium text-[#0C1B33] group-hover:text-[#2563EB]">
+                              {row.communityArea}
+                            </span>
+                            <span className="shrink-0 text-[14px] font-semibold text-[#0C1B33] [font-variant-numeric:tabular-nums]">
+                              {formatFullDollars(row.totalAwarded)}
+                            </span>
                           </div>
-                          <span className="shrink-0 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/40">
-                            {formatCount(row.recordCount)} record{row.recordCount === 1 ? "" : "s"}
-                          </span>
+                          <div className="mt-1.5 flex items-center gap-3">
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#0C1B33]/[0.06]">
+                              <div
+                                className="h-full rounded-full"
+                                style={{
+                                  // Honest linear width — no shared floor that would render a
+                                  // >100x dollar spread as identical bars; 1px minWidth only keeps
+                                  // a nonzero value from vanishing entirely (the $ text is the read).
+                                  width: `${pct * 100}%`,
+                                  minWidth: row.totalAwarded > 0 ? "1px" : 0,
+                                  backgroundColor: MAGNITUDE_HUE,
+                                }}
+                              />
+                            </div>
+                            <span className="shrink-0 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/40">
+                              {formatCount(row.recordCount)} record{row.recordCount === 1 ? "" : "s"}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    </Link>
+                      </Link>
+                      <PinButton area={row.communityArea} />
+                    </div>
                   );
                 })}
               </div>
@@ -157,9 +160,15 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
               </div>
             ) : null}
 
-            <p className="mt-6 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
-              Data as of {formatAsOf(index.generatedAt)} · dollars are awarded amounts, not confirmed receipts
+            <p
+              id="coverage"
+              className="mt-6 scroll-mt-6 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35"
+            >
+              Data as of {formatAsOf(index.generatedAt)} · dollars are awarded amounts, not confirmed receipts ·
+              awarded, announced, and disbursement are separate measures, never summed
             </p>
+
+            <ComparePinBar />
           </>
         )}
       </div>

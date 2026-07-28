@@ -3,17 +3,22 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CHICAGO_COMMUNITY_AREAS } from "@/lib/community-areas";
 import { loadCommunityInvestment } from "@/lib/community-investment";
-import { loadInvestmentAnalysis, loadMajorDevelopments } from "@/lib/investment-analysis";
-import { HeroStat } from "@/components/investment/HeroStat";
+import { loadInvestmentAnalysis, loadMajorDevelopments, loadFlowRows } from "@/lib/investment-analysis";
 import { FunderDonut } from "@/components/investment/FunderDonut";
+import { FunderTypeBars } from "@/components/investment/FunderTypeBars";
 import { YearBars } from "@/components/investment/YearBars";
+import { YearModeToggle } from "@/components/investment/YearModeToggle";
 import { SourceBars } from "@/components/investment/SourceBars";
 import { FunderFlowSankey } from "@/components/investment/FunderFlowSankey";
+import { FunderFlowTable } from "@/components/investment/FunderFlowTable";
 import { MajorDevelopments } from "@/components/investment/MajorDevelopments";
 import { TopRecipientsTable } from "@/components/investment/TopRecipientsTable";
 import { TopFunders } from "@/components/investment/TopFunders";
 import { EquityContext } from "@/components/investment/EquityContext";
 import { Methodology } from "@/components/investment/Methodology";
+import { StatusCards } from "@/components/investment/StatusCards";
+import { WorkingSetPanel } from "@/components/investment/Shortlist";
+import { ComparePinBar, PinButton } from "@/components/investment/PinControls";
 import { getInvestmentAdminState, InvestmentLoginForm, InvestmentNotConfigured } from "../gate";
 
 export const dynamic = "force-dynamic";
@@ -50,14 +55,16 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
 function Section({
   title,
   description,
+  id,
   children,
 }: {
   title: string;
   description?: string;
+  id?: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-10">
+    <section id={id} className="mt-10 scroll-mt-6">
       <h2 className="font-editorial text-[28px] leading-tight text-[#0C1B33]">{title}</h2>
       {description ? (
         <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/45">{description}</p>
@@ -89,8 +96,11 @@ export default async function InvestmentAreaPage({
 
   const analysis = loadInvestmentAnalysis(name);
   const developments = loadMajorDevelopments({ communityArea: name });
+  const flowRows = loadFlowRows(name);
   const meta = loadCommunityInvestment()?.meta;
   const sources = meta?.sources ?? [];
+
+  const rangeLabel = analysis?.span && analysis.span.max > 2020 ? `2020–${analysis.span.max}` : "2020";
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
@@ -115,7 +125,20 @@ export default async function InvestmentAreaPage({
         <span className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#2563EB]">
           Investment &amp; Impact
         </span>
-        <h1 className="mt-3 font-editorial text-[44px] leading-none sm:text-[56px]">{name}</h1>
+        <div className="mt-3 flex flex-wrap items-end justify-between gap-4">
+          <h1 className="font-editorial text-[44px] leading-none sm:text-[56px]">{name}</h1>
+          {analysis ? (
+            <div className="flex items-center gap-2 no-print">
+              <PinButton area={name} />
+              <Link
+                href={`/print/investment/${encodeURIComponent(name)}`}
+                className="inline-flex items-center rounded-[3px] border border-[#0C1B33]/15 bg-white px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-[#0C1B33]/60 hover:border-[#0C1B33]/30 hover:text-[#0C1B33]"
+              >
+                Print brief →
+              </Link>
+            </div>
+          ) : null}
+        </div>
 
         {!analysis ? (
           <div className="mt-8 border border-[#0C1B33]/10 bg-white p-6 text-[14px] text-[#0C1B33]/55">
@@ -128,30 +151,37 @@ export default async function InvestmentAreaPage({
           </div>
         ) : (
           <>
-            {/* 1 — Hero */}
+            {/* 1 — Three-status grammar */}
             <div className="mt-6">
-              <HeroStat
-                total={analysis.totalAwarded}
-                recordCount={analysis.recordCount}
-                spanMax={analysis.span?.max ?? null}
-                eyebrow="Awarded since 2020"
+              <StatusCards
+                awarded={analysis.totalAwarded}
+                announced={analysis.announcedCapital}
+                capital={{
+                  authorizedTif: analysis.authorizedTif,
+                  federalProgram: analysis.federalProgram,
+                  creditCapital: analysis.creditCapital,
+                }}
+                asOf={analysis.generatedAt}
+                coverageHref="#methodology"
+                awardedNote={`${analysis.recordCount} grants & projects · ${rangeLabel}. Documented commitments from public records; an award is a commitment on paper, not proof of receipt.`}
               />
             </div>
 
-            {/* 2 — Donut */}
+            {/* 2 — Donut + sorted bars */}
             <Section
               title="Where the money came from"
-              description="Awarded dollars by funder type — government programs, private foundations, and private development."
+              description="Awarded dollars by funder type — the donut for the part-of-whole, the bars for exact dollars and share."
             >
               <FunderDonut byFunderType={analysis.byFunderType} total={analysis.totalAwarded} />
+              <FunderTypeBars byFunderType={analysis.byFunderType} />
             </Section>
 
-            {/* 3 — Year trend */}
-            <Section
-              title="When it arrived"
-              description="Awarded dollars by year, 2020 to the latest on record."
-            >
-              <YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} />
+            {/* 3 — Year trend (amount / count toggle) */}
+            <Section title="When it arrived" description="Awarded dollars by year, 2020 to the latest on record.">
+              <YearModeToggle
+                amount={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} mode="amount" />}
+                count={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} mode="count" />}
+              />
             </Section>
 
             {/* 4 — Program mix */}
@@ -162,12 +192,20 @@ export default async function InvestmentAreaPage({
               <SourceBars bySource={analysis.bySource} />
             </Section>
 
-            {/* 4b — Flow (funder → program → recipient) */}
+            {/* 4b — Flow: searchable table (default) + sankey behind a disclosure */}
             <Section
               title="How the money flowed"
-              description="Awarded dollars from funders, through programs, to the recipients on record since 2020."
+              description="Awarded dollars from funders, through programs, to recipients on record since 2020. Search the table, or open the funding-paths view for the visual."
             >
-              <FunderFlowSankey communityArea={name} />
+              <FunderFlowTable rows={flowRows} total={analysis.totalAwarded} />
+              <details className="mt-3 border border-[#0C1B33]/10 bg-white">
+                <summary className="cursor-pointer list-none px-4 py-3 font-mono-bureau text-[11px] uppercase tracking-[0.1em] text-[#2563EB] hover:bg-[#FAF9F6]">
+                  ▸ Explore funding paths (Sankey)
+                </summary>
+                <div className="border-t border-[#0C1B33]/10 p-4">
+                  <FunderFlowSankey communityArea={name} />
+                </div>
+              </details>
             </Section>
 
             {/* 4c — Major private developments (announced capital — a separate measure) */}
@@ -178,9 +216,12 @@ export default async function InvestmentAreaPage({
               <MajorDevelopments summary={developments} scope="area" />
             </Section>
 
-            {/* 5 — Top recipients */}
-            <Section title="Top recipients" description="The largest single awards on record since 2020.">
-              <TopRecipientsTable recipients={analysis.topRecipients} />
+            {/* 5 — Top recipients + working set */}
+            <Section title="Top recipients" description="The largest single awards on record since 2020. Save rows to build a working set.">
+              <TopRecipientsTable recipients={analysis.topRecipients} saveEnabled area={name} />
+              <div className="mt-4">
+                <WorkingSetPanel />
+              </div>
             </Section>
 
             {/* 6 — Funders */}
@@ -198,9 +239,11 @@ export default async function InvestmentAreaPage({
             </Section>
 
             {/* 8 — Methodology */}
-            <Section title="Methodology">
+            <Section title="Methodology" id="methodology">
               <Methodology sources={sources} generatedAt={analysis.generatedAt} />
             </Section>
+
+            <ComparePinBar />
           </>
         )}
       </div>
