@@ -314,6 +314,22 @@ export function investmentRecordsToPointFeatures(
       f.properties.radiusPx = radiusOf(f.properties.announcedInvestment);
     }
   }
+  // Size NON-GRANT capital dots (tif_subsidy / federal_program / tax_credit — all
+  // funderType government, amountAwarded=null) by their OWN money field, each on
+  // its own per-class sqrt-domain scale (4–18px). Without this every non-grant dot
+  // collapses to the 4px floor under the amountAwarded paint (to-number(null)=0),
+  // so a $959M TIF ceiling would read identical to a $0 one. tif_subsidy /
+  // federal_program size by authorizedAmount; tax_credit sizes by creditAmount.
+  // A per-CLASS domain keeps each instrument's magnitudes comparable within itself
+  // (the outline color already tells the classes apart).
+  for (const cls of ["tif_subsidy", "federal_program", "tax_credit"] as const) {
+    const ofClass = features.filter((f) => f.properties.capitalClass === cls);
+    if (ofClass.length === 0) continue;
+    const moneyOf = (p: InvestmentPointProps): number | null =>
+      p.capitalClass === "tax_credit" ? p.creditAmount : p.authorizedAmount;
+    const scale = makeDevelopmentDotRadiusScale(ofClass.map((f) => moneyOf(f.properties)));
+    for (const f of ofClass) f.properties.radiusPx = scale(moneyOf(f.properties));
+  }
   return features;
 }
 

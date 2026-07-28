@@ -61,7 +61,7 @@ describe("MapLegendPanel community-investment admin section", () => {
     expect(html).toContain("Admin");
     expect(html).toContain("Community investment");
     // Off → the year/funder/citywide sub-controls are absent.
-    expect(html).not.toContain("Dot size = amount awarded");
+    expect(html).not.toContain("Dot size = each record");
     expect(html).not.toContain("Citywide commitments");
     // Unchecked toggle — no checked attribute right after the label.
     expect(html).not.toMatch(/Community investment[\s\S]*?checked="?true"?/);
@@ -90,7 +90,7 @@ describe("MapLegendPanel community-investment admin section", () => {
     expect(html).toContain(FUNDER_TYPE_LABELS.government);
     expect(html).toContain(FUNDER_TYPE_LABELS.philanthropic);
     expect(html).not.toContain(FUNDER_TYPE_LABELS.private_development);
-    expect(html).toContain("Dot size = amount awarded");
+    expect(html).toContain("Dot size = each record");
   });
 
   it("renders the collapsible Citywide commitments note with a count when there are citywide records", () => {
@@ -149,7 +149,7 @@ describe("MapLegendPanel community-investment admin section", () => {
         investmentCitywide={{ count: 5, totalDollars: 1_000_000 }}
       />
     );
-    expect(html).not.toContain("Dot size = amount awarded");
+    expect(html).not.toContain("Dot size = each record");
     expect(html).not.toContain("Citywide commitments");
   });
 

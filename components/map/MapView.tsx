@@ -1447,18 +1447,24 @@ export default function MapView() {
             "private_development", FUNDER_TYPE_COLORS.private_development,
             INVESTMENT_FALLBACK_COLOR,
           ],
-          // Radius encodes MAGNITUDE, but from different fields by funder type:
+          // Radius encodes MAGNITUDE, but from different fields by capital kind:
           //   • DEVELOPMENT dots read `radiusPx` — a precomputed 4–18px radius
           //     sized by announcedInvestment over the development set (a
           //     domain-normalized sqrt scale a mapbox expression can't express;
           //     stamped in investmentRecordsToPointFeatures). A null-capital
           //     development carries radiusPx=4 (the floor). NEVER amountAwarded.
-          //   • everything else keeps the sqrt(amountAwarded) scale, clamped
-          //     4–18px (interpolate clamps outside the domain; to-number coerces
-          //     a null amount to 0 → the 4px floor).
+          //   • NON-GRANT capital dots (capitalClass != grant: TIF / federal /
+          //     tax-credit, amountAwarded=null) ALSO read a precomputed `radiusPx`,
+          //     sized by their OWN money field on a per-class sqrt domain — so they
+          //     no longer all collapse to the 4px floor under an amountAwarded paint.
+          //   • grant dots keep the sqrt(amountAwarded) scale, clamped 4–18px
+          //     (interpolate clamps outside the domain; to-number coerces a null
+          //     amount to 0 → the 4px floor).
           "circle-radius": [
             "case",
             ["==", ["get", "funderType"], "private_development"],
+            ["to-number", ["get", "radiusPx"], 4],
+            ["!=", ["get", "capitalClass"], "grant"],
             ["to-number", ["get", "radiusPx"], 4],
             [
               "interpolate", ["linear"], ["sqrt", ["to-number", ["get", "amountAwarded"]]],
@@ -2303,6 +2309,14 @@ export default function MapView() {
         elevationValue?: number;
       };
       const count = bin.count ?? bin.points?.length ?? bin.pointIndices?.length ?? 0;
+      // RECORDS mode bins EVERY point (grant + non-grant capital), so the honest
+      // noun is "records" and there is NO dollar figure — the bin value is a count.
+      if (investmentDensityMetric === "records") {
+        return { text: `${count} record${count === 1 ? "" : "s"} in this bin`, style };
+      }
+      // DOLLARS mode: the layer data is filtered to amountAwarded>0 grant records
+      // (see the density layer below), so the bin sum is a real awarded total and
+      // every point in it is a grant.
       const total = bin.colorValue ?? bin.value ?? bin.elevationValue ?? 0;
       return {
         text: `${formatAwardedAmount(total)} awarded\n${count} grant${count === 1 ? "" : "s"} in this bin`,
@@ -2310,7 +2324,7 @@ export default function MapView() {
       };
     }
     return null;
-  }, []);
+  }, [investmentDensityMetric]);
 
   /* ── Community-investment layer: deck.gl view modes (Arcs / Density) ──
      Owns the base circle layer's visibility (visible ONLY in Dots mode) and the
@@ -2407,10 +2421,19 @@ export default function MapView() {
     } else {
       // density
       setInvestmentArcMissingHqCount(0);
+      // In DOLLARS mode, exclude the null-amount government points (TIF / CDBG-HOME
+      // / LIHTC — amountAwarded=null) so a bin of only non-grant points does NOT
+      // paint a phantom $0 hexagon under the "$ awarded" ramp (and does not pin the
+      // color domain floor to 0). RECORDS mode keeps every point — it is a plain
+      // record-density count and the honest picture there includes all records.
+      const densityData =
+        investmentDensityMetric === "dollars"
+          ? filtered.filter((f) => (f.properties.amountAwarded ?? 0) > 0)
+          : filtered;
       layers = [
         new HexagonLayer<InvestmentPointFeature>({
           id: "investment-hexagons",
-          data: filtered,
+          data: densityData,
           getPosition: (f) => f.geometry.coordinates as [number, number],
           // dollars → AWARDED dollars only (never announcedInvestment — a
           // development's announced capital must not heat a bin); records → a
@@ -2435,7 +2458,10 @@ export default function MapView() {
       });
       map.addControl(deckOverlayRef.current as unknown as mapboxgl.IControl);
     } else {
-      deckOverlayRef.current.setProps({ layers });
+      // Re-apply getTooltip too: it closes over investmentDensityMetric (records
+      // vs dollars wording), so a metric switch on an existing overlay must refresh
+      // it — otherwise a stale closure keeps the old bin text.
+      deckOverlayRef.current.setProps({ layers, getTooltip: getInvestmentDeckTooltip });
     }
   }, [
     loaded,

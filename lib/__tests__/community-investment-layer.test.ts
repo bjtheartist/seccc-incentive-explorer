@@ -326,6 +326,54 @@ describe("development dots: announcedInvestment + radiusPx", () => {
     expect(byId.get("gov")!.properties.radiusPx).toBeUndefined();
   });
 
+  it("sizes NON-GRANT capital dots by their OWN money field (per-class), not the 4px floor", () => {
+    const nonGrant = (
+      id: string,
+      capitalClass: "tif_subsidy" | "federal_program" | "tax_credit",
+      source: "tif" | "cdbg-home" | "lihtc",
+      money: number,
+      lat: number,
+    ): CommunityInvestmentRecord => ({
+      id,
+      source,
+      funderType: "government",
+      funderName: "Public capital",
+      recipient: id,
+      amountAwarded: null,
+      authorizedAmount: capitalClass === "tax_credit" ? null : money,
+      creditAmount: capitalClass === "tax_credit" ? money : null,
+      logLine: null,
+      year: 2022,
+      geometry: { kind: "point", lat, lng: -87.6 },
+      address: `${id} St`,
+      status: "awarded",
+      capitalClass,
+      links: [],
+    });
+
+    const features = investmentRecordsToPointFeatures([
+      nonGrant("tif-big", "tif_subsidy", "tif", 900_000_000, 41.70),
+      nonGrant("tif-small", "tif_subsidy", "tif", 2_000_000, 41.71),
+      nonGrant("hud-one", "federal_program", "cdbg-home", 5_000_000, 41.72),
+      nonGrant("lihtc-one", "tax_credit", "lihtc", 12_000_000, 41.73),
+    ]);
+    const byId = new Map(features.map((f) => [f.properties.id, f]));
+
+    // Every non-grant dot carries a radiusPx (so the paint no longer floors it).
+    for (const id of ["tif-big", "tif-small", "hud-one", "lihtc-one"]) {
+      const r = byId.get(id)!.properties.radiusPx;
+      expect(typeof r).toBe("number");
+      expect(r).toBeGreaterThanOrEqual(DEV_DOT_RADIUS_MIN);
+      expect(r).toBeLessThanOrEqual(DEV_DOT_RADIUS_MAX);
+    }
+    // Within the tif_subsidy class, the $900M ceiling reads larger than the $2M one.
+    expect(byId.get("tif-big")!.properties.radiusPx!).toBeGreaterThan(
+      byId.get("tif-small")!.properties.radiusPx!,
+    );
+    // The $900M TIF is the max of its own domain → the max radius.
+    expect(byId.get("tif-big")!.properties.radiusPx).toBe(DEV_DOT_RADIUS_MAX);
+  });
+
   it("makeDevelopmentDotRadiusScale: null/0 → min, max amount → max, monotonic", () => {
     const scale = makeDevelopmentDotRadiusScale([null, 22_000_000, 9_000_000_000]);
     expect(scale(null)).toBe(DEV_DOT_RADIUS_MIN);

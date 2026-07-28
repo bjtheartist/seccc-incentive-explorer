@@ -759,7 +759,7 @@ export default function MapLegendPanel({
 
                 {/* Mode-specific caption / mini legend. */}
                 {investmentViewMode === "dots" && (
-                  <p className="text-[9px] text-[#0C1B33]/35">Dot size = amount awarded</p>
+                  <p className="text-[9px] text-[#0C1B33]/35">Dot size = each record&rsquo;s own capital amount</p>
                 )}
 
                 {investmentViewMode === "arcs" && (
@@ -821,7 +821,7 @@ export default function MapLegendPanel({
                     </div>
                     <p className="text-[9px] text-[#0C1B33]/35">
                       {investmentDensityMetric === "records"
-                        ? `grant count (hex bins, ${HEXAGON_RADIUS_M}m)`
+                        ? `record count (hex bins, ${HEXAGON_RADIUS_M}m)`
                         : `$ awarded (hex bins, ${HEXAGON_RADIUS_M}m)`}
                     </p>
                   </div>

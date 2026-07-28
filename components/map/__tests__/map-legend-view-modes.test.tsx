@@ -79,7 +79,10 @@ describe("MapLegendPanel investment view-mode control", () => {
         investmentViewMode="dots"
       />
     );
-    expect(dots).toContain("Dot size = amount awarded");
+    // Per-class honest caption: dots are sized by each record's OWN money field,
+    // not a single "amount awarded" that would floor every non-grant dot.
+    expect(dots).toContain("Dot size = each record");
+    expect(dots).toContain("own capital amount");
 
     const density = renderToStaticMarkup(
       <MapLegendPanel
@@ -89,7 +92,7 @@ describe("MapLegendPanel investment view-mode control", () => {
         investmentViewMode="density"
       />
     );
-    expect(density).not.toContain("Dot size = amount awarded");
+    expect(density).not.toContain("Dot size = each record");
   });
 
   it("captions the Arcs fallback count when funder HQs are missing", () => {
@@ -157,7 +160,7 @@ describe("MapLegendPanel investment view-mode control", () => {
     );
     expect(dollars).toContain('aria-label="Density metric"');
     expect(dollars).toContain("$ awarded (hex bins, 250m)");
-    expect(dollars).not.toContain("grant count (hex bins, 250m)");
+    expect(dollars).not.toContain("record count (hex bins, 250m)");
 
     const records = renderToStaticMarkup(
       <MapLegendPanel
@@ -168,7 +171,7 @@ describe("MapLegendPanel investment view-mode control", () => {
         investmentDensityMetric="records"
       />
     );
-    expect(records).toContain("grant count (hex bins, 250m)");
+    expect(records).toContain("record count (hex bins, 250m)");
     expect(records).not.toContain("$ awarded (hex bins, 250m)");
   });
 });
