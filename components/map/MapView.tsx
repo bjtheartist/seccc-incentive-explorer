@@ -128,6 +128,14 @@ import {
   type ZipBoundaryFeatureCollection,
 } from "@/lib/county-relief-layer";
 import {
+  buildState2020ReliefFeatureCollection,
+  STATE_2020_RELIEF_FILL_COLOR,
+  STATE_2020_RELIEF_FILL_LAYER_ID,
+  STATE_2020_RELIEF_LINE_COLOR,
+  STATE_2020_RELIEF_LINE_LAYER_ID,
+  STATE_2020_RELIEF_SOURCE_ID,
+} from "@/lib/state-2020-relief-layer";
+import {
   buildStateRecoveryFeatureCollection,
   STATE_RECOVERY_FILL_COLOR,
   STATE_RECOVERY_FILL_LAYER_ID,
@@ -351,11 +359,15 @@ export default function MapView() {
   const stateCapitalFeaturesRef = useRef<InvestmentPointFeature[]>([]);
   const federalRestaurantReliefFeaturesRef = useRef<InvestmentPointFeature[]>([]);
   const countyReliefByZipRef = useRef<CountyReliefZipSummary[]>([]);
+  const state2020ReliefByZipRef = useRef<HistoricalRecoveryZipSummary[]>([]);
   const stateRecoveryByZipRef = useRef<HistoricalRecoveryZipSummary[]>([]);
   const countyReliefBoundariesRef = useRef<ZipBoundaryFeatureCollection | null>(null);
   const [stateCapitalPlottedCount, setStateCapitalPlottedCount] = useState(0);
   const [stateCapitalCitywideCount, setStateCapitalCitywideCount] = useState(0);
   const [countyReliefZipCount, setCountyReliefZipCount] = useState(0);
+  const [state2020ReliefZipCount, setState2020ReliefZipCount] = useState(0);
+  const [state2020HospitalityCitywideCount, setState2020HospitalityCitywideCount] =
+    useState(0);
   const [stateRecoveryZipCount, setStateRecoveryZipCount] = useState(0);
   const [federalRestaurantReliefPlottedCount, setFederalRestaurantReliefPlottedCount] = useState(0);
   const [federalRestaurantReliefCitywideCount, setFederalRestaurantReliefCitywideCount] = useState(0);
@@ -383,7 +395,12 @@ export default function MapView() {
   ) => {
     if (!/^\d{5}$/.test(zipCode)) return;
     const defaults =
-      sourceId === "illinois-b2b"
+      sourceId === "illinois-big"
+        ? {
+            programName: "Business Interruption Grants Program",
+            year: 2020,
+          }
+        : sourceId === "illinois-b2b"
         ? {
             programName: "Illinois Back to Business Grant Program",
             year: 2022,
@@ -1693,6 +1710,66 @@ export default function MapView() {
       map.on("mouseenter", COUNTY_RELIEF_FILL_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", COUNTY_RELIEF_FILL_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
 
+      map.addSource(STATE_2020_RELIEF_SOURCE_ID, {
+        type: "geojson",
+        data: EMPTY_FC,
+      });
+      map.addLayer({
+        id: STATE_2020_RELIEF_FILL_LAYER_ID,
+        type: "fill",
+        source: STATE_2020_RELIEF_SOURCE_ID,
+        layout: { visibility: "none" },
+        paint: {
+          "fill-color": STATE_2020_RELIEF_FILL_COLOR,
+          "fill-opacity": [
+            "interpolate",
+            ["linear"],
+            ["to-number", ["get", "intensity"], 0],
+            0,
+            0.1,
+            1,
+            0.46,
+          ],
+        },
+      }, "owner-clusters-clusters");
+      map.addLayer({
+        id: STATE_2020_RELIEF_LINE_LAYER_ID,
+        type: "line",
+        source: STATE_2020_RELIEF_SOURCE_ID,
+        layout: { visibility: "none" },
+        paint: {
+          "line-color": STATE_2020_RELIEF_LINE_COLOR,
+          "line-width": 1.25,
+          "line-opacity": 0.82,
+        },
+      }, "owner-clusters-clusters");
+      map.on("click", STATE_2020_RELIEF_FILL_LAYER_ID, (e) => {
+        if (!e.features?.length) return;
+        const properties = e.features[0].properties || {};
+        const zipCode = String(properties.zipCode || "");
+        sharedDotPopup
+          .setLngLat(e.lngLat)
+          .setHTML(buildHistoricalRecoveryZipPopupHtml(properties))
+          .addTo(map);
+        const recipientsButton = sharedDotPopup
+          .getElement()
+          ?.querySelector<HTMLButtonElement>("[data-historical-recovery-recipients]");
+        recipientsButton?.addEventListener(
+          "click",
+          () => {
+            sharedDotPopup.remove();
+            openHistoricalRecoveryRecipients("illinois-big", zipCode);
+          },
+          { once: true },
+        );
+      });
+      map.on("mouseenter", STATE_2020_RELIEF_FILL_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", STATE_2020_RELIEF_FILL_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "";
+      });
+
       map.addSource(STATE_RECOVERY_SOURCE_ID, { type: "geojson", data: EMPTY_FC });
       map.addLayer({
         id: STATE_RECOVERY_FILL_LAYER_ID,
@@ -2358,6 +2435,13 @@ export default function MapView() {
     if (countyReliefParam === "0") {
       setPublicInvestmentOverlayPersistent("county_relief_awards", false);
     }
+    const state2020ReliefParam = params.get("state2020Relief");
+    if (state2020ReliefParam === "1") {
+      setPublicInvestmentOverlayPersistent("state_2020_relief", true);
+    }
+    if (state2020ReliefParam === "0") {
+      setPublicInvestmentOverlayPersistent("state_2020_relief", false);
+    }
     const stateRecoveryParam = params.get("stateRecovery");
     if (stateRecoveryParam === "1") {
       setPublicInvestmentOverlayPersistent("state_recovery_awards", true);
@@ -2716,6 +2800,10 @@ export default function MapView() {
         if (stateSrc) stateSrc.setData(EMPTY_FC);
         const countySrc = map.getSource(COUNTY_RELIEF_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
         if (countySrc) countySrc.setData(EMPTY_FC);
+        const state2020ReliefSrc = map.getSource(
+          STATE_2020_RELIEF_SOURCE_ID,
+        ) as mapboxgl.GeoJSONSource | undefined;
+        if (state2020ReliefSrc) state2020ReliefSrc.setData(EMPTY_FC);
         const stateRecoverySrc = map.getSource(STATE_RECOVERY_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
         if (stateRecoverySrc) stateRecoverySrc.setData(EMPTY_FC);
         const federalRestaurantSrc = map.getSource(
@@ -2729,6 +2817,7 @@ export default function MapView() {
         stateCapitalFeaturesRef.current = [];
         federalRestaurantReliefFeaturesRef.current = [];
         countyReliefByZipRef.current = [];
+        state2020ReliefByZipRef.current = [];
         stateRecoveryByZipRef.current = [];
         setCommunityInvestmentLoaded(false);
         setInvestmentPresentFunderTypes([]);
@@ -2741,6 +2830,8 @@ export default function MapView() {
         setStateCapitalPlottedCount(0);
         setStateCapitalCitywideCount(0);
         setCountyReliefZipCount(0);
+        setState2020ReliefZipCount(0);
+        setState2020HospitalityCitywideCount(0);
         setStateRecoveryZipCount(0);
         setFederalRestaurantReliefPlottedCount(0);
         setFederalRestaurantReliefCitywideCount(0);
@@ -2768,8 +2859,12 @@ export default function MapView() {
             (feature) => feature.properties.source === "sba-rrf",
           );
           countyReliefByZipRef.current = result.countyReliefByZip;
+          state2020ReliefByZipRef.current = result.state2020ReliefByZip;
           stateRecoveryByZipRef.current = result.stateRecoveryByZip;
           setStateCapitalCitywideCount(result.stateCapitalCitywideCount);
+          setState2020HospitalityCitywideCount(
+            result.state2020HospitalityCitywideCount,
+          );
           setFederalRestaurantReliefCitywideCount(
             result.federalRestaurantReliefCitywideCount,
           );
@@ -2955,6 +3050,75 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.county_relief_awards,
+    loaded,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    const source = map.getSource(STATE_2020_RELIEF_SOURCE_ID) as
+      | mapboxgl.GeoJSONSource
+      | undefined;
+    const visible =
+      adminSessionActive &&
+      communityInvestmentVisible &&
+      communityInvestmentLoaded &&
+      publicInvestmentOverlays.state_2020_relief;
+
+    for (const layerId of [
+      STATE_2020_RELIEF_FILL_LAYER_ID,
+      STATE_2020_RELIEF_LINE_LAYER_ID,
+    ]) {
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+      }
+    }
+    if (!visible) {
+      source?.setData(EMPTY_FC);
+      setState2020ReliefZipCount(0);
+      return;
+    }
+
+    const applyBoundaries = (boundaries: ZipBoundaryFeatureCollection) => {
+      const collection = buildState2020ReliefFeatureCollection(
+        boundaries,
+        state2020ReliefByZipRef.current,
+      );
+      source?.setData(collection);
+      setState2020ReliefZipCount(collection.features.length);
+    };
+    if (countyReliefBoundariesRef.current) {
+      applyBoundaries(countyReliefBoundariesRef.current);
+      return;
+    }
+
+    const controller = new AbortController();
+    fetch(COUNTY_RELIEF_BOUNDARIES_ENDPOINT, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`ZIP boundaries returned ${response.status}`);
+        }
+        return response.json() as Promise<ZipBoundaryFeatureCollection>;
+      })
+      .then((boundaries) => {
+        if (controller.signal.aborted || boundaries.type !== "FeatureCollection") {
+          return;
+        }
+        countyReliefBoundariesRef.current = boundaries;
+        applyBoundaries(boundaries);
+      })
+      .catch((error) => {
+        if (error?.name === "AbortError") return;
+        console.warn("[CommunityInvestment] Illinois 2020 relief ZIP boundary error:", error);
+        source?.setData(EMPTY_FC);
+        setState2020ReliefZipCount(0);
+      });
+    return () => controller.abort();
+  }, [
+    adminSessionActive,
+    communityInvestmentVisible,
+    communityInvestmentLoaded,
+    publicInvestmentOverlays.state_2020_relief,
     loaded,
   ]);
 
@@ -3393,6 +3557,8 @@ export default function MapView() {
           investmentMegaprojectsVisible={investmentMegaprojectsVisible}
           publicInvestmentOverlays={publicInvestmentOverlays}
           countyReliefZipCount={countyReliefZipCount}
+          state2020ReliefZipCount={state2020ReliefZipCount}
+          state2020HospitalityCitywideCount={state2020HospitalityCitywideCount}
           stateRecoveryZipCount={stateRecoveryZipCount}
           federalRestaurantReliefPlottedCount={federalRestaurantReliefPlottedCount}
           federalRestaurantReliefCitywideCount={federalRestaurantReliefCitywideCount}

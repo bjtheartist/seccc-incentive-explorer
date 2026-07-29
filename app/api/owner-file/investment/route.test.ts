@@ -18,6 +18,8 @@ vi.mock("@/lib/community-investment", () => ({
   INVESTMENT_SOURCES: [
     "cdg",
     "cook-source-2023",
+    "illinois-big",
+    "illinois-hospitality-emergency",
     "illinois-b2b",
     "sba-rrf",
     "dceo-capital",
@@ -35,7 +37,7 @@ import { GET } from "./route";
 const sourceLink = "https://example.com/official-source";
 const fakeData = {
   generatedAt: "2026-07-28T00:00:00.000Z",
-  meta: { totalRecords: 8 },
+  meta: { totalRecords: 10 },
   records: [
     {
       id: "cdg-point",
@@ -61,6 +63,24 @@ const fakeData = {
       geometry: { kind: "zip_area", zip: "60617" },
       amountAwarded: null,
       recovery: { historicalAmount: { value: 20_000 } },
+      links: [sourceLink],
+    },
+    {
+      id: "big-a",
+      source: "illinois-big",
+      recipient: "Illinois BIG recipient",
+      geometry: { kind: "zip_area", zip: "60617" },
+      amountAwarded: null,
+      recovery: { historicalAmount: { value: 30_000 } },
+      links: [sourceLink],
+    },
+    {
+      id: "hospitality-citywide",
+      source: "illinois-hospitality-emergency",
+      recipient: "Illinois Hospitality recipient",
+      geometry: { kind: "citywide" },
+      amountAwarded: null,
+      recovery: { historicalAmount: { value: 25_000 } },
       links: [sourceLink],
     },
     {
@@ -168,13 +188,103 @@ describe("GET /api/owner-file/investment", () => {
         sourceLink,
       },
     ]);
+    expect(body.state2020ReliefByZip).toEqual([
+      {
+        sourceId: "illinois-big",
+        programName: "Business Interruption Grants Program",
+        zipCode: "60617",
+        awardCount: 1,
+        totalDisbursed: 30_000,
+        year: 2020,
+        sourceLink,
+      },
+    ]);
     expect(body.stateCapitalCitywideCount).toBe(1);
     expect(body.federalRestaurantReliefCitywideCount).toBe(1);
+    expect(body.state2020HospitalityCitywideCount).toBe(1);
     expect(JSON.stringify(body)).not.toContain("Cook recipient");
+    expect(JSON.stringify(body)).not.toContain("Illinois BIG recipient");
+    expect(JSON.stringify(body)).not.toContain("Illinois Hospitality recipient");
     expect(JSON.stringify(body)).not.toContain("Illinois B2B recipient");
     expect(JSON.stringify(body)).not.toContain("Unplotted restaurant recipient");
     expect(JSON.stringify(body)).not.toContain("Unplotted state project");
     expect(body.countyReliefByZip[0]).not.toHaveProperty("recipient");
+  });
+
+  it("FAILS CLOSED: aggregate-only sources stay nameless even when held CITYWIDE, not just ZIP-area", async () => {
+    // Regression guard. The projection used to strip these families by
+    // `geometry.kind === "zip_area"`, so name-stripping depended entirely on a
+    // geometry value the importers own. #97 established that an unplottable
+    // record is HELD CITYWIDE rather than deleted (out-of-bounds DCEO geocodes),
+    // and BIG still deletes its one out-of-city ZIP row (60426 / Harvey) — so
+    // "hold it citywide instead" is the obvious next fix. Under the old rule
+    // that fix would have pushed every such recipient's BUSINESS NAME into the
+    // default map payload. The rule is keyed on source now, so it cannot.
+    loadMock.mockReturnValueOnce({
+      ...fakeData,
+      records: [
+        ...fakeData.records,
+        {
+          id: "big-citywide",
+          source: "illinois-big",
+          recipient: "Citywide BIG recipient",
+          geometry: { kind: "citywide" },
+          amountAwarded: null,
+          recovery: { historicalAmount: { value: 15_000 } },
+          links: [sourceLink],
+        },
+        {
+          id: "b2b-citywide",
+          source: "illinois-b2b",
+          recipient: "Citywide B2B recipient",
+          geometry: { kind: "citywide" },
+          amountAwarded: null,
+          recovery: { historicalAmount: { value: 15_000 } },
+          links: [sourceLink],
+        },
+        {
+          id: "cook-citywide",
+          source: "cook-source-2023",
+          recipient: "Citywide Cook recipient",
+          geometry: { kind: "citywide" },
+          amountAwarded: null,
+          recovery: { historicalAmount: { value: 15_000 } },
+          links: [sourceLink],
+        },
+      ],
+    });
+
+    const res = await GET(req("http://localhost/api/owner-file/investment?view=map"));
+    const body = await res.json();
+    const serialized = JSON.stringify(body);
+
+    expect(res.status).toBe(200);
+    expect(body.records.map((record: { id: string }) => record.id)).toEqual([
+      "cdg-point",
+      "rrf-point",
+      "dceo-point",
+    ]);
+    expect(serialized).not.toContain("Citywide BIG recipient");
+    expect(serialized).not.toContain("Citywide B2B recipient");
+    expect(serialized).not.toContain("Citywide Cook recipient");
+  });
+
+  it("FAILS CLOSED: Hospitality has no per-ZIP drilldown, because it has no ZIPs", async () => {
+    // The source publishes a municipality and nothing finer, so every Chicago
+    // Hospitality record is citywide. A per-ZIP drilldown for it is meaningless
+    // and is rejected outright rather than answered with an empty recipient list
+    // that would read as "no awards in this ZIP".
+    const res = await GET(
+      req(
+        "http://localhost/api/owner-file/investment?view=historical-recovery-recipients&source=illinois-hospitality-emergency&zip=60617",
+      ),
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: "A supported historical recovery source is required",
+    });
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
   });
 
   it("FAILS CLOSED: a missing or unrecognized view returns the projected, nameless shape", async () => {
@@ -302,6 +412,34 @@ describe("GET /api/owner-file/investment", () => {
           id: "b2b-a",
           businessName: "Illinois B2B recipient",
           historicalAwardAmount: 25_000,
+        },
+      ],
+    });
+    expect(filterMock).not.toHaveBeenCalled();
+  });
+
+  it("returns Illinois BIG recipients through the generic historical drilldown", async () => {
+    const res = await GET(
+      req(
+        "http://localhost/api/owner-file/investment?view=historical-recovery-recipients&source=illinois-big&zip=60617",
+      ),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({
+      sourceId: "illinois-big",
+      zipCode: "60617",
+      programName: "Business Interruption Grants Program",
+      programStatus: "complete",
+      year: 2020,
+      recipientCount: 1,
+      sourceLink,
+      recipients: [
+        {
+          id: "big-a",
+          businessName: "Illinois BIG recipient",
+          historicalAwardAmount: 30_000,
         },
       ],
     });

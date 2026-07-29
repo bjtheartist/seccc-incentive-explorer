@@ -72,6 +72,8 @@ export interface RecoveryLineageNode {
 }
 
 export const RECOVERY_INVESTMENT_SOURCE_IDS = [
+  "illinois-big",
+  "illinois-hospitality-emergency",
   "illinois-b2b",
   "sba-rrf",
   "cook-source-2023",
@@ -100,7 +102,77 @@ const ARPA_LAW_NODE = {
   governmentLevel: "federal",
 } as const satisfies RecoveryLineageNode;
 
+const CARES_LAW_NODE = {
+  role: "root_law",
+  name: "Coronavirus Aid, Relief, and Economic Security Act",
+  governmentLevel: "federal",
+} as const satisfies RecoveryLineageNode;
+
 export const RECOVERY_INVESTMENT_SOURCE_METADATA = {
+  "illinois-big": {
+    id: "illinois-big",
+    label: "Illinois Business Interruption Grant awardees",
+    programName: "Business Interruption Grants Program",
+    reliefEra: "cares_2020",
+    assistanceType: "grant",
+    governmentLevel: "state",
+    recipientScope: "named_recipient",
+    locationPrecision: "postal_code",
+    canonicalSourceUrl:
+      "https://dceo.illinois.gov/content/dam/soi/en/web/dceo/smallbizassistance/documents/bigawardsall.pdf",
+    lineage: [
+      CARES_LAW_NODE,
+      {
+        role: "root_fund",
+        name: "Coronavirus Relief Fund",
+        governmentLevel: "federal",
+      },
+      {
+        role: "administering_agency",
+        name: "Illinois Department of Commerce and Economic Opportunity",
+        governmentLevel: "state",
+      },
+      {
+        role: "administering_program",
+        name: "Business Interruption Grants Program",
+        governmentLevel: "state",
+      },
+    ],
+  },
+  "illinois-hospitality-emergency": {
+    id: "illinois-hospitality-emergency",
+    label: "Illinois Hospitality Emergency Grant awardees",
+    programName: "Hospitality Emergency Grant Program",
+    reliefEra: "other_pandemic",
+    assistanceType: "grant",
+    governmentLevel: "state",
+    recipientScope: "named_recipient",
+    locationPrecision: "municipality",
+    canonicalSourceUrl:
+      "https://dceo.illinois.gov/content/dam/soi/en/web/dceo/smallbizassistance/documents/hospitality-grant-awardees-full-list.pdf",
+    lineage: [
+      {
+        role: "root_fund",
+        name: "Existing DCEO tourism, job training, and general operations funds",
+        governmentLevel: "state",
+      },
+      {
+        role: "administering_agency",
+        name: "Illinois Department of Commerce and Economic Opportunity",
+        governmentLevel: "state",
+      },
+      {
+        role: "administering_program",
+        name: "Hospitality Emergency Grant Program",
+        governmentLevel: "state",
+      },
+      {
+        role: "intermediary",
+        name: "Accion Serving Illinois and Indiana",
+        governmentLevel: null,
+      },
+    ],
+  },
   "illinois-b2b": {
     id: "illinois-b2b",
     label: "Illinois Back to Business grant awardees",

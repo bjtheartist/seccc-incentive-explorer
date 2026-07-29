@@ -376,6 +376,45 @@ describe("fetchCommunityInvestmentLayer", () => {
     ]);
   });
 
+  it("keeps Illinois BIG ZIP history in the 2020 relief overlay", async () => {
+    const fetchImpl = fetchStub(200, {
+      records: [
+        record({
+          id: "big-1",
+          source: "illinois-big",
+          funderName: "Business Interruption Grants Program",
+          amountAwarded: null,
+          recovery: {
+            sourceId: "illinois-big",
+            historicalAmount: {
+              value: 30_000,
+              currency: "USD",
+              assistanceType: "grant",
+            },
+          },
+          year: 2020,
+          geometry: { kind: "zip_area", zip: "60617" },
+          address: null,
+          status: "disbursed",
+        }),
+      ],
+    });
+    const result = await fetchCommunityInvestmentLayer({ fetchImpl });
+    expect(result.countyReliefByZip).toEqual([]);
+    expect(result.stateRecoveryByZip).toEqual([]);
+    expect(result.state2020ReliefByZip).toEqual([
+      {
+        sourceId: "illinois-big",
+        programName: "Business Interruption Grants Program",
+        zipCode: "60617",
+        awardCount: 1,
+        totalDisbursed: 30_000,
+        year: 2020,
+        sourceLink: "https://example.gov/round",
+      },
+    ]);
+  });
+
   it("keeps unplotted DCEO records out of the base citywide commitment summary", async () => {
     const fetchImpl = fetchStub(200, {
       records: [
@@ -422,6 +461,33 @@ describe("fetchCommunityInvestmentLayer", () => {
 });
 
 describe("fetchCountyReliefRecipients", () => {
+  it("requests Illinois BIG recipients through the generic one-ZIP endpoint", async () => {
+    const fetchImpl = fetchStub(200, {
+      sourceId: "illinois-big",
+      zipCode: "60617",
+      programName: "Business Interruption Grants Program",
+      programStatus: "complete",
+      year: 2020,
+      recipients: [
+        {
+          id: "big-1",
+          businessName: "Neighborhood Business",
+          historicalAwardAmount: 30_000,
+        },
+      ],
+    });
+    const result = await fetchHistoricalRecoveryRecipients(
+      "illinois-big",
+      "60617",
+      { fetchImpl },
+    );
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(
+      `${COMMUNITY_INVESTMENT_ENDPOINT}?view=historical-recovery-recipients&source=illinois-big&zip=60617`,
+    );
+    expect(result.programName).toBe("Business Interruption Grants Program");
+    expect(result.year).toBe(2020);
+  });
+
   it("requests Illinois B2B recipients through the generic one-ZIP endpoint", async () => {
     const fetchImpl = fetchStub(200, {
       sourceId: "illinois-b2b",

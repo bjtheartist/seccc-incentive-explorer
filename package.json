@@ -56,9 +56,13 @@
     "tif:briefs:export": "npx tsx scripts/export-tif-briefs.ts",
     "data:import:cook-source": "npx tsx scripts/import-cook-county-source-grants.ts",
     "data:import:dceo-capital": "npx tsx scripts/import-dceo-capital-appropriations.ts",
+    "data:import:illinois-big": "npx tsx scripts/import-illinois-business-interruption-grants.ts",
+    "data:import:illinois-hospitality": "npx tsx scripts/import-illinois-hospitality-emergency-grants.ts",
     "data:import:illinois-b2b": "npx tsx scripts/import-illinois-back-to-business.ts",
     "data:import:sba-rrf": "npx tsx scripts/import-sba-restaurant-revitalization.ts",
     "data:import:chicago-arpa": "npx tsx scripts/import-chicago-arpa-recovery.ts",
+    "data:import:chicago-cares": "npx tsx scripts/import-chicago-cares-program-ledger.ts",
+    "data:import:cook-cares-2020": "npx tsx scripts/import-cook-county-cares-program-ledger.ts",
     "data:export:investment": "npx tsx scripts/export-community-investment.ts"
   },
   "dependencies": {

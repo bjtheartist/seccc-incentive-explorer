@@ -146,7 +146,7 @@ export default function CountyReliefRecipientsPanel({
       <footer className="border-t border-[#0C1B33]/10 px-4 py-3">
         <p className="text-[9px] leading-relaxed text-[#0C1B33]/40">
           Names are loaded only for this ZIP. No street address is inferred from
-          the {sourceId === "illinois-b2b" ? "state" : "county"} awardee list.
+          the {sourceId === "cook-source-2023" ? "county" : "state"} awardee list.
         </p>
         {safeSourceLink && (
           <a

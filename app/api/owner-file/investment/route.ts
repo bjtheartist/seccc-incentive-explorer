@@ -45,6 +45,10 @@ const HISTORICAL_RECOVERY_RECIPIENT_CONFIG: Readonly<
     programName: "Cook County 2023 Source Grant",
     year: 2023,
   },
+  "illinois-big": {
+    programName: "Business Interruption Grants Program",
+    year: 2020,
+  },
   "illinois-b2b": {
     programName: "Illinois Back to Business Grant Program",
     year: 2022,
@@ -54,7 +58,59 @@ const HISTORICAL_RECOVERY_RECIPIENT_CONFIG: Readonly<
 function isHistoricalRecoveryRecipientSource(
   value: string | null,
 ): value is HistoricalRecoveryRecipientSource {
-  return value === "cook-source-2023" || value === "illinois-b2b";
+  return (
+    value === "cook-source-2023" ||
+    value === "illinois-big" ||
+    value === "illinois-b2b"
+  );
+}
+
+/**
+ * Source families the map may surface ONLY as aggregates. Every record in one of
+ * these carries a recipient BUSINESS NAME at ZIP-or-coarser precision, and the
+ * map never needs the individual row: the polygons are drawn from the
+ * `*ByZip` summaries below, and names load solely through the authenticated
+ * per-ZIP drilldown above.
+ *
+ * Membership is keyed on SOURCE, deliberately NOT on geometry. The rule here
+ * used to be `geometry.kind !== "zip_area"`, which fails OPEN the instant a
+ * record's geometry changes. One `illinois-big`, `illinois-b2b`, or
+ * `cook-source-2023` row held CITYWIDE would have carried its business name
+ * straight into the default map payload — and "hold the record citywide rather
+ * than delete it" is precisely the treatment #97 applied to out-of-bounds DCEO
+ * geocodes, so it is the natural next fix for BIG's one out-of-city ZIP row
+ * (60426 / Harvey), which today is dropped outright. Keying on source means
+ * that fix cannot silently become a name leak.
+ */
+const AGGREGATE_ONLY_SOURCES: ReadonlySet<string> = new Set([
+  "cook-source-2023",
+  "illinois-big",
+  "illinois-hospitality-emergency",
+  "illinois-b2b",
+]);
+
+/**
+ * Sources that legitimately plot points (the source publishes street addresses)
+ * but hold their unplottable remainder citywide. Only that remainder is
+ * withheld: a citywide row adds nothing to the map except its recipient name.
+ */
+const CITYWIDE_WITHHELD_SOURCES: ReadonlySet<string> = new Set([
+  "dceo-capital",
+  "sba-rrf",
+]);
+
+/** Whether a record may appear as an individual row in the projected map payload. */
+function isVisibleInProjectedView(record: {
+  source: string;
+  geometry: { kind: string };
+}): boolean {
+  if (AGGREGATE_ONLY_SOURCES.has(record.source)) return false;
+  // A ZIP-area record is an aggregate by construction, whatever its source.
+  if (record.geometry.kind === "zip_area") return false;
+  return !(
+    CITYWIDE_WITHHELD_SOURCES.has(record.source) &&
+    record.geometry.kind === "citywide"
+  );
 }
 
 /**
@@ -196,19 +252,17 @@ export async function GET(req: NextRequest) {
   const responseData = projectedView
     ? {
         ...filtered,
-        // The map needs ZIP aggregates, not recipient names. Keep raw ZIP-level
-        // rows available only through the explicit authenticated drilldown while
-        // making the normal map payload smaller and less identifying.
-        records: filtered.records.filter(
-          (record) =>
-            record.geometry.kind !== "zip_area" &&
-            !(
-              (record.source === "dceo-capital" ||
-                record.source === "sba-rrf") &&
-              record.geometry.kind === "citywide"
-            ),
-        ),
+        // The map needs ZIP aggregates, not recipient names. Keep raw
+        // recipient-level rows available only through the explicit
+        // authenticated drilldown while making the normal map payload smaller
+        // and less identifying. See isVisibleInProjectedView: the rule is keyed
+        // on source, so it cannot fail open on a geometry change.
+        records: filtered.records.filter(isVisibleInProjectedView),
         countyReliefByZip: summarizeCountyReliefByZip(filtered.records),
+        state2020ReliefByZip: summarizeHistoricalRecoveryByZip(
+          filtered.records,
+          "illinois-big",
+        ),
         stateRecoveryByZip: summarizeHistoricalRecoveryByZip(
           filtered.records,
           "illinois-b2b",
@@ -218,6 +272,11 @@ export async function GET(req: NextRequest) {
         ).length,
         federalRestaurantReliefCitywideCount: filtered.records.filter(
           (record) => record.source === "sba-rrf" && record.geometry.kind === "citywide",
+        ).length,
+        state2020HospitalityCitywideCount: filtered.records.filter(
+          (record) =>
+            record.source === "illinois-hospitality-emergency" &&
+            record.geometry.kind === "citywide",
         ).length,
       }
     : filtered;

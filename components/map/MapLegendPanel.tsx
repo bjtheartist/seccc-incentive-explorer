@@ -109,6 +109,8 @@ interface MapLegendPanelProps {
   /** Independent historical/public-capital overlays, both default off. */
   publicInvestmentOverlays?: PublicInvestmentOverlayVisibility;
   countyReliefZipCount?: number;
+  state2020ReliefZipCount?: number;
+  state2020HospitalityCitywideCount?: number;
   stateRecoveryZipCount?: number;
   federalRestaurantReliefPlottedCount?: number;
   federalRestaurantReliefCitywideCount?: number;
@@ -171,6 +173,8 @@ export default function MapLegendPanel({
   investmentMegaprojectsVisible = false,
   publicInvestmentOverlays = { ...DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY },
   countyReliefZipCount = 0,
+  state2020ReliefZipCount = 0,
+  state2020HospitalityCitywideCount = 0,
   stateRecoveryZipCount = 0,
   federalRestaurantReliefPlottedCount = 0,
   federalRestaurantReliefCitywideCount = 0,
@@ -718,6 +722,8 @@ export default function MapLegendPanel({
                       const countLabel =
                         overlay.id === "county_relief_awards"
                           ? `${countyReliefZipCount} Chicago ZIP areas mapped`
+                          : overlay.id === "state_2020_relief"
+                            ? `${state2020ReliefZipCount} BIG ZIP areas mapped · ${state2020HospitalityCitywideCount} Hospitality records held unplotted`
                           : overlay.id === "state_recovery_awards"
                             ? `${stateRecoveryZipCount} Chicago ZIP areas mapped`
                             : overlay.id === "federal_restaurant_relief"

@@ -34,6 +34,7 @@ export const COMMUNITY_INVESTMENT_ENDPOINT = "/api/owner-file/investment";
 
 export type HistoricalRecoveryRecipientSource =
   | "cook-source-2023"
+  | "illinois-big"
   | "illinois-b2b";
 
 export interface HistoricalRecoveryRecipient {
@@ -780,12 +781,16 @@ export interface CommunityInvestmentLayerResult {
   citywideEntries: CitywideInvestmentEntry[];
   /** ZIP-level aggregates for the completed Cook County 2023 Source Grant. */
   countyReliefByZip: CountyReliefZipSummary[];
+  /** ZIP-level aggregates for Illinois 2020 Business Interruption Grants. */
+  state2020ReliefByZip: HistoricalRecoveryZipSummary[];
   /** ZIP-level aggregates for Illinois Back to Business historical grants. */
   stateRecoveryByZip: HistoricalRecoveryZipSummary[];
   /** DCEO Chicago records kept citywide because the source cannot support a safe point. */
   stateCapitalCitywideCount: number;
   /** SBA RRF Chicago rows held unplotted because no safe point was available. */
   federalRestaurantReliefCitywideCount: number;
+  /** Illinois Hospitality Emergency Grant rows held unplotted at city precision. */
+  state2020HospitalityCitywideCount: number;
   /**
    * Recipient names of the citywide (non-plotting) DEVELOPMENT records — the
    * megaprojects held citywide rather than plotted (e.g. Advocate's South Side
@@ -809,9 +814,11 @@ const EMPTY_LAYER_RESULT = (status: CommunityInvestmentLayerStatus): CommunityIn
   citywide: { count: 0, totalDollars: 0 },
   citywideEntries: [],
   countyReliefByZip: [],
+  state2020ReliefByZip: [],
   stateRecoveryByZip: [],
   stateCapitalCitywideCount: 0,
   federalRestaurantReliefCitywideCount: 0,
+  state2020HospitalityCitywideCount: 0,
   citywideDevelopmentNames: [],
   funderHqs: [],
 });
@@ -845,9 +852,11 @@ export async function fetchCommunityInvestmentLayer(opts?: {
   const data = (await res.json()) as CommunityInvestmentExport & {
     funderHqs?: FunderHq[];
     countyReliefByZip?: CountyReliefZipSummary[];
+    state2020ReliefByZip?: HistoricalRecoveryZipSummary[];
     stateRecoveryByZip?: HistoricalRecoveryZipSummary[];
     stateCapitalCitywideCount?: number;
     federalRestaurantReliefCitywideCount?: number;
+    state2020HospitalityCitywideCount?: number;
   };
   const records = Array.isArray(data?.records) ? data.records : [];
   const pointFeatures = investmentRecordsToPointFeatures(records);
@@ -864,6 +873,9 @@ export async function fetchCommunityInvestmentLayer(opts?: {
   const stateRecoveryByZip = Array.isArray(data.stateRecoveryByZip)
     ? data.stateRecoveryByZip
     : summarizeHistoricalRecoveryByZip(records, "illinois-b2b");
+  const state2020ReliefByZip = Array.isArray(data.state2020ReliefByZip)
+    ? data.state2020ReliefByZip
+    : summarizeHistoricalRecoveryByZip(records, "illinois-big");
   return {
     status: "ready",
     pointFeatures,
@@ -874,6 +886,7 @@ export async function fetchCommunityInvestmentLayer(opts?: {
     citywide: summarizeCitywideEntries(citywideEntries, null),
     citywideEntries,
     countyReliefByZip,
+    state2020ReliefByZip,
     stateRecoveryByZip,
     stateCapitalCitywideCount:
       typeof data.stateCapitalCitywideCount === "number"
@@ -886,6 +899,14 @@ export async function fetchCommunityInvestmentLayer(opts?: {
         ? data.federalRestaurantReliefCitywideCount
         : records.filter(
             (record) => record.source === "sba-rrf" && record.geometry.kind === "citywide",
+          ).length,
+    state2020HospitalityCitywideCount:
+      typeof data.state2020HospitalityCitywideCount === "number"
+        ? data.state2020HospitalityCitywideCount
+        : records.filter(
+            (record) =>
+              record.source === "illinois-hospitality-emergency" &&
+              record.geometry.kind === "citywide",
           ).length,
     citywideDevelopmentNames: citywideDevelopmentProjectNames(records),
     funderHqs: Array.isArray(data?.funderHqs) ? data.funderHqs : [],
@@ -901,6 +922,10 @@ const HISTORICAL_RECOVERY_RECIPIENT_CONFIG: Readonly<
   "cook-source-2023": {
     programName: "Cook County 2023 Source Grant",
     year: 2023,
+  },
+  "illinois-big": {
+    programName: "Business Interruption Grants Program",
+    year: 2020,
   },
   "illinois-b2b": {
     programName: "Illinois Back to Business Grant Program",

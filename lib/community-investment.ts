@@ -76,6 +76,12 @@ import {
  *   • illinois-b2b — Illinois Back to Business historical ARPA grants. The
  *     official list carries municipality + ZIP but no street address, so Chicago
  *     records use ZIP-area geometry and are rendered only as ZIP aggregates.
+ *   • illinois-big — Illinois Business Interruption Grants funded through the
+ *     2020 CARES Act. The official list carries municipality + ZIP but no street
+ *     address, so Chicago records use ZIP-area geometry and render as aggregates.
+ *   • illinois-hospitality-emergency — Illinois Hospitality Emergency Grants.
+ *     The official list carries municipality but no ZIP or street address, so
+ *     explicit Chicago records remain citywide and are never plotted at a guess.
  *   • sba-rrf — SBA Restaurant Revitalization Fund historical ARPA grants. The
  *     official list carries street addresses; successfully geocoded Chicago rows
  *     can render as points while unmatched rows stay explicitly unplotted.
@@ -95,6 +101,8 @@ export const INVESTMENT_SOURCES = [
   "lihtc",
   "nmtc",
   "cook-source-2023",
+  "illinois-big",
+  "illinois-hospitality-emergency",
   "illinois-b2b",
   "sba-rrf",
   "dceo-capital",
@@ -187,6 +195,8 @@ export const SOURCE_FUNDER_TYPE: Record<InvestmentSource, FunderType> = {
   lihtc: "government",
   nmtc: "government",
   "cook-source-2023": "government",
+  "illinois-big": "government",
+  "illinois-hospitality-emergency": "government",
   "illinois-b2b": "government",
   "sba-rrf": "government",
   "dceo-capital": "government",
@@ -211,6 +221,8 @@ export const SOURCE_CAPITAL_CLASS: Record<InvestmentSource, CapitalClass> = {
   lihtc: "tax_credit",
   nmtc: "tax_credit",
   "cook-source-2023": "grant",
+  "illinois-big": "grant",
+  "illinois-hospitality-emergency": "grant",
   "illinois-b2b": "grant",
   "sba-rrf": "grant",
   "dceo-capital": "state_appropriation",
@@ -231,7 +243,11 @@ export type InvestmentGeometry =
 
 export type CommunityInvestmentRecoverySourceId = Extract<
   RecoveryInvestmentSourceId,
-  "cook-source-2023" | "illinois-b2b" | "sba-rrf"
+  | "cook-source-2023"
+  | "illinois-big"
+  | "illinois-hospitality-emergency"
+  | "illinois-b2b"
+  | "sba-rrf"
 >;
 
 /** Compact per-record pointer into CommunityInvestmentExport.recoverySources. */
@@ -372,6 +388,14 @@ export interface CommunityInvestmentMeta {
   illinoisB2BChicagoRecords: number;
   /** Illinois B2B rows outside Chicago kept in the statewide curated source only. */
   illinoisB2BOutsideChicagoRecords: number;
+  /** Illinois BIG Chicago rows retained as ZIP-level historical awards. */
+  illinoisBigChicagoRecords: number;
+  /** Illinois BIG rows outside Chicago kept in the statewide curated source only. */
+  illinoisBigOutsideChicagoRecords: number;
+  /** Illinois Hospitality Emergency Grant rows explicitly published for Chicago. */
+  illinoisHospitalityChicagoRecords: number;
+  /** Illinois Hospitality rows outside Chicago kept in the statewide curated source only. */
+  illinoisHospitalityOutsideChicagoRecords: number;
   /** Explicit Chicago SBA Restaurant Revitalization Fund records retained. */
   sbaRrfChicagoRecords: number;
   /** SBA RRF records plotted at a successfully geocoded Chicago address. */
@@ -942,6 +966,10 @@ export function buildCommunityInvestmentExport(
     cookSourceOutsideChicagoRecords?: number;
     illinoisB2BChicagoRecords?: number;
     illinoisB2BOutsideChicagoRecords?: number;
+    illinoisBigChicagoRecords?: number;
+    illinoisBigOutsideChicagoRecords?: number;
+    illinoisHospitalityChicagoRecords?: number;
+    illinoisHospitalityOutsideChicagoRecords?: number;
     sbaRrfChicagoRecords?: number;
     sbaRrfPointRecords?: number;
     sbaRrfCitywideRecords?: number;
@@ -1079,6 +1107,12 @@ export function buildCommunityInvestmentExport(
       cookSourceOutsideChicagoRecords: stats.cookSourceOutsideChicagoRecords ?? 0,
       illinoisB2BChicagoRecords: stats.illinoisB2BChicagoRecords ?? 0,
       illinoisB2BOutsideChicagoRecords: stats.illinoisB2BOutsideChicagoRecords ?? 0,
+      illinoisBigChicagoRecords: stats.illinoisBigChicagoRecords ?? 0,
+      illinoisBigOutsideChicagoRecords: stats.illinoisBigOutsideChicagoRecords ?? 0,
+      illinoisHospitalityChicagoRecords:
+        stats.illinoisHospitalityChicagoRecords ?? 0,
+      illinoisHospitalityOutsideChicagoRecords:
+        stats.illinoisHospitalityOutsideChicagoRecords ?? 0,
       sbaRrfChicagoRecords: stats.sbaRrfChicagoRecords ?? 0,
       sbaRrfPointRecords: stats.sbaRrfPointRecords ?? 0,
       sbaRrfCitywideRecords: stats.sbaRrfCitywideRecords ?? 0,

@@ -111,6 +111,8 @@ describe("recovery investment taxonomy", () => {
 
   it("classifies the initial source families without conflating record grain", () => {
     expect(RECOVERY_INVESTMENT_SOURCE_IDS).toEqual([
+      "illinois-big",
+      "illinois-hospitality-emergency",
       "illinois-b2b",
       "sba-rrf",
       "cook-source-2023",
@@ -133,6 +135,20 @@ describe("recovery investment taxonomy", () => {
         }),
       ),
     ).toEqual({
+      "illinois-big": {
+        reliefEra: "cares_2020",
+        assistanceType: "grant",
+        governmentLevel: "state",
+        recipientScope: "named_recipient",
+        locationPrecision: "postal_code",
+      },
+      "illinois-hospitality-emergency": {
+        reliefEra: "other_pandemic",
+        assistanceType: "grant",
+        governmentLevel: "state",
+        recipientScope: "named_recipient",
+        locationPrecision: "municipality",
+      },
       "illinois-b2b": {
         reliefEra: "arpa_2021_plus",
         assistanceType: "grant",

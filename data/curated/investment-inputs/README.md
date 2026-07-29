@@ -21,6 +21,21 @@ visitors.
   master toggle, or the admin session dropping)
 - Program state: historical and fully disbursed by February 2024, not active
 
+## Cook County 2020 CARES Program Context
+
+- Source: Cook County 2020 Community Recovery Initiative impact report
+- Import: `npm run data:import:cook-cares-2020 -- --input /path/to/report.pdf`
+- Integrity contract: 24 pages and four non-additive context rows: one $77
+  million umbrella portfolio row plus three direct program outcomes
+- Direct outcomes: 1,690 small-business grants ($16.9 million), 410 business
+  forgivable loans ($7.6 million), and 148 gig-worker forgivable loans
+  ($1.4 million)
+- Chicago scope: award eligibility was suburban Cook County only; every row
+  records that City of Chicago businesses and residents were excluded
+- Map policy: no recipient roster, address, ZIP, coordinate, or map marker
+- Money policy: the umbrella and child amounts are distinct source-reported
+  contexts and must never be added together
+
 ## Illinois DCEO FY26 Capital Appropriations
 
 - Source: DCEO Capital Appropriation List, PDF created 2026-04-10
@@ -42,6 +57,37 @@ visitors.
   own Chicago evidence, and its published balance still counts
 - Money meaning: source-published appropriation balance, not an active NOFO,
   confirmed GATA award, payment, project budget, or estimate of incentive dollars
+- Lifecycle: the platform identifies executed awards and disbursements as
+  separate DCEO Grant Tracker stages; they are not yet ingested or added to the
+  appropriation balance, and future crosswalks require an official shared
+  identifier or documented manual verification
+
+## Illinois Business Interruption Grants
+
+- Source: Illinois DCEO combined BIG awardee PDF, source version 2021-04-09
+- Import: `npm run data:import:illinois-big -- --input /path/to/bigawardsall.pdf`
+- Integrity contract: 135 pages, 8,998 rows, and exactly $276,275,000 in
+  historical grants across the two published rounds
+- Funding lineage: 2020 CARES Act Coronavirus Relief Fund administered by DCEO
+- Location precision: municipality and ZIP only; never infer street addresses
+- Admin UX: Chicago rows render as ZIP aggregates, with recipient names loaded
+  only through the authenticated one-ZIP drilldown
+- Program state: closed historical grants, not an active opportunity
+
+## Illinois Hospitality Emergency Grants
+
+- Source: Illinois DCEO Hospitality Emergency Grant awardee PDF, dated
+  2020-04-27
+- Import: `npm run data:import:illinois-hospitality -- --input /path/to/awardees.pdf`
+- Integrity contract: 12 pages, 699 rows, and exactly $13,995,000 in historical
+  grants, reconciling to DCEO's program page
+- Funding lineage: existing DCEO tourism, job-training, and operating funds,
+  not CARES funding
+- Location precision: municipality and county only; never infer ZIPs or street
+  addresses
+- Admin UX: explicit Chicago records remain citywide and unplotted; the map
+  reports that count instead of placing recipients at a centroid
+- Program state: closed historical grants, not an active opportunity
 
 ## Illinois Back to Business
 
@@ -105,5 +151,23 @@ confidence model and no tier the data cannot produce:
 
 `zip_area` is named rather than folded into `citywide` because a ZIP aggregate is
 a meaningfully narrower claim than "somewhere in Chicago".
+
+## Chicago CARES-Era Program Ledger
+
+- Sources: City Contracts (`rsxa-ify5`), Mid-Year Grants (`iyu8-jkf8`),
+  Chicago Treasurer Catalyst Fund, and the Chicago Urban League's official
+  Microbusiness Recovery Grant administrator page
+- Import: `npm run data:import:chicago-cares`
+- Query boundary: four exact contract predicates plus CDBG-CV project codes
+  `CARES20CD` and `CARES20DB`, each capped at 5,000 ordered rows
+- Grain: 7 program records, 77 administrator-contract records, and 17
+  program-accounting records; no business-recipient records or map points
+- Contract policy: revisions are retained as lineage but never summed; 39
+  duplicate PO mirrors collapse to one authorization, and two source-literal
+  vendor cleanups are documented by exact PO and identity
+- Address policy: administrator addresses are excluded because they are not
+  funded business locations
+- Money policy: authorization, budget, encumbrance, and expenditure stages
+  remain separate and are never presented as one total
 
 Run `npm run data:export:investment` after any curated input changes.
