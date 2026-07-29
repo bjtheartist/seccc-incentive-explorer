@@ -2,7 +2,7 @@
  * Community Investment dataset — export-side data contract, pure helpers, and
  * the static-only loader.
  *
- * This layer merges twelve independent public-money and private-capital sources
+ * This layer merges fourteen independent public-money and private-capital sources
  * into one canonical, admin-gated map layer that answers "who has been putting
  * dollars into this neighborhood, and where":
  *
@@ -43,13 +43,21 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import {
+  assertValidRecoveryInvestmentRecord,
+  RECOVERY_INVESTMENT_SOURCE_METADATA,
+  type RecoveryHistoricalAmount,
+  type RecoveryInvestmentRecord,
+  type RecoveryInvestmentSourceId,
+  type RecoveryInvestmentSourceMetadata,
+} from "@/lib/recovery-investment";
 
 // ── Enums (const arrays so completeness is testable) ─────────────────────────
 
 /**
  * The merged sources. The first six are the original grant/development layer;
  * the next four carry NON-grant public capital that awarded totals must never
- * absorb, and the final two are opt-in historical/context overlays:
+ * absorb, and the final four are opt-in historical/context overlays:
  *   • tif        — City of Chicago TIF-funded RDA/IGA projects (council-authorized
  *     TIF assistance ceilings) — capitalClass "tif_subsidy", money in
  *     authorizedAmount, amountAwarded null.
@@ -65,6 +73,12 @@ import path from "node:path";
  *   • cook-source-2023 — Cook County's completed 2023 Source Grant awards. The
  *     official recipient list carries ZIP, not street address, so these records
  *     use zip-area geometry and are rendered only as ZIP aggregates.
+ *   • illinois-b2b — Illinois Back to Business historical ARPA grants. The
+ *     official list carries municipality + ZIP but no street address, so Chicago
+ *     records use ZIP-area geometry and are rendered only as ZIP aggregates.
+ *   • sba-rrf — SBA Restaurant Revitalization Fund historical ARPA grants. The
+ *     official list carries street addresses; successfully geocoded Chicago rows
+ *     can render as points while unmatched rows stay explicitly unplotted.
  *   • dceo-capital — Illinois DCEO capital-appropriation listings. The source PDF
  *     publishes appropriation balances, not active opportunities or confirmed
  *     award payments, so money lives only in publishedBalance.
@@ -81,6 +95,8 @@ export const INVESTMENT_SOURCES = [
   "lihtc",
   "nmtc",
   "cook-source-2023",
+  "illinois-b2b",
+  "sba-rrf",
   "dceo-capital",
 ] as const;
 export type InvestmentSource = (typeof INVESTMENT_SOURCES)[number];
@@ -171,6 +187,8 @@ export const SOURCE_FUNDER_TYPE: Record<InvestmentSource, FunderType> = {
   lihtc: "government",
   nmtc: "government",
   "cook-source-2023": "government",
+  "illinois-b2b": "government",
+  "sba-rrf": "government",
   "dceo-capital": "government",
 };
 
@@ -193,6 +211,8 @@ export const SOURCE_CAPITAL_CLASS: Record<InvestmentSource, CapitalClass> = {
   lihtc: "tax_credit",
   nmtc: "tax_credit",
   "cook-source-2023": "grant",
+  "illinois-b2b": "grant",
+  "sba-rrf": "grant",
   "dceo-capital": "state_appropriation",
 };
 
@@ -208,6 +228,17 @@ export type InvestmentGeometry =
   | { kind: "point"; lat: number; lng: number }
   | { kind: "zip_area"; zip: string }
   | { kind: "citywide" };
+
+export type CommunityInvestmentRecoverySourceId = Extract<
+  RecoveryInvestmentSourceId,
+  "cook-source-2023" | "illinois-b2b" | "sba-rrf"
+>;
+
+/** Compact per-record pointer into CommunityInvestmentExport.recoverySources. */
+export interface CommunityInvestmentRecovery {
+  sourceId: CommunityInvestmentRecoverySourceId;
+  historicalAmount: RecoveryHistoricalAmount | null;
+}
 
 /** One canonical community-investment record. */
 export interface CommunityInvestmentRecord {
@@ -312,6 +343,13 @@ export interface CommunityInvestmentRecord {
   recordProvenance?: "official" | "partner-list";
   /** Source/project links (deduped, http(s) only). */
   links: string[];
+  /**
+   * Historical pandemic-recovery classification and funding lineage. Its
+   * source-reported transaction lives in recovery.historicalAmount, never in
+   * amountAwarded, so closed recovery programs cannot inflate the ordinary
+   * awarded-grant total or read as money a current project could receive.
+   */
+  recovery?: CommunityInvestmentRecovery;
 }
 
 /** Provenance + run stats for the committed export. */
@@ -330,6 +368,20 @@ export interface CommunityInvestmentMeta {
   cookSourceChicagoRecords: number;
   /** Cook County rows kept in the curated source but excluded from this Chicago map. */
   cookSourceOutsideChicagoRecords: number;
+  /** Illinois B2B Chicago rows retained as ZIP-level historical awards. */
+  illinoisB2BChicagoRecords: number;
+  /** Illinois B2B rows outside Chicago kept in the statewide curated source only. */
+  illinoisB2BOutsideChicagoRecords: number;
+  /** Explicit Chicago SBA Restaurant Revitalization Fund records retained. */
+  sbaRrfChicagoRecords: number;
+  /** SBA RRF records plotted at a successfully geocoded Chicago address. */
+  sbaRrfPointRecords: number;
+  /** SBA RRF records held unplotted because a safe Chicago point was unavailable. */
+  sbaRrfCitywideRecords: number;
+  /** SBA RRF published addresses that returned no Census geocoder match. */
+  sbaRrfAddressGeocodeMisses: number;
+  /** SBA RRF geocodes outside official Chicago community-area polygons. */
+  sbaRrfAddressOutOfBounds: number;
   /** High-confidence Chicago DCEO records retained from the statewide ledger. */
   dceoChicagoRecords: number;
   /** DCEO Chicago records plotted at one explicit, successfully geocoded address. */
@@ -446,6 +498,10 @@ export interface CommunityInvestmentMeta {
 
 export interface CommunityInvestmentExport {
   generatedAt: string;
+  /** Normalized source classification + lineage, stored once per source. */
+  recoverySources: Partial<
+    Record<CommunityInvestmentRecoverySourceId, RecoveryInvestmentSourceMetadata>
+  >;
   meta: CommunityInvestmentMeta;
   records: CommunityInvestmentRecord[];
 }
@@ -873,6 +929,13 @@ export function buildCommunityInvestmentExport(
     nmtcUnstamped?: number;
     cookSourceChicagoRecords?: number;
     cookSourceOutsideChicagoRecords?: number;
+    illinoisB2BChicagoRecords?: number;
+    illinoisB2BOutsideChicagoRecords?: number;
+    sbaRrfChicagoRecords?: number;
+    sbaRrfPointRecords?: number;
+    sbaRrfCitywideRecords?: number;
+    sbaRrfAddressGeocodeMisses?: number;
+    sbaRrfAddressOutOfBounds?: number;
     dceoChicagoRecords?: number;
     dceoPointRecords?: number;
     dceoCitywideRecords?: number;
@@ -941,10 +1004,60 @@ export function buildCommunityInvestmentExport(
         );
       }
     }
+
+    if (r.recovery) {
+      const source = RECOVERY_INVESTMENT_SOURCE_METADATA[r.recovery.sourceId];
+      const recoveryRecord: RecoveryInvestmentRecord = {
+        id: r.id,
+        sourceId: r.recovery.sourceId,
+        programName: source.programName,
+        reliefEra: source.reliefEra,
+        assistanceType: source.assistanceType,
+        governmentLevel: source.governmentLevel,
+        recipientScope: source.recipientScope,
+        recipientName: r.recipient,
+        locationPrecision: source.locationPrecision,
+        historicalAmount: r.recovery.historicalAmount,
+        lineage: [
+          ...source.lineage,
+          {
+            role: "recipient",
+            name: r.recipient,
+            governmentLevel: null,
+          },
+        ],
+      };
+      assertValidRecoveryInvestmentRecord(recoveryRecord);
+      if (r.recovery.sourceId !== r.source) {
+        throw new Error(
+          `Record ${r.id} recovery identity/source must match its canonical investment record.`,
+        );
+      }
+      if (r.amountAwarded != null) {
+        throw new Error(
+          `Record ${r.id} is historical recovery context; its source-reported amount must live only in recovery.historicalAmount.`,
+        );
+      }
+    }
   }
 
   const out: CommunityInvestmentExport = {
     generatedAt,
+    recoverySources: Object.fromEntries(
+      [
+        ...new Set(
+          records
+            .map((record) => record.recovery?.sourceId)
+            .filter(
+              (sourceId): sourceId is CommunityInvestmentRecoverySourceId =>
+                sourceId != null,
+            ),
+        ),
+      ].map((sourceId) => [
+        sourceId,
+        RECOVERY_INVESTMENT_SOURCE_METADATA[sourceId],
+      ]),
+    ),
     meta: {
       counts: countBySource(records),
       totalRecords: records.length,
@@ -953,6 +1066,13 @@ export function buildCommunityInvestmentExport(
       zipAreaCount,
       cookSourceChicagoRecords: stats.cookSourceChicagoRecords ?? 0,
       cookSourceOutsideChicagoRecords: stats.cookSourceOutsideChicagoRecords ?? 0,
+      illinoisB2BChicagoRecords: stats.illinoisB2BChicagoRecords ?? 0,
+      illinoisB2BOutsideChicagoRecords: stats.illinoisB2BOutsideChicagoRecords ?? 0,
+      sbaRrfChicagoRecords: stats.sbaRrfChicagoRecords ?? 0,
+      sbaRrfPointRecords: stats.sbaRrfPointRecords ?? 0,
+      sbaRrfCitywideRecords: stats.sbaRrfCitywideRecords ?? 0,
+      sbaRrfAddressGeocodeMisses: stats.sbaRrfAddressGeocodeMisses ?? 0,
+      sbaRrfAddressOutOfBounds: stats.sbaRrfAddressOutOfBounds ?? 0,
       dceoChicagoRecords: stats.dceoChicagoRecords ?? 0,
       dceoPointRecords: stats.dceoPointRecords ?? 0,
       dceoCitywideRecords: stats.dceoCitywideRecords ?? 0,

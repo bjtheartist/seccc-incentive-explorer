@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import MapLegendPanel from "../MapLegendPanel";
 import {
   buildCountyReliefPopupHtml,
+  buildHistoricalRecoveryZipPopupHtml,
   buildInvestmentPopupHtml,
   formatAwardedAmount,
 } from "../map-helpers";
@@ -184,7 +185,7 @@ describe("MapLegendPanel community-investment admin section", () => {
     expect(grantOnly).not.toContain("Capital class");
   });
 
-  it("renders the county and state overlays as independent, default-off controls", () => {
+  it("renders all public-investment overlays as independent, default-off controls", () => {
     const html = renderToStaticMarkup(
       <MapLegendPanel
         {...baseProps()}
@@ -192,18 +193,48 @@ describe("MapLegendPanel community-investment admin section", () => {
         communityInvestmentVisible={true}
         publicInvestmentOverlays={{
           county_relief_awards: true,
+          state_recovery_awards: false,
+          federal_restaurant_relief: false,
           state_capital_projects: false,
         }}
         countyReliefZipCount={18}
+        stateRecoveryZipCount={12}
+        federalRestaurantReliefPlottedCount={1483}
+        federalRestaurantReliefCitywideCount={40}
         stateCapitalPlottedCount={7}
         stateCapitalCitywideCount={11}
       />
     );
     expect(html).toContain("County relief awards");
+    expect(html).toContain("Illinois recovery grants");
+    expect(html).toContain("Restaurant relief grants");
     expect(html).toContain("State capital projects");
     expect(html).toContain("18 Chicago ZIP areas mapped");
     expect(html).not.toContain("7 address-sited");
     expect(html).toContain("not an active funding opportunity");
+  });
+
+  it("shows historical recovery counts without a possible-dollar headline", () => {
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        communityInvestmentVisible={true}
+        publicInvestmentOverlays={{
+          county_relief_awards: false,
+          state_recovery_awards: true,
+          federal_restaurant_relief: true,
+          state_capital_projects: false,
+        }}
+        stateRecoveryZipCount={41}
+        federalRestaurantReliefPlottedCount={1483}
+        federalRestaurantReliefCitywideCount={40}
+      />,
+    );
+    expect(html).toContain("41 Chicago ZIP areas mapped");
+    expect(html).toContain("1483 address-sited · 40 held unplotted");
+    expect(html).not.toContain("possible incentive dollars");
+    expect(html).not.toContain("potential funding");
   });
 });
 
@@ -353,6 +384,25 @@ describe("buildInvestmentPopupHtml", () => {
     expect(html).toContain("Appropriation record");
   });
 
+  it("keeps a closed RRF transaction separate from the ordinary awarded field", () => {
+    const html = buildInvestmentPopupHtml({
+      source: "sba-rrf",
+      recoverySourceId: "sba-rrf",
+      recipient: "Historic Restaurant",
+      funderName: "U.S. Small Business Administration Restaurant Revitalization Fund",
+      funderType: "government",
+      capitalClass: "grant",
+      amountAwarded: null,
+      historicalRecoveryAmount: 125_000,
+      status: "disbursed",
+      year: 2021,
+    });
+    expect(html).toContain(MONEY_LABEL("Historical grant"));
+    expect(html).toContain("$125,000");
+    expect(html).not.toContain(MONEY_LABEL("Awarded"));
+    expect(html).toContain("Disbursed");
+  });
+
   it("adds an 'Analyze this community →' link to the record's community area", () => {
     const html = buildInvestmentPopupHtml({ ...full, communityArea: "Auburn Gresham" });
     expect(html).toContain("Analyze this community");
@@ -390,6 +440,26 @@ describe("buildCountyReliefPopupHtml", () => {
     });
 
     expect(html).not.toContain("View historical recipients");
+  });
+});
+
+describe("buildHistoricalRecoveryZipPopupHtml", () => {
+  it("labels Illinois B2B as completed historical ZIP context", () => {
+    const html = buildHistoricalRecoveryZipPopupHtml({
+      sourceId: "illinois-b2b",
+      programName: "Illinois Back to Business Grant Program",
+      zipCode: "60617",
+      awardCount: 75,
+      totalDisbursed: 2_400_000,
+      year: 2022,
+      sourceLink: "https://example.org/b2b.pdf",
+    });
+    expect(html).toContain("Illinois Back to Business Grant Program");
+    expect(html).toContain("75 historical awards");
+    expect(html).toContain("Source-reported historical total");
+    expect(html).toContain("not an active funding opportunity");
+    expect(html).toContain('data-historical-recovery-recipients="illinois-b2b"');
+    expect(html).not.toContain("possible incentive");
   });
 });
 

@@ -1,25 +1,32 @@
 import { ExternalLink, RefreshCw, X } from "lucide-react";
 import type {
-  CountyReliefRecipient,
-  CountyReliefRecipientsStatus,
+  HistoricalRecoveryRecipient,
+  HistoricalRecoveryRecipientSource,
+  HistoricalRecoveryRecipientsStatus,
 } from "@/lib/community-investment-layer";
 import { formatAwardedAmount } from "./map-helpers";
 
 export type CountyReliefRecipientsPanelStatus =
-  | CountyReliefRecipientsStatus
+  | HistoricalRecoveryRecipientsStatus
   | "loading"
   | "error";
 
 interface CountyReliefRecipientsPanelProps {
+  sourceId: HistoricalRecoveryRecipientSource;
+  programName: string;
+  year: number;
   zipCode: string;
   status: CountyReliefRecipientsPanelStatus;
-  recipients: CountyReliefRecipient[];
+  recipients: HistoricalRecoveryRecipient[];
   sourceLink: string | null;
   onClose: () => void;
   onRetry: () => void;
 }
 
 export default function CountyReliefRecipientsPanel({
+  sourceId,
+  programName,
+  year,
   zipCode,
   status,
   recipients,
@@ -40,7 +47,7 @@ export default function CountyReliefRecipientsPanel({
       <header className="flex items-start justify-between gap-4 border-b border-[#0C1B33]/10 px-4 py-4">
         <div className="min-w-0">
           <div className="font-mono-bureau text-[8px] uppercase tracking-normal text-[#0E7490]">
-            Admin - historical county awards
+            Admin - historical recovery awards
           </div>
           <h2
             id="county-relief-recipients-title"
@@ -49,8 +56,8 @@ export default function CountyReliefRecipientsPanel({
             Recipients in {zipCode}
           </h2>
           <p className="mt-1 text-[11px] leading-relaxed text-[#5A6478]">
-            Cook County 2023 Source Grant award records. The program is complete
-            and is not a current funding opportunity.
+            {programName} award records ({year}). The program is complete and is
+            not a current funding opportunity.
           </p>
         </div>
         <button
@@ -139,7 +146,7 @@ export default function CountyReliefRecipientsPanel({
       <footer className="border-t border-[#0C1B33]/10 px-4 py-3">
         <p className="text-[9px] leading-relaxed text-[#0C1B33]/40">
           Names are loaded only for this ZIP. No street address is inferred from
-          the county awardee list.
+          the {sourceId === "illinois-b2b" ? "state" : "county"} awardee list.
         </p>
         {safeSourceLink && (
           <a

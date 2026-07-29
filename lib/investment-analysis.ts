@@ -216,6 +216,14 @@ function isInSinceView(r: CommunityInvestmentRecord): boolean {
   return r.year == null || r.year >= SINCE_YEAR;
 }
 
+/** Closed pandemic-recovery overlays have their own historical views. They are
+ * excluded from the ordinary awarded-capital analysis so record counts, trends,
+ * medians, and rankings do not silently mix current/base investment with
+ * historical recovery transactions. */
+function isBaseInvestmentRecord(r: CommunityInvestmentRecord): boolean {
+  return r.recovery == null;
+}
+
 /** Sum of in-window, non-null awarded amounts across the given records. */
 function sumInWindowAwarded(records: readonly CommunityInvestmentRecord[]): number {
   let total = 0;
@@ -249,6 +257,7 @@ export function buildInvestmentIndex(
 ): CommunityInvestmentIndex {
   const byCA = new Map<string, CommunityInvestmentRecord[]>();
   for (const r of records) {
+    if (!isBaseInvestmentRecord(r)) continue;
     const ca = r.communityArea;
     if (!ca) continue;
     const list = byCA.get(ca);
@@ -390,7 +399,9 @@ export function analyzeCommunityArea(
   generatedAt: string,
   index?: CommunityInvestmentIndex,
 ): CommunityInvestmentAnalysis | null {
-  const mine = records.filter((r) => r.communityArea === communityArea);
+  const mine = records.filter(
+    (r) => r.communityArea === communityArea && isBaseInvestmentRecord(r),
+  );
   const inView = mine.filter(isInSinceView);
   if (inView.length === 0) return null;
 

@@ -41,6 +41,7 @@ import {
   buildOwnerClusterPopupHtml,
   buildInvestmentPopupHtml,
   buildCountyReliefPopupHtml,
+  buildHistoricalRecoveryZipPopupHtml,
   formatAwardedAmount,
   type AreaStats, DEFAULT_STATS,
 } from "./map-helpers";
@@ -54,7 +55,7 @@ import {
 } from "@/lib/community-investment-toggle";
 import {
   fetchCommunityInvestmentLayer,
-  fetchCountyReliefRecipients,
+  fetchHistoricalRecoveryRecipients,
   filterInvestmentPointFeatures,
   investmentFeatureCollection,
   summarizeCitywideEntries,
@@ -71,7 +72,9 @@ import {
   type InvestmentPointFeature,
   type CitywideInvestmentEntry,
   type CountyReliefZipSummary,
-  type CountyReliefRecipient,
+  type HistoricalRecoveryZipSummary,
+  type HistoricalRecoveryRecipient,
+  type HistoricalRecoveryRecipientSource,
   type MegaprojectPointFeature,
   type MegaprojectSummary,
 } from "@/lib/community-investment-layer";
@@ -105,6 +108,7 @@ import {
 } from "@/lib/investment-deck-modes";
 import {
   loadStoredPublicInvestmentOverlayVisibility,
+  PUBLIC_INVESTMENT_OVERLAY_COLORS,
   publicInvestmentOverlayIdForSource,
   storePublicInvestmentOverlayVisibility,
   withPublicInvestmentOverlayVisibility,
@@ -120,6 +124,14 @@ import {
   COUNTY_RELIEF_SOURCE_ID,
   type ZipBoundaryFeatureCollection,
 } from "@/lib/county-relief-layer";
+import {
+  buildStateRecoveryFeatureCollection,
+  STATE_RECOVERY_FILL_COLOR,
+  STATE_RECOVERY_FILL_LAYER_ID,
+  STATE_RECOVERY_LINE_COLOR,
+  STATE_RECOVERY_LINE_LAYER_ID,
+  STATE_RECOVERY_SOURCE_ID,
+} from "@/lib/state-recovery-layer";
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -331,11 +343,16 @@ export default function MapView() {
   const [megaprojectSummary, setMegaprojectSummary] = useState<MegaprojectSummary | null>(null);
   const [investmentCitywideDevelopmentNames, setInvestmentCitywideDevelopmentNames] = useState<string[]>([]);
   const stateCapitalFeaturesRef = useRef<InvestmentPointFeature[]>([]);
+  const federalRestaurantReliefFeaturesRef = useRef<InvestmentPointFeature[]>([]);
   const countyReliefByZipRef = useRef<CountyReliefZipSummary[]>([]);
+  const stateRecoveryByZipRef = useRef<HistoricalRecoveryZipSummary[]>([]);
   const countyReliefBoundariesRef = useRef<ZipBoundaryFeatureCollection | null>(null);
   const [stateCapitalPlottedCount, setStateCapitalPlottedCount] = useState(0);
   const [stateCapitalCitywideCount, setStateCapitalCitywideCount] = useState(0);
   const [countyReliefZipCount, setCountyReliefZipCount] = useState(0);
+  const [stateRecoveryZipCount, setStateRecoveryZipCount] = useState(0);
+  const [federalRestaurantReliefPlottedCount, setFederalRestaurantReliefPlottedCount] = useState(0);
+  const [federalRestaurantReliefCitywideCount, setFederalRestaurantReliefCitywideCount] = useState(0);
 
   // Polygon draw tool
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -345,14 +362,30 @@ export default function MapView() {
   const [polygonPanelOpen, setPolygonPanelOpen] = useState(false);
   const countyReliefRecipientsAbortRef = useRef<AbortController | null>(null);
   const [countyReliefRecipientsPanel, setCountyReliefRecipientsPanel] = useState<{
+    sourceId: HistoricalRecoveryRecipientSource;
+    programName: string;
+    year: number;
     zipCode: string;
     status: CountyReliefRecipientsPanelStatus;
-    recipients: CountyReliefRecipient[];
+    recipients: HistoricalRecoveryRecipient[];
     sourceLink: string | null;
   } | null>(null);
 
-  const openCountyReliefRecipients = useCallback((zipCode: string) => {
+  const openHistoricalRecoveryRecipients = useCallback((
+    sourceId: HistoricalRecoveryRecipientSource,
+    zipCode: string,
+  ) => {
     if (!/^\d{5}$/.test(zipCode)) return;
+    const defaults =
+      sourceId === "illinois-b2b"
+        ? {
+            programName: "Illinois Back to Business Grant Program",
+            year: 2022,
+          }
+        : {
+            programName: "Cook County 2023 Source Grant",
+            year: 2023,
+          };
 
     countyReliefRecipientsAbortRef.current?.abort();
     const controller = new AbortController();
@@ -360,18 +393,23 @@ export default function MapView() {
     setSnapshotOpen(false);
     setPolygonPanelOpen(false);
     setCountyReliefRecipientsPanel({
+      sourceId,
+      ...defaults,
       zipCode,
       status: "loading",
       recipients: [],
       sourceLink: null,
     });
 
-    fetchCountyReliefRecipients(zipCode, { signal: controller.signal })
+    fetchHistoricalRecoveryRecipients(sourceId, zipCode, { signal: controller.signal })
       .then((result) => {
         if (controller.signal.aborted) return;
         setCountyReliefRecipientsPanel((current) =>
-          current?.zipCode === zipCode
+          current?.zipCode === zipCode && current.sourceId === sourceId
             ? {
+                sourceId,
+                programName: result.programName,
+                year: result.year,
                 zipCode,
                 status: result.status,
                 recipients: result.recipients,
@@ -384,7 +422,7 @@ export default function MapView() {
         if (controller.signal.aborted) return;
         if (error instanceof DOMException && error.name === "AbortError") return;
         setCountyReliefRecipientsPanel((current) =>
-          current?.zipCode === zipCode
+          current?.zipCode === zipCode && current.sourceId === sourceId
             ? { ...current, status: "error", recipients: [], sourceLink: null }
             : current,
         );
@@ -1611,13 +1649,70 @@ export default function MapView() {
           "click",
           () => {
             sharedDotPopup.remove();
-            openCountyReliefRecipients(zipCode);
+            openHistoricalRecoveryRecipients("cook-source-2023", zipCode);
           },
           { once: true },
         );
       });
       map.on("mouseenter", COUNTY_RELIEF_FILL_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", COUNTY_RELIEF_FILL_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
+
+      map.addSource(STATE_RECOVERY_SOURCE_ID, { type: "geojson", data: EMPTY_FC });
+      map.addLayer({
+        id: STATE_RECOVERY_FILL_LAYER_ID,
+        type: "fill",
+        source: STATE_RECOVERY_SOURCE_ID,
+        layout: { visibility: "none" },
+        paint: {
+          "fill-color": STATE_RECOVERY_FILL_COLOR,
+          "fill-opacity": [
+            "interpolate",
+            ["linear"],
+            ["to-number", ["get", "intensity"], 0],
+            0,
+            0.1,
+            1,
+            0.46,
+          ],
+        },
+      }, "owner-clusters-clusters");
+      map.addLayer({
+        id: STATE_RECOVERY_LINE_LAYER_ID,
+        type: "line",
+        source: STATE_RECOVERY_SOURCE_ID,
+        layout: { visibility: "none" },
+        paint: {
+          "line-color": STATE_RECOVERY_LINE_COLOR,
+          "line-width": 1.25,
+          "line-opacity": 0.82,
+        },
+      }, "owner-clusters-clusters");
+      map.on("click", STATE_RECOVERY_FILL_LAYER_ID, (e) => {
+        if (!e.features?.length) return;
+        const properties = e.features[0].properties || {};
+        const zipCode = String(properties.zipCode || "");
+        sharedDotPopup
+          .setLngLat(e.lngLat)
+          .setHTML(buildHistoricalRecoveryZipPopupHtml(properties))
+          .addTo(map);
+        const recipientsButton = sharedDotPopup
+          .getElement()
+          ?.querySelector<HTMLButtonElement>("[data-historical-recovery-recipients]");
+        recipientsButton?.addEventListener(
+          "click",
+          () => {
+            sharedDotPopup.remove();
+            openHistoricalRecoveryRecipients("illinois-b2b", zipCode);
+          },
+          { once: true },
+        );
+      });
+      map.on("mouseenter", STATE_RECOVERY_FILL_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", STATE_RECOVERY_FILL_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "";
+      });
 
       map.addSource("community-investment", { type: "geojson", data: EMPTY_FC });
 
@@ -1725,6 +1820,53 @@ export default function MapView() {
       map.on("mouseleave", "community-investment-state-capital-points", () => {
         map.getCanvas().style.cursor = "";
       });
+
+      /* SBA Restaurant Revitalization Fund grants are a closed historical
+         recovery overlay. They remain separate from the base investment source
+         so Dots/Arcs/Density never treats them as current awarded capital. */
+      map.addSource("community-investment-federal-restaurant-relief", {
+        type: "geojson",
+        data: EMPTY_FC,
+      });
+      map.addLayer({
+        id: "community-investment-federal-restaurant-relief-points",
+        type: "circle",
+        source: "community-investment-federal-restaurant-relief",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color":
+            PUBLIC_INVESTMENT_OVERLAY_COLORS.federal_restaurant_relief,
+          "circle-radius": 5,
+          "circle-opacity": 0.76,
+          "circle-stroke-width": 1.25,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+      map.on(
+        "click",
+        "community-investment-federal-restaurant-relief-points",
+        (e) => {
+          if (!e.features?.length) return;
+          sharedDotPopup
+            .setLngLat(e.lngLat)
+            .setHTML(buildInvestmentPopupHtml(e.features[0].properties || {}))
+            .addTo(map);
+        },
+      );
+      map.on(
+        "mouseenter",
+        "community-investment-federal-restaurant-relief-points",
+        () => {
+          map.getCanvas().style.cursor = "pointer";
+        },
+      );
+      map.on(
+        "mouseleave",
+        "community-investment-federal-restaurant-relief-points",
+        () => {
+          map.getCanvas().style.cursor = "";
+        },
+      );
 
       /* ── Megaprojects overlay (mapbox-only) ──
          A SECOND source/layer pair for the admin Megaprojects overlay: ONLY the
@@ -1872,7 +2014,7 @@ export default function MapView() {
       map.remove();
       mapRef.current = null;
     };
-  }, [openCountyReliefRecipients]);
+  }, [openHistoricalRecoveryRecipients]);
 
   /* ── Toggle zone visibility ────────────── */
   const toggleZone = useCallback(
@@ -2179,6 +2321,20 @@ export default function MapView() {
     }
     if (countyReliefParam === "0") {
       setPublicInvestmentOverlayPersistent("county_relief_awards", false);
+    }
+    const stateRecoveryParam = params.get("stateRecovery");
+    if (stateRecoveryParam === "1") {
+      setPublicInvestmentOverlayPersistent("state_recovery_awards", true);
+    }
+    if (stateRecoveryParam === "0") {
+      setPublicInvestmentOverlayPersistent("state_recovery_awards", false);
+    }
+    const restaurantReliefParam = params.get("restaurantRelief");
+    if (restaurantReliefParam === "1") {
+      setPublicInvestmentOverlayPersistent("federal_restaurant_relief", true);
+    }
+    if (restaurantReliefParam === "0") {
+      setPublicInvestmentOverlayPersistent("federal_restaurant_relief", false);
     }
     const stateCapitalParam = params.get("stateCapital");
     if (stateCapitalParam === "1") {
@@ -2524,12 +2680,20 @@ export default function MapView() {
         if (stateSrc) stateSrc.setData(EMPTY_FC);
         const countySrc = map.getSource(COUNTY_RELIEF_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
         if (countySrc) countySrc.setData(EMPTY_FC);
+        const stateRecoverySrc = map.getSource(STATE_RECOVERY_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+        if (stateRecoverySrc) stateRecoverySrc.setData(EMPTY_FC);
+        const federalRestaurantSrc = map.getSource(
+          "community-investment-federal-restaurant-relief",
+        ) as mapboxgl.GeoJSONSource | undefined;
+        if (federalRestaurantSrc) federalRestaurantSrc.setData(EMPTY_FC);
         investmentFeaturesRef.current = [];
         investmentCitywideEntriesRef.current = [];
         investmentFunderHqsRef.current = [];
         megaprojectFeaturesRef.current = [];
         stateCapitalFeaturesRef.current = [];
+        federalRestaurantReliefFeaturesRef.current = [];
         countyReliefByZipRef.current = [];
+        stateRecoveryByZipRef.current = [];
         setCommunityInvestmentLoaded(false);
         setInvestmentPresentFunderTypes([]);
         setInvestmentPresentCapitalClasses([]);
@@ -2541,6 +2705,9 @@ export default function MapView() {
         setStateCapitalPlottedCount(0);
         setStateCapitalCitywideCount(0);
         setCountyReliefZipCount(0);
+        setStateRecoveryZipCount(0);
+        setFederalRestaurantReliefPlottedCount(0);
+        setFederalRestaurantReliefCitywideCount(0);
       }
       return;
     }
@@ -2561,8 +2728,15 @@ export default function MapView() {
           stateCapitalFeaturesRef.current = result.pointFeatures.filter(
             (feature) => feature.properties.source === "dceo-capital"
           );
+          federalRestaurantReliefFeaturesRef.current = result.pointFeatures.filter(
+            (feature) => feature.properties.source === "sba-rrf",
+          );
           countyReliefByZipRef.current = result.countyReliefByZip;
+          stateRecoveryByZipRef.current = result.stateRecoveryByZip;
           setStateCapitalCitywideCount(result.stateCapitalCitywideCount);
+          setFederalRestaurantReliefCitywideCount(
+            result.federalRestaurantReliefCitywideCount,
+          );
           // Megaprojects overlay: the development subset, built once and summarized
           // for the legend (unaffected by the year/funderType filters below).
           const megaFeatures = buildMegaprojectFeatures(result.pointFeatures);
@@ -2664,6 +2838,33 @@ export default function MapView() {
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !loaded) return;
+    const source = map.getSource(
+      "community-investment-federal-restaurant-relief",
+    ) as mapboxgl.GeoJSONSource | undefined;
+    const layerId = "community-investment-federal-restaurant-relief-points";
+    const visible =
+      adminSessionActive &&
+      communityInvestmentVisible &&
+      communityInvestmentLoaded &&
+      publicInvestmentOverlays.federal_restaurant_relief;
+
+    if (map.getLayer(layerId)) {
+      map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+    }
+    const features = visible ? federalRestaurantReliefFeaturesRef.current : [];
+    source?.setData(investmentFeatureCollection(features));
+    setFederalRestaurantReliefPlottedCount(features.length);
+  }, [
+    adminSessionActive,
+    communityInvestmentVisible,
+    communityInvestmentLoaded,
+    publicInvestmentOverlays.federal_restaurant_relief,
+    loaded,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
     const source = map.getSource(COUNTY_RELIEF_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
     const visible =
       adminSessionActive &&
@@ -2718,6 +2919,75 @@ export default function MapView() {
     communityInvestmentVisible,
     communityInvestmentLoaded,
     publicInvestmentOverlays.county_relief_awards,
+    loaded,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    const source = map.getSource(STATE_RECOVERY_SOURCE_ID) as
+      | mapboxgl.GeoJSONSource
+      | undefined;
+    const visible =
+      adminSessionActive &&
+      communityInvestmentVisible &&
+      communityInvestmentLoaded &&
+      publicInvestmentOverlays.state_recovery_awards;
+
+    for (const layerId of [
+      STATE_RECOVERY_FILL_LAYER_ID,
+      STATE_RECOVERY_LINE_LAYER_ID,
+    ]) {
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+      }
+    }
+    if (!visible) {
+      source?.setData(EMPTY_FC);
+      setStateRecoveryZipCount(0);
+      return;
+    }
+
+    const applyBoundaries = (boundaries: ZipBoundaryFeatureCollection) => {
+      const collection = buildStateRecoveryFeatureCollection(
+        boundaries,
+        stateRecoveryByZipRef.current,
+      );
+      source?.setData(collection);
+      setStateRecoveryZipCount(collection.features.length);
+    };
+    if (countyReliefBoundariesRef.current) {
+      applyBoundaries(countyReliefBoundariesRef.current);
+      return;
+    }
+
+    const controller = new AbortController();
+    fetch(COUNTY_RELIEF_BOUNDARIES_ENDPOINT, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`ZIP boundaries returned ${response.status}`);
+        }
+        return response.json() as Promise<ZipBoundaryFeatureCollection>;
+      })
+      .then((boundaries) => {
+        if (controller.signal.aborted || boundaries.type !== "FeatureCollection") {
+          return;
+        }
+        countyReliefBoundariesRef.current = boundaries;
+        applyBoundaries(boundaries);
+      })
+      .catch((error) => {
+        if (error?.name === "AbortError") return;
+        console.warn("[CommunityInvestment] state recovery ZIP boundary error:", error);
+        source?.setData(EMPTY_FC);
+        setStateRecoveryZipCount(0);
+      });
+    return () => controller.abort();
+  }, [
+    adminSessionActive,
+    communityInvestmentVisible,
+    communityInvestmentLoaded,
+    publicInvestmentOverlays.state_recovery_awards,
     loaded,
   ]);
 
@@ -3078,6 +3348,9 @@ export default function MapView() {
           investmentMegaprojectsVisible={investmentMegaprojectsVisible}
           publicInvestmentOverlays={publicInvestmentOverlays}
           countyReliefZipCount={countyReliefZipCount}
+          stateRecoveryZipCount={stateRecoveryZipCount}
+          federalRestaurantReliefPlottedCount={federalRestaurantReliefPlottedCount}
+          federalRestaurantReliefCitywideCount={federalRestaurantReliefCitywideCount}
           stateCapitalPlottedCount={stateCapitalPlottedCount}
           stateCapitalCitywideCount={stateCapitalCitywideCount}
           onSetCommunityInvestmentVisible={setCommunityInvestmentVisiblePersistent}
@@ -3107,13 +3380,19 @@ export default function MapView() {
 
       {countyReliefRecipientsPanel && (
         <CountyReliefRecipientsPanel
+          sourceId={countyReliefRecipientsPanel.sourceId}
+          programName={countyReliefRecipientsPanel.programName}
+          year={countyReliefRecipientsPanel.year}
           zipCode={countyReliefRecipientsPanel.zipCode}
           status={countyReliefRecipientsPanel.status}
           recipients={countyReliefRecipientsPanel.recipients}
           sourceLink={countyReliefRecipientsPanel.sourceLink}
           onClose={closeCountyReliefRecipients}
           onRetry={() =>
-            openCountyReliefRecipients(countyReliefRecipientsPanel.zipCode)
+            openHistoricalRecoveryRecipients(
+              countyReliefRecipientsPanel.sourceId,
+              countyReliefRecipientsPanel.zipCode,
+            )
           }
         />
       )}

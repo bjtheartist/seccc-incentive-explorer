@@ -15,7 +15,13 @@ vi.mock("@/lib/owner-files-admin-auth", () => ({
 }));
 
 vi.mock("@/lib/community-investment", () => ({
-  INVESTMENT_SOURCES: ["cdg", "cook-source-2023", "dceo-capital"],
+  INVESTMENT_SOURCES: [
+    "cdg",
+    "cook-source-2023",
+    "illinois-b2b",
+    "sba-rrf",
+    "dceo-capital",
+  ],
   loadCommunityInvestment: loadMock,
   filterInvestmentBySources: filterMock,
 }));
@@ -29,7 +35,7 @@ import { GET } from "./route";
 const sourceLink = "https://example.com/official-source";
 const fakeData = {
   generatedAt: "2026-07-28T00:00:00.000Z",
-  meta: { totalRecords: 5 },
+  meta: { totalRecords: 8 },
   records: [
     {
       id: "cdg-point",
@@ -44,7 +50,8 @@ const fakeData = {
       source: "cook-source-2023",
       recipient: "Cook recipient A",
       geometry: { kind: "zip_area", zip: "60617" },
-      amountAwarded: 10_000,
+      amountAwarded: null,
+      recovery: { historicalAmount: { value: 10_000 } },
       links: [sourceLink],
     },
     {
@@ -52,7 +59,35 @@ const fakeData = {
       source: "cook-source-2023",
       recipient: "Cook recipient B",
       geometry: { kind: "zip_area", zip: "60617" },
-      amountAwarded: 20_000,
+      amountAwarded: null,
+      recovery: { historicalAmount: { value: 20_000 } },
+      links: [sourceLink],
+    },
+    {
+      id: "b2b-a",
+      source: "illinois-b2b",
+      recipient: "Illinois B2B recipient",
+      geometry: { kind: "zip_area", zip: "60617" },
+      amountAwarded: null,
+      recovery: { historicalAmount: { value: 25_000 } },
+      links: [sourceLink],
+    },
+    {
+      id: "rrf-point",
+      source: "sba-rrf",
+      recipient: "Restaurant recipient",
+      geometry: { kind: "point", lat: 41.77, lng: -87.6 },
+      amountAwarded: null,
+      recovery: { historicalAmount: { value: 80_000 } },
+      links: [sourceLink],
+    },
+    {
+      id: "rrf-citywide",
+      source: "sba-rrf",
+      recipient: "Unplotted restaurant recipient",
+      geometry: { kind: "citywide" },
+      amountAwarded: null,
+      recovery: { historicalAmount: { value: 90_000 } },
       links: [sourceLink],
     },
     {
@@ -108,10 +143,13 @@ describe("GET /api/owner-file/investment", () => {
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     expect(body.records.map((record: { id: string }) => record.id)).toEqual([
       "cdg-point",
+      "rrf-point",
       "dceo-point",
     ]);
     expect(body.countyReliefByZip).toEqual([
       {
+        sourceId: "cook-source-2023",
+        programName: "Cook County 2023 Source Grant",
         zipCode: "60617",
         awardCount: 2,
         totalDisbursed: 30_000,
@@ -119,8 +157,22 @@ describe("GET /api/owner-file/investment", () => {
         sourceLink,
       },
     ]);
+    expect(body.stateRecoveryByZip).toEqual([
+      {
+        sourceId: "illinois-b2b",
+        programName: "Illinois Back to Business Grant Program",
+        zipCode: "60617",
+        awardCount: 1,
+        totalDisbursed: 25_000,
+        year: 2022,
+        sourceLink,
+      },
+    ]);
     expect(body.stateCapitalCitywideCount).toBe(1);
+    expect(body.federalRestaurantReliefCitywideCount).toBe(1);
     expect(JSON.stringify(body)).not.toContain("Cook recipient");
+    expect(JSON.stringify(body)).not.toContain("Illinois B2B recipient");
+    expect(JSON.stringify(body)).not.toContain("Unplotted restaurant recipient");
     expect(JSON.stringify(body)).not.toContain("Unplotted state project");
     expect(body.countyReliefByZip[0]).not.toHaveProperty("recipient");
   });
@@ -164,6 +216,7 @@ describe("GET /api/owner-file/investment", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     expect(body).toEqual({
+      sourceId: "cook-source-2023",
       zipCode: "60617",
       programName: "Cook County 2023 Source Grant",
       programStatus: "complete",
@@ -189,6 +242,34 @@ describe("GET /api/owner-file/investment", () => {
     expect(filterMock).not.toHaveBeenCalled();
   });
 
+  it("returns Illinois B2B recipients through the generic historical drilldown", async () => {
+    const res = await GET(
+      req(
+        "http://localhost/api/owner-file/investment?view=historical-recovery-recipients&source=illinois-b2b&zip=60617",
+      ),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({
+      sourceId: "illinois-b2b",
+      zipCode: "60617",
+      programName: "Illinois Back to Business Grant Program",
+      programStatus: "complete",
+      year: 2022,
+      recipientCount: 1,
+      sourceLink,
+      recipients: [
+        {
+          id: "b2b-a",
+          businessName: "Illinois B2B recipient",
+          historicalAwardAmount: 25_000,
+        },
+      ],
+    });
+    expect(filterMock).not.toHaveBeenCalled();
+  });
+
   it("requires one five-digit ZIP for recipient-level access", async () => {
     const res = await GET(
       req(
@@ -199,6 +280,17 @@ describe("GET /api/owner-file/investment", () => {
 
     expect(res.status).toBe(400);
     expect(body.error).toContain("five-digit ZIP");
+    expect(filterMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsupported historical recipient sources", async () => {
+    const res = await GET(
+      req(
+        "http://localhost/api/owner-file/investment?view=historical-recovery-recipients&source=sba-rrf&zip=60617",
+      ),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toContain("supported historical recovery source");
     expect(filterMock).not.toHaveBeenCalled();
   });
 

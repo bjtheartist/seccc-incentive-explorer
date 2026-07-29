@@ -3,6 +3,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import CountyReliefRecipientsPanel from "../CountyReliefRecipientsPanel";
 
 const baseProps = {
+  sourceId: "cook-source-2023" as const,
+  programName: "Cook County 2023 Source Grant",
+  year: 2023,
   zipCode: "60617",
   recipients: [],
   sourceLink: null,
@@ -74,5 +77,21 @@ describe("CountyReliefRecipientsPanel", () => {
     );
 
     expect(html).not.toContain("<a ");
+  });
+
+  it("renders the Illinois B2B program identity without changing the safety copy", () => {
+    const html = renderToStaticMarkup(
+      <CountyReliefRecipientsPanel
+        {...baseProps}
+        sourceId="illinois-b2b"
+        programName="Illinois Back to Business Grant Program"
+        year={2022}
+        status="ready"
+      />,
+    );
+    expect(html).toContain("Illinois Back to Business Grant Program");
+    expect(html).toContain("2022");
+    expect(html).toContain("state awardee list");
+    expect(html).toContain("not a current funding opportunity");
   });
 });

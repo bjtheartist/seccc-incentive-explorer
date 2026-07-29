@@ -40,6 +40,8 @@ describe("county relief ZIP layer", () => {
   it("joins summaries to boundaries without exposing recipient names", () => {
     const result = buildCountyReliefFeatureCollection(boundaries, [
       {
+        sourceId: "cook-source-2023",
+        programName: "Cook County 2023 Source Grant",
         zipCode: "60617",
         awardCount: 25,
         totalDisbursed: 350_000,
@@ -63,6 +65,8 @@ describe("county relief ZIP layer", () => {
   it("uses a stable square-root intensity based on award count", () => {
     const result = buildCountyReliefFeatureCollection(boundaries, [
       {
+        sourceId: "cook-source-2023",
+        programName: "Cook County 2023 Source Grant",
         zipCode: "60617",
         awardCount: 100,
         totalDisbursed: 1_500_000,
@@ -70,6 +74,8 @@ describe("county relief ZIP layer", () => {
         sourceLink: "",
       },
       {
+        sourceId: "cook-source-2023",
+        programName: "Cook County 2023 Source Grant",
         zipCode: "60649",
         awardCount: 25,
         totalDisbursed: 400_000,
@@ -87,6 +93,8 @@ describe("county relief ZIP layer", () => {
     });
     expect(buildCountyReliefFeatureCollection(boundaries, [
       {
+        sourceId: "cook-source-2023",
+        programName: "Cook County 2023 Source Grant",
         zipCode: "99999",
         awardCount: 1,
         totalDisbursed: 10_000,

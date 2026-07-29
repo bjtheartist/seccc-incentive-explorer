@@ -46,6 +46,10 @@ import {
 } from "../lib/community-investment";
 import { assignCommunityArea, loadCommunityAreaPolygons } from "../lib/community-area-stamp";
 import { hasHighConfidenceChicagoDceoLocation } from "../lib/dceo-capital-appropriations";
+import {
+  RECOVERY_INVESTMENT_SOURCE_METADATA,
+  type RecoveryInvestmentSourceId,
+} from "../lib/recovery-investment";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -70,6 +74,8 @@ const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
 const CDG_PROGRAM = "Community Development Grant (City of Chicago)";
 const DEVELOPMENT_FUNDER = "Private development";
 const COOK_SOURCE_PROGRAM = "Cook County 2023 Source Grant";
+const ILLINOIS_B2B_PROGRAM = "Illinois Back to Business Grant Program";
+const SBA_RRF_PROGRAM = "U.S. Small Business Administration Restaurant Revitalization Fund";
 const DCEO_CAPITAL_FUNDER = "Illinois Department of Commerce and Economic Opportunity";
 const DCEO_CAPITAL_SOURCE_PAGE =
   "https://dceo.illinois.gov/aboutdceo/grantopportunities/capitalgrants.html";
@@ -88,6 +94,9 @@ const PROVENANCE_LABELS = [
   "Low-Income Housing Tax Credit allocations (HUD LIHTC database) — tax-credit capital (creditAmount, capitalClass tax_credit)",
   "New Markets Tax Credit QLICIs (CDFI Fund Public Data Release incl. FY2022) — tax-credit capital, community-area stamped from the 2020 census-tract centroid (creditAmount, capitalClass tax_credit)",
   "Cook County 2023 Source Grant recipient list — completed/disbursed historical awards, mapped only as ZIP aggregates because the source publishes no street addresses",
+  "Illinois Back to Business recipient list (DCEO, dated 2022-07-26) — historical ARPA grants, mapped only as ZIP aggregates because the source publishes no street addresses",
+  "SBA Restaurant Revitalization Fund FOIA dataset (source version 2024-10-21) — closed historical ARPA grants; Chicago addresses geocoded only when they resolve inside official city boundaries",
+  "City of Chicago ARPA Road to Recovery Program Details + Grants Summary — citywide program-level historical reporting, never treated as recipient awards or active incentive dollars",
   "Illinois DCEO FY26 Capital Appropriation Listings (quarterly PDF created 2026-04-10) — source-published appropriation balances, not active opportunities or confirmed GATA award payments",
   "Address geocoding: U.S. Census Bureau Geocoder (Public_AR_Current benchmark)",
   "Community-area assignment: City of Chicago Community Area boundaries (Chicago Data Portal dataset igwz-8jzy), point-in-polygon",
@@ -134,6 +143,24 @@ function parseLinks(raw: string | null | undefined): string[] {
     if (/^https?:\/\//i.test(t)) seen.add(t);
   }
   return [...seen];
+}
+
+/** Build the validated record-level recovery extension shared by the historical
+ * recipient datasets. The source-reported amount stays here rather than in
+ * amountAwarded, keeping closed recovery programs out of ordinary grant totals. */
+function historicalRecoveryRecord(
+  sourceId: Extract<RecoveryInvestmentSourceId, "cook-source-2023" | "illinois-b2b" | "sba-rrf">,
+  value: number,
+): NonNullable<CommunityInvestmentRecord["recovery"]> {
+  const source = RECOVERY_INVESTMENT_SOURCE_METADATA[sourceId];
+  return {
+    sourceId,
+    historicalAmount: {
+      value,
+      currency: "USD",
+      assistanceType: source.assistanceType,
+    },
+  };
 }
 
 // ── Minimal CSV/TSV reader (quoted fields, embedded newlines) ─────────────────
@@ -1208,14 +1235,16 @@ function mapCookSourceGrants(
     if (amount == null || amount < 0) {
       throw new Error(`Cook County Source Grant row has an invalid award amount for ${row.awardee_name}.`);
     }
+    const recipient = nullableStr(row.awardee_name) || "(unnamed awardee)";
+    const id = `cook-source-2023-${records.length}`;
     records.push({
-      id: `cook-source-2023-${records.length}`,
+      id,
       source: "cook-source-2023",
       funderType: SOURCE_FUNDER_TYPE["cook-source-2023"],
       funderName: COOK_SOURCE_PROGRAM,
-      recipient: nullableStr(row.awardee_name) || "(unnamed awardee)",
+      recipient,
       capitalClass: "grant",
-      amountAwarded: amount,
+      amountAwarded: null,
       logLine:
         "Historical 2023 small-business recovery award. Cook County reports the program was fully disbursed by February 2024.",
       year: 2023,
@@ -1229,12 +1258,182 @@ function mapCookSourceGrants(
       recordDate: null,
       recordProvenance: "official",
       links: [nullableStr(row.source_url) || COOK_SOURCE_PDF_URL],
+      recovery: historicalRecoveryRecord("cook-source-2023", amount),
     });
   }
   return {
     records,
     chicagoRecords: records.length,
     outsideChicagoRecords,
+  };
+}
+
+function mapIllinoisBackToBusiness(
+  rows: Record<string, string>[],
+  chicagoZipCodes: ReadonlySet<string>,
+): {
+  records: CommunityInvestmentRecord[];
+  chicagoRecords: number;
+  outsideChicagoRecords: number;
+} {
+  const records: CommunityInvestmentRecord[] = [];
+  let outsideChicagoRecords = 0;
+  for (const row of rows) {
+    const zip = normalizeFiveDigitZip(row.zip);
+    const isChicago =
+      nullableStr(row.city)?.toUpperCase() === "CHICAGO" &&
+      nullableStr(row.county)?.toUpperCase() === "COOK";
+    if (!zip || !isChicago || !chicagoZipCodes.has(zip)) {
+      outsideChicagoRecords += 1;
+      continue;
+    }
+
+    const amount = parseAmount(row.award_amount_usd);
+    if (amount == null || amount < 0) {
+      throw new Error(
+        `Illinois Back to Business row has an invalid historical award amount for ${row.legal_business_name}.`,
+      );
+    }
+    const legalName = nullableStr(row.legal_business_name);
+    const dba = nullableStr(row.dba);
+    const recipient = dba || legalName || "(unnamed awardee)";
+    const id = `illinois-b2b-${records.length}`;
+    const sourceLink =
+      nullableStr(row.source_url) ??
+      RECOVERY_INVESTMENT_SOURCE_METADATA["illinois-b2b"].canonicalSourceUrl;
+    records.push({
+      id,
+      source: "illinois-b2b",
+      funderType: SOURCE_FUNDER_TYPE["illinois-b2b"],
+      funderName: ILLINOIS_B2B_PROGRAM,
+      recipient,
+      capitalClass: "grant",
+      amountAwarded: null,
+      logLine:
+        dba && legalName && dba.toUpperCase() !== legalName.toUpperCase()
+          ? `Legal business: ${legalName}. Historical ARPA-funded grant; not an active opportunity.`
+          : "Historical ARPA-funded grant; not an active opportunity.",
+      year: 2022,
+      geometry: { kind: "zip_area", zip },
+      address: null,
+      postalCode: zip,
+      status: "disbursed",
+      recordDate: null,
+      recordProvenance: "official",
+      links: [sourceLink],
+      recovery: historicalRecoveryRecord("illinois-b2b", amount),
+    });
+  }
+  return {
+    records,
+    chicagoRecords: records.length,
+    outsideChicagoRecords,
+  };
+}
+
+interface SbaRrfMapResult {
+  records: CommunityInvestmentRecord[];
+  pointRecords: number;
+  citywideRecords: number;
+  addressGeocodeMisses: number;
+  addressOutOfBounds: number;
+}
+
+function sbaRrfGeocodeQuery(row: Record<string, string>): string | null {
+  const address = nullableStr(row.published_street_address);
+  if (!address) return null;
+  const zip = normalizeFiveDigitZip(row.published_zip);
+  return [address, "Chicago", "IL", zip].filter(Boolean).join(", ");
+}
+
+function mapSbaRestaurantRevitalization(
+  rows: Record<string, string>[],
+  geocodes: ReadonlyMap<string, { lat: number; lng: number } | null>,
+  chicagoPolygons: ReturnType<typeof loadCommunityAreaPolygons>,
+): SbaRrfMapResult {
+  const records: CommunityInvestmentRecord[] = [];
+  let pointRecords = 0;
+  let addressGeocodeMisses = 0;
+  let addressOutOfBounds = 0;
+
+  for (const row of rows) {
+    const amount = parseAmount(row.grant_amount_usd);
+    if (amount == null || amount < 0) {
+      throw new Error(
+        `SBA RRF row has an invalid historical grant amount for ${row.record_id || row.legal_business_name}.`,
+      );
+    }
+    const address = nullableStr(row.published_street_address);
+    const query = sbaRrfGeocodeQuery(row);
+    const rawHit = query ? geocodes.get(query) ?? null : null;
+    const inside =
+      rawHit && assignCommunityArea(rawHit.lng, rawHit.lat, chicagoPolygons)
+        ? rawHit
+        : null;
+    if (query && !rawHit) addressGeocodeMisses += 1;
+    if (rawHit && !inside) addressOutOfBounds += 1;
+
+    const geometry: InvestmentGeometry = inside
+      ? point(inside.lat, inside.lng)
+      : { kind: "citywide" };
+    if (geometry.kind === "point") pointRecords += 1;
+
+    const legalName = nullableStr(row.legal_business_name);
+    const dba = nullableStr(row.dba_trade_name);
+    const recipient = dba || legalName || "(unnamed restaurant)";
+    const id = nullableStr(row.record_id) || `sba-rrf-${records.length}`;
+    const sourceLinks = [
+      nullableStr(row.source_url) ??
+        RECOVERY_INVESTMENT_SOURCE_METADATA["sba-rrf"].canonicalSourceUrl,
+      nullableStr(row.source_download_url),
+    ].filter((value): value is string => Boolean(value));
+    const purposeLabels = [
+      ["grant_purp_cons_outdoor_seating", "outdoor seating"],
+      ["grant_purpose_debt", "business debt"],
+      ["grant_purpose_food", "food"],
+      ["grant_purpose_operations", "operations"],
+      ["grant_purpose_payroll", "payroll"],
+      ["grant_purpose_rent", "rent"],
+      ["grant_purpose_supplies", "supplies"],
+      ["grant_purpose_utility", "utilities"],
+    ]
+      .filter(([field]) => row[field] === "Y")
+      .map(([, label]) => label);
+    records.push({
+      id,
+      source: "sba-rrf",
+      funderType: SOURCE_FUNDER_TYPE["sba-rrf"],
+      funderName: SBA_RRF_PROGRAM,
+      recipient,
+      capitalClass: "grant",
+      amountAwarded: null,
+      logLine: [
+        dba && legalName && dba.toUpperCase() !== legalName.toUpperCase()
+          ? `Legal business: ${legalName}`
+          : null,
+        purposeLabels.length ? `Published uses: ${purposeLabels.join(", ")}` : null,
+        "Closed historical ARPA program; not a current funding opportunity",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      year: yearOfDate(row.approval_date) ?? 2021,
+      geometry,
+      address,
+      postalCode: normalizeFiveDigitZip(row.published_zip) ?? undefined,
+      status: "disbursed",
+      recordDate: nullableStr(row.approval_date),
+      recordProvenance: "official",
+      links: [...new Set(sourceLinks)],
+      recovery: historicalRecoveryRecord("sba-rrf", amount),
+    });
+  }
+
+  return {
+    records,
+    pointRecords,
+    citywideRecords: records.length - pointRecords,
+    addressGeocodeMisses,
+    addressOutOfBounds,
   };
 }
 
@@ -1490,6 +1689,39 @@ function buildCapitalContext(generatedAt: string): unknown {
     topGrantees,
   };
 
+  // 5) City of Chicago ARPA Road to Recovery program ledger. This is program-
+  // level, citywide historical context: no recipient names, no map points, no
+  // single summed headline, and no claim that a reported allocation is an
+  // incentive a current project can access.
+  const chicagoArpaRows = readCsv("chicago_arpa_road_to_recovery_programs.csv");
+  const chicagoArpaPrograms = chicagoArpaRows.map((row) => ({
+    costCenter: nullableStr(row.cost_center),
+    programName: nullableStr(row.program_name),
+    administeringDepartment: nullableStr(row.administering_department),
+    departmentAcronym: nullableStr(row.department_acronym),
+    policyPillar: nullableStr(row.policy_pillar),
+    historicalAllocated: parseAmount(row.historical_amount_allocated_usd),
+    historicalObligated: parseAmount(row.historical_amount_obligated_usd),
+    historicalExpended: parseAmount(row.historical_amount_expended_usd),
+    recordGranularity: nullableStr(row.record_granularity),
+    geographicScope: nullableStr(row.geographic_scope),
+    financialContext: nullableStr(row.financial_context),
+    isRecipientLevelAward:
+      nullableStr(row.is_recipient_level_award)?.toLowerCase() === "true",
+    isActiveIncentiveDollars:
+      nullableStr(row.is_active_incentive_dollars)?.toLowerCase() === "true",
+    programDetailsSourceUrl: nullableStr(row.program_details_source_url),
+    grantsSummarySourceUrl: nullableStr(row.grants_summary_source_url),
+    programDetailsAsOf: nullableStr(row.program_details_as_of),
+    grantsSummaryAsOf: nullableStr(row.grants_summary_as_of),
+  }));
+  const chicagoArpaRecovery = {
+    classification: RECOVERY_INVESTMENT_SOURCE_METADATA["chicago-arpa-program"],
+    note:
+      "Citywide historical program reporting. Financial stages remain separate, null means the summary table had no matching row, and no value is presented as an active site incentive.",
+    programs: chicagoArpaPrograms,
+  };
+
   return {
     generatedAt,
     meta: {
@@ -1500,12 +1732,14 @@ function buildCapitalContext(generatedAt: string): unknown {
         "FFIEC CRA Aggregate Table A1-1 small-business loan ORIGINATIONS, Cook County tracts → community areas (2022–2024)",
         "CDFI transaction aggregates by geography (2021–2022)",
         "Illinois GATA/CSFA active award pipeline SFY2027 (award amounts, not payments)",
+        "City of Chicago ARPA Road to Recovery Program Details (m9g9-cj96) and Grants Summary (9yp3-9pdz)",
       ],
     },
     tifDistricts,
     craByCommunityArea,
     cdfi,
     stateAwards,
+    chicagoArpaRecovery,
   };
 }
 
@@ -1564,10 +1798,16 @@ async function main() {
   const cdgRows = readCsv("cdg_awards.csv");
   const jimRows = readTsv("ellen_nof_awardees.tsv");
   const dceoCandidates = selectChicagoDceoCandidates(readCsv("dceo_capital_appropriations.csv"));
+  const chicagoZipCodes = loadChicagoZipCodes();
   const cookSource = mapCookSourceGrants(
     readCsv("cook_county_source_grants_2023.csv"),
-    loadChicagoZipCodes(),
+    chicagoZipCodes,
   );
+  const illinoisB2B = mapIllinoisBackToBusiness(
+    readCsv("illinois_back_to_business_awards.csv"),
+    chicagoZipCodes,
+  );
+  const sbaRrfRows = readCsv("sba_restaurant_revitalization_chicago.csv");
 
   const cdgQuery = (addr: string) => `${addr.trim()}, Chicago, IL`;
   const queries: string[] = [];
@@ -1581,6 +1821,10 @@ async function main() {
   }
   for (const candidate of dceoCandidates) {
     if (candidate.safeAddress) queries.push(cdgQuery(candidate.safeAddress));
+  }
+  for (const row of sbaRrfRows) {
+    const query = sbaRrfGeocodeQuery(row);
+    if (query) queries.push(query);
   }
 
   // Discovered megadev rows that carry a well-known street address to geocode.
@@ -1667,9 +1911,14 @@ async function main() {
   const caPolygons = loadCommunityAreaPolygons(CA_GEOJSON_PATH);
   console.log(`Geocoded: cdg kept=${cdg.length} jim kept=${jim.length} droppedNoGeocode=${droppedNoGeocode}`);
   const dceo = mapDceoCapital(dceoCandidates, geo, cdgQuery, caPolygons);
+  const sbaRrf = mapSbaRestaurantRevitalization(sbaRrfRows, geo, caPolygons);
   console.log(
     `Public investment additions: cook-source Chicago=${cookSource.chicagoRecords} ` +
-      `outside-Chicago=${cookSource.outsideChicagoRecords}; dceo Chicago=${dceo.records.length} ` +
+      `outside-Chicago=${cookSource.outsideChicagoRecords}; ` +
+      `Illinois-B2B Chicago=${illinoisB2B.chicagoRecords} outside-Chicago=${illinoisB2B.outsideChicagoRecords}; ` +
+      `SBA-RRF Chicago=${sbaRrf.records.length} (point=${sbaRrf.pointRecords} ` +
+      `citywide=${sbaRrf.citywideRecords} geocode-miss=${sbaRrf.addressGeocodeMisses} ` +
+      `out-of-bounds=${sbaRrf.addressOutOfBounds}); dceo Chicago=${dceo.records.length} ` +
       `(point=${dceo.pointRecords} citywide=${dceo.citywideRecords} ` +
       `geocode-miss=${dceo.addressGeocodeMisses} out-of-bounds=${dceo.addressOutOfBounds} ` +
       `multi-site-citywide=${dceo.multiSiteHeldCitywide})`,
@@ -1714,7 +1963,8 @@ async function main() {
   //    capital-spine sources append last (also never dedupe-eligible).
   const all = [
     ...nofSmall, ...nofLarge, ...sbif, ...cdg, ...foundations, ...prize, ...developments, ...jim,
-    ...tif, ...hud, ...lihtc, ...nmtc, ...cookSource.records, ...dceo.records,
+    ...tif, ...hud, ...lihtc, ...nmtc, ...cookSource.records, ...illinoisB2B.records,
+    ...sbaRrf.records, ...dceo.records,
   ];
 
   // 4) Cross-source dedupe (government point rows sharing address+amount).
@@ -1750,6 +2000,13 @@ async function main() {
     nmtcUnstamped: nmtcStamp.unstamped,
     cookSourceChicagoRecords: cookSource.chicagoRecords,
     cookSourceOutsideChicagoRecords: cookSource.outsideChicagoRecords,
+    illinoisB2BChicagoRecords: illinoisB2B.chicagoRecords,
+    illinoisB2BOutsideChicagoRecords: illinoisB2B.outsideChicagoRecords,
+    sbaRrfChicagoRecords: sbaRrf.records.length,
+    sbaRrfPointRecords: sbaRrf.pointRecords,
+    sbaRrfCitywideRecords: sbaRrf.citywideRecords,
+    sbaRrfAddressGeocodeMisses: sbaRrf.addressGeocodeMisses,
+    sbaRrfAddressOutOfBounds: sbaRrf.addressOutOfBounds,
     dceoChicagoRecords: dceo.records.length,
     dceoPointRecords: dceo.pointRecords,
     dceoCitywideRecords: dceo.citywideRecords,

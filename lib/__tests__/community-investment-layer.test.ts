@@ -7,6 +7,7 @@ import {
   DEV_DOT_RADIUS_MIN,
   fetchCommunityInvestmentLayer,
   fetchCountyReliefRecipients,
+  fetchHistoricalRecoveryRecipients,
   excludeMegaprojectFeatures,
   filterInvestmentPointFeatures,
   INVESTMENT_STATUS_LABELS,
@@ -288,7 +289,15 @@ describe("fetchCommunityInvestmentLayer", () => {
         id: "cook-1",
         source: "cook-source-2023",
         funderName: "Cook County 2023 Source Grant",
-        amountAwarded: 10_000,
+        amountAwarded: null,
+        recovery: {
+          sourceId: "cook-source-2023",
+          historicalAmount: {
+            value: 10_000,
+            currency: "USD",
+            assistanceType: "grant",
+          },
+        },
         year: 2023,
         geometry: { kind: "zip_area", zip: "60617" },
         address: null,
@@ -298,7 +307,15 @@ describe("fetchCommunityInvestmentLayer", () => {
         id: "cook-2",
         source: "cook-source-2023",
         funderName: "Cook County 2023 Source Grant",
-        amountAwarded: 20_000,
+        amountAwarded: null,
+        recovery: {
+          sourceId: "cook-source-2023",
+          historicalAmount: {
+            value: 20_000,
+            currency: "USD",
+            assistanceType: "grant",
+          },
+        },
         year: 2023,
         geometry: { kind: "zip_area", zip: "60617" },
         address: null,
@@ -310,10 +327,50 @@ describe("fetchCommunityInvestmentLayer", () => {
     expect(result.pointFeatures).toEqual([]);
     expect(result.countyReliefByZip).toEqual([
       {
+        sourceId: "cook-source-2023",
+        programName: "Cook County 2023 Source Grant",
         zipCode: "60617",
         awardCount: 2,
         totalDisbursed: 30_000,
         year: 2023,
+        sourceLink: "https://example.gov/round",
+      },
+    ]);
+  });
+
+  it("keeps Illinois B2B ZIP history separate from Cook County aggregates", async () => {
+    const fetchImpl = fetchStub(200, {
+      records: [
+        record({
+          id: "b2b-1",
+          source: "illinois-b2b",
+          funderName: "Illinois Back to Business Grant Program",
+          amountAwarded: null,
+          recovery: {
+            sourceId: "illinois-b2b",
+            historicalAmount: {
+              value: 35_000,
+              currency: "USD",
+              assistanceType: "grant",
+            },
+          },
+          year: 2022,
+          geometry: { kind: "zip_area", zip: "60617" },
+          address: null,
+          status: "disbursed",
+        }),
+      ],
+    });
+    const result = await fetchCommunityInvestmentLayer({ fetchImpl });
+    expect(result.countyReliefByZip).toEqual([]);
+    expect(result.stateRecoveryByZip).toEqual([
+      {
+        sourceId: "illinois-b2b",
+        programName: "Illinois Back to Business Grant Program",
+        zipCode: "60617",
+        awardCount: 1,
+        totalDisbursed: 35_000,
+        year: 2022,
         sourceLink: "https://example.gov/round",
       },
     ]);
@@ -346,6 +403,8 @@ describe("fetchCommunityInvestmentLayer", () => {
       records: [],
       countyReliefByZip: [
         {
+          sourceId: "cook-source-2023",
+          programName: "Cook County 2023 Source Grant",
           zipCode: "60617",
           awardCount: 12,
           totalDisbursed: 180_000,
@@ -363,6 +422,34 @@ describe("fetchCommunityInvestmentLayer", () => {
 });
 
 describe("fetchCountyReliefRecipients", () => {
+  it("requests Illinois B2B recipients through the generic one-ZIP endpoint", async () => {
+    const fetchImpl = fetchStub(200, {
+      sourceId: "illinois-b2b",
+      zipCode: "60617",
+      programName: "Illinois Back to Business Grant Program",
+      programStatus: "complete",
+      year: 2022,
+      recipients: [
+        {
+          id: "b2b-1",
+          businessName: "Neighborhood Business",
+          historicalAwardAmount: 35_000,
+        },
+      ],
+    });
+    const result = await fetchHistoricalRecoveryRecipients(
+      "illinois-b2b",
+      "60617",
+      { fetchImpl },
+    );
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(
+      `${COMMUNITY_INVESTMENT_ENDPOINT}?view=historical-recovery-recipients&source=illinois-b2b&zip=60617`,
+    );
+    expect(result.programName).toBe("Illinois Back to Business Grant Program");
+    expect(result.year).toBe(2022);
+    expect(result.recipients[0].businessName).toBe("Neighborhood Business");
+  });
+
   it("requests one ZIP and returns the authenticated historical recipient rows", async () => {
     const fetchImpl = fetchStub(200, {
       zipCode: "60617",
@@ -388,7 +475,7 @@ describe("fetchCountyReliefRecipients", () => {
     const result = await fetchCountyReliefRecipients("60617", { fetchImpl });
 
     expect(String(fetchImpl.mock.calls[0][0])).toBe(
-      `${COMMUNITY_INVESTMENT_ENDPOINT}?view=county-relief-recipients&zip=60617`,
+      `${COMMUNITY_INVESTMENT_ENDPOINT}?view=historical-recovery-recipients&source=cook-source-2023&zip=60617`,
     );
     expect(result.status).toBe("ready");
     expect(result.recipientCount).toBe(2);

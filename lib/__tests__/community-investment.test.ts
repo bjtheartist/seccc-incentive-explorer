@@ -71,6 +71,8 @@ describe("source / funderType / status enums", () => {
     expect(SOURCE_FUNDER_TYPE.foundation).toBe("philanthropic");
     expect(SOURCE_FUNDER_TYPE.development).toBe("private_development");
     expect(SOURCE_FUNDER_TYPE["cook-source-2023"]).toBe("government");
+    expect(SOURCE_FUNDER_TYPE["illinois-b2b"]).toBe("government");
+    expect(SOURCE_FUNDER_TYPE["sba-rrf"]).toBe("government");
     expect(SOURCE_FUNDER_TYPE["dceo-capital"]).toBe("government");
   });
 
@@ -87,6 +89,8 @@ describe("source / funderType / status enums", () => {
       "lihtc",
       "nmtc",
       "cook-source-2023",
+      "illinois-b2b",
+      "sba-rrf",
       "dceo-capital",
     ]);
     expect([...FUNDER_TYPES]).toEqual(["government", "philanthropic", "private_development"]);
@@ -204,6 +208,58 @@ describe("per-field capital totals (authorized / credit / awarded firewall)", ()
     // balance is deliberately not promoted into a fifth headline total.
     expect("totalStateAppropriation" in out.meta).toBe(false);
     expect(findBannedFigureKeys(out)).toEqual([]);
+  });
+
+  it("keeps closed recovery amounts out of ordinary awarded totals and normalizes lineage", () => {
+    const historical = rec({
+      id: "sba-rrf-test",
+      source: "sba-rrf",
+      funderName: "SBA Restaurant Revitalization Fund",
+      recipient: "Historic Restaurant",
+      amountAwarded: null,
+      status: "disbursed",
+      recovery: {
+        sourceId: "sba-rrf",
+        historicalAmount: {
+          value: 125_000,
+          currency: "USD",
+          assistanceType: "grant",
+        },
+      },
+    });
+    const out = buildCommunityInvestmentExport(
+      [historical],
+      "2026-07-28T00:00:00.000Z",
+      { droppedNoGeocode: 0, dedupedRows: 0, sources: [] },
+    );
+    expect(out.meta.totalDollarsAwarded).toBe(0);
+    expect(out.records[0].recovery?.historicalAmount?.value).toBe(125_000);
+    expect(out.recoverySources["sba-rrf"]?.lineage[0].role).toBe("root_law");
+  });
+
+  it("rejects a recovery record that also populates amountAwarded", () => {
+    const dirty = rec({
+      id: "sba-rrf-dirty",
+      source: "sba-rrf",
+      funderName: "SBA Restaurant Revitalization Fund",
+      amountAwarded: 125_000,
+      status: "disbursed",
+      recovery: {
+        sourceId: "sba-rrf",
+        historicalAmount: {
+          value: 125_000,
+          currency: "USD",
+          assistanceType: "grant",
+        },
+      },
+    });
+    expect(() =>
+      buildCommunityInvestmentExport(
+        [dirty],
+        "2026-07-28T00:00:00.000Z",
+        { droppedNoGeocode: 0, dedupedRows: 0, sources: [] },
+      ),
+    ).toThrow("must live only in recovery.historicalAmount");
   });
 
   it("hard-fails if a tif_subsidy record smuggles an awarded amount", () => {
@@ -707,6 +763,25 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(data.meta.totalDollarsAwarded).toBe(sumAwardedDollars(data.records));
   });
 
+  it("stores historical recovery lineage once and keeps its amounts out of amountAwarded", () => {
+    const data = loadCommunityInvestment()!;
+    expect(Object.keys(data.recoverySources).sort()).toEqual([
+      "cook-source-2023",
+      "illinois-b2b",
+      "sba-rrf",
+    ]);
+    const recoveryRecords = data.records.filter((record) => record.recovery);
+    expect(recoveryRecords.length).toBe(
+      data.meta.cookSourceChicagoRecords +
+        data.meta.illinoisB2BChicagoRecords +
+        data.meta.sbaRrfChicagoRecords,
+    );
+    for (const record of recoveryRecords) {
+      expect(record.amountAwarded).toBeNull();
+      expect(record.recovery?.historicalAmount?.value).toBeGreaterThanOrEqual(0);
+    }
+  });
+
   it("announcedCapitalTotal matches the announcedInvestment sum and is a DIFFERENT figure from awarded", () => {
     const data = loadCommunityInvestment()!;
     expect(data.meta.announcedCapitalTotal).toBe(sumAnnouncedInvestment(data.records));
@@ -861,7 +936,7 @@ describe.skipIf(!CONTEXT_EXISTS)("committed capital-context.json", () => {
     expect(findBannedFigureKeys(parsed)).toEqual([]);
   });
 
-  it("carries the four context series and the SFY2027 state-award snapshot caveat", () => {
+  it("carries the context series, Chicago ARPA ledger, and SFY2027 state-award caveat", () => {
     const ctx = JSON.parse(readFileSync(CONTEXT_PATH, "utf8"));
     expect(Array.isArray(ctx.tifDistricts)).toBe(true);
     expect(ctx.tifDistricts.length).toBeGreaterThan(0);
@@ -872,5 +947,15 @@ describe.skipIf(!CONTEXT_EXISTS)("committed capital-context.json", () => {
     expect(String(ctx.stateAwards.snapshotCaveat)).toMatch(/SFY2027|not naively summed/i);
     expect(String(ctx.stateAwards.amountMeaning)).toMatch(/not money paid/i);
     expect(Array.isArray(ctx.stateAwards.topGrantees)).toBe(true);
+    expect(ctx.chicagoArpaRecovery.classification.id).toBe(
+      "chicago-arpa-program",
+    );
+    expect(ctx.chicagoArpaRecovery.programs).toHaveLength(77);
+    expect(
+      ctx.chicagoArpaRecovery.programs.filter(
+        (program: { historicalAllocated: number | null }) =>
+          program.historicalAllocated === null,
+      ),
+    ).toHaveLength(10);
   });
 });

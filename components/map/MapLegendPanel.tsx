@@ -53,11 +53,11 @@ import {
 import type { CapitalClass, FunderType } from "@/lib/community-investment";
 import {
   DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY,
+  PUBLIC_INVESTMENT_OVERLAY_COLORS,
   PUBLIC_INVESTMENT_OVERLAYS,
   type PublicInvestmentOverlayId,
   type PublicInvestmentOverlayVisibility,
 } from "@/lib/public-investment-overlays";
-import { COUNTY_RELIEF_FILL_COLOR } from "@/lib/county-relief-layer";
 
 interface MapLegendPanelProps {
   zoneVisible: Record<string, boolean>;
@@ -109,6 +109,9 @@ interface MapLegendPanelProps {
   /** Independent historical/public-capital overlays, both default off. */
   publicInvestmentOverlays?: PublicInvestmentOverlayVisibility;
   countyReliefZipCount?: number;
+  stateRecoveryZipCount?: number;
+  federalRestaurantReliefPlottedCount?: number;
+  federalRestaurantReliefCitywideCount?: number;
   stateCapitalPlottedCount?: number;
   stateCapitalCitywideCount?: number;
   onSetCommunityInvestmentVisible?: (value: boolean) => void;
@@ -168,6 +171,9 @@ export default function MapLegendPanel({
   investmentMegaprojectsVisible = false,
   publicInvestmentOverlays = { ...DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY },
   countyReliefZipCount = 0,
+  stateRecoveryZipCount = 0,
+  federalRestaurantReliefPlottedCount = 0,
+  federalRestaurantReliefCitywideCount = 0,
   stateCapitalPlottedCount = 0,
   stateCapitalCitywideCount = 0,
   onSetCommunityInvestmentVisible = () => {},
@@ -708,10 +714,15 @@ export default function MapLegendPanel({
                   <div className="space-y-2 border-b border-[#0C1B33]/8 pb-3 mb-2">
                     {PUBLIC_INVESTMENT_OVERLAYS.map((overlay) => {
                       const checked = publicInvestmentOverlays[overlay.id];
-                      const color =
+                      const color = PUBLIC_INVESTMENT_OVERLAY_COLORS[overlay.id];
+                      const countLabel =
                         overlay.id === "county_relief_awards"
-                          ? COUNTY_RELIEF_FILL_COLOR
-                          : CAPITAL_CLASS_OUTLINE.state_appropriation;
+                          ? `${countyReliefZipCount} Chicago ZIP areas mapped`
+                          : overlay.id === "state_recovery_awards"
+                            ? `${stateRecoveryZipCount} Chicago ZIP areas mapped`
+                            : overlay.id === "federal_restaurant_relief"
+                              ? `${federalRestaurantReliefPlottedCount} address-sited · ${federalRestaurantReliefCitywideCount} held unplotted`
+                              : `${stateCapitalPlottedCount} address-sited · ${stateCapitalCitywideCount} held unplotted`;
                       return (
                         <label key={overlay.id} className="flex items-start gap-2.5 py-1 cursor-pointer group">
                           <input
@@ -744,9 +755,7 @@ export default function MapLegendPanel({
                             </span>
                             {checked && (
                               <span className="mt-1 block font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
-                                {overlay.id === "county_relief_awards"
-                                  ? `${countyReliefZipCount} Chicago ZIP areas mapped`
-                                  : `${stateCapitalPlottedCount} address-sited · ${stateCapitalCitywideCount} held unplotted`}
+                                {countLabel}
                               </span>
                             )}
                           </span>

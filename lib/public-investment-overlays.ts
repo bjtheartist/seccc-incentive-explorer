@@ -9,12 +9,19 @@
 
 export const PUBLIC_INVESTMENT_OVERLAY_IDS = [
   "county_relief_awards",
+  "state_recovery_awards",
+  "federal_restaurant_relief",
   "state_capital_projects",
 ] as const;
 
 export type PublicInvestmentOverlayId = (typeof PUBLIC_INVESTMENT_OVERLAY_IDS)[number];
 
-export const PUBLIC_INVESTMENT_SOURCE_IDS = ["cook-source-2023", "dceo-capital"] as const;
+export const PUBLIC_INVESTMENT_SOURCE_IDS = [
+  "cook-source-2023",
+  "illinois-b2b",
+  "sba-rrf",
+  "dceo-capital",
+] as const;
 export type PublicInvestmentSourceId = (typeof PUBLIC_INVESTMENT_SOURCE_IDS)[number];
 
 export interface PublicInvestmentOverlayConfig {
@@ -42,6 +49,24 @@ export const PUBLIC_INVESTMENT_OVERLAYS = [
     defaultVisible: false,
   },
   {
+    id: "state_recovery_awards",
+    label: "Illinois recovery grants",
+    description:
+      "Historical Illinois Back to Business ARPA grants. ZIP-level source records; not an active opportunity.",
+    sourceId: "illinois-b2b",
+    adminOnly: true,
+    defaultVisible: false,
+  },
+  {
+    id: "federal_restaurant_relief",
+    label: "Restaurant relief grants",
+    description:
+      "Historical SBA Restaurant Revitalization Fund grants. The federal program is closed and is not a current opportunity.",
+    sourceId: "sba-rrf",
+    adminOnly: true,
+    defaultVisible: false,
+  },
+  {
     id: "state_capital_projects",
     label: "State capital projects",
     description:
@@ -56,6 +81,8 @@ export const PUBLIC_INVESTMENT_SOURCE_BY_OVERLAY_ID: Readonly<
   Record<PublicInvestmentOverlayId, PublicInvestmentSourceId>
 > = {
   county_relief_awards: "cook-source-2023",
+  state_recovery_awards: "illinois-b2b",
+  federal_restaurant_relief: "sba-rrf",
   state_capital_projects: "dceo-capital",
 };
 
@@ -63,14 +90,27 @@ const PUBLIC_INVESTMENT_OVERLAY_BY_SOURCE_ID: Readonly<
   Record<PublicInvestmentSourceId, PublicInvestmentOverlayId>
 > = {
   "cook-source-2023": "county_relief_awards",
+  "illinois-b2b": "state_recovery_awards",
+  "sba-rrf": "federal_restaurant_relief",
   "dceo-capital": "state_capital_projects",
 };
 
 export type PublicInvestmentOverlayVisibility = Record<PublicInvestmentOverlayId, boolean>;
 
+export const PUBLIC_INVESTMENT_OVERLAY_COLORS: Readonly<
+  Record<PublicInvestmentOverlayId, string>
+> = {
+  county_relief_awards: "#0E7490",
+  state_recovery_awards: "#B45309",
+  federal_restaurant_relief: "#BE123C",
+  state_capital_projects: "#0F766E",
+};
+
 export const DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY: Readonly<PublicInvestmentOverlayVisibility> =
   {
     county_relief_awards: false,
+    state_recovery_awards: false,
+    federal_restaurant_relief: false,
     state_capital_projects: false,
   };
 
@@ -117,6 +157,14 @@ export function parsePublicInvestmentOverlayVisibility(
         typeof values.county_relief_awards === "boolean"
           ? values.county_relief_awards
           : DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY.county_relief_awards,
+      state_recovery_awards:
+        typeof values.state_recovery_awards === "boolean"
+          ? values.state_recovery_awards
+          : DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY.state_recovery_awards,
+      federal_restaurant_relief:
+        typeof values.federal_restaurant_relief === "boolean"
+          ? values.federal_restaurant_relief
+          : DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY.federal_restaurant_relief,
       state_capital_projects:
         typeof values.state_capital_projects === "boolean"
           ? values.state_capital_projects
@@ -133,6 +181,8 @@ export function serializePublicInvestmentOverlayVisibility(
 ): string {
   return JSON.stringify({
     county_relief_awards: visibility.county_relief_awards === true,
+    state_recovery_awards: visibility.state_recovery_awards === true,
+    federal_restaurant_relief: visibility.federal_restaurant_relief === true,
     state_capital_projects: visibility.state_capital_projects === true,
   });
 }
@@ -201,7 +251,7 @@ export function visiblePublicInvestmentSourceIds(
 }
 
 /**
- * Apply only the two public-investment subfilters. Existing Community
+ * Apply only the public-investment subfilters. Existing Community
  * Investment sources pass through untouched, while each new source family is
  * included only when its independent overlay is visible.
  */

@@ -32,9 +32,11 @@ function fakeSessionStorage(initial: Record<string, string> = {}) {
 }
 
 describe("public investment overlay config", () => {
-  it("defines two independent admin-only overlays that default off", () => {
+  it("defines four independent admin-only overlays that default off", () => {
     expect(PUBLIC_INVESTMENT_OVERLAY_IDS).toEqual([
       "county_relief_awards",
+      "state_recovery_awards",
+      "federal_restaurant_relief",
       "state_capital_projects",
     ]);
     expect(PUBLIC_INVESTMENT_OVERLAYS.map(({ id, label, adminOnly, defaultVisible }) => ({
@@ -50,6 +52,18 @@ describe("public investment overlay config", () => {
         defaultVisible: false,
       },
       {
+        id: "state_recovery_awards",
+        label: "Illinois recovery grants",
+        adminOnly: true,
+        defaultVisible: false,
+      },
+      {
+        id: "federal_restaurant_relief",
+        label: "Restaurant relief grants",
+        adminOnly: true,
+        defaultVisible: false,
+      },
+      {
         id: "state_capital_projects",
         label: "State capital projects",
         adminOnly: true,
@@ -58,14 +72,23 @@ describe("public investment overlay config", () => {
     ]);
     expect(DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY).toEqual({
       county_relief_awards: false,
+      state_recovery_awards: false,
+      federal_restaurant_relief: false,
       state_capital_projects: false,
     });
   });
 
   it("maps each overlay to its canonical source family", () => {
-    expect(PUBLIC_INVESTMENT_SOURCE_IDS).toEqual(["cook-source-2023", "dceo-capital"]);
+    expect(PUBLIC_INVESTMENT_SOURCE_IDS).toEqual([
+      "cook-source-2023",
+      "illinois-b2b",
+      "sba-rrf",
+      "dceo-capital",
+    ]);
     expect(PUBLIC_INVESTMENT_SOURCE_BY_OVERLAY_ID).toEqual({
       county_relief_awards: "cook-source-2023",
+      state_recovery_awards: "illinois-b2b",
+      federal_restaurant_relief: "sba-rrf",
       state_capital_projects: "dceo-capital",
     });
     expect(publicInvestmentOverlayIdForSource("cook-source-2023")).toBe(
@@ -73,6 +96,12 @@ describe("public investment overlay config", () => {
     );
     expect(publicInvestmentOverlayIdForSource("dceo-capital")).toBe(
       "state_capital_projects",
+    );
+    expect(publicInvestmentOverlayIdForSource("illinois-b2b")).toBe(
+      "state_recovery_awards",
+    );
+    expect(publicInvestmentOverlayIdForSource("sba-rrf")).toBe(
+      "federal_restaurant_relief",
     );
     expect(publicInvestmentOverlayIdForSource("tif")).toBeNull();
   });
@@ -85,10 +114,22 @@ describe("public investment overlay config", () => {
   });
 
   it("uses historical context copy rather than opportunity or dollar promises", () => {
-    const county = PUBLIC_INVESTMENT_OVERLAYS[0].description;
-    const state = PUBLIC_INVESTMENT_OVERLAYS[1].description;
+    const descriptions = Object.fromEntries(
+      PUBLIC_INVESTMENT_OVERLAYS.map((overlay) => [
+        overlay.id,
+        overlay.description,
+      ]),
+    );
+    const county = descriptions.county_relief_awards;
+    const stateRecovery = descriptions.state_recovery_awards;
+    const restaurant = descriptions.federal_restaurant_relief;
+    const state = descriptions.state_capital_projects;
     expect(county).toContain("Historical");
     expect(county).toContain("not an active funding opportunity");
+    expect(stateRecovery).toContain("Historical");
+    expect(stateRecovery).toContain("not an active opportunity");
+    expect(restaurant).toContain("Historical");
+    expect(restaurant).toContain("not a current opportunity");
     expect(state).toContain("appropriations");
     expect(state).toContain("not an active funding opportunity");
     expect(state).toContain("expected incentive dollars");
@@ -130,6 +171,8 @@ describe("public investment overlay persistence", () => {
       ),
     ).toEqual({
       county_relief_awards: true,
+      state_recovery_awards: false,
+      federal_restaurant_relief: false,
       state_capital_projects: false,
     });
   });
@@ -137,6 +180,8 @@ describe("public investment overlay persistence", () => {
   it("round-trips canonical serialized state", () => {
     const state: PublicInvestmentOverlayVisibility = {
       county_relief_awards: true,
+      state_recovery_awards: true,
+      federal_restaurant_relief: false,
       state_capital_projects: true,
     };
     expect(parsePublicInvestmentOverlayVisibility(
@@ -156,12 +201,14 @@ describe("public investment overlay persistence", () => {
     storePublicInvestmentOverlayVisibility(enabled);
 
     expect(values.get(PUBLIC_INVESTMENT_OVERLAYS_STORAGE_KEY)).toBe(
-      '{"county_relief_awards":true,"state_capital_projects":false}',
+      '{"county_relief_awards":true,"state_recovery_awards":false,"federal_restaurant_relief":false,"state_capital_projects":false}',
     );
     expect(loadStoredPublicInvestmentOverlayVisibility()).toEqual(enabled);
 
     storePublicInvestmentOverlayVisibility({
       county_relief_awards: false,
+      state_recovery_awards: false,
+      federal_restaurant_relief: false,
       state_capital_projects: false,
     });
     expect(values.has(PUBLIC_INVESTMENT_OVERLAYS_STORAGE_KEY)).toBe(false);
@@ -188,6 +235,8 @@ describe("public investment overlay persistence", () => {
     expect(() =>
       storePublicInvestmentOverlayVisibility({
         county_relief_awards: true,
+        state_recovery_awards: false,
+        federal_restaurant_relief: false,
         state_capital_projects: false,
       }),
     ).not.toThrow();
@@ -198,6 +247,8 @@ describe("public investment source filtering", () => {
   const records = [
     { id: "existing", source: "tif" },
     { id: "county", source: "cook-source-2023" },
+    { id: "state-recovery", source: "illinois-b2b" },
+    { id: "restaurant", source: "sba-rrf" },
     { id: "state", source: "dceo-capital" },
   ];
 
@@ -216,10 +267,14 @@ describe("public investment source filtering", () => {
   it("filters each source family independently", () => {
     const countyOnly: PublicInvestmentOverlayVisibility = {
       county_relief_awards: true,
+      state_recovery_awards: false,
+      federal_restaurant_relief: false,
       state_capital_projects: false,
     };
     const stateOnly: PublicInvestmentOverlayVisibility = {
       county_relief_awards: false,
+      state_recovery_awards: false,
+      federal_restaurant_relief: false,
       state_capital_projects: true,
     };
 
@@ -237,18 +292,47 @@ describe("public investment source filtering", () => {
     expect(visiblePublicInvestmentSourceIds(stateOnly)).toEqual(["dceo-capital"]);
   });
 
+  it("toggles state and federal recovery families independently", () => {
+    const stateRecoveryOnly: PublicInvestmentOverlayVisibility = {
+      county_relief_awards: false,
+      state_recovery_awards: true,
+      federal_restaurant_relief: false,
+      state_capital_projects: false,
+    };
+    const restaurantOnly: PublicInvestmentOverlayVisibility = {
+      county_relief_awards: false,
+      state_recovery_awards: false,
+      federal_restaurant_relief: true,
+      state_capital_projects: false,
+    };
+    expect(
+      filterRecordsByPublicInvestmentOverlays(records, stateRecoveryOnly).map(
+        (record) => record.id,
+      ),
+    ).toEqual(["existing", "state-recovery"]);
+    expect(
+      filterRecordsByPublicInvestmentOverlays(records, restaurantOnly).map(
+        (record) => record.id,
+      ),
+    ).toEqual(["existing", "restaurant"]);
+  });
+
   it("includes both source families without changing input order", () => {
     const allVisible: PublicInvestmentOverlayVisibility = {
       county_relief_awards: true,
+      state_recovery_awards: true,
+      federal_restaurant_relief: true,
       state_capital_projects: true,
     };
     expect(
       filterRecordsByPublicInvestmentOverlays(records, allVisible).map(
         (record) => record.id,
       ),
-    ).toEqual(["existing", "county", "state"]);
+    ).toEqual(["existing", "county", "state-recovery", "restaurant", "state"]);
     expect(visiblePublicInvestmentSourceIds(allVisible)).toEqual([
       "cook-source-2023",
+      "illinois-b2b",
+      "sba-rrf",
       "dceo-capital",
     ]);
   });

@@ -9,7 +9,11 @@ import {
 import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { INVESTMENT_SOURCES, filterInvestmentBySources, loadCommunityInvestment } from "@/lib/community-investment";
 import { parseFunderHqCsv, type FunderHq } from "@/lib/investment-deck-modes";
-import { summarizeCountyReliefByZip } from "@/lib/community-investment-layer";
+import {
+  summarizeCountyReliefByZip,
+  summarizeHistoricalRecoveryByZip,
+  type HistoricalRecoveryRecipientSource,
+} from "@/lib/community-investment-layer";
 
 // A valid analytics admin session also satisfies this gate (single sign-on
 // — see lib/owner-files-admin-auth.ts module doc). Identical auth check to
@@ -23,7 +27,29 @@ function isAuthorized(req: NextRequest): boolean {
 
 const VALID_SOURCES = new Set<string>(INVESTMENT_SOURCES);
 const COUNTY_RELIEF_RECIPIENTS_VIEW = "county-relief-recipients";
+const HISTORICAL_RECOVERY_RECIPIENTS_VIEW = "historical-recovery-recipients";
 const FIVE_DIGIT_ZIP_RE = /^\d{5}$/;
+const HISTORICAL_RECOVERY_RECIPIENT_CONFIG: Readonly<
+  Record<
+    HistoricalRecoveryRecipientSource,
+    { programName: string; year: number }
+  >
+> = {
+  "cook-source-2023": {
+    programName: "Cook County 2023 Source Grant",
+    year: 2023,
+  },
+  "illinois-b2b": {
+    programName: "Illinois Back to Business Grant Program",
+    year: 2022,
+  },
+};
+
+function isHistoricalRecoveryRecipientSource(
+  value: string | null,
+): value is HistoricalRecoveryRecipientSource {
+  return value === "cook-source-2023" || value === "illinois-b2b";
+}
 
 /**
  * The 12 foundation headquarters (data/curated/foundation-hqs.csv) that seed the
@@ -76,7 +102,10 @@ export async function GET(req: NextRequest) {
   }
 
   const view = req.nextUrl.searchParams.get("view");
-  if (view === COUNTY_RELIEF_RECIPIENTS_VIEW) {
+  if (
+    view === COUNTY_RELIEF_RECIPIENTS_VIEW ||
+    view === HISTORICAL_RECOVERY_RECIPIENTS_VIEW
+  ) {
     const zipCode = req.nextUrl.searchParams.get("zip")?.trim() ?? "";
     if (!FIVE_DIGIT_ZIP_RE.test(zipCode)) {
       return NextResponse.json(
@@ -84,11 +113,22 @@ export async function GET(req: NextRequest) {
         { status: 400, headers: { "Cache-Control": "private, no-store" } }
       );
     }
+    const requestedSource =
+      view === COUNTY_RELIEF_RECIPIENTS_VIEW
+        ? "cook-source-2023"
+        : req.nextUrl.searchParams.get("source");
+    if (!isHistoricalRecoveryRecipientSource(requestedSource)) {
+      return NextResponse.json(
+        { error: "A supported historical recovery source is required" },
+        { status: 400, headers: { "Cache-Control": "private, no-store" } },
+      );
+    }
+    const config = HISTORICAL_RECOVERY_RECIPIENT_CONFIG[requestedSource];
 
     const recipientRecords = data.records
       .filter(
         (record) =>
-          record.source === "cook-source-2023" &&
+          record.source === requestedSource &&
           record.geometry.kind === "zip_area" &&
           record.geometry.zip === zipCode
       )
@@ -100,16 +140,19 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(
       {
+        sourceId: requestedSource,
         zipCode,
-        programName: "Cook County 2023 Source Grant",
+        programName: config.programName,
         programStatus: "complete",
-        year: 2023,
+        year: config.year,
         recipientCount: recipientRecords.length,
         sourceLink,
         recipients: recipientRecords.map((record) => ({
           id: record.id,
           businessName: record.recipient,
-          historicalAwardAmount: record.amountAwarded,
+          historicalAwardAmount:
+            record.recovery?.historicalAmount?.value ??
+            record.amountAwarded,
         })),
       },
       { headers: { "Cache-Control": "private, no-store" } }
@@ -129,17 +172,28 @@ export async function GET(req: NextRequest) {
   const responseData = mapView
     ? {
         ...filtered,
-        // The map needs ZIP aggregates, not 1,163 recipient names. Keep the raw
-        // rows available to an authorized explicit source request while making
-        // the normal map payload smaller and less identifying.
+        // The map needs ZIP aggregates, not recipient names. Keep raw ZIP-level
+        // rows available only through the explicit authenticated drilldown while
+        // making the normal map payload smaller and less identifying.
         records: filtered.records.filter(
           (record) =>
-            record.source !== "cook-source-2023" &&
-            !(record.source === "dceo-capital" && record.geometry.kind === "citywide"),
+            record.geometry.kind !== "zip_area" &&
+            !(
+              (record.source === "dceo-capital" ||
+                record.source === "sba-rrf") &&
+              record.geometry.kind === "citywide"
+            ),
         ),
         countyReliefByZip: summarizeCountyReliefByZip(filtered.records),
+        stateRecoveryByZip: summarizeHistoricalRecoveryByZip(
+          filtered.records,
+          "illinois-b2b",
+        ),
         stateCapitalCitywideCount: filtered.records.filter(
           (record) => record.source === "dceo-capital" && record.geometry.kind === "citywide",
+        ).length,
+        federalRestaurantReliefCitywideCount: filtered.records.filter(
+          (record) => record.source === "sba-rrf" && record.geometry.kind === "citywide",
         ).length,
       }
     : filtered;
