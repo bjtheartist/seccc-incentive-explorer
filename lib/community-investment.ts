@@ -390,9 +390,20 @@ export interface CommunityInvestmentMeta {
   dceoCitywideRecords: number;
   /** Single explicit DCEO addresses that failed geocoding and were held citywide. */
   dceoAddressGeocodeMisses: number;
-  /** DCEO geocodes outside Chicago that were rejected and held citywide. */
+  /**
+   * DCEO single explicit addresses whose geocode fell OUTSIDE Chicago's
+   * community-area polygons. The POINT is rejected and the record is held
+   * citywide — never deleted — matching the foundation path's rule that a bad
+   * geocode is not a bad appropriation (the row already cleared the source's
+   * own Chicago-location evidence, and its published balance still counts).
+   */
   dceoAddressOutOfBounds: number;
-  /** Multi-address/various-location DCEO rows deliberately held citywide. */
+  /**
+   * DCEO rows deliberately held citywide because the source describes more than
+   * one site: an explicit "various/multiple locations" phrase, two separate
+   * matched addresses, or two house numbers sharing one street suffix
+   * ("6808 O 6816 S HALSTED ST").
+   */
   dceoMultiSiteHeldCitywide: number;
   /**
    * Sum of every non-null amountAwarded. This is a plain total of AWARDED

@@ -106,6 +106,40 @@ const EXPLICIT_STREET_ADDRESS_RE = new RegExp(
   "i",
 );
 
+/**
+ * Two house numbers sharing ONE street name/suffix — the source's shorthand for
+ * a project spanning more than one address ("6808 O 6816 SOUTH HALSTED STREET",
+ * "4111/4113 N PULASKI AVE", "1200 & 4500 SOUTH HALSTED STREET").
+ *
+ * EXPLICIT_STREET_ADDRESS_RE cannot see these as multiple sites: a separator it
+ * does not accept (`&`) simply blocks the earlier match so only the LAST house
+ * number survives, and a separator it does accept as an interior token (`O`,
+ * `/`) gets swallowed into one address string. Either way the match count is 1,
+ * so a plain `addresses.length > 1` multi-site test fails open and the row plots
+ * as a single confident point.
+ *
+ * Requiring a real street suffix after the number pair keeps unrelated numeric
+ * pairs ("FY2024 AND 2025", "$10,000") from tripping the guard.
+ */
+const MULTI_HOUSE_NUMBER_ADDRESS_RE = new RegExp(
+  String.raw`\b\d{1,6}(?:-\d{1,6})?\s*(?:[/&]|\bAND\b|\bOR\b|\bO\b)\s*\d{1,6}(?:-\d{1,6})?\s+` +
+    String.raw`(?:(?:NORTH|SOUTH|EAST|WEST|N|S|E|W)\.?\s+)?` +
+    String.raw`(?:[A-Z0-9][A-Z0-9.'’/-]*\s+){0,7}` +
+    STREET_SUFFIX +
+    String.raw`\.?(?=\s|[,;)]|$)`,
+  "i",
+);
+
+/**
+ * True when the description names two house numbers against a single street —
+ * i.e. the appropriation covers more than one site and must NOT be plotted as
+ * one confident point. Callers treat this exactly like an explicit
+ * "various locations" phrase: hold the record citywide, unplotted.
+ */
+export function describesMultipleProjectSites(description: string): boolean {
+  return MULTI_HOUSE_NUMBER_ADDRESS_RE.test(normalizeField(description));
+}
+
 const CHICAGO_ZIP_RE = /\b606\d{2}(?:-\d{4})?\b/;
 const ANY_ZIP_RE = /\b\d{5}(?:-\d{4})?\b/g;
 const CHICAGO_LOCATION_PHRASE_RE =

@@ -45,7 +45,10 @@ import {
   type InvestmentStatus,
 } from "../lib/community-investment";
 import { assignCommunityArea, loadCommunityAreaPolygons } from "../lib/community-area-stamp";
-import { hasHighConfidenceChicagoDceoLocation } from "../lib/dceo-capital-appropriations";
+import {
+  describesMultipleProjectSites,
+  hasHighConfidenceChicagoDceoLocation,
+} from "../lib/dceo-capital-appropriations";
 import {
   RECOVERY_INVESTMENT_SOURCE_METADATA,
   type RecoveryInvestmentSourceId,
@@ -1465,7 +1468,12 @@ function selectChicagoDceoCandidates(rows: Record<string, string>[]): DceoCandid
     const explicitlyVarious = /\b(?:VARIOUS LOCATIONS|MULTIPLE LOCATIONS|MULTI-SITE)\b/i.test(
       row.original_description || "",
     );
-    const multiSite = explicitlyVarious || addresses.length > 1;
+    // Two house numbers sharing one street suffix ("6808 O 6816 S HALSTED ST",
+    // "4111/4113 N PULASKI AVE") collapse to a SINGLE regex match, so the match
+    // count alone fails open and the row would plot as one confident point.
+    // describesMultipleProjectSites catches that shape explicitly.
+    const multipleHouseNumbers = describesMultipleProjectSites(row.original_description || "");
+    const multiSite = explicitlyVarious || multipleHouseNumbers || addresses.length > 1;
     const parsedAddress = nullableStr(row.explicit_project_address);
     candidates.push({
       row,
@@ -1510,11 +1518,15 @@ function mapDceoCapital(
         : null;
     if (safeAddress && !rawHit) addressGeocodeMisses += 1;
     if (rawHit && !hit) {
-      // A source-literal address resolving outside the official city polygons
-      // is stronger evidence than a Chicago-named grantee. Exclude it rather
-      // than converting it to a misleading citywide Chicago record.
+      // A source-literal address that resolves outside the official city
+      // polygons is a bad GEOCODE, not a bad appropriation — the row already
+      // cleared hasHighConfidenceChicagoDceoLocation on the source's own
+      // evidence. Hold it citywide (unplotted) exactly like the foundation
+      // path does, so the appropriation and its dollars stay in the export and
+      // stay auditable. Deleting the record instead made a real $250,000 state
+      // appropriation vanish with nothing but a counter to explain it, and made
+      // dceoChicagoRecords silently non-deterministic across geocoder refreshes.
       addressOutOfBounds += 1;
-      continue;
     }
     if (multiSite) multiSiteHeldCitywide += 1;
     const geometry: InvestmentGeometry = hit ? point(hit.lat, hit.lng) : { kind: "citywide" };

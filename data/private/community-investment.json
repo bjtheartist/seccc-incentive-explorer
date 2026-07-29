@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-29T14:25:04.241Z",
+  "generatedAt": "2026-07-29T15:31:02.889Z",
   "recoverySources": {
     "cook-source-2023": {
       "id": "cook-source-2023",
@@ -116,11 +116,11 @@
       "cook-source-2023": 1163,
       "illinois-b2b": 2357,
       "sba-rrf": 1523,
-      "dceo-capital": 619
+      "dceo-capital": 620
     },
-    "totalRecords": 24741,
-    "pointCount": 18353,
-    "citywideCount": 2868,
+    "totalRecords": 24742,
+    "pointCount": 18351,
+    "citywideCount": 2871,
     "zipAreaCount": 3520,
     "cookSourceChicagoRecords": 1163,
     "cookSourceOutsideChicagoRecords": 1840,
@@ -131,12 +131,12 @@
     "sbaRrfCitywideRecords": 40,
     "sbaRrfAddressGeocodeMisses": 37,
     "sbaRrfAddressOutOfBounds": 3,
-    "dceoChicagoRecords": 619,
-    "dceoPointRecords": 59,
-    "dceoCitywideRecords": 560,
+    "dceoChicagoRecords": 620,
+    "dceoPointRecords": 57,
+    "dceoCitywideRecords": 563,
     "dceoAddressGeocodeMisses": 3,
     "dceoAddressOutOfBounds": 1,
-    "dceoMultiSiteHeldCitywide": 3,
+    "dceoMultiSiteHeldCitywide": 5,
     "totalDollarsAwarded": 1787353617.66,
     "announcedCapitalTotal": 74906800000,
     "totalAuthorizedTif": 6595382694.67,
@@ -579870,19 +579870,16 @@
       "logLine": "Line-item appropriation · SECTION 955. THE SUM OF $400,000, OR SO MUCH THEREOF AS MAY BE NECESSARY, IS APPROPRIATED FROM THE BUILD ILLINOIS BOND FUND TO THE DEPARTMENT OF COMMERCE AND ECONOMIC OPPORTUNITY FOR A GRANT TO IRVING PARK COMMUNITY FOOD PANTRY FOR COSTS ASSOCIATED WITH CONSTRUCTION OF A FOOD PANTRY AND OTHER CAPITAL IMPROVEMENTS AT...",
       "year": 2026,
       "geometry": {
-        "kind": "point",
-        "lat": 41.955748089327,
-        "lng": -87.72759932898
+        "kind": "citywide"
       },
-      "address": "4113 N PULASKI AVE",
+      "address": null,
       "status": "appropriated",
       "recordDate": null,
       "recordProvenance": "official",
       "links": [
         "https://dceo.illinois.gov/content/dam/soi/en/web/dceo/aboutdceo/grantopportunities/documents/dceo-cap-approp-list.pdf",
         "https://dceo.illinois.gov/aboutdceo/grantopportunities/capitalgrants.html"
-      ],
-      "communityArea": "Irving Park"
+      ]
     },
     {
       "id": "dceo-capital-319",
@@ -581317,19 +581314,16 @@
       "logLine": "Lump-sum appropriation record · GRANT FUNDS WILL COVER THE IMPLEMENTATION OF RENOVATIONS TO THE GRANTEE-OWNED CULTURAL CENTER LOCATED AT 6808 O 6816 SOUTH HALSTED STREET IN CHICAGO, ILLINOIS.",
       "year": 2026,
       "geometry": {
-        "kind": "point",
-        "lat": 41.770320725318,
-        "lng": -87.64461888608
+        "kind": "citywide"
       },
-      "address": "6808 O 6816 SOUTH HALSTED STREET",
+      "address": null,
       "status": "appropriated",
       "recordDate": null,
       "recordProvenance": "official",
       "links": [
         "https://dceo.illinois.gov/content/dam/soi/en/web/dceo/aboutdceo/grantopportunities/documents/dceo-cap-approp-list.pdf",
         "https://dceo.illinois.gov/aboutdceo/grantopportunities/capitalgrants.html"
-      ],
-      "communityArea": "Englewood"
+      ]
     },
     {
       "id": "dceo-capital-378",
@@ -585153,6 +585147,29 @@
       "capitalClass": "state_appropriation",
       "amountAwarded": null,
       "publishedBalance": 250000,
+      "logLine": "Lump-sum appropriation record · GRANT FUNDS WILL BE UTILIZED FOR A PORTION OF THE COSTS, INCLUDING ANY THAT ARE PRIOR INCURRED, ASSOCIATED WITH THE DESIGN AND IMPLEMENTATION OF RENOVATIONS AT THE GRANTEE-OWNED JOHN M. SMYTH ELEMENTARY SCHOOL LOCATED AT 1059 WEST 13TH STREET IN CHICAGO, ILLINOIS.",
+      "year": 2026,
+      "geometry": {
+        "kind": "citywide"
+      },
+      "address": "1059 WEST 13TH STREET",
+      "status": "appropriated",
+      "recordDate": null,
+      "recordProvenance": "official",
+      "links": [
+        "https://dceo.illinois.gov/content/dam/soi/en/web/dceo/aboutdceo/grantopportunities/documents/dceo-cap-approp-list.pdf",
+        "https://dceo.illinois.gov/aboutdceo/grantopportunities/capitalgrants.html"
+      ]
+    },
+    {
+      "id": "dceo-capital-544",
+      "source": "dceo-capital",
+      "funderType": "government",
+      "funderName": "Illinois Department of Commerce and Economic Opportunity",
+      "recipient": "CHICAGO BOARD OF EDUCATION",
+      "capitalClass": "state_appropriation",
+      "amountAwarded": null,
+      "publishedBalance": 250000,
       "logLine": "Lump-sum appropriation record · GRANT FUNDS WILL BE UTILIZED FOR A PORTION OF THE COSTS, INCLUDING ANY THAT ARE PRIOR INCURRED, ASSOCIATED WITH THE REPLACEMENT AND REMOVAL OF EXISTING VCT FLOORING AND ANY NECESSARY ENVIRONMENTAL REMEDIATION AND TESTING AT THE GRANTEE-OWNED GEORGE MANIERRE ELEMENTARY SCHOOLKS FERGUSON CHILD PARENT CENTER LOCATED AT...",
       "year": 2026,
       "geometry": {
@@ -585171,7 +585188,7 @@
       "communityArea": "Near North Side"
     },
     {
-      "id": "dceo-capital-544",
+      "id": "dceo-capital-545",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585197,7 +585214,7 @@
       "communityArea": "Logan Square"
     },
     {
-      "id": "dceo-capital-545",
+      "id": "dceo-capital-546",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585220,7 +585237,7 @@
       ]
     },
     {
-      "id": "dceo-capital-546",
+      "id": "dceo-capital-547",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585243,7 +585260,7 @@
       ]
     },
     {
-      "id": "dceo-capital-547",
+      "id": "dceo-capital-548",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585266,7 +585283,7 @@
       ]
     },
     {
-      "id": "dceo-capital-548",
+      "id": "dceo-capital-549",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585289,7 +585306,7 @@
       ]
     },
     {
-      "id": "dceo-capital-549",
+      "id": "dceo-capital-550",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585312,7 +585329,7 @@
       ]
     },
     {
-      "id": "dceo-capital-550",
+      "id": "dceo-capital-551",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585335,7 +585352,7 @@
       ]
     },
     {
-      "id": "dceo-capital-551",
+      "id": "dceo-capital-552",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585358,7 +585375,7 @@
       ]
     },
     {
-      "id": "dceo-capital-552",
+      "id": "dceo-capital-553",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585381,7 +585398,7 @@
       ]
     },
     {
-      "id": "dceo-capital-553",
+      "id": "dceo-capital-554",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585404,7 +585421,7 @@
       ]
     },
     {
-      "id": "dceo-capital-554",
+      "id": "dceo-capital-555",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585427,7 +585444,7 @@
       ]
     },
     {
-      "id": "dceo-capital-555",
+      "id": "dceo-capital-556",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585450,7 +585467,7 @@
       ]
     },
     {
-      "id": "dceo-capital-556",
+      "id": "dceo-capital-557",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585473,7 +585490,7 @@
       ]
     },
     {
-      "id": "dceo-capital-557",
+      "id": "dceo-capital-558",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585496,7 +585513,7 @@
       ]
     },
     {
-      "id": "dceo-capital-558",
+      "id": "dceo-capital-559",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585519,7 +585536,7 @@
       ]
     },
     {
-      "id": "dceo-capital-559",
+      "id": "dceo-capital-560",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585542,7 +585559,7 @@
       ]
     },
     {
-      "id": "dceo-capital-560",
+      "id": "dceo-capital-561",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585565,7 +585582,7 @@
       ]
     },
     {
-      "id": "dceo-capital-561",
+      "id": "dceo-capital-562",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585588,7 +585605,7 @@
       ]
     },
     {
-      "id": "dceo-capital-562",
+      "id": "dceo-capital-563",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585611,7 +585628,7 @@
       ]
     },
     {
-      "id": "dceo-capital-563",
+      "id": "dceo-capital-564",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585634,7 +585651,7 @@
       ]
     },
     {
-      "id": "dceo-capital-564",
+      "id": "dceo-capital-565",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585657,7 +585674,7 @@
       ]
     },
     {
-      "id": "dceo-capital-565",
+      "id": "dceo-capital-566",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585680,7 +585697,7 @@
       ]
     },
     {
-      "id": "dceo-capital-566",
+      "id": "dceo-capital-567",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585703,7 +585720,7 @@
       ]
     },
     {
-      "id": "dceo-capital-567",
+      "id": "dceo-capital-568",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585726,7 +585743,7 @@
       ]
     },
     {
-      "id": "dceo-capital-568",
+      "id": "dceo-capital-569",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585749,7 +585766,7 @@
       ]
     },
     {
-      "id": "dceo-capital-569",
+      "id": "dceo-capital-570",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585772,7 +585789,7 @@
       ]
     },
     {
-      "id": "dceo-capital-570",
+      "id": "dceo-capital-571",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585795,7 +585812,7 @@
       ]
     },
     {
-      "id": "dceo-capital-571",
+      "id": "dceo-capital-572",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585818,7 +585835,7 @@
       ]
     },
     {
-      "id": "dceo-capital-572",
+      "id": "dceo-capital-573",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585841,7 +585858,7 @@
       ]
     },
     {
-      "id": "dceo-capital-573",
+      "id": "dceo-capital-574",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585864,7 +585881,7 @@
       ]
     },
     {
-      "id": "dceo-capital-574",
+      "id": "dceo-capital-575",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585887,7 +585904,7 @@
       ]
     },
     {
-      "id": "dceo-capital-575",
+      "id": "dceo-capital-576",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585910,7 +585927,7 @@
       ]
     },
     {
-      "id": "dceo-capital-576",
+      "id": "dceo-capital-577",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585933,7 +585950,7 @@
       ]
     },
     {
-      "id": "dceo-capital-577",
+      "id": "dceo-capital-578",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585956,7 +585973,7 @@
       ]
     },
     {
-      "id": "dceo-capital-578",
+      "id": "dceo-capital-579",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -585979,7 +585996,7 @@
       ]
     },
     {
-      "id": "dceo-capital-579",
+      "id": "dceo-capital-580",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586002,7 +586019,7 @@
       ]
     },
     {
-      "id": "dceo-capital-580",
+      "id": "dceo-capital-581",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586028,7 +586045,7 @@
       "communityArea": "Lake View"
     },
     {
-      "id": "dceo-capital-581",
+      "id": "dceo-capital-582",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586051,7 +586068,7 @@
       ]
     },
     {
-      "id": "dceo-capital-582",
+      "id": "dceo-capital-583",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586074,7 +586091,7 @@
       ]
     },
     {
-      "id": "dceo-capital-583",
+      "id": "dceo-capital-584",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586097,7 +586114,7 @@
       ]
     },
     {
-      "id": "dceo-capital-584",
+      "id": "dceo-capital-585",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586120,7 +586137,7 @@
       ]
     },
     {
-      "id": "dceo-capital-585",
+      "id": "dceo-capital-586",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586143,7 +586160,7 @@
       ]
     },
     {
-      "id": "dceo-capital-586",
+      "id": "dceo-capital-587",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586166,7 +586183,7 @@
       ]
     },
     {
-      "id": "dceo-capital-587",
+      "id": "dceo-capital-588",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586189,7 +586206,7 @@
       ]
     },
     {
-      "id": "dceo-capital-588",
+      "id": "dceo-capital-589",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586215,7 +586232,7 @@
       "communityArea": "Brighton Park"
     },
     {
-      "id": "dceo-capital-589",
+      "id": "dceo-capital-590",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586238,7 +586255,7 @@
       ]
     },
     {
-      "id": "dceo-capital-590",
+      "id": "dceo-capital-591",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586261,7 +586278,7 @@
       ]
     },
     {
-      "id": "dceo-capital-591",
+      "id": "dceo-capital-592",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586284,7 +586301,7 @@
       ]
     },
     {
-      "id": "dceo-capital-592",
+      "id": "dceo-capital-593",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586307,7 +586324,7 @@
       ]
     },
     {
-      "id": "dceo-capital-593",
+      "id": "dceo-capital-594",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586330,7 +586347,7 @@
       ]
     },
     {
-      "id": "dceo-capital-594",
+      "id": "dceo-capital-595",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586353,7 +586370,7 @@
       ]
     },
     {
-      "id": "dceo-capital-595",
+      "id": "dceo-capital-596",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586376,7 +586393,7 @@
       ]
     },
     {
-      "id": "dceo-capital-596",
+      "id": "dceo-capital-597",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586399,7 +586416,7 @@
       ]
     },
     {
-      "id": "dceo-capital-597",
+      "id": "dceo-capital-598",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586422,7 +586439,7 @@
       ]
     },
     {
-      "id": "dceo-capital-598",
+      "id": "dceo-capital-599",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586445,7 +586462,7 @@
       ]
     },
     {
-      "id": "dceo-capital-599",
+      "id": "dceo-capital-600",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586468,7 +586485,7 @@
       ]
     },
     {
-      "id": "dceo-capital-600",
+      "id": "dceo-capital-601",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586491,7 +586508,7 @@
       ]
     },
     {
-      "id": "dceo-capital-601",
+      "id": "dceo-capital-602",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586514,7 +586531,7 @@
       ]
     },
     {
-      "id": "dceo-capital-602",
+      "id": "dceo-capital-603",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586537,7 +586554,7 @@
       ]
     },
     {
-      "id": "dceo-capital-603",
+      "id": "dceo-capital-604",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586560,7 +586577,7 @@
       ]
     },
     {
-      "id": "dceo-capital-604",
+      "id": "dceo-capital-605",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586583,7 +586600,7 @@
       ]
     },
     {
-      "id": "dceo-capital-605",
+      "id": "dceo-capital-606",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586606,7 +586623,7 @@
       ]
     },
     {
-      "id": "dceo-capital-606",
+      "id": "dceo-capital-607",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586629,7 +586646,7 @@
       ]
     },
     {
-      "id": "dceo-capital-607",
+      "id": "dceo-capital-608",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586652,7 +586669,7 @@
       ]
     },
     {
-      "id": "dceo-capital-608",
+      "id": "dceo-capital-609",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586675,7 +586692,7 @@
       ]
     },
     {
-      "id": "dceo-capital-609",
+      "id": "dceo-capital-610",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586698,7 +586715,7 @@
       ]
     },
     {
-      "id": "dceo-capital-610",
+      "id": "dceo-capital-611",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586721,7 +586738,7 @@
       ]
     },
     {
-      "id": "dceo-capital-611",
+      "id": "dceo-capital-612",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586744,7 +586761,7 @@
       ]
     },
     {
-      "id": "dceo-capital-612",
+      "id": "dceo-capital-613",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586767,7 +586784,7 @@
       ]
     },
     {
-      "id": "dceo-capital-613",
+      "id": "dceo-capital-614",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586790,7 +586807,7 @@
       ]
     },
     {
-      "id": "dceo-capital-614",
+      "id": "dceo-capital-615",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586813,7 +586830,7 @@
       ]
     },
     {
-      "id": "dceo-capital-615",
+      "id": "dceo-capital-616",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586836,7 +586853,7 @@
       ]
     },
     {
-      "id": "dceo-capital-616",
+      "id": "dceo-capital-617",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586859,7 +586876,7 @@
       ]
     },
     {
-      "id": "dceo-capital-617",
+      "id": "dceo-capital-618",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",
@@ -586882,7 +586899,7 @@
       ]
     },
     {
-      "id": "dceo-capital-618",
+      "id": "dceo-capital-619",
       "source": "dceo-capital",
       "funderType": "government",
       "funderName": "Illinois Department of Commerce and Economic Opportunity",

@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   DCEO_CAPITAL_APPROPRIATIONS_SOURCE_URL,
   DceoCapitalAppropriationParseError,
+  describesMultipleProjectSites,
   extractExplicitProjectAddress,
   hasHighConfidenceChicagoDceoLocation,
   parseDceoCapitalAppropriationsPages,
@@ -129,6 +130,57 @@ describe("extractExplicitProjectAddress", () => {
         "Resurfacing 136TH STREET BETWEEN PULASKI AVENUE AND SPRINGFIELD AVENUE.",
       ),
     ).toBeNull();
+  });
+});
+
+describe("describesMultipleProjectSites", () => {
+  // Both of these are REAL rows from dceo_capital_appropriations.csv that the
+  // match-count multi-site test missed, so they shipped as single confident
+  // points with the drawer asserting "Sited — plotted at a real address".
+  it("flags two house numbers sharing one street suffix (the shipped false negatives)", () => {
+    // IN HIS HANDS GLOBAL MINISTRIES — the state's own typo for "6808 OR 6816".
+    // The interior-token group swallows "O 6816" into one address string.
+    expect(
+      describesMultipleProjectSites(
+        "A GRANTEE-OWNED CULTURAL CENTER LOCATED AT 6808 O 6816 SOUTH HALSTED STREET IN CHICAGO, ILLINOIS.",
+      ),
+    ).toBe(true);
+    // Irving Park Community Food Pantry — only "4113 N PULASKI AVE" matched;
+    // 4111 was dropped silently.
+    expect(
+      describesMultipleProjectSites(
+        "PANTRY AND OTHER CAPITAL IMPROVEMENTS AT 4111/4113 N PULASKI AVE, CHICAGO, IL.",
+      ),
+    ).toBe(true);
+  });
+
+  it("flags separators that BLOCK the earlier match so only the last number survives", () => {
+    // "&" is not in the interior-token class, so no match can begin at 1200 and
+    // the address regex returns exactly one address, 4500 SOUTH HALSTED STREET.
+    expect(
+      describesMultipleProjectSites(
+        "GRANT FUNDS WILL BE USED AT 1200 & 4500 SOUTH HALSTED STREET",
+      ),
+    ).toBe(true);
+    expect(
+      describesMultipleProjectSites(
+        "GRANT FUNDS WILL BE USED AT 1200 AND 4500 SOUTH HALSTED STREET",
+      ),
+    ).toBe(true);
+  });
+
+  it("does not flag a single address, a house-number RANGE, or unrelated number pairs", () => {
+    expect(describesMultipleProjectSites("LOCATED AT 1059 WEST 13TH STREET")).toBe(false);
+    // A hyphenated range is ONE address, not two sites.
+    expect(describesMultipleProjectSites("1200-1210 SOUTH HALSTED STREET")).toBe(false);
+    // Requiring a street suffix after the number pair keeps years and dollar
+    // figures from tripping the guard.
+    expect(
+      describesMultipleProjectSites("FOR FY2024 AND 2025 OPERATIONS AT 800 SOUTH WELLS STREET"),
+    ).toBe(false);
+    expect(
+      describesMultipleProjectSites("COSTS OF $10,000 AND $20,000 AT 55 EAST MONROE STREET"),
+    ).toBe(false);
   });
 });
 

@@ -717,6 +717,21 @@ describe("private-data location guard", () => {
 const EXPORT_PATH = path.join(process.cwd(), "data/private/community-investment.json");
 const EXPORT_EXISTS = existsSync(EXPORT_PATH);
 
+/**
+ * Explicit timeout for the invariant tests that walk EVERY record in the
+ * committed export (24k+ records × several `expect()` calls each, out of a
+ * ~17 MB JSON). Vitest's 5000 ms default was measured crossing under full-suite
+ * worker contention — the suite went red on a timeout unrelated to the change
+ * under test, then green on re-run, which trains a team to re-run rather than
+ * read the failure.
+ *
+ * Deliberately per-test rather than a global `testTimeout` in vitest.config.ts:
+ * a global bump would also hide a real hang in the ~1,500 fast tests that should
+ * still fail loudly at the default. Only the tests that genuinely scale with the
+ * export's size opt in.
+ */
+const COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS = 30_000;
+
 describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
   it("loadCommunityInvestment returns the documented top-level shape", () => {
     const data = loadCommunityInvestment();
@@ -748,20 +763,20 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
         expect(r.geometry).toEqual({ kind: "citywide" });
       }
     }
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("record ids are unique", () => {
     const data = loadCommunityInvestment()!;
     const ids = data.records.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("counts sum to the record total and dollars match the awarded sum", () => {
     const data = loadCommunityInvestment()!;
     const summed = Object.values(data.meta.counts).reduce((a, b) => a + b, 0);
     expect(summed).toBe(data.records.length);
     expect(data.meta.totalDollarsAwarded).toBe(sumAwardedDollars(data.records));
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("stores historical recovery lineage once and keeps its amounts out of amountAwarded", () => {
     const data = loadCommunityInvestment()!;
@@ -780,7 +795,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
       expect(record.amountAwarded).toBeNull();
       expect(record.recovery?.historicalAmount?.value).toBeGreaterThanOrEqual(0);
     }
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("announcedCapitalTotal matches the announcedInvestment sum and is a DIFFERENT figure from awarded", () => {
     const data = loadCommunityInvestment()!;
@@ -791,7 +806,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     // announced capital lands in the expected ~$67–75B band.
     expect(data.meta.announcedCapitalTotal).toBeGreaterThan(60_000_000_000);
     expect(data.meta.announcedCapitalTotal).toBeLessThan(80_000_000_000);
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("every development record carries NO awarded dollars (announced capital only)", () => {
     const data = loadCommunityInvestment()!;
@@ -804,13 +819,13 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
         expect(r.source).toBe("development");
       }
     }
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("IRON RULE: the raw committed text carries no banned derived-figure key", () => {
     // Read the raw file (not the typed loader) so a hand-edit can't slip past.
     const parsed = JSON.parse(readFileSync(EXPORT_PATH, "utf8"));
     expect(findBannedFigureKeys(parsed)).toEqual([]);
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   // ── Capital-spine invariants over the committed export ──────────────────────
 
@@ -831,7 +846,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     for (const r of data.records) {
       if (r.capitalClass !== "grant") expect(r.amountAwarded).toBeNull();
     }
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("carries all five capital classes and each record's money lives in exactly one field", () => {
     const data = loadCommunityInvestment()!;
@@ -877,7 +892,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
       "tax_credit",
       "tif_subsidy",
     ]);
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("each new capital total matches an independent recompute from its own field", () => {
     const data = loadCommunityInvestment()!;
@@ -889,7 +904,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(data.meta.totalFederalProgram).toBeGreaterThan(0);
     expect(data.meta.totalCreditCapital).toBeGreaterThan(0);
     expect(data.meta.totalAuthorizedTif).not.toBe(data.meta.totalDollarsAwarded);
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("every tif/cdbg-home/lihtc record is a PLOTTABLE point (point-quality rule)", () => {
     const data = loadCommunityInvestment()!;
@@ -898,7 +913,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
         expect(r.geometry.kind).toBe("point");
       }
     }
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("NMTC is CA-stamped citywide: never a point, but carries a communityArea for analysis lists", () => {
     const data = loadCommunityInvestment()!;
@@ -917,12 +932,54 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(stamped.length).toBe(data.meta.nmtcCitywideStamped);
     expect(data.meta.nmtcCitywideStamped + data.meta.nmtcUnstamped).toBe(nmtc.length);
     expect(stamped.length).toBeGreaterThan(0);
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("HUD out-of-bbox drop count is recorded (26 activities dropped)", () => {
     const data = loadCommunityInvestment()!;
     expect(data.meta.droppedHudOutOfBbox).toBe(26);
   });
+
+  it("a DCEO out-of-bounds geocode is HELD CITYWIDE, never deleted from the export", () => {
+    const data = loadCommunityInvestment()!;
+    const dceo = data.records.filter((r) => r.source === "dceo-capital");
+    // The counters must PARTITION the retained records, which is only true if
+    // no path deletes a row. An out-of-bounds geocode previously ran `continue`,
+    // so the record vanished and this identity silently held on a smaller set.
+    expect(dceo.length).toBe(data.meta.dceoChicagoRecords);
+    expect(data.meta.dceoPointRecords + data.meta.dceoCitywideRecords).toBe(dceo.length);
+    expect(data.meta.dceoPointRecords).toBe(
+      dceo.filter((r) => r.geometry.kind === "point").length,
+    );
+
+    // The concrete row the review caught: a real $250,000 Board of Education
+    // appropriation whose Census geocode landed in Lake County, ~55 km north.
+    // The POINT is rejected; the appropriation stays, unplotted and auditable.
+    const outOfBounds = dceo.filter((r) => r.address === "1059 WEST 13TH STREET");
+    expect(outOfBounds).toHaveLength(1);
+    expect(outOfBounds[0].recipient).toContain("BOARD OF EDUCATION");
+    expect(outOfBounds[0].geometry).toEqual({ kind: "citywide" });
+    expect(outOfBounds[0].publishedBalance).toBe(250_000);
+    expect(data.meta.dceoAddressOutOfBounds).toBeGreaterThan(0);
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
+
+  it("multi-site DCEO rows stay UNPLOTTED, per the README location-precision contract", () => {
+    const data = loadCommunityInvestment()!;
+    const dceo = data.records.filter((r) => r.source === "dceo-capital");
+    // Two house numbers sharing one street suffix collapse to a single regex
+    // match, so these two shipped as confident points at one of the two sites.
+    for (const name of ["IN HIS HANDS GLOBAL MINISTRIES", "Irving Park Community Food Pantry"]) {
+      const row = dceo.find((r) => r.recipient.includes(name));
+      expect(row, `expected a DCEO row for ${name}`).toBeDefined();
+      expect(row!.geometry).toEqual({ kind: "citywide" });
+      // No safe single address survives, so none is published on the record.
+      expect(row!.address).toBeNull();
+    }
+    expect(data.meta.dceoMultiSiteHeldCitywide).toBeGreaterThanOrEqual(2);
+    // Every DCEO POINT carries exactly one source-literal address.
+    for (const r of dceo) {
+      if (r.geometry.kind === "point") expect(r.address).toBeTruthy();
+    }
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 });
 
 // ── Committed capital-context.json (context aggregates, banned-key rail) ───────
