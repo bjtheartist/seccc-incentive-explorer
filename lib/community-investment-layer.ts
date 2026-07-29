@@ -23,12 +23,45 @@ import type {
   CommunityInvestmentExport,
   CommunityInvestmentRecord,
   FunderType,
+  InvestmentSource,
   InvestmentStatus,
 } from "@/lib/community-investment";
 import type { FunderHq } from "@/lib/investment-deck-modes";
+import { publicInvestmentOverlayIdForSource } from "@/lib/public-investment-overlays";
 
 /** The gated dataset endpoint the layer fetches when toggled on. */
 export const COMMUNITY_INVESTMENT_ENDPOINT = "/api/owner-file/investment";
+
+export type HistoricalRecoveryRecipientSource =
+  | "cook-source-2023"
+  | "illinois-b2b";
+
+export interface HistoricalRecoveryRecipient {
+  id: string;
+  businessName: string;
+  /** Source-published amount from a completed historical program. */
+  historicalAwardAmount: number | null;
+}
+export type CountyReliefRecipient = HistoricalRecoveryRecipient;
+
+export type HistoricalRecoveryRecipientsStatus =
+  | "ready"
+  | "unauthorized"
+  | "unavailable";
+export type CountyReliefRecipientsStatus = HistoricalRecoveryRecipientsStatus;
+
+export interface HistoricalRecoveryRecipientsResult {
+  status: HistoricalRecoveryRecipientsStatus;
+  sourceId: HistoricalRecoveryRecipientSource;
+  zipCode: string;
+  programName: string;
+  programStatus: "complete";
+  year: number;
+  recipientCount: number;
+  sourceLink: string | null;
+  recipients: HistoricalRecoveryRecipient[];
+}
+export type CountyReliefRecipientsResult = HistoricalRecoveryRecipientsResult;
 
 /**
  * Canonical funder-type order wherever the three are listed together (legend
@@ -53,6 +86,8 @@ export const FUNDER_TYPE_LABELS: Record<FunderType, string> = {
 export const INVESTMENT_STATUS_LABELS: Record<InvestmentStatus, string> = {
   completed: "Completed",
   awarded: "Awarded",
+  disbursed: "Disbursed",
+  appropriated: "Appropriation record",
   announced: "Announced",
   proposed: "Proposed",
   under_construction: "Under construction",
@@ -98,6 +133,7 @@ export const CAPITAL_CLASS_ORDER: CapitalClass[] = [
   "tif_subsidy",
   "federal_program",
   "tax_credit",
+  "state_appropriation",
 ];
 
 /** Short capital-class labels for the legend sub-key + the record drawer chip. */
@@ -106,6 +142,7 @@ export const CAPITAL_CLASS_LABELS: Record<CapitalClass, string> = {
   tif_subsidy: "TIF subsidy",
   federal_program: "Federal program",
   tax_credit: "Tax credit",
+  state_appropriation: "State appropriation",
 };
 
 /**
@@ -121,6 +158,7 @@ export const CAPITAL_CLASS_MONEY_NOUN: Record<CapitalClass, string> = {
   tif_subsidy: "Authorized",
   federal_program: "Federal program funding",
   tax_credit: "Tax-credit allocation",
+  state_appropriation: "Published appropriation balance",
 };
 
 /**
@@ -139,6 +177,7 @@ export const CAPITAL_CLASS_OUTLINE: Record<CapitalClass, string> = {
   tif_subsidy: "#D97706",
   federal_program: "#0C1B33",
   tax_credit: "#DB2777",
+  state_appropriation: "#0F766E",
 };
 
 const CAPITAL_CLASS_ORDER_STRINGS: readonly string[] = CAPITAL_CLASS_ORDER;
@@ -191,6 +230,8 @@ export const DEFAULT_INVESTMENT_YEAR_RANGE = "all";
  */
 export interface InvestmentPointProps {
   id: string;
+  /** Canonical source id; optional only for legacy/test payload tolerance. */
+  source?: InvestmentSource;
   recipient: string;
   funderName: string;
   funderType: FunderType;
@@ -211,6 +252,11 @@ export interface InvestmentPointProps {
   /** LIHTC/NMTC tax-credit capital (tax_credit), or null. A DIFFERENT instrument. */
   creditAmount: number | null;
   /**
+   * DCEO source-published appropriation balance. Not an active opportunity,
+   * award, payment, project budget, or estimate of dollars a user could receive.
+   */
+  publishedBalance?: number | null;
+  /**
    * Announced private DEVELOPMENT capital, or null — a SEPARATE measure from
    * amountAwarded, carried so the popup can label a development's figure
    * "Announced" (never "Awarded") and the Dots-mode radius can size a
@@ -225,6 +271,10 @@ export interface InvestmentPointProps {
   communityArea: string;
   /** First http(s) source link, or "" when the record carries none. */
   sourceLink: string;
+  /** Closed-program source-reported amount, kept separate from amountAwarded. */
+  historicalRecoveryAmount?: number | null;
+  /** Recovery source id when this point belongs to a historical program. */
+  recoverySourceId?: string;
   /**
    * Precomputed Dots-mode circle radius (px) for a DEVELOPMENT record, sized by
    * announcedInvestment over the development records only (sqrt-domain, 4–18px).
@@ -285,6 +335,7 @@ export function investmentRecordsToPointFeatures(
       geometry: { type: "Point", coordinates: [r.geometry.lng, r.geometry.lat] },
       properties: {
         id: r.id,
+        source: r.source,
         recipient: r.recipient,
         funderName: r.funderName,
         funderType: r.funderType,
@@ -292,12 +343,15 @@ export function investmentRecordsToPointFeatures(
         amountAwarded: r.amountAwarded,
         authorizedAmount: r.authorizedAmount ?? null,
         creditAmount: r.creditAmount ?? null,
+        publishedBalance: r.publishedBalance ?? null,
         announcedInvestment: r.announcedInvestment ?? null,
         logLine: r.logLine,
         year: r.year,
         status: r.status,
         communityArea: r.communityArea ?? "",
         sourceLink: r.links.find((l) => /^https?:\/\//i.test(l)) ?? "",
+        historicalRecoveryAmount: r.recovery?.historicalAmount?.value ?? null,
+        recoverySourceId: r.recovery?.sourceId,
       },
     });
   }
@@ -322,11 +376,15 @@ export function investmentRecordsToPointFeatures(
   // federal_program size by authorizedAmount; tax_credit sizes by creditAmount.
   // A per-CLASS domain keeps each instrument's magnitudes comparable within itself
   // (the outline color already tells the classes apart).
-  for (const cls of ["tif_subsidy", "federal_program", "tax_credit"] as const) {
+  for (const cls of ["tif_subsidy", "federal_program", "tax_credit", "state_appropriation"] as const) {
     const ofClass = features.filter((f) => f.properties.capitalClass === cls);
     if (ofClass.length === 0) continue;
     const moneyOf = (p: InvestmentPointProps): number | null =>
-      p.capitalClass === "tax_credit" ? p.creditAmount : p.authorizedAmount;
+      p.capitalClass === "tax_credit"
+        ? p.creditAmount
+        : p.capitalClass === "state_appropriation"
+          ? p.publishedBalance ?? null
+          : p.authorizedAmount;
     const scale = makeDevelopmentDotRadiusScale(ofClass.map((f) => moneyOf(f.properties)));
     for (const f of ofClass) f.properties.radiusPx = scale(moneyOf(f.properties));
   }
@@ -390,6 +448,8 @@ export const MEGAPROJECT_STATUS_GROUP_BY_STATUS: Record<InvestmentStatus, Megapr
   announced: "planned",
   proposed: "planned",
   awarded: "planned",
+  disbursed: "planned",
+  appropriated: "planned",
   stalled: "stalled",
   cancelled: "stalled",
 };
@@ -645,6 +705,7 @@ export interface CitywideInvestmentSummary {
  * commitments" figure in lockstep with the plotted dots under the same filters.
  */
 export interface CitywideInvestmentEntry {
+  source: InvestmentSource;
   funderType: FunderType;
   year: number | null;
   /** Real awarded dollars, or null — NEVER a derived figure. */
@@ -658,7 +719,12 @@ export function citywideInvestmentEntries(
   const out: CitywideInvestmentEntry[] = [];
   for (const r of records) {
     if (r.geometry.kind === "citywide") {
-      out.push({ funderType: r.funderType, year: r.year, amountAwarded: r.amountAwarded });
+      out.push({
+        source: r.source,
+        funderType: r.funderType,
+        year: r.year,
+        amountAwarded: r.amountAwarded,
+      });
     }
   }
   return out;
@@ -712,6 +778,14 @@ export interface CommunityInvestmentLayerResult {
   citywide: CitywideInvestmentSummary;
   /** Filterable citywide entries so the legend note re-scopes with the filters. */
   citywideEntries: CitywideInvestmentEntry[];
+  /** ZIP-level aggregates for the completed Cook County 2023 Source Grant. */
+  countyReliefByZip: CountyReliefZipSummary[];
+  /** ZIP-level aggregates for Illinois Back to Business historical grants. */
+  stateRecoveryByZip: HistoricalRecoveryZipSummary[];
+  /** DCEO Chicago records kept citywide because the source cannot support a safe point. */
+  stateCapitalCitywideCount: number;
+  /** SBA RRF Chicago rows held unplotted because no safe point was available. */
+  federalRestaurantReliefCitywideCount: number;
   /**
    * Recipient names of the citywide (non-plotting) DEVELOPMENT records — the
    * megaprojects held citywide rather than plotted (e.g. Advocate's South Side
@@ -734,6 +808,10 @@ const EMPTY_LAYER_RESULT = (status: CommunityInvestmentLayerStatus): CommunityIn
   presentCapitalClasses: [],
   citywide: { count: 0, totalDollars: 0 },
   citywideEntries: [],
+  countyReliefByZip: [],
+  stateRecoveryByZip: [],
+  stateCapitalCitywideCount: 0,
+  federalRestaurantReliefCitywideCount: 0,
   citywideDevelopmentNames: [],
   funderHqs: [],
 });
@@ -756,28 +834,216 @@ export async function fetchCommunityInvestmentLayer(opts?: {
   fetchImpl?: typeof fetch;
 }): Promise<CommunityInvestmentLayerResult> {
   const doFetch = opts?.fetchImpl ?? fetch;
-  const url = opts?.source
-    ? `${COMMUNITY_INVESTMENT_ENDPOINT}?source=${encodeURIComponent(opts.source)}`
-    : COMMUNITY_INVESTMENT_ENDPOINT;
+  const params = new URLSearchParams({ view: "map" });
+  if (opts?.source) params.set("source", opts.source);
+  const url = `${COMMUNITY_INVESTMENT_ENDPOINT}?${params.toString()}`;
 
   const res = await doFetch(url, opts?.signal ? { signal: opts.signal } : undefined);
   if (res.status === 401) return EMPTY_LAYER_RESULT("unauthorized");
   if (!res.ok) return EMPTY_LAYER_RESULT("unavailable");
 
-  const data = (await res.json()) as CommunityInvestmentExport & { funderHqs?: FunderHq[] };
+  const data = (await res.json()) as CommunityInvestmentExport & {
+    funderHqs?: FunderHq[];
+    countyReliefByZip?: CountyReliefZipSummary[];
+    stateRecoveryByZip?: HistoricalRecoveryZipSummary[];
+    stateCapitalCitywideCount?: number;
+    federalRestaurantReliefCitywideCount?: number;
+  };
   const records = Array.isArray(data?.records) ? data.records : [];
   const pointFeatures = investmentRecordsToPointFeatures(records);
-  const citywideEntries = citywideInvestmentEntries(records);
+  const basePointFeatures = pointFeatures.filter(
+    (feature) => publicInvestmentOverlayIdForSource(feature.properties.source) === null,
+  );
+  const allCitywideEntries = citywideInvestmentEntries(records);
+  const citywideEntries = allCitywideEntries.filter(
+    (entry) => publicInvestmentOverlayIdForSource(entry.source) === null,
+  );
+  const countyReliefByZip = Array.isArray(data.countyReliefByZip)
+    ? data.countyReliefByZip
+    : summarizeCountyReliefByZip(records);
+  const stateRecoveryByZip = Array.isArray(data.stateRecoveryByZip)
+    ? data.stateRecoveryByZip
+    : summarizeHistoricalRecoveryByZip(records, "illinois-b2b");
   return {
     status: "ready",
     pointFeatures,
-    presentFunderTypes: presentFunderTypesInOrder(pointFeatures.map((f) => f.properties.funderType)),
+    presentFunderTypes: presentFunderTypesInOrder(basePointFeatures.map((f) => f.properties.funderType)),
     presentCapitalClasses: presentCapitalClassesInOrder(
-      pointFeatures.map((f) => f.properties.capitalClass),
+      basePointFeatures.map((f) => f.properties.capitalClass),
     ),
     citywide: summarizeCitywideEntries(citywideEntries, null),
     citywideEntries,
+    countyReliefByZip,
+    stateRecoveryByZip,
+    stateCapitalCitywideCount:
+      typeof data.stateCapitalCitywideCount === "number"
+        ? data.stateCapitalCitywideCount
+        : records.filter(
+            (record) => record.source === "dceo-capital" && record.geometry.kind === "citywide",
+          ).length,
+    federalRestaurantReliefCitywideCount:
+      typeof data.federalRestaurantReliefCitywideCount === "number"
+        ? data.federalRestaurantReliefCitywideCount
+        : records.filter(
+            (record) => record.source === "sba-rrf" && record.geometry.kind === "citywide",
+          ).length,
     citywideDevelopmentNames: citywideDevelopmentProjectNames(records),
     funderHqs: Array.isArray(data?.funderHqs) ? data.funderHqs : [],
   };
+}
+
+const HISTORICAL_RECOVERY_RECIPIENT_CONFIG: Readonly<
+  Record<
+    HistoricalRecoveryRecipientSource,
+    { programName: string; year: number }
+  >
+> = {
+  "cook-source-2023": {
+    programName: "Cook County 2023 Source Grant",
+    year: 2023,
+  },
+  "illinois-b2b": {
+    programName: "Illinois Back to Business Grant Program",
+    year: 2022,
+  },
+};
+
+/**
+ * Fetch one ZIP's historical recipients only after an authenticated admin asks
+ * for the drilldown. The normal map request receives aggregates only, so the
+ * full ZIP-level recipient lists are never shipped during map load.
+ */
+export async function fetchHistoricalRecoveryRecipients(
+  sourceId: HistoricalRecoveryRecipientSource,
+  zipCode: string,
+  opts?: {
+    signal?: AbortSignal;
+    fetchImpl?: typeof fetch;
+  },
+): Promise<HistoricalRecoveryRecipientsResult> {
+  if (!/^\d{5}$/.test(zipCode)) {
+    throw new Error("A five-digit ZIP code is required");
+  }
+
+  const config = HISTORICAL_RECOVERY_RECIPIENT_CONFIG[sourceId];
+  const emptyResult = (
+    status: Exclude<HistoricalRecoveryRecipientsStatus, "ready">,
+  ): HistoricalRecoveryRecipientsResult => ({
+    status,
+    sourceId,
+    zipCode,
+    programName: config.programName,
+    programStatus: "complete",
+    year: config.year,
+    recipientCount: 0,
+    sourceLink: null,
+    recipients: [],
+  });
+
+  const doFetch = opts?.fetchImpl ?? fetch;
+  const params = new URLSearchParams({
+    view: "historical-recovery-recipients",
+    source: sourceId,
+    zip: zipCode,
+  });
+  const res = await doFetch(
+    `${COMMUNITY_INVESTMENT_ENDPOINT}?${params.toString()}`,
+    opts?.signal ? { signal: opts.signal } : undefined,
+  );
+  if (res.status === 401) return emptyResult("unauthorized");
+  if (!res.ok) return emptyResult("unavailable");
+
+  const data = (await res.json()) as Partial<HistoricalRecoveryRecipientsResult>;
+  const recipients = Array.isArray(data.recipients)
+    ? data.recipients.filter(
+        (recipient): recipient is HistoricalRecoveryRecipient =>
+          typeof recipient?.id === "string" &&
+          typeof recipient.businessName === "string" &&
+          (recipient.historicalAwardAmount === null ||
+            typeof recipient.historicalAwardAmount === "number"),
+      )
+    : [];
+
+  return {
+    status: "ready",
+    sourceId,
+    zipCode,
+    programName:
+      typeof data.programName === "string"
+        ? data.programName
+        : config.programName,
+    programStatus: "complete",
+    year: typeof data.year === "number" ? data.year : config.year,
+    recipientCount: recipients.length,
+    sourceLink:
+      typeof data.sourceLink === "string" && /^https?:\/\//i.test(data.sourceLink)
+        ? data.sourceLink
+        : null,
+    recipients,
+  };
+}
+
+/** Backward-compatible wrapper retained for the existing Cook County callers. */
+export function fetchCountyReliefRecipients(
+  zipCode: string,
+  opts?: {
+    signal?: AbortSignal;
+    fetchImpl?: typeof fetch;
+  },
+): Promise<CountyReliefRecipientsResult> {
+  return fetchHistoricalRecoveryRecipients("cook-source-2023", zipCode, opts);
+}
+
+export interface HistoricalRecoveryZipSummary {
+  sourceId: HistoricalRecoveryRecipientSource;
+  programName: string;
+  zipCode: string;
+  awardCount: number;
+  /** Historical source-reported dollars, never projected funding. */
+  totalDisbursed: number;
+  year: number;
+  sourceLink: string;
+}
+export type CountyReliefZipSummary = HistoricalRecoveryZipSummary;
+
+/**
+ * Aggregate the recipient-level Cook County list before it reaches the ZIP map.
+ * The official file publishes ZIP but no street address, so plotting recipient
+ * points would require guessing. ZIP aggregation preserves the source's location
+ * precision and keeps names out of the polygon properties.
+ */
+export function summarizeCountyReliefByZip(
+  records: readonly CommunityInvestmentRecord[],
+): CountyReliefZipSummary[] {
+  return summarizeHistoricalRecoveryByZip(records, "cook-source-2023");
+}
+
+export function summarizeHistoricalRecoveryByZip(
+  records: readonly CommunityInvestmentRecord[],
+  sourceId: HistoricalRecoveryRecipientSource,
+): HistoricalRecoveryZipSummary[] {
+  const config = HISTORICAL_RECOVERY_RECIPIENT_CONFIG[sourceId];
+  const byZip = new Map<string, HistoricalRecoveryZipSummary>();
+  for (const record of records) {
+    if (record.source !== sourceId || record.geometry.kind !== "zip_area") continue;
+    const zipCode = record.geometry.zip;
+    const current = byZip.get(zipCode) ?? {
+      sourceId,
+      programName: config.programName,
+      zipCode,
+      awardCount: 0,
+      totalDisbursed: 0,
+      year: config.year,
+      sourceLink: record.links.find((link) => /^https?:\/\//i.test(link)) ?? "",
+    };
+    current.awardCount += 1;
+    const historicalAmount =
+      record.recovery?.historicalAmount?.value ?? record.amountAwarded;
+    if (historicalAmount != null) current.totalDisbursed += historicalAmount;
+    if (!current.sourceLink) {
+      current.sourceLink = record.links.find((link) => /^https?:\/\//i.test(link)) ?? "";
+    }
+    byZip.set(zipCode, current);
+  }
+  return [...byZip.values()].sort((a, b) => a.zipCode.localeCompare(b.zipCode));
 }

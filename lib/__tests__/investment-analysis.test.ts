@@ -5,6 +5,7 @@ import {
   buildFlowRows,
   buildInvestmentIndex,
   computeInvestmentFindings,
+  locationConfidenceForGeometry,
   median,
   SINCE_YEAR,
   summarizeMajorDevelopments,
@@ -389,6 +390,39 @@ describe("analyzeCommunityArea grant-class firewall (SourceBars / recordCount)",
   });
 });
 
+describe("historical recovery analysis firewall", () => {
+  const withRecovery: CommunityInvestmentRecord[] = [
+    ...RECORDS,
+    rec({
+      id: "rrf-history",
+      source: "sba-rrf",
+      funderName: "SBA Restaurant Revitalization Fund",
+      amountAwarded: null,
+      year: 2021,
+      status: "disbursed",
+      communityArea: "Alpha",
+      recovery: {
+        sourceId: "sba-rrf",
+        historicalAmount: {
+          value: 450_000,
+          currency: "USD",
+          assistanceType: "grant",
+        },
+      },
+    }),
+  ];
+
+  it("does not change ordinary rankings, counts, trends, or source bars", () => {
+    expect(buildInvestmentIndex(withRecovery, GEN)).toEqual(
+      buildInvestmentIndex(RECORDS, GEN),
+    );
+    const analysis = analyzeCommunityArea(withRecovery, "Alpha", GEN)!;
+    expect(analysis.recordCount).toBe(5);
+    expect(analysis.totalAwarded).toBe(350_000);
+    expect(analysis.bySource.map((entry) => entry.source)).not.toContain("sba-rrf");
+  });
+});
+
 describe("computeInvestmentFindings", () => {
   const a = analyzeCommunityArea(RECORDS, "Alpha", GEN)!;
   const findings = computeInvestmentFindings(a);
@@ -444,5 +478,15 @@ describe("formatCompactDollars boundary rollover", () => {
   });
   it("negative boundary mirrors", () => {
     expect(formatCompactDollars(-999_900)).toBe("$-1.0M");
+  });
+});
+
+describe("locationConfidenceForGeometry", () => {
+  it("names ONE tier per geometry kind, and never reports a ZIP aggregate as citywide", () => {
+    expect(locationConfidenceForGeometry({ kind: "point", lat: 41.7, lng: -87.6 })).toBe("sited");
+    // Previously `point ? "sited" : "citywide"` collapsed this into "citywide",
+    // understating a real ZIP-level location claim as "somewhere in Chicago".
+    expect(locationConfidenceForGeometry({ kind: "zip_area", zip: "60617" })).toBe("zip_area");
+    expect(locationConfidenceForGeometry({ kind: "citywide" })).toBe("citywide");
   });
 });

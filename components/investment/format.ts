@@ -66,6 +66,10 @@ export const SOURCE_LABELS: Record<InvestmentSource, string> = {
   "cdbg-home": "HUD CDBG/HOME activities",
   lihtc: "Low-Income Housing Tax Credit",
   nmtc: "New Markets Tax Credit",
+  "cook-source-2023": "Cook County 2023 Source Grant",
+  "illinois-b2b": "Illinois Back to Business grants",
+  "sba-rrf": "SBA Restaurant Revitalization Fund",
+  "dceo-capital": "Illinois DCEO capital appropriations",
 };
 
 /** Short program label for tight table cells. */
@@ -80,6 +84,10 @@ export const SOURCE_LABELS_SHORT: Record<InvestmentSource, string> = {
   "cdbg-home": "CDBG/HOME",
   lihtc: "LIHTC",
   nmtc: "NMTC",
+  "cook-source-2023": "County relief",
+  "illinois-b2b": "Illinois B2B",
+  "sba-rrf": "SBA RRF",
+  "dceo-capital": "DCEO capital",
 };
 
 /**

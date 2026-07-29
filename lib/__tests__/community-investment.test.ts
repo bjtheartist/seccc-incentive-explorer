@@ -70,6 +70,10 @@ describe("source / funderType / status enums", () => {
     expect(SOURCE_FUNDER_TYPE.cdg).toBe("government");
     expect(SOURCE_FUNDER_TYPE.foundation).toBe("philanthropic");
     expect(SOURCE_FUNDER_TYPE.development).toBe("private_development");
+    expect(SOURCE_FUNDER_TYPE["cook-source-2023"]).toBe("government");
+    expect(SOURCE_FUNDER_TYPE["illinois-b2b"]).toBe("government");
+    expect(SOURCE_FUNDER_TYPE["sba-rrf"]).toBe("government");
+    expect(SOURCE_FUNDER_TYPE["dceo-capital"]).toBe("government");
   });
 
   it("the enum arrays carry exactly the documented members", () => {
@@ -84,11 +88,17 @@ describe("source / funderType / status enums", () => {
       "cdbg-home",
       "lihtc",
       "nmtc",
+      "cook-source-2023",
+      "illinois-b2b",
+      "sba-rrf",
+      "dceo-capital",
     ]);
     expect([...FUNDER_TYPES]).toEqual(["government", "philanthropic", "private_development"]);
     expect([...INVESTMENT_STATUSES]).toEqual([
       "completed",
       "awarded",
+      "disbursed",
+      "appropriated",
       "announced",
       "proposed",
       "under_construction",
@@ -99,7 +109,7 @@ describe("source / funderType / status enums", () => {
     ]);
   });
 
-  it("the four capital-spine sources map to government funderType", () => {
+  it("the original four capital-spine sources map to government funderType", () => {
     for (const s of ["tif", "cdbg-home", "lihtc", "nmtc"] as const) {
       expect(SOURCE_FUNDER_TYPE[s]).toBe("government");
     }
@@ -109,8 +119,14 @@ describe("source / funderType / status enums", () => {
 // ── capitalClass axis (grant / tif_subsidy / federal_program / tax_credit) ─────
 
 describe("capitalClass axis", () => {
-  it("CAPITAL_CLASSES carries exactly the four documented members", () => {
-    expect([...CAPITAL_CLASSES]).toEqual(["grant", "tif_subsidy", "federal_program", "tax_credit"]);
+  it("CAPITAL_CLASSES carries exactly the five documented members", () => {
+    expect([...CAPITAL_CLASSES]).toEqual([
+      "grant",
+      "tif_subsidy",
+      "federal_program",
+      "tax_credit",
+      "state_appropriation",
+    ]);
   });
 
   it("SOURCE_CAPITAL_CLASS covers every source and maps to a valid capitalClass", () => {
@@ -128,6 +144,8 @@ describe("capitalClass axis", () => {
     expect(SOURCE_CAPITAL_CLASS["cdbg-home"]).toBe("federal_program");
     expect(SOURCE_CAPITAL_CLASS.lihtc).toBe("tax_credit");
     expect(SOURCE_CAPITAL_CLASS.nmtc).toBe("tax_credit");
+    expect(SOURCE_CAPITAL_CLASS["cook-source-2023"]).toBe("grant");
+    expect(SOURCE_CAPITAL_CLASS["dceo-capital"]).toBe("state_appropriation");
   });
 });
 
@@ -140,6 +158,16 @@ describe("per-field capital totals (authorized / credit / awarded firewall)", ()
     rec({ source: "cdbg-home", funderType: "government", capitalClass: "federal_program", amountAwarded: null, authorizedAmount: 200_000, status: "completed", ...over });
   const credit = (over: Partial<CommunityInvestmentRecord> & { id: string }) =>
     rec({ source: "lihtc", funderType: "government", capitalClass: "tax_credit", amountAwarded: null, creditAmount: 9_000_000, status: "awarded", ...over });
+  const appropriation = (over: Partial<CommunityInvestmentRecord> & { id: string }) =>
+    rec({
+      source: "dceo-capital",
+      funderType: "government",
+      capitalClass: "state_appropriation",
+      amountAwarded: null,
+      publishedBalance: 750_000,
+      status: "appropriated",
+      ...over,
+    });
 
   const MIX: CommunityInvestmentRecord[] = [
     rec({ id: "g1", amountAwarded: 250_000 }), // grant
@@ -148,6 +176,7 @@ describe("per-field capital totals (authorized / credit / awarded firewall)", ()
     hud({ id: "h1", authorizedAmount: 200_000 }),
     credit({ id: "c1", creditAmount: 9_000_000 }),
     credit({ id: "c2", source: "nmtc", creditAmount: 1_000_000, geometry: { kind: "citywide" } }),
+    appropriation({ id: "s1" }),
   ];
 
   it("sumAuthorizedByClass sums ONLY the requested class's authorizedAmount", () => {
@@ -175,8 +204,62 @@ describe("per-field capital totals (authorized / credit / awarded firewall)", ()
     expect(out.meta.totalAuthorizedTif).toBe(8_000_000);
     expect(out.meta.totalFederalProgram).toBe(200_000);
     expect(out.meta.totalCreditCapital).toBe(10_000_000);
-    // The four totals are provably disjoint — no dollar appears in two of them.
+    // The four headline totals are provably disjoint, and DCEO's source-published
+    // balance is deliberately not promoted into a fifth headline total.
+    expect("totalStateAppropriation" in out.meta).toBe(false);
     expect(findBannedFigureKeys(out)).toEqual([]);
+  });
+
+  it("keeps closed recovery amounts out of ordinary awarded totals and normalizes lineage", () => {
+    const historical = rec({
+      id: "sba-rrf-test",
+      source: "sba-rrf",
+      funderName: "SBA Restaurant Revitalization Fund",
+      recipient: "Historic Restaurant",
+      amountAwarded: null,
+      status: "disbursed",
+      recovery: {
+        sourceId: "sba-rrf",
+        historicalAmount: {
+          value: 125_000,
+          currency: "USD",
+          assistanceType: "grant",
+        },
+      },
+    });
+    const out = buildCommunityInvestmentExport(
+      [historical],
+      "2026-07-28T00:00:00.000Z",
+      { droppedNoGeocode: 0, dedupedRows: 0, sources: [] },
+    );
+    expect(out.meta.totalDollarsAwarded).toBe(0);
+    expect(out.records[0].recovery?.historicalAmount?.value).toBe(125_000);
+    expect(out.recoverySources["sba-rrf"]?.lineage[0].role).toBe("root_law");
+  });
+
+  it("rejects a recovery record that also populates amountAwarded", () => {
+    const dirty = rec({
+      id: "sba-rrf-dirty",
+      source: "sba-rrf",
+      funderName: "SBA Restaurant Revitalization Fund",
+      amountAwarded: 125_000,
+      status: "disbursed",
+      recovery: {
+        sourceId: "sba-rrf",
+        historicalAmount: {
+          value: 125_000,
+          currency: "USD",
+          assistanceType: "grant",
+        },
+      },
+    });
+    expect(() =>
+      buildCommunityInvestmentExport(
+        [dirty],
+        "2026-07-28T00:00:00.000Z",
+        { droppedNoGeocode: 0, dedupedRows: 0, sources: [] },
+      ),
+    ).toThrow("must live only in recovery.historicalAmount");
   });
 
   it("hard-fails if a tif_subsidy record smuggles an awarded amount", () => {
@@ -192,6 +275,17 @@ describe("per-field capital totals (authorized / credit / awarded firewall)", ()
       buildCommunityInvestmentExport([dirty], "2026-07-28T00:00:00.000Z", { droppedNoGeocode: 0, dedupedRows: 0, sources: [] }),
     ).toThrow(/grant/);
   });
+
+  it("hard-fails if a state appropriation smuggles an awarded amount", () => {
+    const dirty = appropriation({ id: "bad3", amountAwarded: 750_000 });
+    expect(() =>
+      buildCommunityInvestmentExport([dirty], "2026-07-28T00:00:00.000Z", {
+        droppedNoGeocode: 0,
+        dedupedRows: 0,
+        sources: [],
+      }),
+    ).toThrow(/state_appropriation/);
+  });
 });
 
 // ── IRON RULE: banned derived-figure key rail ────────────────────────────────
@@ -205,6 +299,7 @@ describe("banned-figure key rail", () => {
     // The legitimate keys we DO ship must not trip the rail.
     expect(BANNED_FIGURE_KEY_RE.test("amountAwarded")).toBe(false);
     expect(BANNED_FIGURE_KEY_RE.test("totalDollarsAwarded")).toBe(false);
+    expect(BANNED_FIGURE_KEY_RE.test("publishedBalance")).toBe(false);
   });
 
   it("findBannedFigureKeys walks nested objects/arrays ([] when clean)", () => {
@@ -622,6 +717,21 @@ describe("private-data location guard", () => {
 const EXPORT_PATH = path.join(process.cwd(), "data/private/community-investment.json");
 const EXPORT_EXISTS = existsSync(EXPORT_PATH);
 
+/**
+ * Explicit timeout for the invariant tests that walk EVERY record in the
+ * committed export (24k+ records × several `expect()` calls each, out of a
+ * ~17 MB JSON). Vitest's 5000 ms default was measured crossing under full-suite
+ * worker contention — the suite went red on a timeout unrelated to the change
+ * under test, then green on re-run, which trains a team to re-run rather than
+ * read the failure.
+ *
+ * Deliberately per-test rather than a global `testTimeout` in vitest.config.ts:
+ * a global bump would also hide a real hang in the ~1,500 fast tests that should
+ * still fail loudly at the default. Only the tests that genuinely scale with the
+ * export's size opt in.
+ */
+const COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS = 30_000;
+
 describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
   it("loadCommunityInvestment returns the documented top-level shape", () => {
     const data = loadCommunityInvestment();
@@ -630,8 +740,10 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(Array.isArray(data!.records)).toBe(true);
     expect(data!.records.length).toBeGreaterThan(0);
     expect(data!.meta.totalRecords).toBe(data!.records.length);
-    // point + citywide partition the records exactly.
-    expect(data!.meta.pointCount + data!.meta.citywideCount).toBe(data!.records.length);
+    // point + ZIP-area + citywide partition the records exactly.
+    expect(data!.meta.pointCount + (data!.meta.zipAreaCount ?? 0) + data!.meta.citywideCount).toBe(
+      data!.records.length,
+    );
   });
 
   it("every record uses only valid enum members and a coherent geometry", () => {
@@ -645,24 +757,60 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
       if (r.geometry.kind === "point") {
         expect(typeof r.geometry.lat).toBe("number");
         expect(typeof r.geometry.lng).toBe("number");
+      } else if (r.geometry.kind === "zip_area") {
+        expect(r.geometry.zip).toMatch(/^\d{5}$/);
       } else {
         expect(r.geometry).toEqual({ kind: "citywide" });
       }
     }
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("record ids are unique", () => {
     const data = loadCommunityInvestment()!;
     const ids = data.records.map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("counts sum to the record total and dollars match the awarded sum", () => {
     const data = loadCommunityInvestment()!;
     const summed = Object.values(data.meta.counts).reduce((a, b) => a + b, 0);
     expect(summed).toBe(data.records.length);
     expect(data.meta.totalDollarsAwarded).toBe(sumAwardedDollars(data.records));
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
+
+  it("stores historical recovery lineage once and keeps its amounts out of amountAwarded", () => {
+    const data = loadCommunityInvestment()!;
+    expect(Object.keys(data.recoverySources).sort()).toEqual([
+      "cook-source-2023",
+      "illinois-b2b",
+      "sba-rrf",
+    ]);
+    const recoveryRecords = data.records.filter((record) => record.recovery);
+    expect(recoveryRecords.length).toBe(
+      data.meta.cookSourceChicagoRecords +
+        data.meta.illinoisB2BChicagoRecords +
+        data.meta.sbaRrfChicagoRecords,
+    );
+    for (const record of recoveryRecords) {
+      expect(record.amountAwarded).toBeNull();
+      expect(record.recovery?.historicalAmount?.value).toBeGreaterThanOrEqual(0);
+    }
+
+    // The recovery-era dollars are a SEPARATE historical class, deliberately
+    // excluded from the awarded hero figure. Assert the exclusion is total and
+    // material, not merely implied by the per-record nulls above: these are
+    // closed 2021-2023 relief programs (Cook Source, Illinois B2B, SBA RRF), not
+    // grants awarded through the ordinary pipeline, so folding them in would
+    // restate the headline by hundreds of millions.
+    const recoveryDollars = recoveryRecords.reduce(
+      (sum, record) => sum + (record.recovery?.historicalAmount?.value ?? 0),
+      0,
+    );
+    expect(recoveryDollars).toBeGreaterThan(500_000_000);
+    expect(data.meta.totalDollarsAwarded).toBe(sumAwardedDollars(data.records));
+    // Nothing in the awarded total came from a recovery record.
+    expect(sumAwardedDollars(recoveryRecords)).toBe(0);
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("announcedCapitalTotal matches the announcedInvestment sum and is a DIFFERENT figure from awarded", () => {
     const data = loadCommunityInvestment()!;
@@ -673,7 +821,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     // announced capital lands in the expected ~$67–75B band.
     expect(data.meta.announcedCapitalTotal).toBeGreaterThan(60_000_000_000);
     expect(data.meta.announcedCapitalTotal).toBeLessThan(80_000_000_000);
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("every development record carries NO awarded dollars (announced capital only)", () => {
     const data = loadCommunityInvestment()!;
@@ -686,13 +834,13 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
         expect(r.source).toBe("development");
       }
     }
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("IRON RULE: the raw committed text carries no banned derived-figure key", () => {
     // Read the raw file (not the typed loader) so a hand-edit can't slip past.
     const parsed = JSON.parse(readFileSync(EXPORT_PATH, "utf8"));
     expect(findBannedFigureKeys(parsed)).toEqual([]);
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   // ── Capital-spine invariants over the committed export ──────────────────────
 
@@ -713,9 +861,9 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     for (const r of data.records) {
       if (r.capitalClass !== "grant") expect(r.amountAwarded).toBeNull();
     }
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
-  it("carries all four capital classes and each record's money lives in exactly one field", () => {
+  it("carries all five capital classes and each record's money lives in exactly one field", () => {
     const data = loadCommunityInvestment()!;
     const seen = new Set<string>();
     for (const r of data.records) {
@@ -725,6 +873,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
         r.amountAwarded != null,
         r.authorizedAmount != null,
         r.creditAmount != null,
+        r.publishedBalance != null,
         r.announcedInvestment != null,
       ].filter(Boolean).length;
       expect(money).toBeLessThanOrEqual(1); // never two money fields on one record
@@ -741,21 +890,36 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
         expect(["lihtc", "nmtc"]).toContain(r.source);
         expect(r.amountAwarded).toBeNull();
       }
+      if (r.capitalClass === "state_appropriation") {
+        expect(r.source).toBe("dceo-capital");
+        expect(r.amountAwarded).toBeNull();
+        if (r.geometry.kind === "point") {
+          // DCEO points pass the official Chicago community-area polygon check,
+          // not only a broad city bounding box.
+          expect(r.communityArea).toBeTruthy();
+        }
+      }
     }
-    expect([...seen].sort()).toEqual(["federal_program", "grant", "tax_credit", "tif_subsidy"]);
-  });
+    expect([...seen].sort()).toEqual([
+      "federal_program",
+      "grant",
+      "state_appropriation",
+      "tax_credit",
+      "tif_subsidy",
+    ]);
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("each new capital total matches an independent recompute from its own field", () => {
     const data = loadCommunityInvestment()!;
     expect(data.meta.totalAuthorizedTif).toBe(sumAuthorizedByClass(data.records, "tif_subsidy"));
     expect(data.meta.totalFederalProgram).toBe(sumAuthorizedByClass(data.records, "federal_program"));
     expect(data.meta.totalCreditCapital).toBe(sumCreditCapital(data.records));
-    // The four totals are meaningfully non-zero and all DISTINCT from the awarded total.
+    // The independent totals are meaningfully non-zero and distinct from awarded grants.
     expect(data.meta.totalAuthorizedTif).toBeGreaterThan(0);
     expect(data.meta.totalFederalProgram).toBeGreaterThan(0);
     expect(data.meta.totalCreditCapital).toBeGreaterThan(0);
     expect(data.meta.totalAuthorizedTif).not.toBe(data.meta.totalDollarsAwarded);
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("every tif/cdbg-home/lihtc record is a PLOTTABLE point (point-quality rule)", () => {
     const data = loadCommunityInvestment()!;
@@ -764,7 +928,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
         expect(r.geometry.kind).toBe("point");
       }
     }
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("NMTC is CA-stamped citywide: never a point, but carries a communityArea for analysis lists", () => {
     const data = loadCommunityInvestment()!;
@@ -783,12 +947,54 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(stamped.length).toBe(data.meta.nmtcCitywideStamped);
     expect(data.meta.nmtcCitywideStamped + data.meta.nmtcUnstamped).toBe(nmtc.length);
     expect(stamped.length).toBeGreaterThan(0);
-  });
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("HUD out-of-bbox drop count is recorded (26 activities dropped)", () => {
     const data = loadCommunityInvestment()!;
     expect(data.meta.droppedHudOutOfBbox).toBe(26);
   });
+
+  it("a DCEO out-of-bounds geocode is HELD CITYWIDE, never deleted from the export", () => {
+    const data = loadCommunityInvestment()!;
+    const dceo = data.records.filter((r) => r.source === "dceo-capital");
+    // The counters must PARTITION the retained records, which is only true if
+    // no path deletes a row. An out-of-bounds geocode previously ran `continue`,
+    // so the record vanished and this identity silently held on a smaller set.
+    expect(dceo.length).toBe(data.meta.dceoChicagoRecords);
+    expect(data.meta.dceoPointRecords + data.meta.dceoCitywideRecords).toBe(dceo.length);
+    expect(data.meta.dceoPointRecords).toBe(
+      dceo.filter((r) => r.geometry.kind === "point").length,
+    );
+
+    // The concrete row the review caught: a real $250,000 Board of Education
+    // appropriation whose Census geocode landed in Lake County, ~55 km north.
+    // The POINT is rejected; the appropriation stays, unplotted and auditable.
+    const outOfBounds = dceo.filter((r) => r.address === "1059 WEST 13TH STREET");
+    expect(outOfBounds).toHaveLength(1);
+    expect(outOfBounds[0].recipient).toContain("BOARD OF EDUCATION");
+    expect(outOfBounds[0].geometry).toEqual({ kind: "citywide" });
+    expect(outOfBounds[0].publishedBalance).toBe(250_000);
+    expect(data.meta.dceoAddressOutOfBounds).toBeGreaterThan(0);
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
+
+  it("multi-site DCEO rows stay UNPLOTTED, per the README location-precision contract", () => {
+    const data = loadCommunityInvestment()!;
+    const dceo = data.records.filter((r) => r.source === "dceo-capital");
+    // Two house numbers sharing one street suffix collapse to a single regex
+    // match, so these two shipped as confident points at one of the two sites.
+    for (const name of ["IN HIS HANDS GLOBAL MINISTRIES", "Irving Park Community Food Pantry"]) {
+      const row = dceo.find((r) => r.recipient.includes(name));
+      expect(row, `expected a DCEO row for ${name}`).toBeDefined();
+      expect(row!.geometry).toEqual({ kind: "citywide" });
+      // No safe single address survives, so none is published on the record.
+      expect(row!.address).toBeNull();
+    }
+    expect(data.meta.dceoMultiSiteHeldCitywide).toBeGreaterThanOrEqual(2);
+    // Every DCEO POINT carries exactly one source-literal address.
+    for (const r of dceo) {
+      if (r.geometry.kind === "point") expect(r.address).toBeTruthy();
+    }
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 });
 
 // ── Committed capital-context.json (context aggregates, banned-key rail) ───────
@@ -802,7 +1008,7 @@ describe.skipIf(!CONTEXT_EXISTS)("committed capital-context.json", () => {
     expect(findBannedFigureKeys(parsed)).toEqual([]);
   });
 
-  it("carries the four context series and the SFY2027 state-award snapshot caveat", () => {
+  it("carries the context series, Chicago ARPA ledger, and SFY2027 state-award caveat", () => {
     const ctx = JSON.parse(readFileSync(CONTEXT_PATH, "utf8"));
     expect(Array.isArray(ctx.tifDistricts)).toBe(true);
     expect(ctx.tifDistricts.length).toBeGreaterThan(0);
@@ -813,5 +1019,15 @@ describe.skipIf(!CONTEXT_EXISTS)("committed capital-context.json", () => {
     expect(String(ctx.stateAwards.snapshotCaveat)).toMatch(/SFY2027|not naively summed/i);
     expect(String(ctx.stateAwards.amountMeaning)).toMatch(/not money paid/i);
     expect(Array.isArray(ctx.stateAwards.topGrantees)).toBe(true);
+    expect(ctx.chicagoArpaRecovery.classification.id).toBe(
+      "chicago-arpa-program",
+    );
+    expect(ctx.chicagoArpaRecovery.programs).toHaveLength(77);
+    expect(
+      ctx.chicagoArpaRecovery.programs.filter(
+        (program: { historicalAllocated: number | null }) =>
+          program.historicalAllocated === null,
+      ),
+    ).toHaveLength(10);
   });
 });

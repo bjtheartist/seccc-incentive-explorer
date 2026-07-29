@@ -302,6 +302,7 @@ export function buildOwnerClusterPopupHtml(p: OwnerClusterPopupProperties): stri
  * optional/nullable to tolerate the coercion.
  */
 export interface InvestmentPopupProperties {
+  source?: string;
   recipient?: string;
   funderName?: string;
   funderType?: string;
@@ -314,6 +315,8 @@ export interface InvestmentPopupProperties {
   authorizedAmount?: number | null;
   /** LIHTC/NMTC tax-credit capital (tax_credit) — a DIFFERENT instrument again. */
   creditAmount?: number | null;
+  /** DCEO source-published appropriation balance; not an award or active opportunity. */
+  publishedBalance?: number | null;
   /** Announced private DEVELOPMENT capital — a SEPARATE measure from amountAwarded. */
   announcedInvestment?: number | null;
   logLine?: string | null;
@@ -322,6 +325,8 @@ export interface InvestmentPopupProperties {
   /** Stamped Chicago community area — powers the "Analyze this community →" link. */
   communityArea?: string;
   sourceLink?: string;
+  historicalRecoveryAmount?: number | null;
+  recoverySourceId?: string;
 }
 
 /**
@@ -332,6 +337,81 @@ export interface InvestmentPopupProperties {
 export function formatAwardedAmount(amount: number | null | undefined): string {
   if (amount == null || !Number.isFinite(amount)) return "Not disclosed";
   return `$${Math.round(amount).toLocaleString("en-US")}`;
+}
+
+export interface CountyReliefPopupProperties {
+  zipCode?: string;
+  awardCount?: number | string;
+  totalDisbursed?: number | string;
+  sourceLink?: string;
+}
+
+/** ZIP-aggregate popup for Cook County's completed 2023 Source Grant program. */
+export function buildCountyReliefPopupHtml(p: CountyReliefPopupProperties): string {
+  const rawZipCode = String(p.zipCode || "");
+  const canLoadRecipients = /^\d{5}$/.test(rawZipCode);
+  const zipCode = escapePopupHtml(rawZipCode || "ZIP unavailable");
+  const awardCount = Number(p.awardCount);
+  const totalDisbursed = Number(p.totalDisbursed);
+  const sourceLink =
+    p.sourceLink && /^https?:\/\//i.test(p.sourceLink) ? escapePopupHtml(p.sourceLink) : "";
+  return `<div style="font-family:Inter,sans-serif">
+    <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#0E7490;margin-bottom:4px;font-weight:500">Admin · Historical county awards</div>
+    <div style="font-size:14px;font-weight:600;color:#0C1B33">ZIP ${zipCode}</div>
+    <div style="font-size:12px;color:#5A6478;margin-top:6px">${Number.isFinite(awardCount) ? Math.round(awardCount).toLocaleString("en-US") : "No"} small-business award${Number.isFinite(awardCount) && awardCount === 1 ? "" : "s"}</div>
+    <div style="display:flex;align-items:baseline;gap:6px;margin-top:7px">
+      <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8A93A6">Disbursed in 2023 program</span>
+      <span style="font-size:14px;font-weight:700;color:#0C1B33">${formatAwardedAmount(totalDisbursed)}</span>
+    </div>
+    <div style="font-size:10px;color:#8A93A6;margin-top:7px;line-height:1.4">ZIP-level source precision. This program is complete and is not an active funding opportunity.</div>
+    ${canLoadRecipients ? `<button type="button" data-county-relief-recipients="${zipCode}" style="display:block;width:100%;margin-top:9px;padding:8px 10px;border:1px solid #0E749033;background:#0E74900D;color:#0E7490;font-size:10px;font-weight:600;cursor:pointer;text-align:center">View historical recipients</button>` : ""}
+    ${sourceLink ? `<a href="${sourceLink}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">Source &rarr;</a>` : ""}
+  </div>`;
+}
+
+export interface HistoricalRecoveryZipPopupProperties {
+  sourceId?: string;
+  programName?: string;
+  zipCode?: string;
+  awardCount?: number | string;
+  totalDisbursed?: number | string;
+  year?: number | string;
+  sourceLink?: string;
+}
+
+/** ZIP-aggregate popup for a completed historical recovery program. */
+export function buildHistoricalRecoveryZipPopupHtml(
+  p: HistoricalRecoveryZipPopupProperties,
+): string {
+  const rawZipCode = String(p.zipCode || "");
+  const sourceId = String(p.sourceId || "");
+  const canLoadRecipients =
+    /^\d{5}$/.test(rawZipCode) &&
+    (sourceId === "cook-source-2023" || sourceId === "illinois-b2b");
+  const zipCode = escapePopupHtml(rawZipCode || "ZIP unavailable");
+  const programName = escapePopupHtml(
+    p.programName || "Historical recovery program",
+  );
+  const awardCount = Number(p.awardCount);
+  const totalDisbursed = Number(p.totalDisbursed);
+  const year = Number(p.year);
+  const sourceLink =
+    p.sourceLink && /^https?:\/\//i.test(p.sourceLink)
+      ? escapePopupHtml(p.sourceLink)
+      : "";
+  return `<div style="font-family:Inter,sans-serif">
+    <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#B45309;margin-bottom:4px;font-weight:500">Admin · Historical recovery grants</div>
+    <div style="font-size:14px;font-weight:600;color:#0C1B33">ZIP ${zipCode}</div>
+    <div style="font-size:11px;color:#5A6478;margin-top:4px">${programName}</div>
+    <div style="font-size:12px;color:#5A6478;margin-top:6px">${Number.isFinite(awardCount) ? Math.round(awardCount).toLocaleString("en-US") : "No"} historical award${Number.isFinite(awardCount) && awardCount === 1 ? "" : "s"}</div>
+    <div style="display:flex;align-items:baseline;gap:6px;margin-top:7px">
+      <span style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#8A93A6">Source-reported historical total${Number.isFinite(year) ? ` · ${Math.round(year)}` : ""}</span>
+      <span style="font-size:14px;font-weight:700;color:#0C1B33">${formatAwardedAmount(totalDisbursed)}</span>
+    </div>
+    <div style="font-size:10px;color:#8A93A6;margin-top:7px;line-height:1.4">ZIP-level source precision. This program is complete and is not an active funding opportunity.</div>
+    ${canLoadRecipients ? `<button type="button" data-historical-recovery-recipients="${escapePopupHtml(sourceId)}" data-recovery-zip="${zipCode}" style="display:block;width:100%;margin-top:9px;padding:8px 10px;border:1px solid #B4530933;background:#B453090D;color:#92400E;font-size:10px;font-weight:600;cursor:pointer;text-align:center">View historical recipients</button>` : ""}
+    ${sourceLink ? `<a href="${sourceLink}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">Source &rarr;</a>` : ""}
+  </div>`;
 }
 
 /**
@@ -362,13 +442,19 @@ export function buildInvestmentPopupHtml(p: InvestmentPopupProperties): string {
   //   • tif_subsidy     → "Authorized" + authorizedAmount (a council ceiling).
   //   • federal_program → "Federal program funding" + authorizedAmount.
   //   • tax_credit      → "Tax-credit allocation" + creditAmount.
-  // The four money fields are mutually exclusive per record, so exactly one is
+  //   • state_appropriation → "Published appropriation balance" + publishedBalance.
+  // The five money fields are mutually exclusive per record, so exactly one is
   // shown — never two, never summed.
   const isDevelopment = funderType === "private_development";
   const capitalClass = (p.capitalClass ?? "grant") as CapitalClass;
+  const isHistoricalRecovery =
+    p.recoverySourceId === "sba-rrf" || p.source === "sba-rrf";
   let moneyLabel: string;
   let moneyValue: number | null | undefined;
-  if (isDevelopment) {
+  if (isHistoricalRecovery) {
+    moneyLabel = "Historical grant";
+    moneyValue = p.historicalRecoveryAmount;
+  } else if (isDevelopment) {
     moneyLabel = "Announced";
     moneyValue = p.announcedInvestment;
   } else if (capitalClass === "tif_subsidy" || capitalClass === "federal_program") {
@@ -377,6 +463,9 @@ export function buildInvestmentPopupHtml(p: InvestmentPopupProperties): string {
   } else if (capitalClass === "tax_credit") {
     moneyLabel = CAPITAL_CLASS_MONEY_NOUN.tax_credit;
     moneyValue = p.creditAmount;
+  } else if (capitalClass === "state_appropriation") {
+    moneyLabel = CAPITAL_CLASS_MONEY_NOUN.state_appropriation;
+    moneyValue = p.publishedBalance;
   } else {
     moneyLabel = CAPITAL_CLASS_MONEY_NOUN.grant; // "Awarded"
     moneyValue = p.amountAwarded;

@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import MapLegendPanel from "../MapLegendPanel";
-import { buildInvestmentPopupHtml, formatAwardedAmount } from "../map-helpers";
+import {
+  buildCountyReliefPopupHtml,
+  buildHistoricalRecoveryZipPopupHtml,
+  buildInvestmentPopupHtml,
+  formatAwardedAmount,
+} from "../map-helpers";
 import { ZONE_KEYS, VACANT_LABELS, ZONING_CATEGORIES } from "@/lib/constants";
 import { POI_LAYERS } from "../map-helpers";
 import { FUNDER_TYPE_LABELS, INVESTMENT_YEAR_RANGES } from "@/lib/community-investment-layer";
+import { PUBLIC_INVESTMENT_OVERLAYS } from "@/lib/public-investment-overlays";
 
 /**
  * The ADMIN "Community investment" legend section is probe-driven exactly like
@@ -52,6 +58,39 @@ describe("MapLegendPanel community-investment admin section", () => {
     );
     expect(html).not.toContain("Admin");
     expect(html).not.toContain("Community investment");
+  });
+
+  it("renders NO public-investment overlay control for a non-admin viewer, even with every overlay on", () => {
+    // All four overlays are admin-only by config (adminOnly: true). Force each
+    // one visible with a non-zero count: a non-admin must still get nothing —
+    // no label, no description, no aria-label, no source-family count.
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={false}
+        communityInvestmentVisible={true}
+        publicInvestmentOverlays={{
+          county_relief_awards: true,
+          state_recovery_awards: true,
+          federal_restaurant_relief: true,
+          state_capital_projects: true,
+        }}
+        countyReliefZipCount={59}
+        stateRecoveryZipCount={59}
+        federalRestaurantReliefPlottedCount={1483}
+        federalRestaurantReliefCitywideCount={40}
+        stateCapitalPlottedCount={57}
+        stateCapitalCitywideCount={563}
+      />
+    );
+    for (const overlay of PUBLIC_INVESTMENT_OVERLAYS) {
+      expect(html, overlay.id).not.toContain(overlay.label);
+      expect(html, overlay.id).not.toContain(overlay.description);
+      expect(html, overlay.id).not.toContain(`Toggle ${overlay.label} overlay`);
+    }
+    expect(html).not.toContain("Additional layers");
+    expect(html).not.toContain("Chicago ZIP areas mapped");
+    expect(html).not.toContain("held unplotted");
   });
 
   it("renders the toggle defaulted off for an admin viewer (204), with no sub-controls", () => {
@@ -178,6 +217,58 @@ describe("MapLegendPanel community-investment admin section", () => {
       />
     );
     expect(grantOnly).not.toContain("Capital class");
+  });
+
+  it("renders all public-investment overlays as independent, default-off controls", () => {
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        communityInvestmentVisible={true}
+        publicInvestmentOverlays={{
+          county_relief_awards: true,
+          state_recovery_awards: false,
+          federal_restaurant_relief: false,
+          state_capital_projects: false,
+        }}
+        countyReliefZipCount={18}
+        stateRecoveryZipCount={12}
+        federalRestaurantReliefPlottedCount={1483}
+        federalRestaurantReliefCitywideCount={40}
+        stateCapitalPlottedCount={7}
+        stateCapitalCitywideCount={11}
+      />
+    );
+    expect(html).toContain("County relief awards");
+    expect(html).toContain("Illinois recovery grants");
+    expect(html).toContain("Restaurant relief grants");
+    expect(html).toContain("State capital projects");
+    expect(html).toContain("18 Chicago ZIP areas mapped");
+    expect(html).not.toContain("7 address-sited");
+    expect(html).toContain("not an active funding opportunity");
+  });
+
+  it("shows historical recovery counts without a possible-dollar headline", () => {
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        communityInvestmentVisible={true}
+        publicInvestmentOverlays={{
+          county_relief_awards: false,
+          state_recovery_awards: true,
+          federal_restaurant_relief: true,
+          state_capital_projects: false,
+        }}
+        stateRecoveryZipCount={41}
+        federalRestaurantReliefPlottedCount={1483}
+        federalRestaurantReliefCitywideCount={40}
+      />,
+    );
+    expect(html).toContain("41 Chicago ZIP areas mapped");
+    expect(html).toContain("1483 address-sited · 40 held unplotted");
+    expect(html).not.toContain("possible incentive dollars");
+    expect(html).not.toContain("potential funding");
   });
 });
 
@@ -311,6 +402,41 @@ describe("buildInvestmentPopupHtml", () => {
     expect(html).not.toContain(MONEY_LABEL("Awarded"));
   });
 
+  it("labels a DCEO amount as a published appropriation balance, never an award or opportunity", () => {
+    const html = buildInvestmentPopupHtml({
+      recipient: "Chicago Park District",
+      funderName: "Illinois DCEO",
+      funderType: "government",
+      capitalClass: "state_appropriation",
+      amountAwarded: null,
+      publishedBalance: 125_000,
+      status: "appropriated",
+    });
+    expect(html).toContain(MONEY_LABEL("Published appropriation balance"));
+    expect(html).toContain("$125,000");
+    expect(html).not.toContain(MONEY_LABEL("Awarded"));
+    expect(html).toContain("Appropriation record");
+  });
+
+  it("keeps a closed RRF transaction separate from the ordinary awarded field", () => {
+    const html = buildInvestmentPopupHtml({
+      source: "sba-rrf",
+      recoverySourceId: "sba-rrf",
+      recipient: "Historic Restaurant",
+      funderName: "U.S. Small Business Administration Restaurant Revitalization Fund",
+      funderType: "government",
+      capitalClass: "grant",
+      amountAwarded: null,
+      historicalRecoveryAmount: 125_000,
+      status: "disbursed",
+      year: 2021,
+    });
+    expect(html).toContain(MONEY_LABEL("Historical grant"));
+    expect(html).toContain("$125,000");
+    expect(html).not.toContain(MONEY_LABEL("Awarded"));
+    expect(html).toContain("Disbursed");
+  });
+
   it("adds an 'Analyze this community →' link to the record's community area", () => {
     const html = buildInvestmentPopupHtml({ ...full, communityArea: "Auburn Gresham" });
     expect(html).toContain("Analyze this community");
@@ -320,6 +446,54 @@ describe("buildInvestmentPopupHtml", () => {
   it("omits the Analyze link when the record has no community area", () => {
     const html = buildInvestmentPopupHtml(full);
     expect(html).not.toContain("Analyze this community");
+  });
+});
+
+describe("buildCountyReliefPopupHtml", () => {
+  it("shows ZIP-level historical disbursement context without presenting an active program", () => {
+    const html = buildCountyReliefPopupHtml({
+      zipCode: "60617",
+      awardCount: 42,
+      totalDisbursed: 620_000,
+      sourceLink: "https://example.org/source.pdf",
+    });
+    expect(html).toContain("ZIP 60617");
+    expect(html).toContain("42 small-business awards");
+    expect(html).toContain("$620,000");
+    expect(html).toContain("program is complete");
+    expect(html).toContain("not an active funding opportunity");
+    expect(html).toContain("View historical recipients");
+    expect(html).toContain('data-county-relief-recipients="60617"');
+  });
+
+  it("omits the recipient action when the feature has no valid ZIP", () => {
+    const html = buildCountyReliefPopupHtml({
+      zipCode: "ZIP unavailable",
+      awardCount: 1,
+      totalDisbursed: 10_000,
+    });
+
+    expect(html).not.toContain("View historical recipients");
+  });
+});
+
+describe("buildHistoricalRecoveryZipPopupHtml", () => {
+  it("labels Illinois B2B as completed historical ZIP context", () => {
+    const html = buildHistoricalRecoveryZipPopupHtml({
+      sourceId: "illinois-b2b",
+      programName: "Illinois Back to Business Grant Program",
+      zipCode: "60617",
+      awardCount: 75,
+      totalDisbursed: 2_400_000,
+      year: 2022,
+      sourceLink: "https://example.org/b2b.pdf",
+    });
+    expect(html).toContain("Illinois Back to Business Grant Program");
+    expect(html).toContain("75 historical awards");
+    expect(html).toContain("Source-reported historical total");
+    expect(html).toContain("not an active funding opportunity");
+    expect(html).toContain('data-historical-recovery-recipients="illinois-b2b"');
+    expect(html).not.toContain("possible incentive");
   });
 });
 

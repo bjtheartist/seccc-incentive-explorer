@@ -54,6 +54,11 @@
     "vacancy:preview": "npx tsx scripts/preview-vacancy-index-pdf.ts",
     "vacancy:index:export": "npx tsx scripts/export-vacancy-index.ts",
     "tif:briefs:export": "npx tsx scripts/export-tif-briefs.ts",
+    "data:import:cook-source": "npx tsx scripts/import-cook-county-source-grants.ts",
+    "data:import:dceo-capital": "npx tsx scripts/import-dceo-capital-appropriations.ts",
+    "data:import:illinois-b2b": "npx tsx scripts/import-illinois-back-to-business.ts",
+    "data:import:sba-rrf": "npx tsx scripts/import-sba-restaurant-revitalization.ts",
+    "data:import:chicago-arpa": "npx tsx scripts/import-chicago-arpa-recovery.ts",
     "data:export:investment": "npx tsx scripts/export-community-investment.ts"
   },
   "dependencies": {

@@ -6,6 +6,8 @@ import {
   DEV_DOT_RADIUS_MAX,
   DEV_DOT_RADIUS_MIN,
   fetchCommunityInvestmentLayer,
+  fetchCountyReliefRecipients,
+  fetchHistoricalRecoveryRecipients,
   excludeMegaprojectFeatures,
   filterInvestmentPointFeatures,
   INVESTMENT_STATUS_LABELS,
@@ -191,8 +193,8 @@ describe("citywideInvestmentEntries / summarizeCitywideEntries", () => {
 
   it("extracts only the citywide records' filterable fields", () => {
     expect(entries).toEqual([
-      { funderType: "philanthropic", year: 2021, amountAwarded: 250_000 },
-      { funderType: "government", year: 2020, amountAwarded: null },
+      { source: "foundation", funderType: "philanthropic", year: 2021, amountAwarded: 250_000 },
+      { source: "cdg", funderType: "government", year: 2020, amountAwarded: null },
     ]);
   });
 
@@ -276,7 +278,257 @@ describe("fetchCommunityInvestmentLayer", () => {
   it("appends a source filter to the endpoint when given", async () => {
     const fetchImpl = fetchStub(200, { records: [] });
     await fetchCommunityInvestmentLayer({ fetchImpl, source: "cdg" });
-    expect(String(fetchImpl.mock.calls[0][0])).toBe(`${COMMUNITY_INVESTMENT_ENDPOINT}?source=cdg`);
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(
+      `${COMMUNITY_INVESTMENT_ENDPOINT}?view=map&source=cdg`,
+    );
+  });
+
+  it("aggregates Cook County recipients by source ZIP without creating points", async () => {
+    const countyRecords = [
+      record({
+        id: "cook-1",
+        source: "cook-source-2023",
+        funderName: "Cook County 2023 Source Grant",
+        amountAwarded: null,
+        recovery: {
+          sourceId: "cook-source-2023",
+          historicalAmount: {
+            value: 10_000,
+            currency: "USD",
+            assistanceType: "grant",
+          },
+        },
+        year: 2023,
+        geometry: { kind: "zip_area", zip: "60617" },
+        address: null,
+        status: "disbursed",
+      }),
+      record({
+        id: "cook-2",
+        source: "cook-source-2023",
+        funderName: "Cook County 2023 Source Grant",
+        amountAwarded: null,
+        recovery: {
+          sourceId: "cook-source-2023",
+          historicalAmount: {
+            value: 20_000,
+            currency: "USD",
+            assistanceType: "grant",
+          },
+        },
+        year: 2023,
+        geometry: { kind: "zip_area", zip: "60617" },
+        address: null,
+        status: "disbursed",
+      }),
+    ];
+    const fetchImpl = fetchStub(200, { records: countyRecords });
+    const result = await fetchCommunityInvestmentLayer({ fetchImpl });
+    expect(result.pointFeatures).toEqual([]);
+    expect(result.countyReliefByZip).toEqual([
+      {
+        sourceId: "cook-source-2023",
+        programName: "Cook County 2023 Source Grant",
+        zipCode: "60617",
+        awardCount: 2,
+        totalDisbursed: 30_000,
+        year: 2023,
+        sourceLink: "https://example.gov/round",
+      },
+    ]);
+  });
+
+  it("keeps Illinois B2B ZIP history separate from Cook County aggregates", async () => {
+    const fetchImpl = fetchStub(200, {
+      records: [
+        record({
+          id: "b2b-1",
+          source: "illinois-b2b",
+          funderName: "Illinois Back to Business Grant Program",
+          amountAwarded: null,
+          recovery: {
+            sourceId: "illinois-b2b",
+            historicalAmount: {
+              value: 35_000,
+              currency: "USD",
+              assistanceType: "grant",
+            },
+          },
+          year: 2022,
+          geometry: { kind: "zip_area", zip: "60617" },
+          address: null,
+          status: "disbursed",
+        }),
+      ],
+    });
+    const result = await fetchCommunityInvestmentLayer({ fetchImpl });
+    expect(result.countyReliefByZip).toEqual([]);
+    expect(result.stateRecoveryByZip).toEqual([
+      {
+        sourceId: "illinois-b2b",
+        programName: "Illinois Back to Business Grant Program",
+        zipCode: "60617",
+        awardCount: 1,
+        totalDisbursed: 35_000,
+        year: 2022,
+        sourceLink: "https://example.gov/round",
+      },
+    ]);
+  });
+
+  it("keeps unplotted DCEO records out of the base citywide commitment summary", async () => {
+    const fetchImpl = fetchStub(200, {
+      records: [
+        record({
+          id: "state-citywide",
+          source: "dceo-capital",
+          funderName: "Illinois DCEO",
+          capitalClass: "state_appropriation",
+          amountAwarded: null,
+          publishedBalance: 500_000,
+          geometry: { kind: "citywide" },
+          address: null,
+          status: "appropriated",
+        }),
+      ],
+    });
+    const result = await fetchCommunityInvestmentLayer({ fetchImpl });
+    expect(result.citywide).toEqual({ count: 0, totalDollars: 0 });
+    expect(result.citywideEntries).toEqual([]);
+    expect(result.stateCapitalCitywideCount).toBe(1);
+  });
+
+  it("accepts the gated route's privacy-preserving map projection", async () => {
+    const fetchImpl = fetchStub(200, {
+      records: [],
+      countyReliefByZip: [
+        {
+          sourceId: "cook-source-2023",
+          programName: "Cook County 2023 Source Grant",
+          zipCode: "60617",
+          awardCount: 12,
+          totalDisbursed: 180_000,
+          year: 2023,
+          sourceLink: "https://example.gov/list.pdf",
+        },
+      ],
+      stateCapitalCitywideCount: 9,
+    });
+    const result = await fetchCommunityInvestmentLayer({ fetchImpl });
+    expect(result.countyReliefByZip).toHaveLength(1);
+    expect(result.stateCapitalCitywideCount).toBe(9);
+    expect(result.pointFeatures).toEqual([]);
+  });
+});
+
+describe("fetchCountyReliefRecipients", () => {
+  it("requests Illinois B2B recipients through the generic one-ZIP endpoint", async () => {
+    const fetchImpl = fetchStub(200, {
+      sourceId: "illinois-b2b",
+      zipCode: "60617",
+      programName: "Illinois Back to Business Grant Program",
+      programStatus: "complete",
+      year: 2022,
+      recipients: [
+        {
+          id: "b2b-1",
+          businessName: "Neighborhood Business",
+          historicalAwardAmount: 35_000,
+        },
+      ],
+    });
+    const result = await fetchHistoricalRecoveryRecipients(
+      "illinois-b2b",
+      "60617",
+      { fetchImpl },
+    );
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(
+      `${COMMUNITY_INVESTMENT_ENDPOINT}?view=historical-recovery-recipients&source=illinois-b2b&zip=60617`,
+    );
+    expect(result.programName).toBe("Illinois Back to Business Grant Program");
+    expect(result.year).toBe(2022);
+    expect(result.recipients[0].businessName).toBe("Neighborhood Business");
+  });
+
+  it("requests one ZIP and returns the authenticated historical recipient rows", async () => {
+    const fetchImpl = fetchStub(200, {
+      zipCode: "60617",
+      programName: "Cook County 2023 Source Grant",
+      programStatus: "complete",
+      year: 2023,
+      recipientCount: 2,
+      sourceLink: "https://example.gov/list.pdf",
+      recipients: [
+        {
+          id: "cook-1",
+          businessName: "First Business",
+          historicalAwardAmount: 10_000,
+        },
+        {
+          id: "cook-2",
+          businessName: "Second Business",
+          historicalAwardAmount: 20_000,
+        },
+      ],
+    });
+
+    const result = await fetchCountyReliefRecipients("60617", { fetchImpl });
+
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(
+      `${COMMUNITY_INVESTMENT_ENDPOINT}?view=historical-recovery-recipients&source=cook-source-2023&zip=60617`,
+    );
+    expect(result.status).toBe("ready");
+    expect(result.recipientCount).toBe(2);
+    expect(result.recipients.map((recipient) => recipient.businessName)).toEqual([
+      "First Business",
+      "Second Business",
+    ]);
+  });
+
+  it("maps an expired admin session to an empty unauthorized result", async () => {
+    const fetchImpl = fetchStub(401, { error: "Unauthorized" });
+    const result = await fetchCountyReliefRecipients("60617", { fetchImpl });
+
+    expect(result.status).toBe("unauthorized");
+    expect(result.recipients).toEqual([]);
+  });
+
+  it("does not request a bulk or malformed ZIP lookup", async () => {
+    const fetchImpl = fetchStub(200, { recipients: [] });
+
+    await expect(
+      fetchCountyReliefRecipients("all", { fetchImpl }),
+    ).rejects.toThrow("five-digit ZIP");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("drops malformed recipient entries and unsafe source links", async () => {
+    const fetchImpl = fetchStub(200, {
+      sourceLink: "javascript:alert(1)",
+      recipients: [
+        {
+          id: "cook-valid",
+          businessName: "Valid Business",
+          historicalAwardAmount: 10_000,
+        },
+        {
+          id: "cook-invalid",
+          historicalAwardAmount: 20_000,
+        },
+      ],
+    });
+
+    const result = await fetchCountyReliefRecipients("60617", { fetchImpl });
+
+    expect(result.recipients).toEqual([
+      {
+        id: "cook-valid",
+        businessName: "Valid Business",
+        historicalAwardAmount: 10_000,
+      },
+    ]);
+    expect(result.recipientCount).toBe(1);
+    expect(result.sourceLink).toBeNull();
   });
 });
 
@@ -372,11 +624,20 @@ describe("development dots: announcedInvestment + radiusPx", () => {
       nonGrant("tif-small", "tif_subsidy", "tif", 2_000_000, 41.71),
       nonGrant("hud-one", "federal_program", "cdbg-home", 5_000_000, 41.72),
       nonGrant("lihtc-one", "tax_credit", "lihtc", 12_000_000, 41.73),
+      record({
+        id: "dceo-one",
+        source: "dceo-capital",
+        capitalClass: "state_appropriation",
+        amountAwarded: null,
+        publishedBalance: 750_000,
+        status: "appropriated",
+        geometry: { kind: "point", lat: 41.74, lng: -87.6 },
+      }),
     ]);
     const byId = new Map(features.map((f) => [f.properties.id, f]));
 
     // Every non-grant dot carries a radiusPx (so the paint no longer floors it).
-    for (const id of ["tif-big", "tif-small", "hud-one", "lihtc-one"]) {
+    for (const id of ["tif-big", "tif-small", "hud-one", "lihtc-one", "dceo-one"]) {
       const r = byId.get(id)!.properties.radiusPx;
       expect(typeof r).toBe("number");
       expect(r).toBeGreaterThanOrEqual(DEV_DOT_RADIUS_MIN);

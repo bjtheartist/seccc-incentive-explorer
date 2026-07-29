@@ -1,0 +1,28 @@
+{
+  "sourcePageUrl": "https://dceo.illinois.gov/aboutdceo/grantopportunities/capitalgrants.html",
+  "sourceUrl": "https://dceo.illinois.gov/content/dam/soi/en/web/dceo/aboutdceo/grantopportunities/documents/dceo-cap-approp-list.pdf",
+  "sourceVersion": "FY26 Capital Appropriation Listings (PDF created 2026-04-10)",
+  "pdfSha256": "670142211a2e76a110be1de119509b447af79edcccb171bd348deb75c91d91d3",
+  "pdfBytes": 5697932,
+  "pageCount": 885,
+  "anchorCount": 6645,
+  "parsedRecordCount": 6645,
+  "lineItemCount": 6122,
+  "lumpSumCount": 523,
+  "negativeAmountCount": 1,
+  "explicitAddressCount": 214,
+  "appropriatedAmountByType": {
+    "lineItem": 3256432292,
+    "lumpSum": 3845933689,
+    "total": 7102365981
+  },
+  "groupBalances": {
+    "lineItem": 3256432292,
+    "lumpSum": 3845933689,
+    "total": 7102365981
+  },
+  "reconcilesToGroupBalances": true,
+  "warnings": [
+    "1 accounting-style parenthetical amount(s) were preserved as negative appropriations"
+  ]
+}

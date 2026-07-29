@@ -20,6 +20,9 @@ import MapLegendPanel from "./MapLegendPanel";
 import MapMobileSheet from "./MapMobileSheet";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
+import CountyReliefRecipientsPanel, {
+  type CountyReliefRecipientsPanelStatus,
+} from "./CountyReliefRecipientsPanel";
 import type { MobileMapPresetId } from "./map-layer-presets";
 import { cachedFetch } from "@/lib/fetch-cache";
 import { getSiteSignals } from "@/lib/site-signals";
@@ -37,6 +40,8 @@ import {
   POI_LAYERS, jsonToGeoJSON, MAP_PRESETS,
   buildOwnerClusterPopupHtml,
   buildInvestmentPopupHtml,
+  buildCountyReliefPopupHtml,
+  buildHistoricalRecoveryZipPopupHtml,
   formatAwardedAmount,
   type AreaStats, DEFAULT_STATS,
 } from "./map-helpers";
@@ -50,6 +55,7 @@ import {
 } from "@/lib/community-investment-toggle";
 import {
   fetchCommunityInvestmentLayer,
+  fetchHistoricalRecoveryRecipients,
   filterInvestmentPointFeatures,
   investmentFeatureCollection,
   summarizeCitywideEntries,
@@ -65,6 +71,10 @@ import {
   MEGAPROJECT_STATUS_GROUP_COLORS,
   type InvestmentPointFeature,
   type CitywideInvestmentEntry,
+  type CountyReliefZipSummary,
+  type HistoricalRecoveryZipSummary,
+  type HistoricalRecoveryRecipient,
+  type HistoricalRecoveryRecipientSource,
   type MegaprojectPointFeature,
   type MegaprojectSummary,
 } from "@/lib/community-investment-layer";
@@ -96,6 +106,35 @@ import {
   type InvestmentArcDatum,
   type FunderHq,
 } from "@/lib/investment-deck-modes";
+import {
+  loadStoredPublicInvestmentOverlayVisibility,
+  PUBLIC_INVESTMENT_OVERLAY_COLORS,
+  PUBLIC_INVESTMENT_OVERLAY_IDS,
+  publicInvestmentOverlayIdForSource,
+  shouldKeepRecipientsPanelOpen,
+  storePublicInvestmentOverlayVisibility,
+  withPublicInvestmentOverlayVisibility,
+  type PublicInvestmentOverlayId,
+  type PublicInvestmentOverlayVisibility,
+} from "@/lib/public-investment-overlays";
+import {
+  buildCountyReliefFeatureCollection,
+  COUNTY_RELIEF_BOUNDARIES_ENDPOINT,
+  COUNTY_RELIEF_FILL_COLOR,
+  COUNTY_RELIEF_FILL_LAYER_ID,
+  COUNTY_RELIEF_LINE_COLOR,
+  COUNTY_RELIEF_LINE_LAYER_ID,
+  COUNTY_RELIEF_SOURCE_ID,
+  type ZipBoundaryFeatureCollection,
+} from "@/lib/county-relief-layer";
+import {
+  buildStateRecoveryFeatureCollection,
+  STATE_RECOVERY_FILL_COLOR,
+  STATE_RECOVERY_FILL_LAYER_ID,
+  STATE_RECOVERY_LINE_COLOR,
+  STATE_RECOVERY_LINE_LAYER_ID,
+  STATE_RECOVERY_SOURCE_ID,
+} from "@/lib/state-recovery-layer";
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -269,12 +308,28 @@ export default function MapView() {
     setInvestmentMegaprojectsVisible(visible);
     storeInvestmentMegaprojectsVisible(visible);
   }, []);
+  const [publicInvestmentOverlays, setPublicInvestmentOverlays] = useState(
+    () => loadStoredPublicInvestmentOverlayVisibility()
+  );
+  const setPublicInvestmentOverlayPersistent = useCallback(
+    (id: PublicInvestmentOverlayId, visible: boolean) => {
+      setPublicInvestmentOverlays((current) => {
+        const next = withPublicInvestmentOverlayVisibility(current, id, visible);
+        storePublicInvestmentOverlayVisibility(next);
+        return next;
+      });
+    },
+    []
+  );
   // Foundation-HQ coordinates from the last gated fetch — the Arcs source.
   const investmentFunderHqsRef = useRef<FunderHq[]>([]);
   // The one deck.gl overlay (created on first entry into a non-Dots mode, torn
   // down when the layer is hidden / mode returns to Dots / on unmount).
   const prevInvestmentViewModeRef = useRef<string | null>(null);
   const prevInvestmentMegaprojectsVisibleRef = useRef<boolean | null>(null);
+  // Previous overlay visibility, so the shared popup can be dismissed on an
+  // overlay transition the same way it is on a view-mode/megaproject one.
+  const prevPublicInvestmentOverlaysRef = useRef<PublicInvestmentOverlayVisibility | null>(null);
   const deckOverlayRef = useRef<MapboxOverlay | null>(null);
   // The shared mapbox dot popup, kept in a ref so the deck effect can close it
   // when entering a non-Dots mode (deck's picking tooltip takes over there).
@@ -293,6 +348,17 @@ export default function MapView() {
   const megaprojectFeaturesRef = useRef<MegaprojectPointFeature[]>([]);
   const [megaprojectSummary, setMegaprojectSummary] = useState<MegaprojectSummary | null>(null);
   const [investmentCitywideDevelopmentNames, setInvestmentCitywideDevelopmentNames] = useState<string[]>([]);
+  const stateCapitalFeaturesRef = useRef<InvestmentPointFeature[]>([]);
+  const federalRestaurantReliefFeaturesRef = useRef<InvestmentPointFeature[]>([]);
+  const countyReliefByZipRef = useRef<CountyReliefZipSummary[]>([]);
+  const stateRecoveryByZipRef = useRef<HistoricalRecoveryZipSummary[]>([]);
+  const countyReliefBoundariesRef = useRef<ZipBoundaryFeatureCollection | null>(null);
+  const [stateCapitalPlottedCount, setStateCapitalPlottedCount] = useState(0);
+  const [stateCapitalCitywideCount, setStateCapitalCitywideCount] = useState(0);
+  const [countyReliefZipCount, setCountyReliefZipCount] = useState(0);
+  const [stateRecoveryZipCount, setStateRecoveryZipCount] = useState(0);
+  const [federalRestaurantReliefPlottedCount, setFederalRestaurantReliefPlottedCount] = useState(0);
+  const [federalRestaurantReliefCitywideCount, setFederalRestaurantReliefCitywideCount] = useState(0);
 
   // Polygon draw tool
   const drawRef = useRef<MapboxDraw | null>(null);
@@ -300,6 +366,117 @@ export default function MapView() {
   const [polygonResults, setPolygonResults] = useState<GeoJSON.FeatureCollection | null>(null);
   const [polygonLoading, setPolygonLoading] = useState(false);
   const [polygonPanelOpen, setPolygonPanelOpen] = useState(false);
+  const countyReliefRecipientsAbortRef = useRef<AbortController | null>(null);
+  const [countyReliefRecipientsPanel, setCountyReliefRecipientsPanel] = useState<{
+    sourceId: HistoricalRecoveryRecipientSource;
+    programName: string;
+    year: number;
+    zipCode: string;
+    status: CountyReliefRecipientsPanelStatus;
+    recipients: HistoricalRecoveryRecipient[];
+    sourceLink: string | null;
+  } | null>(null);
+
+  const openHistoricalRecoveryRecipients = useCallback((
+    sourceId: HistoricalRecoveryRecipientSource,
+    zipCode: string,
+  ) => {
+    if (!/^\d{5}$/.test(zipCode)) return;
+    const defaults =
+      sourceId === "illinois-b2b"
+        ? {
+            programName: "Illinois Back to Business Grant Program",
+            year: 2022,
+          }
+        : {
+            programName: "Cook County 2023 Source Grant",
+            year: 2023,
+          };
+
+    countyReliefRecipientsAbortRef.current?.abort();
+    const controller = new AbortController();
+    countyReliefRecipientsAbortRef.current = controller;
+    setSnapshotOpen(false);
+    setPolygonPanelOpen(false);
+    setCountyReliefRecipientsPanel({
+      sourceId,
+      ...defaults,
+      zipCode,
+      status: "loading",
+      recipients: [],
+      sourceLink: null,
+    });
+
+    fetchHistoricalRecoveryRecipients(sourceId, zipCode, { signal: controller.signal })
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        setCountyReliefRecipientsPanel((current) =>
+          current?.zipCode === zipCode && current.sourceId === sourceId
+            ? {
+                sourceId,
+                programName: result.programName,
+                year: result.year,
+                zipCode,
+                status: result.status,
+                recipients: result.recipients,
+                sourceLink: result.sourceLink,
+              }
+            : current,
+        );
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setCountyReliefRecipientsPanel((current) =>
+          current?.zipCode === zipCode && current.sourceId === sourceId
+            ? { ...current, status: "error", recipients: [], sourceLink: null }
+            : current,
+        );
+      });
+  }, []);
+
+  const closeCountyReliefRecipients = useCallback(() => {
+    countyReliefRecipientsAbortRef.current?.abort();
+    countyReliefRecipientsAbortRef.current = null;
+    setCountyReliefRecipientsPanel(null);
+  }, []);
+
+  // HARD-CLOSE the recipients panel on every teardown path, not just its own X
+  // button. The panel lists recipient BUSINESS NAMES against award amounts — the
+  // single most identifying surface in the layer, and the thing the ZIP-aggregate
+  // design and the gated per-ZIP endpoint exist to protect. Previously
+  // setCountyReliefRecipientsPanel(null) was reachable ONLY from the X, so
+  // unchecking the overlay (or Community Investment entirely, or losing the admin
+  // session) hid the polygons and emptied the source while the panel kept
+  // rendering every name and dollar figure. The shared mapbox popup goes with it.
+  useEffect(() => {
+    if (!countyReliefRecipientsPanel) return;
+    if (
+      shouldKeepRecipientsPanelOpen({
+        adminSessionActive,
+        communityInvestmentVisible,
+        overlays: publicInvestmentOverlays,
+        sourceId: countyReliefRecipientsPanel.sourceId,
+      })
+    ) {
+      return;
+    }
+    sharedDotPopupRef.current?.remove();
+    closeCountyReliefRecipients();
+  }, [
+    countyReliefRecipientsPanel,
+    adminSessionActive,
+    communityInvestmentVisible,
+    publicInvestmentOverlays,
+    closeCountyReliefRecipients,
+  ]);
+
+  useEffect(
+    () => () => {
+      countyReliefRecipientsAbortRef.current?.abort();
+    },
+    [],
+  );
 
   // Load programs for snapshot
   useEffect(() => {
@@ -1462,6 +1639,117 @@ export default function MapView() {
          radius scaled by amountAwarded (sqrt, clamped 4–18px), slight opacity.
          Citywide records never reach this source (excluded client-side); they
          surface only in the legend's "Citywide commitments" note. */
+      map.addSource(COUNTY_RELIEF_SOURCE_ID, { type: "geojson", data: EMPTY_FC });
+      map.addLayer({
+        id: COUNTY_RELIEF_FILL_LAYER_ID,
+        type: "fill",
+        source: COUNTY_RELIEF_SOURCE_ID,
+        layout: { visibility: "none" },
+        paint: {
+          "fill-color": COUNTY_RELIEF_FILL_COLOR,
+          "fill-opacity": [
+            "interpolate",
+            ["linear"],
+            ["to-number", ["get", "intensity"], 0],
+            0,
+            0.12,
+            1,
+            0.5,
+          ],
+        },
+      }, "owner-clusters-clusters");
+      map.addLayer({
+        id: COUNTY_RELIEF_LINE_LAYER_ID,
+        type: "line",
+        source: COUNTY_RELIEF_SOURCE_ID,
+        layout: { visibility: "none" },
+        paint: {
+          "line-color": COUNTY_RELIEF_LINE_COLOR,
+          "line-width": 1.25,
+          "line-opacity": 0.8,
+        },
+      }, "owner-clusters-clusters");
+
+      map.on("click", COUNTY_RELIEF_FILL_LAYER_ID, (e) => {
+        if (!e.features?.length) return;
+        const properties = e.features[0].properties || {};
+        const zipCode = String(properties.zipCode || "");
+        sharedDotPopup
+          .setLngLat(e.lngLat)
+          .setHTML(buildCountyReliefPopupHtml(properties))
+          .addTo(map);
+        const recipientsButton = sharedDotPopup
+          .getElement()
+          ?.querySelector<HTMLButtonElement>("[data-county-relief-recipients]");
+        recipientsButton?.addEventListener(
+          "click",
+          () => {
+            sharedDotPopup.remove();
+            openHistoricalRecoveryRecipients("cook-source-2023", zipCode);
+          },
+          { once: true },
+        );
+      });
+      map.on("mouseenter", COUNTY_RELIEF_FILL_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", COUNTY_RELIEF_FILL_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
+
+      map.addSource(STATE_RECOVERY_SOURCE_ID, { type: "geojson", data: EMPTY_FC });
+      map.addLayer({
+        id: STATE_RECOVERY_FILL_LAYER_ID,
+        type: "fill",
+        source: STATE_RECOVERY_SOURCE_ID,
+        layout: { visibility: "none" },
+        paint: {
+          "fill-color": STATE_RECOVERY_FILL_COLOR,
+          "fill-opacity": [
+            "interpolate",
+            ["linear"],
+            ["to-number", ["get", "intensity"], 0],
+            0,
+            0.1,
+            1,
+            0.46,
+          ],
+        },
+      }, "owner-clusters-clusters");
+      map.addLayer({
+        id: STATE_RECOVERY_LINE_LAYER_ID,
+        type: "line",
+        source: STATE_RECOVERY_SOURCE_ID,
+        layout: { visibility: "none" },
+        paint: {
+          "line-color": STATE_RECOVERY_LINE_COLOR,
+          "line-width": 1.25,
+          "line-opacity": 0.82,
+        },
+      }, "owner-clusters-clusters");
+      map.on("click", STATE_RECOVERY_FILL_LAYER_ID, (e) => {
+        if (!e.features?.length) return;
+        const properties = e.features[0].properties || {};
+        const zipCode = String(properties.zipCode || "");
+        sharedDotPopup
+          .setLngLat(e.lngLat)
+          .setHTML(buildHistoricalRecoveryZipPopupHtml(properties))
+          .addTo(map);
+        const recipientsButton = sharedDotPopup
+          .getElement()
+          ?.querySelector<HTMLButtonElement>("[data-historical-recovery-recipients]");
+        recipientsButton?.addEventListener(
+          "click",
+          () => {
+            sharedDotPopup.remove();
+            openHistoricalRecoveryRecipients("illinois-b2b", zipCode);
+          },
+          { once: true },
+        );
+      });
+      map.on("mouseenter", STATE_RECOVERY_FILL_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", STATE_RECOVERY_FILL_LAYER_ID, () => {
+        map.getCanvas().style.cursor = "";
+      });
+
       map.addSource("community-investment", { type: "geojson", data: EMPTY_FC });
 
       map.addLayer({
@@ -1505,7 +1793,7 @@ export default function MapView() {
           "circle-opacity": 0.7,
           // OUTLINE encodes CAPITAL CLASS (a mapbox circle can't dash, so a
           // distinct stroke color carries it): a grant keeps the white ring, while
-          // the three non-grant classes — all funderType government / blue fill —
+          // the three base-map non-grant classes — all government / blue fill —
           // are told apart by an amber / navy / magenta ring (CAPITAL_CLASS_OUTLINE)
           // + the legend sub-key. Non-grant rings are 1.5px so they read.
           "circle-stroke-width": [
@@ -1536,6 +1824,85 @@ export default function MapView() {
 
       map.on("mouseenter", "community-investment-points", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "community-investment-points", () => { map.getCanvas().style.cursor = ""; });
+
+      /* DCEO capital listings are a separate overlay because their published
+         balance is neither an awarded grant nor a current funding opportunity.
+         Keeping them out of the base Dots/Arcs/Density source prevents a density
+         total or mode switch from changing that meaning. */
+      map.addSource("community-investment-state-capital", { type: "geojson", data: EMPTY_FC });
+      map.addLayer({
+        id: "community-investment-state-capital-points",
+        type: "circle",
+        source: "community-investment-state-capital",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": CAPITAL_CLASS_OUTLINE.state_appropriation,
+          "circle-radius": ["to-number", ["get", "radiusPx"], 5],
+          "circle-opacity": 0.78,
+          "circle-stroke-width": 1.5,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+      map.on("click", "community-investment-state-capital-points", (e) => {
+        if (!e.features?.length) return;
+        sharedDotPopup
+          .setLngLat(e.lngLat)
+          .setHTML(buildInvestmentPopupHtml(e.features[0].properties || {}))
+          .addTo(map);
+      });
+      map.on("mouseenter", "community-investment-state-capital-points", () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", "community-investment-state-capital-points", () => {
+        map.getCanvas().style.cursor = "";
+      });
+
+      /* SBA Restaurant Revitalization Fund grants are a closed historical
+         recovery overlay. They remain separate from the base investment source
+         so Dots/Arcs/Density never treats them as current awarded capital. */
+      map.addSource("community-investment-federal-restaurant-relief", {
+        type: "geojson",
+        data: EMPTY_FC,
+      });
+      map.addLayer({
+        id: "community-investment-federal-restaurant-relief-points",
+        type: "circle",
+        source: "community-investment-federal-restaurant-relief",
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color":
+            PUBLIC_INVESTMENT_OVERLAY_COLORS.federal_restaurant_relief,
+          "circle-radius": 5,
+          "circle-opacity": 0.76,
+          "circle-stroke-width": 1.25,
+          "circle-stroke-color": "#ffffff",
+        },
+      });
+      map.on(
+        "click",
+        "community-investment-federal-restaurant-relief-points",
+        (e) => {
+          if (!e.features?.length) return;
+          sharedDotPopup
+            .setLngLat(e.lngLat)
+            .setHTML(buildInvestmentPopupHtml(e.features[0].properties || {}))
+            .addTo(map);
+        },
+      );
+      map.on(
+        "mouseenter",
+        "community-investment-federal-restaurant-relief-points",
+        () => {
+          map.getCanvas().style.cursor = "pointer";
+        },
+      );
+      map.on(
+        "mouseleave",
+        "community-investment-federal-restaurant-relief-points",
+        () => {
+          map.getCanvas().style.cursor = "";
+        },
+      );
 
       /* ── Megaprojects overlay (mapbox-only) ──
          A SECOND source/layer pair for the admin Megaprojects overlay: ONLY the
@@ -1683,7 +2050,7 @@ export default function MapView() {
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [openHistoricalRecoveryRecipients]);
 
   /* ── Toggle zone visibility ────────────── */
   const toggleZone = useCallback(
@@ -1984,6 +2351,34 @@ export default function MapView() {
     const megaprojectsParam = params.get("megaprojects");
     if (megaprojectsParam === "1") setInvestmentMegaprojectsVisiblePersistent(true);
     if (megaprojectsParam === "0") setInvestmentMegaprojectsVisiblePersistent(false);
+    const countyReliefParam = params.get("countyRelief");
+    if (countyReliefParam === "1") {
+      setPublicInvestmentOverlayPersistent("county_relief_awards", true);
+    }
+    if (countyReliefParam === "0") {
+      setPublicInvestmentOverlayPersistent("county_relief_awards", false);
+    }
+    const stateRecoveryParam = params.get("stateRecovery");
+    if (stateRecoveryParam === "1") {
+      setPublicInvestmentOverlayPersistent("state_recovery_awards", true);
+    }
+    if (stateRecoveryParam === "0") {
+      setPublicInvestmentOverlayPersistent("state_recovery_awards", false);
+    }
+    const restaurantReliefParam = params.get("restaurantRelief");
+    if (restaurantReliefParam === "1") {
+      setPublicInvestmentOverlayPersistent("federal_restaurant_relief", true);
+    }
+    if (restaurantReliefParam === "0") {
+      setPublicInvestmentOverlayPersistent("federal_restaurant_relief", false);
+    }
+    const stateCapitalParam = params.get("stateCapital");
+    if (stateCapitalParam === "1") {
+      setPublicInvestmentOverlayPersistent("state_capital_projects", true);
+    }
+    if (stateCapitalParam === "0") {
+      setPublicInvestmentOverlayPersistent("state_capital_projects", false);
+    }
 
     setCommunityInvestmentVisiblePersistent(true);
 
@@ -2001,6 +2396,7 @@ export default function MapView() {
     setCommunityInvestmentVisiblePersistent,
     setInvestmentMegaprojectsVisiblePersistent,
     setInvestmentViewModePersistent,
+    setPublicInvestmentOverlayPersistent,
   ]);
 
   const handleGenerateSnapshot = useCallback(async () => {
@@ -2316,10 +2712,24 @@ export default function MapView() {
         if (src) src.setData(EMPTY_FC);
         const megaSrc = map.getSource("community-investment-megaprojects") as mapboxgl.GeoJSONSource | undefined;
         if (megaSrc) megaSrc.setData(EMPTY_FC);
+        const stateSrc = map.getSource("community-investment-state-capital") as mapboxgl.GeoJSONSource | undefined;
+        if (stateSrc) stateSrc.setData(EMPTY_FC);
+        const countySrc = map.getSource(COUNTY_RELIEF_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+        if (countySrc) countySrc.setData(EMPTY_FC);
+        const stateRecoverySrc = map.getSource(STATE_RECOVERY_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+        if (stateRecoverySrc) stateRecoverySrc.setData(EMPTY_FC);
+        const federalRestaurantSrc = map.getSource(
+          "community-investment-federal-restaurant-relief",
+        ) as mapboxgl.GeoJSONSource | undefined;
+        if (federalRestaurantSrc) federalRestaurantSrc.setData(EMPTY_FC);
         investmentFeaturesRef.current = [];
         investmentCitywideEntriesRef.current = [];
         investmentFunderHqsRef.current = [];
         megaprojectFeaturesRef.current = [];
+        stateCapitalFeaturesRef.current = [];
+        federalRestaurantReliefFeaturesRef.current = [];
+        countyReliefByZipRef.current = [];
+        stateRecoveryByZipRef.current = [];
         setCommunityInvestmentLoaded(false);
         setInvestmentPresentFunderTypes([]);
         setInvestmentPresentCapitalClasses([]);
@@ -2328,6 +2738,12 @@ export default function MapView() {
         setInvestmentArcMissingHqCount(0);
         setMegaprojectSummary(null);
         setInvestmentCitywideDevelopmentNames([]);
+        setStateCapitalPlottedCount(0);
+        setStateCapitalCitywideCount(0);
+        setCountyReliefZipCount(0);
+        setStateRecoveryZipCount(0);
+        setFederalRestaurantReliefPlottedCount(0);
+        setFederalRestaurantReliefCitywideCount(0);
       }
       return;
     }
@@ -2345,6 +2761,18 @@ export default function MapView() {
           investmentFeaturesRef.current = result.pointFeatures;
           investmentCitywideEntriesRef.current = result.citywideEntries;
           investmentFunderHqsRef.current = result.funderHqs;
+          stateCapitalFeaturesRef.current = result.pointFeatures.filter(
+            (feature) => feature.properties.source === "dceo-capital"
+          );
+          federalRestaurantReliefFeaturesRef.current = result.pointFeatures.filter(
+            (feature) => feature.properties.source === "sba-rrf",
+          );
+          countyReliefByZipRef.current = result.countyReliefByZip;
+          stateRecoveryByZipRef.current = result.stateRecoveryByZip;
+          setStateCapitalCitywideCount(result.stateCapitalCitywideCount);
+          setFederalRestaurantReliefCitywideCount(
+            result.federalRestaurantReliefCitywideCount,
+          );
           // Megaprojects overlay: the development subset, built once and summarized
           // for the legend (unaffected by the year/funderType filters below).
           const megaFeatures = buildMegaprojectFeatures(result.pointFeatures);
@@ -2393,7 +2821,9 @@ export default function MapView() {
       filterInvestmentPointFeatures(investmentFeaturesRef.current, {
         yearRangeId: investmentYearRange,
         activeFunderTypes,
-      })
+      }).filter(
+        (feature) => publicInvestmentOverlayIdForSource(feature.properties.source) === null
+      )
     );
     src.setData(investmentFeatureCollection(filtered));
     // Re-scope the legend's citywide figure to the SAME filters as the dots, so
@@ -2410,6 +2840,190 @@ export default function MapView() {
     communityInvestmentLoaded,
     investmentYearRange,
     investmentFunderTypes,
+    loaded,
+  ]);
+
+  /* Additional public-investment overlays. They deliberately render through
+     their own mapbox sources so neither Dots/Arcs/Density nor awarded-dollar
+     density calculations can absorb them. */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    const source = map.getSource("community-investment-state-capital") as mapboxgl.GeoJSONSource | undefined;
+    const layerId = "community-investment-state-capital-points";
+    const visible =
+      adminSessionActive &&
+      communityInvestmentVisible &&
+      communityInvestmentLoaded &&
+      publicInvestmentOverlays.state_capital_projects;
+
+    if (map.getLayer(layerId)) {
+      map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+    }
+    const features = visible ? stateCapitalFeaturesRef.current : [];
+    source?.setData(investmentFeatureCollection(features));
+    setStateCapitalPlottedCount(features.length);
+  }, [
+    adminSessionActive,
+    communityInvestmentVisible,
+    communityInvestmentLoaded,
+    publicInvestmentOverlays.state_capital_projects,
+    loaded,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    const source = map.getSource(
+      "community-investment-federal-restaurant-relief",
+    ) as mapboxgl.GeoJSONSource | undefined;
+    const layerId = "community-investment-federal-restaurant-relief-points";
+    const visible =
+      adminSessionActive &&
+      communityInvestmentVisible &&
+      communityInvestmentLoaded &&
+      publicInvestmentOverlays.federal_restaurant_relief;
+
+    if (map.getLayer(layerId)) {
+      map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+    }
+    const features = visible ? federalRestaurantReliefFeaturesRef.current : [];
+    source?.setData(investmentFeatureCollection(features));
+    setFederalRestaurantReliefPlottedCount(features.length);
+  }, [
+    adminSessionActive,
+    communityInvestmentVisible,
+    communityInvestmentLoaded,
+    publicInvestmentOverlays.federal_restaurant_relief,
+    loaded,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    const source = map.getSource(COUNTY_RELIEF_SOURCE_ID) as mapboxgl.GeoJSONSource | undefined;
+    const visible =
+      adminSessionActive &&
+      communityInvestmentVisible &&
+      communityInvestmentLoaded &&
+      publicInvestmentOverlays.county_relief_awards;
+
+    for (const layerId of [COUNTY_RELIEF_FILL_LAYER_ID, COUNTY_RELIEF_LINE_LAYER_ID]) {
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+      }
+    }
+    if (!visible) {
+      source?.setData(EMPTY_FC);
+      setCountyReliefZipCount(0);
+      return;
+    }
+
+    const applyBoundaries = (boundaries: ZipBoundaryFeatureCollection) => {
+      const collection = buildCountyReliefFeatureCollection(
+        boundaries,
+        countyReliefByZipRef.current
+      );
+      source?.setData(collection);
+      setCountyReliefZipCount(collection.features.length);
+    };
+    if (countyReliefBoundariesRef.current) {
+      applyBoundaries(countyReliefBoundariesRef.current);
+      return;
+    }
+
+    const controller = new AbortController();
+    fetch(COUNTY_RELIEF_BOUNDARIES_ENDPOINT, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) throw new Error(`ZIP boundaries returned ${response.status}`);
+        return response.json() as Promise<ZipBoundaryFeatureCollection>;
+      })
+      .then((boundaries) => {
+        if (controller.signal.aborted || boundaries.type !== "FeatureCollection") return;
+        countyReliefBoundariesRef.current = boundaries;
+        applyBoundaries(boundaries);
+      })
+      .catch((error) => {
+        if (error?.name === "AbortError") return;
+        console.warn("[CommunityInvestment] county relief ZIP boundary error:", error);
+        source?.setData(EMPTY_FC);
+        setCountyReliefZipCount(0);
+      });
+    return () => controller.abort();
+  }, [
+    adminSessionActive,
+    communityInvestmentVisible,
+    communityInvestmentLoaded,
+    publicInvestmentOverlays.county_relief_awards,
+    loaded,
+  ]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+    const source = map.getSource(STATE_RECOVERY_SOURCE_ID) as
+      | mapboxgl.GeoJSONSource
+      | undefined;
+    const visible =
+      adminSessionActive &&
+      communityInvestmentVisible &&
+      communityInvestmentLoaded &&
+      publicInvestmentOverlays.state_recovery_awards;
+
+    for (const layerId of [
+      STATE_RECOVERY_FILL_LAYER_ID,
+      STATE_RECOVERY_LINE_LAYER_ID,
+    ]) {
+      if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+      }
+    }
+    if (!visible) {
+      source?.setData(EMPTY_FC);
+      setStateRecoveryZipCount(0);
+      return;
+    }
+
+    const applyBoundaries = (boundaries: ZipBoundaryFeatureCollection) => {
+      const collection = buildStateRecoveryFeatureCollection(
+        boundaries,
+        stateRecoveryByZipRef.current,
+      );
+      source?.setData(collection);
+      setStateRecoveryZipCount(collection.features.length);
+    };
+    if (countyReliefBoundariesRef.current) {
+      applyBoundaries(countyReliefBoundariesRef.current);
+      return;
+    }
+
+    const controller = new AbortController();
+    fetch(COUNTY_RELIEF_BOUNDARIES_ENDPOINT, { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`ZIP boundaries returned ${response.status}`);
+        }
+        return response.json() as Promise<ZipBoundaryFeatureCollection>;
+      })
+      .then((boundaries) => {
+        if (controller.signal.aborted || boundaries.type !== "FeatureCollection") {
+          return;
+        }
+        countyReliefBoundariesRef.current = boundaries;
+        applyBoundaries(boundaries);
+      })
+      .catch((error) => {
+        if (error?.name === "AbortError") return;
+        console.warn("[CommunityInvestment] state recovery ZIP boundary error:", error);
+        source?.setData(EMPTY_FC);
+        setStateRecoveryZipCount(0);
+      });
+    return () => controller.abort();
+  }, [
+    adminSessionActive,
+    communityInvestmentVisible,
+    communityInvestmentLoaded,
+    publicInvestmentOverlays.state_recovery_awards,
     loaded,
   ]);
 
@@ -2520,11 +3134,19 @@ export default function MapView() {
     const megaprojectsChanged =
       prevInvestmentMegaprojectsVisibleRef.current !== null &&
       prevInvestmentMegaprojectsVisibleRef.current !== investmentMegaprojectsVisible;
-    if (modeChanged || megaprojectsChanged) {
+    // The four public-investment overlays were never in this check, so toggling
+    // one off left its popup — opened by clicking a ZIP polygon or an overlay
+    // point — floating over a layer that no longer exists.
+    const prevOverlays = prevPublicInvestmentOverlaysRef.current;
+    const overlaysChanged =
+      prevOverlays !== null &&
+      PUBLIC_INVESTMENT_OVERLAY_IDS.some((id) => prevOverlays[id] !== publicInvestmentOverlays[id]);
+    if (modeChanged || megaprojectsChanged || overlaysChanged) {
       sharedDotPopupRef.current?.remove();
     }
     prevInvestmentViewModeRef.current = mode;
     prevInvestmentMegaprojectsVisibleRef.current = investmentMegaprojectsVisible;
+    prevPublicInvestmentOverlaysRef.current = publicInvestmentOverlays;
 
     const removeOverlay = () => {
       if (deckOverlayRef.current) {
@@ -2553,7 +3175,9 @@ export default function MapView() {
       filterInvestmentPointFeatures(investmentFeaturesRef.current, {
         yearRangeId: investmentYearRange,
         activeFunderTypes,
-      })
+      }).filter(
+        (feature) => publicInvestmentOverlayIdForSource(feature.properties.source) === null
+      )
     );
 
     let layers: Layer[] = [];
@@ -2650,6 +3274,7 @@ export default function MapView() {
     investmentFunderTypes,
     investmentDensityMetric,
     getInvestmentDeckTooltip,
+    publicInvestmentOverlays,
   ]);
 
   return (
@@ -2766,11 +3391,19 @@ export default function MapView() {
           investmentMegaprojectSummary={megaprojectSummary}
           investmentMegaprojectCitywideNames={investmentCitywideDevelopmentNames}
           investmentMegaprojectsVisible={investmentMegaprojectsVisible}
+          publicInvestmentOverlays={publicInvestmentOverlays}
+          countyReliefZipCount={countyReliefZipCount}
+          stateRecoveryZipCount={stateRecoveryZipCount}
+          federalRestaurantReliefPlottedCount={federalRestaurantReliefPlottedCount}
+          federalRestaurantReliefCitywideCount={federalRestaurantReliefCitywideCount}
+          stateCapitalPlottedCount={stateCapitalPlottedCount}
+          stateCapitalCitywideCount={stateCapitalCitywideCount}
           onSetCommunityInvestmentVisible={setCommunityInvestmentVisiblePersistent}
           onSetInvestmentYearRange={setInvestmentYearRangePersistent}
           onSetInvestmentViewMode={setInvestmentViewModePersistent}
           onSetInvestmentDensityMetric={setInvestmentDensityMetric}
           onSetInvestmentMegaprojectsVisible={setInvestmentMegaprojectsVisiblePersistent}
+          onSetPublicInvestmentOverlay={setPublicInvestmentOverlayPersistent}
           onToggleInvestmentFunderType={toggleInvestmentFunderType}
           onClose={() => setLegendOpen(false)}
           onToggleZone={toggleZone}
@@ -2789,6 +3422,25 @@ export default function MapView() {
         />
       )}
 
+
+      {countyReliefRecipientsPanel && (
+        <CountyReliefRecipientsPanel
+          sourceId={countyReliefRecipientsPanel.sourceId}
+          programName={countyReliefRecipientsPanel.programName}
+          year={countyReliefRecipientsPanel.year}
+          zipCode={countyReliefRecipientsPanel.zipCode}
+          status={countyReliefRecipientsPanel.status}
+          recipients={countyReliefRecipientsPanel.recipients}
+          sourceLink={countyReliefRecipientsPanel.sourceLink}
+          onClose={closeCountyReliefRecipients}
+          onRetry={() =>
+            openHistoricalRecoveryRecipients(
+              countyReliefRecipientsPanel.sourceId,
+              countyReliefRecipientsPanel.zipCode,
+            )
+          }
+        />
+      )}
 
       {/* ── RIGHT: Area Snapshot Panel ──────── */}
       {snapshotOpen && loaded && (
@@ -2836,7 +3488,7 @@ export default function MapView() {
       )}
 
       {/* Snapshot toggle (when closed) — desktop text button */}
-      {!snapshotOpen && !polygonPanelOpen && loaded && (
+      {!snapshotOpen && !polygonPanelOpen && !countyReliefRecipientsPanel && loaded && (
         <button
           onClick={() => setSnapshotOpen(true)}
           className="hidden md:block absolute top-3 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
@@ -2845,7 +3497,7 @@ export default function MapView() {
         </button>
       )}
 
-      {loaded && isMobile && !legendOpen && !snapshotOpen && !polygonPanelOpen && !drawMode && (
+      {loaded && isMobile && !legendOpen && !snapshotOpen && !polygonPanelOpen && !countyReliefRecipientsPanel && !drawMode && (
         <MapMobileSheet
           activePreset={activeMobilePreset}
           snapshotLabel={snapshotLabel}
@@ -2869,7 +3521,7 @@ export default function MapView() {
       )}
 
       {/* Draw Area button — hidden when right panels are open, always visible in draw mode */}
-      {loaded && (drawMode || (!snapshotOpen && !polygonPanelOpen && !isMobile)) && (
+      {loaded && (drawMode || (!snapshotOpen && !polygonPanelOpen && !countyReliefRecipientsPanel && !isMobile)) && (
         <button
           onClick={() => {
             const draw = drawRef.current;
