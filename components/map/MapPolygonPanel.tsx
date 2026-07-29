@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useCallback, useState } from "react";
+import { useMemo, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { FileText, Loader2, Mail, X } from "lucide-react";
@@ -10,6 +10,27 @@ import type { GeneratedReport } from "@/lib/report-engine";
 import type { WizardState } from "@/lib/report-wizard-config";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
+import {
+  fetchCommunityInvestmentLayer,
+  type CommunityInvestmentLayerResult,
+  type InvestmentPointFeature,
+} from "@/lib/community-investment-layer";
+import {
+  buildDrawnAreaCsv,
+  defaultDrawnAreaName,
+  drawnAreaFilenameSlug,
+  formatPolygonInvestmentAmount,
+  investmentExclusionsFromLayer,
+  polygonInvestmentExclusionNotes,
+  polygonInvestmentYearSpanLabel,
+  selectInvestmentPointsInArea,
+  aggregateInvestmentPoints,
+  POLYGON_INVESTMENT_EMPTY_NOTE,
+  POLYGON_INVESTMENT_HEADING,
+  POLYGON_INVESTMENT_NO_TOTAL_NOTE,
+  type DrawnAreaInput,
+  type PolygonInvestmentSummary,
+} from "@/lib/polygon-investment";
 
 /** Vacancy follow-up resources */
 const RESOURCES = [
@@ -40,11 +61,59 @@ const RESOURCES = [
   },
 ];
 
+/**
+ * Module-scope cache for the gated Community Investment export so an admin who
+ * draws several areas in one session pays for ONE fetch. The promise is dropped
+ * on rejection so a transient failure can be retried by the next draw. Mirrors
+ * the "fetch once per session" contract the map layer already honors with
+ * `communityInvestmentLoaded` in MapView.
+ */
+let investmentLayerPromise: Promise<CommunityInvestmentLayerResult> | null = null;
+
+function loadInvestmentLayerOnce(
+  fetchImpl?: typeof fetch,
+): Promise<CommunityInvestmentLayerResult> {
+  if (!investmentLayerPromise) {
+    investmentLayerPromise = fetchCommunityInvestmentLayer(
+      fetchImpl ? { fetchImpl } : undefined,
+    ).catch((err) => {
+      investmentLayerPromise = null;
+      throw err;
+    });
+  }
+  return investmentLayerPromise;
+}
+
+/** Test-only cache reset so one spec's stub never leaks into the next. */
+export function __resetPolygonInvestmentCache(): void {
+  investmentLayerPromise = null;
+}
+
 interface MapPolygonPanelProps {
   results: GeoJSON.FeatureCollection;
   loading: boolean;
   onClose: () => void;
   onClear: () => void;
+  /**
+   * The polygon the user drew, forwarded from MapView's draw.create handler.
+   * Required for the admin investment section — without a shape there is
+   * nothing to select against.
+   */
+  polygon?: DrawnAreaInput;
+  /**
+   * Result of MapView's one-time /api/owner-file/session probe. The investment
+   * section renders ONLY when this is true; an unauthenticated viewer sees
+   * nothing new anywhere in this panel, including in the CSV export.
+   */
+  adminSessionActive?: boolean;
+  /**
+   * Pre-loaded gated layer result. Supplied by tests (and available to MapView
+   * if it ever wants to hand over its already-fetched copy); when absent the
+   * panel lazily fetches once on the first polygon draw.
+   */
+  investmentLayer?: CommunityInvestmentLayerResult | null;
+  /** Test seam for the gated fetch, mirroring fetchCommunityInvestmentLayer's. */
+  investmentFetchImpl?: typeof fetch;
 }
 
 export default function MapPolygonPanel({
@@ -52,11 +121,82 @@ export default function MapPolygonPanel({
   loading,
   onClose,
   onClear,
+  polygon = null,
+  adminSessionActive = false,
+  investmentLayer = null,
+  investmentFetchImpl,
 }: MapPolygonPanelProps) {
   const { status } = useSession();
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const features = results.features;
+
+  /* ── Ellen's label fix: every drawn area carries a name ──
+     Seeded with a dated default so an export is never anonymous, and editable
+     inline. The name lands in the panel header and in every row and header of
+     the CSV this panel produces. */
+  const [areaName, setAreaName] = useState(() => defaultDrawnAreaName());
+
+  /* ── Admin-only community-investment analysis ──
+     Gated twice over: the section renders only when the admin-session probe
+     came back 204 AND the gated dataset actually loaded. A non-admin never
+     triggers the fetch and never sees the section or its CSV rows. */
+  const [fetchedLayer, setFetchedLayer] = useState<CommunityInvestmentLayerResult | null>(null);
+  const [investmentLoadFailed, setInvestmentLoadFailed] = useState(false);
+  const layerRequestedRef = useRef(false);
+  /** A caller-supplied result wins over our own lazy fetch. */
+  const layer = investmentLayer ?? fetchedLayer;
+
+  useEffect(() => {
+    if (!adminSessionActive || layer || !polygon) return;
+    if (layerRequestedRef.current) return;
+    layerRequestedRef.current = true;
+    let cancelled = false;
+    loadInvestmentLayerOnce(investmentFetchImpl)
+      .then((result) => {
+        if (!cancelled) setFetchedLayer(result);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        // Allow the next draw to retry rather than stranding the section.
+        layerRequestedRef.current = false;
+        setInvestmentLoadFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [adminSessionActive, layer, polygon, investmentFetchImpl]);
+
+  /**
+   * Derived, never set from an effect body: an admin who has drawn a shape but
+   * has no layer result yet is waiting on the gated fetch. A non-ready result
+   * (unauthorized / unavailable) renders NOTHING at all rather than an
+   * admin-shaped placeholder — the gate stays tight in every failure mode.
+   */
+  const investmentPending =
+    adminSessionActive && !!polygon && !layer && !investmentLoadFailed;
+
+  /** Investment points inside the drawn area — null unless admin AND ready. */
+  const investmentSelection = useMemo<InvestmentPointFeature[] | null>(() => {
+    if (!adminSessionActive || !polygon) return null;
+    if (!layer || layer.status !== "ready") return null;
+    return selectInvestmentPointsInArea(polygon, layer.pointFeatures);
+  }, [adminSessionActive, polygon, layer]);
+
+  const investmentSummary = useMemo<PolygonInvestmentSummary | null>(() => {
+    if (!investmentSelection || !layer) return null;
+    return aggregateInvestmentPoints(investmentSelection, investmentExclusionsFromLayer(layer));
+  }, [investmentSelection, layer]);
+
+  const investmentMoneyBuckets = useMemo(
+    () => (investmentSummary ? investmentSummary.buckets.filter((b) => b.count > 0) : []),
+    [investmentSummary],
+  );
+
+  const investmentExclusionNotes = useMemo(
+    () => (investmentSummary ? polygonInvestmentExclusionNotes(investmentSummary.exclusions) : []),
+    [investmentSummary],
+  );
 
   /* ── Summary counts ── */
   const vacantLandCount = features.filter(
@@ -299,49 +439,30 @@ export default function MapPolygonPanel({
     );
   }, [areaReport, areaWizardState, status]);
 
-  /* ── Export CSV ── */
+  /* ── Export CSV ──
+     One file, two tables (vacancy, then the admin investment analysis), both
+     stamped with the area name on the header and every row. The investment
+     table is passed through only for an admin with loaded data — for everyone
+     else the export is the pre-existing vacancy table plus its name column. */
   const handleExportCsv = useCallback(() => {
-    const header = [
-      "Address",
-      "Property Type",
-      "Ward",
-      "Community Area",
-      "Zoning Class",
-      "Sq Ft",
-      "Owner Name",
-      "Owner Type",
-      "Incentive Count",
-      "Zone Matches",
-    ];
-    const rows = features.map((f) => {
-      const p = f.properties ?? {};
-      return [
-        p.address ?? "",
-        p.propertyType ?? "",
-        p.ward ?? "",
-        p.communityArea ?? "",
-        p.zoningClass ?? "",
-        p.squareFeet ?? "",
-        p.ownerName ?? "",
-        p.ownerType ?? "",
-        p.incentiveCount ?? "",
-        (p.zoneMatches ?? []).map((z: { zoneKey?: string }) => z.zoneKey ?? z).join("; "),
-      ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(",");
+    const csv = buildDrawnAreaCsv({
+      areaName,
+      vacancyFeatures: features,
+      investment:
+        investmentSummary && investmentSelection
+          ? { summary: investmentSummary, selected: investmentSelection }
+          : null,
     });
 
-    const area = topCommunityArea ? topCommunityArea.toLowerCase().replace(/\s+/g, "-") : "area";
     const date = new Date().toISOString().slice(0, 10);
-    const csv = [header.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `vacancy-report-${area}-${date}.csv`;
+    a.download = `area-report-${drawnAreaFilenameSlug(areaName)}-${date}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [features, topCommunityArea]);
+  }, [areaName, features, investmentSelection, investmentSummary]);
 
   /** Build report link for a property using its coordinates */
   const buildReportLink = (f: GeoJSON.Feature) => {
@@ -365,7 +486,7 @@ export default function MapPolygonPanel({
             Area Analysis
           </div>
           <div className="font-editorial text-[24px] text-white leading-tight mt-1">
-            Vacancy Report
+            {areaName.trim() || "Drawn area"}
           </div>
           {topCommunityArea && !loading && features.length > 0 && (
             <div className="font-mono-bureau text-[10px] text-white/50 mt-1.5">
@@ -383,17 +504,34 @@ export default function MapPolygonPanel({
         </button>
       </div>
 
-      {/* Clear & Redraw */}
-      <div className="px-5 py-3 bg-white border-b border-[#0C1B33]/8 flex items-center justify-between">
-        <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30">
-          Drawn Area
-        </span>
-        <button
-          onClick={onClear}
-          className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#2563EB] hover:text-[#1d4ed8] transition-colors"
-        >
-          Clear &amp; Redraw
-        </button>
+      {/* Area name + Clear & Redraw */}
+      <div className="px-5 py-3 bg-white border-b border-[#0C1B33]/8">
+        <div className="flex items-center justify-between mb-1.5">
+          <label
+            htmlFor="drawn-area-name"
+            className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30"
+          >
+            Area Name
+          </label>
+          <button
+            onClick={onClear}
+            className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#2563EB] hover:text-[#1d4ed8] transition-colors"
+          >
+            Clear &amp; Redraw
+          </button>
+        </div>
+        <input
+          id="drawn-area-name"
+          type="text"
+          value={areaName}
+          onChange={(event) => setAreaName(event.target.value)}
+          placeholder={defaultDrawnAreaName()}
+          maxLength={120}
+          className="w-full border border-[#0C1B33]/12 px-2.5 py-2 text-[12px] text-[#0C1B33] placeholder:text-[#0C1B33]/25 focus:outline-none focus:border-[#2563EB]"
+        />
+        <p className="text-[8px] text-[#0C1B33]/30 mt-1 leading-snug">
+          Names this area in the panel header and on every row of the CSV export.
+        </p>
       </div>
 
       {/* ── Loading state ── */}
@@ -553,6 +691,128 @@ export default function MapPolygonPanel({
                     );
                   })}
                 </div>
+              </div>
+            </>
+          )}
+
+          {/* ── ADMIN — Community investment in this area ──
+               Gated on the /api/owner-file/session probe (adminSessionActive)
+               AND on the gated dataset having loaded. An unauthenticated viewer
+               renders none of this: no heading, no figures, no CSV rows. */}
+          {adminSessionActive && (investmentPending || investmentSummary) && (
+            <>
+              <div className="mx-5 h-px bg-[#0C1B33]/8" />
+              <div className="px-5 py-4 bg-white">
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0E7490]/60">
+                    {POLYGON_INVESTMENT_HEADING}
+                  </div>
+                  <span className="font-mono-bureau text-[7px] tracking-[0.18em] uppercase text-[#0E7490]/40 shrink-0 ml-2">
+                    Admin
+                  </span>
+                </div>
+
+                {investmentPending && !investmentSummary && (
+                  <div className="flex items-center gap-2 py-2">
+                    <Loader2 className="w-3 h-3 animate-spin text-[#0E7490]/50" />
+                    <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/35">
+                      Loading investment records…
+                    </span>
+                  </div>
+                )}
+
+                {investmentSummary && (
+                  <>
+                    <p className="text-[9px] text-[#0C1B33]/40 leading-snug mb-3">
+                      {POLYGON_INVESTMENT_NO_TOTAL_NOTE}
+                    </p>
+
+                    {investmentMoneyBuckets.length === 0 ? (
+                      <p className="text-[11px] text-[#0C1B33]/45 leading-relaxed">
+                        {POLYGON_INVESTMENT_EMPTY_NOTE}
+                      </p>
+                    ) : (
+                      <div className="space-y-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
+                        {investmentMoneyBuckets.map((bucket) => (
+                          <div key={bucket.key} className="bg-[#FAF9F6] px-3 py-2.5">
+                            <div className="flex items-baseline justify-between gap-2">
+                              <div className="min-w-0">
+                                <div className="font-mono-bureau text-[7px] tracking-[0.18em] uppercase text-[#0C1B33]/35">
+                                  {bucket.label}
+                                </div>
+                                <div className="text-[10px] text-[#0C1B33]/70 mt-0.5">
+                                  {bucket.noun}
+                                </div>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <div className="font-editorial text-[16px] leading-none text-[#0C1B33]">
+                                  {bucket.key === "other"
+                                    ? "—"
+                                    : formatPolygonInvestmentAmount(bucket.total)}
+                                </div>
+                                <div className="font-mono-bureau text-[8px] text-[#0C1B33]/35 mt-1">
+                                  {bucket.count} record{bucket.count === 1 ? "" : "s"}
+                                </div>
+                              </div>
+                            </div>
+                            {bucket.undisclosedCount > 0 && (
+                              <div className="text-[8px] text-[#0C1B33]/30 mt-1">
+                                {bucket.undisclosedCount} of these publish no figure.
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {investmentSummary.yearSpan && (
+                      <div className="mt-2 flex items-center justify-between text-[9px] px-1">
+                        <span className="text-[#0C1B33]/40">Record years</span>
+                        <span className="font-mono-bureau text-[#0C1B33]/60">
+                          {polygonInvestmentYearSpanLabel(investmentSummary.yearSpan)}
+                        </span>
+                      </div>
+                    )}
+
+                    {investmentSummary.topRecipients.length > 0 && (
+                      <div className="mt-4">
+                        <div className="font-mono-bureau text-[8px] tracking-[0.22em] uppercase text-[#0C1B33]/30 mb-0.5">
+                          Top recipients by awarded grant dollars
+                        </div>
+                        <div className="text-[8px] text-[#0C1B33]/30 mb-2 leading-snug">
+                          Grant-class records only — development, TIF, federal, tax-credit and
+                          appropriation figures are not ranked here.
+                        </div>
+                        <div className="space-y-1.5">
+                          {investmentSummary.topRecipients.map((r) => (
+                            <div
+                              key={r.recipient}
+                              className="flex items-baseline justify-between gap-2 text-[10px]"
+                            >
+                              <span className="text-[#0C1B33]/70 truncate">{r.recipient}</span>
+                              <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">
+                                {formatPolygonInvestmentAmount(r.awarded)}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {investmentExclusionNotes.length > 0 && (
+                      <div className="mt-4 border-l-2 border-[#0E7490]/25 pl-3">
+                        <div className="font-mono-bureau text-[8px] tracking-[0.22em] uppercase text-[#0C1B33]/30 mb-1">
+                          Not selectable by a drawn area
+                        </div>
+                        {investmentExclusionNotes.map((note) => (
+                          <p key={note} className="text-[9px] text-[#0C1B33]/40 leading-snug">
+                            {note}
+                          </p>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </>
           )}

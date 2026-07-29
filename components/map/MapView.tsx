@@ -376,6 +376,10 @@ export default function MapView() {
   const drawRef = useRef<MapboxDraw | null>(null);
   const [drawMode, setDrawMode] = useState(false);
   const [polygonResults, setPolygonResults] = useState<GeoJSON.FeatureCollection | null>(null);
+  // The drawn shape itself, kept alongside its vacancy results so MapPolygonPanel
+  // can run the admin community-investment point-in-polygon analysis against the
+  // same geometry the /api/vacant query used.
+  const [polygonGeometry, setPolygonGeometry] = useState<GeoJSON.Polygon | null>(null);
   const [polygonLoading, setPolygonLoading] = useState(false);
   const [polygonPanelOpen, setPolygonPanelOpen] = useState(false);
   const countyReliefRecipientsAbortRef = useRef<AbortController | null>(null);
@@ -2086,6 +2090,9 @@ export default function MapView() {
           setPolygonLoading(true);
           setPolygonPanelOpen(true);
           setSnapshotOpen(false);
+          // Hand the shape to the panel too — the admin community-investment
+          // analysis runs point-in-polygon client-side against this geometry.
+          setPolygonGeometry(geom);
           const polygonJson = JSON.stringify(geom);
           fetch(`/api/vacant?polygon=${encodeURIComponent(polygonJson)}`)
             .then((res) => res.json())
@@ -2103,6 +2110,7 @@ export default function MapView() {
 
       map.on("draw.delete", () => {
         setPolygonResults(null);
+        setPolygonGeometry(null);
         setPolygonPanelOpen(false);
       });
 
@@ -3629,6 +3637,7 @@ export default function MapView() {
             if (!draw) return;
             draw.deleteAll();
             setPolygonResults(null);
+            setPolygonGeometry(null);
             setPolygonPanelOpen(false);
             setSnapshotOpen(false);
             draw.changeMode("draw_polygon");
@@ -3643,10 +3652,13 @@ export default function MapView() {
         <MapPolygonPanel
           results={polygonResults}
           loading={polygonLoading}
+          polygon={polygonGeometry}
+          adminSessionActive={adminSessionActive}
           onClose={() => setPolygonPanelOpen(false)}
           onClear={() => {
             drawRef.current?.deleteAll();
             setPolygonResults(null);
+            setPolygonGeometry(null);
             setPolygonPanelOpen(false);
             setDrawMode(false);
           }}
@@ -3699,6 +3711,7 @@ export default function MapView() {
             } else {
               draw.deleteAll();
               setPolygonResults(null);
+              setPolygonGeometry(null);
               setPolygonPanelOpen(false);
               draw.changeMode("draw_polygon");
               setDrawMode(true);
