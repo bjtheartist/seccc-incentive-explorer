@@ -1,6 +1,6 @@
 #!/usr/bin/env npx tsx
 /**
- * Merge the six Community Investment inputs into the single admin-only export
+ * Merge the Community Investment inputs into the single admin-only export
  * data/private/community-investment.json — the data source for the (admin-gated)
  * Community Investment map layer, served only through /api/owner-file/investment
  * and NEVER moved under public/ (see data/private/README.md).
@@ -45,6 +45,7 @@ import {
   type InvestmentStatus,
 } from "../lib/community-investment";
 import { assignCommunityArea, loadCommunityAreaPolygons } from "../lib/community-area-stamp";
+import { hasHighConfidenceChicagoDceoLocation } from "../lib/dceo-capital-appropriations";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -62,11 +63,16 @@ const OUT_PATH = join(process.cwd(), "data", "private", "community-investment.js
 const CONTEXT_OUT_PATH = join(process.cwd(), "data", "private", "capital-context.json");
 /** Committed City of Chicago Community Area boundaries (dataset igwz-8jzy). */
 const CA_GEOJSON_PATH = join(process.cwd(), "public", "data", "community-areas.geojson");
+const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boundaries.geojson");
 
 const NOF_PROGRAM = "Neighborhood Opportunity Fund (City of Chicago)";
 const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
 const CDG_PROGRAM = "Community Development Grant (City of Chicago)";
 const DEVELOPMENT_FUNDER = "Private development";
+const COOK_SOURCE_PROGRAM = "Cook County 2023 Source Grant";
+const DCEO_CAPITAL_FUNDER = "Illinois Department of Commerce and Economic Opportunity";
+const DCEO_CAPITAL_SOURCE_PAGE =
+  "https://dceo.illinois.gov/aboutdceo/grantopportunities/capitalgrants.html";
 
 const PROVENANCE_LABELS = [
   "City of Chicago Neighborhood Opportunity Fund — grant completions (Chicago Data Portal / Socrata)",
@@ -81,6 +87,8 @@ const PROVENANCE_LABELS = [
   "HUD CDBG/HOME activities administered by the City of Chicago — committed federal program allocations (authorizedAmount, capitalClass federal_program)",
   "Low-Income Housing Tax Credit allocations (HUD LIHTC database) — tax-credit capital (creditAmount, capitalClass tax_credit)",
   "New Markets Tax Credit QLICIs (CDFI Fund Public Data Release incl. FY2022) — tax-credit capital, community-area stamped from the 2020 census-tract centroid (creditAmount, capitalClass tax_credit)",
+  "Cook County 2023 Source Grant recipient list — completed/disbursed historical awards, mapped only as ZIP aggregates because the source publishes no street addresses",
+  "Illinois DCEO FY26 Capital Appropriation Listings (quarterly PDF created 2026-04-10) — source-published appropriation balances, not active opportunities or confirmed GATA award payments",
   "Address geocoding: U.S. Census Bureau Geocoder (Public_AR_Current benchmark)",
   "Community-area assignment: City of Chicago Community Area boundaries (Chicago Data Portal dataset igwz-8jzy), point-in-polygon",
 ];
@@ -1151,6 +1159,204 @@ function mapNmtc(
   return { records: out, stamp };
 }
 
+// ── Historical county awards + state capital appropriations ─────────────────
+
+const COOK_SOURCE_PDF_URL =
+  "https://cookcountysmallbiz.org/wp-content/uploads/2024/11/2023-Source-Grant-Awardee-List-a.o-11.20.24_.pdf";
+const DCEO_CAPITAL_PDF_URL =
+  "https://dceo.illinois.gov/content/dam/soi/en/web/dceo/aboutdceo/grantopportunities/documents/dceo-cap-approp-list.pdf";
+
+function normalizeFiveDigitZip(raw: string | null | undefined): string | null {
+  const match = String(raw ?? "").match(/\b(\d{5})\b/);
+  return match ? match[1] : null;
+}
+
+function loadChicagoZipCodes(): Set<string> {
+  const parsed = JSON.parse(readFileSync(ZIP_GEOJSON_PATH, "utf8")) as {
+    features?: Array<{ properties?: { zip?: unknown } }>;
+  };
+  const zips = new Set<string>();
+  for (const feature of parsed.features ?? []) {
+    const zip = normalizeFiveDigitZip(String(feature.properties?.zip ?? ""));
+    if (zip) zips.add(zip);
+  }
+  if (zips.size < 50) {
+    throw new Error(`Chicago ZIP boundary source is incomplete (${zips.size} ZIPs).`);
+  }
+  return zips;
+}
+
+function mapCookSourceGrants(
+  rows: Record<string, string>[],
+  chicagoZipCodes: ReadonlySet<string>,
+): {
+  records: CommunityInvestmentRecord[];
+  chicagoRecords: number;
+  outsideChicagoRecords: number;
+} {
+  const records: CommunityInvestmentRecord[] = [];
+  let outsideChicagoRecords = 0;
+  for (const row of rows) {
+    const zip = normalizeFiveDigitZip(row.zip);
+    const municipality = nullableStr(row.municipality);
+    const isChicago = municipality?.toUpperCase() === "CHICAGO";
+    if (!zip || !isChicago || !chicagoZipCodes.has(zip)) {
+      outsideChicagoRecords += 1;
+      continue;
+    }
+    const amount = parseAmount(row.award_amount_usd);
+    if (amount == null || amount < 0) {
+      throw new Error(`Cook County Source Grant row has an invalid award amount for ${row.awardee_name}.`);
+    }
+    records.push({
+      id: `cook-source-2023-${records.length}`,
+      source: "cook-source-2023",
+      funderType: SOURCE_FUNDER_TYPE["cook-source-2023"],
+      funderName: COOK_SOURCE_PROGRAM,
+      recipient: nullableStr(row.awardee_name) || "(unnamed awardee)",
+      capitalClass: "grant",
+      amountAwarded: amount,
+      logLine:
+        "Historical 2023 small-business recovery award. Cook County reports the program was fully disbursed by February 2024.",
+      year: 2023,
+      // The official recipient list publishes ZIP, not a street address. Never
+      // invent a point: the client joins this to an official ZIP polygon and
+      // exposes only aggregate counts/dollars.
+      geometry: { kind: "zip_area", zip },
+      address: null,
+      postalCode: zip,
+      status: "disbursed",
+      recordDate: null,
+      recordProvenance: "official",
+      links: [nullableStr(row.source_url) || COOK_SOURCE_PDF_URL],
+    });
+  }
+  return {
+    records,
+    chicagoRecords: records.length,
+    outsideChicagoRecords,
+  };
+}
+
+const DCEO_EXPLICIT_ADDRESS_RE =
+  /\b\d{1,6}(?:-\d{1,6})?\s+(?:(?:NORTH|SOUTH|EAST|WEST|N|S|E|W)\.?\s+)?(?:[A-Z0-9][A-Z0-9.'’/-]*\s+){0,7}(?:STREET|ST|AVENUE|AVE|BOULEVARD|BLVD|ROAD|RD|DRIVE|DR|LANE|LN|COURT|CT|PLACE|PL|PARKWAY|PKWY|HIGHWAY|HWY|TERRACE|TER|CIRCLE|CIR|WAY)\b/gi;
+function isHighConfidenceChicagoDceoRow(row: Record<string, string>): boolean {
+  return hasHighConfidenceChicagoDceoLocation({
+    lineName: row.line_name || "",
+    originalDescription: row.original_description || "",
+  });
+}
+
+function sourceLiteralDceoAddresses(description: string): string[] {
+  const matches = description.match(DCEO_EXPLICIT_ADDRESS_RE) ?? [];
+  return [...new Set(matches.map((match) => match.replace(/\s+/g, " ").trim().toUpperCase()))];
+}
+
+interface DceoCandidate {
+  row: Record<string, string>;
+  safeAddress: string | null;
+  multiSite: boolean;
+}
+
+function selectChicagoDceoCandidates(rows: Record<string, string>[]): DceoCandidate[] {
+  const candidates: DceoCandidate[] = [];
+  for (const row of rows) {
+    if (!isHighConfidenceChicagoDceoRow(row)) continue;
+    const addresses = sourceLiteralDceoAddresses(row.original_description || "");
+    const explicitlyVarious = /\b(?:VARIOUS LOCATIONS|MULTIPLE LOCATIONS|MULTI-SITE)\b/i.test(
+      row.original_description || "",
+    );
+    const multiSite = explicitlyVarious || addresses.length > 1;
+    const parsedAddress = nullableStr(row.explicit_project_address);
+    candidates.push({
+      row,
+      safeAddress: !multiSite && addresses.length === 1 && parsedAddress ? parsedAddress : null,
+      multiSite,
+    });
+  }
+  return candidates;
+}
+
+function conciseDceoDescription(raw: string): string | null {
+  const text = nullableStr(raw);
+  if (!text) return null;
+  const normalized = text.replace(/\s+/g, " ");
+  return normalized.length <= 320 ? normalized : `${normalized.slice(0, 317).trimEnd()}...`;
+}
+
+function mapDceoCapital(
+  candidates: readonly DceoCandidate[],
+  geocodes: ReadonlyMap<string, { lat: number; lng: number } | null>,
+  queryForAddress: (address: string) => string,
+  chicagoPolygons: ReturnType<typeof loadCommunityAreaPolygons>,
+): {
+  records: CommunityInvestmentRecord[];
+  pointRecords: number;
+  citywideRecords: number;
+  addressGeocodeMisses: number;
+  addressOutOfBounds: number;
+  multiSiteHeldCitywide: number;
+} {
+  const records: CommunityInvestmentRecord[] = [];
+  let pointRecords = 0;
+  let addressGeocodeMisses = 0;
+  let addressOutOfBounds = 0;
+  let multiSiteHeldCitywide = 0;
+  for (const candidate of candidates) {
+    const { row, safeAddress, multiSite } = candidate;
+    const rawHit = safeAddress ? geocodes.get(queryForAddress(safeAddress)) : null;
+    const hit =
+      rawHit && assignCommunityArea(rawHit.lng, rawHit.lat, chicagoPolygons)
+        ? rawHit
+        : null;
+    if (safeAddress && !rawHit) addressGeocodeMisses += 1;
+    if (rawHit && !hit) {
+      // A source-literal address resolving outside the official city polygons
+      // is stronger evidence than a Chicago-named grantee. Exclude it rather
+      // than converting it to a misleading citywide Chicago record.
+      addressOutOfBounds += 1;
+      continue;
+    }
+    if (multiSite) multiSiteHeldCitywide += 1;
+    const geometry: InvestmentGeometry = hit ? point(hit.lat, hit.lng) : { kind: "citywide" };
+    if (geometry.kind === "point") pointRecords += 1;
+    const lineType = row.line_type === "line_item" ? "Line-item appropriation" : "Lump-sum appropriation record";
+    const description = conciseDceoDescription(row.original_description);
+    const sourceLinks = [nullableStr(row.source_url) || DCEO_CAPITAL_PDF_URL, DCEO_CAPITAL_SOURCE_PAGE];
+    const publishedBalance = parseAmount(row.appropriated_amount);
+    if (publishedBalance == null) {
+      throw new Error(`DCEO capital row has an invalid published amount for ${row.line_name}.`);
+    }
+    records.push({
+      id: `dceo-capital-${records.length}`,
+      source: "dceo-capital",
+      funderType: SOURCE_FUNDER_TYPE["dceo-capital"],
+      funderName: DCEO_CAPITAL_FUNDER,
+      recipient: nullableStr(row.line_name) || "(unnamed appropriation line)",
+      capitalClass: "state_appropriation",
+      amountAwarded: null,
+      publishedBalance,
+      logLine: [lineType, description].filter(Boolean).join(" · "),
+      year: 2026,
+      geometry,
+      address: safeAddress,
+      postalCode: normalizeFiveDigitZip(row.original_description) ?? undefined,
+      status: "appropriated",
+      recordDate: null,
+      recordProvenance: "official",
+      links: [...new Set(sourceLinks)],
+    });
+  }
+  return {
+    records,
+    pointRecords,
+    citywideRecords: records.length - pointRecords,
+    addressGeocodeMisses,
+    addressOutOfBounds,
+    multiSiteHeldCitywide,
+  };
+}
+
 // ── Capital context (per-district TIF series, CRA, CDFI, state awards) ────────
 
 /**
@@ -1357,6 +1563,11 @@ async function main() {
   // 2) City-grant sources that need geocoding (CDG + Jim's corridor list).
   const cdgRows = readCsv("cdg_awards.csv");
   const jimRows = readTsv("ellen_nof_awardees.tsv");
+  const dceoCandidates = selectChicagoDceoCandidates(readCsv("dceo_capital_appropriations.csv"));
+  const cookSource = mapCookSourceGrants(
+    readCsv("cook_county_source_grants_2023.csv"),
+    loadChicagoZipCodes(),
+  );
 
   const cdgQuery = (addr: string) => `${addr.trim()}, Chicago, IL`;
   const queries: string[] = [];
@@ -1367,6 +1578,9 @@ async function main() {
   for (const r of jimRows) {
     const a = nullableStr(r.Address);
     if (a) queries.push(cdgQuery(a));
+  }
+  for (const candidate of dceoCandidates) {
+    if (candidate.safeAddress) queries.push(cdgQuery(candidate.safeAddress));
   }
 
   // Discovered megadev rows that carry a well-known street address to geocode.
@@ -1450,7 +1664,16 @@ async function main() {
     });
   }
 
+  const caPolygons = loadCommunityAreaPolygons(CA_GEOJSON_PATH);
   console.log(`Geocoded: cdg kept=${cdg.length} jim kept=${jim.length} droppedNoGeocode=${droppedNoGeocode}`);
+  const dceo = mapDceoCapital(dceoCandidates, geo, cdgQuery, caPolygons);
+  console.log(
+    `Public investment additions: cook-source Chicago=${cookSource.chicagoRecords} ` +
+      `outside-Chicago=${cookSource.outsideChicagoRecords}; dceo Chicago=${dceo.records.length} ` +
+      `(point=${dceo.pointRecords} citywide=${dceo.citywideRecords} ` +
+      `geocode-miss=${dceo.addressGeocodeMisses} out-of-bounds=${dceo.addressOutOfBounds} ` +
+      `multi-site-citywide=${dceo.multiSiteHeldCitywide})`,
+  );
 
   // Build the development records now that discovered geocodes are resolved:
   // enrich the 27 verified megadevs onto their KML coordinates, keep the ~68
@@ -1473,7 +1696,6 @@ async function main() {
   //     so they are structurally NEVER dedupe-eligible and pass through untouched.
   //     Load the CA polygons here so NMTC's citywide records can be community-area
   //     stamped from their 2020 tract centroid (the same polygons stamp the points).
-  const caPolygons = loadCommunityAreaPolygons(CA_GEOJSON_PATH);
   const { records: tif, drops: tifDrops } = mapTif(readCsv("tif_projects.csv"));
   const { records: hud, drops: hudDrops } = mapHud(readCsv("hud_cpd_activities.csv"), new Date(generatedAt));
   const { records: lihtc, drops: lihtcDrops } = mapLihtc(readCsv("lihtc_chicago.csv"));
@@ -1492,7 +1714,7 @@ async function main() {
   //    capital-spine sources append last (also never dedupe-eligible).
   const all = [
     ...nofSmall, ...nofLarge, ...sbif, ...cdg, ...foundations, ...prize, ...developments, ...jim,
-    ...tif, ...hud, ...lihtc, ...nmtc,
+    ...tif, ...hud, ...lihtc, ...nmtc, ...cookSource.records, ...dceo.records,
   ];
 
   // 4) Cross-source dedupe (government point rows sharing address+amount).
@@ -1526,6 +1748,14 @@ async function main() {
     droppedLihtcNoCoords: lihtcDrops.noCoords,
     nmtcCitywideStamped: nmtcStamp.stamped,
     nmtcUnstamped: nmtcStamp.unstamped,
+    cookSourceChicagoRecords: cookSource.chicagoRecords,
+    cookSourceOutsideChicagoRecords: cookSource.outsideChicagoRecords,
+    dceoChicagoRecords: dceo.records.length,
+    dceoPointRecords: dceo.pointRecords,
+    dceoCitywideRecords: dceo.citywideRecords,
+    dceoAddressGeocodeMisses: dceo.addressGeocodeMisses,
+    dceoAddressOutOfBounds: dceo.addressOutOfBounds,
+    dceoMultiSiteHeldCitywide: dceo.multiSiteHeldCitywide,
     sources: PROVENANCE_LABELS,
   });
 

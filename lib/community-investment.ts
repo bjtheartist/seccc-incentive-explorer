@@ -2,7 +2,7 @@
  * Community Investment dataset — export-side data contract, pure helpers, and
  * the static-only loader.
  *
- * This layer merges six independent public-money and private-capital sources
+ * This layer merges twelve independent public-money and private-capital sources
  * into one canonical, admin-gated map layer that answers "who has been putting
  * dollars into this neighborhood, and where":
  *
@@ -20,7 +20,7 @@
  *
  * The pipeline mirrors lib/tif-briefs.ts / lib/owner-cluster-geo.ts:
  *
- *   scripts/export-community-investment.ts (reads the six committed input files,
+ *   scripts/export-community-investment.ts (reads the committed input files,
  *     geocodes the city-grant addresses that lack coordinates, dedupes
  *     cross-source rows that describe the same grant)
  *     -> data/private/community-investment.json (committed-private — NEVER
@@ -47,9 +47,9 @@ import path from "node:path";
 // ── Enums (const arrays so completeness is testable) ─────────────────────────
 
 /**
- * The merged sources. The first six are the original grant/development layer; the
- * four appended by the capital-spine work carry NON-grant public capital that the
- * awarded totals must never absorb (see capitalClass + the money-field firewall):
+ * The merged sources. The first six are the original grant/development layer;
+ * the next four carry NON-grant public capital that awarded totals must never
+ * absorb, and the final two are opt-in historical/context overlays:
  *   • tif        — City of Chicago TIF-funded RDA/IGA projects (council-authorized
  *     TIF assistance ceilings) — capitalClass "tif_subsidy", money in
  *     authorizedAmount, amountAwarded null.
@@ -62,6 +62,12 @@ import path from "node:path";
  *     "tax_credit", money in creditAmount, citywide geometry (no street address in
  *     the public file) but community-area-stamped from the project's 2020 census
  *     tract centroid so it still appears in per-community analysis lists.
+ *   • cook-source-2023 — Cook County's completed 2023 Source Grant awards. The
+ *     official recipient list carries ZIP, not street address, so these records
+ *     use zip-area geometry and are rendered only as ZIP aggregates.
+ *   • dceo-capital — Illinois DCEO capital-appropriation listings. The source PDF
+ *     publishes appropriation balances, not active opportunities or confirmed
+ *     award payments, so money lives only in publishedBalance.
  */
 export const INVESTMENT_SOURCES = [
   "nof-small",
@@ -74,6 +80,8 @@ export const INVESTMENT_SOURCES = [
   "cdbg-home",
   "lihtc",
   "nmtc",
+  "cook-source-2023",
+  "dceo-capital",
 ] as const;
 export type InvestmentSource = (typeof INVESTMENT_SOURCES)[number];
 
@@ -94,11 +102,21 @@ export type FunderType = (typeof FUNDER_TYPES)[number];
  *     Program funding, not a discretionary grant award to a named business.
  *   • tax_credit     — LIHTC/NMTC tax-credit capital (creditAmount). A different
  *     financing instrument again; never a grant, never summed with anything.
- * The four money-meaning fields (amountAwarded / announcedInvestment /
- * authorizedAmount / creditAmount) are mutually exclusive per record and are
- * NEVER added together (enforced structurally in buildCommunityInvestmentExport).
+ *   • state_appropriation — a published DCEO appropriation balance
+ *     (publishedBalance). Context only: not an active opportunity or a promise
+ *     of funds to the map user.
+ * The five money-meaning fields (amountAwarded / announcedInvestment /
+ * authorizedAmount / creditAmount / publishedBalance) are mutually exclusive
+ * per record and are NEVER added together (enforced structurally in
+ * buildCommunityInvestmentExport).
  */
-export const CAPITAL_CLASSES = ["grant", "tif_subsidy", "federal_program", "tax_credit"] as const;
+export const CAPITAL_CLASSES = [
+  "grant",
+  "tif_subsidy",
+  "federal_program",
+  "tax_credit",
+  "state_appropriation",
+] as const;
 export type CapitalClass = (typeof CAPITAL_CLASSES)[number];
 
 /**
@@ -107,6 +125,8 @@ export type CapitalClass = (typeof CAPITAL_CLASSES)[number];
  *   • completed          — a finished build-out (NOF/SBIF completion records).
  *   • awarded            — money committed/granted (CDG rounds, foundation
  *     grants, Chicago Prize awards, Jim's NOF corridor awards w/o a completion).
+ *   • disbursed          — a completed historical award program (Cook Source).
+ *   • appropriated       — a published state appropriation listing (DCEO).
  *   • announced          — a development publicly announced, no ground broken.
  *   • proposed           — a development still at the proposal stage.
  *   • under_construction — a development actively being built.
@@ -120,6 +140,8 @@ export type CapitalClass = (typeof CAPITAL_CLASSES)[number];
 export const INVESTMENT_STATUSES = [
   "completed",
   "awarded",
+  "disbursed",
+  "appropriated",
   "announced",
   "proposed",
   "under_construction",
@@ -139,7 +161,7 @@ export const SOURCE_FUNDER_TYPE: Record<InvestmentSource, FunderType> = {
   cdg: "government",
   foundation: "philanthropic",
   development: "private_development",
-  // The four capital-spine sources are all PUBLIC-policy capital (City TIF,
+  // The original four capital-spine sources are all PUBLIC-policy capital (City TIF,
   // HUD CDBG/HOME, and the federal LIHTC/NMTC tax-credit programs administered
   // through public/quasi-public entities) → funderType "government". The
   // grant-vs-subsidy-vs-federal-vs-credit distinction lives on the SEPARATE
@@ -148,6 +170,8 @@ export const SOURCE_FUNDER_TYPE: Record<InvestmentSource, FunderType> = {
   "cdbg-home": "government",
   lihtc: "government",
   nmtc: "government",
+  "cook-source-2023": "government",
+  "dceo-capital": "government",
 };
 
 /**
@@ -168,18 +192,22 @@ export const SOURCE_CAPITAL_CLASS: Record<InvestmentSource, CapitalClass> = {
   "cdbg-home": "federal_program",
   lihtc: "tax_credit",
   nmtc: "tax_credit",
+  "cook-source-2023": "grant",
+  "dceo-capital": "state_appropriation",
 };
 
 // ── Data contract ────────────────────────────────────────────────────────────
 
 /**
- * A record's geometry is either a real plottable point or an explicit
- * "citywide" marker (foundation intermediary / unmappable rows). Citywide
- * carries NO lat/lng — it must never be silently plotted at 0,0 or a downtown
- * HQ that would mislead a map reader (per the geocoding agent's intermediary
- * caveat).
+ * A record's geometry is a real plottable point, a ZIP-area aggregate, or an
+ * explicit "citywide" marker (foundation intermediary / unmappable rows).
+ * Citywide carries NO lat/lng — it must never be silently plotted at 0,0 or a
+ * downtown HQ that would mislead a map reader.
  */
-export type InvestmentGeometry = { kind: "point"; lat: number; lng: number } | { kind: "citywide" };
+export type InvestmentGeometry =
+  | { kind: "point"; lat: number; lng: number }
+  | { kind: "zip_area"; zip: string }
+  | { kind: "citywide" };
 
 /** One canonical community-investment record. */
 export interface CommunityInvestmentRecord {
@@ -192,10 +220,11 @@ export interface CommunityInvestmentRecord {
   /** The grantee / project / development. */
   recipient: string;
   /**
-   * Which of the four money-meaning fields carries this record's dollars (see
+   * Which of the five money-meaning fields carries this record's dollars (see
    * CAPITAL_CLASSES). "grant" → amountAwarded; "tif_subsidy"/"federal_program" →
-   * authorizedAmount; "tax_credit" → creditAmount. The awarded/announced/
-   * authorized/credit totals are each computed from ONE field, never combined.
+   * authorizedAmount; "tax_credit" → creditAmount; "state_appropriation" →
+   * publishedBalance. The awarded/announced/authorized/credit totals are each
+   * computed from ONE field, never combined.
    */
   capitalClass: CapitalClass;
   /** Real awarded/reported GRANT dollars, or null — NEVER a derived figure, and
@@ -225,6 +254,13 @@ export interface CommunityInvestmentRecord {
    */
   creditAmount?: number | null;
   /**
+   * DCEO's source-published capital-appropriation balance, or null. This is not
+   * an active opportunity, award, payment, project budget, or estimate of funds
+   * a user could receive. It is populated only on `state_appropriation` records
+   * and is never rolled into an awarded/authorized/credit headline total.
+   */
+  publishedBalance?: number | null;
+  /**
    * Announced private DEVELOPMENT capital (developments_major.csv
    * announced_investment_usd) — the publicly reported total project cost of a
    * major private development, or null. This is a DIFFERENT TRUTH from
@@ -250,6 +286,8 @@ export interface CommunityInvestmentRecord {
   geometry: InvestmentGeometry;
   /** Street address as published, or null (developments carry only a point). */
   address: string | null;
+  /** Source-published five-digit ZIP when available; never inferred. */
+  postalCode?: string;
   /** Chicago community area when the source supplies it (Socrata NOF/SBIF). */
   communityArea?: string;
   status: InvestmentStatus;
@@ -286,6 +324,24 @@ export interface CommunityInvestmentMeta {
   pointCount: number;
   /** Number of citywide-geometry records. */
   citywideCount: number;
+  /** Number of ZIP-area records (aggregated before map rendering). */
+  zipAreaCount: number;
+  /** Cook County rows retained for Chicago ZIP aggregation. */
+  cookSourceChicagoRecords: number;
+  /** Cook County rows kept in the curated source but excluded from this Chicago map. */
+  cookSourceOutsideChicagoRecords: number;
+  /** High-confidence Chicago DCEO records retained from the statewide ledger. */
+  dceoChicagoRecords: number;
+  /** DCEO Chicago records plotted at one explicit, successfully geocoded address. */
+  dceoPointRecords: number;
+  /** DCEO Chicago records held citywide because the source location was not point-safe. */
+  dceoCitywideRecords: number;
+  /** Single explicit DCEO addresses that failed geocoding and were held citywide. */
+  dceoAddressGeocodeMisses: number;
+  /** DCEO geocodes outside Chicago that were rejected and held citywide. */
+  dceoAddressOutOfBounds: number;
+  /** Multi-address/various-location DCEO rows deliberately held citywide. */
+  dceoMultiSiteHeldCitywide: number;
   /**
    * Sum of every non-null amountAwarded. This is a plain total of AWARDED
    * dollars, not a derived received/available/remaining/unspent figure — the
@@ -523,13 +579,15 @@ export function normalizeRecipientForDedupe(recipient: string | null | undefined
 const DEDUPE_STATUS_RANK: Record<InvestmentStatus, number> = {
   completed: 0,
   awarded: 1,
-  announced: 2,
-  proposed: 3,
-  under_construction: 4,
-  partially_open: 5,
-  opened: 6,
-  stalled: 7,
-  cancelled: 8,
+  disbursed: 2,
+  appropriated: 3,
+  announced: 4,
+  proposed: 5,
+  under_construction: 6,
+  partially_open: 7,
+  opened: 8,
+  stalled: 9,
+  cancelled: 10,
 };
 
 /**
@@ -813,9 +871,18 @@ export function buildCommunityInvestmentExport(
     droppedLihtcNoCoords?: number;
     nmtcCitywideStamped?: number;
     nmtcUnstamped?: number;
+    cookSourceChicagoRecords?: number;
+    cookSourceOutsideChicagoRecords?: number;
+    dceoChicagoRecords?: number;
+    dceoPointRecords?: number;
+    dceoCitywideRecords?: number;
+    dceoAddressGeocodeMisses?: number;
+    dceoAddressOutOfBounds?: number;
+    dceoMultiSiteHeldCitywide?: number;
   },
 ): CommunityInvestmentExport {
   const pointCount = records.filter((r) => r.geometry.kind === "point").length;
+  const zipAreaCount = records.filter((r) => r.geometry.kind === "zip_area").length;
   const totalDollarsAwarded = sumAwardedDollars(records);
 
   // STRUCTURAL GUARD (money-field firewall): the awarded total must be computable
@@ -839,28 +906,38 @@ export function buildCommunityInvestmentExport(
   // ONLY its own money field. A grant/development record never carries an
   // authorized or credit amount; a tif/federal record carries ONLY authorizedAmount
   // (amountAwarded null); a tax_credit record carries ONLY creditAmount. This makes
-  // the four totals provably non-overlapping — a dollar can live in exactly one.
+  // the money fields provably non-overlapping — a dollar can live in exactly one.
   for (const r of records) {
     const hasAwarded = r.amountAwarded != null;
     const hasAuthorized = r.authorizedAmount != null;
     const hasCredit = r.creditAmount != null;
+    const hasPublishedBalance = r.publishedBalance != null;
     const hasAnnounced = r.announcedInvestment != null;
     if (r.capitalClass === "grant") {
-      if (hasAuthorized || hasCredit) {
-        throw new Error(`Record ${r.id} (capitalClass grant) must not carry authorizedAmount/creditAmount.`);
+      if (hasAuthorized || hasCredit || hasPublishedBalance) {
+        throw new Error(
+          `Record ${r.id} (capitalClass grant) must not carry authorizedAmount/creditAmount/publishedBalance.`,
+        );
       }
     } else if (r.capitalClass === "tif_subsidy" || r.capitalClass === "federal_program") {
-      if (hasAwarded || hasCredit || hasAnnounced) {
+      if (hasAwarded || hasCredit || hasPublishedBalance || hasAnnounced) {
         throw new Error(
           `Record ${r.id} (capitalClass ${r.capitalClass}) may carry ONLY authorizedAmount — not ` +
-            `amountAwarded/creditAmount/announcedInvestment.`,
+            `amountAwarded/creditAmount/publishedBalance/announcedInvestment.`,
         );
       }
     } else if (r.capitalClass === "tax_credit") {
-      if (hasAwarded || hasAuthorized || hasAnnounced) {
+      if (hasAwarded || hasAuthorized || hasPublishedBalance || hasAnnounced) {
         throw new Error(
           `Record ${r.id} (capitalClass tax_credit) may carry ONLY creditAmount — not ` +
-            `amountAwarded/authorizedAmount/announcedInvestment.`,
+            `amountAwarded/authorizedAmount/publishedBalance/announcedInvestment.`,
+        );
+      }
+    } else if (r.capitalClass === "state_appropriation") {
+      if (hasAwarded || hasAuthorized || hasCredit || hasAnnounced) {
+        throw new Error(
+          `Record ${r.id} (capitalClass state_appropriation) may carry ONLY publishedBalance — not ` +
+            `amountAwarded/authorizedAmount/creditAmount/announcedInvestment.`,
         );
       }
     }
@@ -872,7 +949,16 @@ export function buildCommunityInvestmentExport(
       counts: countBySource(records),
       totalRecords: records.length,
       pointCount,
-      citywideCount: records.length - pointCount,
+      citywideCount: records.filter((r) => r.geometry.kind === "citywide").length,
+      zipAreaCount,
+      cookSourceChicagoRecords: stats.cookSourceChicagoRecords ?? 0,
+      cookSourceOutsideChicagoRecords: stats.cookSourceOutsideChicagoRecords ?? 0,
+      dceoChicagoRecords: stats.dceoChicagoRecords ?? 0,
+      dceoPointRecords: stats.dceoPointRecords ?? 0,
+      dceoCitywideRecords: stats.dceoCitywideRecords ?? 0,
+      dceoAddressGeocodeMisses: stats.dceoAddressGeocodeMisses ?? 0,
+      dceoAddressOutOfBounds: stats.dceoAddressOutOfBounds ?? 0,
+      dceoMultiSiteHeldCitywide: stats.dceoMultiSiteHeldCitywide ?? 0,
       totalDollarsAwarded,
       announcedCapitalTotal: sumAnnouncedInvestment(records),
       totalAuthorizedTif: sumAuthorizedByClass(records, "tif_subsidy"),

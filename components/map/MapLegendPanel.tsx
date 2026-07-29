@@ -51,6 +51,13 @@ import {
   type InvestmentDensityMetric,
 } from "@/lib/investment-deck-modes";
 import type { CapitalClass, FunderType } from "@/lib/community-investment";
+import {
+  DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY,
+  PUBLIC_INVESTMENT_OVERLAYS,
+  type PublicInvestmentOverlayId,
+  type PublicInvestmentOverlayVisibility,
+} from "@/lib/public-investment-overlays";
+import { COUNTY_RELIEF_FILL_COLOR } from "@/lib/county-relief-layer";
 
 interface MapLegendPanelProps {
   zoneVisible: Record<string, boolean>;
@@ -99,11 +106,17 @@ interface MapLegendPanelProps {
   investmentMegaprojectCitywideNames?: string[];
   /** Independent Megaprojects overlay state; can be combined with any base view. */
   investmentMegaprojectsVisible?: boolean;
+  /** Independent historical/public-capital overlays, both default off. */
+  publicInvestmentOverlays?: PublicInvestmentOverlayVisibility;
+  countyReliefZipCount?: number;
+  stateCapitalPlottedCount?: number;
+  stateCapitalCitywideCount?: number;
   onSetCommunityInvestmentVisible?: (value: boolean) => void;
   onSetInvestmentYearRange?: (id: string) => void;
   onSetInvestmentViewMode?: (mode: InvestmentViewMode) => void;
   onSetInvestmentDensityMetric?: (metric: InvestmentDensityMetric) => void;
   onSetInvestmentMegaprojectsVisible?: (value: boolean) => void;
+  onSetPublicInvestmentOverlay?: (id: PublicInvestmentOverlayId, value: boolean) => void;
   onToggleInvestmentFunderType?: (key: FunderType) => void;
   onClose: () => void;
   onToggleZone: (key: string) => void;
@@ -153,11 +166,16 @@ export default function MapLegendPanel({
   investmentMegaprojectSummary = null,
   investmentMegaprojectCitywideNames = [],
   investmentMegaprojectsVisible = false,
+  publicInvestmentOverlays = { ...DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY },
+  countyReliefZipCount = 0,
+  stateCapitalPlottedCount = 0,
+  stateCapitalCitywideCount = 0,
   onSetCommunityInvestmentVisible = () => {},
   onSetInvestmentYearRange = () => {},
   onSetInvestmentViewMode = () => {},
   onSetInvestmentDensityMetric = () => {},
   onSetInvestmentMegaprojectsVisible = () => {},
+  onSetPublicInvestmentOverlay = () => {},
   onToggleInvestmentFunderType = () => {},
   onClose,
   onToggleZone,
@@ -685,7 +703,56 @@ export default function MapLegendPanel({
                     be combined with Dots, Arcs, or Density. */}
                 <div className="border-t border-[#0C1B33]/8 pt-3">
                   <div className="font-mono-bureau text-[8px] tracking-[0.15em] uppercase text-[#0C1B33]/40 mb-1.5">
-                    Additional layer
+                    Additional layers
+                  </div>
+                  <div className="space-y-2 border-b border-[#0C1B33]/8 pb-3 mb-2">
+                    {PUBLIC_INVESTMENT_OVERLAYS.map((overlay) => {
+                      const checked = publicInvestmentOverlays[overlay.id];
+                      const color =
+                        overlay.id === "county_relief_awards"
+                          ? COUNTY_RELIEF_FILL_COLOR
+                          : CAPITAL_CLASS_OUTLINE.state_appropriation;
+                      return (
+                        <label key={overlay.id} className="flex items-start gap-2.5 py-1 cursor-pointer group">
+                          <input
+                            type="checkbox"
+                            role="switch"
+                            aria-label={`Toggle ${overlay.label} overlay`}
+                            checked={checked}
+                            onChange={() => onSetPublicInvestmentOverlay(overlay.id, !checked)}
+                            className="sr-only"
+                          />
+                          <span
+                            aria-hidden="true"
+                            className="relative mt-0.5 h-5 w-9 flex-shrink-0 rounded-full border transition-colors"
+                            style={{
+                              borderColor: checked ? color : "#0C1B3326",
+                              backgroundColor: checked ? color : "#0C1B330A",
+                            }}
+                          >
+                            <span
+                              className="absolute top-[2px] h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform"
+                              style={{ transform: checked ? "translateX(17px)" : "translateX(2px)" }}
+                            />
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block text-[11px] font-medium text-[#0C1B33]/75 group-hover:text-[#0C1B33] transition-colors">
+                              {overlay.label}
+                            </span>
+                            <span className="block text-[9px] text-[#0C1B33]/40 leading-relaxed">
+                              {overlay.description}
+                            </span>
+                            {checked && (
+                              <span className="mt-1 block font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
+                                {overlay.id === "county_relief_awards"
+                                  ? `${countyReliefZipCount} Chicago ZIP areas mapped`
+                                  : `${stateCapitalPlottedCount} address-sited · ${stateCapitalCitywideCount} held unplotted`}
+                              </span>
+                            )}
+                          </span>
+                        </label>
+                      );
+                    })}
                   </div>
                   <label className="flex items-center gap-2.5 py-1 cursor-pointer group">
                     <input
@@ -839,8 +906,8 @@ export default function MapLegendPanel({
                 )}
 
                 {/* Capital-class sub-legend (Sol #4) — the dot OUTLINE tells the
-                    four capital classes apart (all funderType government share a
-                    blue fill). Shown only when a NON-grant class is on the map. */}
+                    base-map capital classes apart (all government records share
+                    a blue fill). Shown only when a NON-grant class is on the map. */}
                 {investmentPresentCapitalClasses.some((c) => c !== "grant") && (
                   <div>
                     <div className="font-mono-bureau text-[8px] tracking-[0.15em] uppercase text-[#0C1B33]/40 mb-1.5">

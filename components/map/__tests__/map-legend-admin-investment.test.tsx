@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import MapLegendPanel from "../MapLegendPanel";
-import { buildInvestmentPopupHtml, formatAwardedAmount } from "../map-helpers";
+import {
+  buildCountyReliefPopupHtml,
+  buildInvestmentPopupHtml,
+  formatAwardedAmount,
+} from "../map-helpers";
 import { ZONE_KEYS, VACANT_LABELS, ZONING_CATEGORIES } from "@/lib/constants";
 import { POI_LAYERS } from "../map-helpers";
 import { FUNDER_TYPE_LABELS, INVESTMENT_YEAR_RANGES } from "@/lib/community-investment-layer";
@@ -179,6 +183,28 @@ describe("MapLegendPanel community-investment admin section", () => {
     );
     expect(grantOnly).not.toContain("Capital class");
   });
+
+  it("renders the county and state overlays as independent, default-off controls", () => {
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        communityInvestmentVisible={true}
+        publicInvestmentOverlays={{
+          county_relief_awards: true,
+          state_capital_projects: false,
+        }}
+        countyReliefZipCount={18}
+        stateCapitalPlottedCount={7}
+        stateCapitalCitywideCount={11}
+      />
+    );
+    expect(html).toContain("County relief awards");
+    expect(html).toContain("State capital projects");
+    expect(html).toContain("18 Chicago ZIP areas mapped");
+    expect(html).not.toContain("7 address-sited");
+    expect(html).toContain("not an active funding opportunity");
+  });
 });
 
 describe("buildInvestmentPopupHtml", () => {
@@ -311,6 +337,22 @@ describe("buildInvestmentPopupHtml", () => {
     expect(html).not.toContain(MONEY_LABEL("Awarded"));
   });
 
+  it("labels a DCEO amount as a published appropriation balance, never an award or opportunity", () => {
+    const html = buildInvestmentPopupHtml({
+      recipient: "Chicago Park District",
+      funderName: "Illinois DCEO",
+      funderType: "government",
+      capitalClass: "state_appropriation",
+      amountAwarded: null,
+      publishedBalance: 125_000,
+      status: "appropriated",
+    });
+    expect(html).toContain(MONEY_LABEL("Published appropriation balance"));
+    expect(html).toContain("$125,000");
+    expect(html).not.toContain(MONEY_LABEL("Awarded"));
+    expect(html).toContain("Appropriation record");
+  });
+
   it("adds an 'Analyze this community →' link to the record's community area", () => {
     const html = buildInvestmentPopupHtml({ ...full, communityArea: "Auburn Gresham" });
     expect(html).toContain("Analyze this community");
@@ -320,6 +362,22 @@ describe("buildInvestmentPopupHtml", () => {
   it("omits the Analyze link when the record has no community area", () => {
     const html = buildInvestmentPopupHtml(full);
     expect(html).not.toContain("Analyze this community");
+  });
+});
+
+describe("buildCountyReliefPopupHtml", () => {
+  it("shows ZIP-level historical disbursement context without presenting an active program", () => {
+    const html = buildCountyReliefPopupHtml({
+      zipCode: "60617",
+      awardCount: 42,
+      totalDisbursed: 620_000,
+      sourceLink: "https://example.org/source.pdf",
+    });
+    expect(html).toContain("ZIP 60617");
+    expect(html).toContain("42 small-business awards");
+    expect(html).toContain("$620,000");
+    expect(html).toContain("program is complete");
+    expect(html).toContain("not an active funding opportunity");
   });
 });
 

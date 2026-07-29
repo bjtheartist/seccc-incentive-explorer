@@ -1298,5 +1298,277 @@
   "9943 S Halsted, Chicago, IL": {
     "lat": 41.713420209106,
     "lng": -87.642901749208
+  },
+  "1955 N. ST. LOUIS AVE, Chicago, IL": {
+    "lat": 41.916858757777,
+    "lng": -87.713443469391
+  },
+  "1901 S. CALUMET AVE., Chicago, IL": {
+    "lat": 41.856757019831,
+    "lng": -87.619055003307
+  },
+  "4510 S. MICHIGAN AVENUE, Chicago, IL": {
+    "lat": 41.812858802057,
+    "lng": -87.623008057154
+  },
+  "1016 W. JACKSON BLVD., Chicago, IL": {
+    "lat": 41.877917286205,
+    "lng": -87.652340815884
+  },
+  "1116 N. KEDZIE AVENUE, Chicago, IL": {
+    "lat": 41.901809739887,
+    "lng": -87.706833683051
+  },
+  "1029 E. 130TH STREET, Chicago, IL": {
+    "lat": 41.659888830861,
+    "lng": -87.59446287762
+  },
+  "2558 W. 63RD ST., Chicago, IL": {
+    "lat": 41.779263949833,
+    "lng": -87.687824155342
+  },
+  "400 SOUTH STATE STREET, Chicago, IL": {
+    "lat": 41.876870154526,
+    "lng": -87.62772881565
+  },
+  "1701 W. SUPERIOR STREET, Chicago, IL": {
+    "lat": 41.89505944276,
+    "lng": -87.669771270814
+  },
+  "5113 S. HARPER AVE., Chicago, IL": {
+    "lat": 41.802236184444,
+    "lng": -87.589070204892
+  },
+  "1030 WEST VAN BUREN STREET, Chicago, IL": {
+    "lat": 41.876644443627,
+    "lng": -87.653069961149
+  },
+  "6239 NORTH CALIFORNIA AVENUE., Chicago, IL": {
+    "lat": 41.994686407795,
+    "lng": -87.699461344819
+  },
+  "5957 W CHICAGO AVENUE., Chicago, IL": {
+    "lat": 41.894675329121,
+    "lng": -87.773899071825
+  },
+  "400 N ABERDEEN AVENUE, Chicago, IL": {
+    "lat": 41.889036308362,
+    "lng": -87.654645699351
+  },
+  "756 EAST 111TH STREET, Chicago, IL": {
+    "lat": 41.692884204753,
+    "lng": -87.604984512379
+  },
+  "9301 SOUTH STONY ISLAND AVENUE, Chicago, IL": {
+    "lat": 41.723312670502,
+    "lng": -87.585069012587
+  },
+  "1538 W. PULASKI ROAD., Chicago, IL": {
+    "lat": 41.859647870804,
+    "lng": -87.725055161243
+  },
+  "8828 SOUTH STONEY ISLAND AVE, Chicago, IL": {
+    "lat": 41.734547292739,
+    "lng": -87.585670740508
+  },
+  "2756 S HARDING AVE AND 2759 S HARDING AVE, Chicago, IL": {
+    "lat": 41.859334154829,
+    "lng": -87.723750224395
+  },
+  "4113 N PULASKI AVE, Chicago, IL": {
+    "lat": 41.955748089327,
+    "lng": -87.72759932898
+  },
+  "4210 S. BERKLEY AVENUE, Chicago, IL": {
+    "lat": 41.817893962126,
+    "lng": -87.600723390715
+  },
+  "2020 W. OGDEN AVE, Chicago, IL": {
+    "lat": 41.872502783618,
+    "lng": -87.676827018458
+  },
+  "1467 E 67TH ST, Chicago, IL": {
+    "lat": 41.773241765724,
+    "lng": -87.589573713969
+  },
+  "700 E OAKWOOD BLVD, Chicago, IL": {
+    "lat": 41.822770450461,
+    "lng": -87.609724376462
+  },
+  "318-328 EAST 43RD STREET, Chicago, IL": {
+    "lat": 41.816660923662,
+    "lng": -87.618853195014
+  },
+  "9305 S. ASHLAND AVENUE, Chicago, IL": {
+    "lat": 41.724706382782,
+    "lng": -87.662685954637
+  },
+  "5713 W. CHICAGO AVENUE, Chicago, IL": {
+    "lat": 41.894745855576,
+    "lng": -87.768743336463
+  },
+  "753 E. MARQUETTE ROAD, Chicago, IL": {
+    "lat": 41.774888611524,
+    "lng": -87.606629270038
+  },
+  "8108 SOUTH CHICAGO AVENUE, Chicago, IL": {
+    "lat": 41.747205074028,
+    "lng": -87.579721618515
+  },
+  "2416 SOUTH MICHIGAN AVENUE, Chicago, IL": {
+    "lat": 41.849107724107,
+    "lng": -87.623786550256
+  },
+  "6914 W. NORTH AVENUE, Chicago, IL": {
+    "lat": 41.909044446153,
+    "lng": -87.797842849288
+  },
+  "1029 EAST 130TH STREET, Chicago, IL": {
+    "lat": 41.659888830861,
+    "lng": -87.59446287762
+  },
+  "808-812 E. 63RD ST., Chicago, IL": {
+    "lat": 41.780478812144,
+    "lng": -87.605103224399
+  },
+  "4242 S. COTTAGE GROVE AVENUE, Chicago, IL": {
+    "lat": 41.817732867593,
+    "lng": -87.606804642068
+  },
+  "4130 S. INDIANA AVENUE, Chicago, IL": {
+    "lat": 41.819591670254,
+    "lng": -87.621567402401
+  },
+  "6016 SOUTH MARTIN LUTHER KING JR. DRIVE, Chicago, IL": {
+    "lat": 41.784931961475,
+    "lng": -87.615816577548
+  },
+  "10406 AND 10408 S. MARYLAND AVENUE, Chicago, IL": {
+    "lat": 41.703895193114,
+    "lng": -87.602775182074
+  },
+  "581 LOCATED AT 11625 SOUTH OAKLEY AVENUE, Chicago, IL": {
+    "lat": 41.682869141387,
+    "lng": -87.679005443211
+  },
+  "11159 S. CHAMPLAIN AVENUE, Chicago, IL": {
+    "lat": 41.691677248461,
+    "lng": -87.607107937648
+  },
+  "3449 WEST ARTHINGTON AVENUE, Chicago, IL": {
+    "lat": 41.869932856633,
+    "lng": -87.711511876064
+  },
+  "1 EAST 79TH STREET, Chicago, IL": {
+    "lat": 41.750925872143,
+    "lng": -87.622918465659
+  },
+  "6529 SOUTH STEWART AVENUE, Chicago, IL": {
+    "lat": 41.775430484548,
+    "lng": -87.634850700031
+  },
+  "7545 SOUTH WESTERN AVENUE, Chicago, IL": {
+    "lat": 41.756461901047,
+    "lng": -87.682938088972
+  },
+  "406 WEST WINNECONNA PARKWAY, Chicago, IL": {
+    "lat": 41.753904447865,
+    "lng": -87.634702688659
+  },
+  "949 E 75TH STREET, Chicago, IL": {
+    "lat": 41.758568320573,
+    "lng": -87.601367108615
+  },
+  "3345 W. 83RD STREET, Chicago, IL": {
+    "lat": 41.742375230765,
+    "lng": -87.706144050505
+  },
+  "5336 SOUTH STATE STREET, Chicago, IL": {
+    "lat": 41.798945908856,
+    "lng": -87.625889692334
+  },
+  "1239 WEST 59TH STREET, Chicago, IL": {
+    "lat": 41.78680886781,
+    "lng": -87.65604245087
+  },
+  "1824 WEST 59TH STREET, Chicago, IL": {
+    "lat": 41.786724252614,
+    "lng": -87.670798184512
+  },
+  "9538 S. HARVARD AVENUE, Chicago, IL": {
+    "lat": 41.720607029834,
+    "lng": -87.632383851449
+  },
+  "5049 SOUTH THROOP STREET, Chicago, IL": {
+    "lat": 41.802567090085,
+    "lng": -87.657443067433
+  },
+  "6808 O 6816 SOUTH HALSTED STREET, Chicago, IL": {
+    "lat": 41.770320725318,
+    "lng": -87.64461888608
+  },
+  "3311 WEST CARROLL AVENUE, Chicago, IL": {
+    "lat": 41.887424316508,
+    "lng": -87.709239719591
+  },
+  "2100 EAST 71ST STREET, Chicago, IL": {
+    "lat": 41.766286458179,
+    "lng": -87.573778460362
+  },
+  "10420 S HALSTED STREET, Chicago, IL": {
+    "lat": 41.704687888199,
+    "lng": -87.64283924423
+  },
+  "1512 S. PULASKI ROAD, Chicago, IL": {
+    "lat": 41.86032308639,
+    "lng": -87.725073391045
+  },
+  "1852 WEST 19TH STREET, Chicago, IL": {
+    "lat": 41.855943608882,
+    "lng": -87.672341738983
+  },
+  "119 WEST WASHINGTON STREET, Chicago, IL": {
+    "lat": 41.883153849934,
+    "lng": -87.631850475398
+  },
+  "1646 KRISTAN AVENUE, Chicago, IL": {
+    "lat": 42.32966639151,
+    "lng": -87.853577883992
+  },
+  "1215 EAST 83RD STREET, Chicago, IL": {
+    "lat": 41.744009966288,
+    "lng": -87.596960242975
+  },
+  "2018 SHERIDAN ROAD, Chicago, IL": {
+    "lat": 42.322242342813,
+    "lng": -87.841226165429
+  },
+  "820 SOUTH CARPENTER STREET, Chicago, IL": {
+    "lat": 41.871253884116,
+    "lng": -87.653329370723
+  },
+  "1420 NORTH HUDSON AVENUE, Chicago, IL": {
+    "lat": 41.908138817331,
+    "lng": -87.639790242327
+  },
+  "1059 WEST 13TH STREET, Chicago, IL": {
+    "lat": 42.335769022571,
+    "lng": -87.844396176677
+  },
+  "2744 N. WESTERN AVE, Chicago, IL": {
+    "lat": 41.931173753357,
+    "lng": -87.687945705173
+  },
+  "4755 S TALMAN AVENUE, Chicago, IL": {
+    "lat": 41.807156646672,
+    "lng": -87.690425499154
+  },
+  "4332 NORTH PAULINA STREET, Chicago, IL": {
+    "lat": 41.960362329657,
+    "lng": -87.670878419739
+  },
+  "8301 S. SOUTH SHORE DRIVE, Chicago, IL": {
+    "lat": 41.744653666119,
+    "lng": -87.547830442287
   }
 }

@@ -70,6 +70,8 @@ describe("source / funderType / status enums", () => {
     expect(SOURCE_FUNDER_TYPE.cdg).toBe("government");
     expect(SOURCE_FUNDER_TYPE.foundation).toBe("philanthropic");
     expect(SOURCE_FUNDER_TYPE.development).toBe("private_development");
+    expect(SOURCE_FUNDER_TYPE["cook-source-2023"]).toBe("government");
+    expect(SOURCE_FUNDER_TYPE["dceo-capital"]).toBe("government");
   });
 
   it("the enum arrays carry exactly the documented members", () => {
@@ -84,11 +86,15 @@ describe("source / funderType / status enums", () => {
       "cdbg-home",
       "lihtc",
       "nmtc",
+      "cook-source-2023",
+      "dceo-capital",
     ]);
     expect([...FUNDER_TYPES]).toEqual(["government", "philanthropic", "private_development"]);
     expect([...INVESTMENT_STATUSES]).toEqual([
       "completed",
       "awarded",
+      "disbursed",
+      "appropriated",
       "announced",
       "proposed",
       "under_construction",
@@ -99,7 +105,7 @@ describe("source / funderType / status enums", () => {
     ]);
   });
 
-  it("the four capital-spine sources map to government funderType", () => {
+  it("the original four capital-spine sources map to government funderType", () => {
     for (const s of ["tif", "cdbg-home", "lihtc", "nmtc"] as const) {
       expect(SOURCE_FUNDER_TYPE[s]).toBe("government");
     }
@@ -109,8 +115,14 @@ describe("source / funderType / status enums", () => {
 // ── capitalClass axis (grant / tif_subsidy / federal_program / tax_credit) ─────
 
 describe("capitalClass axis", () => {
-  it("CAPITAL_CLASSES carries exactly the four documented members", () => {
-    expect([...CAPITAL_CLASSES]).toEqual(["grant", "tif_subsidy", "federal_program", "tax_credit"]);
+  it("CAPITAL_CLASSES carries exactly the five documented members", () => {
+    expect([...CAPITAL_CLASSES]).toEqual([
+      "grant",
+      "tif_subsidy",
+      "federal_program",
+      "tax_credit",
+      "state_appropriation",
+    ]);
   });
 
   it("SOURCE_CAPITAL_CLASS covers every source and maps to a valid capitalClass", () => {
@@ -128,6 +140,8 @@ describe("capitalClass axis", () => {
     expect(SOURCE_CAPITAL_CLASS["cdbg-home"]).toBe("federal_program");
     expect(SOURCE_CAPITAL_CLASS.lihtc).toBe("tax_credit");
     expect(SOURCE_CAPITAL_CLASS.nmtc).toBe("tax_credit");
+    expect(SOURCE_CAPITAL_CLASS["cook-source-2023"]).toBe("grant");
+    expect(SOURCE_CAPITAL_CLASS["dceo-capital"]).toBe("state_appropriation");
   });
 });
 
@@ -140,6 +154,16 @@ describe("per-field capital totals (authorized / credit / awarded firewall)", ()
     rec({ source: "cdbg-home", funderType: "government", capitalClass: "federal_program", amountAwarded: null, authorizedAmount: 200_000, status: "completed", ...over });
   const credit = (over: Partial<CommunityInvestmentRecord> & { id: string }) =>
     rec({ source: "lihtc", funderType: "government", capitalClass: "tax_credit", amountAwarded: null, creditAmount: 9_000_000, status: "awarded", ...over });
+  const appropriation = (over: Partial<CommunityInvestmentRecord> & { id: string }) =>
+    rec({
+      source: "dceo-capital",
+      funderType: "government",
+      capitalClass: "state_appropriation",
+      amountAwarded: null,
+      publishedBalance: 750_000,
+      status: "appropriated",
+      ...over,
+    });
 
   const MIX: CommunityInvestmentRecord[] = [
     rec({ id: "g1", amountAwarded: 250_000 }), // grant
@@ -148,6 +172,7 @@ describe("per-field capital totals (authorized / credit / awarded firewall)", ()
     hud({ id: "h1", authorizedAmount: 200_000 }),
     credit({ id: "c1", creditAmount: 9_000_000 }),
     credit({ id: "c2", source: "nmtc", creditAmount: 1_000_000, geometry: { kind: "citywide" } }),
+    appropriation({ id: "s1" }),
   ];
 
   it("sumAuthorizedByClass sums ONLY the requested class's authorizedAmount", () => {
@@ -175,7 +200,9 @@ describe("per-field capital totals (authorized / credit / awarded firewall)", ()
     expect(out.meta.totalAuthorizedTif).toBe(8_000_000);
     expect(out.meta.totalFederalProgram).toBe(200_000);
     expect(out.meta.totalCreditCapital).toBe(10_000_000);
-    // The four totals are provably disjoint — no dollar appears in two of them.
+    // The four headline totals are provably disjoint, and DCEO's source-published
+    // balance is deliberately not promoted into a fifth headline total.
+    expect("totalStateAppropriation" in out.meta).toBe(false);
     expect(findBannedFigureKeys(out)).toEqual([]);
   });
 
@@ -192,6 +219,17 @@ describe("per-field capital totals (authorized / credit / awarded firewall)", ()
       buildCommunityInvestmentExport([dirty], "2026-07-28T00:00:00.000Z", { droppedNoGeocode: 0, dedupedRows: 0, sources: [] }),
     ).toThrow(/grant/);
   });
+
+  it("hard-fails if a state appropriation smuggles an awarded amount", () => {
+    const dirty = appropriation({ id: "bad3", amountAwarded: 750_000 });
+    expect(() =>
+      buildCommunityInvestmentExport([dirty], "2026-07-28T00:00:00.000Z", {
+        droppedNoGeocode: 0,
+        dedupedRows: 0,
+        sources: [],
+      }),
+    ).toThrow(/state_appropriation/);
+  });
 });
 
 // ── IRON RULE: banned derived-figure key rail ────────────────────────────────
@@ -205,6 +243,7 @@ describe("banned-figure key rail", () => {
     // The legitimate keys we DO ship must not trip the rail.
     expect(BANNED_FIGURE_KEY_RE.test("amountAwarded")).toBe(false);
     expect(BANNED_FIGURE_KEY_RE.test("totalDollarsAwarded")).toBe(false);
+    expect(BANNED_FIGURE_KEY_RE.test("publishedBalance")).toBe(false);
   });
 
   it("findBannedFigureKeys walks nested objects/arrays ([] when clean)", () => {
@@ -630,8 +669,10 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(Array.isArray(data!.records)).toBe(true);
     expect(data!.records.length).toBeGreaterThan(0);
     expect(data!.meta.totalRecords).toBe(data!.records.length);
-    // point + citywide partition the records exactly.
-    expect(data!.meta.pointCount + data!.meta.citywideCount).toBe(data!.records.length);
+    // point + ZIP-area + citywide partition the records exactly.
+    expect(data!.meta.pointCount + (data!.meta.zipAreaCount ?? 0) + data!.meta.citywideCount).toBe(
+      data!.records.length,
+    );
   });
 
   it("every record uses only valid enum members and a coherent geometry", () => {
@@ -645,6 +686,8 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
       if (r.geometry.kind === "point") {
         expect(typeof r.geometry.lat).toBe("number");
         expect(typeof r.geometry.lng).toBe("number");
+      } else if (r.geometry.kind === "zip_area") {
+        expect(r.geometry.zip).toMatch(/^\d{5}$/);
       } else {
         expect(r.geometry).toEqual({ kind: "citywide" });
       }
@@ -715,7 +758,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     }
   });
 
-  it("carries all four capital classes and each record's money lives in exactly one field", () => {
+  it("carries all five capital classes and each record's money lives in exactly one field", () => {
     const data = loadCommunityInvestment()!;
     const seen = new Set<string>();
     for (const r of data.records) {
@@ -725,6 +768,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
         r.amountAwarded != null,
         r.authorizedAmount != null,
         r.creditAmount != null,
+        r.publishedBalance != null,
         r.announcedInvestment != null,
       ].filter(Boolean).length;
       expect(money).toBeLessThanOrEqual(1); // never two money fields on one record
@@ -741,8 +785,23 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
         expect(["lihtc", "nmtc"]).toContain(r.source);
         expect(r.amountAwarded).toBeNull();
       }
+      if (r.capitalClass === "state_appropriation") {
+        expect(r.source).toBe("dceo-capital");
+        expect(r.amountAwarded).toBeNull();
+        if (r.geometry.kind === "point") {
+          // DCEO points pass the official Chicago community-area polygon check,
+          // not only a broad city bounding box.
+          expect(r.communityArea).toBeTruthy();
+        }
+      }
     }
-    expect([...seen].sort()).toEqual(["federal_program", "grant", "tax_credit", "tif_subsidy"]);
+    expect([...seen].sort()).toEqual([
+      "federal_program",
+      "grant",
+      "state_appropriation",
+      "tax_credit",
+      "tif_subsidy",
+    ]);
   });
 
   it("each new capital total matches an independent recompute from its own field", () => {
@@ -750,7 +809,7 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(data.meta.totalAuthorizedTif).toBe(sumAuthorizedByClass(data.records, "tif_subsidy"));
     expect(data.meta.totalFederalProgram).toBe(sumAuthorizedByClass(data.records, "federal_program"));
     expect(data.meta.totalCreditCapital).toBe(sumCreditCapital(data.records));
-    // The four totals are meaningfully non-zero and all DISTINCT from the awarded total.
+    // The independent totals are meaningfully non-zero and distinct from awarded grants.
     expect(data.meta.totalAuthorizedTif).toBeGreaterThan(0);
     expect(data.meta.totalFederalProgram).toBeGreaterThan(0);
     expect(data.meta.totalCreditCapital).toBeGreaterThan(0);

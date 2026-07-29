@@ -191,8 +191,8 @@ describe("citywideInvestmentEntries / summarizeCitywideEntries", () => {
 
   it("extracts only the citywide records' filterable fields", () => {
     expect(entries).toEqual([
-      { funderType: "philanthropic", year: 2021, amountAwarded: 250_000 },
-      { funderType: "government", year: 2020, amountAwarded: null },
+      { source: "foundation", funderType: "philanthropic", year: 2021, amountAwarded: 250_000 },
+      { source: "cdg", funderType: "government", year: 2020, amountAwarded: null },
     ]);
   });
 
@@ -276,7 +276,88 @@ describe("fetchCommunityInvestmentLayer", () => {
   it("appends a source filter to the endpoint when given", async () => {
     const fetchImpl = fetchStub(200, { records: [] });
     await fetchCommunityInvestmentLayer({ fetchImpl, source: "cdg" });
-    expect(String(fetchImpl.mock.calls[0][0])).toBe(`${COMMUNITY_INVESTMENT_ENDPOINT}?source=cdg`);
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(
+      `${COMMUNITY_INVESTMENT_ENDPOINT}?view=map&source=cdg`,
+    );
+  });
+
+  it("aggregates Cook County recipients by source ZIP without creating points", async () => {
+    const countyRecords = [
+      record({
+        id: "cook-1",
+        source: "cook-source-2023",
+        funderName: "Cook County 2023 Source Grant",
+        amountAwarded: 10_000,
+        year: 2023,
+        geometry: { kind: "zip_area", zip: "60617" },
+        address: null,
+        status: "disbursed",
+      }),
+      record({
+        id: "cook-2",
+        source: "cook-source-2023",
+        funderName: "Cook County 2023 Source Grant",
+        amountAwarded: 20_000,
+        year: 2023,
+        geometry: { kind: "zip_area", zip: "60617" },
+        address: null,
+        status: "disbursed",
+      }),
+    ];
+    const fetchImpl = fetchStub(200, { records: countyRecords });
+    const result = await fetchCommunityInvestmentLayer({ fetchImpl });
+    expect(result.pointFeatures).toEqual([]);
+    expect(result.countyReliefByZip).toEqual([
+      {
+        zipCode: "60617",
+        awardCount: 2,
+        totalDisbursed: 30_000,
+        year: 2023,
+        sourceLink: "https://example.gov/round",
+      },
+    ]);
+  });
+
+  it("keeps unplotted DCEO records out of the base citywide commitment summary", async () => {
+    const fetchImpl = fetchStub(200, {
+      records: [
+        record({
+          id: "state-citywide",
+          source: "dceo-capital",
+          funderName: "Illinois DCEO",
+          capitalClass: "state_appropriation",
+          amountAwarded: null,
+          publishedBalance: 500_000,
+          geometry: { kind: "citywide" },
+          address: null,
+          status: "appropriated",
+        }),
+      ],
+    });
+    const result = await fetchCommunityInvestmentLayer({ fetchImpl });
+    expect(result.citywide).toEqual({ count: 0, totalDollars: 0 });
+    expect(result.citywideEntries).toEqual([]);
+    expect(result.stateCapitalCitywideCount).toBe(1);
+  });
+
+  it("accepts the gated route's privacy-preserving map projection", async () => {
+    const fetchImpl = fetchStub(200, {
+      records: [],
+      countyReliefByZip: [
+        {
+          zipCode: "60617",
+          awardCount: 12,
+          totalDisbursed: 180_000,
+          year: 2023,
+          sourceLink: "https://example.gov/list.pdf",
+        },
+      ],
+      stateCapitalCitywideCount: 9,
+    });
+    const result = await fetchCommunityInvestmentLayer({ fetchImpl });
+    expect(result.countyReliefByZip).toHaveLength(1);
+    expect(result.stateCapitalCitywideCount).toBe(9);
+    expect(result.pointFeatures).toEqual([]);
   });
 });
 
@@ -372,11 +453,20 @@ describe("development dots: announcedInvestment + radiusPx", () => {
       nonGrant("tif-small", "tif_subsidy", "tif", 2_000_000, 41.71),
       nonGrant("hud-one", "federal_program", "cdbg-home", 5_000_000, 41.72),
       nonGrant("lihtc-one", "tax_credit", "lihtc", 12_000_000, 41.73),
+      record({
+        id: "dceo-one",
+        source: "dceo-capital",
+        capitalClass: "state_appropriation",
+        amountAwarded: null,
+        publishedBalance: 750_000,
+        status: "appropriated",
+        geometry: { kind: "point", lat: 41.74, lng: -87.6 },
+      }),
     ]);
     const byId = new Map(features.map((f) => [f.properties.id, f]));
 
     // Every non-grant dot carries a radiusPx (so the paint no longer floors it).
-    for (const id of ["tif-big", "tif-small", "hud-one", "lihtc-one"]) {
+    for (const id of ["tif-big", "tif-small", "hud-one", "lihtc-one", "dceo-one"]) {
       const r = byId.get(id)!.properties.radiusPx;
       expect(typeof r).toBe("number");
       expect(r).toBeGreaterThanOrEqual(DEV_DOT_RADIUS_MIN);

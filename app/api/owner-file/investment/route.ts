@@ -9,6 +9,7 @@ import {
 import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { INVESTMENT_SOURCES, filterInvestmentBySources, loadCommunityInvestment } from "@/lib/community-investment";
 import { parseFunderHqCsv, type FunderHq } from "@/lib/investment-deck-modes";
+import { summarizeCountyReliefByZip } from "@/lib/community-investment-layer";
 
 // A valid analytics admin session also satisfies this gate (single sign-on
 // — see lib/owner-files-admin-auth.ts module doc). Identical auth check to
@@ -53,7 +54,7 @@ function loadFunderHqs(): FunderHq[] {
  * public vacant-properties layer), so this is never cached beyond the request
  * and never served unauthenticated.
  *
- * `source` is an optional comma-separated filter over the six investment
+ * `source` is an optional comma-separated filter over the investment
  * sources (invalid entries dropped); omitted or empty returns every record.
  */
 export async function GET(req: NextRequest) {
@@ -81,12 +82,30 @@ export async function GET(req: NextRequest) {
     : null;
 
   const filtered = filterInvestmentBySources(data, sources);
+  const mapView = req.nextUrl.searchParams.get("view") === "map";
+  const responseData = mapView
+    ? {
+        ...filtered,
+        // The map needs ZIP aggregates, not 1,163 recipient names. Keep the raw
+        // rows available to an authorized explicit source request while making
+        // the normal map payload smaller and less identifying.
+        records: filtered.records.filter(
+          (record) =>
+            record.source !== "cook-source-2023" &&
+            !(record.source === "dceo-capital" && record.geometry.kind === "citywide"),
+        ),
+        countyReliefByZip: summarizeCountyReliefByZip(filtered.records),
+        stateCapitalCitywideCount: filtered.records.filter(
+          (record) => record.source === "dceo-capital" && record.geometry.kind === "citywide",
+        ).length,
+      }
+    : filtered;
   // Attach the funder-HQ coordinates so the client's Arcs mode can draw HQ →
   // recipient arcs without ever fetching the raw CSV path. `funderHqs` is
   // additive to the CommunityInvestmentExport shape and ignored by clients that
   // don't read it (e.g. the existing dots layer).
   return NextResponse.json(
-    { ...filtered, funderHqs: loadFunderHqs() },
+    { ...responseData, funderHqs: loadFunderHqs() },
     { headers: { "Cache-Control": "private, no-store" } }
   );
 }
