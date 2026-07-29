@@ -89,6 +89,8 @@ describe("source / funderType / status enums", () => {
       "lihtc",
       "nmtc",
       "cook-source-2023",
+      "illinois-big",
+      "illinois-hospitality-emergency",
       "illinois-b2b",
       "sba-rrf",
       "dceo-capital",
@@ -783,12 +785,16 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(Object.keys(data.recoverySources).sort()).toEqual([
       "cook-source-2023",
       "illinois-b2b",
+      "illinois-big",
+      "illinois-hospitality-emergency",
       "sba-rrf",
     ]);
     const recoveryRecords = data.records.filter((record) => record.recovery);
     expect(recoveryRecords.length).toBe(
       data.meta.cookSourceChicagoRecords +
         data.meta.illinoisB2BChicagoRecords +
+        data.meta.illinoisBigChicagoRecords +
+        data.meta.illinoisHospitalityChicagoRecords +
         data.meta.sbaRrfChicagoRecords,
     );
     for (const record of recoveryRecords) {
@@ -1014,6 +1020,19 @@ describe.skipIf(!CONTEXT_EXISTS)("committed capital-context.json", () => {
     expect(ctx.tifDistricts.length).toBeGreaterThan(0);
     expect(Array.isArray(ctx.craByCommunityArea)).toBe(true);
     expect(Array.isArray(ctx.cdfi)).toBe(true);
+    expect(ctx.dceoFundingLifecycle.stages.map(
+      (stage: { id: string }) => stage.id,
+    )).toEqual([
+      "proposed_budget",
+      "enacted_authority",
+      "appropriation_register",
+      "funding_opportunity",
+      "executed_award",
+      "disbursement",
+    ]);
+    expect(ctx.dceoFundingLifecycle.policy.amountCombinationPolicy).toBe(
+      "never_sum_across_lifecycle_stages",
+    );
     expect(ctx.stateAwards.fiscalYear).toBe(2027);
     // The award-not-payment + low-recall caveats travel with the summary.
     expect(String(ctx.stateAwards.snapshotCaveat)).toMatch(/SFY2027|not naively summed/i);
@@ -1029,5 +1048,41 @@ describe.skipIf(!CONTEXT_EXISTS)("committed capital-context.json", () => {
           program.historicalAllocated === null,
       ),
     ).toHaveLength(10);
+    expect(ctx.chicagoCaresProgramLedger.records).toHaveLength(101);
+    expect(
+      ctx.chicagoCaresProgramLedger.records.every(
+        (record: {
+          isBusinessRecipient: boolean;
+          isMappableBusinessLocation: boolean;
+          financialAggregationPolicy: string;
+        }) =>
+          record.isBusinessRecipient === false &&
+          record.isMappableBusinessLocation === false &&
+          record.financialAggregationPolicy === "never_sum_across_records",
+      ),
+    ).toBe(true);
+    expect(
+      ctx.chicagoCaresProgramLedger.records.filter(
+        (record: { recordKind: string }) =>
+          record.recordKind === "program_accounting",
+      ),
+    ).toHaveLength(17);
+    expect(ctx.cookCountyCares2020.programs).toHaveLength(4);
+    expect(
+      ctx.cookCountyCares2020.programs.every(
+        (program: {
+          cityOfChicagoAwardEligible: boolean;
+          mappable: boolean;
+        }) =>
+          program.cityOfChicagoAwardEligible === false &&
+          program.mappable === false,
+      ),
+    ).toBe(true);
+    const cookUmbrella = ctx.cookCountyCares2020.programs.find(
+      (program: { recordKind: string }) =>
+        program.recordKind === "umbrella_program_context",
+    );
+    expect(cookUmbrella.historicalPortfolioAmount).toBe(77_000_000);
+    expect(cookUmbrella.historicalDirectRecipientAmount).toBeNull();
   });
 });

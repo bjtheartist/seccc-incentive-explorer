@@ -387,7 +387,9 @@ export function buildHistoricalRecoveryZipPopupHtml(
   const sourceId = String(p.sourceId || "");
   const canLoadRecipients =
     /^\d{5}$/.test(rawZipCode) &&
-    (sourceId === "cook-source-2023" || sourceId === "illinois-b2b");
+    (sourceId === "cook-source-2023" ||
+      sourceId === "illinois-big" ||
+      sourceId === "illinois-b2b");
   const zipCode = escapePopupHtml(rawZipCode || "ZIP unavailable");
   const programName = escapePopupHtml(
     p.programName || "Historical recovery program",

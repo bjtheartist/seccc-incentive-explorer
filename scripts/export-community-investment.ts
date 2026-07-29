@@ -50,6 +50,10 @@ import {
   hasHighConfidenceChicagoDceoLocation,
 } from "../lib/dceo-capital-appropriations";
 import {
+  DCEO_FUNDING_LIFECYCLE_POLICY,
+  DCEO_FUNDING_LIFECYCLE_STAGES,
+} from "../lib/dceo-funding-lifecycle";
+import {
   RECOVERY_INVESTMENT_SOURCE_METADATA,
   type RecoveryInvestmentSourceId,
 } from "../lib/recovery-investment";
@@ -77,6 +81,8 @@ const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
 const CDG_PROGRAM = "Community Development Grant (City of Chicago)";
 const DEVELOPMENT_FUNDER = "Private development";
 const COOK_SOURCE_PROGRAM = "Cook County 2023 Source Grant";
+const ILLINOIS_BIG_PROGRAM = "Illinois Business Interruption Grants Program";
+const ILLINOIS_HOSPITALITY_PROGRAM = "Illinois Hospitality Emergency Grant Program";
 const ILLINOIS_B2B_PROGRAM = "Illinois Back to Business Grant Program";
 const SBA_RRF_PROGRAM = "U.S. Small Business Administration Restaurant Revitalization Fund";
 const DCEO_CAPITAL_FUNDER = "Illinois Department of Commerce and Economic Opportunity";
@@ -97,6 +103,8 @@ const PROVENANCE_LABELS = [
   "Low-Income Housing Tax Credit allocations (HUD LIHTC database) — tax-credit capital (creditAmount, capitalClass tax_credit)",
   "New Markets Tax Credit QLICIs (CDFI Fund Public Data Release incl. FY2022) — tax-credit capital, community-area stamped from the 2020 census-tract centroid (creditAmount, capitalClass tax_credit)",
   "Cook County 2023 Source Grant recipient list — completed/disbursed historical awards, mapped only as ZIP aggregates because the source publishes no street addresses",
+  "Illinois Business Interruption Grants recipient list (DCEO, source version 2021-04-09) — closed historical CARES grants, mapped only as ZIP aggregates because the source publishes no street addresses",
+  "Illinois Hospitality Emergency Grant awardee list (DCEO, dated 2020-04-27) — closed historical state grants held unplotted at municipality precision because the source publishes no ZIP or street address",
   "Illinois Back to Business recipient list (DCEO, dated 2022-07-26) — historical ARPA grants, mapped only as ZIP aggregates because the source publishes no street addresses",
   "SBA Restaurant Revitalization Fund FOIA dataset (source version 2024-10-21) — closed historical ARPA grants; Chicago addresses geocoded only when they resolve inside official city boundaries",
   "City of Chicago ARPA Road to Recovery Program Details + Grants Summary — citywide program-level historical reporting, never treated as recipient awards or active incentive dollars",
@@ -152,7 +160,14 @@ function parseLinks(raw: string | null | undefined): string[] {
  * recipient datasets. The source-reported amount stays here rather than in
  * amountAwarded, keeping closed recovery programs out of ordinary grant totals. */
 function historicalRecoveryRecord(
-  sourceId: Extract<RecoveryInvestmentSourceId, "cook-source-2023" | "illinois-b2b" | "sba-rrf">,
+  sourceId: Extract<
+    RecoveryInvestmentSourceId,
+    | "cook-source-2023"
+    | "illinois-big"
+    | "illinois-hospitality-emergency"
+    | "illinois-b2b"
+    | "sba-rrf"
+  >,
   value: number,
 ): NonNullable<CommunityInvestmentRecord["recovery"]> {
   const source = RECOVERY_INVESTMENT_SOURCE_METADATA[sourceId];
@@ -1271,6 +1286,143 @@ function mapCookSourceGrants(
   };
 }
 
+function mapIllinoisBusinessInterruptionGrants(
+  rows: Record<string, string>[],
+  chicagoZipCodes: ReadonlySet<string>,
+): {
+  records: CommunityInvestmentRecord[];
+  chicagoRecords: number;
+  outsideChicagoRecords: number;
+} {
+  const records: CommunityInvestmentRecord[] = [];
+  let outsideChicagoRecords = 0;
+  for (const row of rows) {
+    const zip = normalizeFiveDigitZip(row.zip);
+    const isChicago =
+      nullableStr(row.city)?.toUpperCase() === "CHICAGO" &&
+      nullableStr(row.county)?.toUpperCase() === "COOK";
+    if (!zip || !isChicago || !chicagoZipCodes.has(zip)) {
+      outsideChicagoRecords += 1;
+      continue;
+    }
+
+    const amount = parseAmount(row.grant_amount_usd);
+    if (amount == null || amount < 0) {
+      throw new Error(
+        `Illinois BIG row has an invalid historical grant amount for ${row.legal_business_name}.`,
+      );
+    }
+    const legalName = nullableStr(row.legal_business_name);
+    const dba = nullableStr(row.dba);
+    const recipient = dba || legalName || "(unnamed awardee)";
+    const sourceRow = nullableStr(row.source_row_number) || String(records.length + 1);
+    records.push({
+      id: `illinois-big-${sourceRow}`,
+      source: "illinois-big",
+      funderType: SOURCE_FUNDER_TYPE["illinois-big"],
+      funderName: ILLINOIS_BIG_PROGRAM,
+      recipient,
+      capitalClass: "grant",
+      amountAwarded: null,
+      logLine: [
+        dba && legalName && dba.toUpperCase() !== legalName.toUpperCase()
+          ? `Legal business: ${legalName}`
+          : null,
+        nullableStr(row.round),
+        "Historical CARES-funded grant from a closed program",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      year: 2020,
+      geometry: { kind: "zip_area", zip },
+      address: null,
+      postalCode: zip,
+      status: "disbursed",
+      recordDate: null,
+      recordProvenance: "official",
+      links: [
+        nullableStr(row.source_url) ??
+          RECOVERY_INVESTMENT_SOURCE_METADATA["illinois-big"].canonicalSourceUrl,
+      ],
+      recovery: historicalRecoveryRecord("illinois-big", amount),
+    });
+  }
+  return {
+    records,
+    chicagoRecords: records.length,
+    outsideChicagoRecords,
+  };
+}
+
+function mapIllinoisHospitalityEmergencyGrants(
+  rows: Record<string, string>[],
+): {
+  records: CommunityInvestmentRecord[];
+  chicagoRecords: number;
+  outsideChicagoRecords: number;
+} {
+  const records: CommunityInvestmentRecord[] = [];
+  let outsideChicagoRecords = 0;
+  for (const row of rows) {
+    const isChicago =
+      nullableStr(row.published_municipality)?.toUpperCase() === "CHICAGO" &&
+      nullableStr(row.county)?.toUpperCase() === "COOK";
+    if (!isChicago) {
+      outsideChicagoRecords += 1;
+      continue;
+    }
+
+    const amount = parseAmount(row.historical_grant_amount_usd);
+    if (amount == null || amount < 0) {
+      throw new Error(
+        `Illinois Hospitality row has an invalid historical grant amount for ${row.legal_business_name}.`,
+      );
+    }
+    const legalName = nullableStr(row.legal_business_name);
+    const dba = nullableStr(row.dba);
+    const recipient = dba || legalName || "(unnamed awardee)";
+    records.push({
+      id: `illinois-hospitality-emergency-${records.length}`,
+      source: "illinois-hospitality-emergency",
+      funderType: SOURCE_FUNDER_TYPE["illinois-hospitality-emergency"],
+      funderName: ILLINOIS_HOSPITALITY_PROGRAM,
+      recipient,
+      capitalClass: "grant",
+      amountAwarded: null,
+      logLine: [
+        dba && legalName && dba.toUpperCase() !== legalName.toUpperCase()
+          ? `Legal business: ${legalName}`
+          : null,
+        "Historical state emergency grant from a closed program",
+      ]
+        .filter(Boolean)
+        .join(" · "),
+      year: 2020,
+      // The official list publishes only city and county. An administrator
+      // address, guessed ZIP, or downtown centroid would all be misleading.
+      geometry: { kind: "citywide" },
+      address: null,
+      status: "disbursed",
+      recordDate: null,
+      recordProvenance: "official",
+      links: [
+        nullableStr(row.source_url) ??
+          RECOVERY_INVESTMENT_SOURCE_METADATA["illinois-hospitality-emergency"]
+            .canonicalSourceUrl,
+      ],
+      recovery: historicalRecoveryRecord(
+        "illinois-hospitality-emergency",
+        amount,
+      ),
+    });
+  }
+  return {
+    records,
+    chicagoRecords: records.length,
+    outsideChicagoRecords,
+  };
+}
+
 function mapIllinoisBackToBusiness(
   rows: Record<string, string>[],
   chicagoZipCodes: ReadonlySet<string>,
@@ -1734,6 +1886,110 @@ function buildCapitalContext(generatedAt: string): unknown {
     programs: chicagoArpaPrograms,
   };
 
+  // 6) Bounded Chicago CARES-era program, administrator, and accounting
+  // records. These remain citywide context. Contract revisions are already
+  // canonicalized by the importer and no administrator address is retained.
+  const chicagoCaresProgramLedger = {
+    note:
+      "Closed historical citywide context. Program authorizations, administrator contracts, budgets, encumbrances, and expenditures remain separate stages and are never treated as business-recipient awards.",
+    records: readCsv("chicago_cares_program_ledger.csv").map((row) => ({
+      recordId: nullableStr(row.record_id),
+      programId: nullableStr(row.program_id),
+      programName: nullableStr(row.program_name),
+      recordKind: nullableStr(row.record_kind),
+      assistanceType: nullableStr(row.assistance_type),
+      fundingClassification: nullableStr(row.funding_classification),
+      programStatus: nullableStr(row.program_status),
+      administratorName: nullableStr(row.administrator_name),
+      administeringDepartment: nullableStr(row.administering_department),
+      historicalAuthorized: parseAmount(row.historical_authorized_usd),
+      historicalBudgeted: parseAmount(row.historical_budgeted_usd),
+      historicalEncumbered: parseAmount(row.historical_encumbered_usd),
+      historicalExpended: parseAmount(row.historical_expended_usd),
+      financialStageNote: nullableStr(row.financial_stage_note),
+      recordGranularity: nullableStr(row.record_granularity),
+      geographicScope: nullableStr(row.geographic_scope),
+      isBusinessRecipient:
+        nullableStr(row.is_business_recipient)?.toLowerCase() === "true",
+      isMappableBusinessLocation:
+        nullableStr(row.is_mappable_business_location)?.toLowerCase() ===
+        "true",
+      isActiveIncentiveDollars:
+        nullableStr(row.is_active_incentive_dollars)?.toLowerCase() === "true",
+      addressUsePolicy: nullableStr(row.address_use_policy),
+      financialAggregationPolicy: nullableStr(
+        row.financial_aggregation_policy,
+      ),
+      sourceAuthority: nullableStr(row.source_authority),
+      sourceDatasetId: nullableStr(row.source_dataset_id),
+      sourceRecordIds: (nullableStr(row.source_record_ids) ?? "")
+        .split("|")
+        .filter(Boolean),
+      sourceUrl: nullableStr(row.source_url),
+      sourceQueryUrl: nullableStr(row.source_query_url),
+      sourceAsOf: nullableStr(row.source_as_of),
+      sourceDatasetUpdatedAt: nullableStr(row.source_dataset_updated_at),
+      specificationNumber: nullableStr(row.specification_number),
+      contractNumbers: (nullableStr(row.contract_numbers) ?? "")
+        .split("|")
+        .filter(Boolean),
+      sourceRevisionCount: parseAmount(row.source_revision_count),
+      latestRevisionNumber: parseAmount(row.latest_revision_number),
+      grantProjectCode: nullableStr(row.grant_project_code),
+      fundCode: nullableStr(row.fund_code),
+      parentCostCenterCode: nullableStr(row.parent_cost_center_code),
+      alnCode: nullableStr(row.aln_code),
+      periodStart: nullableStr(row.period_start),
+      periodEnd: nullableStr(row.period_end),
+    })),
+  };
+
+  // 7) Cook County's 2020 CARES recovery ledger. The source's direct relief
+  // programs were suburban-only, so these rows are explicit Chicago exclusions,
+  // not map records. The $77M umbrella context and three child outcomes are
+  // non-additive and retain separate amount fields.
+  const cookCountyCares2020 = {
+    note:
+      "Closed historical Cook County context. Award eligibility was suburban-only; City of Chicago businesses and residents were excluded. The portfolio amount and child outcomes must never be added together.",
+    programs: readCsv("cook_county_cares_2020_programs.csv").map((row) => ({
+      recordOrder: parseAmount(row.record_order),
+      recordId: nullableStr(row.record_id),
+      parentRecordId: nullableStr(row.parent_record_id),
+      recordKind: nullableStr(row.record_kind),
+      programName: nullableStr(row.program_name),
+      assistanceType: nullableStr(row.assistance_type),
+      recipientCategory: nullableStr(row.recipient_category),
+      recipientCount: parseAmount(row.recipient_count),
+      historicalPortfolioAmount: parseAmount(
+        row.historical_portfolio_amount_usd,
+      ),
+      historicalDirectRecipientAmount: parseAmount(
+        row.historical_direct_recipient_amount_usd,
+      ),
+      sourceReportedAmountLabel: nullableStr(row.source_reported_amount_label),
+      amountRollupPolicy: nullableStr(row.amount_rollup_policy),
+      reliefEra: nullableStr(row.relief_era),
+      fundingSource: nullableStr(row.funding_source),
+      programStatus: nullableStr(row.program_status),
+      geographicEligibility: nullableStr(row.geographic_eligibility),
+      cityOfChicagoAwardEligible:
+        nullableStr(row.city_of_chicago_award_eligible)?.toLowerCase() ===
+        "true",
+      cityOfChicagoExclusionReason: nullableStr(
+        row.city_of_chicago_exclusion_reason,
+      ),
+      mappable: nullableStr(row.mappable)?.toLowerCase() === "true",
+      isRecipientLevelRecord:
+        nullableStr(row.is_recipient_level_record)?.toLowerCase() === "true",
+      sourceReportUrl: nullableStr(row.source_report_url),
+      sourceContextUrl: nullableStr(row.source_context_url),
+      eligibilitySourceUrl: nullableStr(row.eligibility_source_url),
+      sourceVersion: nullableStr(row.source_version),
+      sourcePage: parseAmount(row.source_page),
+      recordNote: nullableStr(row.record_note),
+    })),
+  };
+
   return {
     generatedAt,
     meta: {
@@ -1744,14 +2000,23 @@ function buildCapitalContext(generatedAt: string): unknown {
         "FFIEC CRA Aggregate Table A1-1 small-business loan ORIGINATIONS, Cook County tracts → community areas (2022–2024)",
         "CDFI transaction aggregates by geography (2021–2022)",
         "Illinois GATA/CSFA active award pipeline SFY2027 (award amounts, not payments)",
+        "DCEO Capital Appropriation List + Grant Tracker definitions — appropriation, executed award, and disbursement kept as separate lifecycle stages",
         "City of Chicago ARPA Road to Recovery Program Details (m9g9-cj96) and Grants Summary (9yp3-9pdz)",
+        "City of Chicago Contracts (rsxa-ify5) + Mid-Year Grants (iyu8-jkf8) — bounded CARES-era program, administrator, and accounting records with revisions canonicalized",
+        "Cook County 2020 Community Recovery Initiative impact report — suburban-only CARES program outcomes and explicit City of Chicago exclusion context",
       ],
     },
     tifDistricts,
     craByCommunityArea,
     cdfi,
+    dceoFundingLifecycle: {
+      stages: DCEO_FUNDING_LIFECYCLE_STAGES,
+      policy: DCEO_FUNDING_LIFECYCLE_POLICY,
+    },
     stateAwards,
     chicagoArpaRecovery,
+    chicagoCaresProgramLedger,
+    cookCountyCares2020,
   };
 }
 
@@ -1814,6 +2079,13 @@ async function main() {
   const cookSource = mapCookSourceGrants(
     readCsv("cook_county_source_grants_2023.csv"),
     chicagoZipCodes,
+  );
+  const illinoisBig = mapIllinoisBusinessInterruptionGrants(
+    readCsv("illinois_business_interruption_grants.csv"),
+    chicagoZipCodes,
+  );
+  const illinoisHospitality = mapIllinoisHospitalityEmergencyGrants(
+    readCsv("illinois_hospitality_emergency_grant_awards.csv"),
   );
   const illinoisB2B = mapIllinoisBackToBusiness(
     readCsv("illinois_back_to_business_awards.csv"),
@@ -1927,6 +2199,9 @@ async function main() {
   console.log(
     `Public investment additions: cook-source Chicago=${cookSource.chicagoRecords} ` +
       `outside-Chicago=${cookSource.outsideChicagoRecords}; ` +
+      `Illinois-BIG Chicago=${illinoisBig.chicagoRecords} outside-Chicago=${illinoisBig.outsideChicagoRecords}; ` +
+      `Illinois-Hospitality Chicago=${illinoisHospitality.chicagoRecords} ` +
+      `outside-Chicago=${illinoisHospitality.outsideChicagoRecords}; ` +
       `Illinois-B2B Chicago=${illinoisB2B.chicagoRecords} outside-Chicago=${illinoisB2B.outsideChicagoRecords}; ` +
       `SBA-RRF Chicago=${sbaRrf.records.length} (point=${sbaRrf.pointRecords} ` +
       `citywide=${sbaRrf.citywideRecords} geocode-miss=${sbaRrf.addressGeocodeMisses} ` +
@@ -1975,7 +2250,8 @@ async function main() {
   //    capital-spine sources append last (also never dedupe-eligible).
   const all = [
     ...nofSmall, ...nofLarge, ...sbif, ...cdg, ...foundations, ...prize, ...developments, ...jim,
-    ...tif, ...hud, ...lihtc, ...nmtc, ...cookSource.records, ...illinoisB2B.records,
+    ...tif, ...hud, ...lihtc, ...nmtc, ...cookSource.records, ...illinoisBig.records,
+    ...illinoisHospitality.records, ...illinoisB2B.records,
     ...sbaRrf.records, ...dceo.records,
   ];
 
@@ -2014,6 +2290,11 @@ async function main() {
     cookSourceOutsideChicagoRecords: cookSource.outsideChicagoRecords,
     illinoisB2BChicagoRecords: illinoisB2B.chicagoRecords,
     illinoisB2BOutsideChicagoRecords: illinoisB2B.outsideChicagoRecords,
+    illinoisBigChicagoRecords: illinoisBig.chicagoRecords,
+    illinoisBigOutsideChicagoRecords: illinoisBig.outsideChicagoRecords,
+    illinoisHospitalityChicagoRecords: illinoisHospitality.chicagoRecords,
+    illinoisHospitalityOutsideChicagoRecords:
+      illinoisHospitality.outsideChicagoRecords,
     sbaRrfChicagoRecords: sbaRrf.records.length,
     sbaRrfPointRecords: sbaRrf.pointRecords,
     sbaRrfCitywideRecords: sbaRrf.citywideRecords,

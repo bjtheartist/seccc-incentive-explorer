@@ -45,6 +45,10 @@ const HISTORICAL_RECOVERY_RECIPIENT_CONFIG: Readonly<
     programName: "Cook County 2023 Source Grant",
     year: 2023,
   },
+  "illinois-big": {
+    programName: "Business Interruption Grants Program",
+    year: 2020,
+  },
   "illinois-b2b": {
     programName: "Illinois Back to Business Grant Program",
     year: 2022,
@@ -54,7 +58,11 @@ const HISTORICAL_RECOVERY_RECIPIENT_CONFIG: Readonly<
 function isHistoricalRecoveryRecipientSource(
   value: string | null,
 ): value is HistoricalRecoveryRecipientSource {
-  return value === "cook-source-2023" || value === "illinois-b2b";
+  return (
+    value === "cook-source-2023" ||
+    value === "illinois-big" ||
+    value === "illinois-b2b"
+  );
 }
 
 /**
@@ -204,11 +212,16 @@ export async function GET(req: NextRequest) {
             record.geometry.kind !== "zip_area" &&
             !(
               (record.source === "dceo-capital" ||
-                record.source === "sba-rrf") &&
+                record.source === "sba-rrf" ||
+                record.source === "illinois-hospitality-emergency") &&
               record.geometry.kind === "citywide"
             ),
         ),
         countyReliefByZip: summarizeCountyReliefByZip(filtered.records),
+        state2020ReliefByZip: summarizeHistoricalRecoveryByZip(
+          filtered.records,
+          "illinois-big",
+        ),
         stateRecoveryByZip: summarizeHistoricalRecoveryByZip(
           filtered.records,
           "illinois-b2b",
@@ -218,6 +231,11 @@ export async function GET(req: NextRequest) {
         ).length,
         federalRestaurantReliefCitywideCount: filtered.records.filter(
           (record) => record.source === "sba-rrf" && record.geometry.kind === "citywide",
+        ).length,
+        state2020HospitalityCitywideCount: filtered.records.filter(
+          (record) =>
+            record.source === "illinois-hospitality-emergency" &&
+            record.geometry.kind === "citywide",
         ).length,
       }
     : filtered;

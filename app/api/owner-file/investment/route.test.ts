@@ -18,6 +18,8 @@ vi.mock("@/lib/community-investment", () => ({
   INVESTMENT_SOURCES: [
     "cdg",
     "cook-source-2023",
+    "illinois-big",
+    "illinois-hospitality-emergency",
     "illinois-b2b",
     "sba-rrf",
     "dceo-capital",
@@ -35,7 +37,7 @@ import { GET } from "./route";
 const sourceLink = "https://example.com/official-source";
 const fakeData = {
   generatedAt: "2026-07-28T00:00:00.000Z",
-  meta: { totalRecords: 8 },
+  meta: { totalRecords: 10 },
   records: [
     {
       id: "cdg-point",
@@ -61,6 +63,24 @@ const fakeData = {
       geometry: { kind: "zip_area", zip: "60617" },
       amountAwarded: null,
       recovery: { historicalAmount: { value: 20_000 } },
+      links: [sourceLink],
+    },
+    {
+      id: "big-a",
+      source: "illinois-big",
+      recipient: "Illinois BIG recipient",
+      geometry: { kind: "zip_area", zip: "60617" },
+      amountAwarded: null,
+      recovery: { historicalAmount: { value: 30_000 } },
+      links: [sourceLink],
+    },
+    {
+      id: "hospitality-citywide",
+      source: "illinois-hospitality-emergency",
+      recipient: "Illinois Hospitality recipient",
+      geometry: { kind: "citywide" },
+      amountAwarded: null,
+      recovery: { historicalAmount: { value: 25_000 } },
       links: [sourceLink],
     },
     {
@@ -168,9 +188,23 @@ describe("GET /api/owner-file/investment", () => {
         sourceLink,
       },
     ]);
+    expect(body.state2020ReliefByZip).toEqual([
+      {
+        sourceId: "illinois-big",
+        programName: "Business Interruption Grants Program",
+        zipCode: "60617",
+        awardCount: 1,
+        totalDisbursed: 30_000,
+        year: 2020,
+        sourceLink,
+      },
+    ]);
     expect(body.stateCapitalCitywideCount).toBe(1);
     expect(body.federalRestaurantReliefCitywideCount).toBe(1);
+    expect(body.state2020HospitalityCitywideCount).toBe(1);
     expect(JSON.stringify(body)).not.toContain("Cook recipient");
+    expect(JSON.stringify(body)).not.toContain("Illinois BIG recipient");
+    expect(JSON.stringify(body)).not.toContain("Illinois Hospitality recipient");
     expect(JSON.stringify(body)).not.toContain("Illinois B2B recipient");
     expect(JSON.stringify(body)).not.toContain("Unplotted restaurant recipient");
     expect(JSON.stringify(body)).not.toContain("Unplotted state project");
@@ -302,6 +336,34 @@ describe("GET /api/owner-file/investment", () => {
           id: "b2b-a",
           businessName: "Illinois B2B recipient",
           historicalAwardAmount: 25_000,
+        },
+      ],
+    });
+    expect(filterMock).not.toHaveBeenCalled();
+  });
+
+  it("returns Illinois BIG recipients through the generic historical drilldown", async () => {
+    const res = await GET(
+      req(
+        "http://localhost/api/owner-file/investment?view=historical-recovery-recipients&source=illinois-big&zip=60617",
+      ),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(body).toEqual({
+      sourceId: "illinois-big",
+      zipCode: "60617",
+      programName: "Business Interruption Grants Program",
+      programStatus: "complete",
+      year: 2020,
+      recipientCount: 1,
+      sourceLink,
+      recipients: [
+        {
+          id: "big-a",
+          businessName: "Illinois BIG recipient",
+          historicalAwardAmount: 30_000,
         },
       ],
     });

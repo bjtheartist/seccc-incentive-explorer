@@ -61,7 +61,7 @@ describe("MapLegendPanel community-investment admin section", () => {
   });
 
   it("renders NO public-investment overlay control for a non-admin viewer, even with every overlay on", () => {
-    // All four overlays are admin-only by config (adminOnly: true). Force each
+    // Every overlay is admin-only by config (adminOnly: true). Force each
     // one visible with a non-zero count: a non-admin must still get nothing —
     // no label, no description, no aria-label, no source-family count.
     const html = renderToStaticMarkup(
@@ -74,6 +74,7 @@ describe("MapLegendPanel community-investment admin section", () => {
           state_recovery_awards: true,
           federal_restaurant_relief: true,
           state_capital_projects: true,
+          state_2020_relief: true,
         }}
         countyReliefZipCount={59}
         stateRecoveryZipCount={59}
@@ -227,11 +228,14 @@ describe("MapLegendPanel community-investment admin section", () => {
         communityInvestmentVisible={true}
         publicInvestmentOverlays={{
           county_relief_awards: true,
+          state_2020_relief: false,
           state_recovery_awards: false,
           federal_restaurant_relief: false,
           state_capital_projects: false,
         }}
         countyReliefZipCount={18}
+        state2020ReliefZipCount={9}
+        state2020HospitalityCitywideCount={116}
         stateRecoveryZipCount={12}
         federalRestaurantReliefPlottedCount={1483}
         federalRestaurantReliefCitywideCount={40}
@@ -240,6 +244,7 @@ describe("MapLegendPanel community-investment admin section", () => {
       />
     );
     expect(html).toContain("County relief awards");
+    expect(html).toContain("Illinois 2020 relief");
     expect(html).toContain("Illinois recovery grants");
     expect(html).toContain("Restaurant relief grants");
     expect(html).toContain("State capital projects");
@@ -256,16 +261,20 @@ describe("MapLegendPanel community-investment admin section", () => {
         communityInvestmentVisible={true}
         publicInvestmentOverlays={{
           county_relief_awards: false,
+          state_2020_relief: true,
           state_recovery_awards: true,
           federal_restaurant_relief: true,
           state_capital_projects: false,
         }}
         stateRecoveryZipCount={41}
+        state2020ReliefZipCount={37}
+        state2020HospitalityCitywideCount={116}
         federalRestaurantReliefPlottedCount={1483}
         federalRestaurantReliefCitywideCount={40}
       />,
     );
     expect(html).toContain("41 Chicago ZIP areas mapped");
+    expect(html).toContain("37 BIG ZIP areas mapped · 116 Hospitality records held unplotted");
     expect(html).toContain("1483 address-sited · 40 held unplotted");
     expect(html).not.toContain("possible incentive dollars");
     expect(html).not.toContain("potential funding");
@@ -478,6 +487,22 @@ describe("buildCountyReliefPopupHtml", () => {
 });
 
 describe("buildHistoricalRecoveryZipPopupHtml", () => {
+  it("offers the protected ZIP drilldown for Illinois BIG", () => {
+    const html = buildHistoricalRecoveryZipPopupHtml({
+      sourceId: "illinois-big",
+      programName: "Business Interruption Grants Program",
+      zipCode: "60617",
+      awardCount: 80,
+      totalDisbursed: 2_700_000,
+      year: 2020,
+      sourceLink: "https://example.org/big.pdf",
+    });
+    expect(html).toContain("Business Interruption Grants Program");
+    expect(html).toContain('data-historical-recovery-recipients="illinois-big"');
+    expect(html).toContain("program is complete");
+    expect(html).not.toContain("possible incentive");
+  });
+
   it("labels Illinois B2B as completed historical ZIP context", () => {
     const html = buildHistoricalRecoveryZipPopupHtml({
       sourceId: "illinois-b2b",
