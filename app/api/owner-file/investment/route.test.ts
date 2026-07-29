@@ -177,16 +177,54 @@ describe("GET /api/owner-file/investment", () => {
     expect(body.countyReliefByZip[0]).not.toHaveProperty("recipient");
   });
 
-  it("retains authorized source-level rows outside the projected map view", async () => {
+  it("FAILS CLOSED: a missing or unrecognized view returns the projected, nameless shape", async () => {
+    // This inverts the branch's original default. Previously ONLY the exact
+    // string "map" was projected, so a bare request — or any typo — fell
+    // through to raw rows and dumped every recovery recipient's business name
+    // in one payload. The safe shape is now the default; a typo degrades.
+    for (const url of [
+      "http://localhost/api/owner-file/investment",
+      "http://localhost/api/owner-file/investment?source=cook-source-2023",
+      "http://localhost/api/owner-file/investment?view=maps",
+      "http://localhost/api/owner-file/investment?view=banana",
+      "http://localhost/api/owner-file/investment?view=",
+    ]) {
+      const res = await GET(req(url));
+      const body = await res.json();
+      const raw = JSON.stringify(body);
+
+      expect(res.status, url).toBe(200);
+      expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+      // No name-bearing recovery row survives, whichever source was requested.
+      expect(raw, url).not.toContain("Cook recipient");
+      expect(raw, url).not.toContain("Illinois B2B recipient");
+      expect(raw, url).not.toContain("Unplotted restaurant recipient");
+      expect(raw, url).not.toContain("Unplotted state project");
+      expect(
+        body.records.some(
+          (record: { geometry: { kind: string } }) => record.geometry.kind === "zip_area",
+        ),
+        url,
+      ).toBe(false);
+      // The projection is the SAME one the map gets — one safe shape, not two.
+      expect(body, url).toHaveProperty("countyReliefByZip");
+      expect(body, url).toHaveProperty("stateRecoveryByZip");
+    }
+  });
+
+  it("returns raw recipient-level rows ONLY for an explicit view=full opt-in", async () => {
     const res = await GET(
-      req("http://localhost/api/owner-file/investment?source=cook-source-2023"),
+      req("http://localhost/api/owner-file/investment?source=cook-source-2023&view=full"),
     );
     const body = await res.json();
 
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     expect(body.records.map((record: { id: string }) => record.id)).toEqual([
       "cook-a",
       "cook-b",
     ]);
+    // The raw shape carries no map aggregates — it is the unprojected export.
     expect(body).not.toHaveProperty("countyReliefByZip");
   });
 

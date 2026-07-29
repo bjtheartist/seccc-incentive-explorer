@@ -28,6 +28,12 @@ function isAuthorized(req: NextRequest): boolean {
 const VALID_SOURCES = new Set<string>(INVESTMENT_SOURCES);
 const COUNTY_RELIEF_RECIPIENTS_VIEW = "county-relief-recipients";
 const HISTORICAL_RECOVERY_RECIPIENTS_VIEW = "historical-recovery-recipients";
+/**
+ * The ONLY value that unlocks raw, recipient-level rows. Everything else — a
+ * missing `view`, a misspelling, a renamed enum, a copy-pasted URL that lost the
+ * param — resolves to the projected, nameless shape. See `projectedView` in GET.
+ */
+const FULL_ROWS_VIEW = "full";
 const FIVE_DIGIT_ZIP_RE = /^\d{5}$/;
 const HISTORICAL_RECOVERY_RECIPIENT_CONFIG: Readonly<
   Record<
@@ -168,8 +174,26 @@ export async function GET(req: NextRequest) {
     : null;
 
   const filtered = filterInvestmentBySources(data, sources);
-  const mapView = view === "map";
-  const responseData = mapView
+  /**
+   * FAIL CLOSED. The projected, NAMELESS shape is the default; raw
+   * recipient-level rows require an explicit `view=full`.
+   *
+   * This used to be inverted — only the exact string "map" was projected, and
+   * everything else fell through to the raw rows. That meant a bare
+   * `GET /api/owner-file/investment` returned every `cook-source-2023`,
+   * `illinois-b2b`, and `sba-rrf` recipient BUSINESS NAME in one payload, and so
+   * did `?view=maps`, `?view=banana`, or any future rename of the enum. The most
+   * identifying response shape was opt-in, behind an exact string match, which is
+   * the wrong direction for a default: a typo silently upgraded the payload
+   * instead of degrading it.
+   *
+   * Now a typo degrades to aggregates. The README's promise — "the map receives
+   * ZIP aggregates; recipient names load only after an authenticated user
+   * explicitly opens one ZIP's historical-recipient panel" — is enforced by the
+   * route rather than merely observed by today's callers.
+   */
+  const projectedView = view !== FULL_ROWS_VIEW;
+  const responseData = projectedView
     ? {
         ...filtered,
         // The map needs ZIP aggregates, not recipient names. Keep raw ZIP-level
