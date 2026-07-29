@@ -20,6 +20,9 @@ import MapLegendPanel from "./MapLegendPanel";
 import MapMobileSheet from "./MapMobileSheet";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
+import CountyReliefRecipientsPanel, {
+  type CountyReliefRecipientsPanelStatus,
+} from "./CountyReliefRecipientsPanel";
 import type { MobileMapPresetId } from "./map-layer-presets";
 import { cachedFetch } from "@/lib/fetch-cache";
 import { getSiteSignals } from "@/lib/site-signals";
@@ -51,6 +54,7 @@ import {
 } from "@/lib/community-investment-toggle";
 import {
   fetchCommunityInvestmentLayer,
+  fetchCountyReliefRecipients,
   filterInvestmentPointFeatures,
   investmentFeatureCollection,
   summarizeCitywideEntries,
@@ -67,6 +71,7 @@ import {
   type InvestmentPointFeature,
   type CitywideInvestmentEntry,
   type CountyReliefZipSummary,
+  type CountyReliefRecipient,
   type MegaprojectPointFeature,
   type MegaprojectSummary,
 } from "@/lib/community-investment-layer";
@@ -338,6 +343,66 @@ export default function MapView() {
   const [polygonResults, setPolygonResults] = useState<GeoJSON.FeatureCollection | null>(null);
   const [polygonLoading, setPolygonLoading] = useState(false);
   const [polygonPanelOpen, setPolygonPanelOpen] = useState(false);
+  const countyReliefRecipientsAbortRef = useRef<AbortController | null>(null);
+  const [countyReliefRecipientsPanel, setCountyReliefRecipientsPanel] = useState<{
+    zipCode: string;
+    status: CountyReliefRecipientsPanelStatus;
+    recipients: CountyReliefRecipient[];
+    sourceLink: string | null;
+  } | null>(null);
+
+  const openCountyReliefRecipients = useCallback((zipCode: string) => {
+    if (!/^\d{5}$/.test(zipCode)) return;
+
+    countyReliefRecipientsAbortRef.current?.abort();
+    const controller = new AbortController();
+    countyReliefRecipientsAbortRef.current = controller;
+    setSnapshotOpen(false);
+    setPolygonPanelOpen(false);
+    setCountyReliefRecipientsPanel({
+      zipCode,
+      status: "loading",
+      recipients: [],
+      sourceLink: null,
+    });
+
+    fetchCountyReliefRecipients(zipCode, { signal: controller.signal })
+      .then((result) => {
+        if (controller.signal.aborted) return;
+        setCountyReliefRecipientsPanel((current) =>
+          current?.zipCode === zipCode
+            ? {
+                zipCode,
+                status: result.status,
+                recipients: result.recipients,
+                sourceLink: result.sourceLink,
+              }
+            : current,
+        );
+      })
+      .catch((error: unknown) => {
+        if (controller.signal.aborted) return;
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setCountyReliefRecipientsPanel((current) =>
+          current?.zipCode === zipCode
+            ? { ...current, status: "error", recipients: [], sourceLink: null }
+            : current,
+        );
+      });
+  }, []);
+
+  const closeCountyReliefRecipients = useCallback(() => {
+    countyReliefRecipientsAbortRef.current?.abort();
+    countyReliefRecipientsAbortRef.current = null;
+    setCountyReliefRecipientsPanel(null);
+  }, []);
+
+  useEffect(
+    () => () => {
+      countyReliefRecipientsAbortRef.current?.abort();
+    },
+    [],
+  );
 
   // Load programs for snapshot
   useEffect(() => {
@@ -1533,10 +1598,23 @@ export default function MapView() {
 
       map.on("click", COUNTY_RELIEF_FILL_LAYER_ID, (e) => {
         if (!e.features?.length) return;
+        const properties = e.features[0].properties || {};
+        const zipCode = String(properties.zipCode || "");
         sharedDotPopup
           .setLngLat(e.lngLat)
-          .setHTML(buildCountyReliefPopupHtml(e.features[0].properties || {}))
+          .setHTML(buildCountyReliefPopupHtml(properties))
           .addTo(map);
+        const recipientsButton = sharedDotPopup
+          .getElement()
+          ?.querySelector<HTMLButtonElement>("[data-county-relief-recipients]");
+        recipientsButton?.addEventListener(
+          "click",
+          () => {
+            sharedDotPopup.remove();
+            openCountyReliefRecipients(zipCode);
+          },
+          { once: true },
+        );
       });
       map.on("mouseenter", COUNTY_RELIEF_FILL_LAYER_ID, () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", COUNTY_RELIEF_FILL_LAYER_ID, () => { map.getCanvas().style.cursor = ""; });
@@ -1794,7 +1872,7 @@ export default function MapView() {
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [openCountyReliefRecipients]);
 
   /* ── Toggle zone visibility ────────────── */
   const toggleZone = useCallback(
@@ -3027,6 +3105,19 @@ export default function MapView() {
       )}
 
 
+      {countyReliefRecipientsPanel && (
+        <CountyReliefRecipientsPanel
+          zipCode={countyReliefRecipientsPanel.zipCode}
+          status={countyReliefRecipientsPanel.status}
+          recipients={countyReliefRecipientsPanel.recipients}
+          sourceLink={countyReliefRecipientsPanel.sourceLink}
+          onClose={closeCountyReliefRecipients}
+          onRetry={() =>
+            openCountyReliefRecipients(countyReliefRecipientsPanel.zipCode)
+          }
+        />
+      )}
+
       {/* ── RIGHT: Area Snapshot Panel ──────── */}
       {snapshotOpen && loaded && (
         <MapSnapshotPanel
@@ -3073,7 +3164,7 @@ export default function MapView() {
       )}
 
       {/* Snapshot toggle (when closed) — desktop text button */}
-      {!snapshotOpen && !polygonPanelOpen && loaded && (
+      {!snapshotOpen && !polygonPanelOpen && !countyReliefRecipientsPanel && loaded && (
         <button
           onClick={() => setSnapshotOpen(true)}
           className="hidden md:block absolute top-3 right-3 z-10 bg-white/95 backdrop-blur border border-[#0C1B33]/10 px-3 py-1.5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/70 hover:text-[#0C1B33] transition-colors"
@@ -3082,7 +3173,7 @@ export default function MapView() {
         </button>
       )}
 
-      {loaded && isMobile && !legendOpen && !snapshotOpen && !polygonPanelOpen && !drawMode && (
+      {loaded && isMobile && !legendOpen && !snapshotOpen && !polygonPanelOpen && !countyReliefRecipientsPanel && !drawMode && (
         <MapMobileSheet
           activePreset={activeMobilePreset}
           snapshotLabel={snapshotLabel}
@@ -3106,7 +3197,7 @@ export default function MapView() {
       )}
 
       {/* Draw Area button — hidden when right panels are open, always visible in draw mode */}
-      {loaded && (drawMode || (!snapshotOpen && !polygonPanelOpen && !isMobile)) && (
+      {loaded && (drawMode || (!snapshotOpen && !polygonPanelOpen && !countyReliefRecipientsPanel && !isMobile)) && (
         <button
           onClick={() => {
             const draw = drawRef.current;

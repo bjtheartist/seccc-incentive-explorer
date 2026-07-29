@@ -345,7 +345,9 @@ export interface CountyReliefPopupProperties {
 
 /** ZIP-aggregate popup for Cook County's completed 2023 Source Grant program. */
 export function buildCountyReliefPopupHtml(p: CountyReliefPopupProperties): string {
-  const zipCode = escapePopupHtml(String(p.zipCode || "ZIP unavailable"));
+  const rawZipCode = String(p.zipCode || "");
+  const canLoadRecipients = /^\d{5}$/.test(rawZipCode);
+  const zipCode = escapePopupHtml(rawZipCode || "ZIP unavailable");
   const awardCount = Number(p.awardCount);
   const totalDisbursed = Number(p.totalDisbursed);
   const sourceLink =
@@ -359,6 +361,7 @@ export function buildCountyReliefPopupHtml(p: CountyReliefPopupProperties): stri
       <span style="font-size:14px;font-weight:700;color:#0C1B33">${formatAwardedAmount(totalDisbursed)}</span>
     </div>
     <div style="font-size:10px;color:#8A93A6;margin-top:7px;line-height:1.4">ZIP-level source precision. This program is complete and is not an active funding opportunity.</div>
+    ${canLoadRecipients ? `<button type="button" data-county-relief-recipients="${zipCode}" style="display:block;width:100%;margin-top:9px;padding:8px 10px;border:1px solid #0E749033;background:#0E74900D;color:#0E7490;font-size:10px;font-weight:600;cursor:pointer;text-align:center">View historical recipients</button>` : ""}
     ${sourceLink ? `<a href="${sourceLink}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">Source &rarr;</a>` : ""}
   </div>`;
 }

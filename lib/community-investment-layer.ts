@@ -32,6 +32,26 @@ import { publicInvestmentOverlayIdForSource } from "@/lib/public-investment-over
 /** The gated dataset endpoint the layer fetches when toggled on. */
 export const COMMUNITY_INVESTMENT_ENDPOINT = "/api/owner-file/investment";
 
+export interface CountyReliefRecipient {
+  id: string;
+  businessName: string;
+  /** Source-published award amount from the completed 2023 program. */
+  historicalAwardAmount: number | null;
+}
+
+export type CountyReliefRecipientsStatus = "ready" | "unauthorized" | "unavailable";
+
+export interface CountyReliefRecipientsResult {
+  status: CountyReliefRecipientsStatus;
+  zipCode: string;
+  programName: string;
+  programStatus: "complete";
+  year: 2023;
+  recipientCount: number;
+  sourceLink: string | null;
+  recipients: CountyReliefRecipient[];
+}
+
 /**
  * Canonical funder-type order wherever the three are listed together (legend
  * checkboxes, color key). Government first (the largest, most-mapped source),
@@ -834,6 +854,76 @@ export async function fetchCommunityInvestmentLayer(opts?: {
           ).length,
     citywideDevelopmentNames: citywideDevelopmentProjectNames(records),
     funderHqs: Array.isArray(data?.funderHqs) ? data.funderHqs : [],
+  };
+}
+
+/**
+ * Fetch one ZIP's historical Cook County recipients only after an authenticated
+ * admin asks for the drilldown. The normal map request continues to receive
+ * aggregates only, so the full recipient list is never shipped on map load.
+ */
+export async function fetchCountyReliefRecipients(
+  zipCode: string,
+  opts?: {
+    signal?: AbortSignal;
+    fetchImpl?: typeof fetch;
+  },
+): Promise<CountyReliefRecipientsResult> {
+  if (!/^\d{5}$/.test(zipCode)) {
+    throw new Error("A five-digit ZIP code is required");
+  }
+
+  const emptyResult = (
+    status: Exclude<CountyReliefRecipientsStatus, "ready">,
+  ): CountyReliefRecipientsResult => ({
+    status,
+    zipCode,
+    programName: "Cook County 2023 Source Grant",
+    programStatus: "complete",
+    year: 2023,
+    recipientCount: 0,
+    sourceLink: null,
+    recipients: [],
+  });
+
+  const doFetch = opts?.fetchImpl ?? fetch;
+  const params = new URLSearchParams({
+    view: "county-relief-recipients",
+    zip: zipCode,
+  });
+  const res = await doFetch(
+    `${COMMUNITY_INVESTMENT_ENDPOINT}?${params.toString()}`,
+    opts?.signal ? { signal: opts.signal } : undefined,
+  );
+  if (res.status === 401) return emptyResult("unauthorized");
+  if (!res.ok) return emptyResult("unavailable");
+
+  const data = (await res.json()) as Partial<CountyReliefRecipientsResult>;
+  const recipients = Array.isArray(data.recipients)
+    ? data.recipients.filter(
+        (recipient): recipient is CountyReliefRecipient =>
+          typeof recipient?.id === "string" &&
+          typeof recipient.businessName === "string" &&
+          (recipient.historicalAwardAmount === null ||
+            typeof recipient.historicalAwardAmount === "number"),
+      )
+    : [];
+
+  return {
+    status: "ready",
+    zipCode,
+    programName:
+      typeof data.programName === "string"
+        ? data.programName
+        : "Cook County 2023 Source Grant",
+    programStatus: "complete",
+    year: 2023,
+    recipientCount: recipients.length,
+    sourceLink:
+      typeof data.sourceLink === "string" && /^https?:\/\//i.test(data.sourceLink)
+        ? data.sourceLink
+        : null,
+    recipients,
   };
 }
 

@@ -15,6 +15,8 @@ visitors.
   rows totaling $50,000. The import preserves the list instead of deleting rows
   to force the earlier headline.
 - Location precision: municipality and ZIP only; never infer recipient addresses
+- Admin UX: the map receives ZIP aggregates; recipient names load only after an
+  authenticated user explicitly opens one ZIP's historical-recipient panel
 - Program state: historical and fully disbursed by February 2024, not active
 
 ## Illinois DCEO FY26 Capital Appropriations

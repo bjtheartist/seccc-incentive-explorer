@@ -22,6 +22,8 @@ function isAuthorized(req: NextRequest): boolean {
 }
 
 const VALID_SOURCES = new Set<string>(INVESTMENT_SOURCES);
+const COUNTY_RELIEF_RECIPIENTS_VIEW = "county-relief-recipients";
+const FIVE_DIGIT_ZIP_RE = /^\d{5}$/;
 
 /**
  * The 12 foundation headquarters (data/curated/foundation-hqs.csv) that seed the
@@ -73,6 +75,47 @@ export async function GET(req: NextRequest) {
     );
   }
 
+  const view = req.nextUrl.searchParams.get("view");
+  if (view === COUNTY_RELIEF_RECIPIENTS_VIEW) {
+    const zipCode = req.nextUrl.searchParams.get("zip")?.trim() ?? "";
+    if (!FIVE_DIGIT_ZIP_RE.test(zipCode)) {
+      return NextResponse.json(
+        { error: "A five-digit ZIP code is required" },
+        { status: 400, headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+
+    const recipientRecords = data.records
+      .filter(
+        (record) =>
+          record.source === "cook-source-2023" &&
+          record.geometry.kind === "zip_area" &&
+          record.geometry.zip === zipCode
+      )
+      .sort((a, b) => a.recipient.localeCompare(b.recipient, "en-US"));
+    const sourceLink =
+      recipientRecords
+        .flatMap((record) => record.links)
+        .find((link) => /^https?:\/\//i.test(link)) ?? null;
+
+    return NextResponse.json(
+      {
+        zipCode,
+        programName: "Cook County 2023 Source Grant",
+        programStatus: "complete",
+        year: 2023,
+        recipientCount: recipientRecords.length,
+        sourceLink,
+        recipients: recipientRecords.map((record) => ({
+          id: record.id,
+          businessName: record.recipient,
+          historicalAwardAmount: record.amountAwarded,
+        })),
+      },
+      { headers: { "Cache-Control": "private, no-store" } }
+    );
+  }
+
   const sourceParam = req.nextUrl.searchParams.get("source");
   const sources = sourceParam
     ? sourceParam
@@ -82,7 +125,7 @@ export async function GET(req: NextRequest) {
     : null;
 
   const filtered = filterInvestmentBySources(data, sources);
-  const mapView = req.nextUrl.searchParams.get("view") === "map";
+  const mapView = view === "map";
   const responseData = mapView
     ? {
         ...filtered,

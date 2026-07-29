@@ -378,6 +378,18 @@ describe("buildCountyReliefPopupHtml", () => {
     expect(html).toContain("$620,000");
     expect(html).toContain("program is complete");
     expect(html).toContain("not an active funding opportunity");
+    expect(html).toContain("View historical recipients");
+    expect(html).toContain('data-county-relief-recipients="60617"');
+  });
+
+  it("omits the recipient action when the feature has no valid ZIP", () => {
+    const html = buildCountyReliefPopupHtml({
+      zipCode: "ZIP unavailable",
+      awardCount: 1,
+      totalDisbursed: 10_000,
+    });
+
+    expect(html).not.toContain("View historical recipients");
   });
 });
 

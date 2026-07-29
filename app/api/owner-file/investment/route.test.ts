@@ -137,4 +137,80 @@ describe("GET /api/owner-file/investment", () => {
     ]);
     expect(body).not.toHaveProperty("countyReliefByZip");
   });
+
+  it("returns only one ZIP's historical Cook recipients on explicit drilldown", async () => {
+    loadMock.mockReturnValue({
+      ...fakeData,
+      records: [
+        ...fakeData.records,
+        {
+          id: "cook-other-zip",
+          source: "cook-source-2023",
+          recipient: "Other ZIP recipient",
+          geometry: { kind: "zip_area", zip: "60643" },
+          amountAwarded: 10_000,
+          links: [sourceLink],
+        },
+      ],
+    });
+
+    const res = await GET(
+      req(
+        "http://localhost/api/owner-file/investment?view=county-relief-recipients&zip=60617",
+      ),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+    expect(body).toEqual({
+      zipCode: "60617",
+      programName: "Cook County 2023 Source Grant",
+      programStatus: "complete",
+      year: 2023,
+      recipientCount: 2,
+      sourceLink,
+      recipients: [
+        {
+          id: "cook-a",
+          businessName: "Cook recipient A",
+          historicalAwardAmount: 10_000,
+        },
+        {
+          id: "cook-b",
+          businessName: "Cook recipient B",
+          historicalAwardAmount: 20_000,
+        },
+      ],
+    });
+    expect(JSON.stringify(body)).not.toContain("Other ZIP recipient");
+    expect(JSON.stringify(body)).not.toContain("Ordinary grant recipient");
+    expect(body).not.toHaveProperty("totalAwardAmount");
+    expect(filterMock).not.toHaveBeenCalled();
+  });
+
+  it("requires one five-digit ZIP for recipient-level access", async () => {
+    const res = await GET(
+      req(
+        "http://localhost/api/owner-file/investment?view=county-relief-recipients&zip=all",
+      ),
+    );
+    const body = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(body.error).toContain("five-digit ZIP");
+    expect(filterMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps the ZIP recipient drilldown behind the admin session", async () => {
+    hasSessionMock.mockReturnValue(false);
+    const res = await GET(
+      req(
+        "http://localhost/api/owner-file/investment?view=county-relief-recipients&zip=60617",
+      ),
+    );
+
+    expect(res.status).toBe(401);
+    expect(loadMock).not.toHaveBeenCalled();
+  });
 });

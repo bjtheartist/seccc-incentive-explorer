@@ -6,6 +6,7 @@ import {
   DEV_DOT_RADIUS_MAX,
   DEV_DOT_RADIUS_MIN,
   fetchCommunityInvestmentLayer,
+  fetchCountyReliefRecipients,
   excludeMegaprojectFeatures,
   filterInvestmentPointFeatures,
   INVESTMENT_STATUS_LABELS,
@@ -358,6 +359,89 @@ describe("fetchCommunityInvestmentLayer", () => {
     expect(result.countyReliefByZip).toHaveLength(1);
     expect(result.stateCapitalCitywideCount).toBe(9);
     expect(result.pointFeatures).toEqual([]);
+  });
+});
+
+describe("fetchCountyReliefRecipients", () => {
+  it("requests one ZIP and returns the authenticated historical recipient rows", async () => {
+    const fetchImpl = fetchStub(200, {
+      zipCode: "60617",
+      programName: "Cook County 2023 Source Grant",
+      programStatus: "complete",
+      year: 2023,
+      recipientCount: 2,
+      sourceLink: "https://example.gov/list.pdf",
+      recipients: [
+        {
+          id: "cook-1",
+          businessName: "First Business",
+          historicalAwardAmount: 10_000,
+        },
+        {
+          id: "cook-2",
+          businessName: "Second Business",
+          historicalAwardAmount: 20_000,
+        },
+      ],
+    });
+
+    const result = await fetchCountyReliefRecipients("60617", { fetchImpl });
+
+    expect(String(fetchImpl.mock.calls[0][0])).toBe(
+      `${COMMUNITY_INVESTMENT_ENDPOINT}?view=county-relief-recipients&zip=60617`,
+    );
+    expect(result.status).toBe("ready");
+    expect(result.recipientCount).toBe(2);
+    expect(result.recipients.map((recipient) => recipient.businessName)).toEqual([
+      "First Business",
+      "Second Business",
+    ]);
+  });
+
+  it("maps an expired admin session to an empty unauthorized result", async () => {
+    const fetchImpl = fetchStub(401, { error: "Unauthorized" });
+    const result = await fetchCountyReliefRecipients("60617", { fetchImpl });
+
+    expect(result.status).toBe("unauthorized");
+    expect(result.recipients).toEqual([]);
+  });
+
+  it("does not request a bulk or malformed ZIP lookup", async () => {
+    const fetchImpl = fetchStub(200, { recipients: [] });
+
+    await expect(
+      fetchCountyReliefRecipients("all", { fetchImpl }),
+    ).rejects.toThrow("five-digit ZIP");
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("drops malformed recipient entries and unsafe source links", async () => {
+    const fetchImpl = fetchStub(200, {
+      sourceLink: "javascript:alert(1)",
+      recipients: [
+        {
+          id: "cook-valid",
+          businessName: "Valid Business",
+          historicalAwardAmount: 10_000,
+        },
+        {
+          id: "cook-invalid",
+          historicalAwardAmount: 20_000,
+        },
+      ],
+    });
+
+    const result = await fetchCountyReliefRecipients("60617", { fetchImpl });
+
+    expect(result.recipients).toEqual([
+      {
+        id: "cook-valid",
+        businessName: "Valid Business",
+        historicalAwardAmount: 10_000,
+      },
+    ]);
+    expect(result.recipientCount).toBe(1);
+    expect(result.sourceLink).toBeNull();
   });
 });
 
