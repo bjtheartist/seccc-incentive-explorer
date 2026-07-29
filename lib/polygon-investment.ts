@@ -224,7 +224,24 @@ export interface PolygonInvestmentBucketConfig {
   csvColumn: string;
   /** False for `other`, whose records are counted but whose dollars are never summed. */
   hasMoney: boolean;
+  /**
+   * Optional one-sentence provenance caveat rendered under this bucket's row.
+   * Present only where the RECORD COUNT can mislead even though the dollars are
+   * sound, so the warning sits at the figure rather than in a footnote nobody reads.
+   */
+  caption?: string;
 }
+
+/**
+ * HUD CDBG/HOME activities are geocoded to the address on the activity record,
+ * which for many rows is the administering agency rather than the served site —
+ * so a drawn area containing an agency's office absorbs its entire activity
+ * list. Verified against the live export: a downtown box put 181 federal-program
+ * records on ONE coordinate near LaSalle & Randolph. The committed dollars are
+ * real; the COUNT reads as site density and must not be taken for it.
+ */
+export const POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION =
+  "CDBG/HOME activity counts can cluster at administering-agency addresses; dollars are real, site density may over-read.";
 
 /**
  * The buckets in display order, each with its own noun and CSV column. This is
@@ -259,6 +276,7 @@ export const POLYGON_INVESTMENT_BUCKETS: readonly PolygonInvestmentBucketConfig[
     noun: CAPITAL_CLASS_MONEY_NOUN.federal_program, // "Federal program funding"
     csvColumn: "Federal program funding ($)",
     hasMoney: true,
+    caption: POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION,
   },
   {
     key: "taxCredit",

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DRAWN_AREA_INVESTMENT_COLUMNS,
   POLYGON_INVESTMENT_BUCKETS,
+  POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION,
   POLYGON_INVESTMENT_NO_TOTAL_NOTE,
   aggregateInvestmentPoints,
   buildDrawnAreaCsv,
@@ -342,11 +343,23 @@ describe("aggregateInvestmentPoints", () => {
     expect(bucket("taxCredit").noun).toBe("Tax-credit allocation");
     expect(bucket("stateAppropriation").noun).toBe("Published appropriation balance");
     expect(bucket("historicalRecovery").noun).toBe("Historical award");
-    const allCopy = POLYGON_INVESTMENT_BUCKETS.map((b) => `${b.label} ${b.noun} ${b.csvColumn}`)
+    const allCopy = POLYGON_INVESTMENT_BUCKETS.map(
+      (b) => `${b.label} ${b.noun} ${b.csvColumn} ${b.caption ?? ""}`,
+    )
       .join(" ")
       .toLowerCase();
     expect(allCopy).not.toContain("received");
     expect(allCopy).not.toContain("available");
+  });
+
+  it("captions ONLY the federal-program bucket, and only about its record count", () => {
+    const captioned = POLYGON_INVESTMENT_BUCKETS.filter((b) => b.caption);
+    expect(captioned.map((b) => b.key)).toEqual(["federalProgram"]);
+    expect(captioned[0].caption).toBe(POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION);
+    // One sentence, and it affirms the dollars rather than hedging them.
+    expect(POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION.split(". ").length).toBe(1);
+    expect(POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION).toContain("dollars are real");
+    expect(POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION.toLowerCase()).not.toContain("estimate");
   });
 
   it("ranks top recipients by AWARDED grant dollars only, merging repeats", () => {

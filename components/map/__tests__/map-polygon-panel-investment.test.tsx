@@ -19,6 +19,7 @@ const {
   aggregateInvestmentPoints,
   selectInvestmentPointsInArea,
   investmentExclusionsFromLayer,
+  POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION,
 } = await import("@/lib/polygon-investment");
 
 import type {
@@ -115,6 +116,14 @@ const POINTS: InvestmentPointFeature[] = [
     creditAmount: 14_500_000,
     year: 2021,
   }),
+  investmentPoint(-87.625, 41.882, {
+    id: "fed-1",
+    recipient: "Loop CDBG Activity",
+    funderName: "City of Chicago (HUD CDBG)",
+    capitalClass: "federal_program",
+    authorizedAmount: 2_400_000,
+    year: 2023,
+  }),
   // Well outside the drawn box (South Shore) — must never be selected.
   investmentPoint(-87.57, 41.76, {
     id: "far-1",
@@ -129,7 +138,7 @@ const LAYER: CommunityInvestmentLayerResult = {
   status: "ready",
   pointFeatures: POINTS,
   presentFunderTypes: ["government", "philanthropic"],
-  presentCapitalClasses: ["grant", "tif_subsidy", "tax_credit"],
+  presentCapitalClasses: ["grant", "tif_subsidy", "federal_program", "tax_credit"],
   citywide: { count: 12, totalDollars: 4_000_000 },
   citywideEntries: [],
   countyReliefByZip: [
@@ -201,6 +210,8 @@ describe("MapPolygonPanel — admin gating", () => {
     expect(html).not.toContain("Top recipients");
     expect(html).not.toContain("State Street Storefront Co-op");
     expect(html).not.toContain("Riverline Phase II");
+    expect(html).not.toContain("Loop CDBG Activity");
+    expect(html).not.toContain(POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION);
     expect(html).not.toContain("Admin");
     // The pre-existing public panel is untouched.
     expect(html).toContain("300 S State St");
@@ -250,6 +261,9 @@ describe("MapPolygonPanel — investment aggregation rendering", () => {
     expect(html).toContain("Tax credit");
     expect(html).toContain("Tax-credit allocation");
     expect(html).toContain("$14,500,000");
+    expect(html).toContain("Federal program");
+    expect(html).toContain("Federal program funding");
+    expect(html).toContain("$2,400,000");
   });
 
   it("excludes points outside the drawn area from every figure", () => {
@@ -269,6 +283,33 @@ describe("MapPolygonPanel — investment aggregation rendering", () => {
   it("reports the record year span", () => {
     expect(html).toContain("Record years");
     expect(html).toContain("2021–2025");
+  });
+
+  it("captions the federal-program row with its count-clustering caveat", () => {
+    expect(html).toContain(POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION);
+    // The caveat is about the COUNT, never a hedge on the dollars.
+    expect(POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION).toContain("dollars are real");
+    // It sits under the federal-program row, not floating elsewhere in the panel.
+    const fedIndex = html.indexOf("Federal program funding");
+    expect(fedIndex).toBeGreaterThan(-1);
+    expect(html.indexOf(POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION)).toBeGreaterThan(fedIndex);
+  });
+
+  it("omits the federal-program caption when no federal records are inside the area", () => {
+    const withoutFederal = renderToStaticMarkup(
+      <MapPolygonPanel
+        {...baseProps()}
+        adminSessionActive
+        investmentLayer={{
+          ...LAYER,
+          pointFeatures: POINTS.filter((f) => f.properties.capitalClass !== "federal_program"),
+        }}
+      />,
+    );
+    expect(withoutFederal).toContain("Community investment in this area");
+    expect(withoutFederal).toContain("$575,000");
+    expect(withoutFederal).not.toContain("Federal program");
+    expect(withoutFederal).not.toContain(POLYGON_INVESTMENT_FEDERAL_PROGRAM_CAPTION);
   });
 
   it("states what a drawn area cannot select instead of implying zero", () => {
@@ -303,6 +344,60 @@ describe("MapPolygonPanel — investment aggregation rendering", () => {
   });
 });
 
+describe("MapPolygonPanel — CSV export availability", () => {
+  const NO_VACANCY: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
+
+  it("offers the CSV export to an admin whose area holds only investment records", () => {
+    const html = renderToStaticMarkup(
+      <MapPolygonPanel
+        {...baseProps()}
+        results={NO_VACANCY}
+        adminSessionActive
+        investmentLayer={LAYER}
+      />,
+    );
+    expect(html).toContain("Export Full Report (CSV)");
+    // Save/Email build a vacancy report, so they stay hidden with no vacancies.
+    expect(html).not.toContain("Save Report");
+    expect(html).not.toContain("Email This to Me");
+    expect(html).toContain("No properties found");
+  });
+
+  it("still offers nothing to a non-admin with no vacancies (unchanged behavior)", () => {
+    const html = renderToStaticMarkup(
+      <MapPolygonPanel
+        {...baseProps()}
+        results={NO_VACANCY}
+        adminSessionActive={false}
+        investmentLayer={LAYER}
+      />,
+    );
+    expect(html).not.toContain("Export Full Report (CSV)");
+    expect(html).not.toContain("Save Report");
+  });
+
+  it("hides the export for an admin whose area holds no investment records either", () => {
+    const html = renderToStaticMarkup(
+      <MapPolygonPanel
+        {...baseProps()}
+        results={NO_VACANCY}
+        adminSessionActive
+        investmentLayer={{ ...LAYER, pointFeatures: [] }}
+      />,
+    );
+    expect(html).not.toContain("Export Full Report (CSV)");
+  });
+
+  it("keeps the full action set when the area holds vacancies", () => {
+    const html = renderToStaticMarkup(
+      <MapPolygonPanel {...baseProps()} adminSessionActive investmentLayer={LAYER} />,
+    );
+    expect(html).toContain("Save Report");
+    expect(html).toContain("Email This to Me");
+    expect(html).toContain("Export Full Report (CSV)");
+  });
+});
+
 describe("MapPolygonPanel — iron-rule strings", () => {
   const html = renderToStaticMarkup(
     <MapPolygonPanel {...baseProps()} adminSessionActive investmentLayer={LAYER} />,
@@ -321,7 +416,8 @@ describe("MapPolygonPanel — iron-rule strings", () => {
       "Each figure below is a different kind of capital and is never combined into one total.",
     );
     expect(html).toContain("private development figures are announced project capital, not awarded dollars");
-    // 575,000 + 1,200,000,000 + 98,000,000 + 14,500,000
+    // 575,000 + 1,200,000,000 + 98,000,000 + 14,500,000 + 2,400,000
+    expect(html).not.toContain("$1,315,475,000");
     expect(html).not.toContain("$1,313,075,000");
     expect(html).not.toContain("Total investment");
     expect(html).not.toContain("Combined");

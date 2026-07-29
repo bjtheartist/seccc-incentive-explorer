@@ -21,6 +21,7 @@ import {
   drawnAreaFilenameSlug,
   formatPolygonInvestmentAmount,
   investmentExclusionsFromLayer,
+  polygonInvestmentBucket,
   polygonInvestmentExclusionNotes,
   polygonInvestmentYearSpanLabel,
   selectInvestmentPointsInArea,
@@ -197,6 +198,14 @@ export default function MapPolygonPanel({
     () => (investmentSummary ? polygonInvestmentExclusionNotes(investmentSummary.exclusions) : []),
     [investmentSummary],
   );
+
+  /**
+   * Whether the CSV would carry an investment table. `investmentSelection` is
+   * already null for anyone who is not an admin with ready data, so this is
+   * false for every non-admin viewer.
+   */
+  const investmentExportAvailable =
+    adminSessionActive && !!investmentSelection && investmentSelection.length > 0;
 
   /* ── Summary counts ── */
   const vacantLandCount = features.filter(
@@ -760,6 +769,13 @@ export default function MapPolygonPanel({
                                 {bucket.undisclosedCount} of these publish no figure.
                               </div>
                             )}
+                            {/* Provenance caveat for buckets whose RECORD COUNT
+                                can mislead even when the dollars are sound. */}
+                            {polygonInvestmentBucket(bucket.key).caption && (
+                              <div className="text-[8px] text-[#0C1B33]/30 mt-1 leading-snug">
+                                {polygonInvestmentBucket(bucket.key).caption}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
@@ -891,27 +907,34 @@ export default function MapPolygonPanel({
             </>
           )}
 
-          {/* ── Actions ── */}
-          {features.length > 0 && (
+          {/* ── Actions ──
+               Save Report / Email build a VACANCY report, so they stay gated on
+               there being vacancy records. The CSV export is also offered when
+               the only thing inside the shape is admin investment data —
+               otherwise an admin can see the analysis on screen with no way to
+               take it away. Unchanged for a non-admin: no vacancies, no button. */}
+          {(features.length > 0 || investmentExportAvailable) && (
             <>
               <div className="mx-5 h-px bg-[#0C1B33]/8" />
               <div className="px-5 py-4 bg-white">
-                <div className="grid grid-cols-1 gap-2 mb-2">
-                  <button
-                    onClick={handleSaveReport}
-                    className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-3 px-3 hover:bg-[#1d4ed8] transition-colors"
-                  >
-                    <FileText className="w-3.5 h-3.5" />
-                    Save Report
-                  </button>
-                  <button
-                    onClick={() => setEmailModalOpen(true)}
-                    className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase border border-[#2563EB]/30 text-[#2563EB] py-3 px-3 hover:bg-[#2563EB]/5 transition-colors"
-                  >
-                    <Mail className="w-3.5 h-3.5" />
-                    Email This to Me
-                  </button>
-                </div>
+                {features.length > 0 && (
+                  <div className="grid grid-cols-1 gap-2 mb-2">
+                    <button
+                      onClick={handleSaveReport}
+                      className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-3 px-3 hover:bg-[#1d4ed8] transition-colors"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Save Report
+                    </button>
+                    <button
+                      onClick={() => setEmailModalOpen(true)}
+                      className="w-full inline-flex items-center justify-center gap-2 text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase border border-[#2563EB]/30 text-[#2563EB] py-3 px-3 hover:bg-[#2563EB]/5 transition-colors"
+                    >
+                      <Mail className="w-3.5 h-3.5" />
+                      Email This to Me
+                    </button>
+                  </div>
+                )}
                 <button
                   onClick={handleExportCsv}
                   className="block w-full text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#0C1B33] text-white py-3 px-3 hover:bg-[#0C1B33]/80 transition-colors"
