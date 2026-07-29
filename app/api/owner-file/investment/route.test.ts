@@ -211,6 +211,82 @@ describe("GET /api/owner-file/investment", () => {
     expect(body.countyReliefByZip[0]).not.toHaveProperty("recipient");
   });
 
+  it("FAILS CLOSED: aggregate-only sources stay nameless even when held CITYWIDE, not just ZIP-area", async () => {
+    // Regression guard. The projection used to strip these families by
+    // `geometry.kind === "zip_area"`, so name-stripping depended entirely on a
+    // geometry value the importers own. #97 established that an unplottable
+    // record is HELD CITYWIDE rather than deleted (out-of-bounds DCEO geocodes),
+    // and BIG still deletes its one out-of-city ZIP row (60426 / Harvey) — so
+    // "hold it citywide instead" is the obvious next fix. Under the old rule
+    // that fix would have pushed every such recipient's BUSINESS NAME into the
+    // default map payload. The rule is keyed on source now, so it cannot.
+    loadMock.mockReturnValueOnce({
+      ...fakeData,
+      records: [
+        ...fakeData.records,
+        {
+          id: "big-citywide",
+          source: "illinois-big",
+          recipient: "Citywide BIG recipient",
+          geometry: { kind: "citywide" },
+          amountAwarded: null,
+          recovery: { historicalAmount: { value: 15_000 } },
+          links: [sourceLink],
+        },
+        {
+          id: "b2b-citywide",
+          source: "illinois-b2b",
+          recipient: "Citywide B2B recipient",
+          geometry: { kind: "citywide" },
+          amountAwarded: null,
+          recovery: { historicalAmount: { value: 15_000 } },
+          links: [sourceLink],
+        },
+        {
+          id: "cook-citywide",
+          source: "cook-source-2023",
+          recipient: "Citywide Cook recipient",
+          geometry: { kind: "citywide" },
+          amountAwarded: null,
+          recovery: { historicalAmount: { value: 15_000 } },
+          links: [sourceLink],
+        },
+      ],
+    });
+
+    const res = await GET(req("http://localhost/api/owner-file/investment?view=map"));
+    const body = await res.json();
+    const serialized = JSON.stringify(body);
+
+    expect(res.status).toBe(200);
+    expect(body.records.map((record: { id: string }) => record.id)).toEqual([
+      "cdg-point",
+      "rrf-point",
+      "dceo-point",
+    ]);
+    expect(serialized).not.toContain("Citywide BIG recipient");
+    expect(serialized).not.toContain("Citywide B2B recipient");
+    expect(serialized).not.toContain("Citywide Cook recipient");
+  });
+
+  it("FAILS CLOSED: Hospitality has no per-ZIP drilldown, because it has no ZIPs", async () => {
+    // The source publishes a municipality and nothing finer, so every Chicago
+    // Hospitality record is citywide. A per-ZIP drilldown for it is meaningless
+    // and is rejected outright rather than answered with an empty recipient list
+    // that would read as "no awards in this ZIP".
+    const res = await GET(
+      req(
+        "http://localhost/api/owner-file/investment?view=historical-recovery-recipients&source=illinois-hospitality-emergency&zip=60617",
+      ),
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: "A supported historical recovery source is required",
+    });
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
   it("FAILS CLOSED: a missing or unrecognized view returns the projected, nameless shape", async () => {
     // This inverts the branch's original default. Previously ONLY the exact
     // string "map" was projected, so a bare request — or any typo — fell
