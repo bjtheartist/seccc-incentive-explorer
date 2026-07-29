@@ -40,6 +40,7 @@ import {
   type CapitalClass,
   type CommunityInvestmentRecord,
   type FunderType,
+  type InvestmentGeometry,
   type InvestmentSource,
   type InvestmentStatus,
 } from "./community-investment";
@@ -94,9 +95,22 @@ export interface TopRecipient {
   capitalClass: CapitalClass;
   /** Street address as published, or null (the drawer's location line). */
   address: string | null;
-  /** Whether the record plots at a real address ("sited") or is held citywide
-   * ("citywide", e.g. an intermediary grant) — the drawer's location-confidence. */
-  locationConfidence: "sited" | "citywide";
+  /**
+   * The drawer's location-confidence. EXACTLY ONE TIER PER GEOMETRY KIND —
+   * there is no separate confidence model, and no tier that the data cannot
+   * produce:
+   *   • "sited"    — geometry.kind "point": plotted at a real address.
+   *   • "zip_area" — geometry.kind "zip_area": the source publishes a ZIP but no
+   *     street address, so the record is a ZIP-level aggregate.
+   *   • "citywide" — geometry.kind "citywide": genuinely unplotted (a foundation
+   *     intermediary, a multi-site appropriation, an out-of-bounds geocode).
+   *
+   * "zip_area" is called out rather than folded into "citywide" because a ZIP
+   * aggregate is a real, meaningfully narrower location claim than "somewhere in
+   * Chicago" — reporting it as citywide understates what the source actually
+   * published.
+   */
+  locationConfidence: "sited" | "zip_area" | "citywide";
   /** Source/project links (http(s)), for the drawer. */
   links: string[];
 }
@@ -340,6 +354,24 @@ function sourceBreakdown(records: readonly CommunityInvestmentRecord[]): SourceB
   return out;
 }
 
+/**
+ * Map a record's geometry to its location-confidence tier — exhaustive over
+ * InvestmentGeometry, so a future geometry kind is a compile error here rather
+ * than silently collapsing into "citywide".
+ */
+export function locationConfidenceForGeometry(
+  geometry: InvestmentGeometry,
+): TopRecipient["locationConfidence"] {
+  switch (geometry.kind) {
+    case "point":
+      return "sited";
+    case "zip_area":
+      return "zip_area";
+    case "citywide":
+      return "citywide";
+  }
+}
+
 /** Top-N recipients by in-window awarded dollars. Ties break by recipient name
  * for a stable order. */
 function topRecipients(
@@ -359,7 +391,10 @@ function topRecipients(
       status: r.status,
       capitalClass: r.capitalClass,
       address: r.address,
-      locationConfidence: r.geometry.kind === "point" ? ("sited" as const) : ("citywide" as const),
+      // One tier per geometry kind, mapped exhaustively. Previously this was
+      // `point ? "sited" : "citywide"`, which reported a ZIP-level aggregate as
+      // "citywide" — a weaker location claim than the source actually published.
+      locationConfidence: locationConfidenceForGeometry(r.geometry),
       links: r.links,
     }))
     .sort((a, b) => b.amountAwarded - a.amountAwarded || a.recipient.localeCompare(b.recipient))

@@ -5,6 +5,7 @@ import {
   buildFlowRows,
   buildInvestmentIndex,
   computeInvestmentFindings,
+  locationConfidenceForGeometry,
   median,
   SINCE_YEAR,
   summarizeMajorDevelopments,
@@ -477,5 +478,15 @@ describe("formatCompactDollars boundary rollover", () => {
   });
   it("negative boundary mirrors", () => {
     expect(formatCompactDollars(-999_900)).toBe("$-1.0M");
+  });
+});
+
+describe("locationConfidenceForGeometry", () => {
+  it("names ONE tier per geometry kind, and never reports a ZIP aggregate as citywide", () => {
+    expect(locationConfidenceForGeometry({ kind: "point", lat: 41.7, lng: -87.6 })).toBe("sited");
+    // Previously `point ? "sited" : "citywide"` collapsed this into "citywide",
+    // understating a real ZIP-level location claim as "somewhere in Chicago".
+    expect(locationConfidenceForGeometry({ kind: "zip_area", zip: "60617" })).toBe("zip_area");
+    expect(locationConfidenceForGeometry({ kind: "citywide" })).toBe("citywide");
   });
 });

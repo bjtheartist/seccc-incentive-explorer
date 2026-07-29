@@ -168,6 +168,10 @@ function RecordDrawer({ record, onClose }: { record: TopRecipient; onClose: () =
                 <span>
                   Sited — plotted at a real address
                 </span>
+              ) : record.locationConfidence === "zip_area" ? (
+                <span>
+                  ZIP area — the source publishes a ZIP, not a street address
+                </span>
               ) : (
                 <span>
                   Citywide — held citywide, not plotted at a specific address

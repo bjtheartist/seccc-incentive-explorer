@@ -795,6 +795,21 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
       expect(record.amountAwarded).toBeNull();
       expect(record.recovery?.historicalAmount?.value).toBeGreaterThanOrEqual(0);
     }
+
+    // The recovery-era dollars are a SEPARATE historical class, deliberately
+    // excluded from the awarded hero figure. Assert the exclusion is total and
+    // material, not merely implied by the per-record nulls above: these are
+    // closed 2021-2023 relief programs (Cook Source, Illinois B2B, SBA RRF), not
+    // grants awarded through the ordinary pipeline, so folding them in would
+    // restate the headline by hundreds of millions.
+    const recoveryDollars = recoveryRecords.reduce(
+      (sum, record) => sum + (record.recovery?.historicalAmount?.value ?? 0),
+      0,
+    );
+    expect(recoveryDollars).toBeGreaterThan(500_000_000);
+    expect(data.meta.totalDollarsAwarded).toBe(sumAwardedDollars(data.records));
+    // Nothing in the awarded total came from a recovery record.
+    expect(sumAwardedDollars(recoveryRecords)).toBe(0);
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("announcedCapitalTotal matches the announcedInvestment sum and is a DIFFERENT figure from awarded", () => {

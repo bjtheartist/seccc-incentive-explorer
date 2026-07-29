@@ -52,6 +52,114 @@ export interface ChicagoArpaRecoveryResult {
   diagnostics: ChicagoArpaRecoveryDiagnostics;
 }
 
+/**
+ * The verified shape and dollar totals of the committed ledger, pinned so a
+ * silent upstream shift fails the import instead of publishing.
+ *
+ * Cook Source, Illinois B2B, and SBA RRF all pin exact published figures and
+ * fail closed; ARPA validated STRUCTURE only (dataset ids, required fields,
+ * duplicate/orphan cost centers, currency format), so a changed row count or
+ * dollar total on the next Socrata pull would have passed unnoticed. This closes
+ * that gap.
+ *
+ * Recomputed from data/curated/investment-inputs/chicago_arpa_road_to_recovery_programs.csv:
+ * 77 programs, of which 67 join a Grants Summary financial row and 10 are
+ * metadata-only (present in Program Details with no summary row, kept in the
+ * ledger with null financial fields).
+ *
+ * NOTE: allocated and obligated are equal here because the City's Grants Summary
+ * reports them at the same stage — an upstream characteristic, not a copy in
+ * this code (the two fields are read independently). They remain SEPARATE fields
+ * and are never summed; expended is genuinely distinct.
+ */
+export const CHICAGO_ARPA_FULL_SOURCE_EXPECTATIONS = {
+  programCount: 77,
+  financialRowCount: 67,
+  metadataOnlyCount: 10,
+  historicalAllocatedTotalUsd: 1_886_591_388,
+  historicalObligatedTotalUsd: 1_886_591_388,
+  historicalExpendedTotalUsd: 1_851_247_214.66,
+} as const;
+
+export type ChicagoArpaRecoveryExpectations = Partial<
+  typeof CHICAGO_ARPA_FULL_SOURCE_EXPECTATIONS
+>;
+
+export class ChicagoArpaRecoveryIntegrityError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ChicagoArpaRecoveryIntegrityError";
+  }
+}
+
+/** Sum one historical money field across the ledger, ignoring null rows. */
+function sumHistoricalField(
+  records: readonly ChicagoArpaRecoveryRecord[],
+  field:
+    | "historicalAmountAllocatedUsd"
+    | "historicalAmountObligatedUsd"
+    | "historicalAmountExpendedUsd",
+): number {
+  // Accumulate in integer cents so a 67-term float sum reproduces exactly.
+  const cents = records.reduce((sum, record) => {
+    const value = record[field];
+    return value == null ? sum : sum + Math.round(value * 100);
+  }, 0);
+  return cents / 100;
+}
+
+/**
+ * Fail the import when the committed ledger drifts from its verified baseline.
+ * Each money field is checked against ITS OWN total — the three stages are never
+ * combined into a headline.
+ */
+export function assertChicagoArpaRecoveryIntegrity(
+  result: ChicagoArpaRecoveryResult,
+  expectations: ChicagoArpaRecoveryExpectations = CHICAGO_ARPA_FULL_SOURCE_EXPECTATIONS,
+): void {
+  const problems: string[] = [];
+  const check = (label: string, actual: number, expected: number | undefined) => {
+    if (expected != null && actual !== expected) {
+      problems.push(
+        `expected ${label} ${expected.toLocaleString("en-US")}, got ${actual.toLocaleString("en-US")}`,
+      );
+    }
+  };
+
+  check("program count", result.records.length, expectations.programCount);
+  check(
+    "financial row count",
+    result.diagnostics.joinedFinancialCount,
+    expectations.financialRowCount,
+  );
+  check(
+    "metadata-only count",
+    result.diagnostics.metadataOnlyCount,
+    expectations.metadataOnlyCount,
+  );
+  check(
+    "allocated total",
+    sumHistoricalField(result.records, "historicalAmountAllocatedUsd"),
+    expectations.historicalAllocatedTotalUsd,
+  );
+  check(
+    "obligated total",
+    sumHistoricalField(result.records, "historicalAmountObligatedUsd"),
+    expectations.historicalObligatedTotalUsd,
+  );
+  check(
+    "expended total",
+    sumHistoricalField(result.records, "historicalAmountExpendedUsd"),
+    expectations.historicalExpendedTotalUsd,
+  );
+
+  if (problems.length > 0) {
+    throw new ChicagoArpaRecoveryIntegrityError(
+      `Chicago ARPA Road to Recovery integrity check failed: ${problems.join("; ")}.`,
+    );
+  }
+}
+
 export interface ChicagoArpaRecoverySourceInput {
   programDetails: readonly unknown[];
   grantsSummary: readonly unknown[];

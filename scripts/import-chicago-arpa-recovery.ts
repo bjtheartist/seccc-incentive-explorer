@@ -26,6 +26,7 @@ import {
   CHICAGO_ARPA_GRANTS_SUMMARY_DATASET_ID,
   CHICAGO_ARPA_PROGRAM_DETAILS_API_URL,
   CHICAGO_ARPA_PROGRAM_DETAILS_DATASET_ID,
+  assertChicagoArpaRecoveryIntegrity,
   buildChicagoArpaRecoveryLedger,
   type ChicagoArpaRecoveryRecord,
   type ChicagoArpaRecoveryResult,
@@ -405,6 +406,13 @@ export async function importChicagoArpaRecovery(
     ? readChicagoArpaRecoveryFixture(options.input)
     : await fetchChicagoArpaRecoverySources();
   const result = buildChicagoArpaRecoveryLedger(sourceInput);
+  // Pin the full Socrata pull to its verified baseline BEFORE writing, so an
+  // upstream row-count or dollar shift fails the import instead of silently
+  // republishing. Skipped for a local --input fixture, which is deliberately a
+  // small slice and would never match the full-source counts.
+  if (options.input == null) {
+    assertChicagoArpaRecoveryIntegrity(result);
+  }
   const outputAction = writeFileAtomicallyIfChanged(
     options.output,
     serializeChicagoArpaRecoveryCsv(result.records),
