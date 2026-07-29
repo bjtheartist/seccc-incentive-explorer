@@ -805,9 +805,10 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     // The recovery-era dollars are a SEPARATE historical class, deliberately
     // excluded from the awarded hero figure. Assert the exclusion is total and
     // material, not merely implied by the per-record nulls above: these are
-    // closed 2021-2023 relief programs (Cook Source, Illinois B2B, SBA RRF), not
-    // grants awarded through the ordinary pipeline, so folding them in would
-    // restate the headline by hundreds of millions.
+    // closed 2020-2023 relief programs (Illinois BIG, Illinois Hospitality
+    // Emergency, Cook Source, Illinois B2B, SBA RRF), not grants awarded through
+    // the ordinary pipeline, so folding them in would restate the headline by
+    // hundreds of millions.
     const recoveryDollars = recoveryRecords.reduce(
       (sum, record) => sum + (record.recovery?.historicalAmount?.value ?? 0),
       0,
@@ -816,6 +817,66 @@ describe.skipIf(!EXPORT_EXISTS)("committed community-investment.json", () => {
     expect(data.meta.totalDollarsAwarded).toBe(sumAwardedDollars(data.records));
     // Nothing in the awarded total came from a recovery record.
     expect(sumAwardedDollars(recoveryRecords)).toBe(0);
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
+
+  it("PARTITIONS every 2020-relief source row into kept-for-Chicago or outside-Chicago", () => {
+    // #97 added this identity for the DCEO counters after an out-of-bounds
+    // geocode was found silently DELETING an appropriation while its counter
+    // claimed the record was held. The same exposure exists here: both families
+    // drop rows on a Chicago test, so the counters must still account for every
+    // row the official source publishes. The totals are the ones reconciled
+    // against the DCEO PDFs directly (BIG: 135pp / $276,275,000;
+    // Hospitality: 12pp / $13,995,000).
+    const data = loadCommunityInvestment()!;
+
+    // Two rows are excluded by a deliberate cross-check rather than by a Chicago
+    // municipality, and both land in the outside-Chicago counter rather than
+    // vanishing: BIG's 60426 row (city reads Chicago, ZIP is Harvey) and
+    // Hospitality's Hyatt House West Loop-Fulton Market row (city reads Chicago,
+    // county reads Crawford — an error in the source document itself).
+    expect(
+      data.meta.illinoisBigChicagoRecords +
+        data.meta.illinoisBigOutsideChicagoRecords,
+    ).toBe(8_998);
+    expect(
+      data.meta.illinoisHospitalityChicagoRecords +
+        data.meta.illinoisHospitalityOutsideChicagoRecords,
+    ).toBe(699);
+  }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
+
+  it("holds the 2020 relief families at exactly the precision their sources publish", () => {
+    const data = loadCommunityInvestment()!;
+
+    // BIG publishes municipality + ZIP and no street address, so every retained
+    // Chicago row is a ZIP aggregate — never a point. A point here would be
+    // invented geography, and the ZIP polygons the map draws would disagree with
+    // the records behind them.
+    const big = data.records.filter((record) => record.source === "illinois-big");
+    expect(big.length).toBe(data.meta.illinoisBigChicagoRecords);
+    expect(big.length).toBeGreaterThan(0);
+    expect(new Set(big.map((record) => record.geometry.kind))).toEqual(
+      new Set(["zip_area"]),
+    );
+    // Every ZIP is a real Chicago ZIP: the one source row whose city reads
+    // Chicago but whose ZIP is 60426 (Harvey) is excluded rather than drawn onto
+    // a suburban polygon.
+    for (const record of big) {
+      if (record.geometry.kind === "zip_area") {
+        expect(record.geometry.zip).toMatch(/^\d{5}$/);
+        expect(record.geometry.zip).not.toBe("60426");
+      }
+    }
+
+    // Hospitality publishes a municipality and NOTHING finer. Every Chicago row
+    // therefore stays citywide: no ZIP, no centroid, no downtown pin.
+    const hospitality = data.records.filter(
+      (record) => record.source === "illinois-hospitality-emergency",
+    );
+    expect(hospitality.length).toBe(data.meta.illinoisHospitalityChicagoRecords);
+    expect(hospitality.length).toBeGreaterThan(0);
+    for (const record of hospitality) {
+      expect(record.geometry).toEqual({ kind: "citywide" });
+    }
   }, COMMITTED_EXPORT_INVARIANT_TIMEOUT_MS);
 
   it("announcedCapitalTotal matches the announcedInvestment sum and is a DIFFERENT figure from awarded", () => {
