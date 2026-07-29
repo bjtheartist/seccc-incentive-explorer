@@ -105,6 +105,65 @@ describe("Cook County Source Grant ingestion", () => {
     ).toThrow(/2 parser issue\(s\)/);
   });
 
+  it("flags a wrapped AWARDEE NAME absorbed into the municipality, and fails the integrity gate", () => {
+    // The uninstrumented partialRow path. Once a `$` line lands without a
+    // trailing ZIP, later non-`$` lines were appended to the municipality with
+    // no shape check — so an awardee-name continuation silently became part of
+    // the place name and the awardee name was truncated.
+    //
+    // This is invisible to every other assertion: the row still PARSES, so the
+    // row count, the dollar total, and the page count are all unchanged and
+    // `issues` stayed empty. Only recording an issue closes it.
+    const result = parseCookCountySourceGrantPages([
+      [
+        "Cook County Small Business Source 2023 Source Grant List as of November 20, 2024",
+        "1",
+        "Awardee Award Amount City Zip",
+        "Precision Tools And Equipment Services, $ 10,000 Chicago",
+        "Llc",
+        "60632",
+      ].join("\n"),
+    ]);
+
+    // The row parses, and the corruption is exactly as described: the name is
+    // truncated and "Llc" has been absorbed into the municipality.
+    expect(result.records).toHaveLength(1);
+    expect(result.records[0].awardeeName).toBe("Precision Tools And Equipment Services,");
+    expect(result.records[0].municipality).toBe("Chicago Llc");
+    expect(result.records[0].awardAmountUsd).toBe(10_000);
+
+    // …and it is no longer silent.
+    expect(result.issues.map((issue) => issue.code)).toEqual([
+      "suspect_municipality_fragment",
+    ]);
+    expect(result.issues[0].text).toBe("Llc");
+
+    // The row/dollar/page counts are all UNCHANGED by the corruption, which is
+    // why the issue is the only thing that can stop the import publishing it.
+    expect(() =>
+      assertCookCountySourceGrantIntegrity(result, {
+        pageCount: 1,
+        rowCount: 1,
+        totalAwardUsd: 10_000,
+      })
+    ).toThrow(/1 parser issue\(s\)/);
+  });
+
+  it("does not flag a legitimate multi-word municipality wrap", () => {
+    // The wrap shape this PDF actually produces: "Wiktor Construction &
+    // Development Inc $ 20,000 LaGrange" / "Highlands" / "60525". "Highlands"
+    // is a real place-name fragment and must pass clean, or the guard would
+    // fail the whole import on good data.
+    const result = parseCookCountySourceGrantPages([
+      fixture("wrapped-and-punctuation.txt"),
+    ]);
+    expect(result.issues).toEqual([]);
+    const wiktor = result.records.find((record) =>
+      record.awardeeName.startsWith("Wiktor")
+    );
+    expect(wiktor?.municipality).toBe("LaGrange Highlands");
+  });
+
   it("enforces explicit row, page, and award-total expectations", () => {
     const result = parseCookCountySourceGrantPages([
       fixture("wrapped-and-punctuation.txt"),

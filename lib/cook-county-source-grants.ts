@@ -35,7 +35,8 @@ export interface CookCountySourceGrantRecord {
 export type CookCountySourceGrantParseIssueCode =
   | "incomplete_row"
   | "malformed_row"
-  | "orphan_text";
+  | "orphan_text"
+  | "suspect_municipality_fragment";
 
 export interface CookCountySourceGrantParseIssue {
   code: CookCountySourceGrantParseIssueCode;
@@ -80,6 +81,18 @@ const COMPLETE_ROW_PATTERN = new RegExp(
 const PARTIAL_ROW_PATTERN = new RegExp(
   String.raw`^(.+?)\s+\$\s*(${MONEY_PATTERN})\s+(.+)$`
 );
+
+/**
+ * Characters and tokens that occur in AWARDEE NAMES but not in Illinois
+ * municipality names: a comma, an ampersand, or a corporate-form suffix. Used to
+ * flag a wrapped line that is about to be appended to the municipality when it
+ * is far more likely a continuation of the business name.
+ *
+ * Deliberately narrow. "Oak Park", "Chicago Heights", "La Grange Park", and
+ * "Mount Prospect" are all multi-word and must NOT trip it; only these markers do.
+ */
+const ENTITY_NAME_MARKER_RE =
+  /[,&]|\b(?:INC|LLC|L\.L\.C|LTD|CORP|CO|COMPANY|PLLC|LLP|LP|PC|DBA|ENTERPRISES|HOLDINGS|GROUP|SERVICES|PROGRAM)\b\.?/i;
 
 function normalizeWhitespace(value: string): string {
   return value.trim().replace(/\s+/g, " ");
@@ -247,6 +260,38 @@ export function parseCookCountySourceGrantPages(
           return;
         }
 
+        // The one uninstrumented path in this parser. Once a `$` line lands
+        // without a trailing ZIP, every later non-`$` line was appended to the
+        // municipality UNCONDITIONALLY — no check that the fragment looks like a
+        // place name rather than a continuation of the awardee name.
+        //
+        // Corruption here is invisible to assertCookCountySourceGrantIntegrity:
+        // the row still parses, so rowCount stays 3,003, the amount is untouched
+        // so totalAwardUsd stays $50,050,000, pageCount is unchanged, and issues
+        // stays empty. All four assertions pass and the bad row is written to
+        // the CSV. Downstream the row is silently dropped from the map (the
+        // export's Chicago filter is an exact `municipality === "CHICAGO"`
+        // match), so the Chicago count quietly falls by one with no error
+        // anywhere in the pipeline.
+        //
+        // Recording an issue is enough to close it: the integrity gate throws on
+        // issues.length > 0, so a corrupted row now fails the import loudly
+        // instead of publishing. The wrap fragments this document actually
+        // produces ("Inc.", "Educational Program Inc.", "Precision Tools And
+        // Equipment Services, Llc") are all trivially distinguishable from real
+        // Illinois municipality names ("Highlands", "Oak Park").
+        if (ENTITY_NAME_MARKER_RE.test(line)) {
+          recordIssue(issues, {
+            code: "suspect_municipality_fragment",
+            page,
+            line: lineNumber,
+            text: line,
+            message:
+              "A wrapped line appended to the municipality carries entity-name markers " +
+              "(comma, ampersand, or a corporate suffix), so the awardee name may have " +
+              "been truncated into the municipality.",
+          });
+        }
         partialRow.municipalityParts.push(line);
         return;
       }
