@@ -10,6 +10,7 @@ import {
 import { ZONE_KEYS, VACANT_LABELS, ZONING_CATEGORIES } from "@/lib/constants";
 import { POI_LAYERS } from "../map-helpers";
 import { FUNDER_TYPE_LABELS, INVESTMENT_YEAR_RANGES } from "@/lib/community-investment-layer";
+import { PUBLIC_INVESTMENT_OVERLAYS } from "@/lib/public-investment-overlays";
 
 /**
  * The ADMIN "Community investment" legend section is probe-driven exactly like
@@ -57,6 +58,39 @@ describe("MapLegendPanel community-investment admin section", () => {
     );
     expect(html).not.toContain("Admin");
     expect(html).not.toContain("Community investment");
+  });
+
+  it("renders NO public-investment overlay control for a non-admin viewer, even with every overlay on", () => {
+    // All four overlays are admin-only by config (adminOnly: true). Force each
+    // one visible with a non-zero count: a non-admin must still get nothing —
+    // no label, no description, no aria-label, no source-family count.
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={false}
+        communityInvestmentVisible={true}
+        publicInvestmentOverlays={{
+          county_relief_awards: true,
+          state_recovery_awards: true,
+          federal_restaurant_relief: true,
+          state_capital_projects: true,
+        }}
+        countyReliefZipCount={59}
+        stateRecoveryZipCount={59}
+        federalRestaurantReliefPlottedCount={1483}
+        federalRestaurantReliefCitywideCount={40}
+        stateCapitalPlottedCount={57}
+        stateCapitalCitywideCount={563}
+      />
+    );
+    for (const overlay of PUBLIC_INVESTMENT_OVERLAYS) {
+      expect(html, overlay.id).not.toContain(overlay.label);
+      expect(html, overlay.id).not.toContain(overlay.description);
+      expect(html, overlay.id).not.toContain(`Toggle ${overlay.label} overlay`);
+    }
+    expect(html).not.toContain("Additional layers");
+    expect(html).not.toContain("Chicago ZIP areas mapped");
+    expect(html).not.toContain("held unplotted");
   });
 
   it("renders the toggle defaulted off for an admin viewer (204), with no sub-controls", () => {

@@ -241,6 +241,35 @@ export function publicInvestmentOverlayIdForSource(
     : null;
 }
 
+/**
+ * Whether an OPEN recipient-drilldown panel is still authorized to render.
+ *
+ * The drilldown panel is the most identifying surface in the layer — it lists
+ * recipient BUSINESS NAMES against award amounts, which is exactly what the
+ * ZIP-aggregate map design and the gated per-ZIP endpoint exist to keep off the
+ * screen. So it must hard-close on EVERY teardown path, not only its own X
+ * button: its own overlay toggling off, the Community Investment master toggle
+ * going off, or the admin session dropping.
+ *
+ * Pure and exhaustive over the teardown inputs, so the rule is unit-testable
+ * away from mapbox.
+ */
+export function shouldKeepRecipientsPanelOpen(input: {
+  adminSessionActive: boolean;
+  communityInvestmentVisible: boolean;
+  overlays: PublicInvestmentOverlayVisibility;
+  /** The source whose recipients the open panel is showing. */
+  sourceId: string;
+}): boolean {
+  if (!input.adminSessionActive) return false;
+  if (!input.communityInvestmentVisible) return false;
+  const overlayId = publicInvestmentOverlayIdForSource(input.sourceId);
+  // An unknown source has no overlay that could switch it off — fail closed
+  // rather than leaving names on screen with no control bound to them.
+  if (overlayId === null) return false;
+  return input.overlays[overlayId] === true;
+}
+
 /** Canonical source IDs enabled by the current independent overlay state. */
 export function visiblePublicInvestmentSourceIds(
   visibility: PublicInvestmentOverlayVisibility,

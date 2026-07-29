@@ -13,6 +13,7 @@ import {
   PUBLIC_INVESTMENT_SOURCE_IDS,
   publicInvestmentOverlayIdForSource,
   serializePublicInvestmentOverlayVisibility,
+  shouldKeepRecipientsPanelOpen,
   storePublicInvestmentOverlayVisibility,
   visiblePublicInvestmentSourceIds,
   withPublicInvestmentOverlayVisibility,
@@ -335,5 +336,66 @@ describe("public investment source filtering", () => {
       "sba-rrf",
       "dceo-capital",
     ]);
+  });
+});
+
+describe("recipients-panel teardown gate", () => {
+  const ALL_ON: PublicInvestmentOverlayVisibility = {
+    county_relief_awards: true,
+    state_recovery_awards: true,
+    federal_restaurant_relief: true,
+    state_capital_projects: true,
+  };
+  const open = (over: Partial<Parameters<typeof shouldKeepRecipientsPanelOpen>[0]> = {}) =>
+    shouldKeepRecipientsPanelOpen({
+      adminSessionActive: true,
+      communityInvestmentVisible: true,
+      overlays: ALL_ON,
+      sourceId: "cook-source-2023",
+      ...over,
+    });
+
+  it("keeps an authorized panel open for every name-bearing recovery source", () => {
+    expect(open({ sourceId: "cook-source-2023" })).toBe(true);
+    expect(open({ sourceId: "illinois-b2b" })).toBe(true);
+  });
+
+  it("closes when the panel's OWN overlay is switched off", () => {
+    // Cook names must not survive unchecking "County relief awards"…
+    expect(
+      open({ overlays: { ...ALL_ON, county_relief_awards: false } }),
+    ).toBe(false);
+    // …and B2B names must not survive unchecking "Illinois recovery grants".
+    expect(
+      open({
+        sourceId: "illinois-b2b",
+        overlays: { ...ALL_ON, state_recovery_awards: false },
+      }),
+    ).toBe(false);
+  });
+
+  it("is NOT closed by an unrelated overlay toggling", () => {
+    expect(
+      open({
+        sourceId: "cook-source-2023",
+        overlays: { ...ALL_ON, state_recovery_awards: false, state_capital_projects: false },
+      }),
+    ).toBe(true);
+  });
+
+  it("closes when Community Investment is switched off entirely", () => {
+    expect(open({ communityInvestmentVisible: false })).toBe(false);
+  });
+
+  it("closes when the admin session drops", () => {
+    expect(open({ adminSessionActive: false })).toBe(false);
+    // Session loss wins even with every overlay still checked on.
+    expect(open({ adminSessionActive: false, overlays: ALL_ON })).toBe(false);
+  });
+
+  it("fails closed for a source with no overlay bound to it", () => {
+    // Nothing on screen could switch these off, so they must never stay open.
+    expect(open({ sourceId: "foundation" })).toBe(false);
+    expect(open({ sourceId: "" })).toBe(false);
   });
 });

@@ -109,10 +109,13 @@ import {
 import {
   loadStoredPublicInvestmentOverlayVisibility,
   PUBLIC_INVESTMENT_OVERLAY_COLORS,
+  PUBLIC_INVESTMENT_OVERLAY_IDS,
   publicInvestmentOverlayIdForSource,
+  shouldKeepRecipientsPanelOpen,
   storePublicInvestmentOverlayVisibility,
   withPublicInvestmentOverlayVisibility,
   type PublicInvestmentOverlayId,
+  type PublicInvestmentOverlayVisibility,
 } from "@/lib/public-investment-overlays";
 import {
   buildCountyReliefFeatureCollection,
@@ -324,6 +327,9 @@ export default function MapView() {
   // down when the layer is hidden / mode returns to Dots / on unmount).
   const prevInvestmentViewModeRef = useRef<string | null>(null);
   const prevInvestmentMegaprojectsVisibleRef = useRef<boolean | null>(null);
+  // Previous overlay visibility, so the shared popup can be dismissed on an
+  // overlay transition the same way it is on a view-mode/megaproject one.
+  const prevPublicInvestmentOverlaysRef = useRef<PublicInvestmentOverlayVisibility | null>(null);
   const deckOverlayRef = useRef<MapboxOverlay | null>(null);
   // The shared mapbox dot popup, kept in a ref so the deck effect can close it
   // when entering a non-Dots mode (deck's picking tooltip takes over there).
@@ -434,6 +440,36 @@ export default function MapView() {
     countyReliefRecipientsAbortRef.current = null;
     setCountyReliefRecipientsPanel(null);
   }, []);
+
+  // HARD-CLOSE the recipients panel on every teardown path, not just its own X
+  // button. The panel lists recipient BUSINESS NAMES against award amounts — the
+  // single most identifying surface in the layer, and the thing the ZIP-aggregate
+  // design and the gated per-ZIP endpoint exist to protect. Previously
+  // setCountyReliefRecipientsPanel(null) was reachable ONLY from the X, so
+  // unchecking the overlay (or Community Investment entirely, or losing the admin
+  // session) hid the polygons and emptied the source while the panel kept
+  // rendering every name and dollar figure. The shared mapbox popup goes with it.
+  useEffect(() => {
+    if (!countyReliefRecipientsPanel) return;
+    if (
+      shouldKeepRecipientsPanelOpen({
+        adminSessionActive,
+        communityInvestmentVisible,
+        overlays: publicInvestmentOverlays,
+        sourceId: countyReliefRecipientsPanel.sourceId,
+      })
+    ) {
+      return;
+    }
+    sharedDotPopupRef.current?.remove();
+    closeCountyReliefRecipients();
+  }, [
+    countyReliefRecipientsPanel,
+    adminSessionActive,
+    communityInvestmentVisible,
+    publicInvestmentOverlays,
+    closeCountyReliefRecipients,
+  ]);
 
   useEffect(
     () => () => {
@@ -3098,11 +3134,19 @@ export default function MapView() {
     const megaprojectsChanged =
       prevInvestmentMegaprojectsVisibleRef.current !== null &&
       prevInvestmentMegaprojectsVisibleRef.current !== investmentMegaprojectsVisible;
-    if (modeChanged || megaprojectsChanged) {
+    // The four public-investment overlays were never in this check, so toggling
+    // one off left its popup — opened by clicking a ZIP polygon or an overlay
+    // point — floating over a layer that no longer exists.
+    const prevOverlays = prevPublicInvestmentOverlaysRef.current;
+    const overlaysChanged =
+      prevOverlays !== null &&
+      PUBLIC_INVESTMENT_OVERLAY_IDS.some((id) => prevOverlays[id] !== publicInvestmentOverlays[id]);
+    if (modeChanged || megaprojectsChanged || overlaysChanged) {
       sharedDotPopupRef.current?.remove();
     }
     prevInvestmentViewModeRef.current = mode;
     prevInvestmentMegaprojectsVisibleRef.current = investmentMegaprojectsVisible;
+    prevPublicInvestmentOverlaysRef.current = publicInvestmentOverlays;
 
     const removeOverlay = () => {
       if (deckOverlayRef.current) {
@@ -3230,6 +3274,7 @@ export default function MapView() {
     investmentFunderTypes,
     investmentDensityMetric,
     getInvestmentDeckTooltip,
+    publicInvestmentOverlays,
   ]);
 
   return (
