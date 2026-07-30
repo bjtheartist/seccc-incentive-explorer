@@ -391,6 +391,64 @@ describe("committed per-ZIP directory files", () => {
         expect(keys.has(forbidden)).toBe(false);
       }
     });
+
+    // ── Regression: the ownership taxonomy shipped collapsed. The legacy
+    //    owner-TYPE column offered five facets while the committed rows only
+    //    ever carried two values (city_public for inventory land, unknown for
+    //    every 311 building), so three of the five could never match anything.
+    //    The columns now read the axes that ARE populated; these tests hold the
+    //    facets to a live count so a future export cannot silently re-collapse
+    //    them without turning this red. ──
+
+    it(`${zip}: the shipped rows populate more than two ownership facets`, () => {
+      const rows = load(zip).rows;
+      const structures = new Set(rows.map((r) => rowStructure(r)));
+      const sectors = new Set(rows.map((r) => rowSector(r)));
+      expect(structures.size, `${zip} distinct structures`).toBeGreaterThanOrEqual(3);
+      expect(sectors.size, `${zip} distinct sectors`).toBeGreaterThanOrEqual(2);
+      for (const s of structures) expect(OWNER_STRUCTURE_ORDER).toContain(s);
+    });
+
+    it(`${zip}: a reported building whose parcel resolved is not left unclassified`, () => {
+      // The enrichment the export writes onto an address-matched 311 row is its
+      // taxpayer STRUCTURE. Wherever that resolved, the sector must resolve too
+      // — the legacy ownerType stays "unknown" on these rows forever.
+      const enriched = load(zip).rows.filter(
+        (r) => r.propertyType === "vacant_building" && r.ownerStructure !== "unresolved",
+      );
+      expect(enriched.length, `${zip} enriched building rows`).toBeGreaterThan(0);
+      for (const r of enriched) {
+        expect(r.ownerType, `${zip} ${r.address} legacy type`).toBe("unknown");
+        expect(rowSector(r), `${zip} ${r.address} sector`).not.toBe("unclassified");
+      }
+    });
+
+    it(`${zip}: every facet the dropdown offers reports a live count over the rows`, () => {
+      // Each dropdown renders its full declared vocabulary with a per-value
+      // count computed from the loaded rows. The counts must partition the
+      // dataset exactly, so a zero facet is an honest zero and never a stale
+      // hard-coded option.
+      const rows = load(zip).rows;
+      const sectorTotal = OWNER_SECTOR_ORDER.reduce(
+        (sum, s) => sum + rows.filter((r) => rowSector(r) === s).length,
+        0,
+      );
+      const structureTotal = OWNER_STRUCTURE_ORDER.reduce(
+        (sum, s) => sum + rows.filter((r) => rowStructure(r) === s).length,
+        0,
+      );
+      const typeTotal = PROPERTY_TYPES.reduce(
+        (sum, t) => sum + rows.filter((r) => r.propertyType === t).length,
+        0,
+      );
+      expect(sectorTotal).toBe(rows.length);
+      expect(structureTotal).toBe(rows.length);
+      expect(typeTotal).toBe(rows.length);
+      // Flags overlap by design (a row can carry both), so this is a cover, not
+      // a partition: every row is counted under at least one flag facet.
+      const flagged = rows.filter((r) => rowFlags(r).some((f) => FLAG_VALUES.includes(f)));
+      expect(flagged.length).toBe(rows.length);
+    });
   }
 });
 
@@ -401,8 +459,8 @@ vi.mock("@/lib/analytics-events", () => ({ trackEvent: vi.fn() }));
 describe("VacancyDirectory collapsed state", () => {
   it("still renders the lazy-load affordance after the column rework", () => {
     const html = renderToStaticMarkup(
-      <VacancyDirectory zip="60624" neighborhood="West Garfield Park" directoryCount={2785} />,
+      <VacancyDirectory zip="60624" neighborhood="West Garfield Park" directoryCount={2760} />,
     );
-    expect(html).toContain("Browse all 2,785 tracked addresses");
+    expect(html).toContain("Browse all 2,760 tracked addresses");
   });
 });

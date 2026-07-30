@@ -7,15 +7,36 @@
  *
  * The land record set is the DEDUPLICATED LAND UNION the public report
  * reconciles (assessor vacant-land parcels ∪ City-inventory land not already
- * present) — the same universe as the report's "Who controls the vacant land"
- * table, so the workbench's public-land / private / unknown land counts equal
- * the report's reconciled land figures. Reported buildings (311) stay a
- * separate universe and are never summed into the land count.
+ * present). Its total is `deriveLandUniverse(edition).total`, and its
+ * per-owner-type counts are that function's `byOwnerType` rows — NOT
+ * `ownership.reconciledVacantLandByOwnerType`, which covers only the assessor
+ * half of the union. Getting that distinction wrong is what makes the workbench
+ * look broken: on 60624 the union is 2,739 land parcels with 1,339 City/public,
+ * while the assessor-only reconciled series reads 1,657 with 257 City/public,
+ * and the per-ZIP directory file (a third thing again — the tracked COLS + 311
+ * operational list) carries 1,339 land rows. All three are correct answers to
+ * three different questions. `universe` is returned below and printed on the
+ * page so the workbench states which one its counts are measured against, and
+ * lib/__tests__/vacancy-cases.test.ts binds it to deriveLandUniverse on every
+ * committed edition.
+ *
+ * Reported buildings (311) stay a separate universe and are never summed into
+ * the land count.
  */
 
-import { loadVacancyDirectory, loadVacancyIndex, type VacancyDirectoryFile } from "@/lib/vacancy-index";
+import {
+  deriveLandUniverse,
+  loadVacancyDirectory,
+  loadVacancyIndex,
+  type VacancyDirectoryFile,
+} from "@/lib/vacancy-index";
 import { deriveOpportunityAreas } from "@/lib/vacancy-opportunity-areas";
-import type { VacancyCaseArea, VacancyCaseRecord } from "@/lib/vacancy-cases";
+import {
+  deriveCaseUniverse,
+  type CaseUniverse,
+  type VacancyCaseArea,
+  type VacancyCaseRecord,
+} from "@/lib/vacancy-cases";
 
 // Re-export the client-safe model so server callers can import everything from
 // one place (mirrors how lib/vacancy-index re-exports lib/vacancy-portfolio).
@@ -41,11 +62,18 @@ export function buildCaseRecords(zip: string): {
   records: VacancyCaseRecord[];
   areas: VacancyCaseArea[];
   recordsAsOf: string;
+  /** The two tracked-universe totals the case counts are measured against. */
+  universe: CaseUniverse;
 } {
   const data = loadVacancyIndex();
   const edition = data?.editions[zip];
   if (!data || !edition) {
-    return { records: [], areas: [], recordsAsOf: "" };
+    return {
+      records: [],
+      areas: [],
+      recordsAsOf: "",
+      universe: { land: 0, landTotal: null, building: 0 },
+    };
   }
   const directory: VacancyDirectoryFile | null = loadVacancyDirectory(zip);
   const directoryRows = directory?.rows ?? [];
@@ -135,13 +163,30 @@ export function buildCaseRecords(zip: string): {
     needsChecking: area.needsChecking[0],
   }));
 
+  const records = [...landByKey.values(), ...buildingRecords];
+
   return {
-    records: [...landByKey.values(), ...buildingRecords],
+    records,
     areas,
     recordsAsOf: new Date(data.generatedAt).toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
       year: "numeric",
     }),
+    // The edition's own reconciled land-universe total, so the page can say when
+    // the enumerable land records fall short of it (the export caps published
+    // land points per edition). deriveLandUniverse THROWS on an arithmetic
+    // identity violation by design; a corrupt edition must not take down a
+    // public page, so a failure degrades the denominator to null (rendered as
+    // "not yet available") rather than propagating.
+    universe: deriveCaseUniverse(records, landUniverseTotal(edition)),
   };
+}
+
+function landUniverseTotal(edition: Parameters<typeof deriveLandUniverse>[0]): number | null {
+  try {
+    return deriveLandUniverse(edition)?.total ?? null;
+  } catch {
+    return null;
+  }
 }

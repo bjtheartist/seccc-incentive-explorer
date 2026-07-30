@@ -61,9 +61,22 @@ function r(overrides: Partial<VacancyCaseRecord>): VacancyCaseRecord {
   };
 }
 
-vi.mock("@/lib/vacancy-cases-data", () => ({
-  buildCaseRecords: () => ({ records, areas, recordsAsOf: "July 22, 2026" }),
-}));
+/** The edition's full reconciled land universe. `let`, so one test can raise it
+ *  above the enumerable land records and exercise the truncation disclosure. */
+let landTotal: number | null = 6;
+
+vi.mock("@/lib/vacancy-cases-data", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/vacancy-cases-data")>();
+  return {
+    ...actual,
+    buildCaseRecords: () => ({
+      records,
+      areas,
+      recordsAsOf: "July 22, 2026",
+      universe: actual.deriveCaseUniverse(records, landTotal),
+    }),
+  };
+});
 vi.mock("@/components/vacancy/VacancySubNav", () => ({ VacancySubNav: () => null }));
 vi.mock("@/components/vacancy/CopyCaseLink", () => ({ CopyCaseLink: () => null }));
 vi.mock("@/components/vacancy/CaseAreaSwitcher", () => ({ CaseAreaSwitcher: () => null }));
@@ -204,7 +217,7 @@ describe("Case Workbench page", () => {
     // The 8-record fixture is well under the cap, so the line keeps "shown".
     const uncapped = await render();
     expect(uncapped).toContain("2 of 3 mapped matches shown");
-    expect(uncapped).not.toContain("plotted");
+    expect(uncapped).not.toContain("evenly sampled");
 
     // Over the cap, the caption must state how many dots are ACTUALLY on the
     // map: clustered dots carry visible counts that sum to the plotted total,
@@ -218,7 +231,7 @@ describe("Case Workbench page", () => {
       const capped = await render();
       const total = (CASE_POINT_CAP + 25).toLocaleString("en-US");
       expect(capped).toContain(
-        `${total} of ${total} mapped matches · first ${CASE_POINT_CAP.toLocaleString("en-US")} plotted`,
+        `${total} of ${total} mapped matches · ${CASE_POINT_CAP.toLocaleString("en-US")} evenly sampled`,
       );
       expect(capped).not.toContain("mapped matches shown");
       // ...and the island really does receive only the capped slice.
@@ -239,6 +252,34 @@ describe("Case Workbench page", () => {
     expect(html).toContain('href="/vacancy/60617/map"');
     expect(html).toContain("Open the property map");
     expect(html).toContain("Dots are matches that carry a coordinate");
+  });
+
+  // ── Universe denominators (regression: the case counts shipped with no
+  //    denominator on the page, so the only per-ZIP list available to check
+  //    them against was the All Properties directory — a different universe). ──
+
+  it("prints the land and reported-building denominators the case counts sit inside", async () => {
+    const html = await render();
+    // 6 land + 2 building records in the fixture.
+    expect(html).toContain("Out of 6 land parcels and 2 reported buildings tracked in this ZIP");
+    // ...and names the other per-ZIP list explicitly so the two are not confused.
+    expect(html).toContain("All Properties directory");
+    expect(html).toContain('href="/vacancy/60617/directory"');
+  });
+
+  it("discloses that land counts are a floor when the edition publishes fewer parcels", async () => {
+    const original = landTotal;
+    landTotal = 6; // enumerable === total
+    try {
+      expect(await render()).not.toContain("so the land counts on this page are a floor");
+      landTotal = 900; // the edition's land universe is larger than what it publishes
+      const short = await render();
+      expect(short).toContain("This edition publishes 6 of the ZIP’s 900 reconciled land parcels");
+      expect(short).toContain("a floor, not a total");
+      expect(short).toContain('href="/vacancy/60617/report"');
+    } finally {
+      landTotal = original;
+    }
   });
 
   it("carries the anonymization disclaimer and no owner-name field in the output", async () => {

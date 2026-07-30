@@ -15,7 +15,9 @@ import {
   computeSitePriority,
   corridorRefsIntersectingBbox,
   countAddressesInSet,
+  dedupeDirectoryRows,
   deriveExemptionAnomalies,
+  directoryRowKey,
   deriveLandUniverse,
   hasOccupancyExemption,
   isSeniorExemption,
@@ -348,6 +350,70 @@ describe("compareDirectoryInputs / buildDirectoryRows", () => {
     ]);
     expect(rows).toEqual([]);
     expect(excludedNoAddressCount).toBe(2);
+  });
+
+  // ── Repeat rows (regression: 359 duplicate rows shipped across the nine
+  //    committed editions, rendering as literal duplicate lines in the All
+  //    Properties table and inflating every count derived from the file). ──
+
+  it("collapses repeat rows and reports how many it dropped", () => {
+    const { rows, duplicateRowsRemoved } = buildDirectoryRows([
+      dirSite({ address: "801 S Keeler Ave", pin: "16154100150000", priorityScore: 5 }),
+      dirSite({ address: "801 S Keeler Ave", pin: "16154100150000", priorityScore: 5 }),
+      dirSite({ address: "764 S Kenneth Ave", pin: "16153170290000", priorityScore: 5 }),
+    ]);
+    expect(duplicateRowsRemoved).toBe(1);
+    expect(rows.map((r) => r.address)).toEqual(["764 S Kenneth Ave", "801 S Keeler Ave"]);
+  });
+
+  it("reports an honest zero when the feed carries no repeats", () => {
+    const { duplicateRowsRemoved } = buildDirectoryRows([
+      dirSite({ address: "100 A St" }),
+      dirSite({ address: "200 B St" }),
+    ]);
+    expect(duplicateRowsRemoved).toBe(0);
+  });
+
+  it("treats an internal-whitespace address variant as the same row", () => {
+    // The two land sources spell this parcel differently; byte equality misses it.
+    const { rows, duplicateRowsRemoved } = dedupeDirectoryRows([
+      { ...dirSite({}), address: "3842 W WEST END AVE", pin: "16113080280000" },
+      { ...dirSite({}), address: "3842 W WEST  END AVE", pin: "16113080280000" },
+    ] as never);
+    expect(duplicateRowsRemoved).toBe(1);
+    expect(rows[0].address).toBe("3842 W WEST END AVE"); // first occurrence wins
+  });
+
+  it("keeps the same parcel when it is BOTH vacant land and a reported building", () => {
+    // Two universes, two legitimate records — deduplication must not merge them.
+    const { rows, duplicateRowsRemoved } = buildDirectoryRows([
+      dirSite({ address: "3301 W Fulton Blvd", pin: "16114080200000", propertyType: "vacant_land" }),
+      dirSite({
+        address: "3301 W Fulton Blvd",
+        pin: "16114080200000",
+        propertyType: "vacant_building",
+      }),
+    ]);
+    expect(duplicateRowsRemoved).toBe(0);
+    expect(rows).toHaveLength(2);
+  });
+
+  it("keeps two PIN-less rows that differ only by address", () => {
+    const { rows, duplicateRowsRemoved } = buildDirectoryRows([
+      dirSite({ address: "100 A St", pin: null }),
+      dirSite({ address: "102 A St", pin: null }),
+    ]);
+    expect(duplicateRowsRemoved).toBe(0);
+    expect(rows).toHaveLength(2);
+  });
+
+  it("directoryRowKey folds case and collapses whitespace but keeps type and PIN apart", () => {
+    const base = { address: "100 A St", pin: "12345678901234", propertyType: "vacant_land" as const };
+    expect(directoryRowKey(base)).toBe(directoryRowKey({ ...base, address: "  100   a   st " }));
+    expect(directoryRowKey(base)).not.toBe(directoryRowKey({ ...base, pin: null }));
+    expect(directoryRowKey(base)).not.toBe(
+      directoryRowKey({ ...base, propertyType: "vacant_building" }),
+    );
   });
 });
 
@@ -1922,6 +1988,7 @@ const DIRECTORY_ALLOWED_KEYS = new Set<string>([
   "generatedAt",
   "rows",
   "excludedNoAddressCount",
+  "duplicateRowsRemoved",
   // row
   "address",
   "ownerType",
@@ -2004,6 +2071,25 @@ describe.skipIf(!DIRECTORY_EXISTS)("committed vacancy-directory/{zip}.json files
       if (mainExport?.editions[zip]) {
         expect(dir.rows.length).toBe(mainExport.editions[zip].directoryCount);
       }
+    }
+  });
+
+  it("carries no repeat row, and discloses how many repeats were collapsed", () => {
+    for (const zip of PILOT_ZIP_KEYS) {
+      if (!existsSync(path.join(DIRECTORY_DIR, `${zip}.json`))) continue;
+      const dir = loadDirectory(zip);
+      const keys = new Set<string>();
+      for (const row of dir.rows) {
+        const key = directoryRowKey(row);
+        expect(keys.has(key), `${zip}: repeat directory row ${key}`).toBe(false);
+        keys.add(key);
+      }
+      // dedupeDirectoryRows is a no-op on an already-clean file.
+      expect(dedupeDirectoryRows(dir.rows).duplicateRowsRemoved, `${zip} idempotent`).toBe(0);
+      // The drop is disclosed on the file, not silently absorbed.
+      expect(typeof dir.duplicateRowsRemoved, `${zip} duplicateRowsRemoved present`).toBe("number");
+      expect(Number.isInteger(dir.duplicateRowsRemoved!)).toBe(true);
+      expect(dir.duplicateRowsRemoved!).toBeGreaterThanOrEqual(0);
     }
   });
 

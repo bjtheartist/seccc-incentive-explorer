@@ -7,6 +7,7 @@ import { getVacancyIndexEdition } from "@/lib/vacancy-index";
 import {
   deriveAllCases,
   deriveCase,
+  isLandUniverseTruncated,
   parseCaseParam,
   type CaseKey,
   type DerivedCase,
@@ -162,11 +163,12 @@ export default async function CaseWorkbenchPage({
   const pilotEntry = getPilotZipEntry(zip);
   if (!pilotEntry) notFound();
 
-  const [{ records, areas, recordsAsOf }, resolvedParams] = await Promise.all([
+  const [{ records, areas, recordsAsOf, universe }, resolvedParams] = await Promise.all([
     Promise.resolve(buildCaseRecords(zip)),
     searchParams,
   ]);
   const activeKey: CaseKey = parseCaseParam(resolvedParams.case);
+  const landTruncated = isLandUniverseTruncated(universe);
   const cards = deriveAllCases(records);
   const active = deriveCase(activeKey, records);
   const neighborhood = pilotEntry.primaryNeighborhood;
@@ -278,6 +280,44 @@ export default async function CaseWorkbenchPage({
             <StatTile value={active.landCount} label="Land parcels" />
             <StatTile value={active.buildingCount} label="Building reports" />
           </div>
+          {/* The DENOMINATOR both tiles are measured against. Without it the
+              only other published per-ZIP list a reader can benchmark against
+              is the All Properties directory — a different universe (the
+              tracked City-inventory + 311 operational list) — which makes a
+              correct land count read as impossible. See the note in
+              lib/vacancy-cases-data.ts. */}
+          <p className="mt-3 max-w-xl font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/45 sm:max-w-md">
+            Out of {universe.land.toLocaleString("en-US")} land{" "}
+            {universe.land === 1 ? "parcel" : "parcels"} and{" "}
+            {universe.building.toLocaleString("en-US")} reported{" "}
+            {universe.building === 1 ? "building" : "buildings"} tracked in this ZIP
+          </p>
+          <p className="mt-2 max-w-xl text-[11px] leading-relaxed text-[#0C1B33]/45">
+            Land is the reconciled land universe (City land inventory and Assessor vacant-land
+            parcels, deduplicated) — a wider set than the{" "}
+            <Link
+              href={`/vacancy/${zip}/directory`}
+              className="text-[#2563EB] hover:underline"
+            >
+              All Properties directory
+            </Link>
+            , which lists the tracked City-inventory and 311 records address by address.
+          </p>
+          {/* This edition publishes fewer land parcels than the ZIP's land
+              universe holds, so every land count above is a FLOOR. Saying so is
+              the whole point — a shortfall of several hundred parcels presented
+              as a total is what makes a correct number look wrong. */}
+          {landTruncated && universe.landTotal != null && (
+            <p className="mt-2 max-w-xl border-l-2 border-[#A45B00]/40 pl-3 text-[11px] leading-relaxed text-[#A45B00]">
+              This edition publishes {universe.land.toLocaleString("en-US")} of the ZIP&rsquo;s{" "}
+              {universe.landTotal.toLocaleString("en-US")} reconciled land parcels, so the land
+              counts on this page are a floor, not a total. The{" "}
+              <Link href={`/vacancy/${zip}/report`} className="underline">
+                full vacancy report
+              </Link>{" "}
+              carries the complete land-universe table.
+            </p>
+          )}
         </section>
 
         {/* Geographic preview + Opportunity-areas rail */}
@@ -304,9 +344,12 @@ export default async function CaseWorkbenchPage({
                       SVG hid that behind 400 identical dots; clustered dots
                       carry visible counts that sum to what is actually
                       plotted, so the cap has to be stated or the line is
-                      falsifiable on its face. */}
+                      falsifiable on its face. The slice is an EVENLY SPACED
+                      sample (sampleCasePoints), not the first N — the record
+                      order is land-then-buildings, so a head slice would show
+                      one universe and call it the geographic spread. */}
                   {active.points.length < active.mappedTotal
-                    ? ` · first ${active.points.length.toLocaleString("en-US")} plotted`
+                    ? ` · ${active.points.length.toLocaleString("en-US")} evenly sampled`
                     : " shown"}
                 </span>
               </div>
