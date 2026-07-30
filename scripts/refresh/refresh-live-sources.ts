@@ -128,25 +128,53 @@ async function fetchJson(url: string): Promise<unknown> {
 
 type Row = Record<string, unknown>;
 
+/** Largest number of rows SODA will return in a single request. */
+const SOCRATA_MAX_SINGLE_REQUEST = 50_000;
+
 /**
- * Page a Socrata dataset to exhaustion. `order` is REQUIRED: without a total
- * order, offset paging can drop or duplicate rows between pages.
+ * Fetch a whole Socrata dataset in ONE request, cross-checked against the
+ * dataset's own count endpoint.
+ *
+ * Why not offset paging with `$order`? Because ANY `$order` makes SODA drop the
+ * `:@computed_region_*` columns from the response, silently stripping the
+ * ward/community-area/tract stamps that are part of the committed input files.
+ * A single unordered request keeps every column; the count cross-check is what
+ * makes it safe (a short read fails loudly instead of quietly truncating the
+ * dataset — which would read downstream as "this program shrank").
+ *
+ * Deterministic ordering is imposed in-process by each source's business key.
  */
-async function socrataFetchAll(datasetId: string, order: string): Promise<Row[]> {
-  const pageSize = 50_000;
-  const out: Row[] = [];
-  for (let offset = 0; ; offset += pageSize) {
-    const url =
-      `${SOCRATA_BASE}/${datasetId}.json` +
-      `?$limit=${pageSize}&$offset=${offset}&$order=${encodeURIComponent(order)}`;
-    const page = await fetchJson(url);
-    if (!Array.isArray(page)) {
-      throw new Error(`Socrata ${datasetId} returned a non-array page at offset ${offset}`);
-    }
-    out.push(...(page as Row[]));
-    if (page.length < pageSize) break;
+async function socrataFetchAll(datasetId: string): Promise<Row[]> {
+  const countPayload = await fetchJson(
+    `${SOCRATA_BASE}/${datasetId}.json?$select=count(1)`,
+  );
+  const expected = Number(
+    (Array.isArray(countPayload) ? (countPayload[0] as Row | undefined) : undefined)
+      ?.count_1 ?? NaN,
+  );
+  if (!Number.isFinite(expected)) {
+    throw new Error(`Socrata ${datasetId}: could not read a row count`);
   }
-  return out;
+  if (expected > SOCRATA_MAX_SINGLE_REQUEST) {
+    throw new Error(
+      `Socrata ${datasetId} now has ${expected} rows, above the ${SOCRATA_MAX_SINGLE_REQUEST}-row ` +
+        `single-request ceiling. Switch this source to ordered offset paging and accept the ` +
+        `loss of the :@computed_region_* columns (or select them explicitly).`,
+    );
+  }
+
+  const rows = await fetchJson(
+    `${SOCRATA_BASE}/${datasetId}.json?$limit=${SOCRATA_MAX_SINGLE_REQUEST}`,
+  );
+  if (!Array.isArray(rows)) {
+    throw new Error(`Socrata ${datasetId} returned a non-array payload`);
+  }
+  if (rows.length !== expected) {
+    throw new Error(
+      `Socrata ${datasetId}: fetched ${rows.length} rows but the dataset reports ${expected}`,
+    );
+  }
+  return rows as Row[];
 }
 
 /** Page an ArcGIS FeatureServer layer to exhaustion (attributes only). */
@@ -183,8 +211,14 @@ function str(value: unknown): string {
   return String(value);
 }
 
+/**
+ * Trim AND collapse internal whitespace. Several DPD text fields carry embedded
+ * newlines ("Cabrera Capital Partners/\nThe Habitat Company"); a raw newline is
+ * legal inside a quoted CSV field but makes the committed file and its diffs
+ * unreadable, so runs of whitespace collapse to a single space.
+ */
 function trimmed(value: unknown): string {
-  return str(value).trim();
+  return str(value).replace(/\s+/g, " ").trim();
 }
 
 /** RFC4180 field escape, matching the existing curated CSVs. */
@@ -350,7 +384,7 @@ function socrataCompletionSource(
     file,
     dollarLabel: "incentive_amount",
     async build() {
-      const rows = await socrataFetchAll(datasetId, ":id");
+      const rows = await socrataFetchAll(datasetId);
       rows.sort((a, b) => socrataSortKey(a).localeCompare(socrataSortKey(b)));
       return JSON.stringify(rows) + "\n";
     },
@@ -415,13 +449,18 @@ function buildTifRdaIgaRows(rows: Row[]): string[][] {
         : ward
           ? `Ward ${ward}`
           : communityArea;
+    // Both milestones are kept, in lifecycle order, so the status reads as a
+    // history rather than a single state. mapTif() keys "completed" off the
+    // presence of "COC issued", so a project that has both still resolves
+    // completed — the CDC date is retained as provenance, not as the status.
     const coc = dateOf(r.coc_date);
     const cdc = dateOf(r.cdc_date);
-    const statusText = coc
-      ? `COC issued ${coc}`
-      : cdc
-        ? `CDC approved ${cdc}`
-        : "";
+    const statusText = [
+      cdc ? `CDC approved ${cdc}` : null,
+      coc ? `COC issued ${coc}` : null,
+    ]
+      .filter(Boolean)
+      .join("; ");
     return [
       "rda-iga",
       trimmed(r.project_name),
@@ -485,10 +524,26 @@ function buildTifAnnualReportRows(rows: Row[]): string[][] {
         ? `${status} (${projectType})`
         : status;
 
+    // project_iga splits the annual report into three shapes:
+    //   "IGA"     — project_type names the COUNTERPARTY agency (Chicago Board of
+    //               Education, CTA, Public Buildings Commission…), so that is the
+    //               recipient; annual_report_name is just the project label again.
+    //   "Project" — a redevelopment agreement; annual_report_name is the developer.
+    //   "Program" — SBIF / TIFWorks and friends, where there is no single
+    //               recipient and annual_report_name mirrors project_name.
+    // For the latter two, a name that merely repeats project_name adds nothing
+    // and is left blank rather than duplicated.
+    const recipient =
+      trimmed(r.project_iga) === "IGA"
+        ? projectType
+        : reportName === projectName
+          ? ""
+          : reportName;
+
     return [
       "annual-report",
       projectName,
-      reportName === projectName ? "" : reportName,
+      recipient,
       "", // address: not published in the annual report
       trimmed(r.tif_district),
       "", // ward_or_area: not published in the annual report
@@ -512,8 +567,8 @@ const tifSource: RefreshSource = {
   dollarLabel: "authorized_tif_assistance (rda-iga)",
   async build() {
     const [rdaIga, annualReport] = await Promise.all([
-      socrataFetchAll(TIF_RDA_IGA_DATASET, ":id"),
-      socrataFetchAll(TIF_ANNUAL_REPORT_DATASET, ":id"),
+      socrataFetchAll(TIF_RDA_IGA_DATASET),
+      socrataFetchAll(TIF_ANNUAL_REPORT_DATASET),
     ]);
     return toCsv(TIF_CSV_HEADER, [
       ...buildTifRdaIgaRows(rdaIga),
