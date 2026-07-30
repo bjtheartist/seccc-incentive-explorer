@@ -18,12 +18,21 @@
  *  - Land (the reconciled land universe) and reported buildings (the 311
  *    universe) stay two distinct universes: a case reports a land count and a
  *    building count, never a single summed total across the two.
- *  - The dot preview shows only the MAPPED subset of a case's matches, capped,
- *    with an honest "N of M mapped matches shown" line — the count is the full
- *    match count, the dots are what actually carries a coordinate.
+ *  - Every case count is checkable against a STATED denominator: deriveCase
+ *    Universe reports the two universe totals, the page prints them, and the
+ *    tests bind the land total to the report's own deriveLandUniverse figure.
+ *    Without the denominator on the page a reader benchmarks the counts against
+ *    the only other published list (the per-ZIP directory file, which is the
+ *    tracked COLS+311 operational list, NOT the land universe) and reasonably
+ *    concludes a correct count is impossible.
+ *  - The map preview shows only the MAPPED subset of a case's matches, and when
+ *    that exceeds the cap it plots an EVENLY SAMPLED slice — never the first N,
+ *    which would bias a "geographic spread" panel toward one end of the record
+ *    order — with the sample size stated in the caption.
  */
 
 import type { OwnerType } from "./owner-classify";
+import { classifyOwnerSector, type OwnerSector } from "./owner-sector";
 import type { OwnerGeography, OwnerStructure } from "./owner-taxonomy";
 
 /** One tracked vacant record in a case's universe. Evidence fields ONLY — no
@@ -103,7 +112,8 @@ export const CASE_TYPES: readonly CaseType[] = [
     chip: "PO",
     name: "Private-owner outreach",
     definition: "Sites where the next step is finding and contacting the record owner.",
-    caveat: "Ownership types come from taxpayer records and require verification.",
+    caveat:
+      "Land uses the reconciled owner type; a reported building uses the taxpayer structure resolved from its matched parcel. Both come from taxpayer records and require verification.",
   },
   {
     key: "ownership-check",
@@ -111,7 +121,7 @@ export const CASE_TYPES: readonly CaseType[] = [
     name: "Ownership follow-up",
     definition: "Sites where the record holder is not yet identified.",
     caveat:
-      "Ownership is not yet classified from taxpayer records. Start with the county parcel record and deed history.",
+      "Neither the owner type nor the taxpayer structure has resolved for these records. Start with the county parcel record and deed history.",
   },
   {
     key: "building-review",
@@ -159,14 +169,44 @@ const KNOWN_PRIVATE: ReadonlySet<OwnerType> = new Set<OwnerType>([
 ]);
 
 /**
+ * A record's SECTOR, read off BOTH ownership axes the record already carries —
+ * the same reconciliation the All Properties directory's PUBLIC / PRIVATE column
+ * uses (lib/owner-sector.ts), so the workbench and the directory never disagree
+ * about the same row.
+ *
+ * This matters most for the 311 reported-building universe. A 311 row's LEGACY
+ * `ownerType` is "unknown" by construction — the 311 feed carries no ownership
+ * at all — but the export resolves the row's parcel by exact address match and
+ * writes the matched parcel's taxpayer STRUCTURE onto the record. Reading only
+ * the legacy field therefore threw that enrichment away and reported every
+ * reported building as "owner not yet identified", including the ones whose
+ * taxpayer resolved to an individual, an entity, a trust, or a government body.
+ */
+export function recordSector(record: VacancyCaseRecord): OwnerSector {
+  return classifyOwnerSector({
+    ownerStructure: record.ownerStructure,
+    ownerType: record.ownerType,
+  });
+}
+
+/**
  * The single source of truth for which records belong to a case (pure,
  * deterministic). Every count on the workbench flows through this predicate,
  * so the caveat copy and the number can never drift.
  *
  *  - public-land      → land the report reconciles to City / public control.
- *  - private-outreach → land with a KNOWN non-government owner type.
- *  - ownership-check  → any record whose owner type is "Not yet classified"
- *                       (ownerType unknown) — the field the caveat names.
+ *                       Keyed on the LEGACY owner type on purpose: that field
+ *                       carries the City-inventory signal, which is what a
+ *                       public disposition pathway actually depends on, and it
+ *                       is the same figure deriveLandUniverse publishes.
+ *  - private-outreach → LAND with a known non-government owner type (again the
+ *                       reconciled figure the report publishes), plus REPORTED
+ *                       BUILDINGS whose matched-parcel taxpayer structure reads
+ *                       private. Both halves are named in the caveat.
+ *  - ownership-check  → records unresolved on BOTH axes (sector
+ *                       "unclassified") — the pair the caveat names. Keying on
+ *                       the legacy field alone swept in every address-matched
+ *                       311 row whose taxpayer had in fact resolved.
  *  - building-review  → the 311 reported-building universe.
  *  - tax-title        → any record carrying a distress signal (a tax-sale year
  *                       on its parcel, or a matched vacant-building violation).
@@ -176,9 +216,11 @@ export function caseMatches(key: CaseKey, record: VacancyCaseRecord): boolean {
     case "public-land":
       return record.universe === "land" && record.ownerType === "city_public";
     case "private-outreach":
-      return record.universe === "land" && KNOWN_PRIVATE.has(record.ownerType);
+      return record.universe === "land"
+        ? KNOWN_PRIVATE.has(record.ownerType)
+        : recordSector(record) === "private";
     case "ownership-check":
-      return record.ownerType === "unknown";
+      return recordSector(record) === "unclassified";
     case "building-review":
       return record.universe === "building_report";
     case "tax-title":
@@ -209,16 +251,84 @@ export interface DerivedCase {
   buildingCount: number;
   /** Matches that carry a usable coordinate (the dot preview's honest denom). */
   mappedTotal: number;
-  /** Mapped points for the SVG, capped at `pointCap`. */
+  /** Mapped points for the preview map — the whole mapped set when it fits in
+   *  `pointCap`, otherwise an evenly spaced sample of exactly `pointCap`. */
   points: CasePoint[];
 }
 
-/** Default dot-preview cap — enough to read the geographic spread, few enough
- *  to render as inline SVG without weight. */
+/** Default map-preview cap — enough to read the geographic spread, few enough
+ *  to stay a lightweight preview beside the full property map. */
 export const CASE_POINT_CAP = 400;
 
 const hasCoord = (r: { lat: number | null; lon: number | null }): boolean =>
   Number.isFinite(r.lat) && Number.isFinite(r.lon);
+
+/**
+ * Pick at most `cap` points for the preview map. Under the cap this is the whole
+ * mapped set. Over it, this takes an EVENLY SPACED sample across the full array
+ * rather than `slice(0, cap)`.
+ *
+ * The slice was a real distortion, not a nicety: the record array is land first
+ * (in reconciled-land order) then reported buildings, so the first 400 mapped
+ * matches of a mixed case were all land — a panel captioned "geographic spread"
+ * showed one universe and one end of the ZIP. Striding by `i * length / cap`
+ * keeps the sample deterministic (same input, same dots, every render), keeps
+ * indices strictly increasing (so no point is drawn twice), and always includes
+ * the first and last mapped record.
+ */
+export function sampleCasePoints(mapped: readonly CasePoint[], cap: number): CasePoint[] {
+  const limit = Math.max(0, Math.floor(cap));
+  if (limit === 0) return [];
+  if (mapped.length <= limit) return [...mapped];
+  const out: CasePoint[] = [];
+  for (let i = 0; i < limit; i += 1) {
+    out.push(mapped[Math.floor((i * mapped.length) / limit)]);
+  }
+  return out;
+}
+
+/**
+ * The universe totals a case's counts are measured against. Printed on the
+ * workbench so `landCount <= land` and `buildingCount <= building` are visible
+ * facts rather than claims a reader has to take on trust.
+ *
+ * `land` and `landTotal` are deliberately two numbers. `land` is what the
+ * workbench can actually ENUMERATE — one record per parcel, which is what the
+ * case predicates run over. `landTotal` is the edition's full reconciled
+ * land-universe figure (deriveLandUniverse). They are equal on most editions,
+ * but the export caps its published land points per edition, so on a large ZIP
+ * the enumerable set is short of the true universe (60621: 2,000 of 2,971
+ * points; 60636: 2,000 of 2,900). Collapsing the two would present a
+ * several-hundred-parcel shortfall as a complete count.
+ */
+export interface CaseUniverse {
+  /** Land records the workbench can enumerate — the case predicates' domain. */
+  land: number;
+  /** The edition's full reconciled land universe, or null when unavailable. */
+  landTotal: number | null;
+  building: number;
+}
+
+/** True when the edition publishes fewer land records than its land universe
+ *  holds, so every land count on the page is a floor rather than a total. */
+export function isLandUniverseTruncated(universe: CaseUniverse): boolean {
+  return universe.landTotal != null && universe.landTotal > universe.land;
+}
+
+/** The tracked universe the cases partition (pure). `landTotal` comes from the
+ *  edition (server side) and is left null when the caller has no edition. */
+export function deriveCaseUniverse(
+  records: readonly VacancyCaseRecord[],
+  landTotal: number | null = null,
+): CaseUniverse {
+  let land = 0;
+  let building = 0;
+  for (const r of records) {
+    if (r.universe === "land") land += 1;
+    else building += 1;
+  }
+  return { land, landTotal, building };
+}
 
 /** Compute one case from the full record set (pure). */
 export function deriveCase(
@@ -248,7 +358,7 @@ export function deriveCase(
     landCount,
     buildingCount,
     mappedTotal: mapped.length,
-    points: mapped.slice(0, Math.max(0, pointCap)),
+    points: sampleCasePoints(mapped, pointCap),
   };
 }
 

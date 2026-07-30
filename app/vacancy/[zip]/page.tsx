@@ -3,18 +3,20 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPilotZipEntry } from "@/lib/pilot-zips";
 import { buildCaseRecords } from "@/lib/vacancy-cases-data";
+import { getVacancyIndexEdition } from "@/lib/vacancy-index";
 import {
   deriveAllCases,
   deriveCase,
+  isLandUniverseTruncated,
   parseCaseParam,
   type CaseKey,
-  type CasePoint,
   type DerivedCase,
   type VacancyCaseArea,
 } from "@/lib/vacancy-cases";
 import { VacancySubNav } from "@/components/vacancy/VacancySubNav";
 import { CopyCaseLink } from "@/components/vacancy/CopyCaseLink";
 import { CaseAreaSwitcher } from "@/components/vacancy/CaseAreaSwitcher";
+import CasePreviewMapIsland from "@/components/vacancy/CasePreviewMapIsland";
 
 export const dynamic = "force-dynamic";
 
@@ -86,82 +88,6 @@ function CaseGlyph({ caseKey }: { caseKey: CaseKey }) {
         </svg>
       );
   }
-}
-
-/**
- * Dependency-free SVG dot map (no Mapbox): the mapped subset of a case's
- * matches over a subtle grid, echoing the Revitalization File dot map. Land
- * dots ink, reported-building dots gray — the same key the rest of the section
- * uses. Honest: dots are only the matches that carry a coordinate.
- */
-function CaseDotMap({ points }: { points: readonly CasePoint[] }) {
-  const W = 640;
-  const H = 300;
-  const pad = 18;
-  if (points.length === 0) {
-    return (
-      <div className="flex h-[220px] items-center justify-center bg-white">
-        <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
-          No mapped matches in this case
-        </span>
-      </div>
-    );
-  }
-  let minLon = Infinity;
-  let maxLon = -Infinity;
-  let minLat = Infinity;
-  let maxLat = -Infinity;
-  for (const p of points) {
-    if (p.lon < minLon) minLon = p.lon;
-    if (p.lon > maxLon) maxLon = p.lon;
-    if (p.lat < minLat) minLat = p.lat;
-    if (p.lat > maxLat) maxLat = p.lat;
-  }
-  const spanLon = maxLon - minLon || 1e-6;
-  const spanLat = maxLat - minLat || 1e-6;
-  const x = (lon: number) => pad + ((lon - minLon) / spanLon) * (W - 2 * pad);
-  const y = (lat: number) => pad + ((maxLat - lat) / spanLat) * (H - 2 * pad);
-  const gridLines = 6;
-  return (
-    <svg
-      viewBox={`0 0 ${W} ${H}`}
-      role="img"
-      aria-label={`Geographic spread of ${points.length} mapped matches`}
-      className="block h-auto w-full bg-white"
-      preserveAspectRatio="xMidYMid meet"
-    >
-      {Array.from({ length: gridLines + 1 }).map((_, i) => {
-        const gx = pad + (i / gridLines) * (W - 2 * pad);
-        const gy = pad + (i / gridLines) * (H - 2 * pad);
-        return (
-          <g key={i}>
-            <line x1={gx} y1={pad} x2={gx} y2={H - pad} stroke="#0C1B33" strokeOpacity={0.06} strokeWidth={1} />
-            <line x1={pad} y1={gy} x2={W - pad} y2={gy} stroke="#0C1B33" strokeOpacity={0.06} strokeWidth={1} />
-          </g>
-        );
-      })}
-      <rect
-        x={pad}
-        y={pad}
-        width={W - 2 * pad}
-        height={H - 2 * pad}
-        fill="none"
-        stroke="#0C1B33"
-        strokeOpacity={0.18}
-        strokeWidth={1}
-      />
-      {points.map((p, i) => (
-        <circle
-          key={i}
-          cx={x(p.lon)}
-          cy={y(p.lat)}
-          r={2.6}
-          fill={p.universe === "building_report" ? "#8A8A8A" : "#0C1B33"}
-          fillOpacity={0.72}
-        />
-      ))}
-    </svg>
-  );
 }
 
 /** One selectable case-type card. A LINK (not a button) so selection is a
@@ -237,15 +163,21 @@ export default async function CaseWorkbenchPage({
   const pilotEntry = getPilotZipEntry(zip);
   if (!pilotEntry) notFound();
 
-  const [{ records, areas, recordsAsOf }, resolvedParams] = await Promise.all([
+  const [{ records, areas, recordsAsOf, universe }, resolvedParams] = await Promise.all([
     Promise.resolve(buildCaseRecords(zip)),
     searchParams,
   ]);
   const activeKey: CaseKey = parseCaseParam(resolvedParams.case);
+  const landTruncated = isLandUniverseTruncated(universe);
   const cards = deriveAllCases(records);
   const active = deriveCase(activeKey, records);
   const neighborhood = pilotEntry.primaryNeighborhood;
   const railAreas: VacancyCaseArea[] = areas.slice(0, 5);
+  // Geography for the preview map — the SAME edition boundary/centroid the
+  // property map page (/vacancy/[zip]/map) feeds VacancyReportMap. Records and
+  // edition come from one cached load, so this costs nothing extra; a missing
+  // edition renders the map without a boundary rather than failing.
+  const edition = getVacancyIndexEdition(zip);
 
   // Honest empty state — the edition/export is not available for this ZIP.
   if (records.length === 0) {
@@ -348,6 +280,44 @@ export default async function CaseWorkbenchPage({
             <StatTile value={active.landCount} label="Land parcels" />
             <StatTile value={active.buildingCount} label="Building reports" />
           </div>
+          {/* The DENOMINATOR both tiles are measured against. Without it the
+              only other published per-ZIP list a reader can benchmark against
+              is the All Properties directory — a different universe (the
+              tracked City-inventory + 311 operational list) — which makes a
+              correct land count read as impossible. See the note in
+              lib/vacancy-cases-data.ts. */}
+          <p className="mt-3 max-w-xl font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/45 sm:max-w-md">
+            Out of {universe.land.toLocaleString("en-US")} land{" "}
+            {universe.land === 1 ? "parcel" : "parcels"} and{" "}
+            {universe.building.toLocaleString("en-US")} reported{" "}
+            {universe.building === 1 ? "building" : "buildings"} tracked in this ZIP
+          </p>
+          <p className="mt-2 max-w-xl text-[11px] leading-relaxed text-[#0C1B33]/45">
+            Land is the reconciled land universe (City land inventory and Assessor vacant-land
+            parcels, deduplicated) — a wider set than the{" "}
+            <Link
+              href={`/vacancy/${zip}/directory`}
+              className="text-[#2563EB] hover:underline"
+            >
+              All Properties directory
+            </Link>
+            , which lists the tracked City-inventory and 311 records address by address.
+          </p>
+          {/* This edition publishes fewer land parcels than the ZIP's land
+              universe holds, so every land count above is a FLOOR. Saying so is
+              the whole point — a shortfall of several hundred parcels presented
+              as a total is what makes a correct number look wrong. */}
+          {landTruncated && universe.landTotal != null && (
+            <p className="mt-2 max-w-xl border-l-2 border-[#A45B00]/40 pl-3 text-[11px] leading-relaxed text-[#A45B00]">
+              This edition publishes {universe.land.toLocaleString("en-US")} of the ZIP&rsquo;s{" "}
+              {universe.landTotal.toLocaleString("en-US")} reconciled land parcels, so the land
+              counts on this page are a floor, not a total. The{" "}
+              <Link href={`/vacancy/${zip}/report`} className="underline">
+                full vacancy report
+              </Link>{" "}
+              carries the complete land-universe table.
+            </p>
+          )}
         </section>
 
         {/* Geographic preview + Opportunity-areas rail */}
@@ -355,17 +325,37 @@ export default async function CaseWorkbenchPage({
           {/* Geographic preview */}
           <div className="border border-[#0C1B33]/10 bg-white">
             <div className="relative">
-              <CaseDotMap points={active.points} />
-              <div className="pointer-events-none absolute left-3 top-3 border border-[#0C1B33]/12 bg-white/90 px-2.5 py-1.5">
+              <CasePreviewMapIsland
+                zip={zip}
+                points={active.points}
+                boundary={edition?.boundary ?? null}
+                centroid={edition?.centroid ?? null}
+              />
+              {/* Overlays sit ABOVE the map canvas (z-10) and stay
+                  pointer-events-none so dragging the map still works. */}
+              <div className="pointer-events-none absolute left-3 top-3 z-10 border border-[#0C1B33]/12 bg-white/90 px-2.5 py-1.5">
                 <span className="block font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#2563EB]">
                   Geographic preview
                 </span>
                 <span className="mt-0.5 block font-mono-bureau text-[10px] text-[#0C1B33]/60">
                   {active.mappedTotal.toLocaleString("en-US")} of {active.matches.toLocaleString("en-US")} mapped{" "}
-                  {active.matches === 1 ? "match" : "matches"} shown
+                  {active.matches === 1 ? "match" : "matches"}
+                  {/* The preview plots a CAPPED slice (CASE_POINT_CAP). The old
+                      SVG hid that behind 400 identical dots; clustered dots
+                      carry visible counts that sum to what is actually
+                      plotted, so the cap has to be stated or the line is
+                      falsifiable on its face. The slice is an EVENLY SPACED
+                      sample (sampleCasePoints), not the first N — the record
+                      order is land-then-buildings, so a head slice would show
+                      one universe and call it the geographic spread. */}
+                  {active.points.length < active.mappedTotal
+                    ? ` · ${active.points.length.toLocaleString("en-US")} evenly sampled`
+                    : " shown"}
                 </span>
               </div>
-              <div className="pointer-events-none absolute bottom-3 right-3 border border-[#0C1B33]/12 bg-white/90 px-2.5 py-1 font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/55">
+              {/* bottom-7, not bottom-3: clears Mapbox's required attribution
+                  strip in the bottom-right corner. */}
+              <div className="pointer-events-none absolute bottom-7 right-3 z-10 border border-[#0C1B33]/12 bg-white/90 px-2.5 py-1 font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/55">
                 {neighborhood} · ZIP {zip}
               </div>
             </div>

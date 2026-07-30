@@ -38,7 +38,37 @@ import { trackEvent } from "@/lib/analytics-events";
 // value-importing lib/vacancy-index here would drag its node:fs loader into the
 // client bundle (the leak that broke the build before).
 import type { OwnerGeography, OwnerStructure } from "@/lib/owner-taxonomy";
-import { buildSiteCardHtml, escapeHtml, type CardData } from "./vacancy-site-card";
+import {
+  CARD_SCROLLER_ATTR,
+  STAR_BUTTON_ATTR,
+  ZONE_BADGE_ATTR,
+  ZONE_SLOT_ATTR,
+  buildSiteCardHtml,
+  escapeHtml,
+  programsAndZonesRows,
+  zoneBadgeText,
+  type CardData,
+} from "./vacancy-site-card";
+import {
+  fittedContentHeight,
+  intersectRects,
+  siteCardMaxHeight,
+  siteCardMaxWidth,
+  siteCardPanDelta,
+  type FitRect,
+} from "./vacancy-card-fit";
+import { starredHaloFeatures, starredHaloPaint } from "./vacancy-star-layer";
+import { useStarredKeys, useVacancyAdmin } from "./use-vacancy-admin";
+import {
+  cachedSiteZones,
+  fetchSiteZones,
+  type SiteZoneState,
+} from "@/lib/vacancy-site-zones";
+import {
+  STARRED_RING,
+  siteStarKey,
+  toggleStarredSite,
+} from "@/lib/vacancy-starred";
 import type {
   CorridorKind,
   OwnerConfidence,
@@ -304,10 +334,27 @@ export default function VacancyReportMap({
   const viewRef = useRef(view);
   viewRef.current = view;
 
-  // Both views' full (unfiltered) feature collections, built once at init.
-  const featuresRef = useRef<{ tracked: GeoJSON.Feature[]; land: GeoJSON.Feature[] }>({
+  // ── Starred locations (admin only) ──
+  // A confirmed Owner Files admin session is the single gate: a public reader
+  // sees no star control on the card and no gold halo on the map, and the probe
+  // wipes any stale saved set left behind on a shared machine.
+  const isAdmin = useVacancyAdmin();
+  const starredKeys = useStarredKeys();
+  const adminRef = useRef(isAdmin);
+  adminRef.current = isAdmin;
+  const starredRef = useRef(starredKeys);
+  starredRef.current = starredKeys;
+
+  // Both views' full (unfiltered) feature collections plus the numbered
+  // featured-site markers, built once at init.
+  const featuresRef = useRef<{
+    tracked: GeoJSON.Feature[];
+    land: GeoJSON.Feature[];
+    markers: GeoJSON.Feature[];
+  }>({
     tracked: [],
     land: [],
+    markers: [],
   });
 
   useEffect(() => {
@@ -407,8 +454,6 @@ export default function VacancyReportMap({
       };
     });
 
-    featuresRef.current = { tracked: trackedFeatures, land: landFeatures };
-
     // The enriched fields (pin, sqft, zoning, incentives, confidence, cluster,
     // distress) live on sitePoints, not siteIndex — join by markerNumber.
     const pointByMarker = new Map<number, VacancySitePoint>();
@@ -446,6 +491,12 @@ export default function VacancyReportMap({
         properties: props as unknown as GeoJSON.GeoJsonProperties,
       };
     });
+
+    featuresRef.current = {
+      tracked: trackedFeatures,
+      land: landFeatures,
+      markers: markerFeatures,
+    };
 
     map.on("load", () => {
       // ── Corridor outlines (dashed INK, BENEATH the dots) + line labels.
@@ -542,6 +593,21 @@ export default function VacancyReportMap({
           "text-size": 12,
         },
         paint: { "text-color": "#ffffff" },
+      });
+
+      // ── Starred halo (admin) — added BEFORE the dot layer so it draws
+      //    beneath: the gold annulus surrounds the dot, leaving the owner-type
+      //    fill and the red distress ring fully readable inside it. Empty for
+      //    everyone but a signed-in admin with saved sites. ──
+      map.addSource("vacancy-starred", {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      map.addLayer({
+        id: "vacancy-starred-halo",
+        type: "circle",
+        source: "vacancy-starred",
+        paint: starredHaloPaint() as unknown as mapboxgl.CircleLayerSpecification["paint"],
       });
 
       map.addLayer({
@@ -692,9 +758,62 @@ export default function VacancyReportMap({
       }
 
       // ── Popups: the structured decision card (view-aware via viewRef) ──
+
+      /**
+       * The box the card must stay inside: the map frame INTERSECTED with the
+       * window. The map is 560px tall inside a scrolling page, so on a short
+       * window — or with the page parked mid-map — part of the frame is past
+       * the fold, and seating the card inside the map element alone would still
+       * leave its tail below the window edge.
+       */
+      const containerRect = (): FitRect => {
+        const r = map.getContainer().getBoundingClientRect();
+        return intersectRects(
+          { top: r.top, left: r.left, width: r.width, height: r.height },
+          {
+            top: 0,
+            left: 0,
+            width: window.innerWidth || r.width,
+            height: window.innerHeight || r.height,
+          },
+        );
+      };
+
+      /**
+       * The viewport fit, both halves, run on open and again on every accordion
+       * toggle (opening "Data and sources" is precisely what used to push the
+       * card's tail off screen):
+       *   1. GUARANTEE — re-cap the card's scroll container using the popup's
+       *      MEASURED chrome, which the pre-mount estimate can only approximate.
+       *   2. OFFSET — pan the map by the card's remaining overflow. Panning
+       *      moves the anchor and the popup together, so the pin stays with it.
+       */
+      const refitCard = (popup: mapboxgl.Popup) => {
+        const el = popup.getElement();
+        if (!el || !popup.isOpen()) return;
+
+        const frame = containerRect();
+        if (frame.height <= 0 || frame.width <= 0) return;
+
+        const scroller = el.querySelector<HTMLElement>(`[${CARD_SCROLLER_ATTR}]`);
+        if (scroller) {
+          const chrome = el.getBoundingClientRect().height - scroller.clientHeight;
+          scroller.style.maxHeight = `${fittedContentHeight(frame.height, chrome)}px`;
+        }
+
+        const box = el.getBoundingClientRect();
+        if (box.width === 0 && box.height === 0) return;
+        const [dx, dy] = siteCardPanDelta(
+          { top: box.top, left: box.left, width: box.width, height: box.height },
+          frame,
+        );
+        if (dx !== 0 || dy !== 0) map.panBy([dx, dy], { duration: 220 });
+      };
+
       const openSitePopup = (
         lngLat: mapboxgl.LngLatLike,
         p: Record<string, unknown>,
+        at: { lat: number; lon: number } | null,
       ) => {
         const isLand = viewRef.current === "land";
         const ownerType = (p.ownerType as OwnerType) ?? "unknown";
@@ -720,21 +839,100 @@ export default function VacancyReportMap({
           violation: p.violation === true,
           cluster,
           neighborhood: nbhd ?? null,
+          lat: at?.lat ?? null,
+          lon: at?.lon ?? null,
         };
 
-        const html = buildSiteCardHtml(data, zipForLinks, asOfLabel ?? null);
-        // Every card control is now a plain <a href> (opportunity area + county
-        // record links) — no post-mount button wiring needed.
-        new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" })
+        // Live place-based coverage: already-memoized for this coordinate, else
+        // a lookup we kick off below and patch into the card when it lands.
+        const cached = at ? cachedSiteZones(at.lat, at.lon) : null;
+        const initialZones: SiteZoneState = cached ?? (at ? { status: "loading" } : { status: "idle" });
+
+        // Star affordance ONLY for a confirmed admin session.
+        const starKey = siteStarKey({ pin: data.pin, address: data.address });
+        const showStar = adminRef.current && starKey !== "";
+
+        const frame = containerRect();
+        const html = buildSiteCardHtml(data, zipForLinks, asOfLabel ?? null, {
+          maxHeightPx: siteCardMaxHeight(frame.height),
+          zones: initialZones,
+          star: showStar ? { key: starKey, starred: starredRef.current.has(starKey) } : null,
+        });
+
+        const popup = new mapboxgl.Popup({
+          maxWidth: `${siteCardMaxWidth(frame.width)}px`,
+          className: "bureau-popup",
+        })
           .setLngLat(lngLat)
           .setHTML(html)
           .addTo(map);
+
+        const el = popup.getElement();
+
+        // Keep a scroll INSIDE the capped card from reaching the map: without
+        // this, a wheel over the card zooms the map and a touch-drag pans it.
+        const scroller = el?.querySelector<HTMLElement>(`[${CARD_SCROLLER_ATTR}]`);
+        if (scroller) {
+          scroller.addEventListener("wheel", (e) => e.stopPropagation());
+          scroller.addEventListener("touchmove", (e) => e.stopPropagation());
+        }
+
+        // Fit on open, and again whenever an accordion changes the card's size.
+        // `toggle` does not bubble, so listen in the capture phase.
+        requestAnimationFrame(() => refitCard(popup));
+        el?.addEventListener("toggle", () => refitCard(popup), true);
+
+        // Star toggle — mutates the shared store (which repaints the halo via
+        // the React subscription) and updates this button in place, so the
+        // reader's open accordions survive the click.
+        const starButton = el?.querySelector<HTMLButtonElement>(`[${STAR_BUTTON_ATTR}]`);
+        starButton?.addEventListener("click", () => {
+          const next = toggleStarredSite({
+            address: data.address ?? "",
+            pin: data.pin,
+            zip: zipForLinks,
+            propertyType: data.propertyType,
+          });
+          const nowStarred = next.some((s) => s.key === starKey);
+          starButton.textContent = nowStarred ? "★" : "☆";
+          starButton.setAttribute("aria-pressed", nowStarred ? "true" : "false");
+          starButton.style.color = nowStarred ? STARRED_RING : "#8A93A6";
+          starButton.style.borderColor = nowStarred ? STARRED_RING : "#0C1B3325";
+          starButton.title = nowStarred
+            ? "Remove from starred locations"
+            : "Save to starred locations";
+        });
+
+        // Resolve the geographies containing this point and patch the two
+        // Programs-and-zones nodes. Bail if the reader closed the card first.
+        if (at && initialZones.status === "loading") {
+          void fetchSiteZones(at.lat, at.lon).then((state) => {
+            if (!popup.isOpen()) return;
+            const slot = el?.querySelector<HTMLElement>(`[${ZONE_SLOT_ATTR}]`);
+            if (slot) {
+              slot.innerHTML = programsAndZonesRows(data, state)
+                .map((r) => `<div>${r}</div>`)
+                .join("");
+            }
+            const badge = el?.querySelector<HTMLElement>(`[${ZONE_BADGE_ATTR}]`);
+            if (badge) badge.textContent = zoneBadgeText(state);
+            refitCard(popup);
+          });
+        }
       };
 
       for (const layerId of ["vacancy-unclustered", "vacancy-marker-disc"]) {
         map.on("click", layerId, (e) => {
           if (!e.features?.length) return;
-          openSitePopup(e.lngLat, e.features[0].properties ?? {});
+          const geometry = e.features[0].geometry;
+          const at =
+            geometry?.type === "Point"
+              ? {
+                  lon: (geometry.coordinates as [number, number])[0],
+                  lat: (geometry.coordinates as [number, number])[1],
+                }
+              : { lat: e.lngLat.lat, lon: e.lngLat.lng };
+          openSitePopup(e.lngLat, e.features[0].properties ?? {}, at);
         });
         map.on("mouseenter", layerId, () => {
           map.getCanvas().style.cursor = "pointer";
@@ -818,6 +1016,24 @@ export default function VacancyReportMap({
     const src = map.getSource("vacancy-sites") as mapboxgl.GeoJSONSource | undefined;
     if (src) src.setData({ type: "FeatureCollection", features: filtered });
 
+    // Starred halos track the PLOTTED set, so a starred site hidden by an
+    // owner-type or distress filter leaves no orphan ring behind. A non-admin
+    // always gets an empty collection — the gate is here as well as on the card.
+    const starredSrc = map.getSource("vacancy-starred") as mapboxgl.GeoJSONSource | undefined;
+    if (starredSrc) {
+      starredSrc.setData({
+        type: "FeatureCollection",
+        features: isAdmin
+          ? starredHaloFeatures(
+              filtered,
+              featuresRef.current.markers,
+              starredKeys,
+              view === "tracked",
+            )
+          : [],
+      });
+    }
+
     // Marker layers: visible only on the tracked view, filtered by the same
     // owner-type + distress predicates (a separate, unclustered source).
     const markerClauses: unknown[] = [];
@@ -844,7 +1060,7 @@ export default function VacancyReportMap({
       map.setLayoutProperty(layerId, "visibility", markerVisible ? "visible" : "none");
       map.setFilter(layerId, markerFilter);
     }
-  }, [view, activeTypes, saleFilter, violationFilter, presentTypes, loaded]);
+  }, [view, activeTypes, saleFilter, violationFilter, presentTypes, loaded, isAdmin, starredKeys]);
 
   // ── Cluster deep-link: fit + outline focusBbox whenever it changes ──
   useEffect(() => {
@@ -1059,6 +1275,26 @@ export default function VacancyReportMap({
                     </li>
                   )}
                 </ul>
+              </div>
+            )}
+
+            {/* Starred key — admin only, so a public reader never sees it. */}
+            {isAdmin && (
+              <div className="mt-2.5 border-t border-[#0C1B33]/10 pt-2">
+                <p className="mb-1.5 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                  Starred
+                </p>
+                <div className="flex items-center gap-2">
+                  <span
+                    className="inline-block h-3 w-3 flex-shrink-0 rounded-full border-2"
+                    style={{ borderColor: STARRED_RING, backgroundColor: `${STARRED_RING}29` }}
+                  />
+                  <span className="flex-1 text-[11px] text-[#0C1B33]/55">
+                    {starredKeys.size === 0
+                      ? "Star a site from its card"
+                      : `${starredKeys.size.toLocaleString("en-US")} saved on this browser`}
+                  </span>
+                </div>
               </div>
             )}
 

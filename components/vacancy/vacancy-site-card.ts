@@ -19,6 +19,13 @@
 import { OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import { zoningGloss } from "@/lib/vacancy-zoning";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
+import { STARRED_RING } from "@/lib/vacancy-starred";
+import {
+  siteReportHref,
+  siteZoneLine,
+  siteZonesSummary,
+  type SiteZoneState,
+} from "@/lib/vacancy-site-zones";
 import {
   OWNER_GEOGRAPHY_LABELS,
   OWNER_STRUCTURE_LABELS,
@@ -79,7 +86,41 @@ export interface CardData {
   violation: boolean;
   cluster: VacancyCluster | null;
   neighborhood: string | null;
+  /** The dot's own coordinate. Optional so every existing caller/test compiles;
+   *  when present it powers the live place-based zone lookup and the full
+   *  address-report deep link in "Programs and zones". */
+  lat?: number | null;
+  lon?: number | null;
 }
+
+/** Everything the card needs beyond the site facts themselves. */
+export interface SiteCardOptions {
+  /**
+   * Cap the card's rendered height (px) and give it internal scroll, so a fully
+   * expanded card can never run past the map frame. `null`/omitted = no cap
+   * (the pre-existing behavior).
+   */
+  maxHeightPx?: number | null;
+  /**
+   * Live place-based zone coverage for this point. Omitted (or `{status:"idle"}`)
+   * keeps the legacy `incentiveCount` phrasing.
+   */
+  zones?: SiteZoneState;
+  /**
+   * Admin-only star affordance. Omitted for the public (a non-admin sees no
+   * star anywhere), so this is the single gate for the whole feature on the map.
+   */
+  star?: { key: string; starred: boolean } | null;
+}
+
+/** Marks the element whose innerHTML is swapped when the zone lookup lands. */
+export const ZONE_SLOT_ATTR = "data-vacancy-zones";
+/** Marks the "· N mapped" badge in the Programs-and-zones summary. */
+export const ZONE_BADGE_ATTR = "data-vacancy-zone-badge";
+/** Marks the star button; its value is the site's star key. */
+export const STAR_BUTTON_ATTR = "data-vacancy-star";
+/** Marks the scroll container that guarantees the card fits the frame. */
+export const CARD_SCROLLER_ATTR = "data-vacancy-card-scroll";
 
 /** A plain land-use noun for the significance sentence — from the zoning prefix
  *  when present, else the property type. Longest prefixes first. */
@@ -185,6 +226,66 @@ function flagReasons(d: CardData): string[] {
   return reasons;
 }
 
+/**
+ * The "Programs and zones" body: the zoning gloss, then this point's PLACE-BASED
+ * incentive geographies.
+ *
+ * Honesty rails (the reason this is its own tested function):
+ *   • "Not inside a mapped incentive geography." is claimed ONLY from a lookup
+ *     that completed and genuinely returned nothing. A failed lookup says it
+ *     failed; an in-flight one says it is checking.
+ *   • The legacy `incentiveCount` phrasing survives verbatim for the `idle`
+ *     state (a caller with no coordinate to check) — but a card WITH a
+ *     coordinate never reports coverage from that stamped count, because the
+ *     reconciled vacant-land series ships every dot with `incentiveCount: 0`
+ *     and reading that zero as evidence is exactly the bug this replaces.
+ *   • Geographies are stated as containment, never as eligibility or an award.
+ */
+export function programsAndZonesRows(
+  d: CardData,
+  zones: SiteZoneState = { status: "idle" },
+): string[] {
+  const gloss = zoningGloss(d.zoningClass);
+  const rows: string[] = [gloss ? escapeHtml(gloss) : "Zoning not recorded."];
+
+  if (zones.status === "loading") {
+    rows.push("Checking mapped incentive geographies&hellip;");
+    return rows;
+  }
+
+  if (zones.status === "error") {
+    rows.push(
+      "Could not check mapped incentive geographies right now — open the full address report to verify.",
+    );
+    return rows;
+  }
+
+  if (zones.status === "loaded") {
+    rows.push(escapeHtml(siteZonesSummary(zones.matches)));
+    for (const match of zones.matches) {
+      rows.push(
+        `<span style="color:${CARD_INK}">&bull; ${escapeHtml(siteZoneLine(match))}</span>`,
+      );
+    }
+    return rows;
+  }
+
+  // idle — no coordinate to check; fall back to the stamped export count.
+  rows.push(
+    d.incentiveCount > 0
+      ? `Intersects ${d.incentiveCount} incentive ${d.incentiveCount === 1 ? "geography" : "geographies"}.`
+      : "Not inside a mapped incentive geography.",
+  );
+  return rows;
+}
+
+/** The "· N mapped" badge appended to the accordion summary once resolved. */
+export function zoneBadgeText(zones: SiteZoneState): string {
+  return zones.status === "loaded" && zones.matches.length > 0
+    ? ` · ${zones.matches.length} mapped`
+    : "";
+}
+
 const SOURCES_NOTE =
   "Records indicate; verify current ownership, eligibility, and condition with the county before relying. " +
   "Ownership type is inferred from public taxpayer-of-record patterns — no owner names appear.";
@@ -194,7 +295,13 @@ const SOURCES_NOTE =
  * link; `asOf` (optional) prints the records-as-of line. Native <details>
  * accordions render fine inside the mapbox popup HTML string.
  */
-export function buildSiteCardHtml(d: CardData, zip: string, asOf: string | null): string {
+export function buildSiteCardHtml(
+  d: CardData,
+  zip: string,
+  asOf: string | null,
+  options: SiteCardOptions = {},
+): string {
+  const zones: SiteZoneState = options.zones ?? { status: "idle" };
   const propertyLabel = PROPERTY_TYPE_LABELS[d.propertyType] ?? "Vacant site";
   const addressText = d.address && d.address.trim() ? d.address.trim() : "Address not recorded";
 
@@ -206,9 +313,25 @@ export function buildSiteCardHtml(d: CardData, zip: string, asOf: string | null)
     d.squareFeet != null && Number.isFinite(d.squareFeet)
       ? ` · about ${approxSqft(d.squareFeet).toLocaleString("en-US")} sq ft`
       : "";
+  // Admin-only star. `options.star` is absent for the public, so a non-admin's
+  // card carries no star markup at all — not a hidden one.
+  const starHtml = options.star
+    ? `<button type="button" ${STAR_BUTTON_ATTR}="${escapeHtml(options.star.key)}" aria-pressed="${
+        options.star.starred ? "true" : "false"
+      }" title="${options.star.starred ? "Remove from starred locations" : "Save to starred locations"}" style="flex-shrink:0;cursor:pointer;background:none;border:1px solid ${
+        options.star.starred ? STARRED_RING : `${CARD_INK}25`
+      };border-radius:2px;padding:3px 6px;font-size:12px;line-height:1;color:${
+        options.star.starred ? STARRED_RING : CARD_FAINT
+      }">${options.star.starred ? "★" : "☆"}</button>`
+    : "";
   const glance = `
-    <div style="font-size:14px;font-weight:700;color:${CARD_INK};line-height:1.3">${escapeHtml(addressText)}</div>
-    <div style="font-size:11px;color:${CARD_MUTED};margin-top:3px">${escapeHtml(propertyLabel)}${escapeHtml(sizeClause)}</div>
+    <div style="display:flex;align-items:flex-start;gap:8px">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:14px;font-weight:700;color:${CARD_INK};line-height:1.3">${escapeHtml(addressText)}</div>
+        <div style="font-size:11px;color:${CARD_MUTED};margin-top:3px">${escapeHtml(propertyLabel)}${escapeHtml(sizeClause)}</div>
+      </div>
+      ${starHtml}
+    </div>
   `;
 
   // ── 2 · Significance (one sentence) ──
@@ -275,18 +398,26 @@ export function buildSiteCardHtml(d: CardData, zip: string, asOf: string | null)
       .join(""),
   );
 
-  // 6b · Programs and zones
-  const gloss = zoningGloss(d.zoningClass);
-  const programsRows = [
-    gloss ? escapeHtml(gloss) : "Zoning not recorded.",
-    d.incentiveCount > 0
-      ? `Intersects ${d.incentiveCount} incentive ${d.incentiveCount === 1 ? "geography" : "geographies"}.`
-      : "Not inside a mapped incentive geography.",
-  ];
-  const programs = detail(
-    "Programs and zones",
-    programsRows.map((r) => `<div>${r}</div>`).join(""),
-  );
+  // 6b · Programs and zones — the live place-based coverage for this point.
+  //      Built explicitly (not via `detail`) because two of its parts are
+  //      patched in place when the async lookup lands: the summary badge and
+  //      the row body. See ZONE_BADGE_ATTR / ZONE_SLOT_ATTR.
+  const reportLink =
+    d.lat != null && d.lon != null && Number.isFinite(d.lat) && Number.isFinite(d.lon)
+      ? `<div style="margin-top:5px"><a href="${escapeHtml(
+          siteReportHref(d.lat, d.lon, d.address),
+        )}" target="_blank" rel="noopener noreferrer" style="${linkStyle}">Full address report &#8599;</a></div>`
+      : "";
+  const programs =
+    `<details style="border-top:1px solid ${CARD_INK}12">` +
+    `<summary style="${summaryStyle}">Programs and zones<span ${ZONE_BADGE_ATTR}>${escapeHtml(
+      zoneBadgeText(zones),
+    )}</span></summary>` +
+    `<div style="${detailBodyStyle}">` +
+    `<div ${ZONE_SLOT_ATTR}>${programsAndZonesRows(d, zones)
+      .map((r) => `<div>${r}</div>`)
+      .join("")}</div>${reportLink}` +
+    `</div></details>`;
 
   // 6c · Why it was flagged (real-field reasons only — no rank or badge)
   const whyFlagged = detail(
@@ -313,5 +444,18 @@ export function buildSiteCardHtml(d: CardData, zip: string, asOf: string | null)
     ].join(""),
   );
 
-  return `<div style="font-family:Inter,sans-serif;max-width:300px">${glance}${significance}${cautionBlock}${nextStep}${areaLink}<div style="margin-top:10px">${siteFacts}${programs}${whyFlagged}${dataSources}</div></div>`;
+  const body = `${glance}${significance}${cautionBlock}${nextStep}${areaLink}<div style="margin-top:10px">${siteFacts}${programs}${whyFlagged}${dataSources}</div>`;
+
+  // The GUARANTEE half of the viewport fit: cap the card to the map frame and
+  // scroll the overflow inside it, so a fully-expanded card can never run its
+  // lower sections off screen — including on a phone, where no amount of
+  // panning would seat it. `overscroll-behavior:contain` keeps a scroll that
+  // reaches the end of the card from chaining out to the page.
+  const cap = options.maxHeightPx;
+  const scroller =
+    cap != null && Number.isFinite(cap) && cap > 0
+      ? `<div ${CARD_SCROLLER_ATTR} style="max-height:${Math.floor(cap)}px;overflow-y:auto;overscroll-behavior:contain">${body}</div>`
+      : body;
+
+  return `<div style="font-family:Inter,sans-serif;max-width:300px">${scroller}</div>`;
 }

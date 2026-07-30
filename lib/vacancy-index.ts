@@ -411,6 +411,10 @@ export interface VacancyDirectoryFile {
   rows: VacancyDirectoryRow[];
   /** Tracked rows dropped from `rows` for a missing/empty address (honest). */
   excludedNoAddressCount: number;
+  /** Repeat rows collapsed by dedupeDirectoryRows (same property type, PIN, and
+   * normalized address). Honest zero when the feed carried no repeats; absent
+   * only on a directory file written before deduplication existed. */
+  duplicateRowsRemoved?: number;
 }
 
 /** One row of the page-04 site index (the featured sites — selected by an
@@ -863,16 +867,65 @@ export function compareDirectoryInputs(
 }
 
 /**
- * Build the site directory rows from the tracked scored sites: keep every site
- * whose address is non-empty (after trim), drop and count the rest, and order
- * by compareDirectoryInputs — the internal score orders the rows but is NOT
- * emitted onto them. Pure — unit-tested without a DB. The `excludedNoAddress
- * Count` is the honest "records without a usable address omitted" figure the
- * web report footer prints.
+ * The identity of a directory row for deduplication: property type + PIN +
+ * normalized address. Whitespace is collapsed and case folded because the two
+ * land sources spell the same address differently ("3842 W WEST END AVE" vs
+ * "3842 W WEST  END AVE"), which would otherwise slip a byte-different but
+ * identical record past an exact-equality check.
+ *
+ * The PIN stays in the key on purpose: a parcel legitimately appears twice when
+ * it is BOTH City-inventory vacant land and the subject of a 311 vacant-building
+ * report, and those are two different records in two different universes. Only
+ * same-type, same-parcel, same-address rows collapse.
  */
-export function buildDirectoryRows(
-  sites: readonly DirectoryInputSite[],
-): { rows: VacancyDirectoryRow[]; excludedNoAddressCount: number } {
+export function directoryRowKey(
+  row: Pick<VacancyDirectoryRow, "address" | "pin" | "propertyType">,
+): string {
+  const address = row.address.trim().toUpperCase().replace(/\s+/g, " ");
+  return `${row.propertyType}|${row.pin ?? ""}|${address}`;
+}
+
+/**
+ * Drop repeat directory rows, keeping the FIRST occurrence in the array's
+ * existing order (so the caller's deterministic sort survives). Pure.
+ *
+ * The tracked row feed reaches the export with genuine repeats — the same 311
+ * address reported more than once, the same inventory parcel arriving under two
+ * source ids — and nothing downstream deduplicated them, so they rendered as
+ * literal duplicate rows in the All Properties table and inflated every count
+ * derived from the file (the directory total, the workbench's reported-building
+ * counts, the per-facet filter counts). 348 rows across the nine committed
+ * editions were repeats.
+ */
+export function dedupeDirectoryRows(rows: readonly VacancyDirectoryRow[]): {
+  rows: VacancyDirectoryRow[];
+  duplicateRowsRemoved: number;
+} {
+  const seen = new Set<string>();
+  const out: VacancyDirectoryRow[] = [];
+  for (const row of rows) {
+    const key = directoryRowKey(row);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(row);
+  }
+  return { rows: out, duplicateRowsRemoved: rows.length - out.length };
+}
+
+/**
+ * Build the site directory rows from the tracked scored sites: keep every site
+ * whose address is non-empty (after trim), drop and count the rest, order by
+ * compareDirectoryInputs — the internal score orders the rows but is NOT
+ * emitted onto them — and then drop repeat rows (dedupeDirectoryRows), counting
+ * those too. Pure — unit-tested without a DB. `excludedNoAddressCount` is the
+ * honest "records without a usable address omitted" figure the web report
+ * footer prints; `duplicateRowsRemoved` is its counterpart for repeats.
+ */
+export function buildDirectoryRows(sites: readonly DirectoryInputSite[]): {
+  rows: VacancyDirectoryRow[];
+  excludedNoAddressCount: number;
+  duplicateRowsRemoved: number;
+} {
   const kept: (DirectoryInputSite & { address: string })[] = [];
   let excludedNoAddressCount = 0;
   for (const s of sites) {
@@ -884,7 +937,7 @@ export function buildDirectoryRows(
     kept.push({ ...s, address });
   }
   kept.sort(compareDirectoryInputs);
-  const rows: VacancyDirectoryRow[] = kept.map((s) => ({
+  const ordered: VacancyDirectoryRow[] = kept.map((s) => ({
     address: s.address,
     ownerType: s.ownerType,
     propertyType: s.propertyType,
@@ -895,7 +948,8 @@ export function buildDirectoryRows(
     ownerStructure: s.ownerStructure,
     ownerGeography: s.ownerGeography,
   }));
-  return { rows, excludedNoAddressCount };
+  const { rows, duplicateRowsRemoved } = dedupeDirectoryRows(ordered);
+  return { rows, excludedNoAddressCount, duplicateRowsRemoved };
 }
 
 // ── Quintile dots (pure) ───────────────────────────────────────────────────

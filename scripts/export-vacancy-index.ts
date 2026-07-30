@@ -1068,6 +1068,7 @@ function buildEdition(
   edition: VacancyIndexEdition;
   directoryRows: VacancyDirectoryRow[];
   excludedNoAddressCount: number;
+  duplicateRowsRemoved: number;
   referralRows: ExemptionReferralRow[];
 } {
   const entryIndex = PILOT_ZIPS.findIndex((entry) => entry.zip === zip);
@@ -1352,7 +1353,11 @@ function buildEdition(
   // a usable address, anonymized (owner TYPE only). `sites` is rows.map(...) so
   // it index-aligns with `rows` — pass the RAW nullable address so a missing one
   // is excluded + counted rather than coerced to the site-index "Unknown".
-  const { rows: directoryRows, excludedNoAddressCount } = buildDirectoryRows(
+  const {
+    rows: directoryRows,
+    excludedNoAddressCount,
+    duplicateRowsRemoved,
+  } = buildDirectoryRows(
     sites.map((s, i) => ({
       address: rows[i]?.address ?? null,
       ownerType: s.ownerType,
@@ -1503,7 +1508,7 @@ function buildEdition(
     anchors,
   };
 
-  return { edition, directoryRows, excludedNoAddressCount, referralRows };
+  return { edition, directoryRows, excludedNoAddressCount, duplicateRowsRemoved, referralRows };
 }
 
 // ── Comparison matrix (recomputed over the merged edition set) ──
@@ -1719,7 +1724,13 @@ async function main() {
     const transport = geo ? clipTransportForEdition(transportFeatures, geo.bbox) : [];
     const editionEntry = PILOT_ZIPS.find((e) => e.zip === zip);
     const anchors = editionEntry ? anchorsForEdition(editionEntry, anchorsByCa) : null;
-    const { edition, directoryRows, excludedNoAddressCount, referralRows } = buildEdition(
+    const {
+      edition,
+      directoryRows,
+      excludedNoAddressCount,
+      duplicateRowsRemoved,
+      referralRows,
+    } = buildEdition(
       zip,
       rows,
       parcels,
@@ -1744,6 +1755,7 @@ async function main() {
       generatedAt,
       rows: directoryRows,
       excludedNoAddressCount,
+      duplicateRowsRemoved,
     };
     const directorySerialized = JSON.stringify(directoryFile, null, 2) + "\n";
     assertAnonymized(directorySerialized);
@@ -1774,7 +1786,8 @@ async function main() {
     );
     console.log(
       `    directory: ${directoryRows.length} addresses written to vacancy-directory/${zip}.json` +
-        `${excludedNoAddressCount > 0 ? ` (${excludedNoAddressCount} rows omitted for no usable address)` : ""}`,
+        `${excludedNoAddressCount > 0 ? ` (${excludedNoAddressCount} rows omitted for no usable address)` : ""}` +
+        `${duplicateRowsRemoved > 0 ? ` (${duplicateRowsRemoved} repeat rows collapsed)` : ""}`,
     );
     const ea = edition.exemptionAnomalies;
     console.log(
