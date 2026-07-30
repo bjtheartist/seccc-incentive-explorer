@@ -1,0 +1,207 @@
+name: Monthly data refresh
+
+# Re-pulls the LIVE-API Community Investment inputs, regenerates the export, and
+# OPENS A PULL REQUEST for a human to review. It never pushes to main and never
+# merges: the whole point is that a month-over-month change in public data gets
+# read by a person before it reaches the map.
+#
+# Sibling to check-submittable-links.yml (the other scheduled job), but that one
+# commits straight to main because it only touches a health file that nothing is
+# derived from. This job rewrites the inputs behind an admin-gated dataset, so it
+# takes the PR route instead.
+
+on:
+  schedule:
+    # 07:40 UTC on the 2nd of each month (~1:40 AM Chicago in winter, ~2:40 AM in
+    # summer). The 2nd, not the 1st: month-boundary publishing on the City and
+    # HUD portals lands late on the 1st, and off-peak UTC keeps us out of the
+    # 00:00 cron stampede that makes hosted runners queue.
+    - cron: "40 7 2 * *"
+  workflow_dispatch:
+
+# Least privilege that still lets the job push a branch and open a PR.
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  # Never let a manual run collide with the scheduled one mid-write.
+  group: data-refresh
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      # Node setup mirrors ci.yml so the refresh runs on the same toolchain that
+      # will verify it.
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Refresh live sources and regenerate the export
+        id: refresh
+        run: |
+          set -o pipefail
+          # Keep going on a per-source failure so the summary and the PR still
+          # happen; the script's exit code is captured, not swallowed.
+          if npm run data:refresh:live -- --summary-out "$RUNNER_TEMP/delta.md" 2>&1 | tee "$RUNNER_TEMP/refresh.log"; then
+            echo "refresh_failed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "refresh_failed=true" >> "$GITHUB_OUTPUT"
+            echo "::warning::One or more sources failed to refresh — see the run log"
+          fi
+
+      - name: Detect changes
+        id: diff
+        run: |
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No input changed — nothing to review."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            git status --porcelain
+          fi
+
+      # The full suite, INCLUDING the converted invariants and the monotonic
+      # floors. A failure here does not stop the PR — it retitles it. A refresh
+      # that breaks the data contract is the single most valuable thing this job
+      # can tell us, so it must never exit quietly.
+      - name: Verify (lint, test, typecheck, build)
+        id: verify
+        if: steps.diff.outputs.changed == 'true'
+        run: |
+          set -o pipefail
+          status=0
+          {
+            echo "### lint";       npm run lint          || status=1
+            echo "### test";       npm test              || status=1
+            echo "### typecheck";  npx tsc --noEmit      || status=1
+            echo "### build";      npm run build -- --webpack || status=1
+          } 2>&1 | tee "$RUNNER_TEMP/verify.log"
+          echo "verify_failed=$([ $status -eq 0 ] && echo false || echo true)" >> "$GITHUB_OUTPUT"
+          exit 0
+
+      - name: Open the review PR
+        if: steps.diff.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REFRESH_FAILED: ${{ steps.refresh.outputs.refresh_failed }}
+          VERIFY_FAILED: ${{ steps.verify.outputs.verify_failed }}
+          # Via env rather than inline ${{ }} in run: — workflow expressions are
+          # interpolated into the shell before it parses, so anything that ever
+          # becomes attacker-influenced would execute. Cheap habit, no downside.
+          BASE_BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          DATE="$(date -u +%Y-%m-%d)"
+          BRANCH="chore/data-refresh-$DATE"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "chore(data): monthly refresh of the live investment sources ($DATE)"
+          # Force is right here, not dangerous: the branch name is machine-owned
+          # and date-scoped, so the only thing it can overwrite is an earlier
+          # attempt from the same day. Makes a re-run idempotent.
+          git push --force origin "$BRANCH"
+
+          TITLE="chore(data): monthly refresh $DATE"
+          NEEDS_ATTENTION=false
+          if [ "$VERIFY_FAILED" = "true" ] || [ "$REFRESH_FAILED" = "true" ]; then
+            TITLE="[NEEDS ATTENTION] $TITLE"
+            NEEDS_ATTENTION=true
+          fi
+
+          {
+            echo "Automated monthly refresh of the LIVE-API Community Investment inputs."
+            echo
+            echo "**This PR does not merge itself. A human has to read the delta below and decide.**"
+            echo
+
+            if [ "$NEEDS_ATTENTION" = "true" ]; then
+              echo "## :rotating_light: Needs attention"
+              echo
+              if [ "$REFRESH_FAILED" = "true" ]; then
+                echo "- One or more sources **failed to refresh**. The other sources still ran; the table below shows which."
+              fi
+              if [ "$VERIFY_FAILED" = "true" ]; then
+                echo "- The verification suite **failed against the refreshed data**."
+                echo
+                echo "<details><summary>Failure excerpt</summary>"
+                echo
+                echo '```'
+                grep -E -i -A 12 "FAIL|✖|error( TS[0-9]+)?:|Failed to compile|✗" "$RUNNER_TEMP/verify.log" \
+                  | head -c 40000 || tail -c 40000 "$RUNNER_TEMP/verify.log"
+                echo '```'
+                echo
+                echo "</details>"
+              fi
+              echo
+              echo "A failing refresh is **signal, not noise** — the data moved in a way the invariants"
+              echo "reject. Read it before deciding whether to fix the code or accept and re-baseline."
+              echo
+            fi
+
+            echo "## Per-source delta"
+            echo
+            # Absent only if the refresh died before writing its summary — in
+            # which case the PR still needs to exist and say so.
+            cat "$RUNNER_TEMP/delta.md" 2>/dev/null \
+              || echo "_The refresh did not produce a summary table — see the full log below._"
+            echo
+            echo "## Reviewing this"
+            echo
+            echo "- A **row-count drop over 2%** trips the monotonic floors in"
+            echo "  \`lib/__tests__/community-investment.test.ts\`. If the loss is real and correct,"
+            echo "  re-baseline \`REFRESHED_SOURCE_FLOORS\` **in this PR**, in the same commit that"
+            echo "  accepts the data."
+            echo "- \`chicago_cares_program_ledger.csv\` carries the upstream dataset's own publish"
+            echo "  timestamp, which the City bumps daily, so it shows a diff most months even when"
+            echo "  no record changed. Trust the delta table, not the diff size."
+            echo "- Sources **not** refreshed here are frozen snapshots by design; see"
+            echo "  \`data/curated/investment-inputs/REFRESH.md\` for the cadence per source."
+            echo
+            echo "<details><summary>Full refresh log</summary>"
+            echo
+            echo '```'
+            tail -c 40000 "$RUNNER_TEMP/refresh.log"
+            echo '```'
+            echo
+            echo "</details>"
+          } > "$RUNNER_TEMP/pr-body.md"
+
+          # A same-day re-run should update the open PR rather than error out on
+          # "a pull request already exists".
+          if [ -n "$(gh pr list --head "$BRANCH" --state open --json number --jq '.[].number')" ]; then
+            gh pr edit "$BRANCH" --title "$TITLE" --body-file "$RUNNER_TEMP/pr-body.md"
+          else
+            gh pr create \
+              --title "$TITLE" \
+              --body-file "$RUNNER_TEMP/pr-body.md" \
+              --base "$BASE_BRANCH" \
+              --head "$BRANCH"
+          fi
+
+      - name: Nothing to do
+        if: steps.diff.outputs.changed == 'false'
+        run: echo "No upstream change this month — exiting quietly."
+
+      # Last: if the refresh itself reported a failed source, end the run red so
+      # it shows up in the Actions list even when the PR was opened successfully.
+      - name: Fail the run if any source failed
+        if: steps.refresh.outputs.refresh_failed == 'true'
+        run: |
+          echo "::error::At least one source failed to refresh — see the PR titled [NEEDS ATTENTION]"
+          exit 1

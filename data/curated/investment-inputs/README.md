@@ -4,6 +4,10 @@ These files are public-record source data used to build the private,
 admin-gated Community Investment export. They are not served directly to public
 visitors.
 
+This file documents what each source MEANS and the integrity contract it must
+satisfy. For how often each one changes and who changes it — six sources refresh
+themselves monthly, the rest are frozen snapshots — see [REFRESH.md](./REFRESH.md).
+
 ## Cook County 2023 Source Grant
 
 - Source: Cook County Small Business Source awardee list, version 2024-11-20
