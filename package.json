@@ -63,7 +63,8 @@
     "data:import:chicago-arpa": "npx tsx scripts/import-chicago-arpa-recovery.ts",
     "data:import:chicago-cares": "npx tsx scripts/import-chicago-cares-program-ledger.ts",
     "data:import:cook-cares-2020": "npx tsx scripts/import-cook-county-cares-program-ledger.ts",
-    "data:export:investment": "npx tsx scripts/export-community-investment.ts"
+    "data:export:investment": "npx tsx scripts/export-community-investment.ts",
+    "data:refresh:live": "npx tsx scripts/refresh/refresh-live-sources.ts"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.16",

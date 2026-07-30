@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-29T16:24:01.610Z",
+  "generatedAt": "2026-07-30T19:23:44.021Z",
   "meta": {
     "note": "Coordinate-less capital CONTEXT beside the plotted Community Investment records. Every dollar is a real published figure or 0 where the source publishes 0; distinct money concepts stay in distinct fields and are never summed across concepts or (for cumulative series) across years.",
     "sources": [
@@ -13105,7 +13105,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171932",
@@ -13150,7 +13150,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171933"
@@ -13195,7 +13195,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171934",
@@ -13241,7 +13241,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171936",
@@ -13286,7 +13286,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171937"
@@ -13331,7 +13331,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171938",
@@ -13376,7 +13376,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171939"
@@ -13421,7 +13421,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171940",
@@ -13466,7 +13466,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171941"
@@ -13511,7 +13511,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171942",
@@ -13556,7 +13556,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171943"
@@ -13601,7 +13601,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171944",
@@ -13647,7 +13647,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171945",
@@ -13692,7 +13692,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171946"
@@ -13736,7 +13736,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171947"
@@ -13781,7 +13781,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-26",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171948",
@@ -13827,7 +13827,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171949",
@@ -13873,7 +13873,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171950",
@@ -13918,7 +13918,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171951"
@@ -13963,7 +13963,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171952",
@@ -14009,7 +14009,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171953",
@@ -14054,7 +14054,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171954"
@@ -14098,7 +14098,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171955"
@@ -14144,7 +14144,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171956",
@@ -14191,7 +14191,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171957",
@@ -14237,7 +14237,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171958",
@@ -14282,7 +14282,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171959"
@@ -14326,7 +14326,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171960"
@@ -14371,7 +14371,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171961",
@@ -14417,7 +14417,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171962",
@@ -14463,7 +14463,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171963",
@@ -14508,7 +14508,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171964"
@@ -14553,7 +14553,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171965",
@@ -14599,7 +14599,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171966",
@@ -14645,7 +14645,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171967",
@@ -14691,7 +14691,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171968",
@@ -14736,7 +14736,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171969"
@@ -14781,7 +14781,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171970",
@@ -14826,7 +14826,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171971"
@@ -14871,7 +14871,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171972",
@@ -14917,7 +14917,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171973",
@@ -14962,7 +14962,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171974"
@@ -15007,7 +15007,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171975",
@@ -15052,7 +15052,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171976"
@@ -15096,7 +15096,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171977"
@@ -15141,7 +15141,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171978",
@@ -15187,7 +15187,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171979",
@@ -15233,7 +15233,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171980",
@@ -15279,7 +15279,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171981",
@@ -15325,7 +15325,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171982",
@@ -15371,7 +15371,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171985",
@@ -15416,7 +15416,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171986"
@@ -15461,7 +15461,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171987",
@@ -15507,7 +15507,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-10-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "171988",
@@ -15552,7 +15552,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-11-22",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "174554"
@@ -15596,7 +15596,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-11-22",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "174555"
@@ -15640,7 +15640,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-11-22",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "174557"
@@ -15684,7 +15684,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-11-22",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "174570"
@@ -15728,7 +15728,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-11-22",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "174572"
@@ -15772,7 +15772,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-11-29",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "175089"
@@ -15816,7 +15816,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-11-29",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "175090"
@@ -15860,7 +15860,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-12-07",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "175924"
@@ -15904,7 +15904,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-12-08",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "176209"
@@ -15948,7 +15948,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-12-27",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "177981"
@@ -15992,7 +15992,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2021-12-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "178036"
@@ -16036,7 +16036,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2022-01-19",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "179599"
@@ -16080,7 +16080,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2022-01-19",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "179600"
@@ -16124,7 +16124,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2022-01-19",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "179605"
@@ -16168,7 +16168,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2022-01-25",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "180086"
@@ -16212,7 +16212,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2022-09-28",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1231590",
         "contractNumbers": [
           "204303"
@@ -16256,7 +16256,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271231590%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": null,
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": null,
         "contractNumbers": [],
         "sourceRevisionCount": 0,
@@ -16299,7 +16299,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271215482%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2020-12-14",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1215482",
         "contractNumbers": [
           "144296",
@@ -16344,7 +16344,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=specification_number%3D%271215482%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": null,
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": null,
         "contractNumbers": [],
         "sourceRevisionCount": 0,
@@ -16428,7 +16428,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=purchase_order_contract_number%3D%27144242%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2020-12-10",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1215374",
         "contractNumbers": [
           "144242"
@@ -16472,7 +16472,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=purchase_order_contract_number%3D%27144242%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": null,
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": null,
         "contractNumbers": [],
         "sourceRevisionCount": 0,
@@ -16556,7 +16556,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=upper%28purchase_order_description%29+like+%27%25TOGETHER+NOW%25%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2020-08-05",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1208223",
         "contractNumbers": [
           "135349"
@@ -16601,7 +16601,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=upper%28purchase_order_description%29+like+%27%25TOGETHER+NOW%25%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2020-08-10",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1208521",
         "contractNumbers": [
           "135576",
@@ -16646,7 +16646,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=upper%28purchase_order_description%29+like+%27%25TOGETHER+NOW%25%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2020-08-11",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1208223",
         "contractNumbers": [
           "135774"
@@ -16690,7 +16690,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=upper%28purchase_order_description%29+like+%27%25TOGETHER+NOW%25%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2020-08-11",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1208522",
         "contractNumbers": [
           "135778"
@@ -16735,7 +16735,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=upper%28purchase_order_description%29+like+%27%25TOGETHER+NOW%25%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": "2020-08-13",
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": "1208715",
         "contractNumbers": [
           "135870",
@@ -16780,7 +16780,7 @@
         "sourceUrl": "https://data.cityofchicago.org/d/rsxa-ify5",
         "sourceQueryUrl": "https://data.cityofchicago.org/resource/rsxa-ify5.json?%24where=upper%28purchase_order_description%29+like+%27%25TOGETHER+NOW%25%27&%24order=purchase_order_contract_number%2Crevision_number&%24limit=5000",
         "sourceAsOf": null,
-        "sourceDatasetUpdatedAt": "2026-07-29T08:17:42.000Z",
+        "sourceDatasetUpdatedAt": "2026-07-30T08:17:39.000Z",
         "specificationNumber": null,
         "contractNumbers": [],
         "sourceRevisionCount": 0,
