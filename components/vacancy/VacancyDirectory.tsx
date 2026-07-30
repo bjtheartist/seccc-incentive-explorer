@@ -61,15 +61,22 @@ import {
   PROPERTY_TYPES,
   PROPERTY_TYPE_ABBREV,
   PROPERTY_TYPE_LABELS,
+  STAR_LABELS,
+  STAR_VALUES,
   filterAndSortRows,
   rowEvidenceLine,
   rowFlags,
+  rowIsStarred,
   rowSector,
+  rowStarKey,
   rowStructure,
   saleYearSuffix,
   type FlagValue,
   type SortDir,
+  type StarValue,
 } from "./vacancy-directory-filter";
+import { useStarredKeys, useVacancyAdmin } from "./use-vacancy-admin";
+import { STARRED_RING, clearStarredSites, toggleStarredSite } from "@/lib/vacancy-starred";
 // Type-only import: pulling a runtime value from lib/vacancy-index.ts would drag
 // its fs-backed loader (node:fs) into this client bundle. Mirrors the
 // type-only convention VacancyReportMap uses.
@@ -82,7 +89,7 @@ import type {
 const DISTRESS_RED = "#DC2626";
 const PAGE_SIZE = 100;
 
-type DropdownColumn = "sector" | "structure" | "type" | "flags";
+type DropdownColumn = "sector" | "structure" | "type" | "flags" | "starred";
 
 /** Strip a `?area=` query param from the URL bar without a navigation, once
  * the area filter it seeded has been cleared. Best-effort: no-ops if there's
@@ -126,6 +133,7 @@ export default function VacancyDirectory({
   const [structureFilter, setStructureFilter] = useState<Set<OwnerStructure>>(new Set());
   const [typeFilter, setTypeFilter] = useState<Set<VacancyPropertyType>>(new Set());
   const [flagFilter, setFlagFilter] = useState<Set<FlagValue>>(new Set());
+  const [starFilter, setStarFilter] = useState<Set<StarValue>>(new Set());
   const [search, setSearch] = useState("");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [openDropdown, setOpenDropdown] = useState<DropdownColumn | null>(null);
@@ -134,6 +142,12 @@ export default function VacancyDirectory({
   // Opportunity-Area handoff filter — seeded from the `?area=` query param,
   // clearable independently of the other column filters.
   const [areaFilterId, setAreaFilterId] = useState<number | null>(initialAreaId);
+
+  // Starred locations — admin only. A public reader gets no star column, no
+  // star facet, no per-row control, and (since starFilter can never be
+  // populated without the facet) no starred filtering either.
+  const isAdmin = useVacancyAdmin();
+  const starredKeys = useStarredKeys();
 
   const rootRef = useRef<HTMLDivElement | null>(null);
 
@@ -217,6 +231,16 @@ export default function VacancyDirectory({
     for (const r of allRows) for (const f of rowFlags(r)) counts.set(f, (counts.get(f) ?? 0) + 1);
     return counts;
   }, [allRows]);
+  const starCounts = useMemo(() => {
+    const counts = new Map<StarValue, number>();
+    for (const r of allRows) {
+      const v: StarValue = rowIsStarred(r, starredKeys) ? "starred" : "unstarred";
+      counts.set(v, (counts.get(v) ?? 0) + 1);
+    }
+    return counts;
+  }, [allRows, starredKeys]);
+  /** Rows in THIS ZIP that are starred — what the Clear control reports. */
+  const starredHere = starCounts.get("starred") ?? 0;
 
   // How many rows carry the handoff area's clusterId, independent of every
   // other filter — the number the banner reports.
@@ -239,6 +263,10 @@ export default function VacancyDirectory({
           types: typeFilter,
           flags: flagFilter,
           search,
+          // Gate the facet on the admin probe as well as on the UI, so a value
+          // left in state can never filter a public reader's view.
+          starred: isAdmin ? starFilter : undefined,
+          starredKeys,
         },
         sortDir,
       ),
@@ -249,6 +277,9 @@ export default function VacancyDirectory({
       structureFilter,
       typeFilter,
       flagFilter,
+      starFilter,
+      isAdmin,
+      starredKeys,
       search,
       sortDir,
     ],
@@ -264,6 +295,7 @@ export default function VacancyDirectory({
     structureFilter.size > 0 ||
     typeFilter.size > 0 ||
     flagFilter.size > 0 ||
+    (isAdmin && starFilter.size > 0) ||
     search.trim().length > 0 ||
     areaFilterId != null;
 
@@ -272,9 +304,18 @@ export default function VacancyDirectory({
     setStructureFilter(new Set());
     setTypeFilter(new Set());
     setFlagFilter(new Set());
+    setStarFilter(new Set());
     setSearch("");
     setAreaFilterId(null);
     stripAreaParamFromUrl();
+  }
+
+  /** Explicit "leave nothing behind" control (shared-machine hygiene). Wipes
+   * the whole saved set, not just this ZIP's rows, and drops the facet with it
+   * so the table doesn't sit on an empty starred filter. */
+  function clearStarred() {
+    clearStarredSites();
+    setStarFilter(new Set());
   }
 
   function clearAreaFilter() {
@@ -396,6 +437,16 @@ export default function VacancyDirectory({
             Clear filters
           </button>
         )}
+        {isAdmin && starredHere > 0 && (
+          <button
+            type="button"
+            onClick={clearStarred}
+            title="Removes every starred location saved in this browser."
+            className="border border-[#0C1B33]/20 bg-white px-3 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/70 hover:border-[#DC2626]/50 hover:text-[#DC2626]"
+          >
+            Clear starred ({starredHere.toLocaleString("en-US")})
+          </button>
+        )}
       </div>
 
       {/* Desktop / tablet: dense spreadsheet-style table (sm and up). */}
@@ -404,6 +455,27 @@ export default function VacancyDirectory({
           <thead>
             <tr className="border-b border-[#0C1B33]/10 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
               <th className="px-3 py-2.5 w-10">#</th>
+              {isAdmin && (
+                <FilterHeader
+                  label="★"
+                  ariaLabel="Starred"
+                  column="starred"
+                  active={starFilter.size}
+                  openDropdown={openDropdown}
+                  setOpenDropdown={setOpenDropdown}
+                >
+                  {STAR_VALUES.map((v) => (
+                    <FilterCheckbox
+                      key={v}
+                      checked={starFilter.has(v)}
+                      onChange={() => toggle(setStarFilter, v)}
+                      count={starCounts.get(v) ?? 0}
+                      dotColor={v === "starred" ? STARRED_RING : undefined}
+                      label={STAR_LABELS[v]}
+                    />
+                  ))}
+                </FilterHeader>
+              )}
               <th className="px-3 py-2.5">
                 <button
                   type="button"
@@ -492,7 +564,10 @@ export default function VacancyDirectory({
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-3 py-8 text-center text-[13px] text-[#0C1B33]/45">
+                <td
+                  colSpan={isAdmin ? 8 : 7}
+                  className="px-3 py-8 text-center text-[13px] text-[#0C1B33]/45"
+                >
                   No addresses match the current filters.
                 </td>
               </tr>
@@ -509,6 +584,11 @@ export default function VacancyDirectory({
                     <td className="px-3 py-2 font-mono-bureau text-[11px] text-[#0C1B33]/40">
                       {(i + 1).toLocaleString("en-US")}
                     </td>
+                    {isAdmin && (
+                      <td className="px-3 py-2">
+                        <StarToggle row={row} zip={zip} starred={rowIsStarred(row, starredKeys)} />
+                      </td>
+                    )}
                     <td className="px-3 py-2 text-[12px] text-[#0C1B33]/80">{row.address}</td>
                     <td className="px-3 py-2">
                       <span
@@ -607,9 +687,15 @@ export default function VacancyDirectory({
             No addresses match the current filters.
           </div>
         ) : (
-          filtered
-            .slice(0, visibleCount)
-            .map((row, i) => <DirectoryCard key={`${row.address}-${i}`} row={row} />)
+          filtered.slice(0, visibleCount).map((row, i) => (
+            <DirectoryCard
+              key={`${row.address}-${i}`}
+              row={row}
+              zip={zip}
+              showStar={isAdmin}
+              starred={rowIsStarred(row, starredKeys)}
+            />
+          ))
         )}
       </div>
 
@@ -638,6 +724,62 @@ export default function VacancyDirectory({
   );
 }
 
+// ── Starred toggle ───────────────────────────────────────────────────────────
+
+/**
+ * The per-row star. Rendered ONLY inside an `isAdmin` branch — this component
+ * carries no gate of its own, so there is exactly one place to audit.
+ *
+ * The star key is PIN-first (see siteStarKey), which is the same identity the
+ * Property Map's site card computes, so starring a row here lights the gold
+ * halo on that site's dot and vice versa. A row with neither PIN nor address
+ * cannot be identified and renders a disabled control rather than a star that
+ * silently does nothing.
+ */
+function StarToggle({
+  row,
+  zip,
+  starred,
+  className = "",
+}: {
+  row: VacancyDirectoryRow;
+  zip: string;
+  starred: boolean;
+  className?: string;
+}) {
+  const key = rowStarKey(row);
+  if (!key) {
+    return (
+      <span
+        title="No PIN or address on this record — it cannot be saved."
+        className={`font-mono-bureau text-[12px] text-[#0C1B33]/20 ${className}`}
+      >
+        ☆
+      </span>
+    );
+  }
+  return (
+    <button
+      type="button"
+      aria-pressed={starred}
+      aria-label={starred ? `Unstar ${row.address}` : `Star ${row.address}`}
+      title={starred ? "Remove from starred locations" : "Save to starred locations"}
+      onClick={() =>
+        toggleStarredSite({
+          address: row.address,
+          pin: row.pin,
+          zip,
+          propertyType: row.propertyType,
+        })
+      }
+      className={`text-[14px] leading-none transition-colors ${className}`}
+      style={{ color: starred ? STARRED_RING : "#0C1B3340" }}
+    >
+      {starred ? "★" : "☆"}
+    </button>
+  );
+}
+
 // ── Mobile card ──────────────────────────────────────────────────────────────
 
 /** One tracked address, stacked-card form (below sm). Mirrors the table row's
@@ -645,7 +787,17 @@ export default function VacancyDirectory({
  * + the same two ownership axes the table shows (sector, then entity detail),
  * evidence line, Verify links. An unresolved row reads "Not yet classified"
  * here too — never a blank or a guess. */
-function DirectoryCard({ row }: { row: VacancyDirectoryRow }) {
+function DirectoryCard({
+  row,
+  zip,
+  showStar,
+  starred,
+}: {
+  row: VacancyDirectoryRow;
+  zip: string;
+  showStar: boolean;
+  starred: boolean;
+}) {
   const sector = rowSector(row);
   const structure = rowStructure(row);
   const cookViewer = cookViewerUrl(row.pin);
@@ -655,6 +807,14 @@ function DirectoryCard({ row }: { row: VacancyDirectoryRow }) {
     <div className="border border-[#0C1B33]/10 bg-white p-4">
       <div className="flex items-start justify-between gap-3">
         <p className="text-[14px] font-semibold leading-snug text-[#0C1B33]">{row.address}</p>
+        {showStar && (
+          <StarToggle
+            row={row}
+            zip={zip}
+            starred={starred}
+            className="flex min-h-[44px] min-w-[44px] items-center justify-center"
+          />
+        )}
       </div>
       <p className="mt-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/55">
         {PROPERTY_TYPE_LABELS[row.propertyType]} &middot; {OWNER_SECTOR_LABELS[sector]}
@@ -733,6 +893,7 @@ function FilterPanel({ children }: { children: React.ReactNode }) {
 
 function FilterHeader({
   label,
+  ariaLabel,
   column,
   active,
   openDropdown,
@@ -740,6 +901,8 @@ function FilterHeader({
   children,
 }: {
   label: string;
+  /** Spoken name when `label` is a glyph (the ★ column) rather than words. */
+  ariaLabel?: string;
   column: DropdownColumn;
   active: number;
   openDropdown: DropdownColumn | null;
@@ -749,11 +912,14 @@ function FilterHeader({
   return (
     <th className="px-3 py-2.5 relative">
       <div className="flex items-center gap-1.5">
-        <span className="whitespace-nowrap font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
+        <span
+          aria-label={ariaLabel}
+          className="whitespace-nowrap font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/45"
+        >
           {label}
         </span>
         <FilterFunnel
-          label={label}
+          label={ariaLabel ?? label}
           column={column}
           active={active}
           openDropdown={openDropdown}

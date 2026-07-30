@@ -22,6 +22,7 @@
 
 import { classifyOwnerSector, type OwnerSector } from "@/lib/owner-sector";
 import { normalizeOwnerStructure, type OwnerStructure } from "@/lib/owner-taxonomy";
+import { siteStarKey } from "@/lib/vacancy-starred";
 import type { VacancyDirectoryRow, VacancyPropertyType } from "@/lib/vacancy-index";
 
 export type FlagValue = "tax_sale" | "violation" | "none";
@@ -91,6 +92,35 @@ export function rowEvidenceLine(row: VacancyDirectoryRow): string {
   return parts.length > 0 ? parts.join(" · ") : "No flags on file";
 }
 
+// ── Starred (admin) ──────────────────────────────────────────────────────────
+
+export type StarValue = "starred" | "unstarred";
+
+export const STAR_VALUES: StarValue[] = ["starred", "unstarred"];
+
+export const STAR_LABELS: Record<StarValue, string> = {
+  starred: "Starred",
+  unstarred: "Not starred",
+};
+
+/**
+ * A row's identity in the starred store — the SAME key the map card computes
+ * for the matching dot (PIN when one resolved, else the normalized address), so
+ * starring from either surface lights up the other.
+ */
+export function rowStarKey(row: VacancyDirectoryRow): string {
+  return siteStarKey({ pin: row.pin, address: row.address });
+}
+
+/** Whether a row is in the starred set. Empty set = nothing starred. */
+export function rowIsStarred(
+  row: VacancyDirectoryRow,
+  starredKeys: ReadonlySet<string>,
+): boolean {
+  const key = rowStarKey(row);
+  return key !== "" && starredKeys.has(key);
+}
+
 /** The directory's full filter state. Every set is "empty means no filter". */
 export interface DirectoryFilters {
   /** Opportunity-Area handoff: exact clusterId match, or null for no filter. */
@@ -101,6 +131,18 @@ export interface DirectoryFilters {
   flags: ReadonlySet<FlagValue>;
   /** Case-insensitive substring on address; empty/whitespace = no filter. */
   search: string;
+  /**
+   * Starred facet (admin only). Optional so every pre-existing caller and test
+   * compiles unchanged, and — like every other column — an empty/absent
+   * selection is NO filter rather than match-nothing.
+   */
+  starred?: ReadonlySet<StarValue>;
+  /**
+   * The starred keys to evaluate the facet against. Absent/empty means nothing
+   * is starred, so a `starred` selection of exactly {"starred"} correctly
+   * matches no rows while {"unstarred"} matches all of them.
+   */
+  starredKeys?: ReadonlySet<string>;
 }
 
 /** OR within a column, AND across columns; an empty column selection passes. */
@@ -110,6 +152,12 @@ export function rowMatchesFilters(row: VacancyDirectoryRow, filters: DirectoryFi
   if (filters.structures.size > 0 && !filters.structures.has(rowStructure(row))) return false;
   if (filters.types.size > 0 && !filters.types.has(row.propertyType)) return false;
   if (filters.flags.size > 0 && !rowFlags(row).some((f) => filters.flags.has(f))) return false;
+  if (filters.starred && filters.starred.size > 0) {
+    const value: StarValue = rowIsStarred(row, filters.starredKeys ?? new Set())
+      ? "starred"
+      : "unstarred";
+    if (!filters.starred.has(value)) return false;
+  }
   const needle = filters.search.trim().toLowerCase();
   if (needle && !row.address.toLowerCase().includes(needle)) return false;
   return true;
