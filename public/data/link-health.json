@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-08-01T08:37:49.596Z",
+  "checkedAt": "2026-08-02T08:41:51.959Z",
   "totals": {
     "checked": 12,
     "ok": 12,
@@ -14,7 +14,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     },
     {
       "programId": "sbif",
@@ -24,7 +24,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/a9b7c762-50de-4ac3-87dc-0590a08708a5/2026-sbif-application",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     },
     {
       "programId": "class7a",
@@ -34,7 +34,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/302696/city-of-chicago-cook-county-property-tax-incentive-application",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     },
     {
       "programId": "nof",
@@ -44,7 +44,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/328194/neighborhood-opportunity-fund-nof-grant-application",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     },
     {
       "programId": "nof",
@@ -54,7 +54,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/320126/neighborhood-opportunity-fund-nof-grant-application-spanish",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     },
     {
       "programId": "ccsa",
@@ -64,7 +64,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/343419/commercial-corridor-storefront-activation-grant",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     },
     {
       "programId": "class6b",
@@ -74,7 +74,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/302696/city-of-chicago-cook-county-property-tax-incentive-application",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     },
     {
       "programId": "cdgSmall",
@@ -84,7 +84,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/348438/small-community-development-grants-up-to-250-000",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     },
     {
       "programId": "cdgSmall",
@@ -94,7 +94,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/354576/subvencion-de-desarrollo-comunitario-hasta-250-000-2026",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     },
     {
       "programId": "cdgMedium",
@@ -104,7 +104,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/345760/medium-community-development-grant-application",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     },
     {
       "programId": "cdgLarge",
@@ -114,7 +114,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/345775/large-community-development-grant-application",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     },
     {
       "programId": "workforceSolutions",
@@ -124,7 +124,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit",
       "error": null,
-      "checkedAt": "2026-08-01T08:37:49.596Z"
+      "checkedAt": "2026-08-02T08:41:51.959Z"
     }
   ]
 }
