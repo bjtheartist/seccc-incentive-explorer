@@ -515,18 +515,30 @@ function inChicagoBounds(lat: number, lng: number): boolean {
   );
 }
 
+/**
+ * Filers point at an attachment instead of listing a grantee in several
+ * interchangeable ways. Matching only the first phrase leaves the others live:
+ * the Tier-1 quarantine file carries two Anthony Pritzker Fam Foundation rows
+ * ($19,775,200 and $18,799,294) whose recipient reads "SEE STATEMENT" — the exact
+ * same grant-schedule aggregate as "SEE ATTACHED", which the narrower test let
+ * through. The whole family is rejected, so the shape is caught regardless of
+ * which wording a filer's software emits.
+ */
+const FOUNDATION_ATTACHMENT_PLACEHOLDER_RE =
+  /\bsee\s+(attach\w*|statement|schedule|exhibit|list|below|note)\b/i;
+
 /** Placeholder rows the 990 parser captured as a whole grant-SCHEDULE aggregate
- * rather than a single grant: recipient/address literally "SEE ATTACHED", or a
- * 99999-style filler zip/address. Rejected so a $120M "grant to SEE ATTACHED"
- * never counts as a real award. Applied identically to EVERY foundation input
- * file. */
+ * rather than a single grant: a recipient/address that points at an attachment
+ * ("SEE ATTACHED", "SEE STATEMENT", "SEE SCHEDULE"…), or a 99999-style filler
+ * zip/address. Rejected so a $120M "grant to SEE ATTACHED" never counts as a real
+ * award. Applied identically to EVERY foundation input file. */
 export function isPlaceholderFoundationRow(r: Record<string, string>): boolean {
   const recipient = (r.recipient || "").trim();
   const addr1 = (r.address_line1 || "").trim();
   const zip = (r.zip || "").trim();
   return (
-    /see attached/i.test(recipient) ||
-    /see attached/i.test(addr1) ||
+    FOUNDATION_ATTACHMENT_PLACEHOLDER_RE.test(recipient) ||
+    FOUNDATION_ATTACHMENT_PLACEHOLDER_RE.test(addr1) ||
     /^9{5}$/.test(zip) ||
     /^9{5}$/.test(addr1)
   );
