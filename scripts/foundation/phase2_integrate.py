@@ -148,6 +148,10 @@ def main():
             tallies["review_excluded"] += 1
             continue
 
+        # tax_year -> object_id of the filing that produced those rows, so a
+        # review-held row keeps its provenance pointer instead of a blank
+        year_oid = {rec["tax_yr"]: rec["object_id"] for rec in f["filings"]}
+        year_status = {rec["tax_yr"]: rec["status"] for rec in f["filings"]}
         held = {}  # tax_year -> (count, dollars) pulled back by review
         for r in f["rows"]:
             r = dict(r)
@@ -160,8 +164,11 @@ def main():
                 held[r["tax_year"]] = (c + 1, d + amt)
                 r.update({
                     "lat": "", "lng": "", "locType": "intermediary_or_citywide",
-                    "exclusion_reason": reason, "object_id": "",
-                    "reconciliation_status": "review_excluded",
+                    "exclusion_reason": reason,
+                    "object_id": year_oid.get(r["tax_year"], ""),
+                    # the filing's own reconciliation verdict stands; the REVIEW
+                    # verdict lives in exclusion_reason
+                    "reconciliation_status": year_status.get(r["tax_year"], ""),
                 })
                 quarantine_rows.append(r)
                 continue
@@ -172,14 +179,24 @@ def main():
                 q["foundation"] = display
             quarantine_rows.append(q)
         if held:
-            # the recon report's Chicago tallies describe what PUBLISHED
+            # The recon report's Chicago tallies describe what PUBLISHED. Consume
+            # each year's held tally across that year's recon rows with capping,
+            # so two same-year filings (short year + full year) can never each
+            # absorb the full subtraction.
+            remaining = dict(held)
             for rec in recon_rows:
-                if rec["ein"] == ein and rec["tax_yr"] in held:
-                    c, d = held[rec["tax_yr"]]
-                    rec["chicago_rows"] = max(0, rec["chicago_rows"] - c)
-                    rec["chicago_dollars"] = round(rec["chicago_dollars"] - d, 2)
-                    rec["bridge_note"] = (rec["bridge_note"] + " | review pass held "
-                                          f"{c} row(s) (${d:,.0f}) back from publication")
+                if rec["ein"] != ein or rec["tax_yr"] not in remaining:
+                    continue
+                c_rem, d_rem = remaining[rec["tax_yr"]]
+                if c_rem <= 0 and d_rem <= 0:
+                    continue
+                c_take = min(rec["chicago_rows"], c_rem)
+                d_take = min(rec["chicago_dollars"], d_rem)
+                rec["chicago_rows"] -= c_take
+                rec["chicago_dollars"] = round(rec["chicago_dollars"] - d_take, 2)
+                remaining[rec["tax_yr"]] = (c_rem - c_take, round(d_rem - d_take, 2))
+                rec["bridge_note"] = (rec["bridge_note"] + " | review pass held "
+                                      f"{c_take} row(s) (${d_take:,.0f}) back from publication")
 
         chi_rows = sum(rec["chicago_rows"] for rec in f["filings"])
         chi_dollars = round(sum(rec["chicago_dollars"] for rec in f["filings"]), 2)
@@ -202,6 +219,11 @@ def main():
             "needs_review": "needs_review",
             "resolve_failed": "needs_review",
         }.get(f["disposition"], "needs_review")
+        if disposition == "parsed_phase2" and held and chi_rows == 0:
+            # parsed cleanly, but the review pass held EVERY row back — a
+            # distinct state, so *_no_chicago_rows keeps meaning "the funder
+            # gives elsewhere" and never "we withheld the geography"
+            disposition = "parsed_phase2_review_held"
         note_bits = [b for b in ["; ".join(f["notes"]), held_note] if b]
         census_updates[ein] = {
             "disposition": disposition,

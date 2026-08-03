@@ -16,6 +16,12 @@ import { formatFullDollars, formatPercent, SOURCE_LABELS_SHORT } from "./format"
  * Client component: one text box filters across funder, program, and recipient.
  * Every figure is an AWARDED amount. Pure presentation over server-shaped rows.
  */
+/** Rows actually rendered into the DOM. The search filters over EVERY flow, so
+ * nothing is unfindable — but a 4,000-row community (the flows tripled when the
+ * foundation universe reached the 80% coverage bar) must not mount 4,000 table
+ * rows. Rows are already sorted by dollars desc, so the cap keeps the head. */
+const RENDER_CAP = 400;
+
 export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: number }) {
   const [query, setQuery] = useState("");
 
@@ -30,6 +36,7 @@ export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: numbe
         String(r.year).includes(q),
     );
   }, [rows, query]);
+  const rendered = filtered.length > RENDER_CAP ? filtered.slice(0, RENDER_CAP) : filtered;
 
   if (rows.length === 0) {
     return (
@@ -67,7 +74,7 @@ export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: numbe
             </tr>
           </thead>
           <tbody>
-            {filtered.map((r) => (
+            {rendered.map((r) => (
               <tr key={r.id} className="border-b border-[#0C1B33]/5 last:border-b-0">
                 <td className="px-4 py-2.5 text-[#0C1B33]">
                   <span className="flex items-center gap-1.5">
@@ -89,6 +96,14 @@ export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: numbe
                 </td>
               </tr>
             ))}
+            {filtered.length > RENDER_CAP ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-3 text-center text-[12px] text-[#0C1B33]/50">
+                  Showing the {RENDER_CAP} largest of {filtered.length.toLocaleString()} flows — search
+                  covers all of them; narrow to see the rest.
+                </td>
+              </tr>
+            ) : null}
             {filtered.length === 0 ? (
               <tr>
                 <td colSpan={6} className="px-4 py-6 text-center text-[13px] text-[#0C1B33]/45">

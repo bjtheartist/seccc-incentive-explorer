@@ -169,8 +169,11 @@ describe("foundation grant inputs — three files, one mapper", () => {
     // Phase-2 quarantine holds TWO shapes: attachment-aggregate placeholders,
     // and whole filings the reconciliation or review pass refused. Either way a
     // row must say why it is there, and placeholder-shaped rows must still be
-    // exactly what the guard rejects.
+    // exactly what the guard rejects. The length assertion is what keeps this
+    // loop from passing VACUOUSLY on an empty file.
     const quarantined = readInput(PHASE2_QUARANTINE_FILE);
+    expect(quarantined.length).toBeGreaterThan(0);
+    expect(quarantined.some(isPlaceholderFoundationRow)).toBe(true);
     for (const row of quarantined) {
       expect((row.exclusion_reason || "").length).toBeGreaterThan(0);
       if (isPlaceholderFoundationRow(row)) {
@@ -179,6 +182,34 @@ describe("foundation grant inputs — three files, one mapper", () => {
         expect(row.exclusion_reason).toMatch(/filing_not_publishable|review_excluded/);
       }
     }
+  });
+
+  it("rejects the unitemized-RECIPIENT family, but only where the GRANTEE should be", () => {
+    // The three shapes that shipped as sited grants before the guard learned
+    // them: Field's individuals pool and contributions bucket, Grand Victoria's
+    // miscellaneous bucket.
+    for (const recipient of [
+      "10 INDIVIDUALS - DETAILS UPON REQUEST",
+      "Matching Gifts - Details Available upon request",
+      "MISCELLANEOUS GRANTS",
+      "OTHER CONTRIBUTIONS",
+    ]) {
+      expect(isPlaceholderFoundationRow({ recipient, address_line1: "123 W Real St", zip: "60601" })).toBe(true);
+    }
+    // In the ADDRESS field the same phrase means a real named grantee whose
+    // street address is withheld — an honest citywide row, never a placeholder.
+    expect(
+      isPlaceholderFoundationRow({
+        recipient: "ART INSTITUTE OF CHICAGO",
+        address_line1: "AVAILABLE UPON REQUEST",
+        zip: "60603",
+      }),
+    ).toBe(false);
+    // The bare aggregate nouns must be the WHOLE recipient — a real org whose
+    // name contains the word is untouched.
+    expect(
+      isPlaceholderFoundationRow({ recipient: "Other Voices Theater", address_line1: "1 N Main St", zip: "60601" }),
+    ).toBe(false);
   });
 
   it("routes phase-2 rows through the SAME mapper contract as the earlier files", () => {
