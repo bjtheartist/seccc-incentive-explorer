@@ -1,0 +1,71 @@
+{
+  "_provenance": "Written from the phase2-funder-review workflow (27 agents, 95 funders reviewed, every exclusion/rename adversarially verified) plus the orchestrator's filer-address sweep of all cached filings. See phase2_review_notes.json for the full flag ledger and decisions.",
+  "name_overrides": {
+    "136748171": "Beatrice P Delaney Char FDN",
+    "136753472": "Charles Busch Cemetary Trust 0735660 UW FBO",
+    "356932298": "Tull Family Foundation",
+    "363943431": "McDougal Family Foundation",
+    "364146804": "SF Foundation",
+    "366054815": "Chauncey and Marion Deering McCormick Foundation",
+    "367613423": "Tenzer Family Foundation",
+    "450575574": "CME Group Foundation",
+    "471516608": "BJB Foundation",
+    "475610834": "Chicago Beyond INC",
+    "510138577": "Ira DeCamp Foundation Under the Will of Elizabeth DeCamp McInerny",
+    "521829785": "William G McGowan Charitable Fund",
+    "527018780": "Joanne W Gauntt Charitable Foundation",
+    "527240158": "Nancy A Lauter and Alfred L McDougal Charitable Fund",
+    "766124547": "Rawley Foundation",
+    "823799236": "Lev Zahav NFP",
+    "844058990": "LKQ Community Foundation"
+  },
+  "excluded_funders": {},
+  "excluded_filings": {
+    "362429540": {
+      "2023": "filer-address artifact: all 231 recipient rows carry the foundation's own 8765 W Higgins Rd office as the recipient address (Mayo Clinic, ASPCA, Doctors Without Borders included), so neither the Chicago city attribution nor any pin is real; FY2024 files real addresses and publishes normally"
+    },
+    "237028857": {
+      "2021": "filer-address artifact: every recipient row in all four filings carries the foundation's own office as the recipient address; recipient names and dollars are real and reconciled, recipient geography is not published — held whole, funder-exchange ask attached",
+      "2022": "filer-address artifact (see 2021)",
+      "2023": "filer-address artifact (see 2021)",
+      "2024": "filer-address artifact (see 2021)"
+    },
+    "356932298": {
+      "2023": "sole row (Neuroscience Research Foundation, $500,000) lists the filer's own address as the recipient address; recipient geography unknown"
+    }
+  },
+  "excluded_rows": [
+    {
+      "ein": "363025967",
+      "recipient_contains": "available upon request",
+      "reason": "unitemized matching-gift pool at the foundation's own address — the 'available upon request' placeholder family, not a grant to that address"
+    },
+    {
+      "ein": "363680666",
+      "recipient_contains": "malott family",
+      "reason": "transfer into the officers' own donor-advised vehicle at the family-office address; ultimate grantees and geography unknowable from the filing"
+    },
+    {
+      "ein": "363680666",
+      "recipient_contains": "kizziah family",
+      "reason": "transfer into the officers' own donor-advised vehicle at the family-office address; ultimate grantees and geography unknowable from the filing"
+    },
+    {
+      "ein": "363680666",
+      "recipient_contains": "pohle family",
+      "reason": "transfer into the officers' own donor-advised vehicle at the family-office address; ultimate grantees and geography unknowable from the filing"
+    },
+    {
+      "ein": "651164639",
+      "tax_year": "2024",
+      "recipient_contains": "brca research and cure alliance",
+      "reason": "recipient address is the filer's own One S Wacker office; recipient is not a Chicago organization"
+    },
+    {
+      "ein": "651164639",
+      "tax_year": "2024",
+      "recipient_contains": "our home ukraine",
+      "reason": "recipient address is the filer's own One S Wacker office; recipient is not a Chicago organization"
+    }
+  ]
+}

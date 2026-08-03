@@ -68,8 +68,12 @@ TAX_YEARS = {"2021", "2022", "2023", "2024"}
 # object_id prefix = IRS processing year; tax years 2021-2024 process 2022 onward
 OID_PREFIXES = ("2022", "2023", "2024", "2025", "2026")
 
-# mirrors FOUNDATION_ATTACHMENT_PLACEHOLDER_RE in scripts/export-community-investment.ts
+# mirrors the two placeholder regexes in scripts/export-community-investment.ts:
+# the "see attached" family tests recipient AND address; "available upon request"
+# tests recipient ONLY (in the address field it marks a real grantee whose street
+# address is withheld -- an honest citywide row, not a placeholder)
 PLACEHOLDER_RE = re.compile(r"\bsee\s+(attach\w*|statement|schedule|exhibit|list|below|note)\b", re.I)
+UNITEMIZED_RECIPIENT_RE = re.compile(r"\bavailable\s+upon\s+request\b", re.I)
 REGRANT_KW = re.compile(r"\b(FOUNDATION|FUND|FUNDS|TRUST|FEDERATION|UNITED WAY|ENDOWMENT|DONOR|PHILANTHROP)\b", re.I)
 MEGA_KW = re.compile(r"\b(UNIVERSITY|COLLEGE|MUSEUM|HOSPITAL|MEDICAL CENTER|HEALTH SYSTEM|SEMINARY|INSTITUTE OF TECHNOLOGY)\b", re.I)
 DOWNTOWN_ZIPS = {"60601", "60602", "60603", "60604", "60605", "60606", "60654", "60661", "60611"}
@@ -232,6 +236,7 @@ def is_placeholder(g):
     return bool(
         PLACEHOLDER_RE.search(g["recipient"] or "")
         or PLACEHOLDER_RE.search(g["address_line1"] or "")
+        or UNITEMIZED_RECIPIENT_RE.search(g["recipient"] or "")
         or re.fullmatch(r"9{5}", (g["zip"] or "")[:5] or "")
         or re.fullmatch(r"9{5}", g["address_line1"] or "")
     )

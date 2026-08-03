@@ -19,9 +19,16 @@ with the audit trail it points at.
 Overrides file (scripts/foundation/phase2_overrides.json), written by the
 review pass:
   { "name_overrides": {"<ein>": "Curated Display Name"},
-    "excluded_funders": {"<ein>": "reason"} }
-Excluded funders keep their recon rows (the audit happened) but publish no
-grant rows; their census disposition carries the review reason.
+    "excluded_funders": {"<ein>": "reason"},
+    "excluded_filings": {"<ein>": {"<tax_year>": "reason"}},
+    "excluded_rows": [{"ein": ..., "recipient_contains": ...,
+                       "tax_year": optional, "reason": ...}] }
+Excluded funders/filings/rows keep their recon rows (the audit happened) but
+publish nothing; the quarantine file records each row with its review reason.
+The filing-level form exists for the filer-address artifact: filings whose
+recipient addresses are all the FILER'S own office publish names and dollars
+but no usable recipient geography, so the whole filing is held rather than
+plotted as false pins.
 """
 
 import csv
@@ -60,9 +67,25 @@ RECON_HEADER = [
 
 
 def load_overrides():
+    base = {"name_overrides": {}, "excluded_funders": {}, "excluded_filings": {}, "excluded_rows": []}
     if os.path.exists(OVERRIDES):
-        return json.load(open(OVERRIDES))
-    return {"name_overrides": {}, "excluded_funders": {}}
+        base.update(json.load(open(OVERRIDES)))
+    return base
+
+
+def row_exclusion(row, ein, excluded_filings, excluded_rows):
+    """Review reason a published row must be held back, or None."""
+    filing_reasons = excluded_filings.get(ein, {})
+    if row["tax_year"] in filing_reasons:
+        return f"review_excluded_filing: {filing_reasons[row['tax_year']]}"
+    for rule in excluded_rows:
+        if rule["ein"] != ein:
+            continue
+        if rule.get("tax_year") and rule["tax_year"] != row["tax_year"]:
+            continue
+        if rule["recipient_contains"].lower() in (row["recipient"] or "").lower():
+            return f"review_excluded_row: {rule['reason']}"
+    return None
 
 
 def write_csv(path, header, rows):
@@ -125,19 +148,51 @@ def main():
             tallies["review_excluded"] += 1
             continue
 
+        held = {}  # tax_year -> (count, dollars) pulled back by review
         for r in f["rows"]:
             r = dict(r)
             if renamed:
                 r["foundation"] = display
+            reason = row_exclusion(r, ein, ov["excluded_filings"], ov["excluded_rows"])
+            if reason:
+                amt = r["amount"] if isinstance(r["amount"], (int, float)) else 0
+                c, d = held.get(r["tax_year"], (0, 0.0))
+                held[r["tax_year"]] = (c + 1, d + amt)
+                r.update({
+                    "lat": "", "lng": "", "locType": "intermediary_or_citywide",
+                    "exclusion_reason": reason, "object_id": "",
+                    "reconciliation_status": "review_excluded",
+                })
+                quarantine_rows.append(r)
+                continue
             expansion_rows.append(r)
         for q in f["quarantined"]:
             q = dict(q)
             if renamed:
                 q["foundation"] = display
             quarantine_rows.append(q)
+        if held:
+            # the recon report's Chicago tallies describe what PUBLISHED
+            for rec in recon_rows:
+                if rec["ein"] == ein and rec["tax_yr"] in held:
+                    c, d = held[rec["tax_yr"]]
+                    rec["chicago_rows"] = max(0, rec["chicago_rows"] - c)
+                    rec["chicago_dollars"] = round(rec["chicago_dollars"] - d, 2)
+                    rec["bridge_note"] = (rec["bridge_note"] + " | review pass held "
+                                          f"{c} row(s) (${d:,.0f}) back from publication")
 
         chi_rows = sum(rec["chicago_rows"] for rec in f["filings"])
         chi_dollars = round(sum(rec["chicago_dollars"] for rec in f["filings"]), 2)
+        held_note = ""
+        if held:
+            held_rows = sum(c for c, _ in held.values())
+            held_dollars = sum(d for _, d in held.values())
+            chi_rows -= held_rows
+            chi_dollars = round(chi_dollars - held_dollars, 2)
+            held_note = (
+                f"review pass held {held_rows} row(s) / ${held_dollars:,.0f} back from "
+                f"publication (years: {', '.join(sorted(held))})"
+            )
         disposition = {
             "parsed": "parsed_phase2",
             "parsed_no_chicago_rows": "parsed_phase2_no_chicago_rows",
@@ -147,10 +202,11 @@ def main():
             "needs_review": "needs_review",
             "resolve_failed": "needs_review",
         }.get(f["disposition"], "needs_review")
+        note_bits = [b for b in ["; ".join(f["notes"]), held_note] if b]
         census_updates[ein] = {
             "disposition": disposition,
             "phase2_status": f["disposition"],
-            "phase2_note": "; ".join(f["notes"])[:300],
+            "phase2_note": " | ".join(note_bits)[:400],
             "chicago_rows": chi_rows, "chicago_dollars": chi_dollars,
             "filings": len(f["filings"]),
         }

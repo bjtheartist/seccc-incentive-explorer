@@ -142,16 +142,19 @@ describe("foundation grant inputs — three files, one mapper", () => {
     const data = loadCommunityInvestment();
     if (!data) return; // export not generated yet
     // A bare amount would false-positive against an unrelated grant of the same
-    // size, so quarantined rows are keyed by funder|recipient|amount.
+    // size — and a funder really does repeat the same grant to the same
+    // recipient across years (RRF's held FY2023 vs its published FY2024) — so
+    // quarantined rows are keyed by funder|recipient|amount|YEAR.
     const quarantinedKeys = new Set(
       [...readInput(QUARANTINE_FILE), ...readInput(PHASE2_QUARANTINE_FILE)].map(
-        (r) => `${(r.foundation || "").trim()}|${(r.recipient || "").trim()}|${Number(r.amount)}`,
+        (r) =>
+          `${(r.foundation || "").trim()}|${(r.recipient || "").trim()}|${Number(r.amount)}|${(r.tax_year || "").trim()}`,
       ),
     );
     expect(quarantinedKeys.size).toBeGreaterThan(0);
     for (const record of data.records) {
       if (record.source !== "foundation") continue;
-      const key = `${record.funderName}|${record.recipient}|${record.amountAwarded ?? Number.NaN}`;
+      const key = `${record.funderName}|${record.recipient}|${record.amountAwarded ?? Number.NaN}|${record.year ?? ""}`;
       expect(quarantinedKeys.has(key)).toBe(false);
       expect(record.recipient).not.toMatch(/see attached|see statement/i);
     }

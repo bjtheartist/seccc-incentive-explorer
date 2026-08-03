@@ -525,9 +525,18 @@ function inChicagoBounds(lat: number, lng: number): boolean {
  * same grant-schedule aggregate as "SEE ATTACHED", which the narrower test let
  * through. The whole family is rejected, so the shape is caught regardless of
  * which wording a filer's software emits.
+ *
+ * "available upon request" is the same shape without the word "see" — but ONLY
+ * when it stands where the GRANTEE should be (Coleman's "Matching Gifts -
+ * Details Available upon request" pool). In the ADDRESS field it means the
+ * opposite: a real named grantee whose street address is withheld (Deering
+ * McCormick files 107 real grants that way, $5.9M to the Art Institute et al.),
+ * which is an honest citywide row, not a placeholder. So that family tests the
+ * recipient field alone.
  */
 const FOUNDATION_ATTACHMENT_PLACEHOLDER_RE =
   /\bsee\s+(attach\w*|statement|schedule|exhibit|list|below|note)\b/i;
+const FOUNDATION_UNITEMIZED_RECIPIENT_RE = /\bavailable\s+upon\s+request\b/i;
 
 /** Placeholder rows the 990 parser captured as a whole grant-SCHEDULE aggregate
  * rather than a single grant: a recipient/address that points at an attachment
@@ -541,6 +550,7 @@ export function isPlaceholderFoundationRow(r: Record<string, string>): boolean {
   return (
     FOUNDATION_ATTACHMENT_PLACEHOLDER_RE.test(recipient) ||
     FOUNDATION_ATTACHMENT_PLACEHOLDER_RE.test(addr1) ||
+    FOUNDATION_UNITEMIZED_RECIPIENT_RE.test(recipient) ||
     /^9{5}$/.test(zip) ||
     /^9{5}$/.test(addr1)
   );
