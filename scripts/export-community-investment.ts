@@ -15,6 +15,7 @@
  *   nof_small.json / nof_large.json / sbif.json  — Socrata completion rows
  *   cdg_awards.csv                               — CDG award rounds 2022–2025
  *   foundation_grants_geocoded.csv               — 990 grants w/ lat/lng + locType
+ *   foundation_grants_tier1_expansion.csv        — SAME schema, 20 more funders (Tier 1)
  *   developments.csv                             — major development projects
  *   ellen_nof_awardees.tsv                       — Jim's 38 NOF corridor awards
  *
@@ -33,7 +34,8 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   assertNoBannedFigureKeys,
   buildCommunityInvestmentExport,
@@ -76,6 +78,26 @@ const CONTEXT_OUT_PATH = join(process.cwd(), "data", "private", "capital-context
 const CA_GEOJSON_PATH = join(process.cwd(), "public", "data", "community-areas.geojson");
 const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boundaries.geojson");
 
+/**
+ * The two private-foundation grant files. They share ONE schema and ONE mapper
+ * (mapFoundations) — the split is provenance, not semantics:
+ *
+ *   • foundation_grants_geocoded.csv — the original 11-funder 990-PF parse.
+ *   • foundation_grants_tier1_expansion.csv — the Tier-1 expansion: 20 further
+ *     Chicago private funders, every filing reconciliation-gated before a row
+ *     was allowed out (see data/curated/investment-inputs/README.md).
+ *
+ * Their funder-name sets MUST be disjoint — a name in both files would double-
+ * count that funder's dollars — so the export asserts it (assertDisjointFoundationFunders)
+ * rather than trusting the two parses to have stayed apart.
+ *
+ * Deliberately NOT read here: foundation_grants_tier1_quarantined_DO_NOT_EXPORT.csv.
+ * Those rows are grant-SCHEDULE aggregates ("SEE ATTACHED DETAIL") with no public
+ * itemization; they are committed for provenance only and must never reach a record.
+ */
+const FOUNDATION_GRANTS_FILE = "foundation_grants_geocoded.csv";
+const FOUNDATION_TIER1_FILE = "foundation_grants_tier1_expansion.csv";
+
 const NOF_PROGRAM = "Neighborhood Opportunity Fund (City of Chicago)";
 const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
 const CDG_PROGRAM = "Community Development Grant (City of Chicago)";
@@ -94,6 +116,7 @@ const PROVENANCE_LABELS = [
   "City of Chicago Small Business Improvement Fund — grant completions (Chicago Data Portal / Socrata)",
   "City of Chicago Community Development Grant — award rounds 2022–2025 (chicago.gov press releases)",
   "Private-foundation grants parsed from IRS 990-PF / 990 filings (ProPublica), geocoded to recipient address",
+  "Private-foundation grants — Tier-1 expansion: 20 additional Chicago private funders parsed from IRS 990-PF e-file XML, every filing reconciled row-sum-to-Part-I-line-3a before release; funders whose filings publish only a grant-schedule aggregate are quarantined, never counted",
   "Major development projects — Ellen's Developments map (Google My Maps)",
   "Major private developments — verified/discovered megaprojects w/ announced capital (press coverage, developer filings)",
   "Chicago Prize — Pritzker Traubert Foundation ($10M community-transformation awards + finalist planning grants)",
@@ -185,7 +208,7 @@ function historicalRecoveryRecord(
 
 /** Parse delimited text into row objects keyed by the header row. Handles
  * double-quoted fields, escaped quotes ("") and newlines inside quotes. */
-function parseDelimited(text: string, delimiter: string): Record<string, string>[] {
+export function parseDelimited(text: string, delimiter: string): Record<string, string>[] {
   const rows: string[][] = [];
   let field = "";
   let row: string[] = [];
@@ -492,31 +515,103 @@ function inChicagoBounds(lat: number, lng: number): boolean {
   );
 }
 
+/**
+ * Filers point at an attachment instead of listing a grantee in several
+ * interchangeable ways. Matching only the first phrase leaves the others live:
+ * the Tier-1 quarantine file carries two Anthony Pritzker Fam Foundation rows
+ * ($19,775,200 and $18,799,294) whose recipient reads "SEE STATEMENT" — the exact
+ * same grant-schedule aggregate as "SEE ATTACHED", which the narrower test let
+ * through. The whole family is rejected, so the shape is caught regardless of
+ * which wording a filer's software emits.
+ */
+const FOUNDATION_ATTACHMENT_PLACEHOLDER_RE =
+  /\bsee\s+(attach\w*|statement|schedule|exhibit|list|below|note)\b/i;
+
 /** Placeholder rows the 990 parser captured as a whole grant-SCHEDULE aggregate
- * rather than a single grant: recipient/address literally "SEE ATTACHED", or a
- * 99999-style filler zip/address. Rejected so a $120M "grant to SEE ATTACHED"
- * never counts as a real award. */
-function isPlaceholderFoundationRow(r: Record<string, string>): boolean {
+ * rather than a single grant: a recipient/address that points at an attachment
+ * ("SEE ATTACHED", "SEE STATEMENT", "SEE SCHEDULE"…), or a 99999-style filler
+ * zip/address. Rejected so a $120M "grant to SEE ATTACHED" never counts as a real
+ * award. Applied identically to EVERY foundation input file. */
+export function isPlaceholderFoundationRow(r: Record<string, string>): boolean {
   const recipient = (r.recipient || "").trim();
   const addr1 = (r.address_line1 || "").trim();
   const zip = (r.zip || "").trim();
   return (
-    /see attached/i.test(recipient) ||
-    /see attached/i.test(addr1) ||
+    FOUNDATION_ATTACHMENT_PLACEHOLDER_RE.test(recipient) ||
+    FOUNDATION_ATTACHMENT_PLACEHOLDER_RE.test(addr1) ||
     /^9{5}$/.test(zip) ||
     /^9{5}$/.test(addr1)
   );
 }
 
-interface FoundationStats {
+export interface FoundationStats {
   citywideFallback: number;
   droppedPlaceholder: number;
   outOfBoundsGeocodes: number;
   negativeAmountsNulled: number;
 }
 
-/** Map foundation grant rows — geometry from locType (intermediary -> citywide). */
-function mapFoundations(rows: Record<string, string>[]): {
+/** Sum two foundation-file tallies so the meta counters describe EVERY foundation
+ * input, not just the first file. Splitting the input without summing here would
+ * silently under-report the drops (a placeholder rejected in the second file would
+ * vanish from `meta.droppedPlaceholder` and from the audit trail). */
+export function mergeFoundationStats(a: FoundationStats, b: FoundationStats): FoundationStats {
+  return {
+    citywideFallback: a.citywideFallback + b.citywideFallback,
+    droppedPlaceholder: a.droppedPlaceholder + b.droppedPlaceholder,
+    outOfBoundsGeocodes: a.outOfBoundsGeocodes + b.outOfBoundsGeocodes,
+    negativeAmountsNulled: a.negativeAmountsNulled + b.negativeAmountsNulled,
+  };
+}
+
+/**
+ * Fail LOUDLY if two foundation grant files claim the same funder. The files are
+ * separate PARSES, not separate slices of one funder list, so an overlap means the
+ * same 990-PF grants were counted twice — an invisible inflation of the awarded
+ * headline that no downstream test would attribute to its cause.
+ *
+ * Name equality is exact and case-insensitive on trimmed text, matching the way
+ * funderName is carried through to the export: names stay EXACTLY as the CSV has
+ * them. "Pritzker Traubert Foundation", "Pritzker Family Foundation", "Pritzker
+ * Foundation", and "Anthony Pritzker Fam Foundation" are four DIFFERENT filers with
+ * four different EINs — never normalize a shared surname into a collision.
+ */
+export function assertDisjointFoundationFunders(
+  a: { file: string; rows: Record<string, string>[] },
+  b: { file: string; rows: Record<string, string>[] },
+): void {
+  const namesOf = (rows: Record<string, string>[]) =>
+    new Map(
+      rows
+        .map((r) => (r.foundation || "").trim())
+        .filter(Boolean)
+        .map((name) => [name.toLowerCase(), name] as const),
+    );
+  const aNames = namesOf(a.rows);
+  const shared: string[] = [];
+  for (const [key, name] of namesOf(b.rows)) {
+    if (aNames.has(key)) shared.push(name);
+  }
+  if (shared.length > 0) {
+    throw new Error(
+      `Foundation funder collision between ${a.file} and ${b.file}: ` +
+        `${shared.sort().join(", ")}. The same funder's grants would be counted twice — ` +
+        `resolve the overlap in the input files, never by renaming a funder here.`,
+    );
+  }
+}
+
+/**
+ * Map foundation grant rows — geometry from locType (intermediary -> citywide).
+ *
+ * `idPrefix` keeps each input file's ids in their own namespace, so adding a
+ * second foundation file cannot collide with (or renumber) the first file's
+ * already-published record ids.
+ */
+export function mapFoundations(
+  rows: Record<string, string>[],
+  idPrefix = "foundation",
+): {
   records: CommunityInvestmentRecord[];
   stats: FoundationStats;
 } {
@@ -561,7 +656,7 @@ function mapFoundations(rows: Record<string, string>[]): {
     }
     const addr = [r.address_line1, r.city, r.state, r.zip].map((s) => (s || "").trim()).filter(Boolean).join(", ");
     out.push({
-      id: `foundation-${idx++}`,
+      id: `${idPrefix}-${idx++}`,
       source: "foundation",
       funderType: SOURCE_FUNDER_TYPE.foundation,
       funderName: nullableStr(r.foundation) || "(unnamed foundation)",
@@ -2032,7 +2127,20 @@ async function main() {
   const nofSmall = nofSmallR.records;
   const nofLarge = nofLargeR.records;
   const sbif = sbifR.records;
-  const { records: foundations, stats: foundationStats } = mapFoundations(readCsv("foundation_grants_geocoded.csv"));
+  // Two foundation files, ONE mapper: same locType/citywide handling, same
+  // placeholder rejection, same negative-amount nulling. Disjointness is asserted
+  // BEFORE either file is mapped, so a collision aborts the export instead of
+  // shipping a double-counted headline.
+  const foundationBaseRows = readCsv(FOUNDATION_GRANTS_FILE);
+  const foundationTier1Rows = readCsv(FOUNDATION_TIER1_FILE);
+  assertDisjointFoundationFunders(
+    { file: FOUNDATION_GRANTS_FILE, rows: foundationBaseRows },
+    { file: FOUNDATION_TIER1_FILE, rows: foundationTier1Rows },
+  );
+  const foundationBase = mapFoundations(foundationBaseRows);
+  const foundationTier1 = mapFoundations(foundationTier1Rows, "foundation-t1");
+  const foundations = [...foundationBase.records, ...foundationTier1.records];
+  const foundationStats = mergeFoundationStats(foundationBase.stats, foundationTier1.stats);
 
   // Major private developments (developments_major.csv) + Chicago Prize inputs.
   const kmlRows = readCsv("developments.csv");
@@ -2065,7 +2173,8 @@ async function main() {
 
   console.log(
     `Mapped (pre-geocode): nof-small=${nofSmall.length} nof-large=${nofLarge.length} sbif=${sbif.length} ` +
-      `foundation=${foundations.length} prize=${prize.length} kml=${kmlRows.length} ` +
+      `foundation=${foundations.length} (base=${foundationBase.records.length} tier1=${foundationTier1.records.length}) ` +
+      `prize=${prize.length} kml=${kmlRows.length} ` +
       `mega(verified=${verifiedMega.length} discovered=${discoveredMega.length}) ` +
       `(placeholder-dropped=${foundationStats.droppedPlaceholder} out-of-bounds->citywide=${foundationStats.outOfBoundsGeocodes} ` +
       `negative-nulled=${foundationStats.negativeAmountsNulled} preWindow-dropped=${droppedPreWindow})`,
@@ -2334,7 +2443,19 @@ async function main() {
   console.log(`Wrote ${CONTEXT_OUT_PATH}`);
 }
 
-main().catch((err) => {
-  console.error("Export failed:", err);
-  process.exit(1);
-});
+/**
+ * Only run the export when this file is the entry point. The pure helpers above
+ * (isPlaceholderFoundationRow, assertDisjointFoundationFunders, mapFoundations)
+ * are exported so the test suite can exercise them directly — without this guard,
+ * importing one of them would kick off a full 27k-record export mid-test. Same
+ * pattern as scripts/import-chicago-arpa-recovery.ts.
+ */
+const isDirectRun =
+  process.argv[1] != null && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error("Export failed:", err);
+    process.exit(1);
+  });
+}
