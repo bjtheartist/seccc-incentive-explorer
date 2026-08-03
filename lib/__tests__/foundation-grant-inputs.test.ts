@@ -12,17 +12,19 @@ import {
 
 /**
  * The private-foundation block of the Community Investment export is now built
- * from TWO input files that share one schema and one mapper:
+ * from THREE input files that share one schema and one mapper:
  *
- *   foundation_grants_geocoded.csv         — the original 11-funder 990-PF parse
- *   foundation_grants_tier1_expansion.csv  — the Tier-1 expansion (20 more funders)
+ *   foundation_grants_geocoded.csv          — the original 11-funder 990-PF parse
+ *   foundation_grants_tier1_expansion.csv   — the Tier-1 expansion (20 more funders)
+ *   foundation_grants_phase2_expansion.csv  — the Phase-2 expansion to the 80%
+ *                                             capacity-coverage bar
  *
  * Splitting an input across files creates two failure modes that no downstream
  * assertion would attribute to their cause, so both are tested here directly:
  *
- *   1. DOUBLE COUNT — the same funder appearing in both parses would silently
+ *   1. DOUBLE COUNT — the same funder appearing in two parses would silently
  *      inflate the awarded headline by that funder's whole grant list.
- *   2. UNAPPLIED GUARD — the second file bypassing the placeholder rejection
+ *   2. UNAPPLIED GUARD — a later file bypassing the placeholder rejection
  *      would let a grant-SCHEDULE aggregate ("SEE ATTACHED DETAIL", tens of
  *      millions in one row) enter the export as a single real award.
  */
@@ -30,7 +32,9 @@ import {
 const INPUT_DIR = path.join(process.cwd(), "data", "curated", "investment-inputs");
 const BASE_FILE = "foundation_grants_geocoded.csv";
 const TIER1_FILE = "foundation_grants_tier1_expansion.csv";
+const PHASE2_FILE = "foundation_grants_phase2_expansion.csv";
 const QUARANTINE_FILE = "foundation_grants_tier1_quarantined_DO_NOT_EXPORT.csv";
+const PHASE2_QUARANTINE_FILE = "foundation_grants_phase2_quarantined_DO_NOT_EXPORT.csv";
 const PRIZE_FILE = "chicago_prize.csv";
 
 function readInput(file: string): Record<string, string>[] {
@@ -39,12 +43,13 @@ function readInput(file: string): Record<string, string>[] {
 
 const baseRows = readInput(BASE_FILE);
 const tier1Rows = readInput(TIER1_FILE);
+const phase2Rows = readInput(PHASE2_FILE);
 
 const funderNames = (rows: Record<string, string>[]) =>
   new Set(rows.map((r) => (r.foundation || "").trim()).filter(Boolean));
 
-describe("foundation grant inputs — two files, one mapper", () => {
-  it("both files carry the SAME 13-column schema, so one mapper can read both", () => {
+describe("foundation grant inputs — three files, one mapper", () => {
+  it("all three files carry the SAME 13-column schema, so one mapper can read them all", () => {
     const columns = (rows: Record<string, string>[]) => Object.keys(rows[0]);
     const expected = [
       "foundation",
@@ -63,22 +68,27 @@ describe("foundation grant inputs — two files, one mapper", () => {
     ];
     expect(columns(baseRows)).toEqual(expected);
     expect(columns(tier1Rows)).toEqual(expected);
+    expect(columns(phase2Rows)).toEqual(expected);
   });
 
-  it("the two committed files have DISJOINT funder-name sets (no double count)", () => {
-    const base = funderNames(baseRows);
-    const tier1 = funderNames(tier1Rows);
-    expect(base.size).toBeGreaterThan(0);
-    expect(tier1.size).toBeGreaterThan(0);
-    const shared = [...tier1].filter((name) => base.has(name));
-    expect(shared).toEqual([]);
-    // The export asserts this itself, so the guard runs on every regen.
-    expect(() =>
-      assertDisjointFoundationFunders(
-        { file: BASE_FILE, rows: baseRows },
-        { file: TIER1_FILE, rows: tier1Rows },
-      ),
-    ).not.toThrow();
+  it("the committed files have PAIRWISE DISJOINT funder-name sets (no double count)", () => {
+    const inputs = [
+      { file: BASE_FILE, rows: baseRows },
+      { file: TIER1_FILE, rows: tier1Rows },
+      { file: PHASE2_FILE, rows: phase2Rows },
+    ];
+    for (const input of inputs) {
+      expect(funderNames(input.rows).size).toBeGreaterThan(0);
+    }
+    // The export asserts every pair itself, so the guard runs on every regen.
+    for (let i = 0; i < inputs.length; i++) {
+      for (let j = i + 1; j < inputs.length; j++) {
+        const a = funderNames(inputs[i].rows);
+        const shared = [...funderNames(inputs[j].rows)].filter((name) => a.has(name));
+        expect(shared).toEqual([]);
+        expect(() => assertDisjointFoundationFunders(inputs[i], inputs[j])).not.toThrow();
+      }
+    }
   });
 
   it("the disjointness guard FAILS LOUDLY on an overlap, naming the funder", () => {
@@ -128,19 +138,61 @@ describe("foundation grant inputs — two files, one mapper", () => {
     expect(stats.droppedPlaceholder).toBe(quarantined.length);
   });
 
-  it("NEVER reads the quarantine file: none of its aggregate dollars reach the export", () => {
+  it("NEVER reads either quarantine file: none of their rows reach the export", () => {
     const data = loadCommunityInvestment();
     if (!data) return; // export not generated yet
-    const quarantinedAmounts = new Set(
-      readInput(QUARANTINE_FILE).map((r) => Number(r.amount)),
+    // A bare amount would false-positive against an unrelated grant of the same
+    // size, so quarantined rows are keyed by funder|recipient|amount.
+    const quarantinedKeys = new Set(
+      [...readInput(QUARANTINE_FILE), ...readInput(PHASE2_QUARANTINE_FILE)].map(
+        (r) => `${(r.foundation || "").trim()}|${(r.recipient || "").trim()}|${Number(r.amount)}`,
+      ),
     );
-    expect(quarantinedAmounts.size).toBeGreaterThan(0);
+    expect(quarantinedKeys.size).toBeGreaterThan(0);
     for (const record of data.records) {
       if (record.source !== "foundation") continue;
-      expect(quarantinedAmounts.has(record.amountAwarded ?? Number.NaN)).toBe(false);
+      const key = `${record.funderName}|${record.recipient}|${record.amountAwarded ?? Number.NaN}`;
+      expect(quarantinedKeys.has(key)).toBe(false);
       expect(record.recipient).not.toMatch(/see attached|see statement/i);
     }
   }, 30_000);
+
+  it("APPLIES the placeholder guard to the phase-2 file, and its quarantine explains every row", () => {
+    // Same shape as the tier-1 assertion: zero placeholders in the publishable
+    // file, proven alongside a live guard rather than left vacuous.
+    expect(phase2Rows.filter(isPlaceholderFoundationRow)).toEqual([]);
+    expect(mapFoundations(phase2Rows, "foundation-p2").stats.droppedPlaceholder).toBe(0);
+
+    // Phase-2 quarantine holds TWO shapes: attachment-aggregate placeholders,
+    // and whole filings the reconciliation or review pass refused. Either way a
+    // row must say why it is there, and placeholder-shaped rows must still be
+    // exactly what the guard rejects.
+    const quarantined = readInput(PHASE2_QUARANTINE_FILE);
+    for (const row of quarantined) {
+      expect((row.exclusion_reason || "").length).toBeGreaterThan(0);
+      if (isPlaceholderFoundationRow(row)) {
+        expect(mapFoundations([row], "foundation-p2").records).toEqual([]);
+      } else {
+        expect(row.exclusion_reason).toMatch(/filing_not_publishable|review_excluded/);
+      }
+    }
+  });
+
+  it("routes phase-2 rows through the SAME mapper contract as the earlier files", () => {
+    const { records } = mapFoundations(phase2Rows, "foundation-p2");
+    expect(records.length).toBe(phase2Rows.length);
+    for (const [i, record] of records.entries()) {
+      const row = phase2Rows[i];
+      expect(record.source).toBe("foundation");
+      expect(record.funderType).toBe("philanthropic");
+      expect(record.capitalClass).toBe("grant");
+      expect(record.funderName).toBe(row.foundation);
+      if (row.locType === "intermediary_or_citywide") {
+        expect(record.geometry).toEqual({ kind: "citywide" });
+      }
+    }
+    expect(records[0].id).toBe("foundation-p2-0");
+  });
 
   it("routes tier-1 rows through the SAME locType/citywide handling as the base file", () => {
     const { records } = mapFoundations(tier1Rows, "foundation-t1");
@@ -197,18 +249,20 @@ describe.skipIf(!existsSync(EXPORT_PATH))("committed export — foundation block
    * together while a parser that eats rows — or a second file silently not being
    * read at all — trips it.
    */
-  it("PARTITIONS both foundation inputs plus Chicago Prize against the mapped records", () => {
+  it("PARTITIONS all foundation inputs plus Chicago Prize against the mapped records", () => {
     const data = loadCommunityInvestment()!;
     const mapped = countBySource(data.records)["foundation"] ?? 0;
     const prizeRows = readInput(PRIZE_FILE).length;
 
     expect(mapped + data.meta.droppedPlaceholder).toBe(
-      baseRows.length + tier1Rows.length + prizeRows,
+      baseRows.length + tier1Rows.length + phase2Rows.length + prizeRows,
     );
-    // Both files are genuinely present — the identity above would also hold if
-    // the tier-1 file were empty.
+    // Every file is genuinely present — the identity above would also hold if
+    // one of the expansion files were empty.
     expect(tier1Rows.length).toBeGreaterThan(0);
+    expect(phase2Rows.length).toBeGreaterThan(0);
     expect(data.records.some((r) => r.id.startsWith("foundation-t1-"))).toBe(true);
+    expect(data.records.some((r) => r.id.startsWith("foundation-p2-"))).toBe(true);
   }, 30_000);
 
   it("carries every funder from BOTH files, minus the one whose 990 rows are ALL placeholders", () => {
@@ -230,20 +284,27 @@ describe.skipIf(!existsSync(EXPORT_PATH))("committed export — foundation block
       expect(inExport.has(name)).toBe(false);
     }
 
-    for (const name of [...funderNames(baseRows), ...funderNames(tier1Rows)]) {
+    for (const name of [
+      ...funderNames(baseRows),
+      ...funderNames(tier1Rows),
+      ...funderNames(phase2Rows),
+    ]) {
       if (placeholderOnlyFunders.has(name)) continue;
       expect(inExport.has(name)).toBe(true);
     }
 
-    // The only name in the export that comes from neither grant file is the
-    // Chicago Prize label, which is its own curated input.
+    // The only name in the export that comes from none of the grant files is
+    // the Chicago Prize label, which is its own curated input.
     const extras = [...inExport].filter(
-      (name) => !funderNames(baseRows).has(name) && !funderNames(tier1Rows).has(name),
+      (name) =>
+        !funderNames(baseRows).has(name) &&
+        !funderNames(tier1Rows).has(name) &&
+        !funderNames(phase2Rows).has(name),
     );
     expect(extras).toEqual(["Pritzker Traubert Foundation — Chicago Prize"]);
   }, 30_000);
 
-  it("record ids stay unique across the two foundation namespaces", () => {
+  it("record ids stay unique across the three foundation namespaces", () => {
     const data = loadCommunityInvestment()!;
     const ids = data.records.filter((r) => r.source === "foundation").map((r) => r.id);
     expect(new Set(ids).size).toBe(ids.length);

@@ -97,6 +97,7 @@ const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boun
  */
 const FOUNDATION_GRANTS_FILE = "foundation_grants_geocoded.csv";
 const FOUNDATION_TIER1_FILE = "foundation_grants_tier1_expansion.csv";
+const FOUNDATION_PHASE2_FILE = "foundation_grants_phase2_expansion.csv";
 
 const NOF_PROGRAM = "Neighborhood Opportunity Fund (City of Chicago)";
 const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
@@ -117,6 +118,7 @@ const PROVENANCE_LABELS = [
   "City of Chicago Community Development Grant — award rounds 2022–2025 (chicago.gov press releases)",
   "Private-foundation grants parsed from IRS 990-PF / 990 filings (ProPublica), geocoded to recipient address",
   "Private-foundation grants — Tier-1 expansion: 20 additional Chicago private funders parsed from IRS 990-PF e-file XML, every filing reconciled row-sum-to-Part-I-line-3a before release; funders whose filings publish only a grant-schedule aggregate are quarantined, never counted",
+  "Private-foundation grants — Phase-2 expansion to the 80% capacity-coverage bar: further Chicago private funders parsed from IRS 990-PF / 990 e-file XML under the same reconciliation gate (row sum ties the filing's own printed total within $1); 990 Schedule I filers publish itemized rows only, with the sub-$5k remainder disclosed as a bridge, never invented",
   "Major development projects — Ellen's Developments map (Google My Maps)",
   "Major private developments — verified/discovered megaprojects w/ announced capital (press coverage, developer filings)",
   "Chicago Prize — Pritzker Traubert Foundation ($10M community-transformation awards + finalist planning grants)",
@@ -2127,20 +2129,35 @@ async function main() {
   const nofSmall = nofSmallR.records;
   const nofLarge = nofLargeR.records;
   const sbif = sbifR.records;
-  // Two foundation files, ONE mapper: same locType/citywide handling, same
+  // Three foundation files, ONE mapper: same locType/citywide handling, same
   // placeholder rejection, same negative-amount nulling. Disjointness is asserted
-  // BEFORE either file is mapped, so a collision aborts the export instead of
-  // shipping a double-counted headline.
+  // PAIRWISE before any file is mapped, so a collision aborts the export instead
+  // of shipping a double-counted headline.
   const foundationBaseRows = readCsv(FOUNDATION_GRANTS_FILE);
   const foundationTier1Rows = readCsv(FOUNDATION_TIER1_FILE);
-  assertDisjointFoundationFunders(
+  const foundationPhase2Rows = readCsv(FOUNDATION_PHASE2_FILE);
+  const foundationInputs = [
     { file: FOUNDATION_GRANTS_FILE, rows: foundationBaseRows },
     { file: FOUNDATION_TIER1_FILE, rows: foundationTier1Rows },
-  );
+    { file: FOUNDATION_PHASE2_FILE, rows: foundationPhase2Rows },
+  ];
+  for (let i = 0; i < foundationInputs.length; i++) {
+    for (let j = i + 1; j < foundationInputs.length; j++) {
+      assertDisjointFoundationFunders(foundationInputs[i], foundationInputs[j]);
+    }
+  }
   const foundationBase = mapFoundations(foundationBaseRows);
   const foundationTier1 = mapFoundations(foundationTier1Rows, "foundation-t1");
-  const foundations = [...foundationBase.records, ...foundationTier1.records];
-  const foundationStats = mergeFoundationStats(foundationBase.stats, foundationTier1.stats);
+  const foundationPhase2 = mapFoundations(foundationPhase2Rows, "foundation-p2");
+  const foundations = [
+    ...foundationBase.records,
+    ...foundationTier1.records,
+    ...foundationPhase2.records,
+  ];
+  const foundationStats = mergeFoundationStats(
+    mergeFoundationStats(foundationBase.stats, foundationTier1.stats),
+    foundationPhase2.stats,
+  );
 
   // Major private developments (developments_major.csv) + Chicago Prize inputs.
   const kmlRows = readCsv("developments.csv");
@@ -2173,7 +2190,7 @@ async function main() {
 
   console.log(
     `Mapped (pre-geocode): nof-small=${nofSmall.length} nof-large=${nofLarge.length} sbif=${sbif.length} ` +
-      `foundation=${foundations.length} (base=${foundationBase.records.length} tier1=${foundationTier1.records.length}) ` +
+      `foundation=${foundations.length} (base=${foundationBase.records.length} tier1=${foundationTier1.records.length} phase2=${foundationPhase2.records.length}) ` +
       `prize=${prize.length} kml=${kmlRows.length} ` +
       `mega(verified=${verifiedMega.length} discovered=${discoveredMega.length}) ` +
       `(placeholder-dropped=${foundationStats.droppedPlaceholder} out-of-bounds->citywide=${foundationStats.outOfBoundsGeocodes} ` +
