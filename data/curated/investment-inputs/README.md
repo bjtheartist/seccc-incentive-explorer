@@ -142,6 +142,31 @@ themselves monthly, the rest are frozen snapshots — see [REFRESH.md](./REFRESH
   characteristic, not a copy in this code; do not present them as two independent
   signals
 
+## Private Foundation Grants — Tier-1 Expansion
+
+`foundation_grants_tier1_expansion.csv` adds 2,990 Chicago-recipient grant rows
+($437,837,713) from 20 further private funders, in the exact 13-column schema of
+`foundation_grants_geocoded.csv` and read through the same mapper, so the two
+files' funder-name sets must stay disjoint (the export asserts it). Thirty
+funders were parsed from IRS 990-PF e-file XML across 90 filings, and every
+filing was reconciliation-gated before a single row was allowed out — the parsed
+grant-row sum had to tie to the filing's own printed Part I line-3a total —
+yielding 75 reconciled and 15 known attachment gaps, with zero failures. Those
+gaps are concentrated in 5 aggregate-only funders that together disclose
+$384,982,870 in grantmaking with **zero public itemization** — Paul M Angell
+Family Foundation ($114.0M), Pritzker Foundation ($98.2M), Steans Family
+Foundation ($83.5M), Anthony Pritzker Fam Foundation ($56.6M), and The Richard H
+Driehaus Foundation ($32.7M) — whose filings publish only a grant-schedule total
+pointing at an unpublished attachment; their rows are quarantined in
+`foundation_grants_tier1_quarantined_DO_NOT_EXPORT.csv` for provenance, are never
+read by the export, and are flagged as funder-exchange targets (the itemization
+exists, it is simply not public, so it has to be asked for). `funder_census.csv`
+records the completed Gate A census of all 2,623 Chicago private foundations with
+each one's disposition, and `foundation_grants_tier1_reconciliation_report.csv`
+carries the per-filing audit trail (EIN, object id, parsed sum, line-3a, delta,
+status, source URL, SHA-256). Note that the four Pritzker-named entities here are
+four different filers with four different EINs and are never merged.
+
 ## Location confidence
 
 Records carry EXACTLY ONE tier per geometry kind — there is no separate

@@ -60,6 +60,7 @@ review the integrity contract in `README.md`, commit.
 | File | Source |
 | --- | --- |
 | `foundation_grants_geocoded.csv` | IRS 990 filings |
+| `foundation_grants_tier1_expansion.csv` | IRS 990-PF e-file XML (Tier-1 funders) |
 | `lihtc_chicago.csv` | HUD LIHTC placed-in-service database |
 | `nmtc_chicago.csv` | CDFI Fund NMTC public data |
 | `cra_by_community_area.csv` | FFIEC CRA disclosure |
