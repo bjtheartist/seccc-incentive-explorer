@@ -145,7 +145,9 @@ themselves monthly, the rest are frozen snapshots — see [REFRESH.md](./REFRESH
 ## Private Foundation Grants — Tier-1 Expansion
 
 `foundation_grants_tier1_expansion.csv` adds 2,990 Chicago-recipient grant rows
-($437,837,713) from 20 further private funders, in the exact 13-column schema of
+from 20 further private funders — $441,842,713 as shipped (three reversal rows
+totaling -$4,005,000 are carried in the CSV and nulled, not netted, by the
+export; the CSV's net sum is $437,837,713) — in the exact 13-column schema of
 `foundation_grants_geocoded.csv` and read through the same mapper, so the two
 files' funder-name sets must stay disjoint (the export asserts it). Thirty
 funders were parsed from IRS 990-PF e-file XML across 90 filings, and every
@@ -166,6 +168,42 @@ each one's disposition, and `foundation_grants_tier1_reconciliation_report.csv`
 carries the per-filing audit trail (EIN, object id, parsed sum, line-3a, delta,
 status, source URL, SHA-256). Note that the four Pritzker-named entities here are
 four different filers with four different EINs and are never merged.
+
+## Private Foundation Grants — Phase-2 Expansion (the 80% bar)
+
+`foundation_grants_phase2_expansion.csv` adds 8,999 Chicago-recipient grant rows
+from 65 further private funders — **$625,885,115 as shipped** (the CSV also
+carries five reversal rows totaling -$18,250, which the export NULLS rather than
+nets so a correction can never quietly reduce the awarded headline; the CSV's
+net sum is therefore $625,866,865). This is the tranche that takes
+parsed-or-dispositioned capacity coverage of the 2,623-foundation census from
+58.2% to **80.01%** of total SOI grants-paid capacity, counting the dispositions
+already_parsed / parsed_tier1 / parsed_phase2 / parsed_phase2_no_chicago_rows /
+parsed_phase2_review_held / aggregate_only as covered. Ninety-five funders were
+parsed from IRS 990-PF / 990 e-file XML across 372 filings under the same
+reconciliation gate: 335 reconciled to the filing's own printed total within $1,
+36 known attachment gaps, 1 no-control-total (a verified zero-grant year), zero
+failures. Eight new aggregate-only funders disclose $135,303,434 with no public
+itemization — Harris Family ($24.9M), Offield Family ($24.3M), Lefkofsky Family
+($23.9M), McDougal Family ($15.6M), Lev Zahav NFP ($13.2M), Hoehn Family
+($11.7M), William Blair & Company ($10.9M), Bert William Martin ($10.7M) —
+joining the Tier-1 five as funder-exchange targets.
+
+A post-parse review pass (every exclusion adversarially verified; full ledger in
+`scripts/foundation/phase2_review_notes.json`) held a further $29,737,797 back
+from publication into `foundation_grants_phase2_quarantined_DO_NOT_EXPORT.csv`:
+filings whose recipient addresses are all the FILER'S own office (Feinberg, all
+four years, ~$14.3M; Retirement Research FY2023, $6.7M — real recipients,
+fabricated geography), transfers into officers' own donor-advised vehicles
+(Malott, $3.4M), and an unitemized "Matching Gifts - Details Available upon
+request" pool (Coleman, $0.4M) — that last shape is now rejected structurally by
+the export's placeholder guard, recipient-field only, because the SAME phrase in
+the ADDRESS field marks a real named grantee whose street address is withheld
+(Deering McCormick publishes 107 real grants that way; they are honest citywide
+rows). `foundation_grants_phase2_reconciliation_report.csv` carries the
+per-filing audit trail in the Tier-1 schema, and the census now restates every
+funder's disposition from what the reconciliation reports prove rather than the
+planning-era labels.
 
 ## Location confidence
 

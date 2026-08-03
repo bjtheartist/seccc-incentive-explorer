@@ -97,6 +97,7 @@ const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boun
  */
 const FOUNDATION_GRANTS_FILE = "foundation_grants_geocoded.csv";
 const FOUNDATION_TIER1_FILE = "foundation_grants_tier1_expansion.csv";
+const FOUNDATION_PHASE2_FILE = "foundation_grants_phase2_expansion.csv";
 
 const NOF_PROGRAM = "Neighborhood Opportunity Fund (City of Chicago)";
 const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
@@ -117,6 +118,7 @@ const PROVENANCE_LABELS = [
   "City of Chicago Community Development Grant — award rounds 2022–2025 (chicago.gov press releases)",
   "Private-foundation grants parsed from IRS 990-PF / 990 filings (ProPublica), geocoded to recipient address",
   "Private-foundation grants — Tier-1 expansion: 20 additional Chicago private funders parsed from IRS 990-PF e-file XML, every filing reconciled row-sum-to-Part-I-line-3a before release; funders whose filings publish only a grant-schedule aggregate are quarantined, never counted",
+  "Private-foundation grants — Phase-2 expansion to the 80% capacity-coverage bar: 65 further Chicago private funders parsed from IRS 990-PF e-file XML under the same reconciliation gate (row sum ties the filing's own printed total within $1); a post-parse review pass additionally quarantined filings whose recipient addresses are the filer's own office",
   "Major development projects — Ellen's Developments map (Google My Maps)",
   "Major private developments — verified/discovered megaprojects w/ announced capital (press coverage, developer filings)",
   "Chicago Prize — Pritzker Traubert Foundation ($10M community-transformation awards + finalist planning grants)",
@@ -523,9 +525,23 @@ function inChicagoBounds(lat: number, lng: number): boolean {
  * same grant-schedule aggregate as "SEE ATTACHED", which the narrower test let
  * through. The whole family is rejected, so the shape is caught regardless of
  * which wording a filer's software emits.
+ *
+ * The unitemized-RECIPIENT family is the same shape without the word "see" —
+ * a pool where the GRANTEE should be: Coleman's "Matching Gifts - Details
+ * Available upon request", Field's "10 INDIVIDUALS - DETAILS UPON REQUEST" and
+ * "OTHER CONTRIBUTIONS", Grand Victoria's "MISCELLANEOUS GRANTS". The
+ * upon-request wording matches with or without "available"; the bare aggregate
+ * nouns must be the ENTIRE recipient, so a real organization whose name merely
+ * contains "other"/"various" can never be swallowed. This family tests the
+ * recipient field ALONE — in the ADDRESS field "available upon request" means
+ * the opposite: a real named grantee whose street address is withheld (Deering
+ * McCormick files 107 real grants that way, $5.9M to the Art Institute et al.),
+ * which is an honest citywide row, not a placeholder.
  */
 const FOUNDATION_ATTACHMENT_PLACEHOLDER_RE =
   /\bsee\s+(attach\w*|statement|schedule|exhibit|list|below|note)\b/i;
+const FOUNDATION_UNITEMIZED_RECIPIENT_RE =
+  /\b(details?\s+)?(available\s+)?upon\s+request\b|^\s*(miscellaneous|other|various|sundry)\s+(grants?|contributions?|donations?)\s*$/i;
 
 /** Placeholder rows the 990 parser captured as a whole grant-SCHEDULE aggregate
  * rather than a single grant: a recipient/address that points at an attachment
@@ -539,6 +555,7 @@ export function isPlaceholderFoundationRow(r: Record<string, string>): boolean {
   return (
     FOUNDATION_ATTACHMENT_PLACEHOLDER_RE.test(recipient) ||
     FOUNDATION_ATTACHMENT_PLACEHOLDER_RE.test(addr1) ||
+    FOUNDATION_UNITEMIZED_RECIPIENT_RE.test(recipient) ||
     /^9{5}$/.test(zip) ||
     /^9{5}$/.test(addr1)
   );
@@ -2127,20 +2144,35 @@ async function main() {
   const nofSmall = nofSmallR.records;
   const nofLarge = nofLargeR.records;
   const sbif = sbifR.records;
-  // Two foundation files, ONE mapper: same locType/citywide handling, same
+  // Three foundation files, ONE mapper: same locType/citywide handling, same
   // placeholder rejection, same negative-amount nulling. Disjointness is asserted
-  // BEFORE either file is mapped, so a collision aborts the export instead of
-  // shipping a double-counted headline.
+  // PAIRWISE before any file is mapped, so a collision aborts the export instead
+  // of shipping a double-counted headline.
   const foundationBaseRows = readCsv(FOUNDATION_GRANTS_FILE);
   const foundationTier1Rows = readCsv(FOUNDATION_TIER1_FILE);
-  assertDisjointFoundationFunders(
+  const foundationPhase2Rows = readCsv(FOUNDATION_PHASE2_FILE);
+  const foundationInputs = [
     { file: FOUNDATION_GRANTS_FILE, rows: foundationBaseRows },
     { file: FOUNDATION_TIER1_FILE, rows: foundationTier1Rows },
-  );
+    { file: FOUNDATION_PHASE2_FILE, rows: foundationPhase2Rows },
+  ];
+  for (let i = 0; i < foundationInputs.length; i++) {
+    for (let j = i + 1; j < foundationInputs.length; j++) {
+      assertDisjointFoundationFunders(foundationInputs[i], foundationInputs[j]);
+    }
+  }
   const foundationBase = mapFoundations(foundationBaseRows);
   const foundationTier1 = mapFoundations(foundationTier1Rows, "foundation-t1");
-  const foundations = [...foundationBase.records, ...foundationTier1.records];
-  const foundationStats = mergeFoundationStats(foundationBase.stats, foundationTier1.stats);
+  const foundationPhase2 = mapFoundations(foundationPhase2Rows, "foundation-p2");
+  const foundations = [
+    ...foundationBase.records,
+    ...foundationTier1.records,
+    ...foundationPhase2.records,
+  ];
+  const foundationStats = mergeFoundationStats(
+    mergeFoundationStats(foundationBase.stats, foundationTier1.stats),
+    foundationPhase2.stats,
+  );
 
   // Major private developments (developments_major.csv) + Chicago Prize inputs.
   const kmlRows = readCsv("developments.csv");
@@ -2173,7 +2205,7 @@ async function main() {
 
   console.log(
     `Mapped (pre-geocode): nof-small=${nofSmall.length} nof-large=${nofLarge.length} sbif=${sbif.length} ` +
-      `foundation=${foundations.length} (base=${foundationBase.records.length} tier1=${foundationTier1.records.length}) ` +
+      `foundation=${foundations.length} (base=${foundationBase.records.length} tier1=${foundationTier1.records.length} phase2=${foundationPhase2.records.length}) ` +
       `prize=${prize.length} kml=${kmlRows.length} ` +
       `mega(verified=${verifiedMega.length} discovered=${discoveredMega.length}) ` +
       `(placeholder-dropped=${foundationStats.droppedPlaceholder} out-of-bounds->citywide=${foundationStats.outOfBoundsGeocodes} ` +
