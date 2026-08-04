@@ -33,8 +33,10 @@ const INPUT_DIR = path.join(process.cwd(), "data", "curated", "investment-inputs
 const BASE_FILE = "foundation_grants_geocoded.csv";
 const TIER1_FILE = "foundation_grants_tier1_expansion.csv";
 const PHASE2_FILE = "foundation_grants_phase2_expansion.csv";
+const PHASE3_FILE = "foundation_grants_phase3_expansion.csv";
 const QUARANTINE_FILE = "foundation_grants_tier1_quarantined_DO_NOT_EXPORT.csv";
 const PHASE2_QUARANTINE_FILE = "foundation_grants_phase2_quarantined_DO_NOT_EXPORT.csv";
+const PHASE3_QUARANTINE_FILE = "foundation_grants_phase3_quarantined_DO_NOT_EXPORT.csv";
 const PRIZE_FILE = "chicago_prize.csv";
 
 function readInput(file: string): Record<string, string>[] {
@@ -44,6 +46,7 @@ function readInput(file: string): Record<string, string>[] {
 const baseRows = readInput(BASE_FILE);
 const tier1Rows = readInput(TIER1_FILE);
 const phase2Rows = readInput(PHASE2_FILE);
+const phase3Rows = readInput(PHASE3_FILE);
 
 const funderNames = (rows: Record<string, string>[]) =>
   new Set(rows.map((r) => (r.foundation || "").trim()).filter(Boolean));
@@ -69,6 +72,7 @@ describe("foundation grant inputs — three files, one mapper", () => {
     expect(columns(baseRows)).toEqual(expected);
     expect(columns(tier1Rows)).toEqual(expected);
     expect(columns(phase2Rows)).toEqual(expected);
+    expect(columns(phase3Rows)).toEqual(expected);
   });
 
   it("the committed files have PAIRWISE DISJOINT funder-name sets (no double count)", () => {
@@ -76,6 +80,7 @@ describe("foundation grant inputs — three files, one mapper", () => {
       { file: BASE_FILE, rows: baseRows },
       { file: TIER1_FILE, rows: tier1Rows },
       { file: PHASE2_FILE, rows: phase2Rows },
+      { file: PHASE3_FILE, rows: phase3Rows },
     ];
     for (const input of inputs) {
       expect(funderNames(input.rows).size).toBeGreaterThan(0);
@@ -146,7 +151,7 @@ describe("foundation grant inputs — three files, one mapper", () => {
     // recipient across years (RRF's held FY2023 vs its published FY2024) — so
     // quarantined rows are keyed by funder|recipient|amount|YEAR.
     const quarantinedKeys = new Set(
-      [...readInput(QUARANTINE_FILE), ...readInput(PHASE2_QUARANTINE_FILE)].map(
+      [...readInput(QUARANTINE_FILE), ...readInput(PHASE2_QUARANTINE_FILE), ...readInput(PHASE3_QUARANTINE_FILE)].map(
         (r) =>
           `${(r.foundation || "").trim()}|${(r.recipient || "").trim()}|${Number(r.amount)}|${(r.tax_year || "").trim()}`,
       ),
@@ -165,6 +170,8 @@ describe("foundation grant inputs — three files, one mapper", () => {
     // file, proven alongside a live guard rather than left vacuous.
     expect(phase2Rows.filter(isPlaceholderFoundationRow)).toEqual([]);
     expect(mapFoundations(phase2Rows, "foundation-p2").stats.droppedPlaceholder).toBe(0);
+    expect(phase3Rows.filter(isPlaceholderFoundationRow)).toEqual([]);
+    expect(mapFoundations(phase3Rows, "foundation-p3").stats.droppedPlaceholder).toBe(0);
 
     // Phase-2 quarantine holds TWO shapes: attachment-aggregate placeholders,
     // and whole filings the reconciliation or review pass refused. Either way a
@@ -178,6 +185,19 @@ describe("foundation grant inputs — three files, one mapper", () => {
       expect((row.exclusion_reason || "").length).toBeGreaterThan(0);
       if (isPlaceholderFoundationRow(row)) {
         expect(mapFoundations([row], "foundation-p2").records).toEqual([]);
+      } else {
+        expect(row.exclusion_reason).toMatch(/filing_not_publishable|review_excluded/);
+      }
+    }
+  });
+
+  it("phase-3 quarantine is non-empty and every row states its reason", () => {
+    const quarantined = readInput(PHASE3_QUARANTINE_FILE);
+    expect(quarantined.length).toBeGreaterThan(0);
+    for (const row of quarantined) {
+      expect((row.exclusion_reason || "").length).toBeGreaterThan(0);
+      if (isPlaceholderFoundationRow(row)) {
+        expect(mapFoundations([row], "foundation-p3").records).toEqual([]);
       } else {
         expect(row.exclusion_reason).toMatch(/filing_not_publishable|review_excluded/);
       }
@@ -289,7 +309,7 @@ describe.skipIf(!existsSync(EXPORT_PATH))("committed export — foundation block
     const prizeRows = readInput(PRIZE_FILE).length;
 
     expect(mapped + data.meta.droppedPlaceholder).toBe(
-      baseRows.length + tier1Rows.length + phase2Rows.length + prizeRows,
+      baseRows.length + tier1Rows.length + phase2Rows.length + phase3Rows.length + prizeRows,
     );
     // Every file is genuinely present — the identity above would also hold if
     // one of the expansion files were empty.
@@ -322,6 +342,7 @@ describe.skipIf(!existsSync(EXPORT_PATH))("committed export — foundation block
       ...funderNames(baseRows),
       ...funderNames(tier1Rows),
       ...funderNames(phase2Rows),
+      ...funderNames(phase3Rows),
     ]) {
       if (placeholderOnlyFunders.has(name)) continue;
       expect(inExport.has(name)).toBe(true);
@@ -333,7 +354,8 @@ describe.skipIf(!existsSync(EXPORT_PATH))("committed export — foundation block
       (name) =>
         !funderNames(baseRows).has(name) &&
         !funderNames(tier1Rows).has(name) &&
-        !funderNames(phase2Rows).has(name),
+        !funderNames(phase2Rows).has(name) &&
+        !funderNames(phase3Rows).has(name),
     );
     expect(extras).toEqual(["Pritzker Traubert Foundation — Chicago Prize"]);
   }, 30_000);

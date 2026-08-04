@@ -1,0 +1,24 @@
+{
+ "design": "SRS without replacement, seeded",
+ "seed": 20260804,
+ "universe_rows": 21816,
+ "sample_n": 2401,
+ "counts": {
+  "ok": 2401,
+  "filing_unavailable": 0
+ },
+ "by_file": {
+  "base": {
+   "ok": 1130
+  },
+  "tier1": {
+   "ok": 304
+  },
+  "phase2": {
+   "ok": 967
+  }
+ },
+ "ok_rate": 1.0,
+ "margin_note": "n=2401 gives \u00b12% at 95% confidence for the pooled universe",
+ "remediation_note": "CCT + McCormick (990/Schedule-I filers) resolved by direct EIN after census-note lookup missed them; all 390 re-audited"
+}

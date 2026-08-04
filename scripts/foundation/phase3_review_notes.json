@@ -1,0 +1,2153 @@
+{
+ "funders": [
+  {
+   "ein": "136655406",
+   "auto_name": "Edwin J Hoffritz TR UW Article Seventh",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "hq-outside-chicago: EIN 13-prefix (New York-assigned) and the sole listed fiduciary all four years is JP Morgan Chase Bank NA as trustee (comp $163,939-$178,466/yr); this is a bank-administered testamentary trust with no Chicago operating base in evidence. All four filings (2021-2024) reconciled with delta 0 against line 3a ($700,000 / $785,000 / $1,010,500 / $825,000). Only 1 of 12-13 grant rows per year is Chicago: ALZHEIMER'S DISEASE AND RELATED DISORDER at 225 N Michigan Ave 17th Fl ($40,000 in 2021 and 2022; $55,000 in 2023 and 2024) - that is the Alzheimer's Association national HQ, so the Chicago siting is real but the giving is national in character. 2025 filing (object 202641269349101844) 404'd at source - retry later. Rows are genuine grants; no exclusions."
+  },
+  {
+   "ein": "136786430",
+   "auto_name": "Richard Lounsbery Foundation INC",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago",
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Zero Chicago rows in all four years (disposition parsed_no_chicago_rows, rows empty) - this funder contributes nothing to the published dataset; consider dropping from the roster rather than carrying an empty funder. recipient-rows-look-non-grant (filing-level shape, nothing published): every filing has exactly 1 grant row whose amount equals line 3a exactly ($2,496,000 / $2,340,000 / $2,224,388 / $2,220,000), i.e. the itemized schedule is a single roll-up row, so no per-grantee itemization is recoverable even if Chicago grantees exist. hq-outside-chicago: EIN 13-prefix, JP Morgan Chase Bank NA as trustee (comp $231,042-$249,298/yr) plus individual co-trustee Richard H Pershan; bank trust-desk administration, no Chicago substance in the checkpoint. All four years reconciled delta 0. Exclude left false only because there are no published rows to exclude."
+  },
+  {
+   "ein": "271371242",
+   "auto_name": "Manaaki Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Clean, substantive funder. Four fiscal-year filings (Aug-Jul years labeled by beginning year 2021-2024), all reconciled delta 0 against line 3a ($1,573,920 / $1,527,800 / $1,505,300 / $1,594,045). Chicago share is large and consistent: 11-15 rows and $536,000-$687,420 per year (~35-45% of total giving), all to verifiable Chicago nonprofits with real street addresses (e.g. Chicago Public Media $125,000-$150,000/yr; Planned Parenthood of Illinois $285,000 in 2021; Environmental Law and Policy Center $70,000/yr; Growing Home; Chicago Abortion Fund). Family-governed (Gee family officers, mostly uncompensated; paid administrator $30,000). Purposes are generic boilerplate 2021-2023 (EXEMPT PURPOSE OF ORGANIZATION) and turn specific in 2024. FOREFRONT $75,000 (2024) and Roger Baldwin Foundation of the ACLU rows are regranting/citywide intermediaries and are already tagged locType intermediary_or_citywide. LINK UNLIMITED (2021) and LINK UNLIMITED SCHOLARS (2023, 2024) are the same org renamed. No exclusions."
+  },
+  {
+   "ein": "273930354",
+   "auto_name": "Gary Nfp",
+   "name_ok": false,
+   "name_suggestion": "Gary NFP",
+   "flags": [],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Name fix required: house style preserves the NFP token in caps (BMF legal name GARY NFP), so display should be 'Gary NFP', not 'Gary Nfp'. Zero Chicago rows in all four years (disposition parsed_no_chicago_rows, rows empty) despite 3-6 grant rows and $1,035,000-$1,222,500 in annual giving, all reconciled delta 0 - nothing to publish; consider dropping from the roster. Officers are Andrew Mason, Jennifer E Mason, Bridgit Wolf, all uncompensated; checkpoint contains no address evidence, so no hq flag is asserted. Exclude left false only because there are no published rows to exclude."
+  },
+  {
+   "ein": "436351190",
+   "auto_name": "Mathews Foundation",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Spelling 'Mathews' is the BMF legal name - do NOT 'correct' to Matthews; also distinct from the published 'Matthew Zell Family Foundation' (different filer, no merge). Zero Chicago rows in all four years (rows empty) - nothing to publish; consider dropping from the roster. hq-outside-chicago: EIN 43-prefix (Missouri-assigned) with co-trustees Northern Trust Company and John D Schaperkotter; Northern Trust trust-desk administration is not a Chicago operating base, and no Chicago substance appears anywhere in the checkpoint. Structural break: 2023 giving spikes to $2,100,000 across 2 rows versus $200,000 (2021, 1 row), $188,442 (2022, 1 row), $120,000 (2024, 1 row) - the stated capacity of $2.1M reflects that one-year outlier, not run-rate. All four years reconciled delta 0. 2025 filing (object 202601329349102320) 404'd at source. Exclude left false only because there are no published rows to exclude."
+  },
+  {
+   "ein": "841621866",
+   "auto_name": "Krehbiel Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Clean family foundation (Molex-family Krehbiels; all officers uncompensated). Only THREE filings present - fiscal years Nov-Oct labeled 2021, 2022, 2023; there is no 2024-labeled filing and no fetch-failure note, so the FYE Oct 2025 return likely is not yet public - operator should expect a 3-year series, not 4. All three years reconciled delta 0 ($965,000 / $1,243,766 / $869,000); Chicago share $395,000 / $650,766 / $324,500 across 14 / 19 / 20 rows, all to recognizable Chicago institutions (Art Institute of Chicago, MCA, A Better Chicago, Civic Federation, Lurie Children's, Big Shoulders Fund). Multiple same-year rows to one grantee are separate real grants, not dupes - e.g. Art Institute 2022 appears 4 times ($136,885 + $8,881 + $50,000 + $100,000) and High Jump 2023 three times ($10,000 + $5,000 + $15,000); make sure downstream display does not collapse or double-flag them. One garbled address: Hope Chicago 2023 $5,000 listed at '25 Broadway 12th Floor, Chicago IL 60601' - that street address does not exist in the Loop (reads like a New York address), but Hope Chicago is a genuine Chicago scholarship nonprofit, the row is ungeocoded (lat/lng empty, intermediary_or_citywide), so no map fabrication results; keep the row, optionally repair the address. Enforcers Endowment Fund 2022 $2,500 at 8467 W Windsor Ave is a small grant to a real charity at a residential-style address - fine."
+  },
+  {
+   "ein": "842220090",
+   "auto_name": "Northern Trust Foundation",
+   "name_ok": true,
+   "flags": [
+    "corporate-foundation",
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": true,
+   "exclude_reason": "Filing-level hold (Feinberg/Graham precedent): all four years the grant schedule is a single unitemized 'SEE ATTACHED' aggregate row addressed to the filer's own PO Box 803878, Chicago 60680 ($2,485,000 in 2021; $3,995,220 in 2022; $2,531,830 in 2023; $3,339,000 in 2024). The recipient is a bookkeeping label, not a grantee, and the only address is the filer's own, so any published Chicago attribution would be fabricated. Itemization is not public (status known_attachment_gap every year).",
+   "row_exclusions": [
+    {
+     "recipient_contains": "SEE ATTACHED",
+     "tax_year_or_null": null,
+     "reason": "Unitemized aggregate carrying the filer's own PO Box (803878, Chicago 60680) as the address, all four tax years 2021-2024; bookkeeping label, not a grantee. Pipeline already quarantined all four rows with exclusion_reason aggregate_only_no_itemization - that quarantine must stand permanently."
+    }
+   ],
+   "notes": "corporate-foundation: this is Northern Trust Corporation's company foundation - directors are Northern Trust executives (Michael G O'Grady, Steven L Fradkin, Connie L Lindsey, Kelly M Mannard, etc.), all uncompensated. No name collision: no other Northern Trust entity is among the 97 published funders, and this is a different filer from the Northern Trust Company trust-desk appearances elsewhere (e.g. as Mathews Foundation co-trustee) - never merge. rows[] is empty and all four recipient rows sit in quarantined[] - correct state; the funder-level exclude formalizes that nothing from this filer is publishable until itemization surfaces (possible Phase-3 inbound-scan or AG-filing target, since the totals are large at $2.5-4.0M/yr). 2025 filing (object 202641289349101124) 404'd at source."
+  },
+  {
+   "ein": "133682433",
+   "auto_name": "Dz Liebmann Fund 7428018",
+   "name_ok": false,
+   "name_suggestion": "DZ Liebmann Fund 7428018",
+   "flags": [
+    "hq-outside-chicago",
+    "scholarships-to-individuals"
+   ],
+   "exclude": false,
+   "notes": "hq-outside-chicago: NY-prefix EIN (13-) bank trust; JP Morgan Chase Bank NA is trustee (comp $188K-$205K/yr) and the grant committee is Armenian-studies academics nationwide (Aslanian, Astourian, Bardakjian, Maksoudian) \u2014 no Chicago operating base. scholarships-to-individuals: the ONLY Chicago row across four reconciled years is 2021 'DR TASHA VORDERSTRASSE ORIENTAL INST OF THE UNIV OF CHICAGO', 1155 E 58th St, $4,000, purpose 'SCHOLARSHIP' \u2014 a named individual scholar routed via the Oriental Institute address. Address is the recipient institution's, not the filer's, so the row stands as a real disbursement, but Chicago footprint is $4,000 of ~$4.18M total (2022-2024 have zero Chicago rows). Name fix is casing only: 'DZ' is an initials token in the BMF legal name (DZ LIEBMANN FUND 7428018), analogous to preserved TR/UW tokens; naive title-case 'Dz' misreads it. TY2025 filing 404 (logged in checkpoint notes). No collision with the 97 published funders."
+  },
+  {
+   "ein": "363566181",
+   "auto_name": "American Friends of Ophel Bas Zion Institutions INC",
+   "name_ok": true,
+   "flags": [
+    "daf-or-passthrough",
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": true,
+   "exclude_reason": "Every published Chicago row all four years is the unitemized bookkeeping label 'SUNDRY ORGANIZED CHARITIES' with address 'VARIOUS' (zip 60645): 2021 $13,640; 2022 $10,500; 2023 $10,500; 2024 $3,000. This is exactly the pre-flagged unitemized-recipient shape (VARIOUS/MISC) \u2014 no identifiable Chicago grantee, so no attributable rows survive; filing-level exclusion.",
+   "row_exclusions": [
+    {
+     "recipient_contains": "SUNDRY ORGANIZED CHARITIES",
+     "tax_year_or_null": null,
+     "reason": "Unitemized aggregation row, address 'VARIOUS' \u2014 bookkeeping label, not a grantee; applies to all four tax years (100% of this funder's Chicago rows)."
+    }
+   ],
+   "notes": "daf-or-passthrough: classic 'American Friends of' conduit \u2014 only 2 grant rows per year, with the bulk ($0.9M-$2.0M/yr of $913K/$1.57M/$1.70M/$2.02M totals) going to the overseas Ophel Bas Zion institutions; the Chicago residual is the sundry catch-all. Filer HQ is Chicago (60645, unpaid Belsky family officers), so no hq flag. Data oddity: TY2024 line25d prints 0 while line3a = parsed_sum $2,022,905 (reconciled to 3a per bridge note) \u2014 printing quirk worth logging. All four filings status reconciled."
+  },
+  {
+   "ein": "137046581",
+   "auto_name": "Sarah K Decoizart Perpetual Charitable TR Art 10",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows in all four reconciled years (disposition parsed_no_chicago_rows; $1.80M-$2.26M/yr in grants, none to Chicago) \u2014 nothing to publish, so no funder card should ship unless downstream logic already suppresses empty funders. hq-outside-chicago: NY-prefix EIN (13-), JP Morgan Chase Bank NA sole listed officer/trustee (comp $327K-$339K/yr), Feb-Jan fiscal years \u2014 bank trust desk, no Chicago substance. 'TR' and 'Art 10' (Article 10) preserved from BMF legal name per house style. TY2025 filing 404."
+  },
+  {
+   "ein": "200478557",
+   "auto_name": "Stephen W and Susan M Baird Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "CHARITABLE CONTRIBUTIONS FROM K-1",
+     "tax_year_or_null": null,
+     "reason": "Bookkeeping label for pass-through K-1 charitable contributions, not a grantee \u2014 2021 $12 and 2022 $55, both at 333 West Wacker Drive Ste 700 (the foundation's own c/o address). Same shape as the pre-flagged Hyatt/Lakonishok/Division Fund K-1 rows."
+    }
+   ],
+   "notes": "Genuine Chicago family foundation (Stephen W Baird of Baird & Warner; unpaid family officers), all four years reconciled, recipients are real named Chicago orgs (e.g. Chicago Public Media $225K 2021, Allies for Community Business $50K 2023/2024). Two-row exclusion above is de minimis ($67 total). Operator awareness: recurring ~$200K-$400K/yr to 'The Chicago Community Trust' / 'Chicago Community Foundation' ($197.5K, $397.5K, $247.5K, $247.5K) \u2014 real grants but likely land in a donor-advised fund at CCT; double-count risk if CCT re-grants are ever ingested. Source typos preserved as filed: 'GENERAL AND UNRESTRCITED', 'ORIENTAL INSITUTE'. No collision with published funders."
+  },
+  {
+   "ein": "261595257",
+   "auto_name": "Mccune Family Foundation",
+   "name_ok": false,
+   "name_suggestion": "McCune Family Foundation",
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Name fix is casing only (Mc-surname), not a spelling correction: BMF is MCCUNE FAMILY FOUNDATION. Verify it does not later collide with any other McCune filer if more are added (none among the current 97). hq-outside-chicago (inference from filing shape): Northern Trust Company is the only listed officer/trustee (comp $227K-$238K/yr \u2014 trust-desk administration, which per policy is not a Chicago operating base) and 26 of ~27 grant rows each year are outside Chicago. The single recurring Chicago row is $50,000/yr, all four years, to 'CHILDREN FIRST INC', 33 N LaSalle St \u2014 a plausible named grantee (kept), though 33 N LaSalle is a generic office building; operator may want to confirm which Children First entity this is. All four years reconciled."
+  },
+  {
+   "ein": "356009281",
+   "auto_name": "Co-Tr UW Charles J Lynn 200243",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows all four reconciled years (disposition parsed_no_chicago_rows) \u2014 nothing to publish. Fixed-beneficiary testamentary trust: exactly 7 grant rows every year, $2.53M-$3.03M/yr. hq-outside-chicago: Indiana-prefix EIN (35-; Charles J. Lynn was an Indianapolis/Eli Lilly figure), JP Morgan Chase Bank NA sole trustee (comp $282K-$324K/yr) \u2014 bank trust desk. Co-Tr/UW tokens and the 200243 account number preserved from BMF legal name per house style."
+  },
+  {
+   "ein": "363092281",
+   "auto_name": "Abra Prentice Foundation INC",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Genuine Chicago family foundation (Abra Prentice Wilkin president, unpaid board incl. Louis S Harrison), four reconciled years, ~$1.0M-$1.6M/yr Chicago dollars to real named grantees (e.g. Franciscan Outreach $150K 2024, ELPC $200K 2023-2024, WTTW $100K 2024 'Chicago Stories'). Not a Pritzker entity; no collision with the 97 published funders \u2014 but the display name should stay distinct from the donor's personal 'Abra Prentice Wilkin' naming if that ever appears as a separate filer. Data quirks, as filed, no action needed: 2021 American Writers Museum row carries zip 60035 (Highland Park zip on a 180 N Michigan address; other years say 60601 \u2014 geocode is correct); 2024 'BANDWITH' = BandWith Chicago legal-name spelling, do not correct."
+  },
+  {
+   "ein": "367090069",
+   "auto_name": "Harold M and Adeline S Morrison Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Genuine family foundation with professional staff (ED Bruce Boyd comp $175K-$184K in 2023-2024 \u2014 normal, not an operating-foundation signature); four reconciled years; recipients are real named Chicago orgs. Structural break to know about: Rush University Medical Center received $333,333 / $333,333 / $333,334 in 2021/2022/2023 \u2014 a $1M pledge paid in thirds that completes in 2023, which is why Chicago dollars drop from ~$505K (2023) to $136.5K (2024); real pattern, not data loss. Parser/source concatenation artifact, as filed: 'UNIVERSITY OF CHICAGOSSA FUND' = University of Chicago SSA (Crown Family School) fund with a missing space (purpose 'CROWN FAMILY SCHOOOL FUND' also as filed) \u2014 display cleanup candidate only, the grants are real. 2024 'Northwestern Lake Forest Hospital' row uses the Northwestern Memorial development office at 541 N Fairbanks, Chicago \u2014 acceptable intermediary address."
+  },
+  {
+   "ein": "611405669",
+   "auto_name": "Christopher L & M Susan Gust Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Genuine Chicago family foundation (Gust family directors, unpaid), four reconciled years. 2021 Chicago spike ($1.395M) is real: three separate same-year grants to Shirley Ryan AbilityLab ($1,000,000 general + $100,000 SPARK + $40,000 building fund) \u2014 keep all three, they are distinct grants, not duplicates. St Ignatius College Prep jumps to $535,000 (2023) and $550,000 (2024, 'GENERAL PURPOSE/HOCKEY PROGRAM') \u2014 consistent with the family's hockey-program giving, real. Concatenation artifact in CPS rows, as filed: 'CHICAGO PUBLIC SCHOOLSHELEN C PEIRCE INTERNATIONAL STUDIES SCHOOL' etc. \u2014 missing space between 'SCHOOLS' and the school name; grants (small teacher-training amounts $709-$8,800 to individual schools at their own addresses) are legitimate; display cleanup candidate only. 2024 recipient typo 'SHIRLEY RYAB ABILITY LAB' as filed \u2014 do not correct. 2021/2022 Chicago Hope Academy rows carry zip 60611 for a 2189 W Bowler St address (should be ~60612) but street-level geocode is correct. TY2025 filing 404."
+  },
+  {
+   "ein": "756013845",
+   "auto_name": "William & Catherine Bryce Memorial Fund",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows in all three available reconciled years (disposition parsed_no_chicago_rows) \u2014 nothing to publish. hq-outside-chicago: Texas-prefix EIN (75-; a Fort Worth legacy trust), JP Morgan Chase Bank NA sole trustee (comp $172K-$188K/yr), Oct-Sep fiscal years. Only three filings in the checkpoint (FY ending 9/30/2022 through 9/30/2024); the next filing fetch 404'd \u2014 coverage gap to log, immaterial while the Chicago row count is zero."
+  },
+  {
+   "ein": "136177284",
+   "auto_name": "Rosalind P Walter Foundation",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows in all four reconciled years (2021-2024, $1.54M-$2.37M/yr, delta 0 each year) \u2014 nothing will publish; consider dropping from the funder roster rather than carrying an empty funder. hq-outside-chicago: 13-series (NY) EIN, JP Morgan Chase Bank NA is the compensated trustee ($101K-$274K/yr) alongside individual co-trustees; no Chicago grantee in any year, so no Chicago substance of any kind. No rows, so no row-level issues possible."
+  },
+  {
+   "ein": "136741112",
+   "auto_name": "B H Homan Jr TR Pt 15583",
+   "name_ok": false,
+   "name_suggestion": "B H Homan Jr TR PT 15583",
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Name: 'PT' in the BMF legal name (B H HOMAN JR TR PT 15583) is a trust-registry token in the same class as TR/UW and should stay uppercase per house style; the auto-namer title-cased it to 'Pt'. Zero Chicago rows in all four reconciled years (2021-2024 FYs ending May 31, $1.2M-$1.43M/yr) \u2014 nothing will publish; consider dropping. Sole officer every year is JPMorgan Chase Bank NA as compensated trustee ($233K-$270K/yr); 13-series (NY) EIN; bank-trust-desk administration, no Chicago operating base or Chicago grantee."
+  },
+  {
+   "ein": "137102172",
+   "auto_name": "Renate Hans and Maria Hofmann Trust",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows in all four reconciled years (2021-2024 FYs ending Jun 30; 12-13 grant rows/yr, $2.0M-$2.5M/yr, delta 0) \u2014 nothing will publish; consider dropping. Officers are JP Morgan Chase Bank NA (co-trustee, $272K-$328K/yr) and Patricia A Gallagher Esq (trustee, $49K-$195K/yr); 13-series (NY) EIN; bank-administered trust with no Chicago grantee in any year."
+  },
+  {
+   "ein": "266307600",
+   "auto_name": "Jerome Nerenberg 2000 Charitable TR",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Clean. Fixed-share distribution trust administered by Northern Trust Company (trustee, $64K-$79K/yr): the same three Chicago beneficiaries every year \u2014 Newberry Library, Gateway Foundation Inc, Lyric Opera of Chicago \u2014 in constant proportions (e.g. 2021: $66,332 / $79,598 / $106,131; each year Gateway = 1.2x and Lyric = 1.6x Newberry), consistent with a testamentary trust paying percentage shares of income. All four years reconciled (delta 0). Real institutional grantees at their own addresses; Chicago attribution genuine. Note: a fifth filing (object 202611289349101416) 404'd after 3 fetch attempts \u2014 2025 return not yet in the lake."
+  },
+  {
+   "ein": "363487448",
+   "auto_name": "Paul A & Joan S Rubschlager Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Clean family foundation (Paul A and Joan S Rubschlager, uncompensated trustees). Only THREE filings present (FYs ending Oct 2022/2023/2024 labeled tax_yr 2021-2023); the next object id 202601479349101200 404'd \u2014 expect a fourth year later. All present years reconciled (delta 0). Anchor grants are real: Rush University Medical Center $2,000,000 (2021), Lookingglass Theatre $1,000,000 (2022) and $500,000 (2023). Data quirks as filed: Shriner's Children's Hospital row says '2211 OAK PARK AVENUE, CHICAGO 60607' \u2014 actual site is 2211 N Oak Park Ave 60707, still inside Chicago (geocode ~41.917,-87.795 is consistent), zip as filed is wrong but attribution is sound; purpose field flips between 'CIVIC & SOCIAL' and 'CIVIL & SOCIAL' (filer typo); a few rows lack geocodes (PO Box 7410354 lockbox for Muscular Dystrophy Association)."
+  },
+  {
+   "ein": "363674212",
+   "auto_name": "Eugene and Janet Lerner Family Foundation INC",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Clean. Four reconciled years (delta 0). Chicago dollars are heavily concentrated in Jewish United Fund ($275K-$285K of each year's $329K-$384K Chicago total, ~75-80%), already typed intermediary_or_citywide \u2014 JUF is a federation regrantor, so downstream neighborhood attribution is unknowable from this filing; not a DAF and not an exclusion, just concentration to be aware of. Remaining rows are real sited grantees (WBEZ, WTTW, Rivendell Theatre, Friends of the IDF Chicago office, Judd Goldman Adaptive Sailing, LUV City, Bayit Brigade). President Laura Lerner takes $5,000/yr; all other officers unpaid."
+  },
+  {
+   "ein": "363987600",
+   "auto_name": "Bill Nygren Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Clean. Four reconciled years (delta 0); Nygren family board, all uncompensated. Real Chicago grantees with stable repeat giving (Communities In Schools $100K/yr, Strides for Peace $100K-$135K/yr, Mercy Home $50K/yr, U of C Urban Labs $350K in 2022). Data quirks as filed: 'STRIDE FOR PEACES' (2021) is the filer's typo for Strides for Peace \u2014 same org, address matches its 200 W Madison / 207 E Ohio locations; several rows use remittance/lockbox addresses with blank geocodes (United Way of Chicago '231196 MOMENTUM PLACE' 60689, Youth Guidance PO Box 95286 60694 in 2024, LEARN Charter PO Box 08328, GCFD zip 60680) \u2014 the grantees are genuinely Chicago organizations, so attribution is substantively correct even though those rows won't map."
+  },
+  {
+   "ein": "366007812",
+   "auto_name": "The Kemper Foundation",
+   "name_ok": true,
+   "flags": [
+    "corporate-foundation"
+   ],
+   "exclude": false,
+   "notes": "corporate-foundation: board is Kemper Corporation leadership (Joseph Lacher chairman all four years, plus Boschelli/Aziz/Camden etc., all uncompensated) and the giving pattern is corporate \u2014 'KEMPER'S ACS MATCHING GIFT CAMPAIGN' $94,322 (2024), 'MATCHING GIFT FOR GERRY LADERMAN DONATION' $5,000, event tables ('WISH BALL 2022' $14,500, Chicago Urban League 'ANNUAL DINNER' $7,250), plus the long-running Kemper Scholars Program paid to the University of Chicago as institutional grants ($200K 2022, $200K 2023, $150K 2024 \u2014 institution-paid, so no scholarships-to-individuals flag). Structural break: first filing is a 5-month stub period (2021-08-01 to 2021-12-31, only $30,891 Chicago) from a fiscal-year change \u2014 2021 will look artificially low. All four years reconciled (delta 0). Chicago is a small slice of total giving (8 of 92-145 rows/yr). ISTAT Foundation row uses lockbox '27160 NETWORK PL' 60673 (no geocode); ACS PO Box 10393 likewise \u2014 legitimate grants, remittance addresses only."
+  },
+  {
+   "ein": "366118260",
+   "auto_name": "Baskin Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Three reconciled years only (FYs ending Aug 2022/2023/2024 as tax_yr 2021-2023, delta 0 each); no fourth filing and no fetch-failure note \u2014 FY2025 likely not yet filed. Real Chicago grantees (Restore Justice up to $155K/yr across split rows, The Point Magazine $100K in 2023, RefugeeOne $35K-$40K, Hubbard Street, John Howard Association). Same-recipient multi-row years (Perspectives 2x$5,000 in 2021; Restore Justice 3 rows in 2022 and 2023; The Point 2 rows/yr) are separate installments that tie to line 3a \u2014 keep all. As-filed typos to expect downstream: 'JOFFERY BALLET', 'JOHN HOWARD ASSOCATION', 'PPO BOX 2417', '1716 W HUBBARD STQ', and Academy for Global Citizenship at '44647 W 47TH ST' (real address 4647 W 47th; geocode blank so nothing was fabricated). One weak-attribution row worth an operator glance, not exclusion: PANORAMA GLOBAL $1,023 (2021) at '918 W SCHOOL ST' zip 60606 \u2014 Panorama Global is a Seattle-based fiscal sponsor and that street is residential Lakeview (zip would be 60657); the Chicago address is as-filed, likely a contact address."
+  },
+  {
+   "ein": "756084824",
+   "auto_name": "Grace G Thornton Uta Scholarship TR R76992008",
+   "name_ok": false,
+   "name_suggestion": "Grace G Thornton UTA Scholarship TR R76992008",
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Name: 'UTA' (Under Trust Agreement) is a trust token in the same class as UW/TR and should stay uppercase; auto-namer produced 'Uta'. Zero Chicago rows in all four reconciled years \u2014 nothing will publish; consider dropping. Exactly ONE grant row per year ($1.99M / $2.21M / $1.22M / $0.92M), i.e. a single non-Chicago grantee each year (recipient not visible in checkpoint since only Chicago rows are retained); named a scholarship trust, but with one large row/yr this is almost certainly an institutional payment, so no scholarships-to-individuals flag asserted. 75-series (TX) EIN; sole officer is JPMorgan Chase Bank NA as compensated trustee ($61K-$73K/yr) \u2014 bank trust desk, no Chicago substance. 2025 filing object 202601269349101890 404'd."
+  },
+  {
+   "ein": "814035984",
+   "auto_name": "Enchanted Backpack",
+   "name_ok": true,
+   "flags": [
+    "operating-foundation",
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": false,
+   "notes": "IMPORTANT for the ledger: the dollars here are overwhelmingly IN-KIND goods valuations, not cash grants. Of 265 Chicago rows, 135 are 'IN-KIND DONATION OF CLOTHING AND HOME GOODS' and 104 are 'DONATION OF SCHOOL SUPPLIES & OTHER EDUCATIONAL ITEMS' (row amounts run $16 to $56,930, median ~$5,184 \u2014 FMV of delivered goods); only a handful are cash ('ADOPT A SCHOOL PROGRAM GRANT RECIPIENT (BIG SHOULDERS)' x6, 'PAY IT FORWARD PROGRAM GRANT RECIPIENT' x4). This is NOT a Graham/Feinberg situation \u2014 recipients are real named Chicago schools at their own addresses (e.g. Academy of St Benedict the African, 6020 S Laflin, $6,636 in 2021; Great Lakes Academy, 8401 S Saginaw, $11,682), all four years reconcile to line 3a (delta 0), so Chicago attribution is genuine and no exclusion is warranted under the stated bar. But if the published ledger is meant to be cash grantmaking, publishing ~$1.9M of clothing/school-supply FMV as 'grants' will overstate cash flow \u2014 operator should decide whether to publish as-is with an in-kind label or filter rows whose purpose begins 'IN-KIND'/'DONATION OF'. operating-foundation: it runs its own delivery programs (purposes describe its supply-distribution operation; the only compensated officer is director Hillary Fash, $106K-$115K, on a Bernick-family board). Cosmetic officer artifacts as filed: 'ANDREW C LANGERT-THRU 33022', 'PATRICK MOORE- AS OF 4122' (date fragments glued to names); recipient typo 'BIG SHOULDERS, 212 W VAN BURE STREET' (2021)."
+  },
+  {
+   "ein": "136804976",
+   "auto_name": "Fund for European Scouting Pt 16436",
+   "name_ok": false,
+   "name_suggestion": "Fund for European Scouting PT 16436",
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Bank trust-desk filer: sole trustee/officer all four years is JPMorgan Chase Bank NA (trustee comp $236,049-$289,835/yr); any Chicago address is Chase letterhead, not an operating base, and the charitable purpose is European scouting. All four filings (FY2021-FY2024, Oct-Sep fiscal years) reconcile exactly, each with a single grant row ($1,418,660 / $1,487,505 / $1,458,625 / $1,458,810) and chicago_rows=0 every year \u2014 disposition parsed_no_chicago_rows, rows[] empty, so there is nothing to publish and nothing to exclude. Operator should ensure this EIN does not surface in any Chicago funder directory on address alone. Name: 'PT' is a trust-account token from the BMF legal name (FUND FOR EUROPEAN SCOUTING PT 16436) and should stay uppercase per the TR/UW token-preservation rule; the auto-namer title-cased it to 'Pt'."
+  },
+  {
+   "ein": "260894840",
+   "auto_name": "Best Portion Foundation",
+   "name_ok": true,
+   "name_suggestion": "",
+   "flags": [],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Clean Chicago-focused education/civic family foundation (officers M Gail Waller, Timothy Schwertfeger, Andrew Schwertfeger, all uncompensated). All four years reconcile to the dollar; Chicago share is 60-83% of giving ($1,408,600 of $1,703,600 in 2021 down to $849,752 of $1,146,148 in 2024). Rows are real grants to identifiable orgs (Chicago Scholars Foundation is the anchor grantee: $265,000 / $511,875 / $523,548 / $539,663). Dedup awareness for recipient variants across years: 'CHICAGO HIGH SCHOOL OF THE ARTS' (2021) = 'CHIARTS' (2022-24) at 2714 W Augusta; 'CLEVELAND AVENUE FOUNDATION' (2021) = 'THE CAFE GROUP' (2022) at 222 N Canal; 'CHICAGO SCHOLARS FOUNDATION' vs 'THE CHICAGO SCHOLARS FOUNDATION'. One identity oddity: 2021 'CHICAGO SCHOOLS' $25,000 at 11 E Adams Ste 600 is ambiguous shorthand (real grant, entity unclear \u2014 same building as SGA Youth & Family Services but different suite); keep but do not merge with any other grantee without verification."
+  },
+  {
+   "ein": "363165216",
+   "auto_name": "Katten Muchin Rosenman Foundation INC",
+   "name_ok": true,
+   "name_suggestion": "",
+   "flags": [
+    "corporate-foundation",
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [
+    {
+     "recipient_contains": "MISSING NAME",
+     "tax_year_or_null": "2022",
+     "reason": "$366 row with placeholder recipient 'MISSING NAME' at 525 W Monroe St \u2014 the filer's own office address (Katten Muchin Rosenman LLP HQ). Bookkeeping label, not an identifiable grantee."
+    }
+   ],
+   "notes": "Law-firm foundation of Katten Muchin Rosenman LLP; all officers are firm partners/execs (Noah S Heller president, Gil M Soffer, Lance A Zinman, etc.), hence corporate-foundation. recipient-rows-look-non-grant is scoped, not blanket: a large subset of 2022-2023 rows carry purpose 'PAYMENT TO CHARITY THAT IS NOT COUNTED AS A QD SINCE IT FALLS UNDER SECTION 4941' \u2014 self-declared non-qualifying distributions (typically payments satisfying pledges/obligations of disqualified persons, i.e. the firm). That explains the line3a vs line25d gap (2022: line3a $2,626,041 vs 25d $905,944; 2023: $2,133,070 vs $821,303) even though row sums tie to line3a and status is reconciled. Recipients on those rows are genuine Chicago charities (e.g. Legal Aid Chicago $70,000 2022; Goodman Theatre $30,000) and the dollars are real, so I recommend keeping them, but operator should decide whether \u00a74941-tagged rows count as 'grants' for the exchange ledger. Filer-address watch item: 'NOAH BENJAMIN REISMAN FOUNDATION' 2021 $50,000 at '525 WMONROE STREET' is the filer's own address (firm likely administers that family foundation; real entity, already locType intermediary_or_citywide \u2014 kept, flagged for operator). Structural break: 2024 collapses to 35 rows / $324,216 total / 3 Chicago rows ($45,100: JUF $43,100, ABA Fund for Justice $1,000, Figueroa Wu Family Foundation $1,000) vs 212-282 rows and $2.1-2.6M in 2021-2023 \u2014 giving vehicle may have moved; watch for a successor DAF. A 2025 filing object 404'd (202631329349104223)."
+  },
+  {
+   "ein": "363337340",
+   "auto_name": "Aon Foundation",
+   "name_ok": true,
+   "name_suggestion": "",
+   "flags": [
+    "corporate-foundation"
+   ],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Corporate foundation of Aon plc \u2014 directors include CEO Gregory C Case and CFO Christa Davies; giving tracks corporate civic partnerships (American Red Cross $500,000 in 2021 and 2024; United Way of Metropolitan Chicago $210,000-$260,000/yr in paired line items that are as-filed separate grants, e.g. 2024 $250,000 + $10,000; World Business Chicago $100,000/yr). All four years reconcile exactly; Chicago share $561,000-$1,120,000. Rows are real grants; no exclusions. Data quality notes: 2022 'ST JOHNS EPISCOPAL CHURCH' $10,000 is listed at 4100 W Ann Lurie Place, which is the Greater Chicago Food Depository's address \u2014 an address copy-down error in the filing (row has blank lat/lng and citywide locType, so no false siting today; do not geocode it to GCFD). 2022 University of Chicago $45,000 purpose reads 'bequest payment on behalf of Daniel T Carroll' \u2014 unusual purpose but still a grant."
+  },
+  {
+   "ein": "366051876",
+   "auto_name": "Deering Foundation",
+   "name_ok": true,
+   "name_suggestion": "",
+   "flags": [
+    "daf-or-passthrough"
+   ],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Pass-through dominates the Chicago total: in every year 2021-2024, three $200,000 grants ($600,000 = ~96% of the $625,000-$630,000 Chicago-attributed dollars) go to affiliated family foundations \u2014 Gibbet Hill Foundation, James D Danielson Foundation, The Danielson Foundation \u2014 all at 410 North Michigan Room 590, the Deering/Danielson family-office suite that also serves as the filer's own listed office. This is the pre-flagged recipient-address-equals-filer-address pattern; my assessment is KEEP (unlike Graham, these recipients are real, separately-filing private foundations genuinely administered at that suite, so Chicago attribution is not fabricated) but the daf-or-passthrough flag should govern display \u2014 the dollars regrant onward and are family-office letterhead, not neighborhood impact. All three rows are already locType intermediary_or_citywide. Operator may still choose row-level exclusion of the three foundation-to-foundation rows if the exchange ledger wants operating-charity dollars only. Remaining Chicago rows are ordinary grants: Art Institute of Chicago $25,000/yr, Greater Chicago Food Depository $5,000 (2023, 2024). Structural oddity: total giving is exactly $1,005,000 in all four years (fixed annual program), 9 rows/yr. Name is distinct from the already-published 'Chauncey and Marion Deering McCormick Foundation' \u2014 related Deering family lineage but a DIFFERENT filer; never merge."
+  },
+  {
+   "ein": "461528640",
+   "auto_name": "Perry Family Charitable Foundation",
+   "name_ok": true,
+   "name_suggestion": "",
+   "flags": [],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Family foundation (Christopher, Mary Kathleen, Martin Perry, uncompensated) with a Catholic-education program; rows are real, substantial Chicago grants: Christ the King Jesuit College Prep $621,000 (2021), Cristo Rey Jesuit High School $605,000 (2021), Cristo Rey Network $200,000-$440,000/yr, Catholic Charities of the Archdiocese $135,000-$150,000 (2022-2024), Loyola University Chicago $1,340,000 (2024 \u2014 drives the 2024 Chicago spike to $2,049,500). All four years reconcile to the dollar. Data-quality: 2023 recipient 'JESUETS USA MIDWEST PROUMY' $2,500 is a garbled filing of Jesuits USA Midwest Province (same 1010 N Hooker St address as 2021's 'MIDWEST PROVINCE JESUITS') \u2014 keep as filed, alias for dedup. 2022 'EMPOWER ILLINOIS' $10,000 is a tax-credit scholarship intermediary but still a grant. A 2025 filing object 404'd (202611559349101006), so a fifth year exists but was not retrievable."
+  },
+  {
+   "ein": "766017128",
+   "auto_name": "Gladys & Ed E Hurley Endowment Foundation 3603215802",
+   "name_ok": true,
+   "name_suggestion": "",
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Bank trust-desk filer: sole trustee/officer all four years is JPMorgan Chase Bank NA (trustee comp $140,674-$145,997/yr); the Chicago connection is Chase administration, not an operating base (Hurley endowment historically benefits Louisiana/Texas institutions; EIN prefix 76 is a Texas-issued series). All four calendar years 2021-2024 reconcile exactly with 7 grant rows each ($1,344,928 / $1,494,649 / $1,215,409 / $1,360,391) and chicago_rows=0 every year \u2014 disposition parsed_no_chicago_rows, rows[] empty. Nothing to publish, nothing to exclude; ensure the EIN does not surface as a Chicago funder on address alone. The trailing account number 3603215802 is part of the IRS BMF legal name and correctly preserved."
+  },
+  {
+   "ein": "876893164",
+   "auto_name": "Brumfield Genrev Foundation",
+   "name_ok": true,
+   "name_suggestion": "",
+   "flags": [],
+   "exclude": false,
+   "exclude_reason": "",
+   "row_exclusions": [],
+   "notes": "Small family foundation (trustees Hardy T and Amy W Brumfield, uncompensated); filer location not evidenced in the checkpoint, so no hq flag asserted, but Chicago exposure is incidental national giving: 2023 = 2 of 22 rows ($2,000 of $1,344,000); 2024 = 2 of 18 rows ($15,000 of $1,405,600). All four Chicago rows are national charities' Chicago offices, not neighborhood orgs: American Heart Association $1,000 (2023) and $10,000 (2024) at 300 S Riverside Plaza (AHA Midwest office; already intermediary_or_citywide), Make-A-Wish $1,000 (2023, IL chapter at 200 W Monroe), Alzheimer's Association $5,000 (2024) at 225 N Michigan \u2014 that is the org's NATIONAL headquarters, and its locType 'sited' overstates neighborhood siting; suggest citywide treatment. Grants are real and reconciled every year; no exclusions. Structural note: 2021 is a 16-day initial stub period (2021-12-16 to 2021-12-31, single $10,000 grant); 'Genrev' is a coined word in the legal name \u2014 do not 'correct' it."
+  },
+  {
+   "ein": "136664637",
+   "auto_name": "Hispanic Society of America TR No 2 Pv 14989",
+   "name_ok": false,
+   "name_suggestion": "Hispanic Society of America TR No 2 PV 14989",
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows in all 4 filings (TY2021-2024), so nothing publishable. Single grant row per year with the entire distribution ($1,286,434-$1,700,610) to one fixed beneficiary \u2014 this is a JPMorgan-administered support trust for the Hispanic Society of America (the New York museum). No human officers; sole trustee JP Morgan Chase Bank NA, fee $147K-$176K/yr. BMF ZIP 60603-2300 is the 10 S Dearborn JPMorgan trust desk, not an operating base \u2014 hence hq-outside-chicago (substance, not letterhead). Name fix: PV is an opaque account-code token like TR/UW and should stay uppercase per house style. All 4 filings reconciled (delta 0)."
+  },
+  {
+   "ein": "161639401",
+   "auto_name": "James and Brenda Grusecki Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Clean, genuinely Chicago-focused family foundation: 35-43 Chicago rows/yr, $817,088 (2021) to $1,520,000 (2024) of $1.07-1.75M total giving; all 4 filings reconciled delta 0. Operator should know: TY2024 contains paired same-recipient rows that are distinct grants, not duplicates (American Blues Theater $30,000 + $20,000; Porchlight Music Theatre $50,000 + $25,000; Remy Bumppo $50,000 + $25,000; Shattered Globe $50,000 + $25,000) \u2014 row sums tie to line 3a, keep both. Recipient spellings drift year to year for the same orgs (CHICAGO PUBLIC MEDIA / WBEZ CHICAGO PUBLIC MEDIA / WBEZCHICAGO PUBLIC MEDIA; WTTWWFMT) \u2014 source-filing text, do not normalize. TY2025 filing fetch 404 (noted in checkpoint)."
+  },
+  {
+   "ein": "200156873",
+   "auto_name": "John Hart Foundation",
+   "name_ok": true,
+   "flags": [
+    "daf-or-passthrough"
+   ],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "THE JESSICA FUND",
+     "tax_year_or_null": null,
+     "reason": "Recipient address 1500 N Lake Shore Dr (residential co-op tower, ZIP 60610) matches the filer's own BMF ZIP 60610-6686 \u2014 the pre-flagged filer-address pattern (c). Amounts: $875,000 (2021, 53% of that year's Chicago dollars), $775,000 (2022, 47%), $100,000 (2024). Appears to be a related family fund receiving pass-through transfers at the donor's residence, not a Chicago community grantee; recommend excluding all three rows pending verification of the entity."
+    }
+   ],
+   "notes": "The daf-or-passthrough flag applies only to THE JESSICA FUND rows (see row_exclusions): a recipient at the filer's own residential address taking roughly half of 2021-2022 Chicago dollars is a pass-through/related-entity pattern, not community funding. Everything else is genuine blue-chip Chicago giving that reconciles cleanly all four years: CSO ($90K-$190K/yr), Goodman Theatre (up to $250,000 in 2023), ChiArts ($100K-$115K), Steppenwolf ($100K-$125K), Lincoln Park Zoo ($116K-$150K), Northwestern Memorial Foundation ($100K-$152.5K), Merit School of Music ($40K-$50K). No collision with published funders."
+  },
+  {
+   "ein": "208986573",
+   "auto_name": "Edlis-Neeson Foundation Nfp",
+   "name_ok": false,
+   "name_suggestion": "Edlis-Neeson Foundation NFP",
+   "flags": [],
+   "exclude": false,
+   "notes": "House-style fix only: NFP is a legal-suffix token and should be uppercase (cf. 'Chicago Beyond INC'). Genuine Chicago arts funder (Stefan Edlis / Gael Neeson estate giving): Lyric Opera $500,600 (2021), $500,500 (2023), $600,000 (2024); MCA $75K-$136.5K; Renaissance Society; Chicago Opera Theater; WTTW. The TY2022 Lyric Opera row of $500 is not a parse error \u2014 the filing reconciles delta 0 that year; it is a genuinely small gift. 'WTTWWFMT' is munged WTTW/WFMT source text \u2014 preserve. Checked published CSVs: no existing Edlis/Neeson funder, no collision. TY2025 filing fetch 404."
+  },
+  {
+   "ein": "316570701",
+   "auto_name": "The Virginia W Kettering Foundation",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows in all 4 filings despite 56-66 grant rows/yr ($1.36-1.41M) \u2014 nothing publishable. Virginia W. Kettering was a Dayton, OH philanthropist and the giving pattern shows no Chicago footprint at all. No human officers; sole trustee JP Morgan Chase Bank NA (fee $89K-$231K/yr); BMF ZIP 60603-2300 is the 10 S Dearborn JPMorgan trust desk (same +4 as Clapham/Knorr/Hispanic Society trusts), not an operating base. All filings reconciled delta 0."
+  },
+  {
+   "ein": "363994361",
+   "auto_name": "Clinton Family Fund",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Identity note: this is the Bruce E. Clinton family fund (Chicago, BMF ZIP 60638) \u2014 no relation to the William J. Clinton Foundation; do not merge or cross-link. Small-check generalist: 12-14 Chicago rows/yr ($87,750-$133,250) out of 113-121 total rows/yr; all 4 filings reconciled delta 0. Recipient names carry source-filing typos ('CHCIAGO COUNCIL ON GLOBAL AFFAIRS', 'CATHOLIC CHURCH EXTENTION', 'LURIES CHILDRENS HOSPITAL') \u2014 legal-name spellings, never correct. 'VIRGINIO FERRARI FOUNDATION' ($15,000/2023, $10,855/2024) is a genuine grant to another private foundation (sculptor's legacy), keep. Three rows lack geocodes (Landmarks Illinois, Red Theater PO Box). TY2025 filing fetch 404."
+  },
+  {
+   "ein": "386725549",
+   "auto_name": "Lincoln M Knorr Residuary Trust 4411206000",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows all 4 years \u2014 nothing publishable. Single grant row per year ($1,339,539 / $1,469,770 / $1,600,000 / $1,600,000): a fixed-beneficiary residuary trust, not a discretionary grantmaker. Michigan-prefix EIN (38-); no human officers; sole trustee JP Morgan Chase Bank NA (fee $187K-$217K/yr); BMF ZIP 60603-2300 = 10 S Dearborn JPMorgan trust desk, not an operating base. All filings reconciled delta 0."
+  },
+  {
+   "ein": "467048885",
+   "auto_name": "Robert and Jean Reid Family Foundation",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows in all 4 filings (8-9 rows/yr, $2.42-2.70M total) \u2014 nothing publishable. No human officers at all: sole trustee is BMO Harris Bank N.A. (later BMO Bank N.A.), fee $266K-$343K/yr \u2014 a bank-administered trust with no Chicago operating base and no Chicago giving; the Chicago BMF address is the bank's trust operation. All filings reconciled delta 0. TY2025 filing fetch 404."
+  },
+  {
+   "ein": "516570085",
+   "auto_name": "Mary D Clapham Charitable TR",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Only 3 filings present (TY2021-2023); no TY2024 filing in the checkpoint \u2014 structural gap the operator should know. 18 grant rows/yr ($2.50-2.80M), zero Chicago in every year \u2014 nothing publishable. Trustee is JPMORGAN TRUST COMPANY OF DELAWARE (fee $236K-$261K/yr); Delaware-prefix EIN (51-); BMF ZIP 60603-2300 = 10 S Dearborn JPMorgan trust desk, not an operating base. All present filings reconciled delta 0."
+  },
+  {
+   "ein": "656146949",
+   "auto_name": "Beatrice B Tinsley Charitable Trust",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Publishable, but understand the shape: a Northern Trust-administered fixed-beneficiary trust (no human officers; trustee fee $98K-$185K; BMF ZIP 60680-3878 = Northern Trust PO Box \u2014 hence the HQ flag, substance not letterhead). Each year has exactly 4 grant rows and the sole Chicago row is Chicago Symphony Orchestra at exactly 25% of total distributions: $293,777 (2021), $319,205 (2022), $261,025 (2023), $280,721 (2024). These are genuine grants \u2014 CSO is presumably a named quarter-share beneficiary \u2014 so the rows stand; the funder will never grant to anyone else in Chicago. All filings reconciled delta 0. TY2025 filing fetch 404."
+  },
+  {
+   "ein": "656393997",
+   "auto_name": "Emily G Plumb Charitable Trust 02-40073",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows all 4 years \u2014 nothing publishable. Single grant row per year ($2.54-2.97M): fixed single-beneficiary trust (Emily G. Plumb's legacy is Connecticut-associated). No human officers; trustee Northern Trust, with fees that jumped to $478,302 (TY2023) and $485,356 (TY2024) from $292-320K \u2014 roughly 18% of annual grants, worth knowing if this filer is ever profiled. BMF ZIP 60680-3878 = Northern Trust PO Box, not an operating base. All filings reconciled delta 0."
+  },
+  {
+   "ein": "814600661",
+   "auto_name": "William Beau Wrigley Jr Foundation INC",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows in all 4 filings across 102 total grant rows ($1.20-2.52M/yr) \u2014 nothing publishable. Despite the Wrigley name and Chicago BMF address (60606-3594), the grantmaking shows no Chicago footprint in any year; the family principals (William 'Beau' Wrigley Jr, Sue Hostetler Wrigley) operate from outside Chicago, so the address reads as agent/office letterhead rather than operating substance. Identity guard: this is a distinct filer from any legacy Wrigley-named entities \u2014 never merge. Officer comp paid to Sue Hostetler Wrigley: $151,000 (2021), $90,000 (2022), then $0. All filings reconciled delta 0. TY2025 filing fetch 404."
+  },
+  {
+   "ein": "815068397",
+   "auto_name": "Patricia A Bresky Family Foundation",
+   "name_ok": true,
+   "flags": [
+    "daf-or-passthrough"
+   ],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "Schwab Donor Advised Fund",
+     "tax_year_or_null": "2024",
+     "reason": "$5,105,000 transfer into a national DAF sponsor, 97% of the funder's 2024 Chicago dollars ($5,255,000). The Chicago attribution rests on a Schwab branch address (24 E Washington St Suite 875); ultimate grantees are unknown and the money does not land in Chicago. Bookkeeping/pass-through, not a Chicago community grant. (Row is already locType intermediary_or_citywide if the operator prefers keep-with-tag over exclusion.)"
+    },
+    {
+     "recipient_contains": "Bresky Fund-A Donor Advised Fund",
+     "tax_year_or_null": "2021",
+     "reason": "$85,000 transfer into the founder's own donor-advised fund ('Patricia A Bresky Fund - A Donor Advised Fund', 320 S Wacker Dr Suite 3200) \u2014 self-directed pass-through, ultimate grantees unknown; not a Chicago community grantee. (Also already locType intermediary_or_citywide.)"
+    }
+   ],
+   "notes": "The daf-or-passthrough flag covers two of the seven Chicago rows (see row_exclusions); together they are $5.19M of the $5.49M total Chicago dollars, so excluding them changes this funder's Chicago profile drastically \u2014 from headline to modest. Remaining rows are genuine: The Foundation for Sarcoidosis Research $25,000 in each of 2022/2023/2024 (1820 W Webster, a real Chicago-HQ org) and Feeding America (Chicago HQ, 161 N Clark) $100,000 (2023) + $125,000 (2024). TY2024 total giving spiked to $6,845,000 (vs $515K-$1.7M prior) almost entirely on the Schwab DAF transfer. All 4 filings reconciled delta 0. TY2025 filing fetch 404."
+  },
+  {
+   "ein": "832650413",
+   "auto_name": "Zarpet Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Zero Chicago rows in all 4 filings (5-9 rows/yr) \u2014 nothing publishable. Zell family vehicle (Kellie Zell president; officers Philip Tinkler, Scott Peppet et al. are Equity Group Investments-connected and genuinely Chicago-based, so no HQ flag despite zero local giving). TY2024 giving spiked to $2,768,445 vs $310,000-$826,460 in prior years \u2014 the census capacity_spike note is confirmed; latest-year capacity overstates recurring grantmaking by ~5-8x. All filings reconciled delta 0."
+  },
+  {
+   "ein": "201734765",
+   "auto_name": "Drw Foundation",
+   "name_ok": false,
+   "name_suggestion": "DRW Foundation",
+   "flags": [
+    "corporate-foundation"
+   ],
+   "exclude": false,
+   "notes": "corporate-foundation: this is the philanthropic arm of DRW Holdings LLC (trading firm) \u2014 officers are DRW principals (Donald R Wilson Jr, Jeffrey Levoff, Jennifer Wilson), all uncompensated. Naive title-case mangled the initialism; display should be 'DRW Foundation'. All four years reconcile to line 3a with delta $0. Rows are genuine institutional grants at real grantee addresses (e.g., Noble Network of Charter Schools $392,979 in 2021; Code Platoon $200,000 in 2024). 2023 contains two same-recipient pairs (Bottom Line $5,000 + $100,000; Chicago Tech Academy $5,000 + $100,000) \u2014 the filing still ties to line 3a, so treat as distinct grants, not duplicates. Minor: 2022 Beat the Streets row carries zip 60601 for a 2189 W Bowler address. 2025 filing XML 404 (object 202641219349101019) \u2014 no TY2025 data."
+  },
+  {
+   "ein": "357089953",
+   "auto_name": "Alan C Greenberg Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Zero Chicago rows in all four years (2021-2024; 2-7 grant rows/yr, totals $225,000 to $1,775,000, all reconciled delta $0) and rows[] is empty \u2014 this funder publishes nothing and is a no-op for the map; consider dropping it from the publish set rather than shipping an empty funder. Trustees were Lynne G Koeppel / Ted Greenberg through 2023; in 2024 the sole listed trustee is Northern Trust Company (comp $36,456) \u2014 bank trust-desk administration, no visible Chicago operating base in the checkpoint. Data oddity: capacity field (1,415,000) reflects TY2023, not the larger TY2024 total (1,775,000)."
+  },
+  {
+   "ein": "362356089",
+   "auto_name": "Graham Foundation for Advanced Studies in the Fine Arts",
+   "name_ok": true,
+   "flags": [
+    "scholarships-to-individuals",
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": true,
+   "exclude_reason": "Filing-level hold per the Feinberg precedent, confirming the pre-flag: 330 of 364 published rows (94/103 in 2021, 82/93 in 2022, 88/93 in 2023, 66/75 in 2024) carry the FILER'S OWN address \u2014 4 West Burton Place, Chicago 60610 \u2014 standing in for individual scholar/artist/architect grantees worldwide (e.g., 'Anthony Acciavati' $5,000, 'Noam Andrews' $10,000, 'Can Altay' $5,000) whose personal addresses were withheld. Publishing these as Chicago-sited grants fabricates Chicago attribution at scale (~90% of chicago_dollars each year), so the whole filer must be held.",
+   "row_exclusions": [],
+   "notes": "scholarships-to-individuals: the bulk of the book is project grants/fellowships to named individuals, not organizations. recipient-rows-look-non-grant: Forefront rows ($1,790 in 2021, $1,905 in 2022, 'Membership for community of grantmakers') are association dues, and 2023 Society of Architectural Historians $1,900 'Annual Fundraiser' looks like event support. All four years reconcile delta $0 \u2014 the parse is clean; the problem is attribution, not extraction. Salvage path if the pipeline can filter by address rather than recipient: dropping rows where address_line1 = '4 West Burton Place' leaves ~34 genuine institutional Chicago grants at real grantee addresses (Chicago Architecture Biennial $75,000 in 2021, 2023 and 2024; Lampo $10,000; MAS Context; UIC; Art Institute $15,000 2022). row_exclusions is left empty because the contaminated rows are hundreds of distinct personal names \u2014 recipient_contains cannot express the exclusion; it must be address-based or filing-level."
+  },
+  {
+   "ein": "363218989",
+   "auto_name": "Jmr Chairities INC",
+   "name_ok": false,
+   "name_suggestion": "JMR Chairities INC",
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "VARIOUS MISC CHARITIES",
+     "tax_year_or_null": null,
+     "reason": "Unitemized bookkeeping aggregate, not a grantee, in all four years ($5,750 in 2021, $36,500 in 2022, $70,000 in 2023, $53,449 in 2024), and it is listed at 333 W 35th St \u2014 the filer's own office (the Reinsdorf/White Sox front office), so its 'sited' Chicago geocode is fabricated."
+    }
+   ],
+   "notes": "Name: 'JMR' is an initialism (Jerry M Reinsdorf) mangled by naive title-case \u2014 fix casing only. 'Chairities' is the legal-name spelling in the IRS BMF; preserve it, do NOT correct to 'Charities'. Jerry Reinsdorf family foundation (president Jerry Reinsdorf, trustee Jonathan Reinsdorf, all uncompensated). Remaining rows are genuine grants (Chicago Bulls Charities $250,000 in 2022 and 2023; Chicago White Sox Charities $175,000 in 2023; Jewish United Fund $100,000/yr) \u2014 note Bulls/White Sox Charities rows at 1901 W Madison are real separate grantee entities, not the filer. Minor oddity: 2021 Northwestern Memorial Foundation row carries Evanston zip 60208 under city CHICAGO. All four years reconciled delta $0."
+  },
+  {
+   "ein": "366999365",
+   "auto_name": "The Elizabeth Morse Charitable Trust 2620341200",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "COLLISION WARNING: the already-published 97 include 'Elizabeth Morse Genius Charitable Trust' \u2014 a distinct sibling legacy trust with a different EIN. Never merge the two; keep the '2620341200' account-number token (Serr-style) as it disambiguates the display name. Administered by JPMorgan Chase Bank NA + James L Alexander as trustees drawing combined ~$590,000-660,000/yr in fees against ~$2.1-2.5M annual grants \u2014 high administration cost, but the rows themselves are genuine, purpose-specific institutional grants at real, diverse grantee addresses (Chicago History Museum $116,667 challenge grant 2021; P33 $150,000 in 2021, 2023 and 2024; Chicago Opera Theater $500,000 endowment 2022). 85-92% of dollars are Chicago each year; all four years reconcile delta $0. No filer-address or unitemized shapes found."
+  },
+  {
+   "ein": "367252117",
+   "auto_name": "Philip M Friedmann Fam Char TR 110998",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Zero publishable rows: in all four years the grant schedule is a single 'See attached schedule' aggregate ($1,455,893 in 2021 up to $1,517,915 in 2024) with itemization not public; the extractor correctly quarantined all four rows (aggregate_only_no_itemization) \u2014 the quarantine must stay, those rows are bookkeeping labels at an IL 60605 mailing address, not grantees. 2021 status is known_attachment_gap. This funder is a no-op for the map unless an AG-filing/attachment FOIA later yields the itemization. Identity caution: distinct from 'Ann B and Thomas L Friedman Family Foundation Ltd' (EIN 432057377, also in this batch) \u2014 different filer, different spelling (Friedmann vs Friedman)."
+  },
+  {
+   "ein": "367291505",
+   "auto_name": "Kensington Square Foundation Dtd 11091999",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Carr family foundation (Richard C Carr president, Ann K Carr secretary, uncompensated). Clean book: all rows are genuine institutional grants at real, diverse grantee addresses with a flat 'GENERAL SUPPORT' purpose (Misericordia $1,097,000 in 2022; Cristo Rey Jesuit High School $475,000 in 2021; WTTW $275,000 in 2023 and 2024). All four years reconcile delta $0; no filer-address or unitemized shapes. 'Dtd 11091999' date token preserved per house style (Serr precedent). 2025 filing XML 404 (object 202621339349102132) \u2014 no TY2025 data."
+  },
+  {
+   "ein": "432057377",
+   "auto_name": "Ann B and Thomas L Friedman Family Foundation Ltd",
+   "name_ok": false,
+   "name_suggestion": "Ann B and Thomas L Friedman Family Foundation LTD",
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Suffix token 'LTD' should stay uppercase per the published convention (cf. 'Chicago Beyond INC', 'Paul Galvin Memorial Foundation TR'). hq-outside-chicago: substance, not letterhead \u2014 only 1 Chicago grant in four years (Obama Foundation $10,000, TY2024, at the real 5235 S Harper Ct address) out of ~$42.4M total giving (141 grant rows), and the foundation's only in-Chicago address in the data is 'C/O MBI', 1 N Franklin Ste 625 \u2014 a bookkeeping/management office, not an operating base. The 2021 'MISCELLANEOUS CONTRIBUTIONS UNDER 5000 AVAILABLE UPON REQUEST C/O MBI' $62,000 aggregate is already correctly quarantined; keep it out. Structural break: TY2022 total is $37,150,560 vs $1.3-2.1M in other years \u2014 a one-time spike, none of it Chicago, all reconciled. The single published row is a genuine grant, so the funder stays with its one row. Identity caution: distinct from 'Philip M Friedmann Fam Char TR 110998' (367252117). 2026-object fetch 404 noted."
+  },
+  {
+   "ein": "461384089",
+   "auto_name": "Walter Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Mark and Kimbra Walter's foundation (officers uncompensated). Rows are genuine large institutional grants at real grantee addresses: Lincoln Park Zoological Society $1.0-1.45M every year, OneGoal $3,365,000 in 2022, Chicago Theatre Group $850,000 in 2021. TY2022 total spikes to $7,122,600 (OneGoal + Field Museum $1,550,000) \u2014 real and reconciled, just a variance to expect in trend views. All four years delta $0; no filer-address or unitemized shapes. No name collision in the published set. Minor source typos ('180 N WABACH AVENUE' for OneGoal 2024) are harmless."
+  },
+  {
+   "ein": "823380217",
+   "auto_name": "Caris Charitable Trust II",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "hq-outside-chicago: the trust is administered by Northern Trust Company as corporate trustee (fees $168,527 rising to $236,133/yr) \u2014 a bank trust-desk arrangement, and the checkpoint shows no Chicago operating base in substance: across ~$11M of grants in four years the ONLY Chicago-attributed rows are two $5,000 grants to SparkShop (965 W Chicago Ave) in 2021 and 2022; zero Chicago rows in 2023 and 2024. Those two rows are genuine grants at the grantee's real address, so they stand. Governance oddity worth knowing: directors Catherine Ann Caris and Sherry Cowan each draw $125,000-150,000/yr in compensation from a trust granting ~$2.5-3M/yr. All four years reconcile delta $0."
+  },
+  {
+   "ein": "843854465",
+   "auto_name": "Bluespruce Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Hurd family foundation (Jennifer Jacoby Hurd president; all officers uncompensated). Chicago slice is small \u2014 $15,000-23,000/yr against totals that grow from $135,000 (2021) to $2,446,512 (2024), so most giving is elsewhere. Rows are genuine grants at real grantee addresses (Lurie Children's Hospital Foundation recurring; Injustice Watch $5,000 in 2021-2023). One grantee is itself a private foundation (Henry Schueler 41 & 9 Foundation, $500-1,000/yr, at a residential-looking 6879 N Wildwood address) \u2014 still a real grant, keep. All four years reconciled (2024 line 25d differs by $1, within tolerance). 2025 filing XML 404 (object 202621359349102457) \u2014 no TY2025 data."
+  },
+  {
+   "ein": "136034763",
+   "auto_name": "Steele-Reese Foundation- 561",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows in all three parsed years (2021: 83 rows/$1,830,400; 2022: 89/$2,005,900; 2023: 74/$1,815,600 \u2014 all reconciled, chicago_rows=0). NY-prefix (13-) EIN, JP Morgan Chase Bank NA sole corporate trustee ($225,000-$226,547/yr fees); this is a bank-administered trust whose grantmaking is entirely outside Chicago, so any Chicago screen hit is a JPMorgan trust-desk BMF address, not an operating base \u2014 hence hq-outside-chicago. Nothing published, nothing to exclude. The '- 561' suffix is part of the BMF legal name (bank trust number); house style says preserve it verbatim."
+  },
+  {
+   "ein": "136090903",
+   "auto_name": "Weezie Foundation",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows across all four parsed years (2021-2024, 18/22/35/23 rows, $1.2-1.6M each, all reconciled). NY-prefix (13-) EIN with JP Morgan Chase Bank NA as sole trustee ($174,911-$196,240/yr) \u2014 same bank-trust-desk pattern as Steele-Reese; not a Chicago operating base. One later filing (object 202601269349102535) failed fetch with HTTP 404 after 3 tries \u2014 likely tax-year 2025, retry in a later pass. Nothing published."
+  },
+  {
+   "ein": "136374227",
+   "auto_name": "R L Zuhlke Charitable TR P60324004",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows across four parsed years (2021-2024, exactly 10 grant rows each year, $1.83-2.11M, all reconciled). NY-prefix (13-) EIN, JP Morgan Chase Bank NA sole trustee ($229,601-$234,093/yr); 'P60324004' in the legal name is the bank account/trust number \u2014 classic bank-administered trust, no Chicago operating substance. Nothing published, nothing to exclude. Name preserves TR and the account token per house style."
+  },
+  {
+   "ein": "436316003",
+   "auto_name": "Emerson Directors & Officers Charitable TR",
+   "name_ok": true,
+   "flags": [
+    "corporate-foundation",
+    "hq-outside-chicago",
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "SEE ATTACHED SCHEDULE",
+     "tax_year_or_null": null,
+     "reason": "Bookkeeping placeholder, not a grantee: all four years' schedules are a single 'SEE ATTACHED SCHEDULE' aggregate (2021 $1,488,692; 2022 $622,044; 2023 $1,049,010; 2024 $749,338) with an IL/60680 PO-box zip. Already quarantined as aggregate_only_no_itemization \u2014 must never be promoted to published rows."
+    }
+   ],
+   "notes": "Disposition aggregate_only; zero published rows. Corporate-foundation: this is the Emerson Electric directors-and-officers charitable trust (Missouri 43- EIN). Trustee is Northern Trust Company ($0 comp) and the only address in the data is a 'SEE ATTACHED SCHEDULE' row with Chicago zip 60680 \u2014 a Northern Trust PO-box lockbox, not an operating base, so hq-outside-chicago on substance. recipient-rows-look-non-grant applies to the quarantined placeholder rows only. All four years are known_attachment_gap (itemization not public); one 2026 object fetch 404'd. Correct current state; nothing to exclude beyond keeping the quarantine locked."
+  },
+  {
+   "ein": "516593287",
+   "auto_name": "Eleanor Schwartz Charitable Foundation",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Zero Chicago rows across all four parsed years (2021-2024, 13-14 rows/yr, $1.875-2.15M, all reconciled). JP Morgan Chase Bank NA lead trustee ($331,225-$338,887/yr) with individual co-trustees (Boies, LaVella) \u2014 bank-administered trust whose grantmaking (historically Kansas City-area focused) has no Chicago footprint in any parsed year; screen presence is a trust-desk address, not operating substance. Nothing published."
+  },
+  {
+   "ein": "874395915",
+   "auto_name": "Arthur O Silver Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Recent filer (87- EIN; first filing tax year 2022 \u2014 the missing 2021 is pre-existence, not a gap). Six published Chicago rows, all reconciled, all real grantees. Extreme single-recipient concentration: Foundation for Realization of Human Potential - NFP (445 E Ohio St Ste 370) took $1,900,000 (2022) + $950,000 (2023) + $830,000 (2024) = $3.68M of $3.81M Chicago dollars; parser already marks those rows intermediary_or_citywide, which is right since that recipient is itself a foundation-style NFP. Remainder: Christian Heritage Training Center Community Church $100,000 (2022) + $25,000 (2024, name/address variant '106 E Marquette Rd' vs '160 E Marquette Rd' \u2014 same org), Chicago Shakespeare Theater $8,000 (2024). No exclusions."
+  },
+  {
+   "ein": "846025403",
+   "auto_name": "Woodward Governor Charitable Trust",
+   "name_ok": true,
+   "flags": [
+    "corporate-foundation",
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Corporate foundation of Woodward Inc. (formerly Woodward Governor Co.; company HQ Fort Collins CO, historic base Rockford IL \u2014 84-/Colorado EIN, officers are Woodward executives, $0 comp). Chicago is a tiny slice of a national program: $18,750 of $2.19M (2021), $18,500 of $1.54M (2022), $27,900 of $1.45M (2023), $18,000 of $3.70M (2024) \u2014 so hq-outside-chicago on substance. The 21 published rows are genuine small grants ($1,500-$7,500) to verifiable Chicago nonprofits (Erie Neighborhood House, Chicago Lighthouse, BBBS Metro Chicago, Ladies of Virtue, Safe Families, Foster Progress); pattern is consistent with employee-directed/matching giving. One 2026 object fetch 404'd. No exclusions."
+  },
+  {
+   "ein": "363496915",
+   "auto_name": "Noah Wolff Family Foundation INC",
+   "name_ok": true,
+   "flags": [
+    "daf-or-passthrough",
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "VARIOUS CHARITABLE INSTITUTIONS",
+     "tax_year_or_null": "2021",
+     "reason": "Unitemized bucket row ($74,126, address 'VARIOUS') \u2014 same shape as the Hyatt/Lakonishok/Division Fund exclusions; not an identifiable grantee."
+    },
+    {
+     "recipient_contains": "SCHWAB CHARITABLE FUND",
+     "tax_year_or_null": "2023",
+     "reason": "DAF self-transfers, not community grants: 'RANAN WOLF FFC SCHWAB CHARITABLE FUND' $592,611 and 'LAURI WOLFF SCHWAB CHARITABLE FUND' $592,611 are family donor-advised accounts at Schwab Charitable (San Francisco), each fabricated-sited at 7061 N Kedzie."
+    },
+    {
+     "recipient_contains": "TZEDAKA ACCOUNT",
+     "tax_year_or_null": "2023",
+     "reason": "'THE BARRY AND TZIONA ZEFFREN FAMILY TZEDAKA ACCOUNT' $592,611 \u2014 a family giving account, not an operating grantee; sited at the same 7061 N Kedzie address."
+    },
+    {
+     "recipient_contains": "DONOR ADVISED FUND",
+     "tax_year_or_null": "2022",
+     "reason": "Family DAF transfers at 7061 N Kedzie: RANAAN WOLFF DAF $20,000, BARRY AND TZIONA ZEFFREN FAMILY DAF $40,000, MEYER AND CHERYL MAGENCE ZEDAKA DAF $40,000 \u2014 pass-throughs to donor-controlled funds, not grants to Chicago organizations."
+    },
+    {
+     "recipient_contains": "LAURI WOLFF CHARITABLE FUND",
+     "tax_year_or_null": "2022",
+     "reason": "Same family-DAF pattern as above, $40,000 at 7061 N Kedzie."
+    },
+    {
+     "recipient_contains": "PEF ISRAEL ENDOWMENT FUND",
+     "tax_year_or_null": null,
+     "reason": "PEF Israel Endowment Funds is a New York pass-through intermediary for grants to Israeli charities; rows ($9,000 2022, $25,000 2023, $22,400 2024) are sited at 7061 N Kedzie \u2014 a Chicago address that is not the recipient's. Chicago attribution fabricated."
+    },
+    {
+     "recipient_contains": "SHAVEI HEBRON",
+     "tax_year_or_null": "2022",
+     "reason": "Israeli institution ($4,000) listed at 7061 N Kedzie, Chicago \u2014 not the recipient's address; Chicago siting fabricated."
+    },
+    {
+     "recipient_contains": "ALEH",
+     "tax_year_or_null": "2022",
+     "reason": "ALEH / ALEH ISRAEL FOUNDATION ($2,500 + $1,500 + $2,250) is an Israeli disability-care organization; all three rows sited at 7061 N Kedzie, Chicago. Chicago attribution fabricated."
+    }
+   ],
+   "notes": "Real Chicago giving exists here (Chicago Chesed Fund $86,000 2021 + $61,000 2022 + $35,000 2023; Chicago Community Kollel; Chicago Mitzvah Campaign; The Ark; Hannah Sacks Bais Yaakov) but the file needs heavy row surgery. (1) The address 7061 N Kedzie St/Ave 60645 is stamped on 20+ rows for at least 15 DISTINCT recipients including Schwab DAF accounts, PEF Israel, and Israeli institutions \u2014 a filer-linked default address, so every 'sited' geocode at 42.0100,-87.7091 is unreliable. (2) After the DAF exclusions, 2023 Chicago dollars collapse from $1,863,833 to roughly $61,000 \u2014 95% of that year was family-DAF self-transfer, and the $1,968,833 capacity figure is inflated accordingly. (3) 2021 rows all carry placeholder address 'LOCAL' (unsited, acceptable). (4) Residual watch-list, not excluded: AMERICAN FRIENDS $3,500 / AMERICAN FRIENDS PAN $1,500 / CHILDRENS BRIDGE $1,500+$2,250 / RABBI MEIR BAL HANES(S) $1,000x2 \u2014 truncated names at the borrowed address; Rabbi Meir Baal Haness charities do maintain Chicago collection offices so left in. (5) Suburban-zip rows written as city=CHICAGO by the filer: Chicago Chesed Fund 60712 (Lincolnwood), Hatzalah Chicago $13,600 zip 60712 but geocoded 'sited' to ~65th & Hamlin on the South Side (wrong \u2014 fix or unsit), YU Kollel Torah Mitzion 60076 and NCSY 60076 (Skokie), Darchei Noam 60062 (Northbrook)."
+  },
+  {
+   "ein": "363712587",
+   "auto_name": "Sirius Fund",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "LEGACYCOM",
+     "tax_year_or_null": "2021",
+     "reason": "$40 row to 'LEGACYCOM' (230 W Monroe, purpose 'ARBOR DAY') \u2014 Legacy.com is a for-profit obituary/donation platform, i.e. a payment conduit, not a charitable grantee. Trivial dollars; recommend dropping as a non-grant recipient label."
+    }
+   ],
+   "notes": "Foreman family foundation (Peter/Virginia/Jeffrey/Christopher Foreman, all $0 comp), genuinely Chicago-based on substance. 139 published Chicago rows across 2021-2024, all reconciled; recipients are verifiable Chicago institutions (Shedd $110,000x3 + $110,000 split in 2024, Rush UMC ~$100,000/yr, Merit School of Music $51,000-$168,025/yr, Art Institute, Field Museum, Lincoln Park Zoo). Quirks, none disqualifying: many retail-size rows ($25-$140 \u2014 membership/memorial-level gifts, legitimate 3a disbursements); 2021 Access Living row carries filer typo zip 60015 (Deerfield) but the correct 115 W Chicago Ave geocode; 2024 has multiple same-recipient rows (Merit $25+$10,000+$50,000+$108,000; Shedd $10,000+$100,000; Rush $100,000+$2,500) which tie to line 3a so they are real separate grants, but will read as duplicates in the UI \u2014 consider aggregation display."
+  },
+  {
+   "ein": "363820887",
+   "auto_name": "Conant Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "KENTUCKY HEALTH JUSTICE NETWORK",
+     "tax_year_or_null": "2024",
+     "reason": "Louisville, KY organization ($30,000) listed and geocode-'sited' at 625 N Kingsbury, Chicago 60654 \u2014 that address belongs to other grantees in the same schedule (Art Works Projects / International Children's Media Center). Chicago attribution fabricated by an address carry-over."
+    }
+   ],
+   "notes": "Chicago family foundation (Conant/George/Frank family officers), 173 published rows 2021-2024, all reconciled, ~$1M/yr Chicago. Recipients are real and largely verifiable at their stated addresses. Items for the operator: (1) Human Rights Watch $50,000/yr all four years at 400 N Wells St Ste 200 marked 'sited' \u2014 HRW has kept a Chicago office so the siting is not fabricated, but dollars fund a global org; consider intermediary_or_citywide. (2) Shared-building addresses that check out: Alternatives Inc + CircEsteem both at 4730 N Sheridan; Healing to Action + OCAD at 4811 N Central Park. (3) Recipient-name variants to normalize downstream: 'ALTERNATIVES'/'ALTERNATIVE INC'/'ALTERNATIVES INC'; 'ORGANIZED COMMUNITIES AGAINST DEPORTATION(S)'; filer typo 'CHICAGO PUBIC MEDIA' vs 'CHICAGO PUBLIC MEDIA INC' ($100,000 each). (4) One 60827 (Riverdale-zip but within-Chicago Altgeld area) row for People for Community Recovery at 13061 S Champlain \u2014 legitimately Chicago, keep."
+  },
+  {
+   "ein": "366054751",
+   "auto_name": "Mazza Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Cleanest large file in the batch. Chicago family foundation (Rubinelli/Lavezzorio officers), 120 published rows 2021-2024, all years reconciled ($1.96M/$1.83M/$2.09M/$2.19M), 90%+ of dollars to Chicago. All zips 606xx, no placeholder addresses, no DAF/pass-through shapes, no unitemized buckets, minimum row $5,000. Giving is concentrated in large Catholic and institutional recipients: Big Shoulders Fund $1.2M total, Misericordia Foundation $1.2M, DePaul $850,000, Lurie Children's $1.2M (split across two name variants 'LURIE CHILDREN'S HOSPITAL OF CHICAGO' / 'LURIE CHILDREN'S HOSPITAL' \u2014 normalize downstream), Loyola $500,000 across two variants. No exclusions."
+  },
+  {
+   "ein": "366099675",
+   "auto_name": "Mayer & Morris Kaplan Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Family foundation with a broad professional-grade Chicago education/workforce portfolio: 190 published Chicago rows 2021-2024, all reconciled ($891,722/$898,215/$739,500/$711,913 Chicago of $1.6-2.0M totals \u2014 roughly 45% Chicago, the rest is legitimate non-Chicago giving already filtered out, not an hq concern). Row hygiene is excellent: all 606xx zips, no placeholder addresses, no DAF/unitemized/pass-through shapes, amounts $500-$62,500. Top recipients (Chicago CRED $217,000, National Louis $171,000, Embarc $169,250, Network for College Success $168,000, One Million Degrees $160,500) are all real operating orgs. Minor: officer roster contains a typo duplicate 'Choe Karmin' vs 'Chloe Karmin' (officers table only, no row impact); watch recipient rename 'NewRoot Learning Institute (formerly Umoja)' for downstream entity matching. No exclusions."
+  },
+  {
+   "ein": "132989468",
+   "auto_name": "Arthur K Watson Charitable TR UW",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Bank-administered legacy trust: sole officer all four years is JP MORGAN CHASE BANK NA as compensated trustee ($104-110K/yr); New York-prefix EIN (13-). All four filings 2021-2024 reconciled ($1.206M/$1.017M/$1.18M/$1.4285M) but chicago_rows=0 in every year, so there is nothing to publish -- inclusion is a no-op for the Chicago layer. No quarantined rows, no collisions with the published 97."
+  },
+  {
+   "ein": "363100492",
+   "auto_name": "The Siragusa Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Cleanest large checkpoint in this batch. 4/4 filings reconciled; 348 Chicago rows 2021-2024 (~$876K-$942K Chicago per year out of ~$1.1-1.19M total). Every recipient is a named Chicago nonprofit (3Arts, A Safe Haven, BUILD, Erie Family Health, Marwen, etc.); no unitemized/bookkeeping labels, no shared-address clusters, zero quarantined. Staffed family foundation (ED John E Hicks Jr, $140,400). Name does not collide with any published funder."
+  },
+  {
+   "ein": "364473692",
+   "auto_name": "Modestus Bauer Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "ISRAEL CANCER RESEARCH FUND",
+     "tax_year_or_null": "2024",
+     "reason": "Address is 2 Northfield Plaza, zip 60093 -- that is Northfield IL, a north suburb; the filing's city field says Chicago but the $25,000 row should not carry Chicago attribution (it geocode-failed and fell to intermediary_or_citywide, still inflating Chicago dollars)."
+    }
+   ],
+   "notes": "4/4 filings reconciled (~$1.0-1.02M/yr, ~150 grant rows/yr of which ~40 Chicago). Directors (Lawrence/Reich families) each paid $9,000/yr. Keep-as-is data nits: 2021 Art Institute row has zip typo 60303 but the street address (111 S Michigan) is genuinely Chicago; WFMT/WTTW rows use the '7341 Solutions Center' 60677 bank-lockbox remittance address (orgs are Chicago; already intermediary_or_citywide); 2024 'CAMP ONE STEP' vs 2023 'CAMP STEP ONE' are the same org's verbatim filing variants. 2026 filing 404 (next refresh)."
+  },
+  {
+   "ein": "366051968",
+   "auto_name": "Knowles Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Only 3 filings (fiscal Oct-Sep, tax years 2021-2023); no 2024 filing in the datalake yet, so trend views will show a missing final year. All reconciled ($1.305M/$1.132M/$1.4525M; Chicago $785K/$757K/$942.5K). Recipients are blue-chip Chicago institutions (Adler, Shedd, Field, Lyric, Merit School of Music incl. $187,500 capital campaign 2023). Filing artifacts, keep verbatim: FHSR PO Box increments 180018/180019/180020 across 2022 rows for the same org; 2021 Friends of the Chicago River row carries purpose 'Music To My Ears Program' (purpose-column bleed in the source XML); 'SPECIAL CHILDREN'S CHARITES' spelling is as-filed -- do not correct."
+  },
+  {
+   "ein": "411885356",
+   "auto_name": "Haag Family Foundation",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "hq-outside-chicago basis: Minnesota-registered EIN (41- prefix), officer roster is Gohlke/Haag-Jarvinen (president and VP each paid $70K) with no Chicago footprint visible in the checkpoint; Chicago is a minority slice (2-5 rows, $100K-$182K of ~$1.25-1.56M/yr). The Chicago rows themselves are genuine sited grants and should stay: Chicago Jesuit Academy $50-100K every year, Family Matters, Nourishing Hope, Sunshine Enterprises, West Point School of Music. Nit: 2022 West Point School of Music row has as-filed address typo '7411 SONEY ISLAND AVENUE' (geocode failed, intermediary_or_citywide); the 2024 row uses the corrected 123 W 109th Pl address."
+  },
+  {
+   "ein": "421493980",
+   "auto_name": "Jnt Foundation",
+   "name_ok": false,
+   "name_suggestion": "JNT Foundation",
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Name: BMF legal name 'JNT FOUNDATION' is an initialism; the title-caser produced 'Jnt', which misreads -- display as 'JNT Foundation'. Substance: Iowa-registered EIN (42- prefix), trustees Hansen/Hansen/Cox/Kasper, exactly one grant row per year ($1.38M/$1.7125M/$1.4975M/$1.455M -- a single large grantee each year), chicago_rows=0 in all four reconciled filings. Nothing to publish; inclusion is a no-op."
+  },
+  {
+   "ein": "463460720",
+   "auto_name": "Lakonishok Foundation",
+   "name_ok": true,
+   "flags": [
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "MISC",
+     "tax_year_or_null": "2023",
+     "reason": "Unitemized bookkeeping label, not a grantee: recipient 'MISC', $3,000, purpose 'COMMUNITY', address 1943 N Burling (a residential Lincoln Park street address) -- and it geocoded as locType 'sited', so it would drop a grant pin on a private rowhouse. Matches the pre-flagged unitemized-recipient pattern for this funder."
+    }
+   ],
+   "notes": "Flag applies to that one row only; the rest is clean and heavily Chicago ($1.047M/$1.0525M/$1.426M/$1.714M Chicago of $1.228-2.185M total, 4/4 reconciled): Joffrey ($524K-$800K/yr), Lyric, Art Institute, CSO, plus small education/food rows. 2024 'NORTHWESTERNKESAN CAMP' $2,600 is a garbled as-filed recipient name at Northwestern's 303 E Chicago Ave address -- real small grant, keep verbatim. President Josef Lakonishok (LSV Asset Management, Chicago); no HQ concern."
+  },
+  {
+   "ein": "476662944",
+   "auto_name": "Julian Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "4/4 filings reconciled ($915.85K/$3.0424M/$1.7942M/$2.95675M; Chicago $721K/$2.769M/$1.5875M/$2.66675M). Classical-music-centric Chicago portfolio: CSO $160K/$2.026M/$684.5K/$985K (the 2022 spike is a real single row), Merit School of Music up to $475K, Lyric, Grant Park, Cedille, WTTW/WFMT. Sole listed officer Loretta N Julian (uncompensated). Rows to 'The Chicago Community Trust - Innovation 80' ($25K in 2022/2023/2024) are intermediary grants, already locType intermediary_or_citywide. 2026 filing 404 (next refresh). No collision with published funders."
+  },
+  {
+   "ein": "510242992",
+   "auto_name": "Donald S Walker Fund 1613260",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Numeric token '1613260' is a trust account number embedded in the BMF legal name -- keep it, matching the 'Serr Charitable Action TR UW 09242002' precedent. Bank-administered trust: JP MORGAN CHASE BANK NA sole compensated trustee ($37K-$155K/yr), Delaware-prefix EIN (51-). All four filings reconciled (2 grant rows/yr, $1.807M-$2.011M) with chicago_rows=0 every year -- nothing to publish. 2025 filing fetch 404."
+  },
+  {
+   "ein": "756045044",
+   "auto_name": "Joe & Jessie Crump Fund",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Texas-prefix EIN (75-), JP MORGAN CHASE BANK sole compensated trustee ($298-303K/yr) -- a bank-administered out-of-state trust. Its only Chicago row each year is Muscular Dystrophy Association's national HQ at 222 S Riverside Plaza ($25K 2021, $35K 2022, $40K 2023): national-HQ giving, not Chicago-programmatic; the pipeline already tagged all three rows intermediary_or_citywide with blank lat/lng, so no row exclusion needed but expect near-zero neighborhood signal. Only 3 filings (fiscal Oct-Sep); no 2024 yet. Rows are genuine grants; no exclusion."
+  },
+  {
+   "ein": "832424720",
+   "auto_name": "Marc and Jeanne Malnati Family Foundation INC",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "4/4 reconciled ($1.729M/$1.969M/$1.800M/$1.926M; Chicago $1.447M/$1.644M/$1.257M/$1.579M). Strongly Chicago-programmatic and West Side-relevant: Heartland Alliance READI $150K x2, Metropolitan Family Services CP4P, Austin Coming Together, North Lawndale Employment Network, Garfield Park Rite to Wellness Collaborative $100K (2024). Operator awareness, all keep: (a) many odd-amount small rows ($126-$5,255; e.g., 11th District CAPS $521, Pilsen Food Pantry $126) look like in-kind/pizza-donation valuations but are bona fide Part XV rows that reconcile to line 3a; (b) some grants go TO other private foundations as conduits -- Figueroa Wu Family Foundation $10,000 'PILSEN FOOD PANTRY', Hecktman Family Foundation $10,168 'COATS FOR MIGRANTS' -- pass-through in substance though real grants; (c) 2024 recipient-name variants are separate as-filed rows, not dupes (Carole Robertson Center $242 and $101,300; Leadership Greater Chicago $2,073 and $1,684 at two addresses; Institute for Nonviolence $30,000 PO Box + $949 street). 2026 filing 404."
+  },
+  {
+   "ein": "832726056",
+   "auto_name": "Harold B Smith Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Single-grantee funder: every published row is Newberry Library, 60 W Walton, purpose 'President's Discretionary Fund' ($1,000,631 + $812,223 = $1,812,854 in 2021; $498,314 + $506,661 = $1,004,975 in 2023). Structural break to know: the 2022 and 2024 filings publish zero grant rows AND no Part XV/Part I control total (status no_control_total) -- apparent alternate-year giving, not a parse failure, but the map will show on/off years. Smith-family trustees, uncompensated. 2025 filing 404. Distinct filer; no name collision."
+  },
+  {
+   "ein": "854391880",
+   "auto_name": "R J Samulski Innovation Foundation INC",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Zero Chicago rows in all four reconciled filings (2021: 11 rows/$130K; 2022: 1 row/$2.5M; 2023: 1 row/$2.3M; 2024: 2 rows/$2.555M -- pattern of one large grantee per year). Family-run (R Jude, Joseph, Danielle Samulski), uncompensated; no Chicago connection evident anywhere in the checkpoint. Post-2001 EIN so no geographic inference from the prefix. Nothing to publish; inclusion is a no-op for the Chicago layer."
+  },
+  {
+   "ein": "871791008",
+   "auto_name": "Robert and Penelope Steiner Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "2021 is a short-period stub return (6/25/2021-12/31/2021) with one $2M non-Chicago grant, so the Chicago series effectively starts 2022; 2022-2024 reconciled and heavily Chicago arts ($1.45M/$1.375M/$2.45M Chicago of $1.55M/$1.544M/$2.619M): Lyric up to $1.1M (2024), Art Institute $500K/yr, Cinema/Chicago $450K (2024), Newberry $50K/yr. The 2022 row 'PATRICK G AND SHIRLEY W RYAN OPERA CENTER' ($100K, 20 N Wacker) is a grant to Lyric Opera's training program -- do NOT merge or confuse with the published funder 'Patrick G and Shirley W Ryan Foundation'. 2025 filing 404."
+  },
+  {
+   "ein": "136047243",
+   "auto_name": "Edward E Ford Foundation Mfgr",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "hq-outside-chicago: national independent-school funder run from outside Chicago in substance \u2014 salaried NYC-market executive director (John Gulla, $340-391K), JPMorgan Chase Bank NA as compensated trustee ($349-388K), Oct-Sep fiscal years, and only 2 of 72 parsed grant rows across three filings are Chicago (both in FY2023: Morgan Park Academy $100,000 and Lycee Francais de Chicago $100,000, both genuine grants to real Chicago private schools). All three filings reconcile to line 3a exactly. The trailing 'Mfgr' token is preserved from the BMF legal name per house style but looks like a BMF artifact (likely a truncated '% JPMorgan...' sort-name fragment), worth an operator glance before display. 2021/2022 filings had zero Chicago rows. No collision with the 97 published funders."
+  },
+  {
+   "ein": "207399767",
+   "auto_name": "Skaggs Foundation for Research",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Zero Chicago grant rows in all four filings (2021-2024); disposition parsed_no_chicago_rows, so nothing publishes. The only visible Chicago tie is The Northern Trust Company as compensated trustee ($50-65K/yr) \u2014 a bank trust desk, not an operating base; grants-committee members (Cutshall $47-50K/yr, Luttrell, Moosman) are Skaggs-family associates. 1-3 large research grants per year ($2.0-2.8M), all reconciled to line 3a, none to Chicago recipients. Keep in the funder census only with the trust-desk caveat."
+  },
+  {
+   "ein": "260170419",
+   "auto_name": "Hull Family Foundation",
+   "name_ok": true,
+   "flags": [
+    "daf-or-passthrough"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "daf-or-passthrough applies to 2024 only: the 2024 filing's 12 rows totaling $21,065,264 are a terminal transfer of publicly-traded securities to the foundation's own 'Hull Family Fund Donor Advised Fund' at 501 Silverside Rd, Wilmington DE (a DAF-sponsor address); the parser correctly quarantined the DAF row (recorded amount $1.0 placeholder, purpose describes FMV methodology for stock listings) and 2024 chicago_rows=0, so nothing bad publishes. Structural break: the foundation appears to be terminating into the DAF \u2014 expect no future itemized grants. Published Chicago rows 2021-2023 are genuine small grants, e.g. Chicago Votes $15,000 (2021), Midwest Academy $15,000 (2021, Paul Booth Rising Leadership Project), Misericordia Home $5,000 (2022) + $10,000 (2023), Daniel Murphy Scholarship Fund $5,000 (2023 \u2014 a grant to a scholarship organization, not to individuals, so no scholarships flag). All four filings reconcile to line 3a."
+  },
+  {
+   "ein": "362488355",
+   "auto_name": "Blowitz-Ridgeway Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "Antioch Area Health Accessibility Alliance",
+     "tax_year_or_null": "2024",
+     "reason": "$10,000 row lists 874 Main Street, CHICAGO 60637, but 874 Main St is Antioch IL and the purpose text says AAHAA serves the Antioch area; Chicago city/zip fabricated by preparer"
+    },
+    {
+     "recipient_contains": "Beds Plus Care",
+     "tax_year_or_null": "2024",
+     "reason": "$15,000 row lists PO Box 2035, CHICAGO 60607; BEDS Plus is a southwest-suburban (Summit/La Grange) homeless agency \u2014 Chicago attribution fabricated"
+    },
+    {
+     "recipient_contains": "Crisis Center for South Suburbia",
+     "tax_year_or_null": "2024",
+     "reason": "$10,000 row lists PO Box 39, CHICAGO 60607; the org is a Tinley Park DV agency whose own name says 'South Suburbia' \u2014 Chicago attribution fabricated"
+    },
+    {
+     "recipient_contains": "Journeys-The Road Home",
+     "tax_year_or_null": "2024",
+     "reason": "$15,000 row lists 1140 E Northwest Highway, CHICAGO 60631; that address is Palatine IL (Journeys' HQ) \u2014 Chicago attribution fabricated"
+    },
+    {
+     "recipient_contains": "Lazarus House",
+     "tax_year_or_null": "2024",
+     "reason": "$15,000 row lists 214 Walnut Street, CHICAGO 60645; 214 Walnut St is St. Charles IL (Lazarus House HQ) \u2014 Chicago attribution fabricated"
+    },
+    {
+     "recipient_contains": "McHenry County PADS",
+     "tax_year_or_null": "2024",
+     "reason": "$10,000 row lists 4031 Dayton Street, CHICAGO 60653; that address is McHenry IL and purpose text says it serves McHenry County \u2014 Chicago attribution fabricated"
+    },
+    {
+     "recipient_contains": "Sarah's Inn",
+     "tax_year_or_null": "2024",
+     "reason": "$15,000 row lists 1547 Circle Ave, CHICAGO 60659; 1547 Circle Ave is Forest Park IL (Sarah's Inn HQ) \u2014 Chicago attribution fabricated (do NOT confuse with Sarah's Circle, 4838 N Sheridan, which is genuinely Chicago and stays)"
+    },
+    {
+     "recipient_contains": "Alexian Brothers Housing & Health Alliance",
+     "tax_year_or_null": "2022",
+     "reason": "$15,000 row lists 1000 Remington Blvd Suite 100, CHICAGO 60601; 1000 Remington Blvd is Bolingbrook IL \u2014 Chicago attribution fabricated"
+    }
+   ],
+   "notes": "Otherwise a clean, well-documented grantmaker: ~$1.0-1.1M/yr, 72-80 rows per filing, all four years reconciled to line 3a, ~166 remaining Chicago rows are genuine $2K-$20K grants to Chicago health/housing/DV/homelessness nonprofits with detailed purpose narratives. Two data-quality gotchas: (1) the 2024 filing back-filled city 'CHICAGO' plus arbitrary Chicago zips onto suburban grantees \u2014 the 8 excluded rows total $105,000 (all currently locType intermediary_or_citywide, so dollars not map pins are the exposure); (2) the 2022 filing lists zip 60601 on EVERY row (preparer artifact) \u2014 never geocode 2022 rows by zip, street addresses are correct. Trustees receive small per-meeting fees ($600-$10,200) \u2014 normal. External-knowledge caveat (not in checkpoint): the foundation's office is historically Schaumburg IL, but its giving is overwhelmingly Chicago-city, so no hq flag."
+  },
+  {
+   "ein": "363152531",
+   "auto_name": "Regenstein Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Major genuine Chicago institutional funder: $3.3-11.4M/yr, all four years reconciled to line 3a; Chicago dollars $8.53M (2021), $2.92M (2022), $5.63M (2023), $3.25M (2024) to Lurie Children's, Lincoln Park Zoo, Shirley Ryan AbilityLab, Rush, Shedd, Art Institute, etc. Identity caution: this filer (officers Susan Regenstein, Joseph Regenstein III, Marshall Field V) is distinct from the older legacy 'The Regenstein Foundation' (Joseph & Helen Regenstein, funder of Regenstein Library) \u2014 a different EIN; never merge if that entity is ever added (Pritzker rule). No collision among the 97 published funders today. Source-data quirks to preserve verbatim: recipient typos 'UNIVERISTY OF ILLINOIS' (2022/2023), 'JEWISH UNITED FERATION' (2023), '233 EAST ERRIE STREET' (2024); Lurie rows 2021-2023 have address_line1 'OF CHICAGO' (name-wrap artifact, ungecoded); 2024 has legitimate paired rows to the same recipient (e.g. Northwestern Memorial Foundation $500,000 + $150,000, Rush $1,000,000 + $35,000) \u2014 separate grants, not duplicates."
+  },
+  {
+   "ein": "363209007",
+   "auto_name": "Division Fund",
+   "name_ok": true,
+   "flags": [
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "From Pass Through K-1s",
+     "tax_year_or_null": null,
+     "reason": "bookkeeping label, not a grantee: charitable amounts flowing through partnership K-1s, recorded at the fund's brokers/accountants (440 S LaSalle in 2021-2022, 110 N Wacker Ste 3300 in 2023-2024) and geocoded 'sited' there; amounts $41 (2021), $62 (2022), $45 (2023), $56 (2024) \u2014 exclude all four years"
+    }
+   ],
+   "notes": "recipient-rows-look-non-grant applies ONLY to the 'From Pass Through K-1s' rows (pre-flagged, confirmed in all four years, $204 total). Everything else is genuine: Gidwitz-family fund giving $1.1-1.7M/yr, all four years reconciled to line 3a, with heavy intermediary giving to Jewish United Fund/Jewish Federation at 30 S Wells (e.g. $500,000 Israel Emergency Fund 2023, $200,000 Annual Campaign each year) already correctly locType intermediary_or_citywide, plus direct grants like Council for Jewish Elderly $290,000 (2023, Gidwitz Place renovation) and University of Chicago SSA $250,000 (2023, 2024). Minor source typos preserved: 'Old Town School of Folk Musinc' (2024), 'Metroploitan' (2022)."
+  },
+  {
+   "ein": "363458779",
+   "auto_name": "Lester and Edward Anixter Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Clean family foundation: ~$1.0-1.2M/yr, all four years reconciled to line 3a, 98 Chicago rows all genuine grants to recognizable Chicago nonprofits (Anixter Center $75,000/yr \u2014 an independent disability-services nonprofit named for the family, a real grantee; JUF $150-190K/yr as intermediary, correctly locType intermediary_or_citywide; Misericordia, CJE SeniorLife, Lurie Children's, etc.). Operator awareness: all six family officers/advisors draw $24,000 each ($144K/yr combined against ~$1M in grants) \u2014 notable overhead but not a flag category and not a data problem. 2024 row 'BRYN MAWR CNTRY CLUB EDUCATIONAL ASSISTANCE FOUN' $5,000 is a grant to a scholarship organization, not to individuals."
+  },
+  {
+   "ein": "366118219",
+   "auto_name": "Robert Allerton Trust Under Will Dated April 15 1964",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Bank-administered perpetual charitable trust: JPMorgan Chase Bank NA is the compensated trustee ($200-218K/yr); there is no operating office anywhere \u2014 any Chicago address is the trust desk, hence the flag (letterhead, not substance). The giving itself is genuinely and consistently Chicago-weighted: exactly 2 grant rows per year, one being The Art Institute of Chicago 'GENERAL' ($1,507,693 in 2021, $1,669,157 in 2022, $1,619,817 in 2023, $1,599,935 in 2024 \u2014 about two-thirds of each year's total); the other row each year (~$750-800K) is non-Chicago (historically the Honolulu museum interest). All four years reconciled to line 3a. 2025 filing fetch 404'd (noted in checkpoint). Name is long but is the title-cased BMF legal name per house style \u2014 keep."
+  },
+  {
+   "ein": "367746307",
+   "auto_name": "George F Moss Foundation",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Zero Chicago grant rows in all three filings (2022-2024); disposition parsed_no_chicago_rows, so nothing publishes. JPMorgan Chase Bank NA is compensated trustee ($108-173K/yr) with one co-trustee (Laura Petrie) \u2014 the visible Chicago tie is a bank trust desk, hence the flag. Grant volume swings widely: $498,000 (2022, 11 rows), $1,278,000 (2023, 12 rows), $202,500 (2024, 10 rows), all reconciled to line 3a. 2025 filing fetch 404'd. Keep in census only with the trust-desk caveat."
+  },
+  {
+   "ein": "391560019",
+   "auto_name": "Souder Family Foundation INC",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Structural break: 2021-2023 filings each carry a single 'SEE ATTACHED SCHEDULE' aggregate ($1,597,500 / $1,209,000 / $1,185,500, zip 60680 = a Chicago PO-box zip) \u2014 correctly quarantined as aggregate_only_no_itemization, $3.99M unitemized and a good AG-FOIA attachment-recovery candidate. 2024 is the first itemized year (29 rows, $1,511,000, reconciled) with 2 Chicago rows totaling $175,000: Shedd Aquarium $100,000 'In support of annual giving' and Shirley Ryan AbilityLab (scuba program) $75,000 \u2014 the AbilityLab row's address field holds a contact person ('Sandra Miller Director of Advancem'), not a street, so it is correctly ungeocoded/intermediary. Both published rows are genuine grants. EIN prefix 39 (Wisconsin issuance) but filings route through a Chicago PO box; no substance evidence either way, so no hq flag."
+  },
+  {
+   "ein": "463851243",
+   "auto_name": "Cleveland Avenue Foundation for Education",
+   "name_ok": true,
+   "flags": [
+    "daf-or-passthrough"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "daf-or-passthrough: the dominant rows are transfers to the foundation's affiliated public charity 'The CAFE Group' at 222 N Canal St \u2014 the same address/leadership orbit as the funder (Thompson family / Cleveland Avenue) \u2014 $6,253,150 of $6,505,650 total in 2021 (96%) and $2,550,959 of $2,720,959 in 2023 (94%), both geocoded 'sited' at 222 N Canal. These are real grants to a real Chicago 501(c)(3), so no exclusion under the strict rule, but they are intermediary regranting, not place-based investment: recommend the operator downgrade the CAFE Group rows to intermediary_or_citywide so $8.8M does not pin as sited impact at the funder's own office. Remaining rows are genuine $2.5K-$40K education grants (OneGoal, Kids First Chicago, Braven, City Colleges, Chicago State Foundation, etc.). Reconciliation oddity worth a glance: the 2021 filing shows line25d $252,500 while line3a and the row sum are $6,505,650 (checkpoint still marks reconciled against 3a; other years 25d matches 3a). No name collision with the 97 published funders; distinct from recipient-side 'Cleveland Avenue Foundation for Education Group' strings already present in published recipient columns."
+  },
+  {
+   "ein": "873500519",
+   "auto_name": "The Keywell Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "aggregate_only all three years \u2014 nothing publishes and the parser already quarantined everything: single 'SEE ATTACHED FOR DETAILS' rows of $999,460 (2022, short year from 5/19), $1,288,150 (2023), and 'SEE ATTACHED DETAIL' $609,000 (2024), each reconciled to line 3a. The quarantined rows carry what look like the filer's own addresses (47 W Division St Apt 362 \u2014 a residential apartment, 2022-2023; 1130 W Monroe St, 2024), reinforcing that these are filer aggregates, not grantees. Brad Keywell is sole listed officer (uncompensated). Attachment-recovery / AG-FOIA candidate; no publishable rows until itemization is obtained."
+  },
+  {
+   "ein": "136794686",
+   "auto_name": "Paul Mackall & E E B Mackall TR Pt 16276",
+   "name_ok": false,
+   "name_suggestion": "Paul Mackall & E E B Mackall TR PT 16276",
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Name: BMF is 'PAUL MACKALL & E E B MACKALL TR PT 16276'; 'PT' is a trust-account token like TR/UW and should stay uppercase, not 'Pt'. Substance: bank-administered single-grantee trust \u2014 sole officers all four years are JPMorgan Chase Bank NA (trustee, comp $29,293-$38,403/yr) and one individual co-trustee; any Chicago letterhead is a bank trust desk, not an operating base. Exactly one grant row per year (2021 $1,157,730; 2022 $1,312,404; 2023 $1,192,500; 2024 $1,241,960), all four filings reconciled, and ZERO Chicago rows in every year (disposition parsed_no_chicago_rows) \u2014 this funder publishes nothing to the dataset; consider dropping from the funder list on emptiness grounds, not exclusion grounds. Fiscal-year filer (Sep-Aug periods)."
+  },
+  {
+   "ein": "261225450",
+   "auto_name": "Daniel P Haerther Charitable Trust",
+   "name_ok": true,
+   "flags": [
+    "scholarships-to-individuals",
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "TRUSTEE PLEDGES",
+     "tax_year_or_null": "2022",
+     "reason": "Bookkeeping label, not a grantee: $45,000 'TRUSTEE PLEDGES' at the trustee/filer office address 330 N Wabash Ave \u2014 an aggregate of trustees' personal pledges, non-grant row shape."
+    },
+    {
+     "recipient_contains": "ALANI WATSON",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient listed at trustee/filer office address 330-331 N Wabash Ave with personal address withheld; the 'sited' Chicago pin is fabricated (Graham precedent, row-level). $500-$2,000, purpose EDUCATIONAL."
+    },
+    {
+     "recipient_contains": "ALEXA MENDOZA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ALEXANDER LEBLANC",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ALEXIA GOLAB",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ANDREA VILLANUEVA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ANDREW AYENI",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ANTHONY DIBALSAMO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ANTHONY SALINAS",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ARIANA LEWIS",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ARIANA NELSON",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ARIANNA LEBAB",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "AVA GRACE SALES",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "BENJAMIN GADISON",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "BRANDON BANDA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "BRENDA MUNOZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "BRYAN OLIVIERI",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "CARLIE HALL",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "CATHERINE RILEY",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "CHARLIE LAZO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "CHRISTOPHER DAUGHTERY",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "CRISTIAN CASIMIRO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "DANIEL CARRERA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "DANIELA ESPANA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "DECLAN GOGGIN",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "DELANEY JOHNSON",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "DIANA WOLF",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "DOMINIC PETTENON",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "EDISON LANE",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ELIZABETH CAMPBELL",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "EMANUEL CARRERA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "EMILY TRENDLE",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ESMERALDA ESCARPITA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "FLORECITA AVALOS",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "GINA GRAZIAN",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "GISELLE ALENCASTRO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "GISELLE GODNEZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "GLENN DILLARD JR",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "HAILEY HANSEN",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ITZEL ANTONIO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JACK PETTER",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JACOB STURGULEWSKI",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JAE LEA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JAE'LA LEAVY",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JAYLENE RESPETO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JENNIFER LOPEZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JEREMIAH CODERO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JESUS FERNANDEZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JOCELYN BONET",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JOEY THOME",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JOHN REYES",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JOSIAH VEGA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JULIANA JUAREZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JULIANA REHNQUIST",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JULIANA VENTURA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "JULISSA TORRES-MATA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "KAITLYN DE FOE",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "KAITLYN POULSON",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "KAMRYN PORTER",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "KARIME SANCHEZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "KAVITA RAM",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "KAYLENE MCGRATH",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "KELLY ALTMAN",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "KENNETH LAVEAU",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "KEVIN PEREZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "KRISTINA VARGAS",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "LEIA BAENA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "LENA FOSTER",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "LESLY GONZALEZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "LIAM CONNEELY",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "LUZ DEL ROSARIO KWIATKOWSKI PEREZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MAKILAH COOLEY",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MARIA ESTRADA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MARIANA GUERRERO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MARQUEZ MONSERRAT",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MARTHA RIOS",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MARYFER PALACIOS",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MARYGRACE GOLON",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MAXIMUS PACHECO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MEGAN WERNER",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MEGHAN BURKE",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level). Surname matches trustees Richard W Burke Sr / Mary L Burke \u2014 possible related-party recipient, worth operator eyes."
+    },
+    {
+     "recipient_contains": "MIA NUNEZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MIA SOLIS",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MICHAELA MARRIOTTI",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MIKAYLA PIPES",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "MONS ESTRADA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "NATALY MONTUL",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "NICOLE CONDON",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "OLIVIA SEARS",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ORACIO VEGA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "PABLO RAMIREZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "PRESTON BROOME",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "RANDY PEREZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "REBECCA CHAVEZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "RUBEN MUNOZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "RUDY PEREZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "SAMANTHA CONJAR",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "SAMANTHA VELASCO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "SANIYAH JORDAN",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "SEAN MARTINEZ",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "SHAISY ORTEGA",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "SIMON WAGNER",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "SOFIA RIOS",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "SOPHIA SERRANO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "TRAVIS WILEY",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "TREAZURE EDWARDS",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "TRISTYN HYNES",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "VALERIA FUENTES",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "WILLIAM JACOBSEN",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ZARI YOUNG",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    },
+    {
+     "recipient_contains": "ZOREN CO",
+     "tax_year_or_null": null,
+     "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+    }
+   ],
+   "notes": "Two-population filing, Graham-shaped on the individual half only. (1) Org grants are genuine, at real grantee addresses, and carry ~98% of dollars: stable Catholic-education roster (e.g. Brother Rice HS 2024 $140,895; De LaSalle Institute 2024 $154,650; Catholic Charities 2022 $300,000) plus Shedd Aquarium every year (2021 $345,000; 2024 $460,000). KEEP these. (2) 185 rows across the four years are named individual students, $500-$2,000 each, purpose EDUCATIONAL, ALL carrying 330 N Wabash Ave (twice 331 N Wabash, a typo) \u2014 the office address of compensated trustee Richard W Burke Sr's law firm \u2014 and geocoded locType 'sited'. Per-year: 2021 39 rows/$20,500; 2022 46 rows/$24,000 (+ the $45,000 TRUSTEE PLEDGES bookkeeping row); 2023 48 rows/$26,500; 2024 52 rows/$26,500. Total excluded if row_exclusions applied: ~$142,500 of ~$6.50M Chicago dollars, but 186 bogus pins at one Loop address removed. Compact machine rule if easier than the 110 name entries: exclude every row where address_line1 is 330/331 N WABASH AVE and purpose = EDUCATIONAL, plus TRUSTEE PLEDGES. Other operator notes: trustee comp is high (Burke Sr $120,863-$172,625/yr; three other trustees $37,500-$50,000 each); source address typos ARMITATGE/DAVISION/LEARNINGTON exist but geocoded; one 2022 individual 'MEGHAN BURKE' shares the trustees' surname. All four filings reconciled to line 3a."
+  },
+  {
+   "ein": "351979838",
+   "auto_name": "Lee A & Mary Jane Rieth Foundation for Environmental Education",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Bank-administered trust with an Indiana-prefix EIN (35-): the ONLY listed officer in all four years is JPMorgan Chase Bank NA as trustee (comp $208,458-$238,062/yr against ~$1.1-1.28M annual giving \u2014 trustee fee is ~18-21% of grants, worth knowing). Any Chicago address would be a JPMorgan trust desk, not an operating base. Exactly one grant row per year (2021 $1,096,686; 2022 $1,278,211; 2023 $1,151,864; 2024 $1,110,277), all reconciled, ZERO Chicago rows in all four years (disposition parsed_no_chicago_rows) \u2014 publishes nothing to the dataset; candidate to drop for emptiness. A fifth object (202621269349101887) 404'd after 3 fetch attempts, logged in checkpoint notes."
+  },
+  {
+   "ein": "364010374",
+   "auto_name": "Peter and Paula Fasseas Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Genuine grants at real grantee addresses; all four filings reconciled. One structural fact the operator must know: the foundation is dominated by PAWS Chicago, which founder-director Paula Fasseas also founded and chairs \u2014 PAWS receives $2,201,500 (2021), $2,132,284 (2022), $2,196,400 (2023), $2,661,280 (2024), i.e. 93-97% of Chicago dollars every year, all pinned 'sited' at 3516 W 26th St. Real grants to a real Chicago operating charity, so no exclusion, but any 'top Chicago funders' ranking will effectively be measuring insider giving to the founder's own org. Minor: 'CITY OF HOPE' rows use the cancer center's Chicago regional office at 20 N Upper Wacker (fine); source typo 'TOUGY' for Touhy in the Hellenic Foundation row; small sub-$3K rows (e.g. St Andrew's $260, Hyde Park Day School $150) look like matched/pledge remainders but are legitimate."
+  },
+  {
+   "ein": "366011498",
+   "auto_name": "A G Cox Char TR 15128-00-2",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Name correctly preserves the BMF trust-account tokens (TR, account number), matching house style. Sole listed officer in all four years is JPMorgan Chase Bank NA as trustee ($55,986/yr in 2021) \u2014 a bank trust-desk administration with no independent operating base, so do not present a Chicago letterhead address as a Chicago HQ. The grantmaking substance itself, however, IS strongly Chicago: 24-27 Chicago rows per year, $535,000-$775,000/yr, to a highly stable roster of major institutions (e.g. Rush University Medical Center $85K-$150K/yr; Lurie Children's Hospital Foundation $55K-$115K/yr; Shirley Ryan AbilityLab $40K-$100K/yr). All rows are real orgs at real addresses; nothing to exclude. Identity drift to watch, same address both years: 2021 'GIRL SCOUTS OF GREATER CHICAGO AND NW IN' becomes 2022-2024 'GIRL SCOUTS OF THE UNITED STATES OF AMERICA', both at 20 S Clark St Suite 200 (the local council's office) \u2014 treat as the local council. 2024 renames MSI to 'GRIFFIN MUSEUM OF SCIENCE AND INDUSTRY' (real renaming). Source typo 'KALOV' for Kolmar/Karlov in Off The Street Club rows all four years \u2014 verify its geocode landed at 25 N Karlov."
+  },
+  {
+   "ein": "367195126",
+   "auto_name": "Barney Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Clean family foundation; all four filings reconciled. Chicago is a small slice of its giving: $100K-$180K/yr across 4-5 rows out of ~$1.6-1.8M total grants (~30 rows/yr overall, non-Chicago rows not in checkpoint). Recipients are established orgs at real addresses (Misericordia $30K-$50K/yr; NU Feinberg School of Medicine $50K/yr; Big Shoulders Fund $10K-$15K/yr flagged intermediary_or_citywide, correctly). Nothing to exclude. Operator context: two second-generation family members are each paid ~$125,000-$129,808/yr as 'Foundation Mgr.' \u2014 high admin overhead relative to giving, but not a data-quality issue."
+  },
+  {
+   "ein": "462918450",
+   "auto_name": "Hyatt Hotels Foundation",
+   "name_ok": true,
+   "flags": [
+    "corporate-foundation",
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "VARIOUS CO HYATT",
+     "tax_year_or_null": null,
+     "reason": "Unitemized aggregate, not a grantee: 'VARIOUS CO HYATT HOTELS FOUNDATION' at 150 N Riverside Plaza (the filer's own Hyatt HQ address), purpose 'SECTION 139 DISASTER RELIEF' \u2014 IRC 139 qualified disaster-relief payments to unnamed individuals (employee relief), lumped into one row. 2021 $411,500 (75% of that year's $546,500 Chicago dollars) and 2022 $1,000. Chicago 'intermediary_or_citywide' attribution is a bookkeeping artifact of the filer's address."
+    }
+   ],
+   "notes": "Confirmed the pre-flag. Corporate foundation of Hyatt Hotels Corporation: officers are Hyatt executives (Mark Hoplamazian President/Director, Joan Bottarini VP/Director), HQ 150 N Riverside Plaza \u2014 which IS Chicago, so no hq flag. The two 'VARIOUS CO HYATT HOTELS FOUNDATION' rows are the only non-grant shapes; after excluding them, remaining rows are genuine grants to real Chicago orgs at real addresses (Skills for Chicagoland's Future $50,000 in 2021-2023; Allies for Community Business / Greater West Town / Urban Juncture / Male Mogul each $48,333/yr 2022-2024 \u2014 reads like a three-year cohort commitment; Commercial Club Foundation $200,000 in 2024). Post-exclusion Chicago dollars: 2021 $135,000; 2022 $212,999. Source typo 'CHICAGO SYMPHONY OCHESTRA' (2022 $3,000). A fifth object (2026 filing) 404'd, logged in checkpoint notes."
+  },
+  {
+   "ein": "810719050",
+   "auto_name": "Apmpff INC",
+   "name_ok": false,
+   "name_suggestion": "APMPFF INC",
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Name: BMF is 'APMPFF INC' \u2014 a six-letter initialism (Parekh family foundation; officers Anand and Michelle Parekh), not a word. Title-casing it to 'Apmpff' mangles an acronym the way 'Brca' would; keep it all-caps with INC preserved. Data is clean: all four filings reconciled; 4-7 Chicago rows/yr, $164,750-$447,000, all real orgs at real addresses (University of Chicago $106,250-$212,500/yr sited at 6054 S Drexel; Lurie Children's $75K-$130K; Gol Soccer Foundation every year). One pass-through-style row handled correctly already: 2024 Chicago Hope Academy $14,415 'Designated for Turnabout Athletics Inc general operating support' is flagged intermediary_or_citywide \u2014 keep, redirect is disclosed in the purpose. Watch: total giving jumps to $3,467,365 in 2024 (vs $1,354,250 in 2023) while Chicago stays ~$369K \u2014 growth is going elsewhere. 2024 filing switches to mixed-case recipient names ('Gol Soccer' vs 'GOL SOCCER FOUNDATION') \u2014 dedupe keys should be case-insensitive. A fifth object 404'd, logged in checkpoint notes."
+  },
+  {
+   "ein": "813101626",
+   "auto_name": "John R Flanagan Charitable Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Genuine grants, all four filings reconciled; 3-5 Chicago rows/yr, $285,000-$581,000, stable roster (Gad's Hill $75K-$100K/yr; Metropolitan Family Services $50K-$100K/yr; Greater Chicago Food Depository up to $150K; Northwestern Memorial Foundation $135K-$250K/yr, correctly intermediary_or_citywide). No exclusions \u2014 but one address deserves operator attention short of exclusion: FEMMEBOUGHT COMMUNITY NFP (2021 $50,000; 2023 $31,000; 2024 $25,000) is listed at 111 W Monroe St, which is Chapman and Cutler LLP's office \u2014 the firm of compensated co-trustee Rebecca Wallenfelsz ($172,210-$195,507/yr), i.e. almost certainly the foundation's own mailing address used c/o for the grantee. FemmeBought is a real Chicago org so the Chicago attribution is not fabricated, but the 'sited' pin at 111 W Monroe overstates precision \u2014 recommend re-typing those three rows to intermediary_or_citywide. Source typos in purposes ('CHARTIABLE', 'GFENERAL') are verbatim from the filings. A fifth object 404'd, logged in checkpoint notes."
+  },
+  {
+   "ein": "883337050",
+   "auto_name": "Brca Research & Cure Alliance",
+   "name_ok": false,
+   "name_suggestion": "BRCA Research & Cure Alliance",
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Name: BMF 'BRCA RESEARCH & CURE ALLIANCE' \u2014 BRCA is the gene acronym (BRCA1/BRCA2); title-casing it to 'Brca' mangles it. Keep all-caps BRCA. Young entity (EIN 88- prefix), only two filings in checkpoint (2023, 2024), both reconciled: 5 grant rows/yr totaling $1,155,000 (2023) and $905,000 (2024), ZERO Chicago rows both years (disposition parsed_no_chicago_rows) \u2014 publishes nothing to the dataset; candidate to drop for emptiness. Directors are Michael and Tanya Polsky plus Timothy Parker, all uncompensated \u2014 a Chicago-connected family, but no observed Chicago grantmaking. A third object (202641359349101124) 404'd after 3 attempts, logged in checkpoint notes."
+  },
+  {
+   "ein": "136203234",
+   "auto_name": "TR U Article 2 Uwo Helen M Dekay Fbo Dekay Foundation",
+   "name_ok": false,
+   "name_suggestion": "TR U Article 2 UWO Helen M Dekay FBO Dekay Foundation",
+   "flags": [
+    "hq-outside-chicago",
+    "scholarships-to-individuals"
+   ],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "VARIOUS INDIVIDUALS",
+     "tax_year_or_null": null,
+     "reason": "Unitemized aggregate to individuals ('VARIOUS INDIVIDUALS SEE ATTACHMENT', hardship grants: $442,254 (2021), $462,790 (2022), $491,118 (2023), $503,554 (2024)); no grantee itemization, and the 2023-24 rows carry 10 S Dearborn Street \u2014 the JPMorgan trustee's address, not a grantee address \u2014 so any Chicago attribution would be fabricated. Currently quarantined by the pipeline (aggregate_only_no_itemization); this quarantine must hold permanently."
+    }
+   ],
+   "notes": "Bank-administered trust: JP Morgan Chase Bank NA is trustee (~$291K-$302K/yr trustee fee, the only compensated party). 13- prefix is a pre-2001 New York EIN assignment; the only Chicago address anywhere in the filing set is 10 S Dearborn \u2014 JPMorgan's Chicago trust desk, exactly the letterhead pattern that does not constitute a Chicago operating base. scholarships-to-individuals flag is approximate: the quarantined rows are HARDSHIP grants to individuals (~$440K-$504K/yr), the grants-to-individuals class, not literal scholarships. All four filings 2021-2024 reconciled to line 3a within $1 (5 grant rows/yr, $1.92M-$2.23M totals). Disposition parsed_no_chicago_rows: zero published rows, so nothing enters the map from this funder. UWO ('under will of') and FBO ('for benefit of') are legal tokens like TR/UW and must stay uppercase; do not 'correct' Dekay to DeKay \u2014 BMF legal name is DEKAY and mechanical title-case governs."
+  },
+  {
+   "ein": "200128534",
+   "auto_name": "Violet M Johnson Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Clean zero-Chicago funder. All four filings 2021-2024 reconciled ($1.555M-$1.755M/yr across 10-13 itemized grantees), zero Chicago rows every year, nothing published, nothing quarantined. Halverstadt-family board, all uncompensated. Identity note: 2024 shows board turnover \u2014 Kaitlin Halverstadt appears as President plus three new directors (Alyssa Miller, Nicholas Miller, Ann Halverstadt). No collision with the 97 published funders (Johnson matches in the published CSVs are recipient-side only). No HQ evidence in the checkpoint either way; no hq flag asserted."
+  },
+  {
+   "ein": "204234710",
+   "auto_name": "The George E Richmond Foundation",
+   "name_ok": true,
+   "flags": [
+    "daf-or-passthrough"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "daf-or-passthrough: 2 of 10 published rows are transfers into the foundation's OWN donor-advised fund at Chicago Community Trust \u2014 2022 $800,000 and 2023 $350,000, purpose literally 'George Richmond Foundation DAF', both at CCT's 33 S State St Suite 750. That is $1.15M of $3.475M published Chicago dollars (33%) whose end-use is untraceable; strong candidate for exchange-ledger treatment instead of map credit, but they are legally real grants to a real Chicago 501(c)(3) with the recipient's own address, so the strict exclusion criterion is not met \u2014 operator decision. Remaining rows are genuine University of Chicago / UChicago Medicine grants ($25K PSOM Council annually; $500K-$1.2M oral-health research, e.g. 2024 $1,200,000). All four years reconciled. Oddities: co-presidents Arthur L Herbst Jr and Alfred E Brennan Jr each drew $250,000/yr compensation 2022-2024 (~$185K in 2021) against $1.275M-$1.744M annual grants \u2014 heavy overhead. UChicago Medicine appears under three addresses (130 E Randolph downtown, 5841 S Maryland campus) \u2014 dedupe/geocode consistency note."
+  },
+  {
+   "ein": "362546470",
+   "auto_name": "S & E Bramsen Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "All four filings reconciled; published Chicago rows are small recurring operating-support grants to verifiable orgs at their own addresses (Junior Achievement of Chicago $50,000 in 2021 and 2022; Openlands $2,500/yr; Nature Conservancy of Illinois $5,000/yr; Alzheimer's Association $2,000 \u2014 the 225 N Michigan address is the national HQ that happens to sit in Chicago). Structural break worth knowing: total giving swung $274,500 (2021) \u2192 $1,750,000 (2022) \u2192 $1,089,000 (2023) \u2192 $43,000 (2024); the big 2022-23 dollars went outside Chicago and 2024 giving essentially collapsed, with Chicago share at only $7,500/yr in 2023-24. Uncompensated Bramsen-family board. 2025 filing fetch 404'd (object 202631349349104283) \u2014 retry later."
+  },
+  {
+   "ein": "364257410",
+   "auto_name": "Bruce Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Genuine, consistent Chicago grantmaking: $212K-$415K/yr across 10-13 Chicago rows, all reconciled, recipients are known orgs at their own addresses (Providence St. Mel $20K-$50K, Chicago Furniture Bank $30K-$70K, Shirley Ryan AbilityLab, Girl Scouts, Revive Center, Dreamcatcher Foundation, plus New Moms $20K and Renaissance Social Services $40K new in 2024). DATA-QUALITY item the operator must fix before publish: the parser doubled nearly every recipient name by concatenating identical BusinessName lines ('GIRL SCOUTS OF CHICAGO GIRL SCOUTS OF CHICAGO', 'ABILITY LAB ABILITY LAB'), including a filer typo pair 'NIGHT MINISTRY NIGH MINISTRY' \u2014 display names need de-duplication; underlying grants are fine. Chicago Furniture Bank's 2024 address change to 4801 S Whipple matches the org's real relocation \u2014 not an error. FCACC rows are PO Box (correctly intermediary_or_citywide). Uncompensated Bruce-family board. 2025 filing fetch 404'd. No collision with published funders (Bruce matches in CSVs are recipient-side only)."
+  },
+  {
+   "ein": "823372946",
+   "auto_name": "Caris Charitable Trust I",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Northern Trust-administered trust (trustee fee $47K-$66K/yr) with individual co-trustees Sherry Cowan and Carrie Ann Caris (locations unknown, each compensated $29K-$57K/yr). Zero Chicago rows in all four years; its presence in the universe appears to rest on the Northern Trust trust-desk letterhead, not any Chicago operating substance \u2014 hence the hq flag, hedged since trustee residences are unverifiable from the checkpoint. Striking identity oddity: exactly ONE grant row per year carrying the entire distribution ($2,887,415 in 2021; $2,524,031 in 2022; $2,598,493 in 2023; $2,989,982 in 2024) \u2014 the whole payout goes to a single recipient annually (recipient not visible in checkpoint, likely a designated beneficiary charity). If this funder ever surfaces Chicago rows, inspect that single-recipient pattern before publishing. All years reconciled; nothing published or quarantined. Trailing 'I' is part of the legal name \u2014 keep it. 2025 filing fetch 404'd."
+  },
+  {
+   "ein": "856152110",
+   "auto_name": "Louise H Neuhoff Charitable Trust",
+   "name_ok": true,
+   "flags": [
+    "daf-or-passthrough",
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "Strongest pass-through case in this batch: 100% of published rows \u2014 all six, $1.8M total \u2014 are $300,000 transfers to three named donor-advised funds at Chicago Community Trust ('THE HICKMAN FUND DAF', 'NEUHOFF FAMILY FUND DAF', 'ERIMAR FUND DAF'), identical pattern in 2023 and 2024, all sited at CCT's 33 S State St Suite 750 and correctly tagged intermediary_or_citywide. End-use is untraceable; every published dollar is a candidate for the invisible-giving exchange ledger rather than map credit. Not excluded under the strict criterion because these are real, itemized grants to a real Chicago 501(c)(3) at the recipient's own address \u2014 but if the operator applies the DAF-transfer policy, all six rows (recipient_contains 'DAF CHICAGO COMMUNITY TRUST') would move off the map, zeroing this funder's mapped footprint. hq flag: no staff; Northern Trust sole trustee (fee ramped $1,012 in 2022 \u2192 $84,379 in 2023 \u2192 $161,666 in 2024); Chicago presence is trustee letterhead plus the CCT transfers. Structural: 2021 filing publishes no grant schedule or control total; 2022 only $24,044 (4 rows, none Chicago); substantive distributions begin 2023 at $1.2M/yr flat. 2025 filing fetch 404'd."
+  },
+  {
+   "ein": "956092682",
+   "auto_name": "Nesbitt Foundation",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "row_exclusions": [],
+   "notes": "95- prefix is a pre-2001 Los Angeles-area EIN assignment; Northern Trust Company is the sole listed trustee (fee $32K-$50K/yr, only compensated party) \u2014 this trust appears in the Chicago universe via the trustee's letterhead, and it made zero Chicago grants in all four years. Structural break: 2021 and 2022 filings publish NO grant rows and no Part XV / Part I control total (status no_control_total \u2014 zero-grant or non-publishing years), then 15 rows/$1,070,000 in 2023 and 15 rows/$1,190,000 in 2024, all reconciled, none Chicago. Nothing published, nothing quarantined; disposition parsed_no_chicago_rows. 2025 filing fetch 404'd (object 202611289349102001) \u2014 retry later."
+  },
+  {
+   "ein": "133062211",
+   "auto_name": "T 7291 Howard Young Medical Center Trust",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "JPMorgan Chase Bank NA is sole trustee/officer all four years (trustee fee $243,954-$282,192/yr) \u2014 bank trust desk, no Chicago operating base; the trust exists to benefit Howard Young Medical Center, which is in Woodruff, WI. One grant row per year ($2,583,139 in 2021 up to $2,680,661 in 2024), every year reconciled delta $0, and zero Chicago rows in all four years \u2014 nothing published from this funder. Keep in census for capacity context only."
+  },
+  {
+   "ein": "133741659",
+   "auto_name": "Regina Bauer Frankenburg Foundation for Animal Welfare 7413318",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "JPMorgan-administered charitable trust (JP Morgan Chase Bank NA sole trustee, fee ~$196K-$217K/yr); NY-prefix EIN, bank account token 7413318 preserved in name per house style. 20-21 animal-welfare grant rows/yr ($892K-$1.2M), all four years reconciled delta $0, zero Chicago rows every year \u2014 nothing published. 2025 filing (object 202631269349102143) fetch failed 404, logged in checkpoint notes."
+  },
+  {
+   "ein": "136866947",
+   "auto_name": "Isabella M Sheldon TR Ua 060848",
+   "name_ok": false,
+   "name_suggestion": "Isabella M Sheldon TR UA 060848",
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Casing only: title-caser lowercased the trust-instrument token 'UA' to 'Ua'; house style preserves tokens like TR/UW/UA uppercase (cf. 'Serr Charitable Action TR UW 09242002'). JPMorgan Chase Bank NA sole trustee (fee $140K-$217K/yr) \u2014 bank trust desk, no Chicago substance. One grant row/yr ($1.68M-$1.99M), all reconciled delta $0, zero Chicago rows all four years \u2014 nothing published. Structural note: 2022 is a 9-month short period (2022-04-01 to 2022-12-31), a fiscal-year change to calendar year."
+  },
+  {
+   "ein": "357120359",
+   "auto_name": "Thomas J Watson Foundation TR",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago",
+    "scholarships-to-individuals",
+    "recipient-rows-look-non-grant"
+   ],
+   "exclude": false,
+   "row_exclusions": [
+    {
+     "recipient_contains": "PLEASE SEE ATTACHED",
+     "tax_year_or_null": null,
+     "reason": "Bookkeeping placeholder, not a grantee \u2014 grant schedule is a single non-public attachment aggregate (DE address, zip 11111) in all four years; already quarantined as aggregate_only_no_itemization and must never publish"
+    }
+   ],
+   "notes": "Aggregate-only filer: every year has exactly 2 rows reading 'PLEASE SEE ATTACHED' (e.g. 2021 $330,196 SCHOLARSHIPS + $2,050,648 SCHOLARSHIPS; 2024 $1,339,268 SCHOLARSHIPS + $1,317,449 GENERAL), all correctly quarantined; zero published rows, so no exclusion needed at filing level. Trustee is JPMORGAN TRUST COMPANY OF DELAWARE (fee $210K-$240K/yr) \u2014 Delaware trust desk, no Chicago substance. Purposes are largely SCHOLARSHIPS, likely to individuals via the attachment. Identity caution: this is NOT the well-known New York Thomas J. Watson Foundation (Watson Fellowship, EIN 13-prefix) \u2014 different filer, never merge."
+  },
+  {
+   "ein": "363540747",
+   "auto_name": "Pepper Family Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Clean Chicago family foundation (Pepper Construction family; directors are Pepper family members with $5K-$10K director fees). All four years reconciled delta $0; published Chicago rows (2/11/13/12) and dollars ($35,000/$205,000/$922,000/$2,031,250) tie exactly to filing metadata. Grantees are real sited institutions \u2014 e.g. The Art Institute of Chicago $1,010,000 (2024), John G Shedd Aquarium $500,000 (2023 and 2024), Madonna Mission $50,000 (2024). No name collision with the 97 published funders (Pritzker/Tenzer are different filers). Operator notes: two directors marked DECEASED on the 2024 filing; Secretary-Treasurer W Franklin Appleby Jr comp jumped to $111,505 in 2024; total giving scaled sharply 2023-2024 ($1.57M to $3.24M)."
+  },
+  {
+   "ein": "366033583",
+   "auto_name": "Carylon Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Mervis family foundation carrying the name of the family's Chicago-based company (Carylon Corporation, environmental services); officers are three uncompensated Mervis family members, and the giving pattern (Jewish community orgs, Planned Parenthood $50K-$100K/yr, Rush $100K-$250K/yr, Mishkan Chicago up to $105K) reads as family philanthropy, not a corporate giving program, so corporate-foundation flag withheld deliberately \u2014 noted here for the operator. All four years reconciled delta $0; 120 published Chicago rows tie exactly to filing counts and dollars (27/$819,000, 28/$624,000, 31/$706,500, 34/$692,000). Data-quality: recipient 'BUMBLEE AGENCY' (2023 $5,000, 2024 $20,000, 3260 N Lake Shore Dr) is the filer's own spelling \u2014 leave as filed per house rule."
+  },
+  {
+   "ein": "366068723",
+   "auto_name": "Otho S A Sprague Memorial Institute",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "Historic Chicago health grantmaker; all four years reconciled delta $0 and the 63 published Chicago rows tie exactly to filing counts/dollars (12/$1,416,358, 19/$1,788,505, 16/$1,613,790, 16/$1,915,515). All recipients are genuine Chicago health orgs (UIC School of Public Health $376K-$540K/yr, Heartland Alliance Health, Lawndale Christian Health Center $150,000 in 2023). Data-quality watch items, none excludable: (1) 2024 SWEDISH COVENANT HOSPITAL FOUNDATION $200,000 filed at '5145 S CALIFORNIA AVE' \u2014 Swedish Hospital is at 5145 N California Ave, so the S/N filer typo may misplace the geocode to Gage Park; (2) 2022 rows 'UIL at Chicago' twice are filer typos for UIC; (3) filing style breaks from mixed case (2021-22) to all caps (2023-24) \u2014 same filer, cosmetic; (4) 2025 filing fetch failed 404 (logged)."
+  },
+  {
+   "ein": "416519559",
+   "auto_name": "Martha Sue Parr TR",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "JPMorgan Chase Bank NA sole trustee/officer (fee $211K-$241K/yr) \u2014 bank trust desk with no Chicago operating substance. 18-20 grant rows/yr ($1.23M-$1.41M), all four years reconciled delta $0, zero Chicago rows in every year \u2014 nothing published from this funder."
+  },
+  {
+   "ein": "461615023",
+   "auto_name": "Minerd Foundation",
+   "name_ok": true,
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Foundation of the late B. Scott Minerd (Guggenheim Partners CIO, d. Dec 2022), California-based in substance \u2014 officers are Minerd (2021) then Fedoris/Andrus, and only 1 of 32 grant rows across three filed years is Chicago. Structural break: no 2022 filing in the checkpoint at all (2021, 2023, 2024 only) \u2014 likely tied to the founder's death; operator should confirm whether a 2022 return exists before treating the gap as pipeline loss. The single published row is genuine: ANTI-CRUELTY SOCIETY, 157 W Grand Avenue, $30,000 (2024), sited, real address. All filed years reconciled delta $0."
+  },
+  {
+   "ein": "471330583",
+   "auto_name": "Clayco Foundation the",
+   "name_ok": false,
+   "name_suggestion": "The Clayco Foundation",
+   "flags": [
+    "corporate-foundation"
+   ],
+   "exclude": false,
+   "notes": "BMF legal name is the inverted 'CLAYCO FOUNDATION THE'; restoring the article gives 'The Clayco Foundation', which also matches how the org already appears as a recipient in the published Polsky Foundation rows \u2014 no funder-name collision with the 97 published (it is a recipient there, not a funder). Corporate foundation of Clayco Inc. (construction): officers are company executives (CFO Anthony M Schofield then Justin J Lienemann, VPs James M Havel and Kevin J McKenna, trustees). All four years reconciled delta $0; 17 published Chicago rows tie exactly (4/$290,000, 6/$1,305,000, 2/$250,000, 5/$425,000); giving splits between Chicago and St. Louis-area grantees. Grants are real \u2014 e.g. Rebuild Foundation $1,000,000 (2022, St. Laurence Arts Incubator construction), University of Chicago $200,000/yr. Data-quality: 2022 'Ex-Cons for Community and Society' row repeats the org name in address_line1 (no street address) \u2014 real Chicago org (ECCSC), correctly locType intermediary_or_citywide, not excludable."
+  },
+  {
+   "ein": "756014459",
+   "auto_name": "Adeline & George Mcqueen Foundation of 1960 8336174700",
+   "name_ok": false,
+   "name_suggestion": "Adeline & George McQueen Foundation of 1960 8336174700",
+   "flags": [
+    "hq-outside-chicago"
+   ],
+   "exclude": false,
+   "notes": "Casing-only fix: 'McQueen' vs title-caser's 'Mcqueen' \u2014 letters unchanged from the BMF legal name, so this is not a spelling correction; bank account token 8336174700 preserved per house style. JPMorgan Chase Bank NA sole trustee (fee $190K-$206K/yr), Texas-prefix EIN (Fort Worth-area trust) \u2014 bank trust desk, no Chicago substance. 18-25 grant rows/yr ($1.12M-$1.24M), all four years reconciled delta $0, zero Chicago rows every year \u2014 nothing published."
+  },
+  {
+   "ein": "833694159",
+   "auto_name": "Bryan Cressey and Iliana Sweis Foundation",
+   "name_ok": true,
+   "flags": [],
+   "exclude": false,
+   "notes": "All four years reconciled delta $0; 42 published Chicago rows tie exactly to filing counts/dollars (11/$1,255,148, 10/$1,599,054, 10/$1,504,648, 11/$1,582,497). Concentration note: ABOVE BEYOND FAMILY RECOVERY CENTER (2942 W Lake St) receives $964,648 (2021), $1,252,554 (2022), $1,339,648 (2023), $1,289,497 (2024) \u2014 roughly 77-85% of Chicago dollars each year; Bryan Cressey is that charity's founder/board chair, so this is founder-affiliated but still genuine grants to a real public charity at its real West Side address \u2014 keep, but the operator should expect this single relationship to dominate the funder's map footprint. Data-quality: several recipient names are truncated at ~35 chars by the e-file field ('DEPRESSION AND BIPOLAR SUPPORT ALLI', 'REVIVE CENTER FOR HOUSING AND HEALI', 'UNIVERSITY OF IL COLLEGE OF MEDICIN'), and 'IMMERMANS ANGELS' is the filer's rendering of Imerman Angels \u2014 leave as filed. 2024 'THE DEPARTMENT OF GLOBAL SURGERY' ($40,000, 5841 S Maryland Ave) is a University of Chicago Medicine unit named as recipient \u2014 real grantee unit, not a bookkeeping label. 2025 filing fetch failed 404 (logged)."
+  }
+ ],
+ "verdicts": [
+  {
+   "ein": "462918450",
+   "uphold": true,
+   "reason": "Source XML confirms the exclusion on every point. The 2021 filing contains the row VARIOUS CO HYATT HOTELS FOUNDATION, 150 N Riverside Plaza Chicago (the filer's own Hyatt HQ address), purpose SECTION 139 DISASTER RELIEF, $411,500, with RecipientFoundationStatusTxt = INDIVIDUALS \u2014 the filer's own declaration that this is an aggregate of payments to unnamed individuals (employee disaster relief), not a grantee. The 2022 filing has the identical row at $1,000, also status INDIVIDUALS. The Chicago attribution is a care-of bookkeeping artifact with no real geography (extractor left lat/lng blank). The open-ended recipient_contains pattern is safe: no VARIOUS or individual-status rows exist in 2023/2024, so tax_year=null cannot catch a real grantee. Arithmetic verified: 2021 Chicago rows sum to $546,500 and the VARIOUS row is 75.3% of it. Keeping the funder (exclude=false) is also correct: all remaining Chicago rows are genuine PC-status organizations at their own addresses with amounts matching the filings, and all four filings reconcile exactly to line 3a."
+  },
+  {
+   "ein": "363165216",
+   "uphold": true,
+   "reason": "Verified against the primary source: the 2022 990-PF XML (object_id 202431169349100023) contains exactly one grant row with literal filer-entered recipient \"MISSING NAME\", $366, at 525 W Monroe St, Chicago 60661 \u2014 which the same XML's filer block confirms is the foundation's/firm's own address (525 W MONROE ST 1900, 60661). The placeholder is in the filed return, not an extraction artifact; the grantee is unidentifiable, so the row exclusion is correct and exactly scoped (1 of 178 rows, no over-match, immaterial $366). The funder-level keep also holds: all four filings reconcile to printed line-3a with delta 0, per-year Chicago row counts and dollar sums tie the checkpoint metadata exactly, and the remaining 177 rows are real named Chicago nonprofits whose addresses and geocodes spot-check correctly; blank-geo rows (PO boxes) are properly classed intermediary_or_citywide rather than falsely sited."
+  },
+  {
+   "ein": "363712587",
+   "uphold": true,
+   "reason": "Refutation failed on both fronts. Funder keep is solid: all 4 filings (2021-2024) reconcile to printed line 3a with delta 0.0, quarantine empty, and rows are real, recognizable Chicago charities (Art Institute, Field Museum, Shedd, Merit School of Music, Rush, GCFD, Access Living) with trustworthy geocodes. The single LEGACYCOM row exclusion is factually verified: 230 W Monroe St Suite 400 is the exact HQ of Legacy.com, Inc., the for-profit obituary/memorial platform (confirmed via ZoomInfo/BBB/Wikipedia), and the $40 'ARBOR DAY' purpose matches its memorial-tree donation flow whose true beneficiary is the Arbor Day Foundation in Lincoln, NE \u2014 not a Chicago grantee. The row would falsely site $40 of Chicago giving at a payment conduit's office; its zip is even a carry-over from the adjacent JUF row. Exclusion is correctly scoped to the one 2021 row (no recurrence in other years). Minor non-blocking nits: Access Living filer-error zip 60015 (lat/lng correct), Smart Museum lockbox address already demoted to intermediary_or_citywide."
+  },
+  {
+   "ein": "436316003",
+   "uphold": true,
+   "reason": "Refutation failed; exclusion verified against source XML. Independently fetched two of the four cited 990-PF XMLs (2023 obj 202403059349101145, 2021 obj 202213189349103116): each contains exactly one grant group whose recipient name, address, and city are the literal string \"SEE ATTACHED SCHEDULE\", with amount equal to TotalGrantOrContriPdDurYrAmt (delta=0 all four years per checkpoint), proving the row is a whole-year aggregate placeholder, not a real grantee. The IL/60680 geography is the filer's own trustee address (THE NORTHERN TRUST COMPANY, PO BOX, IL 60680 in the Filer block), so any Chicago geocoding would be false attribution of ~$3.9M to a bank PO box. The row_exclusion rule (recipient_contains \"SEE ATTACHED SCHEDULE\", all years) exactly covers the 4 quarantined rows; cited amounts match checkpoint and XML. Keeping the funder (exclude=false, disposition aggregate_only) while permanently quarantining these rows is correct. Non-blocking note: one additional filing (202601279349102935) 404'd and is absent from the checkpoint."
+  },
+  {
+   "ein": "815068397",
+   "uphold": true,
+   "reason": "Verified against source 990-PF XMLs, not just the checkpoint. 2024 Schwab row: confirmed verbatim; the filer's own RecipientRelationshipTxt is \"Donor Advised Fund\" \u2014 an unambiguous $5,105,000 transfer into the national Schwab DAF sponsor (HQ San Francisco), mapped only via a Schwab office suite at 24 E Washington; math checks ($5,105,000/$5,255,000 = 97.1% of 2024 Chicago dollars; remaining $150,000 = Sarcoidosis $25K + Feeding America $125K). 2021 row: confirmed verbatim; recipient is by name a DAF belonging to the foundation's own president (Patricia A Bresky, president all four years), a self-directed $85,000 pass-through at 320 S Wacker Suite 3200 \u2014 100% of 2021 Chicago dollars. Neither row is a publishable community grant and neither address reflects where charitable dollars land. Matchers are surgical (one row each, no collateral hits), and funder-level exclude=false is correct since the remaining FSR/Feeding America rows are genuine Chicago grantees at real addresses. All refutation attempts failed; exclusion decision upheld."
+  },
+  {
+   "ein": "200156873",
+   "uphold": true,
+   "reason": "Refutation failed; exclusion confirmed and strengthened. Source XMLs show the filer's own address is 1500 N Lake Shore Drive 13-A, Chicago 60610, and IRS records show The Jessica Fund (EIN 36-6850332) at the identical unit (1500 N Lake Shore Dr 13A, 60610-6686). The Jessica Fund is a private non-operating foundation (IRS foundation code 4, 990-PF filer since at least 2005), not a public charity as the Hart schedule claims \u2014 its revenue spikes match Hart's transfers ($1.38M revenue in 2021 vs $875K grant; $838K in 2022 vs $775K grant), confirming PF-to-PF family pass-through at the donor's residence with double-count risk from its own regranting. Geography (a Gold Coast residential apartment) is untrustworthy as community-grant data for 53%/47% of 2021/2022 Chicago dollars (percentages verified). Keeping the funder with exclude=false is also correct: remaining rows are real, correctly-addressed Chicago institutions and all four filings reconcile to line 3a with delta 0."
+  },
+  {
+   "ein": "362356089",
+   "uphold": true,
+   "reason": "Exclusion CONFIRMED. Every factual claim checks out against the checkpoint: 330/364 published rows carry the filer's own HQ address (4 West Burton Place, Chicago 60610), per-year 94/103 (2021), 82/93 (2022), 88/93 (2023), 66/75 (2024) \u2014 exact match to the decision. All 330 share one identical geocode and 321 are locType 'sited'. Cited examples (Acciavati $5,000, Andrews $10,000, Altay $5,000) verified. Decisive refutation-killer: 2024 filer-address rows include Architectural Association (London), University of Edinburgh, Syracuse, U Washington, and Rice \u2014 all impossibly listed at 4 W Burton Pl, proving the address is a filer stand-in for worldwide grantees, not real geography. Two caveats that do not overturn: (1) the \"~90% of chicago_dollars\" figure is overstated \u2014 actual filer-address dollar shares are 79.4/85.0/88.3/81.7% by year (88-95% by row count); (2) the 34 non-filer rows are genuine Chicago orgs with real distinct addresses (Chicago Architecture Biennial, Art Institute, UIC, Lampo, MAS Context, etc.) and would be individually publishable, so a future row-level salvage of those 34 is possible if policy allows. Under the filing-level Feinberg precedent, with ~91% of rows and ~83% of Chicago dollars fabricated as Chicago-sited, the whole-filer hold stands."
+  },
+  {
+   "ein": "363496915",
+   "uphold": true,
+   "reason": "Upheld after adversarial check against the raw IRS XML (2022 and 2023 filings fetched from the source URLs). Decisive evidence: the foundation's own filer address is 7061 N Kedzie Ave #201, Chicago \u2014 every excluded row sited at 7061 N Kedzie carries the funder's own office address and geocode, not the recipient's, so the Chicago geography is fabricated exactly as claimed. Row-by-row: (1) VARIOUS CHARITABLE INSTITUTIONS 2021 $74,126 has literal address \"VARIOUS\" \u2014 unitemized bucket, no identifiable grantee. (2-5) The DAF/tzedaka rows self-identify in their recipient names and match foundation officers (Ranan Wolff director, Cheryl Magence treasurer); the three 2023 rows of $592,611 each ($1,777,833 of the $1,968,833 year total) are a wind-down into family accounts at Schwab Charitable (San Francisco), not community grants. (6-8) PEF Israel Endowment Fund (NY pass-through to Israel), Shavei Hebron (Hebron yeshiva), and ALEH (Israeli disability network) are all non-Chicago recipients sited at the funder's own address. All amounts and tax years in the reasons match the checkpoint exactly, and each recipient_contains pattern matches only its intended rows (no collateral hits \u2014 verified \"ALEH\" does not match HATZALAH etc.). Keeping the funder (exclude=false) is also correct: the remaining rows are genuine independently-addressed Chicago grantees (Chicago Chesed Fund, Hatzalah Chicago, The Ark, Chicago Community Kollel, Chicago Mitzvah Campaign). Minor note: the exclusions are slightly under-inclusive \u2014 kept rows AMERICAN FRIENDS ($3,500), AMERICAN FRIENDS PAN ($1,500), RABBI MEIR BAAL HANES(S) ($1,000 in 2022 and 2023), MEOROT KOLEL SOCHOTSHOV ($3,000), and CHILDRENS BRIDGE ($1,500/$2,250) share the same fabricated 7061 N Kedzie siting and appear Israel-bound or unresolvable; recommend a follow-up pass on those, but this does not undermine the decision under test."
+  },
+  {
+   "ein": "363820887",
+   "uphold": true,
+   "reason": "CONFIRMED against source of truth. Fetched the 2024 990-PF XML from the checkpoint's recorded source_url; SHA-256 prefix f1a4b07d6a9192a5 matches the checkpoint hash. The filing does list KENTUCKY HEALTH JUSTICE NETWORK ($30,000, GENERAL SUPPORT) at 625 N KINGSBURY, CHICAGO IL 60654 \u2014 but ProPublica/IRS shows KHJN (EIN 27-1246514) is a Louisville, KY organization with no Chicago presence, and the same 2024 schedule assigns 625 N Kingsbury St to International Children's Media Center (as do 2021 schedules for Art Works Projects / We All Live Here Foundation), whose address it genuinely is. The checkpoint row carries coordinates bit-identical to the ICMC/Art Works geocode and locType \"sited\", so publishing it would place a Louisville org's grant as a Chicago-sited dot \u2014 fabricated Chicago geography. Row-exclusion filter matches exactly one row (no over-removal). Funder-level exclude=false is also sound: all four filings reconcile to line 3a with delta 0.0 and spot-checked grantees (LVEJO, Sweet Water, Hyde Park Art Center, ASE, Alternatives, CircEsteem) are real Chicago orgs at correct addresses. One nuance: the address error originates in the filed return (preparer carry-over), not the parser \u2014 the KHJN entry's schedule neighbor is \"IN OUR NAME\" (New York), so the reason's implied adjacency mechanism is slightly off, but the substantive basis for exclusion is fully verified."
+  },
+  {
+   "ein": "842220090",
+   "uphold": true,
+   "reason": "Verified against all four primary-source XMLs (2021-2024 990-PFs from the gt990datalake S3 bucket), not just the checkpoint. Each filing's Part XV schedule contains exactly one grant group with recipient \"SEE ATTACHED\" and amounts matching the decision ($2,485,000 / $3,995,220 / $2,531,830 / $3,339,000); each single row equals ContriPaidRevAndExpnssAmt with delta 0, so the aggregate IS the full grant total and no itemized rows were missed by the parser. The recipient address PO BOX 803878, CHICAGO IL 60680 is byte-identical to the filer's own <Filer><USAddress> in every year \u2014 it is Northern Trust Foundation's own mailing address, not a grantee's. The 23-41KB XML files contain no attachment content, confirming known_attachment_gap. Refutation fails on every angle: rows are bookkeeping placeholders, the only geography is the filer's own PO Box, and publishing any Chicago attribution would be fabricated. The 404 note (object_id 202641289349101124) is a not-yet-available later filing, not hidden itemization. Filing-level hold under the Feinberg/Graham precedent is correct; the permanent quarantine of all four aggregate rows must stand."
+  },
+  {
+   "ein": "363209007",
+   "uphold": true,
+   "reason": "Verified against all four source XMLs: each filing contains exactly one row with recipient \"From Pass Through K-1s\" ($41/$62/$45/$56, purpose \"General Use\"), and the filter matches only those rows. It is a bookkeeping label, not a grantee \u2014 decisively, the row addresses (440 S LaSalle 2021-22, 110 N Wacker Ste 3300 2023-24) are the foundation's OWN filer addresses on the corresponding returns (Ste 3100 at 440 S LaSalle; exact suite match at 110 N Wacker), so the \"sited\" geocode pins the funder's office, not a recipient. Amounts are de minimis K-1 pass-through allocations ($204 total) and line-3a totals still reconcile. One correction to the reason text: the addresses are the fund's own filing address, not its brokers/accountants \u2014 which strengthens the exclusion. Exclusion upheld; funder correctly kept with the remaining real, reconciled Chicago grants."
+  },
+  {
+   "ein": "463460720",
+   "uphold": true,
+   "reason": "Exclusion conclusively verified against the source 2023 990-PF XML (sha256 13ebf8b6b3a624bc matches checkpoint). The 'MISC' $3,000 row's recipient address, 1943 N Burling, is the foundation's own Filer address, its location-of-books address, Josef Lakonishok's officer address, AND the Schedule B contributor address \u2014 i.e., the donor's private Lincoln Park residence, not a grantee location. 'MISC' is an unitemized small-grants aggregate, and its 'sited' geocode would pin a grant on a private home. Filter scope is safe: 'MISC' matches exactly one row in 2023 and no recipient in any year collides as a substring. Reconciliation is unaffected (parsed_sum still ties line 3a; Chicago 2023 loses only $3,000 of $1,425,897, 0.21%). Keeping the funder (exclude=false) is also correct \u2014 all other rows are named major institutions at verifiable addresses across four fully reconciled filings."
+  },
+  {
+   "ein": "261225450",
+   "uphold": true,
+   "reason": "Refutation failed on all axes. The 185 excluded individual rows are $500-$2,000 EDUCATIONAL scholarship disbursements to private persons, every one pinned \"sited\" at the identical trustee/law-firm address 330-331 N Wabash (pin 41.8884,-87.6273; officers list confirms trustee Richard W Burke Sr at that office) \u2014 fabricated geography per the Graham precedent, plus a privacy issue; TRUSTEE PLEDGES ($45K, 2022 only, filer address) is a bookkeeping aggregate, and its 2022 year-scope is complete since it appears in no other year. Pattern hygiene verified programmatically: zero uncovered 330/331 N Wabash rows, zero dead patterns, zero over-matches against non-filer-address rows or kept org names. Keeping the funder (exclude=false) is correct: the 73 surviving rows are 20 real, verifiable Chicago nonprofits (Brother Rice, De La Salle, Holy Trinity, Shedd, Catholic Charities, Resurrection Project, etc.) at their true street addresses with coordinates matching those addresses, amounts $8K-$460K, and all four filings reconcile to line 3a with delta 0 (kept+excluded dollars tie exactly to each filing's chicago_dollars). Nits only, non-blocking: OFFICE OF HUMAN DIGINITY/DIGNITY spelling variants should dedupe; DePaul Prep/Arrupe locType \"intermediary_or_citywide\" is questionable for physical campuses; MEGHAN BURKE related-party flag is well-grounded and worth operator review."
+  },
+  {
+   "ein": "364473692",
+   "uphold": true,
+   "reason": "Verified against the checkpoint: the 2024 ISRAEL CANCER RESEARCH FUND row exists exactly as described ($25,000, \"2 NORTHFIELD PLAZA\", zip 60093, empty lat/lng, locType intermediary_or_citywide). ZIP 60093 is Northfield/Winnetka IL, and 2 Northfield Plaza is ICRF's known Midwest office in Northfield \u2014 not Chicago; the city=\"CHICAGO\" field is untrustworthy because this filer wrote CHICAGO on every row in all four years. The exclusion is material: the 39 2024 rows sum to exactly $365,300 = the filing's chicago_dollars, so the $25,000 is currently counted in Chicago attribution (correct total after exclusion: 38 rows / $340,300). Scope is exact \u2014 ICRF appears only once in the file (2024). exclude=false for the funder is also sound: four reconciled filings (delta 0.0) and genuine, mostly sited grants to real Chicago institutions; no other row has a comparable geography break. Decision upheld in full."
+  },
+  {
+   "ein": "363566181",
+   "uphold": true,
+   "reason": "Upheld after primary-source verification. Fetched the 2021 and 2024 990-PF XMLs from the stated source URLs: each filing has exactly 2 grant rows \u2014 one real itemized grant to OPHEL BAS ZION INSTITUTIONS, 32 Alefondri Street, Jerusalem, Israel (2021 $899,722; 2024 $2,019,905), and one 'SUNDRY ORGANIZED CHARITIES' row with AddressLine1 literally 'VARIOUS', Chicago IL 60645. The extraction is faithful (no real grantee was collapsed into the sundry label) and all dollar amounts in the decision match both checkpoint and source. Refutation fails on every front: (a) no entity named 'Sundry Organized Charities' exists \u2014 it is textbook unitemized aggregation, the exact pre-flagged VARIOUS/MISC shape; (b) the Chicago geography is untrustworthy \u2014 the filer's own address is 6247 N Sacramento, Chicago 60659, so zip 60645 reflects the filer's neighborhood, not any grantee, and the pipeline already tagged the row intermediary_or_citywide with no lat/lng; (c) nothing attributable is lost \u2014 the only real grantee all four years is in Jerusalem (out of scope), and parsed sums reconcile to line 3a within $1, ruling out hidden itemized Chicago rows. The sundry rows are 100% of the funder's Chicago rows, so filing-level exclusion is equivalent to the row exclusion and correct."
+  },
+  {
+   "ein": "363218989",
+   "uphold": true,
+   "reason": "Refutation failed; exclusion verified against all four source XMLs. \"VARIOUS MISC CHARITIES\" appears in every filing (2021-2024) with exactly the claimed amounts ($5,750 / $36,500 / $70,000 / $53,449 \u2014 the non-round 2024 figure is characteristic of a residual aggregate), and its address (333 W 35TH, Chicago 60616) is identical to the Filer block address in all four years \u2014 the Reinsdorf/White Sox front office at Rate Field (Jerry Reinsdorf is President). The \"sited\" geocode therefore marks the filer's own office, not a grantee. No entity named \"Various Misc Charities\" exists; it is an unitemized bookkeeping catch-all, and since the foundation's itemized grants go nationally (Phoenix, Memphis, DC, Alexandria VA, Wellington FL), the aggregate's underlying recipients cannot be presumed Chicago. Publishing would fabricate a grantee and inflate sited Chicago dollars by $165,699. The exclude=false funder-level call is also correct: remaining rows are real named grantees, all four filings reconcile to line 3a with delta 0, and chicago_rows/chicago_dollars arithmetic checks out. Minor source quirk (no action needed): the 2023 filing itself lists Chicago White Sox Charities at 1901 W Madison (Bulls address), so that geocode is faithful to the filing."
+  },
+  {
+   "ein": "200478557",
+   "uphold": true,
+   "reason": "Exclusion verified against both source XMLs. The two rows (\"CHARITABLE CONTRIBUTIONS FROM K-1'S\", $12 in 2021 and $55 in 2022) are a bookkeeping aggregate for partnership K-1 pass-through contributions, not a grantee \u2014 recipient relationship \"NONE\", trivial amounts, same shape as the pre-flagged K-1 rows. Geography is untrustworthy: the row is geocoded as \"sited\" at 333 W Wacker Ste 700, an address belonging to no grantee. One correction to the recorded reason: 333 W Wacker is NOT the foundation's own c/o address (filer address is 120 S LaSalle Ste 2000 both years; preparer is in Wilmette) \u2014 it is most likely the K-1-issuing partnership's office; this changes the wording, not the conclusion. Pattern matches exactly 2 of 71 rows, no over-match, no K-1 rows in 2023/2024 so tax_year null is correct. Funder-level exclude=false also holds: all four filings reconcile to line 3a within $1 and remaining rows are real, recognizable Chicago grantees."
+  },
+  {
+   "ein": "136203234",
+   "uphold": true,
+   "reason": "Verified against all four source 990-PF XMLs. Each year's grants table has exactly one 'VARIOUS INDIVIDUALS SEE ATTACHMENT' row (status 'I', purpose HARDSHIP GRANT) with amounts matching to the dollar; no grantee itemization exists in any e-file (the only attachment flag is Form 2220, unrelated; file bulk is capital-gains schedules). The 2023-24 '10 S Dearborn Street' address is confirmed as the JPMorgan trustee's own office \u2014 the filer address and location-of-books are '10 S DEARBORN IL1-0111 / MC IL 1-0111', Chicago 60603, and JP Morgan Chase Bank NA is the compensated trustee all four years \u2014 so even the 2021-22 'CHICAGO 60603' city is trustee geography, not grantee geography. All other grant rows are NY institutions, confirming chicago_rows=0, and parsed sums tie line 3a exactly, so the quarantine hides no parsing gap. The row_exclusions quarantine must hold; exclude=false for the funder overall is also correct since the remaining rows are real, reconciled, non-Chicago grants."
+  },
+  {
+   "ein": "357120359",
+   "uphold": true,
+   "reason": "Refutation failed. Verified both 2022 and 2024 source XMLs from S3 (SHA-256 prefixes match checkpoint). Each of the four 990-PF filings itemizes exactly 2 rows, all 'PLEASE SEE ATTACHED' with placeholder address DE/11111 \u2014 a pointer to a non-public paper attachment, not a real grantee. Reconciliation is exact (parsed_sum = line3a = line25d, delta 0.0 all four years), proving the placeholders are the entire grant schedule with no hidden itemized rows. No future-approved grant groups and no binary attachment content exist in the public XML. The only Chicago/IL references are JPMorgan Trust Company of Delaware's trustee mailing address (10 S Dearborn IL1-0111, Chase Tower) \u2014 filer/books/officer address, not grantee geography. Publishing these rows would fabricate a nonexistent recipient at a fake Delaware address with zero Chicago linkage. The row_exclusion (recipient_contains 'PLEASE SEE ATTACHED', all years) correctly covers all 8 quarantined rows, and funder-level exclude=false is appropriate since capacity/aggregate figures remain valid. Decision upheld."
+  },
+  {
+   "ein": "362488355",
+   "uphold": true,
+   "reason": "Refutation failed \u2014 all 8 row exclusions are correct and well-evidenced. Seven of the eight rows' own purpose text names a non-Chicago service area (AAHAA: \"rural area of northwest Lake County\"; BEDS Plus: \"Southwest Suburban Cook County\"; Crisis Center: \"south Cook County suburbs\"; Journeys: \"north/northwest suburban Cook County\"; Lazarus House: \"Kane County\"; McHenry PADS: \"McHenry County\"; Sarah's Inn: \"near west suburban Cook County\"), and external verification confirms each street address is suburban: 874 Main St = Antioch Village Hall (AAHAA); 1140 E Northwest Hwy = Palatine (Journeys, per org site + directories); 214 Walnut St = St. Charles 60174 (Lazarus House); 4031 W Dayton St = McHenry 60050 (Pioneer Center/McHenry County PADS); 1547 Circle Ave = Forest Park 60130 (Sarah's Inn); 1000 Remington Blvd = Bolingbrook corporate corridor (Alexian Brothers admin; only its Bonaventure House program is in Chicago Lakeview, so the row's Chicago address is still fabricated). Preparer city/zip fields are demonstrably boilerplate: the 2022 filing stamps zip 60601 on every row regardless of street, and 2024 zips are scrambled (e.g., 1240 S Damen tagged 60626, 6212 S Sangamon tagged 60609). All 8 excluded rows have empty lat/lng (geocoder failed on the fake Chicago addresses). Sarah's Circle (4838 N Sheridan, genuine Chicago) is correctly retained and correctly distinguished from Sarah's Inn. Funder-level exclude=false is also right \u2014 the bulk of rows are genuine Chicago grants. CAVEAT \u2014 the row_exclusions list is incomplete; the same fabricated-Chicago pattern appears in 2024 rows NOT excluded: (1) Alexian Brothers 2024 row ($15,000, same 1000 Remington Blvd address) \u2014 inconsistent with excluding only the 2022 row; (2) Anew/formerly South Suburban Family Shelter ($10,000, 18137 South Harwood = Homewood area; 18137 S exceeds Chicago's grid which ends ~138th); (3) Family Health Partnership Clinic ($15,000, 401 E Congress = Crystal Lake org serving McHenry County \u2014 this row is actively geocoded to the Loop at 41.8769,-87.6242 with locType \"sited\", a wrong Chicago map pin); (4) Lake County Haven ($15,000, 117 McKinley Ave = Libertyville); (5) Northwest Compass ($10,000, 1300 W Northwest Hwy = Mount Prospect); (6) The Harbour ($15,000, 1440 Renaissance Dr = Park Ridge); (7) TLS Veterans ($10,000, 805 S McHenry Ave = Crystal Lake, McHenry County per purpose); (8) Will-Grundy Health Partnership ($15,000, 213 E Cass St = Joliet). Recommend extending row_exclusions to cover these before publish; the eight exclusions under test stand."
+  }
+ ]
+}
