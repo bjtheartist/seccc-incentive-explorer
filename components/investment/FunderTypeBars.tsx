@@ -3,10 +3,9 @@ import { FUNDER_TYPE_COLORS, FUNDER_TYPE_LABELS } from "@/lib/community-investme
 import { formatCount, formatFullDollars, formatPercent } from "./format";
 
 /**
- * "Where the money came from", the sortable-bar reading (Sol #4). The donut stays
- * (an explicit preference) for the part-of-whole gestalt; these sorted horizontal
- * bars sit directly beneath it because bars compare magnitudes far better and put
- * the exact dollars AND share on one line. Ranked high → low by awarded dollars.
+ * "Where the money came from" as one ranked horizontal-bar reading. Bars compare
+ * magnitudes directly and put the exact dollars and share on one line, avoiding a
+ * second donut view of the same split. Ranked high to low by awarded dollars.
  *
  * Bars carry the funder-type palette (identity), matching the donut and the map
  * legend so the two readings of the same split use one color language. A
@@ -22,7 +21,7 @@ export function FunderTypeBars({ byFunderType }: { byFunderType: FunderTypeBreak
   const max = Math.max(1, ...withDollars.map((f) => f.awardedDollars));
 
   return (
-    <div className="mt-3 border border-[#0C1B33]/10 bg-white p-5 sm:p-6">
+    <div className="border border-[#0C1B33]/10 bg-white p-5 sm:p-6">
       <div className="font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#0C1B33]/45">
         Sorted by awarded dollars
       </div>

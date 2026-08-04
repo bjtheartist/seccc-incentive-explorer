@@ -8,14 +8,12 @@ import type { VacancyCaseArea, VacancyCaseRecord } from "@/lib/vacancy-cases";
  * called directly with a fixture record set (buildCaseRecords stubbed) and the
  * client islands stubbed out, so renderToStaticMarkup can inspect the
  * result: five case cards with real counts, the active-case panel, the
- * geographic-preview honesty line, the opportunity-areas rail, the as-of line,
- * and the ?case= switch — with NO owner name anywhere in the output.
+ * synchronized-workspace server contract, the opportunity-areas rail, the as-of
+ * line, and the ?case= switch — with NO owner name anywhere in the output.
  *
- * The geographic preview is now the REAL map (CasePreviewMapIsland) instead of
- * the old inline SVG dot map, so its assertions check the SERVER CONTRACT: the
- * island receives the active case's mapped points plus the edition
- * boundary/centroid, the honesty caption still renders server-side, the SVG is
- * gone, and the "Open the property map" link is preserved.
+ * The workspace itself is a client island, so these assertions check the SERVER
+ * CONTRACT: the island receives every active-case record (not a sampled preview),
+ * the edition geography, and parsed shareable filter state.
  */
 
 /** The record set the stubbed loader returns. `let`, so one test can swap in an
@@ -81,28 +79,40 @@ vi.mock("@/components/vacancy/VacancySubNav", () => ({ VacancySubNav: () => null
 vi.mock("@/components/vacancy/CopyCaseLink", () => ({ CopyCaseLink: () => null }));
 vi.mock("@/components/vacancy/CaseAreaSwitcher", () => ({ CaseAreaSwitcher: () => null }));
 
-// The preview map island — stubbed to a marker element that echoes the props
-// the Server Component hands it, so the pass-through contract is assertable
-// without loading mapbox-gl in Node.
-vi.mock("@/components/vacancy/CasePreviewMapIsland", () => ({
+// The synchronized workspace — stubbed to a marker element that echoes the
+// Server Component contract without loading mapbox-gl in Node.
+vi.mock("@/components/vacancy/CaseWorkspace", () => ({
   default: ({
     zip,
-    points,
+    records,
     boundary,
     centroid,
+    initialView,
+    initialUniverse,
+    initialQuery,
+    initialBounds,
   }: {
     zip: string;
-    points: readonly { universe: string }[];
+    records: readonly { universe: string; lat: number | null; lon: number | null }[];
     boundary: unknown;
     centroid: unknown;
+    initialView: string;
+    initialUniverse: string;
+    initialQuery: string;
+    initialBounds: unknown;
   }) => (
     <div
-      data-testid="case-preview-map"
+      data-testid="case-workspace"
       data-zip={zip}
-      data-points={points.length}
-      data-universes={points.map((p) => p.universe).join(",")}
+      data-records={records.length}
+      data-mapped={records.filter((record) => record.lat != null && record.lon != null).length}
+      data-universes={records.map((record) => record.universe).join(",")}
       data-boundary={boundary ? "yes" : "no"}
       data-centroid={centroid ? "yes" : "no"}
+      data-view={initialView}
+      data-universe={initialUniverse}
+      data-query={initialQuery}
+      data-bounds={initialBounds ? "yes" : "no"}
     />
   ),
 }));
@@ -135,11 +145,11 @@ vi.mock("@/lib/vacancy-index", async (importOriginal) => {
 
 import CaseWorkbenchPage from "../page";
 
-async function render(caseParam?: string) {
+async function render(search: Record<string, string> = {}) {
   return renderToStaticMarkup(
     await CaseWorkbenchPage({
       params: Promise.resolve({ zip: "60617" }),
-      searchParams: Promise.resolve(caseParam ? { case: caseParam } : {}),
+      searchParams: Promise.resolve(search),
     }),
   );
 }
@@ -172,14 +182,13 @@ describe("Case Workbench page", () => {
   });
 
   it("switches the active case from ?case=", async () => {
-    const html = await render("building-review");
+    const html = await render({ case: "building-review" });
     expect(html).toContain("Reported vacant buildings that need condition and status checks.");
-    // preview honesty line uses the match count
-    expect(html).toMatch(/mapped match(es)? shown/);
+    expect(html).toContain('data-records="2"');
   });
 
   it("falls back to the default case for an unknown ?case=", async () => {
-    const html = await render("not-a-real-case");
+    const html = await render({ case: "not-a-real-case" });
     expect(html).toContain("Start with land that has a public disposition pathway.");
   });
 
@@ -189,69 +198,55 @@ describe("Case Workbench page", () => {
     expect(html).toContain("Commercial Avenue Cluster");
     expect(html).toContain('href="/vacancy/60617/areas/3"');
     expect(html).toContain('href="/vacancy/60617/areas"'); // All areas
-    expect(html).toContain('href="/vacancy/60617/map"'); // Open the property map
   });
 
-  it("hands the preview map island the active case's mapped points and the ZIP geography", async () => {
+  it("hands the workspace every active-case record and the ZIP geography", async () => {
     const html = await render();
-    expect(html).toContain('data-testid="case-preview-map"');
+    expect(html).toContain('data-testid="case-workspace"');
     expect(html).toContain('data-zip="60617"');
-    // public-land matches 3 records; only 2 of them carry a coordinate.
-    expect(html).toContain('data-points="2"');
-    expect(html).toContain('data-universes="land,land"');
+    // Public-land matches 3 records. The workspace gets all three; two map.
+    expect(html).toContain('data-records="3"');
+    expect(html).toContain('data-mapped="2"');
+    expect(html).toContain('data-universes="land,land,land"');
     expect(html).toContain('data-boundary="yes"');
     expect(html).toContain('data-centroid="yes"');
-    // The honesty caption still renders server-side, over the map.
-    expect(html).toContain("Geographic preview");
-    expect(html).toContain("2 of 3 mapped matches shown");
   });
 
-  it("swaps the preview map's points when the active case changes", async () => {
-    const html = await render("building-review");
-    expect(html).toContain('data-points="2"');
+  it("swaps the workspace records when the active case changes", async () => {
+    const html = await render({ case: "building-review" });
+    expect(html).toContain('data-records="2"');
+    expect(html).toContain('data-mapped="2"');
     expect(html).toContain('data-universes="building_report,building_report"');
-    expect(html).toContain("2 of 2 mapped matches shown");
   });
 
-  it("discloses the point cap in the caption when the preview plots only a slice", async () => {
-    // The 8-record fixture is well under the cap, so the line keeps "shown".
-    const uncapped = await render();
-    expect(uncapped).toContain("2 of 3 mapped matches shown");
-    expect(uncapped).not.toContain("evenly sampled");
-
-    // Over the cap, the caption must state how many dots are ACTUALLY on the
-    // map: clustered dots carry visible counts that sum to the plotted total,
-    // so "all N shown" would be falsifiable on the face of the map.
+  it("does not sample or cap the synchronized active-case record set", async () => {
     const { CASE_POINT_CAP } = await import("@/lib/vacancy-cases");
     const original = records;
     records = Array.from({ length: CASE_POINT_CAP + 25 }, (_, i) =>
       r({ id: `m${i}`, universe: "land", ownerType: "city_public", lat: 41.7 + i * 1e-4, lon: -87.5 }),
     );
     try {
-      const capped = await render();
-      const total = (CASE_POINT_CAP + 25).toLocaleString("en-US");
-      expect(capped).toContain(
-        `${total} of ${total} mapped matches · ${CASE_POINT_CAP.toLocaleString("en-US")} evenly sampled`,
-      );
-      expect(capped).not.toContain("mapped matches shown");
-      // ...and the island really does receive only the capped slice.
-      expect(capped).toContain(`data-points="${CASE_POINT_CAP}"`);
+      const html = await render();
+      expect(html).toContain(`data-records="${CASE_POINT_CAP + 25}"`);
+      expect(html).toContain(`data-mapped="${CASE_POINT_CAP + 25}"`);
     } finally {
       records = original;
     }
   });
 
-  it("no longer renders the inline SVG dot preview", async () => {
-    const html = await render();
-    expect(html).not.toContain("Geographic spread of");
-    expect(html).not.toContain('preserveAspectRatio="xMidYMid meet"');
-  });
-
-  it("preserves the property-map link beside the preview", async () => {
-    const html = await render();
-    expect(html).toContain('href="/vacancy/60617/map"');
-    expect(html).toContain("Open the property map");
-    expect(html).toContain("Dots are matches that carry a coordinate");
+  it("parses shareable workspace state and preserves it across case links", async () => {
+    const html = await render({
+      case: "public-land",
+      view: "map",
+      universe: "land",
+      q: "Commercial",
+      bounds: "-87.6000,41.7000,-87.5000,41.8000",
+    });
+    expect(html).toContain('data-view="map"');
+    expect(html).toContain('data-universe="land"');
+    expect(html).toContain('data-query="Commercial"');
+    expect(html).toContain('data-bounds="yes"');
+    expect(html).toContain("case=building-review&amp;view=map&amp;q=Commercial&amp;universe=land&amp;bounds=");
   });
 
   // ── Universe denominators (regression: the case counts shipped with no

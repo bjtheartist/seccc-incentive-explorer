@@ -5,6 +5,7 @@ import { getPilotZipEntry } from "@/lib/pilot-zips";
 import { buildCaseRecords } from "@/lib/vacancy-cases-data";
 import { getVacancyIndexEdition } from "@/lib/vacancy-index";
 import {
+  caseMatches,
   deriveAllCases,
   deriveCase,
   isLandUniverseTruncated,
@@ -13,10 +14,16 @@ import {
   type DerivedCase,
   type VacancyCaseArea,
 } from "@/lib/vacancy-cases";
+import {
+  parseWorkspaceBounds,
+  parseWorkspaceQuery,
+  parseWorkspaceUniverse,
+  parseWorkspaceView,
+} from "@/lib/vacancy-workspace";
 import { VacancySubNav } from "@/components/vacancy/VacancySubNav";
 import { CopyCaseLink } from "@/components/vacancy/CopyCaseLink";
 import { CaseAreaSwitcher } from "@/components/vacancy/CaseAreaSwitcher";
-import CasePreviewMapIsland from "@/components/vacancy/CasePreviewMapIsland";
+import CaseWorkspace from "@/components/vacancy/CaseWorkspace";
 
 export const dynamic = "force-dynamic";
 
@@ -93,17 +100,17 @@ function CaseGlyph({ caseKey }: { caseKey: CaseKey }) {
 /** One selectable case-type card. A LINK (not a button) so selection is a
  *  server-rendered `?case=` navigation — shareable and JS-free. */
 function CaseCard({
-  zip,
+  href,
   card,
   selected,
 }: {
-  zip: string;
+  href: string;
   card: DerivedCase;
   selected: boolean;
 }) {
   return (
     <Link
-      href={`/vacancy/${zip}?case=${card.key}`}
+      href={href}
       aria-current={selected ? "true" : undefined}
       className={`group flex min-h-[124px] flex-col justify-between bg-white p-4 transition-colors ${
         selected
@@ -138,6 +145,24 @@ function CaseCard({
   );
 }
 
+function firstParam(value: string | string[] | undefined): string | undefined {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+/** Keep the shareable workspace posture when switching task paths. */
+function caseHref(
+  zip: string,
+  caseKey: CaseKey,
+  params: Record<string, string | string[] | undefined>,
+): string {
+  const query = new URLSearchParams({ case: caseKey });
+  for (const key of ["view", "q", "universe", "bounds"] as const) {
+    const value = firstParam(params[key]);
+    if (value) query.set(key, value);
+  }
+  return `/vacancy/${zip}?${query.toString()}`;
+}
+
 /** One stat tile in the active-case panel — serif numeral over a mono label. */
 function StatTile({ value, label }: { value: number; label: string }) {
   return (
@@ -168,9 +193,14 @@ export default async function CaseWorkbenchPage({
     searchParams,
   ]);
   const activeKey: CaseKey = parseCaseParam(resolvedParams.case);
+  const initialView = parseWorkspaceView(resolvedParams.view);
+  const initialUniverse = parseWorkspaceUniverse(resolvedParams.universe);
+  const initialQuery = parseWorkspaceQuery(resolvedParams.q);
+  const initialBounds = parseWorkspaceBounds(resolvedParams.bounds);
   const landTruncated = isLandUniverseTruncated(universe);
   const cards = deriveAllCases(records);
   const active = deriveCase(activeKey, records);
+  const activeRecords = records.filter((record) => caseMatches(activeKey, record));
   const neighborhood = pilotEntry.primaryNeighborhood;
   const railAreas: VacancyCaseArea[] = areas.slice(0, 5);
   // Geography for the preview map — the SAME edition boundary/centroid the
@@ -255,7 +285,12 @@ export default async function CaseWorkbenchPage({
 
           <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-5">
             {cards.map((card) => (
-              <CaseCard key={card.key} zip={zip} card={card} selected={card.key === active.key} />
+              <CaseCard
+                key={card.key}
+                href={caseHref(zip, card.key, resolvedParams)}
+                card={card}
+                selected={card.key === active.key}
+              />
             ))}
           </div>
         </section>
@@ -320,110 +355,71 @@ export default async function CaseWorkbenchPage({
           )}
         </section>
 
-        {/* Geographic preview + Opportunity-areas rail */}
-        <section className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[1.55fr_1fr]">
-          {/* Geographic preview */}
-          <div className="border border-[#0C1B33]/10 bg-white">
-            <div className="relative">
-              <CasePreviewMapIsland
-                zip={zip}
-                points={active.points}
-                boundary={edition?.boundary ?? null}
-                centroid={edition?.centroid ?? null}
-              />
-              {/* Overlays sit ABOVE the map canvas (z-10) and stay
-                  pointer-events-none so dragging the map still works. */}
-              <div className="pointer-events-none absolute left-3 top-3 z-10 border border-[#0C1B33]/12 bg-white/90 px-2.5 py-1.5">
-                <span className="block font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#2563EB]">
-                  Geographic preview
-                </span>
-                <span className="mt-0.5 block font-mono-bureau text-[10px] text-[#0C1B33]/60">
-                  {active.mappedTotal.toLocaleString("en-US")} of {active.matches.toLocaleString("en-US")} mapped{" "}
-                  {active.matches === 1 ? "match" : "matches"}
-                  {/* The preview plots a CAPPED slice (CASE_POINT_CAP). The old
-                      SVG hid that behind 400 identical dots; clustered dots
-                      carry visible counts that sum to what is actually
-                      plotted, so the cap has to be stated or the line is
-                      falsifiable on its face. The slice is an EVENLY SPACED
-                      sample (sampleCasePoints), not the first N — the record
-                      order is land-then-buildings, so a head slice would show
-                      one universe and call it the geographic spread. */}
-                  {active.points.length < active.mappedTotal
-                    ? ` · ${active.points.length.toLocaleString("en-US")} evenly sampled`
-                    : " shown"}
-                </span>
-              </div>
-              {/* bottom-7, not bottom-3: clears Mapbox's required attribution
-                  strip in the bottom-right corner. */}
-              <div className="pointer-events-none absolute bottom-7 right-3 z-10 border border-[#0C1B33]/12 bg-white/90 px-2.5 py-1 font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/55">
-                {neighborhood} · ZIP {zip}
-              </div>
-            </div>
-            <div className="flex items-center justify-between gap-3 border-t border-[#0C1B33]/10 px-4 py-3">
-              <span className="font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/40">
-                Dots are matches that carry a coordinate
+        <CaseWorkspace
+          key={`${zip}:${active.key}`}
+          zip={zip}
+          neighborhood={neighborhood}
+          records={activeRecords}
+          boundary={edition?.boundary ?? null}
+          centroid={edition?.centroid ?? null}
+          initialView={initialView}
+          initialUniverse={initialUniverse}
+          initialQuery={initialQuery}
+          initialBounds={initialBounds}
+        />
+
+        {/* Opportunity areas stay a separate next workflow, not a filter that
+            silently changes the synchronized case result set. */}
+        <section className="mt-10">
+          <div className="flex items-baseline justify-between gap-3">
+            <div>
+              <span className="font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#2563EB]">
+                Nearby-site groups
               </span>
-              <Link
-                href={`/vacancy/${zip}/map`}
-                className="font-mono-bureau text-[11px] uppercase tracking-[0.1em] text-[#2563EB] hover:underline"
-              >
-                Open the property map →
-              </Link>
+              <h2 className="mt-2 font-editorial text-[24px] leading-tight text-[#0C1B33]">
+                Opportunity areas
+              </h2>
             </div>
+            <Link
+              href={`/vacancy/${zip}/areas`}
+              className="flex-shrink-0 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#2563EB] hover:underline"
+            >
+              All areas →
+            </Link>
           </div>
 
-          {/* Opportunity-areas rail */}
-          <aside>
-            <div className="flex items-baseline justify-between gap-3">
-              <div>
-                <span className="font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#2563EB]">
-                  Nearby-site groups
-                </span>
-                <h2 className="mt-2 font-editorial text-[22px] leading-tight text-[#0C1B33]">
-                  Opportunity areas
-                </h2>
-              </div>
-              <Link
-                href={`/vacancy/${zip}/areas`}
-                className="flex-shrink-0 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#2563EB] hover:underline"
-              >
-                All areas →
-              </Link>
-            </div>
-
-            {railAreas.length === 0 ? (
-              <p className="mt-4 border border-dashed border-[#0C1B33]/20 bg-white px-4 py-6 text-center font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
-                No opportunity areas yet
-              </p>
-            ) : (
-              <ul className="mt-4 space-y-px border border-[#0C1B33]/10 bg-[#0C1B33]/10">
-                {railAreas.map((area) => (
-                  <li key={area.id} className="bg-white">
-                    <Link
-                      href={`/vacancy/${zip}/areas/${area.id}`}
-                      className="group block px-4 py-3.5 transition-colors hover:bg-[#FAF9F6]"
-                    >
-                      <span className="flex items-baseline justify-between gap-2">
-                        <span className="font-editorial text-[17px] leading-tight text-[#0C1B33] group-hover:text-[#2563EB]">
-                          {area.name}
-                        </span>
-                        <span className="flex-shrink-0 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">
-                          {area.siteCount} {area.siteCount === 1 ? "site" : "sites"}
-                        </span>
+          {railAreas.length === 0 ? (
+            <p className="mt-4 border border-dashed border-[#0C1B33]/20 bg-white px-4 py-6 text-center font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+              No opportunity areas yet
+            </p>
+          ) : (
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {railAreas.map((area) => (
+                <li key={area.id} className="border border-[#0C1B33]/10 bg-white">
+                  <Link
+                    href={`/vacancy/${zip}/areas/${area.id}`}
+                    className="group block h-full px-4 py-4 transition-colors hover:bg-[#FAF9F6]"
+                  >
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="font-editorial text-[17px] leading-tight text-[#0C1B33] group-hover:text-[#2563EB]">
+                        {area.name}
                       </span>
-                      <span className="mt-1 block font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">
-                        {area.siteCount} nearby {area.siteCount === 1 ? "site" : "sites"}
-                        {area.corridor ? ` · ${area.corridor} corridor` : ""}
+                      <span className="flex-shrink-0 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">
+                        {area.siteCount} {area.siteCount === 1 ? "site" : "sites"}
                       </span>
-                      <span className="mt-1.5 block text-[11px] leading-snug text-[#A45B00]">
-                        {area.needsChecking}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </aside>
+                    </span>
+                    <span className="mt-1 block font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">
+                      {area.siteCount} nearby {area.siteCount === 1 ? "site" : "sites"}
+                      {area.corridor ? ` · ${area.corridor} corridor` : ""}
+                    </span>
+                    <span className="mt-2 block text-[11px] leading-snug text-[#A45B00]">
+                      {area.needsChecking}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
         </section>
 
         {/* Footer note — honest framing consistent with the rest of the section */}

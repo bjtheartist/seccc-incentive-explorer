@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { loadCommunityInvestment } from "@/lib/community-investment";
 import { loadInvestmentIndex, loadMajorDevelopments } from "@/lib/investment-analysis";
+import { buildSourceCoverageRows } from "@/lib/investment-source-coverage";
 import {
   formatCount,
   formatFullDollars,
@@ -11,6 +12,7 @@ import {
 import { StatusCards } from "@/components/investment/StatusCards";
 import { MajorDevelopments } from "@/components/investment/MajorDevelopments";
 import { ComparePinBar, PinButton } from "@/components/investment/PinControls";
+import { SourceCoverageMatrix } from "@/components/investment/SourceCoverageMatrix";
 import { getInvestmentAdminState, InvestmentLoginForm, InvestmentNotConfigured } from "./gate";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +37,9 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
   if (!hasSession) return <InvestmentLoginForm redirectTo="/investment" hasAuthError={hasAuthError} />;
 
   const index = loadInvestmentIndex();
-  const meta = loadCommunityInvestment()?.meta;
+  const investment = loadCommunityInvestment();
+  const meta = investment?.meta;
+  const coverageRows = meta ? buildSourceCoverageRows(meta) : [];
   const topDevelopments = loadMajorDevelopments({ limit: 10 });
 
   return (
@@ -90,6 +94,19 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                 awardedNote={`Community-sited awarded dollars across ${formatCount(index.communityCount)} communities since 2020, from public records. An award is a commitment on paper, not proof of receipt.`}
               />
             </div>
+
+            {investment && coverageRows.length > 0 ? (
+              <section id="coverage" className="mt-10 scroll-mt-6">
+                <h2 className="font-editorial text-[26px]">Source coverage</h2>
+                <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/45">
+                  Categorical source, map, refresh, and review postures for the committed export,
+                  with the source-specific basis preserved in each state.
+                </p>
+                <div className="mt-4">
+                  <SourceCoverageMatrix rows={coverageRows} generatedAt={investment.generatedAt} />
+                </div>
+              </section>
+            ) : null}
 
             {/* Ranked community list */}
             <div className="mt-10">
@@ -160,10 +177,7 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
               </div>
             ) : null}
 
-            <p
-              id="coverage"
-              className="mt-6 scroll-mt-6 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35"
-            >
+            <p className="mt-6 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">
               Data as of {formatAsOf(index.generatedAt)} · dollars are awarded amounts, not confirmed receipts ·
               awarded, announced, and disbursement are separate measures, never summed
             </p>

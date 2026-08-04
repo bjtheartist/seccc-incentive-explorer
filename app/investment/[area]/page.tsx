@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { CHICAGO_COMMUNITY_AREAS } from "@/lib/community-areas";
 import { loadCommunityInvestment } from "@/lib/community-investment";
 import { loadInvestmentAnalysis, loadMajorDevelopments, loadFlowRows } from "@/lib/investment-analysis";
-import { FunderDonut } from "@/components/investment/FunderDonut";
 import { FunderTypeBars } from "@/components/investment/FunderTypeBars";
 import { YearBars } from "@/components/investment/YearBars";
 import { YearModeToggle } from "@/components/investment/YearModeToggle";
@@ -170,20 +169,19 @@ export default async function InvestmentAreaPage({
               />
             </div>
 
-            {/* 2 — Donut + sorted bars */}
+            {/* 2 — Ranked bars: one comparison view, exact dollars + share */}
             <Section
               title="Where the money came from"
-              description="Awarded dollars by funder type — the donut for the part-of-whole, the bars for exact dollars and share."
+              description="Awarded dollars by funder type, ranked high to low with exact dollars and share."
             >
-              <FunderDonut byFunderType={analysis.byFunderType} total={analysis.totalAwarded} />
               <FunderTypeBars byFunderType={analysis.byFunderType} />
             </Section>
 
             {/* 3 — Year trend (amount / count toggle) */}
             <Section title="When it arrived" description="Awarded dollars by year, 2020 to the latest on record.">
               <YearModeToggle
-                amount={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} mode="amount" />}
-                count={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} mode="count" />}
+                amount={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} generatedAt={analysis.generatedAt} mode="amount" />}
+                count={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} generatedAt={analysis.generatedAt} mode="count" />}
               />
             </Section>
 
