@@ -1,0 +1,137 @@
+{
+  "feed": "site-activity/feed-1-idot-aadt",
+  "artifact": "data/curated/site-activity/idot_aadt_stations.csv",
+  "built_utc": "2026-08-04T06:40:15.108731+00:00",
+  "retrieval_date": "2026-08-04",
+  "ingestion_script": "scripts/site-activity/fetch_idot_aadt.py",
+  "rows": 23242,
+  "sha256": "9382bcfa533e4c056d9066657a16ff8b5f8fcf45c95a20d7739a88b8a0aba250",
+  "bytes": 1199530,
+  "sources": [
+    {
+      "role": "traffic_volume",
+      "dataset_id": "AdministrativeData/AADT MapServer layer 0 'Traffic Volume'",
+      "publisher": "Illinois Department of Transportation (IDOT), Traffic Count Program",
+      "vintage": "per-row aadt_year, 2016-2025 (service publishes no lastEditDate/editingInfo)",
+      "retrieval_date": "2026-08-04",
+      "verify_url": "https://gis1.dot.illinois.gov/arcgis/rest/services/AdministrativeData/AADT/MapServer/0",
+      "verify_count_url": "https://gis1.dot.illinois.gov/arcgis/rest/services/AdministrativeData/AADT/MapServer/0/query?geometry=-87.95%2C41.62%2C-87.5%2C42.05&geometryType=esriGeometryEnvelope&inSR=4326&spatialRel=esriSpatialRelIntersects&where=1%3D1&returnCountOnly=true&f=json",
+      "verify_row_url_template": "https://gis1.dot.illinois.gov/arcgis/rest/services/AdministrativeData/AADT/MapServer/0/query?where=OBJECTID%3D{station_or_segment_id}&outFields=OBJECTID%2CROAD_NAME%2CAADT%2CAADT_YR&returnGeometry=false&f=json",
+      "api_key_required": false,
+      "source_reported_count_for_bbox": 24178
+    }
+  ],
+  "geographic_filter": {
+    "bbox": {
+      "lat_min": 41.62,
+      "lat_max": 42.05,
+      "lng_min": -87.95,
+      "lng_max": -87.5
+    },
+    "note": "Bounding box, NOT City of Chicago limits; includes Evanston, Skokie, Cicero, Berwyn, Oak Park, Burbank, Calumet City and other near suburbs.",
+    "spatial_rel": "esriSpatialRelIntersects"
+  },
+  "geometry_reduction": {
+    "source_geometry_type": "esriGeometryPolyline (line segments, NOT point count stations)",
+    "method": "point at 50% of cumulative 2-D path length; longitude scaled by cos(mean latitude)",
+    "disclosure": "Deterministic reduction of published geometry. NOT an estimate of physical counter location. AADT applies to the whole segment.",
+    "max_midpoint_offset_from_own_polyline_m": 0.069
+  },
+  "verification": {
+    "source_count": 24178,
+    "features_retrieved": 24178,
+    "exact_match": true,
+    "dropped_no_geometry": 0,
+    "dropped_midpoint_outside_bbox": 936,
+    "rows_written": 23242,
+    "duplicate_ids": 0,
+    "attribute_fidelity_rows_checked": 23242,
+    "attribute_mismatches": 0,
+    "null_or_nonpositive_aadt": 0,
+    "null_or_zero_aadt_year": 0,
+    "blank_road_name_as_published": 57,
+    "lat_range": [
+      41.620007,
+      42.05
+    ],
+    "lng_range": [
+      -87.94996,
+      -87.525127
+    ],
+    "aadt_min": 20,
+    "aadt_median": 14200,
+    "aadt_max": 343600,
+    "aadt_year_histogram": {
+      "2016": 14,
+      "2017": 9,
+      "2018": 442,
+      "2019": 4,
+      "2020": 13,
+      "2021": 35,
+      "2022": 9956,
+      "2023": 771,
+      "2024": 1090,
+      "2025": 10908
+    },
+    "spot_checks": [
+      {
+        "location": "79th St @ Cottage Grove Ave (Chatham)",
+        "station_or_segment_id": 224714,
+        "road_name": "79th St",
+        "aadt": 9100,
+        "aadt_year": 2022,
+        "lat": 41.751303,
+        "lng": -87.60426,
+        "offset_m": 115,
+        "reread_from_live_service": true,
+        "matches_live": true
+      },
+      {
+        "location": "Western Ave @ 63rd St (Chicago Lawn)",
+        "station_or_segment_id": 222436,
+        "road_name": "Western Ave",
+        "aadt": 29000,
+        "aadt_year": 2022,
+        "lat": 41.778873,
+        "lng": -87.683643,
+        "offset_m": 40,
+        "reread_from_live_service": true,
+        "matches_live": true
+      },
+      {
+        "location": "Stony Island Ave @ 79th St (Avalon Park)",
+        "station_or_segment_id": 224613,
+        "road_name": "Stony Island Ave",
+        "aadt": 33100,
+        "aadt_year": 2022,
+        "lat": 41.75218,
+        "lng": -87.58585,
+        "offset_m": 159,
+        "reread_from_live_service": true,
+        "matches_live": true
+      }
+    ],
+    "corridor_context_79th_st_chicago_stretch": {
+      "segments": 89,
+      "min": 9100,
+      "p25": 12900,
+      "median": 16000,
+      "p75": 18100,
+      "max": 22700,
+      "note": "Expected band ~10-20k confirmed at corridor level; the Cottage Grove segment at 9,100 is the published low end and was NOT replaced with the median."
+    }
+  },
+  "omissions": {
+    "policy": "Absent = agency published nothing. Never zero, never imputed.",
+    "uncounted_local_streets": "IDOT's inventoried network only; most residential Chicago streets are not counted and are absent.",
+    "blank_road_name": "57 rows have blank road_name because IDOT published none; no name was inferred."
+  },
+  "caveats": [
+    "AADT is an annual average daily volume per IDOT methodology, not a measured single-day count.",
+    "Not pedestrian traffic.",
+    "Mixed vintages: read aadt_year before comparing segments.",
+    "Expressway segments included (max 343,600 = Dan Ryan Expwy I-90/94, 2025); filter if street-level activity is wanted."
+  ],
+  "fallback_source_used": false,
+  "fallback_source_note": "data.illinois.gov / IDOT open-data AADT shapefile NOT used; ArcGIS REST service was reachable and authoritative."
+}

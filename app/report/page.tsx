@@ -75,6 +75,7 @@ import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { ProjectFitNote } from "@/components/report/ProjectFitNote";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { ReportEmailGate } from "@/components/report/ReportEmailGate";
+import { SiteActivityCard } from "@/components/report/SiteActivityCard";
 import {
   InlineCrossLinkBanner,
   StickyCrossLinkBanner,
@@ -1735,6 +1736,14 @@ function ReportWizardPage() {
           analyticsSource={reportSource}
           programs={programs}
         />
+        {hasResolvedAddress && (
+          <SiteActivityCard
+            lat={(report.metadata?.lat ?? wizardState.lat) as number}
+            lon={(report.metadata?.lon ?? wizardState.lon) as number}
+            zoningClass={cityZoning?.zoneClass ?? null}
+            zoningDescription={cityZoning?.zoneType ?? null}
+          />
+        )}
         {showCrossLinks && (
           <div ref={inlineCrossLinkRef}>
             <InlineCrossLinkBanner zip={reportZip} />
