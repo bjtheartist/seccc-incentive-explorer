@@ -834,6 +834,14 @@ const EMPTY_LAYER_RESULT = (status: CommunityInvestmentLayerStatus): CommunityIn
  * non-ok (e.g. 503 before the export is generated) → "unavailable", a thrown
  * error (network/abort) propagates to the caller's catch. On success →
  * "ready" with the transformed payload.
+ *
+ * The view=map records are a field-level PROJECTION of CommunityInvestmentRecord
+ * (see projectRecordForMapView in app/api/owner-file/investment/route.ts): only
+ * the fields this module and the popup actually read survive — address,
+ * postalCode, recordDate, recordProvenance and non-first links never ship, and a
+ * citywide record is reduced to its legend-summary fields. Every field read
+ * below is in that whitelist; adding a NEW field read here requires adding it to
+ * the route's projection too.
  */
 export async function fetchCommunityInvestmentLayer(opts?: {
   source?: string | null;
