@@ -1,7 +1,14 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { AlertCircle, ArrowRight, Loader2, Mail, ShieldCheck } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowRight,
+  Download,
+  Loader2,
+  Mail,
+  ShieldCheck,
+} from "lucide-react";
 import { trackEvent } from "@/lib/analytics-events";
 import {
   deliverReportByEmail,
@@ -21,6 +28,7 @@ interface ReportEmailGateProps {
 }
 
 type DeliveryStatus = "idle" | "preparing" | "sending";
+type PdfStatus = "idle" | "building";
 
 export function ReportEmailGate({
   report,
@@ -35,9 +43,11 @@ export function ReportEmailGate({
   const [wantsHelp, setWantsHelp] = useState(false);
   const [website, setWebsite] = useState("");
   const [status, setStatus] = useState<DeliveryStatus>("idle");
+  const [pdfStatus, setPdfStatus] = useState<PdfStatus>("idle");
   const [error, setError] = useState("");
 
   const isBusy = status !== "idle";
+  const isPdfBusy = pdfStatus !== "idle";
   const canSubmit = Boolean(projectType && email.trim().includes("@") && !isBusy);
 
   useEffect(() => {
@@ -130,6 +140,50 @@ export function ReportEmailGate({
     }
   };
 
+  /**
+   * Instant PDF path (WP2). Deliberately gated on nothing: no email, no name,
+   * no primary goal. Analytics showed 110 visitors skipping this gate against
+   * 2 PDF downloads, so the download has to be reachable in one click for
+   * someone who will never type an address into a form. When a goal *is*
+   * already selected we refine first so the file matches the online report,
+   * and any preparation failure still falls back to the report we were handed
+   * — the download must not be the thing that breaks.
+   */
+  const handleDownloadPdf = async () => {
+    if (isBusy || isPdfBusy) return;
+    setError("");
+    setPdfStatus("building");
+    try {
+      const preparedReport = projectType
+        ? (await onPrepareReport(projectType)) ?? report
+        : report;
+
+      const { generateReportPdf } = await import("@/lib/pdf-report");
+      generateReportPdf(preparedReport);
+
+      trackEvent("report_pdf_downloaded", {
+        reportType: preparedReport.reportType,
+        source: "report_email_gate",
+        address: preparedReport.metadata?.address || null,
+        lat: preparedReport.metadata?.lat ?? null,
+        lon: preparedReport.metadata?.lon ?? null,
+        metadata: {
+          entrySource: source,
+          projectType: projectType || null,
+          emailProvided: false,
+        },
+      });
+    } catch (pdfError) {
+      setError(
+        pdfError instanceof Error
+          ? pdfError.message
+          : "We could not build the PDF. Please try again.",
+      );
+    } finally {
+      setPdfStatus("idle");
+    }
+  };
+
   return (
     <dialog
       ref={dialogRef}
@@ -165,8 +219,8 @@ export function ReportEmailGate({
               id="report-email-gate-description"
               className="mt-1.5 text-[13px] leading-relaxed text-[#0C1B33]/60"
             >
-              Select your primary goal. You can have the refined PDF
-              emailed first, or continue directly to the online report.
+              Select your primary goal. Download the PDF instantly, have it
+              emailed, or continue to the online report.
             </p>
           </div>
         </div>
@@ -260,11 +314,34 @@ export function ReportEmailGate({
             </div>
           )}
 
+          {/* Instant download sits above the email row, not inside it: the
+              email option keeps its own styling and both choices stay on
+              screen together. */}
+          <button
+            type="button"
+            data-testid="report-pdf-download"
+            onClick={handleDownloadPdf}
+            disabled={isBusy || isPdfBusy}
+            className="flex min-h-12 w-full items-center justify-center gap-2 bg-[#2563EB] px-5 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {isPdfBusy ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
+                Preparing...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" aria-hidden="true" />
+                Download PDF
+              </>
+            )}
+          </button>
+
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               type="submit"
               disabled={!canSubmit}
-              className="flex min-h-12 w-full items-center justify-center gap-2 bg-[#2563EB] px-5 py-3 text-[13px] font-semibold text-white transition-colors hover:bg-[#1D4ED8] disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex min-h-12 w-full items-center justify-center gap-2 border border-[#0C1B33]/18 bg-transparent px-5 py-3 text-[13px] font-semibold text-[#0C1B33] transition-colors hover:border-[#0C1B33]/35 hover:bg-[#FAF9F6] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {isBusy ? (
                 <>

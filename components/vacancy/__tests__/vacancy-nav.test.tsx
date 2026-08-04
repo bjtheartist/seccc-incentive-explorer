@@ -68,8 +68,11 @@ describe("VacancySubNav — five views", () => {
 });
 
 describe("Global nav", () => {
-  it("labels the incentive map and adds a Vacant Sites entry", () => {
+  // Vacant Sites and the Incentive Map now live under the approved "Find a Site"
+  // group. Full Set-A coverage lives in components/layout/__tests__.
+  it("keeps Vacant Sites reachable from the Find a Site group", () => {
     const html = renderToStaticMarkup(<Header />);
+    expect(html).toContain("Find a Site");
     expect(html).toContain("Incentive Map");
     expect(html).toContain("Vacant Sites");
     expect(html).toContain('href="/vacancy"');
