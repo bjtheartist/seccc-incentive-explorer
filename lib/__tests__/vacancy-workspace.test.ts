@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { VacancyCaseRecord } from "@/lib/vacancy-cases";
 import {
+  buildVacancyCaseHref,
   filterVacancyWorkspaceRecords,
   parseWorkspaceBounds,
   parseWorkspaceQuery,
@@ -41,6 +42,15 @@ const records = [
 ];
 
 describe("vacancy workspace URL state", () => {
+  it("builds case links from the live workspace posture", () => {
+    const current = new URLSearchParams(
+      "case=public-land&view=map&q=Commercial&universe=land&bounds=-87.6000%2C41.7000%2C-87.5000%2C41.8000",
+    );
+    expect(buildVacancyCaseHref("60617", "building-review", current)).toBe(
+      "/vacancy/60617?case=building-review&view=map&q=Commercial&universe=land&bounds=-87.6000%2C41.7000%2C-87.5000%2C41.8000",
+    );
+  });
+
   it("parses only the supported view and record-type values", () => {
     expect(parseWorkspaceView("map")).toBe("map");
     expect(parseWorkspaceView("split")).toBe("list");

@@ -1,4 +1,4 @@
-import type { VacancyCaseRecord } from "./vacancy-cases";
+import type { CaseKey, VacancyCaseRecord } from "./vacancy-cases";
 
 export type VacancyWorkspaceView = "list" | "map";
 export type VacancyWorkspaceUniverse = "all" | VacancyCaseRecord["universe"];
@@ -8,6 +8,24 @@ export interface VacancyWorkspaceFilters {
   query: string;
   universe: VacancyWorkspaceUniverse;
   bounds: VacancyWorkspaceBounds | null;
+}
+
+export const VACANCY_WORKSPACE_URL_EVENT = "vacancy-workspace:urlchange";
+
+const WORKSPACE_QUERY_KEYS = ["view", "q", "universe", "bounds"] as const;
+
+/** Build a case destination from the current workspace URL posture. */
+export function buildVacancyCaseHref(
+  zip: string,
+  caseKey: CaseKey,
+  current: URLSearchParams,
+): string {
+  const query = new URLSearchParams({ case: caseKey });
+  for (const key of WORKSPACE_QUERY_KEYS) {
+    const value = current.get(key);
+    if (value) query.set(key, value);
+  }
+  return `/vacancy/${zip}?${query.toString()}`;
 }
 
 function firstParam(value: string | string[] | undefined): string | undefined {

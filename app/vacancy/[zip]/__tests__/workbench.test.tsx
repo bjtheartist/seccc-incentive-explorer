@@ -78,6 +78,23 @@ vi.mock("@/lib/vacancy-cases-data", async (importOriginal) => {
 vi.mock("@/components/vacancy/VacancySubNav", () => ({ VacancySubNav: () => null }));
 vi.mock("@/components/vacancy/CopyCaseLink", () => ({ CopyCaseLink: () => null }));
 vi.mock("@/components/vacancy/CaseAreaSwitcher", () => ({ CaseAreaSwitcher: () => null }));
+vi.mock("@/components/vacancy/CaseCardLink", () => ({
+  CaseCardLink: ({
+    initialHref,
+    selected,
+    className,
+    children,
+  }: {
+    initialHref: string;
+    selected: boolean;
+    className: string;
+    children: React.ReactNode;
+  }) => (
+    <a href={initialHref} aria-current={selected ? "true" : undefined} className={className}>
+      {children}
+    </a>
+  ),
+}));
 
 // The synchronized workspace — stubbed to a marker element that echoes the
 // Server Component contract without loading mapbox-gl in Node.

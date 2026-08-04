@@ -18,6 +18,7 @@ import { siteReportHref } from "@/lib/vacancy-site-zones";
 import {
   filterVacancyWorkspaceRecords,
   serializeWorkspaceBounds,
+  VACANCY_WORKSPACE_URL_EVENT,
   type VacancyWorkspaceBounds,
   type VacancyWorkspaceUniverse,
   type VacancyWorkspaceView,
@@ -153,6 +154,7 @@ export default function CaseWorkspace({
       else url.searchParams.delete(key);
     }
     window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    window.dispatchEvent(new Event(VACANCY_WORKSPACE_URL_EVENT));
   }, []);
 
   const filtered = useMemo(
@@ -200,6 +202,11 @@ export default function CaseWorkspace({
     setVisibleCount(PAGE_SIZE);
     setSelectedId(null);
     updateUrl({ bounds: null });
+  }
+
+  function selectRecord(id: string) {
+    setCandidateBounds(null);
+    setSelectedId(id);
   }
 
   const activeFilters = [
@@ -326,7 +333,7 @@ export default function CaseWorkspace({
                         <button
                           type="button"
                           aria-pressed={selectedRow}
-                          onClick={() => setSelectedId(record.id)}
+                          onClick={() => selectRecord(record.id)}
                           className={`w-full px-4 py-3.5 text-left transition-colors ${
                             selectedRow ? "bg-[#EAF1FF]" : "hover:bg-[#FAF9F6]"
                           }`}
@@ -378,7 +385,7 @@ export default function CaseWorkspace({
             boundary={boundary}
             centroid={centroid}
             committedBounds={bounds}
-            onSelect={setSelectedId}
+            onSelect={selectRecord}
             onCandidateBounds={setCandidateBounds}
           />
           {candidateBounds ? (

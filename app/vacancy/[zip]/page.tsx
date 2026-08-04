@@ -15,6 +15,7 @@ import {
   type VacancyCaseArea,
 } from "@/lib/vacancy-cases";
 import {
+  buildVacancyCaseHref,
   parseWorkspaceBounds,
   parseWorkspaceQuery,
   parseWorkspaceUniverse,
@@ -23,6 +24,7 @@ import {
 import { VacancySubNav } from "@/components/vacancy/VacancySubNav";
 import { CopyCaseLink } from "@/components/vacancy/CopyCaseLink";
 import { CaseAreaSwitcher } from "@/components/vacancy/CaseAreaSwitcher";
+import { CaseCardLink } from "@/components/vacancy/CaseCardLink";
 import CaseWorkspace from "@/components/vacancy/CaseWorkspace";
 
 export const dynamic = "force-dynamic";
@@ -97,21 +99,25 @@ function CaseGlyph({ caseKey }: { caseKey: CaseKey }) {
   }
 }
 
-/** One selectable case-type card. A LINK (not a button) so selection is a
- *  server-rendered `?case=` navigation — shareable and JS-free. */
+/** One selectable case-type card. Its server href is shareable without JS; the
+ * client wrapper keeps it synchronized with live workspace filters. */
 function CaseCard({
-  href,
+  zip,
   card,
   selected,
+  workspaceParams,
 }: {
-  href: string;
+  zip: string;
   card: DerivedCase;
   selected: boolean;
+  workspaceParams: URLSearchParams;
 }) {
   return (
-    <Link
-      href={href}
-      aria-current={selected ? "true" : undefined}
+    <CaseCardLink
+      zip={zip}
+      caseKey={card.key}
+      initialHref={buildVacancyCaseHref(zip, card.key, workspaceParams)}
+      selected={selected}
       className={`group flex min-h-[124px] flex-col justify-between bg-white p-4 transition-colors ${
         selected
           ? "border-2 border-[#0C1B33]"
@@ -141,7 +147,7 @@ function CaseCard({
           {card.matches.toLocaleString("en-US")} matching {card.matches === 1 ? "record" : "records"}
         </span>
       </span>
-    </Link>
+    </CaseCardLink>
   );
 }
 
@@ -149,18 +155,17 @@ function firstParam(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
 
-/** Keep the shareable workspace posture when switching task paths. */
-function caseHref(
-  zip: string,
-  caseKey: CaseKey,
+/** Convert the server request into the same shareable workspace posture used by
+ * the live case links after hydration. */
+function workspaceSearchParams(
   params: Record<string, string | string[] | undefined>,
-): string {
-  const query = new URLSearchParams({ case: caseKey });
+): URLSearchParams {
+  const query = new URLSearchParams();
   for (const key of ["view", "q", "universe", "bounds"] as const) {
     const value = firstParam(params[key]);
     if (value) query.set(key, value);
   }
-  return `/vacancy/${zip}?${query.toString()}`;
+  return query;
 }
 
 /** One stat tile in the active-case panel — serif numeral over a mono label. */
@@ -197,6 +202,7 @@ export default async function CaseWorkbenchPage({
   const initialUniverse = parseWorkspaceUniverse(resolvedParams.universe);
   const initialQuery = parseWorkspaceQuery(resolvedParams.q);
   const initialBounds = parseWorkspaceBounds(resolvedParams.bounds);
+  const workspaceParams = workspaceSearchParams(resolvedParams);
   const landTruncated = isLandUniverseTruncated(universe);
   const cards = deriveAllCases(records);
   const active = deriveCase(activeKey, records);
@@ -287,9 +293,10 @@ export default async function CaseWorkbenchPage({
             {cards.map((card) => (
               <CaseCard
                 key={card.key}
-                href={caseHref(zip, card.key, resolvedParams)}
+                zip={zip}
                 card={card}
                 selected={card.key === active.key}
+                workspaceParams={workspaceParams}
               />
             ))}
           </div>
