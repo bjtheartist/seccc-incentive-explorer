@@ -1,81 +1,38 @@
-"use client";
+import { Suspense } from "react";
+import type { Metadata } from "next";
+import { QuickCheckClient } from "@/components/check/QuickCheckClient";
 
-import { Suspense, useEffect } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-import { decodeCheckState } from "@/lib/url-state";
+/**
+ * /check — the Quick Address Check surface pinned in the global nav.
+ *
+ * `?lat=&lon=&address=` renders results; anything else renders address entry.
+ * Not a redirect to /report: this page answers the two questions that need no
+ * form (what geographies cover the point, what public activity is measured
+ * around it) and then hands off. See components/check/QuickCheckClient.tsx.
+ *
+ * Server shell so the route carries its own metadata; the search-param read
+ * lives in the client component behind Suspense, as Next requires.
+ */
 
-function CheckRedirect() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-
-  useEffect(() => {
-    const state = decodeCheckState(searchParams);
-
-    if (state) {
-      // Has lat/lon — redirect to instant report with all existing params
-      const params = new URLSearchParams();
-      params.set("instant", "true");
-      params.set("lat", state.lat.toFixed(5));
-      params.set("lon", state.lon.toFixed(5));
-      if (state.address) params.set("addr", state.address);
-      if (state.sector) params.set("sector", state.sector);
-      if (state.surveyAnswers) {
-        params.set("sa", btoa(JSON.stringify(state.surveyAnswers)));
-      }
-      router.replace(`/report?${params.toString()}`);
-    } else {
-      // No coords — redirect to /report
-      router.replace("/report");
-    }
-  }, [searchParams, router]);
-
-  return (
-    <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center">
-      <div className="text-center">
-        <div className="flex gap-1.5 justify-center mb-3">
-          <div className="w-2 h-2 bg-[#2563EB]/30 rounded-full animate-pulse" />
-          <div
-            className="w-2 h-2 bg-[#2563EB]/30 rounded-full animate-pulse"
-            style={{ animationDelay: "0.2s" }}
-          />
-          <div
-            className="w-2 h-2 bg-[#2563EB]/30 rounded-full animate-pulse"
-            style={{ animationDelay: "0.4s" }}
-          />
-        </div>
-        <p className="font-mono-bureau text-[11px] tracking-wide text-[#0C1B33]/30">
-          Redirecting to report...
-        </p>
-      </div>
-    </div>
-  );
-}
+export const metadata: Metadata = {
+  title: "Quick Address Check",
+  description:
+    "Check which mapped incentive geographies cover a Chicago address, plus the raw public activity measurements around it. No form, no login.",
+};
 
 export default function CheckPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center">
-          <div className="text-center">
-            <div className="flex gap-1.5 justify-center mb-3">
-              <div className="w-2 h-2 bg-[#2563EB]/30 rounded-full animate-pulse" />
-              <div
-                className="w-2 h-2 bg-[#2563EB]/30 rounded-full animate-pulse"
-                style={{ animationDelay: "0.2s" }}
-              />
-              <div
-                className="w-2 h-2 bg-[#2563EB]/30 rounded-full animate-pulse"
-                style={{ animationDelay: "0.4s" }}
-              />
-            </div>
-            <p className="font-mono-bureau text-[11px] tracking-wide text-[#0C1B33]/30">
-              Loading...
-            </p>
-          </div>
+        <div className="mx-auto max-w-[640px] px-5 pb-20 pt-14 sm:pt-20">
+          <p className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#0C1B33]/40">
+            Quick address check
+          </p>
+          <p className="mt-2 text-[14.5px] text-[#0C1B33]/45">Loading…</p>
         </div>
       }
     >
-      <CheckRedirect />
+      <QuickCheckClient />
     </Suspense>
   );
 }

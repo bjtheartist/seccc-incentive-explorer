@@ -50,7 +50,10 @@ export function decodeCheckState(
   const state: CheckState = {
     lat: latNum,
     lon: lonNum,
-    address: params.get("addr") || "",
+    // `addr` is the short form encodeCheckState emits and every existing deep
+    // link carries; `address` is the readable spelling /check links are written
+    // with. Accept both so neither shape drops the label.
+    address: params.get("addr") || params.get("address") || "",
   };
 
   const sector = params.get("sector");

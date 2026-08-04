@@ -79,10 +79,36 @@ export function StickyCrossLinkBanner({
 }
 
 /**
+ * Secondary destinations the in-flow banner can hand off to. The full report
+ * sends a reader on to neighborhood investment activity; the quick check —
+ * which deliberately stops short of the program layer — sends them to the
+ * eligibility survey, the same destination the sticky bar offers.
+ */
+const INLINE_SECONDARY = {
+  investment: {
+    href: "/investment",
+    label: "See neighborhood investment activity",
+  },
+  qualify: {
+    href: "/qualify",
+    label: "Refine with the eligibility survey",
+  },
+} as const;
+
+export type InlineCrossLinkSecondary = keyof typeof INLINE_SECONDARY;
+
+/**
  * In-flow cross-link rendered below the report content — same idiom as the
  * sticky bar, no dismissal (it does not overlay anything).
  */
-export function InlineCrossLinkBanner({ zip }: { zip?: string | null }) {
+export function InlineCrossLinkBanner({
+  zip,
+  secondary = "investment",
+}: {
+  zip?: string | null;
+  secondary?: InlineCrossLinkSecondary;
+}) {
+  const next = INLINE_SECONDARY[secondary];
   return (
     <div
       data-testid="report-cross-link-banner"
@@ -93,8 +119,8 @@ export function InlineCrossLinkBanner({ zip }: { zip?: string | null }) {
           View vacant sites near this address
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
-        <Link href="/investment" className={SECONDARY_LINK_CLASS}>
-          See neighborhood investment activity
+        <Link href={next.href} className={SECONDARY_LINK_CLASS}>
+          {next.label}
           <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
         </Link>
       </div>
