@@ -4,6 +4,7 @@ import MapLegendPanel from "../MapLegendPanel";
 import { ZONE_KEYS, VACANT_LABELS, ZONING_CATEGORIES } from "@/lib/constants";
 import { POI_LAYERS } from "../map-helpers";
 import { OWNER_TYPE_LABELS, presentOwnerTypesInOrder } from "@/lib/owner-classify";
+import { ZONE_LAYER_PRESETS } from "../map-layer-presets";
 
 /**
  * The ADMIN ownership-cluster legend section is probe-driven
@@ -154,5 +155,89 @@ describe("MapLegendPanel admin ownership-cluster section", () => {
       expect(html).not.toContain(OWNER_TYPE_LABELS.city_public);
       expect(html).toContain("Dot size = vacant parcels in cluster");
     });
+  });
+});
+
+/* ── WP4: zone layer groups in the legend ───────────────────── */
+
+const ESCAPED = (label: string) => label.replace(/&/g, "&amp;");
+
+/** The markup of the group button carrying `label`, up to the next button. */
+function groupButton(html: string, label: string): string | undefined {
+  return html.split("<button").find((chunk) => chunk.includes(ESCAPED(label)));
+}
+
+describe("MapLegendPanel zone layer groups", () => {
+  const [grants, taxCredits, realEstate, pastAwards] = ZONE_LAYER_PRESETS;
+
+  it("shows the three public groups and withholds the past-awards group from anonymous visitors", () => {
+    const html = renderToStaticMarkup(
+      <MapLegendPanel {...baseProps()} adminSessionActive={false} ownerClustersVisible={false} />
+    );
+
+    expect(html).toContain("Layer Groups");
+    expect(html).toContain(ESCAPED(grants.label));
+    expect(html).toContain(ESCAPED(taxCredits.label));
+    expect(html).toContain(ESCAPED(realEstate.label));
+
+    // Governance: capital layers are admin-only today, so the capital group
+    // does not render for anonymous visitors and nothing about the gated
+    // Community Investment layer leaks with it.
+    expect(html).not.toContain(ESCAPED(pastAwards.label));
+    expect(html).not.toContain("Community investment");
+  });
+
+  it("shows all four groups to an admin viewer without changing the capital gating", () => {
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        adminSessionActive={true}
+        ownerClustersVisible={false}
+        communityInvestmentVisible={false}
+      />
+    );
+
+    for (const preset of ZONE_LAYER_PRESETS) {
+      expect(html).toContain(ESCAPED(preset.label));
+    }
+    // The capital layer itself stays exactly as gated: present for admins,
+    // still switched off until the admin turns it on.
+    expect(html).toContain("Community investment");
+    expect(html).not.toContain('aria-label="Investment view mode"');
+  });
+
+  it("marks no group active when the visible layers match none of them", () => {
+    const html = renderToStaticMarkup(
+      <MapLegendPanel {...baseProps()} adminSessionActive={false} ownerClustersVisible={false} />
+    );
+    expect(groupButton(html, grants.label)).toContain('aria-pressed="false"');
+    expect(groupButton(html, taxCredits.label)).toContain('aria-pressed="false"');
+  });
+
+  it("marks exactly the group whose layers are visible as active", () => {
+    const zoneVisible = { ...baseProps().zoneVisible };
+    for (const key of grants.zones) zoneVisible[key] = true;
+
+    const html = renderToStaticMarkup(
+      <MapLegendPanel
+        {...baseProps()}
+        zoneVisible={zoneVisible}
+        adminSessionActive={false}
+        ownerClustersVisible={false}
+      />
+    );
+
+    expect(groupButton(html, grants.label)).toContain('aria-pressed="true"');
+    expect(groupButton(html, taxCredits.label)).toContain('aria-pressed="false"');
+    expect(groupButton(html, realEstate.label)).toContain('aria-pressed="false"');
+  });
+
+  it("labels each group with the number of zone layers it carries", () => {
+    const html = renderToStaticMarkup(
+      <MapLegendPanel {...baseProps()} adminSessionActive={true} ownerClustersVisible={false} />
+    );
+    for (const preset of ZONE_LAYER_PRESETS) {
+      expect(groupButton(html, preset.label)).toContain(`>${preset.zones.length}</span>`);
+    }
   });
 });
