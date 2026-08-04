@@ -1,0 +1,173 @@
+{
+  "feed": 4,
+  "artifact": "data/curated/site-activity/active_licenses_compact.csv",
+  "artifact_sha256": "9d82ad83f76f6ec93589e414d9dbf28e86d9163c34f58de97311d18d95873933",
+  "artifact_bytes": 2963683,
+  "rows": 49647,
+  "retrieved": "2026-08-04",
+  "generated_by": "scripts/site-activity/build_active_licenses.py",
+  "verified_by": "scripts/site-activity/verify_active_licenses.py",
+  "category_rules": "scripts/site-activity/license_categories.json",
+  "category_rules_version": "1.1.0",
+
+  "source": {
+    "dataset_id": "uupf-x98q",
+    "dataset_name": "Business Licenses - Current Active",
+    "publisher": "City of Chicago, Department of Business Affairs & Consumer Protection (BACP)",
+    "access": "Public Socrata SODA endpoint, no API key",
+    "vintage": "2026-08",
+    "vintage_basis": "rowsUpdatedAt = 2026-08-02T09:58:58Z",
+    "dataset_created": "2011-12-15T20:50:49Z",
+    "verify_url": "https://data.cityofchicago.org/d/uupf-x98q",
+    "api_endpoint": "https://data.cityofchicago.org/resource/uupf-x98q.json",
+    "count_verify_url": "https://data.cityofchicago.org/resource/uupf-x98q.json?$select=count(*)%20as%20n",
+    "parent_dataset_id": "r5kz-chrr",
+    "parent_dataset_verify_url": "https://data.cityofchicago.org/d/r5kz-chrr",
+    "format": "JSON. No XML is parsed in this feed, so no DOCTYPE/ENTITY surface exists."
+  },
+
+  "spec_correction": {
+    "field": "parent dataset id",
+    "spec_said": "r5sn-chpf",
+    "actual": "r5kz-chrr",
+    "evidence": "https://data.cityofchicago.org/api/views/r5sn-chpf.json returns HTTP 404; r5kz-chrr returns HTTP 200 and is named 'Business Licenses'.",
+    "impact": "None on the artifact. The current-active dataset uupf-x98q was used as instructed and resolves normally."
+  },
+
+  "columns": {
+    "license_id": "Source license_id. Unique in this artifact.",
+    "name": "doing_business_as_name, falling back to legal_name.",
+    "category": "Assigned bucket. See category_rules.",
+    "lat": "City-published latitude, 5 decimal places (~1.1 m).",
+    "lng": "City-published longitude, 5 decimal places (~1.1 m)."
+  },
+
+  "row_accounting": {
+    "source_count_star": 54023,
+    "dropped_no_coordinates": 4376,
+    "dropped_outside_chicago_bbox": 0,
+    "dropped_missing_license_id": 0,
+    "written_rows": 49647,
+    "reconciles": true,
+    "reconciliation": "49647 + 4376 + 0 + 0 = 54023"
+  },
+
+  "category_counts": {
+    "other": 19324,
+    "retail_general": 7165,
+    "restaurant_cafe": 6016,
+    "liquor_tavern": 5851,
+    "grocery": 5261,
+    "personal_services": 3972,
+    "financial_services": 1025,
+    "gym_fitness": 759,
+    "medical_health": 274
+  },
+
+  "no_coordinate_drop_rate_by_category": {
+    "_note": "Denominator is kept + dropped for that category. financial_services is the outlier and must not be read as a complete storefront count.",
+    "other": {"kept": 19324, "dropped": 3414, "drop_rate_pct": 15.0},
+    "retail_general": {"kept": 7165, "dropped": 40, "drop_rate_pct": 0.6},
+    "restaurant_cafe": {"kept": 6016, "dropped": 25, "drop_rate_pct": 0.4},
+    "liquor_tavern": {"kept": 5851, "dropped": 66, "drop_rate_pct": 1.1},
+    "grocery": {"kept": 5261, "dropped": 27, "drop_rate_pct": 0.5},
+    "personal_services": {"kept": 3972, "dropped": 15, "drop_rate_pct": 0.4},
+    "financial_services": {"kept": 1025, "dropped": 783, "drop_rate_pct": 43.3},
+    "gym_fitness": {"kept": 759, "dropped": 4, "drop_rate_pct": 0.5},
+    "medical_health": {"kept": 274, "dropped": 2, "drop_rate_pct": 0.7}
+  },
+
+  "licenses_are_not_businesses": {
+    "license_rows": 49647,
+    "distinct_account_plus_site_pairs": 39765,
+    "distinct_coordinate_points": 29802,
+    "mean_licenses_per_site": 1.25,
+    "warning": "One site commonly holds several licenses and appears several times in several categories. Do not present row counts as business counts. Deduplicate on account_number + site_number first."
+  },
+
+  "verification_2026_08_04": {
+    "check_1_row_count_vs_source": {
+      "source_count_star": 54023,
+      "source_rows_without_coordinates": 4376,
+      "artifact_rows": 49647,
+      "artifact_plus_drops": 54023,
+      "passed": true
+    },
+    "check_2_independent_server_side_category": {
+      "method": "Socrata-side COUNT(*) of geocoded rows whose license_description is one of the 8 tier-1 liquor types",
+      "server_side": 5851,
+      "artifact_liquor_tavern": 5851,
+      "passed": true
+    },
+    "check_3_named_businesses_refetched_live": [
+      {
+        "name": "HALE FAMILY MCDONALD'S",
+        "address": "2425 E 79TH ST",
+        "license_id": "3034345",
+        "business_activity": "Preparation of Food and Dining on Premises With Seating",
+        "category": "restaurant_cafe",
+        "rule_path": "tier2 step_a - dining on premises with seating",
+        "passed": true
+      },
+      {
+        "name": "AYA SUPERMARKET",
+        "address": "4035 W MADISON ST",
+        "license_id": "3015736",
+        "business_activity": "Retail Sales of General Merchandise and Non-Perishable Food | Retail Sales of Perishable Foods",
+        "category": "grocery",
+        "rule_path": "tier2 step_b - carries BOTH tokens; perishable presence decides",
+        "passed": true
+      },
+      {
+        "name": "STARBUCKS COFFEE #27892",
+        "address": "806 W 63RD ST",
+        "license_id": "3012160",
+        "business_activity": "Sale of Food Prepared Onsite With Dining Area",
+        "category": "restaurant_cafe",
+        "rule_path": "tier2 step_a - dining area",
+        "passed": true
+      }
+    ],
+    "check_4_radius_spot_checks": {
+      "radius_mi": 0.25,
+      "anchor_note": "Neither 2404 E 79th St nor 4048 W Madison St holds an active license itself, so each anchor is the city-assigned coordinate of the nearest licensed address on the same block. Offsets are far below the 402 m radius.",
+      "results": [
+        {
+          "target": "2404 E 79th St (South Chicago)",
+          "anchor": "2409 E 79TH ST",
+          "anchor_offset_m": 15,
+          "licenses_within_radius": 28,
+          "by_category": {"other": 9, "retail_general": 8, "personal_services": 5, "grocery": 4, "restaurant_cafe": 2},
+          "named_businesses_seen": ["HALE FAMILY MCDONALD'S", "FAMILY DOLLAR STORE #6542", "CITGO QUICK STOP", "LEE'S CLEANERS", "VALENTINE AFRICA HAIR BRAIDING", "TINY TOTS ACADEMY INC."]
+        },
+        {
+          "target": "4048 W Madison St (West Garfield Park)",
+          "anchor": "4047 W MADISON ST",
+          "anchor_offset_m": 25,
+          "licenses_within_radius": 118,
+          "by_category": {"retail_general": 47, "other": 25, "grocery": 21, "restaurant_cafe": 9, "personal_services": 8, "liquor_tavern": 6, "financial_services": 2},
+          "named_businesses_seen": ["F.R.S. 4047 FOOD MARKET", "AYA SUPERMARKET", "RAINBOW SHOP # 326", "DESIGN #1 NAILS", "DREAM TOWN", "FOOT LOCKER # 25148"]
+        },
+        {
+          "target": "806 W 63rd St (Englewood Square, Englewood)",
+          "anchor": "806 W 63RD ST",
+          "anchor_offset_m": 0,
+          "licenses_within_radius": 31,
+          "by_category": {"restaurant_cafe": 13, "other": 9, "grocery": 4, "personal_services": 2, "medical_health": 1, "financial_services": 1, "retail_general": 1},
+          "named_businesses_seen": ["STARBUCKS COFFEE #27892", "CHIPOTLE MEXICAN GRILL #2768", "SIKIA RESTAURANT", "Washburne Culinary Institute Student Training Kitchens", "Help At Home"]
+        }
+      ]
+    }
+  },
+
+  "caveats": [
+    "grocery means FRESH/perishable food retail. Mapping v1.0.0 wrongly included 'Retail Sales of General Merchandise and Non-Perishable Food' (dollar/variety/corner stores with no perishables), inflating grocery by 1,355 geocoded rows: 6,616 -> 5,261, a 20.5% overstatement of fresh-food access on the South and West Sides. Corrected in v1.1.0.",
+    "These are LICENSES, not businesses. See licenses_are_not_businesses.",
+    "medical_health (274) is NOT a measure of health care access. Chicago does not license clinicians (Illinois IDFPR does); the dataset contains no physician, dentist, clinic, optometry or chiropractic tokens at all. Structural omission with a reason, not a zero.",
+    "financial_services drops 43.3% of rows for missing coordinates because debt collection and tax prep licensees are often registered at out-of-city head offices. Not a complete storefront count.",
+    "other (38.9%) is deliberate: automotive and fuel (no bucket exists in this taxonomy), peddlers and street performers (no fixed site), mobile food (address is the commissary, not where the truck operates), shared kitchens (excluded from grocery per spec), wholesale food, special-event permits, and 3,152 rows whose business_activity is null so no sector can be read.",
+    "Brand name does not determine category; the filed activity does. The SUBWAY at 7901 S Yates Blvd is grocery because the city's own record files it under 'Retail Sales of Perishable Foods'. Overriding the record by brand would be fabrication.",
+    "The 4,376 rows without coordinates are an explicit omission, never a zero. They were not placed at a centroid, ZIP centre, or any imputed point.",
+    "Categorization uses exact string matching, never substring. Substring matching produced real false positives on this data: 'Provide 4 or More Parking Spaces' contains 'spa'; 'Live Theatrical' contains 'therap'; 'Cert. of Fitness' (demolition contractor) contains 'fitness'."
+  ]
+}

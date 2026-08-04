@@ -1,0 +1,287 @@
+{
+  "_readme": [
+    "Category mapping for FEED 4 (Chicago Business Licenses - Current Active, Socrata uupf-x98q).",
+    "",
+    "WHY THIS IS NOT A PURE license_description MAPPING:",
+    "The build spec asked for bucketing on license_description alone. Inspection of the",
+    "real data shows that is not achievable without asserting facts the data does not",
+    "support, for two measured reasons:",
+    "  1. 23,007 of 54,023 rows (42.6%) carry 'Limited Business License' (16,360) or",
+    "     'Regulated Business License' (7,647). These are administrative license TYPES.",
+    "     They carry zero sector signal. Their sector lives only in business_activity.",
+    "  2. 'Retail Food Establishment' (11,331 rows) is a single food-handling license that",
+    "     covers grocery stores AND restaurants alike. Measured split via business_activity:",
+    "     ~3,896 'Retail Sales of Perishable Foods' vs ~2,434 'Preparation of Food and",
+    "     Dining on Premises With Seating' vs ~1,610 'Sale of Food Prepared Onsite With",
+    "     Dining Area'. Calling all 11,331 'restaurant_cafe' would mislabel every grocery",
+    "     store, corner store and bakery in Chicago.",
+    "Therefore this mapping uses a two-tier rule over TWO RAW FIELDS OF THE SAME PUBLIC",
+    "RECORD (license_description, business_activity). Nothing is inferred from outside the",
+    "record. Every rule is an EXACT string match against a value observed in the source.",
+    "",
+    "WHY EXACT MATCH AND NOT SUBSTRING/REGEX:",
+    "Substring matching produced false positives on real values in this dataset:",
+    "  'Provide 4 or More Parking Spaces...'      contains 'spa'      -> wrong personal_services",
+    "  'Live Theatrical / Live Cultural...'       contains 'theatric' -> wrong medical (therapy)",
+    "  'Employee of a Wrecking/Demolition/        contains 'fitness'  -> wrong gym_fitness",
+    "   Fireworks Contractor (Cert. of Fitness)'",
+    "Exact token allowlists are used everywhere. Anything not on an allowlist falls through",
+    "to 'other'. Unmatched is NEVER guessed.",
+    "",
+    "MULTI-VALUED ACTIVITY: business_activity may hold several activities separated by '|'.",
+    "The string is split on '|', each part trimmed, and each part matched exactly. When",
+    "parts resolve to different categories, category_precedence below decides, most",
+    "specific first. retail_general is last because it is the weakest signal (e.g.",
+    "'Hair Services | Retail Sales of General Merchandise' is a salon, not a store)."
+  ],
+
+  "_grocery_definition": [
+    "grocery MEANS FRESH/PERISHABLE FOOD RETAIL. It is deliberately NOT 'any store",
+    "that sells food'.",
+    "",
+    "v1.0.0 of this mapping put 'Retail Sales of General Merchandise and Non-Perishable",
+    "Food' into grocery. Measured effect: 2,134 geocoded rows - 32% of the grocery",
+    "bucket - were variety stores, dollar stores and corner stores carrying NO",
+    "perishable goods. On a food-access read of the South and West sides that would",
+    "have overstated fresh-food availability by a third. Those rows now resolve to",
+    "retail_general.",
+    "",
+    "A row carrying BOTH a perishable token and the non-perishable token is grocery:",
+    "perishable presence is the deciding signal."
+  ],
+
+  "version": "1.1.0",
+  "source": {
+    "dataset_id": "uupf-x98q",
+    "dataset_name": "Business Licenses - Current Active",
+    "publisher": "City of Chicago, Department of Business Affairs & Consumer Protection",
+    "verify_url": "https://data.cityofchicago.org/d/uupf-x98q"
+  },
+
+  "category_precedence": [
+    "medical_health",
+    "gym_fitness",
+    "personal_services",
+    "financial_services",
+    "liquor_tavern",
+    "grocery",
+    "restaurant_cafe",
+    "retail_general"
+  ],
+
+  "tier1_license_description_exact": {
+    "_note": "Applied first. These license_description values are themselves sector-specific, so business_activity is not consulted. Liquor licenses are separate license rows from the food license of the same venue.",
+    "liquor_tavern": [
+      "Tavern",
+      "Package Goods",
+      "Consumption on Premises - Incidental Activity",
+      "Caterer's Liquor License",
+      "Special Event Liquor",
+      "Late Hour",
+      "Outdoor Patio",
+      "Not-For-Profit Club"
+    ],
+    "financial_services": [
+      "Pawnbroker"
+    ]
+  },
+
+  "tier2_food_split": {
+    "_note": "Applied ONLY to license_description == 'Retail Food Establishment'. Ordered: first matching step wins. Rationale for the order is in _order_rationale.",
+    "applies_to_license_description": "Retail Food Establishment",
+    "_order_rationale": [
+      "Step A first: on-premises SEATING / on-premises consumption is the strongest and least ambiguous restaurant signal.",
+      "Step B second: a site retailing PERISHABLE food with no seating is a grocery, even if it also prepares food (e.g. a deli counter).",
+      "Step C third: remaining prepared-food-without-seating sites are takeout/quick-service/coffee, which are restaurant_cafe.",
+      "Step D fourth: a food-licensed site whose ONLY retail token is general merchandise + NON-perishable food is a variety/corner store, not a grocery. See _grocery_definition.",
+      "Step E: a Retail Food Establishment matching none of the above is NOT guessed - it goes to other."
+    ],
+    "step_a_dining_on_premises__restaurant_cafe": [
+      "Preparation of Food and Dining on Premises With Seating",
+      "Sale of Food Prepared Onsite With Dining Area",
+      "Expedited Restaurant with On-Premises Consumption"
+    ],
+    "step_b_perishable_food_retail__grocery": [
+      "Retail Sales of Perishable Foods",
+      "Retail Sales of Fresh Fruits and Vegetables (Leafy and Non Leafy Vegetables)",
+      "Operation of a Deli, Butcher or Bakery",
+      "Retail Sales and Wholesale of Perishable Foods",
+      "Retail Sale of Food for Offsite Consumption"
+    ],
+    "step_c_prepared_food_no_seating__restaurant_cafe": [
+      "Sale of Food Prepared Onsite Without Dining Area",
+      "Preparation and Sale of Coffee and/or Drinks",
+      "Preparation of Food, Coffee or Drinks",
+      "Expedited Restaurant without On-Premises Consumption"
+    ],
+    "step_d_non_perishable_only__retail_general": [
+      "Retail Sales of General Merchandise and Non-Perishable Food"
+    ]
+  },
+
+  "tier3_business_activity_exact": {
+    "_note": "General fallback for every row not resolved by tier 1 or tier 2. Exact match on each '|'-separated activity token.",
+
+    "medical_health": [
+      "Provide Home Health Care Services",
+      "Provide Home Health Care Services (Home Based Business)",
+      "Operation of General Medical / Surgical Hospital",
+      "Assisted Living Establishment",
+      "Long Term Care Facility",
+      "Provide Diagnostic Imaging Services",
+      "Pharmacy / Photo Services"
+    ],
+
+    "gym_fitness": [
+      "Provide Fitness Classes",
+      "Operation of a Health Club",
+      "Fitness Training On and Off Premises",
+      "Guide Clients in Yoga Instruction",
+      "Recreational Sports Facility for Children Under 18 Years of Age",
+      "Training in the Arts of Combat and Self-Defense for Both Adults and Children (Less Than 40% Children)",
+      "Training in the Arts of Combat and Self-Defense for Both Adults and Children (40% or More Children)",
+      "Training in the Arts of Combat and Self-Defense for Children Under 18 Years of Age",
+      "Training in Gymnastics for Children Under 18 Years of Age",
+      "Training in Gymnastics for Both Children and Adults (Less Than 40% Children)",
+      "Training in Gymnastics for Both Children and Adults (40% or More Children)"
+    ],
+
+    "personal_services": [
+      "Hair Services",
+      "Nail Services",
+      "Skincare Services",
+      "Hair, Nail, and Skin Care Services",
+      "Operation of Hair Salon, Nail Salon",
+      "Provide Waxing Services",
+      "Provide Full Body Massage Services",
+      "Provide Foot Massage - Fully Clothed/No Disrobing",
+      "Provide Chair Massage - Fully Clothed/No Disrobing",
+      "Tattoo / Permanent Body Art and Make-Up / Micro Blading",
+      "Engage in Microblading Activities",
+      "Engage in Body Piercing",
+      "Enagage in Ear Piercing Services",
+      "Operation of a Tanning Facility",
+      "Operation of a Dry Cleaning - Drop Off Location",
+      "Operation of Dry Cleaning Service - Plant On Premises",
+      "Operation of Dry Cleaning Facility- Self Service Machines",
+      "Operation of a Laundromat - Self Service",
+      "Operation of a Laundry Service",
+      "Operation of a Laundry Service - Drop Off Only",
+      "Clothing Alterations",
+      "Shoe / Leather Goods Repair",
+      "Miscellaneous Personal Services"
+    ],
+
+    "financial_services": [
+      "Operation of a Financial Services Commercial Office",
+      "Provide Financial and Accounting Services",
+      "Provide Tax Preparation Services",
+      "Accounting / Tax Preparation (Home Based Business)",
+      "Accounting Services (Tax Preparation, Bookkeeping)",
+      "Financial Services (Home Based Business)",
+      "Pledging of Property for Money (Pawnbroker / Pawn Shop)",
+      "Debt Collecting - Administrative Commercial Office",
+      "Payment Center"
+    ],
+
+    "liquor_tavern": [
+      "Consumption of Liquor on Premises",
+      "Tavern - Consumption of Liquor on Premises",
+      "Retail Sales of Packaged Liquor",
+      "Retail Sales of Packaged Liquor on Sundays from 8AM - 11AM",
+      "Sale of Liquor Outdoors on Private Property",
+      "Sale of Liquor Until 4am, Monday - Saturday and 5am on Sunday",
+      "Consumption of Liquor on Premises - Not for Profit",
+      "Consumption of Liquor on Premises - Lakefront Venue",
+      "Catering of Liquor To Events",
+      "Catering of Liquor From a Business Not Located In Chicago"
+    ],
+
+    "grocery": [
+      "Retail Sales of Perishable Foods",
+      "Retail Sales of Fresh Fruits and Vegetables (Leafy and Non Leafy Vegetables)",
+      "Operation of a Deli, Butcher or Bakery",
+      "Retail Sales and Wholesale of Perishable Foods",
+      "Retail Sale of Food for Offsite Consumption"
+    ],
+
+    "restaurant_cafe": [
+      "Preparation of Food and Dining on Premises With Seating",
+      "Sale of Food Prepared Onsite With Dining Area",
+      "Expedited Restaurant with On-Premises Consumption",
+      "Sale of Food Prepared Onsite Without Dining Area",
+      "Preparation and Sale of Coffee and/or Drinks",
+      "Preparation of Food, Coffee or Drinks",
+      "Expedited Restaurant without On-Premises Consumption"
+    ],
+
+    "retail_general": [
+      "Retail Sales of General Merchandise",
+      "Retail Sales of General Merchandise and Non-Perishable Food",
+      "Retail Sales of Clothing / Accessories / Shoes",
+      "Retail Sales of Cell Phones and Accessories",
+      "Retail Sales of Jewelry and Jewelry Repair",
+      "Retail Sales of New Electronics and Accessories",
+      "Retail Sales of Used Electronics",
+      "Retail Sales of Appliances",
+      "Retail Sales of Flowers",
+      "Retail Sales of Bicycles and/or Accessories",
+      "Retail Sales of Musical Instruments",
+      "Retail Sales of Carpet and/or Flooring",
+      "Retail Sales of Laundry Cleaning Products",
+      "Retail Sales of Animal Treats and Animal Food",
+      "Sale of Furniture",
+      "Sale of Art",
+      "Sale of Books",
+      "Sale of Used Books",
+      "Sale of Balloons, Balloon Bouquets and Decor",
+      "Retail Sale of Funeral Related Items",
+      "Sale of Products Infused With CBD",
+      "Sale of General Merchandise at Flea Market 181-365 Consecutive Days",
+      "Rental of General Merchandise",
+      "Rental of Furniture",
+      "Operate a Pet Shop / Sales of Animals",
+      "Buying and Reselling of Used Valuable Objects",
+      "Buying and Reselling of Used Goods That Are Not Valuable (No Articles Made of Precious Metals or Precious Gems)",
+      "Buying and Reselling of Valuable Used Goods (Jewelry, Precious Metals, Stones, Gems, Currency)",
+      "Buying and Reselling of Used Cell Phones",
+      "Buying and Reselling of Used Children's Products",
+      "Retail Sale of Tobacco",
+      "Retail Sales of Tobacco Products",
+      "Retail Sales of Tobacco and Flavored Tobacco Products",
+      "Retail Sales of Flavored Tobacco Products",
+      "Retail Sales of Tobacco Accessories",
+      "Retail Sales of Tobacco Products and Accessories (Less Than 80% Gross Revenue of Business)",
+      "Retail Sales of Tobacco Products and Accessories (80% or Higher Gross Revenue of Business)",
+      "Retail Sales of Electronic Cigarettes and Liquid Nicotine Products and Accessories (Under 20% of Gross Revenue of Business)"
+    ]
+  },
+
+  "explicit_exclusions": {
+    "_note": "Values deliberately NOT mapped to a named bucket. Each falls to 'other' with a stated reason. Recorded here so the omission is reviewable and is never mistaken for an oversight or a zero.",
+
+    "Markets / Promotes Pharmaceuticals to Health Care Professionals and Conducts Business for More than 15 Calendar Days per Year": "860 rows. This is a pharmaceutical SALES REPRESENTATIVE registration, not a health care site. Mapping it to medical_health would fabricate ~860 phantom clinics, many registered to downtown offices or out-of-state HQ addresses.",
+
+    "Operate a Veterinary Hospital": "117 rows. Animal health, not human medical_health. No animal-care bucket exists in this taxonomy.",
+
+    "Provide Non-Invasive Cupping Therapy": "36 rows. Ambiguous between medical_health and personal_services; not asserted either way.",
+
+    "Training in The Arts of Combat and Self-Defense, Music, Art, Gymnastics, or Dance (all age variants)": "113 rows across variants. This single license value bundles martial arts WITH music and art instruction, so it cannot be resolved to gym_fitness without guessing which one the site actually does. The combat/self-defense-ONLY and gymnastics-ONLY variants ARE mapped to gym_fitness.",
+
+    "Shared Kitchen User (Long Term) / (Short Term) / Food - Shared Kitchen / Food - Shared Kitchen - Supplemental": "938 rows. Per spec, shared kitchen is excluded from grocery. These are food entrepreneurs REGISTERED AT a shared commissary address; the address is not their own storefront, so plotting them as retail food sites would misrepresent the geography.",
+
+    "Mobile Food License / Mobile Food Preparer / Mobile Food Dispenser / Mobile Desserts Vendor": "190+ rows. A mobile food license address is the commissary or business office of record, NOT where the truck operates. Plotting it as a site of activity would be a false location claim.",
+
+    "Special Event Food / 180 Day Multiple Events - Special Event Food": "246 rows. Temporary event permits, not permanent sites.",
+
+    "Wholesale Food Establishment": "399 rows. Wholesale, not retail food; no wholesale bucket exists.",
+
+    "Peddler License / Street Performer / Combination Street Performer": "1,485+ rows. Licensed to move along the public way; there is no fixed site.",
+
+    "Motor Vehicle Services License / Commercial Garage / Filling Station / Towing": "2,652 rows. Automotive services and fuel retail. This taxonomy has NO automotive or fuel bucket, so these are left in 'other' rather than forced into retail_general.",
+
+    "Operation of an Administrative Commercial Office / Miscellaneous Commercial Services / Home Based Business variants": "Office and home-based registrations. Not a customer-facing site of activity, and the address is frequently residential.",
+
+    "STRUCTURAL ABSENCE - clinicians": "This dataset contains NO tokens for physician, dentist, clinic, optometry, chiropractic, or pharmacy-as-drugstore, because the City of Chicago does not license clinicians - Illinois IDFPR does. medical_health is therefore structurally sparse here and MUST NOT be read as a count of health care access. This is an omission with a reason, not a zero."
+  }
+}
