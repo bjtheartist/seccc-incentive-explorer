@@ -62,11 +62,30 @@ An adapter implements exactly four members:
 5. **Consume** — make the relevant API route DB-first: read from the new table,
    fall back to the existing live path. Additive only.
 
-## SE-Chicago scope
+## Scope
 
-Backfills target the three SE-Chicago ZIPs: **60617, 60619, 60649**.
+Most backfills target the three SE-Chicago ZIPs: **60617, 60619, 60649**.
+
+**`permits.ts` is the exception — it is CITYWIDE.** The SE-Chicago bounding box
+is gone; the fetch is bounded only by the issue-date window
+(`PERMIT_SINCE_DATE` in `lib/permit-match.ts`, currently 2015-01-01) and it
+ignores `opts.zips`. When you add or change a citywide adapter:
+
+- **Page by keyset, not `$offset`.** At ~470k rows deep-offset paging is slow
+  and can skip or repeat rows at a page boundary. `permits.ts` cursors on the
+  dataset's own unique `id`.
+- **Reconcile the retrieved count against the source's own `count(1)`** for the
+  identical filter, and surface the comparison. `permits.ts` records it in
+  `lastFetchAudit`; `scripts/sync-condition.ts` prints it and warns loudly on a
+  shortfall. A truncated ingest reads downstream as "this parcel has no
+  permit" — a claim about the city rather than about the run.
+- **Upsert set-based.** One INSERT per row is ~470k HTTP round trips on the
+  Neon serverless driver. `permits.ts` unnests parallel arrays a page at a time.
 
 ## Verify
 
-`npm run lint` · `npx tsc --noEmit` · `npm run test`. Do **not** run migrations
-or syncs against `DATABASE_URL` — it points at a shared instance.
+`npm run lint` · `npx tsc --noEmit` · `npm run test`.
+
+**Never run a migration or a sync against production.** These scripts write to
+whatever `DATABASE_URL` points at. Verify on a disposable Neon branch, report
+the numbers, and leave the production run to the repo owner.
