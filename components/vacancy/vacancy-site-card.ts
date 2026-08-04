@@ -18,6 +18,14 @@
 
 import { OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import { zoningGloss } from "@/lib/vacancy-zoning";
+import {
+  SITE_ACTIVITY_ERROR_TEXT,
+  SITE_ACTIVITY_MEASURE_ORDER,
+  SITE_ACTIVITY_NOTE,
+  siteActivityCheckingText,
+  siteActivityCompactLines,
+} from "@/lib/site-activity-lines";
+import type { SiteActivityState } from "@/lib/site-activity-client";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import { STARRED_RING } from "@/lib/vacancy-starred";
 import {
@@ -111,6 +119,12 @@ export interface SiteCardOptions {
    * star anywhere), so this is the single gate for the whole feature on the map.
    */
   star?: { key: string; starred: boolean } | null;
+  /**
+   * Public site-activity measurements for this point. Omitted (or
+   * `{status:"idle"}`) renders NO site-activity section at all — the section
+   * only exists for a card that carries a coordinate and has a lookup underway.
+   */
+  activity?: SiteActivityState;
 }
 
 /** Marks the element whose innerHTML is swapped when the zone lookup lands. */
@@ -119,6 +133,10 @@ export const ZONE_SLOT_ATTR = "data-vacancy-zones";
 export const ZONE_BADGE_ATTR = "data-vacancy-zone-badge";
 /** Marks the star button; its value is the site's star key. */
 export const STAR_BUTTON_ATTR = "data-vacancy-star";
+/** Marks the element whose innerHTML is swapped when the site-activity lookup lands. */
+export const ACTIVITY_SLOT_ATTR = "data-vacancy-activity";
+/** Marks the "· N of 4 measured" badge in the Site-activity summary. */
+export const ACTIVITY_BADGE_ATTR = "data-vacancy-activity-badge";
 /** Marks the scroll container that guarantees the card fits the frame. */
 export const CARD_SCROLLER_ATTR = "data-vacancy-card-scroll";
 
@@ -286,6 +304,67 @@ export function zoneBadgeText(zones: SiteZoneState): string {
     : "";
 }
 
+/**
+ * SITE ACTIVITY CONTEXT — the COMPACT variant of the report card
+ * (components/report/SiteActivityCard.tsx), rendered inside this popup for the
+ * selected parcel. Every sentence comes from lib/site-activity-lines.ts, so the
+ * two surfaces cannot drift apart.
+ *
+ * Compact means SHORTER, never looser:
+ *   • one measure = one bold figure + one qualifier + its own source line;
+ *   • an absence is stated as an absence, with its disclosed radius;
+ *   • nothing is combined — there is no "activity score" here and none may be
+ *     added, for the same reason lib/site-activity.ts forbids it;
+ *   • a lookup that failed says so rather than reading as an empty block.
+ *
+ * Returns the slot's inner HTML (the map patches this same string in once the
+ * fetch lands — see ACTIVITY_SLOT_ATTR), so every interpolated value is escaped.
+ */
+export function siteActivityHtml(state: SiteActivityState): string {
+  const wrap = (body: string) => `<div style="line-height:1.5">${body}</div>`;
+
+  if (state.status === "idle") return "";
+  if (state.status === "loading") return wrap(escapeHtml(siteActivityCheckingText("site")));
+  if (state.status === "error") return wrap(escapeHtml(SITE_ACTIVITY_ERROR_TEXT));
+
+  const lines = siteActivityCompactLines(state.context, state.sources, "site");
+  const blocks = lines.map((line, i) => {
+    const label = `<div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:${CARD_FAINT};font-weight:600">${escapeHtml(
+      line.label,
+    )}</div>`;
+    const value = line.figure
+      ? `<div style="color:${CARD_INK};line-height:1.45"><strong>${escapeHtml(
+          line.figure,
+        )}</strong> ${escapeHtml(line.detail)}</div>`
+      : `<div style="color:${CARD_MUTED};line-height:1.45">${escapeHtml(line.detail)}</div>`;
+    const source = line.source
+      ? `<div style="font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:${CARD_FAINT};margin-top:2px">${escapeHtml(
+          line.source.text,
+        )} <a href="${escapeHtml(
+          line.source.url,
+        )}" target="_blank" rel="noopener noreferrer" style="color:${CARD_BLUE};text-decoration:none">verify &#8599;</a></div>`
+      : "";
+    return `<div style="margin-top:${i === 0 ? 4 : 8}px">${label}${value}${source}</div>`;
+  });
+
+  return (
+    `<div style="color:${CARD_FAINT};font-size:10px;letter-spacing:0.08em;text-transform:uppercase">${escapeHtml(
+      SITE_ACTIVITY_NOTE,
+    )}</div>` + blocks.join("")
+  );
+}
+
+/** The "· N of 4 measured" badge on the collapsed accordion — how many of the
+ *  four measures returned something inside their disclosed radius. Silent until
+ *  the lookup completes, so a pending or failed check never implies a count. */
+export function activityBadgeText(state: SiteActivityState): string {
+  if (state.status !== "loaded") return "";
+  const present = siteActivityCompactLines(state.context, state.sources, "site").filter(
+    (l) => l.present,
+  ).length;
+  return ` · ${present} of ${SITE_ACTIVITY_MEASURE_ORDER.length} measured`;
+}
+
 const SOURCES_NOTE =
   "Records indicate; verify current ownership, eligibility, and condition with the county before relying. " +
   "Ownership type is inferred from public taxpayer-of-record patterns — no owner names appear.";
@@ -302,6 +381,7 @@ export function buildSiteCardHtml(
   options: SiteCardOptions = {},
 ): string {
   const zones: SiteZoneState = options.zones ?? { status: "idle" };
+  const activity: SiteActivityState = options.activity ?? { status: "idle" };
   const propertyLabel = PROPERTY_TYPE_LABELS[d.propertyType] ?? "Vacant site";
   const addressText = d.address && d.address.trim() ? d.address.trim() : "Address not recorded";
 
@@ -402,6 +482,8 @@ export function buildSiteCardHtml(
   //      Built explicitly (not via `detail`) because two of its parts are
   //      patched in place when the async lookup lands: the summary badge and
   //      the row body. See ZONE_BADGE_ATTR / ZONE_SLOT_ATTR.
+  const hasPoint =
+    d.lat != null && d.lon != null && Number.isFinite(d.lat) && Number.isFinite(d.lon);
   const reportLink =
     d.lat != null && d.lon != null && Number.isFinite(d.lat) && Number.isFinite(d.lon)
       ? `<div style="margin-top:5px"><a href="${escapeHtml(
@@ -419,7 +501,24 @@ export function buildSiteCardHtml(
       .join("")}</div>${reportLink}` +
     `</div></details>`;
 
-  // 6c · Why it was flagged (real-field reasons only — no rank or badge)
+  // 6c · Site activity context — the compact variant of the report card's five
+  //      raw public measurements around this exact point. Present ONLY for a
+  //      card that carries a coordinate AND has a lookup underway: with no
+  //      point there is nothing honest to measure, so the section is absent
+  //      rather than empty. Patched in place like the zones rows once the
+  //      fetch lands. See ACTIVITY_BADGE_ATTR / ACTIVITY_SLOT_ATTR.
+  const activitySection =
+    hasPoint && activity.status !== "idle"
+      ? `<details style="border-top:1px solid ${CARD_INK}12">` +
+        `<summary style="${summaryStyle}">Site activity context<span ${ACTIVITY_BADGE_ATTR}>${escapeHtml(
+          activityBadgeText(activity),
+        )}</span></summary>` +
+        `<div style="${detailBodyStyle}">` +
+        `<div ${ACTIVITY_SLOT_ATTR}>${siteActivityHtml(activity)}</div>` +
+        `</div></details>`
+      : "";
+
+  // 6d · Why it was flagged (real-field reasons only — no rank or badge)
   const whyFlagged = detail(
     "Why it was flagged",
     flagReasons(d)
@@ -427,7 +526,7 @@ export function buildSiteCardHtml(
       .join(""),
   );
 
-  // 6d · Data and sources (ownership type lives here — off the headline)
+  // 6e · Data and sources (ownership type lives here — off the headline)
   const ownerLabel = PUBLIC_OWNER_TYPE_LABELS[d.ownerType] ?? PUBLIC_OWNER_TYPE_LABELS.unknown;
   const ownerColor = OWNER_TYPE_COLORS[d.ownerType] ?? OWNER_TYPE_COLORS.unknown;
   const axisLine =
@@ -444,7 +543,7 @@ export function buildSiteCardHtml(
     ].join(""),
   );
 
-  const body = `${glance}${significance}${cautionBlock}${nextStep}${areaLink}<div style="margin-top:10px">${siteFacts}${programs}${whyFlagged}${dataSources}</div>`;
+  const body = `${glance}${significance}${cautionBlock}${nextStep}${areaLink}<div style="margin-top:10px">${siteFacts}${programs}${activitySection}${whyFlagged}${dataSources}</div>`;
 
   // The GUARANTEE half of the viewport fit: cap the card to the map frame and
   // scroll the overflow inside it, so a fully-expanded card can never run its

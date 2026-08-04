@@ -39,13 +39,17 @@ import { trackEvent } from "@/lib/analytics-events";
 // client bundle (the leak that broke the build before).
 import type { OwnerGeography, OwnerStructure } from "@/lib/owner-taxonomy";
 import {
+  ACTIVITY_BADGE_ATTR,
+  ACTIVITY_SLOT_ATTR,
   CARD_SCROLLER_ATTR,
   STAR_BUTTON_ATTR,
   ZONE_BADGE_ATTR,
   ZONE_SLOT_ATTR,
+  activityBadgeText,
   buildSiteCardHtml,
   escapeHtml,
   programsAndZonesRows,
+  siteActivityHtml,
   zoneBadgeText,
   type CardData,
 } from "./vacancy-site-card";
@@ -64,6 +68,11 @@ import {
   fetchSiteZones,
   type SiteZoneState,
 } from "@/lib/vacancy-site-zones";
+import {
+  cachedSiteActivity,
+  fetchSiteActivity,
+  type SiteActivityState,
+} from "@/lib/site-activity-client";
 import {
   STARRED_RING,
   siteStarKey,
@@ -848,6 +857,14 @@ export default function VacancyReportMap({
         const cached = at ? cachedSiteZones(at.lat, at.lon) : null;
         const initialZones: SiteZoneState = cached ?? (at ? { status: "loading" } : { status: "idle" });
 
+        // Public site-activity measurements for this exact point, same pattern.
+        // The request is made HERE — on a parcel the reader actually selected —
+        // and never for the thousands of dots on the layer, so opening the map
+        // costs nothing and each card costs one small cached JSON response.
+        const cachedActivity = at ? cachedSiteActivity(at.lat, at.lon) : null;
+        const initialActivity: SiteActivityState =
+          cachedActivity ?? (at ? { status: "loading" } : { status: "idle" });
+
         // Star affordance ONLY for a confirmed admin session.
         const starKey = siteStarKey({ pin: data.pin, address: data.address });
         const showStar = adminRef.current && starKey !== "";
@@ -856,6 +873,7 @@ export default function VacancyReportMap({
         const html = buildSiteCardHtml(data, zipForLinks, asOfLabel ?? null, {
           maxHeightPx: siteCardMaxHeight(frame.height),
           zones: initialZones,
+          activity: initialActivity,
           star: showStar ? { key: starKey, starred: starredRef.current.has(starKey) } : null,
         });
 
@@ -916,6 +934,20 @@ export default function VacancyReportMap({
             }
             const badge = el?.querySelector<HTMLElement>(`[${ZONE_BADGE_ATTR}]`);
             if (badge) badge.textContent = zoneBadgeText(state);
+            refitCard(popup);
+          });
+        }
+
+        // Same for the public site-activity measurements. A failed lookup
+        // patches in "could not check" — never an empty block, which would
+        // read as "nothing is happening around this parcel".
+        if (at && initialActivity.status === "loading") {
+          void fetchSiteActivity(at.lat, at.lon).then((state) => {
+            if (!popup.isOpen()) return;
+            const slot = el?.querySelector<HTMLElement>(`[${ACTIVITY_SLOT_ATTR}]`);
+            if (slot) slot.innerHTML = siteActivityHtml(state);
+            const badge = el?.querySelector<HTMLElement>(`[${ACTIVITY_BADGE_ATTR}]`);
+            if (badge) badge.textContent = activityBadgeText(state);
             refitCard(popup);
           });
         }

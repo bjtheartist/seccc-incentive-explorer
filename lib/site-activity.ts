@@ -264,10 +264,15 @@ export const LICENSE_CATEGORY_LABELS: Record<string, string> = {
   other: "Other licensed",
 };
 
+/** The source register's shape — the four feed keys, each with its SourceRef.
+ * Named so every consumer (the API payload, the report card, the compact
+ * vacancy card) types the register the same way instead of respelling it. */
+export type SiteActivitySources = Record<"aadt" | "rail" | "catchment" | "licenses", SourceRef>;
+
 /** The card's fixed source register — dataset ids and verify links rendered
  * under each measure. Vintage fields that vary per row (AADT year, CTA month,
  * ACS/LODES vintages) are shown from the DATA, not from here. */
-export const SITE_ACTIVITY_SOURCES: Record<"aadt" | "rail" | "catchment" | "licenses", SourceRef> = {
+export const SITE_ACTIVITY_SOURCES: SiteActivitySources = {
   aadt: {
     label: "Illinois DOT traffic counts (AADT)",
     datasetId: "IDOT Getting Around Illinois — AdministrativeData/AADT layer 0",
