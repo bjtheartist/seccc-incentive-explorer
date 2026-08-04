@@ -26,6 +26,7 @@ const byYear: YearBreakdown[] = [
   { year: 2021, awardedDollars: 0, count: 0 },
   { year: 2022, awardedDollars: 400_000_000, count: 20 },
   { year: 2023, awardedDollars: 137_000_000, count: 10 },
+  { year: 2026, awardedDollars: 50_000_000, count: 2 },
 ];
 
 const bySource: SourceBreakdown[] = [
@@ -49,12 +50,17 @@ describe("investment analysis charts (visx substrate)", () => {
   });
 
   it("YearBars is a single neutral series with a peak-only direct label", () => {
-    const html = renderToStaticMarkup(<YearBars byYear={byYear} unYeared={2} />);
+    const html = renderToStaticMarkup(
+      <YearBars byYear={byYear} unYeared={2} generatedAt="2026-08-04T13:54:09.889Z" />,
+    );
     expect(html).toContain("#475569"); // magnitude hue
     expect(html).not.toContain("#2563EB"); // funder-type hues stay off the magnitude chart
     expect(html).toContain("$400.0M"); // peak year label
     expect(html).not.toContain("$137.0M"); // non-peak years are not directly labeled
     expect(html).toContain("<title>");
+    expect(html).toContain("2026 · Partial year");
+    expect(html).toContain("August 4, 2026");
+    expect(html).toContain("Closed CARES and ARPA recipient files");
     expect(html).not.toMatch(FORBIDDEN);
   });
 

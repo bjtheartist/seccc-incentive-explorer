@@ -2,7 +2,7 @@ import { BarRounded } from "@visx/shape";
 import { Group } from "@visx/group";
 import { scaleBand, scaleLinear } from "@visx/scale";
 import type { YearBreakdown } from "@/lib/investment-analysis";
-import { formatCompactDollars, formatCount, formatFullDollars, GRID, INK_40, INK_55, MAGNITUDE_HUE } from "./format";
+import { formatAsOf, formatCompactDollars, formatCount, formatFullDollars, GRID, INK_40, INK_55, MAGNITUDE_HUE } from "./format";
 
 /**
  * "When it arrived" — a single-series column chart per year, 2020 → latest. Built
@@ -12,9 +12,10 @@ import { formatCompactDollars, formatCount, formatFullDollars, GRID, INK_40, INK
  *
  * `mode` picks the y measure — awarded dollars (default) or grant count — so a
  * client toggle (YearModeToggle) can swap between two server-rendered instances.
- * The latest partial year (2026) is shaded with a diagonal hatch and marked "YTD"
- * so a reader never mistakes a mid-year figure for a full-year one, and a caption
- * flags the uneven per-year source coverage (City completions/rounds vs 990 lag).
+ * The export year is shaded with a diagonal hatch and marked "YTD" when the
+ * committed export was generated before year end, so the annotation follows the
+ * dataset metadata instead of a hard-coded calendar year. The exact as-of date is
+ * printed beneath the chart.
  *
  * Complies: no legend (one series), thin bars (≤24px) with a 4px-rounded top and
  * square baseline, ONE direct label on the peak year only, hairline gridlines, one
@@ -32,9 +33,6 @@ const PLOT_W = W - M_LEFT - M_RIGHT;
 const PLOT_H = H - M_TOP - M_BOTTOM;
 const BASELINE = M_TOP + PLOT_H;
 
-/** The latest calendar year treated as partial (year-to-date) for shading. */
-const YTD_YEAR = 2026;
-
 /** Round up to a clean 1 / 2 / 2.5 / 5 / 10 × 10^k ceiling for the axis top. */
 function niceCeil(v: number): number {
   if (v <= 0) return 1;
@@ -47,10 +45,12 @@ function niceCeil(v: number): number {
 export function YearBars({
   byYear,
   unYeared,
+  generatedAt,
   mode = "amount",
 }: {
   byYear: YearBreakdown[];
   unYeared: number;
+  generatedAt: string;
   mode?: "amount" | "count";
 }) {
   if (byYear.length === 0) {
@@ -65,6 +65,11 @@ export function YearBars({
   const valueOf = (y: YearBreakdown) => (mode === "amount" ? y.awardedDollars : y.count);
   const fmtValue = (v: number) => (mode === "amount" ? formatCompactDollars(v) : formatCount(Math.round(v)));
   const hatchId = `ytd-hatch-${mode}`;
+  const exportDate = new Date(generatedAt);
+  const partialYear = Number.isNaN(exportDate.getTime()) ||
+    (exportDate.getUTCMonth() === 11 && exportDate.getUTCDate() === 31)
+    ? null
+    : exportDate.getUTCFullYear();
 
   const maxVal = Math.max(...byYear.map(valueOf));
   const axisMax = niceCeil(maxVal);
@@ -77,7 +82,7 @@ export function YearBars({
   const bandW = xScale.bandwidth();
   const barW = Math.min(24, bandW - 10);
   const peakYear = byYear.reduce((a, b) => (valueOf(b) > valueOf(a) ? b : a));
-  const hasYtd = byYear.some((y) => y.year === YTD_YEAR && valueOf(y) > 0);
+  const hasYtd = partialYear != null && byYear.some((y) => y.year === partialYear && valueOf(y) > 0);
 
   const ticks = [0, 0.5, 1].map((t) => t * axisMax);
 
@@ -119,7 +124,7 @@ export function YearBars({
           const h = BASELINE - barY;
           const barX = (bandW - barW) / 2;
           const isPeak = y.year === peakYear.year && valueOf(peakYear) > 0;
-          const isYtd = y.year === YTD_YEAR;
+          const isYtd = y.year === partialYear;
           const amountText = formatFullDollars(y.awardedDollars);
           const countText = `${formatCount(y.count)} grant${y.count === 1 ? "" : "s"}`;
           const tip = `${y.year}: ${mode === "amount" ? `${amountText} · ${countText}` : `${countText} · ${amountText}`}${isYtd ? " · year-to-date" : ""}`;
@@ -160,10 +165,26 @@ export function YearBars({
       </svg>
 
       <p className="mt-3 text-[11px] leading-relaxed text-[#0C1B33]/40">
-        {hasYtd ? "2026 is year-to-date (hatched). " : ""}
+        {hasYtd ? `${partialYear} is partial through ${formatAsOf(generatedAt)} (hatched). ` : ""}
         Per-year coverage is uneven: City completion records (NOF/SBIF) and grant rounds (CDG) enter on
         different cadences than foundation 990 filings, so a low year can reflect reporting lag rather than
         less money.
+      </p>
+
+      {hasYtd ? (
+        <div className="mt-3 border-l-2 border-[#A45B00]/45 bg-[#FFF4DD]/55 px-3 py-2">
+          <span className="font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.1em] text-[#8A4B00]">
+            {partialYear} · Partial year
+          </span>
+          <p className="mt-1 text-[10px] leading-relaxed text-[#0C1B33]/55">
+            Export as of {formatAsOf(generatedAt)}. Later source publications are not inferred.
+          </p>
+        </div>
+      ) : null}
+
+      <p className="mt-2 text-[10px] leading-relaxed text-[#0C1B33]/40">
+        Closed CARES and ARPA recipient files remain in separate historical overlays and are excluded from
+        this ordinary awarded-capital trend.
       </p>
 
       {unYeared > 0 && (

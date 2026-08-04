@@ -228,7 +228,12 @@ export default async function InvestmentBriefPrintPage({
               </Section>
 
               <Section title="When it arrived" description="Awarded dollars by year, 2020 to the latest on record.">
-                <YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} mode="amount" />
+                <YearBars
+                  byYear={analysis.byYear}
+                  unYeared={analysis.unYeared}
+                  generatedAt={analysis.generatedAt}
+                  mode="amount"
+                />
               </Section>
 
               <div className="grid grid-cols-1 gap-x-6 md:grid-cols-2">
