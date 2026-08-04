@@ -75,6 +75,10 @@ import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { ProjectFitNote } from "@/components/report/ProjectFitNote";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { ReportEmailGate } from "@/components/report/ReportEmailGate";
+import {
+  InlineCrossLinkBanner,
+  StickyCrossLinkBanner,
+} from "@/components/report/CrossLinkBanner";
 import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
 import { AdminOwnershipPanel } from "@/components/report/AdminOwnershipPanel";
@@ -657,6 +661,34 @@ function ReportWizardPage() {
   const [hasRefinedInstantReport, setHasRefinedInstantReport] = useState(isRefineEntry);
   const [revealedReportKey, setRevealedReportKey] = useState<string | null>(null);
   const generatedReportEventGateRef = useRef(createGeneratedReportEventGate());
+  // Sticky cross-link dismissal lives here, not in the banner: the page has to
+  // drop its matching bottom padding in the same render or the document keeps
+  // reserving space for a bar that is gone.
+  const [crossLinkDismissed, setCrossLinkDismissed] = useState(false);
+  // The sticky bar auto-hides while the inline banner (same links) or the global
+  // footer is on screen — otherwise at max scroll it permanently covers the
+  // footer's last block, including the Partner & Admin Sign In link. Bottom
+  // padding stays reserved while the bar is merely auto-hidden (not dismissed),
+  // so hiding never shifts layout and re-triggers the observer.
+  const inlineCrossLinkRef = useRef<HTMLDivElement | null>(null);
+  const [bottomZoneInView, setBottomZoneInView] = useState(false);
+  useEffect(() => {
+    if (!report || crossLinkDismissed) return;
+    const targets = [inlineCrossLinkRef.current, document.querySelector("footer")].filter(
+      (t): t is HTMLElement => t != null,
+    );
+    if (targets.length === 0) return;
+    const visible = new Set<Element>();
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) visible.add(entry.target);
+        else visible.delete(entry.target);
+      }
+      setBottomZoneInView(visible.size > 0);
+    });
+    for (const target of targets) observer.observe(target);
+    return () => observer.disconnect();
+  }, [report, crossLinkDismissed]);
 
   // Comparison state
   const [compareMode, setCompareMode] = useState(false);
@@ -1673,8 +1705,17 @@ function ReportWizardPage() {
   if (report) {
     const showEmailGate = reportRequiresEmailGate(report)
       && revealedReportKey !== reportEmailGateKey(report);
+    // Cross-links only make sense once results for a resolved address are
+    // actually on screen: not behind the email gate, and not on a corridor
+    // report that has no address to be "near".
+    const hasResolvedAddress =
+      (report.metadata?.lat ?? wizardState.lat) != null &&
+      (report.metadata?.lon ?? wizardState.lon) != null;
+    const showCrossLinks = hasResolvedAddress && !showEmailGate;
+    const stickyCandidate = showCrossLinks && !crossLinkDismissed;
+    const showStickyCrossLink = stickyCandidate && !bottomZoneInView;
     return (
-      <div className="min-h-screen">
+      <div className={`min-h-screen${stickyCandidate ? " pb-40 sm:pb-32" : ""}`}>
         <ReportDisplay
           report={report}
           onStartOver={handleStartOver}
@@ -1694,6 +1735,17 @@ function ReportWizardPage() {
           analyticsSource={reportSource}
           programs={programs}
         />
+        {showCrossLinks && (
+          <div ref={inlineCrossLinkRef}>
+            <InlineCrossLinkBanner zip={reportZip} />
+          </div>
+        )}
+        {showStickyCrossLink && (
+          <StickyCrossLinkBanner
+            zip={reportZip}
+            onDismiss={() => setCrossLinkDismissed(true)}
+          />
+        )}
         {showEmailGate && (
           <ReportEmailGate
             report={report}
@@ -5871,7 +5923,7 @@ function DownloadGateModal({
           <div>
             <h3 className="text-sm font-medium text-[#0C1B33]">Download Report</h3>
             <p className="font-mono-bureau text-[10px] text-[#0C1B33]/40 tracking-wide uppercase mt-0.5">
-              Enter your details to download
+              Share your details, or download right away
             </p>
           </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center hover:bg-[#0C1B33]/5 transition-colors">
@@ -5931,6 +5983,22 @@ function DownloadGateModal({
             ) : (
               <><Printer className="w-4 h-4" /> Download PDF</>
             )}
+          </button>
+          <button
+            type="button"
+            data-testid="download-gate-skip"
+            onClick={() => {
+              trackEvent("report_pdf_downloaded", {
+                source: "report_pdf_gate_skipped",
+                address: reportAddress || null,
+                metadata: { reportTitle: reportTitle || null },
+              });
+              onDownload();
+            }}
+            disabled={status !== "idle"}
+            className="w-full text-center font-mono-bureau text-[10px] tracking-wide uppercase text-[#0C1B33]/70 underline underline-offset-4 hover:text-[#0C1B33] disabled:opacity-40 py-1"
+          >
+            Download without sharing details
           </button>
           <p className="text-[9px] text-[#0C1B33]/30 text-center leading-snug">
             Your info helps us understand who we&apos;re serving. We won&apos;t spam you.
