@@ -261,4 +261,28 @@ describe("URL state roundtrip", () => {
     expect(decoded).not.toBeNull();
     expect(decoded!.lat).toBeCloseTo(41.7);
   });
+
+  it("accepts the readable address= spelling /check links are written with", () => {
+    const params = new URLSearchParams({
+      lat: "41.7",
+      lon: "-87.5",
+      address: "9133 S Stony Island Ave",
+    });
+    expect(decodeCheckState(params)!.address).toBe("9133 S Stony Island Ave");
+  });
+
+  it("prefers the short addr= form when a link carries both", () => {
+    const params = new URLSearchParams({
+      lat: "41.7",
+      lon: "-87.5",
+      addr: "short",
+      address: "long",
+    });
+    expect(decodeCheckState(params)!.address).toBe("short");
+  });
+
+  it("leaves address empty when a point carries no label at all", () => {
+    const params = new URLSearchParams({ lat: "41.7", lon: "-87.5" });
+    expect(decodeCheckState(params)!.address).toBe("");
+  });
 });
