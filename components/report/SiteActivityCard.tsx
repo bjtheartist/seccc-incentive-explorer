@@ -2,11 +2,21 @@
 
 import { useEffect, useState } from "react";
 import { ChevronDown, ExternalLink } from "lucide-react";
+import type { SourceRef } from "@/lib/site-activity";
 import {
-  LICENSE_CATEGORY_LABELS,
-  type SiteActivityContext,
-  type SourceRef,
-} from "@/lib/site-activity";
+  SITE_ACTIVITY_NOTE,
+  absenceStatement,
+  arterialVintage,
+  catchmentVintage,
+  formatCount,
+  licenseCategoryPhrase,
+  licenseOtherCount,
+  sourceText,
+} from "@/lib/site-activity-lines";
+import {
+  fetchSiteActivity,
+  type SiteActivityState,
+} from "@/lib/site-activity-client";
 
 /**
  * Site Activity Context — five RAW public measurements around the report
@@ -18,19 +28,20 @@ import {
  * measure with nothing in radius renders as an explicit absence, never zero.
  *
  * This card is report CONTENT (it prints), unlike the cross-link banners.
+ *
+ * The sentences themselves live in lib/site-activity-lines.ts, shared verbatim
+ * with the COMPACT variant inside the Vacant Sites map card
+ * (components/vacancy/vacancy-site-card.ts): the full card and the compact one
+ * make the same claims about the same point, and a wording or provenance fix
+ * can only be made in one place. Resolution goes through
+ * lib/site-activity-client.ts, which turns a failed or malformed response into
+ * an explicit error state rather than a set of empty measures.
  */
-
-interface Payload {
-  context: SiteActivityContext;
-  sources: Record<"aadt" | "rail" | "catchment" | "licenses", SourceRef>;
-}
-
-const nf = new Intl.NumberFormat("en-US");
 
 function SourceLine({ source, vintage }: { source: SourceRef; vintage?: string }) {
   return (
     <p className="mt-1 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">
-      {source.label} · {vintage ?? source.vintage}{" "}
+      {sourceText(source, vintage)}{" "}
       <a
         href={source.url}
         target="_blank"
@@ -66,20 +77,21 @@ export function SiteActivityCard({
   zoningClass?: string | null;
   zoningDescription?: string | null;
 }) {
-  const [payload, setPayload] = useState<Payload | null>(null);
-  const [failed, setFailed] = useState(false);
+  // The resolved point travels WITH its state, so a report that re-points at a
+  // new address can never show the previous address's measurements while the
+  // new lookup is in flight.
+  const [resolved, setResolved] = useState<{
+    lat: number;
+    lon: number;
+    state: SiteActivityState;
+  } | null>(null);
   const [methodOpen, setMethodOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/site-activity?lat=${lat}&lon=${lon}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
-      .then((data: Payload) => {
-        if (!cancelled) setPayload(data);
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true);
-      });
+    void fetchSiteActivity(lat, lon).then((state) => {
+      if (!cancelled) setResolved({ lat, lon, state });
+    });
     return () => {
       cancelled = true;
     };
@@ -87,12 +99,13 @@ export function SiteActivityCard({
 
   // A fetch failure quietly renders nothing — the report must never show a
   // half-built context that could read as "nothing is near this address".
-  if (failed) return null;
-  if (!payload) return null;
+  if (!resolved || resolved.lat !== lat || resolved.lon !== lon) return null;
+  if (resolved.state.status !== "loaded") return null;
 
-  const { context, sources } = payload;
+  const { context, sources } = resolved.state;
   const { arterial, rail, catchment, licenses, radii } = context;
   const nearestRail = rail[0];
+  const otherLicenses = licenses ? licenseOtherCount(licenses) : null;
 
   return (
     <section
@@ -103,34 +116,32 @@ export function SiteActivityCard({
         <div className="flex flex-wrap items-baseline justify-between gap-2 px-5 pb-1 pt-4">
           <h2 className="text-[15px] font-semibold text-[#0C1B33]">Site activity context</h2>
           <p className="font-mono-bureau text-[9px] uppercase tracking-[0.15em] text-[#0C1B33]/40">
-            Raw public measurements — nothing modeled
+            {SITE_ACTIVITY_NOTE}
           </p>
         </div>
 
         <Row heading="Arterial vehicle flow">
           {arterial ? (
             <>
-              <strong>{nf.format(arterial.aadt)}</strong> vehicles/day on {arterial.roadName} (
+              <strong>{formatCount(arterial.aadt)}</strong> vehicles/day on {arterial.roadName} (
               {arterial.aadtYear} count, station {arterial.stationId}, {arterial.distanceMi} mi away)
-              <SourceLine source={sources.aadt} vintage={`${arterial.aadtYear} count year`} />
+              <SourceLine source={sources.aadt} vintage={arterialVintage(arterial)} />
             </>
           ) : (
-            <span className="text-[#0C1B33]/55">
-              No IDOT count station within {radii.arterialMi} mi of this address.
-            </span>
+            <span className="text-[#0C1B33]/55">{absenceStatement("arterial", radii)}</span>
           )}
         </Row>
 
         <Row heading="'L' station entries">
           {nearestRail ? (
             <>
-              <strong>{nf.format(Math.round(nearestRail.avgWeekdayEntries))}</strong> avg weekday
+              <strong>{formatCount(Math.round(nearestRail.avgWeekdayEntries))}</strong> avg weekday
               entries at {nearestRail.name} ({nearestRail.lines.join(", ")};{" "}
               {nearestRail.distanceMi} mi away, {nearestRail.month})
               {nearestRail.priorYearAvgWeekdayEntries != null && (
                 <span className="text-[#0C1B33]/55">
                   {" "}
-                  — prior year {nf.format(Math.round(nearestRail.priorYearAvgWeekdayEntries))}
+                  — prior year {formatCount(Math.round(nearestRail.priorYearAvgWeekdayEntries))}
                 </span>
               )}
               {rail.length > 1 && (
@@ -143,51 +154,35 @@ export function SiteActivityCard({
               <SourceLine source={sources.rail} vintage={nearestRail.month} />
             </>
           ) : (
-            <span className="text-[#0C1B33]/55">
-              No &apos;L&apos; station within {radii.railMi} mi of this address.
-            </span>
+            <span className="text-[#0C1B33]/55">{absenceStatement("rail", radii)}</span>
           )}
         </Row>
 
         <Row heading={`Residents & jobs within ${radii.catchmentMi} mi`}>
           {catchment ? (
             <>
-              <strong>{nf.format(catchment.population)}</strong> residents ·{" "}
-              <strong>{nf.format(catchment.jobs)}</strong> jobs ({catchment.blockGroups} census
+              <strong>{formatCount(catchment.population)}</strong> residents ·{" "}
+              <strong>{formatCount(catchment.jobs)}</strong> jobs ({catchment.blockGroups} census
               block groups by centroid)
-              <SourceLine
-                source={sources.catchment}
-                vintage={`${catchment.acsVintage} · ${catchment.lodesVintage}`}
-              />
+              <SourceLine source={sources.catchment} vintage={catchmentVintage(catchment)} />
             </>
           ) : (
-            <span className="text-[#0C1B33]/55">
-              No census block-group centroid within {radii.catchmentMi} mi.
-            </span>
+            <span className="text-[#0C1B33]/55">{absenceStatement("catchment", radii)}</span>
           )}
         </Row>
 
         <Row heading={`Licensed businesses within ${radii.licenseMi} mi`}>
           {licenses ? (
             <>
-              <strong>{nf.format(licenses.total)}</strong> active licenses —{" "}
-              {licenses.byCategory
-                .filter((c) => c.category !== "other")
-                .slice(0, 4)
-                .map((c) => `${c.count} ${(LICENSE_CATEGORY_LABELS[c.category] ?? c.category).toLowerCase()}`)
-                .join(", ")}
-              {licenses.byCategory.some((c) => c.category === "other") && (
-                <span className="text-[#0C1B33]/55">
-                  {" "}
-                  (+{licenses.byCategory.find((c) => c.category === "other")?.count} other licensed)
-                </span>
+              <strong>{formatCount(licenses.total)}</strong> active licenses —{" "}
+              {licenseCategoryPhrase(licenses)}
+              {otherLicenses != null && (
+                <span className="text-[#0C1B33]/55"> (+{otherLicenses} other licensed)</span>
               )}
               <SourceLine source={sources.licenses} />
             </>
           ) : (
-            <span className="text-[#0C1B33]/55">
-              No active business license on record within {radii.licenseMi} mi.
-            </span>
+            <span className="text-[#0C1B33]/55">{absenceStatement("licenses", radii)}</span>
           )}
         </Row>
 
