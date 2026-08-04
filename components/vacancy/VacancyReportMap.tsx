@@ -42,12 +42,16 @@ import {
   ACTIVITY_BADGE_ATTR,
   ACTIVITY_SLOT_ATTR,
   CARD_SCROLLER_ATTR,
+  PERMIT_BADGE_ATTR,
+  PERMIT_SLOT_ATTR,
   STAR_BUTTON_ATTR,
   ZONE_BADGE_ATTR,
   ZONE_SLOT_ATTR,
   activityBadgeText,
   buildSiteCardHtml,
   escapeHtml,
+  permitBadgeText,
+  permitMatchHtml,
   programsAndZonesRows,
   siteActivityHtml,
   zoneBadgeText,
@@ -73,6 +77,11 @@ import {
   fetchSiteActivity,
   type SiteActivityState,
 } from "@/lib/site-activity-client";
+import {
+  cachedPermitMatch,
+  fetchPermitMatch,
+  type PermitMatchState,
+} from "@/lib/permit-match-client";
 import {
   STARRED_RING,
   siteStarKey,
@@ -865,6 +874,16 @@ export default function VacancyReportMap({
         const initialActivity: SiteActivityState =
           cachedActivity ?? (at ? { status: "loading" } : { status: "idle" });
 
+        // Matched building-permit records for THIS parcel, keyed by its
+        // 14-digit PIN. A card without a PIN (311 building rows carry none)
+        // gets no permit section at all rather than an unanswerable one — the
+        // same rule the "No county PIN on record yet" action line already uses.
+        const permitPin = (data.pin ?? "").replace(/\D/g, "");
+        const canCheckPermits = permitPin.length === 14;
+        const cachedPermits = canCheckPermits ? cachedPermitMatch(permitPin) : null;
+        const initialPermits: PermitMatchState =
+          cachedPermits ?? (canCheckPermits ? { status: "loading" } : { status: "idle" });
+
         // Star affordance ONLY for a confirmed admin session.
         const starKey = siteStarKey({ pin: data.pin, address: data.address });
         const showStar = adminRef.current && starKey !== "";
@@ -874,6 +893,7 @@ export default function VacancyReportMap({
           maxHeightPx: siteCardMaxHeight(frame.height),
           zones: initialZones,
           activity: initialActivity,
+          permits: initialPermits,
           star: showStar ? { key: starKey, starred: starredRef.current.has(starKey) } : null,
         });
 
@@ -948,6 +968,20 @@ export default function VacancyReportMap({
             if (slot) slot.innerHTML = siteActivityHtml(state);
             const badge = el?.querySelector<HTMLElement>(`[${ACTIVITY_BADGE_ATTR}]`);
             if (badge) badge.textContent = activityBadgeText(state);
+            refitCard(popup);
+          });
+        }
+
+        // And the matched permit record. A failed lookup patches in "could not
+        // check"; only a completed lookup that genuinely returned nothing can
+        // print the absence sentence.
+        if (canCheckPermits && initialPermits.status === "loading") {
+          void fetchPermitMatch(permitPin).then((state) => {
+            if (!popup.isOpen()) return;
+            const slot = el?.querySelector<HTMLElement>(`[${PERMIT_SLOT_ATTR}]`);
+            if (slot) slot.innerHTML = permitMatchHtml(state);
+            const badge = el?.querySelector<HTMLElement>(`[${PERMIT_BADGE_ATTR}]`);
+            if (badge) badge.textContent = permitBadgeText(state);
             refitCard(popup);
           });
         }

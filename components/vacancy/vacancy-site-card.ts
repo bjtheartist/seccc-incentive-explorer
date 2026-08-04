@@ -26,6 +26,19 @@ import {
   siteActivityCompactLines,
 } from "@/lib/site-activity-lines";
 import type { SiteActivityState } from "@/lib/site-activity-client";
+import type { PermitMatchState } from "@/lib/permit-match-client";
+import { bestMatchedPermit } from "@/lib/permit-match";
+import {
+  PERMIT_DATA_SOURCE_TEXT,
+  PERMIT_MATCH_CHECKING_TEXT,
+  PERMIT_MATCH_ERROR_TEXT,
+  PERMIT_NO_MATCH_TEXT,
+  PERMIT_PORTAL_LABEL,
+  PERMIT_PORTAL_URL,
+  PERMIT_SECTION_TITLE,
+  PERMIT_VERIFICATION_NOTE,
+  permitDetailLines,
+} from "@/lib/permit-match-lines";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import { STARRED_RING } from "@/lib/vacancy-starred";
 import {
@@ -125,6 +138,13 @@ export interface SiteCardOptions {
    * only exists for a card that carries a coordinate and has a lookup underway.
    */
   activity?: SiteActivityState;
+  /**
+   * Matched building-permit records for this parcel. Omitted (or
+   * `{status:"idle"}`) renders NO permit section at all — with no lookup
+   * underway there is nothing honest to say, and an empty section would read as
+   * "checked, nothing found".
+   */
+  permits?: PermitMatchState;
 }
 
 /** Marks the element whose innerHTML is swapped when the zone lookup lands. */
@@ -137,6 +157,10 @@ export const STAR_BUTTON_ATTR = "data-vacancy-star";
 export const ACTIVITY_SLOT_ATTR = "data-vacancy-activity";
 /** Marks the "· N of 4 measured" badge in the Site-activity summary. */
 export const ACTIVITY_BADGE_ATTR = "data-vacancy-activity-badge";
+/** Marks the element whose innerHTML is swapped when the permit lookup lands. */
+export const PERMIT_SLOT_ATTR = "data-vacancy-permit";
+/** Marks the "· matched" badge in the Matched-building-permit summary. */
+export const PERMIT_BADGE_ATTR = "data-vacancy-permit-badge";
 /** Marks the scroll container that guarantees the card fits the frame. */
 export const CARD_SCROLLER_ATTR = "data-vacancy-card-scroll";
 
@@ -365,6 +389,73 @@ export function activityBadgeText(state: SiteActivityState): string {
   return ` · ${present} of ${SITE_ACTIVITY_MEASURE_ORDER.length} measured`;
 }
 
+/**
+ * MATCHED BUILDING PERMIT RECORD — the block for the selected parcel.
+ *
+ * Every string comes from lib/permit-match-lines.ts so this surface and any
+ * future one (report card, PDF) cannot drift, exactly as siteActivityHtml()
+ * draws from lib/site-activity-lines.ts.
+ *
+ * ── The rails, stated where they are enforced ──
+ *
+ *  • ONE record is shown — the strongest-method, most-recent match
+ *    ({@link bestMatchedPermit}). Multiple matches are never merged, and their
+ *    reported costs are never added: a permit's reported cost is the
+ *    APPLICANT'S OWN ESTIMATE, and a sum of applicant estimates is not an
+ *    investment total, an award, or a spend. The cost is therefore printed once,
+ *    for one permit, carrying "(Applicant Estimate)" every time.
+ *  • The verification note renders with EVERY match, verbatim. A permit is a
+ *    filing; it is not proof that anything was built.
+ *  • The match method and its confidence are shown, because a low-confidence
+ *    proximity match and a PIN match are not the same claim and the reader is
+ *    about to act on the difference.
+ *  • `loaded` with zero matches is the ONLY path to the absence sentence. A
+ *    failed lookup says it failed; an in-flight one says it is checking.
+ *
+ * Returns the slot's inner HTML (the map patches this same string in once the
+ * fetch lands — see PERMIT_SLOT_ATTR), so every interpolated value is escaped.
+ */
+export function permitMatchHtml(state: PermitMatchState): string {
+  const wrap = (body: string) => `<div style="line-height:1.5">${body}</div>`;
+
+  if (state.status === "idle") return "";
+  if (state.status === "loading") return wrap(escapeHtml(PERMIT_MATCH_CHECKING_TEXT));
+  if (state.status === "error") return wrap(escapeHtml(PERMIT_MATCH_ERROR_TEXT));
+
+  const permit = bestMatchedPermit(state.matches);
+  if (!permit) return wrap(escapeHtml(PERMIT_NO_MATCH_TEXT));
+
+  const rows = permitDetailLines(permit)
+    .map(
+      (line) =>
+        `<div style="margin-top:3px"><span style="color:${CARD_FAINT}">${escapeHtml(
+          line.label,
+        )}:</span> <span style="color:${CARD_INK}">${escapeHtml(line.value)}</span></div>`,
+    )
+    .join("");
+
+  const note = `<div style="margin-top:8px;padding-top:6px;border-top:1px solid ${CARD_INK}12;color:${CARD_MUTED};line-height:1.45">${escapeHtml(
+    PERMIT_VERIFICATION_NOTE,
+  )}</div>`;
+
+  const source = `<div style="margin-top:6px;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:${CARD_FAINT}">${escapeHtml(
+    PERMIT_DATA_SOURCE_TEXT,
+  )} <a href="${escapeHtml(
+    PERMIT_PORTAL_URL,
+  )}" target="_blank" rel="noopener noreferrer" style="color:${CARD_BLUE};text-decoration:none">${escapeHtml(
+    PERMIT_PORTAL_LABEL,
+  )} &#8599;</a></div>`;
+
+  return `${rows}${note}${source}`;
+}
+
+/** The "· matched" / "· none" badge on the collapsed accordion. Silent until
+ *  the lookup completes, so a pending or failed check never implies an answer. */
+export function permitBadgeText(state: PermitMatchState): string {
+  if (state.status !== "loaded") return "";
+  return state.matches.length > 0 ? " · matched" : " · none";
+}
+
 const SOURCES_NOTE =
   "Records indicate; verify current ownership, eligibility, and condition with the county before relying. " +
   "Ownership type is inferred from public taxpayer-of-record patterns — no owner names appear.";
@@ -382,6 +473,7 @@ export function buildSiteCardHtml(
 ): string {
   const zones: SiteZoneState = options.zones ?? { status: "idle" };
   const activity: SiteActivityState = options.activity ?? { status: "idle" };
+  const permits: PermitMatchState = options.permits ?? { status: "idle" };
   const propertyLabel = PROPERTY_TYPE_LABELS[d.propertyType] ?? "Vacant site";
   const addressText = d.address && d.address.trim() ? d.address.trim() : "Address not recorded";
 
@@ -518,7 +610,23 @@ export function buildSiteCardHtml(
         `</div></details>`
       : "";
 
-  // 6d · Why it was flagged (real-field reasons only — no rank or badge)
+  // 6d · Matched building permit record — the strongest, most recent permit
+  //      tied to THIS parcel by PIN, address, or proximity, with the method and
+  //      confidence stated. Present ONLY when a lookup is underway, for the same
+  //      reason as the activity section: an empty block reads as a checked
+  //      absence. Patched in place once the fetch lands (PERMIT_SLOT_ATTR).
+  const permitSection =
+    permits.status !== "idle"
+      ? `<details style="border-top:1px solid ${CARD_INK}12">` +
+        `<summary style="${summaryStyle}">${escapeHtml(
+          PERMIT_SECTION_TITLE,
+        )}<span ${PERMIT_BADGE_ATTR}>${escapeHtml(permitBadgeText(permits))}</span></summary>` +
+        `<div style="${detailBodyStyle}">` +
+        `<div ${PERMIT_SLOT_ATTR}>${permitMatchHtml(permits)}</div>` +
+        `</div></details>`
+      : "";
+
+  // 6e · Why it was flagged (real-field reasons only — no rank or badge)
   const whyFlagged = detail(
     "Why it was flagged",
     flagReasons(d)
@@ -526,7 +634,7 @@ export function buildSiteCardHtml(
       .join(""),
   );
 
-  // 6e · Data and sources (ownership type lives here — off the headline)
+  // 6f · Data and sources (ownership type lives here — off the headline)
   const ownerLabel = PUBLIC_OWNER_TYPE_LABELS[d.ownerType] ?? PUBLIC_OWNER_TYPE_LABELS.unknown;
   const ownerColor = OWNER_TYPE_COLORS[d.ownerType] ?? OWNER_TYPE_COLORS.unknown;
   const axisLine =
@@ -543,7 +651,7 @@ export function buildSiteCardHtml(
     ].join(""),
   );
 
-  const body = `${glance}${significance}${cautionBlock}${nextStep}${areaLink}<div style="margin-top:10px">${siteFacts}${programs}${activitySection}${whyFlagged}${dataSources}</div>`;
+  const body = `${glance}${significance}${cautionBlock}${nextStep}${areaLink}<div style="margin-top:10px">${siteFacts}${programs}${activitySection}${permitSection}${whyFlagged}${dataSources}</div>`;
 
   // The GUARANTEE half of the viewport fit: cap the card to the map frame and
   // scroll the overflow inside it, so a fully-expanded card can never run its
