@@ -1,0 +1,774 @@
+{
+ "name_overrides": {
+  "273930354": "Gary NFP",
+  "133682433": "DZ Liebmann Fund 7428018",
+  "261595257": "McCune Family Foundation",
+  "136741112": "B H Homan Jr TR PT 15583",
+  "756084824": "Grace G Thornton UTA Scholarship TR R76992008",
+  "136804976": "Fund for European Scouting PT 16436",
+  "136664637": "Hispanic Society of America TR No 2 PV 14989",
+  "208986573": "Edlis-Neeson Foundation NFP",
+  "201734765": "DRW Foundation",
+  "363218989": "JMR Chairities INC",
+  "432057377": "Ann B and Thomas L Friedman Family Foundation LTD",
+  "421493980": "JNT Foundation",
+  "136794686": "Paul Mackall & E E B Mackall TR PT 16276",
+  "810719050": "APMPFF INC",
+  "883337050": "BRCA Research & Cure Alliance",
+  "136203234": "TR U Article 2 UWO Helen M Dekay FBO Dekay Foundation",
+  "136866947": "Isabella M Sheldon TR UA 060848",
+  "471330583": "The Clayco Foundation",
+  "756014459": "Adeline & George McQueen Foundation of 1960 8336174700"
+ },
+ "excluded_funders": {
+  "842220090": "Filing-level hold (Feinberg/Graham precedent): all four years the grant schedule is a single unitemized 'SEE ATTACHED' aggregate row addressed to the filer's own PO Box 803878, Chicago 60680 ($2,485,000 in 2021; $3,995,220 in 2022; $2,531,830 in 2023; $3,339,000 in 2024). The recipient is a bookkeep",
+  "363566181": "Every published Chicago row all four years is the unitemized bookkeeping label 'SUNDRY ORGANIZED CHARITIES' with address 'VARIOUS' (zip 60645): 2021 $13,640; 2022 $10,500; 2023 $10,500; 2024 $3,000. This is exactly the pre-flagged unitemized-recipient shape (VARIOUS/MISC) \u2014 no identifiable Chicago g",
+  "362356089": "Filing-level hold per the Feinberg precedent, confirming the pre-flag: 330 of 364 published rows (94/103 in 2021, 82/93 in 2022, 88/93 in 2023, 66/75 in 2024) carry the FILER'S OWN address \u2014 4 West Burton Place, Chicago 60610 \u2014 standing in for individual scholar/artist/architect grantees worldwide ("
+ },
+ "excluded_filings": {},
+ "excluded_rows": [
+  {
+   "ein": "842220090",
+   "recipient_contains": "SEE ATTACHED",
+   "reason": "Unitemized aggregate carrying the filer's own PO Box (803878, Chicago 60680) as the address, all four tax years 2021-2024; bookkeeping label, not a grantee. Pipeline already quarantined all four rows "
+  },
+  {
+   "ein": "363566181",
+   "recipient_contains": "SUNDRY ORGANIZED CHARITIES",
+   "reason": "Unitemized aggregation row, address 'VARIOUS' \u2014 bookkeeping label, not a grantee; applies to all four tax years (100% of this funder's Chicago rows)."
+  },
+  {
+   "ein": "200478557",
+   "recipient_contains": "CHARITABLE CONTRIBUTIONS FROM K-1",
+   "reason": "Bookkeeping label for pass-through K-1 charitable contributions, not a grantee \u2014 2021 $12 and 2022 $55, both at 333 West Wacker Drive Ste 700 (the foundation's own c/o address). Same shape as the pre-"
+  },
+  {
+   "ein": "363165216",
+   "recipient_contains": "MISSING NAME",
+   "reason": "$366 row with placeholder recipient 'MISSING NAME' at 525 W Monroe St \u2014 the filer's own office address (Katten Muchin Rosenman LLP HQ). Bookkeeping label, not an identifiable grantee.",
+   "tax_year": "2022"
+  },
+  {
+   "ein": "200156873",
+   "recipient_contains": "THE JESSICA FUND",
+   "reason": "Recipient address 1500 N Lake Shore Dr (residential co-op tower, ZIP 60610) matches the filer's own BMF ZIP 60610-6686 \u2014 the pre-flagged filer-address pattern (c). Amounts: $875,000 (2021, 53% of that"
+  },
+  {
+   "ein": "815068397",
+   "recipient_contains": "Schwab Donor Advised Fund",
+   "reason": "$5,105,000 transfer into a national DAF sponsor, 97% of the funder's 2024 Chicago dollars ($5,255,000). The Chicago attribution rests on a Schwab branch address (24 E Washington St Suite 875); ultimat",
+   "tax_year": "2024"
+  },
+  {
+   "ein": "815068397",
+   "recipient_contains": "Bresky Fund-A Donor Advised Fund",
+   "reason": "$85,000 transfer into the founder's own donor-advised fund ('Patricia A Bresky Fund - A Donor Advised Fund', 320 S Wacker Dr Suite 3200) \u2014 self-directed pass-through, ultimate grantees unknown; not a ",
+   "tax_year": "2021"
+  },
+  {
+   "ein": "363218989",
+   "recipient_contains": "VARIOUS MISC CHARITIES",
+   "reason": "Unitemized bookkeeping aggregate, not a grantee, in all four years ($5,750 in 2021, $36,500 in 2022, $70,000 in 2023, $53,449 in 2024), and it is listed at 333 W 35th St \u2014 the filer's own office (the "
+  },
+  {
+   "ein": "436316003",
+   "recipient_contains": "SEE ATTACHED SCHEDULE",
+   "reason": "Bookkeeping placeholder, not a grantee: all four years' schedules are a single 'SEE ATTACHED SCHEDULE' aggregate (2021 $1,488,692; 2022 $622,044; 2023 $1,049,010; 2024 $749,338) with an IL/60680 PO-bo"
+  },
+  {
+   "ein": "363496915",
+   "recipient_contains": "VARIOUS CHARITABLE INSTITUTIONS",
+   "reason": "Unitemized bucket row ($74,126, address 'VARIOUS') \u2014 same shape as the Hyatt/Lakonishok/Division Fund exclusions; not an identifiable grantee.",
+   "tax_year": "2021"
+  },
+  {
+   "ein": "363496915",
+   "recipient_contains": "SCHWAB CHARITABLE FUND",
+   "reason": "DAF self-transfers, not community grants: 'RANAN WOLF FFC SCHWAB CHARITABLE FUND' $592,611 and 'LAURI WOLFF SCHWAB CHARITABLE FUND' $592,611 are family donor-advised accounts at Schwab Charitable (San",
+   "tax_year": "2023"
+  },
+  {
+   "ein": "363496915",
+   "recipient_contains": "TZEDAKA ACCOUNT",
+   "reason": "'THE BARRY AND TZIONA ZEFFREN FAMILY TZEDAKA ACCOUNT' $592,611 \u2014 a family giving account, not an operating grantee; sited at the same 7061 N Kedzie address.",
+   "tax_year": "2023"
+  },
+  {
+   "ein": "363496915",
+   "recipient_contains": "DONOR ADVISED FUND",
+   "reason": "Family DAF transfers at 7061 N Kedzie: RANAAN WOLFF DAF $20,000, BARRY AND TZIONA ZEFFREN FAMILY DAF $40,000, MEYER AND CHERYL MAGENCE ZEDAKA DAF $40,000 \u2014 pass-throughs to donor-controlled funds, not",
+   "tax_year": "2022"
+  },
+  {
+   "ein": "363496915",
+   "recipient_contains": "LAURI WOLFF CHARITABLE FUND",
+   "reason": "Same family-DAF pattern as above, $40,000 at 7061 N Kedzie.",
+   "tax_year": "2022"
+  },
+  {
+   "ein": "363496915",
+   "recipient_contains": "PEF ISRAEL ENDOWMENT FUND",
+   "reason": "PEF Israel Endowment Funds is a New York pass-through intermediary for grants to Israeli charities; rows ($9,000 2022, $25,000 2023, $22,400 2024) are sited at 7061 N Kedzie \u2014 a Chicago address that i"
+  },
+  {
+   "ein": "363496915",
+   "recipient_contains": "SHAVEI HEBRON",
+   "reason": "Israeli institution ($4,000) listed at 7061 N Kedzie, Chicago \u2014 not the recipient's address; Chicago siting fabricated.",
+   "tax_year": "2022"
+  },
+  {
+   "ein": "363496915",
+   "recipient_contains": "ALEH",
+   "reason": "ALEH / ALEH ISRAEL FOUNDATION ($2,500 + $1,500 + $2,250) is an Israeli disability-care organization; all three rows sited at 7061 N Kedzie, Chicago. Chicago attribution fabricated.",
+   "tax_year": "2022"
+  },
+  {
+   "ein": "363712587",
+   "recipient_contains": "LEGACYCOM",
+   "reason": "$40 row to 'LEGACYCOM' (230 W Monroe, purpose 'ARBOR DAY') \u2014 Legacy.com is a for-profit obituary/donation platform, i.e. a payment conduit, not a charitable grantee. Trivial dollars; recommend droppin",
+   "tax_year": "2021"
+  },
+  {
+   "ein": "363820887",
+   "recipient_contains": "KENTUCKY HEALTH JUSTICE NETWORK",
+   "reason": "Louisville, KY organization ($30,000) listed and geocode-'sited' at 625 N Kingsbury, Chicago 60654 \u2014 that address belongs to other grantees in the same schedule (Art Works Projects / International Chi",
+   "tax_year": "2024"
+  },
+  {
+   "ein": "364473692",
+   "recipient_contains": "ISRAEL CANCER RESEARCH FUND",
+   "reason": "Address is 2 Northfield Plaza, zip 60093 -- that is Northfield IL, a north suburb; the filing's city field says Chicago but the $25,000 row should not carry Chicago attribution (it geocode-failed and ",
+   "tax_year": "2024"
+  },
+  {
+   "ein": "463460720",
+   "recipient_contains": "MISC",
+   "reason": "Unitemized bookkeeping label, not a grantee: recipient 'MISC', $3,000, purpose 'COMMUNITY', address 1943 N Burling (a residential Lincoln Park street address) -- and it geocoded as locType 'sited', so",
+   "tax_year": "2023"
+  },
+  {
+   "ein": "362488355",
+   "recipient_contains": "Antioch Area Health Accessibility Alliance",
+   "reason": "$10,000 row lists 874 Main Street, CHICAGO 60637, but 874 Main St is Antioch IL and the purpose text says AAHAA serves the Antioch area; Chicago city/zip fabricated by preparer",
+   "tax_year": "2024"
+  },
+  {
+   "ein": "362488355",
+   "recipient_contains": "Beds Plus Care",
+   "reason": "$15,000 row lists PO Box 2035, CHICAGO 60607; BEDS Plus is a southwest-suburban (Summit/La Grange) homeless agency \u2014 Chicago attribution fabricated",
+   "tax_year": "2024"
+  },
+  {
+   "ein": "362488355",
+   "recipient_contains": "Crisis Center for South Suburbia",
+   "reason": "$10,000 row lists PO Box 39, CHICAGO 60607; the org is a Tinley Park DV agency whose own name says 'South Suburbia' \u2014 Chicago attribution fabricated",
+   "tax_year": "2024"
+  },
+  {
+   "ein": "362488355",
+   "recipient_contains": "Journeys-The Road Home",
+   "reason": "$15,000 row lists 1140 E Northwest Highway, CHICAGO 60631; that address is Palatine IL (Journeys' HQ) \u2014 Chicago attribution fabricated",
+   "tax_year": "2024"
+  },
+  {
+   "ein": "362488355",
+   "recipient_contains": "Lazarus House",
+   "reason": "$15,000 row lists 214 Walnut Street, CHICAGO 60645; 214 Walnut St is St. Charles IL (Lazarus House HQ) \u2014 Chicago attribution fabricated",
+   "tax_year": "2024"
+  },
+  {
+   "ein": "362488355",
+   "recipient_contains": "McHenry County PADS",
+   "reason": "$10,000 row lists 4031 Dayton Street, CHICAGO 60653; that address is McHenry IL and purpose text says it serves McHenry County \u2014 Chicago attribution fabricated",
+   "tax_year": "2024"
+  },
+  {
+   "ein": "362488355",
+   "recipient_contains": "Sarah's Inn",
+   "reason": "$15,000 row lists 1547 Circle Ave, CHICAGO 60659; 1547 Circle Ave is Forest Park IL (Sarah's Inn HQ) \u2014 Chicago attribution fabricated (do NOT confuse with Sarah's Circle, 4838 N Sheridan, which is gen",
+   "tax_year": "2024"
+  },
+  {
+   "ein": "362488355",
+   "recipient_contains": "Alexian Brothers Housing & Health Alliance",
+   "reason": "$15,000 row lists 1000 Remington Blvd Suite 100, CHICAGO 60601; 1000 Remington Blvd is Bolingbrook IL \u2014 Chicago attribution fabricated",
+   "tax_year": "2022"
+  },
+  {
+   "ein": "363209007",
+   "recipient_contains": "From Pass Through K-1s",
+   "reason": "bookkeeping label, not a grantee: charitable amounts flowing through partnership K-1s, recorded at the fund's brokers/accountants (440 S LaSalle in 2021-2022, 110 N Wacker Ste 3300 in 2023-2024) and g"
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "TRUSTEE PLEDGES",
+   "reason": "Bookkeeping label, not a grantee: $45,000 'TRUSTEE PLEDGES' at the trustee/filer office address 330 N Wabash Ave \u2014 an aggregate of trustees' personal pledges, non-grant row shape.",
+   "tax_year": "2022"
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ALANI WATSON",
+   "reason": "Individual scholarship recipient listed at trustee/filer office address 330-331 N Wabash Ave with personal address withheld; the 'sited' Chicago pin is fabricated (Graham precedent, row-level). $500-$"
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ALEXA MENDOZA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ALEXANDER LEBLANC",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ALEXIA GOLAB",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ANDREA VILLANUEVA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ANDREW AYENI",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ANTHONY DIBALSAMO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ANTHONY SALINAS",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ARIANA LEWIS",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ARIANA NELSON",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ARIANNA LEBAB",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "AVA GRACE SALES",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "BENJAMIN GADISON",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "BRANDON BANDA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "BRENDA MUNOZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "BRYAN OLIVIERI",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "CARLIE HALL",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "CATHERINE RILEY",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "CHARLIE LAZO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "CHRISTOPHER DAUGHTERY",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "CRISTIAN CASIMIRO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "DANIEL CARRERA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "DANIELA ESPANA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "DECLAN GOGGIN",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "DELANEY JOHNSON",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "DIANA WOLF",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "DOMINIC PETTENON",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "EDISON LANE",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ELIZABETH CAMPBELL",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "EMANUEL CARRERA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "EMILY TRENDLE",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ESMERALDA ESCARPITA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "FLORECITA AVALOS",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "GINA GRAZIAN",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "GISELLE ALENCASTRO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "GISELLE GODNEZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "GLENN DILLARD JR",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "HAILEY HANSEN",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ITZEL ANTONIO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JACK PETTER",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JACOB STURGULEWSKI",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JAE LEA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JAE'LA LEAVY",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JAYLENE RESPETO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JENNIFER LOPEZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JEREMIAH CODERO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JESUS FERNANDEZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JOCELYN BONET",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JOEY THOME",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JOHN REYES",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JOSIAH VEGA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JULIANA JUAREZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JULIANA REHNQUIST",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JULIANA VENTURA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "JULISSA TORRES-MATA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "KAITLYN DE FOE",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "KAITLYN POULSON",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "KAMRYN PORTER",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "KARIME SANCHEZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "KAVITA RAM",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "KAYLENE MCGRATH",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "KELLY ALTMAN",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "KENNETH LAVEAU",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "KEVIN PEREZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "KRISTINA VARGAS",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "LEIA BAENA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "LENA FOSTER",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "LESLY GONZALEZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "LIAM CONNEELY",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "LUZ DEL ROSARIO KWIATKOWSKI PEREZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MAKILAH COOLEY",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MARIA ESTRADA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MARIANA GUERRERO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MARQUEZ MONSERRAT",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MARTHA RIOS",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MARYFER PALACIOS",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MARYGRACE GOLON",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MAXIMUS PACHECO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MEGAN WERNER",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MEGHAN BURKE",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level). Surname matches trustees Richard W Burke Sr / Mary L Burke \u2014 possible related-pa"
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MIA NUNEZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MIA SOLIS",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MICHAELA MARRIOTTI",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MIKAYLA PIPES",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "MONS ESTRADA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "NATALY MONTUL",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "NICOLE CONDON",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "OLIVIA SEARS",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ORACIO VEGA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "PABLO RAMIREZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "PRESTON BROOME",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "RANDY PEREZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "REBECCA CHAVEZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "RUBEN MUNOZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "RUDY PEREZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "SAMANTHA CONJAR",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "SAMANTHA VELASCO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "SANIYAH JORDAN",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "SEAN MARTINEZ",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "SHAISY ORTEGA",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "SIMON WAGNER",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "SOFIA RIOS",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "SOPHIA SERRANO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "TRAVIS WILEY",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "TREAZURE EDWARDS",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "TRISTYN HYNES",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "VALERIA FUENTES",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "WILLIAM JACOBSEN",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ZARI YOUNG",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "261225450",
+   "recipient_contains": "ZOREN CO",
+   "reason": "Individual scholarship recipient at filer address 330-331 N Wabash; fabricated sited pin (Graham precedent, row-level)."
+  },
+  {
+   "ein": "462918450",
+   "recipient_contains": "VARIOUS CO HYATT",
+   "reason": "Unitemized aggregate, not a grantee: 'VARIOUS CO HYATT HOTELS FOUNDATION' at 150 N Riverside Plaza (the filer's own Hyatt HQ address), purpose 'SECTION 139 DISASTER RELIEF' \u2014 IRC 139 qualified disaste"
+  },
+  {
+   "ein": "136203234",
+   "recipient_contains": "VARIOUS INDIVIDUALS",
+   "reason": "Unitemized aggregate to individuals ('VARIOUS INDIVIDUALS SEE ATTACHMENT', hardship grants: $442,254 (2021), $462,790 (2022), $491,118 (2023), $503,554 (2024)); no grantee itemization, and the 2023-24"
+  },
+  {
+   "ein": "357120359",
+   "recipient_contains": "PLEASE SEE ATTACHED",
+   "reason": "Bookkeeping placeholder, not a grantee \u2014 grant schedule is a single non-public attachment aggregate (DE address, zip 11111) in all four years; already quarantined as aggregate_only_no_itemization and "
+  }
+ ]
+}

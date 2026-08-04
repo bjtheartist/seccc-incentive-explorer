@@ -45,7 +45,10 @@ except ImportError:
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 INPUTS = os.path.join(REPO, "data", "curated", "investment-inputs")
-TARGETS = os.path.join(os.path.dirname(os.path.abspath(__file__)), "phase2_targets.json")
+TARGETS = os.environ.get(
+    "PHASE_TARGETS",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "phase2_targets.json"),
+)
 STATE_DIR = os.environ.get(
     "PHASE2_STATE",
     "/private/tmp/claude-502/-Users-billyndizeye-Desktop/b9c151f4-b8dc-40ba-b72f-92b827fa50d4/scratchpad/phase2",
@@ -63,7 +66,7 @@ CENSUS_GEO = (
     "https://geocoding.geo.census.gov/geocoder/locations/onelineaddress"
     "?address={addr}&benchmark=Public_AR_Current&format=json"
 )
-EXTRACTION_VERSION = "phase2-2026-08-03.1"
+EXTRACTION_VERSION = os.environ.get("PHASE_EXTRACTION_VERSION", "phase2-2026-08-03.1")
 TAX_YEARS = {"2021", "2022", "2023", "2024"}
 # object_id prefix = IRS processing year; tax years 2021-2024 process 2022 onward
 OID_PREFIXES = ("2022", "2023", "2024", "2025", "2026")

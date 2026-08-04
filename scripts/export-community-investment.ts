@@ -98,6 +98,7 @@ const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boun
 const FOUNDATION_GRANTS_FILE = "foundation_grants_geocoded.csv";
 const FOUNDATION_TIER1_FILE = "foundation_grants_tier1_expansion.csv";
 const FOUNDATION_PHASE2_FILE = "foundation_grants_phase2_expansion.csv";
+const FOUNDATION_PHASE3_FILE = "foundation_grants_phase3_expansion.csv";
 
 const NOF_PROGRAM = "Neighborhood Opportunity Fund (City of Chicago)";
 const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
@@ -119,6 +120,7 @@ const PROVENANCE_LABELS = [
   "Private-foundation grants parsed from IRS 990-PF / 990 filings (ProPublica), geocoded to recipient address",
   "Private-foundation grants — Tier-1 expansion: 20 additional Chicago private funders parsed from IRS 990-PF e-file XML, every filing reconciled row-sum-to-Part-I-line-3a before release; funders whose filings publish only a grant-schedule aggregate are quarantined, never counted",
   "Private-foundation grants — Phase-2 expansion to the 80% capacity-coverage bar: 65 further Chicago private funders parsed from IRS 990-PF e-file XML under the same reconciliation gate (row sum ties the filing's own printed total within $1); a post-parse review pass additionally quarantined filings whose recipient addresses are the filer's own office",
+  "Private-foundation grants — Phase-3 expansion: the census's needs_review remainder (79 further publishing funders) parsed and reconciled under the same gate; review pass held bookkeeping-label rows, DAF self-transfers, and filer-address-artifact filings; every published foundation row is additionally covered by the committed n=2,401 statistical audit (zero errors observed)",
   "Major development projects — Ellen's Developments map (Google My Maps)",
   "Major private developments — verified/discovered megaprojects w/ announced capital (press coverage, developer filings)",
   "Chicago Prize — Pritzker Traubert Foundation ($10M community-transformation awards + finalist planning grants)",
@@ -2144,17 +2146,19 @@ async function main() {
   const nofSmall = nofSmallR.records;
   const nofLarge = nofLargeR.records;
   const sbif = sbifR.records;
-  // Three foundation files, ONE mapper: same locType/citywide handling, same
+  // Four foundation files, ONE mapper: same locType/citywide handling, same
   // placeholder rejection, same negative-amount nulling. Disjointness is asserted
   // PAIRWISE before any file is mapped, so a collision aborts the export instead
   // of shipping a double-counted headline.
   const foundationBaseRows = readCsv(FOUNDATION_GRANTS_FILE);
   const foundationTier1Rows = readCsv(FOUNDATION_TIER1_FILE);
   const foundationPhase2Rows = readCsv(FOUNDATION_PHASE2_FILE);
+  const foundationPhase3Rows = readCsv(FOUNDATION_PHASE3_FILE);
   const foundationInputs = [
     { file: FOUNDATION_GRANTS_FILE, rows: foundationBaseRows },
     { file: FOUNDATION_TIER1_FILE, rows: foundationTier1Rows },
     { file: FOUNDATION_PHASE2_FILE, rows: foundationPhase2Rows },
+    { file: FOUNDATION_PHASE3_FILE, rows: foundationPhase3Rows },
   ];
   for (let i = 0; i < foundationInputs.length; i++) {
     for (let j = i + 1; j < foundationInputs.length; j++) {
@@ -2164,14 +2168,19 @@ async function main() {
   const foundationBase = mapFoundations(foundationBaseRows);
   const foundationTier1 = mapFoundations(foundationTier1Rows, "foundation-t1");
   const foundationPhase2 = mapFoundations(foundationPhase2Rows, "foundation-p2");
+  const foundationPhase3 = mapFoundations(foundationPhase3Rows, "foundation-p3");
   const foundations = [
     ...foundationBase.records,
     ...foundationTier1.records,
     ...foundationPhase2.records,
+    ...foundationPhase3.records,
   ];
   const foundationStats = mergeFoundationStats(
-    mergeFoundationStats(foundationBase.stats, foundationTier1.stats),
-    foundationPhase2.stats,
+    mergeFoundationStats(
+      mergeFoundationStats(foundationBase.stats, foundationTier1.stats),
+      foundationPhase2.stats,
+    ),
+    foundationPhase3.stats,
   );
 
   // Major private developments (developments_major.csv) + Chicago Prize inputs.
@@ -2205,7 +2214,7 @@ async function main() {
 
   console.log(
     `Mapped (pre-geocode): nof-small=${nofSmall.length} nof-large=${nofLarge.length} sbif=${sbif.length} ` +
-      `foundation=${foundations.length} (base=${foundationBase.records.length} tier1=${foundationTier1.records.length} phase2=${foundationPhase2.records.length}) ` +
+      `foundation=${foundations.length} (base=${foundationBase.records.length} tier1=${foundationTier1.records.length} phase2=${foundationPhase2.records.length} phase3=${foundationPhase3.records.length}) ` +
       `prize=${prize.length} kml=${kmlRows.length} ` +
       `mega(verified=${verifiedMega.length} discovered=${discoveredMega.length}) ` +
       `(placeholder-dropped=${foundationStats.droppedPlaceholder} out-of-bounds->citywide=${foundationStats.outOfBoundsGeocodes} ` +

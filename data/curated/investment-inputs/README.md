@@ -205,6 +205,34 @@ per-filing audit trail in the Tier-1 schema, and the census now restates every
 funder's disposition from what the reconciliation reports prove rather than the
 planning-era labels.
 
+## Private Foundation Grants — Phase-3 Expansion
+
+`foundation_grants_phase3_expansion.csv` adds 4,691 Chicago-recipient grant rows
+from 79 further private funders — **$250,123,352 as shipped** (no reversal rows
+in this tranche). This tranche resolves the census's entire `needs_review`
+queue: all 129 remaining funders were parsed (501 filings, 477 reconciled to
+their own printed totals within $1, zero failures) and every one of the 2,623
+census foundations now carries a TERMINAL disposition. Capacity coverage:
+**88.45%**, counting already_parsed / parsed_tier1 / parsed_phase2* /
+parsed_phase3* / aggregate_only / review_excluded as covered.
+
+The review pass (all exclusions adversarially verified, every verdict upheld)
+held back: three whole funders (Graham Foundation — the filer-address artifact
+family, individual grantees worldwide filed at the foundation's own office; two
+aggregate-only shells), $12.9M of row-level holds (bookkeeping labels like
+"VARIOUS", "MISC", "FROM PASS THROUGH K-1s", a $5.1M transfer into a national
+DAF sponsor, and three out-of-town addresses filed as Chicago), and $41.7M of
+attachment-gap aggregates — all in
+`foundation_grants_phase3_quarantined_DO_NOT_EXPORT.csv` with per-row reasons,
+never counted. Three more aggregate-only funders join the funder-exchange
+target list. Review provenance: `scripts/foundation/phase3_review_notes.json`.
+
+**Statistical audit (committed: `foundation_audit_2026-08-04.json`):** a seeded
+SRS of n=2,401 published rows across all foundation files, each re-verified
+against its own IRS filing — recipient and amount re-parsed from the source
+XML. Result: **2,401/2,401 verified, zero mismatches of any class** (95%
+confidence upper bound on the row error rate ≈ 0.12%).
+
 ## Location confidence
 
 Records carry EXACTLY ONE tier per geometry kind — there is no separate
