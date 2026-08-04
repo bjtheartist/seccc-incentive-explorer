@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Lock } from "lucide-react";
 import {
@@ -25,6 +25,14 @@ import {
 } from "@/lib/owner-classify";
 import { CLASS_CODE_MAP } from "@/lib/parcel-classes";
 import { MAP_PRESETS, POI_LAYERS, formatAwardedAmount } from "./map-helpers";
+import {
+  NESTED_ZONE_PARENTS,
+  ZONE_LAYER_PRESETS,
+  activeZoneLayerPreset,
+  planZoneLayerPresetToggles,
+  type ZoneLayerPresetId,
+  type ZoneLayerPresetShape,
+} from "./map-layer-presets";
 import {
   DEFAULT_INVESTMENT_YEAR_RANGE,
   FUNDER_TYPE_COLORS,
@@ -205,6 +213,42 @@ export default function MapLegendPanel({
   // Local collapse for the "Citywide commitments" note — purely presentational,
   // no need to lift into MapView (mirrors ZoneLayerSection's local useState).
   const [citywideOpen, setCitywideOpen] = useState(false);
+
+  /* ── Zone-layer groups (WP4) ───────────────────────────────────
+   * Applied through the zone checkboxes this panel already owns, so MapView
+   * needs no new wiring. The "Public Capital & Past Awards" group is admin-only
+   * (see map-layer-presets.ts) — it never changes the gating of the admin
+   * Community Investment layer, and it does not render for anonymous visitors.
+   */
+  const zoneLayerPresets: ZoneLayerPresetShape[] = ZONE_LAYER_PRESETS.filter(
+    (preset) => !preset.adminOnly || adminSessionActive
+  );
+  const activeZonePresetId = activeZoneLayerPreset(zoneVisible, ZONE_KEYS_SORTED);
+
+  // Nested child layers (Past Grant Winners under NOF) cannot be raised in the
+  // same commit as their parent — MapView.toggleZone reads the parent from the
+  // rendered state — so they are flushed on the next commit.
+  const [deferredZoneToggles, setDeferredZoneToggles] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (deferredZoneToggles.length === 0) return;
+    setDeferredZoneToggles([]);
+    for (const key of deferredZoneToggles) {
+      const parent = NESTED_ZONE_PARENTS[key];
+      // Parent never came up (layer absent from the map) — drop it rather than retry.
+      if (parent && !zoneVisible[parent]) continue;
+      if (!zoneVisible[key]) onToggleZone(key);
+    }
+  }, [deferredZoneToggles, zoneVisible, onToggleZone]);
+
+  const handleApplyZonePreset = (presetId: ZoneLayerPresetId) => {
+    const preset = zoneLayerPresets.find((p) => p.id === presetId);
+    if (!preset) return;
+    const plan = planZoneLayerPresetToggles(preset, zoneVisible, ZONE_KEYS_SORTED);
+    for (const key of plan.now) onToggleZone(key);
+    setDeferredZoneToggles(plan.deferred);
+  };
+
   return (
     <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-3 md:right-auto z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100vh-280px)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
       {/* Mobile drag handle + close */}
@@ -260,6 +304,9 @@ export default function MapLegendPanel({
         onToggleZone={onToggleZone}
         expandedZone={expandedZone}
         onSetExpandedZone={onSetExpandedZone}
+        zoneLayerPresets={zoneLayerPresets}
+        activeZonePresetId={activeZonePresetId}
+        onApplyZonePreset={handleApplyZonePreset}
       />
 
       {/* Divider */}
@@ -1080,6 +1127,10 @@ interface ZoneLayerSectionProps {
   onToggleZone: (key: string) => void;
   expandedZone: string | null;
   onSetExpandedZone: (key: string | null) => void;
+  /** Zone-layer groups the current viewer may see (admin-only groups pre-filtered). */
+  zoneLayerPresets: ZoneLayerPresetShape[];
+  activeZonePresetId: ZoneLayerPresetId | null;
+  onApplyZonePreset: (presetId: ZoneLayerPresetId) => void;
 }
 
 function ZoneLayerSection({
@@ -1087,6 +1138,9 @@ function ZoneLayerSection({
   onToggleZone,
   expandedZone,
   onSetExpandedZone,
+  zoneLayerPresets,
+  activeZonePresetId,
+  onApplyZonePreset,
 }: ZoneLayerSectionProps) {
   const [activeLevel, setActiveLevel] = useState<ProgramLevel | "All">("All");
   const topLevelZoneKeys = ZONE_KEYS_SORTED.filter((key) => key !== "nofFundedProjects");
@@ -1116,6 +1170,47 @@ function ZoneLayerSection({
       <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-2">
         Incentive Zones
       </div>
+
+      {/* Layer groups — one tap selects a whole family of zone layers and
+          clears the rest. The individual checkboxes below stay available. */}
+      {zoneLayerPresets.length > 0 && (
+        <div className="mb-3" role="group" aria-label="Zone layer groups">
+          <div className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/35 mb-1.5">
+            Layer Groups
+          </div>
+          <div className="space-y-1">
+            {zoneLayerPresets.map((preset) => {
+              const active = activeZonePresetId === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  aria-pressed={active}
+                  title={preset.description}
+                  onClick={() => onApplyZonePreset(preset.id as ZoneLayerPresetId)}
+                  className={`w-full flex items-center justify-between gap-2 text-left px-2 py-2 md:py-1.5 border transition-colors ${
+                    active
+                      ? "bg-[#2563EB] text-white border-[#2563EB]"
+                      : "bg-white text-[#0C1B33]/55 border-[#0C1B33]/12 hover:border-[#2563EB]/40 hover:text-[#2563EB]"
+                  }`}
+                >
+                  <span className="font-mono-bureau text-[9px] md:text-[8px] tracking-[0.08em] uppercase leading-tight">
+                    {preset.label}
+                  </span>
+                  <span
+                    className={`font-mono-bureau text-[9px] md:text-[8px] tabular-nums flex-shrink-0 ${
+                      active ? "text-white/70" : "text-[#0C1B33]/35"
+                    }`}
+                  >
+                    {preset.zones.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Gov-level quick filter chips */}
       <div className="flex flex-wrap gap-1 mb-3">
         {(["All", ...LEVELS.filter((l) => l !== "Utility")] as const).map((lvl) => {
