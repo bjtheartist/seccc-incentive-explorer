@@ -48,7 +48,7 @@ describe("Header — approved Set-A structure", () => {
   const html = render("/");
 
   it("renders the three approved group labels", () => {
-    for (const label of ["Check Eligibility", "Find a Site", "Neighborhood Data"]) {
+    for (const label of ["Check Eligibility", "Find a Site", "Community Insights"]) {
       expect(html).toContain(label);
     }
   });
@@ -66,7 +66,7 @@ describe("Header — approved Set-A structure", () => {
 
   it("never links the index-less /neighborhoods route", () => {
     expect(html).not.toContain('href="/neighborhoods"');
-    // Neighborhood Data carries exactly two entries.
+    // Community Insights carries exactly two entries.
     expect(html).toContain('href="/investment"');
     expect(html).toContain('href="/corridors"');
   });
