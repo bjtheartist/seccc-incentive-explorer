@@ -555,9 +555,12 @@ async function crossReferenceZones() {
  * named `spatial_proximity` in the method vocabulary, in the DB, and in the
  * card copy for exactly that reason. Nothing anywhere claims containment.
  *
- * Precedence needs no ranking pass: the tiers insert in order with
- * ON CONFLICT DO NOTHING on (vacant_property_id, permit_id), so a pair already
- * claimed by a stronger tier keeps it.
+ * Precedence holds WITHIN a run by insert order, and ACROSS runs by the
+ * upgrade clause on tiers 1-2: a pair first recorded at a weaker tier (e.g.
+ * spatial_proximity from an earlier run, before the permit gained the
+ * parcel's PIN on refresh) is upgraded in place when a stronger tier claims
+ * it. Tier 3 is the weakest claim and can never upgrade anything, so it
+ * keeps plain DO NOTHING.
  *
  * Batched by keyset over vacant_properties.id for the same reason
  * crossReferenceZones() is: one statement across the full table exceeds the
@@ -623,7 +626,12 @@ async function matchPermitsToVacantParcels() {
       WHERE vp.id > ${lo} AND vp.id <= ${hi}
         AND vp.pin IS NOT NULL
         AND length(vp.pin) = 14
-      ON CONFLICT (vacant_property_id, permit_id) DO NOTHING
+      ON CONFLICT (vacant_property_id, permit_id) DO UPDATE SET
+            match_method = EXCLUDED.match_method,
+            match_confidence = EXCLUDED.match_confidence,
+            matched_on = EXCLUDED.matched_on
+          WHERE array_position(ARRAY['pin_exact','address_normalized','spatial_proximity'], EXCLUDED.match_method)
+              < array_position(ARRAY['pin_exact','address_normalized','spatial_proximity'], vacant_property_permit_matches.match_method)
       RETURNING vacant_property_id AS id
     `,
   );
@@ -651,7 +659,12 @@ async function matchPermitsToVacantParcels() {
       WHERE vp.id > ${lo} AND vp.id <= ${hi}
         AND length(regexp_replace(lower(coalesce(vp.address, '')), '[^a-z0-9]', '', 'g')) >= 8
         AND regexp_replace(lower(coalesce(vp.address, '')), '[^a-z0-9]', '', 'g') <> 'unknown'
-      ON CONFLICT (vacant_property_id, permit_id) DO NOTHING
+      ON CONFLICT (vacant_property_id, permit_id) DO UPDATE SET
+            match_method = EXCLUDED.match_method,
+            match_confidence = EXCLUDED.match_confidence,
+            matched_on = EXCLUDED.matched_on
+          WHERE array_position(ARRAY['pin_exact','address_normalized','spatial_proximity'], EXCLUDED.match_method)
+              < array_position(ARRAY['pin_exact','address_normalized','spatial_proximity'], vacant_property_permit_matches.match_method)
       RETURNING vacant_property_id AS id
     `,
   );

@@ -230,7 +230,7 @@ function coords(r: RawPermit): { lat: number | null; lon: number | null } {
 
 /** The `$where` every citywide query (rows and count alike) shares. */
 function baseWhere(): string {
-  return `issue_date>'${SINCE_DATE}'`;
+  return `issue_date>='${SINCE_DATE}'`;
 }
 
 /** Socrata's own row count for {@link baseWhere}, or null when unavailable. */
