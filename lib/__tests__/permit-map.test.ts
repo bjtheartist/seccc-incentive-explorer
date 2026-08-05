@@ -6,8 +6,8 @@ import {
 } from "@/lib/permit-map";
 
 describe("permit map taxonomy", () => {
-  it("defines the nine source-backed map types with stable unique values", () => {
-    expect(PERMIT_MAP_TYPES).toHaveLength(9);
+  it("defines every source-backed map type with stable unique values", () => {
+    expect(PERMIT_MAP_TYPES).toHaveLength(11);
     expect(PERMIT_MAP_TYPES.map((type) => type.key)).toEqual([
       "express_permit_program",
       "easy_permit_process",
@@ -18,9 +18,11 @@ describe("permit map taxonomy", () => {
       "wrecking_demolition",
       "scaffolding",
       "reinstate_revoked_permit",
+      "porch_construction",
+      "permit_extension",
     ]);
-    expect(new Set(PERMIT_MAP_TYPES.map((type) => type.sourceValue)).size).toBe(9);
-    expect(new Set(PERMIT_MAP_TYPES.map((type) => type.color)).size).toBe(9);
+    expect(new Set(PERMIT_MAP_TYPES.map((type) => type.sourceValue)).size).toBe(11);
+    expect(new Set(PERMIT_MAP_TYPES.map((type) => type.color)).size).toBe(11);
     for (const type of PERMIT_MAP_TYPES) {
       expect(type.color).toMatch(/^#[0-9A-F]{6}$/);
       expect(permitMapTypeForSource(type.sourceValue)).toBe(type);
@@ -36,11 +38,16 @@ describe("permit map taxonomy", () => {
     ).toBe("renovation_alteration");
   });
 
-  it("does not relabel blank, unknown, or retired source types", () => {
+  it("keeps historical source types explicit and rejects unknown values", () => {
     expect(permitMapTypeForSource(null)).toBeNull();
     expect(permitMapTypeForSource(" ")).toBeNull();
-    expect(permitMapTypeForSource("PERMIT - PORCH CONSTRUCTION")).toBeNull();
-    expect(permitMapTypeForSource("PERMIT - FOR EXTENSION OF PMT")).toBeNull();
+    expect(permitMapTypeForSource("PERMIT - PORCH CONSTRUCTION")?.key).toBe(
+      "porch_construction",
+    );
+    expect(permitMapTypeForSource("PERMIT - FOR EXTENSION OF PMT")?.key).toBe(
+      "permit_extension",
+    );
+    expect(permitMapTypeForSource("PERMIT - UNKNOWN CATEGORY")).toBeNull();
   });
 
   it("returns a fresh all-visible record for each caller", () => {
@@ -48,7 +55,7 @@ describe("permit map taxonomy", () => {
     const second = defaultPermitTypeVisibility();
 
     expect(Object.keys(first)).toEqual(PERMIT_MAP_TYPES.map((type) => type.key));
-    expect(Object.values(first)).toEqual(Array(9).fill(true));
+    expect(Object.values(first)).toEqual(Array(11).fill(true));
 
     first.express_permit_program = false;
     expect(second.express_permit_program).toBe(true);

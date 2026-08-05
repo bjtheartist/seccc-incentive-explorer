@@ -1,10 +1,9 @@
 /**
  * Stable map taxonomy for City of Chicago Building Permits (`ydr8-5enu`).
  *
- * `sourceValue` is the exact value persisted from the City dataset. The live
- * source also retains two discontinued historical categories (porch permits
- * and permit extensions); they are intentionally not folded into one of these
- * nine map types.
+ * `sourceValue` is the exact value persisted from the City dataset. Retired
+ * categories remain explicit historical types so the map can show every
+ * published filing category without folding unlike records together.
  */
 export const PERMIT_MAP_TYPES = [
   {
@@ -60,6 +59,18 @@ export const PERMIT_MAP_TYPES = [
     label: "Reinstate Revoked Permit",
     sourceValue: "PERMIT - REINSTATE REVOKED PMT",
     color: "#4F46E5",
+  },
+  {
+    key: "porch_construction",
+    label: "Porch Construction (historical)",
+    sourceValue: "PERMIT - PORCH CONSTRUCTION",
+    color: "#A16207",
+  },
+  {
+    key: "permit_extension",
+    label: "Permit Extension (historical)",
+    sourceValue: "PERMIT - FOR EXTENSION OF PMT",
+    color: "#78716C",
   },
 ] as const;
 

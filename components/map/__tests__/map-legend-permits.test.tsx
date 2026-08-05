@@ -54,7 +54,7 @@ describe("MapLegendPanel building permits", () => {
       />,
     );
 
-    expect(PERMIT_MAP_TYPES).toHaveLength(9);
+    expect(PERMIT_MAP_TYPES).toHaveLength(11);
     expect(html).toContain("Permit types");
     for (const permitType of PERMIT_MAP_TYPES) {
       expect(html).toContain(permitType.label);

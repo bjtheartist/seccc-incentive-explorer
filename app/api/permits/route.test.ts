@@ -155,7 +155,7 @@ describe("GET /api/permits", () => {
     expect(sqlMock.mock.calls[0].slice(1)).toContain(3000);
   });
 
-  it("queries all nine map types by default and drops unusable rows", async () => {
+  it("queries every map type by default and drops unusable rows", async () => {
     sqlMock.mockResolvedValue([
       {
         permit_id: "known",
@@ -189,7 +189,7 @@ describe("GET /api/permits", () => {
     const body = await response.json();
 
     expect(response.status).toBe(200);
-    expect(body.features).toHaveLength(1);
+    expect(body.features).toHaveLength(2);
     expect(sqlMock.mock.calls[0].slice(1)).toContainEqual(
       PERMIT_MAP_TYPES.map((type) => type.sourceValue),
     );
