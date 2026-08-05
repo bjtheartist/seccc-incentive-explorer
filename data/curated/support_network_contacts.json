@@ -1,14 +1,16 @@
 {
-  "generatedAt": "2026-07-14",
-  "sourceNote": "Chamber-only working directory compiled from official organization websites. Individual contacts are included only when the organization publishes the person's current role.",
+  "generatedAt": "2026-08-04",
+  "sourceNote": "Admin-gated directory compiled only from public organization sources. Chamber relationship notes and outreach history are stored outside this repository.",
   "organizations": [
     {
       "id": "greenwood-archer-capital",
       "name": "Greenwood Archer Capital",
       "organizationType": "Nonprofit CDFI and small-business lender",
       "coverageRole": "core_local",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["capital_readiness", "small_business_capital"],
+      "supportLanes": [
+        "capital_readiness",
+        "small_business_capital"
+      ],
       "geography": "Chicago, with emphasis on historically underinvested South and West Side communities",
       "bestFor": "Flexible small-business financing, financial coaching, technical assistance, and growth planning",
       "publicIntake": {
@@ -20,7 +22,6 @@
         {
           "name": "Terrence Johnson",
           "role": "Executive Director",
-          "email": "tjohnson@greenwoodarchercapital.org",
           "sourceUrl": "https://greenwoodarchercapital.org/contact"
         },
         {
@@ -34,7 +35,6 @@
           "sourceUrl": "https://greenwoodarchercapital.org/staff"
         }
       ],
-      "chamberNextStep": "Ask about a chamber referral path, preferred pre-intake information, and a quarterly office-hours partnership for South Side entrepreneurs.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://greenwoodarchercapital.org/staff",
@@ -46,8 +46,11 @@
       "name": "Allies for Community Business",
       "organizationType": "Nonprofit lender and business support organization",
       "coverageRole": "core_local",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["business_navigation", "capital_readiness", "small_business_capital"],
+      "supportLanes": [
+        "business_navigation",
+        "capital_readiness",
+        "small_business_capital"
+      ],
       "geography": "Chicagoland and nearby communities, with priority for underserved entrepreneurs",
       "bestFor": "Small-business loans, grants when available, one-on-one coaching, and business connections",
       "publicIntake": {
@@ -59,17 +62,14 @@
         {
           "name": "Yessenia Diaz De Leon",
           "role": "Director of Community Lending",
-          "email": "ydiazdeleon@a4cb.org",
           "sourceUrl": "https://a4cb.org/about/team/"
         },
         {
           "name": "Tarsa Washington",
           "role": "Director of Business Coaching",
-          "email": "twashington@a4cb.org",
           "sourceUrl": "https://a4cb.org/about/team/"
         }
       ],
-      "chamberNextStep": "Confirm the cleanest referral path for owners who need both coaching and capital, and ask whether the chamber can host recurring coaching sessions.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://a4cb.org/about/team/",
@@ -81,8 +81,11 @@
       "name": "SomerCor",
       "organizationType": "Nonprofit SBA lender and City grant-program administrator",
       "coverageRole": "citywide_specialist",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["capital_readiness", "small_business_capital", "property_community_development"],
+      "supportLanes": [
+        "capital_readiness",
+        "small_business_capital",
+        "property_community_development"
+      ],
       "geography": "Illinois, with City of Chicago administration for SBIF and NOF",
       "bestFor": "SBA financing, owner-occupied commercial real estate, equipment, SBIF, and NOF navigation",
       "publicIntake": {
@@ -107,7 +110,6 @@
           "sourceUrl": "https://somercor.com/wp-content/uploads/2025/12/SomerCor-FY25-Annual-Report-Digital.pdf"
         }
       ],
-      "chamberNextStep": "Separate the lender and grant-administrator conversations, then confirm what project facts make a useful SBIF, NOF, or SBA introduction.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://somercor.com/",
@@ -120,8 +122,10 @@
       "name": "Chicago Community Loan Fund",
       "organizationType": "Community development financial institution",
       "coverageRole": "citywide_specialist",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["capital_readiness", "property_community_development"],
+      "supportLanes": [
+        "capital_readiness",
+        "property_community_development"
+      ],
       "geography": "Chicagoland",
       "bestFor": "Community facilities, affordable housing, commercial real estate, social enterprises, and neighborhood development",
       "publicIntake": {
@@ -133,17 +137,14 @@
         {
           "name": "James A. Norris",
           "role": "Director of Lending Operations",
-          "phone": "312-788-2491",
           "sourceUrl": "https://cclfchicago.org/about-us/staff-board/"
         },
         {
           "name": "Wendell Harris",
           "role": "Executive Vice President of Lending and Equity",
-          "phone": "312-252-0427",
           "sourceUrl": "https://cclfchicago.org/about-us/staff-board/"
         }
       ],
-      "chamberNextStep": "Ask for a project-type referral matrix and the minimum information CCLF wants before an early development conversation.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://cclfchicago.org/contact-us/",
@@ -155,8 +156,10 @@
       "name": "Community Investment Corporation",
       "organizationType": "Affordable multifamily housing CDFI lender",
       "coverageRole": "citywide_specialist",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["housing_homeownership", "property_community_development"],
+      "supportLanes": [
+        "housing_homeownership",
+        "property_community_development"
+      ],
       "geography": "Chicago region; product geography varies",
       "bestFor": "Acquiring, rehabilitating, refinancing, or improving affordable multifamily rental housing, generally five or more units",
       "publicIntake": {
@@ -181,7 +184,6 @@
           "sourceUrl": "https://www.cicchicago.com/about/"
         }
       ],
-      "chamberNextStep": "Keep referrals limited to eligible multifamily or housing-development contexts and confirm which loan officer should receive South Side introductions.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://www.cicchicago.com/about/",
@@ -193,8 +195,10 @@
       "name": "Chicago Neighborhood Initiatives",
       "organizationType": "Community development and real-estate advisory organization",
       "coverageRole": "core_local",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["property_community_development", "corridor_place_based"],
+      "supportLanes": [
+        "property_community_development",
+        "corridor_place_based"
+      ],
       "geography": "Greater Chicagoland, with deep South and West Side project experience",
       "bestFor": "Complex real estate, structured finance, development advisory, neighborhood revitalization, and project execution",
       "publicIntake": {
@@ -206,15 +210,11 @@
         {
           "name": "Jenn Bransfield",
           "role": "Chief Operating Officer and General Counsel",
-          "email": "jbransfield@cnigroup.org",
-          "phone": "773-301-2647",
           "sourceUrl": "https://www.cnigroup.org/consulting/"
         },
         {
           "name": "Kyle Harvey",
           "role": "Structured Finance Consultant",
-          "email": "kharvey@cnigroup.org",
-          "phone": "773-954-8790",
           "sourceUrl": "https://www.cnigroup.org/consulting/"
         },
         {
@@ -223,7 +223,6 @@
           "sourceUrl": "https://www.cnigroup.org/about/staff-leadership/"
         }
       ],
-      "chamberNextStep": "Discuss a defined pathway for complex property and corridor projects, including what CNI needs to decide whether an initial conversation is useful.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://www.cnigroup.org/about/staff-leadership/",
@@ -236,8 +235,10 @@
       "name": "IFF",
       "organizationType": "Mission-driven lender, real-estate consultant, and developer",
       "coverageRole": "citywide_specialist",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["capital_readiness", "property_community_development"],
+      "supportLanes": [
+        "capital_readiness",
+        "property_community_development"
+      ],
       "geography": "Chicago metro, Northwest Indiana, and Illinois",
       "bestFor": "Nonprofit facilities, affordable housing, community-serving real estate, financing, and development consulting",
       "publicIntake": {
@@ -256,7 +257,6 @@
           "sourceUrl": "https://iff.org/contact-us/locations/illinois/"
         }
       ],
-      "chamberNextStep": "Confirm where IFF wants early nonprofit and community-facility referrals to enter, and what project facts should accompany a warm introduction.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://iff.org/contact-us/locations/illinois/",
@@ -269,8 +269,11 @@
       "name": "Women's Business Development Center",
       "organizationType": "Business advising, certification, and capital-access organization",
       "coverageRole": "citywide_specialist",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["business_navigation", "capital_readiness", "small_business_capital"],
+      "supportLanes": [
+        "business_navigation",
+        "capital_readiness",
+        "small_business_capital"
+      ],
       "geography": "Chicago, Cook County, and Northeast Illinois programs",
       "bestFor": "One-on-one advising, capital preparation, direct lending, certification, and growth support",
       "publicIntake": {
@@ -289,7 +292,6 @@
           "sourceUrl": "https://www.wbdc.org/en/womens-business-centers/"
         }
       ],
-      "chamberNextStep": "Explore a direct advising handoff for owners who need capital preparation before speaking with a lender.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://www.wbdc.org/en/cook-city/",
@@ -302,8 +304,13 @@
       "name": "Far South Community Development Corporation",
       "organizationType": "Place-based community development corporation and NBDC",
       "coverageRole": "core_local",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["business_navigation", "capital_readiness", "corridor_place_based", "workforce", "property_community_development"],
+      "supportLanes": [
+        "business_navigation",
+        "capital_readiness",
+        "corridor_place_based",
+        "workforce",
+        "property_community_development"
+      ],
       "geography": "Far South Side of Chicago",
       "bestFor": "Business navigation, City issue troubleshooting, financial-resource connections, workforce support, and community development",
       "publicIntake": {
@@ -315,22 +322,26 @@
         {
           "name": "Cam Brown",
           "role": "Director of Neighborhood Business Development Center",
-          "email": "cam@farsouthcdc.org",
-          "phone": "773-831-7107",
           "sourceUrl": "https://farsouthcdc.org/nbdc"
         }
       ],
-      "chamberNextStep": "Coordinate geography, warm-introduction expectations, and a shared process for Far South Side businesses that enter through either organization.",
       "lastVerifiedAt": "2026-07-14",
-      "sourceUrls": ["https://farsouthcdc.org/nbdc"]
+      "sourceUrls": [
+        "https://farsouthcdc.org/nbdc"
+      ]
     },
     {
       "id": "greater-southwest-development-corporation",
       "name": "Greater Southwest Development Corporation",
       "organizationType": "Place-based community development corporation",
       "coverageRole": "core_local",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["business_navigation", "capital_readiness", "corridor_place_based", "property_community_development", "housing_homeownership"],
+      "supportLanes": [
+        "business_navigation",
+        "capital_readiness",
+        "corridor_place_based",
+        "property_community_development",
+        "housing_homeownership"
+      ],
       "geography": "Southwest Side of Chicago",
       "bestFor": "Business advising, industrial and commercial support, corridor development, real estate, and housing services",
       "publicIntake": {
@@ -341,23 +352,19 @@
         {
           "name": "Adrian Soto",
           "role": "Executive Director",
-          "phone": "773-362-3372",
           "sourceUrl": "https://greatersouthwest.org/about-us/staff/"
         },
         {
           "name": "Giovanni Valdez",
           "role": "Development Director",
-          "phone": "773-735-6729",
           "sourceUrl": "https://greatersouthwest.org/about-us/staff/"
         },
         {
           "name": "Victoria Mireles",
           "role": "Business Advisor",
-          "phone": "773-436-1000 ext. 448",
           "sourceUrl": "https://greatersouthwest.org/about-us/staff/"
         }
       ],
-      "chamberNextStep": "Compare corridor coverage and establish a reciprocal handoff for Southwest Side businesses and development opportunities.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://greatersouthwest.org/about-us/staff/",
@@ -369,8 +376,11 @@
       "name": "Emerald South Economic Development Collaborative",
       "organizationType": "Place-based economic development collaborative",
       "coverageRole": "core_local",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["corridor_place_based", "property_community_development", "business_navigation"],
+      "supportLanes": [
+        "corridor_place_based",
+        "property_community_development",
+        "business_navigation"
+      ],
       "geography": "Washington Park, Woodlawn, and South Shore",
       "bestFor": "Commercial corridors, entrepreneurship, investment coordination, land activation, and community-led development",
       "publicIntake": {
@@ -380,11 +390,9 @@
         {
           "name": "Ghian Foreman",
           "role": "President and CEO",
-          "email": "ghian.foreman@emeraldsouth.org",
           "sourceUrl": "https://www.emeraldsouth.org/new-page"
         }
       ],
-      "chamberNextStep": "Explore a corridor-intelligence exchange and a shared route for businesses or development opportunities in Emerald South's focus communities.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://www.emeraldsouth.org/about",
@@ -396,15 +404,18 @@
       "name": "South Side Community Economic Development Center",
       "organizationType": "Community economic development and financial education organization",
       "coverageRole": "core_local",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["business_navigation", "capital_readiness", "housing_homeownership", "corridor_place_based"],
+      "supportLanes": [
+        "business_navigation",
+        "capital_readiness",
+        "housing_homeownership",
+        "corridor_place_based"
+      ],
       "geography": "Chicago's South Side",
       "bestFor": "Financial education, micro-enterprise support, homeownership education, micro-credit access, and community-development partnerships",
       "publicIntake": {
         "url": "https://sscedc.org/"
       },
       "keyContacts": [],
-      "chamberNextStep": "Identify the current program lead and confirm which services accept direct business referrals from chambers.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://sscedc.org/",
@@ -416,25 +427,32 @@
       "name": "LISC Chicago",
       "organizationType": "Community development intermediary and CDFI",
       "coverageRole": "citywide_specialist",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["property_community_development", "corridor_place_based", "capital_readiness"],
+      "supportLanes": [
+        "property_community_development",
+        "corridor_place_based",
+        "capital_readiness"
+      ],
       "geography": "Chicago",
       "bestFor": "Community-development financing, technical assistance, capacity building, partnerships, and neighborhood investment",
       "publicIntake": {
         "url": "https://www.lisc.org/chicago/"
       },
       "keyContacts": [],
-      "chamberNextStep": "Identify the current Chicago program lead for corridor and community-development partnerships before routing individual projects.",
       "lastVerifiedAt": "2026-07-14",
-      "sourceUrls": ["https://www.lisc.org/chicago/"]
+      "sourceUrls": [
+        "https://www.lisc.org/chicago/"
+      ]
     },
     {
       "id": "the-resurrection-project",
       "name": "The Resurrection Project",
       "organizationType": "Community development and housing organization",
       "coverageRole": "citywide_specialist",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["housing_homeownership", "property_community_development", "corridor_place_based"],
+      "supportLanes": [
+        "housing_homeownership",
+        "property_community_development",
+        "corridor_place_based"
+      ],
       "geography": "Chicago, with roots in Pilsen and surrounding communities",
       "bestFor": "Affordable housing, home purchase and preservation, financial wellness, real estate development, and civic engagement",
       "publicIntake": {
@@ -445,27 +463,28 @@
         {
           "name": "Guacolda Reyes",
           "role": "Chief Real Estate and Development Officer",
-          "phone": "312-666-1323",
           "sourceUrl": "https://resurrectionproject.org/our-directory/"
         },
         {
           "name": "Raul I. Raymundo",
           "role": "Chief Executive Officer and Co-Founder",
-          "phone": "312-666-1323",
           "sourceUrl": "https://resurrectionproject.org/our-directory/"
         }
       ],
-      "chamberNextStep": "Confirm when TRP is the right housing or community-development introduction and where geography limits direct service.",
       "lastVerifiedAt": "2026-07-14",
-      "sourceUrls": ["https://resurrectionproject.org/our-directory/"]
+      "sourceUrls": [
+        "https://resurrectionproject.org/our-directory/"
+      ]
     },
     {
       "id": "neighborhood-housing-services-of-chicago",
       "name": "Neighborhood Housing Services of Chicago",
       "organizationType": "Housing counseling, lending, and neighborhood development organization",
       "coverageRole": "citywide_specialist",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["housing_homeownership", "property_community_development"],
+      "supportLanes": [
+        "housing_homeownership",
+        "property_community_development"
+      ],
       "geography": "Chicago and Chicagoland",
       "bestFor": "Homebuyer education, lending, home repair, foreclosure prevention, and neighborhood stabilization",
       "publicIntake": {
@@ -485,7 +504,6 @@
           "sourceUrl": "https://nhschicago.org/who-we-are/"
         }
       ],
-      "chamberNextStep": "Use only for actual homeownership, owner-occupant, repair, or housing-stability needs and confirm the preferred Chatham-area intake route.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://nhschicago.org/",
@@ -497,25 +515,30 @@
       "name": "Legal Aid for New Entrepreneurs (LANE)",
       "organizationType": "Transactional legal-aid organization",
       "coverageRole": "citywide_specialist",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["legal_support", "business_navigation"],
+      "supportLanes": [
+        "legal_support",
+        "business_navigation"
+      ],
       "geography": "Chicago, Cook County, and qualifying Chicago-area businesses",
       "bestFor": "Entity formation, commercial leases, employment consultations, financing transactions, contracts, and intellectual property",
       "publicIntake": {
         "url": "https://www.lanechicago.org/legal_help"
       },
       "keyContacts": [],
-      "chamberNextStep": "Confirm a chamber referral relationship and the business-stage information LANE wants before an owner requests legal help.",
       "lastVerifiedAt": "2026-07-14",
-      "sourceUrls": ["https://www.lanechicago.org/legal_help"]
+      "sourceUrls": [
+        "https://www.lanechicago.org/legal_help"
+      ]
     },
     {
       "id": "accion-opportunity-fund",
       "name": "Accion Opportunity Fund",
       "organizationType": "National nonprofit small-business lender and advisor",
       "coverageRole": "regional_option",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["capital_readiness", "small_business_capital"],
+      "supportLanes": [
+        "capital_readiness",
+        "small_business_capital"
+      ],
       "geography": "Illinois and most U.S. states; national intake",
       "bestFor": "Small-business term loans, SBA lending, equipment financing, advising, and multilingual intake",
       "publicIntake": {
@@ -523,7 +546,6 @@
         "url": "https://aofund.org/contact/"
       },
       "keyContacts": [],
-      "chamberNextStep": "Ask whether AOF offers a partner referral channel or local Chicago contact before treating it as a primary chamber handoff.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://aofund.org/contact/",
@@ -535,8 +557,10 @@
       "name": "Pursuit",
       "organizationType": "Community-focused small-business lender",
       "coverageRole": "regional_option",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["capital_readiness", "small_business_capital"],
+      "supportLanes": [
+        "capital_readiness",
+        "small_business_capital"
+      ],
       "geography": "Chicago and Illinois, plus selected eastern states",
       "bestFor": "Working capital, equipment, startup and early-stage financing, SBA products, and business advisory support",
       "publicIntake": {
@@ -547,17 +571,14 @@
         {
           "name": "Alex Felton",
           "role": "Vice President, Senior Business Development Officer, Chicago",
-          "phone": "331-343-9585",
           "sourceUrl": "https://pursuitlending.com/business-loans/service-locations/chicago/"
         },
         {
           "name": "Matthew Revere",
           "role": "Vice President, Senior Business Development Officer, Chicago",
-          "phone": "312-898-7205",
           "sourceUrl": "https://pursuitlending.com/business-loans/service-locations/chicago/"
         }
       ],
-      "chamberNextStep": "Meet the Chicago business-development officers and clarify how Pursuit complements, rather than duplicates, local CDFI referrals.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://pursuitlending.com/contact-us/",
@@ -569,8 +590,9 @@
       "name": "Jewish Free Loan Chicago",
       "organizationType": "Nonprofit interest-free lender",
       "coverageRole": "citywide_specialist",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["small_business_capital"],
+      "supportLanes": [
+        "small_business_capital"
+      ],
       "geography": "Cook County, subject to household-income and guarantor requirements",
       "bestFor": "Small interest-free business loans for inventory, improvements, marketing, equipment, and working capital",
       "publicIntake": {
@@ -579,7 +601,6 @@
         "url": "https://jflchicago.org/how-to-apply-small-business-loan"
       },
       "keyContacts": [],
-      "chamberNextStep": "Confirm whether JFLC wants chamber referrals and create a short eligibility checklist before including it in a warm introduction.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://jflchicago.org/contact/",
@@ -591,8 +612,11 @@
       "name": "Chicago TREND",
       "organizationType": "Commercial corridor, retail development, data, and financing organization",
       "coverageRole": "citywide_specialist",
-      "relationshipStatus": "relationship_unconfirmed",
-      "supportLanes": ["property_community_development", "corridor_place_based", "capital_readiness"],
+      "supportLanes": [
+        "property_community_development",
+        "corridor_place_based",
+        "capital_readiness"
+      ],
       "geography": "Chicago and selected urban markets",
       "bestFor": "Strategic retail, commercial corridors, minority-owned development, market analytics, and flexible project financing",
       "publicIntake": {
@@ -611,7 +635,6 @@
           "sourceUrl": "https://www.chicagotrend.com/leadership"
         }
       ],
-      "chamberNextStep": "Explore a commercial-corridor data partnership and define which retail or developer opportunities merit direct introductions.",
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://www.chicagotrend.com/leadership",
@@ -623,18 +646,24 @@
       "id": "justine-petersen",
       "name": "Justine PETERSEN",
       "organizationType": "Midwest CDFI and micro-lender",
-      "coverageRole": "verification_needed",
-      "relationshipStatus": "service_area_check_needed",
-      "supportLanes": ["capital_readiness", "small_business_capital"],
-      "geography": "Illinois service is published, but Cook County and Chicago service were not confirmed in this review",
+      "coverageRole": "regional_option",
+      "supportLanes": [
+        "capital_readiness",
+        "small_business_capital"
+      ],
+      "geography": "Illinois; borrowers should confirm the current Chicago intake path directly with the intermediary",
       "bestFor": "Microloans, credit building, and support for underserved entrepreneurs where service is available",
       "publicIntake": {
-        "url": "https://justinepetersen.org/"
+        "email": "sflanigan@justinepetersen.org",
+        "phone": "314-533-2411 ext. 2411",
+        "url": "https://justinepetersen.org/what-we-do/small-business/"
       },
       "keyContacts": [],
-      "chamberNextStep": "Verify active Cook County service and identify a Chicago referral contact before adding Justine PETERSEN to public report routing.",
-      "lastVerifiedAt": "2026-07-14",
-      "sourceUrls": ["https://justinepetersen.org/"]
+      "lastVerifiedAt": "2026-07-27",
+      "sourceUrls": [
+        "https://www.sba.gov/funding-programs/loans/microloans/list-microlenders",
+        "https://justinepetersen.org/what-we-do/small-business/"
+      ]
     }
   ]
 }

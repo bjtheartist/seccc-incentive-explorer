@@ -106,7 +106,7 @@ export default async function SupportNetworkPage({
               Support Network Directory
             </h1>
             <p className="mt-4 max-w-3xl text-[14px] leading-relaxed text-[#0C1B33]/50">
-              Private working contacts for warm referrals, partnership development, and local-resource coordination. Public reports use only the separate contextual routing data.
+              Public-source organization and contact research for referrals, partnership development, and local-resource coordination.
             </p>
           </div>
           <Link
@@ -115,6 +115,10 @@ export default async function SupportNetworkPage({
           >
             Mission Analytics
           </Link>
+        </div>
+
+        <div className="mb-7 border border-amber-500/25 bg-amber-50 px-4 py-3 text-[12px] leading-relaxed text-amber-900">
+          Relationship notes, outreach history, and private contact details belong in the protected Chamber CRM and are not stored in this repository.
         </div>
 
         <SupportNetworkDirectory
