@@ -41,7 +41,6 @@ const APPROVED_ITEMS: Array<[label: string, href: string]> = [
   ["Site Matchmaker", "/locate"],
   ["Incentive Map", "/map"],
   ["Community Investment", "/investment"],
-  ["Corridor Signals", "/corridors"],
 ];
 
 describe("Header — approved Set-A structure", () => {
@@ -67,9 +66,12 @@ describe("Header — approved Set-A structure", () => {
 
   it("never links the index-less /neighborhoods route", () => {
     expect(html).not.toContain('href="/neighborhoods"');
-    // Public Investment + Corridors carries exactly two entries.
     expect(html).toContain('href="/investment"');
-    expect(html).toContain('href="/corridors"');
+  });
+
+  it("does not expose the retired Corridor Signals preview", () => {
+    expect(html).not.toContain('href="/corridors"');
+    expect(html).not.toContain("Corridor Signals");
   });
 
   it("exposes every approved item as a menu item, and no others", () => {

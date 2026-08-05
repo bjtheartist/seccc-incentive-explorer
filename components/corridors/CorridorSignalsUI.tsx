@@ -1,6 +1,5 @@
 /**
- * Shared presentational pieces for the unlisted "Corridor Signals" preview
- * report (app/corridors, app/corridors/[zip]). Server-safe (no client
+ * Shared presentational pieces for corridor context. Server-safe (no client
  * interactivity) and styled with the same Bureau design tokens used by the
  * rest of the report surface (font-editorial / font-mono-bureau / bg-warm /
  * accent-bar — see app/globals.css and app/neighborhoods/[slug]/incentives).
@@ -18,9 +17,9 @@ export function Eyebrow({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Preview / test-dataset banner. Required on both /corridors and
- * /corridors/[zip] per the "unlisted, experimental" framing — this is NOT
- * part of the standard report and must never be confused for one.
+ * Preview / test-dataset banner for surfaces that expose experimental
+ * corridor metrics. This is NOT part of the standard report and must never be
+ * confused for one.
  */
 export function CorridorPreviewBanner() {
   return (

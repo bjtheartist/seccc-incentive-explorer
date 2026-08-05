@@ -2,6 +2,20 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
+  async redirects() {
+    return [
+      {
+        source: "/corridors",
+        destination: "/map",
+        permanent: true,
+      },
+      {
+        source: "/corridors/:path*",
+        destination: "/map",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     return [
       {
