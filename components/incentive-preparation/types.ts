@@ -3,6 +3,11 @@ import {
   normalizeDocumentSpec,
   type DocumentSpec,
 } from "@/lib/document-spec";
+import {
+  MATERIALS_REVIEW_ORGANIZATION,
+  isSupportRequestType,
+  type SupportRequestType,
+} from "@/lib/incentive-support";
 
 export type { DocumentSpec } from "@/lib/document-spec";
 
@@ -108,10 +113,20 @@ export interface PreparationPacket {
 
 export interface PreparationSupportRequest {
   id: string;
+  requestType: SupportRequestType;
   targetOrganization: string;
   requestedHelp: string;
   dataScopes: string[];
   status: string;
+}
+
+export interface PreparationSupportRequestDraft {
+  id: string;
+  requestType: SupportRequestType;
+  targetOrganization: string;
+  requestedHelp: string;
+  suggestedScopes: string[];
+  updatedAt: string;
 }
 
 export interface FoundationRefreshItemView {
@@ -591,7 +606,10 @@ export function extractPreparationSupportRequests(
       "organizationName",
     );
     const requestedHelp = readString(record, "requestedHelp", "requested_help", "help");
-    if (!targetOrganization || !requestedHelp) return [];
+    const requestType = isSupportRequestType(record.requestType ?? record.request_type)
+      ? (record.requestType ?? record.request_type) as SupportRequestType
+      : "introduction";
+    if (!requestedHelp || (requestType === "introduction" && !targetOrganization)) return [];
     const rawDataScopes =
       record.dataScopes ?? record.data_scopes ?? record.consentScope ?? record.consent_scope;
     const dataScopes = Array.isArray(rawDataScopes)
@@ -599,10 +617,40 @@ export function extractPreparationSupportRequests(
       : [];
     return [{
       id: readString(record, "id", "supportRequestId", "support_request_id") || `support-${index}`,
-      targetOrganization,
+      requestType,
+      targetOrganization: targetOrganization || MATERIALS_REVIEW_ORGANIZATION,
       requestedHelp,
       dataScopes,
       status: readString(record, "status") || "recorded",
     }];
   });
+}
+
+export function extractPreparationSupportRequestDraft(
+  payload: unknown,
+): PreparationSupportRequestDraft | null {
+  const root = asRecord(payload);
+  const record = asRecord(root?.supportRequestDraft ?? root?.support_request_draft ?? root?.draft);
+  if (!record) return null;
+  const requestTypeValue = record.requestType ?? record.request_type;
+  if (!isSupportRequestType(requestTypeValue)) return null;
+  const requestedHelp = readString(record, "requestedHelp", "requested_help", "help");
+  const targetOrganization = readString(
+    record,
+    "targetOrganization",
+    "target_organization",
+    "organizationName",
+  );
+  if (!requestedHelp || (requestTypeValue === "introduction" && !targetOrganization)) return null;
+  const rawScopes = record.suggestedScopes ?? record.suggested_scopes;
+  return {
+    id: readString(record, "id") || "support-draft",
+    requestType: requestTypeValue,
+    targetOrganization,
+    requestedHelp,
+    suggestedScopes: Array.isArray(rawScopes)
+      ? rawScopes.map(cleanString).filter(Boolean)
+      : [],
+    updatedAt: readString(record, "updatedAt", "updated_at"),
+  };
 }

@@ -383,6 +383,7 @@ describe("GET /api/incentive-preparation/[id]", () => {
     getCurrentUserIdMock.mockResolvedValue("user-1");
     sqlMock
       .mockResolvedValueOnce([joinedFoundationRefreshRow])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
     const res = await GET(getRequest(), params);
@@ -403,6 +404,38 @@ describe("GET /api/incentive-preparation/[id]", () => {
       ])
     );
     expect(body.foundationRefresh.items.every((item) => item.newlyCovered)).toBe(true);
+  });
+
+  it("returns the authenticated packet's editable support draft", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    sqlMock
+      .mockResolvedValueOnce([joinedFoundationRefreshRow])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{
+        id: "draft-1",
+        packet_id: "packet-1",
+        request_type: "materials_review",
+        target_organization: null,
+        requested_help: "Review the assembled packet.",
+        suggested_scope_json: ["packet", "documents"],
+        updated_at: "2026-08-04T00:00:00.000Z",
+      }]);
+
+    const res = await GET(getRequest(), params);
+    const body = (await res.json()) as {
+      supportRequestDraft: {
+        requestType: string;
+        targetOrganization: string;
+        suggestedScopes: string[];
+      };
+    };
+
+    expect(res.status).toBe(200);
+    expect(body.supportRequestDraft).toEqual(expect.objectContaining({
+      requestType: "materials_review",
+      targetOrganization: "",
+      suggestedScopes: ["packet", "documents"],
+    }));
   });
 
   it("returns 404 for a packet outside the current user's scope", async () => {

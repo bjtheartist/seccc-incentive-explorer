@@ -805,11 +805,12 @@ describe("incentive preparation migration", () => {
     "utf8"
   );
 
-  it("creates the three required tables and their complete column contract", () => {
+  it("creates the required preparation, request, and draft tables with their complete column contract", () => {
     expect(migration).toContain("CREATE EXTENSION IF NOT EXISTS pgcrypto");
     expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS business_profiles/);
     expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS incentive_preparation_packets/);
     expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS incentive_support_requests/);
+    expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS incentive_support_request_drafts/);
 
     const requiredColumns = [
       "legal_name",
@@ -838,6 +839,7 @@ describe("incentive preparation migration", () => {
       "timeline_json",
       "profile_snapshot_json",
       "target_organization",
+      "request_type",
       "requested_help",
       "consent_scope_json",
       "consented_at",
@@ -866,6 +868,7 @@ describe("incentive preparation migration", () => {
     expect(migration).toContain("profile_snapshot_json is immutable");
     expect(migration).toContain("CREATE INDEX IF NOT EXISTS idx_incentive_packets_profile_id");
     expect(migration).toContain("CREATE INDEX IF NOT EXISTS idx_incentive_support_requests_packet_id");
+    expect(migration).toContain("CREATE INDEX IF NOT EXISTS idx_incentive_support_drafts_packet_id");
   });
 
   it("relaxes goal_type and program_name to nullable for foundation-first packets", () => {

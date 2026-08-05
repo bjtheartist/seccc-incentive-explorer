@@ -21,6 +21,10 @@ import {
 import { getAllPrograms } from "@/lib/programs-data";
 import { isGoalType } from "@/lib/workspace";
 import { isDocumentExtractEnabled, isDocumentsEnabled } from "@/lib/document-flags";
+import {
+  MATERIALS_REVIEW_ORGANIZATION,
+  isSupportRequestType,
+} from "@/lib/incentive-support";
 
 type Params = { params: Promise<{ id: string }> };
 type DatabaseRow = Record<string, unknown>;
@@ -143,7 +147,10 @@ function toSupportRequest(row: DatabaseRow) {
   return {
     id: String(row.id),
     packetId: String(row.packet_id),
-    targetOrganization: String(row.target_organization),
+    requestType: isSupportRequestType(row.request_type) ? row.request_type : "introduction",
+    targetOrganization: row.target_organization
+      ? String(row.target_organization)
+      : MATERIALS_REVIEW_ORGANIZATION,
     requestedHelp: String(row.requested_help),
     consentScope: dataScopes,
     dataScopes,
@@ -152,6 +159,41 @@ function toSupportRequest(row: DatabaseRow) {
     createdAt: dateTime(row.created_at),
     updatedAt: dateTime(row.updated_at),
   };
+}
+
+function toSupportRequestDraft(row: DatabaseRow) {
+  const suggestedScopes = parseJson(row.suggested_scope_json, []);
+  return {
+    id: String(row.id),
+    packetId: String(row.packet_id),
+    requestType: isSupportRequestType(row.request_type) ? row.request_type : "introduction",
+    targetOrganization: row.target_organization ? String(row.target_organization) : "",
+    requestedHelp: String(row.requested_help || ""),
+    suggestedScopes: Array.isArray(suggestedScopes)
+      ? suggestedScopes.filter((scope): scope is string => typeof scope === "string")
+      : [],
+    updatedAt: dateTime(row.updated_at),
+  };
+}
+
+async function loadSupportRequestDraft(
+  sql: NonNullable<ReturnType<typeof getSQL>>,
+  id: string,
+  userId: string,
+) {
+  try {
+    return await sql`
+      SELECT *
+      FROM incentive_support_request_drafts
+      WHERE packet_id = ${id} AND user_id = ${userId}
+      LIMIT 1
+    `;
+  } catch (error) {
+    // A deploy may briefly precede the additive migration. Preserve packet
+    // access in that narrow case; all other database errors still surface.
+    if ((error as { code?: string })?.code === "42P01") return [];
+    throw error;
+  }
 }
 
 function getProgramOverlay(programId: string | null, programName: string) {
@@ -229,12 +271,16 @@ export async function GET(_req: NextRequest, { params }: Params) {
     WHERE packet_id = ${id} AND user_id = ${userId}
     ORDER BY created_at DESC
   `;
+  const draftRows = await loadSupportRequestDraft(sql, id, userId);
   const packetRow = packetRows[0] as DatabaseRow;
 
   return NextResponse.json({
     packet: packetDetail(packetRow),
     profile: toProfile(packetRow),
     supportRequests: supportRows.map((row) => toSupportRequest(row as DatabaseRow)),
+    supportRequestDraft: draftRows.length
+      ? toSupportRequestDraft(draftRows[0] as DatabaseRow)
+      : null,
     // Reconcile the packet's stored foundation state against the CURRENT live
     // profile (already joined into packetRow) so a profile the user completed
     // after creating this packet surfaces a "your profile now covers this"

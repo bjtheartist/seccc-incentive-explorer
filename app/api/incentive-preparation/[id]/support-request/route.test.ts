@@ -24,6 +24,7 @@ function request(body: unknown) {
 
 const validBody = {
   consent: true,
+  requestType: "introduction",
   targetOrganization: "South East Chicago Commission",
   requestedHelp: "Review the documents needed for this likely match.",
   scope: ["business_profile", "documents"],
@@ -73,6 +74,7 @@ describe("POST /api/incentive-preparation/[id]/support-request", () => {
       {
         id: "support-1",
         packet_id: "packet-1",
+        request_type: validBody.requestType,
         target_organization: validBody.targetOrganization,
         requested_help: validBody.requestedHelp,
         consent_scope_json: validBody.scope,
@@ -87,8 +89,44 @@ describe("POST /api/incentive-preparation/[id]/support-request", () => {
     const payload = await res.json();
 
     expect(res.status).toBe(201);
-    expect(payload.supportRequest).toMatchObject({ status: "pending", dataScopes: validBody.scope });
+    expect(payload.supportRequest).toMatchObject({
+      requestType: "introduction",
+      status: "pending",
+      dataScopes: validBody.scope,
+    });
     expect(String(sqlMock.mock.calls[1][0])).toContain("incentive_support_requests");
     expect(sqlMock.mock.calls[1].slice(1)).toEqual(expect.arrayContaining(["user-1", "packet-1"]));
+  });
+
+  it("records a materials-review request without an external organization", async () => {
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    sqlMock.mockResolvedValueOnce([{ id: "packet-1" }]).mockResolvedValueOnce([
+      {
+        id: "support-2",
+        packet_id: "packet-1",
+        request_type: "materials_review",
+        target_organization: null,
+        requested_help: "Review my assembled materials for missing information.",
+        consent_scope_json: ["packet", "documents"],
+        status: "pending",
+        consented_at: "2026-08-04T00:00:00.000Z",
+        created_at: "2026-08-04T00:00:00.000Z",
+        updated_at: "2026-08-04T00:00:00.000Z",
+      },
+    ]);
+
+    const res = await POST(request({
+      consent: true,
+      requestType: "materials_review",
+      requestedHelp: "Review my assembled materials for missing information.",
+      scope: ["packet", "documents"],
+    }), params);
+    const payload = await res.json();
+
+    expect(res.status).toBe(201);
+    expect(payload.supportRequest).toMatchObject({
+      requestType: "materials_review",
+      targetOrganization: "Chicago Incentive Explorer support",
+    });
   });
 });
