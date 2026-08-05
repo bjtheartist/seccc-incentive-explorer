@@ -10,6 +10,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
+import type { PublicAvailableSpaceMeasurement } from "@/lib/parcel-space";
 import {
   OWNER_SECTOR_COLORS,
   OWNER_SECTOR_LABELS,
@@ -40,13 +41,17 @@ import {
   candidateIncentiveGeographyLabel,
   candidatePinLabel,
   candidateRowsToCsv,
+  candidateSpaceFactLabel,
+  candidateFootprintPublication,
   candidateZoningFilterLabel,
   candidateZoningFilterValue,
   candidateZoningLabel,
   epaWalkabilityCategory,
   filterAndSortCandidateRows,
+  joinCandidateAvailableSpace,
   joinCandidateContext,
   normalizeSiteMatchmakerCandidates,
+  parseAvailableSpacePayload,
   parseSiteMatchmakerContextPayload,
   type CandidateDistressStatus,
   type CandidateSort,
@@ -87,6 +92,11 @@ type ContextLoadState =
       sourceNotes: string[];
       contextByKey: ParsedSiteMatchmakerContext["contextByKey"];
     }
+  | { status: "unavailable" };
+
+type AvailableSpaceLoadState =
+  | { status: "loading" }
+  | { status: "available"; measurements: PublicAvailableSpaceMeasurement[] }
   | { status: "unavailable" };
 
 function numericFilter(value: string): number | null {
@@ -428,6 +438,29 @@ function VerificationLinks({ row }: { row: SiteMatchmakerCandidateRow }) {
   );
 }
 
+function SpaceValue({
+  row,
+  field,
+  note,
+}: {
+  row: SiteMatchmakerCandidateRow;
+  field:
+    | "lotAreaSqft"
+    | "assessorBuildingSqft"
+    | "cityGroundFootprintSqft"
+    | "availableSpaceSqft";
+  note?: string | null;
+}) {
+  return (
+    <div>
+      <p className="whitespace-nowrap font-mono-bureau text-[10px] text-[#0C1B33]/70">
+        {candidateSpaceFactLabel(row, field)}
+      </p>
+      {note ? <p className="mt-0.5 text-[9px] leading-snug text-[#0C1B33]/42">{note}</p> : null}
+    </div>
+  );
+}
+
 export default function SiteMatchmakerResultsTable({
   sitePoints,
   landPoints = null,
@@ -439,6 +472,9 @@ export default function SiteMatchmakerResultsTable({
     [sitePoints, landPoints],
   );
   const [contextLoad, setContextLoad] = useState<ContextLoadState>({ status: "loading" });
+  const [availableSpaceLoad, setAvailableSpaceLoad] = useState<AvailableSpaceLoadState>({
+    status: "loading",
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -469,12 +505,47 @@ export default function SiteMatchmakerResultsTable({
     };
   }, [zip]);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/parcel-space?zip=${encodeURIComponent(zip)}`, { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(`Available-space request failed (${response.status})`);
+        const payload: unknown = await response.json();
+        if (
+          !payload ||
+          typeof payload !== "object" ||
+          Array.isArray(payload) ||
+          (payload as { status?: unknown }).status !== "available"
+        ) {
+          throw new Error("Available-space snapshot is unavailable");
+        }
+        return parseAvailableSpacePayload(payload);
+      })
+      .then((measurements) => {
+        if (!cancelled) setAvailableSpaceLoad({ status: "available", measurements });
+      })
+      .catch(() => {
+        if (!cancelled) setAvailableSpaceLoad({ status: "unavailable" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [zip]);
+
+  const rowsWithAvailableSpace = useMemo(
+    () =>
+      availableSpaceLoad.status === "available"
+        ? joinCandidateAvailableSpace(baseRows, availableSpaceLoad.measurements)
+        : baseRows,
+    [availableSpaceLoad, baseRows],
+  );
+
   const rows = useMemo(
     () =>
       contextLoad.status === "available"
-        ? joinCandidateContext(baseRows, contextLoad.contextByKey)
-        : baseRows,
-    [baseRows, contextLoad],
+        ? joinCandidateContext(rowsWithAvailableSpace, contextLoad.contextByKey)
+        : rowsWithAvailableSpace,
+    [contextLoad, rowsWithAvailableSpace],
   );
 
   const [search, setSearch] = useState("");
@@ -534,7 +605,7 @@ export default function SiteMatchmakerResultsTable({
   const sourceCounts = useMemo(() => countRows(rows, (row) => row.source), [rows]);
   const propertyTypeCounts = useMemo(() => countRows(rows, (row) => row.propertyType), [rows]);
   const footprintCounts = useMemo(
-    () => countRows(rows, (row) => (row.squareFeet === null ? "not_published" : "published")),
+    () => countRows(rows, candidateFootprintPublication),
     [rows],
   );
   const ownerSectorCounts = useMemo(() => countRows(rows, (row) => row.ownerSector), [rows]);
@@ -721,7 +792,7 @@ export default function SiteMatchmakerResultsTable({
               }))}
           />
           <SelectFilter
-            label="Footprint record"
+            label="Matching area record"
             value={footprintFilter}
             onChange={(value) => {
               setFootprintFilter(value as FootprintPublication | "");
@@ -874,7 +945,7 @@ export default function SiteMatchmakerResultsTable({
       </div>
 
       <div className="mt-4 hidden max-w-full overflow-x-auto border border-[#0C1B33]/10 bg-white sm:block">
-        <table className="w-full min-w-[1980px] border-collapse text-left">
+        <table className="w-full min-w-[2520px] border-collapse text-left">
           <thead className="sticky top-0 z-10 bg-white">
             <tr className="border-b border-[#0C1B33]/10 font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/48">
               <th className="w-10 px-3 py-2.5">#</th>
@@ -895,11 +966,55 @@ export default function SiteMatchmakerResultsTable({
                 <button
                   type="button"
                   onClick={() => toggleSort("footprint")}
-                  aria-label={`Sort published footprint ${sort.key === "footprint" && sort.direction === "asc" ? "descending" : "ascending"}`}
+                  aria-label={`Sort matching area ${sort.key === "footprint" && sort.direction === "asc" ? "descending" : "ascending"}`}
                   className="inline-flex items-center gap-1 font-mono-bureau text-[9px] uppercase tracking-[0.08em] hover:text-[#2563EB]"
                 >
-                  Footprint
+                  Match area
                   <SortIcon active={sort.key === "footprint"} direction={sort.direction} />
+                </button>
+              </th>
+              <th className="px-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => toggleSort("lot_area")}
+                  aria-label={`Sort lot area ${sort.key === "lot_area" && sort.direction === "asc" ? "descending" : "ascending"}`}
+                  className="inline-flex items-center gap-1 font-mono-bureau text-[9px] uppercase tracking-[0.08em] hover:text-[#2563EB]"
+                >
+                  Lot area
+                  <SortIcon active={sort.key === "lot_area"} direction={sort.direction} />
+                </button>
+              </th>
+              <th className="px-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => toggleSort("assessor_building")}
+                  aria-label={`Sort assessor building area ${sort.key === "assessor_building" && sort.direction === "asc" ? "descending" : "ascending"}`}
+                  className="inline-flex items-center gap-1 font-mono-bureau text-[9px] uppercase tracking-[0.08em] hover:text-[#2563EB]"
+                >
+                  Assessor building
+                  <SortIcon active={sort.key === "assessor_building"} direction={sort.direction} />
+                </button>
+              </th>
+              <th className="px-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => toggleSort("ground_footprint")}
+                  aria-label={`Sort mapped building footprint ${sort.key === "ground_footprint" && sort.direction === "asc" ? "descending" : "ascending"}`}
+                  className="inline-flex items-center gap-1 font-mono-bureau text-[9px] uppercase tracking-[0.08em] hover:text-[#2563EB]"
+                >
+                  Mapped footprint
+                  <SortIcon active={sort.key === "ground_footprint"} direction={sort.direction} />
+                </button>
+              </th>
+              <th className="px-3 py-2.5">
+                <button
+                  type="button"
+                  onClick={() => toggleSort("available_space")}
+                  aria-label={`Sort reported available space ${sort.key === "available_space" && sort.direction === "asc" ? "descending" : "ascending"}`}
+                  className="inline-flex items-center gap-1 font-mono-bureau text-[9px] uppercase tracking-[0.08em] hover:text-[#2563EB]"
+                >
+                  Available space
+                  <SortIcon active={sort.key === "available_space"} direction={sort.direction} />
                 </button>
               </th>
               <th className="px-3 py-2.5">Owner classification</th>
@@ -969,7 +1084,7 @@ export default function SiteMatchmakerResultsTable({
           <tbody>
             {visibleRows.length === 0 ? (
               <tr>
-                <td colSpan={15} className="px-4 py-10 text-center text-[13px] text-[#0C1B33]/45">
+                <td colSpan={19} className="px-4 py-10 text-center text-[13px] text-[#0C1B33]/45">
                   No candidate records match the current filters.
                 </td>
               </tr>
@@ -995,6 +1110,34 @@ export default function SiteMatchmakerResultsTable({
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 font-mono-bureau text-[10px] text-[#0C1B33]/70">
                     {candidateFootprintLabel(row)}
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <SpaceValue row={row} field="lotAreaSqft" note="Cook County parcel record" />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <SpaceValue
+                      row={row}
+                      field="assessorBuildingSqft"
+                      note={
+                        row.space.assessorBuildingYear
+                          ? `Assessor tax year ${row.space.assessorBuildingYear}`
+                          : "Assessor record"
+                      }
+                    />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <SpaceValue
+                      row={row}
+                      field="cityGroundFootprintSqft"
+                      note={row.space.cityGroundFootprintVintage ?? "City polygon source"}
+                    />
+                  </td>
+                  <td className="px-3 py-2.5">
+                    <SpaceValue
+                      row={row}
+                      field="availableSpaceSqft"
+                      note={row.space.availableSpaceSource ?? "Requires explicit verification"}
+                    />
                   </td>
                   <td className="px-3 py-2.5">
                     <OwnershipValue row={row} />
@@ -1059,10 +1202,42 @@ export default function SiteMatchmakerResultsTable({
               <dl className="mt-3 grid min-w-0 grid-cols-2 gap-x-3 gap-y-2 border-y border-[#0C1B33]/8 py-3">
                 <div className="min-w-0">
                   <dt className="font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/42">
-                    Footprint
+                    Match area
                   </dt>
                   <dd className="mt-0.5 break-words text-[11px] text-[#0C1B33]/72">
                     {candidateFootprintLabel(row)}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/42">
+                    Lot area
+                  </dt>
+                  <dd className="mt-0.5 text-[11px] text-[#0C1B33]/72">
+                    {candidateSpaceFactLabel(row, "lotAreaSqft")}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/42">
+                    Assessor building
+                  </dt>
+                  <dd className="mt-0.5 text-[11px] text-[#0C1B33]/72">
+                    {candidateSpaceFactLabel(row, "assessorBuildingSqft")}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/42">
+                    Ground footprint
+                  </dt>
+                  <dd className="mt-0.5 text-[11px] text-[#0C1B33]/72">
+                    {candidateSpaceFactLabel(row, "cityGroundFootprintSqft")}
+                  </dd>
+                </div>
+                <div className="min-w-0">
+                  <dt className="font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/42">
+                    Verified available
+                  </dt>
+                  <dd className="mt-0.5 text-[11px] text-[#0C1B33]/72">
+                    {candidateSpaceFactLabel(row, "availableSpaceSqft")}
                   </dd>
                 </div>
                 <div className="min-w-0">
@@ -1167,6 +1342,13 @@ export default function SiteMatchmakerResultsTable({
           Walkability Index on its published 1-20 scale. Expressway and airport distances are
           straight-line proximity signals, not routed travel times. These fields describe place
           context only.
+        </p>
+        <p className="mt-1.5">
+          Lot area, assessor building area, mapped building footprint on the parcel, and reported
+          available space are separate measurements. Building searches use only current, verified
+          reported available space for size
+          fit; assessor and City dimensions remain descriptive records. When published sources
+          disagree, both values remain visible and are not reconciled into a synthetic figure.
         </p>
         {contextLoad.status === "available" ? (
           <p className="mt-1.5 font-mono-bureau text-[8px] uppercase tracking-[0.06em]">

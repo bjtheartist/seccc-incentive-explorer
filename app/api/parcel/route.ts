@@ -9,6 +9,16 @@ import {
 } from "@/lib/parcel-classes";
 import { socrataHeaders } from "@/lib/socrata";
 import { classifyOwner } from "@/lib/owner-classify";
+import {
+  COOK_COUNTY_CURRENT_PARCELS_QUERY_URL,
+  normalizePin14,
+} from "@/lib/cook-viewer";
+import {
+  CITY_BUILDING_FOOTPRINTS_VINTAGE,
+  availableSpaceSourceLabel,
+  compactParcelSpaceFacts,
+  type ParcelSpaceFacts,
+} from "@/lib/parcel-space";
 import type { ParcelData } from "@/lib/types";
 
 /**
@@ -17,33 +27,50 @@ import type { ParcelData } from "@/lib/types";
  * Strategy:
  * 1. Check Redis cache (if configured)
  * 2. parcels table — nearest stored row within ~50m (if DB configured)
- * 3. Cook County ArcGIS MapServer Layer 44 — with retry
+ * 3. Cook County current CookViewer parcel service — with retry
  * 4. Socrata Parcel Universe (fallback)
  *
  * GET /api/parcel?lat=41.75&lon=-87.58
+ * GET /api/parcel?pin=20123456789012
  */
 
 const fmtMoney = (v: number | null) =>
   v != null ? `$${Number(v).toLocaleString()}` : null;
 
-/** Look up the nearest stored parcel within ~50m of the point, or null. */
-async function dbParcel(lat: number, lon: number): Promise<ParcelData | null> {
+/** Prefer an exact PIN; coordinates are only the fallback for address/map-point lookups. */
+async function dbParcel(
+  lat: number | null,
+  lon: number | null,
+  pin: string | null,
+): Promise<ParcelData | null> {
   const sql = getSQL();
   if (!sql) return null;
   try {
-    const rows = await sql`
-      SELECT pin, address, zip, class_code, class_description, tax_code, township,
-             land_sqft, bldg_sqft, bldg_age, land_value, bldg_value, total_value,
-             parcel_type, is_commercial, is_industrial, is_vacant,
-             owner_name, owner_mailing_address, owner_type
-      FROM parcels
-      WHERE geom IS NOT NULL
-        AND ST_DWithin(geom, ST_MakePoint(${lon}, ${lat})::geography, 50)
-      ORDER BY geom <-> ST_MakePoint(${lon}, ${lat})::geography
-      LIMIT 1
-    `;
+    const rows = pin
+      ? await sql`
+          SELECT pin, address, zip, class_code, class_description, tax_code, township,
+                 land_sqft, bldg_sqft, bldg_age, land_value, bldg_value, total_value,
+                 parcel_type, is_commercial, is_industrial, is_vacant,
+                 owner_name, owner_mailing_address, owner_type
+          FROM parcels
+          WHERE pin = ${pin}
+          LIMIT 1
+        `
+      : await sql`
+          SELECT pin, address, zip, class_code, class_description, tax_code, township,
+                 land_sqft, bldg_sqft, bldg_age, land_value, bldg_value, total_value,
+                 parcel_type, is_commercial, is_industrial, is_vacant,
+                 owner_name, owner_mailing_address, owner_type
+          FROM parcels
+          WHERE geom IS NOT NULL
+            AND ST_DWithin(geom, ST_MakePoint(${lon}, ${lat})::geography, 50)
+          ORDER BY geom <-> ST_MakePoint(${lon}, ${lat})::geography
+          LIMIT 1
+        `;
     if (rows.length === 0) return null;
     const r = rows[0];
+    const landSqft = r.land_sqft != null ? Number(r.land_sqft) : null;
+    const bldgSqft = r.bldg_sqft != null ? Number(r.bldg_sqft) : null;
     return {
       pin: r.pin || "",
       address: r.address || "",
@@ -52,9 +79,13 @@ async function dbParcel(lat: number, lon: number): Promise<ParcelData | null> {
       classDescription: r.class_description || describeClassCode(r.class_code || ""),
       taxCode: r.tax_code || "",
       township: r.township || "",
-      landSqft: r.land_sqft != null ? Number(r.land_sqft) : null,
-      bldgSqft: r.bldg_sqft != null ? Number(r.bldg_sqft) : null,
+      landSqft,
+      bldgSqft,
       bldgAge: r.bldg_age != null ? Number(r.bldg_age) : null,
+      space: compactParcelSpaceFacts({
+        lotAreaSqft: landSqft ?? undefined,
+        assessorBuildingSqft: bldgSqft ?? undefined,
+      }),
       landValue: fmtMoney(r.land_value != null ? Number(r.land_value) : null),
       bldgValue: fmtMoney(r.bldg_value != null ? Number(r.bldg_value) : null),
       totalValue: fmtMoney(r.total_value != null ? Number(r.total_value) : null),
@@ -71,8 +102,55 @@ async function dbParcel(lat: number, lon: number): Promise<ParcelData | null> {
   }
 }
 
+async function dbParcelSpace(pin: string): Promise<ParcelSpaceFacts | undefined> {
+  const sql = getSQL();
+  const normalizedPin = pin.replace(/\D/g, "");
+  if (!sql || normalizedPin.length !== 14) return undefined;
+  try {
+    const rows = await sql`
+      SELECT metric, sqft, source_key, source_year, source_updated_at,
+             fetched_at, verification_status, measurement_scope, is_active,
+             verified_at, reconfirm_after
+      FROM parcel_space_measurements
+      WHERE pin = ${normalizedPin} AND is_current IS TRUE
+      ORDER BY metric
+    `;
+    const facts: ParcelSpaceFacts = {};
+    for (const row of rows) {
+      const sqft = Number(row.sqft);
+      if (!Number.isFinite(sqft) || sqft <= 0) continue;
+      if (row.metric === "lot_area") {
+        facts.lotAreaSqft = Math.round(sqft);
+      } else if (row.metric === "assessor_building_area") {
+        facts.assessorBuildingSqft = Math.round(sqft);
+        const year = Number(row.source_year);
+        if (Number.isInteger(year) && year > 1800) facts.assessorBuildingYear = year;
+      } else if (row.metric === "city_ground_footprint") {
+        facts.cityGroundFootprintSqft = Math.round(sqft);
+        facts.cityGroundFootprintVintage = CITY_BUILDING_FOOTPRINTS_VINTAGE;
+      } else if (
+        row.metric === "available_space" &&
+        row.verification_status === "verified" &&
+        row.measurement_scope === "largest_contiguous_usable_interior_space" &&
+        row.is_active === true &&
+        row.verified_at &&
+        row.reconfirm_after &&
+        new Date(row.reconfirm_after).getTime() > Date.now()
+      ) {
+        facts.availableSpaceSqft = Math.round(sqft);
+        facts.availableSpaceSource = availableSpaceSourceLabel(String(row.source_key ?? ""));
+        facts.availableSpaceVerifiedAt = new Date(row.verified_at).toISOString();
+        facts.availableSpaceReconfirmAfter = new Date(row.reconfirm_after).toISOString();
+      }
+    }
+    return compactParcelSpaceFacts(facts);
+  } catch {
+    return undefined;
+  }
+}
+
 const CDN_HEADERS = {
-  "Cache-Control": "public, s-maxage=2592000, stale-while-revalidate=86400",
+  "Cache-Control": "public, s-maxage=300, stale-while-revalidate=300",
 };
 
 /** Fetch with retry and exponential backoff. */
@@ -102,37 +180,54 @@ async function fetchWithRetry(
 }
 
 export async function GET(request: NextRequest) {
-  const lat = request.nextUrl.searchParams.get("lat");
-  const lon = request.nextUrl.searchParams.get("lon");
+  const rawPin = request.nextUrl.searchParams.get("pin");
+  const pin = rawPin === null ? null : normalizePin14(rawPin);
+  const latRaw = request.nextUrl.searchParams.get("lat");
+  const lonRaw = request.nextUrl.searchParams.get("lon");
+  const lat = latRaw === null ? null : Number(latRaw);
+  const lon = lonRaw === null ? null : Number(lonRaw);
+  const hasCoordinates =
+    lat !== null &&
+    lon !== null &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lon) &&
+    lat >= -90 &&
+    lat <= 90 &&
+    lon >= -180 &&
+    lon <= 180;
 
-  if (!lat || !lon) {
+  if ((rawPin !== null && pin === null) || (!pin && !hasCoordinates)) {
     return NextResponse.json(
-      { error: "lat and lon are required" },
+      { error: "A valid 14-digit pin or valid lat and lon are required" },
       { status: 400 }
     );
   }
 
-  const cacheKey = `parcel:${roundCoord(parseFloat(lat))}:${roundCoord(parseFloat(lon))}`;
+  const cacheKey = pin
+    ? `parcel:v3:pin:${pin}`
+    : `parcel:v3:${roundCoord(lat!)}:${roundCoord(lon!)}`;
 
   const result = await cached<ParcelData | null>(cacheKey, 2592000, async () => {
     // Source 1: persistent parcels store (DB-first)
-    const stored = await dbParcel(parseFloat(lat!), parseFloat(lon!));
+    const stored = await dbParcel(lat, lon, pin);
     if (stored) return stored;
 
-    // Source 2: Cook County ArcGIS MapServer Layer 44
+    // Source 2: Cook County current CookViewer parcel service
     try {
-      const arcgisUrl = new URL(
-        "https://gis.cookcountyil.gov/traditional/rest/services/cookVwrDynmc/MapServer/44/query"
-      );
-      arcgisUrl.searchParams.set(
-        "geometry",
-        JSON.stringify({ x: parseFloat(lon!), y: parseFloat(lat!), spatialReference: { wkid: 4326 } })
-      );
-      arcgisUrl.searchParams.set("geometryType", "esriGeometryPoint");
-      arcgisUrl.searchParams.set("spatialRel", "esriSpatialRelIntersects");
+      const arcgisUrl = new URL(COOK_COUNTY_CURRENT_PARCELS_QUERY_URL);
+      if (pin) {
+        arcgisUrl.searchParams.set("where", `PIN14='${pin}'`);
+      } else {
+        arcgisUrl.searchParams.set(
+          "geometry",
+          JSON.stringify({ x: lon, y: lat, spatialReference: { wkid: 4326 } })
+        );
+        arcgisUrl.searchParams.set("geometryType", "esriGeometryPoint");
+        arcgisUrl.searchParams.set("spatialRel", "esriSpatialRelIntersects");
+      }
       arcgisUrl.searchParams.set(
         "outFields",
-        "PIN14,Address,City,Zip_Code,Town,BLDGClass,TaxCode,LandSqft,BldgSqft,BldgAge,TotalValue,LandValue,BldgValue,PARCELTYPE"
+        "PIN14,street_address,city_state_zip,township_name,BCLASS,TAXDIST,LANDSF,BLDGSQFT,BLDGAGE,CURRENTVALUE_TOTAL,CURRENTVALUE_LAND,CURRENTVALUE_BLDG,TAXYR"
       );
       arcgisUrl.searchParams.set("returnGeometry", "false");
       arcgisUrl.searchParams.set("f", "json");
@@ -142,21 +237,28 @@ export async function GET(request: NextRequest) {
         const data = await res.json();
         if (data.features && data.features.length > 0) {
           const a = data.features[0].attributes;
-          const classCode = a.BLDGClass || "";
+          const classCode = a.BCLASS || "";
+          const landSqft = a.LANDSF != null ? Number(a.LANDSF) : null;
+          const bldgSqft = a.BLDGSQFT != null ? Number(a.BLDGSQFT) : null;
           return {
             pin: a.PIN14 || "",
-            address: [a.Address, a.City, a.Zip_Code].filter(Boolean).join(", "),
+            address: [a.street_address, a.city_state_zip].filter(Boolean).join(", "),
             classCode,
             classDescription: describeClassCode(classCode),
-            taxCode: a.TaxCode || "",
-            township: a.Town || "",
-            landSqft: a.LandSqft != null ? Number(a.LandSqft) : null,
-            bldgSqft: a.BldgSqft != null ? Number(a.BldgSqft) : null,
-            bldgAge: a.BldgAge != null ? Number(a.BldgAge) : null,
-            landValue: a.LandValue != null ? `$${Number(a.LandValue).toLocaleString()}` : null,
-            bldgValue: a.BldgValue != null ? `$${Number(a.BldgValue).toLocaleString()}` : null,
-            totalValue: a.TotalValue != null ? `$${Number(a.TotalValue).toLocaleString()}` : null,
-            parcelType: a.PARCELTYPE != null ? Number(a.PARCELTYPE) : null,
+            taxCode: a.TAXDIST || "",
+            township: a.township_name || "",
+            landSqft,
+            bldgSqft,
+            bldgAge: a.BLDGAGE != null ? Number(a.BLDGAGE) : null,
+            space: compactParcelSpaceFacts({
+              lotAreaSqft: landSqft ?? undefined,
+              assessorBuildingSqft: bldgSqft ?? undefined,
+              assessorBuildingYear: a.TAXYR != null ? Number(a.TAXYR) : undefined,
+            }),
+            landValue: a.CURRENTVALUE_LAND != null ? `$${Number(a.CURRENTVALUE_LAND).toLocaleString()}` : null,
+            bldgValue: a.CURRENTVALUE_BLDG != null ? `$${Number(a.CURRENTVALUE_BLDG).toLocaleString()}` : null,
+            totalValue: a.CURRENTVALUE_TOTAL != null ? `$${Number(a.CURRENTVALUE_TOTAL).toLocaleString()}` : null,
+            parcelType: null,
             isCommercial: isCommercialClass(classCode),
             isIndustrial: isIndustrialClass(classCode),
             isVacant: isVacantClass(classCode),
@@ -169,7 +271,10 @@ export async function GET(request: NextRequest) {
 
     // Source 3: Socrata Parcel Universe (fallback)
     try {
-      const sodaUrl = `https://datacatalog.cookcountyil.gov/resource/nj4t-kc8j.json?$where=within_circle(loc_property_location,${lat},${lon},50)&$limit=1`;
+      const where = pin
+        ? `pin='${pin}'`
+        : `within_circle(loc_property_location,${lat},${lon},50)`;
+      const sodaUrl = `https://datacatalog.cookcountyil.gov/resource/nj4t-kc8j.json?$where=${encodeURIComponent(where)}&$limit=1`;
       const res = await fetchWithRetry(sodaUrl, {
         headers: socrataHeaders(),
       });
@@ -179,6 +284,9 @@ export async function GET(request: NextRequest) {
         if (data && data.length > 0) {
           const r = data[0];
           const classCode = r.class || "";
+          const landSqft = r.land_square_footage != null ? Number(r.land_square_footage) : null;
+          const bldgSqft =
+            r.building_square_footage != null ? Number(r.building_square_footage) : null;
           return {
             pin: r.pin || "",
             address: r.prop_address || "",
@@ -186,9 +294,13 @@ export async function GET(request: NextRequest) {
             classDescription: describeClassCode(classCode),
             taxCode: r.tax_code || "",
             township: r.township_name || "",
-            landSqft: r.land_square_footage != null ? Number(r.land_square_footage) : null,
-            bldgSqft: r.building_square_footage != null ? Number(r.building_square_footage) : null,
+            landSqft,
+            bldgSqft,
             bldgAge: r.age != null ? Number(r.age) : null,
+            space: compactParcelSpaceFacts({
+              lotAreaSqft: landSqft ?? undefined,
+              assessorBuildingSqft: bldgSqft ?? undefined,
+            }),
             landValue: r.certified_land != null ? `$${Number(r.certified_land).toLocaleString()}` : null,
             bldgValue: r.certified_building != null ? `$${Number(r.certified_building).toLocaleString()}` : null,
             totalValue: r.certified_total != null ? `$${Number(r.certified_total).toLocaleString()}` : null,
@@ -243,6 +355,16 @@ export async function GET(request: NextRequest) {
     } catch {
       // Assessment enrichment is non-blocking — failure is fine
     }
+
+    const storedSpace = await dbParcelSpace(enriched.pin);
+    enriched.space = compactParcelSpaceFacts({
+      lotAreaSqft: enriched.landSqft ?? undefined,
+      assessorBuildingSqft: enriched.bldgSqft ?? undefined,
+      ...enriched.space,
+      ...storedSpace,
+    });
+    enriched.landSqft = enriched.space?.lotAreaSqft ?? enriched.landSqft;
+    enriched.bldgSqft = enriched.space?.assessorBuildingSqft ?? enriched.bldgSqft;
   }
 
   return NextResponse.json(enriched, { headers: CDN_HEADERS });

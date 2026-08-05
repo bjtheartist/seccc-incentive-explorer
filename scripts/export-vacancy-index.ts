@@ -57,6 +57,12 @@ import {
 } from "../lib/owner-taxonomy";
 import { normalizeOwnerAddress } from "../lib/corridor-owners";
 import { toDigitsOnlyPin } from "../lib/ingest/pin-batch";
+import {
+  CITY_BUILDING_FOOTPRINTS_VINTAGE,
+  availableSpaceSourceLabel,
+  compactParcelSpaceFacts,
+  type ParcelSpaceFacts,
+} from "../lib/parcel-space";
 import { CHICAGO_COMMUNITY_AREAS } from "../lib/community-areas";
 import type { ExemptionReferralFile, ExemptionReferralRow } from "../lib/exemption-anomalies";
 import {
@@ -737,6 +743,8 @@ async function fetchVacantLandParcels(
     lon: number | null;
     address: string | null;
     squareFeet: number | null;
+    assessorBuildingSqft: number | null;
+    assessorBuildingYear: number | null;
     /** Taxpayer name/mailing — read to CLASSIFY the v2 structure/geography axes
      * at export time; NEVER emitted (the anonymization assert guards output). */
     ownerName: string | null;
@@ -752,6 +760,7 @@ async function fetchVacantLandParcels(
     // coordinates stay in the series/total but drop out of landPoints.
     const rows = (await sql`
       SELECT pin, COALESCE(owner_type, 'unknown') AS owner_type, lat, lon, address, land_sqft,
+             bldg_sqft,
              owner_name, owner_mailing_address
       FROM parcels
       WHERE zip = ${zip} AND is_vacant IS TRUE
@@ -762,6 +771,7 @@ async function fetchVacantLandParcels(
       lon: number | string | null;
       address: string | null;
       land_sqft: number | string | null;
+      bldg_sqft: number | string | null;
       owner_name: string | null;
       owner_mailing_address: string | null;
     }[];
@@ -778,6 +788,8 @@ async function fetchVacantLandParcels(
       lon: toNumOrNull(r.lon),
       address: r.address ?? null,
       squareFeet: toNumOrNull(r.land_sqft),
+      assessorBuildingSqft: toNumOrNull(r.bldg_sqft),
+      assessorBuildingYear: null,
       ownerName: r.owner_name,
       ownerMailingAddress: r.owner_mailing_address,
     }));
@@ -798,6 +810,9 @@ interface ParcelIndexRow {
   normAddress: string;
   ownerName: string | null;
   ownerMailingAddress: string | null;
+  lotAreaSqft: number | null;
+  assessorBuildingSqft: number | null;
+  assessorBuildingYear: number | null;
   /** Cook County class code (drives the exemption-anomaly land/building split
    * — class 1xx = land, 2xx = building). Null when the parcel row lacks one. */
   classCode: string | null;
@@ -821,7 +836,8 @@ async function fetchParcelAddressIndex(
     const rows = (await sql`
       SELECT pin,
              regexp_replace(lower(coalesce(address, '')), '[^a-z0-9]', '', 'g') AS norm_address,
-             owner_name, owner_mailing_address, class_code
+             owner_name, owner_mailing_address, class_code,
+             land_sqft, bldg_sqft
       FROM parcels
       WHERE zip = ${zip}
     `) as {
@@ -830,12 +846,17 @@ async function fetchParcelAddressIndex(
       owner_name: string | null;
       owner_mailing_address: string | null;
       class_code: string | null;
+      land_sqft: number | string | null;
+      bldg_sqft: number | string | null;
     }[];
     return rows.map((r) => ({
       pin: toDigitsOnlyPin(r.pin ?? ""),
       normAddress: r.norm_address ?? "",
       ownerName: r.owner_name,
       ownerMailingAddress: r.owner_mailing_address,
+      lotAreaSqft: toNumOrNull(r.land_sqft),
+      assessorBuildingSqft: toNumOrNull(r.bldg_sqft),
+      assessorBuildingYear: null,
       classCode: r.class_code,
     }));
   } catch (err) {
@@ -845,6 +866,91 @@ async function fetchParcelAddressIndex(
     );
     return null;
   }
+}
+
+/**
+ * Source-separated measurements for this ZIP. The table is an additive
+ * enrichment: an unmigrated refresh branch returns an empty map and the legacy
+ * parcel columns still populate lot/assessor facts.
+ */
+async function fetchParcelSpaceFactsByPin(
+  sql: NeonQueryFunction<false, false>,
+  zip: string,
+): Promise<Map<string, ParcelSpaceFacts>> {
+  try {
+    const rows = (await sql`
+      SELECT m.pin, m.metric, m.sqft, m.source_key, m.source_year,
+             m.source_updated_at, m.fetched_at, m.verification_status,
+             m.measurement_scope, m.is_active, m.verified_at, m.reconfirm_after
+      FROM parcel_space_measurements m
+      WHERE m.is_current IS TRUE
+        AND (
+          m.zip = ${zip}
+          OR EXISTS (SELECT 1 FROM parcels p WHERE p.pin = m.pin AND p.zip = ${zip})
+        )
+      ORDER BY m.pin, m.metric
+    `) as {
+      pin: string | null;
+      metric: string | null;
+      sqft: number | string | null;
+      source_key: string | null;
+      source_year: number | string | null;
+      source_updated_at: Date | string | null;
+      fetched_at: Date | string | null;
+      verification_status: string | null;
+      measurement_scope: string | null;
+      is_active: boolean | null;
+      verified_at: Date | string | null;
+      reconfirm_after: Date | string | null;
+    }[];
+
+    const byPin = new Map<string, ParcelSpaceFacts>();
+    for (const row of rows) {
+      const pin = toDigitsOnlyPin(row.pin ?? "");
+      const sqft = toNumOrNull(row.sqft);
+      if (pin.length !== 14 || sqft == null || sqft <= 0) continue;
+      const facts = byPin.get(pin) ?? {};
+      if (row.metric === "lot_area") {
+        facts.lotAreaSqft = Math.round(sqft);
+      } else if (row.metric === "assessor_building_area") {
+        facts.assessorBuildingSqft = Math.round(sqft);
+        const sourceYear = toNumOrNull(row.source_year);
+        if (sourceYear != null) facts.assessorBuildingYear = Math.round(sourceYear);
+      } else if (row.metric === "city_ground_footprint") {
+        facts.cityGroundFootprintSqft = Math.round(sqft);
+        facts.cityGroundFootprintVintage = CITY_BUILDING_FOOTPRINTS_VINTAGE;
+      } else if (
+        row.metric === "available_space" &&
+        row.verification_status === "verified" &&
+        row.measurement_scope === "largest_contiguous_usable_interior_space" &&
+        row.is_active === true &&
+        row.verified_at &&
+        row.reconfirm_after &&
+        new Date(row.reconfirm_after).getTime() > Date.now()
+      ) {
+        facts.availableSpaceSqft = Math.round(sqft);
+        facts.availableSpaceSource = availableSpaceSourceLabel(row.source_key ?? "");
+        facts.availableSpaceVerifiedAt = new Date(row.verified_at).toISOString();
+        facts.availableSpaceReconfirmAfter = new Date(row.reconfirm_after).toISOString();
+      }
+      const compact = compactParcelSpaceFacts(facts);
+      if (compact) byPin.set(pin, compact);
+    }
+    return byPin;
+  } catch (err) {
+    console.warn(
+      `  ${zip}: parcel-space measurements unavailable; exporting legacy parcel dimensions only:`,
+      err instanceof Error ? err.message : err,
+    );
+    return new Map();
+  }
+}
+
+function mergeParcelSpaceFacts(
+  enriched: ParcelSpaceFacts | undefined,
+  legacy: ParcelSpaceFacts,
+): ParcelSpaceFacts | undefined {
+  return compactParcelSpaceFacts({ ...legacy, ...enriched });
 }
 
 /**
@@ -1023,6 +1129,7 @@ interface ScoredSite {
   propertyType: VacancyPropertyType;
   status: string | null;
   squareFeet: number | null;
+  space?: ParcelSpaceFacts;
   zoningClass: string | null;
   incentiveCount: number;
   priorityScore: number;
@@ -1051,11 +1158,14 @@ function buildEdition(
         lon: number | null;
         address: string | null;
         squareFeet: number | null;
+        assessorBuildingSqft: number | null;
+        assessorBuildingYear: number | null;
         ownerName: string | null;
         ownerMailingAddress: string | null;
       }[]
     | null,
   parcelIndex: ParcelIndexRow[] | null,
+  spaceFactsByPin: Map<string, ParcelSpaceFacts>,
   geo: ZipGeometry | undefined,
   transport: { kind: "expressway" | "rail"; points: [number, number][] }[],
   saleYearsByPin: Map<string, number[]> | null,
@@ -1135,6 +1245,8 @@ function buildEdition(
       lon: p.lon,
       address: p.address,
       squareFeet: p.squareFeet,
+      assessorBuildingSqft: p.assessorBuildingSqft,
+      assessorBuildingYear: p.assessorBuildingYear,
       ownerName: p.ownerName,
       ownerMailingAddress: p.ownerMailingAddress,
     }));
@@ -1174,6 +1286,11 @@ function buildEdition(
     const allLandPoints: VacancyLandPoint[] = withCoords.map((r) => {
       const reconciledType = reconcileOwnerTypeForPin(r.pin, r.ownerType, inventoryPins);
       const axes = landAxes(r);
+      const space = mergeParcelSpaceFacts(spaceFactsByPin.get(r.pin), {
+        lotAreaSqft: r.squareFeet ?? undefined,
+        assessorBuildingSqft: r.assessorBuildingSqft ?? undefined,
+        assessorBuildingYear: r.assessorBuildingYear ?? undefined,
+      });
       return {
         lat: r.lat as number,
         lon: r.lon as number,
@@ -1181,6 +1298,7 @@ function buildEdition(
         address: r.address ?? null,
         pin: r.pin,
         squareFeet: r.squareFeet ?? null,
+        ...(space ? { space } : {}),
         ownerConfidence: ownerConfidenceForPoint(r.pin, reconciledType, inventoryPins),
         saleYear: latestSaleYearForPin(r.pin, saleYearsByPin),
         ownerStructure: axes.structure,
@@ -1236,10 +1354,12 @@ function buildEdition(
     let pin: string | null;
     let pinMatch: PinMatchKind;
     let axes: { structure: OwnerStructure; geography: OwnerGeography };
+    let resolvedParcel: ParcelIndexRow | undefined;
     if (isCols) {
       pin = colsPin.length === 14 ? colsPin : null;
       pinMatch = "inventory";
-      axes = axesFromParcel(pin ? parcelByPin.get(pin) : undefined, true);
+      resolvedParcel = pin ? parcelByPin.get(pin) : undefined;
+      axes = axesFromParcel(resolvedParcel, true);
     } else {
       const norm = normalizeOwnerAddress(r.address);
       const matches = norm ? parcelsByNormAddress.get(norm) ?? [] : [];
@@ -1247,6 +1367,7 @@ function buildEdition(
       if (unique && unique.pin) {
         pin = unique.pin;
         pinMatch = "address_matched";
+        resolvedParcel = unique;
         axes = axesFromParcel(unique, false);
         buildingMatched += 1;
       } else {
@@ -1260,6 +1381,13 @@ function buildEdition(
     // matched), so a back-searched building can surface its own tax-sale signal.
     const saleYear = latestSaleYearForPin(pin, saleYearsByPin);
     const violation = addressHasViolation(normalizeOwnerAddress(r.address), violationAddressSet);
+    const space = mergeParcelSpaceFacts(pin ? spaceFactsByPin.get(pin) : undefined, {
+      lotAreaSqft:
+        resolvedParcel?.lotAreaSqft ??
+        (propertyType === "vacant_land" ? squareFeet ?? undefined : undefined),
+      assessorBuildingSqft: resolvedParcel?.assessorBuildingSqft ?? undefined,
+      assessorBuildingYear: resolvedParcel?.assessorBuildingYear ?? undefined,
+    });
     return {
       id: r.id,
       lat: toNum(r.lat),
@@ -1272,6 +1400,7 @@ function buildEdition(
       propertyType,
       status: r.status,
       squareFeet,
+      ...(space ? { space } : {}),
       zoningClass: r.zoning_class,
       incentiveCount,
       priorityScore: score,
@@ -1336,6 +1465,7 @@ function buildEdition(
     address: s.rawAddress,
     pin: s.pin,
     squareFeet: s.squareFeet,
+    ...(s.space ? { space: s.space } : {}),
     zoningClass: s.zoningClass,
     incentiveCount: s.incentiveCount,
     ownerConfidence: s.ownerConfidence,
@@ -1721,6 +1851,7 @@ async function main() {
     const parcels = await fetchVacantLandParcels(sql, zip);
     // ALL parcels in the ZIP, as the address index for 311-building matching (D2).
     const parcelIndex = await fetchParcelAddressIndex(sql, zip);
+    const spaceFactsByPin = await fetchParcelSpaceFactsByPin(sql, zip);
     const transport = geo ? clipTransportForEdition(transportFeatures, geo.bbox) : [];
     const editionEntry = PILOT_ZIPS.find((e) => e.zip === zip);
     const anchors = editionEntry ? anchorsForEdition(editionEntry, anchorsByCa) : null;
@@ -1735,6 +1866,7 @@ async function main() {
       rows,
       parcels,
       parcelIndex,
+      spaceFactsByPin,
       geo,
       transport,
       saleYearsByPin,
@@ -1757,7 +1889,9 @@ async function main() {
       excludedNoAddressCount,
       duplicateRowsRemoved,
     };
-    const directorySerialized = JSON.stringify(directoryFile, null, 2) + "\n";
+    // These files ship to browsers. Keep public artifacts minified; pretty
+    // output almost doubles the payload for no user-facing benefit.
+    const directorySerialized = JSON.stringify(directoryFile);
     assertAnonymized(directorySerialized);
     const directoryPath = join(DIRECTORY_DIR, `${zip}.json`);
     writeFileSync(directoryPath, directorySerialized);
@@ -1834,13 +1968,21 @@ async function main() {
       corridorMetrics: "Explorer corridor-metrics citywide export (vacancy rate, local ownership, incentive coverage)",
       zipBoundaries: "Chicago ZIP Code boundaries (unjd-c2ca)",
       transportNetwork: "Chicago transportation network (expressways + rail)",
+      parcelArea:
+        "Cook County current CookViewer parcel service (LANDSF, exact PIN)",
+      assessorBuildingArea:
+        "Cook County current CookViewer parcel service (residential BLDGSQFT) + Assessor Commercial Valuation Data csik-bsws (BLDGSF on exact KeyPIN)",
+      cityGroundFootprint:
+        "City of Chicago Building Footprints syp8-uezg (geometry current as of August 2015; spatial parcel intersection)",
+      availableSpace:
+        "Explicitly verified owner, chamber, Land Bank, or City property record; absent unless verified",
       asOf: generatedAt.slice(0, 10),
     },
     editions,
     matrix: buildMatrix(editions),
   };
 
-  const serialized = JSON.stringify(out, null, 2) + "\n";
+  const serialized = JSON.stringify(out);
   assertAnonymized(serialized);
 
   mkdirSync(dirname(OUT_PATH), { recursive: true });

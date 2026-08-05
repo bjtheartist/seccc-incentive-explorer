@@ -111,6 +111,33 @@ describe("buildSiteCardHtml", () => {
     expect(html).toContain("21322110390000");
   });
 
+  it("keeps all four source-separated space facts in the standard pin dossier", () => {
+    const html = buildSiteCardHtml(
+      card({
+        space: {
+          lotAreaSqft: 12027,
+          assessorBuildingSqft: 5000,
+          assessorBuildingYear: 2024,
+          cityGroundFootprintSqft: 2500,
+          cityGroundFootprintVintage: "Current as of August 2015",
+          availableSpaceSqft: 2000,
+          availableSpaceSource: "Owner confirmation",
+          availableSpaceVerifiedAt: "2026-08-01T00:00:00.000Z",
+          availableSpaceReconfirmAfter: "2026-09-01T00:00:00.000Z",
+        },
+      }),
+      "60617",
+      null,
+    );
+
+    expect(html).toContain("Lot area: 12,027 sq ft");
+    expect(html).toContain("Assessor building area: 5,000 sq ft");
+    expect(html).toContain("Mapped building footprint on parcel: 2,500 sq ft");
+    expect(html).toContain("Reported available space: 2,000 sq ft");
+    expect(html).toContain("Current as of August 2015");
+    expect(html).toContain("confirm current availability");
+  });
+
   it("maps unknown ownership to 'Not yet classified' and never shows 'Unknown'", () => {
     const html = buildSiteCardHtml(card({ ownerType: "unknown" }), "60617", null);
     expect(html).toContain("Not yet classified");

@@ -14,6 +14,7 @@ import { OwnerFileViewTracker } from "@/components/owner-file/OwnerFileViewTrack
 import { OwnerFileVerificationForm } from "@/components/owner-file/OwnerFileVerificationForm";
 import { OwnerFileDossierButton } from "@/components/owner-file/OwnerFileDossierButton";
 import { OutreachLog } from "@/components/owner-file/OutreachLog";
+import { AvailableSpaceVerificationForm } from "@/components/owner-file/AvailableSpaceVerificationForm";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import {
   OWNER_GEOGRAPHY_LABELS,
@@ -249,6 +250,17 @@ export default async function OwnerFileDetailPage({ params }: { params: Params }
               </div>
             </div>
           )}
+          <AvailableSpaceVerificationForm
+            zip={zip}
+            clusterKey={clusterKey}
+            pins={Array.from(
+              new Set(
+                cluster.pins
+                  .map((pin) => pin.replace(/\D/g, ""))
+                  .filter((pin) => pin.length === 14),
+              ),
+            )}
+          />
         </section>
 
         {/* Distress signals */}

@@ -150,6 +150,7 @@ import {
   type PermitMapTypeKey,
 } from "@/lib/permit-map";
 import type { MapDossierSelection } from "@/lib/map-dossier";
+import { compactParcelSpaceFacts } from "@/lib/parcel-space";
 import { PERMIT_PORTAL_LABEL, PERMIT_PORTAL_URL } from "@/lib/permit-match-lines";
 
 export default function MapView() {
@@ -624,8 +625,14 @@ export default function MapView() {
   );
 
   /* ── Fetch area stats for a location ────── */
-  const loadCensusForPoint = useCallback(async (lat: number, lon: number, label?: string) => {
+  const loadCensusForPoint = useCallback(async (
+    lat: number,
+    lon: number,
+    label?: string,
+    pin?: string | null,
+  ) => {
     if (label) setSnapshotLabel(label);
+    setAreaStats({ ...DEFAULT_STATS, districtsLoading: true });
     try {
       const [data, parcelData] = await Promise.all([
         cachedFetch<{
@@ -634,7 +641,9 @@ export default function MapView() {
           walkScore?: number;
           tractId?: string;
         }>(`/api/census?lat=${lat}&lon=${lon}`).catch(() => null),
-        cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).catch(() => null),
+        cachedFetch<ParcelData>(
+          `/api/parcel?lat=${lat}&lon=${lon}${pin ? `&pin=${encodeURIComponent(pin)}` : ""}`,
+        ).catch(() => null),
       ]);
       if (data) {
         setAreaStats({
@@ -661,6 +670,7 @@ export default function MapView() {
           priorYearTax: parcelData?.priorYearTax,
           ownerName: parcelData?.ownerName,
           ownerType: parcelData?.ownerType,
+          space: parcelData?.space,
           districtsLoading: true,
         });
         if (!label && data.tractId) {
@@ -699,7 +709,7 @@ export default function MapView() {
 
   // Handle click for location zones + top programs (with parcel boost)
   const handleMapClick = useCallback(
-    async (lat: number, lon: number) => {
+    async (lat: number, lon: number, pin?: string | null) => {
       setLastClickLat(lat);
       setLastClickLon(lon);
       setCopiedLink(false);
@@ -707,7 +717,9 @@ export default function MapView() {
       try {
         const [data, parcelData, tifFinanceData] = await Promise.all([
           cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`),
-          cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).catch(() => null),
+          cachedFetch<ParcelData>(
+            `/api/parcel?lat=${lat}&lon=${lon}${pin ? `&pin=${encodeURIComponent(pin)}` : ""}`,
+          ).catch(() => null),
           cachedFetch<{ tifFinance?: TifFinanceContext | null }>(
             `/api/tif-finance?lat=${lat}&lon=${lon}`
           ).catch(() => null),
@@ -1024,6 +1036,23 @@ export default function MapView() {
             vacancyType: rawType === "vacant_land" ? "vacant_land" : "vacant_building",
             pin,
             squareFeet: numberValue(properties.squareFeet),
+            space: compactParcelSpaceFacts({
+              lotAreaSqft:
+                numberValue(properties.lotAreaSqft) ??
+                (rawType === "vacant_land" ? numberValue(properties.squareFeet) ?? undefined : undefined),
+              assessorBuildingSqft: numberValue(properties.assessorBuildingSqft) ?? undefined,
+              assessorBuildingYear: numberValue(properties.assessorBuildingYear) ?? undefined,
+              cityGroundFootprintSqft:
+                numberValue(properties.cityGroundFootprintSqft) ?? undefined,
+              cityGroundFootprintVintage:
+                textValue(properties.cityGroundFootprintVintage) ?? undefined,
+              availableSpaceSqft: numberValue(properties.availableSpaceSqft) ?? undefined,
+              availableSpaceSource: textValue(properties.availableSpaceSource) ?? undefined,
+              availableSpaceVerifiedAt:
+                textValue(properties.availableSpaceVerifiedAt) ?? undefined,
+              availableSpaceReconfirmAfter:
+                textValue(properties.availableSpaceReconfirmAfter) ?? undefined,
+            }),
             incentiveGeographyCount: numberValue(properties.incentiveCount),
             sources: [
               {
@@ -1043,16 +1072,21 @@ export default function MapView() {
         if (parcelFeature) {
           const properties = parcelFeature.properties || {};
           const pin = textValue(properties.PIN14);
-          const propertyClass = textValue(properties.BLDGClass);
+          const propertyClass = textValue(properties.BCLASS);
           selection = {
             kind: "parcel",
-            title: textValue(properties.Address) || pin || "Selected parcel",
+            title: textValue(properties.street_address) || pin || "Selected parcel",
             pin,
             propertyClass,
             propertyClassDescription: propertyClass
               ? describeClassCode(propertyClass)
               : null,
-            assessedTotal: numberValue(properties.TotalValue),
+            assessedTotal: numberValue(properties.CURRENTVALUE_TOTAL),
+            space: compactParcelSpaceFacts({
+              lotAreaSqft: numberValue(properties.LANDSF) ?? undefined,
+              assessorBuildingSqft: numberValue(properties.BLDGSQFT) ?? undefined,
+              assessorBuildingYear: numberValue(properties.TAXYR) ?? undefined,
+            }),
             sources: [
               {
                 label: "Cook County parcel records",
@@ -1126,9 +1160,15 @@ export default function MapView() {
           lat: lngLat.lat,
           lon: lngLat.lng,
         };
+        const selectedPin =
+          activeSelection.kind === "parcel" ||
+          activeSelection.kind === "vacancy" ||
+          activeSelection.kind === "permit"
+            ? activeSelection.pin ?? null
+            : null;
         openDossier(activeSelection);
-        loadCensusRef.current(lngLat.lat, lngLat.lng, activeSelection.title);
-        lastClickRef.current(lngLat.lat, lngLat.lng);
+        loadCensusRef.current(lngLat.lat, lngLat.lng, activeSelection.title, selectedPin);
+        lastClickRef.current(lngLat.lat, lngLat.lng, selectedPin);
         snapshotOpenedAtRef.current = Date.now();
         if (!isMobileView) setSnapshotOpen(true);
       }
@@ -2794,7 +2834,8 @@ export default function MapView() {
           geometry,
           geometryType: "esriGeometryEnvelope",
           spatialRel: "esriSpatialRelIntersects",
-          outFields: "PIN14,BLDGClass,TotalValue,Address",
+          outFields:
+            "PIN14,BCLASS,CURRENTVALUE_TOTAL,street_address,LANDSF,BLDGSQFT,TAXYR",
           returnGeometry: "true",
           outSR: "4326",
           f: "geojson",

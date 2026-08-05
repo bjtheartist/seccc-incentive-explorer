@@ -28,6 +28,14 @@ import type {
 import { formatMiles } from "@/lib/transport-access";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
+import {
+  compactParcelSpaceFacts,
+  siteMatchAreaForProperty,
+  siteMatchAreaLabel,
+  squareFeetLabel,
+  vacancySpaceFacts,
+  type ParcelSpaceFacts,
+} from "@/lib/parcel-space";
 
 export interface MapDossierCardProps {
   areaStats: AreaStats;
@@ -104,6 +112,45 @@ function FactRow({ label, value, note }: FactRowProps) {
   );
 }
 
+function SpaceFactRows({ space }: { space: ParcelSpaceFacts | null | undefined }) {
+  return (
+    <div className="space-y-2 border-t border-[#0C1B33]/8 pt-3">
+      <div className="font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A93A6]">
+        Site dimensions
+      </div>
+      <FactRow
+        label="Lot area"
+        value={squareFeetLabel(space?.lotAreaSqft)}
+        note="Cook County parcel area."
+      />
+      <FactRow
+        label="Assessor building area"
+        value={squareFeetLabel(space?.assessorBuildingSqft)}
+        note={
+          space?.assessorBuildingYear
+            ? `Assessor tax year ${space.assessorBuildingYear}; not proof of currently available space.`
+            : "Whole-building assessor record; not proof of currently available space."
+        }
+      />
+      <FactRow
+        label="Mapped building footprint on parcel"
+        value={squareFeetLabel(space?.cityGroundFootprintSqft)}
+        note={space?.cityGroundFootprintVintage ?? "City polygon measurement not yet mapped."}
+      />
+      <FactRow
+        label="Reported available space"
+        value={space?.availableSpaceSqft ? squareFeetLabel(space.availableSpaceSqft) : "Not verified"}
+        note={
+          space?.availableSpaceVerifiedAt
+            ? `Verified ${new Date(space.availableSpaceVerifiedAt).toLocaleDateString("en-US")} via ${space.availableSpaceSource ?? "a documented source"}; reconfirm by ${space.availableSpaceReconfirmAfter ? new Date(space.availableSpaceReconfirmAfter).toLocaleDateString("en-US") : "the next review"}.`
+            : space?.availableSpaceSource ??
+              "Requires an explicit owner, chamber, or official record; confirm current availability."
+        }
+      />
+    </div>
+  );
+}
+
 function selectionKindLabel(selection: MapDossierSelection): string {
   switch (selection.kind) {
     case "address":
@@ -145,9 +192,11 @@ function selectionSubtitle(selection: MapDossierSelection): string {
       return selection.pin ? `Cook County parcel ${selection.pin}` : "Cook County parcel";
     case "vacancy": {
       const type = VACANCY_TYPE_LABELS[selection.vacancyType];
+      const space = vacancySpaceFacts(selection.vacancyType, selection.space, selection.squareFeet);
+      const matchArea = siteMatchAreaForProperty(selection.vacancyType, space);
       const size =
-        selection.squareFeet != null && Number.isFinite(selection.squareFeet)
-          ? ` · about ${selection.squareFeet.toLocaleString("en-US")} sq ft`
+        matchArea.sqft != null
+          ? ` · ${matchArea.sqft.toLocaleString("en-US")} sq ft ${siteMatchAreaLabel(matchArea.kind).toLowerCase()}`
           : "";
       return `${type}${size}`;
     }
@@ -311,12 +360,6 @@ function SelectionFacts({ selection }: { selection: MapDossierSelection }) {
       return (
         <>
           <FactRow label="Tracked type" value={VACANCY_TYPE_LABELS[selection.vacancyType]} />
-          {selection.squareFeet != null ? (
-            <FactRow
-              label="Approximate footprint"
-              value={`${selection.squareFeet.toLocaleString("en-US")} sq ft`}
-            />
-          ) : null}
           {selection.pin ? <FactRow label="PIN" value={selection.pin} /> : null}
           {selection.incentiveGeographyCount != null ? (
             <FactRow
@@ -369,11 +412,33 @@ export default function MapDossierCard({
   const contextTransport = snapshotContextSummary?.transport ?? areaStats.transport;
   const contextSiteSignals = snapshotContextSummary?.siteSignals ?? areaStats.siteSignals;
   const title = activeSelection.title.trim() || snapshotLabel.trim() || "Selected location";
-  const nextStep = defaultNextStep(activeSelection, areaStats.parcelPin);
-  const parcelUrl = cookViewerUrl(areaStats.parcelPin);
-  const deedUrl = clerkRecordsUrl(areaStats.parcelPin);
+  const selectedPin =
+    activeSelection.kind === "parcel" ||
+    activeSelection.kind === "vacancy" ||
+    activeSelection.kind === "permit"
+      ? activeSelection.pin ?? null
+      : null;
+  const selectedSpace =
+    activeSelection.kind === "parcel"
+      ? activeSelection.space
+      : activeSelection.kind === "vacancy"
+        ? vacancySpaceFacts(
+            activeSelection.vacancyType,
+            activeSelection.space,
+            activeSelection.squareFeet,
+          )
+        : undefined;
+  const propertySpace = compactParcelSpaceFacts({
+    ...selectedSpace,
+    ...areaStats.space,
+  });
+  const dossierPin = selectedPin ?? areaStats.parcelPin;
+  const nextStep = defaultNextStep(activeSelection, dossierPin);
+  const parcelUrl = cookViewerUrl(dossierPin);
+  const deedUrl = clerkRecordsUrl(dossierPin);
   const hasPropertyRecords = Boolean(
-    areaStats.parcelPin ||
+    dossierPin ||
+      propertySpace ||
       areaStats.assessedTotal != null ||
       areaStats.ownerName ||
       areaStats.districts ||
@@ -637,9 +702,9 @@ export default function MapDossierCard({
 
       {hasPropertyRecords ? (
         <DossierSection title="Property and public records">
-          {areaStats.parcelPin ? (
+          {dossierPin ? (
             <>
-              <FactRow label="PIN" value={areaStats.parcelPin} />
+              <FactRow label="PIN" value={dossierPin} />
               {areaStats.parcelClass ? <FactRow label="Property class" value={areaStats.parcelClass} /> : null}
               {areaStats.parcelClassDescription ? <p>{areaStats.parcelClassDescription}</p> : null}
               {areaStats.parcelValue ? <FactRow label="Recorded parcel value" value={areaStats.parcelValue} /> : null}
@@ -648,6 +713,8 @@ export default function MapDossierCard({
               {areaStats.parcelType ? <FactRow label="Parcel type" value={areaStats.parcelType} /> : null}
             </>
           ) : null}
+
+          {propertySpace ? <SpaceFactRows space={propertySpace} /> : null}
 
           {areaStats.assessedTotal != null ? (
             <div className="space-y-2 border-t border-[#0C1B33]/8 pt-3">

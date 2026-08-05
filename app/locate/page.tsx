@@ -178,6 +178,12 @@ function SiteMatchmakerPage() {
   const summary = useMemo(() => summarizeSiteMatchCriteria(criteria), [criteria]);
   const handoffHref = useMemo(() => buildVacancyHandoffHref(criteria), [criteria]);
   const ready = isSiteMatchCriteriaReady(criteria);
+  const requestedAreaLabel =
+    criteria.propertyType === "vacant-land"
+      ? "lot area"
+      : criteria.propertyType === "existing-building"
+        ? "reported available interior space"
+        : "lot area or reported available interior space";
 
   function setField<K extends keyof SiteMatchCriteria>(key: K, value: SiteMatchCriteria[K]) {
     setCopied(false);
@@ -288,8 +294,8 @@ function SiteMatchmakerPage() {
           <section className="border-x border-b border-[#0C1B33]/10 p-5 sm:p-7">
             <SectionHeading
               number="02"
-              title="Area and footprint"
-              detail="Choose a published vacancy area and the approximate usable footprint the project requires."
+              title="Area and required space"
+              detail={`Choose a published vacancy area and the ${requestedAreaLabel} the project requires.`}
             />
             <div className="grid gap-5 sm:grid-cols-2">
               <label className="block sm:col-span-2">
@@ -312,7 +318,7 @@ function SiteMatchmakerPage() {
 
               <label className="block">
                 <span className="flex items-center gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
-                  <Ruler size={13} aria-hidden="true" /> Minimum square feet
+                  <Ruler size={13} aria-hidden="true" /> Minimum {requestedAreaLabel}
                 </span>
                 <input
                   type="number"
@@ -330,7 +336,7 @@ function SiteMatchmakerPage() {
 
               <label className="block">
                 <span className="flex items-center gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
-                  <Ruler size={13} aria-hidden="true" /> Maximum square feet
+                  <Ruler size={13} aria-hidden="true" /> Maximum {requestedAreaLabel}
                 </span>
                 <input
                   type="number"
@@ -484,7 +490,7 @@ function SiteMatchmakerPage() {
             <SummaryRow label="Area" value={summary.location} />
             <SummaryRow label="Project use" value={summary.projectUse} />
             <SummaryRow label="Property" value={summary.propertyType} />
-            <SummaryRow label="Footprint" value={summary.footprint} />
+            <SummaryRow label="Required size" value={summary.footprint} />
             <SummaryRow label="Context" value={summary.context} />
             <SummaryRow label="Transportation" value={summary.transportation} />
             <SummaryRow label="Transport distance" value={summary.transportationDistance} />
@@ -521,8 +527,8 @@ function SiteMatchmakerPage() {
             </button>
 
             <p className="mt-4 text-[10px] leading-relaxed text-white/38">
-              The next screen shows tracked public-record leads. Confirm current status, dimensions,
-              ownership, condition, zoning, transportation, and nearby amenities before relying.
+              The next screen shows tracked public-record leads. Lot area, assessor building area,
+              City ground coverage, and verified available space remain separate facts.
             </p>
           </div>
         </aside>

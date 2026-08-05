@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { socrataHeaders } from "@/lib/socrata";
+import { COOK_COUNTY_CURRENT_PARCELS_QUERY_URL } from "@/lib/cook-viewer";
 
 /**
  * System health probe — checks every external dependency.
@@ -289,7 +290,7 @@ export async function GET(request: NextRequest) {
     ),
     probeUrl(
       "Cook County ArcGIS Parcels",
-      "https://gis.cookcountyil.gov/traditional/rest/services/cookVwrDynmc/MapServer/44?f=json",
+      `${COOK_COUNTY_CURRENT_PARCELS_QUERY_URL}?where=1%3D1&outFields=PIN14&returnGeometry=false&resultRecordCount=1&f=json`,
       8000
     ),
     probeUrl(

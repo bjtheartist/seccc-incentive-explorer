@@ -1,5 +1,6 @@
 import type { PersonaId } from "./personas";
 import type { DocumentSpec } from "./document-spec";
+import type { ParcelSpaceFacts } from "./parcel-space";
 
 export interface Business {
   id: string;
@@ -239,6 +240,8 @@ export interface ParcelData {
   landSqft: number | null;
   bldgSqft: number | null;
   bldgAge: number | null;
+  /** Source-separated parcel/building dimensions and their limited provenance. */
+  space?: ParcelSpaceFacts;
   landValue: string | null;
   bldgValue: string | null;
   totalValue: string | null;

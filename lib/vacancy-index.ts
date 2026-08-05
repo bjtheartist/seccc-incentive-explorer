@@ -25,6 +25,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import type { OwnerType } from "./owner-classify";
 import { OWNER_TYPE_ORDER, normalizeOwnerType } from "./owner-classify";
+import type { ParcelSpaceFacts } from "./parcel-space";
 import type {
   OwnerGeography,
   OwnerStructure,
@@ -297,8 +298,15 @@ export interface VacancySitePoint {
   /** Digits-only 14-digit PIN for a COLS inventory row; `null` for 311 rows
    * (which carry no PIN — honest) and any COLS row without a real 14-digit PIN. */
   pin: string | null;
-  /** Lot size in square feet (COLS rows carry it; 311 rows do not -> null). */
+  /**
+   * Legacy size field retained for old exports and downstream report code.
+   * Treat it as lot area only for vacant-land rows. New consumers should use
+   * `space`, whose fields keep parcel area, building area, ground coverage,
+   * and verified available interior space separate.
+   */
   squareFeet: number | null;
+  /** Source-separated dimensions. Omitted when no measurement is published. */
+  space?: ParcelSpaceFacts;
   /** Chicago zoning district code (COLS rows only; 311 rows -> null). */
   zoningClass: string | null;
   /** Number of incentive geographies this site intersects (0 when none). */
@@ -353,6 +361,8 @@ export interface VacancyLandPoint {
   /** Lot size in square feet from `parcels.land_sqft`; `null` when the column
    * was null (historically common — emitted null-safe, never coerced to 0). */
   squareFeet: number | null;
+  /** Source-separated dimensions. Omitted when no measurement is published. */
+  space?: ParcelSpaceFacts;
   /** Owner-type confidence (see OwnerConfidence): City-inventory PIN match is
    * `pin_matched`, unknown taxpayer type `needs_verification`, else `inferred`.
    * Land parcels are not clustered, so they carry no clusterId. */
@@ -542,6 +552,10 @@ export interface VacancyIndexSources {
   corridorMetrics: string;
   zipBoundaries: string;
   transportNetwork: string;
+  parcelArea?: string;
+  assessorBuildingArea?: string;
+  cityGroundFootprint?: string;
+  availableSpace?: string;
   asOf: string;
 }
 

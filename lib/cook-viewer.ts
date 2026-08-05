@@ -15,6 +15,10 @@
 
 const COOK_VIEWER_BASE = "https://maps.cookcountyil.gov/cookviewer/";
 
+/** Current CookViewer parcel polygon and characteristics service. */
+export const COOK_COUNTY_CURRENT_PARCELS_QUERY_URL =
+  "https://gis.cookcountyil.gov/traditional/rest/services/parcel_current_beta/FeatureServer/0/query";
+
 /**
  * Normalize a parcel PIN to Cook County's 14-digit `pin14` form.
  *

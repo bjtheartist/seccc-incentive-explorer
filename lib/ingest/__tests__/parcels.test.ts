@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { parcelsAdapter, type RawParcel } from "../parcels";
 
 // Fixture matches the CURRENT Parcel Universe schema (nj4t-kc8j, verified
@@ -97,5 +97,20 @@ describe("parcelsAdapter.normalize", () => {
     expect(parcelsAdapter.normalize({ ...base, lat: undefined })).toBeNull();
     expect(parcelsAdapter.normalize({ ...base, lat: "0", lon: "0" })).toBeNull();
     expect(parcelsAdapter.normalize({ ...base, lat: "40.0" })).toBeNull();
+  });
+});
+
+describe("parcelsAdapter.upsert", () => {
+  it("does not erase CookViewer dimensions during a generic parcel refresh", async () => {
+    const query = vi.fn().mockResolvedValue({});
+    const row = parcelsAdapter.normalize(base);
+    expect(row).not.toBeNull();
+
+    await parcelsAdapter.upsert({ query } as never, [row!]);
+
+    const upsertSql = String(query.mock.calls[0][0]);
+    const conflictClause = upsertSql.slice(upsertSql.indexOf("ON CONFLICT"));
+    expect(conflictClause).not.toContain("land_sqft = EXCLUDED.land_sqft");
+    expect(conflictClause).not.toContain("bldg_sqft = EXCLUDED.bldg_sqft");
   });
 });

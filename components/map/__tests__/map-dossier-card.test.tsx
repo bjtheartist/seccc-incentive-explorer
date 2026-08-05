@@ -98,7 +98,8 @@ describe("MapDossierCard", () => {
       reasonFlagged: "City/public land record and nearby vacant parcels",
     });
 
-    expect(html).toContain("Vacant land · about 12,450 sq ft");
+    expect(html).toContain("Vacant land · 12,450 sq ft lot area");
+    expect(html).toContain("Reported available space");
     expect(html).toContain("8 mapped incentive geographies");
     expect(html).toContain("City/public land record and nearby vacant parcels");
     expect(html).toContain("Verify the parcel record");

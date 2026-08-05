@@ -1,3 +1,5 @@
+import type { ParcelSpaceFacts } from "@/lib/parcel-space";
+
 export type MapDossierFreshness = {
   status: "current" | "stale";
   asOf?: string | null;
@@ -45,6 +47,7 @@ export interface MapDossierParcelSelection extends MapDossierSelectionBase {
   propertyClassDescription?: string | null;
   propertyType?: string | null;
   assessedTotal?: number | null;
+  space?: ParcelSpaceFacts;
 }
 
 export interface MapDossierVacancySelection extends MapDossierSelectionBase {
@@ -52,6 +55,7 @@ export interface MapDossierVacancySelection extends MapDossierSelectionBase {
   vacancyType: "vacant_land" | "vacant_building";
   pin?: string | null;
   squareFeet?: number | null;
+  space?: ParcelSpaceFacts;
   incentiveGeographyCount?: number | null;
   reasonFlagged?: string | null;
 }
