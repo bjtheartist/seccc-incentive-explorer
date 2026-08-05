@@ -1662,6 +1662,7 @@ function ReportWizardPage() {
   const conciergeLocalSupport = report?.communityAssets?.organizations
     ?.slice(0, 6)
     .map((organization) => ({
+      id: organization.id || "",
       name: organization.name,
       role: organization.role,
       supportTypes: organization.supportTypes,
@@ -1691,6 +1692,7 @@ function ReportWizardPage() {
           lat={report.metadata?.lat}
           lon={report.metadata?.lon}
           localSupportOrganizations={conciergeLocalSupport}
+          capitalSupportId={report.capitalPartnerHandoff?.primary?.partnerId}
           capitalSupportName={report.capitalPartnerHandoff?.primary?.name}
           capitalSupportReason={report.capitalPartnerHandoff?.primary?.reason}
           capitalSupportFitNote={report.capitalPartnerHandoff?.primary?.fitNote}
@@ -1774,6 +1776,7 @@ function ReportWizardPage() {
           lat={report.metadata?.lat}
           lon={report.metadata?.lon}
           localSupportOrganizations={conciergeLocalSupport}
+          capitalSupportId={report.capitalPartnerHandoff?.primary?.partnerId}
           capitalSupportName={report.capitalPartnerHandoff?.primary?.name}
           capitalSupportReason={report.capitalPartnerHandoff?.primary?.reason}
           capitalSupportFitNote={report.capitalPartnerHandoff?.primary?.fitNote}

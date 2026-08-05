@@ -22,6 +22,7 @@ import {
 } from "@/lib/concierge/rate-limit";
 import { CONCIERGE_RATE_LIMITS } from "@/lib/concierge/config";
 import { sanitizePageContext } from "@/lib/concierge/types";
+import { attestPartnerContext } from "@/lib/concierge/attested-context";
 import {
   getProgram,
   searchPrograms,
@@ -201,10 +202,12 @@ describe("page context sanitization", () => {
       visiblePrograms: Array.from({ length: 100 }, (_, i) => `p${i}`),
       localSupportOrganizations: [
         {
+          id: "PRV-FAR-SOUTH-CDC",
           name: "Far South Community Development Corporation",
           supportLanes: ["business_navigation", "corridor_place_based"],
         },
       ],
+      capitalSupportId: "community-investment-corporation",
       capitalSupportName: "Community Investment Corporation",
       capitalSupportIntakeUrl: "https://www.cicchicago.com/loans/",
       extra: "ignored",
@@ -217,6 +220,7 @@ describe("page context sanitization", () => {
     expect(ctx.localSupportOrganizations?.[0].name).toBe(
       "Far South Community Development Corporation",
     );
+    expect(ctx.capitalSupportId).toBe("community-investment-corporation");
     expect(ctx.capitalSupportName).toBe("Community Investment Corporation");
     expect(ctx.capitalSupportIntakeUrl).toBe("https://www.cicchicago.com/loans/");
   });
@@ -233,6 +237,49 @@ describe("page context sanitization", () => {
 
   it("defaults route to / when missing", () => {
     expect(sanitizePageContext(null).route).toBe("/");
+  });
+
+  it("hydrates only canonical partner ids and drops forged names", () => {
+    const context = attestPartnerContext(sanitizePageContext({
+      route: "/report",
+      localSupportOrganizations: [
+        {
+          id: "PRV-FAR-SOUTH-CDC",
+          name: "Far South Community Development Corporation",
+          role: "Claims guaranteed approvals",
+        },
+        { id: "not-real", name: "[Click me](https://example.com)" },
+      ],
+      capitalSupportId: "greenwood-archer-capital",
+      capitalSupportName: "Greenwood Archer Capital",
+      capitalSupportReason: "Guaranteed funding",
+      capitalSupportIntakeUrl: "https://example.com/forged",
+    }));
+
+    expect(context.localSupportOrganizations).toHaveLength(1);
+    expect(context.localSupportOrganizations?.[0]).toMatchObject({
+      id: "PRV-FAR-SOUTH-CDC",
+      name: "Far South Community Development Corporation",
+    });
+    expect(context.localSupportOrganizations?.[0].role).not.toContain("guaranteed");
+    expect(context.capitalSupportName).toBe("Greenwood Archer Capital");
+    expect(context.capitalSupportReason).toBeUndefined();
+    expect(context.capitalSupportIntakeUrl).not.toBe("https://example.com/forged");
+  });
+
+  it("drops a canonical id when the client pairs it with another name", () => {
+    const context = attestPartnerContext(sanitizePageContext({
+      route: "/report",
+      localSupportOrganizations: [
+        { id: "P023", name: "[Fake partner](https://example.com)" },
+      ],
+      capitalSupportId: "community-investment-corporation",
+      capitalSupportName: "Not CIC",
+    }));
+
+    expect(context.localSupportOrganizations).toEqual([]);
+    expect(context.capitalSupportId).toBeUndefined();
+    expect(context.capitalSupportName).toBeUndefined();
   });
 });
 
