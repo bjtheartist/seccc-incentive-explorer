@@ -66,6 +66,7 @@ import {
   type PublicInvestmentOverlayId,
   type PublicInvestmentOverlayVisibility,
 } from "@/lib/public-investment-overlays";
+import { PERMIT_MAP_TYPES, type PermitMapTypeKey } from "@/lib/permit-map";
 
 interface MapLegendPanelProps {
   zoneVisible: Record<string, boolean>;
@@ -73,6 +74,8 @@ interface MapLegendPanelProps {
   zoningVisible: Record<string, boolean>;
   vacantVisible: Record<string, boolean>;
   parcelsVisible: boolean;
+  permitsVisible?: boolean;
+  permitTypeVisible?: Record<PermitMapTypeKey, boolean>;
   ownerFilter: OwnerType | "all";
   expandedZone: string | null;
   zoningRefOpen: boolean;
@@ -138,6 +141,10 @@ interface MapLegendPanelProps {
   onToggleAllZoning: () => void;
   onSetVacantVisible: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   onSetParcelsVisible: React.Dispatch<React.SetStateAction<boolean>>;
+  onSetPermitsVisible?: (value: boolean) => void;
+  onSetPermitTypeVisible?: React.Dispatch<
+    React.SetStateAction<Record<PermitMapTypeKey, boolean>>
+  >;
   onSetOwnerFilter: (value: OwnerType | "all") => void;
   onSetExpandedZone: (key: string | null) => void;
   onSetZoningRefOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -153,6 +160,8 @@ export default function MapLegendPanel({
   zoningVisible,
   vacantVisible,
   parcelsVisible,
+  permitsVisible = false,
+  permitTypeVisible = {} as Record<PermitMapTypeKey, boolean>,
   ownerFilter,
   expandedZone,
   zoningRefOpen,
@@ -202,6 +211,8 @@ export default function MapLegendPanel({
   onToggleAllZoning,
   onSetVacantVisible,
   onSetParcelsVisible,
+  onSetPermitsVisible = () => {},
+  onSetPermitTypeVisible = () => {},
   onSetOwnerFilter,
   onSetExpandedZone,
   onSetZoningRefOpen,
@@ -574,6 +585,68 @@ export default function MapLegendPanel({
         <p className="text-[9px] text-[#0C1B33]/35 mt-1 ml-6">
           Lot boundaries visible at zoom 15+
         </p>
+
+        <div className="my-3 h-px bg-[#0C1B33]/8" />
+
+        <label className="flex cursor-pointer items-center gap-2.5 py-1 group">
+          <input
+            type="checkbox"
+            checked={permitsVisible}
+            onChange={() => onSetPermitsVisible(!permitsVisible)}
+            className="sr-only"
+          />
+          <span
+            className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full border transition-colors"
+            style={{
+              borderColor: "#0F766E",
+              backgroundColor: permitsVisible ? "#0F766E30" : "transparent",
+            }}
+          >
+            {permitsVisible && (
+              <span className="block h-2 w-2 rounded-full bg-[#0F766E]" />
+            )}
+          </span>
+          <span className="text-[11px] leading-tight text-[#0C1B33]/70 transition-colors group-hover:text-[#0C1B33]">
+            Building permits
+          </span>
+        </label>
+        <p className="ml-6 mt-1 text-[9px] leading-relaxed text-[#0C1B33]/35">
+          City permit filings since 2015 · visible at zoom 12+
+        </p>
+
+        {permitsVisible && (
+          <details className="ml-6 mt-2 border-t border-[#0C1B33]/8 pt-2">
+            <summary className="cursor-pointer font-mono-bureau text-[8px] uppercase tracking-[0.12em] text-[#0F766E]/70">
+              Permit types
+            </summary>
+            <div className="mt-2 space-y-0.5">
+              {PERMIT_MAP_TYPES.map((permitType) => (
+                <label
+                  key={permitType.key}
+                  className="flex cursor-pointer items-start gap-2 py-1 group"
+                >
+                  <input
+                    type="checkbox"
+                    checked={permitTypeVisible[permitType.key] !== false}
+                    onChange={() =>
+                      onSetPermitTypeVisible((current) => ({
+                        ...current,
+                        [permitType.key]: current[permitType.key] === false,
+                      }))
+                    }
+                    className="mt-0.5 h-3 w-3 flex-shrink-0 accent-[#0F766E]"
+                  />
+                  <span className="text-[10px] leading-snug text-[#0C1B33]/55 transition-colors group-hover:text-[#0C1B33]/80">
+                    {permitType.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-[9px] leading-relaxed text-[#0C1B33]/35">
+              Filings indicate permit activity, not completed construction. Verify status with the City.
+            </p>
+          </details>
+        )}
 
         {/* Collapsible class code reference */}
         <button

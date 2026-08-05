@@ -143,6 +143,11 @@ import {
   STATE_RECOVERY_LINE_LAYER_ID,
   STATE_RECOVERY_SOURCE_ID,
 } from "@/lib/state-recovery-layer";
+import {
+  PERMIT_MAP_TYPES,
+  defaultPermitTypeVisibility,
+  type PermitMapTypeKey,
+} from "@/lib/permit-map";
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -195,6 +200,15 @@ export default function MapView() {
   const [parcelsVisible, setParcelsVisible] = useState(false);
   const parcelsAbortRef = useRef<AbortController | null>(null);
   const parcelsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // City building-permit filings. The source stays empty until the master
+  // toggle is on and the map is close enough to make a viewport query honest.
+  const [permitsVisible, setPermitsVisible] = useState(false);
+  const [permitTypeVisible, setPermitTypeVisible] = useState<
+    Record<PermitMapTypeKey, boolean>
+  >(() => defaultPermitTypeVisibility());
+  const permitsAbortRef = useRef<AbortController | null>(null);
+  const permitsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Vacant property layers
   const [vacantVisible, setVacantVisible] = useState<Record<string, boolean>>({
@@ -843,6 +857,20 @@ export default function MapView() {
        events, not Mapbox's event bus, so the touch map events still arrive. */
     const openSnapshotAt = (point: mapboxgl.Point, lngLat: mapboxgl.LngLat) => {
       const isMobileView = window.matchMedia("(max-width: 768px)").matches;
+
+      // Cluster layers own the click so they can expand. Opening the location
+      // dossier on the same event would stack a panel over the zoom animation.
+      const clusterLayers = [
+        "permit-clusters",
+        "vacant-clusters",
+        "owner-clusters-clusters",
+      ].filter((layerId) => map.getLayer(layerId));
+      if (
+        clusterLayers.length > 0 &&
+        map.queryRenderedFeatures(point, { layers: clusterLayers }).length > 0
+      ) {
+        return;
+      }
 
       /* Zone popup — desktop only: zone fills blanket whole corridors, so on
          mobile every tap would stack a popup under the snapshot sheet */
@@ -1542,6 +1570,83 @@ export default function MapView() {
       map.on("mouseleave", "vacant-clusters", () => { map.getCanvas().style.cursor = ""; });
       map.on("mouseenter", "vacant-unclustered", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "vacant-unclustered", () => { map.getCanvas().style.cursor = ""; });
+
+      /* ── City building-permit filings (viewport-loaded) ── */
+      map.addSource("building-permits", {
+        type: "geojson",
+        data: EMPTY_FC,
+        cluster: true,
+        clusterMaxZoom: 15,
+        clusterRadius: 42,
+      });
+
+      map.addLayer({
+        id: "permit-clusters",
+        type: "circle",
+        source: "building-permits",
+        filter: ["has", "point_count"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": "#0F766E",
+          "circle-radius": ["step", ["get", "point_count"], 14, 20, 18, 100, 24],
+          "circle-opacity": 0.88,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#FFFFFF",
+        },
+      });
+
+      map.addLayer({
+        id: "permit-cluster-count",
+        type: "symbol",
+        source: "building-permits",
+        filter: ["has", "point_count"],
+        layout: {
+          visibility: "none",
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+          "text-size": 11,
+        },
+        paint: { "text-color": "#FFFFFF" },
+      });
+
+      const permitColorExpression: mapboxgl.Expression = [
+        "match",
+        ["get", "permitTypeKey"],
+        ...PERMIT_MAP_TYPES.flatMap((permitType) => [permitType.key, permitType.color]),
+        "#64748B",
+      ];
+      map.addLayer({
+        id: "permit-unclustered",
+        type: "circle",
+        source: "building-permits",
+        filter: ["!", ["has", "point_count"]],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": 6,
+          "circle-color": permitColorExpression,
+          "circle-opacity": 0.92,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#FFFFFF",
+        },
+      });
+
+      map.on("click", "permit-clusters", (e) => {
+        const features = map.queryRenderedFeatures(e.point, { layers: ["permit-clusters"] });
+        if (!features.length) return;
+        const clusterId = features[0].properties?.cluster_id;
+        const source = map.getSource("building-permits") as mapboxgl.GeoJSONSource;
+        source.getClusterExpansionZoom(clusterId, (error, zoom) => {
+          if (error) return;
+          map.easeTo({
+            center: (features[0].geometry as GeoJSON.Point).coordinates as [number, number],
+            zoom: zoom!,
+          });
+        });
+      });
+      map.on("mouseenter", "permit-clusters", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "permit-clusters", () => { map.getCanvas().style.cursor = ""; });
+      map.on("mouseenter", "permit-unclustered", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "permit-unclustered", () => { map.getCanvas().style.cursor = ""; });
 
       /* ── Admin ownership-cluster layer (Owner Files, PRs #65/#67/#68) ──
          Gated: only rendered/toggleable when the ADMIN legend section is
@@ -2727,6 +2832,85 @@ export default function MapView() {
     };
   }, [vacantVisible, loaded, vacantLoaded, ownerFilter]);
 
+  /* ── Dynamic building-permit loading ──── */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+
+    const selectedTypes = PERMIT_MAP_TYPES
+      .filter((permitType) => permitTypeVisible[permitType.key] !== false)
+      .map((permitType) => permitType.key);
+    const anyVisible = permitsVisible && selectedTypes.length > 0;
+    const visibility = anyVisible ? "visible" : "none";
+
+    for (const layerId of ["permit-clusters", "permit-cluster-count", "permit-unclustered"]) {
+      if (map.getLayer(layerId)) map.setLayoutProperty(layerId, "visibility", visibility);
+    }
+
+    if (!anyVisible) {
+      permitsAbortRef.current?.abort();
+      const source = map.getSource("building-permits") as mapboxgl.GeoJSONSource | undefined;
+      source?.setData(EMPTY_FC);
+      return;
+    }
+
+    const fetchPermits = () => {
+      if (permitsTimerRef.current) clearTimeout(permitsTimerRef.current);
+      permitsTimerRef.current = setTimeout(() => {
+        const currentMap = mapRef.current;
+        if (!currentMap) return;
+        const source = currentMap.getSource("building-permits") as
+          | mapboxgl.GeoJSONSource
+          | undefined;
+        if (!source) return;
+
+        // A move or subtype change supersedes the previous viewport request,
+        // including when this move crosses below the minimum useful zoom.
+        permitsAbortRef.current?.abort();
+        if (currentMap.getZoom() < 12) {
+          source.setData(EMPTY_FC);
+          return;
+        }
+
+        const controller = new AbortController();
+        permitsAbortRef.current = controller;
+        const bounds = currentMap.getBounds();
+        if (!bounds) return;
+
+        const params = new URLSearchParams({
+          bounds: `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`,
+          types: selectedTypes.join(","),
+          limit: "3000",
+        });
+
+        fetch(`/api/permits?${params.toString()}`, { signal: controller.signal })
+          .then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then((data: GeoJSON.FeatureCollection) => {
+            if (data?.type === "FeatureCollection" && Array.isArray(data.features)) {
+              source.setData(data);
+            }
+          })
+          .catch((error: Error) => {
+            if (error.name !== "AbortError") {
+              console.warn("[Permits] fetch error:", error);
+              source.setData(EMPTY_FC);
+            }
+          });
+      }, 300);
+    };
+
+    fetchPermits();
+    map.on("moveend", fetchPermits);
+    return () => {
+      map.off("moveend", fetchPermits);
+      if (permitsTimerRef.current) clearTimeout(permitsTimerRef.current);
+      permitsAbortRef.current?.abort();
+    };
+  }, [loaded, permitsVisible, permitTypeVisible]);
+
   /* ── Admin ownership-cluster layer: toggle + one-time fetch ──
      Unlike vacant properties (a citywide live query re-fetched on every
      moveend), the ownership-cluster dataset is a small nine-ZIP admin-only
@@ -3537,6 +3721,8 @@ export default function MapView() {
           zoningVisible={zoningVisible}
           vacantVisible={vacantVisible}
           parcelsVisible={parcelsVisible}
+          permitsVisible={permitsVisible}
+          permitTypeVisible={permitTypeVisible}
           ownerFilter={ownerFilter}
           expandedZone={expandedZone}
           zoningRefOpen={zoningRefOpen}
@@ -3586,6 +3772,8 @@ export default function MapView() {
           onToggleAllZoning={toggleAllZoning}
           onSetVacantVisible={setVacantVisible}
           onSetParcelsVisible={setParcelsVisible}
+          onSetPermitsVisible={setPermitsVisible}
+          onSetPermitTypeVisible={setPermitTypeVisible}
           onSetOwnerFilter={setOwnerFilter}
           onSetExpandedZone={setExpandedZone}
           onSetZoningRefOpen={setZoningRefOpen}
