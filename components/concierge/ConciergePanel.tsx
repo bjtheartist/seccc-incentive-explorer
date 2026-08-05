@@ -25,8 +25,6 @@ import { MarkdownLite } from "./MarkdownLite";
 const RESTING_MESSAGE =
   "The concierge is resting right now — you've hit the usage limit for this window. Keep exploring the map, programs, and reports directly, and check back a little later.";
 
-const GREETING_STORAGE_KEY = "seccc_incentive_guide_greeted_v1";
-
 const QUICK_STARTS = [
   { label: "Improve my space", prompt: "I want to improve or remodel my space." },
   { label: "Hire employees", prompt: "I want to hire employees." },
@@ -48,7 +46,7 @@ const TOOL_STATUS: Record<string, string> = {
   updatePacketTask: "Updating your packet…",
   createFoundationPacket: "Starting your packet…",
   selectPacketProgram: "Setting the program…",
-  prepareSupportRequest: "Preparing your introduction request…",
+  prepareSupportRequest: "Preparing your support request…",
 };
 
 /** Friendly titles for the approval cards (action tools only). */
@@ -57,7 +55,7 @@ const ACTION_LABEL: Record<string, string> = {
   updatePacketTask: "Update a packet task",
   createFoundationPacket: "Start an Incentive Preparedness Packet",
   selectPacketProgram: "Set your packet's program",
-  prepareSupportRequest: "Prepare an introduction request",
+  prepareSupportRequest: "Prepare a support request",
 };
 
 const ACTION_TOOL_NAMES = new Set(Object.keys(ACTION_LABEL));
@@ -88,7 +86,6 @@ export function ConciergePanel({
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [showGreeting, setShowGreeting] = useState(false);
   const firedRef = useRef<Set<string>>(new Set());
   const transcriptEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -115,28 +112,6 @@ export function ConciergePanel({
       cancelled = true;
     };
   }, []);
-
-  // 3. Offer one quiet, non-blocking greeting per browser. It waits until no
-  // other dialog is open and is remembered only after the visitor dismisses it
-  // or opens the guide.
-  useEffect(() => {
-    if (
-      enabled !== true ||
-      open ||
-      dialogOpen ||
-      suppressed ||
-      showGreeting
-    ) {
-      return;
-    }
-    try {
-      if (window.localStorage.getItem(GREETING_STORAGE_KEY) === "true") return;
-    } catch {
-      // Storage can be unavailable in privacy modes; the greeting still works.
-    }
-    const timer = window.setTimeout(() => setShowGreeting(true), 900);
-    return () => window.clearTimeout(timer);
-  }, [dialogOpen, enabled, open, showGreeting, suppressed]);
 
   // 2. Watch the DOM for any open modal dialog and hide the trigger while one
   // is present (the report email gate is a native <dialog open>).
@@ -235,22 +210,12 @@ export function ConciergePanel({
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, [open]);
 
-  const rememberGreeting = useCallback(() => {
-    setShowGreeting(false);
-    try {
-      window.localStorage.setItem(GREETING_STORAGE_KEY, "true");
-    } catch {
-      // No-op when storage is unavailable.
-    }
-  }, []);
-
   const openPanel = useCallback(() => {
-    rememberGreeting();
     setOpen(true);
     fireOnce("opened", () =>
       trackEvent("concierge_opened", { source: pageContextRef.current.route })
     );
-  }, [fireOnce, rememberGreeting]);
+  }, [fireOnce]);
 
   const sendPrompt = useCallback(
     (text: string) => {
@@ -309,30 +274,15 @@ export function ConciergePanel({
     <>
       {/* Floating trigger */}
       {showTrigger && (
-        <div className="fixed bottom-4 right-4 z-[70] flex items-end gap-3 print:hidden sm:bottom-5 sm:right-5">
-          {showGreeting && (
-            <div className="relative w-[min(270px,calc(100vw-88px))] border border-[#0C1B33]/15 bg-white px-4 py-3 pr-9 shadow-xl">
-              <button
-                type="button"
-                onClick={rememberGreeting}
-                aria-label="Dismiss greeting"
-                title="Dismiss"
-                className="absolute right-1.5 top-1.5 flex h-7 w-7 items-center justify-center text-[#0C1B33]/45 hover:text-[#0C1B33]"
-              >
-                <X className="h-3.5 w-3.5" strokeWidth={1.75} />
-              </button>
-              <button
-                type="button"
-                onClick={openPanel}
-                className="block text-left text-[13px] leading-5 text-[#0C1B33]/75"
-              >
-                <span className="font-medium text-[#0C1B33]">
-                  Hi, I&apos;m your Incentive Guide.
-                </span>{" "}
-                What are you working on today?
-              </button>
-            </div>
-          )}
+        <div className="fixed bottom-4 right-4 z-[70] flex flex-col items-end gap-2 print:hidden sm:bottom-5 sm:right-5">
+          <button
+            type="button"
+            onClick={openPanel}
+            data-testid="concierge-help-prompt"
+            className="border border-[#0C1B33]/15 bg-white px-3 py-2 text-[13px] font-medium leading-5 text-[#0C1B33] shadow-lg transition-colors hover:border-[#2563EB]/40 hover:text-[#2563EB] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#2563EB]"
+          >
+            I&apos;m here to help
+          </button>
           <button
             type="button"
             onClick={openPanel}
@@ -386,7 +336,7 @@ export function ConciergePanel({
                   Start here
                 </p>
                 <p className="mt-2 text-[14px] font-medium leading-5 text-[#0C1B33]">
-                  What are you working on today?
+                  I&apos;m here to help. What are you working toward today?
                 </p>
                 <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {QUICK_STARTS.map((choice) => (
