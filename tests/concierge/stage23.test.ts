@@ -163,7 +163,8 @@ describe("action tool ownership re-verification (never trusts model ids)", () =>
     expect(out.ok).toBe(true);
     expect(out.draft).toBeTruthy();
     expect(out.note).toContain("Nothing was sent");
-    expect(out.suggestion?.label).toBe("Review what will be shared");
+    expect(out.note).toContain("or scheduled");
+    expect(out.suggestion?.label).toBe("Review your support request");
     // Deep-links into the consent-gated packet UI and never submits here.
     expect(out.suggestion?.route).toBe("/workspace/incentive-preparation/packet-1");
   });

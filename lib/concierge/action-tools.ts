@@ -448,7 +448,7 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
 
     prepareSupportRequest: tool({
       description:
-        "Prepare a local-support introduction request for a packet (which organization, what help, and which data to share). REQUIRES the user's approval. Use this only after the owner has enough context for a useful first conversation and explicitly asks to continue. It never sends anything. The owner reviews the summary, chooses the data scope, gives consent, and records the request in the packet.",
+        "Prepare a local-support request for a packet, either for an introduction or 1:1 help reviewing assembled materials (which organization, what help, and which data to share). REQUIRES the user's approval. Use this only after the owner has enough context for a useful conversation and explicitly asks to continue. It never sends or schedules anything. The owner reviews the summary, chooses the data scope, gives consent, and records the request in the packet.",
       inputSchema: z.object({
         packetId: z.string().max(200).describe("The packet the request is for."),
         targetOrganization: z
@@ -492,10 +492,10 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
             suggestedScopes: suggestedScopes ?? [],
           },
           note:
-            "Your introduction request is prepared. Nothing was sent. Open your packet to review what will be shared, give consent, and request the introduction.",
+            "Your support request is prepared. Nothing was sent or scheduled. Open your packet to review what will be shared, give consent, and record the request.",
           suggestion: resolveNavTarget(
             `/workspace/incentive-preparation/${packetId}`,
-            "Review what will be shared"
+            "Review your support request"
           ),
         };
       },

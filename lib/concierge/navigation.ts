@@ -71,7 +71,7 @@ export function resolveNavTarget(
 
 function defaultLabelFor(path: string): string {
   if (path === "/map") return "Open the map";
-  if (path === "/report") return "Build a report";
+  if (path === "/report") return "Run a Site Incentive Report";
   if (path === "/faq") return "Read the FAQ";
   if (path === "/workspace") return "Go to workspace";
   if (path === "/workspace/business-file") return "Open your Business File";

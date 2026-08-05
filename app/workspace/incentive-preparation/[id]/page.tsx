@@ -383,7 +383,7 @@ export default function PreparationPacketDetailPage() {
               },
             ],
       );
-      setSupportSuccess("Your introduction request was recorded. Nothing has been shared with the organization yet; the request still needs to be reviewed and routed.");
+      setSupportSuccess("Your support request was recorded. Nothing has been shared or scheduled yet; the request still needs to be reviewed and routed.");
       setTargetOrganization("");
       setRequestedHelp("");
       setDataScopes([]);
@@ -652,8 +652,8 @@ export default function PreparationPacketDetailPage() {
 
             <section className="px-5 py-6">
               <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#2563EB]" aria-hidden="true" /><h2 className="text-base font-semibold text-[#0C1B33]">Get connected to local support</h2></div>
-              <p className="mt-2 text-xs leading-5 text-[#0C1B33]/55">You don&apos;t need to have every detail figured out before talking with someone. Request an introduction and choose exactly what may be shared, so you don&apos;t have to start from scratch.</p>
-              <p className="mt-2 text-[11px] leading-5 text-[#0C1B33]/40">This form records your request for review and routing. It does not send information directly to the organization.</p>
+              <p className="mt-2 text-xs leading-5 text-[#0C1B33]/55">You don&apos;t need to have every detail figured out before talking with someone. Request an introduction or 1:1 help reviewing your preparation materials, and choose exactly what may be shared.</p>
+              <p className="mt-2 text-[11px] leading-5 text-[#0C1B33]/40">A materials review can help identify missing information and open questions. It does not confirm eligibility, certify documents, submit an application, or guarantee an appointment. This form records your request for review and routing; it does not send information directly to the organization.</p>
               <form onSubmit={submitSupportRequest} className="mt-4 space-y-4">
                 <label className="block text-xs font-medium text-[#0C1B33]/70">Organization<input value={targetOrganization} onChange={(event) => setTargetOrganization(event.target.value)} className="mt-1.5 min-h-10 w-full border border-[#0C1B33]/15 bg-white px-3 text-sm text-[#0C1B33] outline-none focus:border-[#2563EB]" /></label>
                 <label className="block text-xs font-medium text-[#0C1B33]/70">What would you like help with?<textarea value={requestedHelp} onChange={(event) => setRequestedHelp(event.target.value)} rows={3} className="mt-1.5 w-full border border-[#0C1B33]/15 bg-white px-3 py-2 text-sm text-[#0C1B33] outline-none focus:border-[#2563EB]" /></label>
@@ -661,9 +661,9 @@ export default function PreparationPacketDetailPage() {
                 <label className="flex items-start gap-2 border border-[#0C1B33]/10 bg-white px-3 py-3 text-xs leading-5 text-[#0C1B33]/65"><input type="checkbox" checked={consentToShare} onChange={(event) => setConsentToShare(event.target.checked)} className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#2563EB]" />I explicitly consent to share only the selected business data with this target organization for this request.</label>
                 {supportError && <p role="alert" className="border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{supportError}</p>}
                 {supportSuccess && <p role="status" className="border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">{supportSuccess}</p>}
-                <button type="submit" disabled={requestingSupport} className="inline-flex min-h-10 w-full items-center justify-center gap-2 bg-[#0C1B33] px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-white hover:bg-[#1E3054] disabled:opacity-60">{requestingSupport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}Request an introduction</button>
+                <button type="submit" disabled={requestingSupport} className="inline-flex min-h-10 w-full items-center justify-center gap-2 bg-[#0C1B33] px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-white hover:bg-[#1E3054] disabled:opacity-60">{requestingSupport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}Request support</button>
               </form>
-              {supportRequests.length > 0 && <div className="mt-5 border-t border-[#0C1B33]/10 pt-4"><p className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/45">Introduction requests</p><ul className="mt-3 space-y-3">{supportRequests.map((request) => <li key={request.id} className="text-xs leading-5 text-[#0C1B33]/60"><strong className="font-medium text-[#0C1B33]">{request.targetOrganization}</strong><br />{request.requestedHelp}<br /><span className="text-[#0C1B33]/45">{request.dataScopes.map(scopeLabel).join(", ") || "No data scope"} · {statusLabel(request.status)}</span></li>)}</ul></div>}
+              {supportRequests.length > 0 && <div className="mt-5 border-t border-[#0C1B33]/10 pt-4"><p className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/45">Support requests</p><ul className="mt-3 space-y-3">{supportRequests.map((request) => <li key={request.id} className="text-xs leading-5 text-[#0C1B33]/60"><strong className="font-medium text-[#0C1B33]">{request.targetOrganization}</strong><br />{request.requestedHelp}<br /><span className="text-[#0C1B33]/45">{request.dataScopes.map(scopeLabel).join(", ") || "No data scope"} · {statusLabel(request.status)}</span></li>)}</ul></div>}
             </section>
           </aside>
         </div>
