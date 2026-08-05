@@ -1,35 +1,16 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  Building2,
-  ChevronRight,
-  CircleAlert,
-  ExternalLink,
-  FileText,
-  Landmark,
-  LibraryBig,
-  MapPin,
-  ScanLine,
-  Store,
-  X,
-} from "lucide-react";
 import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import type { AreaStats } from "./map-helpers";
 import type { ProgramCheckResult } from "@/lib/types";
 import type { TifFinanceContext } from "@/lib/tif-finance";
 import type { LocationContextMapSummary } from "@/lib/location-context";
-import type {
-  MapDossierAction,
-  MapDossierSelection,
-} from "@/lib/map-dossier";
 import { formatMiles } from "@/lib/transport-access";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import { WatchAreaButton } from "@/components/workspace/WatchAreaButton";
 
-export interface MapSnapshotPanelProps {
+interface MapSnapshotPanelProps {
   areaStats: AreaStats;
   snapshotLabel: string;
   snapshotLat?: number | null;
@@ -41,309 +22,9 @@ export interface MapSnapshotPanelProps {
   zoningInfo: string | null;
   isGeneratingSnapshot: boolean;
   openedAt?: number;
-  selection?: MapDossierSelection | null;
   onClose: () => void;
   onDrawArea: () => void;
   onGenerateSnapshot: () => void;
-}
-
-interface DossierSectionProps {
-  title: string;
-  badge?: string | null;
-  children: ReactNode;
-}
-
-interface FactRowProps {
-  label: string;
-  value: ReactNode;
-  note?: ReactNode;
-}
-
-interface NextStepPresentation {
-  text: string;
-  primaryAction?: MapDossierAction | null;
-  secondaryAction?: MapDossierAction | null;
-  generateReport: boolean;
-}
-
-const VACANCY_TYPE_LABELS = {
-  vacant_land: "Vacant land",
-  vacant_building: "Vacant building",
-} as const;
-
-function DossierSection({ title, badge, children }: DossierSectionProps) {
-  return (
-    <details className="group border-t border-[#0C1B33]/10">
-      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-mono-bureau text-[10px] font-semibold uppercase tracking-[0.12em] text-[#5A6478] transition-colors hover:text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#2563EB] [&::-webkit-details-marker]:hidden">
-        <span>
-          {title}
-          {badge ? <span className="ml-1.5 text-[#8A93A6]">· {badge}</span> : null}
-        </span>
-        <ChevronRight
-          aria-hidden="true"
-          className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90"
-          strokeWidth={1.8}
-        />
-      </summary>
-      <div className="space-y-3 px-4 pb-4 text-[11px] leading-relaxed text-[#5A6478]">
-        {children}
-      </div>
-    </details>
-  );
-}
-
-function FactRow({ label, value, note }: FactRowProps) {
-  return (
-    <div>
-      <div className="flex items-start justify-between gap-4">
-        <span className="text-[#5A6478]">{label}</span>
-        <span className="max-w-[58%] text-right font-medium text-[#0C1B33]">{value}</span>
-      </div>
-      {note ? <div className="mt-1 text-[9px] leading-relaxed text-[#8A93A6]">{note}</div> : null}
-    </div>
-  );
-}
-
-function selectionKindLabel(selection: MapDossierSelection): string {
-  switch (selection.kind) {
-    case "address":
-      return "Selected location";
-    case "parcel":
-      return "Parcel";
-    case "vacancy":
-      return "Vacant property";
-    case "permit":
-      return "Building permit";
-    case "poi":
-      return "Nearby place";
-  }
-}
-
-function SelectionIcon({ kind }: { kind: MapDossierSelection["kind"] }) {
-  const iconClass = "h-4 w-4";
-  switch (kind) {
-    case "address":
-      return <MapPin aria-hidden="true" className={iconClass} />;
-    case "parcel":
-      return <Landmark aria-hidden="true" className={iconClass} />;
-    case "vacancy":
-      return <Building2 aria-hidden="true" className={iconClass} />;
-    case "permit":
-      return <FileText aria-hidden="true" className={iconClass} />;
-    case "poi":
-      return <Store aria-hidden="true" className={iconClass} />;
-  }
-}
-
-function selectionSubtitle(selection: MapDossierSelection): string {
-  if (selection.subtitle?.trim()) return selection.subtitle.trim();
-
-  switch (selection.kind) {
-    case "address":
-      return "Address or selected map point";
-    case "parcel":
-      return selection.pin ? `Cook County parcel ${selection.pin}` : "Cook County parcel";
-    case "vacancy": {
-      const type = VACANCY_TYPE_LABELS[selection.vacancyType];
-      const size =
-        selection.squareFeet != null && Number.isFinite(selection.squareFeet)
-          ? ` · about ${selection.squareFeet.toLocaleString("en-US")} sq ft`
-          : "";
-      return `${type}${size}`;
-    }
-    case "permit":
-      return `${selection.permitType?.trim() || "Published permit"} · ${selection.permitId}`;
-    case "poi":
-      return selection.category;
-  }
-}
-
-function selectionSummary(
-  selection: MapDossierSelection,
-  mappedProgramCount: number,
-): string {
-  if (selection.summary?.trim()) return selection.summary.trim();
-
-  switch (selection.kind) {
-    case "address":
-      return mappedProgramCount > 0
-        ? `${mappedProgramCount} mapped program${mappedProgramCount === 1 ? "" : "s"} and public location context are available to review.`
-        : "Review mapped public records and location context before planning next steps.";
-    case "parcel":
-      return "Public parcel context is available for initial research. Verify ownership, title, and current condition with the official county records.";
-    case "vacancy": {
-      const count = selection.incentiveGeographyCount;
-      const geography =
-        count != null && count > 0
-          ? ` It intersects ${count} mapped incentive ${count === 1 ? "geography" : "geographies"}.`
-          : "";
-      return `Records flag this as a tracked ${VACANCY_TYPE_LABELS[selection.vacancyType].toLowerCase()} for follow-up.${geography}`;
-    }
-    case "permit":
-      return "This is a published permit record tied to the selected location. Verify its scope, status, and issue details in the City source.";
-    case "poi":
-      return "This place provides nearby context. Select an address or parcel when you need property-specific records and a location report.";
-  }
-}
-
-function defaultNextStep(
-  selection: MapDossierSelection,
-  fallbackPin?: string | null,
-): NextStepPresentation {
-  if (selection.nextStep) {
-    return {
-      text: selection.nextStep.text,
-      primaryAction: selection.nextStep.primaryAction,
-      secondaryAction: selection.nextStep.secondaryAction,
-      generateReport: !selection.nextStep.primaryAction,
-    };
-  }
-
-  const selectionPin =
-    selection.kind === "parcel" || selection.kind === "vacancy" || selection.kind === "permit"
-      ? selection.pin
-      : null;
-  const pin = selectionPin || fallbackPin || null;
-  const parcelUrl = cookViewerUrl(pin);
-  const deedUrl = clerkRecordsUrl(pin);
-
-  if ((selection.kind === "parcel" || selection.kind === "vacancy") && parcelUrl) {
-    return {
-      text:
-        selection.kind === "vacancy"
-          ? "Verify the parcel record, current condition, and disposition path before outreach."
-          : "Review the official parcel record and deed history before relying on ownership or condition details.",
-      primaryAction: { label: "Check parcel record", href: parcelUrl, external: true },
-      secondaryAction: deedUrl
-        ? { label: "Review deed history", href: deedUrl, external: true }
-        : null,
-      generateReport: false,
-    };
-  }
-
-  if (selection.kind === "permit") {
-    const permitSource = selection.sources?.find((source) => source.href)?.href;
-    if (permitSource) {
-      return {
-        text: "Open the source record to verify the permit's current status and authorized work.",
-        primaryAction: {
-          label: "Verify permit record",
-          href: permitSource,
-          external: true,
-        },
-        generateReport: false,
-      };
-    }
-  }
-
-  if (selection.kind === "poi") {
-    return {
-      text: "Use this nearby place as context, then generate a report for the selected location.",
-      generateReport: true,
-    };
-  }
-
-  return {
-    text: "Generate a location report to review mapped programs, districts, and public records.",
-    generateReport: true,
-  };
-}
-
-function ActionLink({ action, primary = false }: { action: MapDossierAction; primary?: boolean }) {
-  return (
-    <a
-      href={action.href}
-      target={action.external ? "_blank" : undefined}
-      rel={action.external ? "noopener noreferrer" : undefined}
-      className={
-        primary
-          ? "inline-flex min-h-9 items-center gap-1.5 bg-[#0C1B33] px-3 py-2 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#172B4D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2"
-          : "inline-flex min-h-9 items-center gap-1.5 px-1 py-2 text-[10px] font-medium text-[#2563EB] underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
-      }
-    >
-      {action.label}
-      {action.external ? (
-        <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
-      ) : (
-        <ArrowRight aria-hidden="true" className="h-3.5 w-3.5" />
-      )}
-    </a>
-  );
-}
-
-function SelectionFacts({ selection }: { selection: MapDossierSelection }) {
-  switch (selection.kind) {
-    case "address": {
-      const hasCoordinates =
-        typeof selection.lat === "number" &&
-        Number.isFinite(selection.lat) &&
-        typeof selection.lon === "number" &&
-        Number.isFinite(selection.lon);
-      return hasCoordinates ? (
-        <FactRow
-          label="Coordinates"
-          value={`${selection.lat!.toFixed(5)}, ${selection.lon!.toFixed(5)}`}
-          note="Map point used for this location lookup."
-        />
-      ) : (
-        <p>Address-level context. Select a parcel for parcel-specific records.</p>
-      );
-    }
-    case "parcel":
-      return (
-        <>
-          <FactRow label="PIN" value={selection.pin || "Not recorded"} />
-          {selection.propertyClass ? <FactRow label="Property class" value={selection.propertyClass} /> : null}
-          {selection.propertyClassDescription ? (
-            <p className="text-[#5A6478]">{selection.propertyClassDescription}</p>
-          ) : null}
-          {selection.propertyType ? <FactRow label="Parcel type" value={selection.propertyType} /> : null}
-          {selection.assessedTotal != null ? (
-            <FactRow
-              label="Total assessed value"
-              value={`$${selection.assessedTotal.toLocaleString("en-US")}`}
-              note="Assessed value is a tax record, not a sale price or project budget."
-            />
-          ) : null}
-        </>
-      );
-    case "vacancy":
-      return (
-        <>
-          <FactRow label="Tracked type" value={VACANCY_TYPE_LABELS[selection.vacancyType]} />
-          {selection.squareFeet != null ? (
-            <FactRow
-              label="Approximate footprint"
-              value={`${selection.squareFeet.toLocaleString("en-US")} sq ft`}
-            />
-          ) : null}
-          {selection.pin ? <FactRow label="PIN" value={selection.pin} /> : null}
-          {selection.incentiveGeographyCount != null ? (
-            <FactRow
-              label="Mapped incentive geographies"
-              value={selection.incentiveGeographyCount.toLocaleString("en-US")}
-              note="A boundary intersection is a location signal, not an eligibility determination."
-            />
-          ) : null}
-          {selection.reasonFlagged ? <FactRow label="Flagged because" value={selection.reasonFlagged} /> : null}
-        </>
-      );
-    case "permit":
-      return (
-        <>
-          <FactRow label="Permit number" value={selection.permitId} />
-          {selection.pin ? <FactRow label="Matched PIN" value={selection.pin} /> : null}
-        </>
-      );
-    case "poi":
-      return (
-        <>
-          <FactRow label="Place type" value={selection.category} />
-          {selection.address ? <FactRow label="Address" value={selection.address} /> : null}
-          {selection.agency ? <FactRow label="Published by" value={selection.agency} /> : null}
-        </>
-      );
-  }
 }
 
 export default function MapSnapshotPanel({
@@ -358,474 +39,553 @@ export default function MapSnapshotPanel({
   zoningInfo,
   isGeneratingSnapshot,
   openedAt,
-  selection,
   onClose,
   onDrawArea,
   onGenerateSnapshot,
 }: MapSnapshotPanelProps) {
-  const activeSelection: MapDossierSelection = selection ?? {
-    kind: "address",
-    title: snapshotLabel.trim() || "Selected location",
-    lat: snapshotLat,
-    lon: snapshotLon,
-  };
   const contextPrograms = snapshotContextSummary?.programs ?? snapshotPrograms;
   const contextTifFinance = snapshotContextSummary?.tifFinance ?? snapshotTifFinance;
   const contextTransport = snapshotContextSummary?.transport ?? areaStats.transport;
   const contextSiteSignals = snapshotContextSummary?.siteSignals ?? areaStats.siteSignals;
-  const title = activeSelection.title.trim() || snapshotLabel.trim() || "Selected location";
-  const nextStep = defaultNextStep(activeSelection, areaStats.parcelPin);
-  const parcelUrl = cookViewerUrl(areaStats.parcelPin);
-  const deedUrl = clerkRecordsUrl(areaStats.parcelPin);
-  const hasPropertyRecords = Boolean(
-    areaStats.parcelPin ||
-      areaStats.assessedTotal != null ||
-      areaStats.ownerName ||
-      areaStats.districts ||
-      areaStats.districtsLoading,
-  );
-  const hasProgramsAndZones = Boolean(
-    contextPrograms.length > 0 || zoningInfo || contextTifFinance || tifFinanceLoading,
-  );
+  const tifSection =
+    contextTifFinance || tifFinanceLoading ? (
+      <>
+        <div className="mx-4 h-px bg-[#0C1B33]/8" />
+        <div className="px-4 py-3">
+          <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-1.5">
+            TIF Funding Overview
+          </div>
+          {tifFinanceLoading && !contextTifFinance ? (
+            <div className="text-[10px] text-[#0C1B33]/40 italic">Loading TIF finance context...</div>
+          ) : contextTifFinance ? (
+            <div className="space-y-1.5">
+              <div className="text-[11px] font-medium text-[#0C1B33]/85 leading-snug">
+                {contextTifFinance.districtName}
+                {contextTifFinance.reportYear && (
+                  <span className="text-[#0C1B33]/40"> · {contextTifFinance.reportYear}</span>
+                )}
+              </div>
+              {contextTifFinance.fundBalance != null && (
+                <div className="flex justify-between gap-3 text-[10px]">
+                  <span className="text-[#0C1B33]/50">Reported fund balance</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/85">${contextTifFinance.fundBalance.toLocaleString()}</span>
+                </div>
+              )}
+              {contextTifFinance.amountDesignatedProjectCosts != null && (
+                <div className="flex justify-between gap-3 text-[10px]">
+                  <span className="text-[#0C1B33]/50">Project-cost designation</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/85">${contextTifFinance.amountDesignatedProjectCosts.toLocaleString()}</span>
+                </div>
+              )}
+              {contextTifFinance.expirationYear && (
+                <div className="flex justify-between gap-3 text-[10px]">
+                  <span className="text-[#0C1B33]/50">District expiration</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/85">{contextTifFinance.expirationYear}</span>
+                </div>
+              )}
+              <p className="text-[9px] text-[#0C1B33]/35 leading-relaxed pt-1">
+                District-level City annual report context. This does not show available funds or project approval.
+              </p>
+            </div>
+          ) : null}
+        </div>
+      </>
+    ) : null;
 
   return (
     <aside
-      aria-label="Selected map location details"
-      className="absolute bottom-0 left-0 right-0 z-20 max-h-[72vh] touch-manipulation overflow-y-auto rounded-t-lg border-t border-[#0C1B33]/10 bg-white/98 shadow-lg backdrop-blur md:bottom-auto md:left-auto md:right-3 md:top-12 md:z-10 md:max-h-[calc(100%-4rem)] md:w-[340px] md:rounded-none md:border md:bg-white/96 md:shadow-none"
-      onClickCapture={(event) => {
+      aria-label="Location Snapshot"
+      className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none touch-manipulation"
+      // touch-manipulation: this sheet sits over the map canvas (which Mapbox's
+      // own CSS sets to touch-action:none) — without it, Safari's residual
+      // double-tap/zoom gesture heuristics can still apply to the panel itself.
+      // Swallow the synthetic "ghost click" iOS fires ~300ms after the map tap that opened this panel — it would otherwise hit the ×, a link, or Generate.
+      onClickCapture={(e) => {
         if (openedAt && Date.now() - openedAt < 350) {
-          event.preventDefault();
-          event.stopPropagation();
+          e.preventDefault();
+          e.stopPropagation();
         }
       }}
     >
-      <div className="flex flex-col items-center pb-1 pt-2 md:hidden" aria-hidden="true">
-        <div className="h-1 w-10 rounded-full bg-[#0C1B33]/15" />
+      {/* Mobile drag handle */}
+      <div className="md:hidden flex flex-col items-center pt-2 pb-1">
+        <div className="w-10 h-1 bg-[#0C1B33]/15 rounded-full" />
       </div>
 
-      <header className="px-4 pb-4 pt-2 md:pt-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center border border-[#2563EB]/20 bg-[#2563EB]/5 text-[#2563EB]">
-            <SelectionIcon kind={activeSelection.kind} />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.16em] text-[#8A93A6]">
-              {selectionKindLabel(activeSelection)}
-            </div>
-            <h2 className="mt-1 break-words text-[16px] font-semibold leading-tight text-[#0C1B33]">
-              {title}
-            </h2>
-            <p className="mt-1 text-[11px] leading-snug text-[#5A6478]">
-              {selectionSubtitle(activeSelection)}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={(event) => {
-              event.stopPropagation();
-              onClose();
-            }}
-            className="-mr-2 -mt-2 inline-flex h-10 w-10 shrink-0 items-center justify-center text-[#5A6478] transition-colors hover:text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
-            aria-label="Close property details"
-            title="Close"
-          >
-            <X aria-hidden="true" className="h-4 w-4" />
-          </button>
+      <div className="px-4 pt-2 md:pt-4 pb-1 flex items-center justify-between">
+        <div className="font-mono-bureau text-[10px] md:text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30">
+          Location Snapshot
         </div>
-
-        <p className="mt-3 text-[12px] leading-relaxed text-[#0C1B33]">
-          {selectionSummary(activeSelection, contextPrograms.length)}
-        </p>
-
-        {activeSelection.freshness?.status === "stale" ? (
-          <div className="mt-3 flex gap-2 border-l-2 border-[#B45309] bg-[#FFFBEB] px-3 py-2 text-[10px] leading-relaxed text-[#78350F]">
-            <CircleAlert aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>
-              {activeSelection.freshness.note ||
-                "Some selection details may be outdated."}{" "}
-              Verify them against the linked public source.
-              {activeSelection.freshness.asOf ? ` Records as of ${activeSelection.freshness.asOf}.` : ""}
-            </p>
-          </div>
-        ) : null}
-
-        <div className="mt-4 border border-[#0C1B33]/15 border-l-[3px] border-l-[#0C1B33] bg-[#0C1B33]/[0.025] p-3">
-          <div className="font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.15em] text-[#8A93A6]">
-            Next step
-          </div>
-          <p className="mt-2 text-[12px] leading-relaxed text-[#0C1B33]">{nextStep.text}</p>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            {nextStep.generateReport ? (
-              <button
-                type="button"
-                onClick={onGenerateSnapshot}
-                disabled={isGeneratingSnapshot}
-                className="inline-flex min-h-9 items-center gap-1.5 bg-[#0C1B33] px-3 py-2 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#172B4D] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 disabled:cursor-wait disabled:bg-[#0C1B33]/45"
-              >
-                <FileText aria-hidden="true" className="h-3.5 w-3.5" />
-                {isGeneratingSnapshot ? "Preparing report" : "Generate location report"}
-              </button>
-            ) : nextStep.primaryAction ? (
-              <ActionLink action={nextStep.primaryAction} primary />
-            ) : null}
-            {nextStep.secondaryAction ? <ActionLink action={nextStep.secondaryAction} /> : null}
-          </div>
-        </div>
-      </header>
-
-      <DossierSection title="Site facts">
-        <SelectionFacts selection={activeSelection} />
-      </DossierSection>
-
-      {hasProgramsAndZones ? (
-        <DossierSection
-          title="Programs and zones"
-          badge={contextPrograms.length > 0 ? `${contextPrograms.length} mapped` : "location context"}
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          className="text-[#0C1B33]/30 hover:text-[#0C1B33]/60 text-[20px] md:text-[16px] leading-none transition-colors p-2 -mr-1"
+          title="Close"
         >
-          {zoningInfo ? <FactRow label="Zoning" value={zoningInfo} /> : null}
+          &times;
+        </button>
+      </div>
 
-          {contextPrograms.length > 0 ? (
-            <div className="space-y-3">
-              {contextPrograms.map((result) => (
-                <div key={result.programId}>
-                  <div className="font-medium leading-snug text-[#0C1B33]">{result.program.name}</div>
-                  {result.whyOneLine ? <p className="mt-1 text-[10px]">{result.whyOneLine}</p> : null}
-                  {result.benefitRange ? (
-                    <p className="mt-1 font-mono-bureau text-[9px] text-[#8A93A6]">
-                      Published program description: {result.benefitRange}
-                    </p>
-                  ) : null}
-                </div>
-              ))}
-              <p className="text-[9px] text-[#8A93A6]">
-                Location matches do not confirm applicant eligibility, funding availability, or approval.
-              </p>
-            </div>
-          ) : null}
+      {/* Location label */}
+      <div className="px-4 pb-3">
+        <div className="text-[13px] md:text-[11px] font-medium text-[#0C1B33]/80 leading-tight">
+          {snapshotLabel}
+        </div>
+        <div className="text-[9px] text-[#0C1B33]/30 mt-0.5 font-mono-bureau tracking-wide">
+          Search or tap the map to update
+        </div>
+      </div>
 
-          {tifFinanceLoading && !contextTifFinance ? (
-            <p className="italic text-[#8A93A6]">Loading TIF finance context...</p>
-          ) : contextTifFinance ? (
-            <div className="space-y-2 border-t border-[#0C1B33]/8 pt-3">
-              <div className="font-medium text-[#0C1B33]">
-                {contextTifFinance.districtName}
-                {contextTifFinance.reportYear ? (
-                  <span className="font-normal text-[#8A93A6]"> · {contextTifFinance.reportYear}</span>
-                ) : null}
-              </div>
-              {contextTifFinance.fundBalance != null ? (
-                <FactRow
-                  label="Reported fund balance"
-                  value={`$${contextTifFinance.fundBalance.toLocaleString("en-US")}`}
-                />
-              ) : null}
-              {contextTifFinance.amountDesignatedProjectCosts != null ? (
-                <FactRow
-                  label="Project-cost designation"
-                  value={`$${contextTifFinance.amountDesignatedProjectCosts.toLocaleString("en-US")}`}
-                />
-              ) : null}
-              {contextTifFinance.expirationYear ? (
-                <FactRow label="District expiration" value={contextTifFinance.expirationYear} />
-              ) : null}
-              <p className="text-[9px] text-[#8A93A6]">
-                District-level City annual-report context. These figures do not indicate available project funds or approval.
-              </p>
-            </div>
-          ) : null}
-        </DossierSection>
-      ) : null}
+      {/* Mobile eligibility glance + primary CTA (search-first / conversion-led) */}
+      <div className="md:hidden px-4 pb-3">
+        <div className="flex items-center gap-2 mb-2.5">
+          <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-semibold ${contextPrograms.length > 0 ? "bg-[#2563EB]/10 text-[#2563EB]" : "bg-[#0C1B33]/5 text-[#0C1B33]/40"}`}>
+            {contextPrograms.length > 0 ? "✓" : "—"}
+          </span>
+          <span className="text-[13px] text-[#0C1B33]/75 leading-tight">
+            {contextPrograms.length > 0
+              ? `${contextPrograms.length} mapped program${contextPrograms.length !== 1 ? "s" : ""} to review here`
+              : "Reviewing mapped programs…"}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={onGenerateSnapshot}
+          disabled={isGeneratingSnapshot}
+          className="block w-full text-center font-mono-bureau text-[11px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-3.5 rounded-lg shadow-sm hover:bg-[#1d4ed8] disabled:bg-[#2563EB]/45 transition-colors"
+        >
+          {isGeneratingSnapshot ? "Preparing report…" : "Generate report →"}
+        </button>
+      </div>
 
-      <DossierSection title="Site activity context" badge="public measurements">
-        <FactRow
-          label="Median home price"
-          value={areaStats.medianHomePrice}
-          note="Median home sale-price context for the census tract from the public estimate used by the Explorer."
-        />
-        <FactRow
-          label="Median household income"
-          value={areaStats.medianIncome}
-          note="Census-tract household-income context from the public estimate used by the Explorer."
-        />
-        <FactRow
-          label="EPA walkability index"
-          value={`${areaStats.walkScore}/20`}
-          note={
-            <>
-              Public EPA index based on land-use diversity, intersection density, and transit proximity. It is not an Explorer match score. {" "}
-              <a
-                href="https://www.epa.gov/smartgrowth/smart-location-mapping#702702702702702702702702"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[#2563EB] underline underline-offset-2"
-              >
-                EPA source
-              </a>
-            </>
-          }
-        />
+      {tifSection && <div className="md:hidden">{tifSection}</div>}
 
-        {contextTransport ? (
-          <div className="space-y-2 border-t border-[#0C1B33]/8 pt-3">
-            <div className="font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A93A6]">
-              Logistics access
-            </div>
-            {contextTransport.expressway ? (
-              <FactRow
-                label={contextTransport.expressway.name}
-                value={formatMiles(contextTransport.expressway.miles)}
-              />
-            ) : null}
-            {contextTransport.rail ? (
-              <FactRow
-                label={`Freight rail (${contextTransport.rail.name})`}
-                value={formatMiles(contextTransport.rail.miles)}
-              />
-            ) : null}
-            <FactRow label="Midway Airport" value={formatMiles(contextTransport.midwayMiles)} />
-            <FactRow label="O'Hare Airport" value={formatMiles(contextTransport.ohareMiles)} />
-            <p className="text-[9px] text-[#8A93A6]">
-              Straight-line proximity signals, not routed travel times.
-            </p>
+      <div className="mx-4 h-px bg-[#0C1B33]/8" />
+
+      {/* Stats */}
+      <div className="px-4 pt-3 pb-3 space-y-3">
+        <div>
+          <div className="flex justify-between items-baseline">
+            <span className="text-[11px] text-[#0C1B33]/60">Median Home Price</span>
+            <span className="font-mono-bureau text-[13px] text-[#0C1B33]/90 font-medium">
+              {areaStats.medianHomePrice}
+            </span>
           </div>
-        ) : null}
+          <p className="text-[9px] text-[#0C1B33]/30 mt-0.5 leading-relaxed">
+            Median sale price of homes in this census tract (ACS 5-Year Estimate).
+          </p>
+        </div>
 
-        {contextSiteSignals ? (
-          <div className="space-y-2 border-t border-[#0C1B33]/8 pt-3">
-            <div className="font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A93A6]">
-              Nearby records
-            </div>
-            {contextSiteSignals.nofAwardsNearby > 0 ? (
-              <FactRow label="NOF grants funded within 1/2 mi" value={contextSiteSignals.nofAwardsNearby} />
-            ) : null}
-            {contextSiteSignals.incentiveParcelsNearby > 0 ? (
-              <FactRow
-                label="County incentive parcels within 1/4 mi"
-                value={contextSiteSignals.incentiveParcelsNearby}
-              />
-            ) : null}
-            {contextSiteSignals.brownfield && contextSiteSignals.brownfield.miles < 0.5 ? (
-              <FactRow
-                label={`Brownfield record (${contextSiteSignals.brownfield.name})`}
-                value={formatMiles(contextSiteSignals.brownfield.miles)}
-              />
-            ) : null}
-            {contextSiteSignals.openLustNearby > 0 ? (
-              <FactRow
-                label="Open tank-leak records within 1/4 mi"
-                value={contextSiteSignals.openLustNearby}
-              />
-            ) : null}
-            <p className="text-[9px] text-[#8A93A6]">
-              Nearby public records provide context only. Verify current conditions with the source agencies.
-            </p>
+        <div>
+          <div className="flex justify-between items-baseline">
+            <span className="text-[11px] text-[#0C1B33]/60">Median Income</span>
+            <span className="font-mono-bureau text-[13px] text-[#0C1B33]/90 font-medium">
+              {areaStats.medianIncome}
+            </span>
           </div>
-        ) : null}
-      </DossierSection>
+          <p className="text-[9px] text-[#0C1B33]/30 mt-0.5 leading-relaxed">
+            Median household income for the tract, used to determine HUD low-income eligibility.
+          </p>
+        </div>
 
-      {activeSelection.kind === "permit" ? (
-        <DossierSection title="Building permit record" badge="published record">
-          {activeSelection.permitType ? <FactRow label="Permit type" value={activeSelection.permitType} /> : null}
-          {activeSelection.permitStatus ? <FactRow label="Current status text" value={activeSelection.permitStatus} /> : null}
-          {activeSelection.issueDate ? <FactRow label="Issue date" value={activeSelection.issueDate} /> : null}
-          {activeSelection.workDescription ? (
-            <div>
-              <div className="text-[#5A6478]">Authorized work description</div>
-              <p className="mt-1 text-[#0C1B33]">{activeSelection.workDescription}</p>
-            </div>
-          ) : null}
-          {activeSelection.reportedCost != null ? (
-            <FactRow
-              label="Applicant-reported cost"
-              value={`$${activeSelection.reportedCost.toLocaleString("en-US")}`}
-              note="This is the applicant's reported estimate in the permit record, not a verified investment amount, award, or available incentive budget."
-            />
-          ) : null}
-        </DossierSection>
-      ) : null}
-
-      {hasPropertyRecords ? (
-        <DossierSection title="Property and public records">
-          {areaStats.parcelPin ? (
-            <>
-              <FactRow label="PIN" value={areaStats.parcelPin} />
-              {areaStats.parcelClass ? <FactRow label="Property class" value={areaStats.parcelClass} /> : null}
-              {areaStats.parcelClassDescription ? <p>{areaStats.parcelClassDescription}</p> : null}
-              {areaStats.parcelValue ? <FactRow label="Recorded parcel value" value={areaStats.parcelValue} /> : null}
-              {areaStats.parcelTaxCode ? <FactRow label="Tax code" value={areaStats.parcelTaxCode} /> : null}
-              {areaStats.parcelTownship ? <FactRow label="Township" value={areaStats.parcelTownship} /> : null}
-              {areaStats.parcelType ? <FactRow label="Parcel type" value={areaStats.parcelType} /> : null}
-            </>
-          ) : null}
-
-          {areaStats.assessedTotal != null ? (
-            <div className="space-y-2 border-t border-[#0C1B33]/8 pt-3">
-              <div className="font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A93A6]">
-                Assessment{areaStats.taxYear ? ` · ${areaStats.taxYear}` : ""}
+        <div>
+          <div className="flex justify-between items-baseline">
+            <span className="text-[11px] text-[#0C1B33]/60">EPA Walkability Index</span>
+            <div className="flex items-center gap-2">
+              <div className="w-14 h-1.5 bg-[#0C1B33]/10 overflow-hidden">
+                <div
+                  className="h-full bg-[#2563EB]"
+                  style={{ width: `${(areaStats.walkScore / 20) * 100}%` }}
+                />
               </div>
-              {areaStats.assessedLand != null ? (
-                <FactRow label="Land" value={`$${areaStats.assessedLand.toLocaleString("en-US")}`} />
-              ) : null}
-              {areaStats.assessedBuilding != null ? (
-                <FactRow label="Building" value={`$${areaStats.assessedBuilding.toLocaleString("en-US")}`} />
-              ) : null}
-              <FactRow label="Total assessed" value={`$${areaStats.assessedTotal.toLocaleString("en-US")}`} />
-              {areaStats.priorYearTax != null ? (
-                <FactRow label="Prior-year tax" value={`$${areaStats.priorYearTax.toLocaleString("en-US")}`} />
-              ) : null}
+              <span className="font-mono-bureau text-[13px] text-[#0C1B33]/90 font-medium">
+                {areaStats.walkScore}/20
+              </span>
             </div>
-          ) : null}
+          </div>
+          <p className="text-[9px] text-[#0C1B33]/30 mt-0.5 leading-relaxed">
+            Scores land use diversity, intersection density, and transit proximity.{" "}
+            <a href="https://www.epa.gov/smartgrowth/smart-location-mapping#702702702702702702702702" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#2563EB]/60">EPA Smart Location Database</a>
+          </p>
+        </div>
+      </div>
 
-          {areaStats.ownerName ? (
-            <div className="space-y-2 border-t border-[#0C1B33]/8 pt-3">
-              <FactRow label="Taxpayer of record" value={areaStats.ownerName} />
-              {areaStats.ownerType && areaStats.ownerType !== "unknown" ? (
-                <div className="flex items-center justify-between gap-4">
-                  <span>Ownership type</span>
-                  <span
-                    className="border px-2 py-0.5 text-[9px] font-medium"
-                    style={{
-                      backgroundColor:
-                        (OWNER_TYPE_COLORS[areaStats.ownerType as OwnerType] || "#9CA3AF") + "10",
-                      borderColor:
-                        (OWNER_TYPE_COLORS[areaStats.ownerType as OwnerType] || "#9CA3AF") + "35",
-                      color: OWNER_TYPE_COLORS[areaStats.ownerType as OwnerType] || "#64748B",
-                    }}
-                  >
-                    {OWNER_TYPE_LABELS[areaStats.ownerType as OwnerType] || areaStats.ownerType}
+      {/* Logistics access */}
+      {contextTransport && (
+        <>
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 py-3">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#475569]/60 mb-1.5">
+              Logistics Access
+            </div>
+            <div className="space-y-1">
+              {contextTransport.expressway && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50 truncate">{contextTransport.expressway.name}</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">
+                    {formatMiles(contextTransport.expressway.miles)}
                   </span>
                 </div>
-              ) : null}
-              <p className="text-[9px] text-[#8A93A6]">
-                Public taxpayer records do not replace a title search. Verify current ownership and decision-makers independently.
-              </p>
-            </div>
-          ) : null}
-
-          {areaStats.districtsLoading && !areaStats.districts ? (
-            <p className="border-t border-[#0C1B33]/8 pt-3 italic text-[#8A93A6]">Loading civic districts...</p>
-          ) : areaStats.districts ? (
-            <div className="space-y-2 border-t border-[#0C1B33]/8 pt-3">
-              <div className="font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A93A6]">
-                Civic representation
+              )}
+              {contextTransport.rail && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50 truncate">Freight rail ({contextTransport.rail.name})</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">
+                    {formatMiles(contextTransport.rail.miles)}
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                <span className="text-[#0C1B33]/50">Midway Airport</span>
+                <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">
+                  {formatMiles(contextTransport.midwayMiles)}
+                </span>
               </div>
-              {areaStats.districts.ward ? (
-                <FactRow
-                  label="Alderperson"
-                  value={
-                    areaStats.districts.officials?.alderperson?.name
-                      ? `${areaStats.districts.officials.alderperson.name} · Ward ${areaStats.districts.ward}`
-                      : `Ward ${areaStats.districts.ward}`
-                  }
-                />
-              ) : null}
-              {areaStats.districts.commissionerDistrict ? (
-                <FactRow
-                  label="Commissioner"
-                  value={
-                    areaStats.districts.officials?.commissioner?.name
-                      ? `${areaStats.districts.officials.commissioner.name} · Dist. ${areaStats.districts.commissionerDistrict}`
-                      : `Dist. ${areaStats.districts.commissionerDistrict}`
-                  }
-                />
-              ) : null}
-              {areaStats.districts.congressionalDistrict ? (
-                <FactRow label="Congress" value={`IL-${areaStats.districts.congressionalDistrict}`} />
-              ) : null}
-              {areaStats.districts.stateHouseDistrict ? (
-                <FactRow label="State House" value={`Dist. ${areaStats.districts.stateHouseDistrict}`} />
-              ) : null}
-              {areaStats.districts.stateSenateDistrict ? (
-                <FactRow label="State Senate" value={`Dist. ${areaStats.districts.stateSenateDistrict}`} />
-              ) : null}
-              <p className="text-[9px] text-[#8A93A6]">Verify the current public roster before reaching out.</p>
+              <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                <span className="text-[#0C1B33]/50">O&apos;Hare Airport</span>
+                <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">
+                  {formatMiles(contextTransport.ohareMiles)}
+                </span>
+              </div>
             </div>
-          ) : null}
+            <p className="text-[9px] text-[#0C1B33]/30 mt-1.5 leading-relaxed">
+              Straight-line distances to the nearest expressway, freight rail main line, and airports.
+            </p>
+          </div>
+        </>
+      )}
 
-          {parcelUrl || deedUrl ? (
-            <div className="flex flex-wrap gap-3 border-t border-[#0C1B33]/8 pt-3">
-              {parcelUrl ? (
-                <ActionLink
-                  action={{ label: "CookViewer parcel record", href: parcelUrl, external: true }}
-                />
-              ) : null}
-              {deedUrl ? (
-                <ActionLink
-                  action={{ label: "Clerk deed history", href: deedUrl, external: true }}
-                />
-              ) : null}
+      {/* Site signals */}
+      {contextSiteSignals && (
+        <>
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 py-3">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#78350F]/60 mb-1.5">
+              Site Signals
             </div>
-          ) : null}
-        </DossierSection>
-      ) : null}
+            <div className="space-y-1">
+              {contextSiteSignals.nofAwardsNearby > 0 && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50">NOF grants funded within 1/2 mi</span>
+                  <span className="font-mono-bureau text-[#047857] font-medium shrink-0">{contextSiteSignals.nofAwardsNearby}</span>
+                </div>
+              )}
+              {contextSiteSignals.incentiveParcelsNearby > 0 && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50">County incentive parcels within 1/4 mi</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{contextSiteSignals.incentiveParcelsNearby}</span>
+                </div>
+              )}
+              {contextSiteSignals.brownfield && contextSiteSignals.brownfield.miles < 0.5 && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50 truncate">Brownfield site ({contextSiteSignals.brownfield.name})</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80 shrink-0">{formatMiles(contextSiteSignals.brownfield.miles)}</span>
+                </div>
+              )}
+              {contextSiteSignals.openLustNearby > 0 && (
+                <div className="flex justify-between items-baseline gap-2 text-[10px]">
+                  <span className="text-[#0C1B33]/50">Open tank-leak incidents within 1/4 mi</span>
+                  <span className="font-mono-bureau text-[#B91C1C] font-medium shrink-0">{contextSiteSignals.openLustNearby}</span>
+                </div>
+              )}
+              {contextSiteSignals.nofAwardsNearby === 0 &&
+                contextSiteSignals.incentiveParcelsNearby === 0 &&
+                contextSiteSignals.openLustNearby === 0 &&
+                (!contextSiteSignals.brownfield || contextSiteSignals.brownfield.miles >= 0.5) && (
+                  <div className="text-[10px] text-[#0C1B33]/40 italic">No nearby signals</div>
+                )}
+            </div>
+            <p className="text-[9px] text-[#0C1B33]/30 mt-1.5 leading-relaxed">
+              Nearby funding precedents and environmental flags from public data. Verify with the administering agencies before relying on them.
+            </p>
+          </div>
+        </>
+      )}
 
-      <DossierSection title="Data and sources">
-        {activeSelection.sources?.length ? (
-          <div className="space-y-3">
-            {activeSelection.sources.map((source, index) => (
-              <div key={`${source.label}-${index}`}>
-                {source.href ? (
+      {/* Parcel info */}
+      {areaStats.parcelPin && (
+        <>
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 py-3">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-1">
+              Parcel
+            </div>
+            <div className="text-[12px] text-[#0C1B33]/80">
+              <a
+                href={`https://www.cookcountyassessoril.gov/pin/${areaStats.parcelPin}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#2563EB] hover:underline"
+              >
+                {areaStats.parcelPin}
+              </a>
+              {areaStats.parcelClass && <span className="text-[#0C1B33]/50"> · Class {areaStats.parcelClass}</span>}
+              {areaStats.parcelValue && <span className="text-[#0C1B33]/50"> · {areaStats.parcelValue}</span>}
+            </div>
+            {areaStats.parcelClassDescription && (
+              <div className="text-[10px] text-[#0C1B33]/40 mt-0.5 italic">
+                {areaStats.parcelClassDescription}
+              </div>
+            )}
+            {/* Tax Code, Township, Parcel Type row */}
+            {(areaStats.parcelTaxCode || areaStats.parcelTownship || areaStats.parcelType) && (
+              <div className="flex gap-3 mt-1.5 font-mono-bureau text-[9px] text-[#0C1B33]/50">
+                {areaStats.parcelTaxCode && <span>Tax Code {areaStats.parcelTaxCode}</span>}
+                {areaStats.parcelTownship && <span>{areaStats.parcelTownship}</span>}
+                {areaStats.parcelType && <span>{areaStats.parcelType}</span>}
+              </div>
+            )}
+            {/* Property and ownership records pair the public parcel record with
+                deed history. Taxpayer data remains a lead, never a title finding. */}
+            {cookViewerUrl(areaStats.parcelPin) && (
+              <div className="mt-2">
+                <div className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/35">
+                  Property &amp; ownership records
+                </div>
+                <div className="mt-1">
                   <a
-                    href={source.href}
+                    href={cookViewerUrl(areaStats.parcelPin)!}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 font-medium text-[#2563EB] underline-offset-2 hover:underline"
+                    className="text-[11px] text-[#2563EB] hover:underline"
                   >
-                    {source.label}
-                    <ExternalLink aria-hidden="true" className="h-3.5 w-3.5" />
+                    View parcel &amp; ownership details in CookViewer ↗
                   </a>
-                ) : (
-                  <div className="font-medium text-[#0C1B33]">{source.label}</div>
-                )}
-                {source.asOf ? <div className="mt-0.5 text-[9px] text-[#8A93A6]">As of {source.asOf}</div> : null}
-                {source.note ? <p className="mt-1 text-[9px] text-[#8A93A6]">{source.note}</p> : null}
+                  <div className="text-[9px] text-[#0C1B33]/40 mt-0.5">
+                    Opens Cook County&rsquo;s official parcel record in a new tab.
+                  </div>
+                </div>
+                <div className="mt-1.5">
+                  <a
+                    href={clerkRecordsUrl(areaStats.parcelPin)!}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] text-[#2563EB] hover:underline"
+                  >
+                    View deeds and ownership history at the Cook County Clerk ↗
+                  </a>
+                  <div className="text-[9px] text-[#0C1B33]/40 mt-0.5">
+                    Review recorded deeds, grantors, grantees, liens, releases, and other documents
+                    associated with this parcel.
+                  </div>
+                </div>
               </div>
-            ))}
+            )}
           </div>
-        ) : (
-          <p>Source links appear when the selected map record includes a published verification destination.</p>
-        )}
-        <div className="space-y-1 border-t border-[#0C1B33]/8 pt-3 text-[9px] text-[#8A93A6]">
-          <p>Mapped programs and boundaries are discovery signals, not eligibility determinations or funding approvals.</p>
-          <p>Verify parcel ownership, site condition, and permit status with the responsible public agencies before relying on them.</p>
-        </div>
-      </DossierSection>
+        </>
+      )}
 
-      <div className="space-y-2 border-t border-[#0C1B33]/10 px-4 py-4">
-        {!nextStep.generateReport ? (
-          <button
-            type="button"
-            onClick={onGenerateSnapshot}
-            disabled={isGeneratingSnapshot}
-            className="inline-flex min-h-10 w-full items-center justify-center gap-2 bg-[#2563EB] px-3 py-2 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-[#1D4ED8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB] focus-visible:ring-offset-2 disabled:cursor-wait disabled:bg-[#2563EB]/45"
-          >
-            <FileText aria-hidden="true" className="h-4 w-4" />
-            {isGeneratingSnapshot ? "Preparing report" : "Generate location report"}
-          </button>
-        ) : null}
-        {snapshotLat != null && snapshotLon != null ? (
+      {/* Assessment */}
+      {areaStats.assessedTotal != null && (
+        <>
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 py-3">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#059669]/50 mb-1.5">
+              Assessment{areaStats.taxYear ? ` (${areaStats.taxYear})` : ""}
+            </div>
+            <div className="space-y-0.5">
+              {areaStats.assessedLand != null && (
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-[#0C1B33]/50">Land</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80">${areaStats.assessedLand.toLocaleString()}</span>
+                </div>
+              )}
+              {areaStats.assessedBuilding != null && (
+                <div className="flex justify-between text-[10px]">
+                  <span className="text-[#0C1B33]/50">Building</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80">${areaStats.assessedBuilding.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-[10px] font-medium">
+                <span className="text-[#0C1B33]/60">Total Assessed</span>
+                <span className="font-mono-bureau text-[#0C1B33]/90">${areaStats.assessedTotal.toLocaleString()}</span>
+              </div>
+              {areaStats.priorYearTax != null && (
+                <div className="flex justify-between text-[10px] mt-1 pt-1 border-t border-[#0C1B33]/5">
+                  <span className="text-[#0C1B33]/50">Prior Year Tax</span>
+                  <span className="font-mono-bureau text-[#0C1B33]/80">${areaStats.priorYearTax.toLocaleString()}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Ownership */}
+      {areaStats.ownerName && (
+        <>
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 py-3">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-1.5">
+              Taxpayer of Record
+            </div>
+            <div className="text-[11px] font-medium text-[#0C1B33]/90 mb-1">
+              {areaStats.ownerName}
+            </div>
+            {areaStats.ownerType && areaStats.ownerType !== "unknown" && (
+              <span
+                className="inline-block text-[9px] font-medium px-2 py-0.5 rounded"
+                style={{
+                  backgroundColor: (OWNER_TYPE_COLORS[areaStats.ownerType as OwnerType] || "#9CA3AF") + "15",
+                  color: OWNER_TYPE_COLORS[areaStats.ownerType as OwnerType] || "#9CA3AF",
+                  border: `1px solid ${(OWNER_TYPE_COLORS[areaStats.ownerType as OwnerType] || "#9CA3AF")}30`,
+                }}
+              >
+                {OWNER_TYPE_LABELS[areaStats.ownerType as OwnerType] || areaStats.ownerType}
+              </span>
+            )}
+            <p className="text-[9px] text-[#0C1B33]/35 leading-relaxed pt-1">
+              Public taxpayer records do not replace a title search. Verify current ownership and decision-makers independently.
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* Civic representation */}
+      {(areaStats.districts || areaStats.districtsLoading) && (
+        <>
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 py-3">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#D97706]/50 mb-1.5">
+              Civic Representation
+            </div>
+            {areaStats.districtsLoading && !areaStats.districts ? (
+              <div className="text-[10px] text-[#0C1B33]/40 italic">Loading districts...</div>
+            ) : areaStats.districts ? (
+              <div className="space-y-0.5">
+                {areaStats.districts.ward && (
+                  <div className="flex justify-between gap-3 text-[10px]">
+                    <span className="text-[#0C1B33]/50 shrink-0">Alderperson</span>
+                    <span className="font-mono-bureau text-[#0C1B33]/80 text-right">
+                      {areaStats.districts.officials?.alderperson?.name
+                        ? `${areaStats.districts.officials.alderperson.name} · Ward ${areaStats.districts.ward}`
+                        : `Ward ${areaStats.districts.ward}`}
+                    </span>
+                  </div>
+                )}
+                {areaStats.districts.commissionerDistrict && (
+                  <div className="flex justify-between gap-3 text-[10px]">
+                    <span className="text-[#0C1B33]/50 shrink-0">Commissioner</span>
+                    <span className="font-mono-bureau text-[#0C1B33]/80 text-right">
+                      {areaStats.districts.officials?.commissioner?.name
+                        ? `${areaStats.districts.officials.commissioner.name} · Dist. ${areaStats.districts.commissionerDistrict}`
+                        : `Dist. ${areaStats.districts.commissionerDistrict}`}
+                    </span>
+                  </div>
+                )}
+                {areaStats.districts.congressionalDistrict && (
+                  <div className="flex justify-between gap-3 text-[10px]">
+                    <span className="text-[#0C1B33]/50 shrink-0">Congress</span>
+                    <span className="font-mono-bureau text-[#0C1B33]/80 text-right">
+                      {areaStats.districts.officials?.congressionalRepresentative?.name
+                        ? `${areaStats.districts.officials.congressionalRepresentative.name} · IL-${areaStats.districts.congressionalDistrict}`
+                        : `IL-${areaStats.districts.congressionalDistrict}`}
+                    </span>
+                  </div>
+                )}
+                {areaStats.districts.stateHouseDistrict && (
+                  <div className="flex justify-between gap-3 text-[10px]">
+                    <span className="text-[#0C1B33]/50 shrink-0">State Rep</span>
+                    <span className="font-mono-bureau text-[#0C1B33]/80 text-right">
+                      {areaStats.districts.officials?.stateRepresentative?.name
+                        ? `${areaStats.districts.officials.stateRepresentative.name} · Dist. ${areaStats.districts.stateHouseDistrict}`
+                        : `Dist. ${areaStats.districts.stateHouseDistrict}`}
+                    </span>
+                  </div>
+                )}
+                {areaStats.districts.stateSenateDistrict && (
+                  <div className="flex justify-between gap-3 text-[10px]">
+                    <span className="text-[#0C1B33]/50 shrink-0">State Senate</span>
+                    <span className="font-mono-bureau text-[#0C1B33]/80 text-right">
+                      {areaStats.districts.officials?.stateSenator?.name
+                        ? `${areaStats.districts.officials.stateSenator.name} · Dist. ${areaStats.districts.stateSenateDistrict}`
+                        : `Dist. ${areaStats.districts.stateSenateDistrict}`}
+                    </span>
+                  </div>
+                )}
+                {areaStats.districts.officials && (
+                  <div className="pt-1 text-[9px] text-[#0C1B33]/35">
+                    Current public roster lookup; verify before reaching out.
+                  </div>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </>
+      )}
+
+      {tifSection && <div className="hidden md:block">{tifSection}</div>}
+
+      {/* Zoning info */}
+      {zoningInfo && (
+        <>
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 py-3">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#059669]/50 mb-1">
+              Zoning
+            </div>
+            <div className="text-[12px] text-[#0C1B33]/80">{zoningInfo}</div>
+          </div>
+        </>
+      )}
+
+      {/* Top 3 Programs Here */}
+      {contextPrograms.length > 0 && (
+        <>
+          <div className="mx-4 h-px bg-[#0C1B33]/8" />
+          <div className="px-4 pt-3 pb-2">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-2">
+              Mapped Programs to Review
+            </div>
+            <div className="space-y-1.5">
+              {contextPrograms.map((r) => (
+                <div key={r.programId}>
+                  <div className="text-[10px] text-[#0C1B33]/70 leading-snug">
+                    {r.program.name}
+                  </div>
+                  <div className="font-mono-bureau text-[8px] text-[#0C1B33]/40 mt-0.5">
+                    {r.benefitRange}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[9px] text-[#0C1B33]/35 leading-relaxed pt-2">
+              Location matches do not confirm applicant eligibility, funding availability, or approval.
+            </p>
+          </div>
+        </>
+      )}
+
+      {/* Actions */}
+      <div className="mx-4 h-px bg-[#0C1B33]/8" />
+      <div className="px-4 py-3 space-y-2">
+        <button
+          type="button"
+          onClick={onGenerateSnapshot}
+          disabled={isGeneratingSnapshot}
+          className="hidden md:block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase bg-[#2563EB] text-white py-2 px-3 hover:bg-[#1d4ed8] disabled:bg-[#2563EB]/45 transition-colors"
+        >
+          {isGeneratingSnapshot ? "Preparing Snapshot" : "Generate Location Snapshot"}
+        </button>
+        {snapshotLat != null && snapshotLon != null && (
           <WatchAreaButton
             lat={snapshotLat}
             lon={snapshotLon}
-            label={title}
+            label={snapshotLabel}
             callbackUrl="/map"
             variant="panel"
           />
-        ) : null}
+        )}
         <button
-          type="button"
           onClick={onDrawArea}
-          className="inline-flex min-h-10 w-full items-center justify-center gap-2 border border-[#0C1B33]/15 px-3 py-2 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.1em] text-[#5A6478] transition-colors hover:border-[#0C1B33]/35 hover:text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+          className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase border border-[#0C1B33]/15 text-[#0C1B33]/60 py-2 px-3 hover:text-[#0C1B33] hover:border-[#0C1B33]/30 transition-colors"
         >
-          <ScanLine aria-hidden="true" className="h-4 w-4" />
-          Draw area analysis
+          Draw Area Analysis
         </button>
         <Link
           href="/programs"
-          className="inline-flex min-h-10 w-full items-center justify-center gap-2 border border-[#0C1B33]/15 px-3 py-2 font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.1em] text-[#5A6478] transition-colors hover:border-[#0C1B33]/35 hover:text-[#0C1B33] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]"
+          className="block w-full text-center font-mono-bureau text-[9px] tracking-[0.15em] uppercase border border-[#0C1B33]/15 text-[#0C1B33]/60 py-2 px-3 hover:text-[#0C1B33] hover:border-[#0C1B33]/30 transition-colors"
         >
-          <LibraryBig aria-hidden="true" className="h-4 w-4" />
-          Browse all programs
+          Browse All Programs
         </Link>
       </div>
     </aside>

@@ -18,6 +18,7 @@ import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import MapSearch from "./MapSearch";
 import MapLegendPanel from "./MapLegendPanel";
 import MapMobileSheet from "./MapMobileSheet";
+import MapDossierCard from "./MapDossierCard";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
 import CountyReliefRecipientsPanel, {
@@ -174,6 +175,22 @@ export default function MapView() {
   // Timestamp when a map tap opened the snapshot — MapSnapshotPanel uses it to
   // ignore the same ghost click, which otherwise lands on the ×/links/CTA.
   const snapshotOpenedAtRef = useRef(0);
+  const closeDossier = useCallback(() => {
+    setDossierSelection(null);
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      setSnapshotOpen(true);
+    }
+  }, []);
+  const openDossier = useCallback(
+    (selection: MapDossierSelection) => {
+      const isMobileView = window.matchMedia("(max-width: 768px)").matches;
+      setDossierSelection(selection);
+      if (isMobileView) {
+        setSnapshotOpen(false);
+      }
+    },
+    [],
+  );
   const [zoningRefOpen, setZoningRefOpen] = useState(false);
   const [classRefOpen, setClassRefOpen] = useState(false);
   const [zoningInfo, setZoningInfo] = useState<string | null>(null);
@@ -922,6 +939,12 @@ export default function MapView() {
         return Number.isFinite(parsed) ? parsed : null;
       };
 
+      const zoningFeature = firstFeature(
+        ZONING_CATEGORIES.map((category) => `zoning-${category.key}-fill`),
+      );
+      const zoneClass = textValue(zoningFeature?.properties?.zone_class);
+      setZoningInfo(zoneClass ? `${zoneClass} — ${describeZoneClass(zoneClass)}` : null);
+
       let selection: MapDossierSelection | null = null;
       const permitFeature = firstFeature(["permit-unclustered"]);
       if (permitFeature) {
@@ -1103,11 +1126,11 @@ export default function MapView() {
           lat: lngLat.lat,
           lon: lngLat.lng,
         };
-        setDossierSelection(activeSelection);
+        openDossier(activeSelection);
         loadCensusRef.current(lngLat.lat, lngLat.lng, activeSelection.title);
         lastClickRef.current(lngLat.lat, lngLat.lng);
         snapshotOpenedAtRef.current = Date.now();
-        setSnapshotOpen(true);
+        if (!isMobileView) setSnapshotOpen(true);
       }
     };
 
@@ -1451,26 +1474,9 @@ export default function MapView() {
               }
             });
 
-            // Click popup — show code + human-readable description. Desktop
-            // only: zoning blankets the city, so on mobile it would stack a
-            // popup under the snapshot sheet on every tap.
-            map.on("click", layerId, (e) => {
-              if (!e.features?.length) return;
-              if (window.matchMedia("(max-width: 768px)").matches) return;
-              const props = e.features[0].properties || {};
-              const zoneClass = props.zone_class || "Unknown";
-              const description = describeZoneClass(zoneClass);
-              new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
-                .setLngLat(e.lngLat)
-                .setHTML(
-                  `<div style="font-family:Inter,sans-serif">
-                    <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#059669;margin-bottom:4px;font-weight:500">Zoning District</div>
-                    <div style="font-size:18px;font-weight:700;color:#0C1B33;letter-spacing:-0.01em">${zoneClass}</div>
-                    <div style="font-size:12px;color:#5A6478;margin-top:4px;line-height:1.4">${description}</div>
-                  </div>`
-                )
-                .addTo(map);
-            });
+            // Public map clicks use the shared property dossier. Zoning is
+            // resolved into its Programs and zones section, avoiding a second
+            // popup for the same click.
           }
         }
       } catch {
@@ -2299,7 +2305,7 @@ export default function MapView() {
       map.remove();
       mapRef.current = null;
     };
-  }, [openHistoricalRecoveryRecipients]);
+  }, [openDossier, openHistoricalRecoveryRecipients]);
 
   /* ── Toggle zone visibility ────────────── */
   const toggleZone = useCallback(
@@ -2518,8 +2524,8 @@ export default function MapView() {
         duration: 1500,
       });
 
-      // Drop a marker. Details live in the shared dossier, so search does not
-      // create a second Mapbox popup on top of the same location.
+      // Drop a marker and open the same dossier used for every public map
+      // selection at the searched location.
       const marker = new mapboxgl.Marker({ color: "#2563EB" })
         .setLngLat([result.lon, result.lat])
         .addTo(map);
@@ -2528,18 +2534,19 @@ export default function MapView() {
 
       // Update Area Snapshot for the search location
       const title = result.label.split(" — ")[0];
-      setDossierSelection({
+      openDossier({
         kind: "address",
         title,
         subtitle: "Search result",
         lat: result.lat,
         lon: result.lon,
       });
-      setSnapshotOpen(true);
+      setZoningInfo(null);
+      if (!window.matchMedia("(max-width: 768px)").matches) setSnapshotOpen(true);
       lastClickRef.current(result.lat, result.lon);
       loadCensusRef.current(result.lat, result.lon, title);
     },
-    []
+    [openDossier]
   );
 
   /* ── Deep link: /map?lat=&lon=[&label=] ── */
@@ -3692,6 +3699,37 @@ export default function MapView() {
     publicInvestmentOverlays,
   ]);
 
+  const dossierCard = dossierSelection ? (
+    <MapDossierCard
+      areaStats={areaStats}
+      snapshotLabel={snapshotLabel}
+      snapshotLat={lastClickLat}
+      snapshotLon={lastClickLon}
+      snapshotPrograms={snapshotPrograms}
+      snapshotTifFinance={snapshotTifFinance}
+      snapshotContextSummary={snapshotContextSummary}
+      tifFinanceLoading={tifFinanceLoading}
+      zoningInfo={zoningInfo}
+      isGeneratingSnapshot={isGeneratingSnapshot}
+      openedAt={snapshotOpenedAtRef.current}
+      selection={dossierSelection}
+      onClose={closeDossier}
+      onGenerateSnapshot={handleGenerateSnapshot}
+      onDrawArea={() => {
+        const draw = drawRef.current;
+        if (!draw) return;
+        closeDossier();
+        draw.deleteAll();
+        setPolygonResults(null);
+        setPolygonGeometry(null);
+        setPolygonPanelOpen(false);
+        setSnapshotOpen(false);
+        draw.changeMode("draw_polygon");
+        setDrawMode(true);
+      }}
+    />
+  ) : null;
+
   return (
     <div className="relative w-full h-[calc(100dvh-56px)] md:h-[calc(100vh-220px)] min-h-[520px]">
       {/* Map container */}
@@ -3863,6 +3901,18 @@ export default function MapView() {
         />
       )}
 
+      {dossierCard ? (
+        <div
+          className={
+            isMobile
+              ? "absolute inset-x-3 top-16 z-30"
+              : "absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2"
+          }
+        >
+          {dossierCard}
+        </div>
+      ) : null}
+
       {/* ── RIGHT: Area Snapshot Panel ──────── */}
       {snapshotOpen && loaded && (
         <MapSnapshotPanel
@@ -3877,7 +3927,6 @@ export default function MapView() {
           zoningInfo={zoningInfo}
           isGeneratingSnapshot={isGeneratingSnapshot}
           openedAt={snapshotOpenedAtRef.current}
-          selection={dossierSelection}
           onClose={() => setSnapshotOpen(false)}
           onGenerateSnapshot={handleGenerateSnapshot}
           onDrawArea={() => {
@@ -3923,7 +3972,7 @@ export default function MapView() {
         </button>
       )}
 
-      {loaded && isMobile && !legendOpen && !snapshotOpen && !polygonPanelOpen && !countyReliefRecipientsPanel && !drawMode && (
+      {loaded && isMobile && !legendOpen && !snapshotOpen && !dossierSelection && !polygonPanelOpen && !countyReliefRecipientsPanel && !drawMode && (
         <MapMobileSheet
           activePreset={activeMobilePreset}
           snapshotLabel={snapshotLabel}
