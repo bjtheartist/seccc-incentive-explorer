@@ -33,10 +33,13 @@ describe("support network directory", () => {
   });
 
   it("keeps every named contact tied to an official source and current role", () => {
+    expect(supportNetworkDirectory.generatedAt).toBe("2026-08-04");
+
     for (const organization of supportNetworkDirectory.organizations) {
       expect(organization.publicIntake.url).toMatch(/^https:\/\//);
       expect(organization.sourceUrls.length).toBeGreaterThan(0);
-      expect(organization.lastVerifiedAt).toBe("2026-07-14");
+      expect(Date.parse(`${organization.lastVerifiedAt}T00:00:00.000Z`)).not.toBeNaN();
+      expect(organization.lastVerifiedAt <= supportNetworkDirectory.generatedAt).toBe(true);
 
       for (const contact of organization.keyContacts) {
         expect(contact.name.trim()).not.toBe("");
@@ -46,7 +49,7 @@ describe("support network directory", () => {
     }
   });
 
-  it("holds unconfirmed service areas out of public routing", () => {
+  it("tracks current public program verification without repository-held relationship notes", () => {
     const justine = supportNetworkDirectory.organizations.find(
       (organization) => organization.id === "justine-petersen"
     );
@@ -55,8 +58,20 @@ describe("support network directory", () => {
       ...citywideSupportData.organizations.map((organization) => organization.name),
     ];
 
-    expect(justine?.coverageRole).toBe("verification_needed");
-    expect(justine?.relationshipStatus).toBe("service_area_check_needed");
-    expect(publicNames).not.toContain("Justine PETERSEN");
+    expect(justine?.coverageRole).toBe("regional_option");
+    expect(justine?.sourceUrls).toContain(
+      "https://www.sba.gov/funding-programs/loans/microloans/list-microlenders"
+    );
+    expect(publicNames).toContain("Justine PETERSEN");
+
+    const serialized = JSON.stringify(supportNetworkDirectory);
+    expect(serialized).not.toContain("relationshipStatus");
+    expect(serialized).not.toContain("chamberNextStep");
+    for (const organization of supportNetworkDirectory.organizations) {
+      for (const contact of organization.keyContacts) {
+        expect(contact).not.toHaveProperty("email");
+        expect(contact).not.toHaveProperty("phone");
+      }
+    }
   });
 });

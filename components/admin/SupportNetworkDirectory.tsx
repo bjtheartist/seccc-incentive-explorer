@@ -11,7 +11,6 @@ import {
 import type {
   SupportNetworkCoverageRole,
   SupportNetworkOrganization,
-  SupportNetworkRelationshipStatus,
 } from "@/lib/support-network-directory";
 
 const LANE_LABELS: Record<string, string> = {
@@ -30,11 +29,6 @@ const COVERAGE_LABELS: Record<SupportNetworkCoverageRole, string> = {
   citywide_specialist: "Citywide specialist",
   regional_option: "Regional option",
   verification_needed: "Verify before referral",
-};
-
-const RELATIONSHIP_LABELS: Record<SupportNetworkRelationshipStatus, string> = {
-  relationship_unconfirmed: "Relationship unconfirmed",
-  service_area_check_needed: "Service area check needed",
 };
 
 function csvCell(value: string) {
@@ -127,7 +121,6 @@ export function SupportNetworkDirectory({
         organization.organizationType,
         organization.geography,
         organization.bestFor,
-        organization.chamberNextStep,
         ...organization.supportLanes.map((item) => LANE_LABELS[item] || item),
         ...organization.keyContacts.flatMap((contact) => [contact.name, contact.role]),
       ]
@@ -160,8 +153,6 @@ export function SupportNetworkDirectory({
       "Intake email",
       "Intake phone",
       "Intake URL",
-      "Relationship status",
-      "Chamber next step",
       "Last verified",
       "Sources",
     ];
@@ -178,8 +169,6 @@ export function SupportNetworkDirectory({
       organization.publicIntake.email || "",
       organization.publicIntake.phone || "",
       organization.publicIntake.url,
-      RELATIONSHIP_LABELS[organization.relationshipStatus],
-      organization.chamberNextStep,
       organization.lastVerifiedAt,
       organization.sourceUrls.join("; "),
     ]);
@@ -288,12 +277,12 @@ export function SupportNetworkDirectory({
           Showing {filtered.length} of {organizations.length}
         </p>
         <p className="text-right text-[11px] text-[#0C1B33]/35">
-          Verified {formatVerifiedDate(generatedAt)}
+          Directory updated {formatVerifiedDate(generatedAt)}
         </p>
       </div>
 
       <div className="mt-4 overflow-x-auto border border-[#0C1B33]/10 bg-white">
-        <table className="w-full min-w-[1320px] table-fixed text-left">
+        <table className="w-full min-w-[1040px] table-fixed text-left">
           <thead>
             <tr className="border-b border-[#0C1B33]/10 bg-[#EFF3FB] font-mono-bureau text-[9px] uppercase tracking-[0.15em] text-[#0C1B33]/40">
               <th className="w-[200px] px-4 py-3 font-medium">Organization</th>
@@ -301,13 +290,12 @@ export function SupportNetworkDirectory({
               <th className="w-[200px] px-4 py-3 font-medium">Coverage</th>
               <th className="w-[225px] px-4 py-3 font-medium">Key contacts</th>
               <th className="w-[185px] px-4 py-3 font-medium">Public intake</th>
-              <th className="w-[275px] px-4 py-3 font-medium">Chamber follow-up</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#0C1B33]/7">
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-[13px] text-[#0C1B33]/35">
+                <td colSpan={5} className="px-4 py-12 text-center text-[13px] text-[#0C1B33]/35">
                   No contacts match those filters.
                 </td>
               </tr>
@@ -379,22 +367,6 @@ export function SupportNetworkDirectory({
                             <p className="mt-1 text-[10px] leading-relaxed text-[#0C1B33]/40">
                               {contact.role}
                             </p>
-                            {contact.email ? (
-                              <a
-                                href={`mailto:${contact.email}`}
-                                className="mt-1 block break-all text-[10px] text-[#2563EB] hover:underline"
-                              >
-                                {contact.email}
-                              </a>
-                            ) : null}
-                            {contact.phone ? (
-                              <a
-                                href={`tel:${contact.phone.replace(/[^+\d]/g, "")}`}
-                                className="mt-1 block text-[10px] text-[#0C1B33]/45 hover:text-[#2563EB]"
-                              >
-                                {contact.phone}
-                              </a>
-                            ) : null}
                           </div>
                         ))}
                       </div>
@@ -427,20 +399,6 @@ export function SupportNetworkDirectory({
                       url={organization.publicIntake.url}
                       label={organization.name}
                     />
-                  </td>
-                  <td className="px-4 py-5">
-                    <div
-                      className={`font-mono-bureau text-[8px] uppercase tracking-[0.12em] ${
-                        organization.relationshipStatus === "service_area_check_needed"
-                          ? "text-amber-700"
-                          : "text-[#0C1B33]/35"
-                      }`}
-                    >
-                      {RELATIONSHIP_LABELS[organization.relationshipStatus]}
-                    </div>
-                    <p className="mt-3 text-[11px] leading-[1.65] text-[#0C1B33]/55">
-                      {organization.chamberNextStep}
-                    </p>
                   </td>
                 </tr>
               ))
