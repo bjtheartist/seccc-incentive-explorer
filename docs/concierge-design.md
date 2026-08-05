@@ -55,7 +55,7 @@ All persona copy stays descriptive and mirrors the shipped report language: "may
 ## 3. Existing code already enforces the hard boundaries (verified 2026-07-12)
 - **Business profile updates** are auth-gated PATCH — `app/api/business-profiles/[id]/route.ts:194`.
 - **Packet task updates** are auth-gated, body-validated, task-scoped PATCH — `app/api/incentive-preparation/[id]/route.ts:220`.
-- **Introduction requests** hard-require `consent === true` or 400 — `app/api/incentive-preparation/[id]/support-request/route.ts:72`.
+- **Support requests** distinguish a local-partner `introduction` from a direct `materials_review` and hard-require `consent === true` or 400. Concierge preparation writes only to the separate editable draft table.
 
 The concierge's action tools call these same routes (or the logic behind them) as the authenticated user — it inherits every guard instead of re-implementing them. Tools never get a service-role bypass.
 
@@ -159,7 +159,7 @@ The AI SDK moved to a tool-level / \`streamText\`-level approval model. Confirme
 - **Tool part states rendered**: \`approval-requested\` → approval card; \`approval-responded\`/\`input-*\` → "Working…"; \`output-available\` → success/deep-link; \`output-denied\` → "you declined — nothing changed".
 
 ### Action tools (all \`needsApproval: true\`) — \`lib/concierge/action-tools.ts\`
-\`updateBusinessProfile\`, \`updatePacketTask\`, \`createFoundationPacket\`, \`selectPacketProgram\`, \`prepareSupportRequest\`. Merged into the **same** \`buildConciergeTools\` map only when \`actions\` deps are passed (signed-in + DB configured). Boundary re-asserted: actions PREPARE/ORGANIZE only. \`prepareSupportRequest\` prepares an introduction request and deep-links into the existing consent-gated packet form; it never POSTs the request (review, consent, and recording stay in that UI).
+\`updateBusinessProfile\`, \`updatePacketTask\`, \`createFoundationPacket\`, \`selectPacketProgram\`, \`prepareSupportRequest\`. Merged into the **same** \`buildConciergeTools\` map only when \`actions\` deps are passed (signed-in + DB configured). Boundary re-asserted: actions PREPARE/ORGANIZE only. \`prepareSupportRequest\` saves an owned \`introduction\` or \`materials_review\` draft and deep-links into the consent-gated packet form; it never POSTs the final request. The packet reloads the draft with consent unchecked.
 
 ### Ownership re-verification (never trust model-supplied ids)
 The session \`userId\` is captured server-side in the route (\`getCurrentUserId()\`) and closed over in the action deps — it is **never** read from tool input. Every executor re-checks ownership with a \`WHERE ... AND user_id = \${userId}\` query (\`ownedProfileId\` / \`ownsPacket\`) **before** acting; an unowned id returns a polite tool result and touches nothing. Actions then COMPOSE with the existing auth-gated routes (they inherit every guard):

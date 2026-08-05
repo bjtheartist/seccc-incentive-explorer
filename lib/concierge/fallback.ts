@@ -49,9 +49,7 @@ function isSavedRecordActionRequest(
 
 function localPartnerOffer(pageContext: ConciergePageContext): string {
   const names = [
-    ...(pageContext.localSupportOrganizations ?? []).map(
-      (organization) => organization.name
-    ),
+    pageContext.localSupportOrganizations?.[0]?.name,
     pageContext.capitalSupportName,
   ]
     .filter((name): name is string => Boolean(name))

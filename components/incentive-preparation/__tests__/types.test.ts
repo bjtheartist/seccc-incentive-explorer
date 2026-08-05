@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   extractFoundationRefresh,
   extractPreparationPacket,
+  extractPreparationSupportRequestDraft,
   extractPreparationSupportRequests,
 } from "../types";
 
@@ -56,12 +57,21 @@ describe("preparation API normalization", () => {
     supportRequests: [
       {
         id: "support-1",
+        requestType: "introduction",
         targetOrganization: "Southeast Chicago Chamber of Commerce",
         requestedHelp: "Review the landlord letter requirement.",
         consentScope: ["business_profile", "packet"],
         status: "pending",
       },
     ],
+    supportRequestDraft: {
+      id: "draft-1",
+      requestType: "materials_review",
+      targetOrganization: "",
+      requestedHelp: "Review the assembled materials.",
+      suggestedScopes: ["packet", "documents"],
+      updatedAt: "2026-08-04T00:00:00.000Z",
+    },
   };
 
   it("preserves qualitative task states, program context, and profile facts", () => {
@@ -99,10 +109,22 @@ describe("preparation API normalization", () => {
     expect(extractPreparationSupportRequests(payload)).toEqual([
       expect.objectContaining({
         id: "support-1",
+        requestType: "introduction",
         dataScopes: ["business_profile", "packet"],
         status: "pending",
       }),
     ]);
+  });
+
+  it("normalizes a prepared materials-review draft separately from consent", () => {
+    expect(extractPreparationSupportRequestDraft(payload)).toEqual({
+      id: "draft-1",
+      requestType: "materials_review",
+      targetOrganization: "",
+      requestedHelp: "Review the assembled materials.",
+      suggestedScopes: ["packet", "documents"],
+      updatedAt: "2026-08-04T00:00:00.000Z",
+    });
   });
 
   it("keeps the Business File id when a PATCH response omits the root profile", () => {

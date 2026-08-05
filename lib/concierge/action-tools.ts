@@ -21,7 +21,7 @@
  *
  * Boundary (re-asserted for actions): these tools PREPARE and ORGANIZE. They
  * never certify, submit, or send anything externally. `prepareSupportRequest`
- * prepares an introduction request for review. The consent checkbox and the
+ * saves an editable support-request draft for review. The consent checkbox and the
  * actual POST stay in the existing consent-gated packet UI, which this tool
  * deep-links to.
  */
@@ -451,10 +451,16 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
         "Prepare a local-support request for a packet, either for an introduction or 1:1 help reviewing assembled materials (which organization, what help, and which data to share). REQUIRES the user's approval. Use this only after the owner has enough context for a useful conversation and explicitly asks to continue. It never sends or schedules anything. The owner reviews the summary, chooses the data scope, gives consent, and records the request in the packet.",
       inputSchema: z.object({
         packetId: z.string().max(200).describe("The packet the request is for."),
+        requestType: z
+          .enum(["introduction", "materials_review"])
+          .describe(
+            "Use introduction for a local-partner handoff, or materials_review for direct 1:1 help reviewing assembled materials."
+          ),
         targetOrganization: z
           .string()
           .max(200)
-          .describe("The partner organization to ask for help."),
+          .optional()
+          .describe("The partner organization for an introduction. Omit for materials_review."),
         requestedHelp: z
           .string()
           .max(2000)
@@ -476,23 +482,44 @@ export function buildConciergeActionTools(deps: ConciergeActionDeps) {
       needsApproval: true,
       execute: async ({
         packetId,
+        requestType,
         targetOrganization,
         requestedHelp,
         suggestedScopes,
       }) => {
         onToolCall?.("prepareSupportRequest");
         if (!(await ownsPacket(sql, userId, packetId))) return NOT_YOURS;
-        // PREPARATION ONLY — never POSTs the introduction request. Review,
-        // consent, and recording stay in the packet UI, which we deep-link to.
-        return {
-          ok: true,
-          draft: {
+        const { PUT: putSupportRequestDraft } = await import(
+          "@/app/api/incentive-preparation/[id]/support-request/draft/route"
+        );
+        const { status, json } = await callHandler(putSupportRequestDraft, {
+          origin: requestOrigin,
+          path: `/api/incentive-preparation/${packetId}/support-request/draft`,
+          method: "PUT",
+          cookieHeader,
+          id: packetId,
+          body: {
+            requestType,
             targetOrganization,
             requestedHelp,
             suggestedScopes: suggestedScopes ?? [],
           },
+        });
+        if (status >= 400 || !json) {
+          return {
+            ok: false,
+            note:
+              (json?.error as string) ||
+              "I couldn't save that support-request draft. Nothing was shared or scheduled.",
+          };
+        }
+        // PREPARATION ONLY — the draft route never records consent or creates a
+        // support request. Review and final recording stay in the packet UI.
+        return {
+          ok: true,
+          draft: json.draft,
           note:
-            "Your support request is prepared. Nothing was sent or scheduled. Open your packet to review what will be shared, give consent, and record the request.",
+            "Your support-request draft is saved. Nothing was shared or scheduled. Open your packet to review it, choose what may be shared, and give consent only if you want to record the request.",
           suggestion: resolveNavTarget(
             `/workspace/incentive-preparation/${packetId}`,
             "Review your support request"

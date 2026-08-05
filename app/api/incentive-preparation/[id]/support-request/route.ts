@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/current-user";
 import { getSQL } from "@/lib/db";
+import {
+  MATERIALS_REVIEW_ORGANIZATION,
+  isSupportRequestType,
+} from "@/lib/incentive-support";
 
 type Params = { params: Promise<{ id: string }> };
 type DatabaseRow = Record<string, unknown>;
@@ -42,7 +46,10 @@ function toSupportRequest(row: DatabaseRow) {
   return {
     id: String(row.id),
     packetId: String(row.packet_id),
-    targetOrganization: String(row.target_organization),
+    requestType: isSupportRequestType(row.request_type) ? row.request_type : "introduction",
+    targetOrganization: row.target_organization
+      ? String(row.target_organization)
+      : MATERIALS_REVIEW_ORGANIZATION,
     requestedHelp: String(row.requested_help),
     consentScope: dataScopes,
     dataScopes,
@@ -77,9 +84,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "requestedHelp is required" }, { status: 400 });
   }
 
+  const requestType = isSupportRequestType(body.requestType)
+    ? body.requestType
+    : "introduction";
   const targetOrganization =
     typeof body.targetOrganization === "string" ? body.targetOrganization.trim() : "";
-  if (!targetOrganization) {
+  if (requestType === "introduction" && !targetOrganization) {
     return NextResponse.json({ error: "targetOrganization is required" }, { status: 400 });
   }
 
@@ -109,6 +119,7 @@ export async function POST(req: NextRequest, { params }: Params) {
     INSERT INTO incentive_support_requests (
       user_id,
       packet_id,
+      request_type,
       target_organization,
       requested_help,
       consent_scope_json,
@@ -118,7 +129,8 @@ export async function POST(req: NextRequest, { params }: Params) {
     VALUES (
       ${userId},
       ${id},
-      ${targetOrganization},
+      ${requestType},
+      ${requestType === "introduction" ? targetOrganization : null},
       ${requestedHelp},
       ${JSON.stringify(scopes)}::jsonb,
       'pending',
@@ -126,6 +138,18 @@ export async function POST(req: NextRequest, { params }: Params) {
     )
     RETURNING *
   `;
+
+  // Draft cleanup is intentionally best-effort so a lagging draft-table
+  // migration can never block the existing consent-gated request path.
+  try {
+    await sql`
+      DELETE FROM incentive_support_request_drafts
+      WHERE packet_id = ${id} AND user_id = ${userId}
+    `;
+  } catch {
+    // The recorded request remains authoritative; a stale draft can be safely
+    // overwritten or removed after the migration is applied.
+  }
 
   const supportRequest = toSupportRequest(rows[0] as DatabaseRow);
   return NextResponse.json({ supportRequest, supportRequests: [supportRequest] }, { status: 201 });

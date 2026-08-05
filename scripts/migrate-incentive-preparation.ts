@@ -117,13 +117,56 @@ async function main() {
       id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
       user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       packet_id TEXT NOT NULL REFERENCES incentive_preparation_packets(id) ON DELETE CASCADE,
-      target_organization TEXT NOT NULL,
+      request_type TEXT NOT NULL DEFAULT 'introduction'
+        CHECK (request_type IN ('introduction', 'materials_review')),
+      target_organization TEXT,
       requested_help TEXT NOT NULL,
       consent_scope_json JSONB NOT NULL DEFAULT '[]'::jsonb,
       status TEXT NOT NULL DEFAULT 'pending',
       consented_at TIMESTAMPTZ NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // Existing deployments predate the explicit request discriminator. These
+  // idempotent ALTERs preserve all rows as introductions while allowing an
+  // Explorer materials review to exist without pretending it is an external
+  // organization handoff.
+  await sql`
+    ALTER TABLE incentive_support_requests
+    ADD COLUMN IF NOT EXISTS request_type TEXT NOT NULL DEFAULT 'introduction'
+  `;
+  await sql`ALTER TABLE incentive_support_requests ALTER COLUMN target_organization DROP NOT NULL`;
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conname = 'incentive_support_requests_request_type_check'
+      ) THEN
+        ALTER TABLE incentive_support_requests
+        ADD CONSTRAINT incentive_support_requests_request_type_check
+        CHECK (request_type IN ('introduction', 'materials_review'));
+      END IF;
+    END
+    $$
+  `;
+
+  console.log("3b. Creating editable support-request drafts...");
+  await sql`
+    CREATE TABLE IF NOT EXISTS incentive_support_request_drafts (
+      id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+      user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      packet_id TEXT NOT NULL REFERENCES incentive_preparation_packets(id) ON DELETE CASCADE,
+      request_type TEXT NOT NULL
+        CHECK (request_type IN ('introduction', 'materials_review')),
+      target_organization TEXT,
+      requested_help TEXT NOT NULL,
+      suggested_scope_json JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (user_id, packet_id)
     )
   `;
 
@@ -139,6 +182,7 @@ async function main() {
   await sql`CREATE INDEX IF NOT EXISTS idx_incentive_support_requests_user_id ON incentive_support_requests (user_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_incentive_support_requests_packet_id ON incentive_support_requests (packet_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_incentive_support_requests_status ON incentive_support_requests (status)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_incentive_support_drafts_packet_id ON incentive_support_request_drafts (packet_id)`;
 
   console.log("\nIncentive preparation migration complete.");
 }
