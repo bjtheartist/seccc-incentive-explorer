@@ -141,7 +141,7 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
           onChange={(e) => handleInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setOpen(true)}
-          placeholder="Enter an address to check eligibility…"
+          placeholder="Enter an address to explore incentives…"
           className="w-full h-12 md:h-9 bg-white md:bg-white/95 backdrop-blur border border-[#0C1B33]/10 text-[#0C1B33] text-[14px] md:text-[12px] pl-10 md:pl-8 pr-9 md:pr-8 rounded-full md:rounded-none shadow-lg md:shadow-none font-mono-bureau tracking-wide placeholder:text-[#0C1B33]/35 placeholder:normal-case focus:outline-none focus:ring-1 focus:ring-[#2563EB]/40 focus:border-[#2563EB]/40 transition-colors"
         />
         <Search className="absolute left-3.5 md:left-2.5 top-3.5 md:top-2.5 w-4 h-4 md:w-3.5 md:h-3.5 text-[#0C1B33]/35" />
