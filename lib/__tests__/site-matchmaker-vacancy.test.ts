@@ -92,20 +92,24 @@ describe("supported vacancy prefilter", () => {
     { id: "unknown-type", propertyType: null, squareFeet: 4_000 },
   ];
 
-  it("keeps only existing buildings inside the published footprint range", () => {
+  it("keeps in-range and unassessed buildings while omitting known out-of-range records", () => {
     const result = prefilterVacancyRecords(
       records,
       criteria({ minSquareFeet: 1_500, maxSquareFeet: 5_000 }),
       selectors,
     );
 
-    expect(result.records.map((record) => record.id)).toEqual(["building-in-range"]);
+    expect(result.records.map((record) => record.id)).toEqual([
+      "building-in-range",
+      "building-size-unknown",
+    ]);
     expect(result).toMatchObject({
       loadedCount: 5,
-      keptCount: 1,
+      keptCount: 2,
       propertyUniverseCount: 3,
       omittedPropertyTypeCount: 2,
-      omittedUnknownSizeCount: 1,
+      unassessedUnknownSizeCount: 1,
+      confirmedFootprintCount: 1,
       omittedOutsideFootprintCount: 1,
     });
   });
@@ -122,10 +126,10 @@ describe("supported vacancy prefilter", () => {
     );
 
     expect(result.records.map((record) => record.id)).toEqual(["known-land", "unknown-land"]);
-    expect(result.omittedUnknownSizeCount).toBe(0);
+    expect(result.unassessedUnknownSizeCount).toBe(0);
   });
 
-  it("treats either as both published property types and omits unknown sizes", () => {
+  it("treats either as both published property types and keeps unknown sizes unassessed", () => {
     const result = prefilterVacancyRecords(
       records,
       criteria({ propertyType: "either", maxSquareFeet: 3_500 }),
@@ -135,8 +139,10 @@ describe("supported vacancy prefilter", () => {
     expect(result.records.map((record) => record.id)).toEqual([
       "building-in-range",
       "building-too-small",
+      "building-size-unknown",
     ]);
-    expect(result.omittedUnknownSizeCount).toBe(1);
+    expect(result.unassessedUnknownSizeCount).toBe(1);
+    expect(result.confirmedFootprintCount).toBe(2);
     expect(result.omittedOutsideFootprintCount).toBe(1);
     expect(result.omittedPropertyTypeCount).toBe(1);
   });

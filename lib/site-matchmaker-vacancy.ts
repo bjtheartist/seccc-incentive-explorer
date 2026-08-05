@@ -66,7 +66,8 @@ export interface VacancyPrefilterResult<T> {
   keptCount: number;
   propertyUniverseCount: number;
   omittedPropertyTypeCount: number;
-  omittedUnknownSizeCount: number;
+  unassessedUnknownSizeCount: number;
+  confirmedFootprintCount: number;
   omittedOutsideFootprintCount: number;
 }
 
@@ -82,8 +83,8 @@ function propertyTypeIsIncluded(
 
 /**
  * Apply only filters supported by the current vacancy records. Unknown sizes
- * remain visible when no footprint was requested, but are omitted rather than
- * guessed whenever either footprint bound is active.
+ * remain visible as explicitly unassessed leads; they are never represented as
+ * satisfying the requested footprint. Known out-of-range records are omitted.
  */
 export function prefilterVacancyRecords<T>(
   records: readonly T[],
@@ -95,7 +96,8 @@ export function prefilterVacancyRecords<T>(
     criteria.minSquareFeet != null || criteria.maxSquareFeet != null;
   let propertyUniverseCount = 0;
   let omittedPropertyTypeCount = 0;
-  let omittedUnknownSizeCount = 0;
+  let unassessedUnknownSizeCount = 0;
+  let confirmedFootprintCount = 0;
   let omittedOutsideFootprintCount = 0;
 
   for (const record of records) {
@@ -112,7 +114,8 @@ export function prefilterVacancyRecords<T>(
 
     const squareFeet = selectors.squareFeet(record);
     if (squareFeet == null || !Number.isFinite(squareFeet) || squareFeet <= 0) {
-      omittedUnknownSizeCount += 1;
+      unassessedUnknownSizeCount += 1;
+      kept.push(record);
       continue;
     }
     if (
@@ -122,6 +125,7 @@ export function prefilterVacancyRecords<T>(
       omittedOutsideFootprintCount += 1;
       continue;
     }
+    confirmedFootprintCount += 1;
     kept.push(record);
   }
 
@@ -131,7 +135,8 @@ export function prefilterVacancyRecords<T>(
     keptCount: kept.length,
     propertyUniverseCount,
     omittedPropertyTypeCount,
-    omittedUnknownSizeCount,
+    unassessedUnknownSizeCount,
+    confirmedFootprintCount,
     omittedOutsideFootprintCount,
   };
 }

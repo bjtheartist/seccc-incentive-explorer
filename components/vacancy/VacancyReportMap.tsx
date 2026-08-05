@@ -1381,8 +1381,8 @@ export default function VacancyReportMap({
               </p>
               {siteMatchmakerPrefilter ? (
                 <p className="mt-1.5 text-[10px] leading-snug text-[#0C1B33]/45">
-                  Counts reflect the carried property type and published-size criteria on records
-                  loaded for this map.
+                  Property type is applied to loaded records. Published-size criteria are applied
+                  where dimensions exist; unknown sizes remain visible for verification.
                 </p>
               ) : null}
               {view === "tracked" ? (

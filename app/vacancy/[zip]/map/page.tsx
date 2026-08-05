@@ -176,7 +176,7 @@ export default async function VacancyMapPage({
             <div className="mt-4 grid gap-4 border-t border-[#0C1B33]/10 pt-4 md:grid-cols-2">
               <div>
                 <p className="font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">
-                  Applied to the plotted records
+                  Applied where records support it
                 </p>
                 <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px] leading-relaxed">
                   <dt className="text-[#0C1B33]/45">Property</dt>
@@ -193,14 +193,15 @@ export default async function VacancyMapPage({
                 </p>
                 {handoff.footprintBoundActive ? (
                   <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/55">
-                    Records without published dimensions were not assessed against the footprint
-                    and are omitted. This removed{" "}
-                    {trackedPrefilter.omittedUnknownSizeCount.toLocaleString("en-US")} tracked
+                    Published dimensions place{" "}
+                    {trackedPrefilter.confirmedFootprintCount.toLocaleString("en-US")} tracked
+                    records inside the requested footprint. Another{" "}
+                    {trackedPrefilter.unassessedUnknownSizeCount.toLocaleString("en-US")} tracked
                     records
                     {landPrefilter
-                      ? ` and ${landPrefilter.omittedUnknownSizeCount.toLocaleString("en-US")} reconciled land parcels`
+                      ? ` and ${landPrefilter.unassessedUnknownSizeCount.toLocaleString("en-US")} reconciled land parcels`
                       : ""}
-                    .
+                    {" "}remain plotted as unassessed leads because their dimensions are not published.
                   </p>
                 ) : null}
               </div>
