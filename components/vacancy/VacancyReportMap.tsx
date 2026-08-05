@@ -218,6 +218,11 @@ interface VacancyReportMapProps {
    *  driven by the page's `?area=` query param instead of a click. `null`/
    *  `undefined`/an id with no matching cluster are all ignored gracefully. */
   initialAreaId?: number | null;
+  /** True only for the namespaced Site Matchmaker handoff. The supplied point
+   *  arrays have already been reduced using supported property-type and
+   *  published-size criteria, so the showing line must describe a prefilter
+   *  rather than implying it is the full edition universe. */
+  siteMatchmakerPrefilter?: boolean;
 }
 
 /** Feature properties carried on every dot (both views), keyed identically so
@@ -260,6 +265,7 @@ export default function VacancyReportMap({
   asOf,
   neighborhood,
   initialAreaId,
+  siteMatchmakerPrefilter = false,
 }: VacancyReportMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -1366,11 +1372,19 @@ export default function VacancyReportMap({
 
             <div className="mt-2.5 border-t border-[#0C1B33]/10 pt-2">
               <p className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/40">
-                {truncatedOrPartial
+                {siteMatchmakerPrefilter
+                  ? `Showing ${shown.toLocaleString("en-US")} prefiltered ${noun}`
+                  : truncatedOrPartial
                   ? `Showing ${shown.toLocaleString("en-US")} of ${universeTotal.toLocaleString("en-US")}`
                   : `Showing all ${shown.toLocaleString("en-US")} ${noun}`}
                 {distressFilterActive ? " · filtered" : ""}
               </p>
+              {siteMatchmakerPrefilter ? (
+                <p className="mt-1.5 text-[10px] leading-snug text-[#0C1B33]/45">
+                  Counts reflect the carried property type and published-size criteria on records
+                  loaded for this map.
+                </p>
+              ) : null}
               {view === "tracked" ? (
                 <p className="mt-1.5 text-[10px] leading-snug text-[#0C1B33]/45">
                   Numbered discs are the {siteIndex.filter((r) => r.markerNumber != null).length}{" "}

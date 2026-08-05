@@ -20,6 +20,9 @@ function completeCriteria(overrides: Partial<SiteMatchCriteria> = {}): SiteMatch
     maxSquareFeet: 5_000,
     context: "commercial-corridor",
     transportation: ["cta-bus", "cta-rail"],
+    transportationDistance: "half-mile",
+    walkability: "important",
+    pedestrianActivity: "preferred",
     amenities: ["grocery", "restaurants-retail"],
     ...overrides,
   };
@@ -29,7 +32,7 @@ describe("site matchmaker criteria URL state", () => {
   it("round-trips supported criteria in a stable canonical order", () => {
     const encoded = encodeSiteMatchCriteria(completeCriteria());
     expect(encoded.toString()).toBe(
-      "sm_v=1&zip=60617&sm_use=retail-service&sm_property=existing-building&sm_min_sqft=1500&sm_max_sqft=5000&sm_context=commercial-corridor&sm_transport=cta-rail%2Ccta-bus&sm_amenities=restaurants-retail%2Cgrocery",
+      "sm_v=1&zip=60617&sm_use=retail-service&sm_property=existing-building&sm_min_sqft=1500&sm_max_sqft=5000&sm_context=commercial-corridor&sm_transport=cta-rail%2Ccta-bus&sm_transport_distance=half-mile&sm_walkability=important&sm_pedestrian_activity=preferred&sm_amenities=restaurants-retail%2Cgrocery",
     );
     expect(decodeSiteMatchCriteria(encoded)).toEqual(completeCriteria({
       transportation: ["cta-rail", "cta-bus"],
@@ -69,6 +72,9 @@ describe("site matchmaker criteria URL state", () => {
       maxSquareFeet: 2_000_000,
       context: null,
       transportation: ["cta-bus"],
+      transportationDistance: null,
+      walkability: null,
+      pedestrianActivity: null,
       amenities: [],
     });
     expect(normalizeSiteMatchCriteria(completeCriteria({ minSquareFeet: 9_000, maxSquareFeet: 2_000 })))
@@ -88,7 +94,7 @@ describe("site matchmaker handoff", () => {
   it("opens the published vacancy map with a namespaced, source-attributed brief", () => {
     const href = buildVacancyHandoffHref(completeCriteria());
     expect(href).toBe(
-      "/vacancy/60617/map?source=site-matchmaker&sm_v=1&sm_use=retail-service&sm_property=existing-building&sm_min_sqft=1500&sm_max_sqft=5000&sm_context=commercial-corridor&sm_transport=cta-rail%2Ccta-bus&sm_amenities=restaurants-retail%2Cgrocery",
+      "/vacancy/60617/map?source=site-matchmaker&sm_v=1&sm_use=retail-service&sm_property=existing-building&sm_min_sqft=1500&sm_max_sqft=5000&sm_context=commercial-corridor&sm_transport=cta-rail%2Ccta-bus&sm_transport_distance=half-mile&sm_walkability=important&sm_pedestrian_activity=preferred&sm_amenities=restaurants-retail%2Cgrocery",
     );
     expect(isSiteMatchCriteriaReady(completeCriteria())).toBe(true);
   });
@@ -102,6 +108,9 @@ describe("site matchmaker handoff", () => {
       footprint: "1,500 - 5,000 sq ft",
       context: "Commercial corridor",
       transportation: "CTA rail, CTA bus",
+      transportationDistance: "Within 1/2 mile",
+      walkability: "Important",
+      pedestrianActivity: "Preferred",
       amenities: "Restaurants and retail, Grocery",
     });
     expect(JSON.stringify(summary).toLowerCase()).not.toMatch(

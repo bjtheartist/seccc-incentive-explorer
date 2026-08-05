@@ -16,8 +16,10 @@ import { PILOT_ZIPS } from "@/lib/pilot-zips";
 import {
   SITE_AMENITY_OPTIONS,
   SITE_CONTEXT_OPTIONS,
+  SITE_LOCATION_PRIORITY_OPTIONS,
   SITE_PROJECT_USE_OPTIONS,
   SITE_PROPERTY_TYPE_OPTIONS,
+  SITE_TRANSPORTATION_DISTANCE_OPTIONS,
   SITE_TRANSPORTATION_OPTIONS,
   buildSiteMatchmakerHref,
   buildVacancyHandoffHref,
@@ -28,10 +30,12 @@ import {
   summarizeSiteMatchCriteria,
   type SiteAmenityNeed,
   type SiteContextPreference,
+  type SiteLocationPriority,
   type SiteMatchCriteria,
   type SiteMatchOption,
   type SiteProjectUse,
   type SitePropertyType,
+  type SiteTransportationDistance,
   type SiteTransportationNeed,
 } from "@/lib/site-matchmaker";
 
@@ -362,18 +366,90 @@ function SiteMatchmakerPage() {
             <SectionHeading
               number="04"
               title="Transportation needs"
-              detail="Select the networks that should be checked near a candidate location."
+              detail="Select the networks that should be checked near a candidate location and the proximity the project prefers."
             />
             <CheckboxOptions<SiteTransportationNeed>
               options={SITE_TRANSPORTATION_OPTIONS}
               values={criteria.transportation}
               onToggle={toggleTransportation}
             />
+            <fieldset className="mt-8">
+              <legend className="mb-3 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
+                How close should the selected transportation be?
+              </legend>
+              <RadioOptions<SiteTransportationDistance>
+                name="transportation-distance"
+                options={SITE_TRANSPORTATION_DISTANCE_OPTIONS}
+                value={criteria.transportationDistance}
+                onChange={(value) => setField("transportationDistance", value)}
+              />
+            </fieldset>
           </section>
 
           <section className="border-x border-b border-[#0C1B33]/10 p-5 sm:p-7">
             <SectionHeading
               number="05"
+              title="Walkability and pedestrian activity"
+              detail="Capture how much these factors matter so each candidate can be reviewed against published and on-the-ground evidence."
+            />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="block">
+                <span className="font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
+                  Walkability
+                </span>
+                <select
+                  value={criteria.walkability ?? ""}
+                  onChange={(event) =>
+                    setField(
+                      "walkability",
+                      (event.target.value as SiteLocationPriority) || null,
+                    )
+                  }
+                  className="mt-2 h-11 w-full border border-[#0C1B33]/16 bg-white px-3 text-[13px] text-[#0C1B33] outline-none focus:border-[#2563EB]"
+                >
+                  <option value="">Select importance</option>
+                  {SITE_LOCATION_PRIORITY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-2 block text-[11px] leading-relaxed text-[#0C1B33]/50">
+                  The EPA walkability index can be reviewed for each location; it is not a site-match score.
+                </span>
+              </label>
+
+              <label className="block">
+                <span className="font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
+                  Pedestrian activity / foot traffic
+                </span>
+                <select
+                  value={criteria.pedestrianActivity ?? ""}
+                  onChange={(event) =>
+                    setField(
+                      "pedestrianActivity",
+                      (event.target.value as SiteLocationPriority) || null,
+                    )
+                  }
+                  className="mt-2 h-11 w-full border border-[#0C1B33]/16 bg-white px-3 text-[13px] text-[#0C1B33] outline-none focus:border-[#2563EB]"
+                >
+                  <option value="">Select importance</option>
+                  {SITE_LOCATION_PRIORITY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-2 block text-[11px] leading-relaxed text-[#0C1B33]/50">
+                  This flags a need for direct or partner-supplied evidence; nearby amenities are not treated as foot-traffic counts.
+                </span>
+              </label>
+            </div>
+          </section>
+
+          <section className="border-x border-b border-[#0C1B33]/10 p-5 sm:p-7">
+            <SectionHeading
+              number="06"
               title="Nearby amenities"
               detail="Choose the public-data categories that matter to the project. Proximity and operating status must be checked for each site."
             />
@@ -411,6 +487,9 @@ function SiteMatchmakerPage() {
             <SummaryRow label="Footprint" value={summary.footprint} />
             <SummaryRow label="Context" value={summary.context} />
             <SummaryRow label="Transportation" value={summary.transportation} />
+            <SummaryRow label="Transport distance" value={summary.transportationDistance} />
+            <SummaryRow label="Walkability" value={summary.walkability} />
+            <SummaryRow label="Pedestrian activity" value={summary.pedestrianActivity} />
             <SummaryRow label="Nearby amenities" value={summary.amenities} />
           </div>
 

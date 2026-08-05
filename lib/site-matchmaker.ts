@@ -27,6 +27,14 @@ export type SiteTransportationNeed =
   | "freight-rail"
   | "bike-routes";
 
+export type SiteTransportationDistance =
+  | "flexible"
+  | "quarter-mile"
+  | "half-mile"
+  | "one-mile";
+
+export type SiteLocationPriority = "flexible" | "preferred" | "important";
+
 export type SiteAmenityNeed =
   | "restaurants-retail"
   | "grocery"
@@ -139,6 +147,47 @@ export const SITE_TRANSPORTATION_OPTIONS: readonly SiteMatchOption<SiteTransport
   { value: "bike-routes", label: "Bike routes", description: "Proximity to a mapped bike route." },
 ];
 
+export const SITE_TRANSPORTATION_DISTANCE_OPTIONS: readonly SiteMatchOption<SiteTransportationDistance>[] = [
+  {
+    value: "flexible",
+    label: "Flexible distance",
+    description: "Carry no maximum transportation distance into the site review.",
+  },
+  {
+    value: "quarter-mile",
+    label: "Within 1/4 mile",
+    description: "Use a quarter-mile proximity preference when reviewing candidate sites.",
+  },
+  {
+    value: "half-mile",
+    label: "Within 1/2 mile",
+    description: "Use a half-mile proximity preference when reviewing candidate sites.",
+  },
+  {
+    value: "one-mile",
+    label: "Within 1 mile",
+    description: "Use a one-mile proximity preference when reviewing candidate sites.",
+  },
+];
+
+export const SITE_LOCATION_PRIORITY_OPTIONS: readonly SiteMatchOption<SiteLocationPriority>[] = [
+  {
+    value: "flexible",
+    label: "No preference",
+    description: "Do not use this factor to narrow the discussion.",
+  },
+  {
+    value: "preferred",
+    label: "Preferred",
+    description: "Review this factor when comparing possible sites.",
+  },
+  {
+    value: "important",
+    label: "Important",
+    description: "Treat this as a required discussion item, subject to verification.",
+  },
+];
+
 export const SITE_AMENITY_OPTIONS: readonly SiteMatchOption<SiteAmenityNeed>[] = [
   {
     value: "restaurants-retail",
@@ -180,6 +229,9 @@ export interface SiteMatchCriteria {
   maxSquareFeet: number | null;
   context: SiteContextPreference | null;
   transportation: readonly SiteTransportationNeed[];
+  transportationDistance: SiteTransportationDistance | null;
+  walkability: SiteLocationPriority | null;
+  pedestrianActivity: SiteLocationPriority | null;
   amenities: readonly SiteAmenityNeed[];
 }
 
@@ -190,6 +242,9 @@ export interface SiteMatchSummary {
   footprint: string;
   context: string;
   transportation: string;
+  transportationDistance: string;
+  walkability: string;
+  pedestrianActivity: string;
   amenities: string;
 }
 
@@ -205,6 +260,9 @@ const PARAMS = {
   maxSquareFeet: "sm_max_sqft",
   context: "sm_context",
   transportation: "sm_transport",
+  transportationDistance: "sm_transport_distance",
+  walkability: "sm_walkability",
+  pedestrianActivity: "sm_pedestrian_activity",
   amenities: "sm_amenities",
 } as const;
 
@@ -214,6 +272,15 @@ const MIN_SQUARE_FEET_ALIASES = [PARAMS.minSquareFeet, "minSqFt"] as const;
 const MAX_SQUARE_FEET_ALIASES = [PARAMS.maxSquareFeet, "maxSqFt"] as const;
 const CONTEXT_ALIASES = [PARAMS.context, "density", "context"] as const;
 const TRANSPORTATION_ALIASES = [PARAMS.transportation, "transport"] as const;
+const TRANSPORTATION_DISTANCE_ALIASES = [
+  PARAMS.transportationDistance,
+  "transportDistance",
+] as const;
+const WALKABILITY_ALIASES = [PARAMS.walkability, "walkability"] as const;
+const PEDESTRIAN_ACTIVITY_ALIASES = [
+  PARAMS.pedestrianActivity,
+  "pedestrianActivity",
+] as const;
 const AMENITY_ALIASES = [PARAMS.amenities, "amenities"] as const;
 
 export function createEmptySiteMatchCriteria(): SiteMatchCriteria {
@@ -225,6 +292,9 @@ export function createEmptySiteMatchCriteria(): SiteMatchCriteria {
     maxSquareFeet: null,
     context: null,
     transportation: [],
+    transportationDistance: null,
+    walkability: null,
+    pedestrianActivity: null,
     amenities: [],
   };
 }
@@ -292,6 +362,15 @@ export function normalizeSiteMatchCriteria(criteria: SiteMatchCriteria): SiteMat
     maxSquareFeet,
     context: selectedValue(criteria.context, SITE_CONTEXT_OPTIONS),
     transportation: normalizedList(criteria.transportation, SITE_TRANSPORTATION_OPTIONS),
+    transportationDistance: selectedValue(
+      criteria.transportationDistance,
+      SITE_TRANSPORTATION_DISTANCE_OPTIONS,
+    ),
+    walkability: selectedValue(criteria.walkability, SITE_LOCATION_PRIORITY_OPTIONS),
+    pedestrianActivity: selectedValue(
+      criteria.pedestrianActivity,
+      SITE_LOCATION_PRIORITY_OPTIONS,
+    ),
     amenities: normalizedList(criteria.amenities, SITE_AMENITY_OPTIONS),
   };
 }
@@ -312,6 +391,18 @@ export function decodeSiteMatchCriteria(params: URLSearchParams): SiteMatchCrite
       TRANSPORTATION_ALIASES,
       SITE_TRANSPORTATION_OPTIONS,
     ),
+    transportationDistance: selectedValue(
+      firstValue(params, TRANSPORTATION_DISTANCE_ALIASES),
+      SITE_TRANSPORTATION_DISTANCE_OPTIONS,
+    ),
+    walkability: selectedValue(
+      firstValue(params, WALKABILITY_ALIASES),
+      SITE_LOCATION_PRIORITY_OPTIONS,
+    ),
+    pedestrianActivity: selectedValue(
+      firstValue(params, PEDESTRIAN_ACTIVITY_ALIASES),
+      SITE_LOCATION_PRIORITY_OPTIONS,
+    ),
     amenities: selectedValues(params, AMENITY_ALIASES, SITE_AMENITY_OPTIONS),
   });
 }
@@ -331,6 +422,13 @@ export function encodeSiteMatchCriteria(criteria: SiteMatchCriteria): URLSearchP
   if (normalized.context) values.set(PARAMS.context, normalized.context);
   if (normalized.transportation.length > 0) {
     values.set(PARAMS.transportation, normalized.transportation.join(","));
+  }
+  if (normalized.transportationDistance) {
+    values.set(PARAMS.transportationDistance, normalized.transportationDistance);
+  }
+  if (normalized.walkability) values.set(PARAMS.walkability, normalized.walkability);
+  if (normalized.pedestrianActivity) {
+    values.set(PARAMS.pedestrianActivity, normalized.pedestrianActivity);
   }
   if (normalized.amenities.length > 0) {
     values.set(PARAMS.amenities, normalized.amenities.join(","));
@@ -412,6 +510,21 @@ export function summarizeSiteMatchCriteria(criteria: SiteMatchCriteria): SiteMat
       normalized.transportation,
       SITE_TRANSPORTATION_OPTIONS,
       "No transportation preference selected",
+    ),
+    transportationDistance: labelFor(
+      normalized.transportationDistance,
+      SITE_TRANSPORTATION_DISTANCE_OPTIONS,
+      "Flexible distance",
+    ),
+    walkability: labelFor(
+      normalized.walkability,
+      SITE_LOCATION_PRIORITY_OPTIONS,
+      "No preference",
+    ),
+    pedestrianActivity: labelFor(
+      normalized.pedestrianActivity,
+      SITE_LOCATION_PRIORITY_OPTIONS,
+      "No preference",
     ),
     amenities: labelsFor(
       normalized.amenities,
