@@ -526,6 +526,12 @@ export default async function AdminAnalyticsPage({
           </div>
 
           <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin/support-network"
+              className="border border-[#2563EB] bg-[#2563EB] px-3 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-white"
+            >
+              Support Directory
+            </Link>
             {[7, 30, 90, 365].map((option) => (
               <Link
                 key={option}
