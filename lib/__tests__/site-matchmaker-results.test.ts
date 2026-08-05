@@ -8,8 +8,10 @@ import {
   candidateZoningFilterValue,
   epaWalkabilityCategory,
   filterAndSortCandidateRows,
+  joinCandidateAvailableSpace,
   joinCandidateContext,
   normalizeSiteMatchmakerCandidates,
+  parseAvailableSpacePayload,
   parseSiteMatchmakerContextPayload,
   type SiteMatchmakerCandidateFilters,
 } from "../site-matchmaker-results";
@@ -17,6 +19,7 @@ import type { SiteMatchmakerContextMetric } from "../site-matchmaker-context";
 import type { VacancyLandPoint, VacancySitePoint } from "../vacancy-index";
 
 function sitePoint(overrides: Partial<VacancySitePoint> = {}): VacancySitePoint {
+  const squareFeet = overrides.squareFeet === undefined ? 2_500 : overrides.squareFeet;
   return {
     lat: 41.73,
     lon: -87.55,
@@ -25,7 +28,18 @@ function sitePoint(overrides: Partial<VacancySitePoint> = {}): VacancySitePoint 
     markerNumber: null,
     address: "100 E MAIN ST",
     pin: "20123456789012",
-    squareFeet: 2_500,
+    squareFeet,
+    space:
+      overrides.space ??
+      (squareFeet == null
+        ? {}
+        : {
+            assessorBuildingSqft: squareFeet,
+            availableSpaceSqft: squareFeet,
+            availableSpaceSource: "Verified test record",
+            availableSpaceVerifiedAt: "2026-08-05T00:00:00.000Z",
+            availableSpaceReconfirmAfter: "2099-01-01T00:00:00.000Z",
+          }),
     zoningClass: "B3-2",
     incentiveCount: 3,
     ownerConfidence: "inferred",
@@ -40,13 +54,15 @@ function sitePoint(overrides: Partial<VacancySitePoint> = {}): VacancySitePoint 
 }
 
 function landPoint(overrides: Partial<VacancyLandPoint> = {}): VacancyLandPoint {
+  const squareFeet = overrides.squareFeet === undefined ? 5_000 : overrides.squareFeet;
   return {
     lat: 41.74,
     lon: -87.56,
     ownerType: "local_private",
     address: "300 E PINE ST",
     pin: "20987654321098",
-    squareFeet: 5_000,
+    squareFeet,
+    space: overrides.space ?? (squareFeet == null ? {} : { lotAreaSqft: squareFeet }),
     ownerConfidence: "inferred",
     saleYear: null,
     ownerStructure: "individual",
@@ -141,6 +157,82 @@ describe("normalizeSiteMatchmakerCandidates", () => {
     expect(joined[0].context).toEqual(context());
     expect(joined[1].context).toBeNull();
     expect(joined.map((row) => row.id)).toEqual(rows.map((row) => row.id));
+  });
+});
+
+describe("verified available-space enrichment", () => {
+  it("accepts only complete, positive public-safe measurements", () => {
+    expect(
+      parseAvailableSpacePayload({
+        measurements: [
+          {
+            pin: "20-12-345-678-9012",
+            availableSpaceSqft: 4_500.4,
+            source: "Owner confirmation",
+            verifiedAt: "2026-08-05T00:00:00.000Z",
+            reconfirmAfter: "2099-01-01T00:00:00.000Z",
+          },
+          { pin: "bad", availableSpaceSqft: 1_000, source: "Record", verifiedAt: "now" },
+          {
+            pin: "20123456789012",
+            availableSpaceSqft: 0,
+            source: "Record",
+            verifiedAt: "2026-08-05T00:00:00.000Z",
+          },
+        ],
+      }),
+    ).toEqual([
+      {
+        pin: "20123456789012",
+        availableSpaceSqft: 4_500,
+        source: "Owner confirmation",
+        verifiedAt: "2026-08-05T00:00:00.000Z",
+        reconfirmAfter: "2099-01-01T00:00:00.000Z",
+      },
+    ]);
+    expect(parseAvailableSpacePayload({ measurements: "not-an-array" })).toEqual([]);
+  });
+
+  it("updates a building match area without changing row order or cardinality", () => {
+    const rows = normalizeSiteMatchmakerCandidates(
+      [
+        sitePoint({ squareFeet: null, space: { assessorBuildingSqft: 9_000 } }),
+        sitePoint({
+          pin: "21111111111111",
+          address: "200 E OAK ST",
+          squareFeet: null,
+          space: { cityGroundFootprintSqft: 3_200 },
+        }),
+      ],
+      [landPoint({ pin: "20123456789012", squareFeet: 8_000 })],
+    );
+    const enriched = joinCandidateAvailableSpace(rows, [
+      {
+        pin: "20123456789012",
+        availableSpaceSqft: 4_500,
+        source: "Owner confirmation",
+        verifiedAt: "2026-08-05T00:00:00.000Z",
+        reconfirmAfter: "2099-01-01T00:00:00.000Z",
+      },
+    ]);
+
+    expect(enriched.map((row) => row.id)).toEqual(rows.map((row) => row.id));
+    expect(enriched).toHaveLength(rows.length);
+    expect(enriched[0]).toMatchObject({
+      squareFeet: 4_500,
+      matchAreaKind: "verified_available_space",
+      space: {
+        assessorBuildingSqft: 9_000,
+        availableSpaceSqft: 4_500,
+        availableSpaceSource: "Owner confirmation",
+      },
+    });
+    expect(enriched[1].squareFeet).toBeNull();
+    expect(enriched[2]).toMatchObject({
+      squareFeet: 8_000,
+      matchAreaKind: "lot_area",
+      space: { lotAreaSqft: 8_000, availableSpaceSqft: 4_500 },
+    });
   });
 });
 
@@ -367,7 +459,9 @@ describe("candidate sorting and unknown footprints", () => {
     });
     expect(result).toHaveLength(3);
     expect(result.map((row) => row.squareFeet)).toEqual([500, 1_000, null]);
-    expect(candidateFootprintLabel(result[2])).toBe("Not published");
+    expect(candidateFootprintLabel(result[2])).toBe(
+      "Needs size verification · Reported available space not published",
+    );
   });
 
   it("keeps null footprints last in both sort directions", () => {
@@ -384,11 +478,11 @@ describe("candidate sorting and unknown footprints", () => {
       key: "address",
       direction: "asc",
     });
-    expect(sorted.map((row) => row.address)).toEqual(["100 E A ST", "200 E B ST", "300 E C ST"]);
+    expect(sorted.map((row) => row.address)).toEqual(["100 E A ST", "300 E C ST", "200 E B ST"]);
     expect(rows.map((row) => row.id)).toEqual(originalOrder);
   });
 
-  it("keeps missing context last for every context sort direction", () => {
+  it("keeps missing context last among size-confirmed rows for every context sort", () => {
     const enriched = joinCandidateContext(
       rows,
       new Map([
@@ -424,8 +518,10 @@ describe("candidate sorting and unknown footprints", () => {
     ] as const) {
       const asc = filterAndSortCandidateRows(enriched, filters(), { key, direction: "asc" });
       const desc = filterAndSortCandidateRows(enriched, filters(), { key, direction: "desc" });
-      expect(asc.at(-1)?.context).toBeNull();
-      expect(desc.at(-1)?.context).toBeNull();
+      expect(asc.at(-1)?.squareFeet).toBeNull();
+      expect(desc.at(-1)?.squareFeet).toBeNull();
+      expect(asc.at(-2)?.context).toBeNull();
+      expect(desc.at(-2)?.context).toBeNull();
     }
   });
 });
@@ -449,7 +545,7 @@ describe("candidateRowsToCsv", () => {
     const header = csv.slice(0, csv.indexOf("\r\n"));
 
     expect(header).toBe(
-      '"Source view","Address","PIN","Property type","Published footprint (sq ft)","Owner classification","Owner type","Zoning","Incentive geographies","Source-backed flags","Census tract","Tract population","Population density (people/sq mi)","EPA Walkability Index (1-20)","Nearest expressway","Nearest expressway straight-line miles","Midway straight-line miles","O\'Hare straight-line miles","Parcel record","Recorded documents"',
+      '"Source view","Address","PIN","Property type","Size field used for match","Match area (sq ft)","Lot area (sq ft)","Assessor building area (sq ft)","Assessor building tax year","Mapped building footprint on parcel (sq ft)","Mapped footprint source vintage","Reported available space (sq ft)","Available space source","Available space verified at","Available space reconfirm by","Owner classification","Owner type","Zoning","Incentive geographies","Source-backed flags","Census tract","Tract population","Population density (people/sq mi)","EPA Walkability Index (1-20)","Nearest expressway","Nearest expressway straight-line miles","Midway straight-line miles","O\'Hare straight-line miles","Parcel record","Recorded documents"',
     );
     expect(csv).toContain('"100 ""A"", MAIN\nST"');
     expect(csv).toContain('"Not published"');

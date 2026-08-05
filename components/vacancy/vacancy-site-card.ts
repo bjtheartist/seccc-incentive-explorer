@@ -55,6 +55,14 @@ import {
 } from "@/lib/owner-taxonomy";
 import { PUBLIC_OWNER_TYPE_LABELS } from "@/lib/vacancy-public-labels";
 import { approxSqft } from "@/lib/vacancy-opportunity-areas";
+import {
+  CITY_BUILDING_FOOTPRINTS_VINTAGE,
+  siteMatchAreaForProperty,
+  siteMatchAreaLabel,
+  squareFeetLabel,
+  vacancySpaceFacts,
+  type ParcelSpaceFacts,
+} from "@/lib/parcel-space";
 import type {
   OwnerConfidence,
   VacancyCluster,
@@ -96,7 +104,9 @@ export interface CardData {
   ownerType: OwnerType;
   propertyType: VacancyPropertyType;
   pin: string | null;
+  /** Legacy field retained for callers using an older vacancy export. */
   squareFeet: number | null;
+  space?: ParcelSpaceFacts;
   zoningClass: string | null;
   incentiveCount: number;
   ownerConfidence: OwnerConfidence;
@@ -192,9 +202,11 @@ export function landUseNoun(
 export function significanceSentence(d: CardData): string {
   const noun = landUseNoun(d.zoningClass, d.propertyType);
   const lead = noun.charAt(0).toUpperCase() + noun.slice(1);
+  const facts = vacancySpaceFacts(d.propertyType, d.space, d.squareFeet);
+  const matchArea = siteMatchAreaForProperty(d.propertyType, facts);
   const sqftClause =
-    d.squareFeet != null && Number.isFinite(d.squareFeet)
-      ? `, about ${approxSqft(d.squareFeet).toLocaleString("en-US")} sq ft`
+    matchArea.sqft != null
+      ? `, about ${approxSqft(matchArea.sqft).toLocaleString("en-US")} sq ft ${siteMatchAreaLabel(matchArea.kind).toLowerCase()}`
       : "";
   const clusterClause = d.cluster ? ` among ${d.cluster.count} nearby vacant sites` : "";
   const incentiveClause =
@@ -261,7 +273,8 @@ function flagReasons(d: CardData): string[] {
       `Intersects ${d.incentiveCount} incentive ${d.incentiveCount === 1 ? "geography" : "geographies"}.`,
     );
   }
-  if (d.squareFeet != null && d.squareFeet >= 10000) reasons.push("Larger lot (10,000+ sq ft).");
+  const lotArea = vacancySpaceFacts(d.propertyType, d.space, d.squareFeet)?.lotAreaSqft;
+  if (lotArea != null && lotArea >= 10000) reasons.push("Larger lot (10,000+ sq ft).");
   if (d.saleYear != null) reasons.push(`Tax-sale record on file (latest ${d.saleYear}).`);
   if (d.violation) reasons.push("Building-violation record on file.");
   if (reasons.length === 0) reasons.push("Flagged as a tracked vacant site for follow-up.");
@@ -476,14 +489,16 @@ export function buildSiteCardHtml(
   const permits: PermitMatchState = options.permits ?? { status: "idle" };
   const propertyLabel = PROPERTY_TYPE_LABELS[d.propertyType] ?? "Vacant site";
   const addressText = d.address && d.address.trim() ? d.address.trim() : "Address not recorded";
+  const space = vacancySpaceFacts(d.propertyType, d.space, d.squareFeet);
+  const matchArea = siteMatchAreaForProperty(d.propertyType, space);
 
   const label = (text: string) =>
     `<div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${CARD_FAINT};font-weight:600;margin-bottom:5px">${escapeHtml(text)}</div>`;
 
   // ── 1 · Glance: address, then property type + approximate size ──
   const sizeClause =
-    d.squareFeet != null && Number.isFinite(d.squareFeet)
-      ? ` · about ${approxSqft(d.squareFeet).toLocaleString("en-US")} sq ft`
+    matchArea.sqft != null
+      ? ` · about ${approxSqft(matchArea.sqft).toLocaleString("en-US")} sq ft ${siteMatchAreaLabel(matchArea.kind).toLowerCase()}`
       : "";
   // Admin-only star. `options.star` is absent for the public, so a non-admin's
   // card carries no star markup at all — not a hidden one.
@@ -562,7 +577,10 @@ export function buildSiteCardHtml(
   const siteFacts = detail(
     "Site facts",
     [
-      `Lot size: ${d.squareFeet != null && Number.isFinite(d.squareFeet) ? `${d.squareFeet.toLocaleString("en-US")} sq ft` : "Not recorded"}`,
+      `Lot area: ${squareFeetLabel(space?.lotAreaSqft)} <span style="color:${CARD_FAINT}">(Cook County parcel record)</span>`,
+      `Assessor building area: ${squareFeetLabel(space?.assessorBuildingSqft)}${space?.assessorBuildingYear ? ` <span style="color:${CARD_FAINT}">(tax year ${space.assessorBuildingYear})</span>` : ""}`,
+      `Mapped building footprint on parcel: ${squareFeetLabel(space?.cityGroundFootprintSqft)} <span style="color:${CARD_FAINT}">(${escapeHtml(space?.cityGroundFootprintVintage ?? CITY_BUILDING_FOOTPRINTS_VINTAGE)})</span>`,
+      `Reported available space: ${space?.availableSpaceSqft ? `${space.availableSpaceSqft.toLocaleString("en-US")} sq ft` : "Not verified"}${space?.availableSpaceSource ? ` <span style="color:${CARD_FAINT}">(${escapeHtml(space.availableSpaceSource)}; confirm current availability)</span>` : ""}`,
       `PIN: ${d.pin ? `<span style="font-family:${MONO_STACK}">${escapeHtml(d.pin)}</span>` : "No PIN on record"}`,
       `Type: ${escapeHtml(propertyLabel)}`,
     ]

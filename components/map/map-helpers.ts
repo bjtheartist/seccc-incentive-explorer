@@ -17,6 +17,8 @@ import type { CapitalClass, FunderType } from "@/lib/community-investment";
 import type { DistrictData } from "@/lib/types";
 import type { SiteSignals } from "@/lib/site-signals";
 import type { TransportAccess } from "@/lib/transport-access";
+import type { ParcelSpaceFacts } from "@/lib/parcel-space";
+import { COOK_COUNTY_CURRENT_PARCELS_QUERY_URL } from "@/lib/cook-viewer";
 import { cachedFetch } from "@/lib/fetch-cache";
 
 /* ── Zone file mapping (static fallback for keys without DB data) ───── */
@@ -67,9 +69,8 @@ export const CHICAGO_ZONING_URL = "https://data.cityofchicago.org/resource/dj47-
 /** Empty GeoJSON FeatureCollection used as initial/cleared data. */
 export const EMPTY_FC: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
 
-/** Cook County ArcGIS parcels endpoint (Layer 44). */
-export const PARCELS_QUERY_BASE =
-  "https://gis.cookcountyil.gov/traditional/rest/services/cookVwrDynmc/MapServer/44/query";
+/** Cook County's current CookViewer parcel feature service. */
+export const PARCELS_QUERY_BASE = COOK_COUNTY_CURRENT_PARCELS_QUERY_URL;
 
 export function buildZoningColorExpression(): mapboxgl.Expression {
   const zoneClassProp: mapboxgl.Expression = ["get", "zone_class"];
@@ -516,6 +517,7 @@ export interface AreaStats {
   parcelTaxCode?: string;
   parcelTownship?: string;
   parcelType?: string;
+  space?: ParcelSpaceFacts;
   districts?: DistrictData;
   districtsLoading?: boolean;
   assessedLand?: number | null;

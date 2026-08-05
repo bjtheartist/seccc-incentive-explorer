@@ -25,6 +25,15 @@ import {
   siteMatchmakerContextKey,
   type SiteMatchmakerContextMetric,
 } from "@/lib/site-matchmaker-context";
+import {
+  compactParcelSpaceFacts,
+  siteMatchAreaForProperty,
+  siteMatchAreaLabel,
+  squareFeetLabel,
+  vacancySpaceFacts,
+  type ParcelSpaceFacts,
+  type SiteMatchAreaKind,
+} from "@/lib/parcel-space";
 import type {
   VacancyLandPoint,
   VacancyPropertyType,
@@ -51,8 +60,8 @@ export const SITE_MATCHMAKER_PROPERTY_TYPE_LABELS: Record<VacancyPropertyType, s
 export type FootprintPublication = "published" | "not_published";
 
 export const FOOTPRINT_PUBLICATION_LABELS: Record<FootprintPublication, string> = {
-  published: "Published footprint",
-  not_published: "Footprint not published",
+  published: "Matching area published",
+  not_published: "Matching area not published",
 };
 
 export type CandidateDistressStatus = "tax_sale" | "violation" | "none";
@@ -96,6 +105,10 @@ export const EPA_WALKABILITY_CATEGORIES: readonly EpaWalkabilityCategory[] = [
 export type CandidateSortKey =
   | "address"
   | "footprint"
+  | "lot_area"
+  | "assessor_building"
+  | "ground_footprint"
+  | "available_space"
   | "population_density"
   | "walkability"
   | "expressway_distance"
@@ -114,7 +127,10 @@ export interface SiteMatchmakerCandidateRow {
   contextKey: string;
   context: SiteMatchmakerContextMetric | null;
   propertyType: VacancyPropertyType;
+  /** Area used for a min/max match: lot area for land, verified space for a building. */
   squareFeet: number | null;
+  matchAreaKind: SiteMatchAreaKind;
+  space: ParcelSpaceFacts;
   ownerSector: OwnerSector;
   ownerStructure: OwnerStructure;
   zoningClass: string | null;
@@ -156,6 +172,8 @@ function normalizeTrackedPoint(
   sourceIndex: number,
 ): SiteMatchmakerCandidateRow {
   const zoningClass = publishedText(point.zoningClass);
+  const space = vacancySpaceFacts(point.propertyType, point.space, point.squareFeet) ?? {};
+  const matchArea = siteMatchAreaForProperty(point.propertyType, space);
   return {
     id: `tracked_inventory:${sourceIndex}`,
     source: "tracked_inventory",
@@ -166,7 +184,9 @@ function normalizeTrackedPoint(
     contextKey: siteMatchmakerContextKey(point),
     context: null,
     propertyType: point.propertyType,
-    squareFeet: point.squareFeet,
+    squareFeet: matchArea.sqft,
+    matchAreaKind: matchArea.kind,
+    space,
     ownerSector: classifyOwnerSector(point),
     ownerStructure: normalizeOwnerStructure(point.ownerStructure),
     zoningClass,
@@ -182,6 +202,8 @@ function normalizeLandPoint(
   point: VacancyLandPoint,
   sourceIndex: number,
 ): SiteMatchmakerCandidateRow {
+  const space = vacancySpaceFacts("vacant_land", point.space, point.squareFeet) ?? {};
+  const matchArea = siteMatchAreaForProperty("vacant_land", space);
   return {
     id: `reconciled_vacant_land:${sourceIndex}`,
     source: "reconciled_vacant_land",
@@ -192,7 +214,9 @@ function normalizeLandPoint(
     contextKey: siteMatchmakerContextKey(point),
     context: null,
     propertyType: "vacant_land",
-    squareFeet: point.squareFeet,
+    squareFeet: matchArea.sqft,
+    matchAreaKind: matchArea.kind,
+    space,
     ownerSector: classifyOwnerSector(point),
     ownerStructure: normalizeOwnerStructure(point.ownerStructure),
     zoningClass: null,
@@ -230,6 +254,72 @@ export interface ParsedSiteMatchmakerContext {
   generatedAt: string;
   sourceNotes: string[];
   contextByKey: Map<string, SiteMatchmakerContextMetric>;
+}
+
+export interface PublicAvailableSpaceMeasurement {
+  pin: string;
+  availableSpaceSqft: number;
+  source: string;
+  verifiedAt: string;
+  reconfirmAfter: string;
+}
+
+export function parseAvailableSpacePayload(value: unknown): PublicAvailableSpaceMeasurement[] {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return [];
+  const measurements = (value as { measurements?: unknown }).measurements;
+  if (!Array.isArray(measurements)) return [];
+  const output: PublicAvailableSpaceMeasurement[] = [];
+  for (const item of measurements) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) continue;
+    const row = item as Record<string, unknown>;
+    const pin = normalizePin14(typeof row.pin === "string" ? row.pin : null);
+    const availableSpaceSqft = Number(row.availableSpaceSqft);
+    const source = typeof row.source === "string" ? row.source.trim() : "";
+    const verifiedAt = typeof row.verifiedAt === "string" ? row.verifiedAt.trim() : "";
+    const reconfirmAfter =
+      typeof row.reconfirmAfter === "string" ? row.reconfirmAfter.trim() : "";
+    if (
+      pin === null ||
+      !Number.isFinite(availableSpaceSqft) ||
+      availableSpaceSqft <= 0 ||
+      !source ||
+      !verifiedAt ||
+      !Number.isFinite(Date.parse(verifiedAt)) ||
+      !Number.isFinite(Date.parse(reconfirmAfter)) ||
+      Date.parse(reconfirmAfter) <= Date.now()
+    ) {
+      continue;
+    }
+    output.push({
+      pin,
+      availableSpaceSqft: Math.round(availableSpaceSqft),
+      source,
+      verifiedAt,
+      reconfirmAfter,
+    });
+  }
+  return output;
+}
+
+/** Merge the small live human-verified ledger without changing row order or cardinality. */
+export function joinCandidateAvailableSpace(
+  rows: readonly SiteMatchmakerCandidateRow[],
+  measurements: readonly PublicAvailableSpaceMeasurement[],
+): SiteMatchmakerCandidateRow[] {
+  const byPin = new Map(measurements.map((measurement) => [measurement.pin, measurement]));
+  return rows.map((row) => {
+    const measurement = row.pin ? byPin.get(row.pin) : undefined;
+    if (!measurement) return row;
+    const space = compactParcelSpaceFacts({
+      ...row.space,
+      availableSpaceSqft: measurement.availableSpaceSqft,
+      availableSpaceSource: measurement.source,
+      availableSpaceVerifiedAt: measurement.verifiedAt,
+      availableSpaceReconfirmAfter: measurement.reconfirmAfter,
+    }) ?? row.space;
+    const matchArea = siteMatchAreaForProperty(row.propertyType, space);
+    return { ...row, space, squareFeet: matchArea.sqft, matchAreaKind: matchArea.kind };
+  });
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -476,12 +566,48 @@ export function filterAndSortCandidateRows(
   const collator = new Intl.Collator("en-US", { numeric: true, sensitivity: "base" });
 
   filtered.sort((a, b) => {
+    // A record with the relevant size field is actionable before one that
+    // still needs size verification, regardless of the selected secondary sort.
+    if (a.squareFeet === null && b.squareFeet !== null) return 1;
+    if (a.squareFeet !== null && b.squareFeet === null) return -1;
     let primary: number;
     switch (sort.key) {
       case "footprint":
         primary = compareNullable(
           a.squareFeet,
           b.squareFeet,
+          (left, right) => left - right,
+          sort.direction,
+        );
+        break;
+      case "lot_area":
+        primary = compareNullable(
+          a.space.lotAreaSqft ?? null,
+          b.space.lotAreaSqft ?? null,
+          (left, right) => left - right,
+          sort.direction,
+        );
+        break;
+      case "assessor_building":
+        primary = compareNullable(
+          a.space.assessorBuildingSqft ?? null,
+          b.space.assessorBuildingSqft ?? null,
+          (left, right) => left - right,
+          sort.direction,
+        );
+        break;
+      case "ground_footprint":
+        primary = compareNullable(
+          a.space.cityGroundFootprintSqft ?? null,
+          b.space.cityGroundFootprintSqft ?? null,
+          (left, right) => left - right,
+          sort.direction,
+        );
+        break;
+      case "available_space":
+        primary = compareNullable(
+          a.space.availableSpaceSqft ?? null,
+          b.space.availableSpaceSqft ?? null,
           (left, right) => left - right,
           sort.direction,
         );
@@ -547,8 +673,19 @@ export function candidateAddressLabel(row: SiteMatchmakerCandidateRow): string {
 
 export function candidateFootprintLabel(row: SiteMatchmakerCandidateRow): string {
   return row.squareFeet === null
-    ? "Not published"
-    : `${row.squareFeet.toLocaleString("en-US")} sq ft`;
+    ? `Needs size verification · ${siteMatchAreaLabel(row.matchAreaKind)} not published`
+    : `${siteMatchAreaLabel(row.matchAreaKind)}: ${squareFeetLabel(row.squareFeet)}`;
+}
+
+export function candidateSpaceFactLabel(
+  row: SiteMatchmakerCandidateRow,
+  field:
+    | "lotAreaSqft"
+    | "assessorBuildingSqft"
+    | "cityGroundFootprintSqft"
+    | "availableSpaceSqft",
+): string {
+  return squareFeetLabel(row.space[field]);
 }
 
 export function candidateZoningLabel(row: SiteMatchmakerCandidateRow): string {
@@ -582,7 +719,17 @@ export const SITE_MATCHMAKER_CSV_HEADERS = [
   "Address",
   "PIN",
   "Property type",
-  "Published footprint (sq ft)",
+  "Size field used for match",
+  "Match area (sq ft)",
+  "Lot area (sq ft)",
+  "Assessor building area (sq ft)",
+  "Assessor building tax year",
+  "Mapped building footprint on parcel (sq ft)",
+  "Mapped footprint source vintage",
+  "Reported available space (sq ft)",
+  "Available space source",
+  "Available space verified at",
+  "Available space reconfirm by",
   "Owner classification",
   "Owner type",
   "Zoning",
@@ -632,7 +779,25 @@ export function candidateRowsToCsv(
       candidateAddressLabel(row),
       candidatePinLabel(row),
       SITE_MATCHMAKER_PROPERTY_TYPE_LABELS[row.propertyType],
+      siteMatchAreaLabel(row.matchAreaKind),
       row.squareFeet === null ? "Not published" : String(row.squareFeet),
+      row.space.lotAreaSqft == null ? "Not published" : String(row.space.lotAreaSqft),
+      row.space.assessorBuildingSqft == null
+        ? "Not published"
+        : String(row.space.assessorBuildingSqft),
+      row.space.assessorBuildingYear == null
+        ? "Not published"
+        : String(row.space.assessorBuildingYear),
+      row.space.cityGroundFootprintSqft == null
+        ? "Not published"
+        : String(row.space.cityGroundFootprintSqft),
+      row.space.cityGroundFootprintVintage ?? "Not published",
+      row.space.availableSpaceSqft == null
+        ? "Not verified"
+        : String(row.space.availableSpaceSqft),
+      row.space.availableSpaceSource ?? "Not verified",
+      row.space.availableSpaceVerifiedAt ?? "Not verified",
+      row.space.availableSpaceReconfirmAfter ?? "Not verified",
       OWNER_SECTOR_LABELS[row.ownerSector],
       OWNER_STRUCTURE_LABELS[row.ownerStructure],
       candidateZoningLabel(row),

@@ -13,6 +13,7 @@ import {
   decodeSiteMatchmakerVacancyHandoff,
   prefilterVacancyRecords,
 } from "@/lib/site-matchmaker-vacancy";
+import { siteMatchAreaForProperty, vacancySpaceFacts } from "@/lib/parcel-space";
 
 export const dynamic = "force-dynamic";
 
@@ -83,14 +84,20 @@ export default async function VacancyMapPage({
     edition && handoff
       ? prefilterVacancyRecords(edition.sitePoints, handoff.criteria, {
           propertyType: (record) => record.propertyType,
-          squareFeet: (record) => record.squareFeet,
+          squareFeet: (record) => {
+            const space = vacancySpaceFacts(record.propertyType, record.space, record.squareFeet);
+            return siteMatchAreaForProperty(record.propertyType, space).sqft;
+          },
         })
       : null;
   const landPrefilter =
     edition?.landPoints && handoff
       ? prefilterVacancyRecords(edition.landPoints, handoff.criteria, {
           propertyType: () => "vacant_land",
-          squareFeet: (record) => record.squareFeet,
+          squareFeet: (record) => {
+            const space = vacancySpaceFacts("vacant_land", record.space, record.squareFeet);
+            return siteMatchAreaForProperty("vacant_land", space).sqft;
+          },
         })
       : null;
 
@@ -181,7 +188,7 @@ export default async function VacancyMapPage({
                 <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px] leading-relaxed">
                   <dt className="text-[#0C1B33]/45">Property</dt>
                   <dd className="font-medium text-[#0C1B33]">{handoff.summary.propertyType}</dd>
-                  <dt className="text-[#0C1B33]/45">Footprint</dt>
+                  <dt className="text-[#0C1B33]/45">Required site size</dt>
                   <dd className="font-medium text-[#0C1B33]">{handoff.summary.footprint}</dd>
                 </dl>
                 <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/55">
@@ -193,15 +200,15 @@ export default async function VacancyMapPage({
                 </p>
                 {handoff.footprintBoundActive ? (
                   <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/55">
-                    Published dimensions place{" "}
+                    Source-backed size records place{" "}
                     {trackedPrefilter.confirmedFootprintCount.toLocaleString("en-US")} tracked
-                    records inside the requested footprint. Another{" "}
+                    records inside the requested range. Another{" "}
                     {trackedPrefilter.unassessedUnknownSizeCount.toLocaleString("en-US")} tracked
                     records
                     {landPrefilter
                       ? ` and ${landPrefilter.unassessedUnknownSizeCount.toLocaleString("en-US")} reconciled land parcels`
                       : ""}
-                    {" "}remain plotted as unassessed leads because their dimensions are not published.
+                    {" "}remain plotted as leads needing size verification. Known records outside the requested range are omitted.
                   </p>
                 ) : null}
               </div>
