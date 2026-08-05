@@ -56,14 +56,14 @@ export function Footer() {
                 </a>
               </li>
               <li className="font-mono-bureau text-[11px] tracking-wide text-white/30">
-                South East Chicago Chamber of Commerce
+                Southeast Chicago Chamber of Commerce
               </li>
             </ul>
           </div>
         </div>
         <div className="h-px bg-gradient-to-r from-transparent via-white/15 to-transparent mt-10 mb-6" />
         <div className="font-mono-bureau text-[12px] tracking-[0.05em] text-white/70 text-center">
-          Built by <span className="text-white">Billy Ndizeye</span>, in collaboration with the South East Chicago Chamber of Commerce
+          Built by <span className="text-white">Billy Ndizeye</span>, in collaboration with the Southeast Chicago Chamber of Commerce
         </div>
         <div className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-white/20 text-center mt-4">
           Chicago Incentive Explorer &middot;

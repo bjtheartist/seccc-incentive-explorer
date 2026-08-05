@@ -20,7 +20,7 @@ export default function MapPage() {
             Chicago Site Incentive Map
           </h1>
           <p className="text-white/50 text-sm md:text-base max-w-xl">
-            Search any address to check likely incentive eligibility — then explore zones, assets, and neighborhood data across Chicago.
+            Search any address to find location-linked incentive programs, then explore zones, assets, permits, and neighborhood data across Chicago.
           </p>
         </div>
       </div>

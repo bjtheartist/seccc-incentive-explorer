@@ -5,8 +5,8 @@ import { NeighborhoodSelect } from "@/components/vacancy/NeighborhoodSelect";
 
 /**
  * The consistent sub-navigation header shown on every /vacancy/[zip]* page — one
- * area workspace, five views. The ZIP root is the decision-first Case Workbench
- * ("Workbench"); the long narrative report lives at /report.
+ * area workspace, five views. The narrative Report leads the navigation, while
+ * the ZIP root remains the decision-first Case Workbench ("Workbench").
  * Server component: the active view is passed in, so no client hooks are
  * needed. The neighborhood switcher preserves the current view when switching
  * ZIPs (reuses the pilot-ZIP chip-row pattern from the admin Owner Files page).
@@ -17,15 +17,15 @@ import { NeighborhoodSelect } from "@/components/vacancy/NeighborhoodSelect";
 export type VacancyView = "workbench" | "report" | "areas" | "map" | "directory";
 
 const TABS: { key: VacancyView; label: string; href: (zip: string) => string }[] = [
-  { key: "workbench", label: "Workbench", href: (z) => `/vacancy/${z}` },
   { key: "report", label: "Report", href: (z) => `/vacancy/${z}/report` },
-  { key: "areas", label: "Opportunity Areas", href: (z) => `/vacancy/${z}/areas` },
-  { key: "map", label: "Property Map", href: (z) => `/vacancy/${z}/map` },
+  { key: "workbench", label: "Workbench", href: (z) => `/vacancy/${z}` },
   { key: "directory", label: "All Properties", href: (z) => `/vacancy/${z}/directory` },
+  { key: "map", label: "Map", href: (z) => `/vacancy/${z}/map` },
+  { key: "areas", label: "Opportunity Areas", href: (z) => `/vacancy/${z}/areas` },
 ];
 
 export function hrefFor(view: VacancyView, zip: string): string {
-  return (TABS.find((t) => t.key === view) ?? TABS[0]).href(zip);
+  return (TABS.find((t) => t.key === view) ?? TABS.find((t) => t.key === "workbench")!).href(zip);
 }
 
 export function VacancySubNav({ zip, active }: { zip: string; active: VacancyView }) {

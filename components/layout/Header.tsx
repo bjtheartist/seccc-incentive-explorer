@@ -22,13 +22,13 @@ interface NavGroup {
  * Approved Set-A information architecture. Group and item labels are
  * client-approved copy — do not reword them.
  *
- * "Investment & Corridors" intentionally carries exactly two entries: /neighborhoods
+ * "Public Investment + Corridors" intentionally carries exactly two entries: /neighborhoods
  * has no index page, so it is never linked from the global nav.
  */
 const NAV_GROUPS: NavGroup[] = [
   {
     id: "eligibility",
-    label: "Check Eligibility",
+    label: "Find Incentives",
     items: [
       { href: "/check", label: "Quick Address Check" },
       { href: "/qualify", label: "Eligibility Survey" },
@@ -47,7 +47,7 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     id: "data",
-    label: "Investment & Corridors",
+    label: "Public Investment + Corridors",
     items: [
       { href: "/investment", label: "Community Investment" },
       { href: "/corridors", label: "Corridor Signals" },

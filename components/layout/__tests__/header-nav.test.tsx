@@ -49,7 +49,7 @@ describe("Header — approved Set-A structure", () => {
 
   it("renders the three approved group labels", () => {
     // html is serialized markup, so & renders as &amp; — assert the escaped form
-    for (const label of ["Check Eligibility", "Find a Site", "Investment &amp; Corridors"]) {
+    for (const label of ["Find Incentives", "Find a Site", "Public Investment + Corridors"]) {
       expect(html).toContain(label);
     }
   });
@@ -67,7 +67,7 @@ describe("Header — approved Set-A structure", () => {
 
   it("never links the index-less /neighborhoods route", () => {
     expect(html).not.toContain('href="/neighborhoods"');
-    // Investment & Corridors carries exactly two entries.
+    // Public Investment + Corridors carries exactly two entries.
     expect(html).toContain('href="/investment"');
     expect(html).toContain('href="/corridors"');
   });
