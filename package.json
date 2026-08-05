@@ -53,6 +53,7 @@
     "report:preview": "npx tsx scripts/preview-report-pdf.ts",
     "vacancy:preview": "npx tsx scripts/preview-vacancy-index-pdf.ts",
     "vacancy:index:export": "npx tsx scripts/export-vacancy-index.ts",
+    "site-matchmaker:context:export": "npx tsx scripts/export-site-matchmaker-context.ts",
     "vacancy:directory:dedupe": "npx tsx scripts/dedupe-vacancy-directory.ts",
     "tif:briefs:export": "npx tsx scripts/export-tif-briefs.ts",
     "data:import:cook-source": "npx tsx scripts/import-cook-county-source-grants.ts",

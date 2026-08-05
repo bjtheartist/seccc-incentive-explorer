@@ -127,7 +127,7 @@ export default async function VacancyMapPage({
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
-      <div className="mx-auto max-w-5xl">
+      <div className={`mx-auto ${handoff ? "max-w-[1480px]" : "max-w-5xl"}`}>
         <VacancySubNav zip={zip} active="map" />
 
         <span className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#2563EB]">
@@ -256,6 +256,7 @@ export default async function VacancyMapPage({
               anchors={edition.anchors ?? null}
               initialAreaId={initialAreaId}
               siteMatchmakerPrefilter={handoff != null}
+              showSiteMatchmakerResults={handoff != null}
             />
           </div>
         ) : (
