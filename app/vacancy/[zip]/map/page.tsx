@@ -10,10 +10,13 @@ import { VacancySubNav } from "@/components/vacancy/VacancySubNav";
 import { OPPORTUNITY_AREA_DISCLAIMER } from "@/lib/vacancy-public-labels";
 import { buildSiteMatchmakerHref } from "@/lib/site-matchmaker";
 import {
+  applyCurrentAvailableSpaceToLandPoints,
+  applyCurrentAvailableSpaceToSitePoints,
   decodeSiteMatchmakerVacancyHandoff,
   prefilterVacancyRecords,
 } from "@/lib/site-matchmaker-vacancy";
 import { siteMatchAreaForProperty, vacancySpaceFacts } from "@/lib/parcel-space";
+import { loadCurrentAvailableSpaceMeasurements } from "@/lib/parcel-space-server";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +78,25 @@ export default async function VacancyMapPage({
 
   const exportData = loadVacancyIndex();
   const edition = exportData?.editions[zip] ?? null;
+  const availability = edition
+    ? await loadCurrentAvailableSpaceMeasurements({ zip })
+    : { status: "unavailable" as const, measurements: [] };
+  const availabilityIsAuthoritative = availability.status === "available";
+  const currentSitePoints = edition
+    ? applyCurrentAvailableSpaceToSitePoints(
+        edition.sitePoints,
+        availability.measurements,
+        availabilityIsAuthoritative,
+      )
+    : [];
+  const currentLandPoints =
+    edition?.landPoints
+      ? applyCurrentAvailableSpaceToLandPoints(
+          edition.landPoints,
+          availability.measurements,
+          availabilityIsAuthoritative,
+        )
+      : null;
   const handoff = decodeSiteMatchmakerVacancyHandoff(
     zip,
     toUrlSearchParams(rawSearchParams),
@@ -82,7 +104,7 @@ export default async function VacancyMapPage({
 
   const trackedPrefilter =
     edition && handoff
-      ? prefilterVacancyRecords(edition.sitePoints, handoff.criteria, {
+      ? prefilterVacancyRecords(currentSitePoints, handoff.criteria, {
           propertyType: (record) => record.propertyType,
           squareFeet: (record) => {
             const space = vacancySpaceFacts(record.propertyType, record.space, record.squareFeet);
@@ -91,8 +113,8 @@ export default async function VacancyMapPage({
         })
       : null;
   const landPrefilter =
-    edition?.landPoints && handoff
-      ? prefilterVacancyRecords(edition.landPoints, handoff.criteria, {
+    currentLandPoints && handoff
+      ? prefilterVacancyRecords(currentLandPoints, handoff.criteria, {
           propertyType: () => "vacant_land",
           squareFeet: (record) => {
             const space = vacancySpaceFacts("vacant_land", record.space, record.squareFeet);
@@ -101,8 +123,8 @@ export default async function VacancyMapPage({
         })
       : null;
 
-  const plottedSitePoints = trackedPrefilter?.records ?? edition?.sitePoints ?? [];
-  const plottedLandPoints = landPrefilter?.records ?? edition?.landPoints ?? null;
+  const plottedSitePoints = trackedPrefilter?.records ?? currentSitePoints;
+  const plottedLandPoints = landPrefilter?.records ?? currentLandPoints;
   const plottedMarkerNumbers = new Set(
     plottedSitePoints.flatMap((record) =>
       record.markerNumber == null ? [] : [record.markerNumber],

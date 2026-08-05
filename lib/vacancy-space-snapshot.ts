@@ -3,7 +3,9 @@ import {
   CITY_BUILDING_FOOTPRINTS_VINTAGE,
   availableSpaceSourceLabel,
   compactParcelSpaceFacts,
+  currentParcelSpaceFacts,
   positiveSquareFeet,
+  withoutAvailableSpaceFacts,
   type ParcelSpaceFacts,
 } from "./parcel-space";
 import type {
@@ -70,6 +72,14 @@ const SPACE_FACT_KEYS = new Set<keyof ParcelSpaceFacts>([
   "availableSpaceReconfirmAfter",
 ]);
 
+const PRESERVED_PUBLIC_RECORD_SPACE_KEYS: readonly (keyof ParcelSpaceFacts)[] = [
+  "lotAreaSqft",
+  "assessorBuildingSqft",
+  "assessorBuildingYear",
+  "cityGroundFootprintSqft",
+  "cityGroundFootprintVintage",
+];
+
 function validIsoDate(value: Date | string | null): string | null {
   if (!value) return null;
   const date = value instanceof Date ? value : new Date(value);
@@ -129,12 +139,14 @@ function overlaySitePoint(
   factsByPin: ReadonlyMap<string, ParcelSpaceFacts>,
 ): { point: VacancySitePoint; pin: string | null; enriched: boolean } {
   const pin = normalizePin14(point.pin);
-  const space = pin ? factsByPin.get(pin) : undefined;
+  const freshFacts = pin ? factsByPin.get(pin) : undefined;
+  const preservedFacts = withoutAvailableSpaceFacts(currentParcelSpaceFacts(point.space));
+  const space = compactParcelSpaceFacts({ ...preservedFacts, ...freshFacts });
   const { space: _existingSpace, ...rest } = point;
   return {
     point: space ? { ...rest, space } : rest,
     pin,
-    enriched: Boolean(space),
+    enriched: Boolean(freshFacts),
   };
 }
 
@@ -143,12 +155,14 @@ function overlayLandPoint(
   factsByPin: ReadonlyMap<string, ParcelSpaceFacts>,
 ): { point: VacancyLandPoint; pin: string | null; enriched: boolean } {
   const pin = normalizePin14(point.pin);
-  const space = pin ? factsByPin.get(pin) : undefined;
+  const freshFacts = pin ? factsByPin.get(pin) : undefined;
+  const preservedFacts = withoutAvailableSpaceFacts(currentParcelSpaceFacts(point.space));
+  const space = compactParcelSpaceFacts({ ...preservedFacts, ...freshFacts });
   const { space: _existingSpace, ...rest } = point;
   return {
     point: space ? { ...rest, space } : rest,
     pin,
-    enriched: Boolean(space),
+    enriched: Boolean(freshFacts),
   };
 }
 
@@ -282,6 +296,24 @@ export function assertVacancySpaceOnlyChange(
   const strippedAfter = stripAllowedSpaceChanges(after, selectedZips);
   if (JSON.stringify(strippedBefore) !== JSON.stringify(strippedAfter)) {
     throw new Error("Vacancy-space overlay changed data outside the approved space fields");
+  }
+
+  for (const zip of selectedZips) {
+    const beforeEdition = before.editions[zip];
+    const afterEdition = after.editions[zip];
+    const pairs = [
+      [beforeEdition.sitePoints, afterEdition.sitePoints],
+      [beforeEdition.landPoints ?? [], afterEdition.landPoints ?? []],
+    ] as const;
+    for (const [beforePoints, afterPoints] of pairs) {
+      beforePoints.forEach((point, index) => {
+        for (const key of PRESERVED_PUBLIC_RECORD_SPACE_KEYS) {
+          if (point.space?.[key] !== undefined && afterPoints[index]?.space?.[key] === undefined) {
+            throw new Error(`Vacancy-space overlay erased ${key} in ZIP ${zip}`);
+          }
+        }
+      });
+    }
   }
 
   for (const key of SPACE_SOURCE_KEYS) {

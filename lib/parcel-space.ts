@@ -27,6 +27,14 @@ export interface ParcelSpaceFacts {
   availableSpaceReconfirmAfter?: string;
 }
 
+export interface PublicAvailableSpaceMeasurement {
+  pin: string;
+  availableSpaceSqft: number;
+  source: string;
+  verifiedAt: string;
+  reconfirmAfter: string;
+}
+
 export type SiteMatchAreaKind = "lot_area" | "verified_available_space";
 
 export interface SiteMatchArea {
@@ -82,6 +90,70 @@ export function compactParcelSpaceFacts(
   return Object.keys(output).length > 0 ? output : undefined;
 }
 
+/** Remove the complete availability bundle while preserving the three public-record facts. */
+export function withoutAvailableSpaceFacts(
+  input: ParcelSpaceFacts | null | undefined,
+): ParcelSpaceFacts | undefined {
+  if (!input) return undefined;
+  const {
+    availableSpaceSqft: _availableSpaceSqft,
+    availableSpaceSource: _availableSpaceSource,
+    availableSpaceVerifiedAt: _availableSpaceVerifiedAt,
+    availableSpaceReconfirmAfter: _availableSpaceReconfirmAfter,
+    ...rest
+  } = input;
+  return compactParcelSpaceFacts(rest);
+}
+
+function timestamp(value: string | undefined): number | null {
+  if (!value) return null;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+/** Keep available space only while its complete verification bundle is current. */
+export function currentParcelSpaceFacts(
+  input: ParcelSpaceFacts | null | undefined,
+  now: Date | number = Date.now(),
+): ParcelSpaceFacts | undefined {
+  const normalized = compactParcelSpaceFacts(input);
+  if (!normalized) return undefined;
+
+  const nowMs = now instanceof Date ? now.getTime() : now;
+  const verifiedAt = timestamp(normalized.availableSpaceVerifiedAt);
+  const reconfirmAfter = timestamp(normalized.availableSpaceReconfirmAfter);
+  const availabilityIsCurrent =
+    normalized.availableSpaceSqft !== undefined &&
+    Boolean(normalized.availableSpaceSource) &&
+    verifiedAt !== null &&
+    reconfirmAfter !== null &&
+    verifiedAt <= nowMs &&
+    reconfirmAfter > nowMs &&
+    reconfirmAfter > verifiedAt;
+
+  return availabilityIsCurrent ? normalized : withoutAvailableSpaceFacts(normalized);
+}
+
+/** Replace the availability bundle from an authoritative live snapshot. */
+export function replaceAvailableSpaceFacts(
+  input: ParcelSpaceFacts | null | undefined,
+  measurement: PublicAvailableSpaceMeasurement | null | undefined,
+  now: Date | number = Date.now(),
+): ParcelSpaceFacts | undefined {
+  const base = withoutAvailableSpaceFacts(input);
+  if (!measurement) return base;
+  return currentParcelSpaceFacts(
+    {
+      ...base,
+      availableSpaceSqft: measurement.availableSpaceSqft,
+      availableSpaceSource: measurement.source,
+      availableSpaceVerifiedAt: measurement.verifiedAt,
+      availableSpaceReconfirmAfter: measurement.reconfirmAfter,
+    },
+    now,
+  );
+}
+
 /**
  * Backward-compatible read for vacancy exports created before `space` existed.
  * The legacy field is only safe to reuse as lot area for a land record. It is
@@ -91,8 +163,9 @@ export function vacancySpaceFacts(
   propertyType: "vacant_land" | "vacant_building",
   space: ParcelSpaceFacts | null | undefined,
   legacySquareFeet: number | null | undefined,
+  now: Date | number = Date.now(),
 ): ParcelSpaceFacts | undefined {
-  const normalized = compactParcelSpaceFacts(space);
+  const normalized = currentParcelSpaceFacts(space, now);
   if (propertyType !== "vacant_land") return normalized;
   const lotAreaSqft = positiveSquareFeet(legacySquareFeet);
   return compactParcelSpaceFacts({
@@ -111,18 +184,15 @@ export function vacancySpaceFacts(
 export function siteMatchAreaForProperty(
   propertyType: "vacant_land" | "vacant_building",
   facts: ParcelSpaceFacts | null | undefined,
+  now: Date | number = Date.now(),
 ): SiteMatchArea {
+  const currentFacts = currentParcelSpaceFacts(facts, now);
   if (propertyType === "vacant_land") {
-    return { kind: "lot_area", sqft: positiveSquareFeet(facts?.lotAreaSqft) };
+    return { kind: "lot_area", sqft: positiveSquareFeet(currentFacts?.lotAreaSqft) };
   }
   return {
     kind: "verified_available_space",
-    sqft:
-      facts?.availableSpaceReconfirmAfter &&
-      Number.isFinite(Date.parse(facts.availableSpaceReconfirmAfter)) &&
-      Date.parse(facts.availableSpaceReconfirmAfter) > Date.now()
-        ? positiveSquareFeet(facts.availableSpaceSqft)
-        : null,
+    sqft: positiveSquareFeet(currentFacts?.availableSpaceSqft),
   };
 }
 

@@ -52,6 +52,14 @@ function fixture(): VacancyIndexExport {
             address: "1 TEST ST",
             pin: "21-32-211-039-0000",
             squareFeet: 12000,
+            space: {
+              assessorBuildingSqft: 4_100,
+              assessorBuildingYear: 2023,
+              availableSpaceSqft: 2_000,
+              availableSpaceSource: "Expired owner confirmation",
+              availableSpaceVerifiedAt: "2025-01-01T00:00:00.000Z",
+              availableSpaceReconfirmAfter: "2025-04-01T00:00:00.000Z",
+            },
             zoningClass: "C1-1",
             incentiveCount: 2,
             ownerConfidence: "pin_matched",
@@ -92,6 +100,7 @@ function fixture(): VacancyIndexExport {
             address: "1 TEST ST",
             pin: "21322110390000",
             squareFeet: 12000,
+            space: { lotAreaSqft: 11_900 },
             ownerConfidence: "pin_matched",
             saleYear: 2015,
             ownerStructure: "government",
@@ -149,8 +158,19 @@ describe("vacancy space snapshot", () => {
     ]);
     const { data, summary } = overlayVacancySpaceFacts(before, facts);
 
-    expect(data.editions["60617"].sitePoints[0].space).toEqual(facts.get("21322110390000"));
-    expect(data.editions["60617"].landPoints?.[0].space).toEqual(facts.get("21322110390000"));
+    expect(data.editions["60617"].sitePoints[0].space).toEqual({
+      assessorBuildingSqft: 4_100,
+      assessorBuildingYear: 2023,
+      lotAreaSqft: 12_027,
+      cityGroundFootprintSqft: 2_400,
+    });
+    expect(data.editions["60617"].sitePoints[0].space).not.toHaveProperty(
+      "availableSpaceSqft",
+    );
+    expect(data.editions["60617"].landPoints?.[0].space).toEqual({
+      lotAreaSqft: 12_027,
+      cityGroundFootprintSqft: 2_400,
+    });
     expect(data.editions["60617"].sitePoints[1].space).toBeUndefined();
     expect(data.editions["60617"].distress).toEqual(before.editions["60617"].distress);
     expect(data.sources).toMatchObject(VACANCY_SPACE_SOURCE_LABELS);
@@ -164,6 +184,9 @@ describe("vacancy space snapshot", () => {
     const changed = structuredClone(data);
     changed.editions["60617"].headline.vacantPropertyCount = 99;
     expect(() => assertVacancySpaceOnlyChange(before, changed)).toThrow(/outside/);
+    const erased = structuredClone(data);
+    delete erased.editions["60617"].sitePoints[0].space?.assessorBuildingSqft;
+    expect(() => assertVacancySpaceOnlyChange(before, erased)).toThrow(/erased/);
     expect(() => assertVacancySpacePayloadBudget(before, data, 0.35)).not.toThrow();
 
     const bloated = structuredClone(data);

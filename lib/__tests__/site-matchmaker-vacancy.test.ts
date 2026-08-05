@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  applyCurrentAvailableSpaceToSitePoints,
   decodeSiteMatchmakerVacancyHandoff,
   prefilterVacancyRecords,
 } from "@/lib/site-matchmaker-vacancy";
 import type { SiteMatchCriteria } from "@/lib/site-matchmaker";
-import type { VacancyPropertyType } from "@/lib/vacancy-index";
+import { siteMatchAreaForProperty, vacancySpaceFacts } from "@/lib/parcel-space";
+import type { VacancyPropertyType, VacancySitePoint } from "@/lib/vacancy-index";
 
 interface RecordStub {
   id: string;
@@ -145,5 +147,58 @@ describe("supported vacancy prefilter", () => {
     expect(result.confirmedFootprintCount).toBe(2);
     expect(result.omittedOutsideFootprintCount).toBe(1);
     expect(result.omittedPropertyTypeCount).toBe(1);
+  });
+
+  it("applies live verified space before deciding which building pins remain plotted", () => {
+    const point: VacancySitePoint = {
+      lat: 41.73,
+      lon: -87.55,
+      ownerType: "corporate_llc",
+      propertyType: "vacant_building",
+      markerNumber: null,
+      address: "100 E MAIN ST",
+      pin: "20-12-345-678-9012",
+      squareFeet: null,
+      space: { assessorBuildingSqft: 9_000 },
+      zoningClass: "B3-2",
+      incentiveCount: 2,
+      ownerConfidence: "inferred",
+      clusterId: null,
+      saleYear: null,
+      violation: false,
+      ownerStructure: "entity",
+      ownerGeography: "in_state",
+      pinMatch: "address_matched",
+    };
+    const refreshed = applyCurrentAvailableSpaceToSitePoints(
+      [point],
+      [
+        {
+          pin: "20123456789012",
+          availableSpaceSqft: 900,
+          source: "Owner confirmation",
+          verifiedAt: "2026-08-01T00:00:00.000Z",
+          reconfirmAfter: "2099-01-01T00:00:00.000Z",
+        },
+      ],
+      true,
+    );
+    const result = prefilterVacancyRecords(
+      refreshed,
+      criteria({ minSquareFeet: 1_500, maxSquareFeet: 5_000 }),
+      {
+        propertyType: (record) => record.propertyType,
+        squareFeet: (record) =>
+          siteMatchAreaForProperty(
+            record.propertyType,
+            vacancySpaceFacts(record.propertyType, record.space, record.squareFeet),
+          ).sqft,
+      },
+    );
+
+    expect(refreshed[0].space?.availableSpaceSqft).toBe(900);
+    expect(result.records).toEqual([]);
+    expect(result.omittedOutsideFootprintCount).toBe(1);
+    expect(result.unassessedUnknownSizeCount).toBe(0);
   });
 });

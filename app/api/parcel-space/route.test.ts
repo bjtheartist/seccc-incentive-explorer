@@ -108,6 +108,30 @@ describe("GET /api/parcel-space", () => {
     expect(JSON.stringify(body)).not.toMatch(/verifier|sourceUrl|raw_json|notes/i);
     expect(String(sqlMock.mock.calls[0][0])).toContain("current_available_space_measurements");
   });
+
+  it("filters future-dated or expired verification rows even if a view drifts", async () => {
+    sqlMock.mockResolvedValue([
+      {
+        pin: "20123456789012",
+        sqft: 4_500,
+        source_key: "owner_confirmation",
+        verified_at: "2099-01-01T00:00:00.000Z",
+        reconfirm_after: "2099-04-01T00:00:00.000Z",
+      },
+      {
+        pin: "21111111111111",
+        sqft: 2_000,
+        source_key: "city_record",
+        verified_at: "2025-01-01T00:00:00.000Z",
+        reconfirm_after: "2025-04-01T00:00:00.000Z",
+      },
+    ]);
+
+    const response = await GET(
+      new NextRequest("http://localhost/api/parcel-space?zip=60617"),
+    );
+    expect(await response.json()).toEqual({ status: "available", measurements: [] });
+  });
 });
 
 describe("POST /api/parcel-space", () => {

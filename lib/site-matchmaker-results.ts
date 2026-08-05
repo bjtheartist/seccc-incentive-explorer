@@ -26,12 +26,13 @@ import {
   type SiteMatchmakerContextMetric,
 } from "@/lib/site-matchmaker-context";
 import {
-  compactParcelSpaceFacts,
+  replaceAvailableSpaceFacts,
   siteMatchAreaForProperty,
   siteMatchAreaLabel,
   squareFeetLabel,
   vacancySpaceFacts,
   type ParcelSpaceFacts,
+  type PublicAvailableSpaceMeasurement,
   type SiteMatchAreaKind,
 } from "@/lib/parcel-space";
 import type {
@@ -256,14 +257,6 @@ export interface ParsedSiteMatchmakerContext {
   contextByKey: Map<string, SiteMatchmakerContextMetric>;
 }
 
-export interface PublicAvailableSpaceMeasurement {
-  pin: string;
-  availableSpaceSqft: number;
-  source: string;
-  verifiedAt: string;
-  reconfirmAfter: string;
-}
-
 export function parseAvailableSpacePayload(value: unknown): PublicAvailableSpaceMeasurement[] {
   if (!value || typeof value !== "object" || Array.isArray(value)) return [];
   const measurements = (value as { measurements?: unknown }).measurements;
@@ -301,7 +294,7 @@ export function parseAvailableSpacePayload(value: unknown): PublicAvailableSpace
   return output;
 }
 
-/** Merge the small live human-verified ledger without changing row order or cardinality. */
+/** Apply an authoritative live snapshot without changing row order or cardinality. */
 export function joinCandidateAvailableSpace(
   rows: readonly SiteMatchmakerCandidateRow[],
   measurements: readonly PublicAvailableSpaceMeasurement[],
@@ -309,14 +302,7 @@ export function joinCandidateAvailableSpace(
   const byPin = new Map(measurements.map((measurement) => [measurement.pin, measurement]));
   return rows.map((row) => {
     const measurement = row.pin ? byPin.get(row.pin) : undefined;
-    if (!measurement) return row;
-    const space = compactParcelSpaceFacts({
-      ...row.space,
-      availableSpaceSqft: measurement.availableSpaceSqft,
-      availableSpaceSource: measurement.source,
-      availableSpaceVerifiedAt: measurement.verifiedAt,
-      availableSpaceReconfirmAfter: measurement.reconfirmAfter,
-    }) ?? row.space;
+    const space = replaceAvailableSpaceFacts(row.space, measurement) ?? {};
     const matchArea = siteMatchAreaForProperty(row.propertyType, space);
     return { ...row, space, squareFeet: matchArea.sqft, matchAreaKind: matchArea.kind };
   });

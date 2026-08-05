@@ -8,6 +8,7 @@ import {
 } from "@/lib/owner-files-admin-auth";
 import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { availableSpaceSourceLabel, positiveSquareFeet } from "@/lib/parcel-space";
+import { loadCurrentAvailableSpaceMeasurements } from "@/lib/parcel-space-server";
 import { normalizePin14 } from "@/lib/cook-viewer";
 import { getOwnerCluster } from "@/lib/owner-file";
 
@@ -34,50 +35,18 @@ function trimmed(value: unknown, maxLength: number): string | null {
   return result && result.length <= maxLength ? result : null;
 }
 
-function publicMeasurement(row: Record<string, unknown>) {
-  return {
-    pin: String(row.pin),
-    availableSpaceSqft: Math.round(Number(row.sqft)),
-    source: availableSpaceSourceLabel(String(row.source_key ?? "")),
-    verifiedAt: new Date(String(row.verified_at)).toISOString(),
-    reconfirmAfter: new Date(String(row.reconfirm_after)).toISOString(),
-  };
-}
-
 /** Public-safe current available-space records. Human identity and notes never leave the admin write. */
 export async function GET(req: NextRequest) {
-  const sql = getSQL();
-  if (!sql) {
-    return NextResponse.json({ status: "unavailable", measurements: [] });
-  }
-
   const pin = normalizePin14(req.nextUrl.searchParams.get("pin"));
   const zip = req.nextUrl.searchParams.get("zip")?.trim() ?? "";
   if (!pin && !/^\d{5}$/.test(zip)) {
     return NextResponse.json({ error: "A 14-digit pin or 5-digit zip is required" }, { status: 400 });
   }
 
-  try {
-    const rows = pin
-      ? await sql`
-          SELECT pin, sqft, source_key, verified_at, reconfirm_after
-          FROM current_available_space_measurements
-          WHERE pin = ${pin}
-          LIMIT 1
-        `
-      : await sql`
-          SELECT pin, sqft, source_key, verified_at, reconfirm_after
-          FROM current_available_space_measurements
-          WHERE zip = ${zip}
-          ORDER BY pin
-        `;
-    return NextResponse.json(
-      { status: "available", measurements: rows.map((row) => publicMeasurement(row)) },
-      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=300" } },
-    );
-  } catch {
-    return NextResponse.json({ status: "unavailable", measurements: [] });
-  }
+  const result = await loadCurrentAvailableSpaceMeasurements({ pin, zip: pin ? null : zip });
+  return NextResponse.json(result, {
+    headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=300" },
+  });
 }
 
 /** Admin-gated, append-history write for explicitly verified usable vacant interior space. */
@@ -196,7 +165,16 @@ export async function POST(req: NextRequest) {
       )
       RETURNING pin, sqft, source_key, verified_at, reconfirm_after
     `;
-    return NextResponse.json({ measurement: publicMeasurement(rows[0] as Record<string, unknown>) });
+    const saved = rows[0] as Record<string, unknown>;
+    return NextResponse.json({
+      measurement: {
+        pin: String(saved.pin),
+        availableSpaceSqft: Math.round(Number(saved.sqft)),
+        source: availableSpaceSourceLabel(String(saved.source_key ?? "")),
+        verifiedAt: new Date(String(saved.verified_at)).toISOString(),
+        reconfirmAfter: new Date(String(saved.reconfirm_after)).toISOString(),
+      },
+    });
   } catch (error) {
     console.error("[parcel-space] available-space write failed", error);
     return NextResponse.json({ error: "Could not save available-space verification" }, { status: 503 });

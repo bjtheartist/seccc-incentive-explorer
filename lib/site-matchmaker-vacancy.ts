@@ -5,7 +5,17 @@ import {
   type SiteMatchCriteria,
   type SiteMatchSummary,
 } from "./site-matchmaker";
-import type { VacancyPropertyType } from "./vacancy-index";
+import { normalizePin14 } from "./cook-viewer";
+import {
+  replaceAvailableSpaceFacts,
+  vacancySpaceFacts,
+  type PublicAvailableSpaceMeasurement,
+} from "./parcel-space";
+import type {
+  VacancyLandPoint,
+  VacancyPropertyType,
+  VacancySitePoint,
+} from "./vacancy-index";
 
 const SITE_MATCHMAKER_SOURCE = "site-matchmaker";
 const CANONICAL_CRITERIA_PARAMS = [
@@ -69,6 +79,47 @@ export interface VacancyPrefilterResult<T> {
   unassessedUnknownSizeCount: number;
   confirmedFootprintCount: number;
   omittedOutsideFootprintCount: number;
+}
+
+function availableSpaceByPin(
+  measurements: readonly PublicAvailableSpaceMeasurement[],
+): ReadonlyMap<string, PublicAvailableSpaceMeasurement> {
+  return new Map(measurements.map((measurement) => [measurement.pin, measurement]));
+}
+
+/** Reconcile static rows with a live snapshot before filtering or plotting. */
+export function applyCurrentAvailableSpaceToSitePoints(
+  records: readonly VacancySitePoint[],
+  measurements: readonly PublicAvailableSpaceMeasurement[],
+  authoritative: boolean,
+): VacancySitePoint[] {
+  const byPin = availableSpaceByPin(measurements);
+  return records.map((record) => {
+    const base = vacancySpaceFacts(record.propertyType, record.space, record.squareFeet);
+    const pin = normalizePin14(record.pin);
+    const space = authoritative
+      ? replaceAvailableSpaceFacts(base, pin ? byPin.get(pin) : null)
+      : base;
+    const { space: _previousSpace, ...rest } = record;
+    return space ? { ...rest, space } : rest;
+  });
+}
+
+export function applyCurrentAvailableSpaceToLandPoints(
+  records: readonly VacancyLandPoint[],
+  measurements: readonly PublicAvailableSpaceMeasurement[],
+  authoritative: boolean,
+): VacancyLandPoint[] {
+  const byPin = availableSpaceByPin(measurements);
+  return records.map((record) => {
+    const base = vacancySpaceFacts("vacant_land", record.space, record.squareFeet);
+    const pin = normalizePin14(record.pin);
+    const space = authoritative
+      ? replaceAvailableSpaceFacts(base, pin ? byPin.get(pin) : null)
+      : base;
+    const { space: _previousSpace, ...rest } = record;
+    return space ? { ...rest, space } : rest;
+  });
 }
 
 function propertyTypeIsIncluded(

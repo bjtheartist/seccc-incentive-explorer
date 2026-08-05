@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   compactParcelSpaceFacts,
+  currentParcelSpaceFacts,
+  replaceAvailableSpaceFacts,
   siteMatchAreaForProperty,
   vacancySpaceFacts,
 } from "../parcel-space";
@@ -63,6 +65,8 @@ describe("parcel space facts", () => {
       siteMatchAreaForProperty("vacant_building", {
         ...descriptiveOnly,
         availableSpaceSqft: 2_500,
+        availableSpaceSource: "Owner confirmation",
+        availableSpaceVerifiedAt: "2026-08-01T00:00:00.000Z",
         availableSpaceReconfirmAfter: "2099-01-01T00:00:00.000Z",
       }),
     ).toEqual({ kind: "verified_available_space", sqft: 2_500 });
@@ -78,6 +82,36 @@ describe("parcel space facts", () => {
         availableSpaceReconfirmAfter: "2020-01-01T00:00:00.000Z",
       }),
     ).toEqual({ kind: "verified_available_space", sqft: null });
+  });
+
+  it("removes the complete public availability bundle when verification expires", () => {
+    expect(
+      currentParcelSpaceFacts(
+        {
+          assessorBuildingSqft: 8_000,
+          availableSpaceSqft: 2_500,
+          availableSpaceSource: "Owner confirmation",
+          availableSpaceVerifiedAt: "2026-04-01T00:00:00.000Z",
+          availableSpaceReconfirmAfter: "2026-07-01T00:00:00.000Z",
+        },
+        new Date("2026-08-05T00:00:00.000Z"),
+      ),
+    ).toEqual({ assessorBuildingSqft: 8_000 });
+  });
+
+  it("clears an absent authoritative availability record without losing public-record facts", () => {
+    expect(
+      replaceAvailableSpaceFacts(
+        {
+          lotAreaSqft: 10_000,
+          availableSpaceSqft: 2_500,
+          availableSpaceSource: "Owner confirmation",
+          availableSpaceVerifiedAt: "2026-08-01T00:00:00.000Z",
+          availableSpaceReconfirmAfter: "2026-09-01T00:00:00.000Z",
+        },
+        null,
+      ),
+    ).toEqual({ lotAreaSqft: 10_000 });
   });
 
   it("uses lot area for land even when a building-area record is also present", () => {

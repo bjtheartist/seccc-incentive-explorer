@@ -10,6 +10,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
+import type { PublicAvailableSpaceMeasurement } from "@/lib/parcel-space";
 import {
   OWNER_SECTOR_COLORS,
   OWNER_SECTOR_LABELS,
@@ -57,7 +58,6 @@ import {
   type EpaWalkabilityCategory,
   type FootprintPublication,
   type ParsedSiteMatchmakerContext,
-  type PublicAvailableSpaceMeasurement,
   type SiteMatchmakerCandidateFilters,
   type SiteMatchmakerCandidateRow,
   type SiteMatchmakerSource,
@@ -92,6 +92,11 @@ type ContextLoadState =
       sourceNotes: string[];
       contextByKey: ParsedSiteMatchmakerContext["contextByKey"];
     }
+  | { status: "unavailable" };
+
+type AvailableSpaceLoadState =
+  | { status: "loading" }
+  | { status: "available"; measurements: PublicAvailableSpaceMeasurement[] }
   | { status: "unavailable" };
 
 function numericFilter(value: string): number | null {
@@ -467,7 +472,9 @@ export default function SiteMatchmakerResultsTable({
     [sitePoints, landPoints],
   );
   const [contextLoad, setContextLoad] = useState<ContextLoadState>({ status: "loading" });
-  const [availableSpace, setAvailableSpace] = useState<PublicAvailableSpaceMeasurement[]>([]);
+  const [availableSpaceLoad, setAvailableSpaceLoad] = useState<AvailableSpaceLoadState>({
+    status: "loading",
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -502,14 +509,23 @@ export default function SiteMatchmakerResultsTable({
     let cancelled = false;
     fetch(`/api/parcel-space?zip=${encodeURIComponent(zip)}`, { cache: "no-store" })
       .then(async (response) => {
-        if (!response.ok) return [];
-        return parseAvailableSpacePayload(await response.json());
+        if (!response.ok) throw new Error(`Available-space request failed (${response.status})`);
+        const payload: unknown = await response.json();
+        if (
+          !payload ||
+          typeof payload !== "object" ||
+          Array.isArray(payload) ||
+          (payload as { status?: unknown }).status !== "available"
+        ) {
+          throw new Error("Available-space snapshot is unavailable");
+        }
+        return parseAvailableSpacePayload(payload);
       })
       .then((measurements) => {
-        if (!cancelled) setAvailableSpace(measurements);
+        if (!cancelled) setAvailableSpaceLoad({ status: "available", measurements });
       })
       .catch(() => {
-        if (!cancelled) setAvailableSpace([]);
+        if (!cancelled) setAvailableSpaceLoad({ status: "unavailable" });
       });
     return () => {
       cancelled = true;
@@ -517,8 +533,11 @@ export default function SiteMatchmakerResultsTable({
   }, [zip]);
 
   const rowsWithAvailableSpace = useMemo(
-    () => joinCandidateAvailableSpace(baseRows, availableSpace),
-    [availableSpace, baseRows],
+    () =>
+      availableSpaceLoad.status === "available"
+        ? joinCandidateAvailableSpace(baseRows, availableSpaceLoad.measurements)
+        : baseRows,
+    [availableSpaceLoad, baseRows],
   );
 
   const rows = useMemo(

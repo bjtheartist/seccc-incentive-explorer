@@ -234,6 +234,53 @@ describe("verified available-space enrichment", () => {
       space: { lotAreaSqft: 8_000, availableSpaceSqft: 4_500 },
     });
   });
+
+  it("treats an empty successful live snapshot as authoritative", () => {
+    const rows = normalizeSiteMatchmakerCandidates(
+      [
+        sitePoint({
+          space: {
+            assessorBuildingSqft: 9_000,
+            availableSpaceSqft: 4_500,
+            availableSpaceSource: "Owner confirmation",
+            availableSpaceVerifiedAt: "2026-08-01T00:00:00.000Z",
+            availableSpaceReconfirmAfter: "2099-01-01T00:00:00.000Z",
+          },
+        }),
+      ],
+      null,
+    );
+
+    const refreshed = joinCandidateAvailableSpace(rows, []);
+    expect(refreshed[0]).toMatchObject({
+      squareFeet: null,
+      matchAreaKind: "verified_available_space",
+      space: { assessorBuildingSqft: 9_000 },
+    });
+    expect(refreshed[0].space).not.toHaveProperty("availableSpaceSqft");
+  });
+
+  it("does not normalize expired static availability into display or export rows", () => {
+    const [row] = normalizeSiteMatchmakerCandidates(
+      [
+        sitePoint({
+          space: {
+            assessorBuildingSqft: 9_000,
+            availableSpaceSqft: 4_500,
+            availableSpaceSource: "Owner confirmation",
+            availableSpaceVerifiedAt: "2026-01-01T00:00:00.000Z",
+            availableSpaceReconfirmAfter: "2026-02-01T00:00:00.000Z",
+          },
+        }),
+      ],
+      null,
+    );
+
+    expect(row.squareFeet).toBeNull();
+    expect(row.space).toEqual({ assessorBuildingSqft: 9_000 });
+    expect(candidateRowsToCsv([row])).toContain('"Not verified"');
+    expect(candidateRowsToCsv([row])).not.toContain('"4500"');
+  });
 });
 
 describe("site matchmaker context payload", () => {
