@@ -13,7 +13,7 @@ const LOCAL_SUPPORT_GUIDANCE_RE =
 const MATERIAL_REVIEW_SUPPORT_RE =
   /\b(1:1|one[- ]on[- ]one|human|advisor)\b[\s\S]{0,100}\b(review(?:ing)?|check(?:ing)?|look(?:ing)? over)\b[\s\S]{0,80}\b(materials?|documents?|packet|application)\b|\b(review(?:ing)?|check(?:ing)?|look(?:ing)? over)\b[\s\S]{0,80}\b(materials?|documents?|packet|application)\b[\s\S]{0,100}\b(1:1|one[- ]on[- ]one|human|advisor)\b/i;
 const PROGRAM_DISCOVERY_RE =
-  /\b(which|what|find|show|list|recommend|suggest|explore)\b[\s\S]{0,70}\b(programs?|incentives?|grants?|credits?|funding)\b|\b(programs?|incentives?|grants?|credits?|funding)\b[\s\S]{0,70}\b(available|could help|should i explore|for my)\b/i;
+  /\b(which|what|find|show|list|recommend|suggest|explore|are there|is there|any)\b[\s\S]{0,70}\b(programs?|incentives?|grants?|credits?|funding)\b|\b(programs?|incentives?|grants?|credits?|funding)\b[\s\S]{0,70}\b(available|could help|should i explore|for my|for buying|for purchasing)\b/i;
 
 export function shouldUseSignedInActionTools({
   text,

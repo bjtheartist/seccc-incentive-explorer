@@ -86,8 +86,9 @@ describe("deterministic concierge", () => {
         route: "/report",
         reportSummary: "The address has two location-linked programs.",
         localSupportOrganizations: [
-          { name: "Far South Community Development Corporation" },
+          { id: "PRV-FAR-SOUTH-CDC", name: "Far South Community Development Corporation" },
         ],
+        capitalSupportId: "greenwood-archer-capital",
         capitalSupportName: "Greenwood Archer Capital",
       },
       signedIn: false,
@@ -153,7 +154,7 @@ describe("deterministic concierge", () => {
       pageContext: {
         route: "/report",
         reportSummary: "The site is inside one mapped incentive area.",
-        localSupportOrganizations: [{ name: "Greater Southwest Development Corporation" }],
+        localSupportOrganizations: [{ id: "P023", name: "Greater Southwest Development Corporation" }],
       },
       signedIn: false,
     });
@@ -161,6 +162,17 @@ describe("deterministic concierge", () => {
     expect(response).toContain("The site is inside one mapped incentive area.");
     expect(response).toContain("Greater Southwest Development Corporation");
     expect(response).toContain("Would you like help connecting");
+  });
+
+  it("answers a natural equipment-grant discovery question before offering a report", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText: "Are there grants for buying equipment?",
+      pageContext,
+      signedIn: false,
+    });
+
+    expect(response).toContain("may be worth exploring");
+    expect(response).toContain("Official details");
   });
 
   it("recognizes natural profile-field updates and workspace continuations", async () => {

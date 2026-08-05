@@ -23,6 +23,8 @@ export interface ConciergePageContext {
   visiblePrograms?: string[];
   /** Place-based and specialist organizations already surfaced in the report. */
   localSupportOrganizations?: Array<{
+    /** Canonical public registry id. Names without a recognized id are dropped server-side. */
+    id: string;
     name: string;
     role?: string;
     supportTypes?: string;
@@ -31,6 +33,7 @@ export interface ConciergePageContext {
     supportLanes?: string[];
   }>;
   /** Public financing or development match selected by the report engine. */
+  capitalSupportId?: string;
   capitalSupportName?: string;
   /** Plain-language report reason for the financing/development match. */
   capitalSupportReason?: string;
@@ -62,9 +65,11 @@ export function sanitizePageContext(value: unknown): ConciergePageContext {
         .slice(0, 6)
         .map((item) => {
           const org = (item ?? {}) as Record<string, unknown>;
+          const id = str(org.id, 120);
           const name = str(org.name, 200);
-          if (!name) return null;
+          if (!id || !name) return null;
           return {
+            id,
             name,
             role: str(org.role, 300),
             supportTypes: str(org.supportTypes, 1200),
@@ -90,6 +95,7 @@ export function sanitizePageContext(value: unknown): ConciergePageContext {
     lon: num(v.lon),
     visiblePrograms,
     localSupportOrganizations,
+    capitalSupportId: str(v.capitalSupportId, 120),
     capitalSupportName: str(v.capitalSupportName, 200),
     capitalSupportReason: str(v.capitalSupportReason, 800),
     capitalSupportFitNote: str(v.capitalSupportFitNote, 1200),

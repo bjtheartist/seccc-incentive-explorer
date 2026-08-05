@@ -38,6 +38,7 @@ import {
   type ConciergeActionDeps,
 } from "@/lib/concierge/action-tools";
 import { sanitizePageContext } from "@/lib/concierge/types";
+import { attestPartnerContext } from "@/lib/concierge/attested-context";
 import {
   buildDeterministicConciergeResponse,
   shouldUseSignedInActionTools,
@@ -250,9 +251,10 @@ export async function POST(request: NextRequest) {
   clearConciergeRejection(backoffKey);
 
   // 5. Sanitize then SCREEN the page context for prompt-injection markers.
-  const { context: pageContext } = screenPageContext(
+  const { context: screenedPageContext } = screenPageContext(
     sanitizePageContext(rawBody.pageContext)
   );
+  const pageContext = attestPartnerContext(screenedPageContext);
   const userText = latestUserText(messages);
 
   // 6. Common requests use a sourced, zero-model path. This keeps navigation,

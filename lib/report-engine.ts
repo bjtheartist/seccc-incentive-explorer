@@ -337,6 +337,7 @@ export interface GeneratedReport {
     edos: { name: string; address: string }[];
     bsos: { name: string; address: string }[];
     organizations?: {
+      id?: string;
       name: string;
       type: string;
       role: string;
@@ -1434,6 +1435,7 @@ function buildCommunityAssets(
 ): GeneratedReport["communityAssets"] {
   if (localSupport?.organizations?.length) {
     const organizations = localSupport.organizations.slice(0, 6).map((org) => ({
+      id: org.id,
       name: org.name,
       type: org.primaryType || "Business support organization",
       role: relationshipLabel(org),
