@@ -74,6 +74,12 @@ interface NextStepPresentation {
   generateReport: boolean;
 }
 
+function mappedProgramReason(result: ProgramCheckResult): string {
+  return result.program.zoneKey
+    ? "Mapped boundary intersects this location."
+    : "Included from the program catalog for further review.";
+}
+
 const VACANCY_TYPE_LABELS = {
   vacant_land: "Vacant land",
   vacant_building: "Vacant building",
@@ -542,19 +548,28 @@ export default function MapDossierCard({
 
           {contextPrograms.length > 0 ? (
             <div className="space-y-3">
+              <div className="font-mono-bureau text-[9px] font-semibold uppercase tracking-[0.12em] text-[#8A93A6]">
+                Mapped programs to review
+              </div>
               {contextPrograms.map((result) => (
                 <div key={result.programId}>
                   <div className="font-medium leading-snug text-[#0C1B33]">{result.program.name}</div>
-                  {result.whyOneLine ? <p className="mt-1 text-[10px]">{result.whyOneLine}</p> : null}
-                  {result.benefitRange ? (
-                    <p className="mt-1 font-mono-bureau text-[9px] text-[#8A93A6]">
-                      Published program description: {result.benefitRange}
-                    </p>
+                  <p className="mt-1 text-[10px]">{mappedProgramReason(result)}</p>
+                  {(result.program.sourceUrl || result.program.url) ? (
+                    <a
+                      href={result.program.sourceUrl || result.program.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-1 inline-flex items-center gap-1 font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#2563EB] underline-offset-2 hover:underline"
+                    >
+                      Review source
+                      <ExternalLink aria-hidden="true" className="h-3 w-3" />
+                    </a>
                   ) : null}
                 </div>
               ))}
               <p className="text-[9px] text-[#8A93A6]">
-                Location matches do not confirm applicant eligibility, funding availability, or approval.
+                Boundary intersection does not confirm applicant or project eligibility, funding availability, or approval.
               </p>
             </div>
           ) : null}
