@@ -14,7 +14,20 @@ import type { Program } from "../types";
 const PROHIBITED_DETERMINATIONS =
   /appears eligible|may qualify|you qualify|eligible incentive programs|high match|medium match/i;
 const PRIVATE_MATCH_FIELDS =
-  /"(?:confidenceLevel|confidenceLabel|benefitRange|whyOneLine|matchedRules|notVerified|projectFitLabel|projectFitReason)"/i;
+  /"(?:confidenceLevel|confidenceLabel|benefitRange|whyOneLine|matchedRules|notVerified|projectFit|projectFitLabel|projectFitReason)"/i;
+
+function savedReport(sections: GeneratedReport["sections"]): GeneratedReport {
+  return {
+    title: "Saved report",
+    subtitle: "Public report",
+    reportType: "site-incentives",
+    generatedAt: "2026-08-07T00:00:00.000Z",
+    summary: "Review current program requirements.",
+    sections,
+    recommendedActions: [],
+    metadata: { address: "100 E Test St" },
+  };
+}
 
 function program(): Program {
   return {
@@ -170,6 +183,8 @@ describe("public report safety", () => {
                 knownFromPublicData: [
                   "The address is recorded within the district.",
                   "You selected hiring as your project goal.",
+                  "Reported industry: manufacturing.",
+                  "Applicant-reported permit cost: $750,000.",
                 ],
                 basedOnUserAnswers: ["You reported that you plan to hire."],
                 stillToConfirm: ["Confirm payroll records."],
@@ -247,10 +262,12 @@ describe("public report safety", () => {
       expect.arrayContaining([
         expect.stringContaining("you plan to hire"),
         "You selected hiring as your project goal.",
+        "Reported industry: manufacturing.",
       ]),
     );
     expect(item.matchExplanation?.knownFromPublicData).toEqual([
       "The address is recorded within the district.",
+      "Applicant-reported permit cost: $750,000.",
     ]);
     expect(item.matchExplanation?.stillToConfirm).toEqual(
       expect.arrayContaining([
@@ -262,6 +279,141 @@ describe("public report safety", () => {
       label: "Official legacy source",
       url: "https://example.com/legacy",
     });
+  });
+
+  it("limits program-card fallback behavior to actual program-listing sections", () => {
+    const listingTitles = [
+      CONFIRMED_PROGRAMS_SECTION_TITLE,
+      "Programs to Review for Your Goal",
+      "Other Programs Mapped at This Address",
+      "Eligible Incentive Programs",
+      "Other Programs Tied to This Address",
+      "Additional Programs to Explore",
+      "Programs Mapped at This Site (3)",
+      "Incentive Pathway Review",
+      "City-Level Programs",
+    ];
+    const normalized = normalizePublicReportForDisplay(savedReport(
+      listingTitles.map((title) => ({
+        title,
+        items: [{
+          label: `${title} program`,
+          value: "Provides up to $100,000",
+          detail: "Published program summary.",
+          programId: `program-${title}`,
+        }],
+      })),
+    ));
+
+    for (const section of normalized.sections) {
+      expect(section.items[0].value).toBe("Review published terms");
+      expect(section.items[0].matchExplanation?.whyItAppears[0]).toContain(
+        "saved report",
+      );
+    }
+  });
+
+  it("preserves deadline and project-requirement facts while stripping private item payloads", () => {
+    const normalized = normalizePublicReportForDisplay(savedReport([
+      {
+        title: "Upcoming Deadlines Near This Address",
+        items: [{
+          label: "Test Program application deadline",
+          value: "December 15, 2026",
+          detail: "Confirm the current filing window.",
+          programId: "deadline-program",
+          whoQualifies: "Eligible applicants must file before the published deadline.",
+          confidenceLevel: "appears_eligible",
+          confidenceLabel: "High Match",
+          whyOneLine: "You qualify.",
+          matchedRules: ["Reported industry: manufacturing"],
+          notVerified: ["Confirm timing"],
+          projectFit: { level: "strong", label: "Strong fit", reason: "Internal fit" },
+        }],
+      },
+      {
+        title: "Project Requirements",
+        items: [{
+          label: "Published applicant requirements",
+          value: "Eligible businesses must document a qualifying rehabilitation project.",
+          detail: "Factual program requirement.",
+          programId: "requirement-program",
+          whoQualifies: "Eligible businesses must document a qualifying rehabilitation project.",
+          projectFit: { level: "strong", label: "Strong fit", reason: "Internal fit" },
+        }],
+      },
+      {
+        title: "Site Overview",
+        items: [{
+          label: "Public record",
+          value: "Recorded fact",
+          confidenceLabel: "High Match",
+          matchedRules: ["Internal answer"],
+          projectFit: { level: "strong", label: "Strong fit", reason: "Internal fit" },
+        }],
+      },
+    ]));
+
+    const deadline = normalized.sections[0].items[0];
+    const requirement = normalized.sections[1].items[0];
+    expect(deadline.value).toBe("December 15, 2026");
+    expect(deadline.whoQualifies).toBe(
+      "Eligible applicants must file before the published deadline.",
+    );
+    expect(deadline.matchExplanation).toBeUndefined();
+    expect(requirement.value).toBe(
+      "Eligible businesses must document a qualifying rehabilitation project.",
+    );
+    expect(requirement.whoQualifies).toBe(requirement.value);
+    expect(requirement.matchExplanation).toBeUndefined();
+    expect(JSON.stringify(normalized)).not.toMatch(PRIVATE_MATCH_FIELDS);
+  });
+
+  it("only removes incentive-directed dollar claims and preserves factual amounts", () => {
+    const factualValues = [
+      "Awarded public investment totals $8,500,000, worth reviewing before applying",
+      "Applicant-reported permit costs of $750,000, up to 12 filings",
+      "Estimated median household income $65,000 (ACS 5-year)",
+      "The published program summary says it provides up to $100,000",
+      "Up to $5.94 per square foot",
+    ];
+    const normalized = normalizePublicReportForDisplay(savedReport([
+      {
+        title: "Factual Context",
+        description: "Awarded public investment totals $8,500,000; possible incentive $50,000.",
+        items: factualValues.map((value, index) => ({
+          label: `Fact ${index + 1}`,
+          value,
+        })),
+      },
+    ]));
+
+    expect(normalized.sections[0].items.map((item) => item.value)).toEqual(factualValues);
+    expect(normalized.sections[0].description).toBe(
+      "Awarded public investment totals $8,500,000; published program terms.",
+    );
+  });
+
+  it("preserves deadline dates in generated PDFs", async () => {
+    const report = savedReport([
+      {
+        title: "Upcoming Deadlines Near This Address",
+        items: [{
+          label: "Test Program filing deadline",
+          value: "December 15, 2026",
+          detail: "Confirm timing with the administrator.",
+          programId: "deadline-program",
+        }],
+      },
+    ]);
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(
+      new Uint8Array(Buffer.from(output.base64, "base64")),
+      { mergePages: true },
+    );
+
+    expect(extracted.text).toContain("December 15, 2026");
+    expect(extracted.text).not.toContain("This program was included in the saved report");
   });
 
   it("keeps prohibited legacy labels and benefit headlines out of generated PDFs", async () => {
@@ -347,6 +499,9 @@ describe("public report safety", () => {
       expect(source).not.toMatch(/prog\.(?:confidence|confidenceLabel|benefitRange|whyOneLine)/);
       expect(source).not.toContain("prog.projectFitLabel");
       expect(source).not.toMatch(/item\.(?:confidenceLabel|matchedRules|notVerified|whyOneLine)/);
+      expect(source).not.toContain("item.projectFit");
     }
+    const pdfSource = readFileSync(join(process.cwd(), "lib/pdf-report.ts"), "utf8");
+    expect(pdfSource).not.toContain("item.projectFit");
   });
 });

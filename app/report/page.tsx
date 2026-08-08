@@ -72,7 +72,6 @@ import {
   type PersonaId,
 } from "@/lib/personas";
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
-import { ProjectFitNote } from "@/components/report/ProjectFitNote";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { ReportEmailGate } from "@/components/report/ReportEmailGate";
 import { SiteActivityCard } from "@/components/report/SiteActivityCard";
@@ -5364,7 +5363,6 @@ function ReportDisplay({
                                 caveat={item.detailCaveat}
                               />
                             )}
-                            <ProjectFitNote fit={item.projectFit} />
 
                             {/* Public program evidence and official navigation */}
                             {!isSupportNetworkItem && (item.matchExplanation || item.whoQualifies || item.eligibilityRules || item.url || hasNavigationLinks) && (

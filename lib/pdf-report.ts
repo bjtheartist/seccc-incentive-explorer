@@ -1191,24 +1191,6 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
         y += wrapText(doc, compactDetail, MARGIN + 6, y, CONTENT_W - 10, 3.5);
       }
 
-      if (item.projectFit && item.projectFit.level !== "location-only") {
-        y = checkPage(doc, y + 3, 9);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(6.5);
-        setColor(doc, item.projectFit.level === "industry-check" ? AMBER : BLUE);
-        const fitText = section.title === "Additional Programs to Explore" && item.projectFit.level !== "industry-check"
-          ? item.projectFit.label
-          : `${item.projectFit.label}: ${conciseText(item.projectFit.reason, 145)}`;
-        y += wrapText(
-          doc,
-          fitText,
-          MARGIN + 6,
-          y,
-          CONTENT_W - 10,
-          3.3,
-        );
-      }
-
       if (!suppressItemProvenance(section.title)) {
         const provenanceStartY = y + 3;
         const provenanceEndY = drawProgramProvenance(
@@ -1649,7 +1631,7 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
 
     const detail = options.suppressDetail
       ? undefined
-      : item.matchExplanation?.whyItAppears[0] || item.detail || item.projectFit?.reason;
+      : item.matchExplanation?.whyItAppears[0] || item.detail;
     const detailLines = detail
       ? fit(conciseText(detail, 220), CONTENT_W - (contentX - MARGIN) - rightPad, options.detailMaxLines ?? 2, 6.6)
       : [];

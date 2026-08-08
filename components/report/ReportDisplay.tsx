@@ -44,7 +44,6 @@ import {
   type PersonaId,
 } from "@/lib/personas";
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
-import { ProjectFitNote } from "@/components/report/ProjectFitNote";
 import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
@@ -2077,7 +2076,6 @@ export function ReportDisplay({
                                 caveat={item.detailCaveat}
                               />
                             )}
-                            <ProjectFitNote fit={item.projectFit} />
 
                             {/* Public program evidence and official navigation */}
                             {!isSupportNetworkItem && (item.matchExplanation || item.whoQualifies || item.eligibilityRules || item.url || hasNavigationLinks) && (

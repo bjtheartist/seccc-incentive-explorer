@@ -123,6 +123,7 @@ export interface ReportItem {
   detail?: string;
   detailGroups?: ReportDetailGroup[];
   detailCaveat?: string;
+  /** Internal ordering context; stripped before any public report serialization. */
   projectFit?: ProjectFitSummary;
   programId?: string;
   partnerId?: string;
@@ -402,20 +403,28 @@ function normalizePublicDeterminationText(value: string): string {
 
 function normalizePublicHeadlineText(value: string): string {
   const normalized = normalizePublicDeterminationText(value);
-  const money = String.raw`\$[\d,.]+(?:\s*[-–]\s*\$?[\d,.]+)?(?:\s*[KMB])?\b`;
-  const projectedCue = String.raw`(?:possible|potential|estimated|projected|headline|benefit range|incentive estimate|could receive|may receive|up to|worth)`;
+  const money = "\\$[\\d,.]+(?:\\s*[-–]\\s*\\$?[\\d,.]+)?(?:\\s*[KMB])?\\b";
+  const incentiveType = "(?:incentive|benefit|award|grant|credit|reimbursement)s?";
+  const speculative = "(?:possible|potential|estimated|projected)";
   return normalized
-    .replace(new RegExp(`${projectedCue}[^.!?]{0,60}${money}`, "gi"), "published program terms")
-    .replace(new RegExp(`${money}[^.!?]{0,40}${projectedCue}`, "gi"), "published program terms")
+    .replace(new RegExp(String.raw`${speculative}\s+${incentiveType}[^.!?]{0,35}${money}`, "gi"), "published program terms")
+    .replace(new RegExp(String.raw`${speculative}\s+${money}\s*${incentiveType}`, "gi"), "published program terms")
+    .replace(new RegExp(String.raw`${money}[^.!?]{0,24}${speculative}\s+${incentiveType}`, "gi"), "published program terms")
+    .replace(new RegExp(String.raw`(?:benefit\s+range|incentive\s+estimate)[^.!?]{0,35}${money}`, "gi"), "published program terms")
+    .replace(new RegExp(String.raw`(?:could|may)\s+receive[^.!?]{0,35}${money}`, "gi"), "published program terms")
+    .replace(new RegExp(String.raw`Review the published requirements[^.!?]{0,45}up to\s+${money}`, "gi"), "Review the published requirements and published program terms")
     .replace(/published program terms\s*(?:benefit|award|incentive)?/gi, "published program terms")
     .replace(/\b(?:a|an) published program terms\b/gi, "published program terms")
-    .replace(/(?:a\s+)?program review program/gi, "a program selected for review");
+    .replace(/(?:a\s+)?program review program/gi, "a program selected for review")
+    .replace(/[ \t]+([,.;:!?])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
 }
 
 function normalizePublicMatchExplanation(
   explanation: PublicMatchExplanation,
 ): PublicMatchExplanation {
-  const selfReportedPattern = /^(?:you|your)\b|\b(?:user answer|self-reported)\b/i;
+  const selfReportedPattern = /^(?:(?:you|your)\b|(?:reported|selected|provided|entered|stated)\b)|\b(?:user answer|self-reported)\b/i;
   const misplacedUserAnswers = explanation.knownFromPublicData.filter((item) =>
     selfReportedPattern.test(item),
   );
@@ -424,13 +433,21 @@ function normalizePublicMatchExplanation(
     whyItAppears: explanation.whyItAppears.map(normalizePublicHeadlineText),
     knownFromPublicData: explanation.knownFromPublicData
       .filter((item) => !selfReportedPattern.test(item))
-      .map(normalizePublicDeterminationText),
+      .map(normalizePublicHeadlineText),
     basedOnUserAnswers: Array.from(new Set([
       ...explanation.basedOnUserAnswers,
       ...misplacedUserAnswers,
     ])).map(normalizePublicHeadlineText),
     stillToConfirm: explanation.stillToConfirm.map(normalizePublicHeadlineText),
   };
+}
+
+function isProgramListingSection(title: string): boolean {
+  return CONFIRMED_PROGRAMS_SECTION_TITLES.has(title)
+    || title === "Additional Programs to Explore"
+    || /^Programs Mapped at This Site(?: \(\d+\))?$/.test(title)
+    || title === "Incentive Pathway Review"
+    || /^.+-Level Programs$/.test(title);
 }
 
 function legacyMatchExplanation(item: ReportItem): PublicMatchExplanation | undefined {
@@ -563,50 +580,53 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
       label: normalizePublicHeadlineText(action.label),
       description: normalizePublicHeadlineText(action.description),
     })),
-    sections: report.sections.map((section) => ({
-      ...section,
-      title: normalizePublicHeadlineText(section.title),
-      description: section.description
-        ? normalizePublicHeadlineText(section.description)
-        : undefined,
-      items: section.items.map((item) => {
-        if (!item.programId) {
-          return {
-            ...item,
-            label: normalizePublicHeadlineText(item.label),
-            value: normalizePublicHeadlineText(item.value),
-            detail: item.detail
-              ? normalizePublicHeadlineText(item.detail)
+    sections: report.sections.map((section) => {
+      const programListingSection = isProgramListingSection(section.title);
+      return {
+        ...section,
+        title: normalizePublicHeadlineText(section.title),
+        description: section.description
+          ? normalizePublicHeadlineText(section.description)
+          : undefined,
+        items: section.items.map((item) => {
+          const {
+            confidenceLevel: _confidenceLevel,
+            confidenceLabel: _confidenceLabel,
+            whyOneLine: _whyOneLine,
+            notVerified: _notVerified,
+            matchedRules: _matchedRules,
+            projectFit: _projectFit,
+            ...publicItem
+          } = item;
+          void _confidenceLevel;
+          void _confidenceLabel;
+          void _whyOneLine;
+          void _notVerified;
+          void _matchedRules;
+          void _projectFit;
+          const normalizedItem: ReportItem = {
+            ...publicItem,
+            label: normalizePublicHeadlineText(publicItem.label),
+            value: normalizePublicHeadlineText(publicItem.value),
+            detail: publicItem.detail
+              ? normalizePublicHeadlineText(publicItem.detail)
+              : undefined,
+            sourceLabel: publicItem.sourceLabel
+              ? normalizePublicHeadlineText(publicItem.sourceLabel)
+              : undefined,
+            matchExplanation: publicItem.matchExplanation
+              ? normalizePublicMatchExplanation(publicItem.matchExplanation)
               : undefined,
           };
-        }
-        const {
-          confidenceLevel: _confidenceLevel,
-          confidenceLabel: _confidenceLabel,
-          whyOneLine: _whyOneLine,
-          notVerified: _notVerified,
-          matchedRules: _matchedRules,
-          ...publicItem
-        } = item;
-        void _confidenceLevel;
-        void _confidenceLabel;
-        void _whyOneLine;
-        void _notVerified;
-        void _matchedRules;
-        return {
-          ...publicItem,
-          label: normalizePublicHeadlineText(publicItem.label),
-          value: "Review published terms",
-          detail: publicItem.detail
-            ? normalizePublicHeadlineText(publicItem.detail)
-            : undefined,
-          sourceLabel: publicItem.sourceLabel
-            ? normalizePublicHeadlineText(publicItem.sourceLabel)
-            : undefined,
-          matchExplanation: legacyMatchExplanation(item),
-        };
-      }),
-    })),
+          if (!programListingSection || !item.programId) return normalizedItem;
+          return {
+            ...normalizedItem,
+            value: "Review published terms",
+            matchExplanation: legacyMatchExplanation(item),
+          };
+        }),
+      };
+    }),
   };
 }
 

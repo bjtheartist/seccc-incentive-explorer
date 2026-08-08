@@ -18,7 +18,7 @@ describe("ReportDisplay public safety", () => {
       subtitle: "Appears eligible based on location",
       reportType: "site-incentives",
       generatedAt: "2026-08-01T00:00:00.000Z",
-      summary: "You may qualify for a High Match program worth $25,000-$50,000.",
+      summary: "You may qualify for a High Match program with a possible benefit of $25,000-$50,000.",
       verdict: {
         signal: "strong",
         headline: "High Match with a potential incentive of $50,000",

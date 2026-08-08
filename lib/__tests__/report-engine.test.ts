@@ -352,14 +352,13 @@ describe("generateReportData", () => {
     const dataCenter = otherMatches?.items.find((item) => item.programId === "dataCenter");
 
     expect(bestMatches?.items[0].programId).toBe("edge");
-    expect(edge?.projectFit?.label).toContain("Directly related");
+    expect(edge).not.toHaveProperty("projectFit");
     expect(otherMatches?.items.map((item) => item.programId)).toEqual(
       expect.arrayContaining(["sbif", "dataCenter"]),
     );
     expect(dataCenter).not.toHaveProperty("confidenceLevel");
     expect(dataCenter?.matchExplanation?.knownFromPublicData[0]).toContain("recorded within");
-    expect(dataCenter?.projectFit?.level).toBe("industry-check");
-    expect(dataCenter?.projectFit).not.toHaveProperty("score");
+    expect(dataCenter).not.toHaveProperty("projectFit");
     expect(JSON.stringify(report)).not.toContain('"score"');
     expect(report.executiveSummary?.projectGoalLabel).toBe("Hire or retain employees");
     expect(report.executiveSummary?.topPrograms[0].programId).toBe("edge");
