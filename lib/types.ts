@@ -23,7 +23,7 @@ export interface Business {
 export interface ProgramContact {
   agency: string;
   abbreviation: string;
-  phone: string;
+  phone?: string;
   email?: string;
   url?: string;
   role?: string;
@@ -120,6 +120,8 @@ export interface Program {
   suspensionNote?: string;
   sunsetWarning?: string;
   oz2Note?: string;
+  redesignatedAreaWarning?: string;
+  adjacentCapitalNote?: string;
   // ── Availability gating (2026-07) — see lib/program-gating.ts ──
   /** Dated application windows/deadlines for this card (used by deadlines + gating). */
   deadlines?: ProgramDeadlineEntry[];
@@ -363,6 +365,32 @@ export interface CommunityAsset {
 
 /* ── Pre-Qualification Survey ── */
 
+export interface MatchTransparencyContact {
+  agency: string;
+  abbreviation?: string;
+  phone?: string;
+  email?: string;
+  url?: string;
+  role?: string;
+}
+
+export interface MatchTransparencySource {
+  label: string;
+  url: string;
+}
+
+/** Public explanation only. Internal rank and confidence never cross this boundary. */
+export interface PublicMatchExplanation {
+  whyItAppears: string[];
+  knownFromPublicData: string[];
+  basedOnUserAnswers: string[];
+  stillToConfirm: string[];
+  currentDocumentsToGather: string[];
+  confirmWith: MatchTransparencyContact[];
+  officialSource?: MatchTransparencySource;
+  lastVerifiedAt?: string | null;
+}
+
 export interface SurveyQuestion {
   id: string;
   step: number;
@@ -381,15 +409,12 @@ export interface SurveyAnswers {
 
 export interface ProgramMatch {
   programId: string;
-  program: { name: string; short: string };
-  confidence: "high" | "medium" | "low";
-  reasons: string[];
+  program: { name: string; short: string; level: string };
+  explanation: PublicMatchExplanation;
 }
 
 export interface SurveyResult {
   matches: ProgramMatch[];
-  total: number;
-  totalPrograms: number;
 }
 
 /* ── Executive Summary (for reports) ── */
