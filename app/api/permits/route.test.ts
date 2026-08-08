@@ -93,6 +93,7 @@ describe("GET /api/permits", () => {
         work_description: "Construct a two-story commercial building",
         lat: "41.8819",
         lon: "-87.6278",
+        source_as_of: "2026-08-04T14:30:00.000Z",
         reported_cost: "999999999",
       },
     ]);
@@ -126,6 +127,17 @@ describe("GET /api/permits", () => {
           },
         },
       ],
+      meta: {
+        sourceMode: "database",
+        sourcePath: "database:building_permits",
+        asOf: "2026-08-04T14:30:00.000Z",
+        asOfBasis: "latest_queried_row_fetched_at",
+        returnedCount: 1,
+        configuredLimit: 25,
+        queryLimit: 26,
+        coverageStatus: "complete",
+        potentiallyTruncated: false,
+      },
     });
     expect(JSON.stringify(body)).not.toMatch(/reported.?cost|999999999/i);
 
@@ -139,7 +151,75 @@ describe("GET /api/permits", () => {
       "PERMIT - NEW CONSTRUCTION",
       "PERMIT - SIGNS",
     ]);
-    expect(values).toContain(25);
+    expect(values).toContain(26);
+  });
+
+  it("discloses truncation when a sentinel row exceeds the configured limit", async () => {
+    sqlMock.mockResolvedValue([
+      {
+        permit_id: "cap-1",
+        permit_type: "PERMIT - SIGNS",
+        address: "1 S STATE ST",
+        issue_date: "2026-08-04",
+        permit_status: "ACTIVE",
+        permit_milestone: "PERMIT ISSUED",
+        work_type: "SIGN",
+        work_description: "Install sign",
+        lat: "41.8819",
+        lon: "-87.6278",
+        source_as_of: "2026-08-05T00:00:00.000Z",
+      },
+      {
+        permit_id: "cap-2",
+        permit_type: "PERMIT - SIGNS",
+        address: "2 S STATE ST",
+        issue_date: "2026-08-03",
+        permit_status: "ACTIVE",
+        permit_milestone: "PERMIT ISSUED",
+        work_type: "SIGN",
+        work_description: "Install sign",
+        lat: "41.8818",
+        lon: "-87.6277",
+        source_as_of: "2026-08-05T00:00:00.000Z",
+      },
+      {
+        permit_id: "sentinel",
+        permit_type: "PERMIT - SIGNS",
+        address: "3 S STATE ST",
+        issue_date: "2026-08-02",
+        permit_status: "ACTIVE",
+        permit_milestone: "PERMIT ISSUED",
+        work_type: "SIGN",
+        work_description: "Install sign",
+        lat: "41.8817",
+        lon: "-87.6276",
+        source_as_of: "2026-08-05T00:00:00.000Z",
+      },
+    ]);
+
+    const response = await GET(
+      new NextRequest(
+        `http://localhost/api/permits?bounds=${BOUNDS}&types=signs&limit=2`,
+      ),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.features).toHaveLength(2);
+    expect(body.features.map((feature: GeoJSON.Feature) => feature.properties?.permitId)).not.toContain(
+      "sentinel",
+    );
+    expect(body.meta).toEqual({
+      sourceMode: "database",
+      sourcePath: "database:building_permits",
+      asOf: "2026-08-05T00:00:00.000Z",
+      asOfBasis: "latest_queried_row_fetched_at",
+      returnedCount: 2,
+      configuredLimit: 2,
+      queryLimit: 3,
+      coverageStatus: "truncated",
+      potentiallyTruncated: true,
+    });
   });
 
   it("accepts the map viewport cap", async () => {
@@ -152,7 +232,7 @@ describe("GET /api/permits", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(sqlMock.mock.calls[0].slice(1)).toContain(3000);
+    expect(sqlMock.mock.calls[0].slice(1)).toContain(3001);
   });
 
   it("queries every map type by default and drops unusable rows", async () => {
