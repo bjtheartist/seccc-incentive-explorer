@@ -33,9 +33,16 @@ import {
 const POINT = (lat: number, lng: number): InvestmentGeometry => ({ kind: "point", lat, lng });
 
 function rec(over: Partial<CommunityInvestmentRecord> & { id: string }): CommunityInvestmentRecord {
+  const funderType = over.funderType ?? "government";
   return {
     source: "nof-small",
-    funderType: "government",
+    funderType,
+    governmentFundingPurpose:
+      over.governmentFundingPurpose !== undefined
+        ? over.governmentFundingPurpose
+        : funderType === "government"
+          ? "capital_project"
+          : null,
     funderName: "Neighborhood Opportunity Fund (City of Chicago)",
     recipient: "Test Grantee",
     amountAwarded: 100000,
@@ -287,6 +294,33 @@ describe("per-field capital totals (authorized / credit / awarded firewall)", ()
         sources: [],
       }),
     ).toThrow(/state_appropriation/);
+  });
+
+  it("hard-fails when a government record has no persisted funding purpose", () => {
+    const dirty = rec({ id: "purpose-missing", governmentFundingPurpose: null });
+    expect(() =>
+      buildCommunityInvestmentExport([dirty], "2026-07-28T00:00:00.000Z", {
+        droppedNoGeocode: 0,
+        dedupedRows: 0,
+        sources: [],
+      }),
+    ).toThrow(/must carry one source-backed governmentFundingPurpose/);
+  });
+
+  it("hard-fails when a non-government record carries a government purpose", () => {
+    const dirty = rec({
+      id: "purpose-wrong-funder",
+      source: "foundation",
+      funderType: "philanthropic",
+      governmentFundingPurpose: "capital_project",
+    });
+    expect(() =>
+      buildCommunityInvestmentExport([dirty], "2026-07-28T00:00:00.000Z", {
+        droppedNoGeocode: 0,
+        dedupedRows: 0,
+        sources: [],
+      }),
+    ).toThrow(/must carry governmentFundingPurpose null/);
   });
 });
 
@@ -1175,12 +1209,38 @@ describe.skipIf(!CONTEXT_EXISTS)("committed capital-context.json", () => {
     expect(findBannedFigureKeys(parsed)).toEqual([]);
   });
 
-  it("carries the context series, Chicago ARPA ledger, and SFY2027 state-award caveat", () => {
+  it("carries context series, Illinois arts awards, Chicago ARPA, and the SFY2027 caveat", () => {
     const ctx = JSON.parse(readFileSync(CONTEXT_PATH, "utf8"));
     expect(Array.isArray(ctx.tifDistricts)).toBe(true);
     expect(ctx.tifDistricts.length).toBeGreaterThan(0);
     expect(Array.isArray(ctx.craByCommunityArea)).toBe(true);
     expect(Array.isArray(ctx.cdfi)).toBe(true);
+    expect(ctx.illinoisArtsCouncilAwards.sourceVersion).toBe("FY2026 Q1");
+    expect(ctx.illinoisArtsCouncilAwards.fundingPurpose).toBe("arts");
+    expect(ctx.illinoisArtsCouncilAwards.recordCount).toBe(670);
+    expect(ctx.illinoisArtsCouncilAwards.records).toHaveLength(670);
+    expect(
+      ctx.illinoisArtsCouncilAwards.records.reduce(
+        (sum: number, record: { grantAmount: number }) => sum + record.grantAmount,
+        0,
+      ),
+    ).toBe(9_162_720);
+    expect(ctx.illinoisArtsCouncilAwards.coverage).toEqual({
+      capture: "complete_published",
+      mapDetail: "aggregate_only",
+      refresh: "awaiting_publication",
+      review: "complete_published",
+    });
+    expect(
+      ctx.illinoisArtsCouncilAwards.records.every(
+        (record: Record<string, unknown>) =>
+          record.city === "Chicago" &&
+          !("address" in record) &&
+          !("postalCode" in record) &&
+          !("lat" in record) &&
+          !("lng" in record),
+      ),
+    ).toBe(true);
     expect(ctx.dceoFundingLifecycle.stages.map(
       (stage: { id: string }) => stage.id,
     )).toEqual([

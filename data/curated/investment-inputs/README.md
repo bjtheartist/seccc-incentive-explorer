@@ -8,6 +8,72 @@ This file documents what each source MEANS and the integrity contract it must
 satisfy. For how often each one changes and who changes it — six sources refresh
 themselves monthly, the rest are frozen snapshots — see [REFRESH.md](./REFRESH.md).
 
+## Government funding purpose
+
+The product keeps three independent questions separate:
+
+- `funderType` says who supplied the money: government, philanthropic, or
+  private development
+- `capitalClass` says what the source figure represents: grant, TIF
+  authorization, federal allocation, tax credit, or appropriation
+- government funding purpose says what the supported work is for: `capital_project`,
+  `programmatic`, or `arts`
+
+The purpose is assigned once during export by
+`lib/government-funding-purpose.ts` and persisted on every canonical record.
+NOF, SBIF, CDG, TIF, LIHTC, DCEO capital, and physical HUD activities are
+capital projects. Business relief, public services, technical or financial
+assistance, and other non-capital program delivery are programmatic. Illinois
+Arts Council records are arts funding. CDBG/HOME is classified from its own
+published activity and recipient labels because that source spans both physical
+projects and program delivery. NMTC is classified from its dedicated
+`purpose_text`: only all-real-estate rows are capital projects; business-only,
+other-financing, mixed, or missing purposes remain `unclassified`. Anything
+outside the accepted rules stays unclassified, never guessed.
+
+## Illinois Arts Council FY2026 Q1 awards
+
+- Source: [Illinois Arts Council Grant Summaries](https://arts.illinois.gov/about-iac/iac-arts-impact/annual-report/grant-summaries.html), checked 2026-08-08
+- Import: `npm run data:import:iac-arts -- --input data/curated/investment-inputs/illinois_arts_council_fy26_q1_source.json --source-checked-at 2026-08-08`
+- Files: `illinois_arts_council_fy26_q1_source.json` is the exact official
+  table response; `illinois_arts_council_fy26_q1_chicago.csv` is the validated
+  Chicago-city subset used by the private capital-context export
+- Statewide integrity contract: 1,413 source rows, including 1,408 award rows
+  and five published summary rows; award rows reconcile exactly to the source's
+  $16,211,010 grant total and each program subtotal
+- Chicago subset contract: 670 rows totaling $9,162,720 where the source city is
+  literally `Chicago`; no suburb, region inference, organization-name inference,
+  or address lookup is used
+- Source fields: program, applicant name, award amount, city, and region. The
+  source publishes no street address, ZIP, coordinates, or official award id;
+  `record_id` is a snapshot-local key generated from the official table row
+- Product posture: admin-only, filterable citywide historical-award table. It
+  contributes no map pins, parcel matches, community-area totals, current
+  eligibility claim, proof of payment, or estimate of funds a user could receive
+
+## Impact Grants Chicago recipient roster — held, not exported
+
+- Source: [Impact Grants Chicago's official all-recipient roster](https://www.impactgrantschicago.org/all-grant-recipients/), checked 2026-08-08
+- File: `impact_grants_chicago_DO_NOT_EXPORT.csv`
+- Integrity contract: 69 named awards from 2018–2026 totaling exactly
+  $4,425,000; 37 Impact Grants and 32 Merit Grants
+- Grain: one published award to one named recipient, preserving the source's
+  award year, grant type, amount, recipient link, and former-name note where one
+  is published
+- Location precision: the roster publishes no award-site or recipient street
+  address. Every record is therefore held citywide; recipient organization
+  websites are reference links, never location evidence
+- Program state: historical award evidence only. Inclusion does not mean a new
+  application round is open, and the records are not presented as money a
+  current project could receive
+- Hold reason: the foundation files already contain four upstream grants into
+  Impact Grants Chicago totaling $22,100. The recipient roster is a downstream
+  regranting layer. Adding both stages to `amountAwarded` would make the export's
+  gross awarded total count portions of one funding flow more than once
+- Release condition: model intermediary inflows and downstream awards as linked,
+  source-separated stages before exposing the roster. Until then this file is
+  not read by the exporter and must not enter the public incentive directory
+
 ## Cook County 2023 Source Grant
 
 - Source: Cook County Small Business Source awardee list, version 2024-11-20

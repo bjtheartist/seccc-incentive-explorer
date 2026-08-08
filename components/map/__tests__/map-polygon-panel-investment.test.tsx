@@ -138,6 +138,7 @@ const LAYER: CommunityInvestmentLayerResult = {
   status: "ready",
   pointFeatures: POINTS,
   presentFunderTypes: ["government", "philanthropic"],
+  presentGovernmentFundingPurposes: ["capital_project", "programmatic"],
   presentCapitalClasses: ["grant", "tif_subsidy", "federal_program", "tax_credit"],
   citywide: { count: 12, totalDollars: 4_000_000 },
   citywideEntries: [],

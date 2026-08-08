@@ -114,6 +114,29 @@ export const FUNDER_TYPES = ["government", "philanthropic", "private_development
 export type FunderType = (typeof FUNDER_TYPES)[number];
 
 /**
+ * The primary public purpose supported by a government funding record. This is
+ * a third, orthogonal axis:
+ *   - funderType says who supplied the money;
+ *   - capitalClass says what the published dollar figure represents; and
+ *   - governmentFundingPurpose says what the public support is for.
+ *
+ * `unclassified` is an intentional source-honesty state for mixed or
+ * insufficient descriptions. Non-government records carry null.
+ */
+export type GovernmentFundingPurpose =
+  | "capital_project"
+  | "programmatic"
+  | "arts"
+  | "unclassified";
+
+const GOVERNMENT_FUNDING_PURPOSE_VALUES: readonly GovernmentFundingPurpose[] = [
+  "capital_project",
+  "programmatic",
+  "arts",
+  "unclassified",
+];
+
+/**
  * A SECOND, ORTHOGONAL axis to funderType: what KIND of capital a record's money
  * is, so the awarded-grant totals never silently absorb a subsidy, a federal
  * program allocation, or tax-credit capital. Every record carries exactly one:
@@ -262,6 +285,10 @@ export interface CommunityInvestmentRecord {
   id: string;
   source: InvestmentSource;
   funderType: FunderType;
+  /** Primary public purpose for a government record; null for philanthropic and
+   * private-development records. Assigned from source fields during export and
+   * persisted so downstream surfaces never reclassify display text. */
+  governmentFundingPurpose: GovernmentFundingPurpose | null;
   /** The funding entity/program (e.g. a foundation name, or the City program). */
   funderName: string;
   /** The grantee / project / development. */
@@ -367,6 +394,14 @@ export interface CommunityInvestmentRecord {
    */
   recovery?: CommunityInvestmentRecovery;
 }
+
+/** Importer-only shape before the source-backed purpose assignment is applied.
+ * The committed export and every downstream consumer use the required canonical
+ * CommunityInvestmentRecord above. */
+export type CommunityInvestmentRecordDraft = Omit<
+  CommunityInvestmentRecord,
+  "governmentFundingPurpose"
+>;
 
 /** Provenance + run stats for the committed export. */
 export interface CommunityInvestmentMeta {
@@ -1010,6 +1045,20 @@ export function buildCommunityInvestmentExport(
   // (amountAwarded null); a tax_credit record carries ONLY creditAmount. This makes
   // the money fields provably non-overlapping — a dollar can live in exactly one.
   for (const r of records) {
+    const validPurpose = GOVERNMENT_FUNDING_PURPOSE_VALUES.includes(
+      r.governmentFundingPurpose as GovernmentFundingPurpose,
+    );
+    if (r.funderType === "government" && !validPurpose) {
+      throw new Error(
+        `Record ${r.id} is government-funded and must carry one source-backed governmentFundingPurpose.`,
+      );
+    }
+    if (r.funderType !== "government" && r.governmentFundingPurpose !== null) {
+      throw new Error(
+        `Record ${r.id} is ${r.funderType} and must carry governmentFundingPurpose null.`,
+      );
+    }
+
     const hasAwarded = r.amountAwarded != null;
     const hasAuthorized = r.authorizedAmount != null;
     const hasCredit = r.creditAmount != null;

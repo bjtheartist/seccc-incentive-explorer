@@ -15,6 +15,7 @@ import {
   investmentStatusLabel,
   makeDevelopmentDotRadiusScale,
   presentFunderTypesInOrder,
+  presentGovernmentFundingPurposesInOrder,
   summarizeCitywideEntries,
   summarizeCitywideInvestment,
   buildMegaprojectFeatures,
@@ -41,10 +42,17 @@ import {
  */
 
 function record(overrides: Partial<CommunityInvestmentRecord>): CommunityInvestmentRecord {
+  const funderType = overrides.funderType ?? "government";
   return {
     id: "x-1",
     source: "cdg",
-    funderType: "government",
+    funderType,
+    governmentFundingPurpose:
+      overrides.governmentFundingPurpose !== undefined
+        ? overrides.governmentFundingPurpose
+        : funderType === "government"
+          ? "capital_project"
+          : null,
     funderName: "City of Chicago — Community Development Grant",
     recipient: "Example Grantee",
     amountAwarded: 100_000,
@@ -120,7 +128,9 @@ describe("investmentRecordsToPointFeatures", () => {
     const [gov, phil, dev] = investmentRecordsToPointFeatures(records);
     expect(gov.geometry).toEqual({ type: "Point", coordinates: [-87.6, 41.75] });
     expect(gov.properties.sourceLink).toBe("https://example.gov/round");
+    expect(gov.properties.governmentFundingPurpose).toBe("capital_project");
     expect(phil.properties.sourceLink).toBe(""); // no links
+    expect(phil.properties.governmentFundingPurpose).toBeNull();
     expect(dev.properties.sourceLink).toBe("https://dev.example/project"); // ftp skipped
     expect(dev.properties.amountAwarded).toBeNull();
     expect(dev.properties.year).toBeNull();
@@ -152,6 +162,30 @@ describe("filterInvestmentPointFeatures", () => {
       activeFunderTypes: ["philanthropic"],
     });
     expect(out.map((f) => f.properties.id)).toEqual(["phil-2022"]);
+  });
+
+  it("filters government points by funding purpose without hiding non-government points", () => {
+    const programmatic = investmentRecordsToPointFeatures([
+      record({
+        id: "cdbg-service",
+        source: "cdbg-home",
+        governmentFundingPurpose: "programmatic",
+        recipient: "Health Services",
+        logLine: "CDBG activity · Public Services",
+        year: 2022,
+      }),
+    ])[0];
+    const capitalOnly = filterInvestmentPointFeatures([...features, programmatic], {
+      yearRangeId: "all",
+      activeFunderTypes: ["government", "philanthropic", "private_development"],
+      activeGovernmentFundingPurposes: ["capital_project"],
+    });
+
+    expect(capitalOnly.map((feature) => feature.properties.id)).toEqual([
+      "gov-2019",
+      "phil-2022",
+      "dev-noyear",
+    ]);
   });
 
   it("keeps an unknown (off-enum) funderType only while EVERY funder checkbox is on", () => {
@@ -193,8 +227,8 @@ describe("citywideInvestmentEntries / summarizeCitywideEntries", () => {
 
   it("extracts only the citywide records' filterable fields", () => {
     expect(entries).toEqual([
-      { source: "foundation", funderType: "philanthropic", year: 2021, amountAwarded: 250_000 },
-      { source: "cdg", funderType: "government", year: 2020, amountAwarded: null },
+      { source: "foundation", funderType: "philanthropic", governmentFundingPurpose: null, year: 2021, amountAwarded: 250_000 },
+      { source: "cdg", funderType: "government", governmentFundingPurpose: "capital_project", year: 2020, amountAwarded: null },
     ]);
   });
 
@@ -219,6 +253,15 @@ describe("citywideInvestmentEntries / summarizeCitywideEntries", () => {
     // Only the (null-amount) government citywide record remains.
     expect(govOnly).toEqual({ count: 1, totalDollars: 0 });
   });
+
+  it("re-scopes government citywide records by funding purpose without hiding philanthropy", () => {
+    const programmaticOnly = summarizeCitywideEntries(entries, {
+      yearRangeId: "all",
+      activeFunderTypes: ["government", "philanthropic", "private_development"],
+      activeGovernmentFundingPurposes: ["programmatic"],
+    });
+    expect(programmaticOnly).toEqual({ count: 1, totalDollars: 250_000 });
+  });
 });
 
 describe("summarizeCitywideInvestment", () => {
@@ -234,6 +277,20 @@ describe("presentFunderTypesInOrder", () => {
     expect(
       presentFunderTypesInOrder(["philanthropic", "government", "government", "private_development", null])
     ).toEqual(["government", "philanthropic", "private_development"]);
+  });
+});
+
+describe("presentGovernmentFundingPurposesInOrder", () => {
+  it("dedupes mappable purposes, keeps canonical order, and excludes city-level arts", () => {
+    expect(
+      presentGovernmentFundingPurposesInOrder([
+        "programmatic",
+        "arts",
+        "capital_project",
+        "programmatic",
+        null,
+      ]),
+    ).toEqual(["capital_project", "programmatic"]);
   });
 });
 
@@ -254,6 +311,7 @@ describe("fetchCommunityInvestmentLayer", () => {
       "dev-noyear",
     ]);
     expect(result.presentFunderTypes).toEqual(["government", "philanthropic", "private_development"]);
+    expect(result.presentGovernmentFundingPurposes).toEqual(["capital_project"]);
     expect(result.citywide).toEqual({ count: 2, totalDollars: 250_000 });
     // The two citywide rows here are philanthropic + government, not development,
     // so the megaproject "not plotted" list is empty for this fixture.
@@ -606,6 +664,7 @@ describe("development dots: announcedInvestment + radiusPx", () => {
       id,
       source: "development",
       funderType: "private_development",
+      governmentFundingPurpose: null,
       funderName: "Developer",
       recipient: id,
       amountAwarded: null,
@@ -628,6 +687,7 @@ describe("development dots: announcedInvestment + radiusPx", () => {
         id: "gov",
         source: "cdg",
         funderType: "government",
+        governmentFundingPurpose: "capital_project",
         funderName: "City",
         recipient: "Grant",
         amountAwarded: 250_000,
@@ -671,6 +731,7 @@ describe("development dots: announcedInvestment + radiusPx", () => {
       id,
       source,
       funderType: "government",
+      governmentFundingPurpose: "capital_project",
       funderName: "Public capital",
       recipient: id,
       amountAwarded: null,

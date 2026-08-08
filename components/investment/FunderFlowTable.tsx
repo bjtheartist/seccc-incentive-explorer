@@ -4,6 +4,10 @@ import { useMemo, useState } from "react";
 import type { FlowRow } from "@/lib/investment-analysis";
 import { FUNDER_TYPE_COLORS } from "@/lib/community-investment-layer";
 import type { FunderType } from "@/lib/community-investment";
+import {
+  GOVERNMENT_FUNDING_PURPOSE_LABELS,
+  type GovernmentFundingPurpose,
+} from "@/lib/government-funding-purpose";
 import { formatFullDollars, formatPercent, SOURCE_LABELS_SHORT } from "./format";
 
 /**
@@ -24,18 +28,25 @@ const RENDER_CAP = 400;
 
 export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: number }) {
   const [query, setQuery] = useState("");
+  const [purpose, setPurpose] = useState<"all" | GovernmentFundingPurpose>("all");
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return rows;
-    return rows.filter(
-      (r) =>
+    return rows.filter((r) => {
+      if (purpose !== "all" && r.governmentFundingPurpose !== purpose) return false;
+      if (!q) return true;
+      const purposeLabel = r.governmentFundingPurpose
+        ? GOVERNMENT_FUNDING_PURPOSE_LABELS[r.governmentFundingPurpose]
+        : "Not government";
+      return (
         r.funderName.toLowerCase().includes(q) ||
         r.recipient.toLowerCase().includes(q) ||
         (SOURCE_LABELS_SHORT[r.source] ?? r.source).toLowerCase().includes(q) ||
-        String(r.year).includes(q),
-    );
-  }, [rows, query]);
+        purposeLabel.toLowerCase().includes(q) ||
+        String(r.year).includes(q)
+      );
+    });
+  }, [purpose, rows, query]);
   const rendered = filtered.length > RENDER_CAP ? filtered.slice(0, RENDER_CAP) : filtered;
 
   if (rows.length === 0) {
@@ -49,7 +60,7 @@ export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: numbe
 
   return (
     <div className="border border-[#0C1B33]/10 bg-white">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#0C1B33]/10 px-4 py-3">
+      <div className="flex flex-wrap items-end justify-between gap-3 border-b border-[#0C1B33]/10 px-4 py-3">
         <input
           type="search"
           value={query}
@@ -57,16 +68,34 @@ export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: numbe
           placeholder="Search funder, program, or recipient…"
           className="w-full max-w-xs rounded-[3px] border border-[#0C1B33]/15 bg-white px-3 py-1.5 text-[13px] text-[#0C1B33] placeholder:text-[#0C1B33]/35 focus:border-[#2563EB] focus:outline-none"
         />
+        <label className="w-full sm:w-52">
+          <span className="block font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+            Government funding purpose
+          </span>
+          <select
+            value={purpose}
+            onChange={(event) =>
+              setPurpose(event.target.value as "all" | GovernmentFundingPurpose)
+            }
+            className="mt-1 h-8 w-full rounded-[3px] border border-[#0C1B33]/15 bg-white px-2 text-[12px] text-[#0C1B33]/70 outline-none focus:border-[#2563EB]"
+          >
+            <option value="all">All funding purposes</option>
+            <option value="capital_project">Capital projects</option>
+            <option value="programmatic">Programmatic funding</option>
+            <option value="unclassified">Not classified from source</option>
+          </select>
+        </label>
         <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
           {filtered.length} of {rows.length} flow{rows.length === 1 ? "" : "s"}
         </span>
       </div>
       <div className="max-h-[440px] overflow-auto">
-        <table className="w-full min-w-[620px] border-collapse text-[13px]">
+        <table className="w-full min-w-[760px] border-collapse text-[13px]">
           <thead className="sticky top-0 bg-white">
             <tr className="border-b border-[#0C1B33]/10 text-left text-[11px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
               <th className="px-4 py-2.5 font-medium">Funder</th>
               <th className="px-4 py-2.5 font-medium">Program</th>
+              <th className="px-4 py-2.5 font-medium">Funding purpose</th>
               <th className="px-4 py-2.5 font-medium">Recipient</th>
               <th className="px-4 py-2.5 font-medium">Year</th>
               <th className="px-4 py-2.5 text-right font-medium">Awarded</th>
@@ -86,6 +115,11 @@ export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: numbe
                   </span>
                 </td>
                 <td className="px-4 py-2.5 text-[#0C1B33]/55">{SOURCE_LABELS_SHORT[r.source] ?? r.source}</td>
+                <td className="px-4 py-2.5 text-[#0C1B33]/55">
+                  {r.governmentFundingPurpose
+                    ? GOVERNMENT_FUNDING_PURPOSE_LABELS[r.governmentFundingPurpose]
+                    : "Not government"}
+                </td>
                 <td className="px-4 py-2.5 text-[#0C1B33]/80">{r.recipient}</td>
                 <td className="px-4 py-2.5 text-[#0C1B33]/55 [font-variant-numeric:tabular-nums]">{r.year}</td>
                 <td className="px-4 py-2.5 text-right font-semibold text-[#0C1B33] [font-variant-numeric:tabular-nums]">
@@ -98,7 +132,7 @@ export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: numbe
             ))}
             {filtered.length > RENDER_CAP ? (
               <tr>
-                <td colSpan={6} className="px-4 py-3 text-center text-[12px] text-[#0C1B33]/50">
+                <td colSpan={7} className="px-4 py-3 text-center text-[12px] text-[#0C1B33]/50">
                   Showing the {RENDER_CAP} largest of {filtered.length.toLocaleString()} flows — search
                   covers all of them; narrow to see the rest.
                 </td>
@@ -106,8 +140,8 @@ export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: numbe
             ) : null}
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-6 text-center text-[13px] text-[#0C1B33]/45">
-                  No flows match “{query}”.
+                <td colSpan={7} className="px-4 py-6 text-center text-[13px] text-[#0C1B33]/45">
+                  No awarded flows match these filters.
                 </td>
               </tr>
             ) : null}

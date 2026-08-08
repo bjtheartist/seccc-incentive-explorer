@@ -27,6 +27,7 @@ import {
   CAPITAL_CLASS_MONEY_NOUN,
   investmentStatusLabel,
 } from "@/lib/community-investment-layer";
+import { GOVERNMENT_FUNDING_PURPOSE_LABELS } from "@/lib/government-funding-purpose";
 import { formatFullDollars, SOURCE_LABELS } from "./format";
 
 interface RecordDrawerContextValue {
@@ -154,6 +155,11 @@ function RecordDrawer({ record, onClose }: { record: TopRecipient; onClose: () =
 
           <dl className="mt-4">
             <Field label="Capital class">{CAPITAL_CLASS_LABELS[record.capitalClass] ?? "Grant"}</Field>
+            {record.governmentFundingPurpose ? (
+              <Field label="Government funding purpose">
+                {GOVERNMENT_FUNDING_PURPOSE_LABELS[record.governmentFundingPurpose]}
+              </Field>
+            ) : null}
             <Field label="Program / source">{SOURCE_LABELS[record.source]}</Field>
             <Field label="Year">{record.year ?? "Not dated"}</Field>
             <Field label="Address">

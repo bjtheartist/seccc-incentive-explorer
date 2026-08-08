@@ -14,6 +14,10 @@ import {
   investmentStatusLabel,
 } from "@/lib/community-investment-layer";
 import type { CapitalClass, FunderType } from "@/lib/community-investment";
+import {
+  GOVERNMENT_FUNDING_PURPOSE_LABELS,
+  type GovernmentFundingPurpose,
+} from "@/lib/government-funding-purpose";
 import type { DistrictData } from "@/lib/types";
 import type { SiteSignals } from "@/lib/site-signals";
 import type { TransportAccess } from "@/lib/transport-access";
@@ -307,6 +311,7 @@ export interface InvestmentPopupProperties {
   recipient?: string;
   funderName?: string;
   funderType?: string;
+  governmentFundingPurpose?: string | null;
   /** Capital class — picks the money noun + field so a TIF/federal/tax-credit dot
    * is never mislabeled "Awarded". Absent → treated as "grant". */
   capitalClass?: string;
@@ -434,6 +439,13 @@ export function buildInvestmentPopupHtml(p: InvestmentPopupProperties): string {
   const funderType = (p.funderType ?? "") as FunderType;
   const accent = FUNDER_TYPE_COLORS[funderType] ?? INVESTMENT_FALLBACK_COLOR;
   const funderTypeLabel = FUNDER_TYPE_LABELS[funderType] ?? "Investment";
+  const fundingPurpose = (p.governmentFundingPurpose ??
+    "unclassified") as GovernmentFundingPurpose;
+  const fundingPurposeLabel =
+    funderType === "government"
+      ? GOVERNMENT_FUNDING_PURPOSE_LABELS[fundingPurpose] ??
+        GOVERNMENT_FUNDING_PURPOSE_LABELS.unclassified
+      : "";
   const recipient = escapePopupHtml(p.recipient || "Recipient unavailable");
   const funderName = p.funderName ? escapePopupHtml(p.funderName) : "";
 
@@ -495,6 +507,7 @@ export function buildInvestmentPopupHtml(p: InvestmentPopupProperties): string {
     </div>
     <div style="margin-top:8px">
       <span style="display:inline-block;background:${accent}15;color:${accent};border:1px solid ${accent}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapePopupHtml(funderTypeLabel)}</span>
+      ${fundingPurposeLabel ? `<span style="display:inline-block;margin-left:4px;background:#0C1B3308;color:#5A6478;border:1px solid #0C1B3320;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${escapePopupHtml(fundingPurposeLabel)}</span>` : ""}
       ${metaRow.length ? `<span style="font-size:11px;color:#5A6478;margin-left:6px">${metaRow.join(" · ")}</span>` : ""}
     </div>
     ${logLine ? `<div style="font-size:11px;color:#8A93A6;margin-top:6px;line-height:1.4">${logLine}</div>` : ""}

@@ -122,6 +122,20 @@ describe("public investment overlay config", () => {
       "federal_restaurant_relief",
     );
     expect(publicInvestmentOverlayIdForSource("tif")).toBeNull();
+    expect(
+      Object.fromEntries(
+        PUBLIC_INVESTMENT_OVERLAYS.map((overlay) => [
+          overlay.id,
+          overlay.fundingPurpose,
+        ]),
+      ),
+    ).toEqual({
+      county_relief_awards: "programmatic",
+      state_2020_relief: "programmatic",
+      state_recovery_awards: "programmatic",
+      federal_restaurant_relief: "programmatic",
+      state_capital_projects: "capital_project",
+    });
   });
 
   it("guards overlay and source IDs", () => {

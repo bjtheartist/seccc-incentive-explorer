@@ -76,6 +76,7 @@ export function TopRecipientsTable({
                       recipient: r.recipient,
                       funderName: r.funderName,
                       source: r.source,
+                      governmentFundingPurpose: r.governmentFundingPurpose,
                       year: r.year,
                       amountAwarded: r.amountAwarded,
                       communityArea: area as string,

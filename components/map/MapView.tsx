@@ -63,6 +63,7 @@ import {
   DEFAULT_INVESTMENT_YEAR_RANGE,
   FUNDER_TYPE_COLORS,
   FUNDER_TYPE_ORDER,
+  MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER,
   INVESTMENT_FALLBACK_COLOR,
   CAPITAL_CLASS_OUTLINE,
   buildMegaprojectFeatures,
@@ -80,6 +81,7 @@ import {
   type MegaprojectSummary,
 } from "@/lib/community-investment-layer";
 import type { CapitalClass, FunderType } from "@/lib/community-investment";
+import type { GovernmentFundingPurpose } from "@/lib/government-funding-purpose";
 import { CHICAGO_COMMUNITY_AREAS } from "@/lib/community-areas";
 import {
   loadInvestmentSession,
@@ -288,6 +290,10 @@ export default function MapView() {
   const [communityInvestmentLoading, setCommunityInvestmentLoading] = useState(false);
   const [communityInvestmentError, setCommunityInvestmentError] = useState<string | null>(null);
   const [investmentPresentFunderTypes, setInvestmentPresentFunderTypes] = useState<FunderType[]>([]);
+  const [
+    investmentPresentGovernmentFundingPurposes,
+    setInvestmentPresentGovernmentFundingPurposes,
+  ] = useState<GovernmentFundingPurpose[]>([]);
   // Capital classes present among plotted dots — drives the legend's capital-class
   // sub-legend (grant / TIF / federal / tax-credit). Set on each fetch.
   const [investmentPresentCapitalClasses, setInvestmentPresentCapitalClasses] = useState<CapitalClass[]>([]);
@@ -308,6 +314,14 @@ export default function MapView() {
   const [investmentFunderTypes, setInvestmentFunderTypes] = useState<Record<FunderType, boolean>>(
     () => funderTypeRecordFromSession(loadInvestmentSession().funderTypes)
   );
+  const [investmentGovernmentFundingPurposes, setInvestmentGovernmentFundingPurposes] = useState<
+    Record<GovernmentFundingPurpose, boolean>
+  >({
+    capital_project: true,
+    programmatic: true,
+    arts: true,
+    unclassified: true,
+  });
   const [investmentCitywide, setInvestmentCitywide] = useState<{ count: number; totalDollars: number } | null>(
     null
   );
@@ -328,6 +342,15 @@ export default function MapView() {
       return next;
     });
   }, []);
+  const toggleInvestmentGovernmentFundingPurpose = useCallback(
+    (key: GovernmentFundingPurpose) => {
+      setInvestmentGovernmentFundingPurposes((previous) => ({
+        ...previous,
+        [key]: !previous[key],
+      }));
+    },
+    [],
+  );
 
   // Density metric (Sol #4): dollars ($ awarded per bin) | records (grant count
   // per bin). Component state — the choice is not persisted across the /report
@@ -3154,6 +3177,7 @@ export default function MapView() {
         stateRecoveryByZipRef.current = [];
         setCommunityInvestmentLoaded(false);
         setInvestmentPresentFunderTypes([]);
+        setInvestmentPresentGovernmentFundingPurposes([]);
         setInvestmentPresentCapitalClasses([]);
         setInvestmentFunderHqCount(0);
         setInvestmentCitywide(null);
@@ -3210,6 +3234,9 @@ export default function MapView() {
           setInvestmentPresentFunderTypes(
             result.presentFunderTypes.filter((type) => type !== "private_development")
           );
+          setInvestmentPresentGovernmentFundingPurposes(
+            result.presentGovernmentFundingPurposes,
+          );
           setInvestmentPresentCapitalClasses(result.presentCapitalClasses);
           setInvestmentFunderHqCount(result.funderHqs.length);
           setInvestmentCitywide(result.citywide);
@@ -3245,10 +3272,16 @@ export default function MapView() {
     const activeFunderTypes = new Set<FunderType>(
       FUNDER_TYPE_ORDER.filter((k) => k !== "private_development" && investmentFunderTypes[k])
     );
+    const activeGovernmentFundingPurposes = new Set<GovernmentFundingPurpose>(
+      MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER.filter(
+        (purpose) => investmentGovernmentFundingPurposes[purpose],
+      ),
+    );
     const filtered = excludeMegaprojectFeatures(
       filterInvestmentPointFeatures(investmentFeaturesRef.current, {
         yearRangeId: investmentYearRange,
         activeFunderTypes,
+        activeGovernmentFundingPurposes,
       }).filter(
         (feature) => publicInvestmentOverlayIdForSource(feature.properties.source) === null
       )
@@ -3261,6 +3294,7 @@ export default function MapView() {
       summarizeCitywideEntries(investmentCitywideEntriesRef.current, {
         yearRangeId: investmentYearRange,
         activeFunderTypes,
+        activeGovernmentFundingPurposes,
       })
     );
   }, [
@@ -3268,6 +3302,7 @@ export default function MapView() {
     communityInvestmentLoaded,
     investmentYearRange,
     investmentFunderTypes,
+    investmentGovernmentFundingPurposes,
     loaded,
   ]);
 
@@ -3668,10 +3703,16 @@ export default function MapView() {
     const activeFunderTypes = new Set<FunderType>(
       FUNDER_TYPE_ORDER.filter((k) => k !== "private_development" && investmentFunderTypes[k])
     );
+    const activeGovernmentFundingPurposes = new Set<GovernmentFundingPurpose>(
+      MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER.filter(
+        (purpose) => investmentGovernmentFundingPurposes[purpose],
+      ),
+    );
     const filtered = excludeMegaprojectFeatures(
       filterInvestmentPointFeatures(investmentFeaturesRef.current, {
         yearRangeId: investmentYearRange,
         activeFunderTypes,
+        activeGovernmentFundingPurposes,
       }).filter(
         (feature) => publicInvestmentOverlayIdForSource(feature.properties.source) === null
       )
@@ -3769,6 +3810,7 @@ export default function MapView() {
     investmentMegaprojectsVisible,
     investmentYearRange,
     investmentFunderTypes,
+    investmentGovernmentFundingPurposes,
     investmentDensityMetric,
     getInvestmentDeckTooltip,
     publicInvestmentOverlays,
@@ -3913,10 +3955,12 @@ export default function MapView() {
           communityInvestmentLoading={communityInvestmentLoading}
           communityInvestmentError={communityInvestmentError}
           investmentPresentFunderTypes={investmentPresentFunderTypes}
+          investmentPresentGovernmentFundingPurposes={investmentPresentGovernmentFundingPurposes}
           investmentPresentCapitalClasses={investmentPresentCapitalClasses}
           investmentFunderHqCount={investmentFunderHqCount}
           investmentYearRange={investmentYearRange}
           investmentFunderTypes={investmentFunderTypes}
+          investmentGovernmentFundingPurposes={investmentGovernmentFundingPurposes}
           investmentCitywide={investmentCitywide}
           investmentViewMode={investmentViewMode}
           investmentDensityMetric={investmentDensityMetric}
@@ -3940,6 +3984,7 @@ export default function MapView() {
           onSetInvestmentMegaprojectsVisible={setInvestmentMegaprojectsVisiblePersistent}
           onSetPublicInvestmentOverlay={setPublicInvestmentOverlayPersistent}
           onToggleInvestmentFunderType={toggleInvestmentFunderType}
+          onToggleInvestmentGovernmentFundingPurpose={toggleInvestmentGovernmentFundingPurpose}
           onClose={() => setLegendOpen(false)}
           onToggleZone={toggleZone}
           onTogglePoi={togglePoi}

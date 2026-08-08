@@ -15,9 +15,16 @@ const GEN = "2026-07-27T00:00:00.000Z";
 
 /** Minimal record factory (mirrors the community-investment test fixture). */
 function rec(over: Partial<CommunityInvestmentRecord> & { id: string }): CommunityInvestmentRecord {
+  const funderType = over.funderType ?? "government";
   return {
     source: "nof-small",
-    funderType: "government",
+    funderType,
+    governmentFundingPurpose:
+      over.governmentFundingPurpose !== undefined
+        ? over.governmentFundingPurpose
+        : funderType === "government"
+          ? "capital_project"
+          : null,
     funderName: "City of Chicago",
     recipient: "Test Grantee",
     amountAwarded: 100000,
@@ -129,6 +136,14 @@ describe("analyzeCommunityArea — Alpha", () => {
     const dev = a.bySource.find((s) => s.source === "development")!;
     expect(dev.awardedDollars).toBe(0);
     expect(dev.count).toBe(1);
+  });
+
+  it("separates government records by persisted purpose without combining dollars", () => {
+    expect(a.governmentFundingPurposes).toEqual([
+      { purpose: "capital_project", count: 2 },
+      { purpose: "programmatic", count: 0 },
+      { purpose: "unclassified", count: 0 },
+    ]);
   });
 
   it("ranks top recipients by dollars, in-window only", () => {
@@ -458,6 +473,11 @@ describe("buildFlowRows", () => {
     const rows = buildFlowRows(alpha);
     // a2 200k, a1 100k, a3 50k. a4 (2019), a5 (dev null), a6 (null year) excluded.
     expect(rows.map((r) => r.amountAwarded)).toEqual([200000, 100000, 50000]);
+    expect(rows.map((r) => r.governmentFundingPurpose)).toEqual([
+      "capital_project",
+      "capital_project",
+      null,
+    ]);
     for (const r of rows) {
       expect(r.id).toBeTruthy();
       expect(r.year).toBeGreaterThanOrEqual(SINCE_YEAR);

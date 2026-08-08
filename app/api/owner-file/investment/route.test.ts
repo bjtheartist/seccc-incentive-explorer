@@ -43,6 +43,7 @@ const fakeData = {
       id: "cdg-point",
       source: "cdg",
       funderType: "government",
+      governmentFundingPurpose: "capital_project",
       funderName: "Chicago Community Development Grant",
       recipient: "Ordinary grant recipient",
       capitalClass: "grant",
@@ -61,6 +62,8 @@ const fakeData = {
     {
       id: "cook-a",
       source: "cook-source-2023",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Cook recipient A",
       geometry: { kind: "zip_area", zip: "60617" },
       amountAwarded: null,
@@ -70,6 +73,8 @@ const fakeData = {
     {
       id: "cook-b",
       source: "cook-source-2023",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Cook recipient B",
       geometry: { kind: "zip_area", zip: "60617" },
       amountAwarded: null,
@@ -79,6 +84,8 @@ const fakeData = {
     {
       id: "big-a",
       source: "illinois-big",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Illinois BIG recipient",
       geometry: { kind: "zip_area", zip: "60617" },
       amountAwarded: null,
@@ -88,6 +95,8 @@ const fakeData = {
     {
       id: "hospitality-citywide",
       source: "illinois-hospitality-emergency",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Illinois Hospitality recipient",
       geometry: { kind: "citywide" },
       amountAwarded: null,
@@ -97,6 +106,8 @@ const fakeData = {
     {
       id: "b2b-a",
       source: "illinois-b2b",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Illinois B2B recipient",
       geometry: { kind: "zip_area", zip: "60617" },
       amountAwarded: null,
@@ -106,6 +117,8 @@ const fakeData = {
     {
       id: "rrf-point",
       source: "sba-rrf",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Restaurant recipient",
       geometry: { kind: "point", lat: 41.77, lng: -87.6 },
       amountAwarded: null,
@@ -115,6 +128,8 @@ const fakeData = {
     {
       id: "rrf-citywide",
       source: "sba-rrf",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Unplotted restaurant recipient",
       geometry: { kind: "citywide" },
       amountAwarded: null,
@@ -124,6 +139,8 @@ const fakeData = {
     {
       id: "dceo-point",
       source: "dceo-capital",
+      funderType: "government",
+      governmentFundingPurpose: "capital_project",
       recipient: "Address-sited state project",
       geometry: { kind: "point", lat: 41.76, lng: -87.59 },
       amountAwarded: null,
@@ -133,6 +150,8 @@ const fakeData = {
     {
       id: "dceo-citywide",
       source: "dceo-capital",
+      funderType: "government",
+      governmentFundingPurpose: "capital_project",
       recipient: "Unplotted state project",
       geometry: { kind: "citywide" },
       amountAwarded: null,
@@ -234,6 +253,7 @@ describe("GET /api/owner-file/investment", () => {
       id: "cdg-point",
       source: "cdg",
       funderType: "government",
+      governmentFundingPurpose: "capital_project",
       funderName: "Chicago Community Development Grant",
       recipient: "Ordinary grant recipient",
       capitalClass: "grant",
@@ -255,8 +275,10 @@ describe("GET /api/owner-file/investment", () => {
     // A point record with recovery/publishedBalance keeps them (popup money fields).
     const dceo = body.records.find((record: { id?: string }) => record.id === "dceo-point");
     expect(dceo.publishedBalance).toBe(750_000);
+    expect(dceo.governmentFundingPurpose).toBe("capital_project");
     const rrf = body.records.find((record: { id?: string }) => record.id === "rrf-point");
     expect(rrf.recovery).toEqual({ historicalAmount: { value: 80_000 } });
+    expect(rrf.governmentFundingPurpose).toBe("programmatic");
   });
 
   it("reduces surviving CITYWIDE records to legend-summary fields — names only on development rows", async () => {
@@ -268,6 +290,7 @@ describe("GET /api/owner-file/investment", () => {
           id: "foundation-citywide",
           source: "foundation",
           funderType: "philanthropic",
+          governmentFundingPurpose: null,
           funderName: "Example Foundation",
           recipient: "Out-of-bounds grantee name",
           geometry: { kind: "citywide" },
@@ -281,6 +304,7 @@ describe("GET /api/owner-file/investment", () => {
           id: "development-citywide",
           source: "development",
           funderType: "private_development",
+          governmentFundingPurpose: null,
           funderName: "Example Developer",
           recipient: "Advocate-style citywide project",
           geometry: { kind: "citywide" },
@@ -306,6 +330,7 @@ describe("GET /api/owner-file/investment", () => {
     expect(citywide).toContainEqual({
       source: "foundation",
       funderType: "philanthropic",
+      governmentFundingPurpose: null,
       amountAwarded: 40_000,
       year: 2023,
       geometry: { kind: "citywide" },
@@ -317,6 +342,7 @@ describe("GET /api/owner-file/investment", () => {
     expect(citywide).toContainEqual({
       source: "development",
       funderType: "private_development",
+      governmentFundingPurpose: null,
       amountAwarded: null,
       year: null,
       geometry: { kind: "citywide" },
