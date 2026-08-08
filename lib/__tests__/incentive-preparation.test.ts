@@ -319,6 +319,7 @@ describe("buildPreparationTasks", () => {
         "No formal documents required",
         "No formal document is required.",
         "No application needed — benefits are automatic by location",
+        "Contact your SSA delegate agency for any sub-program requirements",
         "Vendor quote",
       ],
       profile: COMPLETE_PROFILE,

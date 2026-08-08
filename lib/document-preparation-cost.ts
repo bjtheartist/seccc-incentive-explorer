@@ -21,10 +21,10 @@ export const DOCUMENT_PREPARATION_COST_CAVEAT =
   "Costs vary; this reflects document preparation, not program value.";
 
 const HIGH_COST_PATTERN =
-  /\b(?:audited? financial (?:statement|statements|report|reports)|financial (?:statement|statements|report|reports) audit|appraisal|environmental (?:assessment|review|report|study)|phase (?:i|ii|1|2) environmental|architect(?:ural|ure)? (?:plan|plans|drawing|drawings|services)|engineering (?:plan|plans|drawing|drawings|report|reports|services)|legal opinion|opinion of counsel|(?:detailed|full) pro formas?|market stud(?:y|ies)|energy (?:audits?|models?)|viability (?:analysis|analyses)|but-for (?:analysis|analyses)|professional (?:site|building) (?:plan|plans))\b/i;
+  /\b(?:audited? financial (?:statement|statements|report|reports)|financial (?:statement|statements|report|reports) audit|appraisal|environmental (?:assessments?|reviews?|reports?|stud(?:y|ies))|phase (?:i|ii|1|2) environmental|architect(?:ural|ure)? (?:plan|plans|drawing|drawings|services)|engineering (?:plan|plans|drawing|drawings|report|reports|services)|legal opinion|opinion of counsel|(?:project|detailed|full) pro formas?|market stud(?:y|ies)|energy (?:audits?|models?)|viability (?:analysis|analyses)|but-for (?:analysis|analyses)|viability\s*\/\s*['\"]?but-for['\"]? (?:analysis|analyses)|professional (?:site|building) (?:plan|plans))\b/i;
 
 const MEDIUM_COST_PATTERN =
-  /\b(?:permit|permits|certificate|certificates|good standing|contractor (?:bid|bids|estimate|estimates|quote|quotes)|tax clearance|insurance (?:certificate|certification)|property survey|boundary survey|land survey|survey report|filing fee|filing fees)\b/i;
+  /\b(?:permit|permits|certificate|certificates|good[- ]standing|accountant[- ]reviewed financials?|contractor (?:scopes?(?: and)? )?(?:bid|bids|estimate|estimates|quote|quotes)|tax clearance|insurance (?:certificate|certification)|property survey|boundary survey|land survey|survey report|filing fee|filing fees)\b/i;
 
 const LOW_COST_PATTERN =
   /\b(?:w-?9|identification|photo id|government id|driver'?s license|tax return|tax returns|bank statement|bank statements|business plan|proof of (?:property )?ownership|ownership proof|lease|ordinary financial statement|ordinary financial statements|financial statement|financial statements)\b/i;
@@ -32,8 +32,18 @@ const LOW_COST_PATTERN =
 const NO_DOCUMENT_REQUIRED_PATTERNS = [
   /\bno formal documents? (?:(?:is|are) )?required\b/i,
   /\bno documents? (?:(?:is|are) )?required\b/i,
-  /\bno application (?:is )?needed\b.*\bbenefits? (?:are )?automatic(?:ally)? by location\b/i,
+  /\bno application (?:is )?(?:needed|required)\b/i,
   /^\s*(?:none|n\/a|not applicable)\s*(?:required)?\s*[.!]?\s*$/i,
+] as const;
+
+const DOCUMENT_GUIDANCE_PATTERNS = [
+  /\bcontact (?:your|the) .+? (?:agency|administrator) for (?:any )?(?:sub-program )?requirements\b/i,
+] as const;
+
+const CONDITIONAL_DOCUMENT_PATTERNS = [
+  /\((?:if|when)\b[^)]*\)/i,
+  /\b(?:if|when|where|as) applicable\b/i,
+  /\b(?:if|when) (?:requested|required|needed)\b/i,
 ] as const;
 
 /**
@@ -45,6 +55,23 @@ export function isExplicitNoDocumentRequirement(value: unknown): boolean {
   const text = value.trim();
   if (!text) return false;
   return NO_DOCUMENT_REQUIRED_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/** Returns true for catalog guidance that is an action, not a document. */
+export function isDocumentRequirementGuidance(value: unknown): boolean {
+  if (isExplicitNoDocumentRequirement(value)) return true;
+  if (typeof value !== "string") return false;
+  const text = value.trim();
+  if (!text) return false;
+  return DOCUMENT_GUIDANCE_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+/** Returns true when the published catalog qualifies a document requirement. */
+export function isConditionalDocumentRequirement(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  const text = value.trim();
+  if (!text) return false;
+  return CONDITIONAL_DOCUMENT_PATTERNS.some((pattern) => pattern.test(text));
 }
 
 /**

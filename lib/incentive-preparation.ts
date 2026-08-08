@@ -1,7 +1,7 @@
 import type { GoalType } from "./workspace";
 import type { VerificationStep } from "./types";
 import { normalizeDocumentSpec, type DocumentSpec } from "./document-spec";
-import { isExplicitNoDocumentRequirement } from "./document-preparation-cost";
+import { isDocumentRequirementGuidance } from "./document-preparation-cost";
 
 export const PREPARATION_TASK_STATUSES = [
   "needs_document",
@@ -655,7 +655,7 @@ export function buildPreparationTasks({
     if (
       !label ||
       !normalizedLabel ||
-      isExplicitNoDocumentRequirement(label) ||
+      isDocumentRequirementGuidance(label) ||
       seenProgramDocuments.has(normalizedLabel)
     ) {
       continue;

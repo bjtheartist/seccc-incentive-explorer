@@ -40,6 +40,7 @@ import {
   DOCUMENT_PREPARATION_COST_CAVEAT,
   DOCUMENT_PREPARATION_COST_LEGEND,
   classifyDocumentPreparationCost,
+  isConditionalDocumentRequirement,
 } from "@/lib/document-preparation-cost";
 import {
   MATERIALS_REVIEW_ORGANIZATION,
@@ -477,9 +478,14 @@ export default function PreparationPacketDetailPage() {
       : "Will update as tasks are confirmed";
 
   const renderTaskRow = (task: PreparationTask) => {
+    const documentLabel = task.documentSpec?.label
+      ?? task.title.replace(/^Collect program document:\s*/i, "");
     const documentCost = isDocumentTask(task)
-      ? classifyDocumentPreparationCost(task.documentSpec?.label, task.title, task.description)
+      ? classifyDocumentPreparationCost(documentLabel)
       : null;
+    const documentRequirementLabel = isConditionalDocumentRequirement(documentLabel)
+      ? "Conditional"
+      : "Required";
 
     return (
     <article key={task.id} className="border border-[#0C1B33]/10 px-4 py-4">
@@ -491,14 +497,16 @@ export default function PreparationPacketDetailPage() {
             {documentCost && (
               <>
                 <span className="border border-[#0C1B33]/20 bg-[#FAF9F6] px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] text-[#0C1B33]">
-                  Required
+                  {documentRequirementLabel}
                 </span>
                 <span
                   className="border border-[#2563EB]/30 bg-[#2563EB]/[0.05] px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] text-[#1D4ED8]"
-                  aria-label={`Document preparation cost tier ${documentCost.tier}. ${documentCost.basis}`}
                   title={documentCost.basis}
                 >
-                  {documentCost.tier}
+                  <span aria-hidden="true">{documentCost.tier}</span>
+                  <span className="sr-only">
+                    {`Document preparation cost tier ${documentCost.tier}. ${documentCost.basis}`}
+                  </span>
                 </span>
               </>
             )}
