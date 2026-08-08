@@ -32,7 +32,8 @@ describe("RefineValuePanel", () => {
       <RefineValuePanel report={reportFixture()} context="instant" onRefine={() => {}} />,
     );
     expect(html).toContain("Location-Only Snapshot");
-    expect(html).toContain("Goal-Based Ranking");
+    expect(html).toContain("Goal-Based Organization");
+    expect(html).not.toMatch(/goal-based ranking/i);
     expect(html).toContain("Week-One Action Plan");
     expect(html).toContain("Document Gap Checklist");
     expect(html).toContain("does not add them up, predict an award, or guarantee eligibility");
@@ -79,6 +80,8 @@ describe("RefineValuePanel", () => {
       />,
     );
     expect(html).toContain("Location-only snapshot");
+    expect(html).toContain("goal-based organization");
+    expect(html).not.toMatch(/goal-based ranking/i);
     expect(html).toContain("Refine");
     // Compact strip stays lightweight - no full value grid.
     expect(html).not.toContain("Week-One Action Plan");

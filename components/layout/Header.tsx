@@ -32,7 +32,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Find Incentives",
     items: [
       { href: "/check", label: "Quick Address Check" },
-      { href: "/qualify", label: "Eligibility Survey" },
+      { href: "/qualify", label: "Program Fit Questions" },
       { href: "/programs", label: "Program Directory" },
       { href: "/faq", label: "FAQ" },
     ],

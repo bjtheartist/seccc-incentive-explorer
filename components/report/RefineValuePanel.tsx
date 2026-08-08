@@ -102,7 +102,7 @@ export function RefineValuePanel({
     return (
       <div className="refine-value-panel px-4 py-3 border-b border-[#2563EB]/15 bg-[#2563EB]/[0.035] print:hidden flex items-center justify-between gap-3">
         <p className="text-[11px] leading-snug text-[#0C1B33]/55">
-          Location-only snapshot. Refining adds goal-based ranking and next
+          Location-only snapshot. Refining adds goal-based organization and next
           steps.
         </p>
         {onRefine && (
@@ -134,7 +134,7 @@ export function RefineValuePanel({
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-px bg-[#0C1B33]/10 border border-[#0C1B33]/10 max-w-3xl">
         <div className="bg-white px-4 py-3">
           <div className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/40 mb-1">
-            Goal-Based Ranking
+            Goal-Based Organization
           </div>
           <p className="text-[12px] leading-relaxed text-[#0C1B33]/60">
             Programs tied to the address are reorganized around the outcome

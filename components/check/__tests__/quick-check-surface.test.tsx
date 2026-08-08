@@ -59,6 +59,11 @@ describe("/check — no resolvable params", () => {
       'data-testid="quick-check-address-entry"',
     );
   });
+
+  it("uses neutral review language instead of making qualification claims", () => {
+    expect(html).toContain("a program-by-program review");
+    expect(html).not.toMatch(/may (?:actually )?qualify|eligibility survey/i);
+  });
 });
 
 describe("/check — resolved point", () => {
@@ -90,6 +95,8 @@ describe("/check — resolved point", () => {
 
   it("labels zone coverage as coverage, never as eligibility", () => {
     expect(html).toContain("Coverage — not eligibility");
+    expect(html).toContain("requirements to verify");
+    expect(html).not.toMatch(/may (?:actually )?qualify|eligibility survey/i);
   });
 });
 
@@ -147,9 +154,10 @@ describe("/check — cross-link banner", () => {
     expect(html).toContain('data-testid="report-cross-link-banner"');
   });
 
-  it("hands off to vacant sites and the eligibility survey", () => {
+  it("hands off to vacant sites and the program fit questions", () => {
     expect(html).toContain('href="/vacancy"');
     expect(html).toContain('href="/qualify"');
+    expect(html).toContain("Continue to program fit questions");
     // The quick check's secondary is the survey, not the report's investment link.
     expect(html).not.toContain('href="/investment"');
   });

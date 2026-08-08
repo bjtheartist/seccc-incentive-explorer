@@ -7,8 +7,8 @@ import { getPilotZipEntry } from "@/lib/pilot-zips";
 /**
  * Cross-link funnel banners (WP2). Two presentations of the same idiom — a
  * white Warm Bureau card on a hairline navy border that hands a visitor who
- * just resolved an address to the next surface (vacant sites, the eligibility
- * survey, neighborhood investment activity).
+ * just resolved an address to the next surface (vacant sites, the program fit
+ * questions, neighborhood investment activity).
  *
  * `sticky` pins to the bottom of the viewport and is dismissible; `inline`
  * sits in the flow below the report. Both are print-hidden — they are
@@ -62,7 +62,7 @@ export function StickyCrossLinkBanner({
             View Vacant Sites →
           </Link>
           <Link href="/qualify" className={SECONDARY_LINK_CLASS}>
-            Refine with the eligibility survey →
+            Continue to program fit questions →
           </Link>
         </div>
       </div>
@@ -82,7 +82,7 @@ export function StickyCrossLinkBanner({
  * Secondary destinations the in-flow banner can hand off to. The full report
  * sends a reader on to neighborhood investment activity; the quick check —
  * which deliberately stops short of the program layer — sends them to the
- * eligibility survey, the same destination the sticky bar offers.
+ * program fit questions, the same destination the sticky bar offers.
  */
 const INLINE_SECONDARY = {
   investment: {
@@ -91,7 +91,7 @@ const INLINE_SECONDARY = {
   },
   qualify: {
     href: "/qualify",
-    label: "Refine with the eligibility survey",
+    label: "Continue to program fit questions",
   },
 } as const;
 

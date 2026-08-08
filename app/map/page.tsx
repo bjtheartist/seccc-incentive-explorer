@@ -62,7 +62,7 @@ export default function MapPage() {
             {
               num: "03",
               title: "Zone Overlaps",
-              desc: "Areas where multiple zones overlap may offer stronger incentive stacking potential for businesses.",
+              desc: "Overlapping zones are a starting point for program-by-program review; overlap alone does not confirm eligibility or stackability.",
             },
           ].map((item, i) => (
             <div
