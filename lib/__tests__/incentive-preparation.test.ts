@@ -318,6 +318,7 @@ describe("buildPreparationTasks", () => {
       programRequiredDocs: [
         "No formal documents required",
         "No formal document is required.",
+        "No application needed — benefits are automatic by location",
         "Vendor quote",
       ],
       profile: COMPLETE_PROFILE,

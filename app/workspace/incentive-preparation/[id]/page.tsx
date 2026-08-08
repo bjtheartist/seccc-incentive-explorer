@@ -553,6 +553,32 @@ export default function PreparationPacketDetailPage() {
 
         {error && <p role="alert" className="mt-5 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
+        {packet.tasks.some(isDocumentTask) && (
+          <aside
+            className="border-x border-b border-[#0C1B33]/10 bg-white px-5 py-4 sm:px-7"
+            aria-labelledby="document-preparation-cost-legend"
+          >
+            <p
+              id="document-preparation-cost-legend"
+              className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/65"
+            >
+              Document preparation cost
+            </p>
+            <ul className="mt-2 grid gap-2 text-xs leading-5 text-[#0C1B33]/65 sm:grid-cols-3">
+              {DOCUMENT_PREPARATION_COST_LEGEND.map((item) => (
+                <li key={item.tier}>
+                  <span className="font-semibold text-[#0C1B33]">{item.tier}</span>
+                  {" = "}
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs leading-5 text-[#0C1B33]/50">
+              {DOCUMENT_PREPARATION_COST_CAVEAT}
+            </p>
+          </aside>
+        )}
+
         <div className="grid grid-cols-1 border-x border-b border-[#0C1B33]/10 bg-white lg:grid-cols-[minmax(0,1fr)_19rem]">
           <div className="min-w-0">
             {hasProgram && (
@@ -625,31 +651,6 @@ export default function PreparationPacketDetailPage() {
                     </p>
                   )}
                 </div>
-                {applicationTasks.some(isDocumentTask) && (
-                  <aside
-                    className="mt-4 border border-[#0C1B33]/10 bg-[#FAF9F6] px-4 py-3"
-                    aria-labelledby="document-preparation-cost-legend"
-                  >
-                    <p
-                      id="document-preparation-cost-legend"
-                      className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/65"
-                    >
-                      Document preparation cost
-                    </p>
-                    <ul className="mt-2 grid gap-2 text-xs leading-5 text-[#0C1B33]/65 sm:grid-cols-3">
-                      {DOCUMENT_PREPARATION_COST_LEGEND.map((item) => (
-                        <li key={item.tier}>
-                          <span className="font-semibold text-[#0C1B33]">{item.tier}</span>
-                          {" = "}
-                          {item.label}
-                        </li>
-                      ))}
-                    </ul>
-                    <p className="mt-2 text-xs leading-5 text-[#0C1B33]/50">
-                      {DOCUMENT_PREPARATION_COST_CAVEAT}
-                    </p>
-                  </aside>
-                )}
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <TimelineFact label="Preparation range" value={formatWeekRange(applicationTimeline.estimatedWeeks)} />
                   <TimelineFact label="Earliest realistic date" value={applicationTimeline.earliestRealisticDate ? formatDateLabel(applicationTimeline.earliestRealisticDate) : "Pending task review"} />

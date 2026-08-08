@@ -21,7 +21,7 @@ export const DOCUMENT_PREPARATION_COST_CAVEAT =
   "Costs vary; this reflects document preparation, not program value.";
 
 const HIGH_COST_PATTERN =
-  /\b(?:audited? financial (?:statement|statements|report|reports)|financial (?:statement|statements|report|reports) audit|appraisal|environmental (?:assessment|review|report|study)|phase (?:i|ii|1|2) environmental|architect(?:ural|ure)? (?:plan|plans|drawing|drawings|services)|engineering (?:plan|plans|drawing|drawings|report|reports|services)|legal opinion|opinion of counsel)\b/i;
+  /\b(?:audited? financial (?:statement|statements|report|reports)|financial (?:statement|statements|report|reports) audit|appraisal|environmental (?:assessment|review|report|study)|phase (?:i|ii|1|2) environmental|architect(?:ural|ure)? (?:plan|plans|drawing|drawings|services)|engineering (?:plan|plans|drawing|drawings|report|reports|services)|legal opinion|opinion of counsel|(?:detailed|full) pro formas?|market stud(?:y|ies)|energy (?:audits?|models?)|viability (?:analysis|analyses)|but-for (?:analysis|analyses)|professional (?:site|building) (?:plan|plans))\b/i;
 
 const MEDIUM_COST_PATTERN =
   /\b(?:permit|permits|certificate|certificates|good standing|contractor (?:bid|bids|estimate|estimates|quote|quotes)|tax clearance|insurance (?:certificate|certification)|property survey|boundary survey|land survey|survey report|filing fee|filing fees)\b/i;
@@ -32,6 +32,7 @@ const LOW_COST_PATTERN =
 const NO_DOCUMENT_REQUIRED_PATTERNS = [
   /\bno formal documents? (?:(?:is|are) )?required\b/i,
   /\bno documents? (?:(?:is|are) )?required\b/i,
+  /\bno application (?:is )?needed\b.*\bbenefits? (?:are )?automatic(?:ally)? by location\b/i,
   /^\s*(?:none|n\/a|not applicable)\s*(?:required)?\s*[.!]?\s*$/i,
 ] as const;
 

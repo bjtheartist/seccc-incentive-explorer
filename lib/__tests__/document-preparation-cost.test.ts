@@ -14,6 +14,15 @@ describe("classifyDocumentPreparationCost", () => {
     "Architectural plans",
     "Engineering report",
     "Legal opinion",
+    "Detailed pro forma",
+    "Full pro forma",
+    "Market study",
+    "Energy audit",
+    "Energy model",
+    "Viability analysis",
+    "But-for analysis",
+    "Professional site plan",
+    "Professional building plans",
   ])("classifies specialized work as $$$: %s", (requirement) => {
     expect(classifyDocumentPreparationCost(requirement)).toEqual({
       tier: "$$$",
@@ -54,6 +63,13 @@ describe("classifyDocumentPreparationCost", () => {
     });
   });
 
+  it.each(["Project plan", "Project budget", "Operating plan and budget"])(
+    "keeps ordinary planning records at the conservative $ default: %s",
+    (requirement) => {
+      expect(classifyDocumentPreparationCost(requirement).tier).toBe("$");
+    },
+  );
+
   it("publishes a qualitative legend and a preparation-only caveat", () => {
     expect(DOCUMENT_PREPARATION_COST_LEGEND.map((item) => item.tier)).toEqual([
       "$",
@@ -71,6 +87,7 @@ describe("isExplicitNoDocumentRequirement", () => {
     "No formal documents required",
     "No formal document is required.",
     "No documents are required",
+    "No application needed — benefits are automatic by location",
     "None required",
     "N/A",
   ])("recognizes non-requirement guidance: %s", (value) => {
