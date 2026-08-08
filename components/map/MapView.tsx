@@ -152,6 +152,10 @@ import {
 import type { MapDossierSelection } from "@/lib/map-dossier";
 import { compactParcelSpaceFacts } from "@/lib/parcel-space";
 import { PERMIT_PORTAL_LABEL, PERMIT_PORTAL_URL } from "@/lib/permit-match-lines";
+import {
+  parseDrawnAreaVacancyResponse,
+  type VacancyCoverageMetadata,
+} from "@/lib/drawn-area-vacancy";
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -412,6 +416,9 @@ export default function MapView() {
   const drawModeRef = useRef(false);
   const [drawMode, setDrawMode] = useState(false);
   const [polygonResults, setPolygonResults] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [polygonVacancyCoverage, setPolygonVacancyCoverage] =
+    useState<VacancyCoverageMetadata | null>(null);
+  const [polygonVacancyLoadFailed, setPolygonVacancyLoadFailed] = useState(false);
   // The drawn shape itself, kept alongside its vacancy results so MapPolygonPanel
   // can run the admin community-investment point-in-polygon analysis against the
   // same geometry the /api/vacant query used.
@@ -2307,6 +2314,8 @@ export default function MapView() {
           setPolygonPanelOpen(true);
           setSnapshotOpen(false);
           setPolygonResults(EMPTY_FC);
+          setPolygonVacancyCoverage(null);
+          setPolygonVacancyLoadFailed(false);
           drawModeRef.current = false;
           setDrawMode(false);
           // Hand the shape to the panel too — the admin community-investment
@@ -2318,12 +2327,12 @@ export default function MapView() {
               if (!res.ok) throw new Error(`HTTP ${res.status}`);
               return res.json();
             })
-            .then((data: GeoJSON.FeatureCollection) => {
-              setPolygonResults(
-                data?.type === "FeatureCollection" && Array.isArray(data.features)
-                  ? data
-                  : EMPTY_FC,
-              );
+            .then((data: unknown) => {
+              const parsed = parseDrawnAreaVacancyResponse(data);
+              if (!parsed) throw new Error("Malformed vacancy response");
+              setPolygonResults(parsed);
+              setPolygonVacancyCoverage(parsed.meta);
+              setPolygonVacancyLoadFailed(false);
               setPolygonLoading(false);
               drawModeRef.current = false;
               setDrawMode(false);
@@ -2332,6 +2341,8 @@ export default function MapView() {
               // Permit analysis is an independent source. Keep the area panel
               // available even when the vacancy lookup fails.
               setPolygonResults(EMPTY_FC);
+              setPolygonVacancyCoverage(null);
+              setPolygonVacancyLoadFailed(true);
               setPolygonLoading(false);
               drawModeRef.current = false;
               setDrawMode(false);
@@ -2341,6 +2352,8 @@ export default function MapView() {
 
       map.on("draw.delete", () => {
         setPolygonResults(null);
+        setPolygonVacancyCoverage(null);
+        setPolygonVacancyLoadFailed(false);
         setPolygonGeometry(null);
         setPolygonPanelOpen(false);
       });
@@ -3783,6 +3796,8 @@ export default function MapView() {
         closeDossier();
         draw.deleteAll();
         setPolygonResults(null);
+        setPolygonVacancyCoverage(null);
+        setPolygonVacancyLoadFailed(false);
         setPolygonGeometry(null);
         setPolygonPanelOpen(false);
         setSnapshotOpen(false);
@@ -3997,6 +4012,8 @@ export default function MapView() {
             if (!draw) return;
             draw.deleteAll();
             setPolygonResults(null);
+            setPolygonVacancyCoverage(null);
+            setPolygonVacancyLoadFailed(false);
             setPolygonGeometry(null);
             setPolygonPanelOpen(false);
             setSnapshotOpen(false);
@@ -4013,12 +4030,16 @@ export default function MapView() {
         <MapPolygonPanel
           results={polygonResults}
           loading={polygonLoading}
+          vacancyCoverage={polygonVacancyCoverage}
+          vacancyLoadFailed={polygonVacancyLoadFailed}
           polygon={polygonGeometry}
           adminSessionActive={adminSessionActive}
           onClose={() => setPolygonPanelOpen(false)}
           onClear={() => {
             drawRef.current?.deleteAll();
             setPolygonResults(null);
+            setPolygonVacancyCoverage(null);
+            setPolygonVacancyLoadFailed(false);
             setPolygonGeometry(null);
             setPolygonPanelOpen(false);
             drawModeRef.current = false;
@@ -4074,6 +4095,8 @@ export default function MapView() {
             } else {
               draw.deleteAll();
               setPolygonResults(null);
+              setPolygonVacancyCoverage(null);
+              setPolygonVacancyLoadFailed(false);
               setPolygonGeometry(null);
               setPolygonPanelOpen(false);
               draw.changeMode("draw_polygon");

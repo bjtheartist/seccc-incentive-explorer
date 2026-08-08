@@ -35,11 +35,17 @@ import {
 import {
   fetchPermitArea,
   formatPermitAreaDate,
+  formatPermitAreaCoverageLabel,
   PERMIT_AREA_ACTIVITY_NOTE,
   PERMIT_AREA_COVERAGE_NOTE,
   PERMIT_AREA_HEADING,
   type PermitAreaResult,
 } from "@/lib/permit-area";
+import {
+  VACANCY_LOOKUP_UNAVAILABLE_NOTE,
+  vacancyCoverageDisclosure,
+  type VacancyCoverageMetadata,
+} from "@/lib/drawn-area-vacancy";
 
 /** Vacancy follow-up resources */
 const RESOURCES = [
@@ -101,6 +107,10 @@ export function __resetPolygonInvestmentCache(): void {
 interface MapPolygonPanelProps {
   results: GeoJSON.FeatureCollection;
   loading: boolean;
+  /** Coverage contract returned by /api/vacant for this exact shape. */
+  vacancyCoverage?: VacancyCoverageMetadata | null;
+  /** HTTP or malformed-response failure; never interpret the empty collection as zero. */
+  vacancyLoadFailed?: boolean;
   onClose: () => void;
   onClear: () => void;
   /**
@@ -141,6 +151,8 @@ function permitPolygonFromArea(area: DrawnAreaInput): GeoJSON.Polygon | null {
 export default function MapPolygonPanel({
   results,
   loading,
+  vacancyCoverage = null,
+  vacancyLoadFailed = false,
   onClose,
   onClear,
   polygon = null,
@@ -154,6 +166,13 @@ export default function MapPolygonPanel({
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const features = results.features;
+  const vacancyCoverageNote = vacancyLoadFailed
+    ? VACANCY_LOOKUP_UNAVAILABLE_NOTE
+    : vacancyCoverageDisclosure(vacancyCoverage);
+  const vacancyCoverageIncomplete =
+    vacancyLoadFailed ||
+    vacancyCoverage?.coverageStatus === "partial" ||
+    vacancyCoverage?.coverageStatus === "truncated";
 
   /* Public, source-backed permit analysis for this exact drawn polygon. */
   const permitPolygon = useMemo(() => permitPolygonFromArea(polygon), [polygon]);
@@ -163,40 +182,45 @@ export default function MapPolygonPanel({
   );
   const [permitLookup, setPermitLookup] = useState<{
     key: string;
+    status: "loading" | "ready" | "failed";
     result: PermitAreaResult | null;
-    failed: boolean;
   } | null>(null);
-  const permitRequestKeyRef = useRef<string | null>(null);
+  const [permitRetryNonce, setPermitRetryNonce] = useState(0);
+  const currentPermitLookup =
+    permitLookup?.key === permitRequestKey ? permitLookup : null;
   const fetchedPermitArea =
-    permitLookup?.key === permitRequestKey ? permitLookup.result : null;
-  const permitLoadFailed =
-    permitLookup?.key === permitRequestKey && permitLookup.failed;
+    currentPermitLookup?.status === "ready" ? currentPermitLookup.result : null;
+  const permitLoadFailed = currentPermitLookup?.status === "failed";
   const permitAnalysis = permitArea ?? fetchedPermitArea;
 
   useEffect(() => {
     if (!permitPolygon || !permitRequestKey || permitArea) return;
-    if (permitRequestKeyRef.current === permitRequestKey) return;
-    permitRequestKeyRef.current = permitRequestKey;
-    let cancelled = false;
+    const controller = new AbortController();
 
-    fetchPermitArea(permitPolygon, permitFetchImpl)
+    fetchPermitArea(permitPolygon, {
+      fetchImpl: permitFetchImpl,
+      signal: controller.signal,
+    })
       .then((result) => {
-        if (!cancelled) {
-          setPermitLookup({ key: permitRequestKey, result, failed: false });
+        if (!controller.signal.aborted) {
+          setPermitLookup({ key: permitRequestKey, status: "ready", result });
         }
       })
       .catch(() => {
-        if (!cancelled) {
-          setPermitLookup({ key: permitRequestKey, result: null, failed: true });
+        if (!controller.signal.aborted) {
+          setPermitLookup({ key: permitRequestKey, status: "failed", result: null });
         }
       });
 
     return () => {
-      cancelled = true;
+      controller.abort();
     };
-  }, [permitArea, permitFetchImpl, permitPolygon, permitRequestKey]);
+  }, [permitArea, permitFetchImpl, permitPolygon, permitRequestKey, permitRetryNonce]);
 
-  const permitPending = !!permitPolygon && !permitAnalysis && !permitLoadFailed;
+  const permitPending =
+    !!permitPolygon &&
+    !permitAnalysis &&
+    currentPermitLookup?.status !== "failed";
   const permitExportAvailable = (permitAnalysis?.totalFilings ?? 0) > 0;
   const recentPermitYears = useMemo(
     () => (permitAnalysis?.yearBreakdown ?? []).slice(0, 6).reverse(),
@@ -341,7 +365,9 @@ export default function MapPolygonPanel({
     if (features.length === 0) return "";
     const parts: string[] = [];
     parts.push(
-      `This area contains ${features.length} vacant ${features.length === 1 ? "property" : "properties"}`
+      vacancyCoverageIncomplete
+        ? `The vacancy lookup returned ${features.length} tracked vacant ${features.length === 1 ? "property" : "properties"}`
+        : `This area contains ${features.length} vacant ${features.length === 1 ? "property" : "properties"}`
     );
     if (topCommunityArea) {
       parts[0] += ` in ${topCommunityArea}`;
@@ -370,20 +396,31 @@ export default function MapPolygonPanel({
     }
 
     return parts.join(" ");
-  }, [features, topCommunityArea, vacantLandCount, vacantBuildingCount, zoneCounts, ownerCounts]);
+  }, [
+    features,
+    topCommunityArea,
+    vacantLandCount,
+    vacantBuildingCount,
+    vacancyCoverageIncomplete,
+    zoneCounts,
+    ownerCounts,
+  ]);
 
   const areaReport = useMemo<GeneratedReport>(() => {
     const reportAreaName = topCommunityArea || "Drawn Area";
+    const permitCoverageLabel = permitAnalysis
+      ? formatPermitAreaCoverageLabel(permitAnalysis)
+      : null;
     const zoneItems = zoneCounts.map(({ key, count }) => ({
       label: ZONE_LABELS[key] || key,
       value: `${count} propert${count === 1 ? "y" : "ies"}`,
-      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of properties in the drawn area fall within this zone.`,
+      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of ${vacancyCoverageIncomplete ? "returned vacancy records" : "properties in the drawn area"} fall within this zone.`,
     }));
 
     const ownerItems = ownerCounts.map(({ key, count }) => ({
       label: OWNER_TYPE_LABELS[key] || key,
       value: `${count} propert${count === 1 ? "y" : "ies"}`,
-      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of the drawn area vacancy set.`,
+      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of the ${vacancyCoverageIncomplete ? "returned" : "drawn area"} vacancy set.`,
     }));
 
     const propertyItems = features.slice(0, 20).map((feature) => {
@@ -403,12 +440,15 @@ export default function MapPolygonPanel({
     }));
 
     const summaryParts = [
-      narrative ||
-        `No tracked vacant properties were returned inside ${reportAreaName}.`,
+      vacancyLoadFailed
+        ? VACANCY_LOOKUP_UNAVAILABLE_NOTE
+        : narrative ||
+          vacancyCoverageNote ||
+          `No tracked vacant properties were returned inside ${reportAreaName}.`,
     ];
     if (permitAnalysis) {
       summaryParts.push(
-        `${permitAnalysis.totalFilings} geocoded permit filing${permitAnalysis.totalFilings === 1 ? "" : "s"} fall inside the area in the ${permitAnalysis.dataWindow} data window.`,
+        `${permitAnalysis.totalFilings} geocoded permit filing${permitAnalysis.totalFilings === 1 ? "" : "s"} fall inside the area. ${permitCoverageLabel}.`,
       );
     }
 
@@ -423,9 +463,33 @@ export default function MapPolygonPanel({
           title: "Area Snapshot",
           description: "Source-backed vacancy and permit context inside the drawn area.",
           items: [
-            { label: "Total Properties", value: String(features.length) },
-            { label: "Vacant Land", value: String(vacantLandCount) },
-            { label: "Vacant Buildings", value: String(vacantBuildingCount) },
+            ...(vacancyLoadFailed
+              ? [
+                  {
+                    label: "Vacancy Lookup",
+                    value: "Unavailable",
+                    detail: VACANCY_LOOKUP_UNAVAILABLE_NOTE,
+                  },
+                ]
+              : [
+                  {
+                    label: vacancyCoverageIncomplete
+                      ? "Vacancy Records Returned"
+                      : "Total Properties",
+                    value: String(features.length),
+                    detail: vacancyCoverageNote ?? undefined,
+                  },
+                  {
+                    label: vacancyCoverageIncomplete ? "Returned Vacant Land" : "Vacant Land",
+                    value: String(vacantLandCount),
+                  },
+                  {
+                    label: vacancyCoverageIncomplete
+                      ? "Returned Vacant Buildings"
+                      : "Vacant Buildings",
+                    value: String(vacantBuildingCount),
+                  },
+                ]),
             { label: "Community Area", value: topCommunityArea || "Drawn area" },
             ...(permitAnalysis
               ? [
@@ -442,7 +506,9 @@ export default function MapPolygonPanel({
           ? [
               {
                 title: "Incentive Zones in Area",
-                description: "Zone coverage among properties inside the drawn area.",
+                description: vacancyCoverageIncomplete
+                  ? "Zone coverage among returned vacancy records inside the drawn area."
+                  : "Zone coverage among properties inside the drawn area.",
                 items: zoneItems,
               },
             ]
@@ -451,7 +517,9 @@ export default function MapPolygonPanel({
           ? [
               {
                 title: "Ownership Breakdown",
-                description: "Ownership classification among vacancy records.",
+                description: vacancyCoverageIncomplete
+                  ? "Ownership classification among returned vacancy records."
+                  : "Ownership classification among vacancy records.",
                 items: ownerItems,
               },
             ]
@@ -463,7 +531,9 @@ export default function MapPolygonPanel({
                 description:
                   propertyItems.length < features.length
                     ? `Showing the first ${propertyItems.length} of ${features.length} properties. Export CSV for the full list.`
-                    : "Properties inside the drawn area.",
+                    : vacancyCoverageIncomplete
+                      ? "Vacancy records returned inside the drawn area."
+                      : "Properties inside the drawn area.",
                 items: propertyItems,
               },
             ]
@@ -481,6 +551,10 @@ export default function MapPolygonPanel({
                   {
                     label: "Distinct Recorded Addresses",
                     value: String(permitAnalysis.distinctAddresses),
+                  },
+                  {
+                    label: "Source Coverage",
+                    value: permitCoverageLabel ?? permitAnalysis.dataWindow,
                   },
                   {
                     label: "Latest Filing in Area Data",
@@ -532,7 +606,9 @@ export default function MapPolygonPanel({
         {
           id: "chicago-open-data",
           label: "City of Chicago Open Data",
-          description: "Vacant property and public boundary data.",
+          description: vacancyCoverageNote
+            ? `Vacant property and public boundary data. ${vacancyCoverageNote}`
+            : "Vacant property and public boundary data.",
           url: "https://data.cityofchicago.org/",
         },
         {
@@ -546,7 +622,7 @@ export default function MapPolygonPanel({
               {
                 id: "chicago-building-permits",
                 label: permitAnalysis.source.label,
-                description: `${PERMIT_AREA_ACTIVITY_NOTE} Located records only.`,
+                description: `${PERMIT_AREA_ACTIVITY_NOTE} Located records only. ${permitCoverageLabel}.`,
                 url: permitAnalysis.source.url,
               },
             ]
@@ -561,6 +637,9 @@ export default function MapPolygonPanel({
     topCommunityArea,
     vacantBuildingCount,
     vacantLandCount,
+    vacancyCoverageIncomplete,
+    vacancyCoverageNote,
+    vacancyLoadFailed,
     zoneCounts,
   ]);
 
@@ -603,6 +682,8 @@ export default function MapPolygonPanel({
     const csv = buildDrawnAreaCsv({
       areaName,
       vacancyFeatures: features,
+      vacancyCoverage,
+      vacancyLoadFailed,
       permitArea: permitAnalysis,
       investment:
         investmentSummary && investmentSelection
@@ -618,7 +699,15 @@ export default function MapPolygonPanel({
     a.download = `area-report-${drawnAreaFilenameSlug(areaName)}-${date}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [areaName, features, investmentSelection, investmentSummary, permitAnalysis]);
+  }, [
+    areaName,
+    features,
+    investmentSelection,
+    investmentSummary,
+    permitAnalysis,
+    vacancyCoverage,
+    vacancyLoadFailed,
+  ]);
 
   /** Build report link for a property using its coordinates */
   const buildReportLink = (f: GeoJSON.Feature) => {
@@ -714,10 +803,33 @@ export default function MapPolygonPanel({
           {/* ── Empty state ── */}
           {features.length === 0 && (
             <div className="px-5 py-10 text-center bg-white">
-              <div className="font-editorial text-[18px] text-[#0C1B33]/30 mb-2">No tracked vacant properties found</div>
-              <div className="text-[11px] text-[#0C1B33]/40">
-                Permit or investment records may still appear below for this area.
+              <div className="font-editorial text-[18px] text-[#0C1B33]/45 mb-2">
+                {vacancyLoadFailed
+                  ? "Vacancy records unavailable"
+                  : vacancyCoverageIncomplete
+                    ? "Partial vacancy records"
+                    : "No tracked vacant properties found"}
               </div>
+              <div className="text-[11px] text-[#0C1B33]/40">
+                {vacancyCoverageNote ??
+                  "Permit or investment records may still appear below for this area."}
+              </div>
+              {vacancyCoverageNote && (
+                <div className="text-[10px] text-[#0C1B33]/35 mt-2">
+                  Permit or investment records may still appear below for this area.
+                </div>
+              )}
+            </div>
+          )}
+
+          {features.length > 0 && vacancyCoverageNote && (
+            <div className="px-5 py-3 bg-[#FFF7ED] border-b border-[#9A3412]/10">
+              <div className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#9A3412]/65 mb-1">
+                Vacancy coverage
+              </div>
+              <p className="text-[10px] text-[#0C1B33]/55 leading-relaxed">
+                {vacancyCoverageNote}
+              </p>
             </div>
           )}
 
@@ -741,9 +853,18 @@ export default function MapPolygonPanel({
               </div>
               <div className="grid grid-cols-3 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
                 {[
-                  { label: "Total", value: features.length },
-                  { label: "Vacant Land", value: vacantLandCount },
-                  { label: "Buildings", value: vacantBuildingCount },
+                  {
+                    label: vacancyCoverageIncomplete ? "Returned" : "Total",
+                    value: features.length,
+                  },
+                  {
+                    label: vacancyCoverageIncomplete ? "Land returned" : "Vacant Land",
+                    value: vacantLandCount,
+                  },
+                  {
+                    label: vacancyCoverageIncomplete ? "Buildings returned" : "Buildings",
+                    value: vacantBuildingCount,
+                  },
                 ].map((stat) => (
                   <div key={stat.label} className="bg-[#FAF9F6] px-3 py-3 text-center">
                     <div className="font-editorial text-[22px] leading-none text-[#0C1B33]">
@@ -773,7 +894,9 @@ export default function MapPolygonPanel({
                   Incentive Zones in Area
                 </div>
                 <div className="text-[9px] text-[#0C1B33]/35 mb-2">
-                  Properties covered by each zone
+                  {vacancyCoverageIncomplete
+                    ? "Returned vacancy records covered by each zone"
+                    : "Properties covered by each zone"}
                 </div>
                 <div className="space-y-1.5">
                   {zoneCounts.map(({ key, count }) => {
@@ -882,6 +1005,21 @@ export default function MapPolygonPanel({
                       Permit filings could not be checked right now. This is a lookup failure,
                       not evidence that the area has no permits.
                     </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!permitRequestKey) return;
+                        setPermitLookup({
+                          key: permitRequestKey,
+                          status: "loading",
+                          result: null,
+                        });
+                        setPermitRetryNonce((value) => value + 1);
+                      }}
+                      className="mt-2 font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#2563EB] hover:text-[#1D4ED8]"
+                    >
+                      Retry permit lookup
+                    </button>
                   </div>
                 )}
 
@@ -893,6 +1031,9 @@ export default function MapPolygonPanel({
                     <p className="text-[8px] text-[#0C1B33]/35 leading-snug mt-1 mb-3">
                       {PERMIT_AREA_COVERAGE_NOTE}
                     </p>
+                    <div className="font-mono-bureau text-[8px] tracking-[0.08em] uppercase text-[#0C1B33]/45 mb-3">
+                      {formatPermitAreaCoverageLabel(permitAnalysis)}
+                    </div>
 
                     {permitAnalysis.totalFilings === 0 ? (
                       <p className="text-[11px] text-[#0C1B33]/45 leading-relaxed">

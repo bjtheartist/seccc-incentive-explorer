@@ -71,6 +71,7 @@ describe("GET /api/permit-area", () => {
         distinct_addresses: "2",
         first_issue_date: "2024-01-10",
         latest_issue_date: "2026-08-04",
+        source_as_of: "2026-08-04T18:22:00.000Z",
         type_breakdown: [
           { permit_type: "PERMIT - NEW CONSTRUCTION", filing_count: 2 },
           { permit_type: "SOURCE-SPECIFIC TYPE", filing_count: 1 },
@@ -107,6 +108,11 @@ describe("GET /api/permit-area", () => {
     expect(body.totalFilings).toBe(3);
     expect(body.distinctAddresses).toBe(2);
     expect(body.issueDateSpan).toEqual({ first: "2024-01-10", latest: "2026-08-04" });
+    expect(body.dataWindow).toBe("Since 2015");
+    expect(body.sourceRefresh).toEqual({
+      asOf: "2026-08-04T18:22:00.000Z",
+      asOfBasis: "latest_queried_row_fetched_at",
+    });
     expect(body.typeBreakdown).toEqual([
       {
         key: "new_construction",
@@ -132,6 +138,7 @@ describe("GET /api/permit-area", () => {
     expect(query).toContain("ST_Intersects");
     expect(query).toContain("geom IS NOT NULL");
     expect(query).toContain("COUNT(*)::int");
+    expect(query).toContain("MAX(fetched_at)::text");
     expect(query).not.toContain("reported_cost");
     expect(query.toLowerCase()).not.toContain("sum(");
     expect(values).toContain("2015-01-01");
@@ -145,6 +152,7 @@ describe("GET /api/permit-area", () => {
         distinct_addresses: 0,
         first_issue_date: null,
         latest_issue_date: null,
+        source_as_of: null,
         type_breakdown: [],
         year_breakdown: [],
         status_breakdown: [],
@@ -157,6 +165,7 @@ describe("GET /api/permit-area", () => {
     expect(response.status).toBe(200);
     expect(body.totalFilings).toBe(0);
     expect(body.issueDateSpan).toBeNull();
+    expect(body.sourceRefresh).toEqual({ asOf: null, asOfBasis: null });
     expect(body.recordsTruncated).toBe(false);
   });
 
@@ -167,4 +176,3 @@ describe("GET /api/permit-area", () => {
     expect(await response.json()).toEqual({ error: "permit area analysis unavailable" });
   });
 });
-

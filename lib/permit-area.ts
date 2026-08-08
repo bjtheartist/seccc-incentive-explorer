@@ -8,13 +8,14 @@ export const PERMIT_AREA_SOURCE_URL =
   "https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu/about_data";
 export const PERMIT_AREA_PORTAL_URL =
   "https://webapps1.chicago.gov/buildingrecords/";
-export const PERMIT_AREA_DATA_WINDOW_LABEL = `${PERMIT_SINCE_DATE.slice(0, 4)}-present`;
+export const PERMIT_AREA_DATA_WINDOW_LABEL = `Since ${PERMIT_SINCE_DATE.slice(0, 4)}`;
 export const PERMIT_AREA_RECORD_LIMIT = 250;
+export const PERMIT_AREA_REQUEST_TIMEOUT_MS = 15_000;
 
 export const PERMIT_AREA_ACTIVITY_NOTE =
   "Permit records show filing activity, not that construction started or finished.";
 export const PERMIT_AREA_COVERAGE_NOTE =
-  `Drawn-area results include geocoded City building-permit filings issued ${PERMIT_AREA_DATA_WINDOW_LABEL}. ` +
+  `Drawn-area results include geocoded City building-permit filings issued since ${PERMIT_SINCE_DATE.slice(0, 4)}. ` +
   "Records without a map location cannot be assigned to the shape.";
 
 export interface PermitAreaTypeCount {
@@ -56,6 +57,10 @@ export interface PermitAreaResult {
     portalUrl: string;
   };
   dataWindow: string;
+  sourceRefresh: {
+    asOf: string | null;
+    asOfBasis: "latest_queried_row_fetched_at" | null;
+  };
   locatedRecordsOnly: true;
   totalFilings: number;
   distinctAddresses: number;
@@ -71,6 +76,12 @@ export interface PermitAreaResult {
   recordsTruncated: boolean;
 }
 
+export interface PermitAreaFetchOptions {
+  fetchImpl?: typeof fetch;
+  signal?: AbortSignal;
+  timeoutMs?: number;
+}
+
 export function permitAreaRequestPath(polygon: GeoJSON.Polygon): string {
   const params = new URLSearchParams({ polygon: JSON.stringify(polygon) });
   return `/api/permit-area?${params.toString()}`;
@@ -78,18 +89,46 @@ export function permitAreaRequestPath(polygon: GeoJSON.Polygon): string {
 
 export async function fetchPermitArea(
   polygon: GeoJSON.Polygon,
-  fetchImpl: typeof fetch = fetch,
+  options: PermitAreaFetchOptions = {},
 ): Promise<PermitAreaResult> {
-  const response = await fetchImpl(permitAreaRequestPath(polygon));
-  if (!response.ok) {
-    throw new Error(`Permit area request failed with HTTP ${response.status}`);
+  const fetchImpl = options.fetchImpl ?? fetch;
+  const controller = new AbortController();
+  const relayAbort = () => controller.abort(options.signal?.reason);
+  if (options.signal?.aborted) {
+    relayAbort();
+  } else {
+    options.signal?.addEventListener("abort", relayAbort, { once: true });
   }
+  const timeoutId = setTimeout(
+    () => controller.abort(new DOMException("Permit area request timed out", "TimeoutError")),
+    options.timeoutMs ?? PERMIT_AREA_REQUEST_TIMEOUT_MS,
+  );
 
-  const body = (await response.json()) as Partial<PermitAreaResult>;
-  if (body.status !== "ready") {
-    throw new Error("Permit area response was not ready");
+  try {
+    const response = await fetchImpl(permitAreaRequestPath(polygon), {
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      throw new Error(`Permit area request failed with HTTP ${response.status}`);
+    }
+
+    const body = (await response.json()) as Partial<PermitAreaResult>;
+    if (
+      body.status !== "ready" ||
+      !body.sourceRefresh ||
+      !(body.sourceRefresh.asOf === null || typeof body.sourceRefresh.asOf === "string") ||
+      !(
+        body.sourceRefresh.asOfBasis === null ||
+        body.sourceRefresh.asOfBasis === "latest_queried_row_fetched_at"
+      )
+    ) {
+      throw new Error("Permit area response was not ready");
+    }
+    return body as PermitAreaResult;
+  } finally {
+    clearTimeout(timeoutId);
+    options.signal?.removeEventListener("abort", relayAbort);
   }
-  return body as PermitAreaResult;
 }
 
 export function formatPermitAreaDate(value: string | null): string {
@@ -104,3 +143,11 @@ export function formatPermitAreaDate(value: string | null): string {
   });
 }
 
+export function formatPermitAreaCoverageLabel(
+  permitArea: Pick<PermitAreaResult, "dataWindow" | "sourceRefresh">,
+): string {
+  const refreshedAt = permitArea.sourceRefresh.asOf;
+  return refreshedAt
+    ? `${permitArea.dataWindow}; database updated ${formatPermitAreaDate(refreshedAt)}`
+    : `${permitArea.dataWindow}; database update date unavailable`;
+}
