@@ -171,8 +171,8 @@ function HeroIntentCards({ onCheckAddress, programCount }: { onCheckAddress: () 
         <IntentCardFace
           kicker="03"
           icon={ClipboardList}
-          title="Take the Eligibility Survey"
-          subtitle={`Four questions to match ${programCount} programs`}
+          title="Answer Program Fit Questions"
+          subtitle={`Four questions to organize ${programCount} programs worth reviewing`}
         />
       </Link>
     </div>

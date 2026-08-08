@@ -236,8 +236,8 @@ function AddressEntry() {
         />
         <p className="text-[12.5px] leading-relaxed text-[#0C1B33]/55">
           A quick check reports mapped coverage and public measurements only. For
-          the program layer — what a site may actually qualify for, and how the
-          programs stack —{" "}
+          a program-by-program review and guidance on how published rules may
+          interact, {" "}
           <Link
             href="/report"
             className="text-[#2563EB] underline-offset-2 hover:underline"
@@ -380,8 +380,8 @@ function QuickCheckResults({
 
           <div className="mt-5 flex flex-col gap-2.5 border-t border-[#0C1B33]/10 pt-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
             <p className="text-[13px] leading-snug text-[#0C1B33]/65">
-              Programs, stacking, and what this site may qualify for live in the
-              full report.
+              Program details, published interactions, and requirements to verify
+              are in the full report.
             </p>
             <Link
               href={reportHref}

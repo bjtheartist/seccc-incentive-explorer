@@ -393,7 +393,9 @@ function normalizePublicDeterminationText(value: string): string {
     )
     .replace(/appears eligible(?: \(based on location\))?/gi, "Included for review")
     .replace(/(?:high|medium|low) match/gi, "Program review")
-    .replace(/you may qualify|you qualify|may qualify/gi, "Review the published requirements")
+    .replace(/(?:this\s+)?(?:site|property|business|project|address|neighborhood)\s+may qualify for/gi, "This location requires review for")
+    .replace(/you may qualify|you qualify/gi, "Review the published requirements")
+    .replace(/\bmay qualify for\b/gi, "may require review for")
     .replace(/(?:this\s+)?(?:site|property|business|project|address)\s+(?:is\s+)?potentially eligible for/gi, "This location is recorded for review of")
     .replace(/(?:this\s+)?(?:site|property|business|project|address)\s+qualifies for/gi, "This location is recorded for review of")
     .replace(/(?:this\s+)?(?:site|property|business|project|address)\s+may be eligible for/gi, "This location requires review for")
@@ -1331,8 +1333,8 @@ function buildNeighborhoodEconomicContextSection(
     });
     if (marketContext.qualificationNarrative && (marketContext.isQCT || marketContext.isLMI)) {
       items.push({
-        label: "Neighborhood Qualification",
-        value: marketContext.isQCT ? "Modeled / needs verification: likely QCT income range" : "Modeled / needs verification: likely LMI range",
+        label: "Neighborhood Program Context",
+        value: marketContext.isQCT ? "Modeled screening context / needs verification: QCT income range" : "Modeled screening context / needs verification: LMI range",
         detail: marketContext.qualificationNarrative,
         sourceLabel: "ACS income vs. modeled HUD thresholds — verify on the official HUD QCT list",
       });

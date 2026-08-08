@@ -38,7 +38,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What is the EDGE Tax Credit?",
-    a: "The Economic Development for a Growing Economy (EDGE) program provides negotiated income tax credits to businesses that create or retain jobs in Illinois. Some designated areas may qualify for enhanced consideration, but terms are project-specific.",
+    a: "The Economic Development for a Growing Economy (EDGE) program provides negotiated income tax credits to businesses that create or retain jobs in Illinois. Published criteria provide enhanced consideration for some designated areas, but terms are project-specific.",
   },
   {
     q: "What are REV and MICRO zones?",
