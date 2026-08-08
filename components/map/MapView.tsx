@@ -409,6 +409,7 @@ export default function MapView() {
 
   // Polygon draw tool
   const drawRef = useRef<MapboxDraw | null>(null);
+  const drawModeRef = useRef(false);
   const [drawMode, setDrawMode] = useState(false);
   const [polygonResults, setPolygonResults] = useState<GeoJSON.FeatureCollection | null>(null);
   // The drawn shape itself, kept alongside its vacancy results so MapPolygonPanel
@@ -888,6 +889,11 @@ export default function MapView() {
        that opens the snapshot. Draw only suppresses the browser's compat
        events, not Mapbox's event bus, so the touch map events still arrive. */
     const openSnapshotAt = (point: mapboxgl.Point, lngLat: mapboxgl.LngLat) => {
+      // Drawing owns map clicks until the polygon is complete. Without this
+      // guard, the ordinary location dossier opens on the first vertex and
+      // blocks the remaining area selection.
+      if (drawModeRef.current) return;
+
       const isMobileView = window.matchMedia("(max-width: 768px)").matches;
 
       // Cluster layers own the click so they can expand. Opening the location
@@ -2300,19 +2306,34 @@ export default function MapView() {
           setPolygonLoading(true);
           setPolygonPanelOpen(true);
           setSnapshotOpen(false);
+          setPolygonResults(EMPTY_FC);
+          drawModeRef.current = false;
+          setDrawMode(false);
           // Hand the shape to the panel too — the admin community-investment
           // analysis runs point-in-polygon client-side against this geometry.
           setPolygonGeometry(geom);
           const polygonJson = JSON.stringify(geom);
           fetch(`/api/vacant?polygon=${encodeURIComponent(polygonJson)}`)
-            .then((res) => res.json())
+            .then((res) => {
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              return res.json();
+            })
             .then((data: GeoJSON.FeatureCollection) => {
-              setPolygonResults(data);
+              setPolygonResults(
+                data?.type === "FeatureCollection" && Array.isArray(data.features)
+                  ? data
+                  : EMPTY_FC,
+              );
               setPolygonLoading(false);
+              drawModeRef.current = false;
               setDrawMode(false);
             })
             .catch(() => {
+              // Permit analysis is an independent source. Keep the area panel
+              // available even when the vacancy lookup fails.
+              setPolygonResults(EMPTY_FC);
               setPolygonLoading(false);
+              drawModeRef.current = false;
               setDrawMode(false);
             });
         }
@@ -3766,6 +3787,7 @@ export default function MapView() {
         setPolygonPanelOpen(false);
         setSnapshotOpen(false);
         draw.changeMode("draw_polygon");
+        drawModeRef.current = true;
         setDrawMode(true);
       }}
     />
@@ -3979,6 +4001,7 @@ export default function MapView() {
             setPolygonPanelOpen(false);
             setSnapshotOpen(false);
             draw.changeMode("draw_polygon");
+            drawModeRef.current = true;
             setDrawMode(true);
           }}
         />
@@ -3998,6 +4021,7 @@ export default function MapView() {
             setPolygonResults(null);
             setPolygonGeometry(null);
             setPolygonPanelOpen(false);
+            drawModeRef.current = false;
             setDrawMode(false);
           }}
         />
@@ -4028,7 +4052,7 @@ export default function MapView() {
       {drawMode && loaded && (
         <div className="absolute top-28 md:top-12 left-1/2 -translate-x-1/2 z-20 bg-[#2563EB] text-white px-4 py-2 rounded-b shadow-md text-center">
           <div className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase">
-            Click to place points — double-click to finish
+            Click to place points — click the first point to finish
           </div>
           <div className="text-[9px] opacity-70 mt-0.5">
             Draw a shape around the area you want to analyze
@@ -4045,6 +4069,7 @@ export default function MapView() {
             if (!draw || !map) return;
             if (drawMode) {
               draw.changeMode("simple_select");
+              drawModeRef.current = false;
               setDrawMode(false);
             } else {
               draw.deleteAll();
@@ -4052,6 +4077,7 @@ export default function MapView() {
               setPolygonGeometry(null);
               setPolygonPanelOpen(false);
               draw.changeMode("draw_polygon");
+              drawModeRef.current = true;
               setDrawMode(true);
               setSnapshotOpen(false);
             }
