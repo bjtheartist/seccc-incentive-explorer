@@ -28,6 +28,7 @@ type AggregateRow = {
   distinct_addresses: unknown;
   first_issue_date: unknown;
   latest_issue_date: unknown;
+  source_as_of: unknown;
   type_breakdown: unknown;
   year_breakdown: unknown;
   status_breakdown: unknown;
@@ -217,7 +218,8 @@ export async function GET(request: NextRequest) {
           permit_status,
           permit_milestone,
           work_type,
-          work_description
+          work_description,
+          fetched_at
         FROM building_permits
         WHERE geom IS NOT NULL
           AND issue_date >= ${PERMIT_SINCE_DATE}::date
@@ -267,6 +269,7 @@ export async function GET(request: NextRequest) {
         ) AS distinct_addresses,
         (SELECT MIN(issue_date)::text FROM scoped) AS first_issue_date,
         (SELECT MAX(issue_date)::text FROM scoped) AS latest_issue_date,
+        (SELECT MAX(fetched_at)::text FROM scoped) AS source_as_of,
         COALESCE(
           (
             SELECT jsonb_agg(
@@ -329,6 +332,7 @@ export async function GET(request: NextRequest) {
     const records = mapRecentFilings(row.recent_filings);
     const firstIssueDate = textOrNull(row.first_issue_date);
     const latestIssueDate = textOrNull(row.latest_issue_date);
+    const sourceAsOf = textOrNull(row.source_as_of);
 
     const result: PermitAreaResult = {
       status: "ready",
@@ -338,6 +342,10 @@ export async function GET(request: NextRequest) {
         portalUrl: PERMIT_AREA_PORTAL_URL,
       },
       dataWindow: PERMIT_AREA_DATA_WINDOW_LABEL,
+      sourceRefresh: {
+        asOf: sourceAsOf,
+        asOfBasis: sourceAsOf ? "latest_queried_row_fetched_at" : null,
+      },
       locatedRecordsOnly: true,
       totalFilings,
       distinctAddresses: integer(row.distinct_addresses),

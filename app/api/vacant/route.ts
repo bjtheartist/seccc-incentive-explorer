@@ -3,6 +3,9 @@ import * as turf from "@turf/turf";
 import { createHash } from "crypto";
 import { getSQL } from "@/lib/db";
 import { cached, roundCoord } from "@/lib/redis";
+import type {
+  VacancyFeatureCollection,
+} from "@/lib/drawn-area-vacancy";
 
 /**
  * Viewport-based vacant property API.
@@ -24,26 +27,6 @@ type CommunityAreaBoundary = GeoJSON.Feature<
   GeoJSON.Polygon | GeoJSON.MultiPolygon,
   GeoJSON.GeoJsonProperties
 >;
-
-type VacancyCoverageMetadata = {
-  sourceMode: "database" | "static_fallback";
-  sourcePath: "database:vacant_properties" | "/data/vacant-properties.json";
-  asOf: string | null;
-  asOfBasis:
-    | "latest_queried_row_updated_at"
-    | "static_export_generated_at"
-    | null;
-  returnedCount: number;
-  configuredLimit: number;
-  queryLimit: number | null;
-  coverageStatus: "complete" | "truncated" | "partial";
-  potentiallyTruncated: boolean;
-  fallbackReason: "database_unavailable" | "database_query_failed" | null;
-};
-
-type VacancyFeatureCollection = GeoJSON.FeatureCollection & {
-  meta: VacancyCoverageMetadata;
-};
 
 type VacancyRow = {
   id: unknown;
