@@ -1,0 +1,6 @@
+session_date,case_id,archetype,participant_role,neighborhood_or_zip,facilitator,report_generation,next_step_clarity,support_option_clarity,support_action,request_status,safety_flag,primary_friction,missing_information,follow_up_owner,follow_up_date,notes
+,equipment,Buy equipment,,,,Not observed,Not observed,Not observed,None,Not requested,None,,,,,
+,remodel,Remodel a space,,,,Not observed,Not observed,Not observed,None,Not requested,None,,,,,
+,expansion,Expand or hire,,,,Not observed,Not observed,Not observed,None,Not requested,None,,,,,
+,acquisition,Acquire a property,,,,Not observed,Not observed,Not observed,None,Not requested,None,,,,,
+,multifamily,Multifamily development,,,,Not observed,Not observed,Not observed,None,Not requested,None,,,,,

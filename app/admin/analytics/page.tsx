@@ -11,6 +11,10 @@ import {
   normalizeAnalyticsWindow,
   type AnalyticsDashboardSummary,
 } from "@/lib/analytics-dashboard";
+import {
+  PRACTITIONER_VALIDATION_CASES,
+  practitionerValidationStartPath,
+} from "@/lib/practitioner-validation";
 
 export const dynamic = "force-dynamic";
 
@@ -195,6 +199,109 @@ function DeviceBreakdown({
   );
 }
 
+function ValidationPilotPanel({
+  data,
+}: {
+  data: AnalyticsDashboardSummary["validationPilot"];
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <span className="font-mono-bureau text-[10px] uppercase tracking-[0.18em] text-[#2563EB]">
+            Five-case learning sprint
+          </span>
+          <h2 className="mt-2 font-editorial text-[30px] leading-tight text-[#0C1B33]">
+            Practitioner Validation
+          </h2>
+        </div>
+        <p className="max-w-2xl text-[12px] leading-relaxed text-[#0C1B33]/45">
+          Campaign-tagged product events only. Requests are recorded requests awaiting review and
+          routing, not acknowledgments, completed connections, approvals, or outcomes.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <MetricCard
+          label="Pilot Starts"
+          value={formatNumber(data.totals.starts)}
+          detail="Visits to one of the five facilitated case links. This is an event count, not a participant count."
+        />
+        <MetricCard
+          label="Searches"
+          value={formatNumber(data.totals.searches)}
+          detail="Address or business searches carrying a recognized validation campaign."
+        />
+        <MetricCard
+          label="Reports Generated"
+          value={formatNumber(data.totals.reportsGenerated)}
+          detail="Distinct campaign-tagged report keys generated during pilot sessions."
+        />
+        <MetricCard
+          label="Support Viewed"
+          value={formatNumber(data.totals.supportViews)}
+          detail="Distinct pilot reports where the local-support section was surfaced."
+        />
+        <MetricCard
+          label="Support Actions"
+          value={formatNumber(data.totals.supportActions)}
+          detail="Distinct pilot reports with a support or financing-resource contact action."
+        />
+        <MetricCard
+          label="Requests Recorded"
+          value={formatNumber(data.totals.requestsRecorded)}
+          detail={`${data.totals.introductionRequests} introduction and ${data.totals.materialsReviewRequests} 1:1 review request events recorded.`}
+        />
+      </div>
+
+      <div className="overflow-x-auto border border-[#0C1B33]/10 bg-white p-5">
+        <table className="w-full min-w-[920px] text-left text-[12px]">
+          <thead>
+            <tr className="border-b border-[#0C1B33]/8 font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#0C1B33]/35">
+              <th className="py-2 pr-4">Case</th>
+              <th className="py-2 pr-4">Starts</th>
+              <th className="py-2 pr-4">Searches</th>
+              <th className="py-2 pr-4">Reports</th>
+              <th className="py-2 pr-4">Support viewed</th>
+              <th className="py-2 pr-4">Support actions</th>
+              <th className="py-2 pr-4">Requests recorded</th>
+              <th className="py-2">Session link</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#0C1B33]/5">
+            {data.cases.map((row) => {
+              const validationCase = PRACTITIONER_VALIDATION_CASES.find(
+                (item) => item.id === row.caseId,
+              );
+              return (
+                <tr key={row.caseId}>
+                  <td className="py-3 pr-4 font-medium text-[#0C1B33]/70">{row.label}</td>
+                  <td className="py-3 pr-4 font-mono-bureau text-[#0C1B33]/45">{row.starts}</td>
+                  <td className="py-3 pr-4 font-mono-bureau text-[#0C1B33]/45">{row.searches}</td>
+                  <td className="py-3 pr-4 font-mono-bureau text-[#0C1B33]/45">{row.reportsGenerated}</td>
+                  <td className="py-3 pr-4 font-mono-bureau text-[#0C1B33]/45">{row.supportViews}</td>
+                  <td className="py-3 pr-4 font-mono-bureau text-[#0C1B33]/45">{row.supportActions}</td>
+                  <td className="py-3 pr-4 font-mono-bureau text-[#0C1B33]/45">{row.requestsRecorded}</td>
+                  <td className="py-3">
+                    {validationCase ? (
+                      <Link
+                        href={practitionerValidationStartPath(validationCase)}
+                        className="font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#2563EB] hover:underline"
+                      >
+                        Open case
+                      </Link>
+                    ) : null}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 function FounderView({ data }: { data: AnalyticsDashboardSummary }) {
   const funnel = [
     { label: "Searches", value: data.totals.searches },
@@ -285,6 +392,8 @@ function FounderView({ data }: { data: AnalyticsDashboardSummary }) {
           ))}
         </div>
       </div>
+
+      <ValidationPilotPanel data={data.validationPilot} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <RankingList title="Top Report Types" rows={data.reportsByType} />
