@@ -1,6 +1,7 @@
 import type { GoalType } from "./workspace";
 import type { VerificationStep } from "./types";
 import { normalizeDocumentSpec, type DocumentSpec } from "./document-spec";
+import { isDocumentRequirementGuidance } from "./document-preparation-cost";
 
 export const PREPARATION_TASK_STATUSES = [
   "needs_document",
@@ -619,7 +620,7 @@ export function buildPreparationTasks({
   const goalDocumentTaskId = overlayTasks[overlayTasks.length - 1].id;
   const programLabel = normalizedProgramName
     ? normalizedProgramName
-    : "the selected likely match";
+    : "the selected program";
 
   tasks.push({
     id: PROGRAM_REQUIREMENTS_TASK_ID,
@@ -651,7 +652,14 @@ export function buildPreparationTasks({
   for (const requirement of programRequiredDocs) {
     const label = normalizeText(requirement);
     const normalizedLabel = label?.toLowerCase();
-    if (!label || !normalizedLabel || seenProgramDocuments.has(normalizedLabel)) continue;
+    if (
+      !label ||
+      !normalizedLabel ||
+      isDocumentRequirementGuidance(label) ||
+      seenProgramDocuments.has(normalizedLabel)
+    ) {
+      continue;
+    }
     seenProgramDocuments.add(normalizedLabel);
     const id = `program-document-${programDocumentTaskIds.length + 1}`;
     programDocumentTaskIds.push(id);

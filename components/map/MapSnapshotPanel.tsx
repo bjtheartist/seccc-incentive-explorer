@@ -27,6 +27,12 @@ interface MapSnapshotPanelProps {
   onGenerateSnapshot: () => void;
 }
 
+function mappedProgramReason(result: ProgramCheckResult): string {
+  return result.program.zoneKey
+    ? "Mapped boundary intersects this location."
+    : "Included from the program catalog for further review.";
+}
+
 export default function MapSnapshotPanel({
   areaStats,
   snapshotLabel,
@@ -538,18 +544,28 @@ export default function MapSnapshotPanel({
             </div>
             <div className="space-y-1.5">
               {contextPrograms.map((r) => (
-                <div key={r.programId}>
+                <div key={r.programId} className="space-y-0.5">
                   <div className="text-[10px] text-[#0C1B33]/70 leading-snug">
                     {r.program.name}
                   </div>
-                  <div className="font-mono-bureau text-[8px] text-[#0C1B33]/40 mt-0.5">
-                    {r.benefitRange}
-                  </div>
+                  <p className="text-[9px] leading-relaxed text-[#0C1B33]/45">
+                    {mappedProgramReason(r)}
+                  </p>
+                  {(r.program.sourceUrl || r.program.url) && (
+                    <a
+                      href={r.program.sourceUrl || r.program.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#2563EB] underline-offset-2 hover:underline"
+                    >
+                      Review source
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
             <p className="text-[9px] text-[#0C1B33]/35 leading-relaxed pt-2">
-              Location matches do not confirm applicant eligibility, funding availability, or approval.
+              Boundary intersection does not confirm applicant or project eligibility, funding availability, or approval.
             </p>
           </div>
         </>

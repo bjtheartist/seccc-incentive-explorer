@@ -166,7 +166,7 @@ export default function FAQPage() {
               Still have questions?
             </h2>
             <p className="text-sm text-[#0C1B33]/50 max-w-md mx-auto">
-              Our team at the South East Chicago Chamber of Commerce is here to help you navigate incentive programs and find the right fit for your business.
+              Our team at the Southeast Chicago Chamber of Commerce is here to help you navigate incentive programs and find the right fit for your business.
             </p>
           </div>
 

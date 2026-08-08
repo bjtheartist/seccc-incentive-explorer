@@ -1,14 +1,20 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
-const { getCurrentUserIdMock, getSQLMock, sqlMock } = vi.hoisted(() => ({
+const { getCurrentUserIdMock, getSQLMock, sendMock, sqlMock } = vi.hoisted(() => ({
   getCurrentUserIdMock: vi.fn(),
   getSQLMock: vi.fn(),
+  sendMock: vi.fn(),
   sqlMock: vi.fn(),
 }));
 
 vi.mock("@/lib/current-user", () => ({ getCurrentUserId: getCurrentUserIdMock }));
 vi.mock("@/lib/db", () => ({ getSQL: getSQLMock }));
+vi.mock("resend", () => ({
+  Resend: class {
+    emails = { send: sendMock };
+  },
+}));
 
 import { POST } from "./route";
 
@@ -34,7 +40,12 @@ beforeEach(() => {
   getCurrentUserIdMock.mockReset();
   getSQLMock.mockReset();
   getSQLMock.mockReturnValue(sqlMock);
+  sendMock.mockReset().mockResolvedValue({ data: { id: "email-1" }, error: null });
   sqlMock.mockReset();
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe("POST /api/incentive-preparation/[id]/support-request", () => {
@@ -68,7 +79,7 @@ describe("POST /api/incentive-preparation/[id]/support-request", () => {
     expect(sqlMock.mock.calls[0].slice(1)).toEqual(expect.arrayContaining(["packet-1", "user-1"]));
   });
 
-  it("records a pending request with consent metadata and no outreach side effect", async () => {
+  it("records a pending request with consent metadata and no partner outreach", async () => {
     getCurrentUserIdMock.mockResolvedValue("user-1");
     sqlMock.mockResolvedValueOnce([{ id: "packet-1" }]).mockResolvedValueOnce([
       {
@@ -96,6 +107,65 @@ describe("POST /api/incentive-preparation/[id]/support-request", () => {
     });
     expect(String(sqlMock.mock.calls[1][0])).toContain("incentive_support_requests");
     expect(sqlMock.mock.calls[1].slice(1)).toEqual(expect.arrayContaining(["user-1", "packet-1"]));
+    expect(sendMock).not.toHaveBeenCalled();
+  });
+
+  it("notifies only the internal help inbox after recording a consented request", async () => {
+    vi.stubEnv("RESEND_API_KEY", "re_test");
+    vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
+    vi.stubEnv("REPORT_EMAIL_FROM", "Explorer <reports@example.com>");
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    sqlMock.mockResolvedValueOnce([{ id: "packet-1" }]).mockResolvedValueOnce([
+      {
+        id: "support-1",
+        packet_id: "packet-1",
+        request_type: validBody.requestType,
+        target_organization: validBody.targetOrganization,
+        requested_help: validBody.requestedHelp,
+        consent_scope_json: validBody.scope,
+        status: "pending",
+        consented_at: "2026-08-07T00:00:00.000Z",
+        created_at: "2026-08-07T00:00:00.000Z",
+        updated_at: "2026-08-07T00:00:00.000Z",
+      },
+    ]);
+
+    const res = await POST(request(validBody), params);
+
+    expect(res.status).toBe(201);
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(sendMock).toHaveBeenCalledWith(expect.objectContaining({
+      from: "Explorer <reports@example.com>",
+      to: ["help@example.com"],
+      subject: expect.stringContaining(validBody.targetOrganization),
+      text: expect.stringContaining("No information has been sent"),
+    }));
+  });
+
+  it("keeps a recorded request successful when the internal notification fails", async () => {
+    vi.stubEnv("RESEND_API_KEY", "re_test");
+    vi.stubEnv("INCENTIVE_HELP_INBOX", "help@example.com");
+    sendMock.mockRejectedValue(new Error("notification unavailable"));
+    getCurrentUserIdMock.mockResolvedValue("user-1");
+    sqlMock.mockResolvedValueOnce([{ id: "packet-1" }]).mockResolvedValueOnce([
+      {
+        id: "support-1",
+        packet_id: "packet-1",
+        request_type: validBody.requestType,
+        target_organization: validBody.targetOrganization,
+        requested_help: validBody.requestedHelp,
+        consent_scope_json: validBody.scope,
+        status: "pending",
+        consented_at: "2026-08-07T00:00:00.000Z",
+        created_at: "2026-08-07T00:00:00.000Z",
+        updated_at: "2026-08-07T00:00:00.000Z",
+      },
+    ]);
+
+    const res = await POST(request(validBody), params);
+
+    expect(res.status).toBe(201);
+    expect(sendMock).toHaveBeenCalledTimes(1);
   });
 
   it("records a materials-review request without an external organization", async () => {

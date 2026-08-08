@@ -1,9 +1,9 @@
 import { PreQualSurvey } from "@/components/survey/PreQualSurvey";
 
 export const metadata = {
-  title: "Pre-Qualify | Chicago Site Incentive Map",
+  title: "Program Fit Questions | Chicago Site Incentive Map",
   description:
-    "Answer 4 quick questions to discover which Chicago business incentive programs you may qualify for.",
+    "Answer four questions to identify Chicago business incentive programs worth reviewing.",
 };
 
 export default function QualifyPage() {
@@ -16,15 +16,15 @@ export default function QualifyPage() {
             <div className="flex items-center justify-center gap-4 mb-6">
               <div className="accent-bar" />
               <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/30">
-                Incentive Qualifier
+                Program Fit Questions
               </span>
               <div className="accent-bar" />
             </div>
             <h1 className="font-editorial text-3xl sm:text-4xl md:text-5xl text-[#0C1B33] mb-4">
-              Find Your Programs
+              Find Programs to Review
             </h1>
             <p className="font-mono-bureau text-[11px] text-[#0C1B33]/40 uppercase tracking-[0.1em] max-w-md mx-auto">
-              4 quick questions to match your business with Chicago incentive programs
+              Four questions to organize useful starting points for your project
             </p>
           </div>
 

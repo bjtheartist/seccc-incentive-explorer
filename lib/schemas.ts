@@ -5,7 +5,7 @@ import { z } from "zod";
 export const ProgramContactSchema = z.object({
   agency: z.string(),
   abbreviation: z.string(),
-  phone: z.string(),
+  phone: z.string().optional(),
   email: z.string().optional(),
   url: z.string().optional(),
   role: z.string().optional(),
@@ -41,6 +41,18 @@ export const VerificationStepSchema = z.object({
   note: z.string().optional(),
 });
 
+const ProgramDeadlineEntrySchema = z.object({
+  label: z.string().optional(),
+  date: z.string(),
+});
+
+const DocumentSpecSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  acceptedTypes: z.array(z.enum(["pdf", "png", "jpg", "webp", "docx"])),
+  multi: z.boolean(),
+});
+
 /* ── Program ──────────────────────────────── */
 
 export const ProgramSchema = z.object({
@@ -48,7 +60,7 @@ export const ProgramSchema = z.object({
   name: z.string(),
   level: z.enum([
     "city", "county", "state", "federal", "utility",
-    "City", "County", "State", "Federal", "Utility",
+    "City", "County", "State", "Federal", "Utility", "Nonprofit / CDFI",
   ]),
   zoneKey: z.string().nullable().optional(),
   summary: z.string(),
@@ -64,7 +76,9 @@ export const ProgramSchema = z.object({
   benefitRange: z.string().optional(),
   fastestConfirmingStep: z.string().optional(),
   // ── Phase 1 (2026-05-21) additions ─────────
-  status: z.enum(["active", "verify", "sunset", "pending"]).optional(),
+  status: z.enum([
+    "active", "current", "changed", "verify", "sunset", "pending", "lapsed",
+  ]).optional(),
   sourceUrl: z.string().optional(),
   applicationPortals: z.array(ApplicationPortalSchema).optional().default([]),
   verificationSteps: z.array(VerificationStepSchema).optional().default([]),
@@ -73,6 +87,14 @@ export const ProgramSchema = z.object({
   suspensionNote: z.string().optional(),
   sunsetWarning: z.string().optional(),
   oz2Note: z.string().optional(),
+  redesignatedAreaWarning: z.string().optional(),
+  adjacentCapitalNote: z.string().optional(),
+  deadlines: z.array(ProgramDeadlineEntrySchema).optional(),
+  oneTime: z.boolean().optional(),
+  expiresOn: z.string().optional(),
+  recurring: z.boolean().optional(),
+  personas: z.array(z.enum(["all", "starting", "growing", "developer"])).optional(),
+  documentSpecs: z.array(DocumentSpecSchema).optional(),
 });
 
 /* ── Stacking Rule ────────────────────────── */

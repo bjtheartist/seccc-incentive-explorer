@@ -100,7 +100,7 @@ export default async function SupportNetworkPage({
         <div className="mb-8 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <span className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#2563EB]">
-              South East Chicago Chamber of Commerce
+              Southeast Chicago Chamber of Commerce
             </span>
             <h1 className="mt-3 font-editorial text-[40px] leading-none sm:text-[48px]">
               Support Network Directory

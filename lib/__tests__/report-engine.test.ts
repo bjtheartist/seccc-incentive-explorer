@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CONFIRMED_PROGRAMS_SECTION_TITLE,
   generateReportData,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
@@ -114,7 +115,7 @@ describe("generateReportData", () => {
     expect(report.executiveSummary?.zoneCount).toBe(1);
     expect(report.executiveSummary?.topPrograms.map((p) => p.programId)).toContain("tif");
     expect(report.locationContext?.geography.zones.value).toEqual(["tif"]);
-    expect(report.locationContext?.programs.topMatches.map((p) => p.programId)).toContain("tif");
+    expect(report.locationContext).not.toHaveProperty("programs");
   });
 
   it("frames address-linked programs as a fit check before application", () => {
@@ -159,9 +160,9 @@ describe("generateReportData", () => {
       { zones: {}, zoneNames: {} },
     );
 
-    expect(report.summary).toContain("matching 0 address-confirmed programs");
+    expect(report.summary).toContain("links 0 programs to this address");
     expect(report.executiveSummary?.topPrograms).toEqual([]);
-    expect(report.sections.find((s) => s.title === "Eligible Incentive Programs")).toBeUndefined();
+    expect(report.sections.find((s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE)).toBeUndefined();
     expect(report.sections.find((s) => s.title === "Additional Programs to Explore")?.items[0].programId).toBe("global");
   });
 
@@ -351,13 +352,13 @@ describe("generateReportData", () => {
     const dataCenter = otherMatches?.items.find((item) => item.programId === "dataCenter");
 
     expect(bestMatches?.items[0].programId).toBe("edge");
-    expect(edge?.projectFit?.label).toContain("Directly related");
+    expect(edge).not.toHaveProperty("projectFit");
     expect(otherMatches?.items.map((item) => item.programId)).toEqual(
       expect.arrayContaining(["sbif", "dataCenter"]),
     );
-    expect(dataCenter?.confidenceLevel).toBe("location_eligible");
-    expect(dataCenter?.projectFit?.level).toBe("industry-check");
-    expect(dataCenter?.projectFit).not.toHaveProperty("score");
+    expect(dataCenter).not.toHaveProperty("confidenceLevel");
+    expect(dataCenter?.matchExplanation?.knownFromPublicData[0]).toContain("recorded within");
+    expect(dataCenter).not.toHaveProperty("projectFit");
     expect(JSON.stringify(report)).not.toContain('"score"');
     expect(report.executiveSummary?.projectGoalLabel).toBe("Hire or retain employees");
     expect(report.executiveSummary?.topPrograms[0].programId).toBe("edge");
@@ -402,8 +403,8 @@ describe("generateReportData", () => {
     );
 
     const additionalSection = report.sections.find((s) => s.title === "Additional Programs to Explore");
-    expect(report.summary).toContain("matching 0 address-confirmed programs");
-    expect(report.sections.find((s) => s.title === "Eligible Incentive Programs")).toBeUndefined();
+    expect(report.summary).toContain("links 0 programs to this address");
+    expect(report.sections.find((s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE)).toBeUndefined();
     expect(additionalSection?.description).toContain("Cook County tools");
     expect(additionalSection?.items[0].programId).toBe("smallBizSource");
     expect(additionalSection?.items.map((item) => item.programId)).not.toContain("cookBrownfield");
@@ -581,7 +582,7 @@ describe("generateReportData", () => {
     );
 
     const item = report.sections
-      .find((s) => s.title === "Eligible Incentive Programs")
+      .find((s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE)
       ?.items.find((i) => i.programId === "tif");
 
     expect(item?.sourceUrl).toBe(program.sourceUrl);
@@ -783,10 +784,10 @@ describe("generateReportData", () => {
       },
     );
 
-    const eligibleSection = report.sections.find((s) => s.title === "Eligible Incentive Programs");
+    const eligibleSection = report.sections.find((s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE);
     expect(eligibleSection?.items.map((item) => item.programId)).toEqual(
       expect.arrayContaining(["hubzone", "energyCommunityBonus"])
     );
-    expect(report.summary).toContain("matching 2 address-confirmed programs");
+    expect(report.summary).toContain("links 2 programs to this address");
   });
 });

@@ -707,7 +707,7 @@ export default function MapView() {
   const loadCensusRef = useRef(loadCensusForPoint);
   useEffect(() => { loadCensusRef.current = loadCensusForPoint; }, [loadCensusForPoint]);
 
-  // Handle click for location zones + top programs (with parcel boost)
+  // Keep ranking private; map surfaces present only a neutral program review list.
   const handleMapClick = useCallback(
     async (lat: number, lon: number, pin?: string | null) => {
       setLastClickLat(lat);
@@ -732,7 +732,7 @@ export default function MapView() {
         setLocationZoneNames(zoneNames);
         setSnapshotParcelData(parcelData ?? null);
         setSnapshotTifFinance(tifFinanceData?.tifFinance ?? null);
-        // Compute top 3 programs client-side (with parcel boost)
+        // Compute the internal ranking client-side (including parcel context).
         if (allPrograms.length > 0) {
           const results = runConfidenceEngine(allPrograms, zones, zoneNames, undefined, parcelData ?? undefined);
           setSnapshotPrograms(

@@ -27,7 +27,7 @@ export const DEFAULT_KEYWORDS = [
   "Southeast Chicago business resources",
 ];
 
-export const ORGANIZATION_NAME = "South East Chicago Chamber of Commerce";
+export const ORGANIZATION_NAME = "Southeast Chicago Chamber of Commerce";
 
 export type SitemapFrequency =
   | "always"
@@ -50,7 +50,7 @@ export const PUBLIC_SEO_ROUTES: PublicSeoRoute[] = [
   { path: "/report", label: "Generate Report", changeFrequency: "weekly", priority: 0.95 },
   { path: "/map", label: "Explorer Map", changeFrequency: "weekly", priority: 0.9 },
   { path: "/programs", label: "Incentive Programs", changeFrequency: "weekly", priority: 0.9 },
-  { path: "/qualify", label: "Pre-Qualify", changeFrequency: "monthly", priority: 0.75 },
+  { path: "/qualify", label: "Program Review", changeFrequency: "monthly", priority: 0.75 },
   { path: "/locate", label: "Find Location by Sector", changeFrequency: "monthly", priority: 0.75 },
   { path: "/faq", label: "FAQ", changeFrequency: "monthly", priority: 0.7 },
   { path: "/quiz", label: "Chicago Incentive Quiz", changeFrequency: "monthly", priority: 0.6 },

@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { AreaStats } from "../map-helpers";
 import type { MapDossierSelection } from "@/lib/map-dossier";
+import type { ProgramCheckResult } from "@/lib/types";
 
 vi.mock("@/components/workspace/WatchAreaButton", () => ({
   WatchAreaButton: () => <button type="button">Watch this area</button>,
@@ -15,9 +16,36 @@ const BASE_STATS: AreaStats = {
   walkScore: 11,
 };
 
+const INTERNAL_PROGRAM_RESULT: ProgramCheckResult & { score: number } = {
+  programId: "sbif",
+  program: {
+    id: "sbif",
+    name: "Small Business Improvement Fund",
+    level: "City",
+    zoneKey: "tif",
+    summary: "Published program summary.",
+    whoQualifies: "Published applicant requirements.",
+    benefits: [],
+    howToApply: [],
+    requiredDocs: [],
+    contact: "SomerCor",
+    url: "https://www.chicago.gov/sbif",
+    sourceUrl: "https://www.chicago.gov/sbif/source",
+  },
+  confidence: "appears_eligible",
+  confidenceLabel: "High Match — Appears eligible",
+  whyOneLine: "You qualify for this program.",
+  benefitRange: "$75,000–$250,000 possible incentive dollars",
+  fastestStep: "Contact the administrator",
+  notVerified: [],
+  matchedRules: [],
+  score: 97,
+};
+
 function renderPanel(
   selection?: MapDossierSelection | null,
   areaStats: AreaStats = BASE_STATS,
+  snapshotPrograms: ProgramCheckResult[] = [],
 ): string {
   const activeSelection: MapDossierSelection = selection ?? {
     kind: "address",
@@ -31,7 +59,7 @@ function renderPanel(
       snapshotLabel="3022 E 91st St"
       snapshotLat={41.73035}
       snapshotLon={-87.55024}
-      snapshotPrograms={[]}
+      snapshotPrograms={snapshotPrograms}
       snapshotTifFinance={null}
       tifFinanceLoading={false}
       zoningInfo={null}
@@ -105,6 +133,22 @@ describe("MapDossierCard", () => {
     expect(html).toContain("Verify the parcel record");
     expect(html).not.toContain("Match score");
     expect(html).not.toContain("Eligibility score");
+  });
+
+  it("renders mapped programs as neutral review leads without internal determinations or dollar anchors", () => {
+    const html = renderPanel(undefined, BASE_STATS, [INTERNAL_PROGRAM_RESULT]);
+
+    expect(html).toContain("Mapped programs to review");
+    expect(html).toContain("Small Business Improvement Fund");
+    expect(html).toContain("Mapped boundary intersects this location.");
+    expect(html).toContain("Review source");
+    expect(html).toContain(
+      "Boundary intersection does not confirm applicant or project eligibility, funding availability, or approval.",
+    );
+    expect(html).not.toMatch(/eligibility score|high match|appears eligible|you qualify/i);
+    expect(html).not.toMatch(/match score[^.]*97/i);
+    expect(html).not.toMatch(/\$75,000|\$250,000|possible incentive dollars|total incentive/i);
+    expect(html).not.toContain("97");
   });
 
   it("renders a permit selection with applicant-reported cost and verification language", () => {

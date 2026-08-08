@@ -37,6 +37,12 @@ import {
 } from "@/components/incentive-preparation/types";
 import { DocumentAttachments } from "@/components/incentive-preparation/document-attachments";
 import {
+  DOCUMENT_PREPARATION_COST_CAVEAT,
+  DOCUMENT_PREPARATION_COST_LEGEND,
+  classifyDocumentPreparationCost,
+  isConditionalDocumentRequirement,
+} from "@/lib/document-preparation-cost";
+import {
   MATERIALS_REVIEW_ORGANIZATION,
   supportRequestTypeLabel,
   type SupportRequestType,
@@ -471,13 +477,39 @@ export default function PreparationPacketDetailPage() {
           .join(" then ")
       : "Will update as tasks are confirmed";
 
-  const renderTaskRow = (task: PreparationTask) => (
+  const renderTaskRow = (task: PreparationTask) => {
+    const documentLabel = task.documentSpec?.label
+      ?? task.title.replace(/^Collect program document:\s*/i, "");
+    const documentCost = isDocumentTask(task)
+      ? classifyDocumentPreparationCost(documentLabel)
+      : null;
+    const documentRequirementLabel = isConditionalDocumentRequirement(documentLabel)
+      ? "Conditional"
+      : "Required";
+
+    return (
     <article key={task.id} className="border border-[#0C1B33]/10 px-4 py-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold text-[#0C1B33]">{task.title}</h3>
             <span className={`border px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] ${statusClass(task.status)}`}>{statusLabel(task.status)}</span>
+            {documentCost && (
+              <>
+                <span className="border border-[#0C1B33]/20 bg-[#FAF9F6] px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] text-[#0C1B33]">
+                  {documentRequirementLabel}
+                </span>
+                <span
+                  className="border border-[#2563EB]/30 bg-[#2563EB]/[0.05] px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] text-[#1D4ED8]"
+                  title={documentCost.basis}
+                >
+                  <span aria-hidden="true">{documentCost.tier}</span>
+                  <span className="sr-only">
+                    {`Document preparation cost tier ${documentCost.tier}. ${documentCost.basis}`}
+                  </span>
+                </span>
+              </>
+            )}
           </div>
           {task.description && <p className="mt-2 text-sm leading-5 text-[#0C1B33]/55">{task.description}</p>}
           <p className="mt-3 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">Owner: {statusLabel(task.owner)}</p>
@@ -501,7 +533,8 @@ export default function PreparationPacketDetailPage() {
         />
       )}
     </article>
-  );
+    );
+  };
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-10 sm:px-6 sm:py-12">
@@ -528,13 +561,39 @@ export default function PreparationPacketDetailPage() {
 
         {error && <p role="alert" className="mt-5 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
+        {packet.tasks.some(isDocumentTask) && (
+          <aside
+            className="border-x border-b border-[#0C1B33]/10 bg-white px-5 py-4 sm:px-7"
+            aria-labelledby="document-preparation-cost-legend"
+          >
+            <p
+              id="document-preparation-cost-legend"
+              className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/65"
+            >
+              Document preparation cost
+            </p>
+            <ul className="mt-2 grid gap-2 text-xs leading-5 text-[#0C1B33]/65 sm:grid-cols-3">
+              {DOCUMENT_PREPARATION_COST_LEGEND.map((item) => (
+                <li key={item.tier}>
+                  <span className="font-semibold text-[#0C1B33]">{item.tier}</span>
+                  {" = "}
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs leading-5 text-[#0C1B33]/50">
+              {DOCUMENT_PREPARATION_COST_CAVEAT}
+            </p>
+          </aside>
+        )}
+
         <div className="grid grid-cols-1 border-x border-b border-[#0C1B33]/10 bg-white lg:grid-cols-[minmax(0,1fr)_19rem]">
           <div className="min-w-0">
             {hasProgram && (
               <section className="border-b border-[#0C1B33]/8 px-5 py-6 sm:px-7">
-                <p className="font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#2563EB]">Likely match</p>
+                <p className="font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#2563EB]">Program in preparation</p>
                 <h2 className="mt-2 text-xl font-semibold text-[#0C1B33]">{packet.selectedProgram.label || "Program to be confirmed"}</h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#0C1B33]/55">This is a likely match for preparation purposes, not an eligibility decision, award estimate, or official certification.</p>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#0C1B33]/55">This is the program selected for preparation, not an eligibility decision, award estimate, or official certification.</p>
                 {packet.primaryGoal && <p className="mt-3 text-sm text-[#0C1B33]/70"><span className="font-medium">Goal:</span> {statusLabel(packet.primaryGoal)}</p>}
               </section>
             )}
@@ -645,7 +704,7 @@ export default function PreparationPacketDetailPage() {
                     </select>
                   </label>
                 </div>
-                <p className="mt-3 text-xs leading-5 text-[#0C1B33]/45">Selecting a program identifies a likely match for preparation purposes, not an eligibility decision, award estimate, or official certification. You can verify current requirements with the program administrators.</p>
+                <p className="mt-3 text-xs leading-5 text-[#0C1B33]/45">Selecting a program organizes preparation work; it is not an eligibility decision, award estimate, or official certification. Verify current requirements with the program administrators.</p>
                 {selectProgramError && (
                   <p role="alert" className="mt-3 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{selectProgramError}</p>
                 )}

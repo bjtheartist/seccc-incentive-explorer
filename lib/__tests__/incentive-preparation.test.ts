@@ -253,7 +253,7 @@ describe("buildPreparationTasks", () => {
     }
   });
 
-  it("uses preparation and likely-match framing without scores or incentive totals", () => {
+  it("uses program-preparation framing without scores or incentive totals", () => {
     const tasks = buildPreparationTasks({
       goalType: "hire-staff",
       profile: COMPLETE_PROFILE,
@@ -261,7 +261,7 @@ describe("buildPreparationTasks", () => {
     const serialized = JSON.stringify(tasks).toLowerCase();
 
     expect(serialized).toContain("application preparation");
-    expect(serialized).toContain("likely match");
+    expect(serialized).toContain("selected program");
     expect(serialized).not.toMatch(/numeric score|possible incentive dollars|guaranteed award/);
     expect(serialized).not.toMatch(/\$[0-9]/);
     expect(tasks.some((task) => "score" in task)).toBe(false);
@@ -308,6 +308,31 @@ describe("buildPreparationTasks", () => {
       status: "external_dependency",
     });
     expect(verificationTasks[0].description).toContain("Funding windows are district-specific");
+  });
+
+  it("does not turn explicit no-document guidance into a required task", () => {
+    const tasks = buildPreparationTasks({
+      goalType: "buy-equipment",
+      programId: "guidance-only",
+      programName: "Guidance-only program",
+      programRequiredDocs: [
+        "No formal documents required",
+        "No formal document is required.",
+        "No application needed — benefits are automatic by location",
+        "Contact your SSA delegate agency for any sub-program requirements",
+        "Vendor quote",
+      ],
+      profile: COMPLETE_PROFILE,
+    });
+
+    const programDocumentTasks = tasks.filter((task) =>
+      task.id.startsWith("program-document-"),
+    );
+
+    expect(programDocumentTasks).toHaveLength(1);
+    expect(programDocumentTasks[0].title).toBe(
+      "Collect program document: Vendor quote",
+    );
   });
 });
 

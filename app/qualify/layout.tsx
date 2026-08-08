@@ -2,9 +2,9 @@ import type { ReactNode } from "react";
 import { pageMetadata } from "@/lib/seo";
 
 export const metadata = pageMetadata({
-  title: "Pre-Qualify for Chicago Incentives | Chicago Incentive Explorer",
+  title: "Review Chicago Incentive Programs | Chicago Incentive Explorer",
   description:
-    "Start a guided Chicago incentive check by address, project type, and readiness to understand which public programs may be worth verifying.",
+    "Answer guided questions about your address and project to organize public incentive programs worth reviewing.",
   path: "/qualify",
   ogType: "website",
 });

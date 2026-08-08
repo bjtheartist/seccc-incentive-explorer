@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Resend } from "resend";
 import { getCurrentUserId } from "@/lib/current-user";
 import { getSQL } from "@/lib/db";
 import {
@@ -58,6 +59,47 @@ function toSupportRequest(row: DatabaseRow) {
     createdAt: dateTime(row.created_at),
     updatedAt: dateTime(row.updated_at),
   };
+}
+
+type SupportRequest = ReturnType<typeof toSupportRequest>;
+
+async function notifyInternalSupportInbox(
+  supportRequest: SupportRequest,
+  userId: string,
+): Promise<void> {
+  const inbox = process.env.INCENTIVE_HELP_INBOX;
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!inbox || !apiKey) return;
+
+  const subjectTarget = supportRequest.targetOrganization
+    .replace(/[\r\n]+/g, " ")
+    .slice(0, 140);
+  const text = [
+    "A consented support request is ready for internal review.",
+    "",
+    `Request ID: ${supportRequest.id}`,
+    `Packet ID: ${supportRequest.packetId}`,
+    `User ID: ${userId}`,
+    `Request type: ${supportRequest.requestType}`,
+    `Requested organization: ${supportRequest.targetOrganization}`,
+    `Requested help: ${supportRequest.requestedHelp}`,
+    `Approved data scopes: ${supportRequest.dataScopes.join(", ")}`,
+    "",
+    "This notification is internal. No information has been sent to the requested organization.",
+  ].join("\n");
+
+  const resend = new Resend(apiKey);
+  const delivery = await resend.emails.send({
+    from:
+      process.env.REPORT_EMAIL_FROM
+      || "Chicago Incentive Explorer <reports@chicagoincentiveexplorer.com>",
+    to: [inbox],
+    subject: `Support request ready for review - ${subjectTarget}`,
+    text,
+  });
+  if (delivery.error) {
+    throw new Error("Resend rejected the support-request notification");
+  }
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
@@ -152,5 +194,11 @@ export async function POST(req: NextRequest, { params }: Params) {
   }
 
   const supportRequest = toSupportRequest(rows[0] as DatabaseRow);
+  try {
+    await notifyInternalSupportInbox(supportRequest, userId);
+  } catch (notificationError) {
+    console.error("Support-request notification failed:", notificationError);
+  }
+
   return NextResponse.json({ supportRequest, supportRequests: [supportRequest] }, { status: 201 });
 }

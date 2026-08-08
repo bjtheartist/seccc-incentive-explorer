@@ -15,6 +15,7 @@ import { PERMIT_SINCE_DATE } from "@/lib/permit-match";
  *
  * The response exposes individual source records only. In particular, the
  * applicant-reported cost field is not queried, returned, or aggregated.
+ * `meta.asOf` is the latest `fetched_at` value among the queried rows.
  */
 
 const CDN_HEADERS = {
@@ -38,9 +39,26 @@ type PermitRow = {
   work_description: unknown;
   lat: unknown;
   lon: unknown;
+  source_as_of: unknown;
 };
 
 type Bounds = [west: number, south: number, east: number, north: number];
+
+type PermitCoverageMetadata = {
+  sourceMode: "database";
+  sourcePath: "database:building_permits";
+  asOf: string | null;
+  asOfBasis: "latest_queried_row_fetched_at" | null;
+  returnedCount: number;
+  configuredLimit: number;
+  queryLimit: number;
+  coverageStatus: "complete" | "truncated";
+  potentiallyTruncated: boolean;
+};
+
+type PermitFeatureCollection = GeoJSON.FeatureCollection & {
+  meta: PermitCoverageMetadata;
+};
 
 function error(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
@@ -118,6 +136,34 @@ function coordinate(value: unknown): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function timestampOrNull(value: unknown): string | null {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  if (typeof value !== "string") return null;
+  const timestamp = value.trim();
+  return timestamp === "" ? null : timestamp;
+}
+
+function latestTimestamp(values: unknown[]): string | null {
+  let latest: string | null = null;
+  let latestMillis = Number.NEGATIVE_INFINITY;
+
+  for (const value of values) {
+    const timestamp = timestampOrNull(value);
+    if (!timestamp) continue;
+    const millis = Date.parse(timestamp);
+    if (Number.isFinite(millis) && millis > latestMillis) {
+      latest = timestamp;
+      latestMillis = millis;
+    } else if (latest === null) {
+      latest = timestamp;
+    }
+  }
+
+  return latest;
+}
+
 function rowsToGeoJSON(rows: PermitRow[]): GeoJSON.FeatureCollection {
   const features: GeoJSON.Feature[] = [];
 
@@ -151,6 +197,28 @@ function rowsToGeoJSON(rows: PermitRow[]): GeoJSON.FeatureCollection {
   return { type: "FeatureCollection", features };
 }
 
+function buildPermitResponse(rows: PermitRow[], limit: number): PermitFeatureCollection {
+  // The query asks for one extra row so truncation is observed, not guessed.
+  const potentiallyTruncated = rows.length > limit;
+  const collection = rowsToGeoJSON(rows.slice(0, limit));
+  const asOf = latestTimestamp(rows.map((row) => row.source_as_of));
+
+  return {
+    ...collection,
+    meta: {
+      sourceMode: "database",
+      sourcePath: "database:building_permits",
+      asOf,
+      asOfBasis: asOf ? "latest_queried_row_fetched_at" : null,
+      returnedCount: collection.features.length,
+      configuredLimit: limit,
+      queryLimit: limit + 1,
+      coverageStatus: potentiallyTruncated ? "truncated" : "complete",
+      potentiallyTruncated,
+    },
+  };
+}
+
 export async function GET(request: NextRequest) {
   const bounds = parseBounds(request.nextUrl.searchParams.get("bounds"));
   if (typeof bounds === "string") return error(bounds);
@@ -181,7 +249,8 @@ export async function GET(request: NextRequest) {
         work_type,
         work_description,
         lat,
-        lon
+        lon,
+        fetched_at::text AS source_as_of
       FROM building_permits
       WHERE geom IS NOT NULL
         AND issue_date >= ${PERMIT_SINCE_DATE}::date
@@ -191,10 +260,10 @@ export async function GET(request: NextRequest) {
         )
         AND permit_type = ANY(${sourceValues})
       ORDER BY issue_date DESC NULLS LAST, permit_id
-      LIMIT ${limit}
+      LIMIT ${limit + 1}
     `;
 
-    return NextResponse.json(rowsToGeoJSON(rows as PermitRow[]), {
+    return NextResponse.json(buildPermitResponse(rows as PermitRow[], limit), {
       headers: CDN_HEADERS,
     });
   } catch (err) {

@@ -1,4 +1,4 @@
-import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats } from "./types";
+import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats, PublicMatchExplanation } from "./types";
 import {
   inferSupportLanes,
   type LocalBusinessSupportContext,
@@ -52,6 +52,7 @@ import {
   capitalPartnerHandoffForReport,
 } from "./capital-partner-report";
 import { addPartnerReferralAttribution } from "./partner-referrals";
+import { buildPublicMatchExplanation, type PublicMatchEvidence } from "./match-transparency";
 
 // ─── Local Types ────────────────────────────────────────────────────
 
@@ -122,6 +123,7 @@ export interface ReportItem {
   detail?: string;
   detailGroups?: ReportDetailGroup[];
   detailCaveat?: string;
+  /** Internal ordering context; stripped before any public report serialization. */
   projectFit?: ProjectFitSummary;
   programId?: string;
   partnerId?: string;
@@ -130,10 +132,16 @@ export interface ReportItem {
   eligibilityRules?: { description: string; required: boolean }[];
   url?: string;
   level?: string;
+  matchExplanation?: PublicMatchExplanation;
+  /** @deprecated Legacy saved-report field. Public renderers ignore it. */
   confidenceLevel?: EligibilityConfidence;
+  /** @deprecated Legacy saved-report field. Public renderers ignore it. */
   confidenceLabel?: string;
+  /** @deprecated Legacy saved-report field. Public renderers ignore it. */
   whyOneLine?: string;
+  /** @deprecated Legacy saved-report field. Public renderers normalize it into stillToConfirm. */
   notVerified?: string[];
+  /** @deprecated Legacy saved-report field. Public renderers normalize it as user-provided context. */
   matchedRules?: string[];
   lastVerifiedAt?: string | null;
   isStale?: boolean;
@@ -271,6 +279,8 @@ export interface ActionRoadmapItem {
   documents?: string[];
 }
 
+export type PublicReportLocationContext = Omit<LocationContext, "posture" | "programs">;
+
 export interface GeneratedReport {
   title: string;
   subtitle: string;
@@ -305,7 +315,8 @@ export interface GeneratedReport {
   executiveSummary?: ExecutiveSummary;
   actionRoadmap?: ActionRoadmapItem[];
   verdict?: {
-    signal: "strong" | "moderate" | "limited";
+    /** @deprecated Internal generation hint. Public normalization removes it. */
+    signal?: "strong" | "moderate" | "limited";
     headline: string;
     subheadline: string;
     topReasons: string[];
@@ -354,19 +365,270 @@ export interface GeneratedReport {
   };
   capitalPartnerHandoff?: CapitalMatchResult;
   neighborhoodEconomics?: NeighborhoodEconomicContext;
-  locationContext?: LocationContext;
+  locationContext?: PublicReportLocationContext;
   dataSources?: DataSourceCitation[];
 }
 
-export const CONFIRMED_PROGRAMS_SECTION_TITLE = "Eligible Incentive Programs";
+export const CONFIRMED_PROGRAMS_SECTION_TITLE = "Programs Mapped at This Address";
 export const GOAL_MATCH_PROGRAMS_SECTION_TITLE = "Programs to Review for Your Goal";
-export const OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE = "Other Programs Tied to This Address";
+export const OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE = "Other Programs Mapped at This Address";
+
+const LEGACY_CONFIRMED_PROGRAMS_SECTION_TITLE = "Eligible Incentive Programs";
+const LEGACY_OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE = "Other Programs Tied to This Address";
 
 const CONFIRMED_PROGRAMS_SECTION_TITLES = new Set([
   CONFIRMED_PROGRAMS_SECTION_TITLE,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+  LEGACY_CONFIRMED_PROGRAMS_SECTION_TITLE,
+  LEGACY_OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 ]);
+
+function normalizePublicDeterminationText(value: string): string {
+  return value
+    .replace(/eligible incentive programs/gi, CONFIRMED_PROGRAMS_SECTION_TITLE)
+    .replace(/other programs tied to this address/gi, OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE)
+    .replace(/address-confirmed programs?/gi, (match) =>
+      match.toLowerCase().endsWith("s") ? "programs mapped at this address" : "program mapped at this address",
+    )
+    .replace(/appears eligible(?: \(based on location\))?/gi, "Included for review")
+    .replace(/(?:high|medium|low) match/gi, "Program review")
+    .replace(/you may qualify|you qualify|may qualify/gi, "Review the published requirements")
+    .replace(/(?:this\s+)?(?:site|property|business|project|address)\s+(?:is\s+)?potentially eligible for/gi, "This location is recorded for review of")
+    .replace(/(?:this\s+)?(?:site|property|business|project|address)\s+qualifies for/gi, "This location is recorded for review of")
+    .replace(/(?:this\s+)?(?:site|property|business|project|address)\s+may be eligible for/gi, "This location requires review for")
+    .replace(/potentially eligible/gi, "Requirements to review")
+    .replace(/eligibility confirmed/gi, "location recorded");
+}
+
+function normalizePublicHeadlineText(value: string): string {
+  const normalized = normalizePublicDeterminationText(value);
+  const money = "\\$[\\d,.]+(?:\\s*[-–]\\s*\\$?[\\d,.]+)?(?:\\s*[KMB])?\\b";
+  const incentiveType = "(?:incentive|benefit|award|grant|credit|reimbursement)s?";
+  const speculative = "(?:possible|potential|estimated|projected)";
+  return normalized
+    .replace(new RegExp(String.raw`${speculative}\s+${incentiveType}[^.!?]{0,35}${money}`, "gi"), "published program terms")
+    .replace(new RegExp(String.raw`${speculative}\s+${money}\s*${incentiveType}`, "gi"), "published program terms")
+    .replace(new RegExp(String.raw`${money}[^.!?]{0,24}${speculative}\s+${incentiveType}`, "gi"), "published program terms")
+    .replace(new RegExp(String.raw`(?:benefit\s+range|incentive\s+estimate)[^.!?]{0,35}${money}`, "gi"), "published program terms")
+    .replace(new RegExp(String.raw`(?:could|may)\s+receive[^.!?]{0,35}${money}`, "gi"), "published program terms")
+    .replace(new RegExp(String.raw`Review the published requirements[^.!?]{0,45}up to\s+${money}`, "gi"), "Review the published requirements and published program terms")
+    .replace(/published program terms\s*(?:benefit|award|incentive)?/gi, "published program terms")
+    .replace(/\b(?:a|an) published program terms\b/gi, "published program terms")
+    .replace(/(?:a\s+)?program review program/gi, "a program selected for review")
+    .replace(/[ \t]+([,.;:!?])/g, "$1")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+}
+
+function normalizePublicMatchExplanation(
+  explanation: PublicMatchExplanation,
+): PublicMatchExplanation {
+  const selfReportedPattern = /^(?:(?:you|your)\b|(?:reported|selected|provided|entered|stated)\b)|\b(?:user answer|self-reported)\b/i;
+  const misplacedUserAnswers = explanation.knownFromPublicData.filter((item) =>
+    selfReportedPattern.test(item),
+  );
+  return {
+    ...explanation,
+    whyItAppears: explanation.whyItAppears.map(normalizePublicHeadlineText),
+    knownFromPublicData: explanation.knownFromPublicData
+      .filter((item) => !selfReportedPattern.test(item))
+      .map(normalizePublicHeadlineText),
+    basedOnUserAnswers: Array.from(new Set([
+      ...explanation.basedOnUserAnswers,
+      ...misplacedUserAnswers,
+    ])).map(normalizePublicHeadlineText),
+    stillToConfirm: explanation.stillToConfirm.map(normalizePublicHeadlineText),
+  };
+}
+
+function isProgramListingSection(title: string): boolean {
+  return CONFIRMED_PROGRAMS_SECTION_TITLES.has(title)
+    || title === "Additional Programs to Explore"
+    || /^Programs Mapped at This Site(?: \(\d+\))?$/.test(title)
+    || title === "Incentive Pathway Review"
+    || /^.+-Level Programs$/.test(title);
+}
+
+function legacyMatchExplanation(item: ReportItem): PublicMatchExplanation | undefined {
+  if (!item.programId) return undefined;
+  const requirements = (item.eligibilityRules ?? []).map((rule) => rule.description);
+  const matchedRules = (item.matchedRules ?? []).map(normalizePublicHeadlineText);
+  const notVerified = (item.notVerified ?? []).map(normalizePublicHeadlineText);
+  const stillToConfirm = Array.from(new Set([...notVerified, ...requirements]));
+  const sourceUrl = item.sourceUrl || item.url;
+  const source = sourceUrl
+    ? {
+        label: normalizePublicHeadlineText(
+          item.sourceLabel || `Official ${item.label} source`,
+        ),
+        url: sourceUrl,
+      }
+    : undefined;
+
+  if (item.matchExplanation) {
+    const normalized = normalizePublicMatchExplanation(item.matchExplanation);
+    return {
+      ...normalized,
+      basedOnUserAnswers: Array.from(new Set([
+        ...normalized.basedOnUserAnswers,
+        ...matchedRules,
+      ])),
+      stillToConfirm: Array.from(new Set([
+        ...normalized.stillToConfirm,
+        ...stillToConfirm,
+      ])),
+      officialSource: normalized.officialSource ?? source,
+      lastVerifiedAt: normalized.lastVerifiedAt ?? item.lastVerifiedAt,
+    };
+  }
+
+  return {
+    whyItAppears: ["This program was included in the saved report as a starting point for review."],
+    knownFromPublicData: item.lastVerifiedAt
+      ? [`Program information was last reviewed on ${item.lastVerifiedAt}.`]
+      : [],
+    basedOnUserAnswers: Array.from(new Set(matchedRules)),
+    stillToConfirm,
+    currentDocumentsToGather: [],
+    confirmWith: [],
+    officialSource: source,
+    lastVerifiedAt: item.lastVerifiedAt,
+  };
+}
+
+/** Normalize legacy saved reports before any public UI or PDF rendering. */
+export function normalizePublicReportForDisplay(report: GeneratedReport): GeneratedReport {
+  const legacySummary = report.executiveSummary as unknown as {
+    topPrograms?: Array<{
+      programId: string;
+      name: string;
+      explanation?: PublicMatchExplanation;
+      matchedRules?: string[];
+      notVerified?: string[];
+    }>;
+    topActions?: ExecutiveSummary["topActions"];
+    zoneCount?: number;
+    whyTheseMatter?: string;
+    projectGoalLabel?: string;
+  } | undefined;
+
+  const executiveSummary = legacySummary
+    ? {
+        topPrograms: (legacySummary.topPrograms ?? []).map((program) => ({
+          programId: program.programId,
+          name: program.name,
+          explanation: normalizePublicMatchExplanation(
+            program.explanation ?? {
+              whyItAppears: ["This program was included in the saved report as a starting point for review."],
+              knownFromPublicData: [],
+              basedOnUserAnswers: Array.from(new Set(program.matchedRules ?? [])),
+              stillToConfirm: Array.from(new Set(program.notVerified ?? [])),
+              currentDocumentsToGather: [],
+              confirmWith: [],
+            },
+          ),
+        })),
+        topActions: (legacySummary.topActions ?? []).map((action) => ({
+          ...action,
+          label: normalizePublicHeadlineText(action.label),
+        })),
+        zoneCount: legacySummary.zoneCount ?? 0,
+        whyTheseMatter: normalizePublicHeadlineText(legacySummary.whyTheseMatter ?? ""),
+        projectGoalLabel: legacySummary.projectGoalLabel,
+      }
+    : undefined;
+
+  const rawLocationContext = report.locationContext as LocationContext | undefined;
+  const publicLocationContext = rawLocationContext
+    ? (() => {
+        const {
+          posture: _posture,
+          programs: _programs,
+          ...publicContext
+        } = rawLocationContext;
+        void _posture;
+        void _programs;
+        return publicContext;
+      })()
+    : undefined;
+
+  return {
+    ...report,
+    title: normalizePublicHeadlineText(report.title),
+    subtitle: normalizePublicHeadlineText(report.subtitle),
+    summary: normalizePublicHeadlineText(report.summary),
+    executiveSummary,
+    locationContext: publicLocationContext,
+    verdict: report.verdict
+      ? {
+          headline: normalizePublicHeadlineText(report.verdict.headline),
+          subheadline: normalizePublicHeadlineText(report.verdict.subheadline),
+          topReasons: report.verdict.topReasons.map(normalizePublicHeadlineText),
+        }
+      : undefined,
+    actionRoadmap: report.actionRoadmap?.map((item) => ({
+      ...item,
+      label: normalizePublicHeadlineText(item.label),
+      description: normalizePublicHeadlineText(item.description),
+      callScript: item.callScript
+        ? normalizePublicHeadlineText(item.callScript)
+        : undefined,
+    })),
+    recommendedActions: report.recommendedActions.map((action) => ({
+      ...action,
+      label: normalizePublicHeadlineText(action.label),
+      description: normalizePublicHeadlineText(action.description),
+    })),
+    sections: report.sections.map((section) => {
+      const programListingSection = isProgramListingSection(section.title);
+      return {
+        ...section,
+        title: normalizePublicHeadlineText(section.title),
+        description: section.description
+          ? normalizePublicHeadlineText(section.description)
+          : undefined,
+        items: section.items.map((item) => {
+          const {
+            confidenceLevel: _confidenceLevel,
+            confidenceLabel: _confidenceLabel,
+            whyOneLine: _whyOneLine,
+            notVerified: _notVerified,
+            matchedRules: _matchedRules,
+            projectFit: _projectFit,
+            ...publicItem
+          } = item;
+          void _confidenceLevel;
+          void _confidenceLabel;
+          void _whyOneLine;
+          void _notVerified;
+          void _matchedRules;
+          void _projectFit;
+          const normalizedItem: ReportItem = {
+            ...publicItem,
+            label: normalizePublicHeadlineText(publicItem.label),
+            value: normalizePublicHeadlineText(publicItem.value),
+            detail: publicItem.detail
+              ? normalizePublicHeadlineText(publicItem.detail)
+              : undefined,
+            sourceLabel: publicItem.sourceLabel
+              ? normalizePublicHeadlineText(publicItem.sourceLabel)
+              : undefined,
+            matchExplanation: publicItem.matchExplanation
+              ? normalizePublicMatchExplanation(publicItem.matchExplanation)
+              : undefined,
+          };
+          if (!programListingSection || !item.programId) return normalizedItem;
+          return {
+            ...normalizedItem,
+            value: "Review published terms",
+            matchExplanation: legacyMatchExplanation(item),
+          };
+        }),
+      };
+    }),
+  };
+}
 
 /** Address-confirmed programs surfaced by a generated report (id + name). */
 export function confirmedProgramsFromReport(
@@ -626,13 +888,54 @@ function confidenceRank(confidence?: EligibilityConfidence): number {
   }
 }
 
+function publicEvidenceForProgram(
+  program: Program,
+  state: WizardState,
+  zones?: Record<string, boolean>,
+  zoneNames?: Record<string, string>,
+  fit?: ProjectFit,
+): PublicMatchEvidence {
+  const mappedAtAddress = Boolean(program.zoneKey && zones?.[program.zoneKey]);
+  const basedOnUserAnswers: string[] = [];
+  if (state.industry) {
+    basedOnUserAnswers.push(`You selected ${getIndustryName(state.industry)} as the business type.`);
+  }
+  if (state.projectType) {
+    basedOnUserAnswers.push(`You selected ${projectGoalLabel(state.projectType)} as the project goal.`);
+  }
+
+  return {
+    whyItAppears: mappedAtAddress
+      ? [
+          fit && isProjectGoalMatch(fit)
+            ? "The program is linked to a mapped incentive zone at this address and its published uses overlap with the selected goal."
+            : "The program is linked to a mapped incentive zone recorded at this address.",
+        ]
+      : [
+          fit && isProjectGoalMatch(fit)
+            ? "The program's published uses overlap with the selected goal."
+            : "This broader program is included as a starting point for review.",
+        ],
+    knownFromPublicData: mappedAtAddress
+      ? [`The address is recorded within ${zoneNames?.[program.zoneKey] || ZONE_LABELS[program.zoneKey] || program.zoneKey}.`]
+      : [],
+    basedOnUserAnswers,
+    rulesEstablishedByPublicData: mappedAtAddress
+      ? (program.eligibilityRules ?? [])
+          .filter((rule) => rule.verifiedBy === "location")
+          .map((rule) => rule.description)
+      : [],
+  };
+}
+
 function programReportItem(
   program: Program,
   confidenceMap?: Map<string, ProgramCheckResult>,
   gatingOpts?: ResolveAvailabilityOpts,
   fit?: ProjectFit,
+  publicEvidence: PublicMatchEvidence = {},
 ): ReportItem {
-  const cr = confidenceMap?.get(program.id);
+  void confidenceMap;
   // 'expired' programs are filtered out before sections are built
   // (generateReportData); here we annotate the surviving states so
   // 'window-closed' and 'lapsed-notice' render with their note.
@@ -643,7 +946,7 @@ function programReportItem(
       : undefined;
   return {
     label: program.name,
-    value: program.benefitRange || "Contact for details",
+    value: "Review published terms",
     detail: availabilityNote ? `${availabilityNote}\n${program.summary}` : program.summary,
     availability: availability.state,
     availabilityNote,
@@ -655,11 +958,7 @@ function programReportItem(
     })),
     url: program.url,
     level: program.level,
-    confidenceLevel: cr?.confidence,
-    confidenceLabel: cr?.confidenceLabel,
-    whyOneLine: cr?.whyOneLine,
-    notVerified: cr?.notVerified,
-    matchedRules: cr?.matchedRules,
+    matchExplanation: buildPublicMatchExplanation(program, publicEvidence),
     projectFit: summarizeProjectFit(fit),
     lastVerifiedAt: program.lastVerifiedAt,
     isStale: isStaleProgramData(program),
@@ -1091,7 +1390,6 @@ function buildNeighborhoodEconomicContextSection(
       detail: `Census ZIP Business Patterns provides establishment, employment, and annual payroll context for ${geographyLabel} across ${years}. ${details || "The report has a ZBP source record but incomplete values."} ZBP is the latest official jobs/payroll benchmark, not a 2024 current-condition figure; read it as a trend benchmark.`,
       sourceLabel: jobsPayroll.sourceLabel || "Census ZIP Business Patterns",
       sourceUrl: DATA_SOURCES.zbp.url,
-      confidenceLabel: "Source",
     });
   } else {
     items.push({
@@ -1100,7 +1398,6 @@ function buildNeighborhoodEconomicContextSection(
       detail: "Census ZIP Business Patterns can add establishment counts, employment, and annual payroll by ZIP. This report does not yet have a matched ZBP record for the address context.",
       sourceLabel: "Census ZIP Business Patterns",
       sourceUrl: DATA_SOURCES.zbp.url,
-      confidenceLabel: "Source",
     });
   }
 
@@ -1124,7 +1421,6 @@ function buildNeighborhoodEconomicContextSection(
       detail: `Building permit activity shows visible reinvestment where permits are filed. Current read for ${geographyLabel}: ${reportedCost}${reinvestment.windowLabel ? ` during ${reinvestment.windowLabel}` : ""}. Reported cost is applicant-reported and should be treated as directional.`,
       sourceLabel: reinvestment.sourceLabel || "City of Chicago Building Permits",
       sourceUrl: DATA_SOURCES.buildingPermits.url,
-      confidenceLabel: "Source",
     });
   } else {
     items.push({
@@ -1133,7 +1429,6 @@ function buildNeighborhoodEconomicContextSection(
       detail: "Building permits can show where visible reinvestment is happening, including reported project cost and permit volume. This address report is not yet carrying the permit-history signal.",
       sourceLabel: "City of Chicago Building Permits",
       sourceUrl: DATA_SOURCES.buildingPermits.url,
-      confidenceLabel: "Source",
     });
   }
 
@@ -1169,7 +1464,6 @@ function buildNeighborhoodEconomicContextSection(
       detail: `Cook County assessed-value records show how the public property assessment for ${geographyLabel} changed ${valueYearSpan} (${propertyMix || "parcel and assessed-value aggregates"}). This is a useful public-record signal for property context, but it is not the same as sale price, private market value, or owner equity — large changes may reflect reassessment cycles, appeals, property improvements, classification changes, or updated assessor methodology. ZIP-level totals only; no owner names or addresses are shown.`,
       sourceLabel: property.sourceLabel || "Cook County Assessor / parcel records",
       sourceUrl: DATA_SOURCES.assessorValues.url,
-      confidenceLabel: "Source",
     });
   } else if (ctx.parcel?.totalValue) {
     items.push({
@@ -1185,7 +1479,6 @@ function buildNeighborhoodEconomicContextSection(
       detail: "Cook County parcel, sales, and assessed-value history can add ownership and value-change context. Sensitive owner/address-level details should stay out of public reports unless reviewed with partners.",
       sourceLabel: "Cook County Assessor open data",
       sourceUrl: DATA_SOURCES.assessorValues.url,
-      confidenceLabel: "Source",
     });
   }
 
@@ -1222,7 +1515,6 @@ function buildNeighborhoodEconomicContextSection(
       detail: `TIF districts capture growth in property-tax revenue and can support public improvements, redevelopment agreements, SBIF, infrastructure, and other district-approved project costs. This address is inside the ${tifFinance.districtName || tifFinance.districtId || "matched"} TIF district. ${reportYear}; ${expiration}. ${financeDetails || "No annual finance figures were matched for this district."} ${tifFinance.caution || "District-level City annual report data; not proof of funding availability or project approval."}`,
       sourceLabel: tifFinance.sourceLabel || DATA_SOURCES.tifFinance.label,
       sourceUrl: tifFinance.sourceUrl || DATA_SOURCES.tifFinance.url,
-      confidenceLabel: "Source",
     });
   }
 
@@ -1500,7 +1792,6 @@ function capitalPartnerReportItem(match: CapitalPartnerMatch): ReportItem {
     sourceUrl: match.provenance.sourceUrl,
     lastVerifiedAt: match.provenance.lastVerifiedAt || null,
     isStale: match.provenance.verificationStatus === "stale",
-    confidenceLabel: "Contact and source",
   };
 }
 
@@ -1803,7 +2094,6 @@ function buildDeadlinesSection(
       sourceUrl: program?.sourceUrl,
       applicationPortals: program?.applicationPortals,
       verificationSteps: program?.verificationSteps,
-      confidenceLabel: item.kind === "program_deadline" ? "Timing & links" : undefined,
     };
   });
 
@@ -1918,7 +2208,13 @@ function generateLocationIncentives(
         title: GOAL_MATCH_PROGRAMS_SECTION_TITLE,
         description: `Programs tied to this address whose stated uses may relate to the selected goal: ${goalLabel}. Each program still requires individual eligibility confirmation.`,
         items: goalMatchedPrograms.map((program) =>
-          programReportItem(program, confidenceMap, gatingOpts, projectFitMap.get(program.id)),
+          programReportItem(
+            program,
+            confidenceMap,
+            gatingOpts,
+            projectFitMap.get(program.id),
+            publicEvidenceForProgram(program, state, zones, zoneNames, projectFitMap.get(program.id)),
+          ),
         ),
       });
       if (otherConfirmedPrograms.length > 0) {
@@ -1926,7 +2222,13 @@ function generateLocationIncentives(
           title: OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
           description: `Other programs connected to this address that do not directly target ${goalLabel.toLowerCase()} or still need industry confirmation.`,
           items: otherConfirmedPrograms.map((program) =>
-            programReportItem(program, confidenceMap, gatingOpts, projectFitMap.get(program.id)),
+            programReportItem(
+              program,
+              confidenceMap,
+              gatingOpts,
+              projectFitMap.get(program.id),
+              publicEvidenceForProgram(program, state, zones, zoneNames, projectFitMap.get(program.id)),
+            ),
           ),
         });
       }
@@ -1935,7 +2237,13 @@ function generateLocationIncentives(
         title: CONFIRMED_PROGRAMS_SECTION_TITLE,
         description: "Programs connected to this address through mapped incentive-zone boundaries. Confirm the applicable requirements for each program.",
         items: confirmedPrograms.map((program) =>
-          programReportItem(program, confidenceMap, gatingOpts, projectFitMap.get(program.id)),
+          programReportItem(
+            program,
+            confidenceMap,
+            gatingOpts,
+            projectFitMap.get(program.id),
+            publicEvidenceForProgram(program, state, zones, zoneNames, projectFitMap.get(program.id)),
+          ),
         ),
       });
     }
@@ -1946,7 +2254,13 @@ function generateLocationIncentives(
       title: "Additional Programs to Explore",
       description: "Programs not confirmed by this address alone, including Cook County tools that may apply countywide but still need project, property, and administrator review.",
       items: exploratoryPrograms.slice(0, 8).map((program) =>
-        programReportItem(program, confidenceMap, gatingOpts, projectFitMap.get(program.id)),
+        programReportItem(
+          program,
+          confidenceMap,
+          gatingOpts,
+          projectFitMap.get(program.id),
+          publicEvidenceForProgram(program, state, zones, zoneNames, projectFitMap.get(program.id)),
+        ),
       ),
     });
   }
@@ -1984,7 +2298,7 @@ function generateLocationIncentives(
       }));
       sections.push({
         title: "Required Documents",
-        description: `${Object.keys(docMap).length} documents across address-confirmed programs, organized by category. Each document lists which program(s) require it.`,
+        description: `${Object.keys(docMap).length} documents across programs mapped at this address, organized by category. Each document lists which program(s) require it.`,
         items: docItems,
       });
     }
@@ -2161,7 +2475,7 @@ function generateLocationIncentives(
     subtitle: `Location-based analysis for ${getIndustryName(state.industry)}`,
     reportType: "location-incentives",
     generatedAt: new Date().toISOString(),
-    summary: `${verdict?.headline || "Incentive analysis complete"}. Your address at ${addressDisplay} falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}, matching ${confirmedPrograms.length} address-confirmed program${confirmedPrograms.length !== 1 ? "s" : ""}.${exploratoryPrograms.length > 0 ? ` ${exploratoryPrograms.length} additional program${exploratoryPrograms.length !== 1 ? "s" : ""} appear as discovery next steps.` : ""}${projectGoalSummary}${stackingContext} Start with the recommended actions, then use the later sections to prepare and verify.`,
+    summary: `${verdict?.headline || "Incentive analysis complete"}. The mapped data records ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} at ${addressDisplay} and links ${confirmedPrograms.length} program${confirmedPrograms.length !== 1 ? "s" : ""} to this address.${exploratoryPrograms.length > 0 ? ` ${exploratoryPrograms.length} additional program${exploratoryPrograms.length !== 1 ? "s" : ""} appear as discovery next steps.` : ""}${projectGoalSummary}${stackingContext} Start with the recommended actions, then use the later sections to prepare and verify.`,
     sections,
     recommendedActions: recommendedActions.slice(0, 4),
     metadata: {
@@ -2239,11 +2553,11 @@ function generateBestLocation(
         label: "Building Classification",
         value: `${parcel.classCode} — ${parcel.classDescription}`,
         detail: parcel.isVacant
-          ? "Vacant land — eligible for new construction or Land Bank programs"
+          ? "Vacant land — review new-construction and Land Bank program requirements"
           : parcel.isCommercial
-            ? "Commercial property — may qualify for Class 7a assessment reduction"
+            ? "Commercial property — Class 7a requirements are relevant to review"
             : parcel.isIndustrial
-              ? "Industrial property — eligible for industrial development incentives"
+              ? "Industrial property — review industrial-development program requirements"
               : "Residential property classification",
       },
     ];
@@ -2320,9 +2634,8 @@ function generateBestLocation(
         value: zoneNames?.[key] || (matchingPrograms.length > 0
           ? `${matchingPrograms.length} program${matchingPrograms.length !== 1 ? "s" : ""}`
           : "Active"),
-        detail: (ZONE_DESCRIPTIONS[key] ? ZONE_DESCRIPTIONS[key] + " " : "") + (matchingPrograms.map((p) =>
-          `${p.name}${p.benefitRange ? ` (${p.benefitRange})` : ""}`
-        ).join("; ") || ""),
+        detail: (ZONE_DESCRIPTIONS[key] ? ZONE_DESCRIPTIONS[key] + " " : "") +
+          (matchingPrograms.map((p) => p.name).join("; ") || ""),
       };
     });
     // Add program interaction notes without exposing internal rankings.
@@ -2345,22 +2658,22 @@ function generateBestLocation(
   if (projectType === "rehab" || projectType === "mixed-use-conversion") {
     if (parcel?.bldgAge != null && parcel.bldgAge >= 50 && activeZones.includes("nrhpDistricts")) {
       feasibilityItems.push({
-        label: "Historic Tax Credit potential",
-        value: "Strong — 50+ year building in historic district",
-        detail: "Building age and National Register district status may qualify for 20% Federal Historic Tax Credit on certified rehabilitation.",
+        label: "Historic Tax Credit review",
+        value: "Age and district records found",
+        detail: "The recorded building age and National Register district status are relevant to the published Federal Historic Tax Credit requirements for certified rehabilitation.",
       });
     } else if (parcel?.bldgAge != null && parcel.bldgAge >= 50) {
       feasibilityItems.push({
-        label: "Historic Tax Credit potential",
-        value: "Possible — building is 50+ years old",
-        detail: "Building age may qualify for historic designation. Check if individual listing or district expansion is feasible.",
+        label: "Historic designation review",
+        value: "Building age recorded as 50+ years",
+        detail: "Review whether individual listing or a district designation applies before relying on historic program terms.",
       });
     }
     if (activeZones.includes("tif") || activeZones.includes("sbif")) {
       feasibilityItems.push({
         label: "Renovation funding",
-        value: "TIF/SBIF eligible",
-        detail: "This site is in a TIF district and/or SBIF-eligible area — rehabilitation costs may be partially reimbursed. Confirm current caps and open funding rounds before applying.",
+        value: "Mapped TIF/SBIF area",
+        detail: "This site is recorded in a TIF district and/or SBIF area. Confirm current project requirements, caps, and open funding rounds before applying.",
       });
     }
   }
@@ -2373,8 +2686,8 @@ function generateBestLocation(
     if (parcel?.isVacant) {
       feasibilityItems.push({
         label: "Vacant land status",
-        value: "Confirmed vacant parcel",
-        detail: "Parcel classified as vacant land. May qualify for Land Bank acquisition or reduced-price city sale programs.",
+        value: "Recorded vacant parcel",
+        detail: "The parcel is classified as vacant land. Review current Land Bank acquisition and City disposition requirements.",
       });
     }
     if (parcel?.isCommercial && isClass7aEligible(parcel.classCode)) {
@@ -2420,17 +2733,33 @@ function generateBestLocation(
   // §06 Available Programs
   if (sitePrograms.length > 0) {
     sections.push({
-      title: `Available Programs (${sitePrograms.length})`,
-      description: "Programs matched to this site through active incentive-zone boundaries, ordered by confidence.",
-      items: sitePrograms.slice(0, 8).map((p) => programReportItem(p, confidenceMap)),
+      title: `Programs Mapped at This Site (${sitePrograms.length})`,
+      description: "Programs linked to this site through mapped incentive-zone boundaries. Each program requires separate review.",
+      items: sitePrograms.slice(0, 8).map((program) =>
+        programReportItem(
+          program,
+          confidenceMap,
+          undefined,
+          undefined,
+          publicEvidenceForProgram(program, state, zones, zoneNames),
+        ),
+      ),
     });
   }
 
   if (exploratoryPrograms.length > 0) {
     sections.push({
       title: "Additional Programs to Explore",
-      description: "Programs not confirmed by this address alone, including Cook County tools that may apply countywide but still need project, property, and administrator review.",
-      items: exploratoryPrograms.slice(0, 8).map((p) => programReportItem(p, confidenceMap)),
+      description: "Broader programs, including Cook County tools, that require project, property, and administrator review.",
+      items: exploratoryPrograms.slice(0, 8).map((program) =>
+        programReportItem(
+          program,
+          confidenceMap,
+          undefined,
+          undefined,
+          publicEvidenceForProgram(program, state, zones, zoneNames),
+        ),
+      ),
     });
   }
 
@@ -2458,7 +2787,7 @@ function generateBestLocation(
         value: p?.bldgAge != null ? `${p.bldgAge}-year-old building` : "No building data",
         detail: p?.bldgAge != null
           ? p.bldgAge >= 50
-            ? "Older structure — factor in renovation costs, but may qualify for historic tax credits."
+            ? "Older structure — factor in renovation costs and review current historic tax credit requirements."
             : p.bldgAge >= 20
               ? "Moderate age — assess mechanical systems and envelope condition."
               : "Relatively new construction — lower renovation risk."
@@ -2481,12 +2810,12 @@ function generateBestLocation(
       "grant-eligibility": (_p, z) => ({
         label: "Grant Eligibility",
         value: (z.includes("tif") || z.includes("sbif"))
-          ? "TIF/SBIF eligible"
+          ? "TIF/SBIF area mapped"
           : z.includes("microMarketRecovery")
-            ? "Micro Market eligible"
+            ? "Micro Market area mapped"
             : "Limited direct grants",
         detail: (z.includes("tif") || z.includes("sbif"))
-          ? "This site qualifies for TIF funding and/or SBIF grant reimbursement for eligible improvements."
+          ? "This site is recorded in a TIF district and/or SBIF area. Review current project and reimbursement requirements."
           : "No direct grant programs identified at this location. Consider county-wide programs.",
         
       }),
@@ -2581,7 +2910,7 @@ function generateBestLocation(
     summaryParts.push(`PIN ${parcel.pin} (${parcel.classDescription})`);
   }
   summaryParts.push(`${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} active at this site`);
-  summaryParts.push(`${sitePrograms.length} address-confirmed program${sitePrograms.length !== 1 ? "s" : ""}`);
+  summaryParts.push(`${sitePrograms.length} program${sitePrograms.length !== 1 ? "s" : ""} mapped at this address`);
   if (exploratoryPrograms.length > 0) {
     summaryParts.push(`${exploratoryPrograms.length} additional discovery program${exploratoryPrograms.length !== 1 ? "s" : ""}`);
   }
@@ -2691,9 +3020,9 @@ function generateProgramExplorer(
       priority: "high",
     },
     {
-      label: "Complete the pre-qualification survey",
+      label: "Add your project details",
       description:
-        "Answer 4 quick questions to see which programs best match your industry, property, and planned activities.",
+        "Answer four project questions to narrow the programs and requirements worth reviewing.",
       priority: "high",
     },
     {
@@ -2735,8 +3064,8 @@ function generateDeveloperAnalysis(
 
   // Section 1: Incentive Pathway Review
   const stackingItems: ReportItem[] = creditPrograms.map((program) => ({
-    ...programReportItem(program),
-    value: program.benefitRange || "Review published program details",
+    ...programReportItem(program, undefined, undefined, undefined, publicEvidenceForProgram(program, state)),
+    value: "Review published terms",
     detail: program.summary,
   }));
 
@@ -2767,7 +3096,7 @@ function generateDeveloperAnalysis(
       docProgramMap[doc].add(p.name);
     }
     allQualifications.push({
-      ...programReportItem(p),
+      ...programReportItem(p, undefined, undefined, undefined, publicEvidenceForProgram(p, state)),
       value: p.whoQualifies,
     });
   }
@@ -2803,7 +3132,7 @@ function generateDeveloperAnalysis(
 
   sections.push({
     title: "Required Documents",
-    description: `${allRequiredDocs.size} documents across your eligible programs, organized by category. Each document lists which program(s) require it.`,
+    description: `${allRequiredDocs.size} documents across the selected programs, organized by category. Each document lists which program(s) require it.`,
     items: requirementItems,
   });
 
@@ -3680,7 +4009,7 @@ export function generateReportData(
         label: "Building Classification",
         value: `${parcel.classCode} — ${parcel.classDescription}`,
         detail: isClass7aEligible(parcel.classCode)
-          ? "This property class may be eligible for Class 7a/7b assessment reduction"
+          ? "This property class is relevant to review under current Class 7a/7b requirements"
           : "Standard property classification for tax assessment purposes",
         
       });
@@ -3770,9 +4099,9 @@ export function generateReportData(
       }
       if (isClass7aEligible(parcel.classCode)) {
         propertyItems.push({
-          label: "Class 7a Eligibility",
-          value: "Potentially eligible",
-          detail: `Property class ${parcel.classCode} may qualify for reduced assessment (10% of market value for commercial/industrial rehab)`,
+          label: "Class 7a Review",
+          value: "Requirements to review",
+          detail: `Property class ${parcel.classCode} is relevant to the published reduced-assessment requirements (10% of market value for qualifying commercial or industrial rehabilitation).`,
         });
       }
       if (districts) {
@@ -3835,20 +4164,9 @@ export function generateReportData(
     if (state.projectType && report.executiveSummary) {
       const goalLabel = projectGoalLabel(state.projectType);
       report.executiveSummary.projectGoalLabel = goalLabel;
-      report.executiveSummary.topPrograms = report.executiveSummary.topPrograms.map((program) => {
-        const sourceProgram = programs.find((candidate) => candidate.id === program.programId);
-        const fit = sourceProgram
-          ? projectGoalFit(sourceProgram, state.projectType, state.industry)
-          : undefined;
-        return {
-          ...program,
-          projectFitLabel: isProjectGoalMatch(fit) ? fit?.label : undefined,
-          projectFitReason: isProjectGoalMatch(fit) ? fit?.reason : undefined,
-        };
-      });
       report.executiveSummary.whyTheseMatter = `These programs are ordered for the selected goal: ${goalLabel}. ${report.executiveSummary.whyTheseMatter}`;
     }
   }
 
-  return report;
+  return normalizePublicReportForDisplay(report);
 }

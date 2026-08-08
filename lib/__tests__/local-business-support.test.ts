@@ -62,6 +62,27 @@ describe("local business support data", () => {
     expect(qcdc?.address).toContain("4210 S. Berkeley");
     expect(qcdc?.supportTypes).toContain("Commercial corridor development");
   });
+
+  it("uses the verified public intake for Greater Englewood in every mapped area", () => {
+    for (const communityAreaNumber of ["67", "68"] as const) {
+      const organization = supportData.byCommunityArea[communityAreaNumber].organizations.find(
+        (org) => org.id === "P019",
+      );
+
+      expect(organization).toMatchObject({
+        name: "Greater Englewood Chamber Foundation",
+        address: "825 W. 69th St., 2nd Floor, Chicago, IL 60621",
+        phone: "312-768-8573",
+        email: "connect@geccf.org",
+        website: "https://www.gechamber.com/contactus",
+        validationLevel: "Verified: official organization contact page",
+        currentStatus: "Active public intake",
+        sourceYear: "2026",
+        lastVerifiedAt: "2026-08-07",
+      });
+      expect(organization?.sourceUrls).toContain("https://www.gechamber.com/contactus");
+    }
+  });
 });
 
 describe("rankLocalBusinessSupport", () => {

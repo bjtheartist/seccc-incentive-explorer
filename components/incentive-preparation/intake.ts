@@ -138,7 +138,7 @@ export function validatePreparationIntake(
     ["contactName", "Contact name is required."],
     ["contactEmail", "Contact email is required."],
     ["primaryGoal", "Primary goal is required."],
-    ["selectedProgramLabel", "Select a likely-match program."],
+    ["selectedProgramLabel", "Select a program to prepare for."],
   ];
 
   for (const [field, message] of required) {

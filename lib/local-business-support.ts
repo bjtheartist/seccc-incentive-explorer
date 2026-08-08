@@ -24,6 +24,7 @@ export interface LocalBusinessSupportOrganization {
   relationships: LocalBusinessSupportRelationship[];
   address?: string;
   phone?: string;
+  email?: string;
   website?: string;
   supportTypes?: string;
   serviceGeography?: string;
@@ -31,6 +32,7 @@ export interface LocalBusinessSupportOrganization {
   validationLevel?: string;
   currentStatus?: string;
   sourceYear?: string;
+  lastVerifiedAt?: string;
   supportLanes?: LocalSupportLane[];
   communityAreaNumbers?: string[];
   serviceRegions?: string[];
@@ -202,6 +204,32 @@ export function normalizeSupportName(name: string): string {
     .replace(/&/g, "and")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+const GREATER_ENGLEWOOD_CONTACT_URL = "https://www.gechamber.com/contactus";
+
+export function applyVerifiedLocalBusinessSupportOverride<
+  T extends LocalBusinessSupportOrganization,
+>(organization: T): T {
+  const isGreaterEnglewood =
+    organization.id === "P019" ||
+    normalizeSupportName(organization.name) === "greater englewood chamber foundation";
+  if (!isGreaterEnglewood) return organization;
+
+  return {
+    ...organization,
+    address: "825 W. 69th St., 2nd Floor, Chicago, IL 60621",
+    phone: "312-768-8573",
+    email: "connect@geccf.org",
+    website: GREATER_ENGLEWOOD_CONTACT_URL,
+    validationLevel: "Verified: official organization contact page",
+    currentStatus: "Active public intake",
+    sourceYear: "2026",
+    lastVerifiedAt: "2026-08-07",
+    sourceUrls: Array.from(
+      new Set([...organization.sourceUrls, GREATER_ENGLEWOOD_CONTACT_URL]),
+    ),
+  } as T;
 }
 
 function organizationMatchesContext(

@@ -21,9 +21,9 @@ export function ReportPreview({ result, programs, onExpand }: ReportPreviewProps
   const [expanded, setExpanded] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
 
-  const eligibleKeys = ZONE_KEYS.filter((k) => result.zones[k]);
+  const mappedZoneKeys = ZONE_KEYS.filter((k) => result.zones[k]);
   const programMap = new Map(programs.map((p) => [p.zoneKey, p]));
-  const topPrograms = eligibleKeys
+  const topPrograms = mappedZoneKeys
     .map((k) => programMap.get(k))
     .filter(Boolean)
     .slice(0, 3);
@@ -101,7 +101,7 @@ export function ReportPreview({ result, programs, onExpand }: ReportPreviewProps
           ))}
         </div>
         <span className="font-mono-bureau text-[10px] text-[#0C1B33]/30 ml-auto">
-          {eligibleKeys.length} zone{eligibleKeys.length !== 1 ? "s" : ""}
+          {mappedZoneKeys.length} zone{mappedZoneKeys.length !== 1 ? "s" : ""}
         </span>
       </div>
 
@@ -109,7 +109,7 @@ export function ReportPreview({ result, programs, onExpand }: ReportPreviewProps
       {topPrograms.length > 0 && (
         <div className="px-5 py-3 border-b border-[#0C1B33]/6">
           <div className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#2563EB]/40 mb-2">
-            Top Eligible Programs
+            Programs to Review
           </div>
           <div className="space-y-1.5">
             {topPrograms.map((p) =>

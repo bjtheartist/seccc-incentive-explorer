@@ -98,7 +98,7 @@ export default async function NeighborhoodIncentivesPage({
   const supportSummary =
     orgNames.length > 0
       ? orgNames.slice(0, 2).join(" and ")
-      : "the South East Chicago Chamber of Commerce and citywide partners";
+      : "the Southeast Chicago Chamber of Commerce and citywide partners";
 
   const faqJsonLd = buildFaqJsonLd([
     {
@@ -348,7 +348,7 @@ export default async function NeighborhoodIncentivesPage({
           ) : (
             <p className="text-[#0C1B33]/60 text-sm rounded-xl border border-[#0C1B33]/10 bg-white px-5 py-4 max-w-2xl leading-relaxed">
               No neighborhood-specific support partner is listed for {ca.name}{" "}
-              yet. The South East Chicago Chamber of Commerce and citywide
+              yet. The Southeast Chicago Chamber of Commerce and citywide
               partners can still help — start with a free snapshot.
             </p>
           )}
