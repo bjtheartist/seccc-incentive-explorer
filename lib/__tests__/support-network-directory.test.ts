@@ -12,6 +12,7 @@ describe("support network directory", () => {
         "Greenwood Archer Capital",
         "Chicago Neighborhood Initiatives",
         "Far South Community Development Corporation",
+        "Greater Englewood Chamber Foundation",
         "Greater Southwest Development Corporation",
         "The Resurrection Project",
         "Neighborhood Housing Services of Chicago",
@@ -33,7 +34,7 @@ describe("support network directory", () => {
   });
 
   it("keeps every named contact tied to an official source and current role", () => {
-    expect(supportNetworkDirectory.generatedAt).toBe("2026-08-04");
+    expect(supportNetworkDirectory.generatedAt).toBe("2026-08-07");
 
     for (const organization of supportNetworkDirectory.organizations) {
       expect(organization.publicIntake.url).toMatch(/^https:\/\//);
@@ -47,6 +48,24 @@ describe("support network directory", () => {
         expect(contact.sourceUrl).toMatch(/^https:\/\//);
       }
     }
+  });
+
+  it("publishes Greater Englewood organization-level intake without personal contacts", () => {
+    const greaterEnglewood = supportNetworkDirectory.organizations.find(
+      (organization) => organization.id === "greater-englewood-chamber-foundation"
+    );
+
+    expect(greaterEnglewood).toMatchObject({
+      name: "Greater Englewood Chamber Foundation",
+      publicIntake: {
+        email: "connect@geccf.org",
+        phone: "312-768-8573",
+        url: "https://www.gechamber.com/contactus",
+      },
+      keyContacts: [],
+      lastVerifiedAt: "2026-08-07",
+      sourceUrls: ["https://www.gechamber.com/contactus"],
+    });
   });
 
   it("tracks current public program verification without repository-held relationship notes", () => {

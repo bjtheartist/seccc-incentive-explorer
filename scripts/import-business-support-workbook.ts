@@ -14,6 +14,7 @@ import * as XLSX from "xlsx";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import {
+  applyVerifiedLocalBusinessSupportOverride,
   normalizeSupportName,
   rankLocalBusinessSupport,
   type LocalBusinessSupportContext,
@@ -150,7 +151,7 @@ function buildProviderIndex(rows: unknown[][]): Map<string, ProviderRecord> {
     const name = value(row, cols.name);
     if (!name) continue;
 
-    const record: ProviderRecord = {
+    const record = applyVerifiedLocalBusinessSupportOverride({
       id: value(row, cols.id) || normalizeSupportName(name),
       name,
       primaryType: value(row, cols.primaryType) || undefined,
@@ -167,7 +168,7 @@ function buildProviderIndex(rows: unknown[][]): Map<string, ProviderRecord> {
       currentStatus: value(row, cols.status) || undefined,
       sourceYear: value(row, cols.year) || undefined,
       sourceUrls: splitUrls(value(row, cols.urls)),
-    };
+    }) as ProviderRecord;
 
     for (const key of providerKeyVariants(name)) {
       index.set(key, record);
@@ -216,6 +217,7 @@ function addOrganization(
   existing.programSubtype ||= org.programSubtype;
   existing.address ||= org.address;
   existing.phone ||= org.phone;
+  existing.email ||= org.email;
   existing.website ||= org.website;
   existing.supportTypes ||= org.supportTypes;
   existing.serviceGeography ||= org.serviceGeography;
@@ -223,6 +225,7 @@ function addOrganization(
   existing.validationLevel ||= org.validationLevel;
   existing.currentStatus ||= org.currentStatus;
   existing.sourceYear ||= org.sourceYear;
+  existing.lastVerifiedAt ||= org.lastVerifiedAt;
 }
 
 function main() {

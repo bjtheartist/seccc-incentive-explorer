@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-04",
+  "generatedAt": "2026-08-07",
   "sourceNote": "Admin-gated directory compiled only from public organization sources. Chamber relationship notes and outreach history are stored outside this repository.",
   "organizations": [
     {
@@ -328,6 +328,29 @@
       "lastVerifiedAt": "2026-07-14",
       "sourceUrls": [
         "https://farsouthcdc.org/nbdc"
+      ]
+    },
+    {
+      "id": "greater-englewood-chamber-foundation",
+      "name": "Greater Englewood Chamber Foundation",
+      "organizationType": "Neighborhood chamber foundation and business-support organization",
+      "coverageRole": "core_local",
+      "supportLanes": [
+        "business_navigation",
+        "corridor_place_based",
+        "workforce"
+      ],
+      "geography": "Englewood and West Englewood",
+      "bestFor": "Hyper-local business development assistance, City navigation, business planning, marketing, contract assistance, workforce development, and connections to training and resources",
+      "publicIntake": {
+        "email": "connect@geccf.org",
+        "phone": "312-768-8573",
+        "url": "https://www.gechamber.com/contactus"
+      },
+      "keyContacts": [],
+      "lastVerifiedAt": "2026-08-07",
+      "sourceUrls": [
+        "https://www.gechamber.com/contactus"
       ]
     },
     {
