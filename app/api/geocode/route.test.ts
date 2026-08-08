@@ -118,7 +118,7 @@ describe("GET /api/geocode", () => {
     );
   });
 
-  it("allows a same-street result with no house number as an explicit fallback", async () => {
+  it("rejects a street-level result when a house number was requested", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -138,9 +138,8 @@ describe("GET /api/geocode", () => {
     );
     const body = await response.json();
 
-    expect(response.status).toBe(200);
-    expect(body.matchQuality).toBe("street");
-    expect(body.displayName).toContain("West 63rd Street");
+    expect(response.status).toBe(404);
+    expect(body.error).toBe("Address not found");
   });
 
   it("does not substitute a different street or conflicting house number", async () => {

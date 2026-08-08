@@ -196,12 +196,9 @@ function selectCandidate(
         normalizeHouseNumber(candidate.address?.house_number) === requested.houseNumber,
     );
     if (exact) return { candidate: exact, matchQuality: "exact" };
-
-    // A street-level result is an honest fallback. A different house number is not.
-    const streetOnly = streetMatches.find(
-      (candidate) => normalizeHouseNumber(candidate.address?.house_number) === null,
-    );
-    return streetOnly ? { candidate: streetOnly, matchQuality: "street" } : null;
+    // Current consumers act on the coordinates immediately and do not prompt
+    // for confirmation. Never substitute a street centroid for a house number.
+    return null;
   }
 
   return { candidate: streetMatches[0], matchQuality: "street" };
