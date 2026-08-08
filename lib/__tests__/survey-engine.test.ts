@@ -40,8 +40,8 @@ describe("survey public results", () => {
     );
     expect(sbif!.explanation.stillToConfirm).toEqual(
       expect.arrayContaining([
-        "Program location and boundary requirements",
-        "Property type and site-control requirements",
+        "Property must be in an eligible TIF district with an open enrollment window",
+        "Commercial or industrial building (1-4 story for commercial); determines cap tier",
       ]),
     );
     expect(JSON.stringify(sbif)).not.toMatch(/confirmed/i);
@@ -68,7 +68,7 @@ describe("survey public results", () => {
         const serialized = JSON.stringify(result);
 
         expect(serialized).not.toMatch(
-          /score|confidence|pre-qualif|you may qualify|high match|medium match|appears eligible|\beligible\b/i,
+          /score|confidence|pre-qualif|you may qualify|high match|medium match|appears eligible|you are eligible|your business is eligible|your project is eligible/i,
         );
       }
     }

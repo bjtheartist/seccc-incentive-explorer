@@ -80,8 +80,8 @@ describe("public match transparency", () => {
       "Building renovations",
     ]);
     expect(explanation.stillToConfirm).toEqual([
-      "Property type and site-control requirements",
-      "Business size and financial requirements (additional program condition)",
+      "The project must have documented site control",
+      "Financial thresholds may affect program terms (additional program condition)",
     ]);
   });
 
@@ -91,7 +91,7 @@ describe("public match transparency", () => {
     });
 
     expect(explanation.stillToConfirm).toContain(
-      "Property type and site-control requirements",
+      "The project must have documented site control",
     );
     expect(explanation.knownFromPublicData).not.toContain("Own commercial property");
     expect(JSON.stringify(explanation)).not.toMatch(/confirmed/i);

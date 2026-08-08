@@ -13,16 +13,6 @@ export interface PublicMatchEvidence {
   rulesEstablishedByPublicData?: readonly string[];
 }
 
-const CRITERION_LABELS: Record<string, string> = {
-  location: "Program location and boundary requirements",
-  industry: "Industry and business-activity requirements",
-  propertyType: "Property type and site-control requirements",
-  investmentSize: "Project scope, investment, hiring, or use-of-funds requirements",
-  businessSize: "Business size and financial requirements",
-  hiring: "Hiring and workforce requirements",
-  ownership: "Ownership and control requirements",
-};
-
 function uniqueNonEmpty(values: readonly string[] | undefined): string[] {
   return Array.from(
     new Set((values ?? []).map((value) => value.trim()).filter(Boolean)),
@@ -92,8 +82,8 @@ function confirmationContacts(program: Program): MatchTransparencyContact[] {
 }
 
 function neutralConfirmationLabel(rule: EligibilityRule): string {
-  const label =
-    CRITERION_LABELS[rule.criterion] ?? "Other published program requirements";
+  const description = rule.description.trim();
+  const label = description || "Confirm the current published program requirements";
   return rule.required ? label : `${label} (additional program condition)`;
 }
 

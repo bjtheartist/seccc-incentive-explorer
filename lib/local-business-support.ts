@@ -208,9 +208,9 @@ export function normalizeSupportName(name: string): string {
 
 const GREATER_ENGLEWOOD_CONTACT_URL = "https://www.gechamber.com/contactus";
 
-export function applyVerifiedLocalBusinessSupportOverride(
-  organization: LocalBusinessSupportOrganization,
-): LocalBusinessSupportOrganization {
+export function applyVerifiedLocalBusinessSupportOverride<
+  T extends LocalBusinessSupportOrganization,
+>(organization: T): T {
   const isGreaterEnglewood =
     organization.id === "P019" ||
     normalizeSupportName(organization.name) === "greater englewood chamber foundation";
@@ -229,7 +229,7 @@ export function applyVerifiedLocalBusinessSupportOverride(
     sourceUrls: Array.from(
       new Set([...organization.sourceUrls, GREATER_ENGLEWOOD_CONTACT_URL]),
     ),
-  };
+  } as T;
 }
 
 function organizationMatchesContext(
