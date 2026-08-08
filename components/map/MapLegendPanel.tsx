@@ -60,6 +60,10 @@ import {
 } from "@/lib/investment-deck-modes";
 import type { CapitalClass, FunderType } from "@/lib/community-investment";
 import {
+  GOVERNMENT_FUNDING_PURPOSE_LABELS,
+  type GovernmentFundingPurpose,
+} from "@/lib/government-funding-purpose";
+import {
   DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY,
   PUBLIC_INVESTMENT_OVERLAY_COLORS,
   PUBLIC_INVESTMENT_OVERLAYS,
@@ -95,6 +99,8 @@ interface MapLegendPanelProps {
   communityInvestmentError?: string | null;
   /** Funder types actually present among the plotted points, in FUNDER_TYPE_ORDER — drives the funderType checkboxes. */
   investmentPresentFunderTypes?: FunderType[];
+  /** Government funding purposes present among plotted base dots. */
+  investmentPresentGovernmentFundingPurposes?: GovernmentFundingPurpose[];
   /** Capital classes present among plotted dots, in CAPITAL_CLASS_ORDER — drives the capital-class sub-legend. */
   investmentPresentCapitalClasses?: CapitalClass[];
   /** Count of tracked foundation HQs — the Arcs "Foundation flows (N tracked HQs)" honest label. */
@@ -103,6 +109,8 @@ interface MapLegendPanelProps {
   investmentYearRange?: string;
   /** Per-funderType checkbox state (client-side filter). */
   investmentFunderTypes?: Record<FunderType, boolean>;
+  /** Per-purpose checkbox state for government-funded base dots. */
+  investmentGovernmentFundingPurposes?: Record<GovernmentFundingPurpose, boolean>;
   /** Citywide-geometry summary (count + total awarded dollars) — records that never plot as dots. */
   investmentCitywide?: { count: number; totalDollars: number } | null;
   /** Active admin view mode (Dots | Arcs | Density); defaults to "dots". */
@@ -134,6 +142,7 @@ interface MapLegendPanelProps {
   onSetInvestmentMegaprojectsVisible?: (value: boolean) => void;
   onSetPublicInvestmentOverlay?: (id: PublicInvestmentOverlayId, value: boolean) => void;
   onToggleInvestmentFunderType?: (key: FunderType) => void;
+  onToggleInvestmentGovernmentFundingPurpose?: (key: GovernmentFundingPurpose) => void;
   onClose: () => void;
   onToggleZone: (key: string) => void;
   onTogglePoi: (key: string) => void;
@@ -177,10 +186,12 @@ export default function MapLegendPanel({
   communityInvestmentLoading,
   communityInvestmentError,
   investmentPresentFunderTypes = [],
+  investmentPresentGovernmentFundingPurposes = [],
   investmentPresentCapitalClasses = [],
   investmentFunderHqCount = 0,
   investmentYearRange = DEFAULT_INVESTMENT_YEAR_RANGE,
   investmentFunderTypes = {} as Record<FunderType, boolean>,
+  investmentGovernmentFundingPurposes = {} as Record<GovernmentFundingPurpose, boolean>,
   investmentCitywide = null,
   investmentViewMode = DEFAULT_INVESTMENT_VIEW_MODE,
   investmentDensityMetric = DEFAULT_INVESTMENT_DENSITY_METRIC,
@@ -204,6 +215,7 @@ export default function MapLegendPanel({
   onSetInvestmentMegaprojectsVisible = () => {},
   onSetPublicInvestmentOverlay = () => {},
   onToggleInvestmentFunderType = () => {},
+  onToggleInvestmentGovernmentFundingPurpose = () => {},
   onClose,
   onToggleZone,
   onTogglePoi,
@@ -836,58 +848,78 @@ export default function MapLegendPanel({
                     Additional layers
                   </div>
                   <div className="space-y-2 border-b border-[#0C1B33]/8 pb-3 mb-2">
-                    {PUBLIC_INVESTMENT_OVERLAYS.map((overlay) => {
-                      const checked = publicInvestmentOverlays[overlay.id];
-                      const color = PUBLIC_INVESTMENT_OVERLAY_COLORS[overlay.id];
-                      const countLabel =
-                        overlay.id === "county_relief_awards"
-                          ? `${countyReliefZipCount} Chicago ZIP areas mapped`
-                          : overlay.id === "state_2020_relief"
-                            ? `${state2020ReliefZipCount} BIG ZIP areas mapped · ${state2020HospitalityCitywideCount} Hospitality records held unplotted`
-                          : overlay.id === "state_recovery_awards"
-                            ? `${stateRecoveryZipCount} Chicago ZIP areas mapped`
-                            : overlay.id === "federal_restaurant_relief"
-                              ? `${federalRestaurantReliefPlottedCount} address-sited · ${federalRestaurantReliefCitywideCount} held unplotted`
-                              : `${stateCapitalPlottedCount} address-sited · ${stateCapitalCitywideCount} held unplotted`;
-                      return (
-                        <label key={overlay.id} className="flex items-start gap-2.5 py-1 cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            role="switch"
-                            aria-label={`Toggle ${overlay.label} overlay`}
-                            checked={checked}
-                            onChange={() => onSetPublicInvestmentOverlay(overlay.id, !checked)}
-                            className="sr-only"
-                          />
-                          <span
-                            aria-hidden="true"
-                            className="relative mt-0.5 h-5 w-9 flex-shrink-0 rounded-full border transition-colors"
-                            style={{
-                              borderColor: checked ? color : "#0C1B3326",
-                              backgroundColor: checked ? color : "#0C1B330A",
-                            }}
-                          >
-                            <span
-                              className="absolute top-[2px] h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform"
-                              style={{ transform: checked ? "translateX(17px)" : "translateX(2px)" }}
-                            />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block text-[11px] font-medium text-[#0C1B33]/75 group-hover:text-[#0C1B33] transition-colors">
-                              {overlay.label}
-                            </span>
-                            <span className="block text-[9px] text-[#0C1B33]/40 leading-relaxed">
-                              {overlay.description}
-                            </span>
-                            {checked && (
-                              <span className="mt-1 block font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
-                                {countLabel}
+                    {(["capital_project", "programmatic"] as const).map((purpose) => (
+                      <div key={purpose} className="space-y-1.5">
+                        <div className="font-mono-bureau text-[8px] uppercase tracking-[0.12em] text-[#0C1B33]/45">
+                          {GOVERNMENT_FUNDING_PURPOSE_LABELS[purpose]}
+                        </div>
+                        {PUBLIC_INVESTMENT_OVERLAYS.filter(
+                          (overlay) => overlay.fundingPurpose === purpose,
+                        ).map((overlay) => {
+                          const checked = publicInvestmentOverlays[overlay.id];
+                          const color = PUBLIC_INVESTMENT_OVERLAY_COLORS[overlay.id];
+                          const countLabel =
+                            overlay.id === "county_relief_awards"
+                              ? `${countyReliefZipCount} Chicago ZIP areas mapped`
+                              : overlay.id === "state_2020_relief"
+                                ? `${state2020ReliefZipCount} BIG ZIP areas mapped · ${state2020HospitalityCitywideCount} Hospitality records held unplotted`
+                              : overlay.id === "state_recovery_awards"
+                                ? `${stateRecoveryZipCount} Chicago ZIP areas mapped`
+                                : overlay.id === "federal_restaurant_relief"
+                                  ? `${federalRestaurantReliefPlottedCount} address-sited · ${federalRestaurantReliefCitywideCount} held unplotted`
+                                  : `${stateCapitalPlottedCount} address-sited · ${stateCapitalCitywideCount} held unplotted`;
+                          return (
+                            <label key={overlay.id} className="flex items-start gap-2.5 py-1 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                role="switch"
+                                aria-label={`Toggle ${overlay.label} overlay`}
+                                checked={checked}
+                                onChange={() => onSetPublicInvestmentOverlay(overlay.id, !checked)}
+                                className="sr-only"
+                              />
+                              <span
+                                aria-hidden="true"
+                                className="relative mt-0.5 h-5 w-9 flex-shrink-0 rounded-full border transition-colors"
+                                style={{
+                                  borderColor: checked ? color : "#0C1B3326",
+                                  backgroundColor: checked ? color : "#0C1B330A",
+                                }}
+                              >
+                                <span
+                                  className="absolute top-[2px] h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform"
+                                  style={{ transform: checked ? "translateX(17px)" : "translateX(2px)" }}
+                                />
                               </span>
-                            )}
-                          </span>
-                        </label>
-                      );
-                    })}
+                              <span className="min-w-0">
+                                <span className="block text-[11px] font-medium text-[#0C1B33]/75 group-hover:text-[#0C1B33] transition-colors">
+                                  {overlay.label}
+                                </span>
+                                <span className="block text-[9px] text-[#0C1B33]/40 leading-relaxed">
+                                  {overlay.description}
+                                </span>
+                                {checked && (
+                                  <span className="mt-1 block font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
+                                    {countLabel}
+                                  </span>
+                                )}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ))}
+                    <div className="space-y-1">
+                      <div className="font-mono-bureau text-[8px] uppercase tracking-[0.12em] text-[#0C1B33]/45">
+                        Arts funding
+                      </div>
+                      <Link
+                        href="/investment#illinois-arts-awards"
+                        className="block text-[9px] leading-relaxed text-[#2563EB] hover:underline"
+                      >
+                        City-level Illinois Arts Council awards are not mapped →
+                      </Link>
+                    </div>
                   </div>
                   <label className="flex items-center gap-2.5 py-1 cursor-pointer group">
                     <input
@@ -1032,6 +1064,45 @@ export default function MapLegendPanel({
                             </span>
                             <span className="text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight">
                               {FUNDER_TYPE_LABELS[type]}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {investmentPresentGovernmentFundingPurposes.length > 0 && (
+                  <div>
+                    <div className="font-mono-bureau text-[8px] tracking-[0.15em] uppercase text-[#0C1B33]/40 mb-1.5">
+                      Government funding purpose
+                    </div>
+                    <div className="space-y-0.5">
+                      {investmentPresentGovernmentFundingPurposes.map((purpose) => {
+                        const checked = investmentGovernmentFundingPurposes[purpose] ?? true;
+                        return (
+                          <label
+                            key={purpose}
+                            className="flex items-center gap-2.5 py-1 cursor-pointer group"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() =>
+                                onToggleInvestmentGovernmentFundingPurpose(purpose)
+                              }
+                              className="sr-only"
+                            />
+                            <span
+                              className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center border border-[#0C1B33]/25 bg-white transition-colors"
+                              aria-hidden="true"
+                            >
+                              {checked ? (
+                                <span className="block h-2 w-2 bg-[#2563EB]" />
+                              ) : null}
+                            </span>
+                            <span className="text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight">
+                              {GOVERNMENT_FUNDING_PURPOSE_LABELS[purpose]}
                             </span>
                           </label>
                         );

@@ -1,7 +1,11 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { loadCommunityInvestment } from "@/lib/community-investment";
-import { loadInvestmentIndex, loadMajorDevelopments } from "@/lib/investment-analysis";
+import {
+  loadIllinoisArtsCouncilAwards,
+  loadInvestmentIndex,
+  loadMajorDevelopments,
+} from "@/lib/investment-analysis";
 import { buildSourceCoverageRows } from "@/lib/investment-source-coverage";
 import {
   formatCount,
@@ -13,6 +17,7 @@ import { StatusCards } from "@/components/investment/StatusCards";
 import { MajorDevelopments } from "@/components/investment/MajorDevelopments";
 import { ComparePinBar, PinButton } from "@/components/investment/PinControls";
 import { SourceCoverageMatrix } from "@/components/investment/SourceCoverageMatrix";
+import { IllinoisArtsCouncilAwardsTable } from "@/components/investment/IllinoisArtsCouncilAwardsTable";
 import { getInvestmentAdminState, InvestmentLoginForm, InvestmentNotConfigured } from "./gate";
 
 export const dynamic = "force-dynamic";
@@ -41,6 +46,7 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
   const meta = investment?.meta;
   const coverageRows = meta ? buildSourceCoverageRows(meta) : [];
   const topDevelopments = loadMajorDevelopments({ limit: 10 });
+  const illinoisArtsCouncilAwards = loadIllinoisArtsCouncilAwards();
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
@@ -95,6 +101,51 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
               />
             </div>
 
+            <section id="government-funding-purposes" className="mt-10 scroll-mt-6">
+              <h2 className="font-editorial text-[26px]">Government funding by purpose</h2>
+              <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/45">
+                Funding purpose describes what the public support is for. Capital class remains separate and
+                tells whether the source figure is an award, authorization, tax credit, or appropriation.
+              </p>
+              <div className="mt-4 grid border-y border-[#0C1B33]/10 md:grid-cols-3 md:divide-x md:divide-[#0C1B33]/10">
+                <div className="border-b border-[#0C1B33]/10 py-4 md:border-b-0 md:pr-5">
+                  <span className="font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB]">
+                    Capital projects
+                  </span>
+                  <p className="mt-2 text-[13px] leading-relaxed text-[#0C1B33]/60">
+                    Buildings, rehabilitation, acquisition, infrastructure, and other physical work.
+                  </p>
+                  <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/40">
+                    Includes NOF, SBIF, CDG, TIF, tax-credit projects, capital appropriations, and
+                    capital-coded HUD activities.
+                  </p>
+                </div>
+                <div className="border-b border-[#0C1B33]/10 py-4 md:border-b-0 md:px-5">
+                  <span className="font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB]">
+                    Programmatic funding
+                  </span>
+                  <p className="mt-2 text-[13px] leading-relaxed text-[#0C1B33]/60">
+                    Services, technical or financial assistance, business relief, and program delivery.
+                  </p>
+                  <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/40">
+                    Includes public-service HUD activities and historical business recovery programs.
+                  </p>
+                </div>
+                <div className="py-4 md:pl-5">
+                  <span className="font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB]">
+                    Arts funding
+                  </span>
+                  <p className="mt-2 text-[13px] leading-relaxed text-[#0C1B33]/60">
+                    Arts and cultural awards published by a government arts agency.
+                  </p>
+                  <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/40">
+                    Illinois Arts Council records are city-level only and are not assigned to a property or
+                    neighborhood.
+                  </p>
+                </div>
+              </div>
+            </section>
+
             {investment && coverageRows.length > 0 ? (
               <section id="coverage" className="mt-10 scroll-mt-6">
                 <h2 className="font-editorial text-[26px]">Source coverage</h2>
@@ -106,6 +157,10 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                   <SourceCoverageMatrix rows={coverageRows} generatedAt={investment.generatedAt} />
                 </div>
               </section>
+            ) : null}
+
+            {illinoisArtsCouncilAwards ? (
+              <IllinoisArtsCouncilAwardsTable data={illinoisArtsCouncilAwards} />
             ) : null}
 
             {/* Ranked community list */}

@@ -66,6 +66,7 @@
     "data:import:illinois-hospitality": "npx tsx scripts/import-illinois-hospitality-emergency-grants.ts",
     "data:import:illinois-b2b": "npx tsx scripts/import-illinois-back-to-business.ts",
     "data:import:sba-rrf": "npx tsx scripts/import-sba-restaurant-revitalization.ts",
+    "data:import:iac-arts": "npx tsx scripts/import-illinois-arts-council.ts",
     "data:import:chicago-arpa": "npx tsx scripts/import-chicago-arpa-recovery.ts",
     "data:import:chicago-cares": "npx tsx scripts/import-chicago-cares-program-ledger.ts",
     "data:import:cook-cares-2020": "npx tsx scripts/import-cook-county-cares-program-ledger.ts",

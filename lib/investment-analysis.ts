@@ -45,6 +45,8 @@ import {
   type InvestmentStatus,
 } from "./community-investment";
 import { formatCount, formatFullDollars, formatMultiple, formatPercent } from "@/components/investment/format";
+import type { IllinoisArtsCouncilAward } from "./illinois-arts-council";
+import type { GovernmentFundingPurpose } from "./government-funding-purpose";
 
 /** The since-anchor year. Dollar math and breakdowns cover year >= this. */
 export const SINCE_YEAR = 2020;
@@ -77,6 +79,19 @@ export interface SourceBreakdown {
   count: number;
 }
 
+export type MappableGovernmentFundingPurpose = Exclude<
+  GovernmentFundingPurpose,
+  "arts"
+>;
+
+/** Record-count view of what government support is for. Counts deliberately
+ * avoid combining dollars whose capital classes have different meanings. Arts
+ * awards remain city-level and are therefore absent from community analysis. */
+export interface GovernmentFundingPurposeBreakdown {
+  purpose: MappableGovernmentFundingPurpose;
+  count: number;
+}
+
 /** One of the top-dollar recipients (in-window, real awarded amount). */
 export interface TopRecipient {
   /** Stable source record id — lets a client shortlist flag/dedupe this row. */
@@ -93,6 +108,8 @@ export interface TopRecipient {
   /** Capital class — always "grant" here (top recipients are amountAwarded>0
    * grant records), surfaced so the drawer can name the class honestly. */
   capitalClass: CapitalClass;
+  /** Government funding purpose, or null for philanthropic/private records. */
+  governmentFundingPurpose: GovernmentFundingPurpose | null;
   /** Street address as published, or null (the drawer's location line). */
   address: string | null;
   /**
@@ -184,6 +201,7 @@ export interface CommunityInvestmentAnalysis {
   byFunderType: FunderTypeBreakdown[];
   byYear: YearBreakdown[];
   bySource: SourceBreakdown[];
+  governmentFundingPurposes: GovernmentFundingPurposeBreakdown[];
   topRecipients: TopRecipient[];
   topFunders: TopFunder[];
   equity: InvestmentEquity;
@@ -354,6 +372,27 @@ function sourceBreakdown(records: readonly CommunityInvestmentRecord[]): SourceB
   return out;
 }
 
+const MAPPABLE_GOVERNMENT_PURPOSES: readonly MappableGovernmentFundingPurpose[] = [
+  "capital_project",
+  "programmatic",
+  "unclassified",
+];
+
+/** Count all sited base-investment government records by their persisted source
+ * purpose. This is intentionally a record count, not a dollar aggregation. */
+export function governmentFundingPurposeBreakdown(
+  records: readonly CommunityInvestmentRecord[],
+): GovernmentFundingPurposeBreakdown[] {
+  return MAPPABLE_GOVERNMENT_PURPOSES.map((purpose) => ({
+    purpose,
+    count: records.filter(
+      (record) =>
+        record.funderType === "government" &&
+        record.governmentFundingPurpose === purpose,
+    ).length,
+  }));
+}
+
 /**
  * Map a record's geometry to its location-confidence tier — exhaustive over
  * InvestmentGeometry, so a future geometry kind is a compile error here rather
@@ -390,6 +429,7 @@ function topRecipients(
       logLine: r.logLine,
       status: r.status,
       capitalClass: r.capitalClass,
+      governmentFundingPurpose: r.governmentFundingPurpose,
       address: r.address,
       // One tier per geometry kind, mapped exhaustively. Previously this was
       // `point ? "sited" : "citywide"`, which reported a ZIP-level aggregate as
@@ -499,6 +539,7 @@ export function analyzeCommunityArea(
     byFunderType: funderTypeBreakdown(grantInView, totalAwarded),
     byYear: yearBreakdown(inWindow, latestYear),
     bySource: sourceBreakdown(grantInView),
+    governmentFundingPurposes: governmentFundingPurposeBreakdown(mine),
     topRecipients: topRecipients(inWindow, 10),
     topFunders: topFunders(inWindow, 8),
     equity,
@@ -654,6 +695,7 @@ export interface FlowRow {
   funderName: string;
   funderType: FunderType;
   source: InvestmentSource;
+  governmentFundingPurpose: GovernmentFundingPurpose | null;
   recipient: string;
   year: number;
   amountAwarded: number;
@@ -673,6 +715,7 @@ export function buildFlowRows(records: readonly CommunityInvestmentRecord[]): Fl
       funderName: r.funderName,
       funderType: r.funderType,
       source: r.source,
+      governmentFundingPurpose: r.governmentFundingPurpose,
       recipient: r.recipient,
       year: r.year as number,
       amountAwarded: r.amountAwarded as number,
@@ -717,11 +760,32 @@ export interface CapitalContextForArea {
   generatedAt: string | null;
 }
 
+export interface IllinoisArtsCouncilAwardsContext {
+  fundingPurpose: Extract<GovernmentFundingPurpose, "arts">;
+  fiscalYear: number;
+  sourceVersion: string;
+  sourceCheckedAt: string;
+  sourcePageUrl: string;
+  sourceDataUrl: string;
+  recordCount: number;
+  recordIdMeaning: string;
+  amountMeaning: string;
+  geographyMeaning: string;
+  coverage: {
+    capture: "complete_published";
+    mapDetail: "aggregate_only";
+    refresh: "awaiting_publication";
+    review: "complete_published";
+  };
+  records: IllinoisArtsCouncilAward[];
+}
+
 interface RawCapitalContext {
   generatedAt?: string;
   meta?: { sources?: string[] };
   craByCommunityArea?: Array<{ communityArea: string; series: CraYearRow[] }>;
   cdfi?: Array<{ geography: string; geographyLevel: string; series: CdfiYearRow[] }>;
+  illinoisArtsCouncilAwards?: IllinoisArtsCouncilAwardsContext;
 }
 
 const CAPITAL_CONTEXT_PATH = path.join(process.cwd(), "data/private/capital-context.json");
@@ -764,6 +828,15 @@ export function loadCapitalContextForArea(communityArea: string): CapitalContext
     sources: ctx?.meta?.sources ?? [],
     generatedAt: ctx?.generatedAt ?? null,
   };
+}
+
+/** Load the admin-only, city-level Illinois Arts Council historical awards. */
+export function loadIllinoisArtsCouncilAwards(): IllinoisArtsCouncilAwardsContext | null {
+  const awards = loadCapitalContext()?.illinoisArtsCouncilAwards;
+  if (!awards || !Array.isArray(awards.records) || awards.records.length === 0) {
+    return null;
+  }
+  return awards;
 }
 
 // ── Server-only loaders (fs) ──────────────────────────────────────────────────

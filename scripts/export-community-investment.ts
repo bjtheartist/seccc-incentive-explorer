@@ -43,9 +43,11 @@ import {
   INVESTMENT_STATUSES,
   SOURCE_FUNDER_TYPE,
   type CommunityInvestmentRecord,
+  type CommunityInvestmentRecordDraft,
   type InvestmentGeometry,
   type InvestmentStatus,
 } from "../lib/community-investment";
+import { governmentFundingPurposeForRecord } from "../lib/government-funding-purpose";
 import { assignCommunityArea, loadCommunityAreaPolygons } from "../lib/community-area-stamp";
 import {
   describesMultipleProjectSites,
@@ -55,6 +57,12 @@ import {
   DCEO_FUNDING_LIFECYCLE_POLICY,
   DCEO_FUNDING_LIFECYCLE_STAGES,
 } from "../lib/dceo-funding-lifecycle";
+import {
+  IAC_SOURCE_DATA_URL,
+  IAC_SOURCE_PAGE,
+  IAC_SOURCE_VERSION,
+  parseCuratedIllinoisArtsCouncilAwards,
+} from "../lib/illinois-arts-council";
 import {
   RECOVERY_INVESTMENT_SOURCE_METADATA,
   type RecoveryInvestmentSourceId,
@@ -456,8 +464,8 @@ function mapSocrata(
   source: "nof-small" | "nof-large" | "sbif",
   funderName: string,
   minYear: number,
-): { records: CommunityInvestmentRecord[]; drops: SocrataDrops } {
-  const out: CommunityInvestmentRecord[] = [];
+): { records: CommunityInvestmentRecordDraft[]; drops: SocrataDrops } {
+  const out: CommunityInvestmentRecordDraft[] = [];
   const drops: SocrataDrops = { preWindow: 0, noCoords: 0 };
   let idx = 0;
   for (const r of rows) {
@@ -631,10 +639,10 @@ export function mapFoundations(
   rows: Record<string, string>[],
   idPrefix = "foundation",
 ): {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   stats: FoundationStats;
 } {
-  const out: CommunityInvestmentRecord[] = [];
+  const out: CommunityInvestmentRecordDraft[] = [];
   const stats: FoundationStats = {
     citywideFallback: 0,
     droppedPlaceholder: 0,
@@ -834,7 +842,7 @@ function enrichedDevelopmentRecord(
   geometry: InvestmentGeometry,
   id: string,
   address: string | null,
-): CommunityInvestmentRecord {
+): CommunityInvestmentRecordDraft {
   const name = (mega.name || "").trim();
   const isSubset = MEGADEV_SUBSET_NAMES.has(name);
   const priceTag = parseAmount(mega.announced_investment_usd);
@@ -861,7 +869,7 @@ function enrichedDevelopmentRecord(
 }
 
 interface DevelopmentBuild {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   stats: {
     enrichedVerified: number;
     discoveredAdded: number;
@@ -888,7 +896,7 @@ function mapDevelopments(
   discoveredGeo: Map<string, InvestmentGeometry>,
   droppedKmlNames: Set<string>,
 ): DevelopmentBuild {
-  const out: CommunityInvestmentRecord[] = [];
+  const out: CommunityInvestmentRecordDraft[] = [];
   const stats: DevelopmentBuild["stats"] = {
     enrichedVerified: 0,
     discoveredAdded: 0,
@@ -985,8 +993,8 @@ function mapDevelopments(
  * (never coerced to 0). recordProvenance "official". These never collide with the
  * government-only dedupe (foundation rows are never dedupe-eligible).
  */
-function mapChicagoPrize(rows: Record<string, string>[]): CommunityInvestmentRecord[] {
-  const out: CommunityInvestmentRecord[] = [];
+function mapChicagoPrize(rows: Record<string, string>[]): CommunityInvestmentRecordDraft[] {
+  const out: CommunityInvestmentRecordDraft[] = [];
   let idx = 0;
   for (const r of rows) {
     let geometry: InvestmentGeometry;
@@ -1101,8 +1109,8 @@ interface TifDrops {
  * the coordinate-less annual-report rows are never records (they feed the context
  * file). Deterministic.
  */
-function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentRecord[]; drops: TifDrops } {
-  const out: CommunityInvestmentRecord[] = [];
+function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: TifDrops } {
+  const out: CommunityInvestmentRecordDraft[] = [];
   const drops: TifDrops = { noCoords: 0 };
   let idx = 0;
   for (const r of rows) {
@@ -1159,8 +1167,8 @@ interface HudDrops {
 function mapHud(
   rows: Record<string, string>[],
   asOf: Date,
-): { records: CommunityInvestmentRecord[]; drops: HudDrops } {
-  const out: CommunityInvestmentRecord[] = [];
+): { records: CommunityInvestmentRecordDraft[]; drops: HudDrops } {
+  const out: CommunityInvestmentRecordDraft[] = [];
   const drops: HudDrops = { outOfBbox: 0 };
   let idx = 0;
   for (const r of rows) {
@@ -1211,8 +1219,8 @@ interface LihtcDrops {
  * Status "completed" once placed in service, else "awarded". Only rows with real
  * coordinates become points. Deterministic.
  */
-function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmentRecord[]; drops: LihtcDrops } {
-  const out: CommunityInvestmentRecord[] = [];
+function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: LihtcDrops } {
+  const out: CommunityInvestmentRecordDraft[] = [];
   const drops: LihtcDrops = { noCoords: 0 };
   let idx = 0;
   for (const r of rows) {
@@ -1297,6 +1305,11 @@ function mapNmtc(
       id: `nmtc-${idx++}`,
       source: "nmtc",
       funderType: SOURCE_FUNDER_TYPE.nmtc,
+      governmentFundingPurpose: governmentFundingPurposeForRecord({
+        source: "nmtc",
+        funderType: SOURCE_FUNDER_TYPE.nmtc,
+        sourcePurposeText: purpose,
+      }),
       funderName: NMTC_FUNDER,
       recipient: cde || "(unnamed CDE project)",
       capitalClass: "tax_credit",
@@ -1349,11 +1362,11 @@ function mapCookSourceGrants(
   rows: Record<string, string>[],
   chicagoZipCodes: ReadonlySet<string>,
 ): {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   chicagoRecords: number;
   outsideChicagoRecords: number;
 } {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let outsideChicagoRecords = 0;
   for (const row of rows) {
     const zip = normalizeFiveDigitZip(row.zip);
@@ -1404,11 +1417,11 @@ function mapIllinoisBusinessInterruptionGrants(
   rows: Record<string, string>[],
   chicagoZipCodes: ReadonlySet<string>,
 ): {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   chicagoRecords: number;
   outsideChicagoRecords: number;
 } {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let outsideChicagoRecords = 0;
   for (const row of rows) {
     const zip = normalizeFiveDigitZip(row.zip);
@@ -1471,11 +1484,11 @@ function mapIllinoisBusinessInterruptionGrants(
 function mapIllinoisHospitalityEmergencyGrants(
   rows: Record<string, string>[],
 ): {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   chicagoRecords: number;
   outsideChicagoRecords: number;
 } {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let outsideChicagoRecords = 0;
   for (const row of rows) {
     const isChicago =
@@ -1541,11 +1554,11 @@ function mapIllinoisBackToBusiness(
   rows: Record<string, string>[],
   chicagoZipCodes: ReadonlySet<string>,
 ): {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   chicagoRecords: number;
   outsideChicagoRecords: number;
 } {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let outsideChicagoRecords = 0;
   for (const row of rows) {
     const zip = normalizeFiveDigitZip(row.zip);
@@ -1601,7 +1614,7 @@ function mapIllinoisBackToBusiness(
 }
 
 interface SbaRrfMapResult {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   pointRecords: number;
   citywideRecords: number;
   addressGeocodeMisses: number;
@@ -1620,7 +1633,7 @@ function mapSbaRestaurantRevitalization(
   geocodes: ReadonlyMap<string, { lat: number; lng: number } | null>,
   chicagoPolygons: ReturnType<typeof loadCommunityAreaPolygons>,
 ): SbaRrfMapResult {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let pointRecords = 0;
   let addressGeocodeMisses = 0;
   let addressOutOfBounds = 0;
@@ -1763,14 +1776,14 @@ function mapDceoCapital(
   queryForAddress: (address: string) => string,
   chicagoPolygons: ReturnType<typeof loadCommunityAreaPolygons>,
 ): {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   pointRecords: number;
   citywideRecords: number;
   addressGeocodeMisses: number;
   addressOutOfBounds: number;
   multiSiteHeldCitywide: number;
 } {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let pointRecords = 0;
   let addressGeocodeMisses = 0;
   let addressOutOfBounds = 0;
@@ -1834,7 +1847,7 @@ function mapDceoCapital(
   };
 }
 
-// ── Capital context (per-district TIF series, CRA, CDFI, state awards) ────────
+// ── Capital context (TIF series, lending, and coordinate-less awards) ─────────
 
 /**
  * Build data/private/capital-context.json — the coordinate-less capital SIGNALS
@@ -1932,7 +1945,43 @@ function buildCapitalContext(generatedAt: string): unknown {
     }))
     .sort((a, b) => a.geographyLevel.localeCompare(b.geographyLevel) || a.geography.localeCompare(b.geography));
 
-  // 4) Illinois state-award (GATA/CSFA) SFY2027 snapshot — AWARD amounts, NOT
+  // 4) Illinois Arts Council FY2026 Q1 awards. The official table publishes
+  //    city and region but no street address, ZIP, coordinates, or official
+  //    award id. These records stay in an admin-only citywide table and never
+  //    enter mapped/community totals or a current-funding claim.
+  const illinoisArtsCouncilRecords = parseCuratedIllinoisArtsCouncilAwards(
+    readCsv("illinois_arts_council_fy26_q1_chicago.csv"),
+  );
+  const sourceCheckedDates = new Set(
+    illinoisArtsCouncilRecords.map((record) => record.sourceCheckedAt),
+  );
+  if (sourceCheckedDates.size !== 1) {
+    throw new Error("Illinois Arts Council rows do not share one source review date.");
+  }
+  const illinoisArtsCouncilAwards = {
+    fundingPurpose: "arts" as const,
+    fiscalYear: 2026,
+    sourceVersion: IAC_SOURCE_VERSION,
+    sourceCheckedAt: [...sourceCheckedDates][0],
+    sourcePageUrl: IAC_SOURCE_PAGE,
+    sourceDataUrl: IAC_SOURCE_DATA_URL,
+    recordCount: illinoisArtsCouncilRecords.length,
+    recordIdMeaning:
+      "Snapshot-local key generated from the official table row number; the source publishes no award id.",
+    amountMeaning:
+      "Historical Illinois Arts Council award amount; not current eligibility, proof of payment, or an estimate of funds a user could receive.",
+    geographyMeaning:
+      "Source-published city and region only. No address, ZIP, coordinate, community area, or map point is inferred.",
+    coverage: {
+      capture: "complete_published",
+      mapDetail: "aggregate_only",
+      refresh: "awaiting_publication",
+      review: "complete_published",
+    },
+    records: illinoisArtsCouncilRecords,
+  };
+
+  // 5) Illinois state-award (GATA/CSFA) SFY2027 snapshot — AWARD amounts, NOT
   //    payments; the chicago_likely flag is name-based (high precision, LOW
   //    recall). Both caveats travel with the summary.
   const stateRows = readCsv("state_awards.csv").filter((r) => (r.chicago_likely || "").trim().toLowerCase() === "true");
@@ -1967,7 +2016,7 @@ function buildCapitalContext(generatedAt: string): unknown {
     topGrantees,
   };
 
-  // 5) City of Chicago ARPA Road to Recovery program ledger. This is program-
+  // 6) City of Chicago ARPA Road to Recovery program ledger. This is program-
   // level, citywide historical context: no recipient names, no map points, no
   // single summed headline, and no claim that a reported allocation is an
   // incentive a current project can access.
@@ -2000,7 +2049,7 @@ function buildCapitalContext(generatedAt: string): unknown {
     programs: chicagoArpaPrograms,
   };
 
-  // 6) Bounded Chicago CARES-era program, administrator, and accounting
+  // 7) Bounded Chicago CARES-era program, administrator, and accounting
   // records. These remain citywide context. Contract revisions are already
   // canonicalized by the importer and no administrator address is retained.
   const chicagoCaresProgramLedger = {
@@ -2058,7 +2107,7 @@ function buildCapitalContext(generatedAt: string): unknown {
     })),
   };
 
-  // 7) Cook County's 2020 CARES recovery ledger. The source's direct relief
+  // 8) Cook County's 2020 CARES recovery ledger. The source's direct relief
   // programs were suburban-only, so these rows are explicit Chicago exclusions,
   // not map records. The $77M umbrella context and three child outcomes are
   // non-additive and retain separate amount fields.
@@ -2114,6 +2163,7 @@ function buildCapitalContext(generatedAt: string): unknown {
         "FFIEC CRA Aggregate Table A1-1 small-business loan ORIGINATIONS, Cook County tracts → community areas (2022–2024)",
         "CDFI transaction aggregates by geography (2021–2022)",
         "Illinois GATA/CSFA active award pipeline SFY2027 (award amounts, not payments)",
+        "Illinois Arts Council FY2026 Q1 Grant Summaries — source-published Chicago applicants and historical award amounts, citywide only because no address or ZIP is published",
         "DCEO Capital Appropriation List + Grant Tracker definitions — appropriation, executed award, and disbursement kept as separate lifecycle stages",
         "City of Chicago ARPA Road to Recovery Program Details (m9g9-cj96) and Grants Summary (9yp3-9pdz)",
         "City of Chicago Contracts (rsxa-ify5) + Mid-Year Grants (iyu8-jkf8) — bounded CARES-era program, administrator, and accounting records with revisions canonicalized",
@@ -2123,6 +2173,7 @@ function buildCapitalContext(generatedAt: string): unknown {
     tifDistricts,
     craByCommunityArea,
     cdfi,
+    illinoisArtsCouncilAwards,
     dceoFundingLifecycle: {
       stages: DCEO_FUNDING_LIFECYCLE_STAGES,
       policy: DCEO_FUNDING_LIFECYCLE_POLICY,
@@ -2286,7 +2337,7 @@ async function main() {
 
   let droppedNoGeocode = 0;
 
-  const cdg: CommunityInvestmentRecord[] = [];
+  const cdg: CommunityInvestmentRecordDraft[] = [];
   let cdgIdx = 0;
   for (const r of cdgRows) {
     const addr = nullableStr(r.address);
@@ -2314,7 +2365,7 @@ async function main() {
     });
   }
 
-  const jim: CommunityInvestmentRecord[] = [];
+  const jim: CommunityInvestmentRecordDraft[] = [];
   let jimIdx = 0;
   for (const r of jimRows) {
     const addr = nullableStr(r.Address);
@@ -2398,16 +2449,29 @@ async function main() {
   //    Chicago Prize rows join the philanthropic (foundation) block; developments
   //    (private) are never dedupe-eligible so their position is immaterial. The
   //    capital-spine sources append last (also never dedupe-eligible).
-  const all = [
+  const all: Array<CommunityInvestmentRecordDraft | CommunityInvestmentRecord> = [
     ...nofSmall, ...nofLarge, ...sbif, ...cdg, ...foundations, ...prize, ...developments, ...jim,
     ...tif, ...hud, ...lihtc, ...nmtc, ...cookSource.records, ...illinoisBig.records,
     ...illinoisHospitality.records, ...illinoisB2B.records,
     ...sbaRrf.records, ...dceo.records,
   ];
 
+  // Assign the primary public purpose once, from source-published importer
+  // fields, and persist it on the canonical record. NMTC is already assigned
+  // above from its dedicated purpose_text column; every other record is
+  // classified here from its source and accepted source fields. Downstream
+  // clients read this field directly and never reclassify display copy.
+  const classified: CommunityInvestmentRecord[] = all.map((record) => ({
+    ...record,
+    governmentFundingPurpose:
+      "governmentFundingPurpose" in record
+        ? record.governmentFundingPurpose
+        : governmentFundingPurposeForRecord(record),
+  }));
+
   // 4) Cross-source dedupe (government point rows sharing address+amount).
-  const { records: deduped, removedCount } = dedupeInvestmentRecords(all);
-  console.log(`Deduped: ${all.length} -> ${deduped.length} (removed ${removedCount})`);
+  const { records: deduped, removedCount } = dedupeInvestmentRecords(classified);
+  console.log(`Deduped: ${classified.length} -> ${deduped.length} (removed ${removedCount})`);
 
   // 5) Point-in-polygon community-area stamping for EVERY point record. Runs on
   //    the final deduped set so the tallies describe the kept records. NMTC

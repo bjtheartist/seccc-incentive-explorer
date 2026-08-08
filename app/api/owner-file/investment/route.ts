@@ -140,6 +140,7 @@ type ProjectedMapPointRecord = Pick<
   | "id"
   | "source"
   | "funderType"
+  | "governmentFundingPurpose"
   | "funderName"
   | "recipient"
   | "capitalClass"
@@ -163,15 +164,34 @@ type ProjectedMapPointRecord = Pick<
   >;
 type ProjectedMapCitywideRecord = Pick<
   CommunityInvestmentRecord,
-  "source" | "funderType" | "amountAwarded" | "year" | "geometry"
+  | "source"
+  | "funderType"
+  | "governmentFundingPurpose"
+  | "amountAwarded"
+  | "year"
+  | "geometry"
 > & { recipient?: string };
 
 function projectRecordForMapView(
   record: CommunityInvestmentRecord,
 ): ProjectedMapPointRecord | ProjectedMapCitywideRecord {
-  const { source, funderType, amountAwarded, year, geometry } = record;
+  const {
+    source,
+    funderType,
+    governmentFundingPurpose,
+    amountAwarded,
+    year,
+    geometry,
+  } = record;
   if (geometry.kind === "citywide") {
-    const citywide: ProjectedMapCitywideRecord = { source, funderType, amountAwarded, year, geometry };
+    const citywide: ProjectedMapCitywideRecord = {
+      source,
+      funderType,
+      governmentFundingPurpose,
+      amountAwarded,
+      year,
+      geometry,
+    };
     if (funderType === "private_development") citywide.recipient = record.recipient;
     return citywide;
   }
@@ -181,6 +201,7 @@ function projectRecordForMapView(
     id: record.id,
     source,
     funderType,
+    governmentFundingPurpose,
     funderName: record.funderName,
     recipient: record.recipient,
     capitalClass: record.capitalClass,

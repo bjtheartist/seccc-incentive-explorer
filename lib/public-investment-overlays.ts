@@ -7,6 +7,8 @@
  * and never imports server-only code, so it is safe in the map client bundle.
  */
 
+import type { GovernmentFundingPurpose } from "@/lib/government-funding-purpose";
+
 export const PUBLIC_INVESTMENT_OVERLAY_IDS = [
   "county_relief_awards",
   "state_2020_relief",
@@ -32,6 +34,10 @@ export interface PublicInvestmentOverlayConfig {
   label: string;
   description: string;
   sourceIds: readonly PublicInvestmentSourceId[];
+  fundingPurpose: Extract<
+    GovernmentFundingPurpose,
+    "capital_project" | "programmatic"
+  >;
   adminOnly: true;
   defaultVisible: boolean;
 }
@@ -48,6 +54,7 @@ export const PUBLIC_INVESTMENT_OVERLAYS = [
     description:
       "Historical Cook County relief awards. This is past public investment, not an active funding opportunity.",
     sourceIds: ["cook-source-2023"],
+    fundingPurpose: "programmatic",
     adminOnly: true,
     defaultVisible: false,
   },
@@ -57,6 +64,7 @@ export const PUBLIC_INVESTMENT_OVERLAYS = [
     description:
       "Historical Illinois BIG and Hospitality Emergency grants. BIG is mapped only by ZIP; Hospitality records remain unplotted because the source publishes only a municipality.",
     sourceIds: ["illinois-big", "illinois-hospitality-emergency"],
+    fundingPurpose: "programmatic",
     adminOnly: true,
     defaultVisible: false,
   },
@@ -66,6 +74,7 @@ export const PUBLIC_INVESTMENT_OVERLAYS = [
     description:
       "Historical Illinois Back to Business ARPA grants. ZIP-level source records; not an active opportunity.",
     sourceIds: ["illinois-b2b"],
+    fundingPurpose: "programmatic",
     adminOnly: true,
     defaultVisible: false,
   },
@@ -75,6 +84,7 @@ export const PUBLIC_INVESTMENT_OVERLAYS = [
     description:
       "Historical SBA Restaurant Revitalization Fund grants. The federal program is closed and is not a current opportunity.",
     sourceIds: ["sba-rrf"],
+    fundingPurpose: "programmatic",
     adminOnly: true,
     defaultVisible: false,
   },
@@ -84,6 +94,7 @@ export const PUBLIC_INVESTMENT_OVERLAYS = [
     description:
       "Published state capital appropriations. An appropriation is not an active funding opportunity or expected incentive dollars.",
     sourceIds: ["dceo-capital"],
+    fundingPurpose: "capital_project",
     adminOnly: true,
     defaultVisible: false,
   },

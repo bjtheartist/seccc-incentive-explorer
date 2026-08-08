@@ -9,9 +9,16 @@ import {
 
 /** Minimal record factory (mirrors the investment-analysis test fixture). */
 function rec(over: Partial<CommunityInvestmentRecord> & { id: string }): CommunityInvestmentRecord {
+  const funderType = over.funderType ?? "government";
   return {
     source: "sbif",
-    funderType: "government",
+    funderType,
+    governmentFundingPurpose:
+      over.governmentFundingPurpose !== undefined
+        ? over.governmentFundingPurpose
+        : funderType === "government"
+          ? "capital_project"
+          : null,
     funderName: "City of Chicago",
     recipient: "Test Grantee",
     amountAwarded: 100000,

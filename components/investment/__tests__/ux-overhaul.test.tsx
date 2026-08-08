@@ -22,8 +22,8 @@ const byFunderType: FunderTypeBreakdown[] = [
 ];
 
 const flowRows: FlowRow[] = [
-  { id: "r1", funderName: "Pritzker Traubert Foundation", funderType: "philanthropic", source: "foundation", recipient: "Neighborhood Group", year: 2023, amountAwarded: 5_000_000 },
-  { id: "r2", funderName: "City of Chicago", funderType: "government", source: "cdg", recipient: "Main St LLC", year: 2022, amountAwarded: 250_000 },
+  { id: "r1", funderName: "Pritzker Traubert Foundation", funderType: "philanthropic", source: "foundation", governmentFundingPurpose: null, recipient: "Neighborhood Group", year: 2023, amountAwarded: 5_000_000 },
+  { id: "r2", funderName: "City of Chicago", funderType: "government", source: "cdg", governmentFundingPurpose: "capital_project", recipient: "Main St LLC", year: 2022, amountAwarded: 250_000 },
 ];
 
 describe("StatusCards — three-status grammar", () => {
@@ -86,6 +86,9 @@ describe("FunderFlowTable — searchable default flow view", () => {
     expect(html).toContain("Search funder, program, or recipient");
     expect(html).toContain("Pritzker Traubert Foundation");
     expect(html).toContain("Neighborhood Group");
+    expect(html).toContain("Government funding purpose");
+    expect(html).toContain("Capital projects");
+    expect(html).toContain("Not government");
     expect(html).toContain("$5,000,000");
     expect(html).not.toMatch(FORBIDDEN);
   });
