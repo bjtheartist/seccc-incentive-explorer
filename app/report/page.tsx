@@ -48,7 +48,7 @@ import type {
   WizardState,
   WizardStepConfig,
 } from "@/lib/report-wizard-config";
-import { generateReportData } from "@/lib/report-engine";
+import { generateReportData, normalizePublicReportForDisplay } from "@/lib/report-engine";
 import type {
   GeneratedReport,
   ReportCensusData,
@@ -128,6 +128,7 @@ import type {
   StackingRule,
   CommunityAsset,
   Stats,
+  PublicMatchExplanation,
   VerificationStep,
 } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
@@ -525,16 +526,6 @@ function getWizardSelectionItems(
 
   return items;
 }
-
-// ─── Confidence badge color mapping ──────────────────────────────────
-
-const CONFIDENCE_BADGE: Record<string, { bg: string; text: string; border: string }> = {
-  appears_eligible: { bg: "bg-[#0C1B33]/[0.04]", text: "text-[#0C1B33]/70", border: "border-[#0C1B33]/12" },
-  location_eligible: { bg: "bg-[#0C1B33]/[0.04]", text: "text-[#0C1B33]/60", border: "border-[#0C1B33]/10" },
-  may_qualify: { bg: "bg-[#0C1B33]/[0.03]", text: "text-[#0C1B33]/50", border: "border-[#0C1B33]/8" },
-  worth_exploring: { bg: "bg-[#0C1B33]/[0.02]", text: "text-[#0C1B33]/35", border: "border-[#0C1B33]/6" },
-  not_applicable: { bg: "bg-[#0C1B33]/[0.02]", text: "text-[#0C1B33]/30", border: "border-[#0C1B33]/5" },
-};
 
 // ─── Wrapper with Suspense ───────────────────────────────────────────
 
@@ -3188,6 +3179,51 @@ function VerdictPartnerStrip({
 
 // ─── Executive Summary Component ─────────────────────────────────────
 
+function MatchExplanationDetails({ explanation }: { explanation?: PublicMatchExplanation }) {
+  if (!explanation) return null;
+  const groups = [
+    ["Why it appears", explanation.whyItAppears],
+    ["Known from public data", explanation.knownFromPublicData],
+    ["Based on your answers", explanation.basedOnUserAnswers],
+    ["Still to confirm", explanation.stillToConfirm],
+    ["Documents to gather", explanation.currentDocumentsToGather],
+  ] as const;
+
+  return (
+    <div className="space-y-3">
+      {groups.map(([label, items]) => items.length > 0 && (
+        <div key={label}>
+          <span className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/35 block mb-1">{label}</span>
+          <ul className="space-y-1">
+            {items.map((text, index) => (
+              <li key={`${label}-${index}`} className="flex items-start gap-2 text-[11px] leading-relaxed text-[#0C1B33]/55">
+                <span className="text-[#0C1B33]/20">&bull;</span><span>{text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      {explanation.confirmWith.length > 0 && (
+        <div>
+          <span className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/35 block mb-1">Confirm with</span>
+          <ul className="space-y-1">
+            {explanation.confirmWith.map((contact, index) => (
+              <li key={`${contact.agency}-${index}`} className="text-[11px] leading-relaxed text-[#0C1B33]/55">
+                {contact.url ? <a className="text-[#2F5BEA] hover:underline" href={contact.url} target="_blank" rel="noopener noreferrer">{contact.agency}</a> : contact.agency}
+                {contact.phone ? ` · ${contact.phone}` : ""}{contact.email ? ` · ${contact.email}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[#0C1B33]/45">
+        {explanation.officialSource && <a className="text-[#2F5BEA] hover:underline" href={explanation.officialSource.url} target="_blank" rel="noopener noreferrer">{explanation.officialSource.label}</a>}
+        {explanation.lastVerifiedAt && <span>Information reviewed {explanation.lastVerifiedAt}</span>}
+      </div>
+    </div>
+  );
+}
+
 function ExecutiveSummarySection({
   summary,
   isEditing,
@@ -3232,7 +3268,7 @@ function ExecutiveSummarySection({
           </span>
           <ul className="space-y-2">
             {summary.topPrograms.map((prog) => {
-              const badge = CONFIDENCE_BADGE[prog.confidence] || CONFIDENCE_BADGE.worth_exploring;
+              const why = prog.explanation.whyItAppears[0];
               return (
                 <li
                   key={prog.programId}
@@ -3243,24 +3279,14 @@ function ExecutiveSummarySection({
                     <span className="text-[14px] font-semibold text-[#0C1B33]">
                       {prog.name}
                     </span>
-                    <span className="relative group/badge">
-                      <span className={`font-mono-bureau text-[8px] tracking-[0.1em] uppercase px-2 py-0.5 border cursor-help ${badge.bg} ${badge.text} ${badge.border}`}>
-                        {prog.confidenceLabel}
-                      </span>
-                      {prog.whyOneLine && (
-                        <span className="invisible group-hover/badge:visible absolute left-0 top-full mt-1 z-10 bg-white border border-[#0C1B33]/10 shadow-md px-3 py-2 text-[11px] text-[#0C1B33]/60 leading-relaxed w-64 font-sans normal-case tracking-normal">
-                          {prog.whyOneLine}
-                        </span>
-                      )}
-                    </span>
                     {prog.projectFitLabel && (
                       <span className="font-mono-bureau text-[9px] text-[#2563EB]">
                         {prog.projectFitLabel}
                       </span>
                     )}
-                    {prog.benefitRange && (
-                      <span className="font-mono-bureau text-[11px] text-[#0C1B33]/40">
-                        {prog.benefitRange}
+                    {why && (
+                      <span className="basis-full text-[11px] leading-relaxed text-[#0C1B33]/45">
+                        {why}
                       </span>
                     )}
                   </div>
@@ -3349,7 +3375,7 @@ function ActionRoadmapSection({
           Your Next Steps
         </span>
         <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed max-w-prose">
-          Prioritized actions to move forward with your eligible programs.
+          Practical actions to prepare for program review and local support.
         </p>
       </div>
 
@@ -3953,7 +3979,7 @@ function ComparisonDisplay({
 // ─── Report Display ──────────────────────────────────────────────────
 
 function ReportDisplay({
-  report,
+  report: rawReport,
   onStartOver,
   onRefine,
   onQuickRefine,
@@ -4002,6 +4028,7 @@ function ReportDisplay({
   /** Entry-point label used on refine/save/email instrumentation (Tier 0 audit). */
   analyticsSource?: string;
 }) {
+  const report = useMemo(() => normalizePublicReportForDisplay(rawReport), [rawReport]);
   const { status } = useSession();
   const [linkCopied, setLinkCopied] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -4075,7 +4102,7 @@ function ReportDisplay({
         Open: the first two sections plus the primary-story sections.
         Content stays in the DOM (CSS-hidden) so print and #anchors work. ── */
   const ALWAYS_OPEN_SECTIONS = useMemo(
-    () => new Set(["Eligible Incentive Programs", "Your Support Network"]),
+    () => new Set(["Programs Mapped at This Address", "Your Support Network"]),
     []
   );
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
@@ -4177,7 +4204,7 @@ function ReportDisplay({
         return;
       }
 
-      if (section.title === "Eligible Incentive Programs" || item.programId) {
+      if (section.title === "Programs Mapped at This Address" || item.programId) {
         trackEvent(
           "program_link_clicked",
           reportAnalyticsPayload(report, "report_program_link", {
@@ -5344,53 +5371,19 @@ function ReportDisplay({
                             )}
                             <ProjectFitNote fit={item.projectFit} />
 
-                            {/* Eligibility & URL — collapsible accordion for program items */}
-                            {!isSupportNetworkItem && (item.whoQualifies || item.eligibilityRules || item.url || item.whyOneLine || hasNavigationLinks) && (
+                            {/* Public program evidence and official navigation */}
+                            {!isSupportNetworkItem && (item.matchExplanation || item.whoQualifies || item.eligibilityRules || item.url || hasNavigationLinks) && (
                               <Accordion type="single" collapsible className="mt-3 sm:mt-4">
-                                <AccordionItem value="eligibility" className="border-none">
+                                <AccordionItem value="program-review" className="border-none">
                                   <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
-                                    {item.confidenceLabel || "Eligibility Details"}
+                                    Program review details
                                   </AccordionTrigger>
                                   <AccordionContent className="report-eligibility pl-4 border-l border-[#0C1B33]/8 space-y-2">
-                                    {item.whyOneLine && (
-                                      <p className="text-[#0C1B33]/50 text-[12px] leading-relaxed italic">
-                                        {item.whyOneLine}
-                                      </p>
-                                    )}
-                                    {item.matchedRules && item.matchedRules.length > 0 && (
-                                      <div>
-                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
-                                          Confirmed
-                                        </span>
-                                        <ul className="space-y-0.5">
-                                          {item.matchedRules.map((rule, rIdx) => (
-                                            <li key={rIdx} className="text-[11px] text-[#0C1B33]/50 leading-relaxed flex items-start gap-1.5">
-                                              <span className="text-[#0C1B33]/25 flex-shrink-0">+</span>
-                                              <span>{rule}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
-                                    {item.notVerified && item.notVerified.length > 0 && (
-                                      <div>
-                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/20 block mb-1">
-                                          Not Yet Verified
-                                        </span>
-                                        <ul className="space-y-0.5">
-                                          {item.notVerified.map((nv, nvIdx) => (
-                                            <li key={nvIdx} className="text-[11px] text-[#0C1B33]/30 leading-relaxed flex items-start gap-1.5">
-                                              <span className="text-[#0C1B33]/15 flex-shrink-0">?</span>
-                                              <span>{nv}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
+                                    <MatchExplanationDetails explanation={item.matchExplanation} />
                                     {item.whoQualifies && (
                                       <div>
                                         <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-0.5">
-                                          Who Qualifies
+                                          Published Applicant Requirements
                                         </span>
                                         <span className="text-[#0C1B33]/45 text-[11px] leading-relaxed block">
                                           {item.whoQualifies}

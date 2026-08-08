@@ -423,11 +423,7 @@ export interface ExecutiveSummary {
   topPrograms: {
     programId: string;
     name: string;
-    confidence: EligibilityConfidence;
-    confidenceLabel: string;
-    benefitRange: string;
-    whyOneLine?: string;
-    notVerified?: string[];
+    explanation: PublicMatchExplanation;
     projectFitLabel?: string;
     projectFitReason?: string;
   }[];
