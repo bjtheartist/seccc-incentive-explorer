@@ -4788,7 +4788,7 @@ function ReportDisplay({
           </div>
 
           {/* Refine value preview (audit RF6/WU5/BM1): explain what
-              refining unlocks — goal-based ranking, action plan, and gap checklist —
+              refining unlocks — goal-based organization, action plan, and gap checklist —
               with an inline goal-first quick refine. Rendered in compact
               (compare) mode too — audit RF4. The full-refine path routes
               through handleRefineClick so PR #49's refine_clicked keeps
