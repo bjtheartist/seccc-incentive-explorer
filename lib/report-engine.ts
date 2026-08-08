@@ -402,16 +402,13 @@ function normalizePublicDeterminationText(value: string): string {
 
 function normalizePublicHeadlineText(value: string): string {
   const normalized = normalizePublicDeterminationText(value);
-  if (/applicant-reported permit|reported permit cost|awarded|public investment/i.test(normalized)) {
-    return normalized;
-  }
   const money = String.raw`\$[\d,.]+(?:\s*[-–]\s*\$?[\d,.]+)?(?:\s*[KMB])?\b`;
   const projectedCue = String.raw`(?:possible|potential|estimated|projected|headline|benefit range|incentive estimate|could receive|may receive|up to|worth)`;
   return normalized
     .replace(new RegExp(`${projectedCue}[^.!?]{0,60}${money}`, "gi"), "published program terms")
     .replace(new RegExp(`${money}[^.!?]{0,40}${projectedCue}`, "gi"), "published program terms")
     .replace(/published program terms\s*(?:benefit|award|incentive)?/gi, "published program terms")
-    .replace(/\ban published program terms\b/gi, "published program terms")
+    .replace(/\b(?:a|an) published program terms\b/gi, "published program terms")
     .replace(/(?:a\s+)?program review program/gi, "a program selected for review");
 }
 
@@ -431,18 +428,25 @@ function normalizePublicMatchExplanation(
     basedOnUserAnswers: Array.from(new Set([
       ...explanation.basedOnUserAnswers,
       ...misplacedUserAnswers,
-    ])).map(normalizePublicDeterminationText),
-    stillToConfirm: explanation.stillToConfirm.map(normalizePublicDeterminationText),
+    ])).map(normalizePublicHeadlineText),
+    stillToConfirm: explanation.stillToConfirm.map(normalizePublicHeadlineText),
   };
 }
 
 function legacyMatchExplanation(item: ReportItem): PublicMatchExplanation | undefined {
   if (!item.programId) return undefined;
   const requirements = (item.eligibilityRules ?? []).map((rule) => rule.description);
-  const stillToConfirm = Array.from(new Set([...(item.notVerified ?? []), ...requirements]));
+  const matchedRules = (item.matchedRules ?? []).map(normalizePublicHeadlineText);
+  const notVerified = (item.notVerified ?? []).map(normalizePublicHeadlineText);
+  const stillToConfirm = Array.from(new Set([...notVerified, ...requirements]));
   const sourceUrl = item.sourceUrl || item.url;
   const source = sourceUrl
-    ? { label: item.sourceLabel || `Official ${item.label} source`, url: sourceUrl }
+    ? {
+        label: normalizePublicHeadlineText(
+          item.sourceLabel || `Official ${item.label} source`,
+        ),
+        url: sourceUrl,
+      }
     : undefined;
 
   if (item.matchExplanation) {
@@ -451,7 +455,7 @@ function legacyMatchExplanation(item: ReportItem): PublicMatchExplanation | unde
       ...normalized,
       basedOnUserAnswers: Array.from(new Set([
         ...normalized.basedOnUserAnswers,
-        ...(item.matchedRules ?? []),
+        ...matchedRules,
       ])),
       stillToConfirm: Array.from(new Set([
         ...normalized.stillToConfirm,
@@ -467,7 +471,7 @@ function legacyMatchExplanation(item: ReportItem): PublicMatchExplanation | unde
     knownFromPublicData: item.lastVerifiedAt
       ? [`Program information was last reviewed on ${item.lastVerifiedAt}.`]
       : [],
-    basedOnUserAnswers: Array.from(new Set(item.matchedRules ?? [])),
+    basedOnUserAnswers: Array.from(new Set(matchedRules)),
     stillToConfirm,
     currentDocumentsToGather: [],
     confirmWith: [],
@@ -485,8 +489,6 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
       explanation?: PublicMatchExplanation;
       matchedRules?: string[];
       notVerified?: string[];
-      projectFitLabel?: string;
-      projectFitReason?: string;
     }>;
     topActions?: ExecutiveSummary["topActions"];
     zoneCount?: number;
@@ -509,8 +511,6 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
               confirmWith: [],
             },
           ),
-          projectFitLabel: program.projectFitLabel,
-          projectFitReason: program.projectFitReason,
         })),
         topActions: (legacySummary.topActions ?? []).map((action) => ({
           ...action,
@@ -595,7 +595,14 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
         void _matchedRules;
         return {
           ...publicItem,
+          label: normalizePublicHeadlineText(publicItem.label),
           value: "Review published terms",
+          detail: publicItem.detail
+            ? normalizePublicHeadlineText(publicItem.detail)
+            : undefined,
+          sourceLabel: publicItem.sourceLabel
+            ? normalizePublicHeadlineText(publicItem.sourceLabel)
+            : undefined,
           matchExplanation: legacyMatchExplanation(item),
         };
       }),
@@ -4137,17 +4144,6 @@ export function generateReportData(
     if (state.projectType && report.executiveSummary) {
       const goalLabel = projectGoalLabel(state.projectType);
       report.executiveSummary.projectGoalLabel = goalLabel;
-      report.executiveSummary.topPrograms = report.executiveSummary.topPrograms.map((program) => {
-        const sourceProgram = programs.find((candidate) => candidate.id === program.programId);
-        const fit = sourceProgram
-          ? projectGoalFit(sourceProgram, state.projectType, state.industry)
-          : undefined;
-        return {
-          ...program,
-          projectFitLabel: isProjectGoalMatch(fit) ? fit?.label : undefined,
-          projectFitReason: isProjectGoalMatch(fit) ? fit?.reason : undefined,
-        };
-      });
       report.executiveSummary.whyTheseMatter = `These programs are ordered for the selected goal: ${goalLabel}. ${report.executiveSummary.whyTheseMatter}`;
     }
   }

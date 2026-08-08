@@ -424,8 +424,6 @@ export interface ExecutiveSummary {
     programId: string;
     name: string;
     explanation: PublicMatchExplanation;
-    projectFitLabel?: string;
-    projectFitReason?: string;
   }[];
   topActions: TopAction[];
   zoneCount: number;

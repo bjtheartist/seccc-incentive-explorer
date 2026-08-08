@@ -312,11 +312,6 @@ function ExecutiveSummarySection({
                     <span className="text-[14px] font-semibold text-[#0C1B33]">
                       {prog.name}
                     </span>
-                    {prog.projectFitLabel && (
-                      <span className="font-mono-bureau text-[9px] text-[#2563EB]">
-                        {prog.projectFitLabel}
-                      </span>
-                    )}
                     {why && (
                       <span className="basis-full text-[11px] leading-relaxed text-[#0C1B33]/45">
                         {why}

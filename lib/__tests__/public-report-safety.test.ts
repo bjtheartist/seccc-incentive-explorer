@@ -14,7 +14,7 @@ import type { Program } from "../types";
 const PROHIBITED_DETERMINATIONS =
   /appears eligible|may qualify|you qualify|eligible incentive programs|high match|medium match/i;
 const PRIVATE_MATCH_FIELDS =
-  /"(?:confidenceLevel|confidenceLabel|benefitRange|whyOneLine|matchedRules|notVerified)"/i;
+  /"(?:confidenceLevel|confidenceLabel|benefitRange|whyOneLine|matchedRules|notVerified|projectFitLabel|projectFitReason)"/i;
 
 function program(): Program {
   return {
@@ -125,21 +125,46 @@ describe("public report safety", () => {
         subheadline: "You qualify for an estimated $25,000 benefit",
         topReasons: ["Appears eligible with a benefit range of $10,000-$50,000"],
       },
+      executiveSummary: {
+        topPrograms: [
+          {
+            programId: "legacy",
+            name: "Legacy Program",
+            projectFitLabel: "Strong fit",
+            projectFitReason: "High categorical fit based on the selected project.",
+            explanation: {
+              whyItAppears: ["Appears eligible based on this address."],
+              knownFromPublicData: [],
+              basedOnUserAnswers: [],
+              stillToConfirm: [],
+              currentDocumentsToGather: [],
+              confirmWith: [],
+            },
+          },
+        ],
+        topActions: [],
+        zoneCount: 1,
+        whyTheseMatter: "Programs to review.",
+      },
       sections: [
         {
           title: "Eligible Incentive Programs",
           description: "Appears eligible for a potential incentive of $40,000.",
           items: [
             {
-              label: "Legacy Program",
+              label: "High Match Legacy Program with projected incentive of $30,000",
               value: "$25,000 possible benefit",
-              detail: "Published program summary.",
+              detail: "You qualify for a possible incentive of $20,000.",
               programId: "legacy",
               confidenceLevel: "appears_eligible",
               confidenceLabel: "High Match",
               whyOneLine: "You qualify based on this location.",
-              matchedRules: ["You reported that you plan to hire."],
-              notVerified: ["Confirm payroll records."],
+              matchedRules: [
+                "You qualify for a possible incentive of $15,000 because you plan to hire.",
+              ],
+              notVerified: [
+                "High Match; confirm projected incentive of $12,000 and payroll records.",
+              ],
               matchExplanation: {
                 whyItAppears: ["Appears eligible based on this address."],
                 knownFromPublicData: [
@@ -154,13 +179,14 @@ describe("public report safety", () => {
               eligibilityRules: [
                 { description: "Eligible businesses must be in good standing.", required: true },
               ],
+              sourceLabel: "Official legacy source",
               sourceUrl: "https://example.com/legacy",
             },
           ],
         },
         {
           title: "Recorded Public Activity",
-          description: "Awarded public investment totals $8,500,000.",
+          description: "Awarded public investment totals $8,500,000; a possible incentive estimate is $90,000.",
           items: [
             {
               label: "Building permit",
@@ -199,20 +225,27 @@ describe("public report safety", () => {
     expect(serialized).not.toContain("$25,000");
     expect(serialized).not.toContain("$50,000");
     expect(serialized).not.toContain("$60,000");
+    expect(serialized).not.toContain("$90,000");
+    expect(serialized).not.toContain("$30,000");
+    expect(serialized).not.toContain("$20,000");
+    expect(serialized).not.toContain("$15,000");
+    expect(serialized).not.toContain("$12,000");
+    expect(serialized).not.toContain("Strong fit");
+    expect(serialized).not.toContain("High categorical fit");
     expect(serialized).not.toContain("This site qualifies");
     expect(normalized.verdict?.headline).toContain("published program terms");
     expect(normalized.actionRoadmap?.[0].description).toContain("published program terms");
     expect(normalized.actionRoadmap?.[0].callScript).toContain("published program terms");
     expect(normalized.recommendedActions[0].description).toContain("published program terms");
     expect(normalized.sections[1].description).toBe(
-      "Awarded public investment totals $8,500,000.",
+      "Awarded public investment totals $8,500,000; published program terms.",
     );
     expect(normalized.sections[1].items[0].value).toBe(
       "Applicant-reported permit cost: $750,000",
     );
     expect(item.matchExplanation?.basedOnUserAnswers).toEqual(
       expect.arrayContaining([
-        "You reported that you plan to hire.",
+        expect.stringContaining("you plan to hire"),
         "You selected hiring as your project goal.",
       ]),
     );
@@ -221,12 +254,12 @@ describe("public report safety", () => {
     ]);
     expect(item.matchExplanation?.stillToConfirm).toEqual(
       expect.arrayContaining([
-        "Confirm payroll records.",
+        expect.stringContaining("payroll records"),
         "Eligible businesses must be in good standing.",
       ]),
     );
     expect(item.matchExplanation?.officialSource).toEqual({
-      label: "Official Legacy Program source",
+      label: "Official legacy source",
       url: "https://example.com/legacy",
     });
   });
@@ -262,7 +295,7 @@ describe("public report safety", () => {
         },
         {
           title: "Site Overview",
-          description: "Recorded permit and investment context.",
+          description: "Awarded public investment: $8,500,000; projected incentive: $90,000.",
           items: [
             { label: "Permit cost", value: "Applicant-reported permit cost: $750,000" },
             { label: "Public investment", value: "Awarded public investment: $8,500,000" },
@@ -295,6 +328,7 @@ describe("public report safety", () => {
     expect(extracted.text).not.toMatch(PROHIBITED_DETERMINATIONS);
     expect(extracted.text).not.toContain("$25,000");
     expect(extracted.text).not.toContain("$50,000");
+    expect(extracted.text).not.toContain("$90,000");
     expect(extracted.text).toContain("Review published terms");
     expect(extracted.text).toContain("Your answers:");
     expect(extracted.text).toContain("Still to confirm:");
@@ -311,6 +345,7 @@ describe("public report safety", () => {
       expect(source).toContain("normalizePublicReportForDisplay(rawReport)");
       expect(source).toContain("MatchExplanationDetails");
       expect(source).not.toMatch(/prog\.(?:confidence|confidenceLabel|benefitRange|whyOneLine)/);
+      expect(source).not.toContain("prog.projectFitLabel");
       expect(source).not.toMatch(/item\.(?:confidenceLabel|matchedRules|notVerified|whyOneLine)/);
     }
   });

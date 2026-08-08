@@ -25,15 +25,36 @@ describe("ReportDisplay public safety", () => {
         subheadline: "You qualify for an estimated $25,000 benefit",
         topReasons: ["Appears eligible for a benefit range of $25,000-$50,000"],
       },
+      executiveSummary: {
+        topPrograms: [
+          {
+            programId: "legacy",
+            name: "Legacy Program",
+            projectFitLabel: "Strong fit",
+            projectFitReason: "High categorical fit based on the selected project.",
+            explanation: {
+              whyItAppears: ["Appears eligible based on this address."],
+              knownFromPublicData: [],
+              basedOnUserAnswers: [],
+              stillToConfirm: [],
+              currentDocumentsToGather: [],
+              confirmWith: [],
+            },
+          },
+        ],
+        topActions: [],
+        zoneCount: 1,
+        whyTheseMatter: "Programs to review.",
+      },
       sections: [
         {
           title: "Eligible Incentive Programs",
           description: "Appears eligible for a potential incentive of $50,000.",
           items: [
             {
-              label: "Legacy Program",
+              label: "High Match Legacy Program with projected incentive of $30,000",
               value: "$25,000-$50,000",
-              detail: "Published program summary.",
+              detail: "You qualify for a possible incentive of $20,000.",
               programId: "legacy",
               confidenceLabel: "High Match",
               matchedRules: ["You reported plans to remodel."],
@@ -77,5 +98,9 @@ describe("ReportDisplay public safety", () => {
     );
     expect(html).not.toContain("$25,000");
     expect(html).not.toContain("$50,000");
+    expect(html).not.toContain("$30,000");
+    expect(html).not.toContain("$20,000");
+    expect(html).not.toContain("Strong fit");
+    expect(html).not.toContain("High categorical fit");
   });
 });
