@@ -619,7 +619,7 @@ export function buildPreparationTasks({
   const goalDocumentTaskId = overlayTasks[overlayTasks.length - 1].id;
   const programLabel = normalizedProgramName
     ? normalizedProgramName
-    : "the selected likely match";
+    : "the selected program";
 
   tasks.push({
     id: PROGRAM_REQUIREMENTS_TASK_ID,

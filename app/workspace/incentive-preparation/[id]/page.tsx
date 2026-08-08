@@ -532,9 +532,9 @@ export default function PreparationPacketDetailPage() {
           <div className="min-w-0">
             {hasProgram && (
               <section className="border-b border-[#0C1B33]/8 px-5 py-6 sm:px-7">
-                <p className="font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#2563EB]">Likely match</p>
+                <p className="font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#2563EB]">Program in preparation</p>
                 <h2 className="mt-2 text-xl font-semibold text-[#0C1B33]">{packet.selectedProgram.label || "Program to be confirmed"}</h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#0C1B33]/55">This is a likely match for preparation purposes, not an eligibility decision, award estimate, or official certification.</p>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#0C1B33]/55">This is the program selected for preparation, not an eligibility decision, award estimate, or official certification.</p>
                 {packet.primaryGoal && <p className="mt-3 text-sm text-[#0C1B33]/70"><span className="font-medium">Goal:</span> {statusLabel(packet.primaryGoal)}</p>}
               </section>
             )}
@@ -645,7 +645,7 @@ export default function PreparationPacketDetailPage() {
                     </select>
                   </label>
                 </div>
-                <p className="mt-3 text-xs leading-5 text-[#0C1B33]/45">Selecting a program identifies a likely match for preparation purposes, not an eligibility decision, award estimate, or official certification. You can verify current requirements with the program administrators.</p>
+                <p className="mt-3 text-xs leading-5 text-[#0C1B33]/45">Selecting a program organizes preparation work; it is not an eligibility decision, award estimate, or official certification. Verify current requirements with the program administrators.</p>
                 {selectProgramError && (
                   <p role="alert" className="mt-3 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{selectProgramError}</p>
                 )}

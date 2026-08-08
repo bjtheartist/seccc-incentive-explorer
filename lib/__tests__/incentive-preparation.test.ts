@@ -253,7 +253,7 @@ describe("buildPreparationTasks", () => {
     }
   });
 
-  it("uses preparation and likely-match framing without scores or incentive totals", () => {
+  it("uses program-preparation framing without scores or incentive totals", () => {
     const tasks = buildPreparationTasks({
       goalType: "hire-staff",
       profile: COMPLETE_PROFILE,
@@ -261,7 +261,7 @@ describe("buildPreparationTasks", () => {
     const serialized = JSON.stringify(tasks).toLowerCase();
 
     expect(serialized).toContain("application preparation");
-    expect(serialized).toContain("likely match");
+    expect(serialized).toContain("selected program");
     expect(serialized).not.toMatch(/numeric score|possible incentive dollars|guaranteed award/);
     expect(serialized).not.toMatch(/\$[0-9]/);
     expect(tasks.some((task) => "score" in task)).toBe(false);
