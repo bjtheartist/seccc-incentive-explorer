@@ -2,6 +2,11 @@
 
 Internal draft for Billy review. Do not circulate yet.
 
+This four-week pilot follows the five-session diagnostic in
+`docs/practitioner-validation-sprint.md`. Do not recruit participating
+organizations into a live referral workflow until the diagnostic's role-clarity,
+support-fit, and safety gates are met.
+
 ## Purpose
 
 Chicago Incentive Explorer helps a business or property owner understand which public programs reach a project address. The pilot adds a path to local support: when a report involves financing, acquisition, construction, remodeling, expansion, or equipment, it surfaces organizations whose publicly listed service area and capabilities may be relevant to the request and helps the owner prepare an introduction.

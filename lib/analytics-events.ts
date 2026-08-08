@@ -1,3 +1,5 @@
+import { resolvePractitionerValidationCampaign } from "./practitioner-validation";
+
 export const ANALYTICS_EVENT_TYPES = [
   "site_page_viewed",
   "start_page_viewed",
@@ -89,6 +91,37 @@ export interface SanitizedAnalyticsEvent {
   metadata: AnalyticsMetadata;
 }
 
+const PRACTITIONER_VALIDATION_SESSION_KEY = "cie_practitioner_validation_campaign";
+
+function withPractitionerValidationCampaign(
+  metadata: AnalyticsMetadata | null | undefined,
+): AnalyticsMetadata {
+  const current = metadata ?? {};
+  let stored: string | null = null;
+
+  try {
+    stored = window.sessionStorage.getItem(PRACTITIONER_VALIDATION_SESSION_KEY);
+  } catch {
+    // Session attribution is optional and must never interrupt product usage.
+  }
+
+  const campaign = resolvePractitionerValidationCampaign({
+    explicit: current.campaign,
+    search: window.location.search,
+    stored,
+  });
+
+  if (!campaign) return current;
+
+  try {
+    window.sessionStorage.setItem(PRACTITIONER_VALIDATION_SESSION_KEY, campaign);
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+
+  return { ...current, campaign };
+}
+
 export function isAnalyticsEventType(value: unknown): value is AnalyticsEventType {
   return (
     typeof value === "string" &&
@@ -171,7 +204,10 @@ export function trackEvent(
 ) {
   if (typeof window === "undefined") return;
 
-  const event = sanitizeAnalyticsEventPayload(eventType, payload);
+  const event = sanitizeAnalyticsEventPayload(eventType, {
+    ...payload,
+    metadata: withPractitionerValidationCampaign(payload.metadata),
+  });
   if (!event) return;
 
   const body = JSON.stringify(event);

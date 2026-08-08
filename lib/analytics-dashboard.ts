@@ -1,4 +1,9 @@
 import type { NeonQueryFunction } from "@neondatabase/serverless";
+import {
+  PRACTITIONER_VALIDATION_CASES,
+  normalizePractitionerValidationCampaign,
+  type PractitionerValidationCampaign,
+} from "./practitioner-validation";
 
 type SqlClient = NeonQueryFunction<false, false>;
 
@@ -84,6 +89,29 @@ export interface AnalyticsDashboardSummary {
   topPrograms: { label: string; count: number }[];
   topSupportOrganizations: { label: string; count: number }[];
   topCapitalPartners: { label: string; count: number }[];
+  validationPilot: {
+    totals: {
+      starts: number;
+      searches: number;
+      reportsGenerated: number;
+      supportViews: number;
+      supportActions: number;
+      requestsRecorded: number;
+      introductionRequests: number;
+      materialsReviewRequests: number;
+    };
+    cases: {
+      caseId: string;
+      label: string;
+      campaign: PractitionerValidationCampaign;
+      starts: number;
+      searches: number;
+      reportsGenerated: number;
+      supportViews: number;
+      supportActions: number;
+      requestsRecorded: number;
+    }[];
+  };
   recentActivity: {
     createdAt: string;
     eventType: string;
@@ -107,6 +135,17 @@ export interface AnalyticsDashboardSummary {
 
 const GENERATED_SET = new Set<string>(REPORT_GENERATED_EVENTS);
 const ACTIVATION_SET = new Set<string>(REPORT_ACTIVATION_EVENTS);
+
+interface ValidationPilotAccumulator {
+  starts: number;
+  searches: number;
+  reportKeys: Set<string>;
+  supportViewReportKeys: Set<string>;
+  supportActionReportKeys: Set<string>;
+  requestsRecorded: number;
+  introductionRequests: number;
+  materialsReviewRequests: number;
+}
 
 function normalizeMetadata(value: AnalyticsEventRow["metadata_json"]): EventMetadata {
   if (!value) return {};
@@ -241,6 +280,24 @@ export function summarizeAnalyticsEvents(
   const generatedReportKeys = new Set<string>();
   const activatedReportKeys = new Set<string>();
   const reachedNeighborhoods = new Set<string>();
+  const validationPilotByCampaign = new Map<
+    PractitionerValidationCampaign,
+    ValidationPilotAccumulator
+  >(
+    PRACTITIONER_VALIDATION_CASES.map((item) => [
+      item.campaign,
+      {
+        starts: 0,
+        searches: 0,
+        reportKeys: new Set<string>(),
+        supportViewReportKeys: new Set<string>(),
+        supportActionReportKeys: new Set<string>(),
+        requestsRecorded: 0,
+        introductionRequests: 0,
+        materialsReviewRequests: 0,
+      },
+    ]),
+  );
 
   let connectionOpportunitiesSurfaced = 0;
 
@@ -248,6 +305,36 @@ export function summarizeAnalyticsEvents(
     const metadata = normalizeMetadata(row.metadata_json);
     increment(eventsByType, row.event_type);
     increment(eventsByDay, `${dayKey(row.created_at)}|${row.event_type}`);
+
+    const validationCampaign = normalizePractitionerValidationCampaign(
+      metadataString(metadata, "campaign"),
+    );
+    const validationPilot = validationCampaign
+      ? validationPilotByCampaign.get(validationCampaign)
+      : null;
+    if (validationPilot) {
+      if (row.event_type === "start_page_viewed") validationPilot.starts += 1;
+      if (row.event_type === "search_performed") validationPilot.searches += 1;
+      if (GENERATED_SET.has(row.event_type)) {
+        validationPilot.reportKeys.add(buildReportEventKey(row));
+      }
+      if (row.event_type === "support_resource_viewed") {
+        validationPilot.supportViewReportKeys.add(buildReportEventKey(row));
+      }
+      if (
+        row.event_type === "support_resource_clicked" ||
+        row.event_type === "capital_partner_clicked" ||
+        row.event_type === "capital_partner_contact_started"
+      ) {
+        validationPilot.supportActionReportKeys.add(buildReportEventKey(row));
+      }
+      if (row.event_type === "preparation_support_requested") {
+        validationPilot.requestsRecorded += 1;
+        const requestType = metadataString(metadata, "requestType");
+        if (requestType === "introduction") validationPilot.introductionRequests += 1;
+        if (requestType === "materials_review") validationPilot.materialsReviewRequests += 1;
+      }
+    }
 
     if (row.event_type === "site_page_viewed") {
       const day = dayKey(row.created_at);
@@ -320,6 +407,43 @@ export function summarizeAnalyticsEvents(
   const capitalPartnerReferralsShown = eventCount("capital_partner_shown");
   const capitalPartnerClicks = eventCount("capital_partner_clicked");
   const capitalPartnerContactsStarted = eventCount("capital_partner_contact_started");
+  const validationCases = PRACTITIONER_VALIDATION_CASES.map((item) => {
+    const pilot = validationPilotByCampaign.get(item.campaign)!;
+    return {
+      caseId: item.id,
+      label: item.label,
+      campaign: item.campaign,
+      starts: pilot.starts,
+      searches: pilot.searches,
+      reportsGenerated: pilot.reportKeys.size,
+      supportViews: pilot.supportViewReportKeys.size,
+      supportActions: pilot.supportActionReportKeys.size,
+      requestsRecorded: pilot.requestsRecorded,
+    };
+  });
+  const validationTotals = [...validationPilotByCampaign.values()].reduce(
+    (totals, pilot) => ({
+      starts: totals.starts + pilot.starts,
+      searches: totals.searches + pilot.searches,
+      reportsGenerated: totals.reportsGenerated + pilot.reportKeys.size,
+      supportViews: totals.supportViews + pilot.supportViewReportKeys.size,
+      supportActions: totals.supportActions + pilot.supportActionReportKeys.size,
+      requestsRecorded: totals.requestsRecorded + pilot.requestsRecorded,
+      introductionRequests: totals.introductionRequests + pilot.introductionRequests,
+      materialsReviewRequests:
+        totals.materialsReviewRequests + pilot.materialsReviewRequests,
+    }),
+    {
+      starts: 0,
+      searches: 0,
+      reportsGenerated: 0,
+      supportViews: 0,
+      supportActions: 0,
+      requestsRecorded: 0,
+      introductionRequests: 0,
+      materialsReviewRequests: 0,
+    },
+  );
 
   const partnerBullets = [
     `${reportsGenerated.toLocaleString()} report${reportsGenerated === 1 ? "" : "s"} generated`,
@@ -384,6 +508,10 @@ export function summarizeAnalyticsEvents(
     topPrograms: ranked(topPrograms),
     topSupportOrganizations: ranked(topSupportOrganizations),
     topCapitalPartners: ranked(topCapitalPartners),
+    validationPilot: {
+      totals: validationTotals,
+      cases: validationCases,
+    },
     recentActivity: rows
       .slice()
       .sort((a, b) => toIso(b.created_at).localeCompare(toIso(a.created_at)))

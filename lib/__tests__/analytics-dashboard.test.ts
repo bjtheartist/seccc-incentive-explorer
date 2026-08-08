@@ -180,6 +180,65 @@ describe("analytics dashboard metrics", () => {
     ).toBe("3039 e 91st st, chicago, il 60617|site-incentives|2026-06-16T10");
   });
 
+  it("keeps the five-case validation funnel separate from ordinary traffic", () => {
+    const campaign = "practitioner-validation-2026-08-equipment";
+    const pilotMetadata = {
+      campaign,
+      reportKey: "pilot-equipment-report",
+    };
+    const summary = summarizeAnalyticsEvents(
+      [
+        row({ event_type: "start_page_viewed", metadata_json: { campaign } }),
+        row({ event_type: "search_performed", metadata_json: { campaign } }),
+        row({ event_type: "location_snapshot_generated", metadata_json: pilotMetadata }),
+        row({ event_type: "location_snapshot_generated", metadata_json: pilotMetadata }),
+        row({ event_type: "support_resource_viewed", metadata_json: pilotMetadata }),
+        row({ event_type: "support_resource_clicked", metadata_json: pilotMetadata }),
+        row({ event_type: "capital_partner_clicked", metadata_json: pilotMetadata }),
+        row({
+          event_type: "preparation_support_requested",
+          metadata_json: { campaign, requestType: "introduction" },
+        }),
+        row({
+          event_type: "preparation_support_requested",
+          metadata_json: { campaign, requestType: "materials_review" },
+        }),
+        row({
+          event_type: "location_snapshot_generated",
+          metadata_json: { campaign: "ordinary-outreach", reportKey: "not-pilot" },
+        }),
+      ],
+      {
+        windowDays: 30,
+        since: "2026-05-17T10:00:00.000Z",
+      },
+    );
+
+    expect(summary.validationPilot.totals).toEqual({
+      starts: 1,
+      searches: 1,
+      reportsGenerated: 1,
+      supportViews: 1,
+      supportActions: 1,
+      requestsRecorded: 2,
+      introductionRequests: 1,
+      materialsReviewRequests: 1,
+    });
+    expect(summary.validationPilot.cases.find((item) => item.caseId === "equipment")).toMatchObject({
+      starts: 1,
+      searches: 1,
+      reportsGenerated: 1,
+      supportViews: 1,
+      supportActions: 1,
+      requestsRecorded: 2,
+    });
+    expect(summary.validationPilot.cases.find((item) => item.caseId === "remodel")).toMatchObject({
+      starts: 0,
+      reportsGenerated: 0,
+      supportActions: 0,
+    });
+  });
+
   it("normalizes dashboard access inputs", () => {
     expect(normalizeAnalyticsWindow(0)).toBe(1);
     expect(normalizeAnalyticsWindow(500)).toBe(365);
