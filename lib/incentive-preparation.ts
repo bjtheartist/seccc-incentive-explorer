@@ -1,6 +1,7 @@
 import type { GoalType } from "./workspace";
 import type { VerificationStep } from "./types";
 import { normalizeDocumentSpec, type DocumentSpec } from "./document-spec";
+import { isExplicitNoDocumentRequirement } from "./document-preparation-cost";
 
 export const PREPARATION_TASK_STATUSES = [
   "needs_document",
@@ -651,7 +652,14 @@ export function buildPreparationTasks({
   for (const requirement of programRequiredDocs) {
     const label = normalizeText(requirement);
     const normalizedLabel = label?.toLowerCase();
-    if (!label || !normalizedLabel || seenProgramDocuments.has(normalizedLabel)) continue;
+    if (
+      !label ||
+      !normalizedLabel ||
+      isExplicitNoDocumentRequirement(label) ||
+      seenProgramDocuments.has(normalizedLabel)
+    ) {
+      continue;
+    }
     seenProgramDocuments.add(normalizedLabel);
     const id = `program-document-${programDocumentTaskIds.length + 1}`;
     programDocumentTaskIds.push(id);

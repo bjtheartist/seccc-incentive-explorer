@@ -37,6 +37,11 @@ import {
 } from "@/components/incentive-preparation/types";
 import { DocumentAttachments } from "@/components/incentive-preparation/document-attachments";
 import {
+  DOCUMENT_PREPARATION_COST_CAVEAT,
+  DOCUMENT_PREPARATION_COST_LEGEND,
+  classifyDocumentPreparationCost,
+} from "@/lib/document-preparation-cost";
+import {
   MATERIALS_REVIEW_ORGANIZATION,
   supportRequestTypeLabel,
   type SupportRequestType,
@@ -471,13 +476,32 @@ export default function PreparationPacketDetailPage() {
           .join(" then ")
       : "Will update as tasks are confirmed";
 
-  const renderTaskRow = (task: PreparationTask) => (
+  const renderTaskRow = (task: PreparationTask) => {
+    const documentCost = isDocumentTask(task)
+      ? classifyDocumentPreparationCost(task.documentSpec?.label, task.title, task.description)
+      : null;
+
+    return (
     <article key={task.id} className="border border-[#0C1B33]/10 px-4 py-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold text-[#0C1B33]">{task.title}</h3>
             <span className={`border px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] ${statusClass(task.status)}`}>{statusLabel(task.status)}</span>
+            {documentCost && (
+              <>
+                <span className="border border-[#0C1B33]/20 bg-[#FAF9F6] px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] text-[#0C1B33]">
+                  Required
+                </span>
+                <span
+                  className="border border-[#2563EB]/30 bg-[#2563EB]/[0.05] px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] text-[#1D4ED8]"
+                  aria-label={`Document preparation cost tier ${documentCost.tier}. ${documentCost.basis}`}
+                  title={documentCost.basis}
+                >
+                  {documentCost.tier}
+                </span>
+              </>
+            )}
           </div>
           {task.description && <p className="mt-2 text-sm leading-5 text-[#0C1B33]/55">{task.description}</p>}
           <p className="mt-3 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">Owner: {statusLabel(task.owner)}</p>
@@ -501,7 +525,8 @@ export default function PreparationPacketDetailPage() {
         />
       )}
     </article>
-  );
+    );
+  };
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-10 sm:px-6 sm:py-12">
@@ -600,6 +625,31 @@ export default function PreparationPacketDetailPage() {
                     </p>
                   )}
                 </div>
+                {applicationTasks.some(isDocumentTask) && (
+                  <aside
+                    className="mt-4 border border-[#0C1B33]/10 bg-[#FAF9F6] px-4 py-3"
+                    aria-labelledby="document-preparation-cost-legend"
+                  >
+                    <p
+                      id="document-preparation-cost-legend"
+                      className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/65"
+                    >
+                      Document preparation cost
+                    </p>
+                    <ul className="mt-2 grid gap-2 text-xs leading-5 text-[#0C1B33]/65 sm:grid-cols-3">
+                      {DOCUMENT_PREPARATION_COST_LEGEND.map((item) => (
+                        <li key={item.tier}>
+                          <span className="font-semibold text-[#0C1B33]">{item.tier}</span>
+                          {" = "}
+                          {item.label}
+                        </li>
+                      ))}
+                    </ul>
+                    <p className="mt-2 text-xs leading-5 text-[#0C1B33]/50">
+                      {DOCUMENT_PREPARATION_COST_CAVEAT}
+                    </p>
+                  </aside>
+                )}
                 <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-3">
                   <TimelineFact label="Preparation range" value={formatWeekRange(applicationTimeline.estimatedWeeks)} />
                   <TimelineFact label="Earliest realistic date" value={applicationTimeline.earliestRealisticDate ? formatDateLabel(applicationTimeline.earliestRealisticDate) : "Pending task review"} />

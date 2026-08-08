@@ -309,6 +309,29 @@ describe("buildPreparationTasks", () => {
     });
     expect(verificationTasks[0].description).toContain("Funding windows are district-specific");
   });
+
+  it("does not turn explicit no-document guidance into a required task", () => {
+    const tasks = buildPreparationTasks({
+      goalType: "buy-equipment",
+      programId: "guidance-only",
+      programName: "Guidance-only program",
+      programRequiredDocs: [
+        "No formal documents required",
+        "No formal document is required.",
+        "Vendor quote",
+      ],
+      profile: COMPLETE_PROFILE,
+    });
+
+    const programDocumentTasks = tasks.filter((task) =>
+      task.id.startsWith("program-document-"),
+    );
+
+    expect(programDocumentTasks).toHaveLength(1);
+    expect(programDocumentTasks[0].title).toBe(
+      "Collect program document: Vendor quote",
+    );
+  });
 });
 
 describe("calculatePreparationTimeline", () => {
