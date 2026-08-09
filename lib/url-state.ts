@@ -1,6 +1,9 @@
 import type { SurveyAnswers } from "./types";
 import type { WizardState, ReportType } from "./report-wizard-config";
-import { INITIAL_WIZARD_STATE } from "./report-wizard-config";
+import {
+  INITIAL_WIZARD_STATE,
+  selectedProjectGoals,
+} from "./report-wizard-config";
 
 export interface CheckState {
   lat: number;
@@ -111,7 +114,11 @@ export function encodeWizardState(state: WizardState): string {
   if (state.neighborhood) params.set("nbh", state.neighborhood);
   if (state.industry) params.set("ind", state.industry);
   if (state.budgetRange) params.set("bud", state.budgetRange);
-  if (state.projectType) params.set("pt", state.projectType);
+  const projectGoals = selectedProjectGoals(state);
+  const primaryProjectType = projectGoals[0] || state.projectType;
+  if (primaryProjectType) params.set("pt", primaryProjectType);
+  if (projectGoals.length > 0) params.set("pg", btoa(JSON.stringify(projectGoals)));
+  if (state.customGoal.trim()) params.set("cg", state.customGoal.trim());
   if (state.proposedUse) params.set("pu", state.proposedUse);
   if (state.fundingCommitted) params.set("fc", state.fundingCommitted);
   if (state.remainingGap) params.set("gap", state.remainingGap);
@@ -164,6 +171,9 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
   const pt = params.get("pt");
   if (pt) state.projectType = pt;
 
+  const customGoal = params.get("cg");
+  if (customGoal) state.customGoal = customGoal.slice(0, 240);
+
   const pu = params.get("pu");
   if (pu) state.proposedUse = pu;
 
@@ -186,12 +196,28 @@ export function decodeWizardState(params: URLSearchParams): WizardState | null {
   function decodeArray(key: string): string[] {
     const val = params.get(key);
     if (!val) return [];
-    try { return JSON.parse(atob(val)); } catch { return []; }
+    try {
+      const parsed: unknown = JSON.parse(atob(val));
+      return Array.isArray(parsed)
+        ? parsed.filter((item): item is string => typeof item === "string")
+        : [];
+    } catch {
+      return [];
+    }
   }
 
   state.creditsToAnalyze = decodeArray("cta");
   state.documentsAvailable = decodeArray("docs");
   state.supportNeeded = decodeArray("need");
+  state.projectGoals = decodeArray("pg")
+    .filter((goal): goal is string => typeof goal === "string" && Boolean(goal))
+    .slice(0, 3);
+  if (state.projectGoals.length === 0 && state.projectType) {
+    state.projectGoals = [state.projectType];
+  }
+  if (state.projectGoals.length > 0) {
+    state.projectType = state.projectGoals[0];
+  }
 
   // Comparison address
   const caddr = params.get("caddr");

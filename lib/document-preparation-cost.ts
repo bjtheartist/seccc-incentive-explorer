@@ -109,3 +109,37 @@ export function classifyDocumentPreparationCost(
     basis: "Typically gathered from existing business records.",
   };
 }
+
+const PAID_STEP_HIGH_PATTERN =
+  /\b(?:architect|engineer|attorney|legal counsel|appraisal|environmental (?:assessment|review|report)|phase (?:i|ii|1|2)|property survey|boundary survey|land survey|audited financial|market study|energy audit|energy model|professional site plan|professional building plan)\b/i;
+
+const PAID_STEP_MEDIUM_PATTERN =
+  /\b(?:application fee|filing fee|permit fee|license fee|inspection fee|contractor (?:bid|estimate|quote)|accountant-reviewed financial|certificate of good standing|tax clearance)\b/i;
+
+/**
+ * Returns a signal only when an action explicitly names a likely paid filing
+ * or professional service. Ordinary calls, intake meetings, and verification
+ * steps remain unmarked rather than being assigned a speculative cost.
+ */
+export function classifyPreparationStepCost(
+  ...stepText: Array<string | null | undefined>
+): DocumentPreparationCostSignal | null {
+  const text = stepText.filter(Boolean).join(" ").trim();
+  if (!text) return null;
+
+  if (PAID_STEP_HIGH_PATTERN.test(text)) {
+    return {
+      tier: "$$$",
+      basis: "Likely to involve specialized professional work.",
+    };
+  }
+
+  if (PAID_STEP_MEDIUM_PATTERN.test(text)) {
+    return {
+      tier: "$$",
+      basis: "May involve a filing fee or professional help.",
+    };
+  }
+
+  return null;
+}

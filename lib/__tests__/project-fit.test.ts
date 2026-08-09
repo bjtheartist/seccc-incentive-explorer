@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   orderProgramCheckResultsByProjectGoal,
+  orderProgramCheckResultsByProjectGoals,
   projectGoalFit,
+  projectGoalsFit,
   summarizeProjectFit,
 } from "../project-fit";
 import type { Program, ProgramCheckResult } from "../types";
@@ -50,5 +52,19 @@ describe("project goal fit", () => {
     expect(ordered.map((item) => item.program.id)).toEqual(["edge", "sbif", "dataCenter"]);
     expect(publicFit).toMatchObject({ level: "strong" });
     expect(publicFit).not.toHaveProperty("score");
+  });
+
+  it("uses the strongest fit across several selected goals", () => {
+    const ordered = orderProgramCheckResultsByProjectGoals(
+      [result("sbif"), result("edge"), result("sbaMicroloan")],
+      ["hiring", "equipment"],
+    );
+
+    expect(ordered.map((item) => item.program.id)).toEqual([
+      "edge",
+      "sbaMicroloan",
+      "sbif",
+    ]);
+    expect(projectGoalsFit(program("sbaMicroloan"), ["hiring", "equipment"])?.level).toBe("strong");
   });
 });

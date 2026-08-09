@@ -652,6 +652,8 @@ export default function MapPolygonPanel({
     industry: "",
     budgetRange: "",
     projectType: "",
+    projectGoals: [],
+    customGoal: "",
     proposedUse: "",
     fundingCommitted: "",
     remainingGap: "",

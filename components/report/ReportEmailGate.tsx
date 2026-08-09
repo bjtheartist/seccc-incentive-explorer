@@ -15,12 +15,16 @@ import {
   type ReportEmailIdentity,
 } from "@/lib/report-email";
 import type { GeneratedReport } from "@/lib/report-engine";
-import { SITE_PROJECT_TYPE_OPTIONS } from "@/lib/report-wizard-config";
+import { selectedProjectGoals } from "@/lib/report-wizard-config";
+import { ProjectGoalSelector } from "@/components/report/ProjectGoalSelector";
 
 interface ReportEmailGateProps {
   report: GeneratedReport;
   source: string;
-  onPrepareReport: (projectType: string) => Promise<GeneratedReport | null>;
+  onPrepareReport: (
+    projectGoals: string[],
+    customGoal: string,
+  ) => Promise<GeneratedReport | null>;
   onReportReady: (
     deliveredReport: GeneratedReport,
     identity?: ReportEmailIdentity,
@@ -37,7 +41,13 @@ export function ReportEmailGate({
   onReportReady,
 }: ReportEmailGateProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const [projectType, setProjectType] = useState(report.metadata?.projectType || "");
+  const [projectGoals, setProjectGoals] = useState(() =>
+    selectedProjectGoals({
+      projectGoals: report.metadata?.projectGoals,
+      projectType: report.metadata?.projectType,
+    }),
+  );
+  const [customGoal, setCustomGoal] = useState(report.metadata?.customGoal || "");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [wantsHelp, setWantsHelp] = useState(false);
@@ -48,7 +58,10 @@ export function ReportEmailGate({
 
   const isBusy = status !== "idle";
   const isPdfBusy = pdfStatus !== "idle";
-  const canSubmit = Boolean(projectType && email.trim().includes("@") && !isBusy);
+  const goalsAreComplete =
+    projectGoals.length > 0 &&
+    (!projectGoals.includes("other") || Boolean(customGoal.trim()));
+  const canSubmit = Boolean(goalsAreComplete && email.trim().includes("@") && !isBusy);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -65,14 +78,16 @@ export function ReportEmailGate({
     setError("");
     setStatus("preparing");
     try {
-      const preparedReport = await onPrepareReport(projectType);
+      const preparedReport = await onPrepareReport(projectGoals, customGoal);
       if (!preparedReport) throw new Error("We could not prepare the report. Please try again.");
 
       const identity: ReportEmailIdentity = {
         email: email.trim().toLowerCase(),
         name: name.trim() || undefined,
         wantsHelp,
-        projectType,
+        projectType: projectGoals[0],
+        projectGoals,
+        customGoal: customGoal.trim() || undefined,
       };
 
       setStatus("sending");
@@ -91,7 +106,8 @@ export function ReportEmailGate({
         lon: preparedReport.metadata?.lon ?? null,
         metadata: {
           entrySource: source,
-          projectType,
+          projectType: projectGoals[0],
+          projectGoals,
           wantsHelp,
         },
       });
@@ -100,7 +116,7 @@ export function ReportEmailGate({
           reportType: preparedReport.reportType,
           source: "report_email_gate",
           address: preparedReport.metadata?.address || null,
-          metadata: { projectType, entrySource: source },
+          metadata: { projectType: projectGoals[0], projectGoals, entrySource: source },
         });
       }
 
@@ -116,18 +132,18 @@ export function ReportEmailGate({
   };
 
   const handleContinueWithoutEmail = async () => {
-    if (!projectType || isBusy) return;
+    if (!goalsAreComplete || isBusy) return;
     setError("");
     setStatus("preparing");
     try {
-      const preparedReport = await onPrepareReport(projectType);
+      const preparedReport = await onPrepareReport(projectGoals, customGoal);
       if (!preparedReport) throw new Error("We could not prepare the report. Please try again.");
 
       trackEvent("report_email_gate_skipped", {
         reportType: preparedReport.reportType,
         source: "report_email_gate",
         address: preparedReport.metadata?.address || null,
-        metadata: { projectType, entrySource: source },
+        metadata: { projectType: projectGoals[0], projectGoals, entrySource: source },
       });
       onReportReady(preparedReport);
     } catch (preparationError) {
@@ -142,7 +158,7 @@ export function ReportEmailGate({
 
   /**
    * Instant PDF path (WP2). Deliberately gated on nothing: no email, no name,
-   * no primary goal. Analytics showed 110 visitors skipping this gate against
+   * no project goals. Analytics showed 110 visitors skipping this gate against
    * 2 PDF downloads, so the download has to be reachable in one click for
    * someone who will never type an address into a form. When a goal *is*
    * already selected we refine first so the file matches the online report,
@@ -154,8 +170,8 @@ export function ReportEmailGate({
     setError("");
     setPdfStatus("building");
     try {
-      const preparedReport = projectType
-        ? (await onPrepareReport(projectType)) ?? report
+      const preparedReport = goalsAreComplete
+        ? (await onPrepareReport(projectGoals, customGoal)) ?? report
         : report;
 
       const { generateReportPdf } = await import("@/lib/pdf-report");
@@ -169,7 +185,8 @@ export function ReportEmailGate({
         lon: preparedReport.metadata?.lon ?? null,
         metadata: {
           entrySource: source,
-          projectType: projectType || null,
+          projectType: projectGoals[0] || null,
+          projectGoals,
           emailProvided: false,
         },
       });
@@ -219,32 +236,24 @@ export function ReportEmailGate({
               id="report-email-gate-description"
               className="mt-1.5 text-[13px] leading-relaxed text-[#0C1B33]/60"
             >
-              Select your primary goal. Download the PDF instantly, have it
+              Select up to three project goals. Download the PDF instantly, have it
               emailed, or continue to the online report.
             </p>
           </div>
         </div>
 
         <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-          <label className="block">
-            <span className="mb-2 block font-mono-bureau text-[10px] uppercase text-[#0C1B33]/55">
-              Primary Goal
-            </span>
-            <select
-              value={projectType}
-              onChange={(event) => setProjectType(event.target.value)}
-              required
-              disabled={isBusy}
-              className="min-h-12 w-full border border-[#0C1B33]/18 bg-white px-4 py-3 text-[14px] text-[#0C1B33] outline-none focus:border-[#2563EB] disabled:opacity-55"
-            >
-              <option value="">Choose the main outcome</option>
-              {SITE_PROJECT_TYPE_OPTIONS.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <ProjectGoalSelector
+            goals={projectGoals}
+            customGoal={customGoal}
+            onChange={(goals, custom) => {
+              setProjectGoals(goals);
+              setCustomGoal(custom);
+            }}
+            disabled={isBusy}
+            required
+            compact
+          />
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <label className="block">
@@ -359,7 +368,7 @@ export function ReportEmailGate({
             <button
               type="button"
               onClick={handleContinueWithoutEmail}
-              disabled={!projectType || isBusy}
+              disabled={!goalsAreComplete || isBusy}
               className="flex min-h-12 w-full items-center justify-center gap-2 border border-[#0C1B33]/18 bg-transparent px-5 py-3 text-[13px] font-semibold text-[#0C1B33] transition-colors hover:border-[#0C1B33]/35 hover:bg-[#FAF9F6] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Continue Without Email

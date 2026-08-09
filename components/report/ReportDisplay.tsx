@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { encodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
-import { PROJECT_TYPE_LABELS } from "@/lib/report-wizard-config";
+import { selectedProjectGoalLabels } from "@/lib/report-wizard-config";
 import type { WizardState } from "@/lib/report-wizard-config";
 import {
   normalizePublicReportForDisplay,
@@ -34,6 +34,11 @@ import {
 import type { ApplicationPortal, ExecutiveSummary, Program, PublicMatchExplanation, VerificationStep } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { RefineValuePanel } from "@/components/report/RefineValuePanel";
+import { ZoningReviewQuestions } from "@/components/zoning/ZoningReviewQuestions";
+import {
+  PreparationCostBadge,
+  parseDocumentCostLine,
+} from "@/components/report/PreparationCostBadge";
 import { PersonaChips } from "@/components/report/PersonaChips";
 import { applyPersonaLens } from "@/lib/report-personas";
 import {
@@ -294,8 +299,8 @@ function ExecutiveSummarySection({
       {summary.topPrograms.length > 0 && (
         <div className="mb-6">
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-3">
-            {summary.projectGoalLabel
-              ? `Programs to Review for ${summary.projectGoalLabel}`
+            {summary.projectGoalLabels?.length || summary.projectGoalLabel
+              ? `Programs to Review for ${(summary.projectGoalLabels || [summary.projectGoalLabel]).filter(Boolean).join(", ")}`
               : "Programs to Review for Your Location"}
           </span>
           <ul className="space-y-2">
@@ -406,9 +411,12 @@ function ActionRoadmapSection({
                     {i + 1}.
                   </span>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[14px] font-semibold text-[#0C1B33] block">
-                      {item.label}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[14px] font-semibold text-[#0C1B33]">
+                        {item.label}
+                      </span>
+                      {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
+                    </div>
                     <span className="text-[12px] text-[#0C1B33]/40 block mt-0.5">
                       {item.description}
                     </span>
@@ -477,9 +485,12 @@ function ActionRoadmapSection({
                 className="py-4 first:pt-0 flex items-start justify-between gap-3"
               >
                 <div className="min-w-0">
-                  <span className="text-[13px] text-[#0C1B33]/60 font-medium block">
-                    {item.programName || item.label}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[13px] text-[#0C1B33]/60 font-medium">
+                      {item.programName || item.label}
+                    </span>
+                    {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
+                  </div>
                   <span className="text-[11px] text-[#0C1B33]/35 block mt-0.5">
                     {item.description}
                   </span>
@@ -979,12 +990,12 @@ export function ReportDisplay({
     const entries: { label: string; anchor: string }[] = [];
     if (report.verdict) entries.push({ label: "Location Findings", anchor: "verdict" });
     if (report.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
+    if (report.actionRoadmap && report.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
     if (report.sections) {
       for (const s of report.sections) {
         entries.push({ label: s.title, anchor: sectionToAnchor(s.title) });
       }
     }
-    if (report.actionRoadmap && report.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
     if (report.recommendedActions && report.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
     if (report.dataSources && report.dataSources.length > 0) entries.push({ label: "Data Sources", anchor: "data-sources" });
     return entries;
@@ -1645,13 +1656,21 @@ export function ReportDisplay({
                 </span>
               </div>
             )}
-            {report.metadata?.projectType && (
+            {selectedProjectGoalLabels({
+              projectGoals: report.metadata?.projectGoals,
+              projectType: report.metadata?.projectType,
+              customGoal: report.metadata?.customGoal,
+            }).length > 0 && (
               <div>
                 <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
-                  Primary Goal
+                  Project Goals
                 </span>
                 <span className="text-[#0C1B33] text-[13px]">
-                  {PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType}
+                  {selectedProjectGoalLabels({
+                    projectGoals: report.metadata?.projectGoals,
+                    projectType: report.metadata?.projectType,
+                    customGoal: report.metadata?.customGoal,
+                  }).join(", ")}
                 </span>
               </div>
             )}
@@ -1804,6 +1823,13 @@ export function ReportDisplay({
                   onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
                   onTextChange={setEditedSummaryText}
                 />
+              </div>
+            )}
+
+            {/* Action-first hierarchy: orient the user before detailed evidence. */}
+            {lensed.actionRoadmap && lensed.actionRoadmap.length > 0 && (
+              <div id="action-roadmap">
+                <ActionRoadmapSection items={lensed.actionRoadmap} />
               </div>
             )}
 
@@ -2016,7 +2042,7 @@ export function ReportDisplay({
                             <div className={`grid grid-cols-1 gap-3 ${hasSideValue ? "sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] sm:gap-x-10" : ""}`}>
                               {/* Left: label */}
                               <div className="flex-1 min-w-0">
-                                <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold block">
+                                <span className="flex flex-wrap items-center gap-2 text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold">
                                   {supportWebsiteUrl ? (
                                     <a
                                       href={supportWebsiteUrl}
@@ -2036,16 +2062,18 @@ export function ReportDisplay({
                                       {item.level}
                                     </span>
                                   )}
+                                  {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
                                 </span>
                                 {!hasGroupedDetail && item.detail && section.title === "Required Documents" ? (
                                   <ul className="mt-2 space-y-1.5">
                                     {item.detail.split("\n").map((line, li) => {
-                                      const [docName, programs] = line.split(" — ");
+                                      const { documentName, programs, cost } = parseDocumentCostLine(line);
                                       return (
                                         <li key={li} className="flex items-start gap-2 text-[11px] sm:text-[12px] leading-relaxed">
                                           <span className="text-[#0C1B33]/15 mt-0.5 flex-shrink-0">&bull;</span>
-                                          <span className="text-[#0C1B33]/55">
-                                            {docName}
+                                          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[#0C1B33]/55">
+                                            <span>{documentName}</span>
+                                            {cost && <PreparationCostBadge signal={cost} label="Prep" />}
                                             {programs && (
                                               <span className="text-[#0C1B33]/25 ml-1.5">— {programs}</span>
                                             )}
@@ -2136,16 +2164,17 @@ export function ReportDisplay({
                         })}
                       </div>
                     )}
+                    {section.title === "Zoning & Use Starting Point" && report.metadata?.zoneClass && (
+                      <div className="mt-8 print:hidden">
+                        <ZoningReviewQuestions
+                          zoneClass={report.metadata.zoneClass}
+                          siteSpecificOrdinanceUrl={section.items.find((item) => item.label === "City Zoning Classification")?.url}
+                        />
+                      </div>
+                    )}
                   </Wrapper>
                 );
               })}
-
-            {/* ── Your Next Steps (action roadmap) ── */}
-            {lensed.actionRoadmap && lensed.actionRoadmap.length > 0 && (
-              <div id="action-roadmap">
-                <ActionRoadmapSection items={lensed.actionRoadmap} />
-              </div>
-            )}
 
             {/* ── Recommended Actions ── */}
             {report.recommendedActions &&
@@ -2187,6 +2216,7 @@ export function ReportDisplay({
                               >
                                 {badge.label}
                               </span>
+                              {action.preparationCost && <PreparationCostBadge signal={action.preparationCost} />}
                             </div>
                             {action.description && (
                               <p className="text-[#0C1B33]/45 text-[13px] leading-relaxed">

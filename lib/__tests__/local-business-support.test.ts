@@ -5,6 +5,7 @@ import {
   mergeCitywideBusinessSupport,
   inferSupportLanes,
   rankLocalBusinessSupport,
+  requestedSupportLanes,
   type LocalBusinessSupportOrganization,
 } from "@/lib/local-business-support";
 
@@ -86,6 +87,14 @@ describe("local business support data", () => {
 });
 
 describe("rankLocalBusinessSupport", () => {
+  it("combines support lanes across multiple project goals", () => {
+    expect(
+      requestedSupportLanes({
+        projectTypes: ["hiring", "equipment"],
+      }),
+    ).toEqual(expect.arrayContaining(["workforce", "capital_readiness"]));
+  });
+
   it("prioritizes primary local access points above secondary and regional supports", () => {
     const ranked = rankLocalBusinessSupport([
       { name: "Regional Hub", relationships: ["cbc_hub"], sourceUrls: [] },

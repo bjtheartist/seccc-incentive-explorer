@@ -5,6 +5,7 @@ import {
   DOCUMENT_PREPARATION_COST_CAVEAT,
   DOCUMENT_PREPARATION_COST_LEGEND,
   classifyDocumentPreparationCost,
+  classifyPreparationStepCost,
   isConditionalDocumentRequirement,
   isDocumentRequirementGuidance,
   isExplicitNoDocumentRequirement,
@@ -126,6 +127,14 @@ describe("classifyDocumentPreparationCost", () => {
         ).toBe("$$$");
       }
     }
+  });
+});
+
+describe("classifyPreparationStepCost", () => {
+  it("signals only steps that explicitly imply paid work", () => {
+    expect(classifyPreparationStepCost("Obtain a Phase I environmental assessment")).toMatchObject({ tier: "$$$" });
+    expect(classifyPreparationStepCost("Pay the permit filing fee")).toMatchObject({ tier: "$$" });
+    expect(classifyPreparationStepCost("Call the program administrator")).toBeNull();
   });
 });
 
