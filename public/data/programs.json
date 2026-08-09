@@ -205,7 +205,7 @@
     "level": "State",
     "zoneKey": "federalOZ",
     "summary": "Federal Opportunity Zone incentive: investors who reinvest capital gains through a Qualified Opportunity Fund into a designated zone receive tax reductions scaled to how long the investment is held. Illinois' current zones remain active for investment; a new round of IL-nominated zones takes effect January 1, 2027 under OZ 2.0.",
-    "whoQualifies": "Investors deploying capital gains through QOFs in Illinois-designated zones, and developers/businesses seeking DCEO discretionary support for OZ projects (especially affordable housing).",
+    "whoQualifies": "Investors deploying capital gains through Qualified Opportunity Funds in Illinois-designated zones.",
     "benefits": [
       "Federal capital-gains tax reduction scaled to the holding period",
       "Deferral of the original gain reinvested through a Qualified Opportunity Fund",
@@ -231,7 +231,6 @@
       {
         "agency": "Illinois Department of Commerce and Economic Opportunity",
         "abbreviation": "DCEO",
-        "phone": "(217) 782-7500",
         "email": "opportunityzones@illinois.gov",
         "url": "https://dceo.illinois.gov/oppzn.html"
       }
@@ -252,7 +251,7 @@
     ],
     "lastVerifiedAt": "2026-08-09",
     "benefitRange": "DCEO grants + federal OZ stacking",
-    "fastestConfirmingStep": "Email opportunityzones@illinois.gov or call DCEO (217) 782-7500",
+    "fastestConfirmingStep": "Email opportunityzones@illinois.gov",
     "oz2Note": "Illinois must nominate ~238 new OZ tracts in H2 2026, effective 1/1/2027. Existing IL OZ boundaries valid through 12/31/2026.",
     "personas": [
       "developer"
@@ -570,8 +569,8 @@
       {
         "agency": "Illinois Department of Commerce and Economic Opportunity",
         "abbreviation": "DCEO",
-        "phone": "(217) 782-7500",
-        "url": "https://dceo.illinois.gov/expandrelocate/incentives/edge.html"
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/edge.html",
+        "email": "CEO.EDGE@illinois.gov"
       }
     ],
     "eligibilityRules": [
@@ -596,7 +595,7 @@
     ],
     "lastVerifiedAt": "2026-08-09",
     "benefitRange": "50% withholding (new hires) / 25% (retained) / +25% underserved-area boost",
-    "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about EDGE eligibility",
+    "fastestConfirmingStep": "Email CEO.EDGE@illinois.gov about EDGE eligibility",
     "boundaryDisclaimer": "The state-incentive zone overlay shown on the map is a high-unemployment census-tract proxy, not an official EDGE zone designation. EDGE is project-by-project, not zone-based.",
     "verificationSteps": [
       {
@@ -733,8 +732,8 @@
       {
         "agency": "Illinois Department of Commerce and Economic Opportunity",
         "abbreviation": "DCEO",
-        "phone": "(217) 782-7500",
-        "url": "https://dceo.illinois.gov/expandrelocate/incentives/micro.html"
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/micro.html",
+        "email": "CEO.MICRO@illinois.gov"
       }
     ],
     "eligibilityRules": [
@@ -753,7 +752,7 @@
     ],
     "lastVerifiedAt": "2026-08-09",
     "benefitRange": "75% payroll withholding (100% underserved) + training, construction, and investment credits",
-    "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about MICRO eligibility",
+    "fastestConfirmingStep": "Email CEO.MICRO@illinois.gov to schedule technical assistance",
     "boundaryDisclaimer": "The state-incentive zone overlay is a high-unemployment census-tract proxy, not an official MICRO zone designation. MICRO is project-by-project.",
     "verificationSteps": [
       {
@@ -1075,7 +1074,7 @@
       },
       {
         "criterion": "investmentSize",
-        "description": "Annual revenue between $500K and $10M with demonstrated growth",
+        "description": "At least $500,000 in annual revenue with demonstrated growth in net income and employee count",
         "verifiedBy": "manual",
         "required": true
       }
@@ -1590,7 +1589,7 @@
         "agency": "City of Chicago Department of Planning and Development — Historic Preservation",
         "abbreviation": "DPD-HP",
         "phone": "(312) 744-3200",
-        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/landmark.html"
+        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/hist.html"
       }
     ],
     "eligibilityRules": [
@@ -1647,8 +1646,8 @@
       {
         "agency": "Illinois State Historic Preservation Office",
         "abbreviation": "SHPO",
-        "phone": "(217) 785-4512",
-        "url": "https://www.illinois.gov/historic-preservation"
+        "phone": "217-782-4836",
+        "url": "https://dnrhistoric.illinois.gov/"
       },
       {
         "agency": "National Park Service — Technical Preservation Services",
@@ -1679,7 +1678,7 @@
     ],
     "lastVerifiedAt": "2026-08-09",
     "benefitRange": "20% federal tax credit (no cap)",
-    "fastestConfirmingStep": "Call Illinois SHPO at (217) 785-4512 to confirm historic status",
+    "fastestConfirmingStep": "Call Illinois SHPO at 217-782-4836 to confirm historic status",
     "sourceUrl": "https://www.nps.gov/subjects/taxincentives/index.htm",
     "status": "active",
     "personas": [
@@ -1691,10 +1690,10 @@
     "name": "Chicago Neighborhood Recovery Program (CNRP, formerly MMRP)",
     "level": "City",
     "zoneKey": "microMarketRecovery",
-    "summary": "Migrated from DPD to the Department of Housing in 2024-2025. Now primarily a homeownership program offering $30,000 down-payment assistance grants in 19 designated MMRP areas, delivered via Neighborhood Housing Services of Chicago. The original commercial-storefront framing is no longer accurate.",
+    "summary": "Migrated from DPD to the Department of Housing and renamed the Chicago Neighborhood Recovery Program (CNRP). A homeownership program offering $15,000 in down-payment assistance, subject to fund availability, across 11 designated target areas. NHS Chicago's purchase-assistance intake is currently closed. The original commercial-storefront framing is no longer accurate.",
     "whoQualifies": "Homebuyers purchasing in one of the 11 designated target areas. Income and counseling requirements apply.",
     "benefits": [
-      "$30,000 down-payment assistance grant for qualifying homebuyers",
+      "$15,000 down-payment assistance for eligible owner-occupants, subject to fund availability",
       "Free homebuyer counseling and education",
       "Connection to other city homeownership programs"
     ],
@@ -1716,20 +1715,21 @@
         "agency": "Chicago Department of Housing",
         "abbreviation": "DOH",
         "phone": "(312) 744-4190",
-        "url": "https://www.chicago.gov/city/en/depts/doh/provdrs/lenders/svcs/micro-market-recovery-program.html"
+        "url": "https://www.chicago.gov/city/en/depts/doh/provdrs/developers/svcs/ChicagoNeighborhoodRecoveryProgram.html",
+        "email": "James.Wheaton@cityofchicago.org"
       },
       {
         "agency": "Neighborhood Housing Services of Chicago",
         "abbreviation": "NHS",
         "phone": "(773) 329-4111",
         "url": "https://nhschicago.org/mmrp-purchase-assistance-grant/",
-        "role": "MMRP delivery partner"
+        "role": "Legacy MMRP delivery partner — purchase-assistance intake closed"
       }
     ],
     "eligibilityRules": [
       {
         "criterion": "location",
-        "description": "Property must be in a designated MMRP area (19 neighborhoods)",
+        "description": "Property must be in one of the 11 designated CNRP target areas",
         "verifiedBy": "location",
         "required": true
       },
@@ -1742,8 +1742,8 @@
     ],
     "lastVerifiedAt": "2026-08-09",
     "benefitRange": "$15,000 down-payment assistance, subject to fund availability",
-    "fastestConfirmingStep": "Contact NHS Chicago about MMRP eligibility",
-    "boundaryDisclaimer": "micro-market-recovery.geojson holds 13 features; current MMRP areas number 19 per chicago.gov/doh. Refresh required.",
+    "fastestConfirmingStep": "Contact DOH Project Manager Jim Wheaton (James.Wheaton@cityofchicago.org) — NHS purchase-assistance intake is closed",
+    "boundaryDisclaimer": "Boundary layer is stale and has not been re-sourced. micro-market-recovery.geojson holds 13 legacy MMRP areas; the City now publishes 11 designated CNRP target areas, and the current 11 have not been mapped here. Confirm the target area with DOH before relying on the map.",
     "expirationNote": "Program scope changed: this is now a homeownership program (Department of Housing), not a commercial storefront program. Treat references to corridor activation as historical.",
     "personas": [
       "growing",
@@ -1782,7 +1782,7 @@
         "agency": "City of Chicago Department of Planning and Development",
         "abbreviation": "DPD",
         "phone": "(312) 744-4190",
-        "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/industrial-corridors.html"
+        "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/repositioning-chicago-s-industrial-corridors-for-today-s-economy.html"
       }
     ],
     "eligibilityRules": [
@@ -1840,7 +1840,7 @@
         "abbreviation": "A4CB",
         "phone": "(312) 275-3000",
         "email": "granthelp@a4cb.org",
-        "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/ccsa.html"
+        "url": "https://www.chicago.gov/city/en/sites/storefront-activation/home.html"
       },
       {
         "agency": "City of Chicago Department of Planning and Development",
@@ -2006,7 +2006,7 @@
         "agency": "Interagency Working Group on Energy Communities",
         "abbreviation": "IWG",
         "phone": "",
-        "url": "https://energycommunities.gov/energy-community-tax-credit-bonus/"
+        "url": "https://www.irs.gov/credits-deductions/frequently-asked-questions-for-energy-communities"
       }
     ],
     "eligibilityRules": [
@@ -2197,7 +2197,7 @@
         "agency": "Internal Revenue Service",
         "abbreviation": "IRS",
         "phone": "(800) 829-1040",
-        "url": "https://www.irs.gov/businesses/small-businesses-self-employed/energy-efficient-commercial-buildings-deduction"
+        "url": "https://www.irs.gov/credits-deductions/energy-efficient-commercial-buildings-deduction"
       }
     ],
     "eligibilityRules": [
@@ -2529,7 +2529,7 @@
         "agency": "U.S. Small Business Administration — Disaster Assistance",
         "abbreviation": "SBA",
         "phone": "(800) 659-2955",
-        "url": "https://disasterloanassistance.sba.gov/"
+        "url": "https://lending.sba.gov/search-disaster/"
       }
     ],
     "eligibilityRules": [
@@ -2572,7 +2572,7 @@
     "name": "CHIPS Investment Tax Credit (§48D)",
     "level": "Federal",
     "zoneKey": "",
-    "summary": "25% federal investment tax credit for semiconductor manufacturing facilities or specialized equipment. Eligible for direct pay. Investment must be initiated by end of 2026 to qualify.",
+    "summary": "35% federal investment tax credit for semiconductor manufacturing facilities or specialized equipment, for property placed in service after 2025. Eligible for direct pay.",
     "whoQualifies": "Businesses making qualified investments in semiconductor manufacturing facilities or specialized semiconductor manufacturing equipment.",
     "benefits": [
       "35% federal investment tax credit for property placed in service after 2025",
@@ -2598,7 +2598,7 @@
         "agency": "Internal Revenue Service",
         "abbreviation": "IRS",
         "phone": "(800) 829-1040",
-        "url": "https://www.irs.gov/businesses/advanced-manufacturing-investment-credit"
+        "url": "https://www.irs.gov/credits-deductions/advanced-manufacturing-investment-credit"
       }
     ],
     "eligibilityRules": [
@@ -2628,7 +2628,7 @@
     "level": "Federal",
     "zoneKey": "",
     "summary": "Federal Treasury allocates $354.6M to Illinois through the State Small Business Credit Initiative (SSBCI). Administered by DCEO as Advantage Illinois (loan participation/guarantee) and INVENT Venture Capital Program.",
-    "whoQualifies": "Illinois small businesses including underserved markets. Loans up to $1.5M with state guarantees; equity investments through certified VC funds.",
+    "whoQualifies": "Illinois small businesses including underserved markets. State participation or guarantee runs from $10,000 up to $2,000,000, set by job creation/retention, project or loan size, and risk; equity investments through certified VC funds.",
     "benefits": [
       "Loan participation and guarantee program through partner lenders",
       "State participation or guarantee from $10,000 up to $2,000,000, set by job creation/retention, project or loan size, and risk",
@@ -2652,7 +2652,6 @@
       {
         "agency": "Illinois DCEO",
         "abbreviation": "DCEO",
-        "phone": "(217) 782-7500",
         "url": "https://dceo.illinois.gov/smallbizassistance/advantageillinois/ssbci.html"
       }
     ],
@@ -2970,8 +2969,8 @@
       {
         "agency": "Illinois DCEO",
         "abbreviation": "DCEO",
-        "phone": "(217) 782-7500",
-        "url": "https://dceo.illinois.gov/expandrelocate/incentives/highimpactbusinessprogram.html"
+        "url": "https://dceo.illinois.gov/expandrelocate/incentives/highimpactbusinessprogram.html",
+        "email": "Ben.Denney@illinois.gov"
       }
     ],
     "eligibilityRules": [
@@ -2984,7 +2983,7 @@
     ],
     "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Sales + utility + manufacturing M&E exemptions + investment tax credit",
-    "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about HIB eligibility",
+    "fastestConfirmingStep": "Email Ben.Denney@illinois.gov about HIB eligibility",
     "verificationSteps": [
       {
         "label": "Building Materials Exemption Certificate (BMEC)",
@@ -3504,7 +3503,7 @@
       {
         "label": "Cook County Board resolution",
         "agency": "Cook County Board of Commissioners",
-        "url": "https://www.cookcountyil.gov/agency/board-commissioners",
+        "url": "https://www.cookcountyboard.com/",
         "kind": "consent",
         "appliesBefore": "application"
       }
@@ -3729,7 +3728,7 @@
       {
         "label": "Township verification",
         "agency": "Cook County Assessor's Office",
-        "url": "https://cookviewer.cookcountyil.gov/",
+        "url": "https://maps.cookcountyil.gov/cookviewer/",
         "kind": "filing",
         "appliesBefore": "application"
       }
@@ -3946,7 +3945,7 @@
       {
         "label": "Commission on Chicago Landmarks recommendation",
         "agency": "DPD Historic Preservation",
-        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/landmark.html",
+        "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/hist.html",
         "kind": "certification",
         "appliesBefore": "application"
       },
@@ -3997,8 +3996,9 @@
       {
         "agency": "Cook County Assessor's Office — Affordable Housing",
         "abbreviation": "CCAO-AH",
-        "phone": "(312) 603-7529",
-        "url": "https://www.cookcountyassessoril.gov/affordable-housing"
+        "phone": "(312) 443-7550",
+        "url": "https://www.cookcountyassessoril.gov/affordable-housing",
+        "email": "assessor.ahsap@cookcountyil.gov"
       }
     ],
     "eligibilityRules": [
@@ -4023,7 +4023,7 @@
     ],
     "lastVerifiedAt": "2026-08-09",
     "benefitRange": "25% (Tier 15) or 35% (Tier 35) assessed-value reduction",
-    "fastestConfirmingStep": "Call (312) 603-7529 or visit cookcountyassessoril.gov/affordable-housing before Sept 5 deadline",
+    "fastestConfirmingStep": "Call (312) 443-7550 or email assessor.ahsap@cookcountyil.gov before the September 5 deadline",
     "expirationNote": "2026 Part 1 + Part 2 application deadline: September 5, 2026.",
     "personas": [
       "developer"
@@ -4726,7 +4726,7 @@
       {
         "label": "Federal §30C alternative-fuel-vehicle refueling property credit",
         "agency": "IRS",
-        "url": "https://www.irs.gov/credits-deductions/businesses/alternative-fuel-vehicle-refueling-property-credit",
+        "url": "https://www.irs.gov/credits-deductions/alternative-fuel-vehicle-refueling-property-credit",
         "kind": "filing",
         "appliesBefore": "annual",
         "note": "Stackable federal credit; file with annual tax return."

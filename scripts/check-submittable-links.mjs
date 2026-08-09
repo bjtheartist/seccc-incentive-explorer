@@ -95,17 +95,36 @@ async function main() {
     }
   }
 
-  // Every official-source link a program points a user at. Deduped per program:
-  // `sourceUrl` is frequently the same string as `url`, and pinging it twice
-  // would double-count one link in the totals.
+  // EVERY link a program points a user at, not just the two top-level ones.
+  //
+  // The first version of this sweep covered only `url` and `sourceUrl`, and the
+  // gap cost something immediately: chips48d's top-level url was repaired on
+  // 2026-08-09 while `contacts[0].url` kept pointing at the same dead IRS page,
+  // because nothing looked inside the arrays. A user clicking "IRS" on the
+  // program card still got a 404. Contact and verification links are what a
+  // person clicks when they are ready to act — the last place a dead link
+  // should be allowed to sit.
+  //
+  // Deduped per program by URL: `sourceUrl` is frequently the same string as
+  // `url`, and a contact often points at the program page, so each distinct URL
+  // is pinged once and counted once.
   const sources = [];
   for (const program of programs) {
-    for (const field of ["url", "sourceUrl"]) {
-      const url = program[field];
-      if (!url) continue;
-      if (field === "sourceUrl" && url === program.url) continue;
+    const seen = new Set();
+    const add = (field, url) => {
+      if (!url || seen.has(url)) return;
+      seen.add(url);
       sources.push({ programId: program.id, field, url });
-    }
+    };
+    add("url", program.url);
+    add("sourceUrl", program.sourceUrl);
+    (program.contacts || []).forEach((c, i) => add(`contacts[${i}].url`, c?.url));
+    (program.verificationSteps || []).forEach((s, i) =>
+      add(`verificationSteps[${i}].url`, s?.url),
+    );
+    (program.applicationPortals || []).forEach((p, i) =>
+      add(`applicationPortals[${i}].url`, p?.url),
+    );
   }
 
   console.log(
