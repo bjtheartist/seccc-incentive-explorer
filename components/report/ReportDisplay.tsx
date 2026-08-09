@@ -51,6 +51,7 @@ import {
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
+import { isSupportOrganizationSectionTitle } from "@/lib/support-organization-copy";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
@@ -948,7 +949,7 @@ export function ReportDisplay({
     [programs],
   );
   const supportSection = useMemo(
-    () => report.sections?.find((section) => section.title === "Your Support Network") ?? null,
+    () => report.sections?.find((section) => isSupportOrganizationSectionTitle(section.title)) ?? null,
     [report.sections],
   );
   const supportItems = useMemo(
@@ -984,7 +985,9 @@ export function ReportDisplay({
 
   // ── TOC ──
   const sectionToAnchor = (title: string) =>
-    title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    isSupportOrganizationSectionTitle(title)
+      ? "your-support-network"
+      : title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const tocEntries = useMemo(() => {
     const entries: { label: string; anchor: string }[] = [];
@@ -2020,7 +2023,7 @@ export function ReportDisplay({
                         {visibleSectionItems(section).map((item, itemIdx) => {
                           const reportItem = item as ReportNavigationItem;
                           const itemProgram = reportItem.programId ? programById.get(reportItem.programId) : undefined;
-                          const isSupportNetworkItem = section.title === "Your Support Network";
+                          const isSupportNetworkItem = isSupportOrganizationSectionTitle(section.title);
                           const isDeadlineItem = section.title === "Upcoming Deadlines Near This Address";
                           const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
                           const hasGroupedDetail = Boolean(item.detailGroups?.length);

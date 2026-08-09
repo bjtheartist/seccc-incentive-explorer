@@ -8,14 +8,14 @@ export const metadata: Metadata = {
     absolute: `Generate a Free Location Snapshot | ${SITE_NAME}`,
   },
   description:
-    "Start with a Chicago address and generate a free location snapshot with incentive zones, TIF and NOF context, site signals, and local support partners.",
+    "Start with a Chicago address and generate a free location snapshot with incentive zones, TIF and NOF context, site signals, and local support organizations.",
   alternates: {
     canonical: absoluteUrl("/start"),
   },
   openGraph: {
     title: `Generate a Free Location Snapshot | ${SITE_NAME}`,
     description:
-      "Start with a Chicago address and generate a free location snapshot with incentive zones, site context, and local support partners.",
+      "Start with a Chicago address and generate a free location snapshot with incentive zones, site context, and local support organizations.",
     url: absoluteUrl("/start"),
     siteName: SITE_NAME,
     type: "website",

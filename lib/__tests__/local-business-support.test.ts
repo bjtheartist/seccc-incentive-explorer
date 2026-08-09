@@ -64,7 +64,7 @@ describe("local business support data", () => {
     expect(qcdc?.supportTypes).toContain("Commercial corridor development");
   });
 
-  it("uses the verified public intake for Greater Englewood in every mapped area", () => {
+  it("records the published public intake for Greater Englewood in every mapped area", () => {
     for (const communityAreaNumber of ["67", "68"] as const) {
       const organization = supportData.byCommunityArea[communityAreaNumber].organizations.find(
         (org) => org.id === "P019",
@@ -108,6 +108,28 @@ describe("rankLocalBusinessSupport", () => {
       "Legal Partner",
       "Secondary Partner",
       "Regional Hub",
+    ]);
+  });
+
+  it("does not treat broad active or verified labels as evidence of current capacity", () => {
+    const ranked = rankLocalBusinessSupport([
+      {
+        name: "Zulu Support",
+        relationships: ["secondary_access_point"],
+        sourceUrls: [],
+        currentStatus: "Active resource",
+        validationLevel: "Verified current web presence",
+      },
+      {
+        name: "Alpha Support",
+        relationships: ["secondary_access_point"],
+        sourceUrls: [],
+      },
+    ]);
+
+    expect(ranked.map((org) => org.name)).toEqual([
+      "Alpha Support",
+      "Zulu Support",
     ]);
   });
 

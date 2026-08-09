@@ -12,6 +12,7 @@ import type {
   SupportNetworkCoverageRole,
   SupportNetworkOrganization,
 } from "@/lib/support-network-directory";
+import { SUPPORT_VERIFICATION_GUIDE } from "@/lib/support-organization-copy";
 
 const LANE_LABELS: Record<string, string> = {
   business_navigation: "Business navigation",
@@ -153,7 +154,7 @@ export function SupportNetworkDirectory({
       "Intake email",
       "Intake phone",
       "Intake URL",
-      "Last verified",
+      "Sources last reviewed",
       "Sources",
     ];
     const rows = filtered.map((organization) => [
@@ -185,12 +186,38 @@ export function SupportNetworkDirectory({
 
   return (
     <div>
+      <section className="mb-7 border-y border-[#0C1B33]/10 bg-white">
+        <div className="px-5 py-5">
+          <h2 className="font-editorial text-[24px] leading-tight text-[#0C1B33]">
+            How to read directory evidence
+          </h2>
+          <p className="mt-2 max-w-3xl text-[12px] leading-relaxed text-[#0C1B33]/50">
+            These labels describe what was checked, not whether an organization is currently accepting new clients. A reachable website is not proof of current program availability or intake capacity.
+          </p>
+        </div>
+        <div className="grid border-t border-[#0C1B33]/10 sm:grid-cols-2 xl:grid-cols-4">
+          {SUPPORT_VERIFICATION_GUIDE.map((item) => (
+            <div
+              key={item.label}
+              className="border-b border-[#0C1B33]/8 px-5 py-4 sm:border-r xl:border-b-0"
+            >
+              <h3 className="text-[12px] font-semibold leading-snug text-[#0C1B33]">
+                {item.label}
+              </h3>
+              <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/45">
+                {item.description}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <div className="grid border-y border-[#0C1B33]/10 bg-white sm:grid-cols-2 lg:grid-cols-4">
         {[
           ["Organizations", organizations.length],
           ["Named contacts", namedContactCount],
           ["Core local", coreLocalCount],
-          ["Needs verification", verificationCount],
+          ["Needs source review", verificationCount],
         ].map(([label, value]) => (
           <div
             key={label}
@@ -339,7 +366,7 @@ export function SupportNetworkDirectory({
                       {organization.geography}
                     </p>
                     <p className="mt-4 font-mono-bureau text-[8px] uppercase tracking-[0.12em] text-[#0C1B33]/30">
-                      Sources verified {formatVerifiedDate(organization.lastVerifiedAt)}
+                      Sources reviewed {formatVerifiedDate(organization.lastVerifiedAt)}
                     </p>
                     <a
                       href={organization.sourceUrls[0]}
@@ -372,7 +399,7 @@ export function SupportNetworkDirectory({
                       </div>
                     ) : (
                       <p className="text-[11px] leading-relaxed text-[#0C1B33]/35">
-                        Start with the published intake route. A named relationship contact still needs to be confirmed.
+                        Use the published intake route. A named relationship contact has not been confirmed.
                       </p>
                     )}
                   </td>

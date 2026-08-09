@@ -88,6 +88,12 @@ import {
 } from "@/components/report/CrossLinkBanner";
 import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
+import {
+  isSupportOrganizationSectionTitle,
+  SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
+  SUPPORT_ORGANIZATIONS_DESCRIPTION,
+  SUPPORT_ORGANIZATIONS_SECTION_TITLE,
+} from "@/lib/support-organization-copy";
 import { AdminOwnershipPanel } from "@/components/report/AdminOwnershipPanel";
 import type { AdminOwnershipPanelStatus } from "@/components/report/AdminOwnershipPanel";
 import { fetchAdminOwnershipContext } from "@/lib/owner-file-report-context";
@@ -258,10 +264,10 @@ function cleanReportSource(value: string | null): string | null {
 
 function supportOrganizationCount(report: GeneratedReport) {
   const supportSection = report.sections?.find(
-    (section) => section.title === "Your Support Network",
+    (section) => isSupportOrganizationSectionTitle(section.title),
   );
   if (!supportSection) return 0;
-  return supportSection.items.filter((item) => item.label !== "Community Support").length;
+  return supportSection.items.slice(1).length;
 }
 
 function zoneMatchesToText(value: unknown): string {
@@ -3231,7 +3237,7 @@ function VerdictCard({ verdict }: { verdict: NonNullable<GeneratedReport["verdic
 }
 
 /**
- * Compact "who can help" strip under the verdict — elevates the support
+ * Compact local-support strip under the verdict — elevates the support
  * network (normally buried mid-report) to the top of the page. Clicks run
  * through the same support_resource_clicked tracking as the full section.
  */
@@ -3249,11 +3255,10 @@ function VerdictPartnerStrip({
     <div className="mb-12 border border-[#0C1B33]/10 bg-[#EFF3FB]/70 px-5 py-4 print:hidden">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <span className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]">
-          Who can help nearby
+          Local support to explore
         </span>
         <span className="text-[12px] text-[#0C1B33]/50">
-          {items.length} local support partner{items.length !== 1 ? "s" : ""}{" "}
-          surfaced for this location
+          {items.length} organization{items.length !== 1 ? "s" : ""} selected for this location
         </span>
         <a
           href="#your-support-network"
@@ -4190,7 +4195,9 @@ function ReportDisplay({
 
   // ── TOC ──
   const sectionToAnchor = (title: string) =>
-    title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    isSupportOrganizationSectionTitle(title)
+      ? "your-support-network"
+      : title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const tocEntries = useMemo(() => {
     const entries: { label: string; anchor: string }[] = [];
@@ -4208,7 +4215,7 @@ function ReportDisplay({
   }, [report]);
 
   const supportSection = useMemo(
-    () => report.sections?.find((section) => section.title === "Your Support Network") ?? null,
+    () => report.sections?.find((section) => isSupportOrganizationSectionTitle(section.title)) ?? null,
     [report.sections]
   );
 
@@ -4216,7 +4223,7 @@ function ReportDisplay({
         Open: the first two sections plus the primary-story sections.
         Content stays in the DOM (CSS-hidden) so print and #anchors work. ── */
   const ALWAYS_OPEN_SECTIONS = useMemo(
-    () => new Set(["Programs Mapped at This Address", "Your Support Network"]),
+    () => new Set(["Programs Mapped at This Address", SUPPORT_ORGANIZATIONS_SECTION_TITLE]),
     []
   );
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
@@ -4306,7 +4313,7 @@ function ReportDisplay({
         return;
       }
 
-      if (section.title === "Your Support Network") {
+      if (isSupportOrganizationSectionTitle(section.title)) {
         trackEvent(
           "support_resource_clicked",
           reportAnalyticsPayload(report, "report_support_network", {
@@ -5037,16 +5044,19 @@ function ReportDisplay({
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
                   <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/60 mb-1.5">
-                    Local Support Partners
+                    Local support organizations
                   </div>
                   <h2 className="font-editorial text-[22px] text-[#0C1B33] leading-snug">
-                    {supportItems.length} organization{supportItems.length === 1 ? "" : "s"} surfaced for this location
+                    {SUPPORT_ORGANIZATIONS_SECTION_TITLE}
                   </h2>
                   <p className="text-[#0C1B33]/45 text-[13px] leading-relaxed mt-1.5 max-w-2xl">
-                    Use these as a starting point for interpreting programs, preparing questions, or finding the right local support path.
+                    {SUPPORT_ORGANIZATIONS_DESCRIPTION}
+                  </p>
+                  <p className="text-[#0C1B33]/35 text-[11px] leading-relaxed mt-1.5 max-w-2xl">
+                    {SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}
                   </p>
                   <p className="font-mono-bureau text-[9px] tracking-[0.08em] text-[#0C1B33]/30 mt-2 truncate">
-                    {supportItems.slice(0, 3).map((item) => item.label).join(" · ")}
+                    {supportItems.length} selected · {supportItems.slice(0, 3).map((item) => item.label).join(" · ")}
                     {supportItems.length > 3 ? " · more below" : ""}
                   </p>
                 </div>
@@ -5060,14 +5070,14 @@ function ReportDisplay({
                       className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[9px] tracking-[0.14em] uppercase px-4 py-3 hover:bg-[#0C1B33]/80 transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      Start with {supportCtaItem.label}
+                      Visit {supportCtaItem.label}
                     </a>
                   )}
                   <a
                     href="#your-support-network"
                     className="inline-flex items-center justify-center gap-2 border border-[#0C1B33]/12 bg-white text-[#0C1B33]/55 font-mono-bureau text-[9px] tracking-[0.14em] uppercase px-4 py-3 hover:border-[#0C1B33]/25 hover:text-[#0C1B33] transition-colors"
                   >
-                    See All Local Support Organizations
+                    See all organizations
                     <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 </div>
@@ -5417,7 +5427,7 @@ function ReportDisplay({
                         {visibleSectionItems(section).map((item, itemIdx) => {
                           const reportItem = item as ReportNavigationItem;
                           const itemProgram = reportItem.programId ? programById.get(reportItem.programId) : undefined;
-                          const isSupportNetworkItem = section.title === "Your Support Network";
+                          const isSupportNetworkItem = isSupportOrganizationSectionTitle(section.title);
                           const isDeadlineItem = section.title === "Upcoming Deadlines Near This Address";
                           const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
                           const hasGroupedDetail = Boolean(item.detailGroups?.length);

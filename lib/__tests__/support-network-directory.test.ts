@@ -2,8 +2,22 @@ import { describe, expect, it } from "vitest";
 import citywideSupportData from "@/data/curated/citywide_business_support_resources.json";
 import capitalPartnerData from "@/data/curated/capital_partners.json";
 import { supportNetworkDirectory } from "@/lib/support-network-directory";
+import { SUPPORT_VERIFICATION_GUIDE } from "@/lib/support-organization-copy";
 
 describe("support network directory", () => {
+  it("distinguishes source checks from current intake capacity", () => {
+    expect(SUPPORT_VERIFICATION_GUIDE.map((item) => item.label)).toEqual([
+      "Listed in a current official source",
+      "Official website checked",
+      "Public intake recently confirmed",
+      "Current capacity not confirmed",
+    ]);
+    expect(SUPPORT_VERIFICATION_GUIDE[0].description).toContain("not current intake");
+    expect(SUPPORT_VERIFICATION_GUIDE[1].description).toContain("not that a program is open");
+    expect(SUPPORT_VERIFICATION_GUIDE[2].description).toContain("response is guaranteed");
+    expect(SUPPORT_VERIFICATION_GUIDE[3].description).toContain("capacity is unknown");
+  });
+
   it("includes the requested local, capital, housing, and development organizations", () => {
     const names = supportNetworkDirectory.organizations.map((organization) => organization.name);
 

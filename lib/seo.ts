@@ -8,7 +8,7 @@ export const SITE_NAME = "Chicago Incentive Explorer";
 export const DEFAULT_TITLE =
   "Chicago Incentive Explorer | Free Business Incentive Lookup by Address";
 export const DEFAULT_DESCRIPTION =
-  "Generate a free Chicago location snapshot by address. Explore TIF, NOF, SBIF, Enterprise Zones, vacancy signals, local support partners, and public incentive data.";
+  "Generate a free Chicago location snapshot by address. Explore TIF, NOF, SBIF, Enterprise Zones, vacancy signals, local support organizations, and public incentive data.";
 
 export const DEFAULT_KEYWORDS = [
   "Chicago business incentives",

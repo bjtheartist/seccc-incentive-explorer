@@ -7,6 +7,11 @@ import {
 } from "../report-engine";
 import type { Program } from "../types";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "../capital-partner-report";
+import {
+  SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
+  SUPPORT_ORGANIZATIONS_DESCRIPTION,
+  SUPPORT_ORGANIZATIONS_SECTION_TITLE,
+} from "../support-organization-copy";
 
 function makeProgram(overrides: Partial<Program> = {}): Program {
   return {
@@ -775,13 +780,16 @@ describe("generateReportData", () => {
       },
     );
 
-    const section = report.sections.find((s) => s.title === "Your Support Network");
-    expect(section?.description).toContain("Neighborhood-facing organizations");
+    const section = report.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE);
+    expect(section?.description).toContain(SUPPORT_ORGANIZATIONS_DESCRIPTION);
+    expect(section?.description).toContain(SUPPORT_ORGANIZATIONS_CAPACITY_NOTE);
     expect(section?.items[0].label).toBe("Local Support in South Chicago");
     expect(section?.items[1].label).toBe("Southeast Chicago Chamber of Commerce");
     expect(section?.items[1].value).toContain("Primary local access point");
     expect(section?.items[1].detail).toContain("Licensing");
-    expect(section?.items[1].detail).toContain("Can help with");
+    expect(section?.items[1].detail).toContain("Published support services");
+    expect(section?.items[1].detail).toContain("Current programs, intake capacity, and response times are not confirmed");
+    expect(section?.items[1].detail).not.toContain("Status: Active");
     expect(report.dataSources?.map((source) => source.id)).toContain("localBusinessSupport");
   });
 
@@ -809,11 +817,11 @@ describe("generateReportData", () => {
       },
     );
 
-    const section = report.sections.find((s) => s.title === "Your Support Network");
-    expect(section?.description).toContain("clearer next conversation");
-    expect(section?.items[0].detail).toContain("warm-handoff list");
+    const section = report.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE);
+    expect(section?.description).toContain(SUPPORT_ORGANIZATIONS_DESCRIPTION);
+    expect(section?.items[0].detail).toContain("discovery list");
     expect(section?.items[1].detail).toContain("regional business navigation");
-    expect(section?.items[1].detail).toContain("Website: not listed");
+    expect(section?.items[1].detail).toContain("Website: not listed in the source records");
     expect(section?.items[1].detail).toContain("Washington Park");
   });
 
@@ -843,7 +851,7 @@ describe("generateReportData", () => {
       },
     );
 
-    const section = report.sections.find((s) => s.title === "Your Support Network");
+    const section = report.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE);
     expect(section?.items[1].label).toBe("Legal Aid for New Entrepreneurs (LANE)");
     expect(section?.items[1].value).toBe("Small business legal support");
     expect(section?.items[1].detail).toContain("small-business legal questions");

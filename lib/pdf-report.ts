@@ -10,6 +10,7 @@ import {
 import type { GeneratedReport } from "./report-engine";
 import { selectedProjectGoalLabels } from "./report-wizard-config";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "./capital-partner-report";
+import { isSupportOrganizationSectionTitle } from "./support-organization-copy";
 
 /**
  * PDF print order is intentionally action-first. The web report can support
@@ -34,7 +35,7 @@ export function orderSectionsForPdf(
     if (confirmedSectionTitles.has(title)) return 12;
     if (title === CAPITAL_PARTNER_SECTION_TITLE) return 20;
     if (title === "Upcoming Deadlines Near This Address") return 30;
-    if (title === "Your Support Network") return 40;
+    if (isSupportOrganizationSectionTitle(title)) return 40;
     if (title === "Additional Programs to Explore") return 50;
     if (title === "Required Documents") return 60;
     if (title === "Document Readiness Checklist") return 61;
@@ -1416,7 +1417,9 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
   const discoveryItems = section("Additional Programs to Explore")?.items || [];
   const deadlineItems = section("Upcoming Deadlines Near This Address")?.items || [];
   const financingItems = section(CAPITAL_PARTNER_SECTION_TITLE)?.items || [];
-  const supportItems = (section("Your Support Network")?.items || []).filter((item) => Boolean(item.url));
+  const supportItems = (
+    report.sections.find((candidate) => isSupportOrganizationSectionTitle(candidate.title))?.items || []
+  ).filter((item) => Boolean(item.url));
   const requiredItems = section("Required Documents")?.items || [];
   const readinessItems = section("Document Readiness Checklist")?.items || [];
   const siteItems = [
