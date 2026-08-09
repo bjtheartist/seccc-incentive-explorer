@@ -189,6 +189,33 @@ describe("generateReportData", () => {
     },
   );
 
+  it("links an exact City-published Clerk matter without inferring use compatibility", () => {
+    const clerkUrl =
+      "https://chicityclerkelms.chicago.gov/Matter/?matterId=14999C67-FD08-F111-8406-001DD80D78DD";
+    const report = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          zoneClass: "B1-3",
+          zoneType: null,
+          clerkDocumentNumber: "O2026-0023281",
+          clerkUrl,
+          ordinanceDate: "2026-05-20T00:00:00.000Z",
+        },
+      },
+    );
+    const item = report.sections
+      .find((section) => section.title === "Zoning & Regulatory Review")
+      ?.items[0];
+    expect(item?.url).toBe(clerkUrl);
+    expect(item?.detail).toContain("Related City Clerk record: O2026-0023281");
+    expect(item?.detail).toContain("Published ordinance date: 2026-05-20");
+    expect(item?.detail).toContain("does not determine whether a proposed use is permitted");
+  });
+
   it("preserves explicit unavailable and not-found zoning states", () => {
     const unavailable = generateReportData(
       makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
