@@ -102,6 +102,7 @@ const AUTO_GUIDE_EXCLUSIONS = [
   "/admin",
   "/api",
   "/forgot-password",
+  "/learn",
   "/login",
   "/print",
   "/report",

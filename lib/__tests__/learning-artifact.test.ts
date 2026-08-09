@@ -35,4 +35,15 @@ describe("Tier 1 learning artifact", () => {
     ].map((match) => match[1]);
     references.forEach((reference) => expect(markerIds.has(reference)).toBe(true));
   });
+
+  it("presents the lessons as a branded, navigable learning course", () => {
+    expect(html).toContain("Chicago Zoning &amp; Permit Essentials");
+    expect(html).toContain("Chicago Incentive Explorer");
+    expect(html).toContain('id="module-decisions"');
+    expect(html).toContain('id="module-zoning"');
+    expect(html).toContain('id="module-permits"');
+    expect(html).toContain('id="courseProgress"');
+    expect(html).toContain("Run an address report");
+    expect(html).toContain("Southeast Chicago Chamber of Commerce");
+  });
 });

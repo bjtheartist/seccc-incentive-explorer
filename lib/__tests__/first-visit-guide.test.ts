@@ -67,8 +67,8 @@ describe("first visit guide placement", () => {
     }
   });
 
-  it("stays out of reports, authentication, workspaces, and admin tools", () => {
-    for (const pathname of ["/report", "/report/abc", "/login", "/workspace/projects/1", "/admin"]) {
+  it("stays out of learning, reports, authentication, workspaces, and admin tools", () => {
+    for (const pathname of ["/learn", "/report", "/report/abc", "/login", "/workspace/projects/1", "/admin"]) {
       expect(shouldAutoOpenFirstVisitGuide(pathname)).toBe(false);
     }
   });

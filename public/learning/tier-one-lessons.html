@@ -4,61 +4,93 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <base target="_blank">
-<title>Twelve Lessons — Tier 1 Complete</title>
+<title>Chicago Zoning &amp; Permit Essentials | Chicago Incentive Explorer</title>
 
 <style>
   :root {
-    --ground:#ECEEF1; --surface:#FFFFFF; --sunken:#F4F5F7;
-    --ink:#15181D; --muted:#5A626E; --line:#D2D7DE; --line-soft:#E3E7EC;
-    --accent:#9A7415; --accent-mark:#F2C230; --on-accent:#15181D;
-    --ok:#2E6B4E; --ok-bg:#E6F1EA; --warn:#A5402F; --warn-bg:#F7E9E6;
-    --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
-    --font-body: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --ground:#F7F8FA; --surface:#FFFFFF; --sunken:#EFF3FB;
+    --ink:#0C1B33; --muted:#56637A; --line:#CCD4E1; --line-soft:#E5EAF1;
+    --accent:#2563EB; --accent-mark:#2563EB; --accent-soft:#EAF0FF; --on-accent:#FFFFFF;
+    --navy:#0C1B33; --navy-soft:#172A49;
+    --ok:#17633E; --ok-bg:#E8F5EE; --warn:#9A3528; --warn-bg:#FBECEA;
+    --font-display: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --font-body: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
     --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --ground:#111318; --surface:#191C22; --sunken:#14171C;
-      --ink:#E6E9ED; --muted:#98A1AD; --line:#2B303A; --line-soft:#232830;
-      --accent:#F2C230; --accent-mark:#F2C230; --on-accent:#15181D;
-      --ok:#5FBF8F; --ok-bg:#152A21; --warn:#E08472; --warn-bg:#2C1B18;
-    }
-  }
-  :root[data-theme="dark"] {
-    --ground:#111318; --surface:#191C22; --sunken:#14171C;
-    --ink:#E6E9ED; --muted:#98A1AD; --line:#2B303A; --line-soft:#232830;
-    --accent:#F2C230; --accent-mark:#F2C230; --on-accent:#15181D;
-    --ok:#5FBF8F; --ok-bg:#152A21; --warn:#E08472; --warn-bg:#2C1B18;
-  }
-  :root[data-theme="light"] {
-    --ground:#ECEEF1; --surface:#FFFFFF; --sunken:#F4F5F7;
-    --ink:#15181D; --muted:#5A626E; --line:#D2D7DE; --line-soft:#E3E7EC;
-    --accent:#9A7415; --accent-mark:#F2C230; --on-accent:#15181D;
-    --ok:#2E6B4E; --ok-bg:#E6F1EA; --warn:#A5402F; --warn-bg:#F7E9E6;
   }
 
   * { box-sizing: border-box; }
 
   body {
     background: var(--ground); color: var(--ink);
-    font-family: var(--font-body); font-size: 18px; line-height: 1.68;
-    margin: 0; padding: 0 20px 100px; -webkit-font-smoothing: antialiased;
+    font-family: var(--font-body); font-size: 17px; line-height: 1.68;
+    margin: 0; padding: 0 0 88px; -webkit-font-smoothing: antialiased;
   }
 
-  .wrap { max-width: 720px; margin: 0 auto; }
+  .wrap { max-width: 800px; margin: 0 auto; padding: 0 24px; }
 
-  .masthead { padding: 56px 0 28px; border-bottom: 2px solid var(--ink); margin-bottom: 8px; }
+  .course-hero { background: var(--navy); color: #FFFFFF; border-bottom: 4px solid var(--accent); }
+  .course-hero-inner { max-width: 800px; margin: 0 auto; padding: 34px 24px 42px; }
+  .brandline { display: flex; align-items: center; gap: 12px; margin-bottom: 42px; }
+  .brand-mark {
+    display: inline-grid; place-items: center; width: 44px; height: 28px;
+    border: 1px solid rgba(255,255,255,.65); font-family: var(--font-mono);
+    font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  }
+  .brand-name { font-size: 14px; font-weight: 650; }
+  .site-return {
+    margin-left: auto; color: rgba(255,255,255,.76); font-family: var(--font-mono);
+    font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; text-decoration: none;
+  }
+  .site-return:hover, .site-return:focus-visible { color: #FFFFFF; text-decoration: underline; text-underline-offset: 4px; }
+  .masthead { margin: 0; }
   .eyebrow {
     font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .14em;
-    text-transform: uppercase; color: var(--muted); margin: 0 0 16px;
+    text-transform: uppercase; color: #AFC4E8; margin: 0 0 16px;
   }
   h1 {
-    font-family: var(--font-display); font-size: clamp(28px,5vw,42px); line-height:1.1;
-    letter-spacing: -.028em; font-weight: 700; margin: 0 0 16px; text-wrap: balance;
+    font-family: var(--font-display); font-size: clamp(36px,6vw,58px); line-height:1.06;
+    letter-spacing: 0; font-weight: 700; margin: 0 0 18px; max-width: 15ch; text-wrap: balance;
   }
-  .standfirst { font-size: 19px; color: var(--muted); margin: 0; max-width: 60ch; }
+  .standfirst { font-size: 18px; line-height: 1.6; color: #D7E1F2; margin: 0; max-width: 62ch; }
 
-  article { padding: 52px 0; border-bottom: 1px solid var(--line); }
+  .course-meta {
+    display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+    max-width: 800px; margin: 0 auto; padding: 0 24px; background: var(--surface);
+  }
+  .course-meta-item { min-width: 0; padding: 18px 16px; border-right: 1px solid var(--line-soft); }
+  .course-meta-item:first-child { padding-left: 0; }
+  .course-meta-item:last-child { border-right: 0; padding-right: 0; }
+  .course-meta-value { display: block; font-family: var(--font-display); font-size: 20px; font-weight: 700; }
+  .course-meta-label {
+    display: block; margin-top: 2px; color: var(--muted); font-family: var(--font-mono);
+    font-size: 9.5px; line-height: 1.45; letter-spacing: .1em; text-transform: uppercase;
+  }
+
+  .course-nav { position: sticky; top: 0; z-index: 10; background: rgba(255,255,255,.97); border-block: 1px solid var(--line-soft); }
+  .course-nav-inner { display: flex; align-items: center; gap: 22px; max-width: 800px; margin: 0 auto; padding: 11px 24px; }
+  .module-links { display: flex; gap: 18px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .module-links::-webkit-scrollbar { display: none; }
+  .module-links a {
+    flex: 0 0 auto; color: var(--muted); font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: .08em; text-transform: uppercase; text-decoration: none;
+  }
+  .module-links a:hover, .module-links a:focus-visible { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
+  .progress-wrap { display: flex; align-items: center; gap: 10px; margin-left: auto; flex: 0 0 auto; }
+  .progress-wrap span { color: var(--muted); font-family: var(--font-mono); font-size: 10px; white-space: nowrap; }
+  progress { width: 72px; height: 5px; border: 0; border-radius: 0; overflow: hidden; background: var(--line-soft); }
+  progress::-webkit-progress-bar { background: var(--line-soft); }
+  progress::-webkit-progress-value { background: var(--accent); }
+  progress::-moz-progress-bar { background: var(--accent); }
+
+  .module-heading { scroll-margin-top: 62px; padding: 62px 0 6px; }
+  .module-number {
+    margin: 0 0 8px; color: var(--accent); font-family: var(--font-mono);
+    font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+  }
+  .module-heading h2 { margin-bottom: 10px; font-size: clamp(28px,4vw,38px); }
+  .module-heading p:last-child { margin: 0; color: var(--muted); }
+
+  article { padding: 48px 0; border-bottom: 1px solid var(--line); }
   article:last-of-type { border-bottom: none; }
 
   .lesson-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 18px; }
@@ -75,7 +107,7 @@
 
   h2 {
     font-family: var(--font-display); font-size: clamp(24px,4vw,32px); line-height: 1.16;
-    letter-spacing: -.022em; font-weight: 700; margin: 0 0 22px; text-wrap: balance;
+    letter-spacing: 0; font-weight: 700; margin: 0 0 22px; text-wrap: balance;
   }
 
   p { margin: 0 0 18px; }
@@ -103,7 +135,7 @@
 
   .opts { display: flex; flex-direction: column; gap: 8px; }
   .opt {
-    font-family: var(--font-display); font-size: 16px; line-height: 1.45;
+    font-family: var(--font-body); font-size: 16px; line-height: 1.45;
     text-align: left; color: var(--ink); background: var(--sunken);
     border: 1px solid var(--line-soft); border-radius: 3px;
     padding: 12px 14px; cursor: pointer; transition: border-color .12s ease, background .12s ease;
@@ -143,36 +175,91 @@
     color: var(--muted); margin: 0; padding-top: 12px; border-top: 1px solid var(--line-soft);
   }
 
-  .closing {
-    margin-top: 48px; padding: 22px; background: var(--sunken);
-    border: 1px solid var(--line); border-radius: 3px; font-size: 16px; color: var(--muted);
+  .closing { margin: 62px -24px 0; padding: 38px 24px; background: var(--navy); color: #D7E1F2; }
+  .closing .eyebrow { margin-bottom: 10px; }
+  .closing h2 { color: #FFFFFF; margin-bottom: 12px; }
+  .closing p { max-width: 58ch; }
+  .closing-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px; }
+  .course-button {
+    display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+    padding: 10px 16px; border: 1px solid rgba(255,255,255,.72); color: #FFFFFF;
+    font-family: var(--font-body); font-size: 14px; font-weight: 700; text-decoration: none;
   }
-  .closing strong { color: var(--ink); }
-  .site-return {
-    display: inline-flex; align-items: center; min-height: 40px; margin-top: 20px;
-    font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em;
-    text-transform: uppercase; color: var(--muted); text-decoration: none;
-  }
-  .site-return:hover, .site-return:focus-visible { color: var(--ink); text-decoration: underline; }
+  .course-button.primary { background: var(--accent); border-color: var(--accent); }
+  .course-button:hover, .course-button:focus-visible { background: #FFFFFF; border-color: #FFFFFF; color: var(--navy); }
+  .course-credit { margin: 24px 0 0 !important; padding-top: 20px; border-top: 1px solid rgba(255,255,255,.2); font-size: 13px; color: #AFC4E8; }
 
   @media (max-width: 560px) {
-    body { font-size: 17px; padding: 0 16px 72px; }
+    body { font-size: 16px; padding-bottom: 64px; }
+    .course-hero-inner { padding: 24px 18px 34px; }
+    .brandline { align-items: flex-start; margin-bottom: 34px; }
+    .brand-name { max-width: 17ch; line-height: 1.3; }
+    .site-return { max-width: 12ch; text-align: right; line-height: 1.45; }
+    .course-meta { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 0 18px; }
+    .course-meta-item { padding: 14px 12px; border-bottom: 1px solid var(--line-soft); }
+    .course-meta-item:nth-child(2) { border-right: 0; padding-right: 0; }
+    .course-meta-item:nth-child(3) { padding-left: 0; border-bottom: 0; }
+    .course-meta-item:nth-child(4) { border-right: 0; border-bottom: 0; padding-right: 0; }
+    .course-nav-inner { display: block; padding: 10px 18px; }
+    .progress-wrap { justify-content: space-between; margin: 10px 0 0; }
+    progress { width: 112px; }
+    .wrap { padding: 0 18px; }
+    .module-heading { padding-top: 48px; scroll-margin-top: 92px; }
+    article { padding: 40px 0; }
+    .fig { margin-inline: -2px; padding: 16px 12px; }
+    .q { padding: 20px 16px; }
     .mins { margin-left: 0; width: 100%; }
+    .closing { margin-inline: -18px; padding-inline: 18px; }
+    .course-button { width: 100%; }
   }
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 </head>
 <body>
 
-<div class="wrap">
+<header class="course-hero">
+  <div class="course-hero-inner">
+    <div class="brandline">
+      <span class="brand-mark" aria-hidden="true">CSIM</span>
+      <span class="brand-name">Chicago Incentive Explorer</span>
+      <a class="site-return" href="/report" target="_top">Return to report</a>
+    </div>
+    <div class="masthead">
+      <p class="eyebrow">Learning Center · Zoning &amp; permits · Tier 1</p>
+      <h1>Chicago Zoning &amp; Permit Essentials</h1>
+      <p class="standfirst">A practical course for Chicago business owners and project teams. Learn who makes each decision, how to read published zoning information, and which permit or license step may come next.</p>
+    </div>
+  </div>
+</header>
 
-  <a class="site-return" href="/report" target="_top">← Back to the Incentive Explorer</a>
+<section class="course-meta" aria-label="Course details">
+  <div class="course-meta-item"><span class="course-meta-value">3</span><span class="course-meta-label">Modules</span></div>
+  <div class="course-meta-item"><span class="course-meta-value">12</span><span class="course-meta-label">Lessons</span></div>
+  <div class="course-meta-item"><span class="course-meta-value">~30</span><span class="course-meta-label">Minutes</span></div>
+  <div class="course-meta-item"><span class="course-meta-value">Linked</span><span class="course-meta-label">Official sources</span></div>
+</section>
 
-  <header class="masthead">
-    <p class="eyebrow">Chicago Incentive Explorer · /learn · Tier 1</p>
-    <h1>Twelve lessons, as a reader would meet them</h1>
-    <p class="standfirst">All of Tier 1 — roughly thirty minutes end to end. One idea each, one question that tests the system rather than your project, and each diagram wired into the lesson it belongs to. The questions work; try answering one wrong.</p>
-  </header>
+<nav class="course-nav" aria-label="Course modules">
+  <div class="course-nav-inner">
+    <div class="module-links">
+      <a href="#module-decisions" target="_self">01 Decisions</a>
+      <a href="#module-zoning" target="_self">02 Zoning</a>
+      <a href="#module-permits" target="_self">03 Permits</a>
+    </div>
+    <div class="progress-wrap">
+      <span id="progressStatus">0 of 12 checks complete</span>
+      <progress id="courseProgress" max="12" value="0" aria-label="Course checks completed">0 of 12</progress>
+    </div>
+  </div>
+</nav>
+
+<main class="wrap">
+
+  <section class="module-heading" id="module-decisions" aria-labelledby="module-decisions-title">
+    <p class="module-number">Module 1 of 3</p>
+    <h2 id="module-decisions-title">Who actually decides</h2>
+    <p>Separate zoning, permits, licensing, and appeals before choosing a path.</p>
+  </section>
 
   <!-- ================= L1.1 ================= -->
   <article>
@@ -467,6 +554,11 @@
   </article>
 
   <!-- ================= L2.1 ================= -->
+  <section class="module-heading" id="module-zoning" aria-labelledby="module-zoning-title">
+    <p class="module-number">Module 2 of 3</p>
+    <h2 id="module-zoning-title">Zoning and permitted uses</h2>
+    <p>Read the published tables without turning public context into a City determination.</p>
+  </section>
   <article>
     <div class="lesson-head">
       <span class="lid">L2.1</span><span class="track">Zoning and permitted uses</span><span class="mins">3 min</span>
@@ -786,6 +878,11 @@
   </article>
 
   <!-- ================= L3.1 ================= -->
+  <section class="module-heading" id="module-permits" aria-labelledby="module-permits-title">
+    <p class="module-number">Module 3 of 3</p>
+    <h2 id="module-permits-title">Permits and opening</h2>
+    <p>Understand the approvals that authorize construction, occupancy, and operation.</p>
+  </section>
   <article>
     <div class="lesson-head">
       <span class="lid">L3.1</span><span class="track">Permits and opening</span><span class="mins">2 min</span>
@@ -1033,11 +1130,24 @@
     </div>
   </article>
 
-  <p class="closing"><strong>Tier 1, complete.</strong> Twelve lessons, ten diagrams, five corrections to things commonly taught wrong. The curriculum opens on separated authorizations in L1.1 and closes on them in L3.4 — that repetition is deliberate spacing, not redundancy. Every perishable value in here is a link rather than a number, which is why a rule change is an edit and not a rewrite.</p>
+  <section class="closing" aria-labelledby="course-complete-title">
+    <p class="eyebrow">Course complete</p>
+    <h2 id="course-complete-title">Turn the lessons into a site-specific starting point.</h2>
+    <p>Run an address report to organize published incentive, zoning, site, and local-support information around a Chicago location. The report is a discovery tool, not an approval or eligibility determination.</p>
+    <div class="closing-actions">
+      <a class="course-button primary" href="/report" target="_top">Run an address report</a>
+      <a class="course-button" href="/map" target="_top">Explore the map</a>
+    </div>
+    <p class="course-credit">Built by the Southeast Chicago Chamber of Commerce for Chicago businesses, neighborhoods, and the people helping projects move forward.</p>
+  </section>
 
-</div>
+</main>
 
 <script>
+  var completedChecks = 0;
+  var progress = document.getElementById('courseProgress');
+  var progressStatus = document.getElementById('progressStatus');
+
   document.querySelectorAll('[data-q]').forEach(function (q) {
     var opts = q.querySelectorAll('.opt');
     var why = q.querySelector('.why');
@@ -1050,6 +1160,10 @@
         });
         if (!btn.hasAttribute('data-correct')) btn.classList.add('wrong');
         why.hidden = false;
+        completedChecks += 1;
+        progress.value = completedChecks;
+        progress.textContent = completedChecks + ' of 12';
+        progressStatus.textContent = completedChecks + ' of 12 checks complete';
       });
     });
   });
