@@ -17,6 +17,7 @@ import { trackEvent } from "@/lib/analytics-events";
 import {
   FIRST_VISIT_GUIDE_OPEN_EVENT,
   FIRST_VISIT_GUIDE_STEPS,
+  FIRST_VISIT_SPOTLIGHT_OPEN_EVENT,
   readFirstVisitGuidePreference,
   shouldAutoOpenFirstVisitGuide,
   writeFirstVisitGuidePreference,
@@ -114,6 +115,7 @@ export function FirstVisitGuideDialog({
   screen,
   step,
   onStart,
+  onSpotlight,
   onSkip,
   onBack,
   onNext,
@@ -125,6 +127,7 @@ export function FirstVisitGuideDialog({
   screen: GuideScreen;
   step: number;
   onStart: () => void;
+  onSpotlight: () => void;
   onSkip: () => void;
   onBack: () => void;
   onNext: () => void;
@@ -199,17 +202,24 @@ export function FirstVisitGuideDialog({
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
               <button
                 type="button"
-                onClick={onStart}
+                onClick={onSpotlight}
                 data-autofocus="true"
-                className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#0C1B33] px-5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-white transition-colors hover:bg-[#1E3054]"
+                className="inline-flex min-h-12 items-center justify-center gap-2 bg-[#0C1B33] px-5 font-mono-bureau text-[10px] uppercase text-white transition-colors hover:bg-[#1E3054]"
               >
-                Start the tour
+                Show me around
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </button>
               <button
                 type="button"
+                onClick={onStart}
+                className="min-h-12 border border-[#0C1B33]/12 px-5 font-mono-bureau text-[10px] uppercase text-[#0C1B33]/55 transition-colors hover:border-[#0C1B33]/30 hover:text-[#0C1B33]"
+              >
+                Preview the workflow
+              </button>
+              <button
+                type="button"
                 onClick={onSkip}
-                className="min-h-12 px-5 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/55 transition-colors hover:text-[#0C1B33]"
+                className="min-h-12 px-3 font-mono-bureau text-[10px] uppercase text-[#0C1B33]/55 transition-colors hover:text-[#0C1B33]"
               >
                 Explore on my own
               </button>
@@ -330,8 +340,10 @@ export function FirstVisitGuide() {
     if (autoOpenHandledRef.current) return;
     if (!shouldAutoOpenFirstVisitGuide(pathname)) return;
     if (readFirstVisitGuidePreference(window.localStorage)) return;
-    autoOpenHandledRef.current = true;
-    const timer = window.setTimeout(() => showGuide("first_visit"), 0);
+    const timer = window.setTimeout(() => {
+      autoOpenHandledRef.current = true;
+      showGuide("first_visit");
+    }, 0);
     return () => window.clearTimeout(timer);
   }, [pathname, showGuide]);
 
@@ -416,6 +428,13 @@ export function FirstVisitGuide() {
         setStep(0);
         trackEvent("first_visit_guide_started", { source: "welcome" });
         trackEvent("first_visit_guide_step_viewed", { source: "guided_tour", metadata: { step: 1 } });
+      }}
+      onSpotlight={() => {
+        setOpen(false);
+        trackEvent("first_visit_guide_started", { source: "welcome_spotlight" });
+        window.setTimeout(() => {
+          window.dispatchEvent(new Event(FIRST_VISIT_SPOTLIGHT_OPEN_EVENT));
+        }, 0);
       }}
       onSkip={() => {
         writeFirstVisitGuidePreference(window.localStorage, "skipped");

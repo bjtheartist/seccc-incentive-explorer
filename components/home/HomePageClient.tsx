@@ -87,7 +87,7 @@ function DemoAddressChips() {
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+    <div data-tour="sample-addresses" className="flex flex-wrap items-center justify-center gap-2 mt-4">
       <span className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-white/30 mr-1">
         No address handy? Try
       </span>
@@ -150,7 +150,7 @@ function IntentCardFace({
 
 function HeroIntentCards({ onCheckAddress, programCount }: { onCheckAddress: () => void; programCount: number }) {
   return (
-    <div className="mx-auto mt-4 grid w-full max-w-[720px] gap-2.5 sm:mt-5 sm:grid-cols-3">
+    <div data-tour="project-paths" className="mx-auto mt-4 grid w-full max-w-[720px] gap-2.5 sm:mt-5 sm:grid-cols-3">
       <button type="button" onClick={onCheckAddress} className={INTENT_CARD_CLASS}>
         <IntentCardFace
           kicker="01"
@@ -272,6 +272,7 @@ export function HomePageClient({
           <motion.div
             ref={heroSearchRef}
             id="address-search"
+            data-tour="address-search"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.7 }}
@@ -442,6 +443,7 @@ export function HomePageClient({
               whileInView={{ opacity: 1, y: 0, rotate: 0.8 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
+              data-tour="report-preview"
               className="relative bg-white border border-[#0C1B33]/15 shadow-[0_24px_60px_-24px_rgba(12,27,51,0.35)] p-6 md:p-8"
             >
               <span className="absolute -top-3 right-6 bg-[#2563EB] text-white font-mono-bureau text-[9px] tracking-[0.3em] uppercase px-3 py-1">
