@@ -1,4 +1,15 @@
-import type { Program, ExecutiveSummary, ParcelData, DistrictData, StackingRule, CommunityAsset, Stats, PublicMatchExplanation } from "./types";
+import type {
+  Program,
+  ExecutiveSummary,
+  ParcelData,
+  DistrictData,
+  StackingRule,
+  CommunityAsset,
+  Stats,
+  PublicMatchExplanation,
+  ZoningLookupResponse,
+  ZoningSourceMetadata,
+} from "./types";
 import {
   inferSupportLanes,
   type LocalBusinessSupportContext,
@@ -12,7 +23,7 @@ import { buildLocationContext, publicParcelContext } from "./location-context";
 import type { LocationContext } from "./location-context";
 import { isClass7aEligible } from "./parcel-classes";
 import { formatMiles } from "./transport-access";
-import { ZONE_LABELS, ZONE_DESCRIPTIONS, describeZoneClass } from "./constants";
+import { ZONE_LABELS, ZONE_DESCRIPTIONS } from "./constants";
 import { getIndustryById } from "./industries-data";
 import { generateExecutiveSummary, computeStackingNarrative, runConfidenceEngine, isStaleProgramData } from "./confidence-engine";
 import type { EligibilityConfidence, ProgramCheckResult } from "./types";
@@ -1049,9 +1060,9 @@ const DATA_SOURCES: Record<string, DataSourceCitation> = {
   },
   zoning: {
     id: "zoning",
-    label: "Chicago ArcGIS MapServer",
-    description: "Real-time zoning classification data from the City of Chicago GIS system.",
-    url: "https://gisapps.chicago.gov/arcgis/rest/services",
+    label: "City of Chicago zoning boundaries",
+    description: "Published district classification from the City zoning boundary layer. The classification does not determine whether a proposed use is permitted.",
+    url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
   },
   parcel: {
     id: "parcel",
@@ -1117,7 +1128,22 @@ function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
   const sources: DataSourceCitation[] = [];
   if (ctx.census) sources.push(DATA_SOURCES.census);
   if (ctx.zones) sources.push(DATA_SOURCES.zones);
-  if (ctx.cityZoning) sources.push(DATA_SOURCES.zoning);
+  if (ctx.cityZoning && ctx.cityZoning.status !== "unavailable") {
+    const source = ctx.cityZoning.source;
+    if (source) {
+      const freshness = source.recordUpdatedAt
+        ? ` Source record updated ${source.recordUpdatedAt.slice(0, 10)}.`
+        : ` Retrieved ${source.retrievedAt.slice(0, 10)}.`;
+      sources.push({
+        id: "zoning",
+        label: source.label,
+        description: `${DATA_SOURCES.zoning.description}${freshness}`,
+        url: source.url,
+      });
+    } else {
+      sources.push(DATA_SOURCES.zoning);
+    }
+  }
   if (ctx.parcel) sources.push(DATA_SOURCES.parcel);
   if (ctx.neighborhoodEconomics?.jobsPayroll) sources.push(DATA_SOURCES.zbp);
   if (ctx.neighborhoodEconomics?.reinvestment) sources.push(DATA_SOURCES.buildingPermits);
@@ -2497,6 +2523,53 @@ function generateLocationIncentives(
   };
 }
 
+function buildZoningReportItem(
+  cityZoning: ReportZoningData | undefined,
+): ReportItem | null {
+  if (!cityZoning) return null;
+
+  if (cityZoning.status === "unavailable") {
+    return {
+      label: "Published Zoning Source",
+      value: "Temporarily unavailable",
+      detail: `${cityZoning.message || "Published Chicago zoning data could not be retrieved."} No zoning conclusion is shown. Try again before relying on this report for a project decision.`,
+    };
+  }
+
+  if (cityZoning.status === "not_found") {
+    return {
+      label: "Published Zoning Source",
+      value: "No district returned",
+      detail: `${cityZoning.message || "No published Chicago zoning district was returned for this location."} This is not a finding that zoning requirements do not apply.`,
+      url: cityZoning.source?.url,
+    };
+  }
+
+  if (!cityZoning.zoneClass) return null;
+
+  const recordUpdatedAt =
+    cityZoning.recordUpdatedAt ?? cityZoning.source?.recordUpdatedAt;
+  const sourceDetail = [
+    cityZoning.zoneType
+      ? `Published City zoning category: ${cityZoning.zoneType}.`
+      : null,
+    recordUpdatedAt
+      ? `Source record updated ${recordUpdatedAt.slice(0, 10)}.`
+      : null,
+    "This report does not determine whether a proposed use is permitted.",
+    "Verify the intended use and project requirements against the current Chicago Zoning Ordinance and with the City.",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  return {
+    label: "City Zoning Classification",
+    value: cityZoning.zoneClass,
+    detail: sourceDetail,
+    url: cityZoning.source?.url,
+  };
+}
+
 function generateBestLocation(
   state: WizardState,
   programs: Program[],
@@ -2597,27 +2670,12 @@ function generateBestLocation(
   }
 
   // §02 Zoning & Regulatory Review
-  if (cityZoning?.zoneClass) {
-    const zoningItems: ReportItem[] = [
-      {
-        label: "City Zoning Classification",
-        value: cityZoning.zoneClass,
-        detail: `${describeZoneClass(cityZoning.zoneClass)}${cityZoning.zoneType ? ` — ${cityZoning.zoneType} zoning` : ""}. Determines permitted land uses, density, and building requirements.`,
-      },
-    ];
-    // Add zone-specific guidance
-    const zoneClass = cityZoning.zoneClass;
-    if (zoneClass.startsWith("RS") || zoneClass.startsWith("RT") || zoneClass.startsWith("RM")) {
-      zoningItems.push({ label: "Use Compatibility", value: "Residential zone", detail: "Commercial uses may require a zoning change or special use permit. Verify compatibility with your intended project type." });
-    } else if (zoneClass.startsWith("C") || zoneClass.startsWith("B")) {
-      zoningItems.push({ label: "Use Compatibility", value: "Commercial zone", detail: "Most business uses are permitted by right. Check specific subcategory for any restrictions on your intended use." });
-    } else if (zoneClass.startsWith("M")) {
-      zoningItems.push({ label: "Use Compatibility", value: "Manufacturing zone", detail: "Manufacturing, warehouse, and some commercial uses are permitted. Retail may be restricted depending on the subcategory." });
-    }
+  const zoningItem = buildZoningReportItem(cityZoning);
+  if (zoningItem) {
     sections.push({
       title: "Zoning & Regulatory Review",
-      description: "City zoning classification and use compatibility for your project type.",
-      items: zoningItems,
+      description: "Published City zoning classification for the selected location. Verify the intended use and project requirements before relying on it for a project decision.",
+      items: [zoningItem],
     });
   }
 
@@ -3878,10 +3936,24 @@ export interface ReportCensusData {
 /**
  * City zoning classification for the report location.
  */
-export interface ReportZoningData {
-  zoneClass?: string;
+export interface LegacyReportZoningData {
+  status?: never;
+  zoneClass: string;
   zoneType?: string | null;
+  zoneTypeCode?: number | null;
+  pdNumber?: number | null;
+  pmdSubArea?: string | null;
+  pedestrianStreetAreaName?: string | null;
+  ordinanceNumber?: string | null;
+  ordinanceDate?: string | null;
+  clerkDocumentNumber?: string | null;
+  clerkUrl?: string | null;
+  recordUpdatedAt?: string | null;
+  source?: ZoningSourceMetadata | null;
+  message?: never;
 }
+
+export type ReportZoningData = ZoningLookupResponse | LegacyReportZoningData;
 
 /**
  * Bundled context for report generation — replaces the growing param list.
@@ -3989,15 +4061,8 @@ export function generateReportData(
     // Insert a "Site Profile" section — property, zoning, and district data only
     // (census/market data lives in Neighborhood Economic Context to avoid duplication)
     const contextItems: ReportItem[] = [];
-    if (cityZoning?.zoneClass) {
-      contextItems.push({
-        label: "City Zoning Classification",
-        value: cityZoning.zoneClass,
-        detail: cityZoning.zoneType
-          ? `${cityZoning.zoneType} zoning — determines permitted land uses, density, and building requirements at this location`
-          : "Determines permitted land uses, density, and building requirements at this location",
-      });
-    }
+    const zoningItem = buildZoningReportItem(cityZoning);
+    if (zoningItem) contextItems.push(zoningItem);
 
     // Parcel data items
     if (parcel && parcel.pin) {

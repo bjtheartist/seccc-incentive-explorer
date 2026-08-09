@@ -7,10 +7,11 @@ import { runConfidenceEngine, computeTopActions, computeStackingNarrative } from
 import type { StackingNarrative } from "@/lib/confidence-engine";
 import { TopActionsStrip } from "./TopActionsStrip";
 import { ProgramResultCard } from "./ProgramResultCard";
-import type { Program, SurveyAnswers, ProgramCheckResult, TopAction, CityZoning, CensusData, ParcelData } from "@/lib/types";
+import type { Program, SurveyAnswers, ProgramCheckResult, TopAction, CityZoning, CensusData, ParcelData, ZoningLookupStatus } from "@/lib/types";
 import { censusNarrative } from "@/lib/census-narrative";
 import { isExpired } from "@/lib/program-gating";
 import { cachedFetch } from "@/lib/fetch-cache";
+import { fetchZoningLookup } from "@/lib/zoning-lookup";
 
 interface CheckResultsProps {
   address: string;
@@ -40,6 +41,7 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
   const [programs, setPrograms] = useState<ProgramCheckResult[]>([]);
   const [topActions, setTopActions] = useState<TopAction[]>([]);
   const [cityZoning, setCityZoning] = useState<CityZoning | undefined>();
+  const [cityZoningStatus, setCityZoningStatus] = useState<ZoningLookupStatus | undefined>();
   const [census, setCensus] = useState<CensusData | undefined>();
   const [parcel, setParcel] = useState<ParcelData | undefined>();
   const [copied, setCopied] = useState(false);
@@ -48,6 +50,11 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
 
   useEffect(() => {
     let cancelled = false;
+    const zoningController = new AbortController();
+    setLoading(true);
+    setLoadingStep(0);
+    setCityZoning(undefined);
+    setCityZoningStatus(undefined);
     const stepInterval = setInterval(() => {
       setLoadingStep((s) => Math.min(s + 1, LOADING_STEPS.length - 1));
     }, 800);
@@ -62,8 +69,7 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
             .catch(() => cachedFetch<Program[]>("/data/programs.json")),
           cachedFetch<CensusData>(`/api/census?lat=${lat}&lon=${lon}`)
             .catch(() => null),
-          cachedFetch<CityZoning>(`/api/zoning?lat=${lat}&lon=${lon}`)
-            .catch(() => null),
+          fetchZoningLookup(lat, lon, { signal: zoningController.signal }),
           cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`)
             .catch(() => null),
         ]);
@@ -103,7 +109,8 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
         setTopActions(actions);
         setStackingNarrative(narrative);
         if (censusRes) setCensus(censusRes);
-        if (zoningRes?.zoneClass) setCityZoning(zoningRes);
+        setCityZoningStatus(zoningRes.status);
+        if (zoningRes.status === "available") setCityZoning(zoningRes);
         if (parcelRes) setParcel(parcelRes);
       } catch (err) {
         console.error("CheckResults fetch error:", err);
@@ -115,6 +122,7 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
     fetchResults();
     return () => {
       cancelled = true;
+      zoningController.abort();
       clearInterval(stepInterval);
     };
   }, [lat, lon, survey]);
@@ -168,6 +176,8 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
           <p className="text-[11px] font-mono-bureau tracking-wide text-[#0C1B33]/40">
             {zoneCount} of {ZONE_KEYS.length} incentive zones
             {cityZoning && ` · ${cityZoning.zoneClass} zoning`}
+            {cityZoningStatus === "not_found" && " · no published zoning district returned"}
+            {cityZoningStatus === "unavailable" && " · published zoning temporarily unavailable"}
           </p>
         </div>
         <button

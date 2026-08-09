@@ -325,9 +325,9 @@ const report: GeneratedReport = {
     },
     {
       id: "arcgis",
-      label: "Chicago ArcGIS MapServer",
-      description: "Zoning and boundary geometries.",
-      url: "https://gisapps.chicago.gov/arcgis/rest/services",
+      label: "City of Chicago zoning boundaries",
+      description: "Published zoning boundary geometry; district classification does not determine whether a proposed use is permitted.",
+      url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
     },
     {
       id: "sbrm",

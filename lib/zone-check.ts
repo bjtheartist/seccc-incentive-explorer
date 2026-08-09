@@ -2,7 +2,8 @@ import * as turf from "@turf/turf";
 import { CHECKABLE_ZONE_KEYS } from "./constants";
 import { normalizeZoneCheckResponse } from "./zone-response";
 import { featureDisplayName } from "./zone-names";
-import type { LookupResult, CityZoning, CensusData, ZoneCheckResult } from "./types";
+import type { LookupResult, CensusData, ZoneCheckResult } from "./types";
+import { cityZoningFromLookup, fetchZoningLookup } from "./zoning-lookup";
 import type { FeatureCollection, Feature, Polygon, MultiPolygon } from "geojson";
 
 const zoneFileMap: Record<string, string> = {
@@ -154,7 +155,7 @@ export async function checkZones(
   }
 
   // Fetch census data and city zoning in parallel
-  const [census, cityZoning] = await Promise.all([
+  const [census, zoningLookup] = await Promise.all([
     getCensusDB(lat, lon),
     fetchCityZoning(lat, lon),
   ]);
@@ -167,7 +168,8 @@ export async function checkZones(
     zones,
     zoneNames,
     incentiveCount,
-    cityZoning: cityZoning ?? undefined,
+    cityZoning: cityZoningFromLookup(zoningLookup),
+    cityZoningStatus: zoningLookup.status,
     employment,
     census: census ?? undefined,
   };
@@ -176,27 +178,8 @@ export async function checkZones(
 /**
  * Fetch city zoning classification (non-blocking, with retry).
  */
-async function fetchCityZoning(lat: number, lon: number): Promise<CityZoning | null> {
-  const attempt = async (n: number): Promise<CityZoning | null> => {
-    try {
-      const zRes = await fetch(`/api/zoning?lat=${lat}&lon=${lon}`, {
-        signal: AbortSignal.timeout(12000),
-      });
-      if (zRes.ok) {
-        const zData = await zRes.json();
-        if (zData.zoneClass) {
-          return { zoneClass: zData.zoneClass, zoneType: zData.zoneType };
-        }
-      }
-    } catch {
-      if (n < 1) {
-        await new Promise((r) => setTimeout(r, 1500));
-        return attempt(n + 1);
-      }
-    }
-    return null;
-  };
-  return attempt(0);
+async function fetchCityZoning(lat: number, lon: number) {
+  return fetchZoningLookup(lat, lon);
 }
 
 /**

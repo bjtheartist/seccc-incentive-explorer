@@ -147,9 +147,9 @@ const SOURCE_REGISTRY: Record<string, LocationContextSource> = {
   },
   zoning: {
     id: "zoning",
-    label: "City of Chicago zoning",
-    url: "https://gisapps.chicago.gov/arcgis/rest/services",
-    freshness: "Live or cached city GIS lookup",
+    label: "City of Chicago ArcGIS zoning boundaries",
+    url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+    freshness: "City source record date returned by the lookup when available",
   },
   parcel: {
     id: "parcel",
@@ -269,11 +269,29 @@ function supportSourceOverrides(localSupport?: LocalBusinessSupportContext | nul
   ];
 }
 
+function zoningSourceOverrides(
+  cityZoning?: ReportZoningData,
+): LocationContextSource[] {
+  if (!cityZoning?.source) return [];
+  return [
+    {
+      id: "zoning",
+      label: cityZoning.source.label,
+      url: cityZoning.source.url,
+      freshness: cityZoning.source.recordUpdatedAt
+        ? `Source record updated ${cityZoning.source.recordUpdatedAt.slice(0, 10)}`
+        : `Retrieved ${cityZoning.source.retrievedAt.slice(0, 10)}`,
+    },
+  ];
+}
+
 function collectSourceIds(input: LocationContextInput, programResults: ProgramCheckResult[]): string[] {
   return [
     input.zones ? "zones" : null,
     input.census ? "census" : null,
-    input.cityZoning ? "zoning" : null,
+    input.cityZoning && input.cityZoning.status !== "unavailable"
+      ? "zoning"
+      : null,
     input.parcel ? "parcel" : null,
     input.districts ? "districts" : null,
     programResults.length > 0 ? "programs" : null,
@@ -352,7 +370,10 @@ export function buildLocationContext(
     },
     site: {},
     neighborhood: {},
-    sources: uniqueSources(sourceIds, supportSourceOverrides(input.localBusinessSupport)),
+    sources: uniqueSources(sourceIds, [
+      ...supportSourceOverrides(input.localBusinessSupport),
+      ...zoningSourceOverrides(input.cityZoning),
+    ]),
     trust: {
       caveats: [
         "The context engine is internal-first and does not expose a public partner or agent API in v1.",
@@ -368,7 +389,25 @@ export function buildLocationContext(
     context.geography.census = claim("census", "Census and market context", "measured", input.census, ["census"]);
   }
   if (input.cityZoning) {
-    context.geography.cityZoning = claim("cityZoning", "City zoning", "measured", input.cityZoning, ["zoning"]);
+    const sourceAvailable = input.cityZoning.status !== "unavailable";
+    context.geography.cityZoning = claim(
+      "cityZoning",
+      "City zoning",
+      sourceAvailable ? "measured" : "needs_verification",
+      input.cityZoning,
+      sourceAvailable ? ["zoning"] : [],
+      {
+        freshness:
+          input.cityZoning.source?.recordUpdatedAt ??
+          input.cityZoning.source?.retrievedAt,
+        caveat:
+          input.cityZoning.status === "unavailable"
+            ? "Published Chicago zoning data was unavailable, so no zoning conclusion is shown."
+            : input.cityZoning.status === "not_found"
+              ? "No published Chicago zoning district was returned; this is not evidence that zoning requirements do not apply."
+              : "The published district classification does not determine whether a proposed use is permitted.",
+      },
+    );
   }
   if (input.parcel) {
     context.geography.parcel = claim(

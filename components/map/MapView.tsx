@@ -12,7 +12,7 @@ import { OWNER_TYPE_COLORS, presentOwnerTypesInOrder, type OwnerType } from "@/l
 import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { describeClassCode, describeParcelType } from "@/lib/parcel-classes";
 import { normalizeZoneCheckResponse } from "@/lib/zone-response";
-import type { Program, ProgramCheckResult, ParcelData, DistrictData } from "@/lib/types";
+import type { Program, ProgramCheckResult, ParcelData, DistrictData, ZoningLookupResponse } from "@/lib/types";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import MapSearch from "./MapSearch";
@@ -26,6 +26,7 @@ import CountyReliefRecipientsPanel, {
 } from "./CountyReliefRecipientsPanel";
 import type { MobileMapPresetId } from "./map-layer-presets";
 import { cachedFetch } from "@/lib/fetch-cache";
+import { fetchZoningLookup } from "@/lib/zoning-lookup";
 import { getSiteSignals } from "@/lib/site-signals";
 import { getTransportAccess } from "@/lib/transport-access";
 import type { TifFinanceContext } from "@/lib/tif-finance";
@@ -201,6 +202,7 @@ export default function MapView() {
   const [zoningRefOpen, setZoningRefOpen] = useState(false);
   const [classRefOpen, setClassRefOpen] = useState(false);
   const [zoningInfo, setZoningInfo] = useState<string | null>(null);
+  const zoningLookupAbortRef = useRef<AbortController | null>(null);
   const [areaStats, setAreaStats] = useState<AreaStats>(DEFAULT_STATS);
   const [snapshotLabel, setSnapshotLabel] = useState("Chicago (default)");
   const [, setCopiedLink] = useState(false);
@@ -213,11 +215,70 @@ export default function MapView() {
   // Inspect zoning mode
   const [inspectMode, setInspectMode] = useState(false);
 
+  const inspectPublishedZoning = useCallback(
+    async (map: mapboxgl.Map, lngLat: mapboxgl.LngLat) => {
+      zoningLookupAbortRef.current?.abort();
+      const controller = new AbortController();
+      zoningLookupAbortRef.current = controller;
+      setZoningInfo("Loading...");
+
+      const result = await fetchZoningLookup(lngLat.lat, lngLat.lng, {
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+
+      let eyebrow = "Published Zoning Source";
+      let value = "Temporarily unavailable";
+      let detail = "Click this location again to retry.";
+      if (result.status === "available") {
+        eyebrow = "Zoning Classification";
+        value = result.zoneClass;
+        detail = `${describeZoneClass(result.zoneClass)} Verify the proposed use against the current Chicago Zoning Ordinance and with the City.`;
+        setZoningInfo(`${result.zoneClass} — ${describeZoneClass(result.zoneClass)}`);
+      } else if (result.status === "not_found") {
+        value = "No district returned";
+        detail = "The published source returned no district. This is not evidence that zoning requirements do not apply.";
+        setZoningInfo("No published zoning district returned");
+      } else {
+        setZoningInfo("Published zoning temporarily unavailable — click again to retry");
+      }
+
+      const popup = document.createElement("div");
+      const eyebrowEl = document.createElement("div");
+      eyebrowEl.style.cssText =
+        "font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#059669;margin-bottom:4px;font-weight:500";
+      eyebrowEl.textContent = eyebrow;
+      const valueEl = document.createElement("div");
+      valueEl.style.cssText =
+        "font-size:18px;font-weight:700;color:#0C1B33;letter-spacing:0";
+      valueEl.textContent = value;
+      const detailEl = document.createElement("div");
+      detailEl.style.cssText =
+        "font-size:12px;color:#5A6478;margin-top:4px;line-height:1.4";
+      detailEl.textContent = detail;
+      popup.append(eyebrowEl, valueEl, detailEl);
+
+      new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" })
+        .setLngLat(lngLat)
+        .setDOMContent(popup)
+        .addTo(map);
+    },
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      zoningLookupAbortRef.current?.abort();
+    },
+    [],
+  );
+
   // Enhanced Area Snapshot
   const [snapshotPrograms, setSnapshotPrograms] = useState<ProgramCheckResult[]>([]);
   const [snapshotTifFinance, setSnapshotTifFinance] = useState<TifFinanceContext | null>(null);
   const [locationZoneNames, setLocationZoneNames] = useState<Record<string, string> | null>(null);
   const [snapshotParcelData, setSnapshotParcelData] = useState<ParcelData | null>(null);
+  const [snapshotCityZoning, setSnapshotCityZoning] = useState<ZoningLookupResponse | null>(null);
   const [tifFinanceLoading, setTifFinanceLoading] = useState(false);
   const [lastClickLat, setLastClickLat] = useState<number | null>(null);
   const [lastClickLon, setLastClickLon] = useState<number | null>(null);
@@ -741,20 +802,38 @@ export default function MapView() {
   // Keep ranking private; map surfaces present only a neutral program review list.
   const handleMapClick = useCallback(
     async (lat: number, lon: number, pin?: string | null) => {
+      zoningLookupAbortRef.current?.abort();
+      const zoningController = new AbortController();
+      zoningLookupAbortRef.current = zoningController;
+      setSnapshotCityZoning(null);
+      setZoningInfo("Loading...");
       setLastClickLat(lat);
       setLastClickLon(lon);
       setCopiedLink(false);
       setTifFinanceLoading(true);
       try {
-        const [data, parcelData, tifFinanceData] = await Promise.all([
-          cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`),
+        const [data, parcelData, tifFinanceData, zoningLookup] = await Promise.all([
+          cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`).catch(() => null),
           cachedFetch<ParcelData>(
             `/api/parcel?lat=${lat}&lon=${lon}${pin ? `&pin=${encodeURIComponent(pin)}` : ""}`,
           ).catch(() => null),
           cachedFetch<{ tifFinance?: TifFinanceContext | null }>(
             `/api/tif-finance?lat=${lat}&lon=${lon}`
           ).catch(() => null),
+          fetchZoningLookup(lat, lon, { signal: zoningController.signal }),
         ]);
+        if (!zoningController.signal.aborted) {
+          setSnapshotCityZoning(zoningLookup);
+          if (zoningLookup.status === "available") {
+            setZoningInfo(
+              `${zoningLookup.zoneClass} — ${describeZoneClass(zoningLookup.zoneClass)}`,
+            );
+          } else if (zoningLookup.status === "not_found") {
+            setZoningInfo("No published zoning district returned");
+          } else {
+            setZoningInfo("Published zoning temporarily unavailable — select the location again to retry");
+          }
+        }
         const normalized = normalizeZoneCheckResponse(data);
         if (!normalized) throw new Error("Unexpected zone check response");
 
@@ -795,6 +874,7 @@ export default function MapView() {
         zones: locationZones,
         zoneNames: locationZoneNames ?? undefined,
         parcel: snapshotParcelData ?? undefined,
+        cityZoning: snapshotCityZoning ?? undefined,
         siteSignals: areaStats.siteSignals ?? undefined,
         transport: areaStats.transport ?? undefined,
         tifFinance: snapshotTifFinance ?? undefined,
@@ -811,6 +891,7 @@ export default function MapView() {
     locationZones,
     snapshotLabel,
     snapshotParcelData,
+    snapshotCityZoning,
     snapshotTifFinance,
   ]);
   const lastClickRef = useRef(handleMapClick);
@@ -2535,35 +2616,14 @@ export default function MapView() {
     const map = mapRef.current;
 
     const inspectHandler = async (e: mapboxgl.MapMouseEvent) => {
-      setZoningInfo("Loading...");
-      try {
-        const data = await cachedFetch<{ zoneClass?: string }>(
-          `/api/zoning?lat=${e.lngLat.lat}&lon=${e.lngLat.lng}`
-        );
-        if (data.zoneClass) {
-          const desc = describeZoneClass(data.zoneClass);
-          setZoningInfo(`${data.zoneClass} — ${desc}`);
-          new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
-            .setLngLat(e.lngLat)
-            .setHTML(
-              `<div style="font-family:Inter,sans-serif">
-                <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#059669;margin-bottom:4px;font-weight:500">Zoning Classification</div>
-                <div style="font-size:18px;font-weight:700;color:#0C1B33;letter-spacing:-0.01em">${data.zoneClass}</div>
-                <div style="font-size:12px;color:#5A6478;margin-top:4px;line-height:1.4">${desc}</div>
-              </div>`
-            )
-            .addTo(map);
-        }
-      } catch {
-        setZoningInfo(null);
-      }
+      await inspectPublishedZoning(map, e.lngLat);
     };
 
     map.on("click", inspectHandler);
     return () => {
       map.off("click", inspectHandler);
     };
-  }, [loaded, inspectMode]);
+  }, [inspectMode, inspectPublishedZoning, loaded]);
 
   /* ── Zoning lookup on right-click ──────── */
   useEffect(() => {
@@ -2571,37 +2631,14 @@ export default function MapView() {
     const map = mapRef.current;
 
     const handler = async (e: mapboxgl.MapMouseEvent) => {
-      setZoningInfo("Loading...");
-      try {
-        const data = await cachedFetch<{ zoneClass?: string }>(
-          `/api/zoning?lat=${e.lngLat.lat}&lon=${e.lngLat.lng}`
-        );
-        if (data.zoneClass) {
-          const desc = describeZoneClass(data.zoneClass);
-          setZoningInfo(`${data.zoneClass} — ${desc}`);
-          new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
-            .setLngLat(e.lngLat)
-            .setHTML(
-              `<div style="font-family:Inter,sans-serif">
-                <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#059669;margin-bottom:4px;font-weight:500">Zoning Classification</div>
-                <div style="font-size:18px;font-weight:700;color:#0C1B33;letter-spacing:-0.01em">${data.zoneClass}</div>
-                <div style="font-size:12px;color:#5A6478;margin-top:4px;line-height:1.4">${desc}</div>
-              </div>`
-            )
-            .addTo(map);
-        } else {
-          setZoningInfo(null);
-        }
-      } catch {
-        setZoningInfo(null);
-      }
+      await inspectPublishedZoning(map, e.lngLat);
     };
 
     map.on("contextmenu", handler);
     return () => {
       map.off("contextmenu", handler);
     };
-  }, [loaded]);
+  }, [inspectPublishedZoning, loaded]);
 
   /* ── Search result handler ─────────────── */
   const handleSearchResult = useCallback(
