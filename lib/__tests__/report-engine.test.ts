@@ -145,6 +145,136 @@ describe("generateReportData", () => {
     expect(report.executiveSummary?.zoneCount).toBe(1);
   });
 
+  it.each([
+    ["RS-3", "Residential"],
+    ["B3-2", "Business"],
+    ["M1-2", "Manufacturing"],
+  ])(
+    "preserves the published %s classification without inferring permitted uses",
+    (zoneClass, zoneType) => {
+      const report = generateReportData(
+        makeState({
+          reportType: "dev-feasibility",
+          projectType: "rehab",
+        }),
+        [makeProgram()],
+        {
+          zones,
+          zoneNames,
+          cityZoning: { zoneClass, zoneType },
+        },
+      );
+
+      const zoningSection = report.sections.find(
+        (section) => section.title === "Zoning & Regulatory Review",
+      );
+      const zoningCopy = JSON.stringify(zoningSection);
+
+      expect(zoningSection?.description).toContain("Published City zoning classification");
+      expect(zoningSection?.items).toHaveLength(1);
+      expect(zoningSection?.items[0]).toMatchObject({
+        label: "City Zoning Classification",
+        value: zoneClass,
+      });
+      expect(zoningSection?.items[0].detail).toContain(
+        "This report does not determine whether a proposed use is permitted",
+      );
+      expect(zoningSection?.items[0].detail).toContain(
+        "Verify the intended use and project requirements",
+      );
+      expect(zoningCopy).not.toContain("Use Compatibility");
+      expect(zoningCopy).not.toContain("Most business uses are permitted by right");
+      expect(zoningCopy).not.toContain("Commercial uses may require a zoning change");
+      expect(zoningCopy).not.toContain("Manufacturing, warehouse, and some commercial uses are permitted");
+    },
+  );
+
+  it("preserves explicit unavailable and not-found zoning states", () => {
+    const unavailable = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "unavailable",
+          zoneClass: null,
+          zoneType: null,
+          source: null,
+          message: "Published Chicago zoning data is temporarily unavailable.",
+        },
+      },
+    );
+    const unavailableCopy = JSON.stringify(unavailable);
+    expect(unavailableCopy).toContain("Temporarily unavailable");
+    expect(unavailableCopy).toContain("No zoning conclusion is shown");
+    expect(unavailable.dataSources?.some((source) => source.id === "zoning")).toBe(false);
+
+    const source = {
+      id: "chicago-arcgis-zoning" as const,
+      label: "City of Chicago ArcGIS zoning boundaries",
+      url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+      retrievedAt: "2026-08-08T12:00:00.000Z",
+      recordUpdatedAt: null,
+    };
+    const notFound = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "not_found",
+          zoneClass: null,
+          zoneType: null,
+          source,
+          message: "No published Chicago zoning district was returned.",
+        },
+      },
+    );
+    const notFoundCopy = JSON.stringify(notFound);
+    expect(notFoundCopy).toContain("No district returned");
+    expect(notFoundCopy).toContain(
+      "not a finding that zoning requirements do not apply",
+    );
+    expect(notFound.dataSources?.find((item) => item.id === "zoning")).toMatchObject({
+      label: source.label,
+      url: source.url,
+    });
+  });
+
+  it("cites the actual fallback source and record freshness", () => {
+    const report = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "available",
+          zoneClass: "C1-3",
+          zoneType: null,
+          recordUpdatedAt: "2025-03-05T00:00:00.000Z",
+          source: {
+            id: "chicago-data-portal-zoning",
+            label: "City of Chicago Data Portal zoning boundaries",
+            url: "https://data.cityofchicago.org/d/dj47-wfun",
+            retrievedAt: "2026-08-08T12:00:00.000Z",
+            recordUpdatedAt: "2025-03-05T00:00:00.000Z",
+          },
+        },
+      },
+    );
+
+    expect(report.dataSources?.find((source) => source.id === "zoning")).toMatchObject({
+      label: "City of Chicago Data Portal zoning boundaries",
+      url: "https://data.cityofchicago.org/d/dj47-wfun",
+    });
+    expect(
+      report.dataSources?.find((source) => source.id === "zoning")?.description,
+    ).toContain("Source record updated 2025-03-05");
+  });
+
   it("keeps no-zone programs out of address-confirmed eligibility claims", () => {
     const globalProgram = makeProgram({
       id: "global",

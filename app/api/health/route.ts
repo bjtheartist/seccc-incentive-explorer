@@ -37,6 +37,18 @@ interface ProbeResult {
   details?: Record<string, unknown>;
 }
 
+interface ArcgisQueryResponse {
+  features?: Array<{
+    attributes?: {
+      ZONE_CLASS?: unknown;
+    };
+  }>;
+  error?: {
+    code?: number;
+    message?: string;
+  };
+}
+
 /** Probe a URL and return status + latency. */
 async function probeUrl(
   name: string,
@@ -59,6 +71,97 @@ async function probeUrl(
       status: "degraded",
       latencyMs,
       message: `HTTP ${res.status} ${res.statusText}`,
+    };
+  } catch (err) {
+    return {
+      name,
+      status: "down",
+      latencyMs: Date.now() - start,
+      message: err instanceof Error ? err.message : "Unknown error",
+    };
+  }
+}
+
+/** Probe the queryable Chicago zoning feature layer at a known city point. */
+async function probeChicagoZoning(timeoutMs = 8000): Promise<ProbeResult> {
+  const name = "Chicago ArcGIS Zoning";
+  const start = Date.now();
+  const params = new URLSearchParams({
+    where: "1=1",
+    geometry: "-87.62318,41.88183",
+    geometryType: "esriGeometryPoint",
+    inSR: "4326",
+    spatialRel: "esriSpatialRelIntersects",
+    outFields: "ZONE_CLASS",
+    returnGeometry: "false",
+    resultRecordCount: "1",
+    f: "json",
+  });
+  const url =
+    "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1/query" +
+    `?${params.toString()}`;
+
+  try {
+    const res = await fetch(url, {
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+    const latencyMs = Date.now() - start;
+    if (!res.ok) {
+      return {
+        name,
+        status: "degraded",
+        latencyMs,
+        message: `HTTP ${res.status} ${res.statusText}`,
+      };
+    }
+
+    let payload: ArcgisQueryResponse | null;
+    try {
+      payload = (await res.json()) as ArcgisQueryResponse | null;
+    } catch {
+      return {
+        name,
+        status: "degraded",
+        latencyMs,
+        message: "Zoning query returned invalid JSON",
+      };
+    }
+
+    if (!payload || typeof payload !== "object") {
+      return {
+        name,
+        status: "degraded",
+        latencyMs,
+        message: "Zoning query returned an invalid payload",
+      };
+    }
+
+    if (payload.error) {
+      const code = payload.error.code ? ` ${payload.error.code}` : "";
+      const message = payload.error.message || "Unknown ArcGIS query error";
+      return {
+        name,
+        status: "degraded",
+        latencyMs,
+        message: `ArcGIS query error${code}: ${message}`,
+      };
+    }
+
+    const zoneClass = payload.features?.[0]?.attributes?.ZONE_CLASS;
+    if (typeof zoneClass !== "string" || !zoneClass.trim()) {
+      return {
+        name,
+        status: "degraded",
+        latencyMs,
+        message: "Zoning query returned no usable ZONE_CLASS",
+      };
+    }
+
+    return {
+      name,
+      status: "ok",
+      latencyMs,
+      details: { zoneClass },
     };
   } catch (err) {
     return {
@@ -293,11 +396,7 @@ export async function GET(request: NextRequest) {
       `${COOK_COUNTY_CURRENT_PARCELS_QUERY_URL}?where=1%3D1&outFields=PIN14&returnGeometry=false&resultRecordCount=1&f=json`,
       8000
     ),
-    probeUrl(
-      "Chicago ArcGIS Zoning",
-      "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/0?f=json",
-      8000
-    ),
+    probeChicagoZoning(),
     probeUrl(
       "Socrata Chicago Data Portal",
       "https://data.cityofchicago.org/resource/dj47-wfun.json?$limit=1",

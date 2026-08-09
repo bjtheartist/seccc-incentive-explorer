@@ -56,7 +56,7 @@ The current package scripts cover vacant-property maintenance plus the business 
    - `lib/data.ts` — Data access layer abstraction (DB-first, static fallback)
    - `lib/zone-check.ts` — PostGIS zone check via `/api/zones/check`, falls back to Turf.js `booleanPointInPolygon`
 
-3. **Geocoding:** `/api/geocode` uses OpenStreetMap Nominatim. `/api/zoning` queries Chicago zoning with triple fallback (ArcGIS → Socrata SODA → GeoJSON endpoint) and exponential backoff retry.
+3. **Geocoding:** `/api/geocode` uses OpenStreetMap Nominatim. `/api/zoning` queries the City ArcGIS zoning feature layer with an authoritative Chicago Data Portal GeoJSON fallback, bounded retry, explicit availability states, and source metadata.
 
 4. **Survey engine:** `lib/survey-engine.ts` scores 4-step questionnaire answers against a rules matrix, producing program matches with confidence levels (high/medium/low). `lib/confidence-engine.ts` (492 LOC) handles the detailed eligibility scoring.
 

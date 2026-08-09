@@ -136,4 +136,66 @@ describe("buildLocationContext", () => {
     expect(safeParcel).not.toHaveProperty("ownerName");
     expect(safeParcel).not.toHaveProperty("ownerMailingAddress");
   });
+
+  it("uses the source returned by a successful zoning lookup", () => {
+    const context = buildLocationContext(
+      { reportType: "site-incentives", address: "100 E Test St" },
+      [makeProgram()],
+      {
+        zones: { tif: true },
+        cityZoning: {
+          status: "available",
+          zoneClass: "B3-2",
+          zoneType: null,
+          source: {
+            id: "chicago-data-portal-zoning",
+            label: "City of Chicago Data Portal zoning boundaries",
+            url: "https://data.cityofchicago.org/d/dj47-wfun",
+            retrievedAt: "2026-08-08T12:00:00.000Z",
+            recordUpdatedAt: "2025-03-05T00:00:00.000Z",
+          },
+        },
+      },
+    );
+
+    expect(context.geography.cityZoning).toMatchObject({
+      kind: "measured",
+      sourceIds: ["zoning"],
+      freshness: "2025-03-05T00:00:00.000Z",
+    });
+    expect(context.geography.cityZoning?.caveat).toContain(
+      "does not determine whether a proposed use is permitted",
+    );
+    expect(context.sources.find((source) => source.id === "zoning")).toMatchObject({
+      label: "City of Chicago Data Portal zoning boundaries",
+      url: "https://data.cityofchicago.org/d/dj47-wfun",
+      freshness: "Source record updated 2025-03-05",
+    });
+  });
+
+  it("keeps an unavailable zoning lookup out of measured source claims", () => {
+    const context = buildLocationContext(
+      { reportType: "site-incentives", address: "100 E Test St" },
+      [makeProgram()],
+      {
+        zones: { tif: true },
+        cityZoning: {
+          status: "unavailable",
+          zoneClass: null,
+          zoneType: null,
+          source: null,
+          message: "Published Chicago zoning data is temporarily unavailable.",
+        },
+      },
+    );
+
+    expect(context.geography.cityZoning).toMatchObject({
+      kind: "needs_verification",
+      sourceIds: [],
+    });
+    expect(context.geography.cityZoning?.caveat).toContain(
+      "no zoning conclusion is shown",
+    );
+    expect(context.sources.some((source) => source.id === "zoning")).toBe(false);
+  });
 });

@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { ZONE_KEYS, ZONE_COLORS } from "./constants";
-import type { LookupResult, Program } from "./types";
+import type { LookupResult, Program, ZoningLookupStatus } from "./types";
 import {
   CONFIRMED_PROGRAMS_SECTION_TITLE,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
@@ -152,6 +152,33 @@ function formatDateLabel(value: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+function effectiveLookupZoningStatus(result: LookupResult): ZoningLookupStatus | undefined {
+  if (result.cityZoningStatus === "available" && !result.cityZoning) return "unavailable";
+  return result.cityZoningStatus ?? (result.cityZoning ? "available" : undefined);
+}
+
+function formatLookupZoningDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function lookupZoningFreshnessLabel(result: LookupResult): string | null {
+  const zoning = result.cityZoning;
+  if (!zoning) return null;
+  const recordUpdatedAt = zoning.recordUpdatedAt ?? zoning.source?.recordUpdatedAt;
+  if (recordUpdatedAt) return `Record updated ${formatLookupZoningDate(recordUpdatedAt)}`;
+  if (zoning.source?.retrievedAt) {
+    return `Retrieved ${formatLookupZoningDate(zoning.source.retrievedAt)}`;
+  }
+  return null;
 }
 
 function hasText(value: unknown): value is string {
@@ -437,7 +464,9 @@ function _buildReport(
   }
 
   // City Zoning
-  if (result.cityZoning) {
+  const zoningStatus = effectiveLookupZoningStatus(result);
+  const zoningAvailable = zoningStatus === "available" && Boolean(result.cityZoning);
+  if (zoningStatus) {
     coverY += 4;
     fillRect(doc, MARGIN, coverY, CONTENT_W, 0.3, "#FFFFFF15");
     coverY += 8;
@@ -445,17 +474,75 @@ function _buildReport(
     setColor(doc, "#FFFFFF60");
     doc.text("CITY ZONING CLASSIFICATION", MARGIN, coverY);
     coverY += 7;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    setColor(doc, BLUE);
-    doc.text(result.cityZoning.zoneClass, MARGIN, coverY);
-    if (result.cityZoning.zoneType) {
+
+    if (zoningAvailable && result.cityZoning) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      setColor(doc, BLUE);
+      doc.text(result.cityZoning.zoneClass, MARGIN, coverY);
+      if (result.cityZoning.zoneType) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        setColor(doc, "#FFFFFF80");
+        doc.text(`  ${result.cityZoning.zoneType}`, MARGIN + doc.getTextWidth(result.cityZoning.zoneClass) + 3, coverY);
+      }
+      coverY += 7;
+
       doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      setColor(doc, "#FFFFFF70");
+      coverY += wrapText(
+        doc,
+        "Published district classification only. Verify whether a proposed use is permitted against the current Chicago Zoning Ordinance or with the City of Chicago.",
+        MARGIN,
+        coverY,
+        CONTENT_W,
+        3.5,
+      );
+
+      const freshness = lookupZoningFreshnessLabel(result);
+      if (freshness) {
+        doc.setFontSize(6.5);
+        setColor(doc, "#FFFFFF50");
+        doc.text(freshness, MARGIN, coverY);
+        coverY += 4;
+      }
+
+      if (result.cityZoning.source) {
+        doc.setFontSize(6.5);
+        setColor(doc, "#60A5FA");
+        doc.textWithLink("View published City zoning source", MARGIN, coverY, {
+          url: result.cityZoning.source.url,
+        });
+        coverY += 4;
+      }
+    } else {
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
-      setColor(doc, "#FFFFFF80");
-      doc.text(`  ${result.cityZoning.zoneType}`, MARGIN + doc.getTextWidth(result.cityZoning.zoneClass) + 3, coverY);
+      setColor(doc, "#FFFFFF90");
+      doc.text(
+        zoningStatus === "not_found"
+          ? "NO PUBLISHED DISTRICT RETURNED"
+          : "PUBLISHED SOURCE TEMPORARILY UNAVAILABLE",
+        MARGIN,
+        coverY,
+      );
+      coverY += 6;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      setColor(doc, "#FFFFFF70");
+      coverY += wrapText(
+        doc,
+        zoningStatus === "not_found"
+          ? "The published source returned no zoning district for this location. This is not evidence that zoning requirements do not apply; verify with the City of Chicago."
+          : "Published City zoning data is temporarily unavailable. No zoning or proposed-use conclusion was made.",
+        MARGIN,
+        coverY,
+        CONTENT_W,
+        3.5,
+      );
     }
-    coverY += 8;
+    coverY += 2;
   }
 
   // Factual mapped-zone count

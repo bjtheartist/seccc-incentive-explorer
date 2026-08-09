@@ -2,14 +2,14 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { extractText } from "unpdf";
-import { generateReportPdfBase64 } from "../pdf-report";
+import { generateReportBase64, generateReportPdfBase64 } from "../pdf-report";
 import {
   CONFIRMED_PROGRAMS_SECTION_TITLE,
   generateReportData,
   normalizePublicReportForDisplay,
   type GeneratedReport,
 } from "../report-engine";
-import type { Program } from "../types";
+import type { LookupResult, Program } from "../types";
 
 const PROHIBITED_DETERMINATIONS =
   /appears eligible|may qualify|you qualify|eligible incentive programs|high match|medium match/i;
@@ -486,6 +486,65 @@ describe("public report safety", () => {
     expect(extracted.text).toContain("Still to confirm:");
     expect(extracted.text).toContain("Applicant-reported permit cost: $750,000");
     expect(extracted.text).toContain("Awarded public investment: $8,500,000");
+  });
+
+  it("keeps LookupResult zoning states source-honest in generated PDFs", async () => {
+    const lookupResult: LookupResult = {
+      matched: false,
+      address: "100 E Test St",
+      lat: 41.8,
+      lon: -87.6,
+      zones: {},
+      zoneNames: {},
+      incentiveCount: 0,
+    };
+    const extractLookupPdf = async (result: LookupResult) => {
+      const output = generateReportBase64(result, []);
+      return extractText(
+        new Uint8Array(Buffer.from(output.base64, "base64")),
+        { mergePages: true },
+      );
+    };
+
+    const available = await extractLookupPdf({
+      ...lookupResult,
+      cityZoningStatus: "available",
+      cityZoning: {
+        zoneClass: "B3-2",
+        zoneType: "Business",
+        recordUpdatedAt: "2026-08-01T00:00:00.000Z",
+        source: {
+          id: "chicago-arcgis-zoning",
+          label: "City of Chicago Zoning Map",
+          url: "https://gisapps.chicago.gov/zoning",
+          retrievedAt: "2026-08-08T00:00:00.000Z",
+          recordUpdatedAt: "2026-08-01T00:00:00.000Z",
+        },
+      },
+    });
+    const notFound = await extractLookupPdf({
+      ...lookupResult,
+      cityZoningStatus: "not_found",
+    });
+    const unavailable = await extractLookupPdf({
+      ...lookupResult,
+      cityZoningStatus: "unavailable",
+    });
+
+    expect(available.text).toContain("B3-2");
+    expect(available.text).toContain("Published district classification only");
+    expect(available.text).toContain("Verify whether a proposed use is permitted");
+    expect(available.text).toContain("Record updated Aug 1, 2026");
+    expect(available.text).toContain("View published City zoning source");
+    expect(available.text).not.toMatch(/Zoning determines permitted land uses/i);
+
+    expect(notFound.text).toContain("NO PUBLISHED DISTRICT RETURNED");
+    expect(notFound.text).toContain("not evidence that zoning requirements do not apply");
+    expect(notFound.text).not.toContain("PUBLISHED SOURCE TEMPORARILY UNAVAILABLE");
+
+    expect(unavailable.text).toContain("PUBLISHED SOURCE TEMPORARILY UNAVAILABLE");
+    expect(unavailable.text).toContain("No zoning or proposed-use conclusion was made");
+    expect(unavailable.text).not.toContain("NO PUBLISHED DISTRICT RETURNED");
   });
 
   it("keeps both public report renderers off legacy confidence fields", () => {

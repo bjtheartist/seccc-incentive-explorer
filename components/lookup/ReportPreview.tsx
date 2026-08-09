@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ZONE_KEYS, ZONE_LABELS, ZONE_COLORS } from "@/lib/constants";
-import type { LookupResult, Program } from "@/lib/types";
+import type { LookupResult, Program, ZoningLookupStatus } from "@/lib/types";
 import { ChevronDown, FileDown, Layers, MapPin, DollarSign, Building2, Mail } from "lucide-react";
 import { EmailReportDialog } from "./EmailReportDialog";
 
@@ -10,6 +10,32 @@ interface ReportPreviewProps {
   result: LookupResult;
   programs: Program[];
   onExpand?: () => void;
+}
+
+function effectiveZoningStatus(result: LookupResult): ZoningLookupStatus | undefined {
+  if (result.cityZoningStatus === "available" && !result.cityZoning) return "unavailable";
+  return result.cityZoningStatus ?? (result.cityZoning ? "available" : undefined);
+}
+
+function formatZoningDate(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function zoningFreshnessLabel(result: LookupResult): string | null {
+  const zoning = result.cityZoning;
+  if (!zoning) return null;
+  const recordDate = formatZoningDate(zoning.recordUpdatedAt ?? zoning.source?.recordUpdatedAt);
+  if (recordDate) return `Record updated ${recordDate}`;
+  const retrievedDate = formatZoningDate(zoning.source?.retrievedAt);
+  return retrievedDate ? `Retrieved ${retrievedDate}` : null;
 }
 
 /**
@@ -20,6 +46,9 @@ interface ReportPreviewProps {
 export function ReportPreview({ result, programs, onExpand }: ReportPreviewProps) {
   const [expanded, setExpanded] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
+  const zoningStatus = effectiveZoningStatus(result);
+  const zoningAvailable = zoningStatus === "available" && Boolean(result.cityZoning);
+  const zoningFreshness = zoningFreshnessLabel(result);
 
   const mappedZoneKeys = ZONE_KEYS.filter((k) => result.zones[k]);
   const programMap = new Map(programs.map((p) => [p.zoneKey, p]));
@@ -181,20 +210,48 @@ export function ReportPreview({ result, programs, onExpand }: ReportPreviewProps
           <div className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 mb-2">
             City Zoning
           </div>
-          {result.cityZoning ? (
-            <div>
-              <span className="font-mono-bureau text-[12px] text-[#0C1B33]/70">
-                {result.cityZoning.zoneClass}
-              </span>
-              {result.cityZoning.zoneType && (
-                <span className="text-[10px] text-[#0C1B33]/35 ml-1">
-                  {result.cityZoning.zoneType}
+          {zoningAvailable && result.cityZoning ? (
+            <div className="space-y-1">
+              <div>
+                <span className="font-mono-bureau text-[12px] text-[#0C1B33]/70">
+                  {result.cityZoning.zoneClass}
                 </span>
+                {result.cityZoning.zoneType && (
+                  <span className="text-[10px] text-[#0C1B33]/35 ml-1">
+                    {result.cityZoning.zoneType}
+                  </span>
+                )}
+              </div>
+              <p className="text-[9px] leading-relaxed text-[#0C1B33]/35">
+                Published district only. Verify proposed-use permission with the current Chicago Zoning Ordinance or City.
+              </p>
+              {(result.cityZoning.source || zoningFreshness) && (
+                <div className="flex flex-wrap gap-x-2 gap-y-0.5 font-mono-bureau text-[8px] text-[#0C1B33]/30">
+                  {result.cityZoning.source && (
+                    <a
+                      href={result.cityZoning.source.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#2563EB]/70 hover:text-[#2563EB] transition-colors"
+                    >
+                      City source
+                    </a>
+                  )}
+                  {zoningFreshness && <span>{zoningFreshness}</span>}
+                </div>
               )}
             </div>
+          ) : zoningStatus === "not_found" ? (
+            <span className="text-[10px] text-[#0C1B33]/25 italic">
+              No published zoning district was returned. This is not evidence that zoning requirements do not apply.
+            </span>
+          ) : zoningStatus === "unavailable" ? (
+            <span className="text-[10px] text-[#0C1B33]/25 italic">
+              Published zoning data is temporarily unavailable. No zoning conclusion was made.
+            </span>
           ) : (
             <span className="text-[10px] text-[#0C1B33]/25 italic">
-              Not available
+              Zoning lookup not recorded
             </span>
           )}
         </div>

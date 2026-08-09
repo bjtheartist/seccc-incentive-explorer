@@ -132,6 +132,10 @@ import type {
 } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { cachedFetch } from "@/lib/fetch-cache";
+import {
+  fetchZoningLookup,
+  zoningLookupKey,
+} from "@/lib/zoning-lookup";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
 import { trackEvent } from "@/lib/analytics-events";
@@ -691,6 +695,7 @@ function ReportWizardPage() {
   const [compareZoneNames, setCompareZoneNames] = useState<Record<string, string> | null>(null);
   const [compareCensus, setCompareCensus] = useState<ReportCensusData | null>(null);
   const [compareZoning, setCompareZoning] = useState<ReportZoningData | null>(null);
+  const [compareZoningKey, setCompareZoningKey] = useState<string | null>(null);
   const [compareParcel, setCompareParcel] = useState<ParcelData | null>(null);
   const [compareNeighborhoodEconomics, setCompareNeighborhoodEconomics] = useState<NeighborhoodEconomicContext | null>(null);
   const [compareNeighborhoodEconomicsZip, setCompareNeighborhoodEconomicsZip] = useState<string | null>(null);
@@ -701,6 +706,7 @@ function ReportWizardPage() {
   const [zoneNames, setZoneNames] = useState<Record<string, string> | null>(null);
   const [censusData, setCensusData] = useState<ReportCensusData | null>(null);
   const [cityZoning, setCityZoning] = useState<ReportZoningData | null>(null);
+  const [cityZoningKey, setCityZoningKey] = useState<string | null>(null);
   const [parcelData, setParcelData] = useState<ParcelData | null>(null);
   const [parcelLookupComplete, setParcelLookupComplete] = useState(false);
   const [districtsData, setDistrictsData] = useState<DistrictData | null>(null);
@@ -826,37 +832,46 @@ function ReportWizardPage() {
   // Load zone data when address has lat/lon
   // Uses the API first, then falls back to client-side Turf.js if the API fails.
   useEffect(() => {
-    if (!wizardState.lat || !wizardState.lon) return;
+    if (!wizardState.lat || !wizardState.lon) {
+      setZones(null);
+      setZoneNames(null);
+      return;
+    }
     const lat = wizardState.lat;
     const lon = wizardState.lon;
+    let cancelled = false;
+    setZones(null);
+    setZoneNames(null);
 
     (async () => {
       try {
         const data = await cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`);
         const normalized = normalizeZoneCheckResponse(data);
         if (!normalized) throw new Error("API unavailable");
+        if (cancelled) return;
         setZones(normalized.zones);
         setZoneNames(normalized.zoneNames);
       } catch {
         // Fallback: use client-side Turf.js zone check
         const { checkZones } = await import("@/lib/zone-check");
         const result = await checkZones(lat, lon);
+        if (cancelled) return;
         setZones(result.zones);
         setZoneNames(result.zoneNames);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [wizardState.lat, wizardState.lon]);
 
-  // Load census + zoning + parcel data when address has lat/lon
+  // Load census + parcel data when address has lat/lon.
   useEffect(() => {
     if (!wizardState.lat || !wizardState.lon) return;
     setParcelLookupComplete(false);
     setParcelData(null);
     cachedFetch(`/api/census?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setCensusData(data as ReportCensusData); })
-      .catch(() => {});
-    cachedFetch(`/api/zoning?lat=${wizardState.lat}&lon=${wizardState.lon}`)
-      .then((data) => { if (data) setCityZoning(data as ReportZoningData); })
       .catch(() => {});
     cachedFetch<ParcelData>(`/api/parcel?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setParcelData(data); })
@@ -865,6 +880,31 @@ function ReportWizardPage() {
     cachedFetch<DistrictData>(`/api/representatives?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setDistrictsData(data); })
       .catch(() => {});
+  }, [wizardState.lat, wizardState.lon]);
+
+  // Zoning has a stricter contract than the general stale-while-error client
+  // cache: never reuse another address or hide a current source failure.
+  useEffect(() => {
+    const lat = wizardState.lat;
+    const lon = wizardState.lon;
+    if (lat == null || lon == null) {
+      setCityZoning(null);
+      setCityZoningKey(null);
+      return;
+    }
+
+    const requestKey = zoningLookupKey(lat, lon);
+    const controller = new AbortController();
+    setCityZoning(null);
+    setCityZoningKey(null);
+
+    fetchZoningLookup(lat, lon, { signal: controller.signal }).then((result) => {
+      if (controller.signal.aborted) return;
+      setCityZoning(result);
+      setCityZoningKey(requestKey);
+    });
+
+    return () => controller.abort();
   }, [wizardState.lat, wizardState.lon]);
 
   // Load address-level proximity signals used in the report Site Overview.
@@ -1011,6 +1051,14 @@ function ReportWizardPage() {
   useEffect(() => {
     if (!compareGeoResult) return;
     const { lat, lon } = compareGeoResult;
+    const requestKey = zoningLookupKey(lat, lon);
+    const zoningController = new AbortController();
+    setCompareZones(null);
+    setCompareZoneNames(null);
+    setCompareCensus(null);
+    setCompareZoning(null);
+    setCompareZoningKey(null);
+    setCompareParcel(null);
     (async () => {
       try {
         const data = await cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`);
@@ -1026,8 +1074,13 @@ function ReportWizardPage() {
       }
     })();
     cachedFetch(`/api/census?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareCensus(d as ReportCensusData); }).catch(() => {});
-    cachedFetch(`/api/zoning?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareZoning(d as ReportZoningData); }).catch(() => {});
+    fetchZoningLookup(lat, lon, { signal: zoningController.signal }).then((result) => {
+      if (zoningController.signal.aborted) return;
+      setCompareZoning(result);
+      setCompareZoningKey(requestKey);
+    });
     cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareParcel(d); }).catch(() => {});
+    return () => zoningController.abort();
   }, [compareGeoResult]);
 
   useEffect(() => {
@@ -1060,6 +1113,10 @@ function ReportWizardPage() {
   // Generate comparison report once compare data is ready
   useEffect(() => {
     if (!compareGeoResult || !compareZones || programs.length === 0) return;
+    if (
+      compareZoningKey !==
+      zoningLookupKey(compareGeoResult.lat, compareGeoResult.lon)
+    ) return;
     if (compareZip && compareNeighborhoodEconomicsZip !== compareZip) return;
     const timer = setTimeout(() => {
       const compareState: WizardState = {
@@ -1079,7 +1136,7 @@ function ReportWizardPage() {
       setCompareReport(generated);
     }, 400);
     return () => clearTimeout(timer);
-  }, [compareGeoResult, compareZones, compareZoneNames, compareCensus, compareZoning, compareParcel, compareZip, compareNeighborhoodEconomicsZip, compareNeighborhoodEconomics, programs, wizardState]);
+  }, [compareGeoResult, compareZones, compareZoneNames, compareCensus, compareZoning, compareZoningKey, compareParcel, compareZip, compareNeighborhoodEconomicsZip, compareNeighborhoodEconomics, programs, wizardState]);
 
   // Instant mode: auto-generate report once programs + zones are loaded
   // Small delay gives census/zoning APIs time to resolve alongside zones
@@ -1087,6 +1144,11 @@ function ReportWizardPage() {
     if (!isInstantMode || !instantLoading) return;
     if (programs.length === 0 || !zones) return;
     if (wizardState.lat && wizardState.lon && !parcelLookupComplete) return;
+    if (
+      wizardState.lat != null &&
+      wizardState.lon != null &&
+      cityZoningKey !== zoningLookupKey(wizardState.lat, wizardState.lon)
+    ) return;
     if (wizardState.lat && wizardState.lon && localBusinessSupport === undefined) return;
     if (wizardState.lat && wizardState.lon && siteSignals === undefined) return;
     if (wizardState.lat && wizardState.lon && transportAccess === undefined) return;
@@ -1137,7 +1199,7 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, instantAddr]);
+  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, instantAddr]);
 
   // Corridor URL mode: auto-generate a corridor report after the metric lookup completes.
   const [corridorAutoGenerated, setCorridorAutoGenerated] = useState(false);
@@ -1181,6 +1243,11 @@ function ReportWizardPage() {
     // For address-based reports, wait for zones
     if (!zones && wizardState.lat) return;
     if (wizardState.lat && wizardState.lon && !parcelLookupComplete) return;
+    if (
+      wizardState.lat != null &&
+      wizardState.lon != null &&
+      cityZoningKey !== zoningLookupKey(wizardState.lat, wizardState.lon)
+    ) return;
     if (wizardState.lat && wizardState.lon && localBusinessSupport === undefined) return;
     if (wizardState.lat && wizardState.lon && siteSignals === undefined) return;
     if (wizardState.lat && wizardState.lon && transportAccess === undefined) return;
@@ -1229,7 +1296,7 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isShareMode, shareAutoGenerated, programs, zones, zoneNames, censusData, cityZoning, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
+  }, [isShareMode, shareAutoGenerated, programs, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
 
   // Derive steps based on report type
   const steps = useMemo<WizardStepConfig[]>(() => {
@@ -1369,6 +1436,7 @@ function ReportWizardPage() {
     setZoneNames(null);
     setCensusData(null);
     setCityZoning(null);
+    setCityZoningKey(null);
     setParcelData(null);
     setParcelLookupComplete(false);
     setInstantLoading(false);
@@ -1491,12 +1559,24 @@ function ReportWizardPage() {
         mobilityForReport = await cachedFetch<MobilityAccess>(`/api/mobility-access?lat=${stateForReport.lat}&lon=${stateForReport.lon}`).catch(() => null);
         setMobilityAccess(mobilityForReport);
       }
+      let zoningForReport = cityZoning;
+      if (stateForReport.lat != null && stateForReport.lon != null) {
+        const requestKey = zoningLookupKey(stateForReport.lat, stateForReport.lon);
+        if (cityZoningKey !== requestKey || !zoningForReport) {
+          zoningForReport = await fetchZoningLookup(
+            stateForReport.lat,
+            stateForReport.lon,
+          );
+          setCityZoning(zoningForReport);
+          setCityZoningKey(requestKey);
+        }
+      }
 
       const generated = generateReportData(stateForReport, programs, {
         zones: zones ?? undefined,
         zoneNames: zoneNames ?? undefined,
         census: censusData ?? undefined,
-        cityZoning: cityZoning ?? undefined,
+        cityZoning: zoningForReport ?? undefined,
         parcel: parcelData ?? undefined,
           reportZip: reportZip ?? undefined,
         districts: districtsData ?? undefined,
@@ -1519,7 +1599,7 @@ function ReportWizardPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics, neighborhoodEconomicsZip, reportZip]);
+  }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics, neighborhoodEconomicsZip, reportZip]);
 
   const handlePrepareGatedReport = useCallback(
     async (projectType: string): Promise<GeneratedReport | null> => {

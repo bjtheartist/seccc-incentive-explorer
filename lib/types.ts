@@ -192,6 +192,7 @@ export interface CheckResult {
   programs: ProgramCheckResult[];
   topActions: TopAction[];
   cityZoning?: CityZoning;
+  cityZoningStatus?: ZoningLookupStatus;
   census?: CensusData;
   parcel?: ParcelData;
   timestamp: string;
@@ -220,8 +221,54 @@ export interface Stats {
 
 export interface CityZoning {
   zoneClass: string; // e.g. "C1-2", "M1-2", "RS-3"
-  zoneType: string | null; // e.g. "Commercial", "Manufacturing"
+  zoneType: string | null; // Official label for zoneTypeCode, when published
+  zoneTypeCode?: number | null;
+  pdNumber?: number | null;
+  pmdSubArea?: string | null;
+  pedestrianStreetAreaName?: string | null;
+  ordinanceNumber?: string | null;
+  ordinanceDate?: string | null;
+  clerkDocumentNumber?: string | null;
+  clerkUrl?: string | null;
+  recordUpdatedAt?: string | null;
+  source?: ZoningSourceMetadata;
 }
+
+export type ZoningLookupStatus = "available" | "not_found" | "unavailable";
+
+export interface ZoningSourceMetadata {
+  id: "chicago-arcgis-zoning" | "chicago-data-portal-zoning";
+  label: string;
+  url: string;
+  retrievedAt: string;
+  recordUpdatedAt: string | null;
+}
+
+export interface ZoningAvailableResponse extends CityZoning {
+  status: "available";
+  source: ZoningSourceMetadata;
+}
+
+export interface ZoningNotFoundResponse {
+  status: "not_found";
+  zoneClass: null;
+  zoneType: null;
+  source: ZoningSourceMetadata;
+  message: string;
+}
+
+export interface ZoningUnavailableResponse {
+  status: "unavailable";
+  zoneClass: null;
+  zoneType: null;
+  source: null;
+  message: string;
+}
+
+export type ZoningLookupResponse =
+  | ZoningAvailableResponse
+  | ZoningNotFoundResponse
+  | ZoningUnavailableResponse;
 
 export interface CensusData {
   tractId: string;
@@ -339,6 +386,7 @@ export interface LookupResult {
   zoneNames: Record<string, string>; // e.g. { tif: "Stony Island Ave...", ssa: "Calumet Hts/Avalon" }
   incentiveCount: number;
   cityZoning?: CityZoning;
+  cityZoningStatus?: ZoningLookupStatus;
   sector?: string; // user-selected business sector ID
   employment?: {
     censusTract: string;
