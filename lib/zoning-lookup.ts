@@ -26,7 +26,9 @@ interface FetchZoningLookupOptions {
 const zoningCache = new Map<string, ZoningCacheEntry>();
 
 export function zoningApiUrl(lat: number, lon: number): string {
-  return `/api/zoning?lat=${lat}&lon=${lon}&v=4`;
+  // v5 matches the server cache key. Both move together or a warm entry serves
+  // a payload shaped for the previous contract.
+  return `/api/zoning?lat=${lat}&lon=${lon}&v=5`;
 }
 
 export function zoningLookupKey(lat: number, lon: number): string {
@@ -49,9 +51,55 @@ export function zoningUnavailable(
   };
 }
 
+const REQUIRED_MIRROR_IDS = [
+  "chicago-arcgis-zoning",
+  "chicago-data-portal-zoning",
+] as const;
+
+const QUERY_OUTCOMES = ["answered", "empty", "failed", "not_queried"];
+const DATASET_OUTCOMES = [
+  "published",
+  "not_published",
+  "unreachable",
+  "not_waited",
+];
+
+/** A published timestamp must name its field and what it covers. */
+function isZoningTimestamp(value: unknown): boolean {
+  if (value === null) return true;
+  if (typeof value !== "object") return false;
+  const stamp = value as Record<string, unknown>;
+  return (
+    typeof stamp.field === "string" &&
+    stamp.field.trim().length > 0 &&
+    (stamp.scope === "record" || stamp.scope === "dataset") &&
+    (stamp.updatedAt === null || typeof stamp.updatedAt === "string")
+  );
+}
+
+function isZoningMirrorVintage(value: unknown): boolean {
+  if (!value || typeof value !== "object") return false;
+  const entry = value as Record<string, unknown>;
+  return (
+    (entry.id === "chicago-arcgis-zoning" ||
+      entry.id === "chicago-data-portal-zoning") &&
+    typeof entry.label === "string" &&
+    QUERY_OUTCOMES.includes(String(entry.queryOutcome)) &&
+    DATASET_OUTCOMES.includes(String(entry.datasetOutcome)) &&
+    isZoningTimestamp(entry.record) &&
+    isZoningTimestamp(entry.dataset) &&
+    typeof entry.note === "string" &&
+    // A record timestamp may only ride on a mirror that returned a record.
+    (entry.record === null || entry.queryOutcome === "answered")
+  );
+}
+
 /**
- * Accept a vintage block only when both mirrors are described. A partial block
- * would let one mirror's silence read as the whole picture.
+ * Accept a vintage block only when BOTH mirrors are described. A partial block
+ * would let one mirror's silence read as the whole picture, and an empty
+ * `mirrors` array satisfies `every()` vacuously — so presence of each required
+ * id is checked explicitly rather than inferred from the entries that happen to
+ * be there.
  */
 function isZoningVintage(value: unknown): value is ZoningVintage {
   if (!value || typeof value !== "object") return false;
@@ -70,20 +118,22 @@ function isZoningVintage(value: unknown): value is ZoningVintage {
   ) {
     return false;
   }
-  return vintage.mirrors.every((mirror) => {
-    if (!mirror || typeof mirror !== "object") return false;
-    const entry = mirror as Record<string, unknown>;
-    return (
-      (entry.id === "chicago-arcgis-zoning" ||
-        entry.id === "chicago-data-portal-zoning") &&
-      typeof entry.label === "string" &&
-      typeof entry.answered === "boolean" &&
-      (entry.field === null || typeof entry.field === "string") &&
-      (entry.scope === "record" || entry.scope === "dataset") &&
-      (entry.updatedAt === null || typeof entry.updatedAt === "string") &&
-      typeof entry.note === "string"
-    );
-  });
+  if (
+    vintage.answerKind !== null &&
+    vintage.answerKind !== "zoning" &&
+    vintage.answerKind !== "no_zoning"
+  ) {
+    return false;
+  }
+  // Nobody answered, so nothing can have been established, and vice versa.
+  if ((vintage.answeredBy === null) !== (vintage.answerKind === null)) {
+    return false;
+  }
+  if (!vintage.mirrors.every(isZoningMirrorVintage)) return false;
+  const presentIds = new Set(
+    vintage.mirrors.map((mirror) => (mirror as Record<string, unknown>).id),
+  );
+  return REQUIRED_MIRROR_IDS.every((id) => presentIds.has(id));
 }
 
 function isChicagoZbaSourceMetadata(
@@ -203,6 +253,24 @@ function isZoningSourceMetadata(value: unknown): value is ZoningSourceMetadata {
   );
 }
 
+/**
+ * Carry a vintage block through only when it passes `isZoningVintage`, and drop
+ * the key entirely otherwise. The available and not_found paths are the ones
+ * that actually carry zoning data, so an unvalidated block is most dangerous
+ * exactly there — a bare spread would publish whatever the server sent.
+ */
+function withValidatedVintage(
+  candidate: Record<string, unknown>,
+  zba: ChicagoZbaLookupResponse | undefined,
+): ZoningLookupResponse {
+  const { vintage, ...rest } = candidate;
+  return {
+    ...rest,
+    ...(isZoningVintage(vintage) ? { vintage } : {}),
+    zba,
+  } as unknown as ZoningLookupResponse;
+}
+
 export function normalizeZoningLookup(value: unknown): ZoningLookupResponse {
   if (!value || typeof value !== "object") return zoningUnavailable();
 
@@ -214,7 +282,7 @@ export function normalizeZoningLookup(value: unknown): ZoningLookupResponse {
     candidate.zoneClass.trim().length > 0 &&
     isZoningSourceMetadata(candidate.source)
   ) {
-    return { ...candidate, zba } as unknown as ZoningLookupResponse;
+    return withValidatedVintage(candidate, zba);
   }
   if (
     candidate.status === "not_found" &&
@@ -222,7 +290,7 @@ export function normalizeZoningLookup(value: unknown): ZoningLookupResponse {
     isZoningSourceMetadata(candidate.source) &&
     typeof candidate.message === "string"
   ) {
-    return { ...candidate, zba } as unknown as ZoningLookupResponse;
+    return withValidatedVintage(candidate, zba);
   }
   if (candidate.status === "unavailable") {
     return zoningUnavailable(

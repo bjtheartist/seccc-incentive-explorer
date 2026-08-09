@@ -248,45 +248,111 @@ export interface ZoningSourceMetadata {
 }
 
 /**
+ * What ONE mirror's point query actually did.
+ *
+ * A mirror that was never asked, a mirror that answered "no polygon here", and
+ * a mirror that could not answer at all are three different facts, and
+ * collapsing them lets a source that could not be consulted read as a source
+ * that was consulted and found nothing. This is deliberately separate from
+ * whether that mirror's dataset-level metadata could be retrieved: the two
+ * endpoints fail independently.
+ */
+export type ZoningMirrorQueryOutcome =
+  /** Returned the polygon whose fields this response publishes. */
+  | "answered"
+  /** Queried successfully and authoritatively returned no polygon here. */
+  | "empty"
+  /** Queried and could not answer. Its silence is not evidence of absence. */
+  | "failed"
+  /** Never asked, because another mirror had already answered. */
+  | "not_queried";
+
+/**
+ * Whether this mirror's own dataset-wide freshness could be established. Kept
+ * separate from `ZoningMirrorQueryOutcome` so a healthy metadata endpoint can
+ * never make a failed point query look like a consulted one.
+ */
+export type ZoningMirrorDatasetOutcome =
+  /** The mirror published a dataset-level timestamp and we read it. */
+  | "published"
+  /** The mirror publishes no dataset-level timestamp at all. */
+  | "not_published"
+  /** The metadata endpoint was asked and could not answer. */
+  | "unreachable"
+  /** Not waited on, so the answer would not be delayed by provenance. */
+  | "not_waited";
+
+/** One published timestamp, carrying the field it came from and its scope. */
+export interface ZoningTimestamp {
+  /** Published field the timestamp was read from. */
+  field: string;
+  /** ISO timestamp exactly as the mirror published it, or null when absent. */
+  updatedAt: string | null;
+  /** What the timestamp describes. */
+  scope: "record" | "dataset";
+}
+
+/**
  * Freshness that ONE published mirror reports about itself.
  *
  * The two City mirrors do not measure the same thing and must not be collapsed
  * into a single "last updated" line. The ArcGIS feature layer publishes a
  * per-polygon `UPDATE_TIMESTAMP` and exposes no service-level `editingInfo`,
- * so its freshness is record-scoped: it describes the one polygon returned,
- * not the dataset. The Data Portal mirror publishes a dataset-level
- * `rowsUpdatedAt` plus a curated "Time Period" statement, and says nothing
- * about any individual polygon. Picking either and calling it "the" vintage
- * would publish a freshness neither source stated, so each mirror is reported
- * on its own terms with its scope named.
+ * so it has record-scoped freshness only: it describes the one polygon
+ * returned, not the dataset. The Data Portal mirror publishes a per-row
+ * `edit_date` AND a dataset-level `rowsUpdatedAt` plus a curated "Time Period"
+ * statement. `record` and `dataset` are therefore separate slots rather than
+ * one field with a scope label: when the Data Portal answers it has both, and
+ * making it pick one would publish a freshness the source never stated.
  */
 export interface ZoningMirrorVintage {
   id: ZoningSourceMetadata["id"];
   label: string;
-  /** Whether this mirror is the one that produced the published fields. */
-  answered: boolean;
-  /** Published field the timestamp was read from, or null when none exists. */
-  field: string | null;
-  /** What the timestamp describes: the returned polygon, or the whole dataset. */
-  scope: "record" | "dataset";
-  /** ISO timestamp exactly as the mirror published it, or null. */
-  updatedAt: string | null;
-  /** Why `updatedAt` is null, or what it does and does not cover. */
+  /** What this mirror's point query did. */
+  queryOutcome: ZoningMirrorQueryOutcome;
+  /** Whether this mirror's dataset-wide freshness could be established. */
+  datasetOutcome: ZoningMirrorDatasetOutcome;
+  /**
+   * Freshness of the polygon THIS mirror returned. Non-null only when this
+   * mirror answered, so a record timestamp can never be attributed to a mirror
+   * that did not produce the record.
+   */
+  record: ZoningTimestamp | null;
+  /** Dataset-wide freshness THIS mirror publishes, when it publishes one. */
+  dataset: ZoningTimestamp | null;
+  /** What this mirror could and could not report for this lookup, and why. */
   note: string;
   /** Verbatim curated freshness statement, when the mirror publishes one. */
   statedTimePeriod?: string | null;
 }
 
+/** What the responding mirror actually established. */
+export type ZoningAnswerKind =
+  /** It returned a zoning polygon. */
+  | "zoning"
+  /** It successfully established that it publishes no polygon here. */
+  | "no_zoning";
+
 /**
- * Per-response provenance: which mirror answered, when we asked, and what each
- * mirror says about its own freshness. Retrieval time is never presented as a
- * source-update date.
+ * Per-response provenance: which mirror produced this answer, when we asked,
+ * and what each mirror says about its own freshness. Retrieval time is never
+ * presented as a source-update date.
  */
 export interface ZoningVintage {
   /** When this lookup ran. Not a source-update date. */
   retrievedAt: string;
-  /** Which mirror actually produced the published fields, if any. */
+  /**
+   * Which mirror produced this response — the one that returned the polygon,
+   * or, for a not_found, the one that authoritatively returned none. Null when
+   * no mirror could answer. Always agrees with the response's `source`.
+   */
   answeredBy: ZoningSourceMetadata["id"] | null;
+  /**
+   * What `answeredBy` established, so "answered by ArcGIS" is never ambiguous
+   * between a returned polygon and a confirmed absence. Null when nothing was
+   * established.
+   */
+  answerKind: ZoningAnswerKind | null;
   mirrors: ZoningMirrorVintage[];
   /** Why the mirror timestamps are not directly comparable. */
   comparabilityNote: string;

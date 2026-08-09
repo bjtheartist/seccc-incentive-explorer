@@ -55,7 +55,8 @@ describe("zoning lookup client", () => {
     expect(first.status).toBe("available");
     expect(second).toEqual(first);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toContain("&v=4");
+    // Moves with the server cache key, or a warm entry serves the old shape.
+    expect(fetchMock.mock.calls[0][0]).toContain("&v=5");
   });
 
   it("parses a 503 unavailable body and does not substitute an expired success", async () => {
@@ -167,30 +168,50 @@ describe("zoning lookup client", () => {
   });
 
   describe("vintage passthrough", () => {
+    const arcgisMirror = {
+      id: "chicago-arcgis-zoning",
+      label: "City of Chicago ArcGIS zoning boundaries",
+      queryOutcome: "answered",
+      datasetOutcome: "not_published",
+      record: {
+        field: "UPDATE_TIMESTAMP",
+        updatedAt: "2023-02-03T15:53:28.000Z",
+        scope: "record",
+      },
+      dataset: null,
+      note: "Polygon-scoped.",
+    };
+
+    const socrataMirror = {
+      id: "chicago-data-portal-zoning",
+      label: "City of Chicago Data Portal zoning boundaries",
+      queryOutcome: "not_queried",
+      datasetOutcome: "published",
+      record: null,
+      dataset: {
+        field: "rowsUpdatedAt",
+        updatedAt: "2026-07-29T15:21:09.000Z",
+        scope: "dataset",
+      },
+      note: "Dataset-scoped.",
+      statedTimePeriod: "Current as of June 2026",
+    };
+
     const vintage = {
       retrievedAt: "2026-08-09T19:44:37.946Z",
       answeredBy: "chicago-arcgis-zoning",
+      answerKind: "zoning",
       comparabilityNote: "The two City mirrors publish freshness at different scopes.",
+      mirrors: [arcgisMirror, socrataMirror],
+    };
+
+    const unansweredVintage = {
+      ...vintage,
+      answeredBy: null,
+      answerKind: null,
       mirrors: [
-        {
-          id: "chicago-arcgis-zoning",
-          label: "City of Chicago ArcGIS zoning boundaries",
-          answered: true,
-          field: "UPDATE_TIMESTAMP",
-          scope: "record",
-          updatedAt: "2023-02-03T15:53:28.000Z",
-          note: "Polygon-scoped.",
-        },
-        {
-          id: "chicago-data-portal-zoning",
-          label: "City of Chicago Data Portal zoning boundaries",
-          answered: false,
-          field: "rowsUpdatedAt",
-          scope: "dataset",
-          updatedAt: "2026-07-29T15:21:09.000Z",
-          note: "Dataset-scoped.",
-          statedTimePeriod: "Current as of June 2026",
-        },
+        { ...arcgisMirror, queryOutcome: "failed", record: null },
+        { ...socrataMirror, queryOutcome: "failed" },
       ],
     };
 
@@ -217,7 +238,7 @@ describe("zoning lookup client", () => {
         zoneType: null,
         source: null,
         message: "Published Chicago zoning data is temporarily unavailable.",
-        vintage: { ...vintage, answeredBy: null },
+        vintage: unansweredVintage,
       });
 
       expect(result.status).toBe("unavailable");
@@ -236,6 +257,100 @@ describe("zoning lookup client", () => {
       });
 
       expect(result.status).toBe("unavailable");
+      expect(result.vintage).toBeUndefined();
+    });
+
+    /**
+     * Defect 6. The guard was enforced only on the unavailable branch, so the
+     * two paths that actually carry zoning data spread the candidate verbatim
+     * and published whatever arrived — contradicting the guard's own docstring.
+     */
+    it("enforces the guard on the branches that carry zoning data", () => {
+      const available = normalizeZoningLookup({
+        status: "available",
+        zoneClass: "B3-2",
+        zoneType: null,
+        source,
+        vintage: { bogus: true, mirrors: "not-an-array" },
+      });
+
+      expect(available.status).toBe("available");
+      expect(available.vintage).toBeUndefined();
+
+      const notFound = normalizeZoningLookup({
+        status: "not_found",
+        zoneClass: null,
+        zoneType: null,
+        source,
+        message: "No published Chicago zoning district was returned.",
+        vintage: "not even an object",
+      });
+
+      expect(notFound.status).toBe("not_found");
+      expect(notFound.vintage).toBeUndefined();
+    });
+
+    /**
+     * Defect 7. `mirrors.every(...)` is vacuously true for [], so a block
+     * describing NO mirror satisfied a guard whose whole purpose is refusing
+     * partial provenance. Both published mirrors must be present by id.
+     */
+    it.each([
+      ["no mirrors at all", []],
+      ["only ArcGIS", [arcgisMirror]],
+      ["only the Data Portal", [socrataMirror]],
+      ["two copies of one mirror", [arcgisMirror, arcgisMirror]],
+    ])("rejects a vintage block describing %s", (_label, mirrors) => {
+      const result = normalizeZoningLookup({
+        status: "unavailable",
+        zoneClass: null,
+        zoneType: null,
+        source: null,
+        message: "Published Chicago zoning data is temporarily unavailable.",
+        vintage: { ...vintage, mirrors },
+      });
+
+      expect(result.vintage).toBeUndefined();
+    });
+
+    it("keeps a block that does describe both mirrors", () => {
+      const result = normalizeZoningLookup({
+        status: "unavailable",
+        zoneClass: null,
+        zoneType: null,
+        source: null,
+        message: "Published Chicago zoning data is temporarily unavailable.",
+        vintage: unansweredVintage,
+      });
+
+      expect(result.vintage?.mirrors).toHaveLength(2);
+    });
+
+    /** A record timestamp may not ride on a mirror that returned no record. */
+    it("rejects a record timestamp on a mirror that did not answer", () => {
+      const result = normalizeZoningLookup({
+        status: "unavailable",
+        zoneClass: null,
+        zoneType: null,
+        source: null,
+        message: "Published Chicago zoning data is temporarily unavailable.",
+        vintage: {
+          ...unansweredVintage,
+          mirrors: [
+            {
+              ...arcgisMirror,
+              queryOutcome: "failed",
+              record: {
+                field: "UPDATE_TIMESTAMP",
+                updatedAt: "2023-02-03T15:53:28.000Z",
+                scope: "record",
+              },
+            },
+            { ...socrataMirror, queryOutcome: "failed" },
+          ],
+        },
+      });
+
       expect(result.vintage).toBeUndefined();
     });
   });

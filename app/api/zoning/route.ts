@@ -4,11 +4,15 @@ import { socrataHeaders } from "@/lib/socrata";
 import { lookupChicagoZba } from "@/lib/chicago-zba";
 import type {
   CityZoning,
+  ZoningAnswerKind,
   ZoningAvailableResponse,
   ZoningLookupResponse,
+  ZoningMirrorDatasetOutcome,
+  ZoningMirrorQueryOutcome,
   ZoningMirrorVintage,
   ZoningNotFoundResponse,
   ZoningSourceMetadata,
+  ZoningTimestamp,
   ZoningVintage,
 } from "@/lib/types";
 
@@ -36,6 +40,13 @@ const VINTAGE_COMPARABILITY_NOTE =
 
 const ARCGIS_NO_DATASET_VINTAGE_NOTE =
   "This layer publishes UPDATE_TIMESTAMP per polygon and exposes no service-level editing timestamp, so no dataset-wide vintage is available from this mirror.";
+
+/**
+ * How long the response will wait on dataset-level provenance before reporting
+ * it as not-waited-on. Provenance gathering must never delay an answer a mirror
+ * has already given; an unwaited mirror still says so rather than going quiet.
+ */
+const DATASET_VINTAGE_WAIT_MS = 400;
 
 const CACHE_HEADERS = {
   "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=21600",
@@ -135,7 +146,7 @@ function zoningFromRecord(
 interface SocrataDatasetVintage {
   rowsUpdatedAt: string | null;
   statedTimePeriod: string | null;
-  retrieved: boolean;
+  outcome: ZoningMirrorDatasetOutcome;
 }
 
 /**
@@ -143,12 +154,15 @@ interface SocrataDatasetVintage {
  * the curated "Time Period" custom field (currently the verbatim string
  * "Current as of June 2026"). Best effort only — a failure here reports an
  * explicit unknown and never affects whether zoning itself resolves.
+ *
+ * This describes the DATASET only. It says nothing about whether the Data
+ * Portal's point query could be answered, which is tracked separately.
  */
 async function fetchSocrataDatasetVintage(): Promise<SocrataDatasetVintage> {
   const unknown: SocrataDatasetVintage = {
     rowsUpdatedAt: null,
     statedTimePeriod: null,
-    retrieved: false,
+    outcome: "unreachable",
   };
 
   try {
@@ -177,57 +191,157 @@ async function fetchSocrataDatasetVintage(): Promise<SocrataDatasetVintage> {
       ? nullableString(metadataGroup["Time Period"])
       : null;
 
-    return { rowsUpdatedAt, statedTimePeriod, retrieved: true };
+    return {
+      rowsUpdatedAt,
+      statedTimePeriod,
+      outcome: rowsUpdatedAt ? "published" : "not_published",
+    };
   } catch {
     return unknown;
   }
 }
 
 /**
- * Report both mirrors' freshness side by side, each labelled with the field it
- * came from and the scope it covers. A mirror that could not be reached says
- * so explicitly rather than reporting a null that could read as "never
- * updated".
+ * Cap how long the response waits on dataset provenance. A mirror that has not
+ * answered by the deadline is reported as not-waited-on, which is distinct from
+ * unreachable: we stopped asking, so we cannot say the endpoint failed.
+ */
+function withDatasetVintageDeadline(
+  pending: Promise<SocrataDatasetVintage>,
+  waitMs = DATASET_VINTAGE_WAIT_MS,
+): Promise<SocrataDatasetVintage> {
+  const notWaited: SocrataDatasetVintage = {
+    rowsUpdatedAt: null,
+    statedTimePeriod: null,
+    outcome: "not_waited",
+  };
+
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(notWaited), waitMs);
+    const settle = (value: SocrataDatasetVintage) => {
+      clearTimeout(timer);
+      resolve(value);
+    };
+    pending.then(settle, () => settle(notWaited));
+  });
+}
+
+/**
+ * What a mirror's point query did. A mirror that was never asked and a mirror
+ * that answered "nothing here" are different facts and are never merged.
+ */
+function queryOutcomeOf(
+  result: SourceQueryResult | null,
+): ZoningMirrorQueryOutcome {
+  if (!result) return "not_queried";
+  if (result.status === "failed") return "failed";
+  if (result.status === "empty") return "empty";
+  return "answered";
+}
+
+/**
+ * The timestamp of the polygon THIS mirror returned, or null when it returned
+ * none. A record timestamp is never attributed to a mirror that did not
+ * produce the record.
+ */
+function recordTimestampOf(
+  result: SourceQueryResult | null,
+  field: string,
+): ZoningTimestamp | null {
+  if (!result || result.status !== "found") return null;
+  return {
+    field,
+    updatedAt: result.zoning.recordUpdatedAt ?? null,
+    scope: "record",
+  };
+}
+
+/** How this mirror's point query went, in plain language. */
+function queryNote(
+  outcome: ZoningMirrorQueryOutcome,
+  field: string,
+  hasRecordTimestamp: boolean,
+): string {
+  switch (outcome) {
+    case "answered":
+      return hasRecordTimestamp
+        ? `${field} as published on the polygon this mirror returned. It describes that polygon only, not the dataset.`
+        : `This mirror returned the polygon published here, but that polygon carried no ${field}.`;
+    case "empty":
+      return "This mirror was queried and returned no polygon for this point, so it published no record timestamp. Nothing was returned to carry one.";
+    case "failed":
+      return "This mirror's point query could not be answered for this lookup, so it reported nothing about this point either way. Its silence is not evidence that no polygon exists here.";
+    case "not_queried":
+      return "This mirror was not queried for this point, because the other mirror had already answered. It reported nothing about this point either way.";
+  }
+}
+
+/** What this mirror could establish about its own dataset-wide freshness. */
+function datasetNote(outcome: ZoningMirrorDatasetOutcome): string {
+  switch (outcome) {
+    case "published":
+      return "Separately, rowsUpdatedAt is published for the whole dj47-wfun dataset and does not describe any individual polygon.";
+    case "not_published":
+      return "The dataset metadata was retrieved but published no rowsUpdatedAt value.";
+    case "unreachable":
+      return "The dataset metadata endpoint could not be reached for this lookup, so no dataset-wide freshness is reported from this mirror.";
+    case "not_waited":
+      return "The dataset metadata endpoint had not answered within the provenance deadline, so it was not waited on. It was not consulted for this lookup, which is not a finding that it publishes nothing.";
+  }
+}
+
+/**
+ * Report both mirrors' freshness side by side, each carrying what its own point
+ * query did, what the polygon it returned (if any) was stamped with, and what
+ * it publishes dataset-wide. Nothing a mirror did not establish is reported as
+ * something it established.
  */
 function buildVintage(
   retrievedAt: string,
   answeredBy: ZoningSourceMetadata["id"] | null,
-  arcgisRecordUpdatedAt: string | null,
-  arcgisReached: boolean,
-  socrata: SocrataDatasetVintage,
+  answerKind: ZoningAnswerKind | null,
+  arcgis: SourceQueryResult | null,
+  socrata: SourceQueryResult | null,
+  datasetVintage: SocrataDatasetVintage,
 ): ZoningVintage {
+  const arcgisOutcome = queryOutcomeOf(arcgis);
+  const arcgisRecord = recordTimestampOf(arcgis, "UPDATE_TIMESTAMP");
   const arcgisMirror: ZoningMirrorVintage = {
     id: "chicago-arcgis-zoning",
     label: ARCGIS_LABEL,
-    answered: answeredBy === "chicago-arcgis-zoning",
-    field: arcgisRecordUpdatedAt ? "UPDATE_TIMESTAMP" : null,
-    scope: "record",
-    updatedAt: arcgisRecordUpdatedAt,
-    note: arcgisRecordUpdatedAt
-      ? `UPDATE_TIMESTAMP as published on the returned polygon. It describes that polygon only, not the dataset. ${ARCGIS_NO_DATASET_VINTAGE_NOTE}`
-      : arcgisReached
-        ? `No UPDATE_TIMESTAMP was published on the returned record. ${ARCGIS_NO_DATASET_VINTAGE_NOTE}`
-        : `This mirror could not be reached for this lookup, so no freshness is reported from it. ${ARCGIS_NO_DATASET_VINTAGE_NOTE}`,
+    queryOutcome: arcgisOutcome,
+    // The feature layer exposes no service-level editingInfo, so there is no
+    // dataset-wide vintage to retrieve or to fail at retrieving.
+    datasetOutcome: "not_published",
+    record: arcgisRecord,
+    dataset: null,
+    note: `${queryNote(arcgisOutcome, "UPDATE_TIMESTAMP", Boolean(arcgisRecord?.updatedAt))} ${ARCGIS_NO_DATASET_VINTAGE_NOTE}`,
   };
 
+  const socrataOutcome = queryOutcomeOf(socrata);
+  const socrataRecord = recordTimestampOf(socrata, "edit_date");
   const socrataMirror: ZoningMirrorVintage = {
     id: "chicago-data-portal-zoning",
     label: SOCRATA_LABEL,
-    answered: answeredBy === "chicago-data-portal-zoning",
-    field: socrata.rowsUpdatedAt ? "rowsUpdatedAt" : null,
-    scope: "dataset",
-    updatedAt: socrata.rowsUpdatedAt,
-    note: socrata.retrieved
-      ? socrata.rowsUpdatedAt
-        ? "rowsUpdatedAt as published for the whole dj47-wfun dataset. It does not describe any individual polygon."
-        : "The dataset metadata was retrieved but published no rowsUpdatedAt value."
-      : "The dataset metadata endpoint could not be reached for this lookup, so no freshness is reported from this mirror.",
-    statedTimePeriod: socrata.statedTimePeriod,
+    queryOutcome: socrataOutcome,
+    datasetOutcome: datasetVintage.outcome,
+    record: socrataRecord,
+    dataset:
+      datasetVintage.outcome === "published"
+        ? {
+            field: "rowsUpdatedAt",
+            updatedAt: datasetVintage.rowsUpdatedAt,
+            scope: "dataset",
+          }
+        : null,
+    note: `${queryNote(socrataOutcome, "edit_date", Boolean(socrataRecord?.updatedAt))} ${datasetNote(datasetVintage.outcome)}`,
+    statedTimePeriod: datasetVintage.statedTimePeriod,
   };
 
   return {
     retrievedAt,
     answeredBy,
+    answerKind,
     mirrors: [arcgisMirror, socrataMirror],
     comparabilityNote: VINTAGE_COMPARABILITY_NOTE,
   };
@@ -393,7 +507,8 @@ async function querySocrata(lat: number, lon: number): Promise<SourceQueryResult
 async function lookupZoning(lat: number, lon: number): Promise<ZoningLookupResponse> {
   const retrievedAt = new Date().toISOString();
   // Dataset-level freshness is independent of the point query, so it runs
-  // alongside rather than adding a serial hop.
+  // alongside rather than adding a serial hop, and it is never waited on past
+  // its deadline: provenance must not delay an answer a mirror already gave.
   const datasetVintagePromise = fetchSocrataDatasetVintage();
 
   const arcgis = await queryArcGis(lat, lon);
@@ -407,36 +522,48 @@ async function lookupZoning(lat: number, lon: number): Promise<ZoningLookupRespo
         ? socrata
         : null;
 
-  const vintage = buildVintage(
-    retrievedAt,
-    answered ? answered.source.id : null,
-    arcgis.status === "found" ? (arcgis.zoning.recordUpdatedAt ?? null) : null,
-    arcgis.status !== "failed",
-    await datasetVintagePromise,
-  );
+  const buildVintageFor = async (
+    answeredBy: ZoningSourceMetadata["id"] | null,
+    answerKind: ZoningAnswerKind | null,
+  ): Promise<ZoningVintage> =>
+    buildVintage(
+      retrievedAt,
+      answeredBy,
+      answerKind,
+      arcgis,
+      socrata,
+      await withDatasetVintageDeadline(datasetVintagePromise),
+    );
 
   if (answered) {
     return {
       status: "available",
       ...answered.zoning,
       source: answered.source,
-      vintage,
+      vintage: await buildVintageFor(answered.source.id, "zoning"),
     };
   }
 
-  const successfulEmpty =
+  const emptyResult =
     arcgis.status === "empty"
       ? arcgis
       : socrata?.status === "empty"
         ? socrata
         : null;
-  if (successfulEmpty) {
+  // An absence is only publishable as a determination when nothing was left
+  // unasked. If the mirror that did NOT report empty could not answer, one
+  // source was never able to speak and "no zoning here" would be reporting a
+  // gap in our knowledge as a fact about the parcel.
+  const someMirrorFailed =
+    arcgis.status === "failed" || socrata?.status === "failed";
+
+  if (emptyResult && !someMirrorFailed) {
     return {
       status: "not_found",
       zoneClass: null,
       zoneType: null,
-      source: successfulEmpty.source,
-      vintage,
+      source: emptyResult.source,
+      vintage: await buildVintageFor(emptyResult.source.id, "no_zoning"),
       message: "No published Chicago zoning district was returned for this location.",
     };
   }
@@ -446,8 +573,10 @@ async function lookupZoning(lat: number, lon: number): Promise<ZoningLookupRespo
     zoneClass: null,
     zoneType: null,
     source: null,
-    vintage,
-    message: "Published Chicago zoning data is temporarily unavailable.",
+    vintage: await buildVintageFor(null, null),
+    message: emptyResult
+      ? "One City zoning mirror returned no district for this location and the other could not be reached, so the absence of a published district here is unconfirmed."
+      : "Published Chicago zoning data is temporarily unavailable.",
   };
 }
 
@@ -471,7 +600,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const cacheKey = `zoning:v4:${roundCoord(lat, 5)}:${roundCoord(lon, 5)}`;
+  // v5: the response shape changed (per-mirror query outcome, record/dataset
+  // split, answerKind). Serving a v4 entry would hand back a payload with no
+  // vintage at all for the life of the TTL.
+  const cacheKey = `zoning:v5:${roundCoord(lat, 5)}:${roundCoord(lon, 5)}`;
   const zbaPromise = lookupChicagoZba(lat, lon);
 
   try {
@@ -506,7 +638,13 @@ export async function GET(request: NextRequest) {
         ...(error instanceof ZoningSourcesUnavailableError && error.vintage
           ? { vintage: error.vintage }
           : {}),
-        message: "Published Chicago zoning data is temporarily unavailable.",
+        // Keep the specific reason when we have one. "One mirror said nothing
+        // is here and the other could not be reached" is a different fact from
+        // a plain outage, and the caller is entitled to it.
+        message:
+          error instanceof ZoningSourcesUnavailableError
+            ? error.message
+            : "Published Chicago zoning data is temporarily unavailable.",
         zba,
       },
       { status: 503, headers: UNAVAILABLE_HEADERS },

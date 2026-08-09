@@ -31,6 +31,23 @@ The two mirrors report freshness at **different scopes and do not agree**, so th
 
 The Data Portal additionally publishes a curated statement, carried through verbatim as `statedTimePeriod` (currently `Current as of June 2026`).
 
+Because the Data Portal mirror publishes freshness at **both** scopes — a per-row `edit_date` and a dataset-level `rowsUpdatedAt` — each mirror in the payload carries `record` and `dataset` as separate slots rather than one timestamp with a scope label. `record` is non-null only on the mirror that actually returned the polygon, so a record timestamp is never attributed to a mirror that produced no record.
+
+### An unasked mirror is not a mirror that found nothing
+
+Each mirror also reports `queryOutcome`, which is the outcome of **its own point query** and is deliberately separate from `datasetOutcome` (whether its dataset metadata could be read). The two endpoints fail independently, and a healthy metadata response must never make a failed point query look like a consulted one.
+
+| `queryOutcome` | Meaning |
+| --- | --- |
+| `answered` | Returned the polygon whose fields the response publishes |
+| `empty` | Queried successfully and authoritatively returned no polygon here |
+| `failed` | Queried and could not answer — its silence is not evidence of absence |
+| `not_queried` | Never asked, because the other mirror had already answered |
+
+`status: "not_found"` is therefore published **only when no mirror hard-failed**. If one mirror returns no polygon and the other could not be reached, the answer is `unavailable` (503), not `not_found`: one source was never able to speak, and reporting that as "no zoning here" would publish a gap in our knowledge as a fact about the parcel. `vintage.answeredBy` names the mirror that produced the response — the one that returned the polygon, or, for a `not_found`, the one that authoritatively returned none — and always agrees with the response's `source`. `vintage.answerKind` says which of the two it established.
+
+Dataset provenance is best effort and is never allowed to delay an answer a mirror already gave: it is raced against a short deadline, and a metadata endpoint that has not returned by then is reported as `not_waited`, which is distinct from `unreachable`. We stopped asking, so we cannot claim the endpoint failed.
+
 Planned Developments have **three disagreeing predicates** in the published data, so any PD determination must use their **union**. Live counts: `pd_num > 0` = 1,456; `zone_class LIKE 'PD%'` = 1,457; `zone_type = 5` = 1,459; **union = 1,461**. `PD 1376` is classed PD while carrying `zone_type` 1. The API therefore publishes `zoneClass`, `zoneTypeCode`, and `pdNumber` as separate raw fields and derives no PD flag of its own.
 
 `ZONE_TYPE` is published as a bare numeric code with no value-domain label, so `zoneType` is `null` rather than a locally invented category name. `C1-1.5` and `DX-10` are valid published classifications and must never be treated as malformed.
