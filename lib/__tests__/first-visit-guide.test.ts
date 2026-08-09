@@ -3,6 +3,7 @@ import {
   FIRST_VISIT_GUIDE_STEPS,
   FIRST_VISIT_GUIDE_STORAGE_KEY,
   FIRST_VISIT_GUIDE_VERSION,
+  FIRST_VISIT_SPOTLIGHT_STEPS,
   readFirstVisitGuidePreference,
   shouldAutoOpenFirstVisitGuide,
   writeFirstVisitGuidePreference,
@@ -75,5 +76,17 @@ describe("first visit guide placement", () => {
   it("provides a stable media key for each future walkthrough segment", () => {
     expect(FIRST_VISIT_GUIDE_STEPS).toHaveLength(4);
     expect(new Set(FIRST_VISIT_GUIDE_STEPS.map((step) => step.walkthroughKey)).size).toBe(4);
+  });
+
+  it("defines unique, source-honest targets for the live spotlight tour", () => {
+    expect(FIRST_VISIT_SPOTLIGHT_STEPS).toHaveLength(4);
+    expect(new Set(FIRST_VISIT_SPOTLIGHT_STEPS.map((step) => step.key)).size).toBe(4);
+    expect(new Set(FIRST_VISIT_SPOTLIGHT_STEPS.map((step) => step.selector)).size).toBe(4);
+
+    const copy = FIRST_VISIT_SPOTLIGHT_STEPS.map((step) => step.description).join(" ");
+    expect(copy).toContain("public records");
+    expect(copy).toContain("not eligibility determinations");
+    expect(copy).toContain("verification links");
+    expect(copy).not.toMatch(/\$\d|\d{2,}\+|\d+ programs|official determination/i);
   });
 });

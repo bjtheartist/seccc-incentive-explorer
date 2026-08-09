@@ -4,6 +4,7 @@ import { FirstVisitGuideDialog } from "@/components/onboarding/FirstVisitGuide";
 
 const actions = {
   onStart: () => {},
+  onSpotlight: () => {},
   onSkip: () => {},
   onBack: () => {},
   onNext: () => {},
@@ -25,7 +26,8 @@ describe("FirstVisitGuideDialog", () => {
     expect(html).toContain('role="dialog"');
     expect(html).toContain('aria-modal="true"');
     expect(html).toContain("Find what may apply to a Chicago address");
-    expect(html).toContain("Start the tour");
+    expect(html).toContain("Show me around");
+    expect(html).toContain("Preview the workflow");
     expect(html).toContain("Explore on my own");
     expect(html).toContain("does not ask for an email");
     expect(html).toContain("Close site tour");
