@@ -40,4 +40,47 @@ describe("investment working-set CSV", () => {
       "Example Nonprofit,Example Foundation,foundation,Not government,2023,50000,South Chicago,",
     );
   });
+
+  it("does not label a legacy record 'Not government' when nothing was recorded", () => {
+    // A record saved before `governmentFundingPurpose` existed has the key
+    // ABSENT, not null, and readShortlist validates only `id` so it survives
+    // the round-trip unchanged. The old two-way ternary sent it down the same
+    // branch as an explicit null and exported a City of Chicago award
+    // asserting it was not government money.
+    const legacy = {
+      id: "legacy-1",
+      recipient: "Example Builder",
+      funderName: "City of Chicago",
+      source: "cdg",
+      year: 2024,
+      amountAwarded: 250_000,
+      communityArea: "South Chicago",
+      notes: "",
+    } as ShortlistRecord;
+
+    // The distinction the fix rests on: absent survives JSON, null survives too.
+    expect(Object.hasOwn(legacy, "governmentFundingPurpose")).toBe(false);
+    expect(JSON.parse(JSON.stringify(legacy))).not.toHaveProperty(
+      "governmentFundingPurpose",
+    );
+
+    const csv = shortlistToCsv([legacy]);
+    expect(csv).not.toContain("Not government");
+    expect(csv).toContain("Not recorded (saved before this field existed)");
+  });
+
+  it("keeps all three states distinguishable in one export", () => {
+    const base = {
+      recipient: "R", funderName: "F", source: "cdg",
+      year: 2024, amountAwarded: 1, communityArea: "X", notes: "",
+    };
+    const csv = shortlistToCsv([
+      { ...base, id: "a", governmentFundingPurpose: "capital_project" },
+      { ...base, id: "b", governmentFundingPurpose: null },
+      { ...base, id: "c" } as ShortlistRecord,
+    ]);
+    expect(csv).toContain("Capital projects");
+    expect(csv).toContain("Not government");
+    expect(csv).toContain("Not recorded");
+  });
 });

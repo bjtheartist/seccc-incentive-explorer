@@ -73,26 +73,42 @@ export function censusNarrative(census: CensusData): CensusNarrativeResult {
     }
   }
 
-  // Home value analysis
+  // Home value — the ACS figure and its ratio to the city median are measured.
+  // What that implies about appreciation, "room for growth", or "strong
+  // fundamentals" is a forecast this platform has no basis to make, so the
+  // number is reported and the forecast is not.
   if (census.medianHomeValue != null) {
-    if (census.medianHomeValue < 150_000) {
-      result.homeValueNarrative = `$${census.medianHomeValue.toLocaleString()} — well below the city average, indicating potential for appreciation. Land Bank and TIF investments target areas like this.`;
-    } else if (census.medianHomeValue < 250_000) {
-      result.homeValueNarrative = `$${census.medianHomeValue.toLocaleString()} — moderate property values suggest room for growth with incentive-backed investment.`;
-    } else {
-      result.homeValueNarrative = `$${census.medianHomeValue.toLocaleString()} — higher property values indicate an established market with strong fundamentals.`;
-    }
+    const pct = Math.round(
+      (census.medianHomeValue / CHICAGO_MEDIANS.homeValue) * 100,
+    );
+    result.homeValueNarrative =
+      `$${census.medianHomeValue.toLocaleString()} — ${pct}% of the Chicago city median ` +
+      `($${CHICAGO_MEDIANS.homeValue.toLocaleString()}), from ACS 5-year estimates. ` +
+      `Median home value is a demographic measure, not an appraisal or a projection of future value.`;
   }
 
-  // Population
+  // Population — RESIDENTS, and only residents.
+  //
+  // This previously read "a densely populated tract offering strong foot
+  // traffic and customer volume" above 5,000 residents. Residential population
+  // is not foot traffic: it counts who sleeps in the tract, not who passes a
+  // storefront, and the two diverge hardest exactly where it matters — a
+  // downtown block with few residents and heavy daytime traffic, or a quiet
+  // residential tract with no commercial corridor. Publishing an inferred
+  // customer volume under a "Measured (census tract)" label is the specific
+  // thing lib/site-activity.ts refuses to do, where the header states no
+  // combined foot-traffic figure may ever be added. The report already carries
+  // real measurements of activity — IDOT counts, CTA entries, workplace jobs,
+  // active licenses — so the honest move is to name the census figure for what
+  // it is and point at those.
   if (census.population != null) {
-    if (census.population < 2000) {
-      result.populationNarrative = `${census.population.toLocaleString()} residents in this tract — a smaller population can mean less competition and more community impact from your business.`;
-    } else if (census.population < 5000) {
-      result.populationNarrative = `${census.population.toLocaleString()} residents — a mid-size tract with a solid customer base for neighborhood-serving businesses.`;
-    } else {
-      result.populationNarrative = `${census.population.toLocaleString()} residents — a densely populated tract offering strong foot traffic and customer volume.`;
-    }
+    const pct = Math.round(
+      (census.population / CHICAGO_MEDIANS.populationPerTract) * 100,
+    );
+    result.populationNarrative =
+      `${census.population.toLocaleString()} residents in this tract — ${pct}% of the typical ` +
+      `Chicago tract (about ${CHICAGO_MEDIANS.populationPerTract.toLocaleString()}), from ACS 5-year estimates. ` +
+      `This counts residents, not visitors or customers; see the site activity measures for traffic, transit, and workplace counts.`;
   }
 
   // Overall qualification narrative
@@ -104,7 +120,12 @@ export function censusNarrative(census: CensusData): CensusNarrativeResult {
     reasons.push("its income falls within a modeled low-to-moderate range used by some place-based programs");
   }
   if (census.medianHomeValue != null && census.medianHomeValue < 150_000) {
-    reasons.push("property values below the city average suggest the area has been targeted for public investment");
+    // Was: "...suggest the area has been targeted for public investment" — a
+    // causal claim about what agencies have done, inferred from a home-value
+    // figure that says nothing about it. Whether this area has actually
+    // received public investment is a question the Community Investment
+    // dataset answers from records; it is not derivable from ACS home values.
+    reasons.push("median home value is below the city average, which some place-based programs use as a screening input");
   }
 
   if (reasons.length > 0) {

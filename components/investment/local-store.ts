@@ -35,11 +35,27 @@ export interface ShortlistRecord {
   recipient: string;
   funderName: string;
   source: string;
-  governmentFundingPurpose: GovernmentFundingPurpose | null;
+  /**
+   * THREE states, which is why this is optional and not merely nullable:
+   *   - a purpose -> government money, classified from the source
+   *   - null      -> recorded as NOT government money
+   *   - ABSENT    -> saved before this field existed; nothing is known
+   *
+   * `JSON.stringify` drops `undefined` but preserves `null`, so after the
+   * localStorage round-trip `Object.hasOwn` reliably separates a legacy record
+   * from a recorded non-government one. Collapsing those two is how a City of
+   * Chicago CDG award was exported to CSV reading "Not government".
+   */
+  governmentFundingPurpose?: GovernmentFundingPurpose | null;
   year: number | null;
   amountAwarded: number;
   communityArea: string;
   notes: string;
+}
+
+/** True when the record actually carries a classification, even a null one. */
+export function hasRecordedFundingPurpose(record: ShortlistRecord): boolean {
+  return Object.hasOwn(record, "governmentFundingPurpose");
 }
 
 function isBrowser(): boolean {
@@ -265,9 +281,13 @@ export function shortlistToCsv(records: readonly ShortlistRecord[]): string {
       r.recipient,
       r.funderName,
       r.source,
+      // Three states, three labels. The old two-way ternary published the
+      // absence of a classification as the affirmative claim "Not government".
       r.governmentFundingPurpose
         ? GOVERNMENT_FUNDING_PURPOSE_LABELS[r.governmentFundingPurpose]
-        : "Not government",
+        : hasRecordedFundingPurpose(r)
+          ? "Not government"
+          : "Not recorded (saved before this field existed)",
       r.year ?? "",
       r.amountAwarded,
       r.communityArea,
