@@ -165,4 +165,78 @@ describe("zoning lookup client", () => {
       "unavailable",
     );
   });
+
+  describe("vintage passthrough", () => {
+    const vintage = {
+      retrievedAt: "2026-08-09T19:44:37.946Z",
+      answeredBy: "chicago-arcgis-zoning",
+      comparabilityNote: "The two City mirrors publish freshness at different scopes.",
+      mirrors: [
+        {
+          id: "chicago-arcgis-zoning",
+          label: "City of Chicago ArcGIS zoning boundaries",
+          answered: true,
+          field: "UPDATE_TIMESTAMP",
+          scope: "record",
+          updatedAt: "2023-02-03T15:53:28.000Z",
+          note: "Polygon-scoped.",
+        },
+        {
+          id: "chicago-data-portal-zoning",
+          label: "City of Chicago Data Portal zoning boundaries",
+          answered: false,
+          field: "rowsUpdatedAt",
+          scope: "dataset",
+          updatedAt: "2026-07-29T15:21:09.000Z",
+          note: "Dataset-scoped.",
+          statedTimePeriod: "Current as of June 2026",
+        },
+      ],
+    };
+
+    it("keeps both mirrors on an available response", () => {
+      const result = normalizeZoningLookup({
+        status: "available",
+        zoneClass: "PD 677",
+        zoneType: null,
+        source,
+        vintage,
+      });
+
+      expect(result.status).toBe("available");
+      expect(result.vintage?.mirrors).toHaveLength(2);
+      expect(result.vintage?.mirrors[1].statedTimePeriod).toBe(
+        "Current as of June 2026",
+      );
+    });
+
+    it("keeps provenance on an unavailable response", () => {
+      const result = normalizeZoningLookup({
+        status: "unavailable",
+        zoneClass: null,
+        zoneType: null,
+        source: null,
+        message: "Published Chicago zoning data is temporarily unavailable.",
+        vintage: { ...vintage, answeredBy: null },
+      });
+
+      expect(result.status).toBe("unavailable");
+      expect(result.vintage?.answeredBy).toBeNull();
+      expect(result.vintage?.mirrors).toHaveLength(2);
+    });
+
+    it("drops a vintage block that does not describe its mirrors", () => {
+      const result = normalizeZoningLookup({
+        status: "unavailable",
+        zoneClass: null,
+        zoneType: null,
+        source: null,
+        message: "Published Chicago zoning data is temporarily unavailable.",
+        vintage: { retrievedAt: "2026-08-09T19:44:37.946Z", mirrors: [{ id: "made-up" }] },
+      });
+
+      expect(result.status).toBe("unavailable");
+      expect(result.vintage).toBeUndefined();
+    });
+  });
 });

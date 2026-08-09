@@ -168,7 +168,7 @@ describe("GET /api/zoning", () => {
       source: { id: "chicago-data-portal-zoning" },
     });
     const fallbackCall = fetchMock.mock.calls.find(
-      ([input]) => String(input).includes("data.cityofchicago.org"),
+      ([input]) => String(input).includes("dj47-wfun.geojson"),
     );
     const fallbackUrl = new URL(String(fallbackCall?.[0]));
     expect(fallbackUrl.searchParams.get("$where")).toBe(
@@ -249,6 +249,196 @@ describe("GET /api/zoning", () => {
       zba: { status: "unavailable" },
     });
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("never queries the ArcGIS group layer (layer 0 errors inside HTTP 200)", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) =>
+      String(input).includes("/MapServer/16/query")
+        ? jsonResponse({ features: [] })
+        : jsonResponse({
+            features: [{ attributes: { ZONE_CLASS: "B3-2", ZONE_TYPE: 1 } }],
+          }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await GET(request());
+
+    const zoningLayerCalls = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .filter((url) => url.includes("/ExternalApps/Zoning/MapServer/"));
+    expect(zoningLayerCalls.length).toBeGreaterThan(0);
+    for (const url of zoningLayerCalls) {
+      expect(url).toContain("/MapServer/1/query");
+      expect(url).not.toContain("/MapServer/0/query");
+    }
+  });
+
+  it.each([
+    ["C1-1.5", 1],
+    ["DX-10", 3],
+  ])(
+    "accepts the published classification %s rather than treating it as malformed",
+    async (zoneClass, zoneTypeCode) => {
+      const fetchMock = vi.fn(async (input: string | URL | Request) =>
+        String(input).includes("/MapServer/16/query")
+          ? jsonResponse({ features: [] })
+          : jsonResponse({
+              features: [
+                { attributes: { ZONE_CLASS: zoneClass, ZONE_TYPE: zoneTypeCode } },
+              ],
+            }),
+      );
+      vi.stubGlobal("fetch", fetchMock);
+
+      const response = await GET(request());
+      const body = await response.json();
+
+      expect(response.status).toBe(200);
+      expect(body).toMatchObject({
+        status: "available",
+        zoneClass,
+        zoneTypeCode,
+        // The raw published class is the fact; no local label replaces it.
+        zoneType: null,
+      });
+    },
+  );
+
+  it("preserves the PD fields the union predicate needs, including the zone_type=1 PD outlier", async () => {
+    // Live counts on dj47-wfun: pd_num>0 = 1456, zone_class LIKE 'PD%' = 1457,
+    // zone_type=5 = 1459, union = 1461. "PD 1376" is the polygon classed PD
+    // while carrying zone_type 1, so a zone_type-only predicate would miss it
+    // and a pd_num-only predicate would miss PD polygons with pd_num 0.
+    const fetchMock = vi.fn(async (input: string | URL | Request) =>
+      String(input).includes("/MapServer/16/query")
+        ? jsonResponse({ features: [] })
+        : jsonResponse({
+            features: [
+              {
+                attributes: { ZONE_CLASS: "PD 1376", ZONE_TYPE: 1, PD_NUM: 1376 },
+              },
+            ],
+          }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const body = await (await GET(request())).json();
+
+    // All three union inputs survive to the consumer, so no single predicate
+    // is baked into the payload.
+    expect(body.zoneClass).toBe("PD 1376");
+    expect(body.zoneTypeCode).toBe(1);
+    expect(body.pdNumber).toBe(1376);
+    // No derived PD boolean is published; the union is the consumer's to apply.
+    expect(body).not.toHaveProperty("isPlannedDevelopment");
+  });
+
+  it("reports both mirrors' freshness on their own terms instead of picking one", async () => {
+    const polygonUpdatedAt = Date.UTC(2023, 1, 3);
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/MapServer/16/query")) return jsonResponse({ features: [] });
+      if (url.includes("/api/views/dj47-wfun.json")) {
+        return jsonResponse({
+          // Socrata publishes rowsUpdatedAt in epoch SECONDS.
+          rowsUpdatedAt: 1785338469,
+          metadata: {
+            custom_fields: {
+              Metadata: { "Time Period": "Current as of June 2026" },
+            },
+          },
+        });
+      }
+      return jsonResponse({
+        features: [
+          {
+            attributes: {
+              ZONE_CLASS: "PD 677",
+              ZONE_TYPE: 5,
+              PD_NUM: 677,
+              UPDATE_TIMESTAMP: polygonUpdatedAt,
+            },
+          },
+        ],
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const body = await (await GET(request())).json();
+
+    expect(body.vintage.answeredBy).toBe("chicago-arcgis-zoning");
+    expect(typeof body.vintage.retrievedAt).toBe("string");
+
+    const arcgis = body.vintage.mirrors.find(
+      (m: { id: string }) => m.id === "chicago-arcgis-zoning",
+    );
+    const socrata = body.vintage.mirrors.find(
+      (m: { id: string }) => m.id === "chicago-data-portal-zoning",
+    );
+
+    // Record scope: describes the returned polygon only.
+    expect(arcgis).toMatchObject({
+      answered: true,
+      field: "UPDATE_TIMESTAMP",
+      scope: "record",
+      updatedAt: new Date(polygonUpdatedAt).toISOString(),
+    });
+
+    // Dataset scope: describes the whole table, and disagrees with ArcGIS.
+    expect(socrata).toMatchObject({
+      answered: false,
+      field: "rowsUpdatedAt",
+      scope: "dataset",
+      updatedAt: new Date(1785338469 * 1000).toISOString(),
+      statedTimePeriod: "Current as of June 2026",
+    });
+
+    // The disagreement is stated, not resolved.
+    expect(arcgis.updatedAt).not.toBe(socrata.updatedAt);
+    expect(body.vintage.comparabilityNote).toMatch(/different scopes/i);
+  });
+
+  it("reports an unreachable mirror as unknown rather than as never-updated", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/MapServer/16/query")) return jsonResponse({ features: [] });
+      if (url.includes("/api/views/dj47-wfun.json")) {
+        return jsonResponse({ error: "metadata unavailable" }, 500);
+      }
+      return jsonResponse({
+        features: [{ attributes: { ZONE_CLASS: "B3-2", ZONE_TYPE: 1 } }],
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const body = await (await GET(request())).json();
+    const socrata = body.vintage.mirrors.find(
+      (m: { id: string }) => m.id === "chicago-data-portal-zoning",
+    );
+
+    expect(socrata.updatedAt).toBeNull();
+    expect(socrata.field).toBeNull();
+    expect(socrata.note).toMatch(/could not be reached/i);
+  });
+
+  it("still carries provenance on the 503 when both sources fail", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/MapServer/16/query")) return jsonResponse({ features: [] });
+      if (url.includes("/api/views/dj47-wfun.json")) {
+        return jsonResponse({ rowsUpdatedAt: 1785338469 });
+      }
+      return jsonResponse({ error: "upstream unavailable" }, 400);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await GET(request());
+    const body = await response.json();
+
+    expect(response.status).toBe(503);
+    expect(body.status).toBe("unavailable");
+    expect(body.vintage.answeredBy).toBeNull();
+    expect(body.vintage.mirrors).toHaveLength(2);
   });
 
   it.each([

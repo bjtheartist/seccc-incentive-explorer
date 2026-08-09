@@ -6,14 +6,36 @@ import type {
   CityZoning,
   ZoningAvailableResponse,
   ZoningLookupResponse,
+  ZoningMirrorVintage,
   ZoningNotFoundResponse,
   ZoningSourceMetadata,
+  ZoningVintage,
 } from "@/lib/types";
 
+// Layer 1 is the queryable "Zoning Boundaries" feature layer. Layer 0 is the
+// "Map Layers" GROUP layer: querying it returns ArcGIS error 400 "Invalid or
+// missing input parameters" inside an HTTP 200 body.
 const ARCGIS_LAYER_URL =
   "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1";
 const SOCRATA_LAYER_URL =
   "https://data.cityofchicago.org/resource/dj47-wfun.geojson";
+const SOCRATA_DATASET_URL = "https://data.cityofchicago.org/d/dj47-wfun";
+const SOCRATA_METADATA_URL =
+  "https://data.cityofchicago.org/api/views/dj47-wfun.json";
+
+const ARCGIS_LABEL = "City of Chicago ArcGIS zoning boundaries";
+const SOCRATA_LABEL = "City of Chicago Data Portal zoning boundaries";
+
+/**
+ * The two mirrors publish freshness at different scopes and neither is a
+ * substitute for the other, so both are reported verbatim and the difference
+ * is stated rather than resolved.
+ */
+const VINTAGE_COMPARABILITY_NOTE =
+  "The two City mirrors publish freshness at different scopes and disagree. The ArcGIS layer publishes UPDATE_TIMESTAMP on each polygon and exposes no service-level edit date, so its timestamp covers only the returned polygon. The Data Portal publishes a dataset-level rowsUpdatedAt covering the whole table and says nothing about an individual polygon. Neither is the other's equivalent, and neither is presented here as the single zoning vintage.";
+
+const ARCGIS_NO_DATASET_VINTAGE_NOTE =
+  "This layer publishes UPDATE_TIMESTAMP per polygon and exposes no service-level editing timestamp, so no dataset-wide vintage is available from this mirror.";
 
 const CACHE_HEADERS = {
   "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=21600",
@@ -32,7 +54,19 @@ type SourceQueryResult =
   | { status: "empty"; source: ZoningSourceMetadata }
   | { status: "failed" };
 
-class ZoningSourcesUnavailableError extends Error {}
+/**
+ * Signals total source failure out of the cache loader so the unavailable
+ * state is never written to cache, while still carrying the provenance we
+ * gathered so the caller can report which mirrors were tried.
+ */
+class ZoningSourcesUnavailableError extends Error {
+  readonly vintage: ZoningVintage | undefined;
+
+  constructor(message: string, vintage?: ZoningVintage) {
+    super(message);
+    this.vintage = vintage;
+  }
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -98,6 +132,107 @@ function zoningFromRecord(
   };
 }
 
+interface SocrataDatasetVintage {
+  rowsUpdatedAt: string | null;
+  statedTimePeriod: string | null;
+  retrieved: boolean;
+}
+
+/**
+ * Read the Data Portal's self-reported dataset freshness: `rowsUpdatedAt` and
+ * the curated "Time Period" custom field (currently the verbatim string
+ * "Current as of June 2026"). Best effort only — a failure here reports an
+ * explicit unknown and never affects whether zoning itself resolves.
+ */
+async function fetchSocrataDatasetVintage(): Promise<SocrataDatasetVintage> {
+  const unknown: SocrataDatasetVintage = {
+    rowsUpdatedAt: null,
+    statedTimePeriod: null,
+    retrieved: false,
+  };
+
+  try {
+    const response = await fetch(SOCRATA_METADATA_URL, {
+      headers: { ...socrataHeaders(), Accept: "application/json" },
+      signal: AbortSignal.timeout(3000),
+    });
+    if (!response.ok) return unknown;
+
+    const payload: unknown = await response.json();
+    if (!isRecord(payload)) return unknown;
+
+    // Socrata publishes rowsUpdatedAt as epoch SECONDS.
+    const rawRowsUpdatedAt = payload.rowsUpdatedAt;
+    const rowsUpdatedAt =
+      typeof rawRowsUpdatedAt === "number" && Number.isFinite(rawRowsUpdatedAt)
+        ? nullableIsoDate(rawRowsUpdatedAt * 1000)
+        : null;
+
+    const metadata = isRecord(payload.metadata) ? payload.metadata : null;
+    const customFields =
+      metadata && isRecord(metadata.custom_fields) ? metadata.custom_fields : null;
+    const metadataGroup =
+      customFields && isRecord(customFields.Metadata) ? customFields.Metadata : null;
+    const statedTimePeriod = metadataGroup
+      ? nullableString(metadataGroup["Time Period"])
+      : null;
+
+    return { rowsUpdatedAt, statedTimePeriod, retrieved: true };
+  } catch {
+    return unknown;
+  }
+}
+
+/**
+ * Report both mirrors' freshness side by side, each labelled with the field it
+ * came from and the scope it covers. A mirror that could not be reached says
+ * so explicitly rather than reporting a null that could read as "never
+ * updated".
+ */
+function buildVintage(
+  retrievedAt: string,
+  answeredBy: ZoningSourceMetadata["id"] | null,
+  arcgisRecordUpdatedAt: string | null,
+  arcgisReached: boolean,
+  socrata: SocrataDatasetVintage,
+): ZoningVintage {
+  const arcgisMirror: ZoningMirrorVintage = {
+    id: "chicago-arcgis-zoning",
+    label: ARCGIS_LABEL,
+    answered: answeredBy === "chicago-arcgis-zoning",
+    field: arcgisRecordUpdatedAt ? "UPDATE_TIMESTAMP" : null,
+    scope: "record",
+    updatedAt: arcgisRecordUpdatedAt,
+    note: arcgisRecordUpdatedAt
+      ? `UPDATE_TIMESTAMP as published on the returned polygon. It describes that polygon only, not the dataset. ${ARCGIS_NO_DATASET_VINTAGE_NOTE}`
+      : arcgisReached
+        ? `No UPDATE_TIMESTAMP was published on the returned record. ${ARCGIS_NO_DATASET_VINTAGE_NOTE}`
+        : `This mirror could not be reached for this lookup, so no freshness is reported from it. ${ARCGIS_NO_DATASET_VINTAGE_NOTE}`,
+  };
+
+  const socrataMirror: ZoningMirrorVintage = {
+    id: "chicago-data-portal-zoning",
+    label: SOCRATA_LABEL,
+    answered: answeredBy === "chicago-data-portal-zoning",
+    field: socrata.rowsUpdatedAt ? "rowsUpdatedAt" : null,
+    scope: "dataset",
+    updatedAt: socrata.rowsUpdatedAt,
+    note: socrata.retrieved
+      ? socrata.rowsUpdatedAt
+        ? "rowsUpdatedAt as published for the whole dj47-wfun dataset. It does not describe any individual polygon."
+        : "The dataset metadata was retrieved but published no rowsUpdatedAt value."
+      : "The dataset metadata endpoint could not be reached for this lookup, so no freshness is reported from this mirror.",
+    statedTimePeriod: socrata.statedTimePeriod,
+  };
+
+  return {
+    retrievedAt,
+    answeredBy,
+    mirrors: [arcgisMirror, socrataMirror],
+    comparabilityNote: VINTAGE_COMPARABILITY_NOTE,
+  };
+}
+
 /** Fetch with retry and exponential backoff. */
 async function fetchWithRetry(
   url: string,
@@ -132,7 +267,7 @@ async function queryArcGis(lat: number, lon: number): Promise<SourceQueryResult>
   const retrievedAt = new Date().toISOString();
   const source = sourceMetadata(
     "chicago-arcgis-zoning",
-    "City of Chicago ArcGIS zoning boundaries",
+    ARCGIS_LABEL,
     ARCGIS_LAYER_URL,
     retrievedAt,
     null,
@@ -197,8 +332,8 @@ async function querySocrata(lat: number, lon: number): Promise<SourceQueryResult
   const retrievedAt = new Date().toISOString();
   const source = sourceMetadata(
     "chicago-data-portal-zoning",
-    "City of Chicago Data Portal zoning boundaries",
-    "https://data.cityofchicago.org/d/dj47-wfun",
+    SOCRATA_LABEL,
+    SOCRATA_DATASET_URL,
     retrievedAt,
     null,
   );
@@ -256,20 +391,43 @@ async function querySocrata(lat: number, lon: number): Promise<SourceQueryResult
 }
 
 async function lookupZoning(lat: number, lon: number): Promise<ZoningLookupResponse> {
-  const arcgis = await queryArcGis(lat, lon);
-  if (arcgis.status === "found") {
-    return { status: "available", ...arcgis.zoning, source: arcgis.source };
-  }
+  const retrievedAt = new Date().toISOString();
+  // Dataset-level freshness is independent of the point query, so it runs
+  // alongside rather than adding a serial hop.
+  const datasetVintagePromise = fetchSocrataDatasetVintage();
 
-  const socrata = await querySocrata(lat, lon);
-  if (socrata.status === "found") {
-    return { status: "available", ...socrata.zoning, source: socrata.source };
+  const arcgis = await queryArcGis(lat, lon);
+  const socrata =
+    arcgis.status === "found" ? null : await querySocrata(lat, lon);
+
+  const answered =
+    arcgis.status === "found"
+      ? arcgis
+      : socrata?.status === "found"
+        ? socrata
+        : null;
+
+  const vintage = buildVintage(
+    retrievedAt,
+    answered ? answered.source.id : null,
+    arcgis.status === "found" ? (arcgis.zoning.recordUpdatedAt ?? null) : null,
+    arcgis.status !== "failed",
+    await datasetVintagePromise,
+  );
+
+  if (answered) {
+    return {
+      status: "available",
+      ...answered.zoning,
+      source: answered.source,
+      vintage,
+    };
   }
 
   const successfulEmpty =
     arcgis.status === "empty"
       ? arcgis
-      : socrata.status === "empty"
+      : socrata?.status === "empty"
         ? socrata
         : null;
   if (successfulEmpty) {
@@ -278,6 +436,7 @@ async function lookupZoning(lat: number, lon: number): Promise<ZoningLookupRespo
       zoneClass: null,
       zoneType: null,
       source: successfulEmpty.source,
+      vintage,
       message: "No published Chicago zoning district was returned for this location.",
     };
   }
@@ -287,6 +446,7 @@ async function lookupZoning(lat: number, lon: number): Promise<ZoningLookupRespo
     zoneClass: null,
     zoneType: null,
     source: null,
+    vintage,
     message: "Published Chicago zoning data is temporarily unavailable.",
   };
 }
@@ -321,7 +481,7 @@ export async function GET(request: NextRequest) {
       async () => {
         const lookup = await lookupZoning(lat, lon);
         if (lookup.status === "unavailable") {
-          throw new ZoningSourcesUnavailableError(lookup.message);
+          throw new ZoningSourcesUnavailableError(lookup.message, lookup.vintage);
         }
         return lookup;
       },
@@ -343,6 +503,9 @@ export async function GET(request: NextRequest) {
         zoneClass: null,
         zoneType: null,
         source: null,
+        ...(error instanceof ZoningSourcesUnavailableError && error.vintage
+          ? { vintage: error.vintage }
+          : {}),
         message: "Published Chicago zoning data is temporarily unavailable.",
         zba,
       },

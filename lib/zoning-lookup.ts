@@ -6,6 +6,7 @@ import type {
   ZoningLookupResponse,
   ZoningSourceMetadata,
   ZoningUnavailableResponse,
+  ZoningVintage,
 } from "./types";
 
 const DEFAULT_CACHE_TTL_MS = 30 * 60 * 1000;
@@ -35,15 +36,54 @@ export function zoningLookupKey(lat: number, lon: number): string {
 export function zoningUnavailable(
   message = "Published Chicago zoning data is temporarily unavailable.",
   zba?: ChicagoZbaLookupResponse,
+  vintage?: ZoningVintage,
 ): ZoningUnavailableResponse {
   return {
     status: "unavailable",
     zoneClass: null,
     zoneType: null,
     source: null,
+    ...(vintage ? { vintage } : {}),
     message,
     zba,
   };
+}
+
+/**
+ * Accept a vintage block only when both mirrors are described. A partial block
+ * would let one mirror's silence read as the whole picture.
+ */
+function isZoningVintage(value: unknown): value is ZoningVintage {
+  if (!value || typeof value !== "object") return false;
+  const vintage = value as Record<string, unknown>;
+  if (
+    typeof vintage.retrievedAt !== "string" ||
+    typeof vintage.comparabilityNote !== "string" ||
+    !Array.isArray(vintage.mirrors)
+  ) {
+    return false;
+  }
+  if (
+    vintage.answeredBy !== null &&
+    vintage.answeredBy !== "chicago-arcgis-zoning" &&
+    vintage.answeredBy !== "chicago-data-portal-zoning"
+  ) {
+    return false;
+  }
+  return vintage.mirrors.every((mirror) => {
+    if (!mirror || typeof mirror !== "object") return false;
+    const entry = mirror as Record<string, unknown>;
+    return (
+      (entry.id === "chicago-arcgis-zoning" ||
+        entry.id === "chicago-data-portal-zoning") &&
+      typeof entry.label === "string" &&
+      typeof entry.answered === "boolean" &&
+      (entry.field === null || typeof entry.field === "string") &&
+      (entry.scope === "record" || entry.scope === "dataset") &&
+      (entry.updatedAt === null || typeof entry.updatedAt === "string") &&
+      typeof entry.note === "string"
+    );
+  });
 }
 
 function isChicagoZbaSourceMetadata(
@@ -188,6 +228,7 @@ export function normalizeZoningLookup(value: unknown): ZoningLookupResponse {
     return zoningUnavailable(
       typeof candidate.message === "string" ? candidate.message : undefined,
       zba,
+      isZoningVintage(candidate.vintage) ? candidate.vintage : undefined,
     );
   }
 

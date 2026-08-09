@@ -56,7 +56,7 @@ The current package scripts cover vacant-property maintenance plus the business 
    - `lib/data.ts` — Data access layer abstraction (DB-first, static fallback)
    - `lib/zone-check.ts` — PostGIS zone check via `/api/zones/check`, falls back to Turf.js `booleanPointInPolygon`
 
-3. **Geocoding:** `/api/geocode` uses OpenStreetMap Nominatim. `/api/zoning` queries the City ArcGIS zoning feature layer with an authoritative Chicago Data Portal GeoJSON fallback, bounded retry, explicit availability states, and source metadata.
+3. **Geocoding:** `/api/geocode` uses OpenStreetMap Nominatim. `/api/zoning` queries the City ArcGIS zoning feature layer (**layer 1**, with `inSR=4326` — layer 0 is a group layer that errors inside HTTP 200) with an authoritative Chicago Data Portal GeoJSON fallback, bounded retry, explicit availability states, and source metadata. Total source failure returns 503 `status: "unavailable"`, never 200 with a null zone. Both mirrors' freshness is reported side by side with its scope named, because they disagree — see `data/curated/zoning/README.md`.
 
 4. **Survey engine:** `lib/survey-engine.ts` scores 4-step questionnaire answers against a rules matrix, producing program matches with confidence levels (high/medium/low). `lib/confidence-engine.ts` (492 LOC) handles the detailed eligibility scoring.
 

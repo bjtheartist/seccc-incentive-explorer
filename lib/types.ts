@@ -232,6 +232,8 @@ export interface CityZoning {
   clerkUrl?: string | null;
   recordUpdatedAt?: string | null;
   source?: ZoningSourceMetadata;
+  /** Per-mirror freshness, each on its own terms. See ZoningVintage. */
+  vintage?: ZoningVintage;
   zba?: ChicagoZbaLookupResponse;
 }
 
@@ -245,6 +247,51 @@ export interface ZoningSourceMetadata {
   recordUpdatedAt: string | null;
 }
 
+/**
+ * Freshness that ONE published mirror reports about itself.
+ *
+ * The two City mirrors do not measure the same thing and must not be collapsed
+ * into a single "last updated" line. The ArcGIS feature layer publishes a
+ * per-polygon `UPDATE_TIMESTAMP` and exposes no service-level `editingInfo`,
+ * so its freshness is record-scoped: it describes the one polygon returned,
+ * not the dataset. The Data Portal mirror publishes a dataset-level
+ * `rowsUpdatedAt` plus a curated "Time Period" statement, and says nothing
+ * about any individual polygon. Picking either and calling it "the" vintage
+ * would publish a freshness neither source stated, so each mirror is reported
+ * on its own terms with its scope named.
+ */
+export interface ZoningMirrorVintage {
+  id: ZoningSourceMetadata["id"];
+  label: string;
+  /** Whether this mirror is the one that produced the published fields. */
+  answered: boolean;
+  /** Published field the timestamp was read from, or null when none exists. */
+  field: string | null;
+  /** What the timestamp describes: the returned polygon, or the whole dataset. */
+  scope: "record" | "dataset";
+  /** ISO timestamp exactly as the mirror published it, or null. */
+  updatedAt: string | null;
+  /** Why `updatedAt` is null, or what it does and does not cover. */
+  note: string;
+  /** Verbatim curated freshness statement, when the mirror publishes one. */
+  statedTimePeriod?: string | null;
+}
+
+/**
+ * Per-response provenance: which mirror answered, when we asked, and what each
+ * mirror says about its own freshness. Retrieval time is never presented as a
+ * source-update date.
+ */
+export interface ZoningVintage {
+  /** When this lookup ran. Not a source-update date. */
+  retrievedAt: string;
+  /** Which mirror actually produced the published fields, if any. */
+  answeredBy: ZoningSourceMetadata["id"] | null;
+  mirrors: ZoningMirrorVintage[];
+  /** Why the mirror timestamps are not directly comparable. */
+  comparabilityNote: string;
+}
+
 export interface ZoningAvailableResponse extends CityZoning {
   status: "available";
   source: ZoningSourceMetadata;
@@ -255,6 +302,7 @@ export interface ZoningNotFoundResponse {
   zoneClass: null;
   zoneType: null;
   source: ZoningSourceMetadata;
+  vintage?: ZoningVintage;
   message: string;
   zba?: ChicagoZbaLookupResponse;
 }
@@ -264,6 +312,7 @@ export interface ZoningUnavailableResponse {
   zoneClass: null;
   zoneType: null;
   source: null;
+  vintage?: ZoningVintage;
   message: string;
   zba?: ChicagoZbaLookupResponse;
 }

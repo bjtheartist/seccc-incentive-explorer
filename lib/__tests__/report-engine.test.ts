@@ -191,6 +191,51 @@ describe("generateReportData", () => {
     },
   );
 
+  /**
+   * The three literal strings above only catch the copy we already removed.
+   * This guard is shape-based, so a NEW permitted-use claim for any district
+   * family fails the suite the moment it is written. Only the disclaiming form
+   * ("does NOT determine whether a proposed use is permitted") is allowed,
+   * so the affirmative patterns are matched and the negated ones exempted.
+   */
+  it.each([
+    "RS-3",
+    "B3-2",
+    "M1-2",
+    "C1-1.5",
+    "DX-10",
+    "PD 1376",
+    "PMD 11",
+  ])(
+    "never asserts what uses are allowed in %s",
+    (zoneClass) => {
+      const report = generateReportData(
+        makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+        [makeProgram()],
+        { zones, zoneNames, cityZoning: { zoneClass, zoneType: null } },
+      );
+
+      const copy = JSON.stringify(report);
+      // Strip the sanctioned disclaimers so only affirmative claims remain.
+      const affirmative = copy
+        .replace(/does not determine whether a proposed use is permitted/gi, "")
+        .replace(/does not establish that a proposed use is permitted/gi, "")
+        .replace(/Verify whether a proposed use is permitted/gi, "")
+        .replace(/does not classify the proposed activity/gi, "");
+
+      for (const pattern of [
+        /permitted by[- ]right/i,
+        /uses? (?:are|is) permitted/i,
+        /uses? (?:are|is) allowed/i,
+        /uses? (?:are|is) prohibited/i,
+        /most business uses/i,
+        /Use Compatibility/i,
+      ]) {
+        expect(affirmative).not.toMatch(pattern);
+      }
+    },
+  );
+
   it("puts published zoning and a verification action first in site reports", () => {
     const report = generateReportData(
       makeState({ projectGoals: ["rehab"], projectType: "rehab" }),
