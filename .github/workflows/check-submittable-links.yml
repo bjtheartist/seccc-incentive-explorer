@@ -1,4 +1,4 @@
-name: Check Submittable links
+name: Check program links
 
 on:
   schedule:
@@ -35,3 +35,29 @@ jobs:
           if [ "$broken" != "0" ]; then
             echo "::warning::$broken Submittable portal(s) broken — see public/data/link-health.json"
           fi
+
+      # Official-source links (program.url / program.sourceUrl) went unchecked
+      # until 2026-08-09, which is how four hard 404s sat in production
+      # undetected. This step FAILS on `broken` — a program card pointing a user
+      # at a 404 is worse than a dead apply button. `blocked` never fails the
+      # job: it means a bot filter stopped the probe, not that the page is gone,
+      # and scoring it as a defect would publish an absence as a finding.
+      - name: Fail on dead official-source links
+        run: |
+          node -e "
+            const d = require('./public/data/link-health.json');
+            const sources = d.sources || [];
+            const dead = sources.filter((s) => s.status === 'broken');
+            const blocked = sources.filter((s) => s.status === 'blocked');
+            for (const s of dead) {
+              console.log('::error::' + s.programId + '.' + s.field + ' -> HTTP ' + s.httpStatus + '  ' + s.url);
+            }
+            for (const s of blocked) {
+              console.log('::notice::' + s.programId + '.' + s.field + ' inconclusive (HTTP ' + s.httpStatus + ', bot filter)  ' + s.url);
+            }
+            if (dead.length) {
+              console.error(dead.length + ' official-source link(s) dead — fix the program record.');
+              process.exit(1);
+            }
+            console.log('official-source links: ' + sources.length + ' checked, 0 dead, ' + blocked.length + ' inconclusive.');
+          "

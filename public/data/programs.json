@@ -25,10 +25,30 @@
       "Building permits (if applicable)"
     ],
     "documentSpecs": [
-      { "id": "proof-of-site-control", "label": "Proof of property ownership or lease", "acceptedTypes": [], "multi": false },
-      { "id": "project-plan-and-budget", "label": "Detailed project plan and budget", "acceptedTypes": [], "multi": false },
-      { "id": "contractor-bids", "label": "Contractor bids (minimum 2)", "acceptedTypes": [], "multi": true },
-      { "id": "building-permits", "label": "Building permits (if applicable)", "acceptedTypes": [], "multi": false }
+      {
+        "id": "proof-of-site-control",
+        "label": "Proof of property ownership or lease",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "project-plan-and-budget",
+        "label": "Detailed project plan and budget",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "contractor-bids",
+        "label": "Contractor bids (minimum 2)",
+        "acceptedTypes": [],
+        "multi": true
+      },
+      {
+        "id": "building-permits",
+        "label": "Building permits (if applicable)",
+        "acceptedTypes": [],
+        "multi": false
+      }
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html",
@@ -184,16 +204,17 @@
     "name": "Illinois Opportunity Zones",
     "level": "State",
     "zoneKey": "federalOZ",
-    "summary": "Illinois supports federal Opportunity Zone investments through DCEO discretionary grants (Regional Site Readiness, OZ capital grants) and scoring preference for projects in designated zones. A new round of IL-nominated zones takes effect January 1, 2027 under OZ 2.0.",
+    "summary": "Federal Opportunity Zone incentive: investors who reinvest capital gains through a Qualified Opportunity Fund into a designated zone receive tax reductions scaled to how long the investment is held. Illinois' current zones remain active for investment; a new round of IL-nominated zones takes effect January 1, 2027 under OZ 2.0.",
     "whoQualifies": "Investors deploying capital gains through QOFs in Illinois-designated zones, and developers/businesses seeking DCEO discretionary support for OZ projects (especially affordable housing).",
     "benefits": [
-      "DCEO discretionary grants and scoring preference for OZ projects",
-      "Stacks with federal OZ tax benefits",
-      "Additional state support for affordable housing projects in OZs"
+      "Federal capital-gains tax reduction scaled to the holding period",
+      "Deferral of the original gain reinvested through a Qualified Opportunity Fund",
+      "Illinois' currently designated zones remain available for investment"
     ],
     "howToApply": [
-      "Follow federal QOF requirements",
-      "Contact Illinois DCEO for state OZ grants and scoring preferences",
+      "Confirm the site is in a designated zone using the U.S. Census Bureau Geocoder",
+      "Invest through a Qualified Opportunity Fund holding at least 90% of its assets in Opportunity Zones",
+      "Claim the benefit through IRS filings",
       "Watch for OZ 2.0 IL nominations (effective 1/1/2027)"
     ],
     "requiredDocs": [
@@ -202,7 +223,7 @@
       "Investment documentation",
       "Property/business records in OZ census tracts"
     ],
-    "contact": "Illinois DCEO: (217) 782-7500",
+    "contact": "Illinois DCEO — opportunityzones@illinois.gov",
     "url": "https://dceo.illinois.gov/oppzn.html",
     "sourceUrl": "https://dceo.illinois.gov/oppzn.html",
     "status": "active",
@@ -229,7 +250,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "DCEO grants + federal OZ stacking",
     "fastestConfirmingStep": "Email opportunityzones@illinois.gov or call DCEO (217) 782-7500",
     "oz2Note": "Illinois must nominate ~238 new OZ tracts in H2 2026, effective 1/1/2027. Existing IL OZ boundaries valid through 12/31/2026.",
@@ -304,7 +325,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Up to 9.25% sales tax exemption + 0.5% investment credit + utility exemptions",
     "fastestConfirmingStep": "Email ezadministrator@cityofchicago.org to confirm Enterprise Zone status",
     "expirationNote": "All six Chicago Enterprise Zones (I-VI) expire 2030. Recertification window opens 2028.",
@@ -366,13 +387,48 @@
       "Business financial statements (to determine reimbursement tier)"
     ],
     "documentSpecs": [
-      { "id": "sbif-application", "label": "Completed SBIF application", "acceptedTypes": [], "multi": false },
-      { "id": "proof-of-site-control", "label": "Proof of property ownership or lease (minimum 5 years remaining)", "acceptedTypes": [], "multi": false },
-      { "id": "contractor-bids", "label": "Two contractor bids for proposed work", "acceptedTypes": [], "multi": true },
-      { "id": "building-permits", "label": "Building permits", "acceptedTypes": [], "multi": false },
-      { "id": "w9-form", "label": "W-9 form", "acceptedTypes": [], "multi": false },
-      { "id": "certificate-of-insurance", "label": "Certificate of insurance", "acceptedTypes": [], "multi": false },
-      { "id": "financial-statements", "label": "Business financial statements (to determine reimbursement tier)", "acceptedTypes": [], "multi": false }
+      {
+        "id": "sbif-application",
+        "label": "Completed SBIF application",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "proof-of-site-control",
+        "label": "Proof of property ownership or lease (minimum 5 years remaining)",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "contractor-bids",
+        "label": "Two contractor bids for proposed work",
+        "acceptedTypes": [],
+        "multi": true
+      },
+      {
+        "id": "building-permits",
+        "label": "Building permits",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "w9-form",
+        "label": "W-9 form",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "certificate-of-insurance",
+        "label": "Certificate of insurance",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "financial-statements",
+        "label": "Business financial statements (to determine reimbursement tier)",
+        "acceptedTypes": [],
+        "multi": false
+      }
     ],
     "contact": "SomerCor (SBIF Administrator): (312) 360-3384",
     "url": "https://somercor.com/sbif/",
@@ -491,7 +547,8 @@
       "50% of state withholding for new jobs created",
       "25% of state withholding for retained jobs",
       "Additional 25% boost for projects in underserved areas (total up to 75% on new-hire withholding)",
-      "Credits available for up to 10 years"
+      "10% credit on new employee training costs",
+      "Tier I: up to 10 years of benefits. Tier II: up to 15 years"
     ],
     "howToApply": [
       "Submit EDGE application to Illinois DCEO",
@@ -505,7 +562,7 @@
       "Job creation/retention projections",
       "Capital investment documentation"
     ],
-    "contact": "Illinois DCEO: (217) 782-7500",
+    "contact": "Illinois DCEO — CEO.EDGE@illinois.gov",
     "url": "https://dceo.illinois.gov/expandrelocate/incentives/edge.html",
     "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/edge.html",
     "status": "active",
@@ -537,7 +594,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "50% withholding (new hires) / 25% (retained) / +25% underserved-area boost",
     "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about EDGE eligibility",
     "boundaryDisclaimer": "The state-incentive zone overlay shown on the map is a high-unemployment census-tract proxy, not an official EDGE zone designation. EDGE is project-by-project, not zone-based.",
@@ -620,7 +677,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Negotiated tax credits across 4 investment/job tiers",
     "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about REV eligibility",
     "boundaryDisclaimer": "The state-incentive zone overlay is a high-unemployment census-tract proxy, not an official REV zone designation. REV is project-by-project, not zone-based.",
@@ -650,12 +707,13 @@
     "level": "State",
     "zoneKey": "stateIncentiveZones",
     "summary": "MICRO (Manufacturing Illinois Chips for Real Opportunity) supports semiconductor and microchip-related businesses with income tax credits, training, and infrastructure support. Codified at 35 ILCS 45.",
-    "whoQualifies": "Semiconductor / microchip manufacturers, packagers, testers, or supply-chain firms investing at least $2.5M and creating the lesser of 50 jobs or 10% of worldwide baseline.",
+    "whoQualifies": "Semiconductor / microchip manufacturers, packagers, testers, or supply-chain firms, and companies doing quantum-computing research and development or making component parts for quantum computers, investing at least $2.5M and creating the lesser of 50 jobs or 10% of worldwide baseline.",
     "benefits": [
-      "Income tax credits for qualifying investments",
-      "Workforce training support",
-      "Infrastructure development assistance",
-      "Enhanced credit value for underserved-area projects"
+      "75% payroll tax withholding retention (100% in underserved or energy-transition areas)",
+      "10% credit on new employee training costs",
+      "50% construction jobs credit",
+      "0.5% investment credit",
+      "Tier I: up to 20 years of benefits. Tier II: up to 30 years"
     ],
     "howToApply": [
       "Contact Illinois DCEO for program details",
@@ -667,7 +725,7 @@
       "Business description and semiconductor connection",
       "Investment and hiring projections"
     ],
-    "contact": "Illinois DCEO: (217) 782-7500",
+    "contact": "Illinois DCEO — CEO.MICRO@illinois.gov",
     "url": "https://dceo.illinois.gov/expandrelocate/incentives/micro.html",
     "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/micro.html",
     "status": "active",
@@ -693,8 +751,8 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "Negotiated income tax credits + training/infrastructure support",
+    "lastVerifiedAt": "2026-08-09",
+    "benefitRange": "75% payroll withholding (100% underserved) + training, construction, and investment credits",
     "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about MICRO eligibility",
     "boundaryDisclaimer": "The state-incentive zone overlay is a high-unemployment census-tract proxy, not an official MICRO zone designation. MICRO is project-by-project.",
     "verificationSteps": [
@@ -722,8 +780,8 @@
     "name": "Data Center Tax Incentive",
     "level": "State",
     "zoneKey": "stateIncentiveZones",
-    "summary": "Illinois offers sales tax exemptions and construction-wage tax credits for data center operations to attract tech infrastructure investment. Note: a 2-year suspension on new project certifications is in effect from July 1, 2026 to June 30, 2028 (Pritzker, May 2026). Existing certifications are unaffected.",
-    "whoQualifies": "Data center operators and technology companies establishing or expanding data center facilities in Illinois. Currently certified projects continue receiving benefits during the suspension period.",
+    "summary": "Illinois offers sales tax exemptions and construction-wage tax credits for data center operations to attract tech infrastructure investment. Per the Governor's directive of June 5, 2026, DCEO is no longer processing new applications; no resumption date has been published. Existing certifications are unaffected.",
+    "whoQualifies": "Data center operators and technology companies making a capital investment of at least $250 million over a 60-month period, creating 20 or more new full-time jobs paid at 120% of county median wage, and meeting carbon-neutral or green-building certification. Currently certified projects continue receiving benefits during the pause.",
     "benefits": [
       "Sales tax exemption on qualifying equipment",
       "20% credit on construction wages for projects in underserved areas",
@@ -740,7 +798,7 @@
       "Facility plans and equipment lists",
       "Investment projections"
     ],
-    "contact": "Illinois DCEO: (217) 782-7500",
+    "contact": "Illinois DCEO — CEO.Datacenters@illinois.gov",
     "url": "https://dceo.illinois.gov/expandrelocate/incentives/datacenters.html",
     "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/datacenters.html",
     "status": "verify",
@@ -766,11 +824,11 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Sales tax exemption on equipment + 20% construction wage credit (underserved areas)",
     "fastestConfirmingStep": "Call DCEO at (217) 782-7500; verify suspension status",
     "boundaryDisclaimer": "The state-incentive zone overlay is a high-unemployment census-tract proxy, not an official Data Center zone designation.",
-    "suspensionNote": "New project certifications suspended July 1, 2026 – June 30, 2028. Existing certifications unaffected. Illinois Senate is debating earlier sunset.",
+    "suspensionNote": "New applications are not being processed. DCEO cites the Governor's directive of June 5, 2026 and publishes no date for resuming intake.",
     "verificationSteps": [
       {
         "label": "IDOR Business Incentives Reporting",
@@ -826,7 +884,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Free corridor services (streetscaping, marketing, safety)",
     "fastestConfirmingStep": "Look up your SSA on the city's Provider List",
     "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
@@ -939,7 +997,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "10% assessment (vs. 25%) for 10 years",
     "fastestConfirmingStep": "Call Cook County Assessor at (312) 443-7550",
     "sourceUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
@@ -981,7 +1039,7 @@
     "level": "County",
     "zoneKey": "",
     "summary": "The Catalyst Grant provides up to $100,000 to established small businesses in Cook County for equipment, facilities, and hiring — funded through ARPA dollars.",
-    "whoQualifies": "For-profit businesses in Cook County with at least 1 full-time employee besides owner, annual revenue between $500K and $10M, and demonstrated growth in net income and employee count.",
+    "whoQualifies": "For-profit businesses in Cook County reporting at least $500,000 in annual revenue with demonstrated growth in net income and employee count. (Cook County's published eligibility states a $500,000 revenue minimum; it does not state a revenue maximum or a minimum employee count.)",
     "benefits": [
       "Up to $100,000 grant per business",
       "Covers equipment (machinery, computers, POS systems)",
@@ -989,10 +1047,8 @@
       "Covers people (salaries for new hires, recruitment costs)"
     ],
     "howToApply": [
-      "Watch for application windows at cookcountysmallbiz.org",
-      "Submit application with business financials and growth plan",
-      "Must demonstrate revenue growth and job creation",
-      "Awards announced after review period"
+      "No round is currently open — the County does not anticipate grant programs in 2026 or 2027",
+      "Confirm current status with Cook County Small Business Source before planning around this program"
     ],
     "requiredDocs": [
       "Business financial statements (2 years)",
@@ -1024,16 +1080,17 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Up to $100,000",
-    "fastestConfirmingStep": "Check cookcountysmallbiz.org for Round 3 announcements",
+    "fastestConfirmingStep": "Confirm with Cook County Small Business Source whether any future round has been announced",
     "sourceUrl": "https://cookcountysmallbiz.org/catalystgrant-2/",
-    "status": "active",
+    "status": "lapsed",
     "expirationNote": "Round 2 closed Nov 14, 2025; disbursements spring 2026. Round 3 timing TBD.",
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "sunsetWarning": "The one application window opened September 25, 2025 and closed November 14, 2025; awards were notified May 22, 2026. Cook County states it does not anticipate grant programs in 2026 or 2027."
   },
   {
     "id": "cpace",
@@ -1090,7 +1147,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Up to 100% project financing (30-year terms)",
     "fastestConfirmingStep": "Call (312) 603-1000 about C-PACE eligibility",
     "sourceUrl": "https://www.cookcountyil.gov/service/clean-energy-cpace-program",
@@ -1142,7 +1199,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Free advising (no cost)",
     "fastestConfirmingStep": "Visit cookcountysmallbiz.org to request an advisor",
     "sourceUrl": "https://cookcountysmallbiz.org/",
@@ -1204,7 +1261,7 @@
         "required": false
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Below-market property acquisition + Reclaiming Chicago pipeline",
     "fastestConfirmingStep": "Call CCLBA at (312) 603-8015 or email Info@CookCountyLandBank.org",
     "personas": [
@@ -1240,11 +1297,36 @@
       "Contractor bids for construction/renovation"
     ],
     "documentSpecs": [
-      { "id": "nof-application", "label": "Completed NOF application", "acceptedTypes": [], "multi": false },
-      { "id": "project-budget-and-timeline", "label": "Project budget and timeline", "acceptedTypes": [], "multi": false },
-      { "id": "proof-of-site-control", "label": "Proof of property ownership or lease agreement", "acceptedTypes": [], "multi": false },
-      { "id": "business-plan", "label": "Business plan showing community impact", "acceptedTypes": [], "multi": false },
-      { "id": "contractor-bids", "label": "Contractor bids for construction/renovation", "acceptedTypes": [], "multi": true }
+      {
+        "id": "nof-application",
+        "label": "Completed NOF application",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "project-budget-and-timeline",
+        "label": "Project budget and timeline",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "proof-of-site-control",
+        "label": "Proof of property ownership or lease agreement",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "business-plan",
+        "label": "Business plan showing community impact",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "contractor-bids",
+        "label": "Contractor bids for construction/renovation",
+        "acceptedTypes": [],
+        "multi": true
+      }
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home/Apply.html",
@@ -1408,7 +1490,7 @@
     "level": "Federal",
     "zoneKey": "qct",
     "summary": "HUD-designated Qualified Census Tracts boost Low-Income Housing Tax Credits (LIHTC) by 30%, making affordable housing development more financially viable in these areas.",
-    "whoQualifies": "Developers and investors building or substantially rehabilitating affordable rental housing in QCT-designated census tracts. 50%+ of households must earn below 60% of area median income.",
+    "whoQualifies": "Developers and investors building or substantially rehabilitating affordable rental housing in QCT-designated census tracts. A tract qualifies if 50%+ of households earn below 60% of Area Median Gross Income OR the poverty rate is 25% or more — the two tests are alternatives.",
     "benefits": [
       "130% boost on LIHTC eligible basis (30% more tax credits)",
       "Makes affordable housing projects more financially viable",
@@ -1464,7 +1546,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "130% LIHTC basis boost (30% more credits)",
     "fastestConfirmingStep": "Call IHDA at (312) 836-5200 about QCT LIHTC allocation",
     "sourceUrl": "https://www.huduser.gov/portal/datasets/qct.html",
@@ -1500,7 +1582,7 @@
       "Class L application through Cook County Assessor (separate process)"
     ],
     "contact": "DPD Historic Preservation: (312) 744-3200",
-    "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/landmark.html",
+    "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/hist.html",
     "sourceUrl": "https://www.chicago.gov/content/dam/city/depts/zlup/Historic_Preservation/Publications/Chicago_Landmarks_Ordinance_2025.pdf",
     "status": "active",
     "contacts": [
@@ -1525,7 +1607,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Class L: 10% assessment for 10 years (administered by Cook County Assessor)",
     "fastestConfirmingStep": "Call DPD Historic Preservation at (312) 744-3200",
     "boundaryDisclaimer": "landmark-districts.geojson holds 59 features; current count is 62 (2025 Landmarks Ordinance). Refresh from data.cityofchicago.org.",
@@ -1559,7 +1641,7 @@
       "Architectural plans for proposed rehabilitation",
       "Cost documentation for qualified rehabilitation expenditures"
     ],
-    "contact": "Illinois SHPO: (217) 785-4512",
+    "contact": "Illinois SHPO: (217) 782-4836",
     "url": "https://www.nps.gov/subjects/taxincentives/index.htm",
     "contacts": [
       {
@@ -1595,7 +1677,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "20% federal tax credit (no cap)",
     "fastestConfirmingStep": "Call Illinois SHPO at (217) 785-4512 to confirm historic status",
     "sourceUrl": "https://www.nps.gov/subjects/taxincentives/index.htm",
@@ -1606,31 +1688,29 @@
   },
   {
     "id": "microMarketRecovery",
-    "name": "Micro Market Recovery Program",
+    "name": "Chicago Neighborhood Recovery Program (CNRP, formerly MMRP)",
     "level": "City",
     "zoneKey": "microMarketRecovery",
     "summary": "Migrated from DPD to the Department of Housing in 2024-2025. Now primarily a homeownership program offering $30,000 down-payment assistance grants in 19 designated MMRP areas, delivered via Neighborhood Housing Services of Chicago. The original commercial-storefront framing is no longer accurate.",
-    "whoQualifies": "Homebuyers purchasing in one of the 19 designated MMRP areas (now includes West Englewood, Roseland, Woodlawn, Fuller Park, North Lawndale, South Lawndale). Income and counseling requirements apply via NHS Chicago.",
+    "whoQualifies": "Homebuyers purchasing in one of the 11 designated target areas. Income and counseling requirements apply.",
     "benefits": [
       "$30,000 down-payment assistance grant for qualifying homebuyers",
       "Free homebuyer counseling and education",
       "Connection to other city homeownership programs"
     ],
     "howToApply": [
-      "Confirm the property is in an MMRP area",
-      "Contact Neighborhood Housing Services (NHS) Chicago",
-      "Complete homebuyer counseling",
-      "Submit purchase assistance application"
+      "Confirm the property is in a designated target area",
+      "Contact DOH before planning around this program — NHS Chicago's purchase-assistance intake is closed and is no longer accepting applications"
     ],
     "requiredDocs": [
       "Proof of income and household size",
       "Homebuyer counseling certificate (NHS)",
       "Purchase contract for property in MMRP area"
     ],
-    "contact": "NHS Chicago — MMRP Purchase Assistance",
-    "url": "https://www.chicago.gov/city/en/depts/doh/provdrs/lenders/svcs/micro-market-recovery-program.html",
+    "contact": "Chicago DOH — James.Wheaton@cityofchicago.org (Project Manager, CNRP)",
+    "url": "https://www.chicago.gov/city/en/depts/doh/provdrs/developers/svcs/ChicagoNeighborhoodRecoveryProgram.html",
     "sourceUrl": "https://nhschicago.org/mmrp-purchase-assistance-grant/",
-    "status": "active",
+    "status": "verify",
     "contacts": [
       {
         "agency": "Chicago Department of Housing",
@@ -1660,8 +1740,8 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "$30,000 down-payment assistance",
+    "lastVerifiedAt": "2026-08-09",
+    "benefitRange": "$15,000 down-payment assistance, subject to fund availability",
     "fastestConfirmingStep": "Contact NHS Chicago about MMRP eligibility",
     "boundaryDisclaimer": "micro-market-recovery.geojson holds 13 features; current MMRP areas number 19 per chicago.gov/doh. Refresh required.",
     "expirationNote": "Program scope changed: this is now a homeownership program (Department of Housing), not a commercial storefront program. Treat references to corridor activation as historical.",
@@ -1696,7 +1776,7 @@
       "Building permits for new construction or renovations"
     ],
     "contact": "City of Chicago Department of Planning and Development: (312) 744-4190",
-    "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/industrial-corridors.html",
+    "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/repositioning-chicago-s-industrial-corridors-for-today-s-economy.html",
     "contacts": [
       {
         "agency": "City of Chicago Department of Planning and Development",
@@ -1719,7 +1799,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Zoning protections + infrastructure priority",
     "fastestConfirmingStep": "Call DPD at (312) 744-4190 to verify Industrial Corridor status",
     "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/supp_info/repositioning-chicago-s-industrial-corridors-for-today-s-economy.html",
@@ -1731,7 +1811,7 @@
     "level": "City",
     "zoneKey": "ccsa",
     "summary": "The Commercial Corridor Storefront Activation Program supports capital improvements to vacant and existing commercial spaces in selected Chicago corridors and pairs the work with technical assistance. Awards, eligible costs, and current corridor availability must be confirmed with the program administrator.",
-    "whoQualifies": "Business owners, property owners, or nonprofits in good standing with the State of Illinois and City of Chicago whose physical property is located within an approved CCSAP corridor boundary. Applicant must have site control (ownership or permission from property owner).",
+    "whoQualifies": "Business owners, property owners, or nonprofits in good standing with the State of Illinois and City of Chicago whose physical property sits inside one of the 12 named eligible corridors on the City's storefront-activation site, each with published boundaries and a Corridor Lead agency. Applicant must have site control (ownership or permission from property owner).",
     "benefits": [
       "Reimbursable grants for capital improvements to storefronts",
       "Covers vacant and existing commercial spaces",
@@ -1740,11 +1820,10 @@
       "Grants awarded quarterly on a rolling basis"
     ],
     "howToApply": [
-      "Verify your property is within a currently approved CCSAP corridor boundary",
-      "Visit Chicago.gov/CCSA for application details",
-      "Contact Program Administrator Allies for Community Business for grant questions",
+      "Verify your property is inside one of the 12 published eligible corridors",
       "Connect with your Corridor Lead Agency for technical assistance",
-      "Submit application — accepted on a rolling basis, awarded quarterly"
+      "Contact Program Administrator Allies for Community Business for grant questions",
+      "Submit before the next quarterly deadline — 5 p.m. Friday, August 21, 2026"
     ],
     "requiredDocs": [
       "Proof of business ownership or nonprofit status",
@@ -1754,7 +1833,7 @@
       "Capital improvement project description and budget"
     ],
     "contact": "Allies for Community Business: (312) 275-3000",
-    "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/ccsa.html",
+    "url": "https://www.chicago.gov/city/en/sites/storefront-activation/home.html",
     "contacts": [
       {
         "agency": "Allies for Community Business (Program Administrator)",
@@ -1802,10 +1881,10 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "Reimbursement terms vary; confirm eligible costs and current availability before committing funds",
-    "fastestConfirmingStep": "Contact Allies for Community Business at granthelp@a4cb.org or (312) 275-3000 to confirm corridor eligibility",
-    "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/supp_info/ccsa.html",
+    "lastVerifiedAt": "2026-08-09",
+    "benefitRange": "Grants fund up to 75% of eligible project costs; applicant must show funding for at least the remaining 25%",
+    "fastestConfirmingStep": "Check your corridor and the next quarterly deadline on the City's storefront-activation site",
+    "sourceUrl": "https://www.chicago.gov/city/en/sites/storefront-activation/home.html",
     "status": "active",
     "applicationPortals": [
       {
@@ -1919,8 +1998,8 @@
       "Tax advisor review of current IRS guidance"
     ],
     "contact": "Verify with a tax professional; designations are published by DOE and IRS",
-    "url": "https://energycommunities.gov/energy-community-tax-credit-bonus/",
-    "sourceUrl": "https://energycommunities.gov/energy-community-tax-credit-bonus/",
+    "url": "https://www.irs.gov/credits-deductions/frequently-asked-questions-for-energy-communities",
+    "sourceUrl": "https://www.irs.gov/credits-deductions/frequently-asked-questions-for-energy-communities",
     "status": "active",
     "contacts": [
       {
@@ -1950,7 +2029,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-06-12",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "+10 points on ITC / +10% PTC",
     "fastestConfirmingStep": "Check the site on the official energy communities map, then confirm project fit with a tax advisor",
     "personas": [
@@ -2037,7 +2116,8 @@
     "benefits": [
       "Direct cash refund for tax-exempt entities (elective pay)",
       "Ability to sell credits to taxable buyers (transferability)",
-      "Applies to §48E (clean electricity ITC), §30C (EV charging), §45Y (clean electricity PTC), and others"
+      "Applies to §48E (clean electricity ITC), §45Y (clean electricity PTC), and others",
+      "§30C (EV charging) is no longer available for new projects — property had to be placed in service by June 30, 2026"
     ],
     "howToApply": [
       "Pre-file registration through IRS Energy Credits Online (ECO) portal",
@@ -2069,7 +2149,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Cash monetization of clean-energy credits",
     "fastestConfirmingStep": "Pre-file at IRS Energy Credits Online before placing project in service",
     "verificationSteps": [
@@ -2111,7 +2191,7 @@
     "contact": "IRS",
     "url": "https://www.congress.gov/crs-product/IF12862",
     "sourceUrl": "https://www.congress.gov/crs-product/IF12862",
-    "status": "active",
+    "status": "sunset",
     "contacts": [
       {
         "agency": "Internal Revenue Service",
@@ -2134,10 +2214,10 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Up to $5.94/sf federal deduction",
     "fastestConfirmingStep": "Engage a §179D energy modeler before 6/30/2026 construction start",
-    "sunsetWarning": "§179D terminates for construction beginning after 6/30/2026 (OBBBA). Property owners considering qualifying work should act before that date.",
+    "sunsetWarning": "The IRS states §179D is terminated for property whose construction begins after June 30, 2026. That date has passed, so no new project can start and qualify; only construction starts before July 1, 2026 remain claimable.",
     "personas": [
       "growing",
       "developer"
@@ -2153,8 +2233,7 @@
     "benefits": [
       "Federally-guaranteed loans up to 5x the city's annual CDBG allocation",
       "30-year maturity (matching useful life)",
-      "FY 2026 fee: 0.58% of guaranteed amount",
-      "$250M of $400M FY 2026 authority prioritized for affordable housing"
+      "FY 2026 fee: 0.58% of guaranteed amount"
     ],
     "howToApply": [
       "Develop project concept with City of Chicago DPD",
@@ -2193,7 +2272,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Federally-guaranteed loan, 30-year term, 0.58% FY26 fee",
     "fastestConfirmingStep": "Discuss the project with Chicago DPD before approaching HUD",
     "personas": [
@@ -2216,7 +2295,8 @@
     "howToApply": [
       "Identify a local Qualified Issuer CDFI (Chicago Community Loan Fund, IFF, LISC)",
       "Engage CDFI on project underwriting and bond pool fit",
-      "CDFI structures financing and includes in bond issuance"
+      "CDFI structures financing and includes in bond issuance",
+      "Note: the current Qualified Issuer round opened June 30, 2026 and closed July 8, 2026; awards are announced Fall 2026"
     ],
     "requiredDocs": [
       "Project pro forma and use of funds",
@@ -2250,7 +2330,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Long-term fixed-rate capital deployed through certified CDFIs",
     "personas": [
       "developer"
@@ -2495,7 +2575,7 @@
     "summary": "25% federal investment tax credit for semiconductor manufacturing facilities or specialized equipment. Eligible for direct pay. Investment must be initiated by end of 2026 to qualify.",
     "whoQualifies": "Businesses making qualified investments in semiconductor manufacturing facilities or specialized semiconductor manufacturing equipment.",
     "benefits": [
-      "25% federal investment tax credit",
+      "35% federal investment tax credit for property placed in service after 2025",
       "Eligible for IRS direct pay (cash refund) without elective-pay restrictions",
       "Stacks with state MICRO program and Illinois Quantum Enterprise Zone incentives"
     ],
@@ -2510,8 +2590,8 @@
       "IRS direct-pay pre-filing registration"
     ],
     "contact": "IRS Advanced Manufacturing Investment Credit",
-    "url": "https://www.irs.gov/businesses/advanced-manufacturing-investment-credit",
-    "sourceUrl": "https://www.irs.gov/businesses/advanced-manufacturing-investment-credit",
+    "url": "https://www.irs.gov/credits-deductions/advanced-manufacturing-investment-credit",
+    "sourceUrl": "https://www.irs.gov/instructions/i3468",
     "status": "active",
     "contacts": [
       {
@@ -2535,8 +2615,8 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "25% federal investment tax credit",
+    "lastVerifiedAt": "2026-08-09",
+    "benefitRange": "35% federal investment tax credit (property placed in service after 2025)",
     "fastestConfirmingStep": "Consult a tax advisor before initiating qualified investment",
     "personas": [
       "developer"
@@ -2551,7 +2631,7 @@
     "whoQualifies": "Illinois small businesses including underserved markets. Loans up to $1.5M with state guarantees; equity investments through certified VC funds.",
     "benefits": [
       "Loan participation and guarantee program through partner lenders",
-      "Up to $1.5M in state-guaranteed loans",
+      "State participation or guarantee from $10,000 up to $2,000,000, set by job creation/retention, project or loan size, and risk",
       "Equity investment through INVENT Venture Capital Program",
       "Climate Bank Finance LPP for clean-energy projects"
     ],
@@ -2590,8 +2670,8 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "Loans up to $1.5M (state guarantee) + equity through INVENT VCP",
+    "lastVerifiedAt": "2026-08-09",
+    "benefitRange": "State participation/guarantee $10K–$2M + equity through INVENT VCP",
     "fastestConfirmingStep": "Visit dceo.illinois.gov/smallbizassistance/advantageillinois for current partner lenders",
     "personas": [
       "starting",
@@ -2603,7 +2683,7 @@
     "name": "EDA Build to Scale (B2S)",
     "level": "Federal",
     "zoneKey": "",
-    "summary": "$500K-$5M federal grants for regional tech-ecosystem capacity. Applicants are nonprofits, EDOs, universities, or governments. FY 2026 cycle closed; next NOFO expected late summer 2026.",
+    "summary": "$500K-$5M federal grants for regional tech-ecosystem capacity. Applicants are nonprofits, EDOs, universities, or governments. The most recent competition is FY 2024, which closed October 28, 2024; EDA's program page announces no upcoming NOFO and no expected date.",
     "whoQualifies": "Nonprofits, economic development organizations, universities, and government entities building regional innovation capacity. SECCC could partner as a sub-awardee for entrepreneur capacity building.",
     "benefits": [
       "$500K – $5M federal grants",
@@ -2611,9 +2691,9 @@
       "3-year project periods"
     ],
     "howToApply": [
-      "Watch grants.gov for next Build to Scale NOFO (expected late summer 2026)",
-      "Form a regional coalition with university, EDO, and nonprofit partners",
-      "Submit application with matching funds commitment"
+      "No open opportunity — EDA announces no upcoming Build to Scale NOFO",
+      "Subscribe to EDA program news for any future funding announcement",
+      "Form a regional coalition with university, EDO, and nonprofit partners in the meantime"
     ],
     "requiredDocs": [
       "Coalition MOU and roles",
@@ -2641,7 +2721,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "$500K – $5M federal grants",
     "fastestConfirmingStep": "Monitor grants.gov for FY 2026 Build to Scale NOFO",
     "personas": [
@@ -2662,9 +2742,9 @@
     ],
     "howToApply": [
       "First obtain the underlying program certification (DCEO Enterprise Zone, REV, MICRO, HIB, AIM, Quantum, or RERZ designation)",
-      "Apply to IDOR for a BMEC tied to the project",
+      "Apply through the Zone Administrator for the zone where the project is located, or through the High Impact Business / DCEO Certified Entity project manager — not directly to IDOR",
       "Provide BMEC number to contractors/suppliers for tax-exempt material purchases",
-      "File quarterly reporting to IDOR"
+      "File annual reporting: the online system opens February 1 each year for the preceding calendar year"
     ],
     "requiredDocs": [
       "Underlying program certification (DCEO or zone administrator)",
@@ -2692,7 +2772,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Sales tax exemption on eligible building materials",
     "fastestConfirmingStep": "Call IDOR at 1-800-732-8866 after underlying program certification is in hand",
     "verificationSteps": [
@@ -2768,7 +2848,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "3% / 5% / 7% capital credit (tiered by investment)",
     "fastestConfirmingStep": "Call DCEO at (217) 782-7500 to scope AIM eligibility",
     "verificationSteps": [
@@ -2841,7 +2921,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Utility + sales tax exemptions + income tax credits",
     "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about Quantum EZ tenancy",
     "verificationSteps": [
@@ -2873,6 +2953,7 @@
     "howToApply": [
       "Contact Illinois DCEO with project concept",
       "Submit HIB application with investment and job creation plan",
+      "Obtain certification BEFORE project commencement, including before purchasing any building materials",
       "Negotiate designation agreement"
     ],
     "requiredDocs": [
@@ -2881,7 +2962,7 @@
       "Job creation/retention projections",
       "Financial statements"
     ],
-    "contact": "Illinois DCEO: (217) 782-7500",
+    "contact": "Illinois DCEO — Ben.Denney@illinois.gov",
     "url": "https://dceo.illinois.gov/expandrelocate/incentives/highimpactbusinessprogram.html",
     "sourceUrl": "https://dceo.illinois.gov/expandrelocate/incentives/highimpactbusinessprogram.html",
     "status": "active",
@@ -2901,7 +2982,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Sales + utility + manufacturing M&E exemptions + investment tax credit",
     "fastestConfirmingStep": "Call DCEO at (217) 782-7500 about HIB eligibility",
     "verificationSteps": [
@@ -2930,7 +3011,7 @@
     "level": "State",
     "zoneKey": "",
     "summary": "Rolling DCEO grants up to $75,000 (75% reimbursement) pairing Illinois small businesses with university researchers in AI, quantum, clean energy, advanced manufacturing, semiconductors, and life sciences. Round 3 announced Feb 2026 (~$2.6M available).",
-    "whoQualifies": "Illinois small businesses partnering with an Illinois university or research institution on an applied R&D project.",
+    "whoQualifies": "Illinois-based companies with 500 or fewer total employees partnering with an Illinois university or research institution on an applied R&D project. DCEO names the eligible sectors as agribusiness/agtech, energy, information technology, life sciences/healthcare, manufacturing, and transportation/logistics.",
     "benefits": [
       "Up to $75,000 grant (75% reimbursement)",
       "Connects small businesses with university research expertise",
@@ -2938,7 +3019,7 @@
     ],
     "howToApply": [
       "Identify a university research partner",
-      "Submit application to DCEO during open round",
+      "Apply through the Illinois Science & Technology Coalition portal, which administers intake and review — applications are not submitted to DCEO",
       "Execute project and request reimbursement"
     ],
     "requiredDocs": [
@@ -2947,7 +3028,7 @@
       "Small business documentation"
     ],
     "contact": "Illinois DCEO: (217) 782-7500",
-    "url": "https://innovate-illinois.com/dceo-incentives/",
+    "url": "https://dceo.illinois.gov/whyillinois/innovation-vouchers.html",
     "sourceUrl": "https://innovate-illinois.com/dceo-incentives/",
     "status": "active",
     "contacts": [
@@ -2972,7 +3053,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Up to $75,000 (75% reimbursement)",
     "fastestConfirmingStep": "Visit innovate-illinois.com/dceo-incentives for next round timing",
     "personas": [
@@ -3102,7 +3183,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Up to 35% transferable credit",
     "fastestConfirmingStep": "Pre-apply with the Illinois Film Office before production begins",
     "personas": [
@@ -3151,7 +3232,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "20% transferable credit on qualified IL expenditures",
     "fastestConfirmingStep": "Pre-apply with DCEO before production begins",
     "personas": [
@@ -3182,7 +3263,7 @@
     "contact": "DCEO Office of Economic Equity",
     "url": "https://dceo.illinois.gov/oe3/cannabisequity/cannabis-social-equity-r3.html",
     "sourceUrl": "https://dceo.illinois.gov/oe3/cannabisequity/cannabis-social-equity-r3.html",
-    "status": "active",
+    "status": "lapsed",
     "contacts": [
       {
         "agency": "Illinois DCEO Office of Economic Equity",
@@ -3199,12 +3280,13 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Forgivable loans (size varies by round)",
     "fastestConfirmingStep": "Monitor DCEO OE3 page for next round",
     "personas": [
       "starting"
-    ]
+    ],
+    "sunsetWarning": "Round III applications closed September 25, 2025 and awards are complete — $31.8 million to 95 qualified businesses. No Round IV has been announced."
   },
   {
     "id": "r3Grants",
@@ -3218,9 +3300,9 @@
       "Multi-year commitments common"
     ],
     "howToApply": [
-      "Watch r3.illinois.gov for next NOFO (next deadline March 6, 2026)",
-      "Confirm service area is in an R3-designated community",
-      "Submit application aligned to one of the five R3 priority areas"
+      "No round is currently open — the March 6, 2026 deadline has passed and both the $35M and $15M opportunities are listed as expired",
+      "Watch r3.illinois.gov for the next NOFO",
+      "Confirm service area is in an R3-designated community"
     ],
     "requiredDocs": [
       "Organizational documentation (nonprofit or government)",
@@ -3228,7 +3310,7 @@
       "Service area documentation"
     ],
     "contact": "Illinois R3 Program",
-    "url": "https://r3.illinois.gov/news/restore-reinvest-renew-r3-program-grants-apply-now/",
+    "url": "https://r3.illinois.gov/",
     "sourceUrl": "https://r3.illinois.gov/news/restore-reinvest-renew-r3-program-grants-apply-now/",
     "status": "active",
     "contacts": [
@@ -3253,7 +3335,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Grants (size varies by NOFO)",
     "fastestConfirmingStep": "Monitor r3.illinois.gov for next NOFO",
     "personas": [
@@ -3357,7 +3439,7 @@
     "level": "County",
     "zoneKey": "",
     "summary": "A non-renewable 6b variant for long-tenured industrial owners facing economic hardship. Requires both a municipal Special Circumstances resolution AND a Cook County Board resolution.",
-    "whoQualifies": "Industrial owners who have occupied the building for at least 10 years under the same ownership and can demonstrate that without SER designation the business would not be economically viable.",
+    "whoQualifies": "Industrial owners whose industrial enterprise has occupied the premises at the same location for at least ten consecutive years, and who can demonstrate that without SER designation the business would not be economically viable. The ten-year test runs with the occupying enterprise, not with continuous ownership.",
     "benefits": [
       "10% assessment for 10 years, 15% year 11, 20% year 12",
       "Preserves jobs at existing industrial facilities",
@@ -3408,7 +3490,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "10% assessment for 10 years (non-renewable)",
     "fastestConfirmingStep": "Call Assessor Incentives at (312) 603-7529 to discuss SER hardship case",
     "verificationSteps": [
@@ -3438,7 +3520,7 @@
     "level": "County",
     "zoneKey": "",
     "summary": "Same 12-year reduced assessment as 7a but for commercial projects with total costs over $2 million, in areas in need of commercial development.",
-    "whoQualifies": "Commercial property owners or developers undertaking new construction, substantial rehab, or reoccupancy in areas determined to need commercial development. Total project cost must exceed $2 million.",
+    "whoQualifies": "Commercial property owners or developers undertaking new construction, substantial rehab, or reoccupancy in areas determined to need commercial development. Total development costs exclusive of land must exceed $2 million — land cost does not count toward the threshold.",
     "benefits": [
       "10% assessment years 1-10 (vs. 25%)",
       "15% year 11, 20% year 12",
@@ -3489,7 +3571,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "10% assessment for 10 years, then 15% / 20%",
     "fastestConfirmingStep": "Call Assessor Incentives at (312) 603-7529 to scope 7b qualification",
     "verificationSteps": [
@@ -3528,7 +3610,7 @@
     ],
     "howToApply": [
       "Obtain municipal resolution of support",
-      "File 7c Eligibility Application with the Assessor",
+      "File the 7c Eligibility Application with BOTH the Cook County Assessor and the Bureau of Economic Development, before construction, rehabilitation, or reoccupation begins",
       "Demonstrate viability gap (real estate tax burden, vacancy, market conditions)",
       "File Incentive Application after completion"
     ],
@@ -3564,7 +3646,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "10% assessment for 5 years (renewable once)",
     "fastestConfirmingStep": "Call Assessor Incentives at (312) 603-7529 to assess 7c fit",
     "verificationSteps": [
@@ -3587,7 +3669,7 @@
     "level": "County",
     "zoneKey": "",
     "summary": "Class 8 grants the same 12-year reduced assessment as 6b/7b but is restricted to industrial and commercial property in severely economically depressed areas — primarily the five south-suburban townships: Bloom, Bremen, Calumet, Rich, and Thornton.",
-    "whoQualifies": "Industrial or commercial owners/developers in Bloom, Bremen, Calumet, Rich, or Thornton Township.",
+    "whoQualifies": "Industrial or commercial owners/developers in Bloom, Bremen, Calumet, Rich, or Thornton Township, OR anywhere in Cook County in an area the Assessor certifies — on application of the local governing body — as in need of substantial revitalization. Property obtained through the Cook County Tax Reactivation Project may also qualify.",
     "benefits": [
       "10% assessment years 1-10 (vs. 25%)",
       "15% year 11, 20% year 12",
@@ -3632,7 +3714,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "10% assessment for 10 years, then 15% / 20%",
     "fastestConfirmingStep": "Verify township at cookviewer.cookcountyil.gov, then call (312) 603-7529",
     "boundaryDisclaimer": "Class 8 township eligibility layer not yet built. Township boundaries are available from Cook Central or ChicagoCityscape/pins GitHub; verify township eligibility with the Cook County Assessor before relying on this program.",
@@ -3663,11 +3745,11 @@
     "level": "County",
     "zoneKey": "",
     "summary": "Class 8 variant calibrated for semiconductor and microchip manufacturing investments. Connects to the State of Illinois MICRO program and federal CHIPS Act incentives.",
-    "whoQualifies": "Semiconductor, microchip, or related supply-chain manufacturers investing in Cook County. Coordinates with state MICRO and federal §48D credits.",
+    "whoQualifies": "Businesses certified under the State of Illinois MICRO Act, in a municipally designated MICRO area, meeting the statutory investment and job floors (tiers of $1.5B/500 jobs, $300M/150 jobs, $100M/75 jobs, or $2.5M/50 jobs) with wages at least 120% of the county average. Coordinates with state MICRO and federal §48D credits.",
     "benefits": [
-      "10% assessment for 10 years (vs. 25%)",
+      "10% assessment level for 30 years (vs. 25%), running from the later of construction completion or submission of an executed Class 8 MICRO agreement",
       "Stacks effectively with state MICRO credit and federal §48D ITC",
-      "Designed to support advanced manufacturing investments"
+      "Not renewable"
     ],
     "howToApply": [
       "Coordinate with the Cook County Assessor and DCEO MICRO team early",
@@ -3705,8 +3787,8 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "10% assessment for 10 years (stacks with state MICRO + federal §48D)",
+    "lastVerifiedAt": "2026-08-09",
+    "benefitRange": "10% assessment for 30 years (stacks with state MICRO + federal §48D)",
     "fastestConfirmingStep": "Call Assessor Incentives at (312) 603-7529 to scope 8a MICRO",
     "personas": [
       "developer"
@@ -3739,7 +3821,7 @@
       "Use plan for the remediated site"
     ],
     "contact": "Cook County Assessor Incentives Department: (312) 603-7529",
-    "url": "https://www.cookcountyassessor.com/form-document/class-c",
+    "url": "https://www.cookcountyassessoril.gov/form-document/class-c",
     "sourceUrl": "https://www.cookcountyassessor.com/form-document/class-c",
     "status": "active",
     "contacts": [
@@ -3770,7 +3852,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "10% assessment on land + improvements for 10 years",
     "fastestConfirmingStep": "Confirm IEPA NFR letter is in hand, then call (312) 603-7529",
     "verificationSteps": [
@@ -3857,7 +3939,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "10% assessment on improvements for 10 years (12-year total schedule)",
     "fastestConfirmingStep": "Call DPD Historic Preservation at (312) 744-3200 to verify landmark eligibility",
     "verificationSteps": [
@@ -3886,18 +3968,18 @@
     "name": "Affordable Housing Special Assessment Program (AHSAP)",
     "level": "County",
     "zoneKey": "",
-    "summary": "AHSAP (administered by the Cook County Assessor) freezes the assessed value of qualifying multifamily rental buildings that maintain affordability. Replaces legacy Class 9 for most use cases.",
-    "whoQualifies": "Owners of multifamily rental buildings (typically 7+ units) who commit to affordability set-asides and complete qualifying capital investment. Three tiers (Tier 1/2/3) calibrated to neighborhood market conditions.",
+    "summary": "AHSAP (administered by the Cook County Assessor) reduces the assessed value of qualifying multifamily rental buildings that maintain affordability. Replaces legacy Class 9 for most use cases.",
+    "whoQualifies": "Owners of multifamily rental buildings (typically 7+ units) who commit to affordability set-asides and complete qualifying capital investment. Three tiers set by the share of units renting at or below 60% AMI: Tier 15 (15–34% of units), Tier 35 (35%+), and Low Affordability Community.",
     "benefits": [
-      "Assessment reduction tied to affordability commitment",
-      "Tier 1 / Tier 3 thresholds based on per-square-foot capital expenditure",
-      "2026 thresholds: $8.16/sf (Tier 1) and $12.75/sf (Tier 3) for compliance + replacement of 2 primary systems",
+      "25% assessed-value reduction under Tier 15; 35% under Tier 35",
+      "2026 capital-expenditure thresholds: $8.16/sf (Tier 15) and $12.75/sf (Tier 35), with replacement of 2 primary building systems",
+      "Low Affordability Community tier requires $61.20/sf and replacement of 5 primary building systems",
       "Multi-year benefit; renewable with continued compliance"
     ],
     "howToApply": [
-      "Confirm tier eligibility based on building location and affordability commitment",
-      "Submit Part 1 application by September 5 of the assessment year",
-      "Submit Part 2 application with capital expenditure documentation",
+      "Confirm tier eligibility based on the share of units renting at or below 60% AMI",
+      "Submit BOTH Part 1 and Part 2 no later than September 5 of the assessment year; Part 1 must be filed before the property is placed in service",
+      "Pay the filing fee: $750 for 1–3 buildings, $1,000 for 4–7, $1,500 for more than 7",
       "Maintain affordability covenant for duration of benefit"
     ],
     "requiredDocs": [
@@ -3907,7 +3989,7 @@
       "Documentation of replacement of 2 primary building systems",
       "Annual recertification of affordable units"
     ],
-    "contact": "Cook County Assessor — Affordable Housing: (312) 603-7529",
+    "contact": "Cook County Assessor — Affordable Housing: (312) 443-7550 / assessor.ahsap@cookcountyil.gov",
     "url": "https://www.cookcountyassessoril.gov/affordable-housing",
     "sourceUrl": "https://www.cookcountyassessoril.gov/affordable-housing",
     "status": "active",
@@ -3939,8 +4021,8 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "Assessment freeze, tiered by neighborhood market",
+    "lastVerifiedAt": "2026-08-09",
+    "benefitRange": "25% (Tier 15) or 35% (Tier 35) assessed-value reduction",
     "fastestConfirmingStep": "Call (312) 603-7529 or visit cookcountyassessoril.gov/affordable-housing before Sept 5 deadline",
     "expirationNote": "2026 Part 1 + Part 2 application deadline: September 5, 2026.",
     "personas": [
@@ -3952,18 +4034,17 @@
     "name": "Cook County Cannabis Development Grant",
     "level": "County",
     "zoneKey": "",
-    "summary": "$75,000 grants to social-equity cannabis license holders to support buildout and operations. Announced December 2025 with nine additional recipients; ongoing program through the Bureau of Economic Development.",
+    "summary": "Cook County grants to social-equity cannabis license holders to support buildout and operations, administered by the Bureau of Economic Development. The published application window ran May 23 to June 21, 2024; no current or upcoming round is announced.",
     "whoQualifies": "Social-equity cannabis license holders (dispensary, craft grow, transporter, infuser) operating in Cook County. Must meet Illinois Cannabis Regulation and Tax Act social-equity criteria.",
     "benefits": [
-      "$75,000 grant per recipient",
+      "Grants ranged from $75,000 to $150,000, with the amount dependent on business type",
       "Funds may be used for buildout, equipment, legal/compliance, working capital",
       "Pairs with state Cannabis Business Development Fund loans"
     ],
     "howToApply": [
-      "Watch for application windows announced via Cook County BED",
-      "Demonstrate Illinois social-equity status",
-      "Submit business plan and use-of-funds",
-      "Awards announced periodically by President's office"
+      "No round is currently open — the published window ran May 23 to June 21, 2024",
+      "Confirm with Cook County Bureau of Economic Development whether a future round is planned",
+      "Demonstrate Illinois social-equity status"
     ],
     "requiredDocs": [
       "Illinois Cannabis social-equity certification",
@@ -3972,9 +4053,9 @@
       "Tax returns / financials"
     ],
     "contact": "Cook County Bureau of Economic Development: (312) 603-1000",
-    "url": "https://www.cookcountyil.gov/agency/bureau-economic-development",
+    "url": "https://www.cookcountyil.gov/service/cannabis-development-grant",
     "sourceUrl": "https://www.cookcountyil.gov/news/cook-county-president-toni-preckwinkle-announces-nine-additional-recipients-cannabis",
-    "status": "active",
+    "status": "verify",
     "contacts": [
       {
         "agency": "Cook County Bureau of Economic Development",
@@ -3997,8 +4078,8 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "$75,000 per recipient",
+    "lastVerifiedAt": "2026-08-09",
+    "benefitRange": "$75,000–$150,000, depending on business type",
     "fastestConfirmingStep": "Call CCBED at (312) 603-1000 about upcoming rounds",
     "personas": [
       "starting"
@@ -4055,7 +4136,7 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
+    "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Grant award sized to project (program total $8.5M/year)",
     "fastestConfirmingStep": "Visit cookcountyil.gov/investincook for next call schedule",
     "personas": [
@@ -4068,8 +4149,8 @@
     "name": "Cook County Brownfield Redevelopment Assistance",
     "level": "County",
     "zoneKey": "",
-    "summary": "ARPA-funded brownfield assessment and remediation services for suburban Cook County property owners, administered by the Department of Environment and Sustainability. Pairs with Class C for full lifecycle benefit.",
-    "whoQualifies": "Qualified property owners in suburban Cook County (not the City of Chicago) with potential or known contamination. Coalition partners including SSMMA serve the south suburbs.",
+    "summary": "ARPA-funded brownfield assessment and remediation services for suburban Cook County property owners, administered by the Department of Environment and Sustainability. The no-cost service window runs 2022 through 2026, so this funding sunsets this calendar year. Pairs with Class C for full lifecycle benefit.",
+    "whoQualifies": "Qualified property owners in suburban Cook County (not the City of Chicago) with potential or known contamination. The south-suburban partner named by the County is the South Suburban Land Bank and Development Authority (SSLBDA).",
     "benefits": [
       "Phase I and Phase II environmental site assessments at no cost",
       "Cleanup planning support",
@@ -4077,9 +4158,9 @@
       "Coordinates with SSMMA's South Suburban Brownfields Coalition"
     ],
     "howToApply": [
-      "Contact Cook County Department of Environment and Sustainability",
-      "Submit site inquiry with parcel info and known/suspected contamination",
-      "Coordinate with SSMMA if site is in the south-suburban coalition area",
+      "Complete the County's Brownfields Submittal Form (online nomination form)",
+      "Provide parcel info and known or suspected contamination",
+      "Coordinate with SSLBDA if the site is in the south-suburban area",
       "Move into IEPA SRP after Phase II"
     ],
     "requiredDocs": [
@@ -4119,8 +4200,8 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "Phase I/II assessments and remediation planning (no-cost to qualifying owners)",
+    "lastVerifiedAt": "2026-08-09",
+    "benefitRange": "Phase I/II assessments and remediation planning, no-cost to qualifying owners through 2026",
     "fastestConfirmingStep": "Call Cook County DES at (312) 603-8200 for site eligibility",
     "personas": [
       "developer"
@@ -4447,11 +4528,36 @@
       "W-9 and certificate of insurance"
     ],
     "documentSpecs": [
-      { "id": "training-plan-and-curriculum", "label": "Training plan and curriculum", "acceptedTypes": [], "multi": false },
-      { "id": "employee-roster", "label": "Employee roster (showing FTE count for industrial applicants)", "acceptedTypes": [], "multi": false },
-      { "id": "financial-statements", "label": "Business financial statements (3-yr gross sales for commercial applicants)", "acceptedTypes": [], "multi": false },
-      { "id": "training-invoices", "label": "Invoices and proof of completed training", "acceptedTypes": [], "multi": true },
-      { "id": "w9-and-insurance", "label": "W-9 and certificate of insurance", "acceptedTypes": [], "multi": false }
+      {
+        "id": "training-plan-and-curriculum",
+        "label": "Training plan and curriculum",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "employee-roster",
+        "label": "Employee roster (showing FTE count for industrial applicants)",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "financial-statements",
+        "label": "Business financial statements (3-yr gross sales for commercial applicants)",
+        "acceptedTypes": [],
+        "multi": false
+      },
+      {
+        "id": "training-invoices",
+        "label": "Invoices and proof of completed training",
+        "acceptedTypes": [],
+        "multi": true
+      },
+      {
+        "id": "w9-and-insurance",
+        "label": "W-9 and certificate of insurance",
+        "acceptedTypes": [],
+        "multi": false
+      }
     ],
     "contact": "City of Chicago DPD: (312) 744-4190",
     "url": "https://www.chicago.gov/city/en/sites/workforce-solutions/home.html",
@@ -4529,18 +4635,18 @@
       "Stacks with federal IRA clean-energy credits"
     ],
     "howToApply": [
-      "Apply via DPD Universal Financial Incentives or Small CDG portal",
-      "Provide project plans and climate/ETOD alignment narrative"
+      "No open intake — the CIF grant application is closed and the ETOD round closed August 18, 2023",
+      "Confirm with the City whether a successor round has been announced before planning around this program"
     ],
     "requiredDocs": [
       "Project plans and budget",
       "Climate or ETOD alignment narrative",
       "Site control documentation"
     ],
-    "contact": "City of Chicago DPD: (312) 744-4190",
-    "url": "https://www.chicago.gov/city/en/sites/dpd-recovery-plan/home/CRPFinalistResources.html",
+    "contact": "City of Chicago — ClimateFund@cityofchicago.org",
+    "url": "https://www.chicago.gov/city/en/sites/dpd-recovery-plan/home/climate-infrastructure-projects.html",
     "sourceUrl": "https://www.chicago.gov/city/en/sites/dpd-recovery-plan/home/CRPFinalistResources.html",
-    "status": "active",
+    "status": "lapsed",
     "contacts": [
       {
         "agency": "City of Chicago Department of Planning and Development",
@@ -4563,29 +4669,30 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "Capital grants (size varies)",
+    "lastVerifiedAt": "2026-08-09",
+    "benefitRange": "Grants up to $250,000 per award (round closed)",
     "fastestConfirmingStep": "Discuss project alignment with DPD before applying",
     "personas": [
       "developer"
-    ]
+    ],
+    "sunsetWarning": "The Climate Infrastructure Fund grant application is closed and no successor round is announced. The ETOD half of this record is also closed — its Round 1 deadline was August 18, 2023."
   },
   {
     "id": "comedEvRebate",
     "name": "ComEd EV Charger and Installation Rebate",
     "level": "Utility",
     "zoneKey": "",
-    "summary": "2026 ComEd rebate for EV charger purchase and installation. Stackable with federal §30C charging credit and other clean-energy incentives.",
-    "whoQualifies": "ComEd residential and commercial customers installing eligible EV chargers. Multi-family and small commercial sites can also access EV Make-Ready program.",
+    "summary": "ComEd rebate for EV charger purchase and installation. The program term is capped at December 31, 2026 or until funds are exhausted, whichever comes first. Stackable with other clean-energy incentives.",
+    "whoQualifies": "ComEd residential and commercial customers installing eligible EV chargers. Residential applicants must enroll in an approved time-variant supply rate (Hourly Pricing, Delivery Time of Day, or an ARES time-variant rate) for at least three years. Multi-family and small commercial sites can also access EV Make-Ready.",
     "benefits": [
-      "$1,000 – $2,500 residential rebate",
-      "Up to $8,000 per port commercial via EV Make-Ready",
-      "Stacks with federal §30C alternative-fuel-vehicle refueling property credit"
+      "Residential: up to $750 for customers who do not qualify as low-income; up to $2,500 for LI/LIC/EIEC customers",
+      "Commercial Make-Ready: up to $5,000/port base, up to $7,500/port for LI/EIEC — applications are currently closed",
+      "Stacks with other clean-energy incentives"
     ],
     "howToApply": [
       "Confirm charger eligibility on the ComEd-approved equipment list",
-      "Install through a participating contractor",
-      "Submit rebate application to ComEd within 90 days of installation"
+      "Enroll in an approved time-variant supply rate (residential, three-year minimum)",
+      "Install through a ComEd-approved EV Service Provider — the EVSP submits the residential application on your behalf"
     ],
     "requiredDocs": [
       "Charger model and serial number",
@@ -4612,8 +4719,8 @@
         "required": true
       }
     ],
-    "lastVerifiedAt": "2026-05-21",
-    "benefitRange": "$1K-$2.5K residential / up to $8K/port commercial",
+    "lastVerifiedAt": "2026-08-09",
+    "benefitRange": "Residential up to $750 ($2,500 LI/LIC/EIEC); commercial up to $5,000/port ($7,500 LI/EIEC)",
     "fastestConfirmingStep": "Confirm charger eligibility at comed.com/EV before purchase",
     "verificationSteps": [
       {
