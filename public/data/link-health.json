@@ -1,8 +1,15 @@
 {
-  "checkedAt": "2026-08-09T07:29:51.932Z",
+  "checkedAt": "2026-08-09T21:30:16.154Z",
   "totals": {
     "checked": 12,
     "ok": 12,
+    "blocked": 0,
+    "broken": 0
+  },
+  "sourceTotals": {
+    "checked": 92,
+    "ok": 90,
+    "blocked": 2,
     "broken": 0
   },
   "portals": [
@@ -14,7 +21,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     },
     {
       "programId": "sbif",
@@ -24,7 +31,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/a9b7c762-50de-4ac3-87dc-0590a08708a5/2026-sbif-application",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     },
     {
       "programId": "class7a",
@@ -34,7 +41,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/302696/city-of-chicago-cook-county-property-tax-incentive-application",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     },
     {
       "programId": "nof",
@@ -44,7 +51,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/328194/neighborhood-opportunity-fund-nof-grant-application",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     },
     {
       "programId": "nof",
@@ -54,7 +61,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/320126/neighborhood-opportunity-fund-nof-grant-application-spanish",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     },
     {
       "programId": "ccsa",
@@ -64,7 +71,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/343419/commercial-corridor-storefront-activation-grant",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     },
     {
       "programId": "class6b",
@@ -74,7 +81,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/302696/city-of-chicago-cook-county-property-tax-incentive-application",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     },
     {
       "programId": "cdgSmall",
@@ -84,7 +91,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/348438/small-community-development-grants-up-to-250-000",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     },
     {
       "programId": "cdgSmall",
@@ -94,7 +101,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/354576/subvencion-de-desarrollo-comunitario-hasta-250-000-2026",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     },
     {
       "programId": "cdgMedium",
@@ -104,7 +111,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/345760/medium-community-development-grant-application",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     },
     {
       "programId": "cdgLarge",
@@ -114,7 +121,7 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit/345775/large-community-development-grant-application",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     },
     {
       "programId": "workforceSolutions",
@@ -124,7 +131,929 @@
       "httpStatus": 200,
       "finalUrl": "https://cocdpd.submittable.com/submit",
       "error": null,
-      "checkedAt": "2026-08-09T07:29:51.932Z"
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    }
+  ],
+  "sources": [
+    {
+      "programId": "tif",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/depts/dcd/provdrs/tif.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "federalOZ",
+      "field": "url",
+      "url": "https://www.irs.gov/credits-deductions/businesses/opportunity-zones",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.irs.gov/credits-deductions/businesses/opportunity-zones",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "federalOZ",
+      "field": "sourceUrl",
+      "url": "https://www.irs.gov/newsroom/treasury-irs-provide-guidance-to-states-for-nominating-census-tracts-as-qualified-opportunity-zones-under-the-one-big-beautiful-bill",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.irs.gov/newsroom/treasury-irs-provide-guidance-to-states-for-nominating-census-tracts-as-qualified-opportunity-zones-under-the-one-big-beautiful-bill",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "illinoisOZ",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/oppzn.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/oppzn.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "enterprise",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/expandrelocate/incentives/taxassistance/enterprisezone.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/expandrelocate/incentives/taxassistance/enterprisezone.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "sbif",
+      "field": "url",
+      "url": "https://somercor.com/sbif/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://somercor.com/sbif/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "sbif",
+      "field": "sourceUrl",
+      "url": "https://www.chicago.gov/city/en/sites/small-business-improvement-fund/home.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/sites/small-business-improvement-fund/home.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "edge",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/expandrelocate/incentives/edge.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/expandrelocate/incentives/edge.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "rev",
+      "field": "url",
+      "url": "https://ev.illinois.gov/incentives/rev-tax-credit.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://ev.illinois.gov/incentives/rev-tax-credit.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "micro",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/expandrelocate/incentives/micro.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/expandrelocate/incentives/micro.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "dataCenter",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/expandrelocate/incentives/datacenters.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/expandrelocate/incentives/datacenters.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "ssa",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/depts/dcd/supp_info/special_service_areasandproviderlist.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "highUnemployment",
+      "field": "url",
+      "url": "https://ides.illinois.gov/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://ides.illinois.gov/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "highUnemployment",
+      "field": "sourceUrl",
+      "url": "https://www.dol.gov/agencies/eta/wotc",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.dol.gov/agencies/eta/wotc",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "class7a",
+      "field": "url",
+      "url": "https://www.cookcountyil.gov/service/property-tax-incentives",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyil.gov/service/property-tax-incentives",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "class7a",
+      "field": "sourceUrl",
+      "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "catalystGrant",
+      "field": "url",
+      "url": "https://cookcountysmallbiz.org/catalystgrant/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://cookcountysmallbiz.org/catalystgrant-2/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "catalystGrant",
+      "field": "sourceUrl",
+      "url": "https://cookcountysmallbiz.org/catalystgrant-2/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://cookcountysmallbiz.org/catalystgrant-2/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "cpace",
+      "field": "url",
+      "url": "https://www.cookcountyil.gov/service/clean-energy-cpace-program",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyil.gov/service/clean-energy-cpace-program",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "smallBizSource",
+      "field": "url",
+      "url": "https://cookcountysmallbiz.org/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://cookcountysmallbiz.org/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "landBank",
+      "field": "url",
+      "url": "https://www.cookcountylandbank.org/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://cookcountylandbank.org/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "nof",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home/Apply.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/sites/neighborhood-opportunity-fund/home/Apply.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "nof",
+      "field": "sourceUrl",
+      "url": "https://www.chicago.gov/content/dam/city/sites/neighborhood-opportunity-fund/pdfs/NOF_Program_Manual_9.18.25.pdf",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/content/dam/city/sites/neighborhood-opportunity-fund/pdfs/NOF_Program_Manual_9.18.25.pdf",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "nmtcEligible",
+      "field": "url",
+      "url": "https://www.cdfifund.gov/programs-training/programs/new-markets-tax-credit",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cdfifund.gov/programs-training/programs/new-markets-tax-credit",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "qct",
+      "field": "url",
+      "url": "https://www.huduser.gov/portal/datasets/qct.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.huduser.gov/portal/datasets/qct.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "landmarkDistricts",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/hist.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/depts/dcd/provdrs/hist.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "landmarkDistricts",
+      "field": "sourceUrl",
+      "url": "https://www.chicago.gov/content/dam/city/depts/zlup/Historic_Preservation/Publications/Chicago_Landmarks_Ordinance_2025.pdf",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/content/dam/city/depts/zlup/Historic_Preservation/Publications/Chicago_Landmarks_Ordinance_2025.pdf",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "nrhpDistricts",
+      "field": "url",
+      "url": "https://www.nps.gov/subjects/taxincentives/index.htm",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.nps.gov/subjects/taxincentives/index.htm",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "microMarketRecovery",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/depts/doh/provdrs/developers/svcs/ChicagoNeighborhoodRecoveryProgram.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/depts/doh/provdrs/developers/svcs/ChicagoNeighborhoodRecoveryProgram.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "microMarketRecovery",
+      "field": "sourceUrl",
+      "url": "https://nhschicago.org/mmrp-purchase-assistance-grant/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://nhschicago.org/mmrp-purchase-assistance-grant/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "industrialCorridors",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/depts/dcd/supp_info/repositioning-chicago-s-industrial-corridors-for-today-s-economy.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/depts/dcd/supp_info/repositioning-chicago-s-industrial-corridors-for-today-s-economy.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "ccsa",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/sites/storefront-activation/home.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/sites/storefront-activation/home.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "hubzone",
+      "field": "url",
+      "url": "https://www.sba.gov/federal-contracting/contracting-assistance-programs/hubzone-program",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.sba.gov/certifications/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "energyCommunityBonus",
+      "field": "url",
+      "url": "https://www.irs.gov/credits-deductions/frequently-asked-questions-for-energy-communities",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.irs.gov/credits-deductions/frequently-asked-questions-for-energy-communities",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "iraCleanElectricity",
+      "field": "url",
+      "url": "https://www.irs.gov/credits-deductions/clean-electricity-low-income-communities-bonus-credit-amount-program",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.irs.gov/credits-deductions/clean-electricity-low-income-communities-bonus-credit-amount-program",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "electivePay",
+      "field": "url",
+      "url": "https://www.irs.gov/credits-deductions/elective-pay-and-transferability",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.irs.gov/credits-deductions/elective-pay-and-transferability",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "sec179d",
+      "field": "url",
+      "url": "https://www.congress.gov/crs-product/IF12862",
+      "status": "blocked",
+      "httpStatus": 403,
+      "finalUrl": "https://www.congress.gov/crs-product/IF12862",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "hudSection108",
+      "field": "url",
+      "url": "https://www.hud.gov/hud-partners/community-section108",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.hud.gov/hud-partners/community-section108",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "cdfiBond",
+      "field": "url",
+      "url": "https://www.cdfifund.gov/programs-training/programs/cdfi-bond",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cdfifund.gov/programs-training/programs/cdfi-bond",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "sba7a504",
+      "field": "url",
+      "url": "https://www.sba.gov/funding-programs/loans",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.sba.gov/loans/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "sba7a504",
+      "field": "sourceUrl",
+      "url": "https://www.sba.gov/document/policy-notice-5000-879058-coordination-7a-504-maximum-loan-limits",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://legacy.sba.gov/document/policy-notice-5000-879058-coordination-7a-504-maximum-loan-limits",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "sbaMicroloan",
+      "field": "url",
+      "url": "https://www.sba.gov/funding-programs/loans/microloans",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.sba.gov/loans/microloans/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "sbaMicroloan",
+      "field": "sourceUrl",
+      "url": "https://www.sba.gov/funding-programs/loans/microloans/list-microlenders",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://legacy.sba.gov/funding-programs/loans/microloans/list-microlenders",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "sbaDisasterEidl",
+      "field": "url",
+      "url": "https://www.sba.gov/funding-programs/disaster-assistance",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.sba.gov/disaster/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "sbaDisasterEidl",
+      "field": "sourceUrl",
+      "url": "https://www.sba.gov/article/2026/05/21/sba-disaster-relief-still-available-illinois-businesses-private-nonprofits-residents-affected-severe",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://legacy.sba.gov/article/2026/05/21/sba-disaster-relief-still-available-illinois-businesses-private-nonprofits-residents-affected-severe",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "chips48d",
+      "field": "url",
+      "url": "https://www.irs.gov/credits-deductions/advanced-manufacturing-investment-credit",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.irs.gov/credits-deductions/advanced-manufacturing-investment-credit",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "chips48d",
+      "field": "sourceUrl",
+      "url": "https://www.irs.gov/instructions/i3468",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.irs.gov/instructions/i3468",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "ssbciAdvantageIL",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/smallbizassistance/advantageillinois/ssbci.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/smallbizassistance/advantageillinois/ssbci.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "ssbciAdvantageIL",
+      "field": "sourceUrl",
+      "url": "https://home.treasury.gov/policy-issues/small-business-programs/state-small-business-credit-initiative-ssbci",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://home.treasury.gov/policy-issues/small-business-programs/state-small-business-credit-initiative-ssbci",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "edaBuildToScale",
+      "field": "url",
+      "url": "https://www.eda.gov/funding/programs/build-to-scale",
+      "status": "blocked",
+      "httpStatus": 403,
+      "finalUrl": "https://www.eda.gov/funding/programs/build-to-scale",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "bmec",
+      "field": "url",
+      "url": "https://tax.illinois.gov/businesses/incentives.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://tax.illinois.gov/businesses/incentives.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "aim",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/businesshelp/incentivesandtaxcredits.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/businesshelp/incentivesandtaxcredits.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "quantumEZ",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/expandrelocate/incentives/quantum-enterprise-zone-program.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/expandrelocate/incentives/quantum-enterprise-zone-program.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "hib",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/expandrelocate/incentives/highimpactbusinessprogram.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/expandrelocate/incentives/highimpactbusinessprogram.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "innovationVoucher",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/whyillinois/innovation-vouchers.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/whyillinois/innovation-vouchers.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "innovationVoucher",
+      "field": "sourceUrl",
+      "url": "https://innovate-illinois.com/dceo-incentives/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://innovate-illinois.com/dceo-incentives/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "economicEmpowermentCenters",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/oe3/econ-empowerment-centers.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/oe3/econ-empowerment-centers.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "economicEmpowermentCenters",
+      "field": "sourceUrl",
+      "url": "https://dceo.illinois.gov/aboutdceo/grantopportunities/3226-4281.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/aboutdceo/grantopportunities/3226-4281.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "filmCredit",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/whyillinois/film/filmtaxcredit.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/whyillinois/film/filmtaxcredit.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "liveTheaterCredit",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/whyillinois/film/live-theater-tax-credit.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/whyillinois/film/live-theater-tax-credit.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "cannabisR3",
+      "field": "url",
+      "url": "https://dceo.illinois.gov/oe3/cannabisequity/cannabis-social-equity-r3.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://dceo.illinois.gov/oe3/cannabisequity/cannabis-social-equity-r3.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "r3Grants",
+      "field": "url",
+      "url": "https://r3.illinois.gov/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://r3.illinois.gov/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "r3Grants",
+      "field": "sourceUrl",
+      "url": "https://r3.illinois.gov/news/restore-reinvest-renew-r3-program-grants-apply-now/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://r3.illinois.gov/news/restore-reinvest-renew-r3-program-grants-apply-now/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "class6b",
+      "field": "url",
+      "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "class6bSer",
+      "field": "url",
+      "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "class7b",
+      "field": "url",
+      "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "class7c",
+      "field": "url",
+      "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "class8",
+      "field": "url",
+      "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "class8aMicro",
+      "field": "url",
+      "url": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyassessoril.gov/incentives-special-properties",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "class8aMicro",
+      "field": "sourceUrl",
+      "url": "https://www.cookcountyil.gov/service/property-tax-incentives",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyil.gov/service/property-tax-incentives",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "classC",
+      "field": "url",
+      "url": "https://www.cookcountyassessoril.gov/form-document/class-c",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyassessoril.gov/form-document/class-c",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "classC",
+      "field": "sourceUrl",
+      "url": "https://www.cookcountyassessor.com/form-document/class-c",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyassessoril.gov/form-document/class-c",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "classL",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/depts/dcd/provdrs/hist/svcs/class_l_propertytaxincentive.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/depts/dcd/provdrs/hist/svcs/class_l_propertytaxincentive.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "ahsap",
+      "field": "url",
+      "url": "https://www.cookcountyassessoril.gov/affordable-housing",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyassessoril.gov/affordable-housing",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "cookCannabisGrant",
+      "field": "url",
+      "url": "https://www.cookcountyil.gov/service/cannabis-development-grant",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyil.gov/service/cannabis-development-grant",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "cookCannabisGrant",
+      "field": "sourceUrl",
+      "url": "https://www.cookcountyil.gov/news/cook-county-president-toni-preckwinkle-announces-nine-additional-recipients-cannabis",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyil.gov/news/cook-county-president-toni-preckwinkle-announces-nine-additional-recipients-cannabis",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "investInCook",
+      "field": "url",
+      "url": "https://www.cookcountyil.gov/investincook",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyil.gov/investincook",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "cookBrownfield",
+      "field": "url",
+      "url": "https://www.cookcountyil.gov/service/brownfield-redevelopment",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.cookcountyil.gov/service/brownfield-redevelopment",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "cdgSmall",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "cdgMedium",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "cdgLarge",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/sites/community-development-grant/home.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "workforceSolutions",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/sites/workforce-solutions/home.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/sites/workforce-solutions/home.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "climateInfrastructureFund",
+      "field": "url",
+      "url": "https://www.chicago.gov/city/en/sites/dpd-recovery-plan/home/climate-infrastructure-projects.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/sites/dpd-recovery-plan/home/climate-infrastructure-projects.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "climateInfrastructureFund",
+      "field": "sourceUrl",
+      "url": "https://www.chicago.gov/city/en/sites/dpd-recovery-plan/home/CRPFinalistResources.html",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.chicago.gov/city/en/sites/dpd-recovery-plan/home/CRPFinalistResources.html",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "comedEvRebate",
+      "field": "url",
+      "url": "https://www.comed.com/about-us/clean-energy/electric-vehicle-charger-and-installation-rebate",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.comed.com/about-us/clean-energy/electric-vehicle-charger-and-installation-rebate",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "comedSmallBizEfficiency",
+      "field": "url",
+      "url": "https://www.comed.com/WaysToSave/ForYourBusiness/Pages/Incentives.aspx",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.comed.com/WaysToSave/ForYourBusiness/Pages/Incentives.aspx",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "comedDgSolar",
+      "field": "url",
+      "url": "https://www.comed.com/SmartEnergy/MyGreenPowerConnection/Pages/SolarRebates.aspx",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.comed.com/SmartEnergy/MyGreenPowerConnection/Pages/SolarRebates.aspx",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "comedDgSolar",
+      "field": "sourceUrl",
+      "url": "https://illinoisshines.com/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://illinoisshines.com/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "peoplesGasEfficiency",
+      "field": "url",
+      "url": "https://www.peoplesgasdelivery.com/savings/business/rebates-ci",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.peoplesgasdelivery.com/savings/business/rebates-ci",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "kivaChicago",
+      "field": "url",
+      "url": "https://www.kiva.org/borrow",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://www.kiva.org/borrow",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "greenwoodArcher",
+      "field": "url",
+      "url": "https://greenwoodarchercapital.org/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://greenwoodarchercapital.org/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
+    },
+    {
+      "programId": "alliesCommunityBusiness",
+      "field": "url",
+      "url": "https://a4cb.org/services/loans/",
+      "status": "ok",
+      "httpStatus": 200,
+      "finalUrl": "https://a4cb.org/services/loans/",
+      "error": null,
+      "checkedAt": "2026-08-09T21:30:16.154Z"
     }
   ]
 }
