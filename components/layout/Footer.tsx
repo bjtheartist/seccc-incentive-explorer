@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SiteTourButton } from "@/components/onboarding/SiteTourButton";
 
 export function Footer() {
   return (
@@ -74,6 +75,8 @@ export function Footer() {
           Program details change over time &middot; verify with administrators
         </div>
         <div className="text-center mt-4">
+          <SiteTourButton />
+          <span className="mx-3 text-white/15" aria-hidden="true">&middot;</span>
           <Link
             href="/login?callbackUrl=/workspace"
             className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-white/20 hover:text-white/60 transition-colors"
