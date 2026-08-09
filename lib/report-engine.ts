@@ -7,6 +7,7 @@ import type {
   CommunityAsset,
   Stats,
   PublicMatchExplanation,
+  ChicagoZbaLookupResponse,
   ZoningLookupResponse,
   ZoningSourceMetadata,
 } from "./types";
@@ -1143,6 +1144,21 @@ function collectDataSources(ctx: ReportContext): DataSourceCitation[] {
     } else {
       sources.push(DATA_SOURCES.zoning);
     }
+  }
+  const zba = ctx.cityZoning?.zba;
+  if (zba) {
+    sources.push({
+      id: "chicagoZba",
+      label: zba.source.label,
+      description: `Official City ZBA case geometry and published case attributes. ${zba.source.freshnessNote} The Explorer's point match and presentation are informational, not a City zoning determination. Retrieved ${zba.source.retrievedAt.slice(0, 10)}.`,
+      url: zba.source.url,
+    });
+    sources.push({
+      id: "chicagoZbaBoard",
+      label: "Chicago Zoning Board of Appeals",
+      description: "Official City board page for current procedures, calendars, and verification contacts.",
+      url: zba.source.boardUrl,
+    });
   }
   if (ctx.parcel) sources.push(DATA_SOURCES.parcel);
   if (ctx.neighborhoodEconomics?.jobsPayroll) sources.push(DATA_SOURCES.zbp);
@@ -2576,6 +2592,87 @@ function buildZoningReportItem(
   };
 }
 
+const ZBA_CASE_TYPE_LABELS = {
+  special_use: "Special use",
+  variation: "Variation",
+  administrative_appeal: "Administrative appeal",
+  unknown: "City case type",
+} as const;
+
+function buildZbaReportItems(
+  zba: ChicagoZbaLookupResponse | undefined,
+): ReportItem[] {
+  if (!zba) return [];
+
+  if (zba.status === "unavailable") {
+    return [{
+      label: "City ZBA Case Source",
+      value: "Temporarily unavailable",
+      detail: `${zba.message} Consult the cited City source directly before relying on this report. ${zba.source.freshnessNote}`,
+      url: zba.source.url,
+    }];
+  }
+
+  if (zba.status === "not_found") {
+    return [{
+      label: "City ZBA Case Source",
+      value: "No intersecting record returned",
+      detail: `${zba.message} In the cited ArcGIS layer, use the Query tool to search the published ADDRESS and ORDINANCE fields, then confirm the case history with the Chicago Zoning Board of Appeals or Department of Planning and Development. ${zba.source.freshnessNote}`,
+      url: zba.source.url,
+    }];
+  }
+
+  const maxDisplayedCases = 8;
+  const displayedCases = zba.cases.slice(0, maxDisplayedCases);
+  const omittedCount = Math.max(0, zba.returnedCount - displayedCases.length);
+  const items: ReportItem[] = [{
+    label: "City ZBA Case Source",
+    value: `${zba.returnedCount} historical record${zba.returnedCount === 1 ? "" : "s"} returned`,
+    detail: [
+      zba.message,
+      zba.coverage === "partial"
+        ? "The returned set is partial; consult the cited City layer for the complete published result."
+        : null,
+      omittedCount > 0
+        ? `${omittedCount} additional record${omittedCount === 1 ? " is" : "s are"} not listed in this compact report.`
+        : null,
+      "These are historical City records whose published geometry intersects the selected point. A past judgment does not establish current authorization, permitted use, or compliance.",
+      "In the cited ArcGIS layer, use the Query tool to search the ORDINANCE field for the case reference. Verify conditions, amendments, expiration or revocation, and current effect with the Chicago Zoning Board of Appeals or Department of Planning and Development before relying on it.",
+      zba.source.freshnessNote,
+    ].filter(Boolean).join(" "),
+    url: zba.source.url,
+  }];
+
+  for (const zbaCase of displayedCases) {
+    const caseLabel = ZBA_CASE_TYPE_LABELS[zbaCase.caseType];
+    items.push({
+      label: `${caseLabel} · ${zbaCase.caseReference ?? "Case reference not published"}`,
+      value: zbaCase.judgment ?? "Judgment not published",
+      detail: [
+        zbaCase.address ? `Published address: ${zbaCase.address}.` : null,
+        zbaCase.caseType === "unknown" && zbaCase.caseTypeRaw
+          ? `Published case-type code: ${zbaCase.caseTypeRaw}. The Explorer did not map it to a standard ZBA category.`
+          : null,
+        zbaCase.description,
+        "Judgment text is shown as published by the City and has not been normalized by the Explorer.",
+        `Open the cited City ArcGIS layer, use Query to search the ORDINANCE field for ${zbaCase.caseReference ?? "the published case reference"}, and confirm its current effect before relying on this record.`,
+      ].filter(Boolean).join(" "),
+      url: zba.source.url,
+    });
+  }
+  return items;
+}
+
+function buildZoningReportItems(
+  cityZoning: ReportZoningData | undefined,
+): ReportItem[] {
+  const zoningItem = buildZoningReportItem(cityZoning);
+  return [
+    ...(zoningItem ? [zoningItem] : []),
+    ...buildZbaReportItems(cityZoning?.zba),
+  ];
+}
+
 function generateBestLocation(
   state: WizardState,
   programs: Program[],
@@ -2676,12 +2773,12 @@ function generateBestLocation(
   }
 
   // §02 Zoning & Regulatory Review
-  const zoningItem = buildZoningReportItem(cityZoning);
-  if (zoningItem) {
+  const zoningItems = buildZoningReportItems(cityZoning);
+  if (zoningItems.length > 0) {
     sections.push({
       title: "Zoning & Regulatory Review",
-      description: "Published City zoning classification for the selected location. Verify the intended use and project requirements before relying on it for a project decision.",
-      items: [zoningItem],
+      description: "Published City zoning classification and cited City ZBA records for the selected location. The cited datasets are official City sources. The Explorer's point matches and presentation are informational and are not a City zoning determination. Consult the cited records and verify the intended use, case history, and project requirements with the City before relying on them.",
+      items: zoningItems,
     });
   }
 
@@ -3956,6 +4053,7 @@ export interface LegacyReportZoningData {
   clerkUrl?: string | null;
   recordUpdatedAt?: string | null;
   source?: ZoningSourceMetadata | null;
+  zba?: ChicagoZbaLookupResponse;
   message?: never;
 }
 
@@ -4067,8 +4165,12 @@ export function generateReportData(
     // Insert a "Site Profile" section — property, zoning, and district data only
     // (census/market data lives in Neighborhood Economic Context to avoid duplication)
     const contextItems: ReportItem[] = [];
-    const zoningItem = buildZoningReportItem(cityZoning);
-    if (zoningItem) contextItems.push(zoningItem);
+    const hasDedicatedZoningSection = report.sections.some(
+      (section) => section.title === "Zoning & Regulatory Review",
+    );
+    if (!hasDedicatedZoningSection) {
+      contextItems.push(...buildZoningReportItems(cityZoning));
+    }
 
     // Parcel data items
     if (parcel && parcel.pin) {

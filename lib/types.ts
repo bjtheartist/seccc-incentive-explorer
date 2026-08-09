@@ -232,6 +232,7 @@ export interface CityZoning {
   clerkUrl?: string | null;
   recordUpdatedAt?: string | null;
   source?: ZoningSourceMetadata;
+  zba?: ChicagoZbaLookupResponse;
 }
 
 export type ZoningLookupStatus = "available" | "not_found" | "unavailable";
@@ -255,6 +256,7 @@ export interface ZoningNotFoundResponse {
   zoneType: null;
   source: ZoningSourceMetadata;
   message: string;
+  zba?: ChicagoZbaLookupResponse;
 }
 
 export interface ZoningUnavailableResponse {
@@ -263,12 +265,76 @@ export interface ZoningUnavailableResponse {
   zoneType: null;
   source: null;
   message: string;
+  zba?: ChicagoZbaLookupResponse;
 }
 
 export type ZoningLookupResponse =
   | ZoningAvailableResponse
   | ZoningNotFoundResponse
   | ZoningUnavailableResponse;
+
+export type ChicagoZbaCaseType =
+  | "special_use"
+  | "variation"
+  | "administrative_appeal"
+  | "unknown";
+
+export interface ChicagoZbaCase {
+  id: string;
+  globalId: string | null;
+  caseReference: string | null;
+  caseYear: number | null;
+  caseSequence: number | null;
+  caseType: ChicagoZbaCaseType;
+  caseTypeRaw: string | null;
+  address: string | null;
+  judgment: string | null;
+  description: string | null;
+  pin10: string | null;
+  pinAccuracy: string | null;
+  publishedYearField: string | null;
+  publishedCaseField: string | null;
+}
+
+export interface ChicagoZbaSourceMetadata {
+  id: "chicago-zba-arcgis";
+  label: string;
+  url: string;
+  boardUrl: string;
+  retrievedAt: string;
+  sourceUpdatedAt: null;
+  freshnessNote: string;
+}
+
+export interface ChicagoZbaAvailableResponse {
+  status: "available";
+  cases: ChicagoZbaCase[];
+  returnedCount: number;
+  coverage: "complete" | "partial";
+  source: ChicagoZbaSourceMetadata;
+  message: string;
+}
+
+export interface ChicagoZbaNotFoundResponse {
+  status: "not_found";
+  cases: [];
+  returnedCount: 0;
+  coverage: "complete";
+  source: ChicagoZbaSourceMetadata;
+  message: string;
+}
+
+export interface ChicagoZbaUnavailableResponse {
+  status: "unavailable";
+  cases: [];
+  source: ChicagoZbaSourceMetadata;
+  message: string;
+}
+
+export type ChicagoZbaLookupResponse =
+  | ChicagoZbaAvailableResponse
+  | ChicagoZbaNotFoundResponse
+  | ChicagoZbaUnavailableResponse;
 
 export interface CensusData {
   tractId: string;

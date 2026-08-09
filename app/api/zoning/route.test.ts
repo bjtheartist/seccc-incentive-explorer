@@ -25,6 +25,25 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+function zbaFeature() {
+  return {
+    attributes: {
+      OBJECTID: 71,
+      ORDINANCE: "71-25-Z",
+      ORD_YEAR: "71",
+      ORD_CASE: "2025",
+      ORD_TYPE: "Z",
+      ADDRESS: "118 S CLINTON ST",
+      JUDGMENT: "Granted with Conditions",
+      DESC_: "Published variation description.",
+      PIN10: "1716101001",
+      ID: "71-25-Z",
+      GLOBALID: "zba-g-1",
+      PIN_ACCURACY: "MATCHED",
+    },
+  };
+}
+
 beforeEach(() => {
   cachedMock.mockReset().mockImplementation(
     async (_key: string, _ttl: number, loader: () => Promise<unknown>) =>
@@ -40,8 +59,12 @@ describe("GET /api/zoning", () => {
   it("queries ArcGIS feature layer 1 in WGS84 and returns official fields", async () => {
     const updatedAt = Date.UTC(2026, 5, 16);
     const ordinanceDate = Date.UTC(2024, 1, 21);
-    const fetchMock = vi.fn().mockResolvedValue(
-      jsonResponse({
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/MapServer/16/query")) {
+        return jsonResponse({ features: [zbaFeature()] });
+      }
+      return jsonResponse({
         features: [
           {
             attributes: {
@@ -58,8 +81,8 @@ describe("GET /api/zoning", () => {
             },
           },
         ],
-      }),
-    );
+      });
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await GET(request());
@@ -82,9 +105,18 @@ describe("GET /api/zoning", () => {
         id: "chicago-arcgis-zoning",
         recordUpdatedAt: new Date(updatedAt).toISOString(),
       },
+      zba: {
+        status: "available",
+        returnedCount: 1,
+        coverage: "complete",
+        cases: [{ caseReference: "71-25-Z", judgment: "Granted with Conditions" }],
+      },
     });
 
-    const upstreamUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    const upstreamCall = fetchMock.mock.calls.find(
+      ([input]) => String(input).includes("/MapServer/1/query"),
+    );
+    const upstreamUrl = new URL(String(upstreamCall?.[0]));
     expect(upstreamUrl.pathname.endsWith("/MapServer/1/query")).toBe(true);
     expect(upstreamUrl.searchParams.get("inSR")).toBe("4326");
     expect(upstreamUrl.searchParams.get("geometry")).toBe(
@@ -94,20 +126,22 @@ describe("GET /api/zoning", () => {
     expect(upstreamUrl.searchParams.get("resultRecordCount")).toBe("1");
     expect(upstreamUrl.searchParams.get("outFields")).toContain("CLERK_URL");
     expect(cachedMock).toHaveBeenCalledWith(
-      "zoning:v3:41.73035:-87.55024",
+      "zoning:v4:41.73035:-87.55024",
       604800,
       expect.any(Function),
     );
   });
 
   it("detects an ArcGIS error inside HTTP 200 and uses intersects fallback", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(
-        jsonResponse({ error: { code: 400, message: "Unable to complete operation" } }),
-      )
-      .mockResolvedValueOnce(
-        jsonResponse({
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/MapServer/16/query")) {
+        return jsonResponse({ features: [] });
+      }
+      if (url.includes("/MapServer/1/query")) {
+        return jsonResponse({ error: { code: 400, message: "Unable to complete operation" } });
+      }
+      return jsonResponse({
           type: "FeatureCollection",
           features: [
             {
@@ -119,8 +153,8 @@ describe("GET /api/zoning", () => {
               },
             },
           ],
-        }),
-      );
+        });
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await GET(request());
@@ -133,7 +167,10 @@ describe("GET /api/zoning", () => {
       zoneType: null,
       source: { id: "chicago-data-portal-zoning" },
     });
-    const fallbackUrl = new URL(String(fetchMock.mock.calls[1][0]));
+    const fallbackCall = fetchMock.mock.calls.find(
+      ([input]) => String(input).includes("data.cityofchicago.org"),
+    );
+    const fallbackUrl = new URL(String(fallbackCall?.[0]));
     expect(fallbackUrl.searchParams.get("$where")).toBe(
       "intersects(the_geom,'POINT(-87.55024 41.73035)')",
     );
@@ -141,12 +178,11 @@ describe("GET /api/zoning", () => {
   });
 
   it("returns a typed not_found result after a successful empty lookup", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ features: [] }))
-      .mockResolvedValueOnce(
-        jsonResponse({ type: "FeatureCollection", features: [] }),
-      );
+    const fetchMock = vi.fn(async (input: string | URL | Request) =>
+      String(input).includes("data.cityofchicago.org")
+        ? jsonResponse({ type: "FeatureCollection", features: [] })
+        : jsonResponse({ features: [] }),
+    );
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await GET(request("lat=42.5&lon=-88.5"));
@@ -158,27 +194,59 @@ describe("GET /api/zoning", () => {
       zoneClass: null,
       zoneType: null,
       source: { id: "chicago-arcgis-zoning" },
+      zba: { status: "not_found", returnedCount: 0 },
     });
     expect(response.headers.get("Cache-Control")).toContain("s-maxage");
   });
 
   it("returns an uncached 503 when both authoritative sources fail", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ error: "ArcGIS unavailable" }, 400))
-      .mockResolvedValueOnce(jsonResponse({ error: "Socrata unavailable" }, 400));
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/MapServer/16/query")) {
+        return jsonResponse({ features: [zbaFeature()] });
+      }
+      return jsonResponse(
+        { error: url.includes("data.cityofchicago.org") ? "Socrata unavailable" : "ArcGIS unavailable" },
+        400,
+      );
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     const response = await GET(request());
     const body = await response.json();
 
     expect(response.status).toBe(503);
-    expect(body).toEqual({
+    expect(body).toMatchObject({
       status: "unavailable",
       zoneClass: null,
       zoneType: null,
       source: null,
       message: "Published Chicago zoning data is temporarily unavailable.",
+      zba: { status: "available", returnedCount: 1 },
+    });
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+  });
+
+  it("keeps current zoning available but does not cache a transient ZBA failure", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      if (url.includes("/MapServer/16/query")) {
+        return jsonResponse({ error: { code: 500 } }, 500);
+      }
+      return jsonResponse({
+        features: [{ attributes: { ZONE_CLASS: "B3-2", ZONE_TYPE: 1 } }],
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const response = await GET(request());
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      status: "available",
+      zoneClass: "B3-2",
+      zba: { status: "unavailable" },
     });
     expect(response.headers.get("Cache-Control")).toBe("private, no-store");
   });

@@ -272,17 +272,23 @@ function supportSourceOverrides(localSupport?: LocalBusinessSupportContext | nul
 function zoningSourceOverrides(
   cityZoning?: ReportZoningData,
 ): LocationContextSource[] {
-  if (!cityZoning?.source) return [];
+  if (!cityZoning) return [];
   return [
-    {
+    cityZoning.source ? {
       id: "zoning",
       label: cityZoning.source.label,
       url: cityZoning.source.url,
       freshness: cityZoning.source.recordUpdatedAt
         ? `Source record updated ${cityZoning.source.recordUpdatedAt.slice(0, 10)}`
         : `Retrieved ${cityZoning.source.retrievedAt.slice(0, 10)}`,
-    },
-  ];
+    } : null,
+    cityZoning.zba ? {
+      id: "chicagoZba",
+      label: cityZoning.zba.source.label,
+      url: cityZoning.zba.source.url,
+      freshness: cityZoning.zba.source.freshnessNote,
+    } : null,
+  ].filter(Boolean) as LocationContextSource[];
 }
 
 function collectSourceIds(input: LocationContextInput, programResults: ProgramCheckResult[]): string[] {
@@ -292,6 +298,7 @@ function collectSourceIds(input: LocationContextInput, programResults: ProgramCh
     input.cityZoning && input.cityZoning.status !== "unavailable"
       ? "zoning"
       : null,
+    input.cityZoning?.zba ? "chicagoZba" : null,
     input.parcel ? "parcel" : null,
     input.districts ? "districts" : null,
     programResults.length > 0 ? "programs" : null,
@@ -390,22 +397,33 @@ export function buildLocationContext(
   }
   if (input.cityZoning) {
     const sourceAvailable = input.cityZoning.status !== "unavailable";
+    const zbaCaveat =
+      input.cityZoning.zba?.status === "available"
+        ? " Historical ZBA records are point-matched source records; a past judgment does not establish current authorization, permitted use, or compliance."
+        : input.cityZoning.zba?.status === "not_found"
+          ? " No intersecting ZBA record was returned; this does not establish that no ZBA action exists."
+          : input.cityZoning.zba?.status === "unavailable"
+            ? " The City ZBA source was unavailable, so no absence conclusion is shown."
+            : "";
     context.geography.cityZoning = claim(
       "cityZoning",
       "City zoning",
       sourceAvailable ? "measured" : "needs_verification",
       input.cityZoning,
-      sourceAvailable ? ["zoning"] : [],
+      [
+        ...(sourceAvailable ? ["zoning"] : []),
+        ...(input.cityZoning.zba ? ["chicagoZba"] : []),
+      ],
       {
         freshness:
           input.cityZoning.source?.recordUpdatedAt ??
           input.cityZoning.source?.retrievedAt,
         caveat:
           input.cityZoning.status === "unavailable"
-            ? "Published Chicago zoning data was unavailable, so no zoning conclusion is shown."
+            ? `Published Chicago zoning data was unavailable, so no zoning conclusion is shown.${zbaCaveat}`
             : input.cityZoning.status === "not_found"
-              ? "No published Chicago zoning district was returned; this is not evidence that zoning requirements do not apply."
-              : "The published district classification does not determine whether a proposed use is permitted.",
+              ? `No published Chicago zoning district was returned; this is not evidence that zoning requirements do not apply.${zbaCaveat}`
+              : `The published district classification does not determine whether a proposed use is permitted.${zbaCaveat}`,
       },
     );
   }
