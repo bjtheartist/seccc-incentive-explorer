@@ -13,6 +13,16 @@ const source = {
   recordUpdatedAt: "2026-07-01T00:00:00.000Z",
 };
 
+const zbaSource = {
+  id: "chicago-zba-arcgis" as const,
+  label: "City of Chicago Zoning Board of Appeals case layer",
+  url: "https://example.test/zba/16",
+  boardUrl: "https://example.test/zba",
+  retrievedAt: "2026-08-08T12:00:00.000Z",
+  sourceUpdatedAt: null,
+  freshnessNote: "The City layer does not publish a refresh timestamp.",
+};
+
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
@@ -29,7 +39,7 @@ afterEach(() => {
 
 describe("zoning lookup client", () => {
   it("memoizes only a validated available response", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(
+    const fetchMock = vi.fn().mockImplementation(async () =>
       jsonResponse({
         status: "available",
         zoneClass: "B3-2",
@@ -45,7 +55,7 @@ describe("zoning lookup client", () => {
     expect(first.status).toBe("available");
     expect(second).toEqual(first);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toContain("&v=3");
+    expect(fetchMock.mock.calls[0][0]).toContain("&v=4");
   });
 
   it("parses a 503 unavailable body and does not substitute an expired success", async () => {
@@ -77,6 +87,31 @@ describe("zoning lookup client", () => {
     const result = await fetchZoningLookup(41.81, -87.61, { cacheTtlMs: 0 });
 
     expect(result.status).toBe("unavailable");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not memoize current zoning when the nested ZBA source is unavailable", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () =>
+      jsonResponse({
+        status: "available",
+        zoneClass: "B3-2",
+        zoneType: null,
+        source,
+        zba: {
+          status: "unavailable",
+          cases: [],
+          source: zbaSource,
+          message: "The City ZBA source could not be checked.",
+        },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const first = await fetchZoningLookup(41.82, -87.62);
+    const second = await fetchZoningLookup(41.82, -87.62);
+
+    expect(first.zba?.status).toBe("unavailable");
+    expect(second.zba?.status).toBe("unavailable");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 

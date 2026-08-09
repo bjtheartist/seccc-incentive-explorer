@@ -54,8 +54,8 @@ function LoginPanel() {
         Zoning Change Ledger
       </h1>
       <p className="mt-4 text-[14px] leading-relaxed text-[#0C1B33]/55">
-        Sign in with the analytics admin password to review the City Clerk and zoning-map source
-        history.
+        Sign in with the analytics admin password to review the City Clerk, zoning-map, and ZBA
+        source history.
       </p>
       <form action="/api/admin/analytics/login" method="post" className="mt-8 space-y-4">
         <input type="hidden" name="redirectTo" value="/admin/zoning-changes" />
@@ -111,7 +111,8 @@ export default async function ZoningChangesPage({
   const query = (param(params.q) ?? "").trim().toLowerCase();
   const page = Math.max(1, Number(param(params.page) ?? "1") || 1);
   const pageSize = 50;
-  const { legislation, mapSnapshot, mapDelta } = loadZoningSourceLedger();
+  const { legislation, mapSnapshot, mapDelta, zbaSnapshot, zbaDelta } =
+    loadZoningSourceLedger();
   const years = Object.keys(legislation.coverage.byFileYear).sort(
     (a, b) => Number(b) - Number(a),
   );
@@ -166,29 +167,42 @@ export default async function ZoningChangesPage({
                 Zoning Change Ledger
               </h1>
               <p className="mt-3 max-w-3xl text-[13px] leading-relaxed text-[#0C1B33]/55">
-                eLMS records legislative activity. ArcGIS publishes the current zoning geometry.
-                The ledger joins them only when the City publishes an exact Clerk identifier; it
-                never infers a parcel boundary or permitted use from a matter title.
+                eLMS records legislative activity. ArcGIS publishes the current zoning geometry,
+                and the separate City ZBA layer publishes historical case records. The ledger
+                never infers a parcel boundary, permitted use, or current authorization from a
+                matter title or past ZBA judgment.
               </p>
             </div>
-            <a
-              href={legislation.source.publicUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#2563EB] hover:underline"
-            >
-              Open City Clerk eLMS ↗
-            </a>
+            <div className="flex flex-wrap gap-4">
+              <a
+                href={legislation.source.publicUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#2563EB] hover:underline"
+              >
+                Open City Clerk eLMS ↗
+              </a>
+              <a
+                href={zbaSnapshot.source.url}
+                target="_blank"
+                rel="noreferrer"
+                className="font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#2563EB] hover:underline"
+              >
+                Open City ZBA layer ↗
+              </a>
+            </div>
           </div>
         </header>
 
-        <section className="grid border-y border-l border-[#0C1B33]/10 bg-white sm:grid-cols-2 xl:grid-cols-5">
+        <section className="grid border-y border-l border-[#0C1B33]/10 bg-white sm:grid-cols-2 xl:grid-cols-7">
           {[
             ["Legislative matters", legislation.coverage.total.toLocaleString()],
             ["Pending", legislation.coverage.byLifecycle.pending.toLocaleString()],
             ["Adopted", legislation.coverage.byLifecycle.adopted.toLocaleString()],
             ["Current map polygons", mapSnapshot.featureCount.toLocaleString()],
             ["Map updated through", formatDate(mapSnapshot.source.sourceUpdatedThrough)],
+            ["Published ZBA records", zbaSnapshot.featureCount.toLocaleString()],
+            ["ZBA updated through", "Not published"],
           ].map(([label, value]) => (
             <div key={label} className="border-b border-r border-[#0C1B33]/10 p-4">
               <span className="font-mono-bureau text-[9px] uppercase tracking-[0.16em] text-[#0C1B33]/35">
@@ -204,18 +218,29 @@ export default async function ZoningChangesPage({
             Source boundary
           </h2>
           <p className="mt-2 text-[12px] leading-relaxed text-[#0C1B33]/55">
-            Coverage begins December 1, 2010. Special-use decisions are handled by the Zoning
-            Board of Appeals and are not included here. A pending ordinance is not a zoning-map
-            change; an adopted matter is not treated as mapped until the official GIS source
-            reflects it. {excludedRelatedRecords.toLocaleString()} related eLMS search result
+            eLMS coverage begins December 1, 2010. The separate City ZBA layer supplies historical
+            special-use, variation, and administrative-appeal case records. A ZBA record or past
+            judgment does not establish current authorization, permitted use, or compliance. The
+            City layer does not publish a refresh timestamp, and the Explorer does not substitute
+            its retrieval date. A pending ordinance is not a zoning-map change; an adopted matter
+            is not treated as mapped until the official GIS source reflects it. The Explorer&apos;s
+            point matching and presentation are informational, not a City zoning determination.
+            {" "}{excludedRelatedRecords.toLocaleString()} related eLMS search result
             {excludedRelatedRecords === 1 ? " is" : "s are"} excluded because the record is not a
             map or Zoning Code amendment (for example, an opposition or vote-intent communication).
+            {" "}{zbaSnapshot.coverage.byCaseType.unknown.toLocaleString()} ZBA record
+            {zbaSnapshot.coverage.byCaseType.unknown === 1 ? " has" : "s have"} an unrecognized
+            published case-type code, and {zbaSnapshot.coverage.withoutPublishedJudgment.toLocaleString()}
+            {" "}do not publish judgment text; both remain visible as source limitations.
           </p>
           <p className="mt-2 font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#0C1B33]/35">
             eLMS published through {formatDate(legislation.source.sourceUpdatedThrough)} · latest
             reviewed map delta: {mapDelta.counts.added} added, {mapDelta.counts.removed} removed,
             {" "}{mapDelta.counts.attributesChanged} attribute and{" "}
-            {mapDelta.counts.geometryChanged} geometry changes
+            {mapDelta.counts.geometryChanged} geometry changes · latest reviewed ZBA delta:{" "}
+            {zbaDelta.counts.added} added, {zbaDelta.counts.removed} removed, {" "}
+            {zbaDelta.counts.attributesChanged} attribute and {" "}
+            {zbaDelta.counts.geometryChanged} geometry changes
           </p>
         </section>
 

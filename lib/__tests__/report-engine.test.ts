@@ -216,6 +216,84 @@ describe("generateReportData", () => {
     expect(item?.detail).toContain("does not determine whether a proposed use is permitted");
   });
 
+  it("shows cited historical ZBA records with verification guardrails and no duplicate zoning section", () => {
+    const zoningSource = {
+      id: "chicago-arcgis-zoning" as const,
+      label: "City of Chicago ArcGIS zoning boundaries",
+      url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+      retrievedAt: "2026-08-08T12:00:00.000Z",
+      recordUpdatedAt: null,
+    };
+    const zbaSource = {
+      id: "chicago-zba-arcgis" as const,
+      label: "City of Chicago Zoning Board of Appeals case layer",
+      url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning_update/MapServer/16",
+      boardUrl: "https://www.chicago.gov/city/en/depts/dcd/zoning-board-of-appeals.html",
+      retrievedAt: "2026-08-08T12:00:00.000Z",
+      sourceUpdatedAt: null,
+      freshnessNote:
+        "The City layer does not publish a refresh timestamp. Retrieval time is not a source-update date.",
+    };
+    const report = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "available",
+          zoneClass: "B3-2",
+          zoneType: null,
+          source: zoningSource,
+          zba: {
+            status: "available",
+            returnedCount: 1,
+            coverage: "complete",
+            source: zbaSource,
+            message: "Historical City ZBA records whose published geometry intersects this point.",
+            cases: [{
+              id: "zba-1",
+              globalId: "zba-1",
+              caseReference: "71-25-Z",
+              caseYear: 2025,
+              caseSequence: 71,
+              caseType: "variation",
+              caseTypeRaw: "Z",
+              address: "118 S CLINTON ST",
+              judgment: "Aproved/Cont.",
+              description: "Published case description.",
+              pin10: "1716101001",
+              pinAccuracy: "MATCHED",
+              publishedYearField: "71",
+              publishedCaseField: "2025",
+            }],
+          },
+        },
+      },
+    );
+
+    const zoningSections = report.sections.filter(
+      (section) => section.title === "Zoning & Regulatory Review",
+    );
+    expect(zoningSections).toHaveLength(1);
+    expect(zoningSections[0].description).toContain("not a City zoning determination");
+    expect(zoningSections[0].items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "Variation · 71-25-Z",
+          value: "Aproved/Cont.",
+          url: zbaSource.url,
+        }),
+      ]),
+    );
+    expect(JSON.stringify(zoningSections[0])).toContain("does not establish current authorization");
+    expect(JSON.stringify(zoningSections[0])).toContain("use the Query tool");
+    expect(report.dataSources?.find((item) => item.id === "chicagoZba")?.description)
+      .toContain("does not publish a refresh timestamp");
+    expect(report.dataSources?.find((item) => item.id === "chicagoZbaBoard")?.url)
+      .toBe(zbaSource.boardUrl);
+  });
+
   it("preserves explicit unavailable and not-found zoning states", () => {
     const unavailable = generateReportData(
       makeState({ reportType: "dev-feasibility", projectType: "rehab" }),

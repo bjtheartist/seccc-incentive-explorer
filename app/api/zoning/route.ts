@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cached, roundCoord } from "@/lib/redis";
 import { socrataHeaders } from "@/lib/socrata";
+import { lookupChicagoZba } from "@/lib/chicago-zba";
 import type {
   CityZoning,
   ZoningAvailableResponse,
@@ -15,7 +16,7 @@ const SOCRATA_LAYER_URL =
   "https://data.cityofchicago.org/resource/dj47-wfun.geojson";
 
 const CACHE_HEADERS = {
-  "Cache-Control": "public, s-maxage=604800, stale-while-revalidate=86400",
+  "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=21600",
 };
 
 const UNAVAILABLE_HEADERS = {
@@ -310,7 +311,8 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const cacheKey = `zoning:v3:${roundCoord(lat, 5)}:${roundCoord(lon, 5)}`;
+  const cacheKey = `zoning:v4:${roundCoord(lat, 5)}:${roundCoord(lon, 5)}`;
+  const zbaPromise = lookupChicagoZba(lat, lon);
 
   try {
     const result = await cached<CacheableZoningResponse>(
@@ -325,11 +327,16 @@ export async function GET(request: NextRequest) {
       },
     );
 
-    return NextResponse.json(result, { headers: CACHE_HEADERS });
+    const zba = await zbaPromise;
+    return NextResponse.json(
+      { ...result, zba },
+      { headers: zba.status === "unavailable" ? UNAVAILABLE_HEADERS : CACHE_HEADERS },
+    );
   } catch (error) {
     if (!(error instanceof ZoningSourcesUnavailableError)) {
       console.error("[zoning] lookup failed:", error);
     }
+    const zba = await zbaPromise;
     return NextResponse.json(
       {
         status: "unavailable",
@@ -337,6 +344,7 @@ export async function GET(request: NextRequest) {
         zoneType: null,
         source: null,
         message: "Published Chicago zoning data is temporarily unavailable.",
+        zba,
       },
       { status: 503, headers: UNAVAILABLE_HEADERS },
     );

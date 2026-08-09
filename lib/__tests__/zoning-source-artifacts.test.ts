@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { loadZoningSourceLedger } from "@/lib/zoning-legislation-data";
 
 describe("committed zoning source artifacts", () => {
-  const { legislation, mapSnapshot, mapDelta } = loadZoningSourceLedger();
+  const { legislation, mapSnapshot, mapDelta, zbaSnapshot, zbaDelta } =
+    loadZoningSourceLedger();
 
   it("reconciles every eLMS search page and discloses related-record exclusions", () => {
     for (const search of legislation.coverage.searches) {
@@ -52,6 +53,40 @@ describe("committed zoning source artifacts", () => {
     expect(mapDelta.comparedThrough).toBe(mapSnapshot.source.sourceUpdatedThrough);
     expect(mapDelta.changes).toEqual([]);
     expect(mapDelta.counts).toEqual({
+      added: 0,
+      removed: 0,
+      attributesChanged: 0,
+      geometryChanged: 0,
+    });
+  });
+
+  it("stores every published ZBA record without republishing geometry", () => {
+    expect(zbaSnapshot.featureCount).toBe(zbaSnapshot.records.length);
+    expect(new Set(zbaSnapshot.records.map((row) => row.globalId)).size).toBe(
+      zbaSnapshot.featureCount,
+    );
+    for (const row of zbaSnapshot.records) {
+      expect(row.attributeFingerprint).toMatch(/^[0-9a-f]{64}$/);
+      expect(row.geometryFingerprint).toMatch(/^[0-9a-f]{64}$/);
+      expect(row).not.toHaveProperty("geometry");
+      expect(row).not.toHaveProperty("currentAuthorization");
+    }
+    expect(
+      Object.values(zbaSnapshot.coverage.byCaseType).reduce(
+        (sum, count) => sum + count,
+        0,
+      ),
+    ).toBe(zbaSnapshot.featureCount);
+    expect(zbaSnapshot.coverage.withoutPublishedJudgment).toBeGreaterThan(0);
+  });
+
+  it("does not invent ZBA freshness or changes for the first baseline", () => {
+    expect(zbaSnapshot.source.sourceUpdatedThrough).toBeNull();
+    expect(zbaSnapshot.source.freshnessNote).toContain("does not publish");
+    expect(zbaDelta.comparedFromFeatureCount).toBeNull();
+    expect(zbaDelta.comparedThroughFeatureCount).toBe(zbaSnapshot.featureCount);
+    expect(zbaDelta.changes).toEqual([]);
+    expect(zbaDelta.counts).toEqual({
       added: 0,
       removed: 0,
       attributesChanged: 0,
