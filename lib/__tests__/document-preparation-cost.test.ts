@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   DOCUMENT_PREPARATION_COST_CAVEAT,
   DOCUMENT_PREPARATION_COST_LEGEND,
+  DOCUMENT_PREPARATION_COST_UNKNOWN_BASIS,
   classifyDocumentPreparationCost,
   classifyPreparationStepCost,
   isConditionalDocumentRequirement,
@@ -83,26 +84,48 @@ describe("classifyDocumentPreparationCost", () => {
     expect(classifyDocumentPreparationCost(requirement).tier).toBe("$");
   });
 
-  it("defaults unknown requirements conservatively without claiming precision", () => {
+  // These three cases previously asserted a "$" fall-through and called it a
+  // "conservative default". It was not conservative: "$" carries the published
+  // meaning "usually self-provided or low/no fee", so an unrecognised
+  // requirement was being published as cheap on no evidence. The tests encoded
+  // the defect as intent, which is why nothing caught it.
+  it("returns the unknown tier — not $ — when no pattern matches", () => {
     expect(classifyDocumentPreparationCost("Program narrative attachment")).toEqual({
-      tier: "$",
-      basis: "Typically gathered from existing business records.",
+      tier: "?",
+      basis: DOCUMENT_PREPARATION_COST_UNKNOWN_BASIS,
     });
   });
 
   it.each(["Project plan", "Project budget", "Operating plan and budget"])(
-    "keeps ordinary planning records at the conservative $ default: %s",
+    "does not claim a cost it cannot determine: %s",
     (requirement) => {
-      expect(classifyDocumentPreparationCost(requirement).tier).toBe("$");
+      const signal = classifyDocumentPreparationCost(requirement);
+      expect(signal.tier).toBe("?");
+      expect(signal.tier).not.toBe("$");
     },
   );
 
-  it("publishes a qualitative legend and a preparation-only caveat", () => {
+  it("never publishes an unmatched requirement as low-cost", () => {
+    // The real-world consequence: NMTC legal structuring and a W-9 must not
+    // render identically. The W-9 matches LOW_COST_PATTERN and stays "$"; the
+    // structuring document matches nothing and must say so.
+    expect(classifyDocumentPreparationCost("W-9").tier).toBe("$");
+    expect(
+      classifyDocumentPreparationCost("Legal and financial structuring documents").tier,
+    ).toBe("?");
+  });
+
+  it("publishes a qualitative legend that includes the unknown tier", () => {
     expect(DOCUMENT_PREPARATION_COST_LEGEND.map((item) => item.tier)).toEqual([
       "$",
       "$$",
       "$$$",
+      "?",
     ]);
+    // The unknown tier's label must not read as a cost claim.
+    const unknown = DOCUMENT_PREPARATION_COST_LEGEND.find((i) => i.tier === "?");
+    expect(unknown?.label).toBe("Not determined from the requirement text");
+    expect(unknown?.label).not.toMatch(/low|no fee|cheap|self-provided/i);
     expect(DOCUMENT_PREPARATION_COST_CAVEAT).toBe(
       "Costs vary; this reflects document preparation, not program value.",
     );

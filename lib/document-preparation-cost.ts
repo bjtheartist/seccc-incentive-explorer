@@ -1,7 +1,30 @@
-export const DOCUMENT_PREPARATION_COST_TIERS = ["$", "$$", "$$$"] as const;
+/**
+ * "?" is a first-class tier, not a placeholder.
+ *
+ * This classifier reads a requirement's TEXT and matches keywords. Most of the
+ * catalog matches nothing — 206 of 285 requiredDocs entries as of 2026-08-09 —
+ * and the function used to answer those with "$" plus the affirmative basis
+ * "Typically gathered from existing business records." That published an
+ * unknown as a determination: NMTC legal structuring, an NPS Historic
+ * Preservation Part 1-3 application, and a W-9 all rendered identically as
+ * low/no-fee, and a user planning around the cheap badge would be wrong in a
+ * way the platform had told them to trust.
+ *
+ * classifyPreparationStepCost, twelve lines below, already got this right by
+ * returning null rather than "being assigned a speculative cost". Documents
+ * cannot simply vanish from a checklist the way an unmarked step can, so they
+ * get an explicit unknown instead of an omission.
+ */
+export const DOCUMENT_PREPARATION_COST_TIERS = ["?", "$", "$$", "$$$"] as const;
 
 export type DocumentPreparationCostTier =
   (typeof DOCUMENT_PREPARATION_COST_TIERS)[number];
+
+/** The tier meaning "we did not determine this", never "this is cheap". */
+export const DOCUMENT_PREPARATION_COST_UNKNOWN_TIER: DocumentPreparationCostTier = "?";
+
+export const DOCUMENT_PREPARATION_COST_UNKNOWN_BASIS =
+  "Preparation cost not determined from the requirement text — check with the administering agency.";
 
 export interface DocumentPreparationCostSignal {
   tier: DocumentPreparationCostTier;
@@ -15,6 +38,7 @@ export const DOCUMENT_PREPARATION_COST_LEGEND: ReadonlyArray<{
   { tier: "$", label: "Usually self-provided or low/no fee" },
   { tier: "$$", label: "May involve filing fees or professional help" },
   { tier: "$$$", label: "Often requires specialized professional work" },
+  { tier: "?", label: "Not determined from the requirement text" },
 ];
 
 export const DOCUMENT_PREPARATION_COST_CAVEAT =
@@ -104,9 +128,12 @@ export function classifyDocumentPreparationCost(
     };
   }
 
+  // Nothing matched. Say so. The previous fall-through returned "$" with an
+  // affirmative low-cost basis, which meant every unrecognised requirement was
+  // published as cheap on the strength of no evidence at all.
   return {
-    tier: "$",
-    basis: "Typically gathered from existing business records.",
+    tier: DOCUMENT_PREPARATION_COST_UNKNOWN_TIER,
+    basis: DOCUMENT_PREPARATION_COST_UNKNOWN_BASIS,
   };
 }
 
