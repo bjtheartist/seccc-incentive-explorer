@@ -7,6 +7,7 @@ import {
 } from "../report-engine";
 import type { GeneratedReport } from "../report-engine";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "../capital-partner-report";
+import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "../support-organization-copy";
 import { extractText } from "unpdf";
 
 function section(title: string): GeneratedReport["sections"][number] {
@@ -22,14 +23,14 @@ describe("orderSectionsForPdf", () => {
       section("Eligible Incentive Programs"),
       section("Additional Programs to Explore"),
       section("Required Documents"),
-      section("Your Support Network"),
+      section(SUPPORT_ORGANIZATIONS_SECTION_TITLE),
       section("Upcoming Deadlines Near This Address"),
     ];
     const titles = orderSectionsForPdf(input).map((s) => s.title);
     expect(titles).toEqual([
       "Eligible Incentive Programs",
       "Upcoming Deadlines Near This Address",
-      "Your Support Network",
+      SUPPORT_ORGANIZATIONS_SECTION_TITLE,
       "Additional Programs to Explore",
       "Required Documents",
       "Site Overview",
@@ -54,14 +55,14 @@ describe("orderSectionsForPdf", () => {
     ]);
   });
 
-  it("puts Your Support Network first when Eligible Incentive Programs is absent", () => {
+  it("puts support organizations first when confirmed programs are absent", () => {
     const input = [
       section("Market Signal Summary"),
-      section("Your Support Network"),
+      section(SUPPORT_ORGANIZATIONS_SECTION_TITLE),
       section("Data Sources"),
     ];
     const titles = orderSectionsForPdf(input).map((s) => s.title);
-    expect(titles[0]).toBe("Your Support Network");
+    expect(titles[0]).toBe(SUPPORT_ORGANIZATIONS_SECTION_TITLE);
     expect(titles).toHaveLength(3);
   });
 

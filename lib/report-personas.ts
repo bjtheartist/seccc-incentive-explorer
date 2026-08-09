@@ -26,6 +26,7 @@ import {
   personaDescriptor,
   type PersonaId,
 } from "@/lib/personas";
+import { isSupportOrganizationSectionTitle } from "@/lib/support-organization-copy";
 
 /** Section title for the collapsed "everything else" disclosure. */
 export const ALSO_AT_ADDRESS_TITLE = "Also at this address";
@@ -35,8 +36,6 @@ const CONFIRMED_SECTION_TITLES = new Set([
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 ]);
-
-const SUPPORT_NETWORK_TITLE = "Your Support Network";
 
 /**
  * DRAFT persona tags mirrored from public/data/programs.json.
@@ -251,7 +250,7 @@ export function applyPersonaLens(
   let lastConfirmedIndex = -1;
 
   for (const section of report.sections ?? []) {
-    if (section.title === SUPPORT_NETWORK_TITLE) {
+    if (isSupportOrganizationSectionTitle(section.title)) {
       nextSections.push(reorderSupportNetwork(section, persona));
       continue;
     }

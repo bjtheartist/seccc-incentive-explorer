@@ -266,7 +266,7 @@ export function HomePageClient({
           >
             Enter a Chicago address to generate a free location snapshot from
             public data — TIF, NOF, and SBIF context, vacancy signals, and
-            nearby local support partners.
+            nearby local support organizations.
           </motion.p>
 
           <motion.div
@@ -418,7 +418,7 @@ export function HomePageClient({
                   ["01", "Start with an address", "or a corridor you're considering"],
                   ["02", "See what may apply", "zones + programs, plain English"],
                   ["03", "Generate the report", "print it, email it, share the link"],
-                  ["04", "Take the next step", "with the right local partner"],
+                  ["04", "Take the next step", "with a local support organization"],
                 ].map(([n, title, sub]) => (
                   <li key={n} className="flex items-baseline gap-4">
                     <span className="font-mono-bureau text-[10px] tracking-[0.2em] text-[#2563EB] shrink-0">

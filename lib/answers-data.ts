@@ -44,7 +44,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     description:
       "Enter any Chicago address to see which public incentive programs and zones may apply — TIF, NOF, SBIF, Opportunity Zones, and more — in one free snapshot.",
     answer:
-      "Enter your Chicago address into the Chicago Incentive Explorer and generate a free location snapshot. It cross-references city, county, state, and federal incentive zones for that address and lists the programs and local support partners that may apply.",
+      "Enter your Chicago address into the Chicago Incentive Explorer and generate a free location snapshot. It cross-references city, county, state, and federal incentive zones for that address and lists programs to review and local support organizations that may be relevant.",
     bullets: [
       "One address returns every overlapping incentive zone in one view.",
       "Covers city (TIF, SBIF, NOF, SSA), county (Cook 7a/7b), state (Enterprise Zone), and federal (Opportunity Zone, NMTC) layers.",

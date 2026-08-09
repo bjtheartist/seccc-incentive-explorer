@@ -73,6 +73,13 @@ import {
 } from "./capital-partner-report";
 import { addPartnerReferralAttribution } from "./partner-referrals";
 import { buildPublicMatchExplanation, type PublicMatchEvidence } from "./match-transparency";
+import {
+  isSupportOrganizationSectionTitle,
+  SUPPORT_ORGANIZATION_AVAILABILITY_LINE,
+  SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
+  SUPPORT_ORGANIZATIONS_DESCRIPTION,
+  SUPPORT_ORGANIZATIONS_SECTION_TITLE,
+} from "./support-organization-copy";
 
 // ─── Local Types ────────────────────────────────────────────────────
 
@@ -480,6 +487,21 @@ function isProgramListingSection(title: string): boolean {
     || /^.+-Level Programs$/.test(title);
 }
 
+function normalizeSupportOrganizationDetail(detail?: string): string | undefined {
+  const lines = (detail ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^Status:/i.test(line))
+    .map(normalizePublicHeadlineText);
+
+  if (!lines.some((line) => /^Availability:/i.test(line))) {
+    lines.push(SUPPORT_ORGANIZATION_AVAILABILITY_LINE);
+  }
+
+  return lines.length > 0 ? lines.join("\n") : undefined;
+}
+
 function legacyMatchExplanation(item: ReportItem): PublicMatchExplanation | undefined {
   if (!item.programId) return undefined;
   const requirements = (item.eligibilityRules ?? []).map((rule) => rule.description);
@@ -614,12 +636,17 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
     })),
     sections: report.sections.map((section) => {
       const programListingSection = isProgramListingSection(section.title);
+      const supportOrganizationSection = isSupportOrganizationSectionTitle(section.title);
       return {
         ...section,
-        title: normalizePublicHeadlineText(section.title),
-        description: section.description
-          ? normalizePublicHeadlineText(section.description)
-          : undefined,
+        title: supportOrganizationSection
+          ? SUPPORT_ORGANIZATIONS_SECTION_TITLE
+          : normalizePublicHeadlineText(section.title),
+        description: supportOrganizationSection
+          ? `${SUPPORT_ORGANIZATIONS_DESCRIPTION} ${SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}`
+          : section.description
+            ? normalizePublicHeadlineText(section.description)
+            : undefined,
         items: section.items.map((item) => {
           const {
             confidenceLevel: _confidenceLevel,
@@ -636,13 +663,18 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
           void _notVerified;
           void _matchedRules;
           void _projectFit;
+          const supportSummaryItem =
+            item.label === "Community Support" || item.label.startsWith("Local Support in ");
           const normalizedItem: ReportItem = {
             ...publicItem,
             label: normalizePublicHeadlineText(publicItem.label),
             value: normalizePublicHeadlineText(publicItem.value),
-            detail: publicItem.detail
-              ? normalizePublicHeadlineText(publicItem.detail)
-              : undefined,
+            detail:
+              supportOrganizationSection && !supportSummaryItem
+                ? normalizeSupportOrganizationDetail(publicItem.detail)
+                : publicItem.detail
+                  ? normalizePublicHeadlineText(publicItem.detail)
+                  : undefined,
             sourceLabel: publicItem.sourceLabel
               ? normalizePublicHeadlineText(publicItem.sourceLabel)
               : undefined,
@@ -1777,12 +1809,12 @@ function localSupportDetail(
   storefrontCorridor?: boolean,
 ): string {
   const inferredSupport = org.relationships.includes("cbc_hub")
-    ? "Can help with: regional business navigation, referrals, and Chicago Business Center support. Confirm the exact intake path before referring a business."
+    ? "May help with: regional business navigation, referrals, and Chicago Business Center support. Confirm the exact intake path directly."
     : org.relationships.includes("ssa_provider")
-      ? "Can help with: corridor services, local business support, and SSA-related questions. Confirm the current service area before referring a business."
+      ? "May help with: corridor services, local business support, and SSA-related questions. Confirm the current service area directly."
       : org.relationships.includes("legal_support")
-        ? "Can help with: small-business legal questions, entity formation, contracts, compliance, and referrals. Confirm eligibility and intake requirements before referring a business."
-      : "Can help with: business advising, referrals, and incentive-navigation questions. Confirm current capacity before referring a business.";
+        ? "May help with: small-business legal questions, entity formation, contracts, compliance, and referrals. Confirm eligibility and intake requirements directly."
+      : "May help with: business advising, referrals, and incentive-navigation questions. Confirm current programs and capacity directly.";
 
   const details = [
     storefrontCorridor && org.relationships.includes("ssa_provider")
@@ -1790,10 +1822,10 @@ function localSupportDetail(
       : "",
     org.address ? `Address: ${org.address}` : "",
     org.phone ? `Phone: ${org.phone}` : "",
-    org.supportTypes ? `Can help with: ${org.supportTypes}` : inferredSupport,
-    org.serviceGeography ? `Serves: ${org.serviceGeography}` : communityArea ? `Service area: mapped as a support option for ${communityArea}; verify fit before referral.` : "",
-    org.website ? "" : "Website: not listed in the validated source map.",
-    org.currentStatus || org.validationLevel ? `Status: ${[org.currentStatus, org.validationLevel].filter(Boolean).join("; ")}` : "",
+    org.supportTypes ? `Published support services: ${org.supportTypes}` : inferredSupport,
+    org.serviceGeography ? `Published service area: ${org.serviceGeography}` : communityArea ? `Service area: mapped as a support option for ${communityArea}; confirm fit directly.` : "",
+    org.website ? "" : "Website: not listed in the source records used for this report.",
+    SUPPORT_ORGANIZATION_AVAILABILITY_LINE,
   ].filter(Boolean);
   return details.join("\n");
 }
@@ -1824,7 +1856,7 @@ function buildCommunityAssets(
       .filter((org) => !/edo|cdc|chamber|ssa/i.test(`${org.type} ${org.role}`))
       .map((org) => ({ name: org.name, address: org.address || "" }));
 
-    const narrative = `${organizations.length} local business-support organization${organizations.length !== 1 ? "s" : ""} are mapped for ${localSupport.communityArea}. Use this as a warm-handoff list: start with the closest neighborhood-facing partner, then confirm current capacity, language access, service area, and intake process before referring a business.`;
+    const narrative = `${organizations.length} local business-support organization${organizations.length !== 1 ? "s" : ""} are mapped for ${localSupport.communityArea}. Use this as a discovery list: review the published service fit, then confirm current programs, contact options, language access, and capacity directly with each organization.`;
 
     return {
       edos,
@@ -2390,7 +2422,7 @@ function generateLocationIncentives(
     sections.push(buildDocumentReadinessSection(confirmedPrograms, state));
   }
 
-  // §05 Your Support Network
+  // §05 Organizations that may be able to help
   if (communityAssetsData) {
     const assetItems: ReportItem[] = [];
     assetItems.push({
@@ -2418,10 +2450,8 @@ function generateLocationIncentives(
       }
     }
     sections.push({
-      title: "Your Support Network",
-      description: communityAssetsData.communityArea
-        ? "Neighborhood-facing organizations that can help business owners turn the report into a clearer next conversation."
-        : "Local organizations that provide free advising and application assistance.",
+      title: SUPPORT_ORGANIZATIONS_SECTION_TITLE,
+      description: `${SUPPORT_ORGANIZATIONS_DESCRIPTION} ${SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}`,
       items: assetItems,
     });
   }
@@ -4352,8 +4382,8 @@ export function generateReportData(
     : null;
   if (capitalPartnerHandoff?.primary && capitalPartnerSection) {
     report.capitalPartnerHandoff = capitalPartnerHandoff;
-    const supportIndex = report.sections.findIndex(
-      (section) => section.title === "Your Support Network",
+    const supportIndex = report.sections.findIndex((section) =>
+      isSupportOrganizationSectionTitle(section.title),
     );
     const contextIndex = report.sections.reduce(
       (lastIndex, section, index) =>

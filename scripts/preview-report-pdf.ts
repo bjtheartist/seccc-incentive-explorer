@@ -27,6 +27,11 @@ import { generateReportPdfBase64 } from "@/lib/pdf-report";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
 import { CONFIRMED_PROGRAMS_SECTION_TITLE } from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
+import {
+  SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
+  SUPPORT_ORGANIZATIONS_DESCRIPTION,
+  SUPPORT_ORGANIZATIONS_SECTION_TITLE,
+} from "@/lib/support-organization-copy";
 
 const report: GeneratedReport = {
   title: "Site Incentive Analysis",
@@ -154,11 +159,11 @@ const report: GeneratedReport = {
         },
       ],
     },
-    // §5 Your Support Network — 5 organizations (index 0 = START HERE hero;
+    // §5 Local support organizations — 5 organizations (index 0 = START HERE hero;
     // run-on contact strings, one org missing a phone, one missing a website).
     {
-      title: "Your Support Network",
-      description: "Neighborhood-facing organizations that can help business owners turn the report into a clearer next conversation.",
+      title: SUPPORT_ORGANIZATIONS_SECTION_TITLE,
+      description: `${SUPPORT_ORGANIZATIONS_DESCRIPTION} ${SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}`,
       items: [
         {
           label: "Old Town Merchants & Residents Association",

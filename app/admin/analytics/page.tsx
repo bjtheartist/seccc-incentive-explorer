@@ -630,7 +630,7 @@ export default async function AdminAnalyticsPage({
               Mission Analytics
             </h1>
             <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/45">
-              Measures whether the tool moves people from incentive discovery to useful next steps, especially finding local support partners they can contact.
+              Measures whether the tool moves people from incentive discovery to useful next steps, especially finding local support organizations they can explore.
             </p>
           </div>
 

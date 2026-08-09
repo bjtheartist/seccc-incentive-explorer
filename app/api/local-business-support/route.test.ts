@@ -15,6 +15,21 @@ describe("/api/local-business-support", () => {
     expect(response.status).toBe(200);
     expect(payload.communityArea).toBe("South Chicago");
     expect(payload.organizationCount).toBe(payload.organizations.length);
+    expect(payload.selectionDisclosure).toMatchObject({
+      currentProgramsConfirmed: false,
+      currentCapacityConfirmed: false,
+    });
+    expect(payload.selectionDisclosure.basis).toContain("published service areas");
+    expect(payload.selectionDisclosure.note).toContain("does not confirm");
+    expect(payload.organizations.every(
+      (org: Record<string, unknown>) => !("currentStatus" in org) && !("validationLevel" in org),
+    )).toBe(true);
+    expect(payload).not.toHaveProperty("confidence");
+    expect(payload).not.toHaveProperty("biggestGap");
+    expect(payload.sourceLabel).toBe(
+      "Chicago Small Business Resource Map (source records reviewed)",
+    );
+    expect(payload.sourceLabel).not.toMatch(/active|verified|validated/i);
     expect(payload.coverage.ssa).toBe(
       "SSA #5 Commercial Ave. (Calumet Area Industrial Commission)"
     );

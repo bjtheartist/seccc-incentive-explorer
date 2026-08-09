@@ -10,6 +10,11 @@ import {
   type GeneratedReport,
 } from "../report-engine";
 import type { LookupResult, Program } from "../types";
+import {
+  SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
+  SUPPORT_ORGANIZATIONS_DESCRIPTION,
+  SUPPORT_ORGANIZATIONS_SECTION_TITLE,
+} from "../support-organization-copy";
 
 const PROHIBITED_DETERMINATIONS =
   /appears eligible|may qualify|you qualify|eligible incentive programs|high match|medium match/i;
@@ -311,6 +316,38 @@ describe("public report safety", () => {
         "saved report",
       );
     }
+  });
+
+  it("tightens legacy support sections without implying live intake capacity", () => {
+    const normalized = normalizePublicReportForDisplay(savedReport([
+      {
+        title: "Your Support Network",
+        description: "Local organizations that provide free advising and application assistance.",
+        items: [
+          {
+            label: "Local Support in South Chicago",
+            value: "1 organization",
+            detail: "A legacy support summary.",
+          },
+          {
+            label: "Example Organization",
+            value: "Primary local access point",
+            detail: [
+              "Published support services: Business advising",
+              "Status: Active resource; Verified current web presence",
+            ].join("\n"),
+            url: "https://example.com",
+          },
+        ],
+      },
+    ]));
+
+    const section = normalized.sections[0];
+    expect(section.title).toBe(SUPPORT_ORGANIZATIONS_SECTION_TITLE);
+    expect(section.description).toContain(SUPPORT_ORGANIZATIONS_DESCRIPTION);
+    expect(section.description).toContain(SUPPORT_ORGANIZATIONS_CAPACITY_NOTE);
+    expect(section.items[1].detail).toContain("Availability: Current programs");
+    expect(section.items[1].detail).not.toMatch(/Status:|Active resource|Verified current web presence/i);
   });
 
   it("preserves deadline and project-requirement facts while stripping private item payloads", () => {

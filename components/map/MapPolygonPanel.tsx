@@ -594,7 +594,7 @@ export default function MapPolygonPanel({
         {
           label: "Contact an acquisition or corridor partner",
           description:
-            "Use the report to start conversations with CCLBA, DPD, CCSA, or a local business support partner.",
+            "Use the report to start conversations with CCLBA, DPD, CCSA, or a local business support organization.",
           priority: "medium",
         },
       ],

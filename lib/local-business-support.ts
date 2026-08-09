@@ -29,6 +29,7 @@ export interface LocalBusinessSupportOrganization {
   supportTypes?: string;
   serviceGeography?: string;
   citywideOrRegional?: string;
+  /** Legacy source labels retained for provenance; never treat as live intake or capacity. */
   validationLevel?: string;
   currentStatus?: string;
   sourceYear?: string;
@@ -74,6 +75,12 @@ export interface LocalBusinessSupportContext {
   organizations: LocalBusinessSupportOrganization[];
   /** Echoed by the API when the SSA-first storefront reordering applied. */
   storefrontCorridor?: boolean;
+  selectionDisclosure?: {
+    basis: string;
+    currentProgramsConfirmed: boolean;
+    currentCapacityConfirmed: boolean;
+    note: string;
+  };
   sourceLabel: string;
   sourceUrls: string[];
 }
@@ -334,10 +341,6 @@ export function rankLocalBusinessSupport(
       };
       const relevanceDelta = relevance(b) - relevance(a);
       if (relevanceDelta !== 0) return relevanceDelta;
-
-      const verifiedA = /active|verified/i.test(`${a.currentStatus ?? ""} ${a.validationLevel ?? ""}`) ? 1 : 0;
-      const verifiedB = /active|verified/i.test(`${b.currentStatus ?? ""} ${b.validationLevel ?? ""}`) ? 1 : 0;
-      if (verifiedA !== verifiedB) return verifiedB - verifiedA;
 
       return a.name.localeCompare(b.name);
     })
