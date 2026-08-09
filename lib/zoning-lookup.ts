@@ -90,7 +90,15 @@ function isZoningMirrorVintage(value: unknown): boolean {
     isZoningTimestamp(entry.dataset) &&
     typeof entry.note === "string" &&
     // A record timestamp may only ride on a mirror that returned a record.
-    (entry.record === null || entry.queryOutcome === "answered")
+    (entry.record === null || entry.queryOutcome === "answered") &&
+    // Symmetrically: a DATASET timestamp may only ride on a mirror whose
+    // metadata was actually published. Without this, a block could claim
+    // datasetOutcome "unreachable" while carrying a freshness value for the
+    // very endpoint it says was never read — the same defect class the record
+    // check exists to stop, on the other slot. The route never emits that
+    // shape, but this guard is the network-trust boundary, not a restatement
+    // of what the route happens to do today.
+    (entry.dataset === null || entry.datasetOutcome === "published")
   );
 }
 
@@ -264,9 +272,17 @@ function withValidatedVintage(
   zba: ChicagoZbaLookupResponse | undefined,
 ): ZoningLookupResponse {
   const { vintage, ...rest } = candidate;
+  // data/curated/zoning/README.md states as an invariant that answeredBy names
+  // the same mirror as source.id. A block that disagrees with its own response
+  // is attributing the answer to a source that did not give it, so it is
+  // dropped rather than published.
+  const sourceId = (rest.source as Record<string, unknown> | undefined)?.id;
+  const agreesWithSource =
+    isZoningVintage(vintage) &&
+    (vintage.answeredBy === null || sourceId === undefined || vintage.answeredBy === sourceId);
   return {
     ...rest,
-    ...(isZoningVintage(vintage) ? { vintage } : {}),
+    ...(agreesWithSource ? { vintage } : {}),
     zba,
   } as unknown as ZoningLookupResponse;
 }

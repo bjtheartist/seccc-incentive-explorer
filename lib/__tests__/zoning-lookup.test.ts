@@ -355,3 +355,75 @@ describe("zoning lookup client", () => {
     });
   });
 });
+
+describe("zoning vintage — guard symmetry and source agreement", () => {
+  const mirror = (over: Record<string, unknown> = {}) => ({
+    id: "chicago-arcgis-zoning",
+    label: "City ArcGIS zoning",
+    queryOutcome: "answered",
+    datasetOutcome: "published",
+    record: null,
+    dataset: null,
+    note: "n",
+    ...over,
+  });
+  const vintage = (over: Record<string, unknown> = {}) => ({
+    retrievedAt: "2026-08-09T00:00:00.000Z",
+    comparabilityNote: "c",
+    answeredBy: "chicago-arcgis-zoning",
+    answerKind: "zoning",
+    mirrors: [
+      mirror(),
+      mirror({ id: "chicago-data-portal-zoning", label: "Data Portal" }),
+    ],
+    ...over,
+  });
+  const source = {
+    id: "chicago-arcgis-zoning",
+    label: "City ArcGIS zoning",
+    url: "https://example.org",
+    retrievedAt: "2026-08-09T00:00:00.000Z",
+    recordUpdatedAt: null,
+  };
+
+  it("drops a DATASET timestamp attributed to metadata the block says was never read", () => {
+    // Mirror of the existing record-slot rule. Without the dataset-slot check a
+    // block can publish a freshness value for an endpoint it admits it could
+    // not reach — a source speaking while stating it was silent.
+    const bad = vintage({
+      mirrors: [
+        mirror({
+          datasetOutcome: "unreachable",
+          dataset: { field: "rowsUpdatedAt", updatedAt: "2026-07-29T00:00:00.000Z", scope: "dataset" },
+        }),
+        mirror({ id: "chicago-data-portal-zoning", label: "Data Portal" }),
+      ],
+    });
+    const out = normalizeZoningLookup({ status: "available", zoneClass: "B3-2", source, vintage: bad });
+    expect("vintage" in out).toBe(false);
+  });
+
+  it("keeps a dataset timestamp when the metadata WAS published", () => {
+    const good = vintage({
+      mirrors: [
+        mirror({
+          datasetOutcome: "published",
+          dataset: { field: "rowsUpdatedAt", updatedAt: "2026-07-29T00:00:00.000Z", scope: "dataset" },
+        }),
+        mirror({ id: "chicago-data-portal-zoning", label: "Data Portal" }),
+      ],
+    });
+    const out = normalizeZoningLookup({ status: "available", zoneClass: "B3-2", source, vintage: good });
+    expect("vintage" in out).toBe(true);
+  });
+
+  it("drops a block whose answeredBy contradicts the response's own source", () => {
+    const out = normalizeZoningLookup({
+      status: "available",
+      zoneClass: "B3-2",
+      source,
+      vintage: vintage({ answeredBy: "chicago-data-portal-zoning" }),
+    });
+    expect("vintage" in out).toBe(false);
+  });
+});
