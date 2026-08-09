@@ -41,6 +41,16 @@ describe("POST /api/admin/analytics/login", () => {
     expect(response.cookies.get("cie_analytics_admin")?.value).toBeTruthy();
   });
 
+  it("allows the shared admin session to return to the zoning change ledger", async () => {
+    const response = await POST(request("/admin/zoning-changes"));
+
+    expect(response.status).toBe(303);
+    expect(new URL(response.headers.get("Location") || "").pathname).toBe(
+      "/admin/zoning-changes",
+    );
+    expect(response.cookies.get("cie_analytics_admin")?.value).toBeTruthy();
+  });
+
   it("rejects external redirect targets", async () => {
     const response = await POST(request("https://example.com/admin/future-of-commerce"));
 

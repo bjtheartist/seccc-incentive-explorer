@@ -2556,6 +2556,12 @@ function buildZoningReportItem(
     recordUpdatedAt
       ? `Source record updated ${recordUpdatedAt.slice(0, 10)}.`
       : null,
+    cityZoning.clerkDocumentNumber
+      ? `Related City Clerk record: ${cityZoning.clerkDocumentNumber}.`
+      : null,
+    cityZoning.ordinanceDate
+      ? `Published ordinance date: ${cityZoning.ordinanceDate.slice(0, 10)}.`
+      : null,
     "This report does not determine whether a proposed use is permitted.",
     "Verify the intended use and project requirements against the current Chicago Zoning Ordinance and with the City.",
   ]
@@ -2566,7 +2572,7 @@ function buildZoningReportItem(
     label: "City Zoning Classification",
     value: cityZoning.zoneClass,
     detail: sourceDetail,
-    url: cityZoning.source?.url,
+    url: cityZoning.clerkUrl ?? cityZoning.source?.url,
   };
 }
 

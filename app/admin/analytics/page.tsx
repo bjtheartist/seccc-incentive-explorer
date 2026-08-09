@@ -682,6 +682,12 @@ export default async function AdminAnalyticsPage({
           </div>
           <div className="flex flex-wrap gap-2">
             <Link
+              href="/admin/zoning-changes"
+              className="border border-[#0C1B33]/12 bg-white px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/45"
+            >
+              Zoning Changes
+            </Link>
+            <Link
               href="/admin/owner-files"
               className="border border-[#0C1B33]/12 bg-white px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/45"
             >
