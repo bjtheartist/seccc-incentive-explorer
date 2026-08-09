@@ -138,6 +138,7 @@ const LAYER: CommunityInvestmentLayerResult = {
   status: "ready",
   pointFeatures: POINTS,
   presentFunderTypes: ["government", "philanthropic"],
+  presentGovernmentFundingPurposes: ["capital_project", "programmatic"],
   presentCapitalClasses: ["grant", "tif_subsidy", "federal_program", "tax_credit"],
   citywide: { count: 12, totalDollars: 4_000_000 },
   citywideEntries: [],
@@ -356,11 +357,11 @@ describe("MapPolygonPanel — CSV export availability", () => {
         investmentLayer={LAYER}
       />,
     );
-    expect(html).toContain("Export Full Report (CSV)");
+    expect(html).toContain("Export Area Data (CSV)");
     // Save/Email build a vacancy report, so they stay hidden with no vacancies.
     expect(html).not.toContain("Save Report");
     expect(html).not.toContain("Email This to Me");
-    expect(html).toContain("No properties found");
+    expect(html).toContain("No tracked vacant properties found");
   });
 
   it("still offers nothing to a non-admin with no vacancies (unchanged behavior)", () => {
@@ -372,7 +373,7 @@ describe("MapPolygonPanel — CSV export availability", () => {
         investmentLayer={LAYER}
       />,
     );
-    expect(html).not.toContain("Export Full Report (CSV)");
+    expect(html).not.toContain("Export Area Data (CSV)");
     expect(html).not.toContain("Save Report");
   });
 
@@ -385,7 +386,7 @@ describe("MapPolygonPanel — CSV export availability", () => {
         investmentLayer={{ ...LAYER, pointFeatures: [] }}
       />,
     );
-    expect(html).not.toContain("Export Full Report (CSV)");
+    expect(html).not.toContain("Export Area Data (CSV)");
   });
 
   it("keeps the full action set when the area holds vacancies", () => {
@@ -394,7 +395,7 @@ describe("MapPolygonPanel — CSV export availability", () => {
     );
     expect(html).toContain("Save Report");
     expect(html).toContain("Email This to Me");
-    expect(html).toContain("Export Full Report (CSV)");
+    expect(html).toContain("Export Area Data (CSV)");
   });
 });
 

@@ -272,7 +272,7 @@ function WorkspaceContent() {
             <EmptyState
               icon={<ClipboardCheck className="w-5 h-5" />}
               title="No application prep started yet"
-              text="Start from a likely-match report to preserve your business facts and map the work needed before an official application."
+              text="Start from a report or choose a program to preserve your business facts and map the work needed before an official application."
               action={
                 <Link
                   href="/workspace/incentive-preparation/new"

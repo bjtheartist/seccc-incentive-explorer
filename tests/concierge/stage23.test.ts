@@ -28,10 +28,17 @@ const routeMocks = vi.hoisted(() => ({
   patchPacket: vi.fn(async (_request: Request, _context: unknown) =>
     Response.json({ packet: { id: "packet-1" } })
   ),
+  putSupportDraft: vi.fn(async (request: Request, _context: unknown) => {
+    const body = await request.json();
+    return Response.json({ draft: body });
+  }),
 }));
 
 vi.mock("@/app/api/incentive-preparation/[id]/route", () => ({
   PATCH: routeMocks.patchPacket,
+}));
+vi.mock("@/app/api/incentive-preparation/[id]/support-request/draft/route", () => ({
+  PUT: routeMocks.putSupportDraft,
 }));
 
 const toolOpts = { toolCallId: "test", messages: [] } as never;
@@ -65,6 +72,7 @@ afterEach(() => {
 
 beforeEach(() => {
   routeMocks.patchPacket.mockClear();
+  routeMocks.putSupportDraft.mockClear();
 });
 
 describe("buildConciergeTools with signed-in actions", () => {
@@ -141,7 +149,7 @@ describe("action tool ownership re-verification (never trusts model ids)", () =>
     expect(out.ok).toBe(false);
   });
 
-  it("prepareSupportRequest only prepares an introduction request for an owned packet", async () => {
+  it("prepareSupportRequest saves only a draft for an owned packet", async () => {
     const tools = buildConciergeActionTools({
       ...baseDeps,
       sql: sqlReturning([{ id: "packet-1" }]),
@@ -149,6 +157,7 @@ describe("action tool ownership re-verification (never trusts model ids)", () =>
     const out = (await tools.prepareSupportRequest.execute!(
       {
         packetId: "packet-1",
+        requestType: "introduction",
         targetOrganization: "SomerCor",
         requestedHelp: "SBIF guidance",
         suggestedScopes: ["packet"],
@@ -162,10 +171,32 @@ describe("action tool ownership re-verification (never trusts model ids)", () =>
     };
     expect(out.ok).toBe(true);
     expect(out.draft).toBeTruthy();
-    expect(out.note).toContain("Nothing was sent");
-    expect(out.suggestion?.label).toBe("Review what will be shared");
+    expect(out.note).toContain("Nothing was shared");
+    expect(out.note).toContain("or scheduled");
+    expect(out.suggestion?.label).toBe("Review your support request");
     // Deep-links into the consent-gated packet UI and never submits here.
     expect(out.suggestion?.route).toBe("/workspace/incentive-preparation/packet-1");
+    expect(routeMocks.putSupportDraft).toHaveBeenCalledOnce();
+  });
+
+  it("prepares a materials review without requiring an external organization", async () => {
+    const tools = buildConciergeActionTools({
+      ...baseDeps,
+      sql: sqlReturning([{ id: "packet-1" }]),
+    });
+    const out = (await tools.prepareSupportRequest.execute!(
+      {
+        packetId: "packet-1",
+        requestType: "materials_review",
+        requestedHelp: "Review my assembled application materials for open questions.",
+        suggestedScopes: ["packet", "documents"],
+      },
+      toolOpts,
+    )) as { ok: boolean; draft?: { requestType?: string; targetOrganization?: string } };
+
+    expect(out.ok).toBe(true);
+    expect(out.draft?.requestType).toBe("materials_review");
+    expect(out.draft?.targetOrganization).toBeUndefined();
   });
 
   it("accepts only task statuses supported by the packet API", () => {

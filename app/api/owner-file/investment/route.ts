@@ -8,6 +8,7 @@ import {
 } from "@/lib/owner-files-admin-auth";
 import { ANALYTICS_ADMIN_COOKIE } from "@/lib/analytics-admin-auth";
 import { INVESTMENT_SOURCES, filterInvestmentBySources, loadCommunityInvestment } from "@/lib/community-investment";
+import type { CommunityInvestmentRecord } from "@/lib/community-investment";
 import { parseFunderHqCsv, type FunderHq } from "@/lib/investment-deck-modes";
 import {
   summarizeCountyReliefByZip,
@@ -111,6 +112,113 @@ function isVisibleInProjectedView(record: {
     CITYWIDE_WITHHELD_SOURCES.has(record.source) &&
     record.geometry.kind === "citywide"
   );
+}
+
+/**
+ * Field-level projection for a record that SURVIVES isVisibleInProjectedView —
+ * the second half of the projected view's trim. The map client reads a FIXED
+ * subset of fields (lib/community-investment-layer.ts investmentRecordsToPointFeatures /
+ * citywideInvestmentEntries / citywideDevelopmentProjectNames, rendered by
+ * buildInvestmentPopupHtml in components/map/map-helpers.ts); everything else —
+ * address, postalCode, recordDate, recordProvenance, every link after the first
+ * http(s) one — is dead weight shipped ~32k times per layer toggle on a route
+ * that is deliberately `private, no-store` (measured ~2.7 MB of the 15.9 MB
+ * response, 2026-08). Built as a WHITELIST so a field added to
+ * CommunityInvestmentRecord later stays OUT of the map payload until someone
+ * deliberately adds it here — the same fail-closed direction as
+ * isVisibleInProjectedView.
+ *
+ * A CITYWIDE record never plots and never opens a popup, so the client reads
+ * only {source, funderType, year, amountAwarded} (the legend's re-scoping
+ * citywide summary) plus `recipient` on a private_development record (the
+ * Megaprojects legend's "not plotted" names). The grantee names + logLines on
+ * the other ~5k citywide rows (foundation out-of-bounds geocodes, NMTC) were
+ * being shipped and never rendered; they now stay server-side.
+ */
+type ProjectedMapPointRecord = Pick<
+  CommunityInvestmentRecord,
+  | "id"
+  | "source"
+  | "funderType"
+  | "governmentFundingPurpose"
+  | "funderName"
+  | "recipient"
+  | "capitalClass"
+  | "amountAwarded"
+  | "logLine"
+  | "year"
+  | "geometry"
+  | "status"
+  | "links"
+> &
+  Partial<
+    Pick<
+      CommunityInvestmentRecord,
+      | "authorizedAmount"
+      | "creditAmount"
+      | "publishedBalance"
+      | "announcedInvestment"
+      | "communityArea"
+      | "recovery"
+    >
+  >;
+type ProjectedMapCitywideRecord = Pick<
+  CommunityInvestmentRecord,
+  | "source"
+  | "funderType"
+  | "governmentFundingPurpose"
+  | "amountAwarded"
+  | "year"
+  | "geometry"
+> & { recipient?: string };
+
+function projectRecordForMapView(
+  record: CommunityInvestmentRecord,
+): ProjectedMapPointRecord | ProjectedMapCitywideRecord {
+  const {
+    source,
+    funderType,
+    governmentFundingPurpose,
+    amountAwarded,
+    year,
+    geometry,
+  } = record;
+  if (geometry.kind === "citywide") {
+    const citywide: ProjectedMapCitywideRecord = {
+      source,
+      funderType,
+      governmentFundingPurpose,
+      amountAwarded,
+      year,
+      geometry,
+    };
+    if (funderType === "private_development") citywide.recipient = record.recipient;
+    return citywide;
+  }
+  // The popup renders only the FIRST http(s) link (InvestmentPointProps.sourceLink).
+  const sourceLink = record.links.find((link) => /^https?:\/\//i.test(link));
+  const projected: ProjectedMapPointRecord = {
+    id: record.id,
+    source,
+    funderType,
+    governmentFundingPurpose,
+    funderName: record.funderName,
+    recipient: record.recipient,
+    capitalClass: record.capitalClass,
+    amountAwarded,
+    logLine: record.logLine,
+    year,
+    geometry,
+    status: record.status,
+    links: sourceLink ? [sourceLink] : [],
+  };
+  if (record.authorizedAmount != null) projected.authorizedAmount = record.authorizedAmount;
+  if (record.creditAmount != null) projected.creditAmount = record.creditAmount;
+  if (record.publishedBalance != null) projected.publishedBalance = record.publishedBalance;
+  if (record.announcedInvestment != null) projected.announcedInvestment = record.announcedInvestment;
+  if (record.communityArea !== undefined) projected.communityArea = record.communityArea;
+  if (record.recovery !== undefined) projected.recovery = record.recovery;
+  return projected;
 }
 
 /**
@@ -256,8 +364,10 @@ export async function GET(req: NextRequest) {
         // recipient-level rows available only through the explicit
         // authenticated drilldown while making the normal map payload smaller
         // and less identifying. See isVisibleInProjectedView: the rule is keyed
-        // on source, so it cannot fail open on a geometry change.
-        records: filtered.records.filter(isVisibleInProjectedView),
+        // on source, so it cannot fail open on a geometry change. The surviving
+        // records are then field-projected (projectRecordForMapView) down to
+        // what the map client actually renders.
+        records: filtered.records.filter(isVisibleInProjectedView).map(projectRecordForMapView),
         countyReliefByZip: summarizeCountyReliefByZip(filtered.records),
         state2020ReliefByZip: summarizeHistoricalRecoveryByZip(
           filtered.records,

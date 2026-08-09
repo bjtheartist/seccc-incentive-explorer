@@ -1,0 +1,6 @@
+foundation,tax_year,recipient,address_line1,city,state,zip,amount,purpose,source_form,lat,lng,locType,exclusion_reason,object_id,reconciliation_status
+Anthony Pritzker Fam Foundation,2024,SEE STATEMENT,SEE STATEMENT,CHICAGO,IL,60603,19775200,SEE STATEMENT,990-PF,,,intermediary_or_citywide,aggregate_only_no_itemization,202523189349102902,known_attachment_gap
+Anthony Pritzker Fam Foundation,2023,SEE STATEMENT,SEE STATEMENT,CHICAGO,IL,60603,18799294,SEE STATEMENT,990-PF,,,intermediary_or_citywide,aggregate_only_no_itemization,202403189349101975,known_attachment_gap
+The Richard H Driehaus Foundation,2024,SEE ATTACHED DETAIL,25 E Erie Street,CHICAGO,IL,60611,17096126,SEE ATTACHED DETAIL,990-PF,41.894034847792,-87.62686122047,sited,aggregate_only_no_itemization,202543219349104794,known_attachment_gap
+The Richard H Driehaus Foundation,2023,SEE ATTACHED DETAIL,25 E Erie Street,CHICAGO,IL,60611,10431221,SEE ATTACHED DETAIL,990-PF,41.894034847792,-87.62686122047,sited,aggregate_only_no_itemization,202423209349102072,known_attachment_gap
+The Richard H Driehaus Foundation,2022,SEE ATTACHED DETAIL,25 E Erie Street,CHICAGO,IL,60611,5162401,SEE ATTACHED DETAIL,990-PF,41.894034847792,-87.62686122047,sited,aggregate_only_no_itemization,202343199349101769,known_attachment_gap

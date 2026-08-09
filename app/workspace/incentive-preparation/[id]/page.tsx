@@ -23,6 +23,7 @@ import {
   extractFoundationRefresh,
   extractPacketDocuments,
   extractPreparationPacket,
+  extractPreparationSupportRequestDraft,
   extractPreparationSupportRequests,
   isDocumentTask,
   isFoundationScopeTask,
@@ -35,6 +36,17 @@ import {
   type PreparationTimelineView,
 } from "@/components/incentive-preparation/types";
 import { DocumentAttachments } from "@/components/incentive-preparation/document-attachments";
+import {
+  DOCUMENT_PREPARATION_COST_CAVEAT,
+  DOCUMENT_PREPARATION_COST_LEGEND,
+  classifyDocumentPreparationCost,
+  isConditionalDocumentRequirement,
+} from "@/lib/document-preparation-cost";
+import {
+  MATERIALS_REVIEW_ORGANIZATION,
+  supportRequestTypeLabel,
+  type SupportRequestType,
+} from "@/lib/incentive-support";
 
 interface ProgramOption {
   id: string;
@@ -140,6 +152,7 @@ export default function PreparationPacketDetailPage() {
   const [supportError, setSupportError] = useState("");
   const [supportSuccess, setSupportSuccess] = useState("");
   const [requestingSupport, setRequestingSupport] = useState(false);
+  const [requestType, setRequestType] = useState<SupportRequestType>("introduction");
   const [targetOrganization, setTargetOrganization] = useState("");
   const [requestedHelp, setRequestedHelp] = useState("");
   const [dataScopes, setDataScopes] = useState<string[]>([]);
@@ -183,6 +196,16 @@ export default function PreparationPacketDetailPage() {
         setDocumentFlags(extractDocumentFlags(body));
         setFoundationRefresh(extractFoundationRefresh(body));
         setSupportRequests(extractPreparationSupportRequests(body));
+        const supportDraft = extractPreparationSupportRequestDraft(body);
+        if (supportDraft) {
+          setRequestType(supportDraft.requestType);
+          setTargetOrganization(supportDraft.targetOrganization);
+          setRequestedHelp(supportDraft.requestedHelp);
+          setDataScopes(supportDraft.suggestedScopes);
+          // A prepared draft is never consent. The owner must make this choice
+          // in the packet after reviewing the exact recipient and data scope.
+          setConsentToShare(false);
+        }
       })
       .catch((loadError: unknown) => {
         if (active) setError(loadError instanceof Error ? loadError.message : "Could not load this packet.");
@@ -344,8 +367,16 @@ export default function PreparationPacketDetailPage() {
     if (!packet) return;
     setSupportError("");
     setSupportSuccess("");
-    if (!targetOrganization.trim() || !requestedHelp.trim() || dataScopes.length === 0) {
-      setSupportError("Name the organization, describe what you are working toward, and choose what may be shared.");
+    if (
+      (requestType === "introduction" && !targetOrganization.trim()) ||
+      !requestedHelp.trim() ||
+      dataScopes.length === 0
+    ) {
+      setSupportError(
+        requestType === "introduction"
+          ? "Name the organization, describe what you are working toward, and choose what may be shared."
+          : "Describe what you would like reviewed and choose what may be shared.",
+      );
       return;
     }
     if (!consentToShare) {
@@ -359,14 +390,16 @@ export default function PreparationPacketDetailPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          targetOrganization: targetOrganization.trim(),
+          requestType,
+          targetOrganization:
+            requestType === "introduction" ? targetOrganization.trim() : undefined,
           requestedHelp: requestedHelp.trim(),
           consentScope: dataScopes,
           consent: true,
         }),
       });
       const body = await responseBody(response);
-      if (!response.ok) throw new Error(responseError(body, "Could not record the introduction request."));
+      if (!response.ok) throw new Error(responseError(body, "Could not record the support request."));
 
       const fromResponse = extractPreparationSupportRequests(body);
       setSupportRequests((current) =>
@@ -376,24 +409,33 @@ export default function PreparationPacketDetailPage() {
               ...current,
               {
                 id: `recorded-${Date.now()}`,
-                targetOrganization: targetOrganization.trim(),
+                requestType,
+                targetOrganization:
+                  requestType === "introduction"
+                    ? targetOrganization.trim()
+                    : MATERIALS_REVIEW_ORGANIZATION,
                 requestedHelp: requestedHelp.trim(),
                 dataScopes,
                 status: "recorded",
               },
             ],
       );
-      setSupportSuccess("Your introduction request was recorded. Nothing has been shared with the organization yet; the request still needs to be reviewed and routed.");
+      setSupportSuccess(
+        requestType === "materials_review"
+          ? "Your 1:1 materials-review request was recorded. Nothing has been scheduled yet; the request still needs to be reviewed and routed."
+          : "Your introduction request was recorded. Nothing has been shared or scheduled yet; the request still needs to be reviewed and routed.",
+      );
+      setRequestType("introduction");
       setTargetOrganization("");
       setRequestedHelp("");
       setDataScopes([]);
       setConsentToShare(false);
       trackEvent("preparation_support_requested", {
         source: "preparation_packet_detail",
-        metadata: { dataScopeCount: dataScopes.length },
+        metadata: { requestType, dataScopeCount: dataScopes.length },
       });
     } catch (requestError) {
-      setSupportError(requestError instanceof Error ? requestError.message : "Could not record the introduction request.");
+      setSupportError(requestError instanceof Error ? requestError.message : "Could not record the support request.");
     } finally {
       setRequestingSupport(false);
     }
@@ -435,13 +477,39 @@ export default function PreparationPacketDetailPage() {
           .join(" then ")
       : "Will update as tasks are confirmed";
 
-  const renderTaskRow = (task: PreparationTask) => (
+  const renderTaskRow = (task: PreparationTask) => {
+    const documentLabel = task.documentSpec?.label
+      ?? task.title.replace(/^Collect program document:\s*/i, "");
+    const documentCost = isDocumentTask(task)
+      ? classifyDocumentPreparationCost(documentLabel)
+      : null;
+    const documentRequirementLabel = isConditionalDocumentRequirement(documentLabel)
+      ? "Conditional"
+      : "Required";
+
+    return (
     <article key={task.id} className="border border-[#0C1B33]/10 px-4 py-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-sm font-semibold text-[#0C1B33]">{task.title}</h3>
             <span className={`border px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] ${statusClass(task.status)}`}>{statusLabel(task.status)}</span>
+            {documentCost && (
+              <>
+                <span className="border border-[#0C1B33]/20 bg-[#FAF9F6] px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] text-[#0C1B33]">
+                  {documentRequirementLabel}
+                </span>
+                <span
+                  className="border border-[#2563EB]/30 bg-[#2563EB]/[0.05] px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] text-[#1D4ED8]"
+                  title={documentCost.basis}
+                >
+                  <span aria-hidden="true">{documentCost.tier}</span>
+                  <span className="sr-only">
+                    {`Document preparation cost tier ${documentCost.tier}. ${documentCost.basis}`}
+                  </span>
+                </span>
+              </>
+            )}
           </div>
           {task.description && <p className="mt-2 text-sm leading-5 text-[#0C1B33]/55">{task.description}</p>}
           <p className="mt-3 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">Owner: {statusLabel(task.owner)}</p>
@@ -465,7 +533,8 @@ export default function PreparationPacketDetailPage() {
         />
       )}
     </article>
-  );
+    );
+  };
 
   return (
     <main className="min-h-screen bg-[#FAF9F6] px-4 py-10 sm:px-6 sm:py-12">
@@ -492,13 +561,39 @@ export default function PreparationPacketDetailPage() {
 
         {error && <p role="alert" className="mt-5 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
 
+        {packet.tasks.some(isDocumentTask) && (
+          <aside
+            className="border-x border-b border-[#0C1B33]/10 bg-white px-5 py-4 sm:px-7"
+            aria-labelledby="document-preparation-cost-legend"
+          >
+            <p
+              id="document-preparation-cost-legend"
+              className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/65"
+            >
+              Document preparation cost
+            </p>
+            <ul className="mt-2 grid gap-2 text-xs leading-5 text-[#0C1B33]/65 sm:grid-cols-3">
+              {DOCUMENT_PREPARATION_COST_LEGEND.map((item) => (
+                <li key={item.tier}>
+                  <span className="font-semibold text-[#0C1B33]">{item.tier}</span>
+                  {" = "}
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-2 text-xs leading-5 text-[#0C1B33]/50">
+              {DOCUMENT_PREPARATION_COST_CAVEAT}
+            </p>
+          </aside>
+        )}
+
         <div className="grid grid-cols-1 border-x border-b border-[#0C1B33]/10 bg-white lg:grid-cols-[minmax(0,1fr)_19rem]">
           <div className="min-w-0">
             {hasProgram && (
               <section className="border-b border-[#0C1B33]/8 px-5 py-6 sm:px-7">
-                <p className="font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#2563EB]">Likely match</p>
+                <p className="font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#2563EB]">Program in preparation</p>
                 <h2 className="mt-2 text-xl font-semibold text-[#0C1B33]">{packet.selectedProgram.label || "Program to be confirmed"}</h2>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#0C1B33]/55">This is a likely match for preparation purposes, not an eligibility decision, award estimate, or official certification.</p>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-[#0C1B33]/55">This is the program selected for preparation, not an eligibility decision, award estimate, or official certification.</p>
                 {packet.primaryGoal && <p className="mt-3 text-sm text-[#0C1B33]/70"><span className="font-medium">Goal:</span> {statusLabel(packet.primaryGoal)}</p>}
               </section>
             )}
@@ -609,7 +704,7 @@ export default function PreparationPacketDetailPage() {
                     </select>
                   </label>
                 </div>
-                <p className="mt-3 text-xs leading-5 text-[#0C1B33]/45">Selecting a program identifies a likely match for preparation purposes, not an eligibility decision, award estimate, or official certification. You can verify current requirements with the program administrators.</p>
+                <p className="mt-3 text-xs leading-5 text-[#0C1B33]/45">Selecting a program organizes preparation work; it is not an eligibility decision, award estimate, or official certification. Verify current requirements with the program administrators.</p>
                 {selectProgramError && (
                   <p role="alert" className="mt-3 border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{selectProgramError}</p>
                 )}
@@ -652,18 +747,49 @@ export default function PreparationPacketDetailPage() {
 
             <section className="px-5 py-6">
               <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#2563EB]" aria-hidden="true" /><h2 className="text-base font-semibold text-[#0C1B33]">Get connected to local support</h2></div>
-              <p className="mt-2 text-xs leading-5 text-[#0C1B33]/55">You don&apos;t need to have every detail figured out before talking with someone. Request an introduction and choose exactly what may be shared, so you don&apos;t have to start from scratch.</p>
-              <p className="mt-2 text-[11px] leading-5 text-[#0C1B33]/40">This form records your request for review and routing. It does not send information directly to the organization.</p>
+              <p className="mt-2 text-xs leading-5 text-[#0C1B33]/55">You don&apos;t need to have every detail figured out before talking with someone. Request an introduction or 1:1 help reviewing your preparation materials, and choose exactly what may be shared.</p>
+              <p className="mt-2 text-[11px] leading-5 text-[#0C1B33]/40">A materials review can help identify missing information and open questions. It does not confirm eligibility, certify documents, submit an application, or guarantee an appointment. This form records your request for review and routing; it does not send information directly to the organization.</p>
               <form onSubmit={submitSupportRequest} className="mt-4 space-y-4">
-                <label className="block text-xs font-medium text-[#0C1B33]/70">Organization<input value={targetOrganization} onChange={(event) => setTargetOrganization(event.target.value)} className="mt-1.5 min-h-10 w-full border border-[#0C1B33]/15 bg-white px-3 text-sm text-[#0C1B33] outline-none focus:border-[#2563EB]" /></label>
+                <fieldset>
+                  <legend className="text-xs font-medium text-[#0C1B33]/70">How would you like support?</legend>
+                  <div className="mt-2 grid grid-cols-1 gap-px border border-[#0C1B33]/15 bg-[#0C1B33]/15">
+                    {([
+                      ["introduction", "Local partner introduction", "Connect me with an organization that fits this project."],
+                      ["materials_review", "1:1 materials review", "Help me identify missing information and open questions."],
+                    ] as const).map(([value, label, description]) => (
+                      <label key={value} className={`cursor-pointer bg-white px-3 py-3 ${requestType === value ? "outline outline-2 -outline-offset-2 outline-[#2563EB]" : ""}`}>
+                        <span className="flex items-start gap-2">
+                          <input
+                            type="radio"
+                            name="support-request-type"
+                            value={value}
+                            checked={requestType === value}
+                            onChange={() => {
+                              setRequestType(value);
+                              setConsentToShare(false);
+                            }}
+                            className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#2563EB]"
+                          />
+                          <span>
+                            <span className="block text-xs font-medium text-[#0C1B33]">{label}</span>
+                            <span className="mt-1 block text-[11px] leading-4 text-[#0C1B33]/45">{description}</span>
+                          </span>
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </fieldset>
+                {requestType === "introduction" && (
+                  <label className="block text-xs font-medium text-[#0C1B33]/70">Organization<input value={targetOrganization} onChange={(event) => setTargetOrganization(event.target.value)} className="mt-1.5 min-h-10 w-full border border-[#0C1B33]/15 bg-white px-3 text-sm text-[#0C1B33] outline-none focus:border-[#2563EB]" /></label>
+                )}
                 <label className="block text-xs font-medium text-[#0C1B33]/70">What would you like help with?<textarea value={requestedHelp} onChange={(event) => setRequestedHelp(event.target.value)} rows={3} className="mt-1.5 w-full border border-[#0C1B33]/15 bg-white px-3 py-2 text-sm text-[#0C1B33] outline-none focus:border-[#2563EB]" /></label>
                 <fieldset><legend className="text-xs font-medium text-[#0C1B33]/70">Information to include</legend><div className="mt-2 space-y-2">{SUPPORT_SCOPE_OPTIONS.map((scope) => <label key={scope.value} className="flex items-start gap-2 text-xs leading-5 text-[#0C1B33]/65"><input type="checkbox" checked={dataScopes.includes(scope.value)} onChange={() => toggleScope(scope.value)} className="mt-1 h-3.5 w-3.5 accent-[#2563EB]" />{scope.label}</label>)}</div></fieldset>
-                <label className="flex items-start gap-2 border border-[#0C1B33]/10 bg-white px-3 py-3 text-xs leading-5 text-[#0C1B33]/65"><input type="checkbox" checked={consentToShare} onChange={(event) => setConsentToShare(event.target.checked)} className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#2563EB]" />I explicitly consent to share only the selected business data with this target organization for this request.</label>
+                <label className="flex items-start gap-2 border border-[#0C1B33]/10 bg-white px-3 py-3 text-xs leading-5 text-[#0C1B33]/65"><input type="checkbox" checked={consentToShare} onChange={(event) => setConsentToShare(event.target.checked)} className="mt-0.5 h-3.5 w-3.5 shrink-0 accent-[#2563EB]" />I explicitly consent to share only the selected business data {requestType === "introduction" ? "with the named organization" : "with the Chicago Incentive Explorer support team"} for this request.</label>
                 {supportError && <p role="alert" className="border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{supportError}</p>}
                 {supportSuccess && <p role="status" className="border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">{supportSuccess}</p>}
-                <button type="submit" disabled={requestingSupport} className="inline-flex min-h-10 w-full items-center justify-center gap-2 bg-[#0C1B33] px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-white hover:bg-[#1E3054] disabled:opacity-60">{requestingSupport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}Request an introduction</button>
+                <button type="submit" disabled={requestingSupport} className="inline-flex min-h-10 w-full items-center justify-center gap-2 bg-[#0C1B33] px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-white hover:bg-[#1E3054] disabled:opacity-60">{requestingSupport ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}{requestType === "materials_review" ? "Request 1:1 review" : "Request introduction"}</button>
               </form>
-              {supportRequests.length > 0 && <div className="mt-5 border-t border-[#0C1B33]/10 pt-4"><p className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/45">Introduction requests</p><ul className="mt-3 space-y-3">{supportRequests.map((request) => <li key={request.id} className="text-xs leading-5 text-[#0C1B33]/60"><strong className="font-medium text-[#0C1B33]">{request.targetOrganization}</strong><br />{request.requestedHelp}<br /><span className="text-[#0C1B33]/45">{request.dataScopes.map(scopeLabel).join(", ") || "No data scope"} · {statusLabel(request.status)}</span></li>)}</ul></div>}
+              {supportRequests.length > 0 && <div className="mt-5 border-t border-[#0C1B33]/10 pt-4"><p className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-[#0C1B33]/45">Support requests</p><ul className="mt-3 space-y-3">{supportRequests.map((request) => <li key={request.id} className="text-xs leading-5 text-[#0C1B33]/60"><strong className="font-medium text-[#0C1B33]">{supportRequestTypeLabel(request.requestType)}</strong><br />{request.requestType === "introduction" && <>{request.targetOrganization}<br /></>}{request.requestedHelp}<br /><span className="text-[#0C1B33]/45">{request.dataScopes.map(scopeLabel).join(", ") || "No data scope"} · {statusLabel(request.status)}</span></li>)}</ul></div>}
             </section>
           </aside>
         </div>

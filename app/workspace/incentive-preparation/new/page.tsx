@@ -278,7 +278,7 @@ function NewPreparationPacketContent() {
           </h1>
           <p className="max-w-2xl text-sm leading-6 text-[#0C1B33]/55">
             Your Business File holds shared business facts. This prep organizes
-            application work for one likely-match program. Program administrators
+            application work for one program you want to review. Program administrators
             make final eligibility and award determinations.
           </p>
         </header>
@@ -403,7 +403,7 @@ function NewPreparationPacketContent() {
 
               <div>
                 <FieldLabel htmlFor="likely-match-program" required>
-                  Selected likely-match program
+                  Program to prepare for
                 </FieldLabel>
                 {context?.programs.length ? (
                   <select
@@ -418,7 +418,7 @@ function NewPreparationPacketContent() {
                     }
                     className={inputClassName}
                   >
-                    <option value="">Select a likely match</option>
+                    <option value="">Select a program</option>
                     {context.programs.map((program) => (
                       <option key={program.programId} value={program.programId}>
                         {program.label}

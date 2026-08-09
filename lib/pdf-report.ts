@@ -1,14 +1,16 @@
 import { jsPDF } from "jspdf";
 import { ZONE_KEYS, ZONE_COLORS } from "./constants";
-import type { LookupResult, Program } from "./types";
+import type { LookupResult, Program, ZoningLookupStatus } from "./types";
 import {
   CONFIRMED_PROGRAMS_SECTION_TITLE,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+  normalizePublicReportForDisplay,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "./report-engine";
 import type { GeneratedReport } from "./report-engine";
-import { PROJECT_TYPE_LABELS } from "./report-wizard-config";
+import { selectedProjectGoalLabels } from "./report-wizard-config";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "./capital-partner-report";
+import { isSupportOrganizationSectionTitle } from "./support-organization-copy";
 
 /**
  * PDF print order is intentionally action-first. The web report can support
@@ -24,6 +26,7 @@ export function orderSectionsForPdf(
     CONFIRMED_PROGRAMS_SECTION_TITLE,
     GOAL_MATCH_PROGRAMS_SECTION_TITLE,
     OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+    "Eligible Incentive Programs",
   ]);
 
   const priority = (title: string): number => {
@@ -32,11 +35,12 @@ export function orderSectionsForPdf(
     if (confirmedSectionTitles.has(title)) return 12;
     if (title === CAPITAL_PARTNER_SECTION_TITLE) return 20;
     if (title === "Upcoming Deadlines Near This Address") return 30;
-    if (title === "Your Support Network") return 40;
+    if (isSupportOrganizationSectionTitle(title)) return 40;
     if (title === "Additional Programs to Explore") return 50;
     if (title === "Required Documents") return 60;
     if (title === "Document Readiness Checklist") return 61;
-    if (title === "Site Overview") return 80;
+    if (title === "Zoning & Use Starting Point") return 5;
+    if (title === "Site Facts" || title === "Site Overview") return 80;
     if (title === "Project Intake") return 81;
     if (title === "Incentive Zone Coverage & Program Interactions") return 82;
     if (title === "Neighborhood Economic Context") return 90;
@@ -85,6 +89,14 @@ type ReportItemWithProvenance = GeneratedReport["sections"][number]["items"][num
   verificationSteps?: ReportVerificationStep[];
   stale?: boolean;
 };
+
+function reportGoalLabels(report: GeneratedReport): string[] {
+  return selectedProjectGoalLabels({
+    projectGoals: report.metadata?.projectGoals,
+    projectType: report.metadata?.projectType,
+    customGoal: report.metadata?.customGoal,
+  });
+}
 
 function hexToRgb(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -150,6 +162,33 @@ function formatDateLabel(value: string): string {
     month: "short",
     day: "numeric",
   });
+}
+
+function effectiveLookupZoningStatus(result: LookupResult): ZoningLookupStatus | undefined {
+  if (result.cityZoningStatus === "available" && !result.cityZoning) return "unavailable";
+  return result.cityZoningStatus ?? (result.cityZoning ? "available" : undefined);
+}
+
+function formatLookupZoningDate(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function lookupZoningFreshnessLabel(result: LookupResult): string | null {
+  const zoning = result.cityZoning;
+  if (!zoning) return null;
+  const recordUpdatedAt = zoning.recordUpdatedAt ?? zoning.source?.recordUpdatedAt;
+  if (recordUpdatedAt) return `Record updated ${formatLookupZoningDate(recordUpdatedAt)}`;
+  if (zoning.source?.retrievedAt) {
+    return `Retrieved ${formatLookupZoningDate(zoning.source.retrievedAt)}`;
+  }
+  return null;
 }
 
 function hasText(value: unknown): value is string {
@@ -435,7 +474,9 @@ function _buildReport(
   }
 
   // City Zoning
-  if (result.cityZoning) {
+  const zoningStatus = effectiveLookupZoningStatus(result);
+  const zoningAvailable = zoningStatus === "available" && Boolean(result.cityZoning);
+  if (zoningStatus) {
     coverY += 4;
     fillRect(doc, MARGIN, coverY, CONTENT_W, 0.3, "#FFFFFF15");
     coverY += 8;
@@ -443,17 +484,75 @@ function _buildReport(
     setColor(doc, "#FFFFFF60");
     doc.text("CITY ZONING CLASSIFICATION", MARGIN, coverY);
     coverY += 7;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    setColor(doc, BLUE);
-    doc.text(result.cityZoning.zoneClass, MARGIN, coverY);
-    if (result.cityZoning.zoneType) {
+
+    if (zoningAvailable && result.cityZoning) {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      setColor(doc, BLUE);
+      doc.text(result.cityZoning.zoneClass, MARGIN, coverY);
+      if (result.cityZoning.zoneType) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        setColor(doc, "#FFFFFF80");
+        doc.text(`  ${result.cityZoning.zoneType}`, MARGIN + doc.getTextWidth(result.cityZoning.zoneClass) + 3, coverY);
+      }
+      coverY += 7;
+
       doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      setColor(doc, "#FFFFFF70");
+      coverY += wrapText(
+        doc,
+        "Published district classification only. Verify whether a proposed use is permitted against the current Chicago Zoning Ordinance or with the City of Chicago.",
+        MARGIN,
+        coverY,
+        CONTENT_W,
+        3.5,
+      );
+
+      const freshness = lookupZoningFreshnessLabel(result);
+      if (freshness) {
+        doc.setFontSize(6.5);
+        setColor(doc, "#FFFFFF50");
+        doc.text(freshness, MARGIN, coverY);
+        coverY += 4;
+      }
+
+      if (result.cityZoning.source) {
+        doc.setFontSize(6.5);
+        setColor(doc, "#60A5FA");
+        doc.textWithLink("View published City zoning source", MARGIN, coverY, {
+          url: result.cityZoning.source.url,
+        });
+        coverY += 4;
+      }
+    } else {
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
-      setColor(doc, "#FFFFFF80");
-      doc.text(`  ${result.cityZoning.zoneType}`, MARGIN + doc.getTextWidth(result.cityZoning.zoneClass) + 3, coverY);
+      setColor(doc, "#FFFFFF90");
+      doc.text(
+        zoningStatus === "not_found"
+          ? "NO PUBLISHED DISTRICT RETURNED"
+          : "PUBLISHED SOURCE TEMPORARILY UNAVAILABLE",
+        MARGIN,
+        coverY,
+      );
+      coverY += 6;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      setColor(doc, "#FFFFFF70");
+      coverY += wrapText(
+        doc,
+        zoningStatus === "not_found"
+          ? "The published source returned no zoning district for this location. This is not evidence that zoning requirements do not apply; verify with the City of Chicago."
+          : "Published City zoning data is temporarily unavailable. No zoning or proposed-use conclusion was made.",
+        MARGIN,
+        coverY,
+        CONTENT_W,
+        3.5,
+      );
     }
-    coverY += 8;
+    coverY += 2;
   }
 
   // Factual mapped-zone count
@@ -485,7 +584,7 @@ function _buildReport(
   setColor(doc, "#FFFFFF30");
   doc.text("Southeast Chicago Chamber of Commerce", MARGIN, H - 12);
 
-  /* ── PAGE 2: WHAT YOU MAY BE ELIGIBLE FOR ── */
+  /* ── PAGE 2: PROGRAMS RECORDED AT THIS LOCATION ── */
   doc.addPage();
   let y = MARGIN + 5;
 
@@ -496,16 +595,16 @@ function _buildReport(
   doc.setFontSize(8);
   setColor(doc, LIGHT_GRAY);
   doc.text("02", MARGIN, y);
-  doc.text("ELIGIBILITY SUMMARY", MARGIN + 12, y);
+  doc.text("PROGRAM REVIEW", MARGIN + 12, y);
   y += 10;
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(22);
   setColor(doc, NAVY);
-  doc.text("Here\u2019s What You", MARGIN, y);
+  doc.text("Programs Recorded", MARGIN, y);
   y += 9;
   setColor(doc, "#0C1B3366");
-  doc.text("May Be Eligible For", MARGIN, y);
+  doc.text("at This Location", MARGIN, y);
   y += 14;
 
   // Employment info if present
@@ -519,7 +618,7 @@ function _buildReport(
     doc.setFontSize(9);
     setColor(doc, NAVY);
     doc.text(
-      `Unemployment Rate: ${result.employment.unemploymentRate} — Your business may qualify for WOTC and workforce incentives.`,
+      `Unemployment Rate: ${result.employment.unemploymentRate} — review current WOTC and workforce-program requirements.`,
       MARGIN + 10,
       y + 13
     );
@@ -552,12 +651,12 @@ function _buildReport(
       setColor(doc, MEDIUM_GRAY);
       doc.text(prog.level, MARGIN + 90, y);
 
-      // Green "Eligible" badge
+      // Neutral mapped-location badge
       const badgeX = MARGIN + 125;
       fillRect(doc, badgeX, y - 3.5, 20, 5, "#DCFCE7");
       doc.setFontSize(6);
       setColor(doc, GREEN);
-      doc.text("ELIGIBLE", badgeX + 2, y);
+      doc.text("MAPPED", badgeX + 2, y);
       y += 6;
     }
   } else {
@@ -582,7 +681,7 @@ function _buildReport(
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     setColor(doc, MEDIUM_GRAY);
-    doc.text("These programs are available regardless of zone location:", MARGIN, y);
+    doc.text("These broader programs are not established by zone location alone:", MARGIN, y);
     y += 6;
 
     for (const prog of countyPrograms) {
@@ -611,7 +710,7 @@ function _buildReport(
   y += wrapText(
     doc,
     "The Cook County Assessor\u2019s Office determines the assessed value of commercial properties for tax purposes. " +
-    "Understanding your property\u2019s valuation can help you estimate tax incentive savings and appeal assessments.",
+    "Understanding your property\u2019s valuation can help you review published assessment rules and prepare questions about appeals.",
     MARGIN,
     y,
     CONTENT_W,
@@ -664,13 +763,13 @@ function _buildReport(
     y += wrapText(doc, prog.summary, MARGIN, y, CONTENT_W, 4.5);
     y += 8;
 
-    // ── WHAT YOU MAY BE ELIGIBLE FOR (Benefits) ──
+    // ── PUBLISHED PROGRAM TERMS ──
     y = checkPage(doc, y, 30);
     fillRect(doc, MARGIN, y, 3, 1.5, GREEN);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     setColor(doc, NAVY);
-    doc.text("WHAT YOU MAY BE ELIGIBLE FOR", MARGIN + 8, y + 1);
+    doc.text("PUBLISHED PROGRAM TERMS", MARGIN + 8, y + 1);
     y += 8;
 
     for (const benefit of prog.benefits) {
@@ -788,7 +887,7 @@ function _buildReport(
   y += 14;
 
   const nextSteps = [
-    "Review each eligible program in this report and confirm you meet the requirements.",
+    "Review each program in this report and confirm the published requirements with its administrator.",
     "Gather the required documents listed for each program you want to pursue.",
     "Contact the program administrators listed in the \"Who to Reach Out To\" sections.",
     "Visit the Southeast Chicago Chamber of Commerce for hands-on assistance.",
@@ -888,13 +987,13 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
 
   // Verdict banner on cover
   if (report.verdict) {
-    const vColor = report.verdict.signal === "strong" ? "#16A34A" : report.verdict.signal === "moderate" ? "#D97706" : "#EF4444";
+    const vColor = BLUE;
     fillRect(doc, MARGIN, coverY, CONTENT_W, 32, "#FFFFFF08");
     fillRect(doc, MARGIN, coverY, 3, 32, vColor);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     setColor(doc, vColor);
-    doc.text(report.verdict.signal.toUpperCase(), MARGIN + 10, coverY + 10);
+    doc.text("LOCATION FINDINGS", MARGIN + 10, coverY + 10);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     setColor(doc, WHITE);
@@ -913,9 +1012,9 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
     doc.text(`Industry: ${report.metadata.industry}`, MARGIN, coverY);
     coverY += 6;
   }
-  if (report.metadata?.projectType) {
-    const goalLabel = PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType;
-    doc.text(`Primary goal: ${goalLabel}`, MARGIN, coverY);
+  const goalLabels = reportGoalLabels(report);
+  if (goalLabels.length > 0) {
+    doc.text(`Project goals: ${goalLabels.join(", ")}`, MARGIN, coverY);
     coverY += 6;
   }
   if (report.metadata?.zoneClass) doc.text(`Zoning: ${report.metadata.zoneClass}`, MARGIN, coverY);
@@ -990,7 +1089,7 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
 
   // Verdict reasons
   if (report.verdict && report.verdict.topReasons.length > 0) {
-    const vColor = report.verdict.signal === "strong" ? "#16A34A" : report.verdict.signal === "moderate" ? "#D97706" : "#EF4444";
+    const vColor = BLUE;
     fillRect(doc, MARGIN, y, 3, 1.5, vColor);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
@@ -1118,11 +1217,12 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
 
       let valueLines: string[] = [];
 
-      if (item.value && !hasGroupedDetail) {
+      const itemValue = [item.value, item.preparationCost?.tier].filter(Boolean).join(" · ");
+      if (itemValue && !hasGroupedDetail) {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
         setColor(doc, MEDIUM_GRAY);
-        valueLines = doc.splitTextToSize(item.value, valueColumnWidth) as string[];
+        valueLines = doc.splitTextToSize(itemValue, valueColumnWidth) as string[];
         valueLines.forEach((line, lineIndex) => {
           const valW = doc.getTextWidth(line);
           doc.text(line, W - MARGIN - valW, y + lineIndex * 3.5);
@@ -1133,12 +1233,12 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
       y += (headingLines - 1) * 3.8;
 
       if (hasGroupedDetail && item.detailGroups) {
-        if (item.value) {
+        if (itemValue) {
           y += 4;
           doc.setFont("helvetica", "normal");
           doc.setFontSize(7);
           setColor(doc, MEDIUM_GRAY);
-          y += wrapText(doc, item.value, MARGIN + 6, y, CONTENT_W - 10, 3.5);
+          y += wrapText(doc, itemValue, MARGIN + 6, y, CONTENT_W - 10, 3.5);
         }
 
         for (const group of item.detailGroups) {
@@ -1187,24 +1287,6 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
               ? "Prepare if available; confirm exact requirements with the program administrator."
               : item.detail;
         y += wrapText(doc, compactDetail, MARGIN + 6, y, CONTENT_W - 10, 3.5);
-      }
-
-      if (item.projectFit && item.projectFit.level !== "location-only") {
-        y = checkPage(doc, y + 3, 9);
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(6.5);
-        setColor(doc, item.projectFit.level === "industry-check" ? AMBER : BLUE);
-        const fitText = section.title === "Additional Programs to Explore" && item.projectFit.level !== "industry-check"
-          ? item.projectFit.label
-          : `${item.projectFit.label}: ${conciseText(item.projectFit.reason, 145)}`;
-        y += wrapText(
-          doc,
-          fitText,
-          MARGIN + 6,
-          y,
-          CONTENT_W - 10,
-          3.3,
-        );
       }
 
       if (!suppressItemProvenance(section.title)) {
@@ -1317,9 +1399,10 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     month: "long",
     day: "numeric",
   });
-  const primaryGoal = report.metadata?.projectType
-    ? PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType
-    : "Confirm the project goal with an advisor";
+  const projectGoals = reportGoalLabels(report);
+  const projectGoalsText = projectGoals.length > 0
+    ? projectGoals.join(", ")
+    : "Confirm the project goals with an advisor";
   const neighborhoodLabel = report.communityAssets?.communityArea || report.neighborhoodEconomics?.geographyLabel;
   const preparedFor = hasText(report.metadata?.preparedFor) ? report.metadata.preparedFor.trim() : undefined;
 
@@ -1334,10 +1417,14 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
   const discoveryItems = section("Additional Programs to Explore")?.items || [];
   const deadlineItems = section("Upcoming Deadlines Near This Address")?.items || [];
   const financingItems = section(CAPITAL_PARTNER_SECTION_TITLE)?.items || [];
-  const supportItems = (section("Your Support Network")?.items || []).filter((item) => Boolean(item.url));
+  const supportItems = (
+    report.sections.find((candidate) => isSupportOrganizationSectionTitle(candidate.title))?.items || []
+  ).filter((item) => Boolean(item.url));
   const requiredItems = section("Required Documents")?.items || [];
   const readinessItems = section("Document Readiness Checklist")?.items || [];
   const siteItems = [
+    ...(section("Zoning & Use Starting Point")?.items || []),
+    ...(section("Site Facts")?.items || []),
     ...(section("Site Overview")?.items || []),
     ...(section("Project Intake")?.items || []),
     ...(section("Incentive Zone Coverage & Program Interactions")?.items || []),
@@ -1465,6 +1552,21 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
       .map((line) => line.split(/\s+—\s+/)[0]?.trim())
       .filter((name): name is string => Boolean(name));
     return [...new Set(names)];
+  };
+
+  const matchExplanationLines = (item: ReportRow): string[] => {
+    const explanation = item.matchExplanation;
+    if (!explanation) return [];
+    const first = (values: string[]) => values[0];
+    return [
+      first(explanation.whyItAppears) ? `Why it appears: ${first(explanation.whyItAppears)}` : undefined,
+      first(explanation.knownFromPublicData) ? `Public data: ${first(explanation.knownFromPublicData)}` : undefined,
+      first(explanation.basedOnUserAnswers) ? `Your answers: ${first(explanation.basedOnUserAnswers)}` : undefined,
+      first(explanation.stillToConfirm) ? `Still to confirm: ${first(explanation.stillToConfirm)}` : undefined,
+      first(explanation.currentDocumentsToGather) ? `Document: ${first(explanation.currentDocumentsToGather)}` : undefined,
+      explanation.confirmWith[0] ? `Confirm with: ${explanation.confirmWith[0].agency}` : undefined,
+      explanation.lastVerifiedAt ? `Information reviewed: ${explanation.lastVerifiedAt}` : undefined,
+    ].filter((line): line is string => Boolean(line));
   };
 
   /* ── Small drawn glyphs (spec: square/circle chips with centered numbers, not tall rectangles) ── */
@@ -1624,13 +1726,16 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     const hasBadge = Boolean(options.badge);
     const contentX = hasBadge ? MARGIN + 19 : MARGIN + 7;
     const rightPad = 7;
-    const valueWidth = item.value ? 44 : 0;
-    const labelWidth = CONTENT_W - (contentX - MARGIN) - rightPad - (item.value ? valueWidth + 4 : 0);
+    const displayValue = [item.value, item.preparationCost?.tier].filter(Boolean).join(" · ");
+    const valueWidth = displayValue ? 44 : 0;
+    const labelWidth = CONTENT_W - (contentX - MARGIN) - rightPad - (displayValue ? valueWidth + 4 : 0);
     const labelLines = fit(item.label, labelWidth, 2, 7.8, "bold");
-    const valueLines = item.value ? fit(item.value, valueWidth, 2, 6.5) : [];
+    const valueLines = displayValue ? fit(displayValue, valueWidth, 2, 6.5) : [];
     const headerLines = Math.max(labelLines.length, valueLines.length, 1);
 
-    const detail = options.suppressDetail ? undefined : item.detail || item.projectFit?.reason;
+    const detail = options.suppressDetail
+      ? undefined
+      : item.matchExplanation?.whyItAppears[0] || item.detail;
     const detailLines = detail
       ? fit(conciseText(detail, 220), CONTENT_W - (contentX - MARGIN) - rightPad, options.detailMaxLines ?? 2, 6.6)
       : [];
@@ -1679,7 +1784,7 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     setColor(doc, NAVY);
     labelLines.forEach((line, index) => doc.text(line, contentX, ty + index * 3.3));
 
-    if (item.value) {
+    if (displayValue) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(6.5);
       setColor(doc, MEDIUM_GRAY);
@@ -1731,8 +1836,9 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     const valueWidth = item.value ? 52 : 0;
     const labelWidth = CONTENT_W - (contentX - MARGIN) - rightPad - (item.value ? valueWidth + 3 : 0);
     const labelLines = fit(item.label, labelWidth, 2, 7.4, "bold");
-    const detailLines = item.detail
-      ? fit(conciseText(item.detail, 190), CONTENT_W - (contentX - MARGIN) - rightPad, 1, 6.3)
+    const rankedDetail = item.matchExplanation?.whyItAppears[0] || item.detail;
+    const detailLines = rankedDetail
+      ? fit(conciseText(rankedDetail, 190), CONTENT_W - (contentX - MARGIN) - rightPad, 1, 6.3)
       : [];
 
     const topPad = 4;
@@ -2038,9 +2144,9 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(6.5);
   setColor(doc, "#8CB4FF");
-  doc.text("PRIMARY GOAL", MARGIN + 10, coverChipY + 8);
+  doc.text("PROJECT GOALS", MARGIN + 10, coverChipY + 8);
   setColor(doc, WHITE);
-  doc.text(fit(primaryGoal, CONTENT_W - 20, 1, 11, "bold")[0], MARGIN + 10, coverChipY + 17);
+  doc.text(fit(projectGoalsText, CONTENT_W - 20, 1, 11, "bold")[0], MARGIN + 10, coverChipY + 17);
 
   /* PAGE 2 - KEY FINDINGS */
   doc.addPage();
@@ -2059,10 +2165,10 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   setColor(doc, "#8CB4FF");
-  doc.text("PRIMARY GOAL", MARGIN + 10, 76);
+  doc.text("PROJECT GOALS", MARGIN + 10, 76);
   doc.setFontSize(15);
   setColor(doc, WHITE);
-  fit(primaryGoal, CONTENT_W - 20, 2, 15, "bold").forEach((line, index) => {
+  fit(projectGoalsText, CONTENT_W - 20, 2, 15, "bold").forEach((line, index) => {
     doc.text(line, MARGIN + 10, 88 + index * 6);
   });
 
@@ -2071,8 +2177,8 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
   const metricY = 108;
   const metricHeight = 30;
   const metrics = [
-    { value: confirmedItems.length, label: "ADDRESS-LINKED", detail: "Matched incentive zones were found at this address.", color: BLUE },
-    { value: discoveryItems.length, label: "TO EXPLORE", detail: "High-potential programs to explore.", color: AMBER },
+    { value: confirmedItems.length, label: "ADDRESS-LINKED", detail: "Mapped incentive zones were recorded at this address.", color: BLUE },
+    { value: discoveryItems.length, label: "TO EXPLORE", detail: "Broader programs included for review.", color: AMBER },
     { value: deadlineItems.length, label: "UPCOMING DATES", detail: "Important deadlines to keep on your radar.", color: GREEN },
   ];
   metrics.forEach((metric, index) => {
@@ -2134,7 +2240,7 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
 
   /* PAGE 3 - REVIEW */
   doc.addPage();
-  drawPageTitle(3, "Step 1", "Review the Findings", "Focus on the strongest signals first. Address-linked does not guarantee eligibility.");
+  drawPageTitle(3, "Step 1", "Review the Findings", "Start with mapped address records. Address-linked does not establish program approval.");
   let y2 = 64;
 
   y2 = layoutList(
@@ -2142,7 +2248,11 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     `${confirmedItems.length} found`,
     y2,
     confirmedItems.slice(0, 2),
-    (item, rowY) => drawOpportunityCard(item, rowY, { detailMaxLines: 2, showSource: true }),
+    (item, rowY) => drawOpportunityCard(item, rowY, {
+      detailMaxLines: 2,
+      showSource: true,
+      extraLines: matchExplanationLines(item),
+    }),
     "No address-linked opportunity was found. Continue with the discovery leads below.",
   );
 
@@ -2210,7 +2320,12 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     y4,
     report.recommendedActions.slice(0, 3),
     (action, rowY, index) => {
-      const item: ReportRow = { label: action.label, value: index === 0 ? "FIRST" : "NEXT", detail: action.description };
+      const item: ReportRow = {
+        label: action.label,
+        value: index === 0 ? "FIRST" : "NEXT",
+        detail: action.description,
+        preparationCost: action.preparationCost,
+      };
       return drawOpportunityCard(item, rowY, {
         detailMaxLines: 2,
         accent: index === 0 ? BLUE : index === 1 ? AMBER : "#74869F",
@@ -2249,7 +2364,12 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     doc.text(fit(item.label, checklistWidth - 26, 1, 6.6)[0], x + 6.5, rowY - 0.2);
     doc.setFontSize(5.9);
     setColor(doc, LIGHT_GRAY);
-    const status = fit(item.value || "Confirm", 20, 1, 5.9)[0] ?? "";
+    const status = fit(
+      [item.value || "Confirm", item.preparationCost?.tier].filter(Boolean).join(" · "),
+      20,
+      1,
+      5.9,
+    )[0] ?? "";
     const statusWidth = doc.getTextWidth(status);
     doc.text(status, x + checklistWidth - statusWidth, rowY - 0.2);
   });
@@ -2389,10 +2509,11 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
 }
 
 function _buildReportPdf(report: GeneratedReport): { doc: jsPDF; slug: string } {
-  if (report.reportType === "site-incentives" || report.reportType === "location-incentives") {
-    return _buildSevenPageActionReportPdf(report);
+  const publicReport = normalizePublicReportForDisplay(report);
+  if (publicReport.reportType === "site-incentives" || publicReport.reportType === "location-incentives") {
+    return _buildSevenPageActionReportPdf(publicReport);
   }
-  return _buildLegacyReportPdf(report);
+  return _buildLegacyReportPdf(publicReport);
 }
 
 export function generateReportPdf(report: GeneratedReport): void {

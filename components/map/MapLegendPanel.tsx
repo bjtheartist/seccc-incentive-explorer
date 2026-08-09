@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { Lock } from "lucide-react";
 import {
@@ -25,6 +25,14 @@ import {
 } from "@/lib/owner-classify";
 import { CLASS_CODE_MAP } from "@/lib/parcel-classes";
 import { MAP_PRESETS, POI_LAYERS, formatAwardedAmount } from "./map-helpers";
+import {
+  NESTED_ZONE_PARENTS,
+  ZONE_LAYER_PRESETS,
+  activeZoneLayerPreset,
+  planZoneLayerPresetToggles,
+  type ZoneLayerPresetId,
+  type ZoneLayerPresetShape,
+} from "./map-layer-presets";
 import {
   DEFAULT_INVESTMENT_YEAR_RANGE,
   FUNDER_TYPE_COLORS,
@@ -52,12 +60,17 @@ import {
 } from "@/lib/investment-deck-modes";
 import type { CapitalClass, FunderType } from "@/lib/community-investment";
 import {
+  GOVERNMENT_FUNDING_PURPOSE_LABELS,
+  type GovernmentFundingPurpose,
+} from "@/lib/government-funding-purpose";
+import {
   DEFAULT_PUBLIC_INVESTMENT_OVERLAY_VISIBILITY,
   PUBLIC_INVESTMENT_OVERLAY_COLORS,
   PUBLIC_INVESTMENT_OVERLAYS,
   type PublicInvestmentOverlayId,
   type PublicInvestmentOverlayVisibility,
 } from "@/lib/public-investment-overlays";
+import { PERMIT_MAP_TYPES, type PermitMapTypeKey } from "@/lib/permit-map";
 
 interface MapLegendPanelProps {
   zoneVisible: Record<string, boolean>;
@@ -65,6 +78,8 @@ interface MapLegendPanelProps {
   zoningVisible: Record<string, boolean>;
   vacantVisible: Record<string, boolean>;
   parcelsVisible: boolean;
+  permitsVisible?: boolean;
+  permitTypeVisible?: Record<PermitMapTypeKey, boolean>;
   ownerFilter: OwnerType | "all";
   expandedZone: string | null;
   zoningRefOpen: boolean;
@@ -84,6 +99,8 @@ interface MapLegendPanelProps {
   communityInvestmentError?: string | null;
   /** Funder types actually present among the plotted points, in FUNDER_TYPE_ORDER — drives the funderType checkboxes. */
   investmentPresentFunderTypes?: FunderType[];
+  /** Government funding purposes present among plotted base dots. */
+  investmentPresentGovernmentFundingPurposes?: GovernmentFundingPurpose[];
   /** Capital classes present among plotted dots, in CAPITAL_CLASS_ORDER — drives the capital-class sub-legend. */
   investmentPresentCapitalClasses?: CapitalClass[];
   /** Count of tracked foundation HQs — the Arcs "Foundation flows (N tracked HQs)" honest label. */
@@ -92,6 +109,8 @@ interface MapLegendPanelProps {
   investmentYearRange?: string;
   /** Per-funderType checkbox state (client-side filter). */
   investmentFunderTypes?: Record<FunderType, boolean>;
+  /** Per-purpose checkbox state for government-funded base dots. */
+  investmentGovernmentFundingPurposes?: Record<GovernmentFundingPurpose, boolean>;
   /** Citywide-geometry summary (count + total awarded dollars) — records that never plot as dots. */
   investmentCitywide?: { count: number; totalDollars: number } | null;
   /** Active admin view mode (Dots | Arcs | Density); defaults to "dots". */
@@ -123,6 +142,7 @@ interface MapLegendPanelProps {
   onSetInvestmentMegaprojectsVisible?: (value: boolean) => void;
   onSetPublicInvestmentOverlay?: (id: PublicInvestmentOverlayId, value: boolean) => void;
   onToggleInvestmentFunderType?: (key: FunderType) => void;
+  onToggleInvestmentGovernmentFundingPurpose?: (key: GovernmentFundingPurpose) => void;
   onClose: () => void;
   onToggleZone: (key: string) => void;
   onTogglePoi: (key: string) => void;
@@ -130,6 +150,10 @@ interface MapLegendPanelProps {
   onToggleAllZoning: () => void;
   onSetVacantVisible: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   onSetParcelsVisible: React.Dispatch<React.SetStateAction<boolean>>;
+  onSetPermitsVisible?: (value: boolean) => void;
+  onSetPermitTypeVisible?: React.Dispatch<
+    React.SetStateAction<Record<PermitMapTypeKey, boolean>>
+  >;
   onSetOwnerFilter: (value: OwnerType | "all") => void;
   onSetExpandedZone: (key: string | null) => void;
   onSetZoningRefOpen: React.Dispatch<React.SetStateAction<boolean>>;
@@ -145,6 +169,8 @@ export default function MapLegendPanel({
   zoningVisible,
   vacantVisible,
   parcelsVisible,
+  permitsVisible = false,
+  permitTypeVisible = {} as Record<PermitMapTypeKey, boolean>,
   ownerFilter,
   expandedZone,
   zoningRefOpen,
@@ -160,10 +186,12 @@ export default function MapLegendPanel({
   communityInvestmentLoading,
   communityInvestmentError,
   investmentPresentFunderTypes = [],
+  investmentPresentGovernmentFundingPurposes = [],
   investmentPresentCapitalClasses = [],
   investmentFunderHqCount = 0,
   investmentYearRange = DEFAULT_INVESTMENT_YEAR_RANGE,
   investmentFunderTypes = {} as Record<FunderType, boolean>,
+  investmentGovernmentFundingPurposes = {} as Record<GovernmentFundingPurpose, boolean>,
   investmentCitywide = null,
   investmentViewMode = DEFAULT_INVESTMENT_VIEW_MODE,
   investmentDensityMetric = DEFAULT_INVESTMENT_DENSITY_METRIC,
@@ -187,6 +215,7 @@ export default function MapLegendPanel({
   onSetInvestmentMegaprojectsVisible = () => {},
   onSetPublicInvestmentOverlay = () => {},
   onToggleInvestmentFunderType = () => {},
+  onToggleInvestmentGovernmentFundingPurpose = () => {},
   onClose,
   onToggleZone,
   onTogglePoi,
@@ -194,6 +223,8 @@ export default function MapLegendPanel({
   onToggleAllZoning,
   onSetVacantVisible,
   onSetParcelsVisible,
+  onSetPermitsVisible = () => {},
+  onSetPermitTypeVisible = () => {},
   onSetOwnerFilter,
   onSetExpandedZone,
   onSetZoningRefOpen,
@@ -205,6 +236,42 @@ export default function MapLegendPanel({
   // Local collapse for the "Citywide commitments" note — purely presentational,
   // no need to lift into MapView (mirrors ZoneLayerSection's local useState).
   const [citywideOpen, setCitywideOpen] = useState(false);
+
+  /* ── Zone-layer groups (WP4) ───────────────────────────────────
+   * Applied through the zone checkboxes this panel already owns, so MapView
+   * needs no new wiring. The "Public Capital & Past Awards" group is admin-only
+   * (see map-layer-presets.ts) — it never changes the gating of the admin
+   * Community Investment layer, and it does not render for anonymous visitors.
+   */
+  const zoneLayerPresets: ZoneLayerPresetShape[] = ZONE_LAYER_PRESETS.filter(
+    (preset) => !preset.adminOnly || adminSessionActive
+  );
+  const activeZonePresetId = activeZoneLayerPreset(zoneVisible, ZONE_KEYS_SORTED);
+
+  // Nested child layers (Past Grant Winners under NOF) cannot be raised in the
+  // same commit as their parent — MapView.toggleZone reads the parent from the
+  // rendered state — so they are flushed on the next commit.
+  const [deferredZoneToggles, setDeferredZoneToggles] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (deferredZoneToggles.length === 0) return;
+    setDeferredZoneToggles([]);
+    for (const key of deferredZoneToggles) {
+      const parent = NESTED_ZONE_PARENTS[key];
+      // Parent never came up (layer absent from the map) — drop it rather than retry.
+      if (parent && !zoneVisible[parent]) continue;
+      if (!zoneVisible[key]) onToggleZone(key);
+    }
+  }, [deferredZoneToggles, zoneVisible, onToggleZone]);
+
+  const handleApplyZonePreset = (presetId: ZoneLayerPresetId) => {
+    const preset = zoneLayerPresets.find((p) => p.id === presetId);
+    if (!preset) return;
+    const plan = planZoneLayerPresetToggles(preset, zoneVisible, ZONE_KEYS_SORTED);
+    for (const key of plan.now) onToggleZone(key);
+    setDeferredZoneToggles(plan.deferred);
+  };
+
   return (
     <div className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-3 md:right-auto z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100vh-280px)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none">
       {/* Mobile drag handle + close */}
@@ -260,6 +327,9 @@ export default function MapLegendPanel({
         onToggleZone={onToggleZone}
         expandedZone={expandedZone}
         onSetExpandedZone={onSetExpandedZone}
+        zoneLayerPresets={zoneLayerPresets}
+        activeZonePresetId={activeZonePresetId}
+        onApplyZonePreset={handleApplyZonePreset}
       />
 
       {/* Divider */}
@@ -528,6 +598,68 @@ export default function MapLegendPanel({
           Lot boundaries visible at zoom 15+
         </p>
 
+        <div className="my-3 h-px bg-[#0C1B33]/8" />
+
+        <label className="flex cursor-pointer items-center gap-2.5 py-1 group">
+          <input
+            type="checkbox"
+            checked={permitsVisible}
+            onChange={() => onSetPermitsVisible(!permitsVisible)}
+            className="sr-only"
+          />
+          <span
+            className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center rounded-full border transition-colors"
+            style={{
+              borderColor: "#0F766E",
+              backgroundColor: permitsVisible ? "#0F766E30" : "transparent",
+            }}
+          >
+            {permitsVisible && (
+              <span className="block h-2 w-2 rounded-full bg-[#0F766E]" />
+            )}
+          </span>
+          <span className="text-[11px] leading-tight text-[#0C1B33]/70 transition-colors group-hover:text-[#0C1B33]">
+            Building permits
+          </span>
+        </label>
+        <p className="ml-6 mt-1 text-[9px] leading-relaxed text-[#0C1B33]/35">
+          City permit filings since 2015 · visible at zoom 12+
+        </p>
+
+        {permitsVisible && (
+          <details className="ml-6 mt-2 border-t border-[#0C1B33]/8 pt-2">
+            <summary className="cursor-pointer font-mono-bureau text-[8px] uppercase tracking-[0.12em] text-[#0F766E]/70">
+              Permit types
+            </summary>
+            <div className="mt-2 space-y-0.5">
+              {PERMIT_MAP_TYPES.map((permitType) => (
+                <label
+                  key={permitType.key}
+                  className="flex cursor-pointer items-start gap-2 py-1 group"
+                >
+                  <input
+                    type="checkbox"
+                    checked={permitTypeVisible[permitType.key] !== false}
+                    onChange={() =>
+                      onSetPermitTypeVisible((current) => ({
+                        ...current,
+                        [permitType.key]: current[permitType.key] === false,
+                      }))
+                    }
+                    className="mt-0.5 h-3 w-3 flex-shrink-0 accent-[#0F766E]"
+                  />
+                  <span className="text-[10px] leading-snug text-[#0C1B33]/55 transition-colors group-hover:text-[#0C1B33]/80">
+                    {permitType.label}
+                  </span>
+                </label>
+              ))}
+            </div>
+            <p className="mt-2 text-[9px] leading-relaxed text-[#0C1B33]/35">
+              Filings indicate permit activity, not completed construction. Verify status with the City.
+            </p>
+          </details>
+        )}
+
         {/* Collapsible class code reference */}
         <button
           onClick={() => onSetClassRefOpen((v) => !v)}
@@ -716,58 +848,78 @@ export default function MapLegendPanel({
                     Additional layers
                   </div>
                   <div className="space-y-2 border-b border-[#0C1B33]/8 pb-3 mb-2">
-                    {PUBLIC_INVESTMENT_OVERLAYS.map((overlay) => {
-                      const checked = publicInvestmentOverlays[overlay.id];
-                      const color = PUBLIC_INVESTMENT_OVERLAY_COLORS[overlay.id];
-                      const countLabel =
-                        overlay.id === "county_relief_awards"
-                          ? `${countyReliefZipCount} Chicago ZIP areas mapped`
-                          : overlay.id === "state_2020_relief"
-                            ? `${state2020ReliefZipCount} BIG ZIP areas mapped · ${state2020HospitalityCitywideCount} Hospitality records held unplotted`
-                          : overlay.id === "state_recovery_awards"
-                            ? `${stateRecoveryZipCount} Chicago ZIP areas mapped`
-                            : overlay.id === "federal_restaurant_relief"
-                              ? `${federalRestaurantReliefPlottedCount} address-sited · ${federalRestaurantReliefCitywideCount} held unplotted`
-                              : `${stateCapitalPlottedCount} address-sited · ${stateCapitalCitywideCount} held unplotted`;
-                      return (
-                        <label key={overlay.id} className="flex items-start gap-2.5 py-1 cursor-pointer group">
-                          <input
-                            type="checkbox"
-                            role="switch"
-                            aria-label={`Toggle ${overlay.label} overlay`}
-                            checked={checked}
-                            onChange={() => onSetPublicInvestmentOverlay(overlay.id, !checked)}
-                            className="sr-only"
-                          />
-                          <span
-                            aria-hidden="true"
-                            className="relative mt-0.5 h-5 w-9 flex-shrink-0 rounded-full border transition-colors"
-                            style={{
-                              borderColor: checked ? color : "#0C1B3326",
-                              backgroundColor: checked ? color : "#0C1B330A",
-                            }}
-                          >
-                            <span
-                              className="absolute top-[2px] h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform"
-                              style={{ transform: checked ? "translateX(17px)" : "translateX(2px)" }}
-                            />
-                          </span>
-                          <span className="min-w-0">
-                            <span className="block text-[11px] font-medium text-[#0C1B33]/75 group-hover:text-[#0C1B33] transition-colors">
-                              {overlay.label}
-                            </span>
-                            <span className="block text-[9px] text-[#0C1B33]/40 leading-relaxed">
-                              {overlay.description}
-                            </span>
-                            {checked && (
-                              <span className="mt-1 block font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
-                                {countLabel}
+                    {(["capital_project", "programmatic"] as const).map((purpose) => (
+                      <div key={purpose} className="space-y-1.5">
+                        <div className="font-mono-bureau text-[8px] uppercase tracking-[0.12em] text-[#0C1B33]/45">
+                          {GOVERNMENT_FUNDING_PURPOSE_LABELS[purpose]}
+                        </div>
+                        {PUBLIC_INVESTMENT_OVERLAYS.filter(
+                          (overlay) => overlay.fundingPurpose === purpose,
+                        ).map((overlay) => {
+                          const checked = publicInvestmentOverlays[overlay.id];
+                          const color = PUBLIC_INVESTMENT_OVERLAY_COLORS[overlay.id];
+                          const countLabel =
+                            overlay.id === "county_relief_awards"
+                              ? `${countyReliefZipCount} Chicago ZIP areas mapped`
+                              : overlay.id === "state_2020_relief"
+                                ? `${state2020ReliefZipCount} BIG ZIP areas mapped · ${state2020HospitalityCitywideCount} Hospitality records held unplotted`
+                              : overlay.id === "state_recovery_awards"
+                                ? `${stateRecoveryZipCount} Chicago ZIP areas mapped`
+                                : overlay.id === "federal_restaurant_relief"
+                                  ? `${federalRestaurantReliefPlottedCount} address-sited · ${federalRestaurantReliefCitywideCount} held unplotted`
+                                  : `${stateCapitalPlottedCount} address-sited · ${stateCapitalCitywideCount} held unplotted`;
+                          return (
+                            <label key={overlay.id} className="flex items-start gap-2.5 py-1 cursor-pointer group">
+                              <input
+                                type="checkbox"
+                                role="switch"
+                                aria-label={`Toggle ${overlay.label} overlay`}
+                                checked={checked}
+                                onChange={() => onSetPublicInvestmentOverlay(overlay.id, !checked)}
+                                className="sr-only"
+                              />
+                              <span
+                                aria-hidden="true"
+                                className="relative mt-0.5 h-5 w-9 flex-shrink-0 rounded-full border transition-colors"
+                                style={{
+                                  borderColor: checked ? color : "#0C1B3326",
+                                  backgroundColor: checked ? color : "#0C1B330A",
+                                }}
+                              >
+                                <span
+                                  className="absolute top-[2px] h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform"
+                                  style={{ transform: checked ? "translateX(17px)" : "translateX(2px)" }}
+                                />
                               </span>
-                            )}
-                          </span>
-                        </label>
-                      );
-                    })}
+                              <span className="min-w-0">
+                                <span className="block text-[11px] font-medium text-[#0C1B33]/75 group-hover:text-[#0C1B33] transition-colors">
+                                  {overlay.label}
+                                </span>
+                                <span className="block text-[9px] text-[#0C1B33]/40 leading-relaxed">
+                                  {overlay.description}
+                                </span>
+                                {checked && (
+                                  <span className="mt-1 block font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
+                                    {countLabel}
+                                  </span>
+                                )}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ))}
+                    <div className="space-y-1">
+                      <div className="font-mono-bureau text-[8px] uppercase tracking-[0.12em] text-[#0C1B33]/45">
+                        Arts funding
+                      </div>
+                      <Link
+                        href="/investment#illinois-arts-awards"
+                        className="block text-[9px] leading-relaxed text-[#2563EB] hover:underline"
+                      >
+                        City-level Illinois Arts Council awards are not mapped →
+                      </Link>
+                    </div>
                   </div>
                   <label className="flex items-center gap-2.5 py-1 cursor-pointer group">
                     <input
@@ -912,6 +1064,45 @@ export default function MapLegendPanel({
                             </span>
                             <span className="text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight">
                               {FUNDER_TYPE_LABELS[type]}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {investmentPresentGovernmentFundingPurposes.length > 0 && (
+                  <div>
+                    <div className="font-mono-bureau text-[8px] tracking-[0.15em] uppercase text-[#0C1B33]/40 mb-1.5">
+                      Government funding purpose
+                    </div>
+                    <div className="space-y-0.5">
+                      {investmentPresentGovernmentFundingPurposes.map((purpose) => {
+                        const checked = investmentGovernmentFundingPurposes[purpose] ?? true;
+                        return (
+                          <label
+                            key={purpose}
+                            className="flex items-center gap-2.5 py-1 cursor-pointer group"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() =>
+                                onToggleInvestmentGovernmentFundingPurpose(purpose)
+                              }
+                              className="sr-only"
+                            />
+                            <span
+                              className="flex h-3.5 w-3.5 flex-shrink-0 items-center justify-center border border-[#0C1B33]/25 bg-white transition-colors"
+                              aria-hidden="true"
+                            >
+                              {checked ? (
+                                <span className="block h-2 w-2 bg-[#2563EB]" />
+                              ) : null}
+                            </span>
+                            <span className="text-[11px] text-[#0C1B33]/70 group-hover:text-[#0C1B33] transition-colors leading-tight">
+                              {GOVERNMENT_FUNDING_PURPOSE_LABELS[purpose]}
                             </span>
                           </label>
                         );
@@ -1080,6 +1271,10 @@ interface ZoneLayerSectionProps {
   onToggleZone: (key: string) => void;
   expandedZone: string | null;
   onSetExpandedZone: (key: string | null) => void;
+  /** Zone-layer groups the current viewer may see (admin-only groups pre-filtered). */
+  zoneLayerPresets: ZoneLayerPresetShape[];
+  activeZonePresetId: ZoneLayerPresetId | null;
+  onApplyZonePreset: (presetId: ZoneLayerPresetId) => void;
 }
 
 function ZoneLayerSection({
@@ -1087,6 +1282,9 @@ function ZoneLayerSection({
   onToggleZone,
   expandedZone,
   onSetExpandedZone,
+  zoneLayerPresets,
+  activeZonePresetId,
+  onApplyZonePreset,
 }: ZoneLayerSectionProps) {
   const [activeLevel, setActiveLevel] = useState<ProgramLevel | "All">("All");
   const topLevelZoneKeys = ZONE_KEYS_SORTED.filter((key) => key !== "nofFundedProjects");
@@ -1116,6 +1314,47 @@ function ZoneLayerSection({
       <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-2">
         Incentive Zones
       </div>
+
+      {/* Layer groups — one tap selects a whole family of zone layers and
+          clears the rest. The individual checkboxes below stay available. */}
+      {zoneLayerPresets.length > 0 && (
+        <div className="mb-3" role="group" aria-label="Zone layer groups">
+          <div className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/35 mb-1.5">
+            Layer Groups
+          </div>
+          <div className="space-y-1">
+            {zoneLayerPresets.map((preset) => {
+              const active = activeZonePresetId === preset.id;
+              return (
+                <button
+                  key={preset.id}
+                  type="button"
+                  aria-pressed={active}
+                  title={preset.description}
+                  onClick={() => onApplyZonePreset(preset.id as ZoneLayerPresetId)}
+                  className={`w-full flex items-center justify-between gap-2 text-left px-2 py-2 md:py-1.5 border transition-colors ${
+                    active
+                      ? "bg-[#2563EB] text-white border-[#2563EB]"
+                      : "bg-white text-[#0C1B33]/55 border-[#0C1B33]/12 hover:border-[#2563EB]/40 hover:text-[#2563EB]"
+                  }`}
+                >
+                  <span className="font-mono-bureau text-[9px] md:text-[8px] tracking-[0.08em] uppercase leading-tight">
+                    {preset.label}
+                  </span>
+                  <span
+                    className={`font-mono-bureau text-[9px] md:text-[8px] tabular-nums flex-shrink-0 ${
+                      active ? "text-white/70" : "text-[#0C1B33]/35"
+                    }`}
+                  >
+                    {preset.zones.length}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Gov-level quick filter chips */}
       <div className="flex flex-wrap gap-1 mb-3">
         {(["All", ...LEVELS.filter((l) => l !== "Utility")] as const).map((lvl) => {

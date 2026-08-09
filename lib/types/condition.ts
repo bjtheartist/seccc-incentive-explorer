@@ -6,19 +6,39 @@
  * back from Postgres. Kept separate from `lib/types.ts` (do not edit that).
  */
 
-/** A row from `building_permits` (Chicago Building Permits, `ydr8-5enu`). */
+/**
+ * A row from `building_permits` (Chicago Building Permits, `ydr8-5enu`).
+ *
+ * `lat`/`lon` are NULLABLE: the citywide ingest keeps a permit that carries a
+ * PIN or a street address even when the city published no coordinates for it,
+ * because those rows are exactly the ones the PIN and address match tiers can
+ * still place. `zip` is always null — the dataset has no ZIP column (see
+ * lib/ingest/permits.ts).
+ *
+ * `reportedCost` is the APPLICANT'S OWN ESTIMATE from the application form. It
+ * is not an award, a commitment, or a spend, and it must never be summed into a
+ * capital or investment total.
+ */
 export interface BuildingPermit {
   permitId: string;
+  /** First entry of {@link pins}. */
   pin: string | null;
+  /** Every PIN on the permit, digits-only. These are 10-digit PINs; `parcels`
+   *  and the COLS inventory carry the 14-digit form. */
+  pins: string[];
   address: string | null;
   zip: string | null;
   permitType: string | null;
+  permitStatus: string | null;
+  permitMilestone: string | null;
+  workType: string | null;
+  permitCondition: string | null;
   workDescription: string | null;
   issueDate: string | null;
   reportedCost: number | null;
   isDemolition: boolean;
-  lat: number;
-  lon: number;
+  lat: number | null;
+  lon: number | null;
 }
 
 /** A row from `building_violations` (Chicago Building Violations, `22u3-xenr`). */

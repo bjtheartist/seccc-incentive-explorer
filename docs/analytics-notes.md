@@ -50,6 +50,22 @@ The v1 mission proxy is `Local Resource Connections`: clicks on support-network 
 contacts surfaced from a report. This is an impact proxy, not proof that a business received
 capital or won an incentive.
 
+## Practitioner Validation Sprint
+
+The five facilitated links in `docs/practitioner-validation-sprint.md` use the
+closed campaign set `practitioner-validation-2026-08-*`. Only those five exact
+campaigns persist in session storage and roll up into the private dashboard's
+Practitioner Validation panel. The attribution follows the same browser session
+through report, local-support, and recorded support-request events without adding
+participant names or documents to analytics.
+
+Pilot counts are product events, not people. `Reports Generated`, `Support Viewed`,
+and `Support Actions` are deduplicated by report key within each case. `Requests
+Recorded` means a consented request was saved for review and routing; it does not
+mean an organization acknowledged the request, made contact, approved a project,
+or delivered assistance. The manual scorecard remains the primary evidence at a
+five-session sample size.
+
 The founder view also includes first-party traffic analytics: public page views, anonymous
 visitor sessions, top pages, daily/weekly traffic tables, and coarse device breakdown
 (`mobile`, `tablet`, `desktop`, `unknown`). Admin dashboard traffic is excluded. These

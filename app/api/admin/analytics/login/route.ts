@@ -9,6 +9,8 @@ import {
 const ALLOWED_ADMIN_REDIRECTS = new Set([
   "/admin/analytics",
   "/admin/future-of-commerce",
+  "/admin/zoning-changes",
+  "/admin/support-network",
 ]);
 
 function safeDashboardRedirect(req: NextRequest, value: FormDataEntryValue | null) {

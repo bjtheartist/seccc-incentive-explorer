@@ -90,7 +90,7 @@ const CHECKLISTS: Record<GoalType, string[]> = {
     "Define improvement scope and budget",
     "Collect contractor estimates",
     "Review matching grant and corridor program fit",
-    "Schedule a conversation with a business support partner",
+    "Schedule a conversation with a business support organization",
   ],
   "buy-equipment": [
     "List equipment needed and estimated cost",
@@ -104,14 +104,14 @@ const CHECKLISTS: Record<GoalType, string[]> = {
     "Estimate new jobs or retained jobs",
     "Review workforce and hiring incentive fit",
     "Gather payroll or employment records",
-    "Contact a workforce or business support partner",
+    "Contact a workforce or business support organization",
   ],
   "expand-location": [
     "Document current space constraints",
     "Confirm zoning and parcel context",
     "Estimate buildout or relocation budget",
     "Review location-based incentives",
-    "Bring the report to a lender or local support partner",
+    "Bring the report to a lender or local support organization",
   ],
   "open-relocate": [
     "Compare possible addresses or corridors",

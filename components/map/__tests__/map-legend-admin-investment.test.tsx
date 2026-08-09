@@ -114,11 +114,18 @@ describe("MapLegendPanel community-investment admin section", () => {
         adminSessionActive={true}
         communityInvestmentVisible={true}
         investmentPresentFunderTypes={["government", "philanthropic"]}
+        investmentPresentGovernmentFundingPurposes={["capital_project", "programmatic"]}
         investmentYearRange="all"
         investmentFunderTypes={{
           government: true,
           philanthropic: true,
           private_development: true,
+        }}
+        investmentGovernmentFundingPurposes={{
+          capital_project: true,
+          programmatic: true,
+          arts: true,
+          unclassified: true,
         }}
       />
     );
@@ -130,6 +137,10 @@ describe("MapLegendPanel community-investment admin section", () => {
     expect(html).toContain(FUNDER_TYPE_LABELS.government);
     expect(html).toContain(FUNDER_TYPE_LABELS.philanthropic);
     expect(html).not.toContain(FUNDER_TYPE_LABELS.private_development);
+    expect(html).toContain("Government funding purpose");
+    expect(html).toContain("Capital projects");
+    expect(html).toContain("Programmatic funding");
+    expect(html).toContain("City-level Illinois Arts Council awards are not mapped");
     expect(html).toContain("Dot size = each record");
   });
 
@@ -248,6 +259,9 @@ describe("MapLegendPanel community-investment admin section", () => {
     expect(html).toContain("Illinois recovery grants");
     expect(html).toContain("Restaurant relief grants");
     expect(html).toContain("State capital projects");
+    expect(html).toContain("Programmatic funding");
+    expect(html).toContain("Capital projects");
+    expect(html).toContain("Arts funding");
     expect(html).toContain("18 Chicago ZIP areas mapped");
     expect(html).not.toContain("7 address-sited");
     expect(html).toContain("not an active funding opportunity");
@@ -369,6 +383,7 @@ describe("buildInvestmentPopupHtml", () => {
       recipient: "5039 N Kimball",
       funderName: "City of Chicago — TIF",
       funderType: "government",
+      governmentFundingPurpose: "capital_project",
       capitalClass: "tif_subsidy",
       amountAwarded: null,
       authorizedAmount: 2_500_000,
@@ -378,6 +393,7 @@ describe("buildInvestmentPopupHtml", () => {
     expect(html).toContain(MONEY_LABEL("Authorized"));
     expect(html).toContain("$2,500,000");
     expect(html).not.toContain(MONEY_LABEL("Awarded"));
+    expect(html).toContain("Capital projects");
     expect(html.toLowerCase()).not.toContain("received");
   });
 
@@ -386,6 +402,7 @@ describe("buildInvestmentPopupHtml", () => {
       recipient: "3403 W Lawrence",
       funderName: "City of Chicago — CDBG/HOME",
       funderType: "government",
+      governmentFundingPurpose: "programmatic",
       capitalClass: "federal_program",
       amountAwarded: null,
       authorizedAmount: 68_868,
@@ -394,6 +411,7 @@ describe("buildInvestmentPopupHtml", () => {
     expect(html).toContain(MONEY_LABEL("Federal program funding"));
     expect(html).toContain("$68,868");
     expect(html).not.toContain(MONEY_LABEL("Awarded"));
+    expect(html).toContain("Programmatic funding");
   });
 
   it("labels a LIHTC/NMTC figure with the 'Tax-credit allocation' money noun, reading creditAmount", () => {

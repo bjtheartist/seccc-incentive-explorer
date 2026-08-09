@@ -10,6 +10,10 @@ const INTRODUCTION_ACTION_RE =
   /(?:\b(request|prepare|make|arrange|send|set up)\b[\s\S]{0,100}\b(introduction|local support|support organization|partner|delegate agenc(?:y|ies)|cdfi)\b|\b(connect|introduce)\s+(?:me|us|my business|our business)\b)/i;
 const LOCAL_SUPPORT_GUIDANCE_RE =
   /\b(get connected|local support|support organization|delegate agenc(?:y|ies)|who can help|help me find (?:someone|an organization)|next local (?:resource|organization)|warm handoff)\b/i;
+const MATERIAL_REVIEW_SUPPORT_RE =
+  /\b(1:1|one[- ]on[- ]one|human|advisor)\b[\s\S]{0,100}\b(review(?:ing)?|check(?:ing)?|look(?:ing)? over)\b[\s\S]{0,80}\b(materials?|documents?|packet|application)\b|\b(review(?:ing)?|check(?:ing)?|look(?:ing)? over)\b[\s\S]{0,80}\b(materials?|documents?|packet|application)\b[\s\S]{0,100}\b(1:1|one[- ]on[- ]one|human|advisor)\b/i;
+const PROGRAM_DISCOVERY_RE =
+  /\b(which|what|find|show|list|recommend|suggest|explore|are there|is there|any)\b[\s\S]{0,70}\b(programs?|incentives?|grants?|credits?|funding)\b|\b(programs?|incentives?|grants?|credits?|funding)\b[\s\S]{0,70}\b(available|could help|should i explore|for my|for buying|for purchasing)\b/i;
 
 export function shouldUseSignedInActionTools({
   text,
@@ -24,6 +28,7 @@ export function shouldUseSignedInActionTools({
     signedIn &&
       (ACTION_REQUEST_RE.test(text) ||
         INTRODUCTION_ACTION_RE.test(text) ||
+        MATERIAL_REVIEW_SUPPORT_RE.test(text) ||
         (pageContext.route.startsWith("/workspace") &&
           WORKSPACE_ACTION_VERB_RE.test(text)))
   );
@@ -36,9 +41,30 @@ function isSavedRecordActionRequest(
   return Boolean(
     ACTION_REQUEST_RE.test(text) ||
       INTRODUCTION_ACTION_RE.test(text) ||
+      MATERIAL_REVIEW_SUPPORT_RE.test(text) ||
       (pageContext.route.startsWith("/workspace") &&
         WORKSPACE_ACTION_VERB_RE.test(text))
   );
+}
+
+function localPartnerOffer(pageContext: ConciergePageContext): string {
+  const names = [
+    pageContext.localSupportOrganizations?.[0]?.name,
+    pageContext.capitalSupportName,
+  ]
+    .filter((name): name is string => Boolean(name))
+    .filter((name, index, all) => all.indexOf(name) === index)
+    .slice(0, 2);
+  const surfaced = names.length > 0
+    ? ` Your report surfaced ${names.join(" and ")} as possible starting points.`
+    : "";
+
+  return `${surfaced} Would you like help connecting with a local partner who fits the project? A connection is optional and does not confirm eligibility or approval.`;
+}
+
+function nextGuidedOffer(pageContext: ConciergePageContext): string {
+  if (pageContext.reportSummary) return localPartnerOffer(pageContext);
+  return "Would you like to run a **Site Incentive Report** for a specific address? [Run a Site Incentive Report](/report) to check location-linked programs and support signals. The report is informational and does not determine eligibility.";
 }
 
 function programLines(
@@ -111,6 +137,10 @@ export async function buildDeterministicConciergeResponse({
     return null;
   }
 
+  if (!signedIn && MATERIAL_REVIEW_SUPPORT_RE.test(text)) {
+    return "You can request 1:1 support to review assembled materials for completeness and open questions. That review does not confirm eligibility, certify documents, or submit an application. To prepare a support request and control what may be shared, [sign in to your workspace](/login?callbackUrl=/workspace). Nothing has been shared or scheduled.";
+  }
+
   if (!signedIn && INTRODUCTION_ACTION_RE.test(text)) {
     return "You don't need to have every detail figured out before talking with someone. I can help organize what you're working toward and any open questions so you don't have to start from scratch. To save that summary and request an introduction, [sign in to your workspace](/login?callbackUrl=/workspace). Nothing has been shared with an organization.";
   }
@@ -129,6 +159,9 @@ export async function buildDeterministicConciergeResponse({
   }
 
   if (LOCAL_SUPPORT_GUIDANCE_RE.test(text)) {
+    if (pageContext.reportSummary) {
+      return `Your Site Incentive Report gives us a location-specific starting point.${localPartnerOffer(pageContext)}`;
+    }
     return "You don't need to have every detail figured out before talking with someone. To help identify a useful next connection, where does the project stand right now: are you exploring an idea, actively planning, or is the work already underway? This helps shape the conversation; it is not an eligibility, viability, or readiness score.";
   }
 
@@ -180,7 +213,7 @@ export async function buildDeterministicConciergeResponse({
 
   if (/\b(explain|understand|plain language)\b[\s\S]{0,45}\b(report|page|this)\b/i.test(text)) {
     if (pageContext.reportSummary) {
-      return `Here is the report's plain-language starting point:\n\n${pageContext.reportSummary}\n\nThese are location and program signals, not an eligibility or award decision. Review each surfaced program's official source and verify the project details with its administrator.`;
+      return `Here is the report's plain-language starting point:\n\n${pageContext.reportSummary}\n\nThese are location and program signals, not an eligibility or award decision. Review each surfaced program's official source and verify the project details with its administrator.\n\n${localPartnerOffer(pageContext)}`;
     }
     return "This page helps you discover programs and location signals. Start with an address and what the business is trying to do, then review each program's official source. [Build an incentive report](/report)";
   }
@@ -202,6 +235,9 @@ export async function buildDeterministicConciergeResponse({
 
   const queries = goalQueries(text);
   if (queries.length > 0) {
+    if (!PROGRAM_DISCOVERY_RE.test(text)) {
+      return `That gives me a clear starting point.\n\n${nextGuidedOffer(pageContext)}`;
+    }
     const programs = await programsForQueries(queries);
     if (programs.length > 0) {
       return [
@@ -210,8 +246,11 @@ export async function buildDeterministicConciergeResponse({
         ...programLines(programs),
         "",
         "This is a descriptive match, not an eligibility or award decision. Confirm current requirements, timing, and project fit with each program administrator.",
+        "",
+        nextGuidedOffer(pageContext),
       ].join("\n");
     }
+    return nextGuidedOffer(pageContext);
   }
 
   if (/\b(eligible|eligibility|qualify|qualified)\b/i.test(text)) {

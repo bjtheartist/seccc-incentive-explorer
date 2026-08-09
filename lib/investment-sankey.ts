@@ -45,8 +45,11 @@ import {
  * imported so this module carries no analysis-loader coupling). */
 export const SINCE_YEAR = 2020;
 
-/** Default fold thresholds — top-N kept by awarded dollars, the rest bucketed. */
-export const DEFAULT_TOP_FUNDERS = 6;
+/** Default fold thresholds — top-N kept by awarded dollars, the rest bucketed.
+ * Raised 6 -> 10 when the funder universe grew to 97: at six, the "Other
+ * funders" bucket became the largest node on most areas, which reads as one
+ * giant funder. The fold count is still disclosed in the caption. */
+export const DEFAULT_TOP_FUNDERS = 10;
 export const DEFAULT_TOP_RECIPIENTS = 8;
 
 /** The label of the funder-side fold bucket. */

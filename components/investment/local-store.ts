@@ -13,6 +13,10 @@
  */
 
 import { clearInvestmentSession } from "@/lib/investment-session";
+import {
+  GOVERNMENT_FUNDING_PURPOSE_LABELS,
+  type GovernmentFundingPurpose,
+} from "@/lib/government-funding-purpose";
 
 export const PINNED_AREAS_KEY = "investment.pinnedAreas";
 export const SHORTLIST_KEY = "investment.shortlist";
@@ -31,6 +35,7 @@ export interface ShortlistRecord {
   recipient: string;
   funderName: string;
   source: string;
+  governmentFundingPurpose: GovernmentFundingPurpose | null;
   year: number | null;
   amountAwarded: number;
   communityArea: string;
@@ -245,9 +250,29 @@ function csvCell(value: string | number | null): string {
 
 /** Serialize the shortlist to CSV text (header + one row per saved record). */
 export function shortlistToCsv(records: readonly ShortlistRecord[]): string {
-  const header = ["Recipient", "Funder", "Program", "Year", "Awarded", "Community area", "Notes"];
+  const header = [
+    "Recipient",
+    "Funder",
+    "Program",
+    "Government funding purpose",
+    "Year",
+    "Awarded",
+    "Community area",
+    "Notes",
+  ];
   const rows = records.map((r) =>
-    [r.recipient, r.funderName, r.source, r.year ?? "", r.amountAwarded, r.communityArea, r.notes]
+    [
+      r.recipient,
+      r.funderName,
+      r.source,
+      r.governmentFundingPurpose
+        ? GOVERNMENT_FUNDING_PURPOSE_LABELS[r.governmentFundingPurpose]
+        : "Not government",
+      r.year ?? "",
+      r.amountAwarded,
+      r.communityArea,
+      r.notes,
+    ]
       .map(csvCell)
       .join(","),
   );

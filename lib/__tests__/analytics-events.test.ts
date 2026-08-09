@@ -38,6 +38,14 @@ describe("analytics events", () => {
     });
   });
 
+  it("accepts first-visit guide funnel events", () => {
+    expect(isAnalyticsEventType("first_visit_guide_viewed")).toBe(true);
+    expect(isAnalyticsEventType("first_visit_guide_started")).toBe(true);
+    expect(isAnalyticsEventType("first_visit_guide_step_viewed")).toBe(true);
+    expect(isAnalyticsEventType("first_visit_guide_skipped")).toBe(true);
+    expect(isAnalyticsEventType("first_visit_guide_completed")).toBe(true);
+  });
+
   it("accepts the report-funnel instrumentation events added for the 2026-07 audit", () => {
     // Tier 0 "measure first" events: wizard step / refine exposure & click,
     // silent-engine-failure visibility, and save/email click-level telemetry.

@@ -1,5 +1,6 @@
 import { runConfidenceEngine } from "./confidence-engine";
-import { orderProgramCheckResultsByProjectGoal } from "./project-fit";
+import { orderProgramCheckResultsByProjectGoals } from "./project-fit";
+import { selectedProjectGoals } from "./report-wizard-config";
 import type { LocalBusinessSupportContext } from "./local-business-support";
 import type {
   NeighborhoodEconomicContext,
@@ -59,7 +60,9 @@ export interface LocationContextState {
   lon?: number | null;
   neighborhood?: string;
   industry?: string;
+  projectGoals?: string[];
   projectType?: string;
+  customGoal?: string;
   proposedUse?: string;
   siteControl?: string;
   documentsAvailable?: string[];
@@ -94,7 +97,9 @@ export interface LocationContext {
     lon?: number | null;
     project?: {
       industry?: string;
+      projectGoals?: string[];
       projectType?: string;
+      customGoal?: string;
       proposedUse?: string;
       siteControl?: string;
       documentsAvailable?: string[];
@@ -147,9 +152,9 @@ const SOURCE_REGISTRY: Record<string, LocationContextSource> = {
   },
   zoning: {
     id: "zoning",
-    label: "City of Chicago zoning",
-    url: "https://gisapps.chicago.gov/arcgis/rest/services",
-    freshness: "Live or cached city GIS lookup",
+    label: "City of Chicago ArcGIS zoning boundaries",
+    url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+    freshness: "City source record date returned by the lookup when available",
   },
   parcel: {
     id: "parcel",
@@ -269,11 +274,36 @@ function supportSourceOverrides(localSupport?: LocalBusinessSupportContext | nul
   ];
 }
 
+function zoningSourceOverrides(
+  cityZoning?: ReportZoningData,
+): LocationContextSource[] {
+  if (!cityZoning) return [];
+  return [
+    cityZoning.source ? {
+      id: "zoning",
+      label: cityZoning.source.label,
+      url: cityZoning.source.url,
+      freshness: cityZoning.source.recordUpdatedAt
+        ? `Source record updated ${cityZoning.source.recordUpdatedAt.slice(0, 10)}`
+        : `Retrieved ${cityZoning.source.retrievedAt.slice(0, 10)}`,
+    } : null,
+    cityZoning.zba ? {
+      id: "chicagoZba",
+      label: cityZoning.zba.source.label,
+      url: cityZoning.zba.source.url,
+      freshness: cityZoning.zba.source.freshnessNote,
+    } : null,
+  ].filter(Boolean) as LocationContextSource[];
+}
+
 function collectSourceIds(input: LocationContextInput, programResults: ProgramCheckResult[]): string[] {
   return [
     input.zones ? "zones" : null,
     input.census ? "census" : null,
-    input.cityZoning ? "zoning" : null,
+    input.cityZoning && input.cityZoning.status !== "unavailable"
+      ? "zoning"
+      : null,
+    input.cityZoning?.zba ? "chicagoZba" : null,
     input.parcel ? "parcel" : null,
     input.districts ? "districts" : null,
     programResults.length > 0 ? "programs" : null,
@@ -295,8 +325,9 @@ export function buildLocationContext(
   const programResults = input.zones
     ? runConfidenceEngine(programs, input.zones, input.zoneNames || {}, undefined, input.parcel ?? undefined)
     : [];
-  const orderedProgramResults = state.projectType
-    ? orderProgramCheckResultsByProjectGoal(programResults, state.projectType, state.industry)
+  const projectGoals = selectedProjectGoals(state);
+  const orderedProgramResults = projectGoals.length > 0
+    ? orderProgramCheckResultsByProjectGoals(programResults, projectGoals, state.industry)
     : programResults;
   const topMatches = orderedProgramResults
     .filter((result) => result.confidence !== "not_applicable")
@@ -315,7 +346,9 @@ export function buildLocationContext(
       lon: state.lon,
       project: {
         industry: state.industry,
+        projectGoals,
         projectType: state.projectType,
+        customGoal: state.customGoal,
         proposedUse: state.proposedUse,
         siteControl: state.siteControl,
         documentsAvailable: state.documentsAvailable,
@@ -352,7 +385,10 @@ export function buildLocationContext(
     },
     site: {},
     neighborhood: {},
-    sources: uniqueSources(sourceIds, supportSourceOverrides(input.localBusinessSupport)),
+    sources: uniqueSources(sourceIds, [
+      ...supportSourceOverrides(input.localBusinessSupport),
+      ...zoningSourceOverrides(input.cityZoning),
+    ]),
     trust: {
       caveats: [
         "The context engine is internal-first and does not expose a public partner or agent API in v1.",
@@ -368,7 +404,36 @@ export function buildLocationContext(
     context.geography.census = claim("census", "Census and market context", "measured", input.census, ["census"]);
   }
   if (input.cityZoning) {
-    context.geography.cityZoning = claim("cityZoning", "City zoning", "measured", input.cityZoning, ["zoning"]);
+    const sourceAvailable = input.cityZoning.status !== "unavailable";
+    const zbaCaveat =
+      input.cityZoning.zba?.status === "available"
+        ? " Historical ZBA records are point-matched source records; a past judgment does not establish current authorization, permitted use, or compliance."
+        : input.cityZoning.zba?.status === "not_found"
+          ? " No intersecting ZBA record was returned; this does not establish that no ZBA action exists."
+          : input.cityZoning.zba?.status === "unavailable"
+            ? " The City ZBA source was unavailable, so no absence conclusion is shown."
+            : "";
+    context.geography.cityZoning = claim(
+      "cityZoning",
+      "City zoning",
+      sourceAvailable ? "measured" : "needs_verification",
+      input.cityZoning,
+      [
+        ...(sourceAvailable ? ["zoning"] : []),
+        ...(input.cityZoning.zba ? ["chicagoZba"] : []),
+      ],
+      {
+        freshness:
+          input.cityZoning.source?.recordUpdatedAt ??
+          input.cityZoning.source?.retrievedAt,
+        caveat:
+          input.cityZoning.status === "unavailable"
+            ? `Published Chicago zoning data was unavailable, so no zoning conclusion is shown.${zbaCaveat}`
+            : input.cityZoning.status === "not_found"
+              ? `No published Chicago zoning district was returned; this is not evidence that zoning requirements do not apply.${zbaCaveat}`
+              : `The published district classification does not determine whether a proposed use is permitted.${zbaCaveat}`,
+      },
+    );
   }
   if (input.parcel) {
     context.geography.parcel = claim(

@@ -5,6 +5,7 @@ import {
   mergeCitywideBusinessSupport,
   inferSupportLanes,
   rankLocalBusinessSupport,
+  requestedSupportLanes,
   type LocalBusinessSupportOrganization,
 } from "@/lib/local-business-support";
 
@@ -62,9 +63,38 @@ describe("local business support data", () => {
     expect(qcdc?.address).toContain("4210 S. Berkeley");
     expect(qcdc?.supportTypes).toContain("Commercial corridor development");
   });
+
+  it("records the published public intake for Greater Englewood in every mapped area", () => {
+    for (const communityAreaNumber of ["67", "68"] as const) {
+      const organization = supportData.byCommunityArea[communityAreaNumber].organizations.find(
+        (org) => org.id === "P019",
+      );
+
+      expect(organization).toMatchObject({
+        name: "Greater Englewood Chamber Foundation",
+        address: "825 W. 69th St., 2nd Floor, Chicago, IL 60621",
+        phone: "312-768-8573",
+        email: "connect@geccf.org",
+        website: "https://www.gechamber.com/contactus",
+        validationLevel: "Verified: official organization contact page",
+        currentStatus: "Active public intake",
+        sourceYear: "2026",
+        lastVerifiedAt: "2026-08-07",
+      });
+      expect(organization?.sourceUrls).toContain("https://www.gechamber.com/contactus");
+    }
+  });
 });
 
 describe("rankLocalBusinessSupport", () => {
+  it("combines support lanes across multiple project goals", () => {
+    expect(
+      requestedSupportLanes({
+        projectTypes: ["hiring", "equipment"],
+      }),
+    ).toEqual(expect.arrayContaining(["workforce", "capital_readiness"]));
+  });
+
   it("prioritizes primary local access points above secondary and regional supports", () => {
     const ranked = rankLocalBusinessSupport([
       { name: "Regional Hub", relationships: ["cbc_hub"], sourceUrls: [] },
@@ -78,6 +108,28 @@ describe("rankLocalBusinessSupport", () => {
       "Legal Partner",
       "Secondary Partner",
       "Regional Hub",
+    ]);
+  });
+
+  it("does not treat broad active or verified labels as evidence of current capacity", () => {
+    const ranked = rankLocalBusinessSupport([
+      {
+        name: "Zulu Support",
+        relationships: ["secondary_access_point"],
+        sourceUrls: [],
+        currentStatus: "Active resource",
+        validationLevel: "Verified current web presence",
+      },
+      {
+        name: "Alpha Support",
+        relationships: ["secondary_access_point"],
+        sourceUrls: [],
+      },
+    ]);
+
+    expect(ranked.map((org) => org.name)).toEqual([
+      "Alpha Support",
+      "Zulu Support",
     ]);
   });
 

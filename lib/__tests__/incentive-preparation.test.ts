@@ -253,7 +253,7 @@ describe("buildPreparationTasks", () => {
     }
   });
 
-  it("uses preparation and likely-match framing without scores or incentive totals", () => {
+  it("uses program-preparation framing without scores or incentive totals", () => {
     const tasks = buildPreparationTasks({
       goalType: "hire-staff",
       profile: COMPLETE_PROFILE,
@@ -261,7 +261,7 @@ describe("buildPreparationTasks", () => {
     const serialized = JSON.stringify(tasks).toLowerCase();
 
     expect(serialized).toContain("application preparation");
-    expect(serialized).toContain("likely match");
+    expect(serialized).toContain("selected program");
     expect(serialized).not.toMatch(/numeric score|possible incentive dollars|guaranteed award/);
     expect(serialized).not.toMatch(/\$[0-9]/);
     expect(tasks.some((task) => "score" in task)).toBe(false);
@@ -308,6 +308,31 @@ describe("buildPreparationTasks", () => {
       status: "external_dependency",
     });
     expect(verificationTasks[0].description).toContain("Funding windows are district-specific");
+  });
+
+  it("does not turn explicit no-document guidance into a required task", () => {
+    const tasks = buildPreparationTasks({
+      goalType: "buy-equipment",
+      programId: "guidance-only",
+      programName: "Guidance-only program",
+      programRequiredDocs: [
+        "No formal documents required",
+        "No formal document is required.",
+        "No application needed — benefits are automatic by location",
+        "Contact your SSA delegate agency for any sub-program requirements",
+        "Vendor quote",
+      ],
+      profile: COMPLETE_PROFILE,
+    });
+
+    const programDocumentTasks = tasks.filter((task) =>
+      task.id.startsWith("program-document-"),
+    );
+
+    expect(programDocumentTasks).toHaveLength(1);
+    expect(programDocumentTasks[0].title).toBe(
+      "Collect program document: Vendor quote",
+    );
   });
 });
 
@@ -805,11 +830,12 @@ describe("incentive preparation migration", () => {
     "utf8"
   );
 
-  it("creates the three required tables and their complete column contract", () => {
+  it("creates the required preparation, request, and draft tables with their complete column contract", () => {
     expect(migration).toContain("CREATE EXTENSION IF NOT EXISTS pgcrypto");
     expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS business_profiles/);
     expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS incentive_preparation_packets/);
     expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS incentive_support_requests/);
+    expect(migration).toMatch(/CREATE TABLE IF NOT EXISTS incentive_support_request_drafts/);
 
     const requiredColumns = [
       "legal_name",
@@ -838,6 +864,7 @@ describe("incentive preparation migration", () => {
       "timeline_json",
       "profile_snapshot_json",
       "target_organization",
+      "request_type",
       "requested_help",
       "consent_scope_json",
       "consented_at",
@@ -866,6 +893,7 @@ describe("incentive preparation migration", () => {
     expect(migration).toContain("profile_snapshot_json is immutable");
     expect(migration).toContain("CREATE INDEX IF NOT EXISTS idx_incentive_packets_profile_id");
     expect(migration).toContain("CREATE INDEX IF NOT EXISTS idx_incentive_support_requests_packet_id");
+    expect(migration).toContain("CREATE INDEX IF NOT EXISTS idx_incentive_support_drafts_packet_id");
   });
 
   it("relaxes goal_type and program_name to nullable for foundation-first packets", () => {

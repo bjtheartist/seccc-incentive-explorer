@@ -27,6 +27,12 @@ interface MapSnapshotPanelProps {
   onGenerateSnapshot: () => void;
 }
 
+function mappedProgramReason(result: ProgramCheckResult): string {
+  return result.program.zoneKey
+    ? "Mapped boundary intersects this location."
+    : "Included from the program catalog for further review.";
+}
+
 export default function MapSnapshotPanel({
   areaStats,
   snapshotLabel,
@@ -93,7 +99,8 @@ export default function MapSnapshotPanel({
     ) : null;
 
   return (
-    <div
+    <aside
+      aria-label="Location Snapshot"
       className="absolute bottom-0 left-0 right-0 md:bottom-auto md:top-12 md:left-auto md:right-3 z-20 md:z-10 bg-white/98 md:bg-white/95 backdrop-blur border-t md:border border-[#0C1B33]/10 md:w-72 max-h-[60vh] md:max-h-[calc(100%-4rem)] overflow-y-auto rounded-t-xl md:rounded-none shadow-lg md:shadow-none touch-manipulation"
       // touch-manipulation: this sheet sits over the map canvas (which Mapbox's
       // own CSS sets to touch-action:none) — without it, Safari's residual
@@ -142,8 +149,8 @@ export default function MapSnapshotPanel({
           </span>
           <span className="text-[13px] text-[#0C1B33]/75 leading-tight">
             {contextPrograms.length > 0
-              ? `${contextPrograms.length} incentive program${contextPrograms.length !== 1 ? "s" : ""} may apply here`
-              : "Checking incentive eligibility…"}
+              ? `${contextPrograms.length} mapped program${contextPrograms.length !== 1 ? "s" : ""} to review here`
+              : "Reviewing mapped programs…"}
           </span>
         </div>
         <button
@@ -333,10 +340,8 @@ export default function MapSnapshotPanel({
                 {areaStats.parcelType && <span>{areaStats.parcelType}</span>}
               </div>
             )}
-            {/* Property & ownership records — paired official destinations:
-                CookViewer (parcel record) + Cook County Clerk (recorded deeds).
-                Links only — the Explorer never scrapes or displays owners and
-                never implies it performed a title search. */}
+            {/* Property and ownership records pair the public parcel record with
+                deed history. Taxpayer data remains a lead, never a title finding. */}
             {cookViewerUrl(areaStats.parcelPin) && (
               <div className="mt-2">
                 <div className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/35">
@@ -417,7 +422,7 @@ export default function MapSnapshotPanel({
           <div className="mx-4 h-px bg-[#0C1B33]/8" />
           <div className="px-4 py-3">
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/50 mb-1.5">
-              Property Owner
+              Taxpayer of Record
             </div>
             <div className="text-[11px] font-medium text-[#0C1B33]/90 mb-1">
               {areaStats.ownerName}
@@ -434,6 +439,9 @@ export default function MapSnapshotPanel({
                 {OWNER_TYPE_LABELS[areaStats.ownerType as OwnerType] || areaStats.ownerType}
               </span>
             )}
+            <p className="text-[9px] text-[#0C1B33]/35 leading-relaxed pt-1">
+              Public taxpayer records do not replace a title search. Verify current ownership and decision-makers independently.
+            </p>
           </div>
         </>
       )}
@@ -532,20 +540,33 @@ export default function MapSnapshotPanel({
           <div className="mx-4 h-px bg-[#0C1B33]/8" />
           <div className="px-4 pt-3 pb-2">
             <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-2">
-              Programs at This Location
+              Mapped Programs to Review
             </div>
             <div className="space-y-1.5">
               {contextPrograms.map((r) => (
-                <div key={r.programId}>
+                <div key={r.programId} className="space-y-0.5">
                   <div className="text-[10px] text-[#0C1B33]/70 leading-snug">
                     {r.program.name}
                   </div>
-                  <div className="font-mono-bureau text-[8px] text-[#0C1B33]/40 mt-0.5">
-                    {r.benefitRange}
-                  </div>
+                  <p className="text-[9px] leading-relaxed text-[#0C1B33]/45">
+                    {mappedProgramReason(r)}
+                  </p>
+                  {(r.program.sourceUrl || r.program.url) && (
+                    <a
+                      href={r.program.sourceUrl || r.program.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-block font-mono-bureau text-[8px] uppercase tracking-[0.08em] text-[#2563EB] underline-offset-2 hover:underline"
+                    >
+                      Review source
+                    </a>
+                  )}
                 </div>
               ))}
             </div>
+            <p className="text-[9px] text-[#0C1B33]/35 leading-relaxed pt-2">
+              Boundary intersection does not confirm applicant or project eligibility, funding availability, or approval.
+            </p>
           </div>
         </>
       )}
@@ -583,6 +604,6 @@ export default function MapSnapshotPanel({
           Browse All Programs
         </Link>
       </div>
-    </div>
+    </aside>
   );
 }

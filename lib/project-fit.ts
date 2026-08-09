@@ -376,6 +376,24 @@ export function compareProjectGoalFit(a?: ProjectFit, b?: ProjectFit): number {
   return bPriority - aPriority;
 }
 
+/**
+ * Returns the strongest source-backed fit across the selected structured goals.
+ * Open-text goals are shown as user context but never keyword-matched here.
+ */
+export function projectGoalsFit(
+  program: ProgramProjectProfile,
+  projectTypes: readonly string[],
+  industry?: string,
+): ProjectFit | undefined {
+  let best: ProjectFit | undefined;
+  for (const projectType of projectTypes) {
+    const candidate = projectGoalFit(program, projectType, industry);
+    if (!candidate) continue;
+    if (!best || compareProjectGoalFit(candidate, best) < 0) best = candidate;
+  }
+  return best;
+}
+
 export function orderProgramCheckResultsByProjectGoal(
   results: ProgramCheckResult[],
   projectType: string,
@@ -389,4 +407,18 @@ export function orderProgramCheckResultsByProjectGoal(
     );
     return fitDiff;
   });
+}
+
+export function orderProgramCheckResultsByProjectGoals(
+  results: ProgramCheckResult[],
+  projectTypes: readonly string[],
+  industry?: string,
+): ProgramCheckResult[] {
+  if (projectTypes.length === 0) return results;
+  return [...results].sort((a, b) =>
+    compareProjectGoalFit(
+      projectGoalsFit(a.program, projectTypes, industry),
+      projectGoalsFit(b.program, projectTypes, industry),
+    ),
+  );
 }

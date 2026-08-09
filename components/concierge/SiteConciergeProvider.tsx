@@ -37,7 +37,7 @@ export function pageLabelForRoute(route: string): string {
   if (route.startsWith("/locate")) return "Location explorer";
   if (route.startsWith("/corridors")) return "Corridor intelligence";
   if (route.startsWith("/neighborhoods")) return "Neighborhood incentives";
-  if (route.startsWith("/qualify")) return "Pre-qualification";
+  if (route.startsWith("/qualify")) return "Program review";
   if (route.startsWith("/quiz")) return "Incentive quiz";
   if (route.startsWith("/faq")) return "Frequently asked questions";
   if (route.startsWith("/answers")) return "Incentive answers";
@@ -88,6 +88,7 @@ export function ConciergePageContextBridge({
   lon,
   visiblePrograms,
   localSupportOrganizations,
+  capitalSupportId,
   capitalSupportName,
   capitalSupportReason,
   capitalSupportFitNote,
@@ -123,6 +124,7 @@ export function ConciergePageContextBridge({
         lon,
         visiblePrograms,
         localSupportOrganizations: stableLocalSupportOrganizations,
+        capitalSupportId,
         capitalSupportName,
         capitalSupportReason,
         capitalSupportFitNote,
@@ -139,6 +141,7 @@ export function ConciergePageContextBridge({
     lat,
     lon,
     capitalSupportFitNote,
+    capitalSupportId,
     capitalSupportIntakeUrl,
     capitalSupportName,
     capitalSupportReason,

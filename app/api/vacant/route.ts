@@ -3,6 +3,9 @@ import * as turf from "@turf/turf";
 import { createHash } from "crypto";
 import { getSQL } from "@/lib/db";
 import { cached, roundCoord } from "@/lib/redis";
+import type {
+  VacancyFeatureCollection,
+} from "@/lib/drawn-area-vacancy";
 
 /**
  * Viewport-based vacant property API.
@@ -11,7 +14,9 @@ import { cached, roundCoord } from "@/lib/redis";
  * GET /api/vacant?communityArea=Near%20West%20Side
  *
  * Returns GeoJSON FeatureCollection with zone_matches in feature properties.
- * Falls back to static file if DB is unavailable.
+ * Database responses use the latest queried `updated_at` for `meta.asOf`.
+ * Static fallback responses are always marked partial and use the export's
+ * `generatedAt` only when the file actually provides it.
  */
 
 const CDN_HEADERS = {
@@ -23,8 +28,59 @@ type CommunityAreaBoundary = GeoJSON.Feature<
   GeoJSON.GeoJsonProperties
 >;
 
+type VacancyRow = {
+  id: unknown;
+  source: unknown;
+  address: unknown;
+  lat: number;
+  lon: number;
+  property_type: unknown;
+  ward: unknown;
+  community_area: unknown;
+  zoning_class: unknown;
+  square_feet: unknown;
+  status: unknown;
+  zone_matches: unknown;
+  incentive_count: unknown;
+  owner_name: unknown;
+  owner_type: unknown;
+  source_as_of?: unknown;
+};
+
+type StaticVacancyFeatureCollection = GeoJSON.FeatureCollection & {
+  generatedAt?: unknown;
+};
+
 function normalizeCommunityAreaName(value: unknown): string {
   return String(value ?? "").trim().toLowerCase();
+}
+
+function timestampOrNull(value: unknown): string | null {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  if (typeof value !== "string") return null;
+  const timestamp = value.trim();
+  return timestamp === "" ? null : timestamp;
+}
+
+function latestTimestamp(values: unknown[]): string | null {
+  let latest: string | null = null;
+  let latestMillis = Number.NEGATIVE_INFINITY;
+
+  for (const value of values) {
+    const timestamp = timestampOrNull(value);
+    if (!timestamp) continue;
+    const millis = Date.parse(timestamp);
+    if (Number.isFinite(millis) && millis > latestMillis) {
+      latest = timestamp;
+      latestMillis = millis;
+    } else if (latest === null) {
+      latest = timestamp;
+    }
+  }
+
+  return latest;
 }
 
 async function loadCommunityAreaBoundary(
@@ -56,8 +112,7 @@ async function loadCommunityAreaBoundary(
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function rowsToGeoJSON(rows: any[]): GeoJSON.FeatureCollection {
+function rowsToGeoJSON(rows: VacancyRow[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
     features: rows.map((r) => ({
@@ -85,6 +140,60 @@ function rowsToGeoJSON(rows: any[]): GeoJSON.FeatureCollection {
         ownerType: r.owner_type || null,
       },
     })),
+  };
+}
+
+function buildDatabaseResponse(
+  rows: VacancyRow[],
+  limit: number,
+): VacancyFeatureCollection {
+  // The database query asks for one extra row so truncation is observed.
+  const potentiallyTruncated = rows.length > limit;
+  const collection = rowsToGeoJSON(rows.slice(0, limit));
+  const asOf = latestTimestamp(rows.map((row) => row.source_as_of));
+
+  return {
+    ...collection,
+    meta: {
+      sourceMode: "database",
+      sourcePath: "database:vacant_properties",
+      asOf,
+      asOfBasis: asOf ? "latest_queried_row_updated_at" : null,
+      returnedCount: collection.features.length,
+      configuredLimit: limit,
+      queryLimit: limit + 1,
+      coverageStatus: potentiallyTruncated ? "truncated" : "complete",
+      potentiallyTruncated,
+      fallbackReason: null,
+    },
+  };
+}
+
+function buildStaticFallbackResponse(
+  features: GeoJSON.Feature[],
+  limit: number,
+  generatedAt: unknown,
+  fallbackReason: "database_unavailable" | "database_query_failed",
+): VacancyFeatureCollection {
+  const potentiallyTruncated = features.length > limit;
+  const returnedFeatures = features.slice(0, limit);
+  const asOf = timestampOrNull(generatedAt);
+
+  return {
+    type: "FeatureCollection",
+    features: returnedFeatures,
+    meta: {
+      sourceMode: "static_fallback",
+      sourcePath: "/data/vacant-properties.json",
+      asOf,
+      asOfBasis: asOf ? "static_export_generated_at" : null,
+      returnedCount: returnedFeatures.length,
+      configuredLimit: limit,
+      queryLimit: null,
+      coverageStatus: "partial",
+      potentiallyTruncated,
+      fallbackReason,
+    },
   };
 }
 
@@ -150,17 +259,20 @@ export async function GET(request: NextRequest) {
     ? createHash("sha256").update(communityAreaParam.toLowerCase()).digest("hex").slice(0, 16)
     : null;
   const cacheKey = communityAreaParam
-    ? `vacant:community-boundary:v1:${communityHash}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}`
+    ? `vacant:community-boundary:v2:${communityHash}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}:${limit}`
     : polygonParam
-    ? `vacant:poly:${polygonHash}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}`
-    : `vacant:${roundCoord(west)}:${roundCoord(south)}:${roundCoord(east)}:${roundCoord(north)}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}`;
+    ? `vacant:poly:v2:${polygonHash}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}:${limit}`
+    : `vacant:v2:${roundCoord(west)}:${roundCoord(south)}:${roundCoord(east)}:${roundCoord(north)}:${typeFilter || "all"}:${sourceFilter || "all"}:${ownerTypeFilter || "all"}:${limit}`;
 
   const sql = getSQL();
 
-  const result = await cached<GeoJSON.FeatureCollection>(cacheKey, 86400, async () => {
+  const result = await cached<VacancyFeatureCollection>(cacheKey, 86400, async () => {
     const communityAreaBoundary = communityAreaParam
       ? await loadCommunityAreaBoundary(request, communityAreaParam)
       : null;
+
+    let fallbackReason: "database_unavailable" | "database_query_failed" =
+      sql ? "database_query_failed" : "database_unavailable";
 
     // Try database first
     if (sql) {
@@ -170,29 +282,31 @@ export async function GET(request: NextRequest) {
             ? await sql`
               SELECT id, source, address, lat, lon, property_type, ward, community_area,
                      zoning_class, square_feet, status, zone_matches, incentive_count,
-                     owner_name, owner_type
+                     owner_name, owner_type,
+                     updated_at::text AS source_as_of
               FROM vacant_properties
               WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(communityAreaBoundary.geometry)}), 4326)::geography)
                 AND (CAST(${typeFilter} AS text) IS NULL OR property_type = ${typeFilter})
                 AND (CAST(${sourceFilter} AS text) IS NULL OR source = ${sourceFilter})
                 AND (CAST(${ownerTypeFilter} AS text) IS NULL OR owner_type = ${ownerTypeFilter})
               ORDER BY incentive_count DESC, address ASC
-              LIMIT ${limit}
+              LIMIT ${limit + 1}
             `
             : await sql`
               SELECT id, source, address, lat, lon, property_type, ward, community_area,
                      zoning_class, square_feet, status, zone_matches, incentive_count,
-                     owner_name, owner_type
+                     owner_name, owner_type,
+                     updated_at::text AS source_as_of
               FROM vacant_properties
               WHERE lower(community_area) = lower(${communityAreaParam})
                 AND (CAST(${typeFilter} AS text) IS NULL OR property_type = ${typeFilter})
                 AND (CAST(${sourceFilter} AS text) IS NULL OR source = ${sourceFilter})
                 AND (CAST(${ownerTypeFilter} AS text) IS NULL OR owner_type = ${ownerTypeFilter})
               ORDER BY incentive_count DESC, address ASC
-              LIMIT ${limit}
+              LIMIT ${limit + 1}
             `;
 
-          return rowsToGeoJSON(rows);
+          return buildDatabaseResponse(rows as VacancyRow[], limit);
         }
 
         if (polygonParam) {
@@ -200,35 +314,38 @@ export async function GET(request: NextRequest) {
           const rows = await sql`
             SELECT id, source, address, lat, lon, property_type, ward, community_area,
                    zoning_class, square_feet, status, zone_matches, incentive_count,
-                   owner_name, owner_type
+                   owner_name, owner_type,
+                   updated_at::text AS source_as_of
             FROM vacant_properties
             WHERE ST_Intersects(geom, ST_SetSRID(ST_GeomFromGeoJSON(${polygonJson}), 4326)::geography)
               AND (CAST(${typeFilter} AS text) IS NULL OR property_type = ${typeFilter})
               AND (CAST(${sourceFilter} AS text) IS NULL OR source = ${sourceFilter})
               AND (CAST(${ownerTypeFilter} AS text) IS NULL OR owner_type = ${ownerTypeFilter})
             ORDER BY incentive_count DESC
-            LIMIT ${limit}
+            LIMIT ${limit + 1}
           `;
 
-          return rowsToGeoJSON(rows);
+          return buildDatabaseResponse(rows as VacancyRow[], limit);
         }
 
         const rows = await sql`
           SELECT id, source, address, lat, lon, property_type, ward, community_area,
                  zoning_class, square_feet, status, zone_matches, incentive_count,
-                 owner_name, owner_type
+                 owner_name, owner_type,
+                 updated_at::text AS source_as_of
           FROM vacant_properties
           WHERE ST_Intersects(geom, ST_MakeEnvelope(${west}, ${south}, ${east}, ${north}, 4326)::geography)
             AND (CAST(${typeFilter} AS text) IS NULL OR property_type = ${typeFilter})
             AND (CAST(${sourceFilter} AS text) IS NULL OR source = ${sourceFilter})
             AND (CAST(${ownerTypeFilter} AS text) IS NULL OR owner_type = ${ownerTypeFilter})
           ORDER BY incentive_count DESC
-          LIMIT ${limit}
+          LIMIT ${limit + 1}
         `;
 
-        return rowsToGeoJSON(rows);
+        return buildDatabaseResponse(rows as VacancyRow[], limit);
       } catch (err) {
         console.warn("[vacant] DB query failed, falling back to static:", err);
+        fallbackReason = "database_query_failed";
       }
     }
 
@@ -236,8 +353,10 @@ export async function GET(request: NextRequest) {
     try {
       const staticUrl = new URL("/data/vacant-properties.json", request.nextUrl.origin);
       const res = await fetch(staticUrl.toString());
-      if (!res.ok) return { type: "FeatureCollection" as const, features: [] };
-      const data: GeoJSON.FeatureCollection = await res.json();
+      if (!res.ok) {
+        return buildStaticFallbackResponse([], limit, null, fallbackReason);
+      }
+      const data = (await res.json()) as StaticVacancyFeatureCollection;
       const communityAreaFilter = communityAreaParam?.toLowerCase();
 
       const filtered = data.features.filter((f) => {
@@ -266,12 +385,14 @@ export async function GET(request: NextRequest) {
         return true;
       });
 
-      return {
-        type: "FeatureCollection" as const,
-        features: filtered.slice(0, limit),
-      };
+      return buildStaticFallbackResponse(
+        filtered,
+        limit,
+        data.generatedAt,
+        fallbackReason,
+      );
     } catch {
-      return { type: "FeatureCollection" as const, features: [] };
+      return buildStaticFallbackResponse([], limit, null, fallbackReason);
     }
   });
 

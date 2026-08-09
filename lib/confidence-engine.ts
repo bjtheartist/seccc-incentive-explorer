@@ -7,6 +7,7 @@ import type {
   ExecutiveSummary,
   ParcelData,
 } from "./types";
+import { buildPublicMatchExplanation } from "./match-transparency";
 
 /**
  * Confidence Engine — given zone results + programs + optional survey answers,
@@ -410,7 +411,7 @@ function buildWhyParagraph(
   zoneCount: number,
 ): string {
   if (topResults.length === 0) {
-    return "No specific incentive programs were matched to this location. Consider exploring county-wide programs or contacting a business advisor for guidance.";
+    return "No address-linked programs were found in the mapped data. Broader programs and local business support may still be useful starting points.";
   }
 
   const names = topResults.map((r) => r.program.name);
@@ -421,16 +422,7 @@ function buildWhyParagraph(
         ? `${names[0]} and ${names[1]}`
         : `${names.slice(0, -1).join(", ")}, and ${names[names.length - 1]}`;
 
-  const benefits = topResults
-    .filter((r) => r.benefitRange && r.benefitRange !== "Contact for details")
-    .map((r) => r.benefitRange);
-
-  const benefitClause =
-    benefits.length > 0
-      ? ` — with potential benefits including ${benefits.slice(0, 2).join(" and ")}`
-      : "";
-
-  return `Your location falls within ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""}, making you a candidate for programs like ${listText}${benefitClause}. These programs are designed to reduce costs, offset taxes, and support investment in your area. We recommend reviewing the details below and contacting program administrators to confirm eligibility.`;
+  return `The mapped data records ${zoneCount} incentive zone${zoneCount !== 1 ? "s" : ""} at this location and surfaces programs such as ${listText} for review. Each program has separate project, applicant, timing, and approval requirements to confirm with its administrator.`;
 }
 
 /**
@@ -457,11 +449,18 @@ export function generateExecutiveSummary(
   const topPrograms = topResults.map((r) => ({
     programId: r.programId,
     name: r.program.name,
-    confidence: r.confidence,
-    confidenceLabel: r.confidenceLabel,
-    benefitRange: r.benefitRange,
-    whyOneLine: r.whyOneLine,
-    notVerified: r.notVerified,
+    explanation: buildPublicMatchExplanation(r.program, {
+      whyItAppears: r.program.zoneKey && zones[r.program.zoneKey]
+        ? [`This program is linked to a mapped incentive zone recorded at this address.`]
+        : [`This program is included as a starting point based on its published focus.`],
+      knownFromPublicData: r.program.zoneKey && zones[r.program.zoneKey]
+        ? [`The address is recorded within ${zoneNames[r.program.zoneKey] || r.program.zoneKey}.`]
+        : [],
+      basedOnUserAnswers: r.matchedRules,
+      rulesEstablishedByPublicData: (r.program.eligibilityRules ?? [])
+        .filter((rule) => rule.verifiedBy === "location" && r.program.zoneKey && zones[r.program.zoneKey])
+        .map((rule) => rule.description),
+    }),
   }));
 
   const whyTheseMatter = buildWhyParagraph(topResults, zoneCount);

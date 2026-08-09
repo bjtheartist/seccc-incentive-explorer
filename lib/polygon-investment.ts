@@ -50,6 +50,17 @@ import {
   type InvestmentPointFeature,
   type InvestmentPointProps,
 } from "@/lib/community-investment-layer";
+import {
+  formatPermitAreaCoverageLabel,
+  PERMIT_AREA_ACTIVITY_NOTE,
+  PERMIT_AREA_COVERAGE_NOTE,
+  type PermitAreaResult,
+} from "@/lib/permit-area";
+import {
+  VACANCY_LOOKUP_UNAVAILABLE_NOTE,
+  vacancyCoverageDisclosure,
+  type VacancyCoverageMetadata,
+} from "@/lib/drawn-area-vacancy";
 
 // ── Point-in-polygon ─────────────────────────────────────────────────────────
 
@@ -677,6 +688,27 @@ export const DRAWN_AREA_VACANCY_COLUMNS = [
   "Zone Matches",
 ] as const;
 
+/** Permit-table columns, deliberately excluding applicant-reported cost. */
+export const DRAWN_AREA_PERMIT_COLUMNS = [
+  "Permit #",
+  "Address",
+  "Permit Type",
+  "Date Issued",
+  "Permit Status",
+  "Permit Milestone",
+  "Work Type",
+  "Authorized Work Description",
+  "Source",
+] as const;
+
+/** Complete aggregate permit-type table; independent from recent record rows. */
+export const DRAWN_AREA_PERMIT_TYPE_COLUMNS = [
+  "Source Permit Type",
+  "Display Category",
+  "Mapped Type Key",
+  "Filing Count",
+] as const;
+
 /**
  * Investment-table columns, after the leading "Area Name". One column PER MONEY
  * NOUN (rather than a single "Amount") so a reader who sums a column is summing
@@ -696,6 +728,12 @@ export interface DrawnAreaCsvInput {
   areaName: string;
   /** Vacancy features already scoped to the drawn area by /api/vacant. */
   vacancyFeatures: readonly GeoJSON.Feature[];
+  /** Source coverage returned with the scoped vacancy features. */
+  vacancyCoverage?: VacancyCoverageMetadata | null;
+  /** HTTP or malformed-response failure; vacancyFeature emptiness is not a zero. */
+  vacancyLoadFailed?: boolean;
+  /** Source-backed permit analysis for the same polygon, or null when unavailable. */
+  permitArea?: PermitAreaResult | null;
   /**
    * The admin investment analysis, or null for a non-admin / not-yet-loaded
    * viewer — in which case the CSV carries the vacancy table alone and mentions
@@ -708,7 +746,7 @@ export interface DrawnAreaCsvInput {
 }
 
 /**
- * Build the drawn-area CSV. Two tables in one file, each with its own honest
+ * Build the drawn-area CSV. Separate tables in one file, each with its own honest
  * header, separated by a blank line — a single wide sparse table would force
  * vacancy and investment columns into the same rows, which they do not share.
  *
@@ -726,28 +764,126 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
 
   lines.push(csvRow(["Area Name", areaName]));
   lines.push("");
-  lines.push(csvRow(["Section", "Vacancy"]));
-  lines.push(csvRow(["Area Name", ...DRAWN_AREA_VACANCY_COLUMNS]));
-  for (const feature of input.vacancyFeatures) {
-    const p = (feature?.properties ?? {}) as Record<string, unknown>;
-    const zoneMatches = Array.isArray(p.zoneMatches) ? p.zoneMatches : [];
+  const vacancyDisclosure = input.vacancyLoadFailed
+    ? VACANCY_LOOKUP_UNAVAILABLE_NOTE
+    : vacancyCoverageDisclosure(input.vacancyCoverage);
+  if (input.vacancyLoadFailed || input.vacancyCoverage) {
+    lines.push(csvRow(["Section", "Vacancy coverage"]));
+    lines.push(csvRow(["Area Name", "Metric", "Value"]));
     lines.push(
       csvRow([
         areaName,
-        p.address ?? "",
-        p.propertyType ?? "",
-        p.ward ?? "",
-        p.communityArea ?? "",
-        p.zoningClass ?? "",
-        p.squareFeet ?? "",
-        p.ownerName ?? "",
-        p.ownerType ?? "",
-        p.incentiveCount ?? "",
-        zoneMatches
-          .map((z) => (z && typeof z === "object" ? ((z as { zoneKey?: string }).zoneKey ?? "") : z))
-          .join("; "),
+        "Coverage status",
+        input.vacancyLoadFailed
+          ? "Unavailable"
+          : input.vacancyCoverage?.coverageStatus ?? "Unavailable",
       ]),
     );
+    if (input.vacancyCoverage) {
+      lines.push(csvRow([areaName, "Source", input.vacancyCoverage.sourcePath]));
+      lines.push(csvRow([areaName, "Source as of", input.vacancyCoverage.asOf ?? "Not recorded"]));
+      lines.push(csvRow([areaName, "Records returned", input.vacancyCoverage.returnedCount]));
+    }
+    if (vacancyDisclosure) {
+      lines.push(csvRow([areaName, "Coverage note", vacancyDisclosure]));
+    }
+    lines.push("");
+  }
+
+  if (!input.vacancyLoadFailed) {
+    lines.push(csvRow(["Section", "Vacancy"]));
+    lines.push(csvRow(["Area Name", ...DRAWN_AREA_VACANCY_COLUMNS]));
+    for (const feature of input.vacancyFeatures) {
+      const p = (feature?.properties ?? {}) as Record<string, unknown>;
+      const zoneMatches = Array.isArray(p.zoneMatches) ? p.zoneMatches : [];
+      lines.push(
+        csvRow([
+          areaName,
+          p.address ?? "",
+          p.propertyType ?? "",
+          p.ward ?? "",
+          p.communityArea ?? "",
+          p.zoningClass ?? "",
+          p.squareFeet ?? "",
+          p.ownerName ?? "",
+          p.ownerType ?? "",
+          p.incentiveCount ?? "",
+          zoneMatches
+            .map((z) =>
+              z && typeof z === "object"
+                ? ((z as { zoneKey?: string }).zoneKey ?? "")
+                : z,
+            )
+            .join("; "),
+        ]),
+      );
+    }
+  }
+
+  if (input.permitArea) {
+    const permitArea = input.permitArea;
+    lines.push("");
+    lines.push(csvRow(["Section", "Permit filing summary"]));
+    lines.push(csvRow(["Area Name", "Metric", "Value"]));
+    lines.push(csvRow([areaName, "Activity caveat", PERMIT_AREA_ACTIVITY_NOTE]));
+    lines.push(csvRow([areaName, "Coverage caveat", PERMIT_AREA_COVERAGE_NOTE]));
+    lines.push(csvRow([areaName, "Geocoded permit filings", permitArea.totalFilings]));
+    lines.push(csvRow([areaName, "Distinct recorded addresses", permitArea.distinctAddresses]));
+    lines.push(csvRow([areaName, "Source coverage", formatPermitAreaCoverageLabel(permitArea)]));
+    if (permitArea.issueDateSpan) {
+      lines.push(csvRow([areaName, "First filing in area data", permitArea.issueDateSpan.first]));
+      lines.push(csvRow([areaName, "Latest filing in area data", permitArea.issueDateSpan.latest]));
+    }
+
+    lines.push("");
+    lines.push(csvRow(["Section", "Permit type breakdown"]));
+    lines.push(csvRow(["Area Name", ...DRAWN_AREA_PERMIT_TYPE_COLUMNS]));
+    for (const type of permitArea.typeBreakdown) {
+      lines.push(
+        csvRow([
+          areaName,
+          type.sourceValue ?? "Not recorded",
+          type.label,
+          type.key ?? "Unmapped",
+          type.count,
+        ]),
+      );
+    }
+
+    if (permitArea.recordsTruncated) {
+      lines.push("");
+      lines.push(csvRow(["Section", "Recent permit record coverage"]));
+      lines.push(csvRow(["Area Name", "Metric", "Value"]));
+      lines.push(csvRow([areaName, "Recent records exported", permitArea.recordsReturned]));
+      lines.push(csvRow([areaName, "Total geocoded filings", permitArea.totalFilings]));
+      lines.push(
+        csvRow([
+          areaName,
+          "Coverage note",
+          `The recent-record table contains the ${permitArea.recordsReturned} most recent filing record${permitArea.recordsReturned === 1 ? "" : "s"}. Aggregate summary and type-breakdown tables use all ${permitArea.totalFilings} geocoded filings in the area.`,
+        ]),
+      );
+    }
+
+    lines.push("");
+    lines.push(csvRow(["Section", "Recent permit filing records"]));
+    lines.push(csvRow(["Area Name", ...DRAWN_AREA_PERMIT_COLUMNS]));
+    for (const record of permitArea.records) {
+      lines.push(
+        csvRow([
+          areaName,
+          record.permitId,
+          record.address ?? "",
+          record.permitTypeLabel,
+          record.issueDate ?? "",
+          record.permitStatus ?? "",
+          record.permitMilestone ?? "",
+          record.workType ?? "",
+          record.workDescription ?? "",
+          permitArea.source.url,
+        ]),
+      );
+    }
   }
 
   if (input.investment) {

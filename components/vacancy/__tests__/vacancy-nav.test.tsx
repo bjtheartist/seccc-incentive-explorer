@@ -24,18 +24,26 @@ describe("VacancySubNav — five views", () => {
     expect(html).toContain('href="/vacancy/60617"'); // Workbench (ZIP root)
     expect(html).toContain('href="/vacancy/60617/report"'); // Report
     expect(html).toContain('href="/vacancy/60617/areas"'); // Opportunity Areas
-    expect(html).toContain('href="/vacancy/60617/map"'); // Property Map
+    expect(html).toContain('href="/vacancy/60617/map"'); // Map
     expect(html).toContain('href="/vacancy/60617/directory"'); // All Properties
     // The retired standalone Case Workbench route is gone.
     expect(html).not.toContain('href="/vacancy/60617/cases"');
     for (const label of [
-      "Workbench",
       "Report",
-      "Opportunity Areas",
-      "Property Map",
+      "Workbench",
       "All Properties",
+      "Map",
+      "Opportunity Areas",
     ]) {
       expect(html).toContain(label);
+    }
+
+    const tabOrder = ["Report", "Workbench", "All Properties", "Map", "Opportunity Areas"];
+    let previousIndex = -1;
+    for (const label of tabOrder) {
+      const index = html.indexOf(`>${label}</a>`);
+      expect(index).toBeGreaterThan(previousIndex);
+      previousIndex = index;
     }
   });
 
@@ -68,8 +76,11 @@ describe("VacancySubNav — five views", () => {
 });
 
 describe("Global nav", () => {
-  it("labels the incentive map and adds a Vacant Sites entry", () => {
+  // Vacant Sites and the Incentive Map now live under the approved "Find a Site"
+  // group. Full Set-A coverage lives in components/layout/__tests__.
+  it("keeps Vacant Sites reachable from the Find a Site group", () => {
     const html = renderToStaticMarkup(<Header />);
+    expect(html).toContain("Find a Site");
     expect(html).toContain("Incentive Map");
     expect(html).toContain("Vacant Sites");
     expect(html).toContain('href="/vacancy"');

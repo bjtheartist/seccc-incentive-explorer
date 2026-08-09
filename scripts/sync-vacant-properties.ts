@@ -2,16 +2,35 @@
 /**
  * Sync vacant properties from Chicago's City-Owned Land Inventory (Socrata).
  * Upserts into vacant_properties table, cross-references against zone geometries,
- * and generates a static GeoJSON fallback file.
+ * matches citywide building permits to the vacant-parcel universe, and generates
+ * a static GeoJSON fallback file.
+ *
+ * ── PRODUCTION SAFETY ──
+ *
+ * This script WRITES. Point DATABASE_URL at a disposable Neon branch to verify a
+ * change; a production run is the repo owner's call and is not something a
+ * change-verification run should ever perform. The citywide permits ingest that
+ * feeds the match phase (scripts/sync-condition.ts) carries the same rule.
  *
  * Usage:
  *   DATABASE_URL="postgresql://..." npx tsx scripts/sync-vacant-properties.ts
+ *
+ * Steps can be selected so a targeted re-run does not redo the whole sync:
+ *   SYNC_VACANT_STEPS=permits,export npx tsx scripts/sync-vacant-properties.ts
+ *   (steps: cols, sr311, zones, permits, export — default: all)
  */
 
 import { neon } from "@neondatabase/serverless";
 import { socrataHeaders } from "../lib/socrata";
 import { classifyOwner } from "../lib/owner-classify";
 import { CHICAGO_COMMUNITY_AREAS } from "../lib/community-areas";
+import { toDigitsOnlyPin } from "../lib/ingest/pin-batch";
+import {
+  NORMALIZED_ADDRESS_SQL,
+  PERMIT_MATCH_METHOD_ORDER,
+  SPATIAL_MATCH_PER_PARCEL_CAP,
+  SPATIAL_MATCH_RADIUS_M,
+} from "../lib/permit-match";
 import { writeFileSync, mkdirSync } from "fs";
 import { join } from "path";
 
@@ -22,6 +41,16 @@ if (!DATABASE_URL) {
 }
 
 const sql = neon(DATABASE_URL);
+
+/** Which phases to run. Default is every phase, in order. */
+const ALL_STEPS = ["cols", "sr311", "zones", "permits", "export"] as const;
+type SyncStep = (typeof ALL_STEPS)[number];
+const STEPS = new Set<SyncStep>(
+  (process.env.SYNC_VACANT_STEPS
+    ? (process.env.SYNC_VACANT_STEPS.split(",").map((s) => s.trim()) as SyncStep[])
+    : [...ALL_STEPS]
+  ).filter((s): s is SyncStep => (ALL_STEPS as readonly string[]).includes(s)),
+);
 
 // City-Owned Land Inventory — Socrata dataset
 const COLS_DATASET_ID = "aksk-kvfp";
@@ -168,7 +197,13 @@ async function fetchAllPages(): Promise<ColsRecord[]> {
 
 function normalizeRecord(r: ColsRecord): {
   id: string;
+  /** As published by COLS — dashed, e.g. "16-11-105-004-0000". Keys the id and
+   *  the Assessor lookup, both of which predate the digits-only column. */
   pin: string | null;
+  /** The same PIN in the digits-only 14-char `parcels.pin` convention, which is
+   *  what the permit match engine joins on. Null when COLS published no PIN or
+   *  published one that is not 14 digits. */
+  pinDigits: string | null;
   address: string;
   lat: number;
   lon: number;
@@ -190,9 +225,12 @@ function normalizeRecord(r: ColsRecord): {
     [r.dir, r.street, r.type].filter(Boolean).join(" ") ||
     "Unknown";
 
+  const pinDigits = toDigitsOnlyPin(r.pin ?? "");
+
   return {
     id: `cols-${r.pin || `${lat.toFixed(6)}-${lon.toFixed(6)}`}`,
     pin: r.pin || null,
+    pinDigits: pinDigits.length === 14 ? pinDigits : null,
     address,
     lat,
     lon,
@@ -391,10 +429,11 @@ async function upsertBatch(
       const ownerType = ownership?.ownerType || "city_public";
 
       await sql`
-        INSERT INTO vacant_properties (id, source, address, lat, lon, property_type, ward, community_area, zoning_class, square_feet, status, owner_name, owner_mailing_address, owner_type, geom, updated_at)
+        INSERT INTO vacant_properties (id, source, pin, address, lat, lon, property_type, ward, community_area, zoning_class, square_feet, status, owner_name, owner_mailing_address, owner_type, geom, updated_at)
         VALUES (
           ${r.id},
           'cols',
+          ${r.pinDigits},
           ${r.address},
           ${r.lat},
           ${r.lon},
@@ -411,6 +450,7 @@ async function upsertBatch(
           NOW()
         )
         ON CONFLICT (id) DO UPDATE SET
+          pin = EXCLUDED.pin,
           address = EXCLUDED.address,
           lat = EXCLUDED.lat,
           lon = EXCLUDED.lon,
@@ -482,6 +522,334 @@ async function crossReferenceZones() {
 
   console.log(`  Updated ${updated} properties`);
   console.log(`  ${withIncentives[0]?.cnt || 0} properties have incentive zone matches`);
+}
+
+// ── Building-permit → vacant-parcel matching ─────────────────────────────────
+
+/**
+ * Match citywide building permits to the vacant-parcel universe in ONE pass,
+ * three tiers, strongest first. Every row records the method AND the confidence
+ * it earns, plus `matched_on` — the literal value that matched — so any claim
+ * the UI makes can be re-derived without re-running the match.
+ *
+ *   1. `pin_exact`          Cook County PIN. The permits dataset stores 10-digit
+ *                           PINs and COLS stores 14-digit ones, so the join is
+ *                           `LEFT(vp.pin, 10)` against the permit's `pins` array
+ *                           (EVERY pin on the permit, not just the first).
+ *                           Confidence is HIGH when the parcel's 4-digit suffix
+ *                           is "0000" (an undivided parcel the 10-digit PIN
+ *                           names uniquely) and MEDIUM otherwise, where the
+ *                           permit PIN names the parcel but not the unit.
+ *   2. `address_normalized` The repo's existing normalization
+ *                           (lower + strip non-alphanumerics) on both sides.
+ *                           MEDIUM. No abbreviation expansion, no token
+ *                           reordering, no fuzzy/edit-distance similarity —
+ *                           see lib/permit-match.ts for why.
+ *   3. `spatial_proximity`  The permit point within SPATIAL_MATCH_RADIUS_M of
+ *                           the parcel point. LOW, and capped per parcel: this
+ *                           is the only tier that can fan out on a dense block.
+ *
+ * NOTE the plan called tier 3 "point-in-polygon". There are no parcel polygons
+ * in this database — `vacant_properties.geom` and `parcels.geom` are both
+ * GEOGRAPHY(POINT) — so what runs is a point-to-point proximity test. It is
+ * named `spatial_proximity` in the method vocabulary, in the DB, and in the
+ * card copy for exactly that reason. Nothing anywhere claims containment.
+ *
+ * Precedence holds WITHIN a run by insert order, and ACROSS runs by the
+ * upgrade clause on tiers 1-2: a pair first recorded at a weaker tier (e.g.
+ * spatial_proximity from an earlier run, before the permit gained the
+ * parcel's PIN on refresh) is upgraded in place when a stronger tier claims
+ * it. Tier 3 is the weakest claim and can never upgrade anything, so it
+ * keeps plain DO NOTHING.
+ *
+ * Batched by keyset over vacant_properties.id for the same reason
+ * crossReferenceZones() is: one statement across the full table exceeds the
+ * Neon HTTP driver's headers timeout on a small refresh-branch compute.
+ */
+async function matchPermitsToVacantParcels() {
+  console.log("\nMatching building permits to vacant parcels...");
+
+  const permitCount = await sql`SELECT COUNT(*)::int AS cnt FROM building_permits`;
+  const permits = Number(permitCount[0]?.cnt ?? 0);
+  if (permits === 0) {
+    // An empty permits table is a missing ingest, not an absence of permits.
+    // Say so and leave the match table untouched rather than writing a run that
+    // would read as "no parcel has a permit".
+    console.warn(
+      "  building_permits is EMPTY — skipping the match pass. Run scripts/sync-condition.ts first; " +
+        "an empty pass here would look like a citywide absence of permits.",
+    );
+    return;
+  }
+  console.log(`  ${permits.toLocaleString("en-US")} permits available to match`);
+
+  const BATCH = 2000;
+
+  /** Run one tier over every vacant parcel, batched by id keyset. */
+  async function runTier(
+    label: string,
+    step: (lo: string, hi: string) => Promise<Record<string, unknown>[]>,
+  ): Promise<number> {
+    let cursor = "";
+    let inserted = 0;
+    for (;;) {
+      const window = await sql`
+        SELECT id FROM vacant_properties WHERE id > ${cursor} ORDER BY id LIMIT ${BATCH}
+      `;
+      if (window.length === 0) break;
+      const lo = cursor;
+      const hi = String(window[window.length - 1].id);
+      const rows = await step(lo, hi);
+      inserted += rows.length;
+      cursor = hi;
+    }
+    console.log(`  ${label}: ${inserted.toLocaleString("en-US")} match rows`);
+    return inserted;
+  }
+
+  // ── Tier 1 · PIN ──
+  await runTier(
+    "pin_exact",
+    (lo, hi) => sql`
+      INSERT INTO vacant_property_permit_matches (
+        vacant_property_id, permit_id, match_method, match_confidence, matched_on
+      )
+      SELECT
+        vp.id,
+        bp.permit_id,
+        'pin_exact',
+        CASE WHEN substring(vp.pin from 11 for 4) = '0000' THEN 'high' ELSE 'medium' END,
+        CASE WHEN bp.pins @> ARRAY[vp.pin] THEN vp.pin ELSE left(vp.pin, 10) END
+      FROM vacant_properties vp
+      JOIN building_permits bp
+        ON bp.pins && ARRAY[left(vp.pin, 10), vp.pin]
+      WHERE vp.id > ${lo} AND vp.id <= ${hi}
+        AND vp.pin IS NOT NULL
+        AND length(vp.pin) = 14
+      ON CONFLICT (vacant_property_id, permit_id) DO UPDATE SET
+            match_method = EXCLUDED.match_method,
+            match_confidence = EXCLUDED.match_confidence,
+            matched_on = EXCLUDED.matched_on
+          WHERE array_position(ARRAY['pin_exact','address_normalized','spatial_proximity'], EXCLUDED.match_method)
+              < array_position(ARRAY['pin_exact','address_normalized','spatial_proximity'], vacant_property_permit_matches.match_method)
+      RETURNING vacant_property_id AS id
+    `,
+  );
+
+  // ── Tier 2 · normalized street address ──
+  // The >= 8 character floor and the 'unknown' exclusion keep the placeholder
+  // addresses this table carries ("Unknown") from matching each other and from
+  // matching a permit whose address normalized down to a stub.
+  await runTier(
+    "address_normalized",
+    (lo, hi) => sql`
+      INSERT INTO vacant_property_permit_matches (
+        vacant_property_id, permit_id, match_method, match_confidence, matched_on
+      )
+      SELECT
+        vp.id,
+        bp.permit_id,
+        'address_normalized',
+        'medium',
+        regexp_replace(lower(coalesce(vp.address, '')), '[^a-z0-9]', '', 'g')
+      FROM vacant_properties vp
+      JOIN building_permits bp
+        ON regexp_replace(lower(coalesce(bp.address, '')), '[^a-z0-9]', '', 'g')
+         = regexp_replace(lower(coalesce(vp.address, '')), '[^a-z0-9]', '', 'g')
+      WHERE vp.id > ${lo} AND vp.id <= ${hi}
+        AND length(regexp_replace(lower(coalesce(vp.address, '')), '[^a-z0-9]', '', 'g')) >= 8
+        AND regexp_replace(lower(coalesce(vp.address, '')), '[^a-z0-9]', '', 'g') <> 'unknown'
+      ON CONFLICT (vacant_property_id, permit_id) DO UPDATE SET
+            match_method = EXCLUDED.match_method,
+            match_confidence = EXCLUDED.match_confidence,
+            matched_on = EXCLUDED.matched_on
+          WHERE array_position(ARRAY['pin_exact','address_normalized','spatial_proximity'], EXCLUDED.match_method)
+              < array_position(ARRAY['pin_exact','address_normalized','spatial_proximity'], vacant_property_permit_matches.match_method)
+      RETURNING vacant_property_id AS id
+    `,
+  );
+
+  // ── Tier 3 · spatial proximity (LOW confidence, capped per parcel) ──
+  await runTier(
+    "spatial_proximity",
+    (lo, hi) => sql`
+      INSERT INTO vacant_property_permit_matches (
+        vacant_property_id, permit_id, match_method, match_confidence, matched_on
+      )
+      SELECT
+        vp.id,
+        near.permit_id,
+        'spatial_proximity',
+        'low',
+        round(near.dist_m)::text || ' m'
+      FROM vacant_properties vp
+      CROSS JOIN LATERAL (
+        SELECT bp.permit_id, ST_Distance(bp.geom, vp.geom) AS dist_m
+        FROM building_permits bp
+        WHERE bp.geom IS NOT NULL
+          AND ST_DWithin(bp.geom, vp.geom, ${SPATIAL_MATCH_RADIUS_M})
+        ORDER BY bp.issue_date DESC NULLS LAST, bp.permit_id
+        LIMIT ${SPATIAL_MATCH_PER_PARCEL_CAP}
+      ) near
+      WHERE vp.id > ${lo} AND vp.id <= ${hi}
+        AND vp.geom IS NOT NULL
+      ON CONFLICT (vacant_property_id, permit_id) DO NOTHING
+      RETURNING vacant_property_id AS id
+    `,
+  );
+
+  await printPermitMatchReport();
+}
+
+/**
+ * The verification report for the match pass: tallies by method and confidence,
+ * how much of the parcel universe is covered, and six sample matched parcels
+ * spread across the North, West and South sides.
+ *
+ * The side bands are approximate lat/lon cuts, spelled out in the SQL and
+ * labeled as approximate in the output — they exist to prove the match is
+ * genuinely citywide rather than still clustered in the three pilot ZIPs, and
+ * they are not offered as an official geography.
+ *
+ * There is deliberately NO cost column in this report. Permit reported costs
+ * are applicant estimates; summing them would manufacture a capital total out
+ * of self-reported guesses.
+ */
+async function printPermitMatchReport() {
+  const byMethod = await sql`
+    SELECT match_method, match_confidence, COUNT(*)::int AS cnt
+    FROM vacant_property_permit_matches
+    GROUP BY match_method, match_confidence
+    ORDER BY match_method, match_confidence
+  `;
+  const coverage = await sql`
+    SELECT
+      (SELECT COUNT(*)::int FROM vacant_properties) AS parcels,
+      (SELECT COUNT(DISTINCT vacant_property_id)::int FROM vacant_property_permit_matches) AS matched_parcels,
+      (SELECT COUNT(*)::int FROM vacant_property_permit_matches) AS match_rows,
+      (SELECT COUNT(DISTINCT permit_id)::int FROM vacant_property_permit_matches) AS matched_permits
+  `;
+
+  console.log("\n── Permit Match Report ──");
+  const c = coverage[0];
+  console.log(`Vacant parcels: ${Number(c?.parcels ?? 0).toLocaleString("en-US")}`);
+  console.log(
+    `Parcels with >=1 matched permit: ${Number(c?.matched_parcels ?? 0).toLocaleString("en-US")}`,
+  );
+  console.log(`Match rows: ${Number(c?.match_rows ?? 0).toLocaleString("en-US")}`);
+  console.log(
+    `Distinct permits matched: ${Number(c?.matched_permits ?? 0).toLocaleString("en-US")}`,
+  );
+  console.log("By method / confidence:");
+  for (const method of PERMIT_MATCH_METHOD_ORDER) {
+    const rows = byMethod.filter((r) => r.match_method === method);
+    if (rows.length === 0) {
+      console.log(`  ${method}: 0`);
+      continue;
+    }
+    for (const r of rows) {
+      console.log(`  ${method} / ${r.match_confidence}: ${Number(r.cnt).toLocaleString("en-US")}`);
+    }
+  }
+
+  // Per-side coverage. This is the number that proves the bounding box is
+  // genuinely gone: a run still confined to the three SE-Chicago pilot ZIPs
+  // would show matches on the South side and essentially none on the North.
+  const bySide = await sql`
+    SELECT
+      CASE
+        WHEN vp.lat > 41.90 THEN 'North'
+        WHEN vp.lat < 41.84 THEN 'South'
+        WHEN vp.lon < -87.68 THEN 'West'
+        ELSE 'Central'
+      END AS side,
+      COUNT(*)::int AS parcels,
+      COUNT(*) FILTER (
+        WHERE EXISTS (
+          SELECT 1 FROM vacant_property_permit_matches m WHERE m.vacant_property_id = vp.id
+        )
+      )::int AS matched
+    FROM vacant_properties vp
+    GROUP BY 1
+    ORDER BY 1
+  `;
+  console.log("Coverage by side (approximate lat/lon bands):");
+  for (const r of bySide) {
+    const parcels = Number(r.parcels);
+    const matched = Number(r.matched);
+    const pct = parcels > 0 ? ((matched / parcels) * 100).toFixed(1) : "0.0";
+    console.log(
+      `  ${r.side}: ${matched.toLocaleString("en-US")} of ${parcels.toLocaleString("en-US")} parcels matched (${pct}%)`,
+    );
+  }
+
+  // Two sample parcels per side. Approximate bands: North = lat > 41.90,
+  // South = lat < 41.84, West = the strip between them west of -87.68.
+  const samples = await sql`
+    WITH banded AS (
+      SELECT
+        vp.id, vp.address, vp.pin, vp.community_area, vp.lat, vp.lon,
+        m.permit_id, m.match_method, m.match_confidence, m.matched_on,
+        bp.permit_type, bp.work_type, bp.permit_status,
+        -- Cast in SQL: the Neon driver hands a DATE back as a JS Date, and
+        -- String(date).slice(0,10) yields "Mon Jul 27" rather than an ISO day.
+        bp.issue_date::text AS issue_date,
+        CASE
+          WHEN vp.lat > 41.90 THEN 'North'
+          WHEN vp.lat < 41.84 THEN 'South'
+          WHEN vp.lon < -87.68 THEN 'West'
+          ELSE 'Central'
+        END AS side,
+        ROW_NUMBER() OVER (
+          PARTITION BY CASE
+            WHEN vp.lat > 41.90 THEN 'North'
+            WHEN vp.lat < 41.84 THEN 'South'
+            WHEN vp.lon < -87.68 THEN 'West'
+            ELSE 'Central'
+          END
+          ORDER BY
+            array_position(ARRAY['pin_exact','address_normalized','spatial_proximity'], m.match_method),
+            bp.issue_date DESC NULLS LAST,
+            vp.id
+        ) AS rn
+      FROM vacant_property_permit_matches m
+      JOIN vacant_properties vp ON vp.id = m.vacant_property_id
+      JOIN building_permits bp ON bp.permit_id = m.permit_id
+    )
+    SELECT * FROM banded WHERE side IN ('North','West','South') AND rn <= 2
+    ORDER BY side, rn
+  `;
+
+  console.log("\nSample matched parcels (2 per side; bands are approximate lat/lon cuts):");
+  if (samples.length === 0) {
+    console.log("  none — no matches to sample");
+  }
+  for (const s of samples) {
+    console.log(
+      `  [${s.side}] ${s.address ?? "address not recorded"} · PIN ${s.pin ?? "none"} · ` +
+        `${s.community_area ?? "CA not recorded"}`,
+    );
+    console.log(
+      `      permit ${s.permit_id} · ${s.permit_type ?? s.work_type ?? "type not recorded"} · ` +
+        `issued ${s.issue_date ?? "not recorded"} · ` +
+        `status ${s.permit_status ?? "not recorded"}`,
+    );
+    console.log(
+      `      matched by ${s.match_method} (${s.match_confidence}) on "${s.matched_on ?? ""}"`,
+    );
+  }
+
+  // Guard rail, asserted rather than trusted: NORMALIZED_ADDRESS_SQL is the
+  // expression tier 2 and the index both use. If someone edits one and not the
+  // other the tier silently stops using its index, so keep them provably equal.
+  const normProbe = await sql`
+    SELECT regexp_replace(lower(coalesce('3717 W Chicago Ave.', '')), '[^a-z0-9]', '', 'g') AS norm
+  `;
+  if (normProbe[0]?.norm !== "3717wchicagoave") {
+    throw new Error(
+      `Address normalization drifted from ${NORMALIZED_ADDRESS_SQL} — tier 2 would match the wrong rows`,
+    );
+  }
 }
 
 async function generateStaticFile() {
@@ -577,50 +945,72 @@ async function printSummary() {
 
 async function main() {
   console.log("=== Vacant Property Sync ===\n");
+  console.log(`Steps: ${[...ALL_STEPS].filter((s) => STEPS.has(s)).join(", ") || "(none)"}`);
+
+  // Addresses of the COLS rows written THIS run, used to keep 311 duplicates
+  // out. When the COLS step is skipped the set is read back from the table
+  // instead, so a `SYNC_VACANT_STEPS=sr311` run still de-duplicates correctly
+  // rather than re-inserting every 311 row COLS already covers.
+  let colsAddresses = new Set<string>();
 
   // ── Source 1: City-Owned Land Inventory (vacant land) ──
-  const raw = await fetchAllPages();
-  console.log(`\nTotal COLS raw records: ${raw.length}`);
+  if (STEPS.has("cols")) {
+    const raw = await fetchAllPages();
+    console.log(`\nTotal COLS raw records: ${raw.length}`);
 
-  const normalized = raw
-    .map(normalizeRecord)
-    .filter((r): r is NonNullable<typeof r> => r !== null);
-  console.log(`Valid records with coordinates: ${normalized.length}`);
+    const normalized = raw
+      .map(normalizeRecord)
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    console.log(`Valid records with coordinates: ${normalized.length}`);
+    console.log(`  With a 14-digit PIN: ${normalized.filter((r) => r.pinDigits).length}`);
 
-  const pinsWithData = normalized.filter((r) => r.pin).map((r) => r.pin!);
-  console.log(`\nFetching ownership data for ${pinsWithData.length} PINs...`);
-  const ownershipMap = await fetchOwnershipBatch(pinsWithData);
-  console.log(`  Got ownership data for ${ownershipMap.size} properties`);
+    const pinsWithData = normalized.filter((r) => r.pin).map((r) => r.pin!);
+    console.log(`\nFetching ownership data for ${pinsWithData.length} PINs...`);
+    const ownershipMap = await fetchOwnershipBatch(pinsWithData);
+    console.log(`  Got ownership data for ${ownershipMap.size} properties`);
 
-  console.log("\nUpserting COLS (vacant land) into database...");
-  await upsertBatch(normalized, ownershipMap);
+    console.log("\nUpserting COLS (vacant land) into database...");
+    await upsertBatch(normalized, ownershipMap);
+
+    colsAddresses = new Set(normalized.map((r) => r.address.trim().toUpperCase()));
+  } else if (STEPS.has("sr311")) {
+    const existing = await sql`
+      SELECT address FROM vacant_properties WHERE source = 'cols' AND address IS NOT NULL
+    `;
+    colsAddresses = new Set(existing.map((r) => String(r.address).trim().toUpperCase()));
+    console.log(`\nCOLS step skipped — read ${colsAddresses.size} existing COLS addresses for dedup`);
+  }
 
   // ── Source 2: 311 Vacant/Abandoned Building Complaints ──
-  const raw311 = await fetch311VacantBuildings();
-  console.log(`\nTotal 311 raw records: ${raw311.length}`);
+  if (STEPS.has("sr311")) {
+    const raw311 = await fetch311VacantBuildings();
+    console.log(`\nTotal 311 raw records: ${raw311.length}`);
 
-  const deduped311 = dedup311ByAddress(raw311);
-  console.log(`Unique addresses after dedup: ${deduped311.length}`);
+    const deduped311 = dedup311ByAddress(raw311);
+    console.log(`Unique addresses after dedup: ${deduped311.length}`);
 
-  const normalized311 = deduped311
-    .map(normalize311Record)
-    .filter((r): r is NonNullable<typeof r> => r !== null);
-  console.log(`Valid 311 records with coordinates: ${normalized311.length}`);
+    const normalized311 = deduped311
+      .map(normalize311Record)
+      .filter((r): r is NonNullable<typeof r> => r !== null);
+    console.log(`Valid 311 records with coordinates: ${normalized311.length}`);
 
-  // Remove 311 records that share an address with a COLS record (COLS is authoritative)
-  const colsAddresses = new Set(normalized.map((r) => r.address.trim().toUpperCase()));
-  const filtered311 = normalized311.filter(
-    (r) => !colsAddresses.has(r.address.trim().toUpperCase())
-  );
-  console.log(`After removing COLS duplicates: ${filtered311.length}`);
+    // Remove 311 records that share an address with a COLS record (COLS is authoritative)
+    const filtered311 = normalized311.filter(
+      (r) => !colsAddresses.has(r.address.trim().toUpperCase())
+    );
+    console.log(`After removing COLS duplicates: ${filtered311.length}`);
 
-  console.log("\nUpserting 311 (vacant buildings) into database...");
-  await upsert311Batch(filtered311);
+    console.log("\nUpserting 311 (vacant buildings) into database...");
+    await upsert311Batch(filtered311);
+  }
 
-  // ── Cross-reference & export ──
-  await crossReferenceZones();
-  await generateStaticFile();
-  await printSummary();
+  // ── Cross-reference, match & export ──
+  if (STEPS.has("zones")) await crossReferenceZones();
+  if (STEPS.has("permits")) await matchPermitsToVacantParcels();
+  if (STEPS.has("export")) {
+    await generateStaticFile();
+    await printSummary();
+  }
 
   console.log("\nDone!");
 }

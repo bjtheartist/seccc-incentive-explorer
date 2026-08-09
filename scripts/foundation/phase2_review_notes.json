@@ -1,0 +1,24 @@
+{
+  "review": "phase2-funder-review workflow, 2026-08-03: 27 agents (8 batch reviewers + adversarial verifiers over every proposed exclusion/rename), 95 funders reviewed, plus an orchestrator sweep matching every published row's recipient address against the filer's own address across all cached filings.",
+  "decisions": {
+    "lefkofsky_207066362": "Reviewer proposed exclusion (all rows are quarantined placeholders); verifier upheld. NOT applied: the pipeline had already published zero rows, and the aggregate_only disposition is the truthful register entry — it keeps the funder on the funder-exchange target list ($23.9M quarantined) instead of relabeling it as a review casualty.",
+    "feinberg_237028857": "Caught by the orchestrator's filer-address sweep, not the batch review: all 504 rows across four filings (about $14.3M) list the foundation's own office as every recipient address. Real recipient names, reconciled dollars, fabricated geography (city attribution included). Held whole as excluded_filings; premier funder-exchange ask — the itemization exists, only the addresses are missing.",
+    "rrf_362429540_fy2023": "Filer-address artifact on FY2023 only (231/231 rows; FY2024 files real addresses); also carries a -$4.4M prior-year-payables contra row that ties line 3a while the positive rows overstate the year. Held FY2023 whole; other years publish normally.",
+    "malott_363680666": "Three rows per year are transfers into the officers' own donor-advised vehicles at the family-office address ($3.4M total, 20-39% of its would-be Chicago total). Held as excluded_rows.",
+    "coleman_363025967": "'Matching Gifts - Details Available upon request' at the foundation's own address, all four years ($425,969). Held, and the placeholder-family regex in the export now covers the 'available upon request' shape structurally.",
+    "polsky_651164639": "Two FY2024 rows ($3.26M) list the filer's One S Wacker office for non-Chicago recipients (BRCA Research and Cure Alliance, Our Home Ukraine). Held as excluded_rows.",
+    "tull_356932298": "Sole FY2023 row ($500k, Neuroscience Research Foundation) at the filer's own address. Held.",
+    "kennedy_367014327": "FY2024 no_control_total is a genuine zero-grant year (explicit $0 contributions paid, $8,759 total expenses) — nothing missing, nothing to load.",
+    "busch_trust_136753472": "Identity flag: BMF name says Charles Busch Cemetary Trust but the e-file filer name is a Rutgers University UW trust and the sole grantee is Rutgers (NJ). Zero Chicago rows so nothing publishes; flagged for operator awareness before any future surfacing.",
+    "mondelez_203881590": "Structural break: TY2023+ routes employee giving through an online-giving intermediary, so its Chicago itemization collapses by construction (20 -> 1 rows). Any per-year trend on this funder needs that caveat."
+  },
+  "flags": {
+    "hq-outside-chicago": ["731128665", "736254994", "750827445", "756013899", "756094930", "756314202", "766124547", "133187074", "136048718", "136170340", "136753472", "200461026", "311530248"],
+    "corporate-foundation": ["203881590", "203980527", "450575574", "460858318", "830499473", "844058990", "916056738", "363092291"],
+    "daf-or-passthrough": ["611480716", "203881590", "203980527", "476858270", "261596672", "357258667", "362999442", "363680666"],
+    "operating-foundation": ["261596672", "362490808", "362999442"],
+    "scholarships-to-individuals": ["364170236", "362490808"],
+    "recipient-rows-look-non-grant": ["750827445", "207066362", "362429540", "363025967", "363680666"]
+  },
+  "note": "The 13 hq-outside-chicago funders are predominantly JPMorgan/bank trust-desk filings whose BMF city is Chicago because the TRUSTEE is; most publish zero Chicago recipient rows and therefore contribute capacity coverage (we checked) without contributing rows."
+}

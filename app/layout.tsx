@@ -10,6 +10,7 @@ import "@fontsource/jetbrains-mono/700.css";
 import "@fontsource/playfair-display/400.css";
 import "@fontsource/playfair-display/600.css";
 import "@fontsource/playfair-display/700.css";
+import "driver.js/dist/driver.css";
 import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
@@ -17,6 +18,8 @@ import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { SiteTrafficTracker } from "@/components/analytics/SiteTrafficTracker";
 import { SiteConciergeProvider } from "@/components/concierge/SiteConciergeProvider";
+import { FirstVisitGuide } from "@/components/onboarding/FirstVisitGuide";
+import { FirstVisitSpotlight } from "@/components/onboarding/FirstVisitSpotlight";
 import { Analytics } from "@vercel/analytics/next";
 import {
   DEFAULT_DESCRIPTION,
@@ -82,6 +85,8 @@ export default function RootLayout({
             <StructuredData />
             <main className="flex-1">{children}</main>
             <Footer />
+            <FirstVisitGuide />
+            <FirstVisitSpotlight />
             <ServiceWorkerRegistrar />
             <SiteTrafficTracker />
             <Analytics />

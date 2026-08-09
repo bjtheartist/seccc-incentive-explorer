@@ -1,4 +1,12 @@
-import type { SurveyQuestion, SurveyAnswers, ProgramMatch, SurveyResult } from "./types";
+import programsData from "@/public/data/programs.json";
+import { buildPublicMatchExplanation } from "./match-transparency";
+import type {
+  Program,
+  ProgramMatch,
+  SurveyAnswers,
+  SurveyQuestion,
+  SurveyResult,
+} from "./types";
 
 // ─── Question Definitions ────────────────────────────────────────────
 
@@ -93,7 +101,7 @@ export const PROGRAMS: Record<string, { name: string; short: string }> = {
   highUnemployment: { name: "High-Impact Business (High Unemployment)", short: "High Unemployment" },
   catalystGrant: { name: "Catalyst Fund Grant", short: "Catalyst" },
   smallBizSource: { name: "Small Business Source", short: "SB Source" },
-  workforceInvest: { name: "Workforce Investment Programs", short: "Workforce" },
+  workforceSolutions: { name: "Workforce Solutions", short: "Workforce" },
   ssa: { name: "Special Service Area", short: "SSA" },
 };
 
@@ -123,7 +131,7 @@ const RULES: Record<string, Record<string, RuleMatch[]>> = {
     lease5plus: [{ program: "sbif", confidence: "high" }, { program: "tif", confidence: "high" }],
     leaseShort: [{ program: "tif", confidence: "medium" }],
     buyBuild: [{ program: "landBank", confidence: "high" }, { program: "class7a", confidence: "high" }, { program: "federalOZ", confidence: "medium" }, { program: "illinoisOZ", confidence: "medium" }],
-    none: [{ program: "workforceInvest", confidence: "medium" }],
+    none: [{ program: "workforceSolutions", confidence: "medium" }],
   },
   activities: {
     renovations: [{ program: "sbif", confidence: "high" }, { program: "tif", confidence: "high" }, { program: "class7a", confidence: "medium" }, { program: "enterprise", confidence: "medium" }],
@@ -141,20 +149,24 @@ const RULES: Record<string, Record<string, RuleMatch[]>> = {
   },
 };
 
-// ─── Scoring Function ────────────────────────────────────────────────
+// ─── Internal Ordering ───────────────────────────────────────────────
+
+const PROGRAM_DETAILS = new Map(
+  (programsData as unknown as Program[]).map((program) => [program.id, program]),
+);
 
 export function scoreSurvey(answers: SurveyAnswers): SurveyResult {
   const matchMap: Record<string, { confidence: Confidence; reasons: string[] }> = {};
   const rank: Record<Confidence, number> = { high: 3, medium: 2, low: 1 };
 
-  const addMatch = (programId: string, confidence: Confidence, reason: string) => {
+  const addMatch = (programId: string, confidence: Confidence, reason?: string) => {
     if (!matchMap[programId]) {
       matchMap[programId] = { confidence, reasons: [] };
     }
     if (rank[confidence] > rank[matchMap[programId].confidence]) {
       matchMap[programId].confidence = confidence;
     }
-    matchMap[programId].reasons.push(reason);
+    if (reason) matchMap[programId].reasons.push(reason);
   };
 
   for (const question of SURVEY_QUESTIONS) {
@@ -178,18 +190,34 @@ export function scoreSurvey(answers: SurveyAnswers): SurveyResult {
 
   // smallBizSource always matches
   if (!matchMap.smallBizSource) {
-    addMatch("smallBizSource", "low", "Available to all businesses");
+    addMatch("smallBizSource", "low");
   }
 
   const confidenceOrder: Record<Confidence, number> = { high: 0, medium: 1, low: 2 };
-  const matches: ProgramMatch[] = Object.entries(matchMap)
+  const rankedMatches = Object.entries(matchMap)
     .map(([programId, data]) => ({
       programId,
-      program: PROGRAMS[programId] || { name: programId, short: programId },
       confidence: data.confidence,
       reasons: data.reasons,
     }))
     .sort((a, b) => confidenceOrder[a.confidence] - confidenceOrder[b.confidence]);
 
-  return { matches, total: matches.length, totalPrograms: Object.keys(PROGRAMS).length };
+  const matches: ProgramMatch[] = rankedMatches.flatMap((match) => {
+    const program = PROGRAM_DETAILS.get(match.programId);
+    if (!program) return [];
+
+    return [{
+      programId: match.programId,
+      program: {
+        name: program.name,
+        short: PROGRAMS[match.programId]?.short ?? program.name,
+        level: program.level,
+      },
+      explanation: buildPublicMatchExplanation(program, {
+        basedOnUserAnswers: match.reasons,
+      }),
+    }];
+  });
+
+  return { matches };
 }

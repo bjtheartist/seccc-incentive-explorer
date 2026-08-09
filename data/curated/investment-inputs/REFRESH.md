@@ -52,6 +52,7 @@ review the integrity contract in `README.md`, commit.
 | --- | --- | --- |
 | `dceo_capital_appropriations.csv` | DCEO Capital Appropriation List (PDF) | `npm run data:import:dceo-capital -- --input <pdf>` |
 | `state_awards.csv` | Illinois GATA award snapshot | manual export |
+| `illinois_arts_council_fy26_q1_source.json`, `illinois_arts_council_fy26_q1_chicago.csv` | Illinois Arts Council Grant Summaries | `npm run data:import:iac-arts` against the newly published official table; re-baseline only after reviewing source and Chicago-subset contract changes |
 
 ---
 
@@ -60,6 +61,8 @@ review the integrity contract in `README.md`, commit.
 | File | Source |
 | --- | --- |
 | `foundation_grants_geocoded.csv` | IRS 990 filings |
+| `foundation_grants_tier1_expansion.csv` | IRS 990-PF e-file XML (Tier-1 funders) |
+| `foundation_grants_phase2_expansion.csv` | IRS 990-PF / 990 e-file XML (Phase-2 funders, `scripts/foundation/` pipeline) |
 | `lihtc_chicago.csv` | HUD LIHTC placed-in-service database |
 | `nmtc_chicago.csv` | CDFI Fund NMTC public data |
 | `cra_by_community_area.csv` | FFIEC CRA disclosure |
@@ -77,6 +80,17 @@ Updated when something is announced — there is no schedule to wait for.
 | `chicago_prize.csv` | Pritzker Traubert Foundation Chicago Prize |
 | `developments.csv`, `developments_major.csv` | curated megaproject list |
 | `ellen_nof_awardees.tsv` | partner-supplied corridor list |
+
+---
+
+## Held source snapshots
+
+These files are verified source captures but are deliberately not read by the
+export. Refresh them only as part of resolving the documented release condition.
+
+| File | Source | Hold |
+| --- | --- | --- |
+| `impact_grants_chicago_DO_NOT_EXPORT.csv` | Impact Grants Chicago official all-recipient roster | Downstream awards must be linked to intermediary inflows before either stage can enter a shared gross-dollar total without double-count risk |
 
 ---
 

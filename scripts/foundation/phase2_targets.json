@@ -1,0 +1,857 @@
+[
+ {
+  "ein": "366139439",
+  "name": "REVA & DAVID LOGAN FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60640-0005",
+  "capacity": 12296006.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366055115",
+  "name": "THE IRVING HARRIS FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-1254",
+  "capacity": 11992337.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "363925857",
+  "name": "FOGLIA FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60603-3496",
+  "capacity": 11776741.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "527240158",
+  "name": "NANCY A LAUTER AND ALFRED L MCDOUGAL CHARITABLE FUND",
+  "city": "CHICAGO",
+  "zip": "60680-3878",
+  "capacity": 11657155.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "271895175",
+  "name": "MANSUETO FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60611-4105",
+  "capacity": 11272156.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "356932298",
+  "name": "TULL FAM FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-5087",
+  "capacity": 11268000.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "830499473",
+  "name": "EXELON FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 11040753.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "475610834",
+  "name": "CHICAGOBEYOND INC",
+  "city": "CHICAGO",
+  "zip": "60606-5087",
+  "capacity": 10465381.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "136170340",
+  "name": "BOOTH FERRIS FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 10378100.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "822759714",
+  "name": "RICHARD L DUCHOSSOIS MEMORIAL FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60602-1605",
+  "capacity": 10184598.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "362999442",
+  "name": "TERRA FOUNDATION FOR AMERICAN ART",
+  "city": "CHICAGO",
+  "zip": "60611-3154",
+  "capacity": 9907025.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "03"
+ },
+ {
+  "ein": "300036022",
+  "name": "THE PRITZKER PUCKER FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-1594",
+  "capacity": 9693641.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "363025967",
+  "name": "COLEMAN FOUNDATION INC",
+  "city": "CHICAGO",
+  "zip": "60606-3102",
+  "capacity": 9116544.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "311530248",
+  "name": "FRECHETTE FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-0000",
+  "capacity": 8760086.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "476858270",
+  "name": "SUE LING GIN FOUNDATION TR",
+  "city": "CHICAGO",
+  "zip": "60607-1722",
+  "capacity": 8593050.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "611480716",
+  "name": "KLAFF FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60601-1044",
+  "capacity": 8479057.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366098849",
+  "name": "WILEMAL FUND",
+  "city": "CHICAGO",
+  "zip": "60606-2208",
+  "capacity": 8161744.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "871526433",
+  "name": "FRANK E PAYNE AND SEBA B PAYNE FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-1254",
+  "capacity": 7814000.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "826893685",
+  "name": "ANAHATA FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 7526200.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "300040386",
+  "name": "TAWANI CHARITABLE DISTRIBUTION FUND",
+  "city": "CHICAGO",
+  "zip": "60603-5921",
+  "capacity": 7464895.0,
+  "disposition": "tier1_queue",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "363913323",
+  "name": "CANNING FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60602-0000",
+  "capacity": 7326939.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "830574010",
+  "name": "ROOTED ALLIANCE INC",
+  "city": "CHICAGO",
+  "zip": "60611-4251",
+  "capacity": 7297460.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "371887329",
+  "name": "HUNTER FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60602-2100",
+  "capacity": 7256600.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "363680666",
+  "name": "MALOTT FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60601-4111",
+  "capacity": 7155000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "207066362",
+  "name": "LEFKOFSKY FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60654-2282",
+  "capacity": 7113731.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366108460",
+  "name": "GAYLORD AND DOROTHY DONNELLEY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60603-5234",
+  "capacity": 7009526.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "363305162",
+  "name": "PATRICK G AND SHIRLEY W RYAN FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60601-7559",
+  "capacity": 6879873.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "521829785",
+  "name": "WILLIAM G MCGOWAN CHARITABLE FUND",
+  "city": "CHICAGO",
+  "zip": "60606-7471",
+  "capacity": 6810452.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "261596672",
+  "name": "GRAY COLLECTION TRUST",
+  "city": "CHICAGO",
+  "zip": "60611-1048",
+  "capacity": 6750000.0,
+  "disposition": "needs_review",
+  "foundation_code": "03"
+ },
+ {
+  "ein": "367754898",
+  "name": "LULUMA CHARITABLE TR",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 6632500.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "363852559",
+  "name": "MARGOT AND THOMAS PRITZKER FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-1594",
+  "capacity": 6578598.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "237376427",
+  "name": "HELEN BRACH FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60603-6114",
+  "capacity": 6516942.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "596964359",
+  "name": "JAMES M SCHOONMAKER II FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60680-3878",
+  "capacity": 6400000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366054378",
+  "name": "HARRIS FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-1900",
+  "capacity": 6358672.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "136748171",
+  "name": "BEATRICE P DELANEY CHAR FDN",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 6262500.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "367014327",
+  "name": "GEORGE D KENNEDY AND VALERIE P KENNEDY CHARITABLE TRUST",
+  "city": "CHICAGO",
+  "zip": "60610-0889",
+  "capacity": 6100000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "450575574",
+  "name": "CME GROUP FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-7431",
+  "capacity": 6073000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366066240",
+  "name": "OFFIELD FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60690-1105",
+  "capacity": 6000000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "816959383",
+  "name": "DONALD R WILSON JR FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60661-2555",
+  "capacity": 5944303.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366152744",
+  "name": "KOVLER FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60611-1958",
+  "capacity": 5847949.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "756314202",
+  "name": "LEO POTISHMAN FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 5815000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "262991942",
+  "name": "SUSAN CROWN EXCHANGE INC",
+  "city": "CHICAGO",
+  "zip": "60611-2783",
+  "capacity": 5786619.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "823799236",
+  "name": "LEV ZAHAV NFP",
+  "city": "CHICAGO",
+  "zip": "60645-1206",
+  "capacity": 5553520.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "362498125",
+  "name": "W CLEMENT & JESSIE V STONE FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60601-7638",
+  "capacity": 5323157.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "357258667",
+  "name": "LEROY PHILANTHROPIC TR",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 5320910.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366054815",
+  "name": "CHAUNCEY AND MARION DEERING MCCORMICK FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60611-4220",
+  "capacity": 5277554.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366068835",
+  "name": "SQUARE ONE FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60654-5503",
+  "capacity": 5194418.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "843791888",
+  "name": "RALLA KLEPAK PERFORMING ARTS FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60645-4213",
+  "capacity": 4992500.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "136141339",
+  "name": "LOHENGRIN FOUNDATION INC",
+  "city": "CHICAGO",
+  "zip": "60606-3414",
+  "capacity": 4973454.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "510138577",
+  "name": "IRA DECAMP FOUNDATION UNDER THE WILL OF ELIZABETH DECAMP MCINERNY",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 4952852.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "362429540",
+  "name": "RETIREMENT RESEARCH FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-3415",
+  "capacity": 4823314.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "750827445",
+  "name": "HENDRICK HOME FOR CHILDREN TRUST",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 4723862.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "651164639",
+  "name": "POLSKY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-4614",
+  "capacity": 4363941.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "203980527",
+  "name": "SIDLEY AUSTIN FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60603-2306",
+  "capacity": 4247603.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "450524597",
+  "name": "EARL AND BRENDA SHAPIRO FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60611-4130",
+  "capacity": 4194500.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366065560",
+  "name": "ROBERT W GALVIN FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-0039",
+  "capacity": 4187100.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "472570839",
+  "name": "PRITZKER MILITARY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60603-5921",
+  "capacity": 4108551.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "812433446",
+  "name": "SMART FAMILY FOUNDATION OF ILLINOIS",
+  "city": "CHICAGO",
+  "zip": "60611-1900",
+  "capacity": 4103775.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "364221334",
+  "name": "FINNEGAN FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60602-3857",
+  "capacity": 4094154.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "866182808",
+  "name": "PAUL GALVIN MEMORIAL FOUNDATION TR",
+  "city": "CHICAGO",
+  "zip": "60606-0039",
+  "capacity": 4040600.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "844058990",
+  "name": "LKQ COMMUNITY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60661-2506",
+  "capacity": 3957960.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "455492483",
+  "name": "FARLEY FAMILY CHARITABLE FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60690-2593",
+  "capacity": 3935500.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "364146804",
+  "name": "SF FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60657-5200",
+  "capacity": 3900000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "756013899",
+  "name": "DORA ROBERTS FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 3865000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "136138728",
+  "name": "GEORGE D SMITH FUND INC",
+  "city": "CHICAGO",
+  "zip": "60615-4530",
+  "capacity": 3770000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366765844",
+  "name": "FRANKEL FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60694-5672",
+  "capacity": 3755000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "363943431",
+  "name": "MCDOUGAL FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60602-1727",
+  "capacity": 3669000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "203881590",
+  "name": "MONDELEZ INTERNATIONAL FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60607-1325",
+  "capacity": 3654094.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "766124547",
+  "name": "RAWLEY FOUNDATION P65070008",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 3640500.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "136048718",
+  "name": "HAGEDORN FUND",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 3630000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "200461026",
+  "name": "KHAN FOUNDATION INC",
+  "city": "CHICAGO",
+  "zip": "60606-0000",
+  "capacity": 3610000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "133187074",
+  "name": "THE RAYMOND FRANKEL FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-0000",
+  "capacity": 3590413.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "756094930",
+  "name": "G R WHITE TRUST",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 3576801.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "731128665",
+  "name": "HARGROVE HUDSON CHARITABLE TRUST",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 3534317.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "832650859",
+  "name": "MATTHEW ZELL FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-2627",
+  "capacity": 3492720.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "237028857",
+  "name": "THE JOSEPH AND BESSIE FEINBERG FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60611-5834",
+  "capacity": 3445733.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "362490808",
+  "name": "THE POETRY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60654-5457",
+  "capacity": 3369494.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "527018780",
+  "name": "JOANNE W GUANTT CHARITABLE FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60680-3878",
+  "capacity": 3340500.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "363481541",
+  "name": "T KIMBALL BROOKER FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60610-6686",
+  "capacity": 3265040.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "136753472",
+  "name": "CHARLES BUSCH CEMETARY TRUST 0735660 UW FBO",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 3256000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "270096038",
+  "name": "SCHLINGER CHRISMAN FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60680-3878",
+  "capacity": 3252000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "916056738",
+  "name": "BOEING COMPANY CHARITABLE TRUST",
+  "city": "CHICAGO",
+  "zip": "60680-3878",
+  "capacity": 3183000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "471516608",
+  "name": "BJB FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60601-7511",
+  "capacity": 3171658.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "362167943",
+  "name": "VISITING NURSE ASSOCIATION OF CHICAGO",
+  "city": "CHICAGO",
+  "zip": "60606-3482",
+  "capacity": 3116650.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366060591",
+  "name": "BERT WILLIAM MARTIN FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60680-3878",
+  "capacity": 3100000.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "367010559",
+  "name": "ELIZABETH MORSE GENIUS CHARITABLE TRUST",
+  "city": "CHICAGO",
+  "zip": "60603-2300",
+  "capacity": 3062957.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "367613423",
+  "name": "TENZER FAM FOUDNATION ESTABLISHED 12202012 AS A WHOLLY CHARITABLE TR",
+  "city": "CHICAGO",
+  "zip": "60604-3391",
+  "capacity": 3061227.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "141840613",
+  "name": "BERNARD HEEREY FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60602-3904",
+  "capacity": 3049927.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "832650002",
+  "name": "ZELLIS FAMILY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-2627",
+  "capacity": 3012774.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "364170236",
+  "name": "ERNEST WENTCHER EDUCATIONAL FUND",
+  "city": "CHICAGO",
+  "zip": "60606-6322",
+  "capacity": 3000530.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "366088708",
+  "name": "CHILDRENS CARE FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60601-5310",
+  "capacity": 2957393.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "364235135",
+  "name": "HOEHN FAMILY CHARITABLE TR",
+  "city": "CHICAGO",
+  "zip": "60603-0000",
+  "capacity": 2920774.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "363092291",
+  "name": "WILLIAM BLAIR & COMPANY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60606-1598",
+  "capacity": 2900941.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "460858318",
+  "name": "KRAFT HEINZ COMPANY FOUNDATION",
+  "city": "CHICAGO",
+  "zip": "60601-7012",
+  "capacity": 2856113.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ },
+ {
+  "ein": "736254994",
+  "name": "LLOYD & ROXIE ANDERSON CHARITABLE TRUST",
+  "city": "CHICAGO",
+  "zip": "60694-5672",
+  "capacity": 2850140.0,
+  "disposition": "needs_review",
+  "foundation_code": "04"
+ }
+]

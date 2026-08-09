@@ -7,17 +7,18 @@ import { ArcLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import { Layers } from "lucide-react";
-import { ZONE_COLORS, ZONE_LABELS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
-import { OWNER_TYPE_LABELS, OWNER_TYPE_COLORS, presentOwnerTypesInOrder, type OwnerType } from "@/lib/owner-classify";
+import { ZONE_COLORS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
+import { OWNER_TYPE_COLORS, presentOwnerTypesInOrder, type OwnerType } from "@/lib/owner-classify";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { describeClassCode, describeParcelType } from "@/lib/parcel-classes";
 import { normalizeZoneCheckResponse } from "@/lib/zone-response";
-import type { Program, ProgramCheckResult, ParcelData, DistrictData } from "@/lib/types";
+import type { Program, ProgramCheckResult, ParcelData, DistrictData, ZoningLookupResponse } from "@/lib/types";
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import "@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css";
 import MapSearch from "./MapSearch";
 import MapLegendPanel from "./MapLegendPanel";
 import MapMobileSheet from "./MapMobileSheet";
+import MapDossierCard from "./MapDossierCard";
 import MapSnapshotPanel from "./MapSnapshotPanel";
 import MapPolygonPanel from "./MapPolygonPanel";
 import CountyReliefRecipientsPanel, {
@@ -25,6 +26,7 @@ import CountyReliefRecipientsPanel, {
 } from "./CountyReliefRecipientsPanel";
 import type { MobileMapPresetId } from "./map-layer-presets";
 import { cachedFetch } from "@/lib/fetch-cache";
+import { fetchZoningLookup } from "@/lib/zoning-lookup";
 import { getSiteSignals } from "@/lib/site-signals";
 import { getTransportAccess } from "@/lib/transport-access";
 import type { TifFinanceContext } from "@/lib/tif-finance";
@@ -62,6 +64,7 @@ import {
   DEFAULT_INVESTMENT_YEAR_RANGE,
   FUNDER_TYPE_COLORS,
   FUNDER_TYPE_ORDER,
+  MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER,
   INVESTMENT_FALLBACK_COLOR,
   CAPITAL_CLASS_OUTLINE,
   buildMegaprojectFeatures,
@@ -79,6 +82,7 @@ import {
   type MegaprojectSummary,
 } from "@/lib/community-investment-layer";
 import type { CapitalClass, FunderType } from "@/lib/community-investment";
+import type { GovernmentFundingPurpose } from "@/lib/government-funding-purpose";
 import { CHICAGO_COMMUNITY_AREAS } from "@/lib/community-areas";
 import {
   loadInvestmentSession,
@@ -143,6 +147,18 @@ import {
   STATE_RECOVERY_LINE_LAYER_ID,
   STATE_RECOVERY_SOURCE_ID,
 } from "@/lib/state-recovery-layer";
+import {
+  PERMIT_MAP_TYPES,
+  defaultPermitTypeVisibility,
+  type PermitMapTypeKey,
+} from "@/lib/permit-map";
+import type { MapDossierSelection } from "@/lib/map-dossier";
+import { compactParcelSpaceFacts } from "@/lib/parcel-space";
+import { PERMIT_PORTAL_LABEL, PERMIT_PORTAL_URL } from "@/lib/permit-match-lines";
+import {
+  parseDrawnAreaVacancyResponse,
+  type VacancyCoverageMetadata,
+} from "@/lib/drawn-area-vacancy";
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -160,15 +176,33 @@ export default function MapView() {
   );
   const [legendOpen, setLegendOpen] = useState(true);
   const [snapshotOpen, setSnapshotOpen] = useState(true);
+  const [dossierSelection, setDossierSelection] = useState<MapDossierSelection | null>(null);
   // Timestamp when the legend opened, to ignore the iOS post-tap ghost click.
   const legendOpenedAtRef = useRef(0);
   useEffect(() => { if (legendOpen) legendOpenedAtRef.current = Date.now(); }, [legendOpen]);
   // Timestamp when a map tap opened the snapshot — MapSnapshotPanel uses it to
   // ignore the same ghost click, which otherwise lands on the ×/links/CTA.
   const snapshotOpenedAtRef = useRef(0);
+  const closeDossier = useCallback(() => {
+    setDossierSelection(null);
+    if (window.matchMedia("(max-width: 768px)").matches) {
+      setSnapshotOpen(true);
+    }
+  }, []);
+  const openDossier = useCallback(
+    (selection: MapDossierSelection) => {
+      const isMobileView = window.matchMedia("(max-width: 768px)").matches;
+      setDossierSelection(selection);
+      if (isMobileView) {
+        setSnapshotOpen(false);
+      }
+    },
+    [],
+  );
   const [zoningRefOpen, setZoningRefOpen] = useState(false);
   const [classRefOpen, setClassRefOpen] = useState(false);
   const [zoningInfo, setZoningInfo] = useState<string | null>(null);
+  const zoningLookupAbortRef = useRef<AbortController | null>(null);
   const [areaStats, setAreaStats] = useState<AreaStats>(DEFAULT_STATS);
   const [snapshotLabel, setSnapshotLabel] = useState("Chicago (default)");
   const [, setCopiedLink] = useState(false);
@@ -181,11 +215,70 @@ export default function MapView() {
   // Inspect zoning mode
   const [inspectMode, setInspectMode] = useState(false);
 
+  const inspectPublishedZoning = useCallback(
+    async (map: mapboxgl.Map, lngLat: mapboxgl.LngLat) => {
+      zoningLookupAbortRef.current?.abort();
+      const controller = new AbortController();
+      zoningLookupAbortRef.current = controller;
+      setZoningInfo("Loading...");
+
+      const result = await fetchZoningLookup(lngLat.lat, lngLat.lng, {
+        signal: controller.signal,
+      });
+      if (controller.signal.aborted) return;
+
+      let eyebrow = "Published Zoning Source";
+      let value = "Temporarily unavailable";
+      let detail = "Click this location again to retry.";
+      if (result.status === "available") {
+        eyebrow = "Zoning Classification";
+        value = result.zoneClass;
+        detail = `${describeZoneClass(result.zoneClass)} Verify the proposed use against the current Chicago Zoning Ordinance and with the City.`;
+        setZoningInfo(`${result.zoneClass} — ${describeZoneClass(result.zoneClass)}`);
+      } else if (result.status === "not_found") {
+        value = "No district returned";
+        detail = "The published source returned no district. This is not evidence that zoning requirements do not apply.";
+        setZoningInfo("No published zoning district returned");
+      } else {
+        setZoningInfo("Published zoning temporarily unavailable — click again to retry");
+      }
+
+      const popup = document.createElement("div");
+      const eyebrowEl = document.createElement("div");
+      eyebrowEl.style.cssText =
+        "font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#059669;margin-bottom:4px;font-weight:500";
+      eyebrowEl.textContent = eyebrow;
+      const valueEl = document.createElement("div");
+      valueEl.style.cssText =
+        "font-size:18px;font-weight:700;color:#0C1B33;letter-spacing:0";
+      valueEl.textContent = value;
+      const detailEl = document.createElement("div");
+      detailEl.style.cssText =
+        "font-size:12px;color:#5A6478;margin-top:4px;line-height:1.4";
+      detailEl.textContent = detail;
+      popup.append(eyebrowEl, valueEl, detailEl);
+
+      new mapboxgl.Popup({ maxWidth: "320px", className: "bureau-popup" })
+        .setLngLat(lngLat)
+        .setDOMContent(popup)
+        .addTo(map);
+    },
+    [],
+  );
+
+  useEffect(
+    () => () => {
+      zoningLookupAbortRef.current?.abort();
+    },
+    [],
+  );
+
   // Enhanced Area Snapshot
   const [snapshotPrograms, setSnapshotPrograms] = useState<ProgramCheckResult[]>([]);
   const [snapshotTifFinance, setSnapshotTifFinance] = useState<TifFinanceContext | null>(null);
   const [locationZoneNames, setLocationZoneNames] = useState<Record<string, string> | null>(null);
   const [snapshotParcelData, setSnapshotParcelData] = useState<ParcelData | null>(null);
+  const [snapshotCityZoning, setSnapshotCityZoning] = useState<ZoningLookupResponse | null>(null);
   const [tifFinanceLoading, setTifFinanceLoading] = useState(false);
   const [lastClickLat, setLastClickLat] = useState<number | null>(null);
   const [lastClickLon, setLastClickLon] = useState<number | null>(null);
@@ -195,6 +288,15 @@ export default function MapView() {
   const [parcelsVisible, setParcelsVisible] = useState(false);
   const parcelsAbortRef = useRef<AbortController | null>(null);
   const parcelsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // City building-permit filings. The source stays empty until the master
+  // toggle is on and the map is close enough to make a viewport query honest.
+  const [permitsVisible, setPermitsVisible] = useState(false);
+  const [permitTypeVisible, setPermitTypeVisible] = useState<
+    Record<PermitMapTypeKey, boolean>
+  >(() => defaultPermitTypeVisibility());
+  const permitsAbortRef = useRef<AbortController | null>(null);
+  const permitsTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Vacant property layers
   const [vacantVisible, setVacantVisible] = useState<Record<string, boolean>>({
@@ -249,6 +351,10 @@ export default function MapView() {
   const [communityInvestmentLoading, setCommunityInvestmentLoading] = useState(false);
   const [communityInvestmentError, setCommunityInvestmentError] = useState<string | null>(null);
   const [investmentPresentFunderTypes, setInvestmentPresentFunderTypes] = useState<FunderType[]>([]);
+  const [
+    investmentPresentGovernmentFundingPurposes,
+    setInvestmentPresentGovernmentFundingPurposes,
+  ] = useState<GovernmentFundingPurpose[]>([]);
   // Capital classes present among plotted dots — drives the legend's capital-class
   // sub-legend (grant / TIF / federal / tax-credit). Set on each fetch.
   const [investmentPresentCapitalClasses, setInvestmentPresentCapitalClasses] = useState<CapitalClass[]>([]);
@@ -269,6 +375,14 @@ export default function MapView() {
   const [investmentFunderTypes, setInvestmentFunderTypes] = useState<Record<FunderType, boolean>>(
     () => funderTypeRecordFromSession(loadInvestmentSession().funderTypes)
   );
+  const [investmentGovernmentFundingPurposes, setInvestmentGovernmentFundingPurposes] = useState<
+    Record<GovernmentFundingPurpose, boolean>
+  >({
+    capital_project: true,
+    programmatic: true,
+    arts: true,
+    unclassified: true,
+  });
   const [investmentCitywide, setInvestmentCitywide] = useState<{ count: number; totalDollars: number } | null>(
     null
   );
@@ -289,6 +403,15 @@ export default function MapView() {
       return next;
     });
   }, []);
+  const toggleInvestmentGovernmentFundingPurpose = useCallback(
+    (key: GovernmentFundingPurpose) => {
+      setInvestmentGovernmentFundingPurposes((previous) => ({
+        ...previous,
+        [key]: !previous[key],
+      }));
+    },
+    [],
+  );
 
   // Density metric (Sol #4): dollars ($ awarded per bin) | records (grant count
   // per bin). Component state — the choice is not persisted across the /report
@@ -374,8 +497,12 @@ export default function MapView() {
 
   // Polygon draw tool
   const drawRef = useRef<MapboxDraw | null>(null);
+  const drawModeRef = useRef(false);
   const [drawMode, setDrawMode] = useState(false);
   const [polygonResults, setPolygonResults] = useState<GeoJSON.FeatureCollection | null>(null);
+  const [polygonVacancyCoverage, setPolygonVacancyCoverage] =
+    useState<VacancyCoverageMetadata | null>(null);
+  const [polygonVacancyLoadFailed, setPolygonVacancyLoadFailed] = useState(false);
   // The drawn shape itself, kept alongside its vacancy results so MapPolygonPanel
   // can run the admin community-investment point-in-polygon analysis against the
   // same geometry the /api/vacant query used.
@@ -590,8 +717,14 @@ export default function MapView() {
   );
 
   /* ── Fetch area stats for a location ────── */
-  const loadCensusForPoint = useCallback(async (lat: number, lon: number, label?: string) => {
+  const loadCensusForPoint = useCallback(async (
+    lat: number,
+    lon: number,
+    label?: string,
+    pin?: string | null,
+  ) => {
     if (label) setSnapshotLabel(label);
+    setAreaStats({ ...DEFAULT_STATS, districtsLoading: true });
     try {
       const [data, parcelData] = await Promise.all([
         cachedFetch<{
@@ -600,7 +733,9 @@ export default function MapView() {
           walkScore?: number;
           tractId?: string;
         }>(`/api/census?lat=${lat}&lon=${lon}`).catch(() => null),
-        cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).catch(() => null),
+        cachedFetch<ParcelData>(
+          `/api/parcel?lat=${lat}&lon=${lon}${pin ? `&pin=${encodeURIComponent(pin)}` : ""}`,
+        ).catch(() => null),
       ]);
       if (data) {
         setAreaStats({
@@ -627,6 +762,7 @@ export default function MapView() {
           priorYearTax: parcelData?.priorYearTax,
           ownerName: parcelData?.ownerName,
           ownerType: parcelData?.ownerType,
+          space: parcelData?.space,
           districtsLoading: true,
         });
         if (!label && data.tractId) {
@@ -663,21 +799,41 @@ export default function MapView() {
   const loadCensusRef = useRef(loadCensusForPoint);
   useEffect(() => { loadCensusRef.current = loadCensusForPoint; }, [loadCensusForPoint]);
 
-  // Handle click for location zones + top programs (with parcel boost)
+  // Keep ranking private; map surfaces present only a neutral program review list.
   const handleMapClick = useCallback(
-    async (lat: number, lon: number) => {
+    async (lat: number, lon: number, pin?: string | null) => {
+      zoningLookupAbortRef.current?.abort();
+      const zoningController = new AbortController();
+      zoningLookupAbortRef.current = zoningController;
+      setSnapshotCityZoning(null);
+      setZoningInfo("Loading...");
       setLastClickLat(lat);
       setLastClickLon(lon);
       setCopiedLink(false);
       setTifFinanceLoading(true);
       try {
-        const [data, parcelData, tifFinanceData] = await Promise.all([
-          cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`),
-          cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).catch(() => null),
+        const [data, parcelData, tifFinanceData, zoningLookup] = await Promise.all([
+          cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`).catch(() => null),
+          cachedFetch<ParcelData>(
+            `/api/parcel?lat=${lat}&lon=${lon}${pin ? `&pin=${encodeURIComponent(pin)}` : ""}`,
+          ).catch(() => null),
           cachedFetch<{ tifFinance?: TifFinanceContext | null }>(
             `/api/tif-finance?lat=${lat}&lon=${lon}`
           ).catch(() => null),
+          fetchZoningLookup(lat, lon, { signal: zoningController.signal }),
         ]);
+        if (!zoningController.signal.aborted) {
+          setSnapshotCityZoning(zoningLookup);
+          if (zoningLookup.status === "available") {
+            setZoningInfo(
+              `${zoningLookup.zoneClass} — ${describeZoneClass(zoningLookup.zoneClass)}`,
+            );
+          } else if (zoningLookup.status === "not_found") {
+            setZoningInfo("No published zoning district returned");
+          } else {
+            setZoningInfo("Published zoning temporarily unavailable — select the location again to retry");
+          }
+        }
         const normalized = normalizeZoneCheckResponse(data);
         if (!normalized) throw new Error("Unexpected zone check response");
 
@@ -686,7 +842,7 @@ export default function MapView() {
         setLocationZoneNames(zoneNames);
         setSnapshotParcelData(parcelData ?? null);
         setSnapshotTifFinance(tifFinanceData?.tifFinance ?? null);
-        // Compute top 3 programs client-side (with parcel boost)
+        // Compute the internal ranking client-side (including parcel context).
         if (allPrograms.length > 0) {
           const results = runConfidenceEngine(allPrograms, zones, zoneNames, undefined, parcelData ?? undefined);
           setSnapshotPrograms(
@@ -718,6 +874,7 @@ export default function MapView() {
         zones: locationZones,
         zoneNames: locationZoneNames ?? undefined,
         parcel: snapshotParcelData ?? undefined,
+        cityZoning: snapshotCityZoning ?? undefined,
         siteSignals: areaStats.siteSignals ?? undefined,
         transport: areaStats.transport ?? undefined,
         tifFinance: snapshotTifFinance ?? undefined,
@@ -734,6 +891,7 @@ export default function MapView() {
     locationZones,
     snapshotLabel,
     snapshotParcelData,
+    snapshotCityZoning,
     snapshotTifFinance,
   ]);
   const lastClickRef = useRef(handleMapClick);
@@ -842,58 +1000,219 @@ export default function MapView() {
        that opens the snapshot. Draw only suppresses the browser's compat
        events, not Mapbox's event bus, so the touch map events still arrive. */
     const openSnapshotAt = (point: mapboxgl.Point, lngLat: mapboxgl.LngLat) => {
+      // Drawing owns map clicks until the polygon is complete. Without this
+      // guard, the ordinary location dossier opens on the first vertex and
+      // blocks the remaining area selection.
+      if (drawModeRef.current) return;
+
       const isMobileView = window.matchMedia("(max-width: 768px)").matches;
 
-      /* Zone popup — desktop only: zone fills blanket whole corridors, so on
-         mobile every tap would stack a popup under the snapshot sheet */
-      const features = map.queryRenderedFeatures(point, {
-        layers: getLoadedZoneFillLayers(),
-      });
-      if (!isMobileView && features.length > 0) {
-        const props = features[0].properties || {};
-        const sourceKey = (features[0].source ?? "").replace("zone-", "");
-        const label = ZONE_LABELS[sourceKey] || sourceKey;
-        const name = props.name || props.Name || props.NAME || "";
-        new mapboxgl.Popup({ maxWidth: "260px", className: "bureau-popup" })
-          .setLngLat(lngLat)
-          .setHTML(
-            `<div style="font-family:Inter,sans-serif">
-              <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#2563EB;margin-bottom:4px">${label}</div>
-              ${name ? `<div style="font-size:14px;font-weight:600;color:#0C1B33">${name}</div>` : ""}
-            </div>`
-          )
-          .addTo(map);
+      // Cluster layers own the click so they can expand. Opening the location
+      // dossier on the same event would stack a panel over the zoom animation.
+      const clusterLayers = [
+        "permit-clusters",
+        "vacant-clusters",
+        "owner-clusters-clusters",
+      ].filter((layerId) => map.getLayer(layerId));
+      if (
+        clusterLayers.length > 0 &&
+        map.queryRenderedFeatures(point, { layers: clusterLayers }).length > 0
+      ) {
+        return;
       }
 
-      /* POI popup — desktop only, same reasoning as the zone popup above:
-         on mobile the snapshot sheet already surfaces this tap, so a second
-         popup would just stack underneath it. */
+      // Admin analytical overlays retain their purpose-built record popup. The
+      // shared property dossier owns public location, parcel, vacancy, permit,
+      // and nearby-place selections; returning here prevents both surfaces from
+      // opening for the same click when an admin overlay is visible.
+      const analyticalPopupLayers = [
+        "owner-clusters-unclustered",
+        COUNTY_RELIEF_FILL_LAYER_ID,
+        STATE_2020_RELIEF_FILL_LAYER_ID,
+        STATE_RECOVERY_FILL_LAYER_ID,
+        "community-investment-points",
+        "community-investment-state-capital-points",
+        "community-investment-federal-restaurant-relief-points",
+        "community-investment-megaproject-points",
+      ].filter((layerId) => map.getLayer(layerId));
+      if (
+        analyticalPopupLayers.length > 0 &&
+        map.queryRenderedFeatures(point, { layers: analyticalPopupLayers }).length > 0
+      ) {
+        return;
+      }
+
+      // A property selection replaces any older analytical popup so one click
+      // always leaves one clear inspection surface on screen.
+      sharedDotPopupRef.current?.remove();
+
+      /* Resolve one location/property selection in an explicit priority order.
+         This replaces the older parcel, vacancy, permit, search, and POI popup
+         variants with the shared dossier panel. */
       const poiLayers = Object.keys(POI_LAYERS)
         .map((k) => `poi-${k}`)
         .filter((id) => map.getLayer(id));
-      if (!isMobileView && poiLayers.length > 0) {
-        const poiFeats = map.queryRenderedFeatures(point, {
-          layers: poiLayers,
-        });
-        if (poiFeats.length > 0) {
-          const p = poiFeats[0].properties || {};
-          const layerKey = (poiFeats[0].layer?.id ?? "").replace("poi-", "");
-          const cfg = POI_LAYERS[layerKey];
-          const nameField = cfg?.nameField;
-          const name = (nameField ? p[nameField] : null) ||
-            p.station_name || p.short_name || p.long_name ||
-            p.name_ || p.Name || p.name || "";
-          const addr = p.address || p.street_address || p.the_geom_address || "";
-          new mapboxgl.Popup({ maxWidth: "260px", className: "bureau-popup" })
-            .setLngLat(lngLat)
-            .setHTML(
-              `<div style="font-family:Inter,sans-serif">
-                <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:${cfg.color};margin-bottom:4px">${cfg.label}</div>
-                ${name ? `<div style="font-size:14px;font-weight:600;color:#0C1B33">${name}</div>` : ""}
-                ${addr ? `<div style="font-size:12px;color:#5A6478;margin-top:2px">${addr}</div>` : ""}
-              </div>`
-            )
-            .addTo(map);
+      const firstFeature = (layerIds: string[]) => {
+        const loadedLayers = layerIds.filter((layerId) => map.getLayer(layerId));
+        if (loadedLayers.length === 0) return null;
+        return map.queryRenderedFeatures(point, { layers: loadedLayers })[0] ?? null;
+      };
+      const textValue = (value: unknown): string | null => {
+        if (value == null) return null;
+        const normalized = String(value).trim();
+        return normalized ? normalized : null;
+      };
+      const numberValue = (value: unknown): number | null => {
+        if (value == null || value === "") return null;
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : null;
+      };
+
+      const zoningFeature = firstFeature(
+        ZONING_CATEGORIES.map((category) => `zoning-${category.key}-fill`),
+      );
+      const zoneClass = textValue(zoningFeature?.properties?.zone_class);
+      setZoningInfo(zoneClass ? `${zoneClass} — ${describeZoneClass(zoneClass)}` : null);
+
+      let selection: MapDossierSelection | null = null;
+      const permitFeature = firstFeature(["permit-unclustered"]);
+      if (permitFeature) {
+        const properties = permitFeature.properties || {};
+        const permitId = textValue(properties.permitId);
+        if (permitId) {
+          selection = {
+            kind: "permit",
+            title:
+              textValue(properties.address) ||
+              textValue(properties.permitTypeLabel) ||
+              "Selected building permit",
+            permitId,
+            permitType:
+              textValue(properties.rawPermitType) || textValue(properties.permitTypeLabel),
+            permitStatus: textValue(properties.permitStatus),
+            issueDate: textValue(properties.issueDate),
+            workDescription: textValue(properties.workDescription),
+            sources: [
+              {
+                label: PERMIT_PORTAL_LABEL,
+                href: PERMIT_PORTAL_URL,
+                note: "Verify the current permit status and filing details in the City source.",
+              },
+            ],
+          };
+        }
+      }
+
+      if (!selection) {
+        const poiFeature = firstFeature(poiLayers);
+        if (poiFeature) {
+          const properties = poiFeature.properties || {};
+          const layerKey = (poiFeature.layer?.id ?? "").replace("poi-", "");
+          const config = POI_LAYERS[layerKey];
+          const nameField = config?.nameField;
+          selection = {
+            kind: "poi",
+            title:
+              (nameField ? textValue(properties[nameField]) : null) ||
+              textValue(properties.station_name) ||
+              textValue(properties.short_name) ||
+              textValue(properties.long_name) ||
+              textValue(properties.name_) ||
+              textValue(properties.Name) ||
+              textValue(properties.name) ||
+              config?.label ||
+              "Nearby place",
+            category: config?.label || "Nearby place",
+            address:
+              textValue(properties.address) ||
+              textValue(properties.street_address) ||
+              textValue(properties.the_geom_address),
+            agency:
+              textValue(properties.agency) ||
+              textValue(properties.operator) ||
+              textValue(properties.owner),
+            sources: config?.label ? [{ label: config.label }] : undefined,
+          };
+        }
+      }
+
+      if (!selection) {
+        const vacancyFeature = firstFeature(["vacant-unclustered"]);
+        if (vacancyFeature) {
+          const properties = vacancyFeature.properties || {};
+          const sourceId = textValue(properties.id);
+          const candidatePin =
+            textValue(properties.source) === "cols" && sourceId
+              ? sourceId.replace(/^cols-/, "")
+              : null;
+          const pin = candidatePin && /^\d{14}$/.test(candidatePin) ? candidatePin : null;
+          const rawType = textValue(properties.propertyType);
+          selection = {
+            kind: "vacancy",
+            title: textValue(properties.address) || "Address not recorded",
+            vacancyType: rawType === "vacant_land" ? "vacant_land" : "vacant_building",
+            pin,
+            squareFeet: numberValue(properties.squareFeet),
+            space: compactParcelSpaceFacts({
+              lotAreaSqft:
+                numberValue(properties.lotAreaSqft) ??
+                (rawType === "vacant_land" ? numberValue(properties.squareFeet) ?? undefined : undefined),
+              assessorBuildingSqft: numberValue(properties.assessorBuildingSqft) ?? undefined,
+              assessorBuildingYear: numberValue(properties.assessorBuildingYear) ?? undefined,
+              cityGroundFootprintSqft:
+                numberValue(properties.cityGroundFootprintSqft) ?? undefined,
+              cityGroundFootprintVintage:
+                textValue(properties.cityGroundFootprintVintage) ?? undefined,
+              availableSpaceSqft: numberValue(properties.availableSpaceSqft) ?? undefined,
+              availableSpaceSource: textValue(properties.availableSpaceSource) ?? undefined,
+              availableSpaceVerifiedAt:
+                textValue(properties.availableSpaceVerifiedAt) ?? undefined,
+              availableSpaceReconfirmAfter:
+                textValue(properties.availableSpaceReconfirmAfter) ?? undefined,
+            }),
+            incentiveGeographyCount: numberValue(properties.incentiveCount),
+            sources: [
+              {
+                label:
+                  textValue(properties.source) === "cols"
+                    ? "Cook County / City land records"
+                    : "City of Chicago vacant-building records",
+                note: "Tracked vacancy records are research leads, not availability listings.",
+              },
+            ],
+          };
+        }
+      }
+
+      if (!selection) {
+        const parcelFeature = firstFeature(["parcels-fill"]);
+        if (parcelFeature) {
+          const properties = parcelFeature.properties || {};
+          const pin = textValue(properties.PIN14);
+          const propertyClass = textValue(properties.BCLASS);
+          selection = {
+            kind: "parcel",
+            title: textValue(properties.street_address) || pin || "Selected parcel",
+            pin,
+            propertyClass,
+            propertyClassDescription: propertyClass
+              ? describeClassCode(propertyClass)
+              : null,
+            assessedTotal: numberValue(properties.CURRENTVALUE_TOTAL),
+            space: compactParcelSpaceFacts({
+              lotAreaSqft: numberValue(properties.LANDSF) ?? undefined,
+              assessorBuildingSqft: numberValue(properties.BLDGSQFT) ?? undefined,
+              assessorBuildingYear: numberValue(properties.TAXYR) ?? undefined,
+            }),
+            sources: [
+              {
+                label: "Cook County parcel records",
+                href: pin
+                  ? `https://www.cookcountyassessoril.gov/pin/${encodeURIComponent(pin)}`
+                  : null,
+              },
+            ],
+          };
         }
       }
 
@@ -902,10 +1221,10 @@ export default function MapView() {
          (mobile pads the fit so the area lands above the bottom sheet). */
       const drawing = drawRef.current?.getMode?.() === "draw_polygon";
       if (!drawing) {
-        // Skip community-area zoom if the click landed on a parcel
-        const clickedParcel = map.getLayer("parcels-fill")
-          ? map.queryRenderedFeatures(point, { layers: ["parcels-fill"] }).length > 0
-          : false;
+        const selectedProperty =
+          selection?.kind === "parcel" ||
+          selection?.kind === "vacancy" ||
+          selection?.kind === "permit";
 
         let areaLabel: string | undefined;
         if (map.getLayer("community-areas-fill")) {
@@ -924,7 +1243,7 @@ export default function MapView() {
               // sheet covers the bottom ~60% of the screen, so pad the fit
               // asymmetrically to land the neighborhood in the visible strip
               // above the sheet instead of centering it behind it.
-              if (!clickedParcel && map.getZoom() < 15) {
+              if (!selectedProperty && map.getZoom() < 15) {
                 const geometry = caFeats[0].geometry;
                 if (geometry.type === "Polygon" || geometry.type === "MultiPolygon") {
                   const coords =
@@ -950,10 +1269,25 @@ export default function MapView() {
           }
         }
 
-        loadCensusRef.current(lngLat.lat, lngLat.lng, areaLabel);
-        lastClickRef.current(lngLat.lat, lngLat.lng);
+        const activeSelection: MapDossierSelection = selection ?? {
+          kind: "address",
+          title:
+            areaLabel || `${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)}`,
+          subtitle: areaLabel ? `${areaLabel} map point` : "Selected map point",
+          lat: lngLat.lat,
+          lon: lngLat.lng,
+        };
+        const selectedPin =
+          activeSelection.kind === "parcel" ||
+          activeSelection.kind === "vacancy" ||
+          activeSelection.kind === "permit"
+            ? activeSelection.pin ?? null
+            : null;
+        openDossier(activeSelection);
+        loadCensusRef.current(lngLat.lat, lngLat.lng, activeSelection.title, selectedPin);
+        lastClickRef.current(lngLat.lat, lngLat.lng, selectedPin);
         snapshotOpenedAtRef.current = Date.now();
-        setSnapshotOpen(true);
+        if (!isMobileView) setSnapshotOpen(true);
       }
     };
 
@@ -1297,26 +1631,9 @@ export default function MapView() {
               }
             });
 
-            // Click popup — show code + human-readable description. Desktop
-            // only: zoning blankets the city, so on mobile it would stack a
-            // popup under the snapshot sheet on every tap.
-            map.on("click", layerId, (e) => {
-              if (!e.features?.length) return;
-              if (window.matchMedia("(max-width: 768px)").matches) return;
-              const props = e.features[0].properties || {};
-              const zoneClass = props.zone_class || "Unknown";
-              const description = describeZoneClass(zoneClass);
-              new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
-                .setLngLat(e.lngLat)
-                .setHTML(
-                  `<div style="font-family:Inter,sans-serif">
-                    <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#059669;margin-bottom:4px;font-weight:500">Zoning District</div>
-                    <div style="font-size:18px;font-weight:700;color:#0C1B33;letter-spacing:-0.01em">${zoneClass}</div>
-                    <div style="font-size:12px;color:#5A6478;margin-top:4px;line-height:1.4">${description}</div>
-                  </div>`
-                )
-                .addTo(map);
-            });
+            // Public map clicks use the shared property dossier. Zoning is
+            // resolved into its Programs and zones section, avoiding a second
+            // popup for the same click.
           }
         }
       } catch {
@@ -1371,30 +1688,6 @@ export default function MapView() {
           hoveredParcelId = null;
         }
         map.getCanvas().style.cursor = "";
-      });
-
-      // Parcel click popup
-      map.on("click", "parcels-fill", (e) => {
-        if (!e.features?.length) return;
-        const p = e.features[0].properties || {};
-        const pin = p.PIN14 || "";
-        const bldg = p.BLDGClass || "";
-        const classDesc = bldg ? describeClassCode(bldg) : "";
-        const val = p.TotalValue ? `$${Number(p.TotalValue).toLocaleString()}` : "";
-        const addr = p.Address || "";
-        new mapboxgl.Popup({ maxWidth: "280px", className: "bureau-popup" })
-          .setLngLat(e.lngLat)
-          .setHTML(
-            `<div style="font-family:Inter,sans-serif">
-              <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#7C3AED;margin-bottom:4px;font-weight:500">Parcel</div>
-              ${pin ? `<div style="font-size:14px;font-weight:600;color:#0C1B33"><a href="https://www.cookcountyassessoril.gov/pin/${pin}" target="_blank" rel="noopener noreferrer" style="color:#2563EB;text-decoration:underline">${pin}</a></div>` : ""}
-              ${addr ? `<div style="font-size:12px;color:#5A6478;margin-top:3px">${addr}</div>` : ""}
-              ${bldg ? `<div style="font-size:11px;color:#5A6478;margin-top:2px">Class: ${bldg}</div>` : ""}
-              ${classDesc ? `<div style="font-size:10px;color:#5A6478;margin-top:1px;font-style:italic">${classDesc}</div>` : ""}
-              ${val ? `<div style="font-size:11px;color:#5A6478;margin-top:2px">Assessed: ${val}</div>` : ""}
-            </div>`
-          )
-          .addTo(map);
       });
 
       /* ── Vacant Properties layer (clustered GeoJSON) ── */
@@ -1467,8 +1760,8 @@ export default function MapView() {
         },
       });
 
-      /* One shared popup instance for ALL unclustered-dot layers (vacant,
-         ownership clusters, community investment). Mapbox fires every
+      /* One shared popup instance for the specialized admin dot layers
+         (ownership clusters and community investment). Mapbox fires every
          layer-scoped click handler with a rendered feature under the pointer, so
          a single click where two admin dot layers overlap would otherwise open
          (and stack) a separate popup per layer. Reusing ONE popup — setLngLat +
@@ -1478,49 +1771,6 @@ export default function MapView() {
       // Exposed via ref so the deck view-mode effect can close it when entering
       // Arcs/Density (deck's picking tooltip replaces the mapbox dot popup there).
       sharedDotPopupRef.current = sharedDotPopup;
-
-      // Click handler for unclustered vacant points
-      map.on("click", "vacant-unclustered", (e) => {
-        if (!e.features?.length) return;
-        const p = e.features[0].properties || {};
-        const zoneMatches = typeof p.zoneMatches === "string" ? JSON.parse(p.zoneMatches) : (p.zoneMatches || []);
-        const badges = zoneMatches.map((z: { zoneKey: string; zoneName: string }) =>
-          `<span style="display:inline-block;background:${ZONE_COLORS[z.zoneKey] || '#6B7280'}20;color:${ZONE_COLORS[z.zoneKey] || '#6B7280'};border:1px solid ${ZONE_COLORS[z.zoneKey] || '#6B7280'}40;padding:1px 6px;border-radius:2px;font-size:9px;margin:2px 2px 0 0">${ZONE_LABELS[z.zoneKey] || z.zoneName}</span>`
-        ).join("");
-
-        const addr = p.address || "Unknown Address";
-        const sqft = p.squareFeet ? `${Number(p.squareFeet).toLocaleString()} sq ft` : "";
-        const ward = p.ward ? `Ward ${p.ward}` : "";
-        const meta = [sqft, ward].filter(Boolean).join(" · ");
-
-        // Owner info
-        const ownerName = p.ownerName || null;
-        const ownerType = p.ownerType as OwnerType | null;
-        const ownerLabel = ownerType ? (OWNER_TYPE_LABELS[ownerType] || ownerType) : null;
-        const ownerColor = ownerType ? (OWNER_TYPE_COLORS[ownerType] || "#9CA3AF") : "#9CA3AF";
-        const ownerHtml = ownerName
-          ? `<div style="margin-top:6px;padding:6px 8px;background:#F8FAFC;border-radius:4px;border:1px solid #E2E8F0">
-              <div style="font-size:9px;letter-spacing:0.1em;text-transform:uppercase;color:#64748B;margin-bottom:2px">Owner</div>
-              <div style="font-size:12px;font-weight:600;color:#0C1B33">${ownerName}</div>
-              ${ownerLabel ? `<span style="display:inline-block;margin-top:3px;background:${ownerColor}15;color:${ownerColor};border:1px solid ${ownerColor}30;padding:1px 6px;border-radius:2px;font-size:9px;font-weight:500">${ownerLabel}</span>` : ""}
-            </div>`
-          : "";
-
-        sharedDotPopup
-          .setLngLat(e.lngLat)
-          .setHTML(
-            `<div style="font-family:Inter,sans-serif">
-              <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${VACANT_COLORS.vacantLand};margin-bottom:4px;font-weight:500">Vacant Property</div>
-              <div style="font-size:14px;font-weight:600;color:#0C1B33">${addr}</div>
-              ${meta ? `<div style="font-size:11px;color:#5A6478;margin-top:3px">${meta}</div>` : ""}
-              ${ownerHtml}
-              ${badges ? `<div style="margin-top:6px;display:flex;flex-wrap:wrap">${badges}</div>` : ""}
-              ${p.incentiveCount > 0 ? `<div style="font-size:10px;color:#059669;margin-top:6px;font-weight:500">${p.incentiveCount} incentive zone${p.incentiveCount > 1 ? "s" : ""} overlap</div>` : ""}
-              ${p.source === "cols" ? `<a href="https://www.cookcountyassessoril.gov/pin/${p.id?.replace("cols-", "")}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:8px;font-size:10px;color:#2563EB;text-decoration:underline">View on Cook County Assessor →</a>` : `<span style="display:inline-block;margin-top:8px;font-size:10px;color:#64748B">Source: 311 Report</span>`}
-            </div>`
-          )
-          .addTo(map);
-      });
 
       // Click on cluster to zoom in
       map.on("click", "vacant-clusters", (e) => {
@@ -1542,6 +1792,83 @@ export default function MapView() {
       map.on("mouseleave", "vacant-clusters", () => { map.getCanvas().style.cursor = ""; });
       map.on("mouseenter", "vacant-unclustered", () => { map.getCanvas().style.cursor = "pointer"; });
       map.on("mouseleave", "vacant-unclustered", () => { map.getCanvas().style.cursor = ""; });
+
+      /* ── City building-permit filings (viewport-loaded) ── */
+      map.addSource("building-permits", {
+        type: "geojson",
+        data: EMPTY_FC,
+        cluster: true,
+        clusterMaxZoom: 15,
+        clusterRadius: 42,
+      });
+
+      map.addLayer({
+        id: "permit-clusters",
+        type: "circle",
+        source: "building-permits",
+        filter: ["has", "point_count"],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-color": "#0F766E",
+          "circle-radius": ["step", ["get", "point_count"], 14, 20, 18, 100, 24],
+          "circle-opacity": 0.88,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#FFFFFF",
+        },
+      });
+
+      map.addLayer({
+        id: "permit-cluster-count",
+        type: "symbol",
+        source: "building-permits",
+        filter: ["has", "point_count"],
+        layout: {
+          visibility: "none",
+          "text-field": ["get", "point_count_abbreviated"],
+          "text-font": ["DIN Pro Medium", "Arial Unicode MS Regular"],
+          "text-size": 11,
+        },
+        paint: { "text-color": "#FFFFFF" },
+      });
+
+      const permitColorExpression: mapboxgl.Expression = [
+        "match",
+        ["get", "permitTypeKey"],
+        ...PERMIT_MAP_TYPES.flatMap((permitType) => [permitType.key, permitType.color]),
+        "#64748B",
+      ];
+      map.addLayer({
+        id: "permit-unclustered",
+        type: "circle",
+        source: "building-permits",
+        filter: ["!", ["has", "point_count"]],
+        layout: { visibility: "none" },
+        paint: {
+          "circle-radius": 6,
+          "circle-color": permitColorExpression,
+          "circle-opacity": 0.92,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": "#FFFFFF",
+        },
+      });
+
+      map.on("click", "permit-clusters", (e) => {
+        const features = map.queryRenderedFeatures(e.point, { layers: ["permit-clusters"] });
+        if (!features.length) return;
+        const clusterId = features[0].properties?.cluster_id;
+        const source = map.getSource("building-permits") as mapboxgl.GeoJSONSource;
+        source.getClusterExpansionZoom(clusterId, (error, zoom) => {
+          if (error) return;
+          map.easeTo({
+            center: (features[0].geometry as GeoJSON.Point).coordinates as [number, number],
+            zoom: zoom!,
+          });
+        });
+      });
+      map.on("mouseenter", "permit-clusters", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "permit-clusters", () => { map.getCanvas().style.cursor = ""; });
+      map.on("mouseenter", "permit-unclustered", () => { map.getCanvas().style.cursor = "pointer"; });
+      map.on("mouseleave", "permit-unclustered", () => { map.getCanvas().style.cursor = ""; });
 
       /* ── Admin ownership-cluster layer (Owner Files, PRs #65/#67/#68) ──
          Gated: only rendered/toggleable when the ADMIN legend section is
@@ -2090,19 +2417,38 @@ export default function MapView() {
           setPolygonLoading(true);
           setPolygonPanelOpen(true);
           setSnapshotOpen(false);
+          setPolygonResults(EMPTY_FC);
+          setPolygonVacancyCoverage(null);
+          setPolygonVacancyLoadFailed(false);
+          drawModeRef.current = false;
+          setDrawMode(false);
           // Hand the shape to the panel too — the admin community-investment
           // analysis runs point-in-polygon client-side against this geometry.
           setPolygonGeometry(geom);
           const polygonJson = JSON.stringify(geom);
           fetch(`/api/vacant?polygon=${encodeURIComponent(polygonJson)}`)
-            .then((res) => res.json())
-            .then((data: GeoJSON.FeatureCollection) => {
-              setPolygonResults(data);
+            .then((res) => {
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
+              return res.json();
+            })
+            .then((data: unknown) => {
+              const parsed = parseDrawnAreaVacancyResponse(data);
+              if (!parsed) throw new Error("Malformed vacancy response");
+              setPolygonResults(parsed);
+              setPolygonVacancyCoverage(parsed.meta);
+              setPolygonVacancyLoadFailed(false);
               setPolygonLoading(false);
+              drawModeRef.current = false;
               setDrawMode(false);
             })
             .catch(() => {
+              // Permit analysis is an independent source. Keep the area panel
+              // available even when the vacancy lookup fails.
+              setPolygonResults(EMPTY_FC);
+              setPolygonVacancyCoverage(null);
+              setPolygonVacancyLoadFailed(true);
               setPolygonLoading(false);
+              drawModeRef.current = false;
               setDrawMode(false);
             });
         }
@@ -2110,6 +2456,8 @@ export default function MapView() {
 
       map.on("draw.delete", () => {
         setPolygonResults(null);
+        setPolygonVacancyCoverage(null);
+        setPolygonVacancyLoadFailed(false);
         setPolygonGeometry(null);
         setPolygonPanelOpen(false);
       });
@@ -2135,7 +2483,7 @@ export default function MapView() {
       map.remove();
       mapRef.current = null;
     };
-  }, [openHistoricalRecoveryRecipients]);
+  }, [openDossier, openHistoricalRecoveryRecipients]);
 
   /* ── Toggle zone visibility ────────────── */
   const toggleZone = useCallback(
@@ -2268,35 +2616,14 @@ export default function MapView() {
     const map = mapRef.current;
 
     const inspectHandler = async (e: mapboxgl.MapMouseEvent) => {
-      setZoningInfo("Loading...");
-      try {
-        const data = await cachedFetch<{ zoneClass?: string }>(
-          `/api/zoning?lat=${e.lngLat.lat}&lon=${e.lngLat.lng}`
-        );
-        if (data.zoneClass) {
-          const desc = describeZoneClass(data.zoneClass);
-          setZoningInfo(`${data.zoneClass} — ${desc}`);
-          new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
-            .setLngLat(e.lngLat)
-            .setHTML(
-              `<div style="font-family:Inter,sans-serif">
-                <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#059669;margin-bottom:4px;font-weight:500">Zoning Classification</div>
-                <div style="font-size:18px;font-weight:700;color:#0C1B33;letter-spacing:-0.01em">${data.zoneClass}</div>
-                <div style="font-size:12px;color:#5A6478;margin-top:4px;line-height:1.4">${desc}</div>
-              </div>`
-            )
-            .addTo(map);
-        }
-      } catch {
-        setZoningInfo(null);
-      }
+      await inspectPublishedZoning(map, e.lngLat);
     };
 
     map.on("click", inspectHandler);
     return () => {
       map.off("click", inspectHandler);
     };
-  }, [loaded, inspectMode]);
+  }, [inspectMode, inspectPublishedZoning, loaded]);
 
   /* ── Zoning lookup on right-click ──────── */
   useEffect(() => {
@@ -2304,37 +2631,14 @@ export default function MapView() {
     const map = mapRef.current;
 
     const handler = async (e: mapboxgl.MapMouseEvent) => {
-      setZoningInfo("Loading...");
-      try {
-        const data = await cachedFetch<{ zoneClass?: string }>(
-          `/api/zoning?lat=${e.lngLat.lat}&lon=${e.lngLat.lng}`
-        );
-        if (data.zoneClass) {
-          const desc = describeZoneClass(data.zoneClass);
-          setZoningInfo(`${data.zoneClass} — ${desc}`);
-          new mapboxgl.Popup({ maxWidth: "300px", className: "bureau-popup" })
-            .setLngLat(e.lngLat)
-            .setHTML(
-              `<div style="font-family:Inter,sans-serif">
-                <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:#059669;margin-bottom:4px;font-weight:500">Zoning Classification</div>
-                <div style="font-size:18px;font-weight:700;color:#0C1B33;letter-spacing:-0.01em">${data.zoneClass}</div>
-                <div style="font-size:12px;color:#5A6478;margin-top:4px;line-height:1.4">${desc}</div>
-              </div>`
-            )
-            .addTo(map);
-        } else {
-          setZoningInfo(null);
-        }
-      } catch {
-        setZoningInfo(null);
-      }
+      await inspectPublishedZoning(map, e.lngLat);
     };
 
     map.on("contextmenu", handler);
     return () => {
       map.off("contextmenu", handler);
     };
-  }, [loaded]);
+  }, [inspectPublishedZoning, loaded]);
 
   /* ── Search result handler ─────────────── */
   const handleSearchResult = useCallback(
@@ -2354,28 +2658,29 @@ export default function MapView() {
         duration: 1500,
       });
 
-      // Drop a marker
+      // Drop a marker and open the same dossier used for every public map
+      // selection at the searched location.
       const marker = new mapboxgl.Marker({ color: "#2563EB" })
         .setLngLat([result.lon, result.lat])
-        .setPopup(
-          new mapboxgl.Popup({ maxWidth: "260px", className: "bureau-popup" }).setHTML(
-            `<div style="font-family:Inter,sans-serif">
-              <div style="font-size:11px;letter-spacing:0.1em;text-transform:uppercase;color:#2563EB;margin-bottom:4px">Search Result</div>
-              <div style="font-size:13px;font-weight:600;color:#0C1B33">${result.label.split(" — ")[0]}</div>
-            </div>`
-          )
-        )
         .addTo(map);
 
-      marker.togglePopup();
       searchMarkerRef.current = marker;
 
       // Update Area Snapshot for the search location
-      setSnapshotOpen(true);
+      const title = result.label.split(" — ")[0];
+      openDossier({
+        kind: "address",
+        title,
+        subtitle: "Search result",
+        lat: result.lat,
+        lon: result.lon,
+      });
+      setZoningInfo(null);
+      if (!window.matchMedia("(max-width: 768px)").matches) setSnapshotOpen(true);
       lastClickRef.current(result.lat, result.lon);
-      loadCensusRef.current(result.lat, result.lon, result.label.split(" — ")[0]);
+      loadCensusRef.current(result.lat, result.lon, title);
     },
-    []
+    [openDossier]
   );
 
   /* ── Deep link: /map?lat=&lon=[&label=] ── */
@@ -2623,7 +2928,8 @@ export default function MapView() {
           geometry,
           geometryType: "esriGeometryEnvelope",
           spatialRel: "esriSpatialRelIntersects",
-          outFields: "PIN14,BLDGClass,TotalValue,Address",
+          outFields:
+            "PIN14,BCLASS,CURRENTVALUE_TOTAL,street_address,LANDSF,BLDGSQFT,TAXYR",
           returnGeometry: "true",
           outSR: "4326",
           f: "geojson",
@@ -2727,6 +3033,85 @@ export default function MapView() {
     };
   }, [vacantVisible, loaded, vacantLoaded, ownerFilter]);
 
+  /* ── Dynamic building-permit loading ──── */
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !loaded) return;
+
+    const selectedTypes = PERMIT_MAP_TYPES
+      .filter((permitType) => permitTypeVisible[permitType.key] !== false)
+      .map((permitType) => permitType.key);
+    const anyVisible = permitsVisible && selectedTypes.length > 0;
+    const visibility = anyVisible ? "visible" : "none";
+
+    for (const layerId of ["permit-clusters", "permit-cluster-count", "permit-unclustered"]) {
+      if (map.getLayer(layerId)) map.setLayoutProperty(layerId, "visibility", visibility);
+    }
+
+    if (!anyVisible) {
+      permitsAbortRef.current?.abort();
+      const source = map.getSource("building-permits") as mapboxgl.GeoJSONSource | undefined;
+      source?.setData(EMPTY_FC);
+      return;
+    }
+
+    const fetchPermits = () => {
+      if (permitsTimerRef.current) clearTimeout(permitsTimerRef.current);
+      permitsTimerRef.current = setTimeout(() => {
+        const currentMap = mapRef.current;
+        if (!currentMap) return;
+        const source = currentMap.getSource("building-permits") as
+          | mapboxgl.GeoJSONSource
+          | undefined;
+        if (!source) return;
+
+        // A move or subtype change supersedes the previous viewport request,
+        // including when this move crosses below the minimum useful zoom.
+        permitsAbortRef.current?.abort();
+        if (currentMap.getZoom() < 12) {
+          source.setData(EMPTY_FC);
+          return;
+        }
+
+        const controller = new AbortController();
+        permitsAbortRef.current = controller;
+        const bounds = currentMap.getBounds();
+        if (!bounds) return;
+
+        const params = new URLSearchParams({
+          bounds: `${bounds.getWest()},${bounds.getSouth()},${bounds.getEast()},${bounds.getNorth()}`,
+          types: selectedTypes.join(","),
+          limit: "3000",
+        });
+
+        fetch(`/api/permits?${params.toString()}`, { signal: controller.signal })
+          .then((response) => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+          })
+          .then((data: GeoJSON.FeatureCollection) => {
+            if (data?.type === "FeatureCollection" && Array.isArray(data.features)) {
+              source.setData(data);
+            }
+          })
+          .catch((error: Error) => {
+            if (error.name !== "AbortError") {
+              console.warn("[Permits] fetch error:", error);
+              source.setData(EMPTY_FC);
+            }
+          });
+      }, 300);
+    };
+
+    fetchPermits();
+    map.on("moveend", fetchPermits);
+    return () => {
+      map.off("moveend", fetchPermits);
+      if (permitsTimerRef.current) clearTimeout(permitsTimerRef.current);
+      permitsAbortRef.current?.abort();
+    };
+  }, [loaded, permitsVisible, permitTypeVisible]);
+
   /* ── Admin ownership-cluster layer: toggle + one-time fetch ──
      Unlike vacant properties (a citywide live query re-fetched on every
      moveend), the ownership-cluster dataset is a small nine-ZIP admin-only
@@ -2829,6 +3214,7 @@ export default function MapView() {
         stateRecoveryByZipRef.current = [];
         setCommunityInvestmentLoaded(false);
         setInvestmentPresentFunderTypes([]);
+        setInvestmentPresentGovernmentFundingPurposes([]);
         setInvestmentPresentCapitalClasses([]);
         setInvestmentFunderHqCount(0);
         setInvestmentCitywide(null);
@@ -2885,6 +3271,9 @@ export default function MapView() {
           setInvestmentPresentFunderTypes(
             result.presentFunderTypes.filter((type) => type !== "private_development")
           );
+          setInvestmentPresentGovernmentFundingPurposes(
+            result.presentGovernmentFundingPurposes,
+          );
           setInvestmentPresentCapitalClasses(result.presentCapitalClasses);
           setInvestmentFunderHqCount(result.funderHqs.length);
           setInvestmentCitywide(result.citywide);
@@ -2920,10 +3309,16 @@ export default function MapView() {
     const activeFunderTypes = new Set<FunderType>(
       FUNDER_TYPE_ORDER.filter((k) => k !== "private_development" && investmentFunderTypes[k])
     );
+    const activeGovernmentFundingPurposes = new Set<GovernmentFundingPurpose>(
+      MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER.filter(
+        (purpose) => investmentGovernmentFundingPurposes[purpose],
+      ),
+    );
     const filtered = excludeMegaprojectFeatures(
       filterInvestmentPointFeatures(investmentFeaturesRef.current, {
         yearRangeId: investmentYearRange,
         activeFunderTypes,
+        activeGovernmentFundingPurposes,
       }).filter(
         (feature) => publicInvestmentOverlayIdForSource(feature.properties.source) === null
       )
@@ -2936,6 +3331,7 @@ export default function MapView() {
       summarizeCitywideEntries(investmentCitywideEntriesRef.current, {
         yearRangeId: investmentYearRange,
         activeFunderTypes,
+        activeGovernmentFundingPurposes,
       })
     );
   }, [
@@ -2943,6 +3339,7 @@ export default function MapView() {
     communityInvestmentLoaded,
     investmentYearRange,
     investmentFunderTypes,
+    investmentGovernmentFundingPurposes,
     loaded,
   ]);
 
@@ -3343,10 +3740,16 @@ export default function MapView() {
     const activeFunderTypes = new Set<FunderType>(
       FUNDER_TYPE_ORDER.filter((k) => k !== "private_development" && investmentFunderTypes[k])
     );
+    const activeGovernmentFundingPurposes = new Set<GovernmentFundingPurpose>(
+      MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER.filter(
+        (purpose) => investmentGovernmentFundingPurposes[purpose],
+      ),
+    );
     const filtered = excludeMegaprojectFeatures(
       filterInvestmentPointFeatures(investmentFeaturesRef.current, {
         yearRangeId: investmentYearRange,
         activeFunderTypes,
+        activeGovernmentFundingPurposes,
       }).filter(
         (feature) => publicInvestmentOverlayIdForSource(feature.properties.source) === null
       )
@@ -3444,10 +3847,45 @@ export default function MapView() {
     investmentMegaprojectsVisible,
     investmentYearRange,
     investmentFunderTypes,
+    investmentGovernmentFundingPurposes,
     investmentDensityMetric,
     getInvestmentDeckTooltip,
     publicInvestmentOverlays,
   ]);
+
+  const dossierCard = dossierSelection ? (
+    <MapDossierCard
+      areaStats={areaStats}
+      snapshotLabel={snapshotLabel}
+      snapshotLat={lastClickLat}
+      snapshotLon={lastClickLon}
+      snapshotPrograms={snapshotPrograms}
+      snapshotTifFinance={snapshotTifFinance}
+      snapshotContextSummary={snapshotContextSummary}
+      tifFinanceLoading={tifFinanceLoading}
+      zoningInfo={zoningInfo}
+      isGeneratingSnapshot={isGeneratingSnapshot}
+      openedAt={snapshotOpenedAtRef.current}
+      selection={dossierSelection}
+      onClose={closeDossier}
+      onGenerateSnapshot={handleGenerateSnapshot}
+      onDrawArea={() => {
+        const draw = drawRef.current;
+        if (!draw) return;
+        closeDossier();
+        draw.deleteAll();
+        setPolygonResults(null);
+        setPolygonVacancyCoverage(null);
+        setPolygonVacancyLoadFailed(false);
+        setPolygonGeometry(null);
+        setPolygonPanelOpen(false);
+        setSnapshotOpen(false);
+        draw.changeMode("draw_polygon");
+        drawModeRef.current = true;
+        setDrawMode(true);
+      }}
+    />
+  ) : null;
 
   return (
     <div className="relative w-full h-[calc(100dvh-56px)] md:h-[calc(100vh-220px)] min-h-[520px]">
@@ -3537,6 +3975,8 @@ export default function MapView() {
           zoningVisible={zoningVisible}
           vacantVisible={vacantVisible}
           parcelsVisible={parcelsVisible}
+          permitsVisible={permitsVisible}
+          permitTypeVisible={permitTypeVisible}
           ownerFilter={ownerFilter}
           expandedZone={expandedZone}
           zoningRefOpen={zoningRefOpen}
@@ -3552,10 +3992,12 @@ export default function MapView() {
           communityInvestmentLoading={communityInvestmentLoading}
           communityInvestmentError={communityInvestmentError}
           investmentPresentFunderTypes={investmentPresentFunderTypes}
+          investmentPresentGovernmentFundingPurposes={investmentPresentGovernmentFundingPurposes}
           investmentPresentCapitalClasses={investmentPresentCapitalClasses}
           investmentFunderHqCount={investmentFunderHqCount}
           investmentYearRange={investmentYearRange}
           investmentFunderTypes={investmentFunderTypes}
+          investmentGovernmentFundingPurposes={investmentGovernmentFundingPurposes}
           investmentCitywide={investmentCitywide}
           investmentViewMode={investmentViewMode}
           investmentDensityMetric={investmentDensityMetric}
@@ -3579,6 +4021,7 @@ export default function MapView() {
           onSetInvestmentMegaprojectsVisible={setInvestmentMegaprojectsVisiblePersistent}
           onSetPublicInvestmentOverlay={setPublicInvestmentOverlayPersistent}
           onToggleInvestmentFunderType={toggleInvestmentFunderType}
+          onToggleInvestmentGovernmentFundingPurpose={toggleInvestmentGovernmentFundingPurpose}
           onClose={() => setLegendOpen(false)}
           onToggleZone={toggleZone}
           onTogglePoi={togglePoi}
@@ -3586,6 +4029,8 @@ export default function MapView() {
           onToggleAllZoning={toggleAllZoning}
           onSetVacantVisible={setVacantVisible}
           onSetParcelsVisible={setParcelsVisible}
+          onSetPermitsVisible={setPermitsVisible}
+          onSetPermitTypeVisible={setPermitTypeVisible}
           onSetOwnerFilter={setOwnerFilter}
           onSetExpandedZone={setExpandedZone}
           onSetZoningRefOpen={setZoningRefOpen}
@@ -3616,6 +4061,18 @@ export default function MapView() {
         />
       )}
 
+      {dossierCard ? (
+        <div
+          className={
+            isMobile
+              ? "absolute inset-x-3 top-16 z-30"
+              : "absolute left-1/2 top-1/2 z-30 -translate-x-1/2 -translate-y-1/2"
+          }
+        >
+          {dossierCard}
+        </div>
+      ) : null}
+
       {/* ── RIGHT: Area Snapshot Panel ──────── */}
       {snapshotOpen && loaded && (
         <MapSnapshotPanel
@@ -3637,10 +4094,13 @@ export default function MapView() {
             if (!draw) return;
             draw.deleteAll();
             setPolygonResults(null);
+            setPolygonVacancyCoverage(null);
+            setPolygonVacancyLoadFailed(false);
             setPolygonGeometry(null);
             setPolygonPanelOpen(false);
             setSnapshotOpen(false);
             draw.changeMode("draw_polygon");
+            drawModeRef.current = true;
             setDrawMode(true);
           }}
         />
@@ -3652,14 +4112,19 @@ export default function MapView() {
         <MapPolygonPanel
           results={polygonResults}
           loading={polygonLoading}
+          vacancyCoverage={polygonVacancyCoverage}
+          vacancyLoadFailed={polygonVacancyLoadFailed}
           polygon={polygonGeometry}
           adminSessionActive={adminSessionActive}
           onClose={() => setPolygonPanelOpen(false)}
           onClear={() => {
             drawRef.current?.deleteAll();
             setPolygonResults(null);
+            setPolygonVacancyCoverage(null);
+            setPolygonVacancyLoadFailed(false);
             setPolygonGeometry(null);
             setPolygonPanelOpen(false);
+            drawModeRef.current = false;
             setDrawMode(false);
           }}
         />
@@ -3675,7 +4140,7 @@ export default function MapView() {
         </button>
       )}
 
-      {loaded && isMobile && !legendOpen && !snapshotOpen && !polygonPanelOpen && !countyReliefRecipientsPanel && !drawMode && (
+      {loaded && isMobile && !legendOpen && !snapshotOpen && !dossierSelection && !polygonPanelOpen && !countyReliefRecipientsPanel && !drawMode && (
         <MapMobileSheet
           activePreset={activeMobilePreset}
           snapshotLabel={snapshotLabel}
@@ -3690,7 +4155,7 @@ export default function MapView() {
       {drawMode && loaded && (
         <div className="absolute top-28 md:top-12 left-1/2 -translate-x-1/2 z-20 bg-[#2563EB] text-white px-4 py-2 rounded-b shadow-md text-center">
           <div className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase">
-            Click to place points — double-click to finish
+            Click to place points — click the first point to finish
           </div>
           <div className="text-[9px] opacity-70 mt-0.5">
             Draw a shape around the area you want to analyze
@@ -3707,13 +4172,17 @@ export default function MapView() {
             if (!draw || !map) return;
             if (drawMode) {
               draw.changeMode("simple_select");
+              drawModeRef.current = false;
               setDrawMode(false);
             } else {
               draw.deleteAll();
               setPolygonResults(null);
+              setPolygonVacancyCoverage(null);
+              setPolygonVacancyLoadFailed(false);
               setPolygonGeometry(null);
               setPolygonPanelOpen(false);
               draw.changeMode("draw_polygon");
+              drawModeRef.current = true;
               setDrawMode(true);
               setSnapshotOpen(false);
             }

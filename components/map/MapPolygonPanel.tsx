@@ -32,6 +32,20 @@ import {
   type DrawnAreaInput,
   type PolygonInvestmentSummary,
 } from "@/lib/polygon-investment";
+import {
+  fetchPermitArea,
+  formatPermitAreaDate,
+  formatPermitAreaCoverageLabel,
+  PERMIT_AREA_ACTIVITY_NOTE,
+  PERMIT_AREA_COVERAGE_NOTE,
+  PERMIT_AREA_HEADING,
+  type PermitAreaResult,
+} from "@/lib/permit-area";
+import {
+  VACANCY_LOOKUP_UNAVAILABLE_NOTE,
+  vacancyCoverageDisclosure,
+  type VacancyCoverageMetadata,
+} from "@/lib/drawn-area-vacancy";
 
 /** Vacancy follow-up resources */
 const RESOURCES = [
@@ -93,6 +107,10 @@ export function __resetPolygonInvestmentCache(): void {
 interface MapPolygonPanelProps {
   results: GeoJSON.FeatureCollection;
   loading: boolean;
+  /** Coverage contract returned by /api/vacant for this exact shape. */
+  vacancyCoverage?: VacancyCoverageMetadata | null;
+  /** HTTP or malformed-response failure; never interpret the empty collection as zero. */
+  vacancyLoadFailed?: boolean;
   onClose: () => void;
   onClear: () => void;
   /**
@@ -115,22 +133,107 @@ interface MapPolygonPanelProps {
   investmentLayer?: CommunityInvestmentLayerResult | null;
   /** Test seam for the gated fetch, mirroring fetchCommunityInvestmentLayer's. */
   investmentFetchImpl?: typeof fetch;
+  /** Pre-loaded permit analysis for tests or callers that already queried it. */
+  permitArea?: PermitAreaResult | null;
+  /** Test seam for the public polygon permit lookup. */
+  permitFetchImpl?: typeof fetch;
+}
+
+function permitPolygonFromArea(area: DrawnAreaInput): GeoJSON.Polygon | null {
+  if (!area) return null;
+  if (area.type === "Polygon") return area;
+  if (area.type === "Feature" && area.geometry?.type === "Polygon") {
+    return area.geometry;
+  }
+  return null;
 }
 
 export default function MapPolygonPanel({
   results,
   loading,
+  vacancyCoverage = null,
+  vacancyLoadFailed = false,
   onClose,
   onClear,
   polygon = null,
   adminSessionActive = false,
   investmentLayer = null,
   investmentFetchImpl,
+  permitArea = null,
+  permitFetchImpl,
 }: MapPolygonPanelProps) {
   const { status } = useSession();
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [emailModalOpen, setEmailModalOpen] = useState(false);
   const features = results.features;
+  const vacancyCoverageNote = vacancyLoadFailed
+    ? VACANCY_LOOKUP_UNAVAILABLE_NOTE
+    : vacancyCoverageDisclosure(vacancyCoverage);
+  const vacancyCoverageIncomplete =
+    vacancyLoadFailed ||
+    vacancyCoverage?.coverageStatus === "partial" ||
+    vacancyCoverage?.coverageStatus === "truncated";
+
+  /* Public, source-backed permit analysis for this exact drawn polygon. */
+  const permitPolygon = useMemo(() => permitPolygonFromArea(polygon), [polygon]);
+  const permitRequestKey = useMemo(
+    () => (permitPolygon ? JSON.stringify(permitPolygon) : null),
+    [permitPolygon],
+  );
+  const [permitLookup, setPermitLookup] = useState<{
+    key: string;
+    status: "loading" | "ready" | "failed";
+    result: PermitAreaResult | null;
+  } | null>(null);
+  const [permitRetryNonce, setPermitRetryNonce] = useState(0);
+  const currentPermitLookup =
+    permitLookup?.key === permitRequestKey ? permitLookup : null;
+  const fetchedPermitArea =
+    currentPermitLookup?.status === "ready" ? currentPermitLookup.result : null;
+  const permitLoadFailed = currentPermitLookup?.status === "failed";
+  const permitAnalysis = permitArea ?? fetchedPermitArea;
+
+  useEffect(() => {
+    if (!permitPolygon || !permitRequestKey || permitArea) return;
+    const controller = new AbortController();
+
+    fetchPermitArea(permitPolygon, {
+      fetchImpl: permitFetchImpl,
+      signal: controller.signal,
+    })
+      .then((result) => {
+        if (!controller.signal.aborted) {
+          setPermitLookup({ key: permitRequestKey, status: "ready", result });
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setPermitLookup({ key: permitRequestKey, status: "failed", result: null });
+        }
+      });
+
+    return () => {
+      controller.abort();
+    };
+  }, [permitArea, permitFetchImpl, permitPolygon, permitRequestKey, permitRetryNonce]);
+
+  const permitPending =
+    !!permitPolygon &&
+    !permitAnalysis &&
+    currentPermitLookup?.status !== "failed";
+  const permitExportAvailable = (permitAnalysis?.totalFilings ?? 0) > 0;
+  const recentPermitYears = useMemo(
+    () => (permitAnalysis?.yearBreakdown ?? []).slice(0, 6).reverse(),
+    [permitAnalysis],
+  );
+  const maxRecentPermitYearCount = Math.max(
+    1,
+    ...recentPermitYears.map((row) => row.count),
+  );
+  const maxPermitTypeCount = Math.max(
+    1,
+    ...(permitAnalysis?.typeBreakdown ?? []).map((row) => row.count),
+  );
 
   /* ── Ellen's label fix: every drawn area carries a name ──
      Seeded with a dated default so an export is never anonymous, and editable
@@ -262,7 +365,9 @@ export default function MapPolygonPanel({
     if (features.length === 0) return "";
     const parts: string[] = [];
     parts.push(
-      `This area contains ${features.length} vacant ${features.length === 1 ? "property" : "properties"}`
+      vacancyCoverageIncomplete
+        ? `The vacancy lookup returned ${features.length} tracked vacant ${features.length === 1 ? "property" : "properties"}`
+        : `This area contains ${features.length} vacant ${features.length === 1 ? "property" : "properties"}`
     );
     if (topCommunityArea) {
       parts[0] += ` in ${topCommunityArea}`;
@@ -291,20 +396,31 @@ export default function MapPolygonPanel({
     }
 
     return parts.join(" ");
-  }, [features, topCommunityArea, vacantLandCount, vacantBuildingCount, zoneCounts, ownerCounts]);
+  }, [
+    features,
+    topCommunityArea,
+    vacantLandCount,
+    vacantBuildingCount,
+    vacancyCoverageIncomplete,
+    zoneCounts,
+    ownerCounts,
+  ]);
 
   const areaReport = useMemo<GeneratedReport>(() => {
-    const areaName = topCommunityArea || "Drawn Area";
+    const reportAreaName = topCommunityArea || "Drawn Area";
+    const permitCoverageLabel = permitAnalysis
+      ? formatPermitAreaCoverageLabel(permitAnalysis)
+      : null;
     const zoneItems = zoneCounts.map(({ key, count }) => ({
       label: ZONE_LABELS[key] || key,
       value: `${count} propert${count === 1 ? "y" : "ies"}`,
-      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of properties in the drawn area fall within this zone.`,
+      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of ${vacancyCoverageIncomplete ? "returned vacancy records" : "properties in the drawn area"} fall within this zone.`,
     }));
 
     const ownerItems = ownerCounts.map(({ key, count }) => ({
       label: OWNER_TYPE_LABELS[key] || key,
       value: `${count} propert${count === 1 ? "y" : "ies"}`,
-      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of the drawn area vacancy set.`,
+      detail: `${features.length > 0 ? Math.round((count / features.length) * 100) : 0}% of the ${vacancyCoverageIncomplete ? "returned" : "drawn area"} vacancy set.`,
     }));
 
     const propertyItems = features.slice(0, 20).map((feature) => {
@@ -317,30 +433,82 @@ export default function MapPolygonPanel({
       };
     });
 
+    const permitTypeItems = (permitAnalysis?.typeBreakdown ?? []).map((row) => ({
+      label: row.label,
+      value: `${row.count} filing${row.count === 1 ? "" : "s"}`,
+      detail: "Exact City permit category count among geocoded filings inside the drawn area.",
+    }));
+
+    const summaryParts = [
+      vacancyLoadFailed
+        ? VACANCY_LOOKUP_UNAVAILABLE_NOTE
+        : narrative ||
+          vacancyCoverageNote ||
+          `No tracked vacant properties were returned inside ${reportAreaName}.`,
+    ];
+    if (permitAnalysis) {
+      summaryParts.push(
+        `${permitAnalysis.totalFilings} geocoded permit filing${permitAnalysis.totalFilings === 1 ? "" : "s"} fall inside the area. ${permitCoverageLabel}.`,
+      );
+    }
+
     return {
-      title: `Vacancy Area Report — ${areaName}`,
-      subtitle: "Drawn-area vacancy overview",
+      title: `Area Analysis Report — ${reportAreaName}`,
+      subtitle: "Drawn-area vacancy and permit context",
       reportType: "best-location",
       generatedAt: new Date().toISOString(),
-      summary:
-        narrative ||
-        `This drawn area contains ${features.length} vacant ${features.length === 1 ? "property" : "properties"}.`,
+      summary: summaryParts.join(" "),
       sections: [
         {
           title: "Area Snapshot",
-          description: "Summary of vacant properties inside the drawn area.",
+          description: "Source-backed vacancy and permit context inside the drawn area.",
           items: [
-            { label: "Total Properties", value: String(features.length) },
-            { label: "Vacant Land", value: String(vacantLandCount) },
-            { label: "Vacant Buildings", value: String(vacantBuildingCount) },
+            ...(vacancyLoadFailed
+              ? [
+                  {
+                    label: "Vacancy Lookup",
+                    value: "Unavailable",
+                    detail: VACANCY_LOOKUP_UNAVAILABLE_NOTE,
+                  },
+                ]
+              : [
+                  {
+                    label: vacancyCoverageIncomplete
+                      ? "Vacancy Records Returned"
+                      : "Total Properties",
+                    value: String(features.length),
+                    detail: vacancyCoverageNote ?? undefined,
+                  },
+                  {
+                    label: vacancyCoverageIncomplete ? "Returned Vacant Land" : "Vacant Land",
+                    value: String(vacantLandCount),
+                  },
+                  {
+                    label: vacancyCoverageIncomplete
+                      ? "Returned Vacant Buildings"
+                      : "Vacant Buildings",
+                    value: String(vacantBuildingCount),
+                  },
+                ]),
             { label: "Community Area", value: topCommunityArea || "Drawn area" },
+            ...(permitAnalysis
+              ? [
+                  {
+                    label: "Geocoded Permit Filings",
+                    value: String(permitAnalysis.totalFilings),
+                    detail: PERMIT_AREA_ACTIVITY_NOTE,
+                  },
+                ]
+              : []),
           ],
         },
         ...(zoneItems.length > 0
           ? [
               {
                 title: "Incentive Zones in Area",
-                description: "Zone coverage among properties inside the drawn area.",
+                description: vacancyCoverageIncomplete
+                  ? "Zone coverage among returned vacancy records inside the drawn area."
+                  : "Zone coverage among properties inside the drawn area.",
                 items: zoneItems,
               },
             ]
@@ -349,7 +517,9 @@ export default function MapPolygonPanel({
           ? [
               {
                 title: "Ownership Breakdown",
-                description: "Ownership classification among vacancy records.",
+                description: vacancyCoverageIncomplete
+                  ? "Ownership classification among returned vacancy records."
+                  : "Ownership classification among vacancy records.",
                 items: ownerItems,
               },
             ]
@@ -361,17 +531,48 @@ export default function MapPolygonPanel({
                 description:
                   propertyItems.length < features.length
                     ? `Showing the first ${propertyItems.length} of ${features.length} properties. Export CSV for the full list.`
-                    : "Properties inside the drawn area.",
+                    : vacancyCoverageIncomplete
+                      ? "Vacancy records returned inside the drawn area."
+                      : "Properties inside the drawn area.",
                 items: propertyItems,
+              },
+            ]
+          : []),
+        ...(permitAnalysis
+          ? [
+              {
+                title: "Permit Filing Context",
+                description: `${PERMIT_AREA_ACTIVITY_NOTE} ${PERMIT_AREA_COVERAGE_NOTE}`,
+                items: [
+                  {
+                    label: "Total Geocoded Filings",
+                    value: String(permitAnalysis.totalFilings),
+                  },
+                  {
+                    label: "Distinct Recorded Addresses",
+                    value: String(permitAnalysis.distinctAddresses),
+                  },
+                  {
+                    label: "Source Coverage",
+                    value: permitCoverageLabel ?? permitAnalysis.dataWindow,
+                  },
+                  {
+                    label: "Latest Filing in Area Data",
+                    value: formatPermitAreaDate(
+                      permitAnalysis.issueDateSpan?.latest ?? null,
+                    ),
+                  },
+                  ...permitTypeItems,
+                ],
               },
             ]
           : []),
       ],
       recommendedActions: [
         {
-          label: "Export and review the full property list",
+          label: "Export and review the area data",
           description:
-            "Use the CSV to prioritize addresses by ownership, vacancy type, and incentive zone overlap.",
+            "Use the CSV to compare vacancy, ownership, incentive-zone, and permit-filing records without blending their meanings.",
           priority: "high",
         },
         {
@@ -380,22 +581,34 @@ export default function MapPolygonPanel({
             "Vacancy records can lag real conditions. Confirm status through site visits, assessor records, or local partners.",
           priority: "medium",
         },
+        ...(permitAnalysis && permitAnalysis.totalFilings > 0
+          ? [
+              {
+                label: "Verify permit activity",
+                description:
+                  "Review current permit status and site conditions before treating a filing as active or completed construction.",
+                priority: "medium" as const,
+              },
+            ]
+          : []),
         {
           label: "Contact an acquisition or corridor partner",
           description:
-            "Use the report to start conversations with CCLBA, DPD, CCSA, or a local business support partner.",
+            "Use the report to start conversations with CCLBA, DPD, CCSA, or a local business support organization.",
           priority: "medium",
         },
       ],
       metadata: {
-        address: areaName,
+        address: reportAreaName,
         projectType: "vacant-acquisition",
       },
       dataSources: [
         {
           id: "chicago-open-data",
           label: "City of Chicago Open Data",
-          description: "Vacant property and public boundary data.",
+          description: vacancyCoverageNote
+            ? `Vacant property and public boundary data. ${vacancyCoverageNote}`
+            : "Vacant property and public boundary data.",
           url: "https://data.cityofchicago.org/",
         },
         {
@@ -404,15 +617,29 @@ export default function MapPolygonPanel({
           description: "Property assessment and ownership context.",
           url: "https://www.cookcountyassessor.com/",
         },
+        ...(permitAnalysis
+          ? [
+              {
+                id: "chicago-building-permits",
+                label: permitAnalysis.source.label,
+                description: `${PERMIT_AREA_ACTIVITY_NOTE} Located records only. ${permitCoverageLabel}.`,
+                url: permitAnalysis.source.url,
+              },
+            ]
+          : []),
       ],
     };
   }, [
     features,
     narrative,
     ownerCounts,
+    permitAnalysis,
     topCommunityArea,
     vacantBuildingCount,
     vacantLandCount,
+    vacancyCoverageIncomplete,
+    vacancyCoverageNote,
+    vacancyLoadFailed,
     zoneCounts,
   ]);
 
@@ -425,6 +652,8 @@ export default function MapPolygonPanel({
     industry: "",
     budgetRange: "",
     projectType: "",
+    projectGoals: [],
+    customGoal: "",
     proposedUse: "",
     fundingCommitted: "",
     remainingGap: "",
@@ -449,14 +678,15 @@ export default function MapPolygonPanel({
   }, [areaReport, areaWizardState, status]);
 
   /* ── Export CSV ──
-     One file, two tables (vacancy, then the admin investment analysis), both
-     stamped with the area name on the header and every row. The investment
-     table is passed through only for an admin with loaded data — for everyone
-     else the export is the pre-existing vacancy table plus its name column. */
+     One file with source-separated vacancy, permit, and gated investment
+     tables. Applicant-reported permit cost is never part of this export. */
   const handleExportCsv = useCallback(() => {
     const csv = buildDrawnAreaCsv({
       areaName,
       vacancyFeatures: features,
+      vacancyCoverage,
+      vacancyLoadFailed,
+      permitArea: permitAnalysis,
       investment:
         investmentSummary && investmentSelection
           ? { summary: investmentSummary, selected: investmentSelection }
@@ -471,7 +701,15 @@ export default function MapPolygonPanel({
     a.download = `area-report-${drawnAreaFilenameSlug(areaName)}-${date}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [areaName, features, investmentSelection, investmentSummary]);
+  }, [
+    areaName,
+    features,
+    investmentSelection,
+    investmentSummary,
+    permitAnalysis,
+    vacancyCoverage,
+    vacancyLoadFailed,
+  ]);
 
   /** Build report link for a property using its coordinates */
   const buildReportLink = (f: GeoJSON.Feature) => {
@@ -567,8 +805,33 @@ export default function MapPolygonPanel({
           {/* ── Empty state ── */}
           {features.length === 0 && (
             <div className="px-5 py-10 text-center bg-white">
-              <div className="font-editorial text-[18px] text-[#0C1B33]/30 mb-2">No properties found</div>
-              <div className="text-[11px] text-[#0C1B33]/40">Try drawing a larger area or a different location.</div>
+              <div className="font-editorial text-[18px] text-[#0C1B33]/45 mb-2">
+                {vacancyLoadFailed
+                  ? "Vacancy records unavailable"
+                  : vacancyCoverageIncomplete
+                    ? "Partial vacancy records"
+                    : "No tracked vacant properties found"}
+              </div>
+              <div className="text-[11px] text-[#0C1B33]/40">
+                {vacancyCoverageNote ??
+                  "Permit or investment records may still appear below for this area."}
+              </div>
+              {vacancyCoverageNote && (
+                <div className="text-[10px] text-[#0C1B33]/35 mt-2">
+                  Permit or investment records may still appear below for this area.
+                </div>
+              )}
+            </div>
+          )}
+
+          {features.length > 0 && vacancyCoverageNote && (
+            <div className="px-5 py-3 bg-[#FFF7ED] border-b border-[#9A3412]/10">
+              <div className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#9A3412]/65 mb-1">
+                Vacancy coverage
+              </div>
+              <p className="text-[10px] text-[#0C1B33]/55 leading-relaxed">
+                {vacancyCoverageNote}
+              </p>
             </div>
           )}
 
@@ -592,9 +855,18 @@ export default function MapPolygonPanel({
               </div>
               <div className="grid grid-cols-3 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
                 {[
-                  { label: "Total", value: features.length },
-                  { label: "Vacant Land", value: vacantLandCount },
-                  { label: "Buildings", value: vacantBuildingCount },
+                  {
+                    label: vacancyCoverageIncomplete ? "Returned" : "Total",
+                    value: features.length,
+                  },
+                  {
+                    label: vacancyCoverageIncomplete ? "Land returned" : "Vacant Land",
+                    value: vacantLandCount,
+                  },
+                  {
+                    label: vacancyCoverageIncomplete ? "Buildings returned" : "Buildings",
+                    value: vacantBuildingCount,
+                  },
                 ].map((stat) => (
                   <div key={stat.label} className="bg-[#FAF9F6] px-3 py-3 text-center">
                     <div className="font-editorial text-[22px] leading-none text-[#0C1B33]">
@@ -624,7 +896,9 @@ export default function MapPolygonPanel({
                   Incentive Zones in Area
                 </div>
                 <div className="text-[9px] text-[#0C1B33]/35 mb-2">
-                  Properties covered by each zone
+                  {vacancyCoverageIncomplete
+                    ? "Returned vacancy records covered by each zone"
+                    : "Properties covered by each zone"}
                 </div>
                 <div className="space-y-1.5">
                   {zoneCounts.map(({ key, count }) => {
@@ -700,6 +974,249 @@ export default function MapPolygonPanel({
                     );
                   })}
                 </div>
+              </div>
+            </>
+          )}
+
+          {/* Public permit-filing analysis for the exact drawn polygon. */}
+          {(permitPending || permitAnalysis || permitLoadFailed) && (
+            <>
+              <div className="mx-5 h-px bg-[#0C1B33]/8" />
+              <div className="px-5 py-4 bg-white">
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#7C3AED]/60">
+                    {PERMIT_AREA_HEADING}
+                  </div>
+                  <span className="font-mono-bureau text-[7px] tracking-[0.18em] uppercase text-[#0C1B33]/30 shrink-0 ml-2">
+                    Public record
+                  </span>
+                </div>
+
+                {permitPending && !permitAnalysis && (
+                  <div className="flex items-center gap-2 py-2">
+                    <Loader2 className="w-3 h-3 animate-spin text-[#7C3AED]/50" />
+                    <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#0C1B33]/35">
+                      Loading permit filings…
+                    </span>
+                  </div>
+                )}
+
+                {permitLoadFailed && !permitAnalysis && (
+                  <div className="border-l-2 border-[#DC2626]/30 pl-3 py-1">
+                    <p className="text-[10px] text-[#0C1B33]/55 leading-relaxed">
+                      Permit filings could not be checked right now. This is a lookup failure,
+                      not evidence that the area has no permits.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!permitRequestKey) return;
+                        setPermitLookup({
+                          key: permitRequestKey,
+                          status: "loading",
+                          result: null,
+                        });
+                        setPermitRetryNonce((value) => value + 1);
+                      }}
+                      className="mt-2 font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#2563EB] hover:text-[#1D4ED8]"
+                    >
+                      Retry permit lookup
+                    </button>
+                  </div>
+                )}
+
+                {permitAnalysis && (
+                  <>
+                    <p className="text-[9px] text-[#0C1B33]/50 leading-snug">
+                      {PERMIT_AREA_ACTIVITY_NOTE}
+                    </p>
+                    <p className="text-[8px] text-[#0C1B33]/35 leading-snug mt-1 mb-3">
+                      {PERMIT_AREA_COVERAGE_NOTE}
+                    </p>
+                    <div className="font-mono-bureau text-[8px] tracking-[0.08em] uppercase text-[#0C1B33]/45 mb-3">
+                      {formatPermitAreaCoverageLabel(permitAnalysis)}
+                    </div>
+
+                    {permitAnalysis.totalFilings === 0 ? (
+                      <p className="text-[11px] text-[#0C1B33]/45 leading-relaxed">
+                        No geocoded permit filings fall inside this shape in the published data
+                        window. Unlocated records cannot be tested against a drawn area.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-3 gap-px bg-[#0C1B33]/8 border border-[#0C1B33]/8">
+                          {[
+                            { label: "Filings", value: permitAnalysis.totalFilings },
+                            { label: "Addresses", value: permitAnalysis.distinctAddresses },
+                            { label: "Types", value: permitAnalysis.typeBreakdown.length },
+                          ].map((stat) => (
+                            <div key={stat.label} className="bg-[#FAF9F6] px-2 py-3 text-center">
+                              <div className="font-editorial text-[20px] leading-none text-[#0C1B33]">
+                                {stat.value.toLocaleString("en-US")}
+                              </div>
+                              <div className="font-mono-bureau text-[7px] tracking-[0.14em] uppercase text-[#0C1B33]/35 mt-2">
+                                {stat.label}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        {permitAnalysis.issueDateSpan && (
+                          <div className="mt-2 flex items-center justify-between gap-3 px-1 text-[9px]">
+                            <span className="text-[#0C1B33]/40">Latest filing in area data</span>
+                            <span className="font-mono-bureau text-[#0C1B33]/65 text-right">
+                              {formatPermitAreaDate(permitAnalysis.issueDateSpan.latest)}
+                            </span>
+                          </div>
+                        )}
+
+                        {permitAnalysis.typeBreakdown.length > 0 && (
+                          <div className="mt-4">
+                            <div className="font-mono-bureau text-[8px] tracking-[0.22em] uppercase text-[#0C1B33]/30 mb-2">
+                              Filing types
+                            </div>
+                            <div className="space-y-2">
+                              {permitAnalysis.typeBreakdown.slice(0, 6).map((row) => (
+                                <div key={row.sourceValue ?? row.label}>
+                                  <div className="flex items-center justify-between gap-2 text-[9px] mb-1">
+                                    <div className="flex items-center gap-1.5 min-w-0">
+                                      <span
+                                        className="w-2 h-2 rounded-full shrink-0"
+                                        style={{ backgroundColor: row.color }}
+                                      />
+                                      <span className="text-[#0C1B33]/65 truncate">{row.label}</span>
+                                    </div>
+                                    <span className="font-mono-bureau text-[#0C1B33]/60 shrink-0">
+                                      {row.count.toLocaleString("en-US")}
+                                    </span>
+                                  </div>
+                                  <div className="h-1 bg-[#0C1B33]/5 overflow-hidden">
+                                    <div
+                                      className="h-full"
+                                      style={{
+                                        width: `${Math.max(2, (row.count / maxPermitTypeCount) * 100)}%`,
+                                        backgroundColor: row.color,
+                                        opacity: 0.65,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                            {permitAnalysis.typeBreakdown.length > 6 && (
+                              <div className="text-[8px] text-[#0C1B33]/30 mt-2">
+                                {permitAnalysis.typeBreakdown.length - 6} additional source
+                                categor{permitAnalysis.typeBreakdown.length - 6 === 1 ? "y" : "ies"}
+                                in the CSV.
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {recentPermitYears.length > 0 && (
+                          <div className="mt-4">
+                            <div className="font-mono-bureau text-[8px] tracking-[0.22em] uppercase text-[#0C1B33]/30 mb-2">
+                              Recent filing years
+                            </div>
+                            <div className="space-y-1.5">
+                              {recentPermitYears.map((row) => (
+                                <div key={row.year} className="grid grid-cols-[34px_1fr_36px] items-center gap-2">
+                                  <span className="font-mono-bureau text-[8px] text-[#0C1B33]/45">
+                                    {row.year}
+                                  </span>
+                                  <div className="h-1.5 bg-[#0C1B33]/5 overflow-hidden">
+                                    <div
+                                      className="h-full bg-[#7C3AED]/55"
+                                      style={{ width: `${(row.count / maxRecentPermitYearCount) * 100}%` }}
+                                    />
+                                  </div>
+                                  <span className="font-mono-bureau text-[8px] text-[#0C1B33]/45 text-right">
+                                    {row.count.toLocaleString("en-US")}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {permitAnalysis.statusBreakdown.length > 0 && (
+                          <details className="mt-4 border-t border-[#0C1B33]/8 pt-3">
+                            <summary className="cursor-pointer font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/45">
+                              Recorded statuses · {permitAnalysis.statusBreakdown.length}
+                            </summary>
+                            <div className="mt-2 space-y-1.5">
+                              {permitAnalysis.statusBreakdown.map((row) => (
+                                <div key={row.status} className="flex items-center justify-between gap-2 text-[9px]">
+                                  <span className="text-[#0C1B33]/55 truncate">{row.status}</span>
+                                  <span className="font-mono-bureau text-[#0C1B33]/45 shrink-0">
+                                    {row.count.toLocaleString("en-US")}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </details>
+                        )}
+
+                        {permitAnalysis.records.length > 0 && (
+                          <details className="mt-3 border-t border-[#0C1B33]/8 pt-3">
+                            <summary className="cursor-pointer font-mono-bureau text-[8px] tracking-[0.18em] uppercase text-[#0C1B33]/45">
+                              Recent filing records · {Math.min(8, permitAnalysis.records.length)} shown
+                            </summary>
+                            <div className="mt-3 space-y-3">
+                              {permitAnalysis.records.slice(0, 8).map((record) => (
+                                <div key={record.permitId} className="border-l-2 border-[#7C3AED]/25 pl-3">
+                                  <div className="flex items-baseline justify-between gap-2">
+                                    <span className="text-[10px] font-medium text-[#0C1B33]/70 truncate">
+                                      {record.address ?? "Address not recorded"}
+                                    </span>
+                                    <span className="font-mono-bureau text-[8px] text-[#0C1B33]/35 shrink-0">
+                                      {formatPermitAreaDate(record.issueDate)}
+                                    </span>
+                                  </div>
+                                  <div className="text-[9px] text-[#0C1B33]/45 mt-0.5">
+                                    {record.permitTypeLabel}
+                                    {record.permitStatus ? ` · ${record.permitStatus}` : ""}
+                                  </div>
+                                  {record.workDescription && (
+                                    <p className="text-[8px] text-[#0C1B33]/35 leading-snug mt-1 line-clamp-2">
+                                      {record.workDescription}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            {permitAnalysis.recordsTruncated && (
+                              <p className="text-[8px] text-[#0C1B33]/30 leading-snug mt-2">
+                                The API returned the {permitAnalysis.recordsReturned} most recent
+                                record{permitAnalysis.recordsReturned === 1 ? "" : "s"} of {permitAnalysis.totalFilings.toLocaleString("en-US")} total
+                                filings. Aggregate counts use the full selected set.
+                              </p>
+                            )}
+                          </details>
+                        )}
+                      </>
+                    )}
+
+                    <div className="mt-4 flex flex-wrap gap-x-3 gap-y-1 text-[8px]">
+                      <a
+                        href={permitAnalysis.source.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#2563EB] hover:underline"
+                      >
+                        Dataset source ↗
+                      </a>
+                      <a
+                        href={permitAnalysis.source.portalUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#2563EB] hover:underline"
+                      >
+                        Verify permit records ↗
+                      </a>
+                    </div>
+                  </>
+                )}
               </div>
             </>
           )}
@@ -907,17 +1424,13 @@ export default function MapPolygonPanel({
             </>
           )}
 
-          {/* ── Actions ──
-               Save Report / Email build a VACANCY report, so they stay gated on
-               there being vacancy records. The CSV export is also offered when
-               the only thing inside the shape is admin investment data —
-               otherwise an admin can see the analysis on screen with no way to
-               take it away. Unchanged for a non-admin: no vacancies, no button. */}
-          {(features.length > 0 || investmentExportAvailable) && (
+          {/* Source-separated report actions. Save/email are available for
+              vacancy or permit findings; gated investment remains CSV-only. */}
+          {(features.length > 0 || permitExportAvailable || investmentExportAvailable) && (
             <>
               <div className="mx-5 h-px bg-[#0C1B33]/8" />
               <div className="px-5 py-4 bg-white">
-                {features.length > 0 && (
+                {(features.length > 0 || permitExportAvailable) && (
                   <div className="grid grid-cols-1 gap-2 mb-2">
                     <button
                       onClick={handleSaveReport}
@@ -939,7 +1452,7 @@ export default function MapPolygonPanel({
                   onClick={handleExportCsv}
                   className="block w-full text-center font-mono-bureau text-[10px] tracking-[0.15em] uppercase bg-[#0C1B33] text-white py-3 px-3 hover:bg-[#0C1B33]/80 transition-colors"
                 >
-                  Export Full Report (CSV)
+                  Export Area Data (CSV)
                 </button>
               </div>
             </>
@@ -988,7 +1501,7 @@ export default function MapPolygonPanel({
           {/* ── Attribution ── */}
           <div className="px-5 py-3 bg-[#F5F5F0] border-t border-[#0C1B33]/6">
             <p className="text-[8px] text-[#0C1B33]/25 leading-snug">
-              Data: City of Chicago Open Data &amp; Cook County Assessor. Vacancy records may not reflect current conditions. Always verify on-site.
+              Data: City of Chicago Open Data &amp; Cook County Assessor. Vacancy records may lag current conditions; permit filings do not prove work started or finished. Always verify source records and site conditions.
             </p>
           </div>
         </>

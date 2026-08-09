@@ -13,6 +13,11 @@ import {
   type LocalBusinessSupportRequest,
 } from "@/lib/local-business-support";
 import { pointInAnyZone } from "@/lib/zones-check";
+import {
+  SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
+  SUPPORT_ORGANIZATIONS_DESCRIPTION,
+  SUPPORT_ORGANIZATIONS_SOURCE_LABEL,
+} from "@/lib/support-organization-copy";
 
 interface CommunityAreaProps {
   community?: string;
@@ -38,6 +43,19 @@ interface CitywideBusinessSupportFile {
 
 const supportFile = supportData as LocalBusinessSupportFile;
 const citywideSupportFile = citywideSupportData as CitywideBusinessSupportFile;
+
+function publicOrganization(
+  organization: LocalBusinessSupportOrganization,
+): LocalBusinessSupportOrganization {
+  const {
+    currentStatus: _currentStatus,
+    validationLevel: _validationLevel,
+    ...publicFields
+  } = organization;
+  void _currentStatus;
+  void _validationLevel;
+  return publicFields;
+}
 
 let cachedAreas: Array<Feature<Polygon | MultiPolygon, CommunityAreaProps>> | null = null;
 function communityAreaFeatures() {
@@ -84,6 +102,11 @@ export async function GET(request: NextRequest) {
   const lonStr = params.get("lon");
   const reportType = params.get("reportType")?.trim().slice(0, 80) || undefined;
   const projectType = params.get("projectType")?.trim().slice(0, 80) || undefined;
+  const projectTypes = (params.get("projectTypes") || "")
+    .split(",")
+    .map((value) => value.trim().slice(0, 80))
+    .filter(Boolean)
+    .slice(0, 3);
   const proposedUse = params.get("proposedUse")?.trim().slice(0, 80) || undefined;
 
   let caNumber: string | null = caParam && /^\d{1,2}$/.test(caParam) ? caParam : null;
@@ -121,7 +144,7 @@ export async function GET(request: NextRequest) {
   // CCSA corridor so the SSA provider can lead the support list.
   const storefrontParam = params.get("storefrontCorridor");
   let storefrontCorridor = storefrontParam === "1" || storefrontParam === "true";
-  if (!storefrontCorridor && projectType === "rehab" && hasPoint) {
+  if (!storefrontCorridor && (projectType === "rehab" || projectTypes.includes("rehab")) && hasPoint) {
     try {
       storefrontCorridor = await pointInAnyZone(lat, lon, ["ssa", "ccsa"]);
     } catch {
@@ -135,6 +158,7 @@ export async function GET(request: NextRequest) {
     region: entry.region,
     reportType,
     projectType,
+    projectTypes,
     proposedUse,
     storefrontCorridor,
   };
@@ -143,7 +167,8 @@ export async function GET(request: NextRequest) {
     citywideSupportFile.organizations,
     supportRequest,
   );
-  const organizations = rankLocalBusinessSupport(supportPool, 6, supportRequest);
+  const organizations = rankLocalBusinessSupport(supportPool, 6, supportRequest)
+    .map(publicOrganization);
   const sourceUrls = Array.from(
     new Set([
       ...(entry.sourceUrls ?? []),
@@ -153,11 +178,20 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json(
     {
-      ...entry,
+      communityAreaNumber: caNumber,
       communityArea: entry.communityArea || resolvedName || "",
+      region: entry.region,
+      coverage: entry.coverage,
       organizations,
       organizationCount: organizations.length,
       storefrontCorridor,
+      selectionDisclosure: {
+        basis: SUPPORT_ORGANIZATIONS_DESCRIPTION,
+        currentProgramsConfirmed: false,
+        currentCapacityConfirmed: false,
+        note: SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
+      },
+      sourceLabel: SUPPORT_ORGANIZATIONS_SOURCE_LABEL,
       sourceUrls,
     },
     {

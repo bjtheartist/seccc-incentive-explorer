@@ -2,10 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import VacancyReportMap from "./VacancyReportMap";
+import SiteMatchmakerResultsTable from "./SiteMatchmakerResultsTable";
 import { useFocusBbox } from "./vacancy-focus";
 import type { ComponentProps } from "react";
 
-type MapProps = Omit<ComponentProps<typeof VacancyReportMap>, "focusBbox">;
+type MapProps = Omit<ComponentProps<typeof VacancyReportMap>, "focusBbox"> & {
+  showSiteMatchmakerResults?: boolean;
+};
 
 /**
  * Client island around the report map: subscribes to the shared focus store
@@ -14,7 +17,10 @@ type MapProps = Omit<ComponentProps<typeof VacancyReportMap>, "focusBbox">;
  * link, defect B) passes straight through in `props` — VacancyReportMap
  * itself resolves it against `clusters` on load.
  */
-export default function VacancyMapIsland(props: MapProps) {
+export default function VacancyMapIsland({
+  showSiteMatchmakerResults = false,
+  ...props
+}: MapProps) {
   const focusBbox = useFocusBbox();
   const wrapRef = useRef<HTMLDivElement>(null);
 
@@ -25,8 +31,20 @@ export default function VacancyMapIsland(props: MapProps) {
   }, [focusBbox]);
 
   return (
-    <div ref={wrapRef}>
-      <VacancyReportMap {...props} focusBbox={focusBbox} />
-    </div>
+    <>
+      <div ref={wrapRef} id={showSiteMatchmakerResults ? "site-matchmaker-map" : undefined}>
+        <VacancyReportMap {...props} focusBbox={focusBbox} />
+      </div>
+      {showSiteMatchmakerResults ? (
+        <div className="mt-8">
+          <SiteMatchmakerResultsTable
+            sitePoints={props.sitePoints}
+            landPoints={props.landPoints}
+            zip={props.zip}
+            neighborhood={props.neighborhood ?? `ZIP ${props.zip}`}
+          />
+        </div>
+      ) : null}
+    </>
   );
 }

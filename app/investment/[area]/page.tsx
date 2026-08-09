@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { CHICAGO_COMMUNITY_AREAS } from "@/lib/community-areas";
 import { loadCommunityInvestment } from "@/lib/community-investment";
 import { loadInvestmentAnalysis, loadMajorDevelopments, loadFlowRows } from "@/lib/investment-analysis";
-import { FunderDonut } from "@/components/investment/FunderDonut";
 import { FunderTypeBars } from "@/components/investment/FunderTypeBars";
 import { YearBars } from "@/components/investment/YearBars";
 import { YearModeToggle } from "@/components/investment/YearModeToggle";
@@ -21,6 +20,10 @@ import { WorkingSetPanel } from "@/components/investment/Shortlist";
 import { ComparePinBar, PinButton } from "@/components/investment/PinControls";
 import { ShowOnMapLink } from "@/components/investment/ShowOnMapLink";
 import { RecordDrawerProvider } from "@/components/investment/RecordDrawer";
+import {
+  GOVERNMENT_FUNDING_PURPOSE_DESCRIPTIONS,
+  GOVERNMENT_FUNDING_PURPOSE_LABELS,
+} from "@/lib/government-funding-purpose";
 import { getInvestmentAdminState, InvestmentLoginForm, InvestmentNotConfigured } from "../gate";
 
 export const dynamic = "force-dynamic";
@@ -170,20 +173,19 @@ export default async function InvestmentAreaPage({
               />
             </div>
 
-            {/* 2 — Donut + sorted bars */}
+            {/* 2 — Ranked bars: one comparison view, exact dollars + share */}
             <Section
               title="Where the money came from"
-              description="Awarded dollars by funder type — the donut for the part-of-whole, the bars for exact dollars and share."
+              description="Awarded dollars by funder type, ranked high to low with exact dollars and share."
             >
-              <FunderDonut byFunderType={analysis.byFunderType} total={analysis.totalAwarded} />
               <FunderTypeBars byFunderType={analysis.byFunderType} />
             </Section>
 
             {/* 3 — Year trend (amount / count toggle) */}
             <Section title="When it arrived" description="Awarded dollars by year, 2020 to the latest on record.">
               <YearModeToggle
-                amount={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} mode="amount" />}
-                count={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} mode="count" />}
+                amount={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} generatedAt={analysis.generatedAt} mode="amount" />}
+                count={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} generatedAt={analysis.generatedAt} mode="count" />}
               />
             </Section>
 
@@ -195,10 +197,43 @@ export default async function InvestmentAreaPage({
               <SourceBars bySource={analysis.bySource} />
             </Section>
 
-            {/* 4b — Flow: searchable table (default) + sankey behind a disclosure */}
+            {/* 4b — Purpose over every sited government record, expressed as
+                counts so unlike capital classes are never blended into dollars. */}
+            <Section
+              title="Government funding by purpose"
+              description="Sited government records in this community across the published source windows. These are record counts, not a combined dollar total."
+            >
+              <div className="grid border-y border-[#0C1B33]/10 sm:grid-cols-3 sm:divide-x sm:divide-[#0C1B33]/10">
+                {analysis.governmentFundingPurposes.map((entry, index) => (
+                  <div
+                    key={entry.purpose}
+                    className={`py-4 ${index < 2 ? "border-b border-[#0C1B33]/10 sm:border-b-0" : ""} ${index === 0 ? "sm:pr-5" : index === 1 ? "sm:px-5" : "sm:pl-5"}`}
+                  >
+                    <span className="font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB]">
+                      {GOVERNMENT_FUNDING_PURPOSE_LABELS[entry.purpose]}
+                    </span>
+                    <p className="mt-2 font-editorial text-[30px] leading-none text-[#0C1B33]">
+                      {entry.count.toLocaleString("en-US")}
+                    </p>
+                    <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/45">
+                      {GOVERNMENT_FUNDING_PURPOSE_DESCRIPTIONS[entry.purpose]}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-3 text-[11px] leading-relaxed text-[#0C1B33]/45">
+                Illinois Arts Council awards publish only city and region, so arts funding stays in the{" "}
+                <Link href="/investment#illinois-arts-awards" className="text-[#2563EB] hover:underline">
+                  city-level awards table
+                </Link>{" "}
+                instead of being assigned to this community.
+              </p>
+            </Section>
+
+            {/* 4c — Flow: searchable table (default) + sankey behind a disclosure */}
             <Section
               title="How the money flowed"
-              description="Awarded dollars from funders, through programs, to recipients on record since 2020. Search the table, or open the funding-paths view for the visual."
+              description="Awarded dollars from funders, through programs, to recipients on record since 2020. The purpose filter applies only to these dollar-valued award flows; other capital classes remain in the summary above."
             >
               <FunderFlowTable rows={flowRows} total={analysis.totalAwarded} />
               <details className="mt-3 border border-[#0C1B33]/10 bg-white">
@@ -211,7 +246,7 @@ export default async function InvestmentAreaPage({
               </details>
             </Section>
 
-            {/* 4c — Major private developments (announced capital — a separate measure) */}
+            {/* 4d — Major private developments (announced capital — a separate measure) */}
             <Section
               title="Major private developments"
               description="Announced private capital sited in this community — a different measure from the awarded grants above, and never combined with them."

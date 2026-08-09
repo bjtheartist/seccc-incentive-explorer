@@ -39,13 +39,26 @@ import { trackEvent } from "@/lib/analytics-events";
 // client bundle (the leak that broke the build before).
 import type { OwnerGeography, OwnerStructure } from "@/lib/owner-taxonomy";
 import {
+  compactParcelSpaceFacts,
+  siteMatchAreaForProperty,
+  vacancySpaceFacts,
+} from "@/lib/parcel-space";
+import {
+  ACTIVITY_BADGE_ATTR,
+  ACTIVITY_SLOT_ATTR,
   CARD_SCROLLER_ATTR,
+  PERMIT_BADGE_ATTR,
+  PERMIT_SLOT_ATTR,
   STAR_BUTTON_ATTR,
   ZONE_BADGE_ATTR,
   ZONE_SLOT_ATTR,
+  activityBadgeText,
   buildSiteCardHtml,
   escapeHtml,
+  permitBadgeText,
+  permitMatchHtml,
   programsAndZonesRows,
+  siteActivityHtml,
   zoneBadgeText,
   type CardData,
 } from "./vacancy-site-card";
@@ -64,6 +77,16 @@ import {
   fetchSiteZones,
   type SiteZoneState,
 } from "@/lib/vacancy-site-zones";
+import {
+  cachedSiteActivity,
+  fetchSiteActivity,
+  type SiteActivityState,
+} from "@/lib/site-activity-client";
+import {
+  cachedPermitMatch,
+  fetchPermitMatch,
+  type PermitMatchState,
+} from "@/lib/permit-match-client";
 import {
   STARRED_RING,
   siteStarKey,
@@ -200,6 +223,11 @@ interface VacancyReportMapProps {
    *  driven by the page's `?area=` query param instead of a click. `null`/
    *  `undefined`/an id with no matching cluster are all ignored gracefully. */
   initialAreaId?: number | null;
+  /** True only for the namespaced Site Matchmaker handoff. The supplied point
+   *  arrays have already been reduced using supported property-type and
+   *  published-size criteria, so the showing line must describe a prefilter
+   *  rather than implying it is the full edition universe. */
+  siteMatchmakerPrefilter?: boolean;
 }
 
 /** Feature properties carried on every dot (both views), keyed identically so
@@ -216,6 +244,16 @@ interface DotProps {
   distressed: boolean;
   pin: string | null;
   squareFeet: number | null;
+  lotAreaSqft: number | null;
+  assessorBuildingSqft: number | null;
+  assessorBuildingYear: number | null;
+  cityGroundFootprintSqft: number | null;
+  cityGroundFootprintVintage: string | null;
+  availableSpaceSqft: number | null;
+  availableSpaceSource: string | null;
+  availableSpaceVerifiedAt: string | null;
+  availableSpaceReconfirmAfter: string | null;
+  sizeMatchKnown: boolean;
   zoningClass: string | null;
   incentiveCount: number;
   ownerConfidence: OwnerConfidence;
@@ -242,6 +280,7 @@ export default function VacancyReportMap({
   asOf,
   neighborhood,
   initialAreaId,
+  siteMatchmakerPrefilter = false,
 }: VacancyReportMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
@@ -327,8 +366,8 @@ export default function VacancyReportMap({
 
   // Latest props for the mount-once init effect (read through a ref so the
   // effect can stay dependency-free without going stale).
-  const dataRef = useRef({ zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood, initialAreaId });
-  dataRef.current = { zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood, initialAreaId };
+  const dataRef = useRef({ zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood, initialAreaId, siteMatchmakerPrefilter });
+  dataRef.current = { zip, boundary, bbox, centroid, sitePoints, siteIndex, landPoints, clusters, corridors, anchors, asOf, neighborhood, initialAreaId, siteMatchmakerPrefilter };
 
   // Current view read through a ref so the mount-once popup handler stays fresh.
   const viewRef = useRef(view);
@@ -374,6 +413,7 @@ export default function VacancyReportMap({
       asOf: asOfLabel,
       neighborhood: nbhd,
       initialAreaId: initialAreaIdVal,
+      siteMatchmakerPrefilter: useSizeMatchStyling,
     } = dataRef.current;
 
     // Kept clusters keyed by id, for the site card's cluster/corridor line, the
@@ -399,6 +439,10 @@ export default function VacancyReportMap({
     const trackedFeatures: GeoJSON.Feature[] = pts.map((p) => {
       const joined = p.markerNumber != null ? markerByNumber.get(p.markerNumber) : undefined;
       const sale = p.saleYear != null;
+      const matchingArea = siteMatchAreaForProperty(
+        p.propertyType,
+        vacancySpaceFacts(p.propertyType, p.space, p.squareFeet),
+      ).sqft;
       const props: DotProps = {
         ownerType: p.ownerType,
         propertyType: p.propertyType,
@@ -412,6 +456,17 @@ export default function VacancyReportMap({
         distressed: sale || p.violation,
         pin: p.pin,
         squareFeet: p.squareFeet,
+        lotAreaSqft:
+          p.space?.lotAreaSqft ?? (p.propertyType === "vacant_land" ? p.squareFeet : null),
+        assessorBuildingSqft: p.space?.assessorBuildingSqft ?? null,
+        assessorBuildingYear: p.space?.assessorBuildingYear ?? null,
+        cityGroundFootprintSqft: p.space?.cityGroundFootprintSqft ?? null,
+        cityGroundFootprintVintage: p.space?.cityGroundFootprintVintage ?? null,
+        availableSpaceSqft: p.space?.availableSpaceSqft ?? null,
+        availableSpaceSource: p.space?.availableSpaceSource ?? null,
+        availableSpaceVerifiedAt: p.space?.availableSpaceVerifiedAt ?? null,
+        availableSpaceReconfirmAfter: p.space?.availableSpaceReconfirmAfter ?? null,
+        sizeMatchKnown: matchingArea !== null,
         zoningClass: p.zoningClass,
         incentiveCount: p.incentiveCount,
         ownerConfidence: p.ownerConfidence,
@@ -428,6 +483,10 @@ export default function VacancyReportMap({
 
     const landFeatures: GeoJSON.Feature[] = (land ?? []).map((p) => {
       const sale = p.saleYear != null;
+      const matchingArea = siteMatchAreaForProperty(
+        "vacant_land",
+        vacancySpaceFacts("vacant_land", p.space, p.squareFeet),
+      ).sqft;
       const props: DotProps = {
         ownerType: p.ownerType,
         propertyType: "vacant_land",
@@ -440,6 +499,16 @@ export default function VacancyReportMap({
         distressed: sale,
         pin: p.pin,
         squareFeet: p.squareFeet,
+        lotAreaSqft: p.space?.lotAreaSqft ?? p.squareFeet,
+        assessorBuildingSqft: p.space?.assessorBuildingSqft ?? null,
+        assessorBuildingYear: p.space?.assessorBuildingYear ?? null,
+        cityGroundFootprintSqft: p.space?.cityGroundFootprintSqft ?? null,
+        cityGroundFootprintVintage: p.space?.cityGroundFootprintVintage ?? null,
+        availableSpaceSqft: p.space?.availableSpaceSqft ?? null,
+        availableSpaceSource: p.space?.availableSpaceSource ?? null,
+        availableSpaceVerifiedAt: p.space?.availableSpaceVerifiedAt ?? null,
+        availableSpaceReconfirmAfter: p.space?.availableSpaceReconfirmAfter ?? null,
+        sizeMatchKnown: matchingArea !== null,
         zoningClass: null,
         incentiveCount: 0,
         ownerConfidence: p.ownerConfidence,
@@ -466,6 +535,11 @@ export default function VacancyReportMap({
       const saleYear = sp?.saleYear ?? null;
       const violation = sp?.violation ?? false;
       const sale = saleYear != null;
+      const propertyType = sp?.propertyType ?? r.propertyType;
+      const matchingArea = siteMatchAreaForProperty(
+        propertyType,
+        vacancySpaceFacts(propertyType, sp?.space, sp?.squareFeet ?? r.squareFeet),
+      ).sqft;
       const props: DotProps = {
         ownerType: r.ownerType,
         propertyType: r.propertyType,
@@ -478,6 +552,18 @@ export default function VacancyReportMap({
         distressed: sale || violation,
         pin: sp?.pin ?? null,
         squareFeet: sp?.squareFeet ?? r.squareFeet,
+        lotAreaSqft:
+          sp?.space?.lotAreaSqft ??
+          (r.propertyType === "vacant_land" ? (sp?.squareFeet ?? r.squareFeet) : null),
+        assessorBuildingSqft: sp?.space?.assessorBuildingSqft ?? null,
+        assessorBuildingYear: sp?.space?.assessorBuildingYear ?? null,
+        cityGroundFootprintSqft: sp?.space?.cityGroundFootprintSqft ?? null,
+        cityGroundFootprintVintage: sp?.space?.cityGroundFootprintVintage ?? null,
+        availableSpaceSqft: sp?.space?.availableSpaceSqft ?? null,
+        availableSpaceSource: sp?.space?.availableSpaceSource ?? null,
+        availableSpaceVerifiedAt: sp?.space?.availableSpaceVerifiedAt ?? null,
+        availableSpaceReconfirmAfter: sp?.space?.availableSpaceReconfirmAfter ?? null,
+        sizeMatchKnown: matchingArea !== null,
         zoningClass: sp?.zoningClass ?? r.zoningClass,
         incentiveCount: sp?.incentiveCount ?? r.incentiveCount,
         ownerConfidence: sp?.ownerConfidence ?? "inferred",
@@ -626,9 +712,26 @@ export default function VacancyReportMap({
             OWNER_TYPE_COLORS.unknown,
           ],
           "circle-radius": 7,
+          "circle-opacity": useSizeMatchStyling
+            ? ["case", ["==", ["get", "sizeMatchKnown"], true], 0.95, 0.48]
+            : 0.95,
           // Distressed dots (tax-sale exposed OR violation-matched) get a red ring.
-          "circle-stroke-width": ["case", ["==", ["get", "distressed"], true], 2, 1.5],
-          "circle-stroke-color": ["case", ["==", ["get", "distressed"], true], DISTRESS_RED, "#ffffff"],
+          "circle-stroke-width": useSizeMatchStyling
+            ? [
+                "case",
+                ["==", ["get", "distressed"], true], 2,
+                ["==", ["get", "sizeMatchKnown"], false], 2.5,
+                1.5,
+              ]
+            : ["case", ["==", ["get", "distressed"], true], 2, 1.5],
+          "circle-stroke-color": useSizeMatchStyling
+            ? [
+                "case",
+                ["==", ["get", "distressed"], true], DISTRESS_RED,
+                ["==", ["get", "sizeMatchKnown"], false], "#D97706",
+                "#ffffff",
+              ]
+            : ["case", ["==", ["get", "distressed"], true], DISTRESS_RED, "#ffffff"],
         },
       });
 
@@ -663,9 +766,19 @@ export default function VacancyReportMap({
         paint: {
           "circle-color": INK,
           "circle-radius": 11,
+          "circle-opacity": useSizeMatchStyling
+            ? ["case", ["==", ["get", "sizeMatchKnown"], true], 1, 0.55]
+            : 1,
           "circle-stroke-width": 2,
           // Distressed featured sites ring red too (else white).
-          "circle-stroke-color": ["case", ["==", ["get", "distressed"], true], DISTRESS_RED, "#ffffff"],
+          "circle-stroke-color": useSizeMatchStyling
+            ? [
+                "case",
+                ["==", ["get", "distressed"], true], DISTRESS_RED,
+                ["==", ["get", "sizeMatchKnown"], false], "#D97706",
+                "#ffffff",
+              ]
+            : ["case", ["==", ["get", "distressed"], true], DISTRESS_RED, "#ffffff"],
         },
       });
       map.addLayer({
@@ -829,6 +942,33 @@ export default function VacancyReportMap({
           propertyType: (p.propertyType as VacancyPropertyType) ?? "vacant_land",
           pin: typeof p.pin === "string" && p.pin ? p.pin : null,
           squareFeet,
+          space: compactParcelSpaceFacts({
+            lotAreaSqft: p.lotAreaSqft == null ? undefined : Number(p.lotAreaSqft),
+            assessorBuildingSqft:
+              p.assessorBuildingSqft == null ? undefined : Number(p.assessorBuildingSqft),
+            assessorBuildingYear:
+              p.assessorBuildingYear == null ? undefined : Number(p.assessorBuildingYear),
+            cityGroundFootprintSqft:
+              p.cityGroundFootprintSqft == null
+                ? undefined
+                : Number(p.cityGroundFootprintSqft),
+            cityGroundFootprintVintage:
+              typeof p.cityGroundFootprintVintage === "string"
+                ? p.cityGroundFootprintVintage
+                : undefined,
+            availableSpaceSqft:
+              p.availableSpaceSqft == null ? undefined : Number(p.availableSpaceSqft),
+            availableSpaceSource:
+              typeof p.availableSpaceSource === "string" ? p.availableSpaceSource : undefined,
+            availableSpaceVerifiedAt:
+              typeof p.availableSpaceVerifiedAt === "string"
+                ? p.availableSpaceVerifiedAt
+                : undefined,
+            availableSpaceReconfirmAfter:
+              typeof p.availableSpaceReconfirmAfter === "string"
+                ? p.availableSpaceReconfirmAfter
+                : undefined,
+          }),
           zoningClass: typeof p.zoningClass === "string" && p.zoningClass ? p.zoningClass : null,
           incentiveCount: Number.isFinite(Number(p.incentiveCount)) ? Number(p.incentiveCount) : 0,
           ownerConfidence: (p.ownerConfidence as OwnerConfidence) ?? "inferred",
@@ -848,6 +988,24 @@ export default function VacancyReportMap({
         const cached = at ? cachedSiteZones(at.lat, at.lon) : null;
         const initialZones: SiteZoneState = cached ?? (at ? { status: "loading" } : { status: "idle" });
 
+        // Public site-activity measurements for this exact point, same pattern.
+        // The request is made HERE — on a parcel the reader actually selected —
+        // and never for the thousands of dots on the layer, so opening the map
+        // costs nothing and each card costs one small cached JSON response.
+        const cachedActivity = at ? cachedSiteActivity(at.lat, at.lon) : null;
+        const initialActivity: SiteActivityState =
+          cachedActivity ?? (at ? { status: "loading" } : { status: "idle" });
+
+        // Matched building-permit records for THIS parcel, keyed by its
+        // 14-digit PIN. A card without a PIN (311 building rows carry none)
+        // gets no permit section at all rather than an unanswerable one — the
+        // same rule the "No county PIN on record yet" action line already uses.
+        const permitPin = (data.pin ?? "").replace(/\D/g, "");
+        const canCheckPermits = permitPin.length === 14;
+        const cachedPermits = canCheckPermits ? cachedPermitMatch(permitPin) : null;
+        const initialPermits: PermitMatchState =
+          cachedPermits ?? (canCheckPermits ? { status: "loading" } : { status: "idle" });
+
         // Star affordance ONLY for a confirmed admin session.
         const starKey = siteStarKey({ pin: data.pin, address: data.address });
         const showStar = adminRef.current && starKey !== "";
@@ -856,6 +1014,8 @@ export default function VacancyReportMap({
         const html = buildSiteCardHtml(data, zipForLinks, asOfLabel ?? null, {
           maxHeightPx: siteCardMaxHeight(frame.height),
           zones: initialZones,
+          activity: initialActivity,
+          permits: initialPermits,
           star: showStar ? { key: starKey, starred: starredRef.current.has(starKey) } : null,
         });
 
@@ -916,6 +1076,34 @@ export default function VacancyReportMap({
             }
             const badge = el?.querySelector<HTMLElement>(`[${ZONE_BADGE_ATTR}]`);
             if (badge) badge.textContent = zoneBadgeText(state);
+            refitCard(popup);
+          });
+        }
+
+        // Same for the public site-activity measurements. A failed lookup
+        // patches in "could not check" — never an empty block, which would
+        // read as "nothing is happening around this parcel".
+        if (at && initialActivity.status === "loading") {
+          void fetchSiteActivity(at.lat, at.lon).then((state) => {
+            if (!popup.isOpen()) return;
+            const slot = el?.querySelector<HTMLElement>(`[${ACTIVITY_SLOT_ATTR}]`);
+            if (slot) slot.innerHTML = siteActivityHtml(state);
+            const badge = el?.querySelector<HTMLElement>(`[${ACTIVITY_BADGE_ATTR}]`);
+            if (badge) badge.textContent = activityBadgeText(state);
+            refitCard(popup);
+          });
+        }
+
+        // And the matched permit record. A failed lookup patches in "could not
+        // check"; only a completed lookup that genuinely returned nothing can
+        // print the absence sentence.
+        if (canCheckPermits && initialPermits.status === "loading") {
+          void fetchPermitMatch(permitPin).then((state) => {
+            if (!popup.isOpen()) return;
+            const slot = el?.querySelector<HTMLElement>(`[${PERMIT_SLOT_ATTR}]`);
+            if (slot) slot.innerHTML = permitMatchHtml(state);
+            const badge = el?.querySelector<HTMLElement>(`[${PERMIT_BADGE_ATTR}]`);
+            if (badge) badge.textContent = permitBadgeText(state);
             refitCard(popup);
           });
         }
@@ -1300,11 +1488,23 @@ export default function VacancyReportMap({
 
             <div className="mt-2.5 border-t border-[#0C1B33]/10 pt-2">
               <p className="font-mono-bureau text-[9px] uppercase tracking-[0.08em] text-[#0C1B33]/40">
-                {truncatedOrPartial
+                {siteMatchmakerPrefilter
+                  ? `Showing ${shown.toLocaleString("en-US")} prefiltered ${noun}`
+                  : truncatedOrPartial
                   ? `Showing ${shown.toLocaleString("en-US")} of ${universeTotal.toLocaleString("en-US")}`
                   : `Showing all ${shown.toLocaleString("en-US")} ${noun}`}
                 {distressFilterActive ? " · filtered" : ""}
               </p>
+              {siteMatchmakerPrefilter ? (
+                <div className="mt-1.5 flex items-start gap-2 text-[10px] leading-snug text-[#0C1B33]/45">
+                  <span className="mt-0.5 h-2.5 w-2.5 shrink-0 rounded-full border-2 border-[#D97706] bg-[#0C1B33]/20" />
+                  <p>
+                    Property type is applied to loaded records. Source-backed size criteria are
+                    applied where the matching field exists; amber-ringed sites need size
+                    verification and are not counted as matches.
+                  </p>
+                </div>
+              ) : null}
               {view === "tracked" ? (
                 <p className="mt-1.5 text-[10px] leading-snug text-[#0C1B33]/45">
                   Numbered discs are the {siteIndex.filter((r) => r.markerNumber != null).length}{" "}

@@ -38,7 +38,7 @@ const FAQ_ITEMS = [
   },
   {
     q: "What is the EDGE Tax Credit?",
-    a: "The Economic Development for a Growing Economy (EDGE) program provides negotiated income tax credits to businesses that create or retain jobs in Illinois. Some designated areas may qualify for enhanced consideration, but terms are project-specific.",
+    a: "The Economic Development for a Growing Economy (EDGE) program provides negotiated income tax credits to businesses that create or retain jobs in Illinois. Published criteria provide enhanced consideration for some designated areas, but terms are project-specific.",
   },
   {
     q: "What are REV and MICRO zones?",
@@ -166,7 +166,7 @@ export default function FAQPage() {
               Still have questions?
             </h2>
             <p className="text-sm text-[#0C1B33]/50 max-w-md mx-auto">
-              Our team at the South East Chicago Chamber of Commerce is here to help you navigate incentive programs and find the right fit for your business.
+              Our team at the Southeast Chicago Chamber of Commerce is here to help you navigate incentive programs and find the right fit for your business.
             </p>
           </div>
 

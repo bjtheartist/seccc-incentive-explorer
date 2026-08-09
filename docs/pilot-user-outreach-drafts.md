@@ -2,6 +2,10 @@
 
 Internal draft for Billy review. Do not send yet.
 
+This is the expansion cohort. Begin with the five-session diagnostic in
+`docs/practitioner-validation-sprint.md` and expand to this 12-person cohort only
+after its go/no-go criteria are met.
+
 ## Pilot Goal
 
 Recruit 12 people with real Chicago projects to complete an address report and tell us whether the report led to a useful next step. This is a product-learning cohort, not a financing or incentive application cohort.

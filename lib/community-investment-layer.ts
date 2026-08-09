@@ -28,6 +28,10 @@ import type {
 } from "@/lib/community-investment";
 import type { FunderHq } from "@/lib/investment-deck-modes";
 import { publicInvestmentOverlayIdForSource } from "@/lib/public-investment-overlays";
+import {
+  GOVERNMENT_FUNDING_PURPOSES,
+  type GovernmentFundingPurpose,
+} from "@/lib/government-funding-purpose";
 
 /** The gated dataset endpoint the layer fetches when toggled on. */
 export const COMMUNITY_INVESTMENT_ENDPOINT = "/api/owner-file/investment";
@@ -76,6 +80,14 @@ export const FUNDER_TYPE_LABELS: Record<FunderType, string> = {
   philanthropic: "Philanthropic",
   private_development: "Private development",
 };
+
+/** Mappable purpose filters. Arts awards are city-level only and live in the
+ * admin analysis table, so they are intentionally absent from the map order. */
+export const MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER: GovernmentFundingPurpose[] = [
+  "capital_project",
+  "programmatic",
+  "unclassified",
+];
 
 /**
  * Display labels for every InvestmentStatus — the ONE place status text is
@@ -236,6 +248,8 @@ export interface InvestmentPointProps {
   recipient: string;
   funderName: string;
   funderType: FunderType;
+  /** What the government-funded record supports; null for non-government rows. */
+  governmentFundingPurpose?: GovernmentFundingPurpose | null;
   /**
    * What KIND of capital this dot's money is (grant / tif_subsidy /
    * federal_program / tax_credit). Drives the popup's money noun + field and the
@@ -340,6 +354,7 @@ export function investmentRecordsToPointFeatures(
         recipient: r.recipient,
         funderName: r.funderName,
         funderType: r.funderType,
+        governmentFundingPurpose: r.governmentFundingPurpose,
         capitalClass: r.capitalClass,
         amountAwarded: r.amountAwarded,
         authorizedAmount: r.authorizedAmount ?? null,
@@ -654,6 +669,25 @@ function toActiveSet(
     : new Set(activeFunderTypes as readonly FunderType[]);
 }
 
+function toActivePurposeSet(
+  activePurposes:
+    | ReadonlySet<GovernmentFundingPurpose>
+    | readonly GovernmentFundingPurpose[],
+): ReadonlySet<GovernmentFundingPurpose> {
+  return activePurposes instanceof Set
+    ? activePurposes
+    : new Set(activePurposes as readonly GovernmentFundingPurpose[]);
+}
+
+function governmentFundingPurposeActive(
+  feature: InvestmentPointFeature,
+  activeSet: ReadonlySet<GovernmentFundingPurpose> | null,
+): boolean {
+  if (!activeSet || feature.properties.funderType !== "government") return true;
+  const purpose = feature.properties.governmentFundingPurpose ?? "unclassified";
+  return activeSet.has(purpose);
+}
+
 /**
  * Client-side filter over already-built point features, mirroring the vacancy
  * distress-filter pattern (components/vacancy/VacancyReportMap.tsx) that
@@ -664,13 +698,23 @@ function toActiveSet(
  */
 export function filterInvestmentPointFeatures(
   features: readonly InvestmentPointFeature[],
-  opts: { yearRangeId: string; activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[] }
+  opts: {
+    yearRangeId: string;
+    activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[];
+    activeGovernmentFundingPurposes?:
+      | ReadonlySet<GovernmentFundingPurpose>
+      | readonly GovernmentFundingPurpose[];
+  }
 ): InvestmentPointFeature[] {
   const range = INVESTMENT_YEAR_RANGES.find((r) => r.id === opts.yearRangeId) ?? null;
   const activeSet = toActiveSet(opts.activeFunderTypes);
+  const activePurposeSet = opts.activeGovernmentFundingPurposes
+    ? toActivePurposeSet(opts.activeGovernmentFundingPurposes)
+    : null;
   return features.filter((f) => {
     const p = f.properties;
     if (!funderTypeActive(p.funderType, activeSet)) return false;
+    if (!governmentFundingPurposeActive(f, activePurposeSet)) return false;
     return yearInRange(p.year, range);
   });
 }
@@ -694,6 +738,21 @@ export function presentFunderTypesInOrder(types: Array<string | null | undefined
   return FUNDER_TYPE_ORDER.filter((k) => present.has(k));
 }
 
+export function presentGovernmentFundingPurposesInOrder(
+  purposes: Array<string | null | undefined>,
+): GovernmentFundingPurpose[] {
+  const present = new Set(
+    purposes.filter(
+      (purpose): purpose is GovernmentFundingPurpose =>
+        typeof purpose === "string" &&
+        (GOVERNMENT_FUNDING_PURPOSES as readonly string[]).includes(purpose),
+    ),
+  );
+  return MAPPABLE_GOVERNMENT_FUNDING_PURPOSE_ORDER.filter((purpose) =>
+    present.has(purpose),
+  );
+}
+
 export interface CitywideInvestmentSummary {
   count: number;
   totalDollars: number;
@@ -708,6 +767,7 @@ export interface CitywideInvestmentSummary {
 export interface CitywideInvestmentEntry {
   source: InvestmentSource;
   funderType: FunderType;
+  governmentFundingPurpose: GovernmentFundingPurpose | null;
   year: number | null;
   /** Real awarded dollars, or null — NEVER a derived figure. */
   amountAwarded: number | null;
@@ -723,6 +783,7 @@ export function citywideInvestmentEntries(
       out.push({
         source: r.source,
         funderType: r.funderType,
+        governmentFundingPurpose: r.governmentFundingPurpose,
         year: r.year,
         amountAwarded: r.amountAwarded,
       });
@@ -751,14 +812,30 @@ export function summarizeCitywideInvestment(
  */
 export function summarizeCitywideEntries(
   entries: readonly CitywideInvestmentEntry[],
-  opts: { yearRangeId: string; activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[] } | null
+  opts: {
+    yearRangeId: string;
+    activeFunderTypes: ReadonlySet<FunderType> | readonly FunderType[];
+    activeGovernmentFundingPurposes?:
+      | ReadonlySet<GovernmentFundingPurpose>
+      | readonly GovernmentFundingPurpose[];
+  } | null
 ): CitywideInvestmentSummary {
   const range = opts ? INVESTMENT_YEAR_RANGES.find((r) => r.id === opts.yearRangeId) ?? null : null;
   const activeSet = opts ? toActiveSet(opts.activeFunderTypes) : null;
+  const activePurposeSet = opts?.activeGovernmentFundingPurposes
+    ? toActivePurposeSet(opts.activeGovernmentFundingPurposes)
+    : null;
   let count = 0;
   let totalDollars = 0;
   for (const e of entries) {
     if (activeSet && !funderTypeActive(e.funderType, activeSet)) continue;
+    if (
+      activePurposeSet &&
+      e.funderType === "government" &&
+      !activePurposeSet.has(e.governmentFundingPurpose ?? "unclassified")
+    ) {
+      continue;
+    }
     if (!yearInRange(e.year, range)) continue;
     count += 1;
     if (e.amountAwarded != null) totalDollars += e.amountAwarded;
@@ -772,6 +849,7 @@ export interface CommunityInvestmentLayerResult {
   status: CommunityInvestmentLayerStatus;
   pointFeatures: InvestmentPointFeature[];
   presentFunderTypes: FunderType[];
+  presentGovernmentFundingPurposes: GovernmentFundingPurpose[];
   /** Distinct capital classes present among the plotted dots, in CAPITAL_CLASS_ORDER
    * — drives the legend's capital-class sub-legend. */
   presentCapitalClasses: CapitalClass[];
@@ -810,6 +888,7 @@ const EMPTY_LAYER_RESULT = (status: CommunityInvestmentLayerStatus): CommunityIn
   status,
   pointFeatures: [],
   presentFunderTypes: [],
+  presentGovernmentFundingPurposes: [],
   presentCapitalClasses: [],
   citywide: { count: 0, totalDollars: 0 },
   citywideEntries: [],
@@ -834,6 +913,14 @@ const EMPTY_LAYER_RESULT = (status: CommunityInvestmentLayerStatus): CommunityIn
  * non-ok (e.g. 503 before the export is generated) → "unavailable", a thrown
  * error (network/abort) propagates to the caller's catch. On success →
  * "ready" with the transformed payload.
+ *
+ * The view=map records are a field-level PROJECTION of CommunityInvestmentRecord
+ * (see projectRecordForMapView in app/api/owner-file/investment/route.ts): only
+ * the fields this module and the popup actually read survive — address,
+ * postalCode, recordDate, recordProvenance and non-first links never ship, and a
+ * citywide record is reduced to its legend-summary fields. Every field read
+ * below is in that whitelist; adding a NEW field read here requires adding it to
+ * the route's projection too.
  */
 export async function fetchCommunityInvestmentLayer(opts?: {
   source?: string | null;
@@ -880,6 +967,9 @@ export async function fetchCommunityInvestmentLayer(opts?: {
     status: "ready",
     pointFeatures,
     presentFunderTypes: presentFunderTypesInOrder(basePointFeatures.map((f) => f.properties.funderType)),
+    presentGovernmentFundingPurposes: presentGovernmentFundingPurposesInOrder(
+      basePointFeatures.map((feature) => feature.properties.governmentFundingPurpose),
+    ),
     presentCapitalClasses: presentCapitalClassesInOrder(
       basePointFeatures.map((f) => f.properties.capitalClass),
     ),

@@ -24,13 +24,16 @@ export interface LocalBusinessSupportOrganization {
   relationships: LocalBusinessSupportRelationship[];
   address?: string;
   phone?: string;
+  email?: string;
   website?: string;
   supportTypes?: string;
   serviceGeography?: string;
   citywideOrRegional?: string;
+  /** Legacy source labels retained for provenance; never treat as live intake or capacity. */
   validationLevel?: string;
   currentStatus?: string;
   sourceYear?: string;
+  lastVerifiedAt?: string;
   supportLanes?: LocalSupportLane[];
   communityAreaNumbers?: string[];
   serviceRegions?: string[];
@@ -47,6 +50,7 @@ export interface LocalBusinessSupportRequest {
   region?: string;
   reportType?: string;
   projectType?: string;
+  projectTypes?: string[];
   proposedUse?: string;
   /** True when the report address sits inside an SSA or CCSA corridor. */
   storefrontCorridor?: boolean;
@@ -71,6 +75,12 @@ export interface LocalBusinessSupportContext {
   organizations: LocalBusinessSupportOrganization[];
   /** Echoed by the API when the SSA-first storefront reordering applied. */
   storefrontCorridor?: boolean;
+  selectionDisclosure?: {
+    basis: string;
+    currentProgramsConfirmed: boolean;
+    currentCapacityConfirmed: boolean;
+    note: string;
+  };
   sourceLabel: string;
   sourceUrls: string[];
 }
@@ -175,17 +185,20 @@ export function requestedSupportLanes(
     "corridor_place_based",
     "legal_support",
   ]);
-  const projectType = normalized(request.projectType);
+  const projectTypes = Array.from(new Set([
+    ...(request.projectTypes ?? []),
+    request.projectType ?? "",
+  ].map(normalized).filter(Boolean)));
   const proposedUse = normalized(request.proposedUse);
 
-  if (CAPITAL_PROJECT_TYPES.has(projectType)) {
+  if (projectTypes.some((projectType) => CAPITAL_PROJECT_TYPES.has(projectType))) {
     lanes.add("capital_readiness");
     lanes.add("small_business_capital");
   }
-  if (projectType === "hiring") lanes.add("workforce");
+  if (projectTypes.includes("hiring")) lanes.add("workforce");
   if (
     request.reportType === "dev-feasibility" ||
-    DEVELOPMENT_PROJECT_TYPES.has(projectType) ||
+    projectTypes.some((projectType) => DEVELOPMENT_PROJECT_TYPES.has(projectType)) ||
     ["community-cultural", "housing", "mixed-use", "industrial-maker"].includes(proposedUse)
   ) {
     lanes.add("property_community_development");
@@ -202,6 +215,32 @@ export function normalizeSupportName(name: string): string {
     .replace(/&/g, "and")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+const GREATER_ENGLEWOOD_CONTACT_URL = "https://www.gechamber.com/contactus";
+
+export function applyVerifiedLocalBusinessSupportOverride<
+  T extends LocalBusinessSupportOrganization,
+>(organization: T): T {
+  const isGreaterEnglewood =
+    organization.id === "P019" ||
+    normalizeSupportName(organization.name) === "greater englewood chamber foundation";
+  if (!isGreaterEnglewood) return organization;
+
+  return {
+    ...organization,
+    address: "825 W. 69th St., 2nd Floor, Chicago, IL 60621",
+    phone: "312-768-8573",
+    email: "connect@geccf.org",
+    website: GREATER_ENGLEWOOD_CONTACT_URL,
+    validationLevel: "Verified: official organization contact page",
+    currentStatus: "Active public intake",
+    sourceYear: "2026",
+    lastVerifiedAt: "2026-08-07",
+    sourceUrls: Array.from(
+      new Set([...organization.sourceUrls, GREATER_ENGLEWOOD_CONTACT_URL]),
+    ),
+  } as T;
 }
 
 function organizationMatchesContext(
@@ -223,6 +262,7 @@ function organizationMatchesContext(
   if (!org.requiresProjectContext) return true;
 
   return (
+    (request.projectTypes ?? []).some((projectType) => includesNormalized(org.projectTypes, projectType)) ||
     includesNormalized(org.projectTypes, request.projectType) ||
     includesNormalized(org.proposedUses, request.proposedUse)
   );
@@ -270,7 +310,13 @@ export function rankLocalBusinessSupport(
     .sort((a, b) => {
       const relevance = (org: LocalBusinessSupportOrganization) => {
         const laneMatches = inferSupportLanes(org).filter((lane) => requestedLanes.has(lane)).length;
-        const projectMatch = includesNormalized(org.projectTypes, request.projectType) ? 30 : 0;
+        const requestedProjectTypes = Array.from(new Set([
+          ...(request.projectTypes ?? []),
+          request.projectType ?? "",
+        ].filter(Boolean)));
+        const projectMatch = requestedProjectTypes.some((projectType) =>
+          includesNormalized(org.projectTypes, projectType),
+        ) ? 30 : 0;
         const useMatch = includesNormalized(org.proposedUses, request.proposedUse) ? 30 : 0;
         // Naming this community area is stronger place-based evidence than a
         // region-wide claim, and both beat merely not being excluded.
@@ -285,7 +331,7 @@ export function rankLocalBusinessSupport(
         // conversation and outranks even the primary access point.
         const ssaFirst =
           request.storefrontCorridor &&
-          normalized(request.projectType) === "rehab" &&
+          requestedProjectTypes.map(normalized).includes("rehab") &&
           org.relationships.includes("ssa_provider")
             ? 90
             : 0;
@@ -295,10 +341,6 @@ export function rankLocalBusinessSupport(
       };
       const relevanceDelta = relevance(b) - relevance(a);
       if (relevanceDelta !== 0) return relevanceDelta;
-
-      const verifiedA = /active|verified/i.test(`${a.currentStatus ?? ""} ${a.validationLevel ?? ""}`) ? 1 : 0;
-      const verifiedB = /active|verified/i.test(`${b.currentStatus ?? ""} ${b.validationLevel ?? ""}`) ? 1 : 0;
-      if (verifiedA !== verifiedB) return verifiedB - verifiedA;
 
       return a.name.localeCompare(b.name);
     })

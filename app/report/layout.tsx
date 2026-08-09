@@ -4,7 +4,7 @@ import { pageMetadata } from "@/lib/seo";
 export const metadata = pageMetadata({
   title: "Generate a Free Chicago Location Snapshot | Incentive Report",
   description:
-    "Generate a free address-based Chicago incentive report with location snapshot data, zoning context, TIF and NOF signals, local support partners, and next-step resources.",
+    "Generate a free address-based Chicago incentive report with location snapshot data, zoning context, TIF and NOF signals, local support organizations, and next-step resources.",
   path: "/report",
   ogType: "website",
 });

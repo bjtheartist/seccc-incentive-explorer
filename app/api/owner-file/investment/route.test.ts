@@ -42,14 +42,28 @@ const fakeData = {
     {
       id: "cdg-point",
       source: "cdg",
+      funderType: "government",
+      governmentFundingPurpose: "capital_project",
+      funderName: "Chicago Community Development Grant",
       recipient: "Ordinary grant recipient",
+      capitalClass: "grant",
       geometry: { kind: "point", lat: 41.75, lng: -87.58 },
       amountAwarded: 50_000,
-      links: [sourceLink],
+      logLine: "Storefront rehab",
+      year: 2024,
+      status: "completed",
+      communityArea: "SOUTH SHORE",
+      address: "7501 S Exchange Ave",
+      postalCode: "60649",
+      recordDate: "2024-03-01",
+      recordProvenance: "official",
+      links: ["not-a-link", sourceLink, "https://example.com/second-link"],
     },
     {
       id: "cook-a",
       source: "cook-source-2023",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Cook recipient A",
       geometry: { kind: "zip_area", zip: "60617" },
       amountAwarded: null,
@@ -59,6 +73,8 @@ const fakeData = {
     {
       id: "cook-b",
       source: "cook-source-2023",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Cook recipient B",
       geometry: { kind: "zip_area", zip: "60617" },
       amountAwarded: null,
@@ -68,6 +84,8 @@ const fakeData = {
     {
       id: "big-a",
       source: "illinois-big",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Illinois BIG recipient",
       geometry: { kind: "zip_area", zip: "60617" },
       amountAwarded: null,
@@ -77,6 +95,8 @@ const fakeData = {
     {
       id: "hospitality-citywide",
       source: "illinois-hospitality-emergency",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Illinois Hospitality recipient",
       geometry: { kind: "citywide" },
       amountAwarded: null,
@@ -86,6 +106,8 @@ const fakeData = {
     {
       id: "b2b-a",
       source: "illinois-b2b",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Illinois B2B recipient",
       geometry: { kind: "zip_area", zip: "60617" },
       amountAwarded: null,
@@ -95,6 +117,8 @@ const fakeData = {
     {
       id: "rrf-point",
       source: "sba-rrf",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Restaurant recipient",
       geometry: { kind: "point", lat: 41.77, lng: -87.6 },
       amountAwarded: null,
@@ -104,6 +128,8 @@ const fakeData = {
     {
       id: "rrf-citywide",
       source: "sba-rrf",
+      funderType: "government",
+      governmentFundingPurpose: "programmatic",
       recipient: "Unplotted restaurant recipient",
       geometry: { kind: "citywide" },
       amountAwarded: null,
@@ -113,6 +139,8 @@ const fakeData = {
     {
       id: "dceo-point",
       source: "dceo-capital",
+      funderType: "government",
+      governmentFundingPurpose: "capital_project",
       recipient: "Address-sited state project",
       geometry: { kind: "point", lat: 41.76, lng: -87.59 },
       amountAwarded: null,
@@ -122,6 +150,8 @@ const fakeData = {
     {
       id: "dceo-citywide",
       source: "dceo-capital",
+      funderType: "government",
+      governmentFundingPurpose: "capital_project",
       recipient: "Unplotted state project",
       geometry: { kind: "citywide" },
       amountAwarded: null,
@@ -209,6 +239,115 @@ describe("GET /api/owner-file/investment", () => {
     expect(JSON.stringify(body)).not.toContain("Unplotted restaurant recipient");
     expect(JSON.stringify(body)).not.toContain("Unplotted state project");
     expect(body.countyReliefByZip[0]).not.toHaveProperty("recipient");
+  });
+
+  it("projects each surviving map record down to the fields the map client renders", async () => {
+    const res = await GET(req("http://localhost/api/owner-file/investment?view=map"));
+    const body = await res.json();
+
+    expect(res.status).toBe(200);
+    const cdg = body.records.find((record: { id?: string }) => record.id === "cdg-point");
+    // The whitelist: exactly what investmentRecordsToPointFeatures + the popup
+    // read (lib/community-investment-layer.ts / components/map/map-helpers.ts).
+    expect(cdg).toEqual({
+      id: "cdg-point",
+      source: "cdg",
+      funderType: "government",
+      governmentFundingPurpose: "capital_project",
+      funderName: "Chicago Community Development Grant",
+      recipient: "Ordinary grant recipient",
+      capitalClass: "grant",
+      amountAwarded: 50_000,
+      logLine: "Storefront rehab",
+      year: 2024,
+      geometry: { kind: "point", lat: 41.75, lng: -87.58 },
+      status: "completed",
+      communityArea: "SOUTH SHORE",
+      // Flattened to the FIRST http(s) link — the only one the popup renders.
+      links: [sourceLink],
+    });
+    // The dead-weight fields are stripped by name, not merely absent by luck.
+    for (const stripped of ["address", "postalCode", "recordDate", "recordProvenance"]) {
+      expect(cdg).not.toHaveProperty(stripped);
+    }
+    expect(JSON.stringify(body)).not.toContain("7501 S Exchange Ave");
+    expect(JSON.stringify(body)).not.toContain("second-link");
+    // A point record with recovery/publishedBalance keeps them (popup money fields).
+    const dceo = body.records.find((record: { id?: string }) => record.id === "dceo-point");
+    expect(dceo.publishedBalance).toBe(750_000);
+    expect(dceo.governmentFundingPurpose).toBe("capital_project");
+    const rrf = body.records.find((record: { id?: string }) => record.id === "rrf-point");
+    expect(rrf.recovery).toEqual({ historicalAmount: { value: 80_000 } });
+    expect(rrf.governmentFundingPurpose).toBe("programmatic");
+  });
+
+  it("reduces surviving CITYWIDE records to legend-summary fields — names only on development rows", async () => {
+    loadMock.mockReturnValueOnce({
+      ...fakeData,
+      records: [
+        ...fakeData.records,
+        {
+          id: "foundation-citywide",
+          source: "foundation",
+          funderType: "philanthropic",
+          governmentFundingPurpose: null,
+          funderName: "Example Foundation",
+          recipient: "Out-of-bounds grantee name",
+          geometry: { kind: "citywide" },
+          amountAwarded: 40_000,
+          logLine: "General operating support",
+          year: 2023,
+          address: null,
+          links: [sourceLink],
+        },
+        {
+          id: "development-citywide",
+          source: "development",
+          funderType: "private_development",
+          governmentFundingPurpose: null,
+          funderName: "Example Developer",
+          recipient: "Advocate-style citywide project",
+          geometry: { kind: "citywide" },
+          amountAwarded: null,
+          announcedInvestment: 300_000_000,
+          year: null,
+          address: null,
+          links: [],
+        },
+      ],
+    });
+
+    const res = await GET(req("http://localhost/api/owner-file/investment?view=map"));
+    const body = await res.json();
+    const serialized = JSON.stringify(body);
+
+    expect(res.status).toBe(200);
+    const citywide = body.records.filter(
+      (record: { geometry: { kind: string } }) => record.geometry.kind === "citywide",
+    );
+    // A non-development citywide record never plots and never opens a popup —
+    // only the legend's re-scoping summary reads it, so only those fields ship.
+    expect(citywide).toContainEqual({
+      source: "foundation",
+      funderType: "philanthropic",
+      governmentFundingPurpose: null,
+      amountAwarded: 40_000,
+      year: 2023,
+      geometry: { kind: "citywide" },
+    });
+    expect(serialized).not.toContain("Out-of-bounds grantee name");
+    expect(serialized).not.toContain("General operating support");
+    // A private_development citywide record KEEPS its name — the Megaprojects
+    // legend lists it under "not plotted" (citywideDevelopmentProjectNames).
+    expect(citywide).toContainEqual({
+      source: "development",
+      funderType: "private_development",
+      governmentFundingPurpose: null,
+      amountAwarded: null,
+      year: null,
+      geometry: { kind: "citywide" },
+      recipient: "Advocate-style citywide project",
+    });
   });
 
   it("FAILS CLOSED: aggregate-only sources stay nameless even when held CITYWIDE, not just ZIP-area", async () => {

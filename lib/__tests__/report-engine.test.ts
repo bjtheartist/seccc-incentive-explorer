@@ -1,11 +1,62 @@
 import { describe, expect, it } from "vitest";
 import {
+  CONFIRMED_PROGRAMS_SECTION_TITLE,
   generateReportData,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "../report-engine";
 import type { Program } from "../types";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "../capital-partner-report";
+import {
+  SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
+  SUPPORT_ORGANIZATIONS_DESCRIPTION,
+  SUPPORT_ORGANIZATIONS_SECTION_TITLE,
+} from "../support-organization-copy";
+
+/**
+ * Words that assert a use permission. Anything that answers "may I do this
+ * here?" belongs on this list; only the City can answer that question.
+ */
+const CLAIM_WORDS =
+  "permitted|allowed|prohibited|banned|barred|permissible|by[-\\s]?right|as[-\\s]of[-\\s]right";
+
+/**
+ * Proximity, not adjacency. The earlier patterns demanded the claim word sit
+ * directly beside "use(s)" ("uses are permitted"), which any normal sentence
+ * slips past — "Business uses are generally permitted" reads identically to a
+ * user and matched nothing. Here the claim word only has to land within the
+ * same sentence-ish window as "use(s)", in either order, so a new permission
+ * claim fails the suite the moment it is written.
+ */
+const PERMISSION_CLAIM_PATTERNS: RegExp[] = [
+  new RegExp(`\\buses?\\b[^.]{0,40}\\b(?:${CLAIM_WORDS})\\b`, "i"),
+  new RegExp(`\\b(?:${CLAIM_WORDS})\\b[^.]{0,40}\\buses?\\b`, "i"),
+  /\bpermits?\b[^.]{0,40}\buses?\b/i,
+  /most business uses/i,
+  /Use Compatibility/i,
+];
+
+/**
+ * The sanctioned DISCLAIMING forms, which say the report does NOT decide the
+ * question. These are exact published phrases, not loose exemptions, so they
+ * cannot launder an affirmative claim.
+ */
+const SANCTIONED_DISCLAIMERS: RegExp[] = [
+  /does not determine whether a proposed use is permitted/gi,
+  /does not establish that a proposed use is permitted/gi,
+  /Verify whether a proposed use is permitted/gi,
+  /does not classify the proposed activity or determine that a use is permitted/gi,
+  /does not classify the proposed activity/gi,
+  /does not establish current authorization, permitted use, or compliance/gi,
+];
+
+/** Remove the sanctioned disclaimers so only affirmative claims remain. */
+function stripSanctionedDisclaimers(copy: string): string {
+  return SANCTIONED_DISCLAIMERS.reduce(
+    (text, pattern) => text.replace(pattern, ""),
+    copy,
+  );
+}
 
 function makeProgram(overrides: Partial<Program> = {}): Program {
   return {
@@ -55,7 +106,9 @@ function makeState(overrides: Partial<ReportState> = {}): ReportState {
     neighborhood: "",
     industry: "",
     budgetRange: "",
+    projectGoals: [],
     projectType: "",
+    customGoal: "",
     proposedUse: "",
     fundingCommitted: "",
     remainingGap: "",
@@ -114,7 +167,7 @@ describe("generateReportData", () => {
     expect(report.executiveSummary?.zoneCount).toBe(1);
     expect(report.executiveSummary?.topPrograms.map((p) => p.programId)).toContain("tif");
     expect(report.locationContext?.geography.zones.value).toEqual(["tif"]);
-    expect(report.locationContext?.programs.topMatches.map((p) => p.programId)).toContain("tif");
+    expect(report.locationContext).not.toHaveProperty("programs");
   });
 
   it("frames address-linked programs as a fit check before application", () => {
@@ -144,6 +197,342 @@ describe("generateReportData", () => {
     expect(report.executiveSummary?.zoneCount).toBe(1);
   });
 
+  it.each([
+    ["RS-3", "Residential"],
+    ["B3-2", "Business"],
+    ["M1-2", "Manufacturing"],
+  ])(
+    "preserves the published %s classification without inferring permitted uses",
+    (zoneClass, zoneType) => {
+      const report = generateReportData(
+        makeState({
+          reportType: "dev-feasibility",
+          projectType: "rehab",
+        }),
+        [makeProgram()],
+        {
+          zones,
+          zoneNames,
+          cityZoning: { zoneClass, zoneType },
+        },
+      );
+
+      const zoningSection = report.sections.find(
+        (section) => section.title === "Zoning & Regulatory Review",
+      );
+      const zoningCopy = JSON.stringify(zoningSection);
+
+      expect(zoningSection?.description).toContain("Published City zoning classification");
+      expect(zoningSection?.items).toHaveLength(1);
+      expect(zoningSection?.items[0]).toMatchObject({
+        label: "City Zoning Classification",
+        value: zoneClass,
+      });
+      expect(zoningSection?.items[0].detail).toContain(
+        "This report does not determine whether a proposed use is permitted",
+      );
+      expect(zoningSection?.items[0].detail).toContain(
+        "Verify the intended use and project requirements",
+      );
+      expect(zoningCopy).not.toContain("Use Compatibility");
+      expect(zoningCopy).not.toContain("Most business uses are permitted by right");
+      expect(zoningCopy).not.toContain("Commercial uses may require a zoning change");
+      expect(zoningCopy).not.toContain("Manufacturing, warehouse, and some commercial uses are permitted");
+    },
+  );
+
+  /**
+   * The three literal strings above only catch the copy we already removed.
+   * This guard is shape-based, so a NEW permitted-use claim for any district
+   * family fails the suite the moment it is written. Only the disclaiming form
+   * ("does NOT determine whether a proposed use is permitted") is allowed,
+   * so the affirmative patterns are matched and the negated ones exempted.
+   */
+  it.each([
+    "RS-3",
+    "B3-2",
+    "M1-2",
+    "C1-1.5",
+    "DX-10",
+    "PD 1376",
+    "PMD 11",
+  ])(
+    "never asserts what uses are allowed in %s",
+    (zoneClass) => {
+      const report = generateReportData(
+        makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+        [makeProgram()],
+        { zones, zoneNames, cityZoning: { zoneClass, zoneType: null } },
+      );
+
+      const affirmative = stripSanctionedDisclaimers(JSON.stringify(report));
+
+      for (const pattern of PERMISSION_CLAIM_PATTERNS) {
+        expect(affirmative).not.toMatch(pattern);
+      }
+    },
+  );
+
+  /**
+   * The guard above is only worth as much as its patterns. The originals
+   * required the claim word to sit immediately beside "use(s)", so ordinary
+   * phrasings walked straight through: "Business uses are generally permitted"
+   * and "by-right uses include" both passed clean. These cases pin the
+   * proximity form in place — and pin the sanctioned disclaimers as still
+   * allowed, so the guard cannot be "fixed" by making it reject the honest
+   * copy the reports depend on.
+   */
+  describe("the permitted-use guard's own patterns", () => {
+    it.each([
+      "Business uses are generally permitted",
+      "by-right uses include retail and office",
+      "Residential uses are typically allowed in this district",
+      "Industrial uses may be prohibited here",
+      "Most uses in this district are permitted as of right",
+      "This district permits the following uses by right",
+      "Retail use is allowed",
+      "Use Compatibility",
+      "Most business uses are permitted by right",
+    ])("fails a new permission claim: %s", (claim) => {
+      const affirmative = stripSanctionedDisclaimers(claim);
+      expect(
+        PERMISSION_CLAIM_PATTERNS.some((pattern) => pattern.test(affirmative)),
+      ).toBe(true);
+    });
+
+    it.each([
+      "This report does not determine whether a proposed use is permitted.",
+      "The published district alone does not establish that a proposed use is permitted or that zoning relief is required.",
+      "Verify whether a proposed use is permitted against the current Chicago Zoning Ordinance.",
+      "A past judgment does not establish current authorization, permitted use, or compliance.",
+      "It does not classify the proposed activity or determine that a use is permitted.",
+    ])("still allows the disclaiming form: %s", (disclaimer) => {
+      const affirmative = stripSanctionedDisclaimers(disclaimer);
+      for (const pattern of PERMISSION_CLAIM_PATTERNS) {
+        expect(affirmative).not.toMatch(pattern);
+      }
+    });
+  });
+
+  it("puts published zoning and a verification action first in site reports", () => {
+    const report = generateReportData(
+      makeState({ projectGoals: ["rehab"], projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "available",
+          zoneClass: "B3-2",
+          zoneType: "Business",
+          source: {
+            id: "chicago-arcgis-zoning",
+            label: "City of Chicago ArcGIS zoning boundaries",
+            url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+            retrievedAt: "2026-08-09T12:00:00.000Z",
+            recordUpdatedAt: null,
+          },
+        },
+      },
+    );
+
+    expect(report.sections[0]?.title).toBe("Zoning & Use Starting Point");
+    expect(report.sections[0]?.description).toContain("does not classify the proposed activity");
+    expect(report.actionRoadmap?.[0]?.label).toContain("verify its use category for B3-2");
+    expect(report.actionRoadmap?.[0]?.description).toContain("does not establish");
+  });
+
+  it("links an exact City-published Clerk matter without inferring use compatibility", () => {
+    const clerkUrl =
+      "https://chicityclerkelms.chicago.gov/Matter/?matterId=14999C67-FD08-F111-8406-001DD80D78DD";
+    const report = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          zoneClass: "B1-3",
+          zoneType: null,
+          clerkDocumentNumber: "O2026-0023281",
+          clerkUrl,
+          ordinanceDate: "2026-05-20T00:00:00.000Z",
+        },
+      },
+    );
+    const item = report.sections
+      .find((section) => section.title === "Zoning & Regulatory Review")
+      ?.items[0];
+    expect(item?.url).toBe(clerkUrl);
+    expect(item?.detail).toContain("Related City Clerk record: O2026-0023281");
+    expect(item?.detail).toContain("Published ordinance date: 2026-05-20");
+    expect(item?.detail).toContain("does not determine whether a proposed use is permitted");
+  });
+
+  it("shows cited historical ZBA records with verification guardrails and no duplicate zoning section", () => {
+    const zoningSource = {
+      id: "chicago-arcgis-zoning" as const,
+      label: "City of Chicago ArcGIS zoning boundaries",
+      url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+      retrievedAt: "2026-08-08T12:00:00.000Z",
+      recordUpdatedAt: null,
+    };
+    const zbaSource = {
+      id: "chicago-zba-arcgis" as const,
+      label: "City of Chicago Zoning Board of Appeals case layer",
+      url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning_update/MapServer/16",
+      boardUrl: "https://www.chicago.gov/city/en/depts/dcd/zoning-board-of-appeals.html",
+      retrievedAt: "2026-08-08T12:00:00.000Z",
+      sourceUpdatedAt: null,
+      freshnessNote:
+        "The City layer does not publish a refresh timestamp. Retrieval time is not a source-update date.",
+    };
+    const report = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "available",
+          zoneClass: "B3-2",
+          zoneType: null,
+          source: zoningSource,
+          zba: {
+            status: "available",
+            returnedCount: 1,
+            coverage: "complete",
+            source: zbaSource,
+            message: "Historical City ZBA records whose published geometry intersects this point.",
+            cases: [{
+              id: "zba-1",
+              globalId: "zba-1",
+              caseReference: "71-25-Z",
+              caseYear: 2025,
+              caseSequence: 71,
+              caseType: "variation",
+              caseTypeRaw: "Z",
+              address: "118 S CLINTON ST",
+              judgment: "Aproved/Cont.",
+              description: "Published case description.",
+              pin10: "1716101001",
+              pinAccuracy: "MATCHED",
+              publishedYearField: "71",
+              publishedCaseField: "2025",
+            }],
+          },
+        },
+      },
+    );
+
+    const zoningSections = report.sections.filter(
+      (section) => section.title === "Zoning & Regulatory Review",
+    );
+    expect(zoningSections).toHaveLength(1);
+    expect(zoningSections[0].description).toContain("not a City zoning determination");
+    expect(zoningSections[0].items).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          label: "Variation · 71-25-Z",
+          value: "Aproved/Cont.",
+          url: zbaSource.url,
+        }),
+      ]),
+    );
+    expect(JSON.stringify(zoningSections[0])).toContain("does not establish current authorization");
+    expect(JSON.stringify(zoningSections[0])).toContain("use the Query tool");
+    expect(report.dataSources?.find((item) => item.id === "chicagoZba")?.description)
+      .toContain("does not publish a refresh timestamp");
+    expect(report.dataSources?.find((item) => item.id === "chicagoZbaBoard")?.url)
+      .toBe(zbaSource.boardUrl);
+  });
+
+  it("preserves explicit unavailable and not-found zoning states", () => {
+    const unavailable = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "unavailable",
+          zoneClass: null,
+          zoneType: null,
+          source: null,
+          message: "Published Chicago zoning data is temporarily unavailable.",
+        },
+      },
+    );
+    const unavailableCopy = JSON.stringify(unavailable);
+    expect(unavailableCopy).toContain("Temporarily unavailable");
+    expect(unavailableCopy).toContain("No zoning conclusion is shown");
+    expect(unavailable.dataSources?.some((source) => source.id === "zoning")).toBe(false);
+
+    const source = {
+      id: "chicago-arcgis-zoning" as const,
+      label: "City of Chicago ArcGIS zoning boundaries",
+      url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+      retrievedAt: "2026-08-08T12:00:00.000Z",
+      recordUpdatedAt: null,
+    };
+    const notFound = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "not_found",
+          zoneClass: null,
+          zoneType: null,
+          source,
+          message: "No published Chicago zoning district was returned.",
+        },
+      },
+    );
+    const notFoundCopy = JSON.stringify(notFound);
+    expect(notFoundCopy).toContain("No district returned");
+    expect(notFoundCopy).toContain(
+      "not a finding that zoning requirements do not apply",
+    );
+    expect(notFound.dataSources?.find((item) => item.id === "zoning")).toMatchObject({
+      label: source.label,
+      url: source.url,
+    });
+  });
+
+  it("cites the actual fallback source and record freshness", () => {
+    const report = generateReportData(
+      makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "available",
+          zoneClass: "C1-3",
+          zoneType: null,
+          recordUpdatedAt: "2025-03-05T00:00:00.000Z",
+          source: {
+            id: "chicago-data-portal-zoning",
+            label: "City of Chicago Data Portal zoning boundaries",
+            url: "https://data.cityofchicago.org/d/dj47-wfun",
+            retrievedAt: "2026-08-08T12:00:00.000Z",
+            recordUpdatedAt: "2025-03-05T00:00:00.000Z",
+          },
+        },
+      },
+    );
+
+    expect(report.dataSources?.find((source) => source.id === "zoning")).toMatchObject({
+      label: "City of Chicago Data Portal zoning boundaries",
+      url: "https://data.cityofchicago.org/d/dj47-wfun",
+    });
+    expect(
+      report.dataSources?.find((source) => source.id === "zoning")?.description,
+    ).toContain("Source record updated 2025-03-05");
+  });
+
   it("keeps no-zone programs out of address-confirmed eligibility claims", () => {
     const globalProgram = makeProgram({
       id: "global",
@@ -159,13 +548,13 @@ describe("generateReportData", () => {
       { zones: {}, zoneNames: {} },
     );
 
-    expect(report.summary).toContain("matching 0 address-confirmed programs");
+    expect(report.summary).toContain("links 0 programs to this address");
     expect(report.executiveSummary?.topPrograms).toEqual([]);
-    expect(report.sections.find((s) => s.title === "Eligible Incentive Programs")).toBeUndefined();
+    expect(report.sections.find((s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE)).toBeUndefined();
     expect(report.sections.find((s) => s.title === "Additional Programs to Explore")?.items[0].programId).toBe("global");
   });
 
-  it("adds logistics access and site signals to the Site Overview", () => {
+  it("adds logistics access and site signals to Site Facts", () => {
     const report = generateReportData(
       makeState(),
       [makeProgram()],
@@ -189,15 +578,15 @@ describe("generateReportData", () => {
       },
     );
 
-    const siteOverview = report.sections.find((section) => section.title === "Site Overview");
-    expect(siteOverview?.description).toContain("transportation");
-    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.value).toContain("I-90");
-    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.detail).toContain("Straight-line distance only");
-    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.sourceLabel).toBe("Transportation and logistics access layer");
-    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.value).toContain("nearby public-data");
-    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.detail).toContain("NOF grants funded within 1/2 mi: 2");
-    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.detail).toContain("verify with DPD");
-    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.sourceLabel).toBe("Public site-signal layers");
+    const siteFacts = report.sections.find((section) => section.title === "Site Facts");
+    expect(siteFacts?.description).toContain("transportation");
+    expect(siteFacts?.items.find((item) => item.label === "Logistics Access")?.value).toContain("I-90");
+    expect(siteFacts?.items.find((item) => item.label === "Logistics Access")?.detail).toContain("Straight-line distance only");
+    expect(siteFacts?.items.find((item) => item.label === "Logistics Access")?.sourceLabel).toBe("Transportation and logistics access layer");
+    expect(siteFacts?.items.find((item) => item.label === "Site Signals")?.value).toContain("nearby public-data");
+    expect(siteFacts?.items.find((item) => item.label === "Site Signals")?.detail).toContain("NOF grants funded within 1/2 mi: 2");
+    expect(siteFacts?.items.find((item) => item.label === "Site Signals")?.detail).toContain("verify with DPD");
+    expect(siteFacts?.items.find((item) => item.label === "Site Signals")?.sourceLabel).toBe("Public site-signal layers");
     expect(report.locationContext?.site.siteSignals?.kind).toBe("proximity");
     expect(report.locationContext?.site.transport?.kind).toBe("proximity");
     expect(report.dataSources?.map((source) => source.id)).toEqual(
@@ -290,8 +679,8 @@ describe("generateReportData", () => {
       },
     );
 
-    const siteOverview = report.sections.find((section) => section.title === "Site Overview");
-    const mobilityItem = siteOverview?.items.find((item) => item.label === "Transportation & Site Access");
+    const siteFacts = report.sections.find((section) => section.title === "Site Facts");
+    const mobilityItem = siteFacts?.items.find((item) => item.label === "Transportation & Site Access");
     expect(mobilityItem?.value).toContain("Strong public transit access");
     expect(mobilityItem?.detail).toContain("CTA rail: 79th · 0.2 mi");
     expect(mobilityItem?.detail).toContain(
@@ -314,14 +703,14 @@ describe("generateReportData", () => {
     expect(mobilityItem?.detailCaveat).toBe(
       "Distances are straight-line proximity signals, not routed travel times.",
     );
-    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")).toBeUndefined();
+    expect(siteFacts?.items.find((item) => item.label === "Logistics Access")).toBeUndefined();
     expect(report.locationContext?.site.mobilityAccess?.kind).toBe("proximity");
     expect(report.dataSources?.map((source) => source.id)).toEqual(
       expect.arrayContaining(["mobilityAccess"])
     );
   });
 
-  it("prioritizes confirmed programs by the user's primary goal without exposing scores", () => {
+  it("prioritizes confirmed programs by the user's selected goal without exposing scores", () => {
     const report = generateReportData(
       makeState({ projectType: "hiring" }),
       [
@@ -351,18 +740,50 @@ describe("generateReportData", () => {
     const dataCenter = otherMatches?.items.find((item) => item.programId === "dataCenter");
 
     expect(bestMatches?.items[0].programId).toBe("edge");
-    expect(edge?.projectFit?.label).toContain("Directly related");
+    expect(edge).not.toHaveProperty("projectFit");
     expect(otherMatches?.items.map((item) => item.programId)).toEqual(
       expect.arrayContaining(["sbif", "dataCenter"]),
     );
-    expect(dataCenter?.confidenceLevel).toBe("location_eligible");
-    expect(dataCenter?.projectFit?.level).toBe("industry-check");
-    expect(dataCenter?.projectFit).not.toHaveProperty("score");
+    expect(dataCenter).not.toHaveProperty("confidenceLevel");
+    expect(dataCenter?.matchExplanation?.knownFromPublicData[0]).toContain("recorded within");
+    expect(dataCenter).not.toHaveProperty("projectFit");
     expect(JSON.stringify(report)).not.toContain('"score"');
     expect(report.executiveSummary?.projectGoalLabel).toBe("Hire or retain employees");
     expect(report.executiveSummary?.topPrograms[0].programId).toBe("edge");
     expect(report.summary).toContain("Hire or retain employees");
     expect(report.actionRoadmap?.[0].callScript).toContain("hire or retain employees");
+  });
+
+  it("organizes programs across three goals and preserves custom context without scoring it", () => {
+    const report = generateReportData(
+      makeState({
+        projectGoals: ["hiring", "equipment", "other"],
+        projectType: "hiring",
+        customGoal: "Open a shared commercial kitchen",
+      }),
+      [
+        makeProgram({ id: "edge", name: "EDGE" }),
+        makeProgram({ id: "sbaMicroloan", name: "SBA Microloan" }),
+        makeProgram({ id: "sbif", name: "SBIF" }),
+      ],
+      { zones, zoneNames },
+    );
+
+    const bestMatches = report.sections.find(
+      (section) => section.title === GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+    );
+    expect(bestMatches?.items.map((item) => item.programId)).toEqual([
+      "edge",
+      "sbaMicroloan",
+    ]);
+    expect(report.metadata.projectGoals).toEqual(["hiring", "equipment", "other"]);
+    expect(report.metadata.customGoal).toBe("Open a shared commercial kitchen");
+    expect(report.executiveSummary?.projectGoalLabels).toEqual([
+      "Hire or retain employees",
+      "Buy equipment",
+      "Open a shared commercial kitchen",
+    ]);
+    expect(JSON.stringify(report)).not.toContain('"score"');
   });
 
   it("prioritizes Cook County discovery programs without treating them as address-confirmed", () => {
@@ -402,8 +823,8 @@ describe("generateReportData", () => {
     );
 
     const additionalSection = report.sections.find((s) => s.title === "Additional Programs to Explore");
-    expect(report.summary).toContain("matching 0 address-confirmed programs");
-    expect(report.sections.find((s) => s.title === "Eligible Incentive Programs")).toBeUndefined();
+    expect(report.summary).toContain("links 0 programs to this address");
+    expect(report.sections.find((s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE)).toBeUndefined();
     expect(additionalSection?.description).toContain("Cook County tools");
     expect(additionalSection?.items[0].programId).toBe("smallBizSource");
     expect(additionalSection?.items.map((item) => item.programId)).not.toContain("cookBrownfield");
@@ -477,13 +898,16 @@ describe("generateReportData", () => {
       },
     );
 
-    const section = report.sections.find((s) => s.title === "Your Support Network");
-    expect(section?.description).toContain("Neighborhood-facing organizations");
+    const section = report.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE);
+    expect(section?.description).toContain(SUPPORT_ORGANIZATIONS_DESCRIPTION);
+    expect(section?.description).toContain(SUPPORT_ORGANIZATIONS_CAPACITY_NOTE);
     expect(section?.items[0].label).toBe("Local Support in South Chicago");
     expect(section?.items[1].label).toBe("Southeast Chicago Chamber of Commerce");
     expect(section?.items[1].value).toContain("Primary local access point");
     expect(section?.items[1].detail).toContain("Licensing");
-    expect(section?.items[1].detail).toContain("Can help with");
+    expect(section?.items[1].detail).toContain("Published support services");
+    expect(section?.items[1].detail).toContain("Current programs, intake capacity, and response times are not confirmed");
+    expect(section?.items[1].detail).not.toContain("Status: Active");
     expect(report.dataSources?.map((source) => source.id)).toContain("localBusinessSupport");
   });
 
@@ -511,11 +935,11 @@ describe("generateReportData", () => {
       },
     );
 
-    const section = report.sections.find((s) => s.title === "Your Support Network");
-    expect(section?.description).toContain("clearer next conversation");
-    expect(section?.items[0].detail).toContain("warm-handoff list");
+    const section = report.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE);
+    expect(section?.description).toContain(SUPPORT_ORGANIZATIONS_DESCRIPTION);
+    expect(section?.items[0].detail).toContain("discovery list");
     expect(section?.items[1].detail).toContain("regional business navigation");
-    expect(section?.items[1].detail).toContain("Website: not listed");
+    expect(section?.items[1].detail).toContain("Website: not listed in the source records");
     expect(section?.items[1].detail).toContain("Washington Park");
   });
 
@@ -545,7 +969,7 @@ describe("generateReportData", () => {
       },
     );
 
-    const section = report.sections.find((s) => s.title === "Your Support Network");
+    const section = report.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE);
     expect(section?.items[1].label).toBe("Legal Aid for New Entrepreneurs (LANE)");
     expect(section?.items[1].value).toBe("Small business legal support");
     expect(section?.items[1].detail).toContain("small-business legal questions");
@@ -581,12 +1005,27 @@ describe("generateReportData", () => {
     );
 
     const item = report.sections
-      .find((s) => s.title === "Eligible Incentive Programs")
+      .find((s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE)
       ?.items.find((i) => i.programId === "tif");
 
     expect(item?.sourceUrl).toBe(program.sourceUrl);
     expect(item?.applicationPortals).toEqual(applicationPortals);
     expect(item?.verificationSteps).toEqual(verificationSteps);
+  });
+
+  it("adds qualitative preparation cost signals to required documents", () => {
+    const report = generateReportData(
+      makeState({ projectGoals: ["rehab"], projectType: "rehab" }),
+      [makeProgram({ requiredDocs: ["Phase I environmental assessment", "Building permits", "W-9"] })],
+      { zones, zoneNames },
+    );
+
+    const required = report.sections.find((section) => section.title === "Required Documents");
+    const copy = JSON.stringify(required);
+    expect(copy).toContain("Phase I environmental assessment [$$$]");
+    expect(copy).toContain("Building permits [$$]");
+    expect(copy).toContain("W-9 [$]");
+    expect(required?.description).toContain("document preparation, not program value");
   });
 
   it("does not aggregate possible incentive dollars from a project budget", () => {
@@ -783,10 +1222,10 @@ describe("generateReportData", () => {
       },
     );
 
-    const eligibleSection = report.sections.find((s) => s.title === "Eligible Incentive Programs");
+    const eligibleSection = report.sections.find((s) => s.title === CONFIRMED_PROGRAMS_SECTION_TITLE);
     expect(eligibleSection?.items.map((item) => item.programId)).toEqual(
       expect.arrayContaining(["hubzone", "energyCommunityBonus"])
     );
-    expect(report.summary).toContain("matching 2 address-confirmed programs");
+    expect(report.summary).toContain("links 2 programs to this address");
   });
 });

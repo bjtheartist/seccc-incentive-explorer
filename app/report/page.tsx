@@ -30,7 +30,6 @@ import {
   setStepValue,
   INITIAL_WIZARD_STATE,
   PROJECT_TYPE_LABELS,
-  SITE_PROJECT_TYPE_OPTIONS,
   PROPOSED_USE_LABELS,
   PROPOSED_USE_OPTIONS,
   VACANCY_PROJECT_TYPE_OPTIONS,
@@ -42,13 +41,15 @@ import {
   SUPPORT_NEEDED_OPTIONS,
   BUDGET_RANGE_OPTIONS,
   optionLabel,
+  selectedProjectGoalLabels,
+  selectedProjectGoals,
 } from "@/lib/report-wizard-config";
 import type {
   ReportType,
   WizardState,
   WizardStepConfig,
 } from "@/lib/report-wizard-config";
-import { generateReportData } from "@/lib/report-engine";
+import { generateReportData, normalizePublicReportForDisplay } from "@/lib/report-engine";
 import type {
   GeneratedReport,
   ReportCensusData,
@@ -72,11 +73,27 @@ import {
   type PersonaId,
 } from "@/lib/personas";
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
-import { ProjectFitNote } from "@/components/report/ProjectFitNote";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { ReportEmailGate } from "@/components/report/ReportEmailGate";
+import { ProjectGoalSelector } from "@/components/report/ProjectGoalSelector";
+import { ZoningReviewQuestions } from "@/components/zoning/ZoningReviewQuestions";
+import {
+  PreparationCostBadge,
+  parseDocumentCostLine,
+} from "@/components/report/PreparationCostBadge";
+import { SiteActivityCard } from "@/components/report/SiteActivityCard";
+import {
+  InlineCrossLinkBanner,
+  StickyCrossLinkBanner,
+} from "@/components/report/CrossLinkBanner";
 import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
+import {
+  isSupportOrganizationSectionTitle,
+  SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
+  SUPPORT_ORGANIZATIONS_DESCRIPTION,
+  SUPPORT_ORGANIZATIONS_SECTION_TITLE,
+} from "@/lib/support-organization-copy";
 import { AdminOwnershipPanel } from "@/components/report/AdminOwnershipPanel";
 import type { AdminOwnershipPanelStatus } from "@/components/report/AdminOwnershipPanel";
 import { fetchAdminOwnershipContext } from "@/lib/owner-file-report-context";
@@ -123,10 +140,15 @@ import type {
   StackingRule,
   CommunityAsset,
   Stats,
+  PublicMatchExplanation,
   VerificationStep,
 } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { cachedFetch } from "@/lib/fetch-cache";
+import {
+  fetchZoningLookup,
+  zoningLookupKey,
+} from "@/lib/zoning-lookup";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
 import { storePendingReport } from "@/components/workspace/PendingReportSaver";
 import { trackEvent } from "@/lib/analytics-events";
@@ -242,10 +264,10 @@ function cleanReportSource(value: string | null): string | null {
 
 function supportOrganizationCount(report: GeneratedReport) {
   const supportSection = report.sections?.find(
-    (section) => section.title === "Your Support Network",
+    (section) => isSupportOrganizationSectionTitle(section.title),
   );
   if (!supportSection) return 0;
-  return supportSection.items.filter((item) => item.label !== "Community Support").length;
+  return supportSection.items.slice(1).length;
 }
 
 function zoneMatchesToText(value: unknown): string {
@@ -377,9 +399,9 @@ async function fetchTifFinance(
  * the goal-less instant-report result.
  */
 function localSupportRequestKey(
-  state: Pick<WizardState, "lat" | "lon" | "reportType" | "projectType" | "proposedUse">,
+  state: Pick<WizardState, "lat" | "lon" | "reportType" | "projectGoals" | "projectType" | "proposedUse">,
 ): string {
-  return [state.lat, state.lon, state.reportType, state.projectType, state.proposedUse]
+  return [state.lat, state.lon, state.reportType, selectedProjectGoals(state).join(","), state.proposedUse]
     .map((value) => value ?? "")
     .join("|");
 }
@@ -387,12 +409,14 @@ function localSupportRequestKey(
 async function fetchLocalBusinessSupport(
   lat: number,
   lon: number,
-  state: Pick<WizardState, "reportType" | "projectType" | "proposedUse">,
+  state: Pick<WizardState, "reportType" | "projectGoals" | "projectType" | "proposedUse">,
   signal?: AbortSignal
 ): Promise<LocalBusinessSupportContext | null> {
   const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
   if (state.reportType) params.set("reportType", state.reportType);
   if (state.projectType) params.set("projectType", state.projectType);
+  const projectGoals = selectedProjectGoals(state);
+  if (projectGoals.length > 0) params.set("projectTypes", projectGoals.join(","));
   if (state.proposedUse) params.set("proposedUse", state.proposedUse);
   const res = await fetch(`/api/local-business-support?${params.toString()}`, {
     cache: "default",
@@ -459,7 +483,7 @@ function getDisplayValueForStep(
         wizardState.proposedUse && (PROPOSED_USE_LABELS[wizardState.proposedUse] || wizardState.proposedUse),
       ]
       : [
-        wizardState.projectType && (PROJECT_TYPE_LABELS[wizardState.projectType] || wizardState.projectType),
+        selectedProjectGoalLabels(wizardState).join(", "),
         wizardState.budgetRange && optionLabel([...BUDGET_RANGE_OPTIONS, { id: "skip", label: "Still estimating" }], wizardState.budgetRange),
         wizardState.timeline && optionLabel(TIMELINE_OPTIONS, wizardState.timeline),
       ])
@@ -520,16 +544,6 @@ function getWizardSelectionItems(
 
   return items;
 }
-
-// ─── Confidence badge color mapping ──────────────────────────────────
-
-const CONFIDENCE_BADGE: Record<string, { bg: string; text: string; border: string }> = {
-  appears_eligible: { bg: "bg-[#0C1B33]/[0.04]", text: "text-[#0C1B33]/70", border: "border-[#0C1B33]/12" },
-  location_eligible: { bg: "bg-[#0C1B33]/[0.04]", text: "text-[#0C1B33]/60", border: "border-[#0C1B33]/10" },
-  may_qualify: { bg: "bg-[#0C1B33]/[0.03]", text: "text-[#0C1B33]/50", border: "border-[#0C1B33]/8" },
-  worth_exploring: { bg: "bg-[#0C1B33]/[0.02]", text: "text-[#0C1B33]/35", border: "border-[#0C1B33]/6" },
-  not_applicable: { bg: "bg-[#0C1B33]/[0.02]", text: "text-[#0C1B33]/30", border: "border-[#0C1B33]/5" },
-};
 
 // ─── Wrapper with Suspense ───────────────────────────────────────────
 
@@ -657,6 +671,34 @@ function ReportWizardPage() {
   const [hasRefinedInstantReport, setHasRefinedInstantReport] = useState(isRefineEntry);
   const [revealedReportKey, setRevealedReportKey] = useState<string | null>(null);
   const generatedReportEventGateRef = useRef(createGeneratedReportEventGate());
+  // Sticky cross-link dismissal lives here, not in the banner: the page has to
+  // drop its matching bottom padding in the same render or the document keeps
+  // reserving space for a bar that is gone.
+  const [crossLinkDismissed, setCrossLinkDismissed] = useState(false);
+  // The sticky bar auto-hides while the inline banner (same links) or the global
+  // footer is on screen — otherwise at max scroll it permanently covers the
+  // footer's last block, including the Partner & Admin Sign In link. Bottom
+  // padding stays reserved while the bar is merely auto-hidden (not dismissed),
+  // so hiding never shifts layout and re-triggers the observer.
+  const inlineCrossLinkRef = useRef<HTMLDivElement | null>(null);
+  const [bottomZoneInView, setBottomZoneInView] = useState(false);
+  useEffect(() => {
+    if (!report || crossLinkDismissed) return;
+    const targets = [inlineCrossLinkRef.current, document.querySelector("footer")].filter(
+      (t): t is HTMLElement => t != null,
+    );
+    if (targets.length === 0) return;
+    const visible = new Set<Element>();
+    const observer = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) visible.add(entry.target);
+        else visible.delete(entry.target);
+      }
+      setBottomZoneInView(visible.size > 0);
+    });
+    for (const target of targets) observer.observe(target);
+    return () => observer.disconnect();
+  }, [report, crossLinkDismissed]);
 
   // Comparison state
   const [compareMode, setCompareMode] = useState(false);
@@ -668,6 +710,7 @@ function ReportWizardPage() {
   const [compareZoneNames, setCompareZoneNames] = useState<Record<string, string> | null>(null);
   const [compareCensus, setCompareCensus] = useState<ReportCensusData | null>(null);
   const [compareZoning, setCompareZoning] = useState<ReportZoningData | null>(null);
+  const [compareZoningKey, setCompareZoningKey] = useState<string | null>(null);
   const [compareParcel, setCompareParcel] = useState<ParcelData | null>(null);
   const [compareNeighborhoodEconomics, setCompareNeighborhoodEconomics] = useState<NeighborhoodEconomicContext | null>(null);
   const [compareNeighborhoodEconomicsZip, setCompareNeighborhoodEconomicsZip] = useState<string | null>(null);
@@ -678,6 +721,7 @@ function ReportWizardPage() {
   const [zoneNames, setZoneNames] = useState<Record<string, string> | null>(null);
   const [censusData, setCensusData] = useState<ReportCensusData | null>(null);
   const [cityZoning, setCityZoning] = useState<ReportZoningData | null>(null);
+  const [cityZoningKey, setCityZoningKey] = useState<string | null>(null);
   const [parcelData, setParcelData] = useState<ParcelData | null>(null);
   const [parcelLookupComplete, setParcelLookupComplete] = useState(false);
   const [districtsData, setDistrictsData] = useState<DistrictData | null>(null);
@@ -803,37 +847,46 @@ function ReportWizardPage() {
   // Load zone data when address has lat/lon
   // Uses the API first, then falls back to client-side Turf.js if the API fails.
   useEffect(() => {
-    if (!wizardState.lat || !wizardState.lon) return;
+    if (!wizardState.lat || !wizardState.lon) {
+      setZones(null);
+      setZoneNames(null);
+      return;
+    }
     const lat = wizardState.lat;
     const lon = wizardState.lon;
+    let cancelled = false;
+    setZones(null);
+    setZoneNames(null);
 
     (async () => {
       try {
         const data = await cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`);
         const normalized = normalizeZoneCheckResponse(data);
         if (!normalized) throw new Error("API unavailable");
+        if (cancelled) return;
         setZones(normalized.zones);
         setZoneNames(normalized.zoneNames);
       } catch {
         // Fallback: use client-side Turf.js zone check
         const { checkZones } = await import("@/lib/zone-check");
         const result = await checkZones(lat, lon);
+        if (cancelled) return;
         setZones(result.zones);
         setZoneNames(result.zoneNames);
       }
     })();
+    return () => {
+      cancelled = true;
+    };
   }, [wizardState.lat, wizardState.lon]);
 
-  // Load census + zoning + parcel data when address has lat/lon
+  // Load census + parcel data when address has lat/lon.
   useEffect(() => {
     if (!wizardState.lat || !wizardState.lon) return;
     setParcelLookupComplete(false);
     setParcelData(null);
     cachedFetch(`/api/census?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setCensusData(data as ReportCensusData); })
-      .catch(() => {});
-    cachedFetch(`/api/zoning?lat=${wizardState.lat}&lon=${wizardState.lon}`)
-      .then((data) => { if (data) setCityZoning(data as ReportZoningData); })
       .catch(() => {});
     cachedFetch<ParcelData>(`/api/parcel?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setParcelData(data); })
@@ -842,6 +895,31 @@ function ReportWizardPage() {
     cachedFetch<DistrictData>(`/api/representatives?lat=${wizardState.lat}&lon=${wizardState.lon}`)
       .then((data) => { if (data) setDistrictsData(data); })
       .catch(() => {});
+  }, [wizardState.lat, wizardState.lon]);
+
+  // Zoning has a stricter contract than the general stale-while-error client
+  // cache: never reuse another address or hide a current source failure.
+  useEffect(() => {
+    const lat = wizardState.lat;
+    const lon = wizardState.lon;
+    if (lat == null || lon == null) {
+      setCityZoning(null);
+      setCityZoningKey(null);
+      return;
+    }
+
+    const requestKey = zoningLookupKey(lat, lon);
+    const controller = new AbortController();
+    setCityZoning(null);
+    setCityZoningKey(null);
+
+    fetchZoningLookup(lat, lon, { signal: controller.signal }).then((result) => {
+      if (controller.signal.aborted) return;
+      setCityZoning(result);
+      setCityZoningKey(requestKey);
+    });
+
+    return () => controller.abort();
   }, [wizardState.lat, wizardState.lon]);
 
   // Load address-level proximity signals used in the report Site Overview.
@@ -887,11 +965,17 @@ function ReportWizardPage() {
     });
     if (wizardState.reportType) params.set("reportType", wizardState.reportType);
     if (wizardState.projectType) params.set("projectType", wizardState.projectType);
+    const projectGoals = selectedProjectGoals({
+      projectGoals: wizardState.projectGoals,
+      projectType: wizardState.projectType,
+    });
+    if (projectGoals.length > 0) params.set("projectTypes", projectGoals.join(","));
     if (wizardState.proposedUse) params.set("proposedUse", wizardState.proposedUse);
     localSupportKeyRef.current = localSupportRequestKey({
       lat: wizardState.lat,
       lon: wizardState.lon,
       reportType: wizardState.reportType,
+      projectGoals: wizardState.projectGoals,
       projectType: wizardState.projectType,
       proposedUse: wizardState.proposedUse,
     });
@@ -901,6 +985,7 @@ function ReportWizardPage() {
   }, [
     wizardState.lat,
     wizardState.lon,
+    wizardState.projectGoals,
     wizardState.projectType,
     wizardState.proposedUse,
     wizardState.reportType,
@@ -988,6 +1073,14 @@ function ReportWizardPage() {
   useEffect(() => {
     if (!compareGeoResult) return;
     const { lat, lon } = compareGeoResult;
+    const requestKey = zoningLookupKey(lat, lon);
+    const zoningController = new AbortController();
+    setCompareZones(null);
+    setCompareZoneNames(null);
+    setCompareCensus(null);
+    setCompareZoning(null);
+    setCompareZoningKey(null);
+    setCompareParcel(null);
     (async () => {
       try {
         const data = await cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`);
@@ -1003,8 +1096,13 @@ function ReportWizardPage() {
       }
     })();
     cachedFetch(`/api/census?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareCensus(d as ReportCensusData); }).catch(() => {});
-    cachedFetch(`/api/zoning?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareZoning(d as ReportZoningData); }).catch(() => {});
+    fetchZoningLookup(lat, lon, { signal: zoningController.signal }).then((result) => {
+      if (zoningController.signal.aborted) return;
+      setCompareZoning(result);
+      setCompareZoningKey(requestKey);
+    });
     cachedFetch<ParcelData>(`/api/parcel?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareParcel(d); }).catch(() => {});
+    return () => zoningController.abort();
   }, [compareGeoResult]);
 
   useEffect(() => {
@@ -1037,6 +1135,10 @@ function ReportWizardPage() {
   // Generate comparison report once compare data is ready
   useEffect(() => {
     if (!compareGeoResult || !compareZones || programs.length === 0) return;
+    if (
+      compareZoningKey !==
+      zoningLookupKey(compareGeoResult.lat, compareGeoResult.lon)
+    ) return;
     if (compareZip && compareNeighborhoodEconomicsZip !== compareZip) return;
     const timer = setTimeout(() => {
       const compareState: WizardState = {
@@ -1056,7 +1158,7 @@ function ReportWizardPage() {
       setCompareReport(generated);
     }, 400);
     return () => clearTimeout(timer);
-  }, [compareGeoResult, compareZones, compareZoneNames, compareCensus, compareZoning, compareParcel, compareZip, compareNeighborhoodEconomicsZip, compareNeighborhoodEconomics, programs, wizardState]);
+  }, [compareGeoResult, compareZones, compareZoneNames, compareCensus, compareZoning, compareZoningKey, compareParcel, compareZip, compareNeighborhoodEconomicsZip, compareNeighborhoodEconomics, programs, wizardState]);
 
   // Instant mode: auto-generate report once programs + zones are loaded
   // Small delay gives census/zoning APIs time to resolve alongside zones
@@ -1064,6 +1166,11 @@ function ReportWizardPage() {
     if (!isInstantMode || !instantLoading) return;
     if (programs.length === 0 || !zones) return;
     if (wizardState.lat && wizardState.lon && !parcelLookupComplete) return;
+    if (
+      wizardState.lat != null &&
+      wizardState.lon != null &&
+      cityZoningKey !== zoningLookupKey(wizardState.lat, wizardState.lon)
+    ) return;
     if (wizardState.lat && wizardState.lon && localBusinessSupport === undefined) return;
     if (wizardState.lat && wizardState.lon && siteSignals === undefined) return;
     if (wizardState.lat && wizardState.lon && transportAccess === undefined) return;
@@ -1114,7 +1221,7 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, instantAddr]);
+  }, [isInstantMode, instantLoading, programs, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState, instantAddr]);
 
   // Corridor URL mode: auto-generate a corridor report after the metric lookup completes.
   const [corridorAutoGenerated, setCorridorAutoGenerated] = useState(false);
@@ -1158,6 +1265,11 @@ function ReportWizardPage() {
     // For address-based reports, wait for zones
     if (!zones && wizardState.lat) return;
     if (wizardState.lat && wizardState.lon && !parcelLookupComplete) return;
+    if (
+      wizardState.lat != null &&
+      wizardState.lon != null &&
+      cityZoningKey !== zoningLookupKey(wizardState.lat, wizardState.lon)
+    ) return;
     if (wizardState.lat && wizardState.lon && localBusinessSupport === undefined) return;
     if (wizardState.lat && wizardState.lon && siteSignals === undefined) return;
     if (wizardState.lat && wizardState.lon && transportAccess === undefined) return;
@@ -1206,7 +1318,7 @@ function ReportWizardPage() {
       }
     }, 600);
     return () => clearTimeout(timer);
-  }, [isShareMode, shareAutoGenerated, programs, zones, zoneNames, censusData, cityZoning, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
+  }, [isShareMode, shareAutoGenerated, programs, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, parcelLookupComplete, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorLoading, corridorMetric, corridorOwnerClusters, reportZip, neighborhoodEconomicsZip, neighborhoodEconomics, wizardState]);
 
   // Derive steps based on report type
   const steps = useMemo<WizardStepConfig[]>(() => {
@@ -1244,7 +1356,8 @@ function ReportWizardPage() {
         );
       case "project-intake":
         return wizardState.reportType === "site-incentives"
-          ? Boolean(wizardState.projectType)
+          ? selectedProjectGoals(wizardState).length > 0 &&
+              (!selectedProjectGoals(wizardState).includes("other") || Boolean(wizardState.customGoal.trim()))
           : true;
       case "single":
       case "combobox": {
@@ -1346,6 +1459,7 @@ function ReportWizardPage() {
     setZoneNames(null);
     setCensusData(null);
     setCityZoning(null);
+    setCityZoningKey(null);
     setParcelData(null);
     setParcelLookupComplete(false);
     setInstantLoading(false);
@@ -1468,12 +1582,24 @@ function ReportWizardPage() {
         mobilityForReport = await cachedFetch<MobilityAccess>(`/api/mobility-access?lat=${stateForReport.lat}&lon=${stateForReport.lon}`).catch(() => null);
         setMobilityAccess(mobilityForReport);
       }
+      let zoningForReport = cityZoning;
+      if (stateForReport.lat != null && stateForReport.lon != null) {
+        const requestKey = zoningLookupKey(stateForReport.lat, stateForReport.lon);
+        if (cityZoningKey !== requestKey || !zoningForReport) {
+          zoningForReport = await fetchZoningLookup(
+            stateForReport.lat,
+            stateForReport.lon,
+          );
+          setCityZoning(zoningForReport);
+          setCityZoningKey(requestKey);
+        }
+      }
 
       const generated = generateReportData(stateForReport, programs, {
         zones: zones ?? undefined,
         zoneNames: zoneNames ?? undefined,
         census: censusData ?? undefined,
-        cityZoning: cityZoning ?? undefined,
+        cityZoning: zoningForReport ?? undefined,
         parcel: parcelData ?? undefined,
           reportZip: reportZip ?? undefined,
         districts: districtsData ?? undefined,
@@ -1496,16 +1622,28 @@ function ReportWizardPage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, parcelData, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics, neighborhoodEconomicsZip, reportZip]);
+  }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics, neighborhoodEconomicsZip, reportZip]);
 
   const handlePrepareGatedReport = useCallback(
-    async (projectType: string): Promise<GeneratedReport | null> => {
-      if (report?.metadata?.projectType === projectType) return report;
+    async (projectGoals: string[], customGoal: string): Promise<GeneratedReport | null> => {
+      const normalizedGoals = selectedProjectGoals({ projectGoals });
+      const reportGoals = selectedProjectGoals({
+        projectGoals: report?.metadata?.projectGoals,
+        projectType: report?.metadata?.projectType,
+      });
+      if (
+        JSON.stringify(reportGoals) === JSON.stringify(normalizedGoals) &&
+        (report?.metadata?.customGoal || "") === customGoal.trim()
+      ) {
+        return report;
+      }
 
       const preparedState: WizardState = {
         ...wizardState,
         reportType: "site-incentives",
-        projectType,
+        projectGoals: normalizedGoals,
+        projectType: normalizedGoals[0] || "",
+        customGoal: normalizedGoals.includes("other") ? customGoal.trim() : "",
       };
       setWizardState(preparedState);
       setHasRefinedInstantReport(true);
@@ -1528,10 +1666,13 @@ function ReportWizardPage() {
   // regenerate the report with two answers, without leaving the view.
   const handleQuickRefine = useCallback(
     async (fields: QuickRefineFields) => {
+      const projectGoals = selectedProjectGoals({ projectGoals: fields.projectGoals });
       const refinedState: WizardState = {
         ...wizardState,
         reportType: "site-incentives",
-        projectType: fields.projectType,
+        projectGoals,
+        projectType: projectGoals[0] || "",
+        customGoal: projectGoals.includes("other") ? fields.customGoal.trim() : "",
         budgetRange: fields.budgetRange,
         timeline: fields.timeline || wizardState.timeline,
       };
@@ -1629,6 +1770,7 @@ function ReportWizardPage() {
   const conciergeLocalSupport = report?.communityAssets?.organizations
     ?.slice(0, 6)
     .map((organization) => ({
+      id: organization.id || "",
       name: organization.name,
       role: organization.role,
       supportTypes: organization.supportTypes,
@@ -1658,6 +1800,7 @@ function ReportWizardPage() {
           lat={report.metadata?.lat}
           lon={report.metadata?.lon}
           localSupportOrganizations={conciergeLocalSupport}
+          capitalSupportId={report.capitalPartnerHandoff?.primary?.partnerId}
           capitalSupportName={report.capitalPartnerHandoff?.primary?.name}
           capitalSupportReason={report.capitalPartnerHandoff?.primary?.reason}
           capitalSupportFitNote={report.capitalPartnerHandoff?.primary?.fitNote}
@@ -1673,8 +1816,17 @@ function ReportWizardPage() {
   if (report) {
     const showEmailGate = reportRequiresEmailGate(report)
       && revealedReportKey !== reportEmailGateKey(report);
+    // Cross-links only make sense once results for a resolved address are
+    // actually on screen: not behind the email gate, and not on a corridor
+    // report that has no address to be "near".
+    const hasResolvedAddress =
+      (report.metadata?.lat ?? wizardState.lat) != null &&
+      (report.metadata?.lon ?? wizardState.lon) != null;
+    const showCrossLinks = hasResolvedAddress && !showEmailGate;
+    const stickyCandidate = showCrossLinks && !crossLinkDismissed;
+    const showStickyCrossLink = stickyCandidate && !bottomZoneInView;
     return (
-      <div className="min-h-screen">
+      <div className={`min-h-screen${stickyCandidate ? " pb-40 sm:pb-32" : ""}`}>
         <ReportDisplay
           report={report}
           onStartOver={handleStartOver}
@@ -1694,6 +1846,25 @@ function ReportWizardPage() {
           analyticsSource={reportSource}
           programs={programs}
         />
+        {hasResolvedAddress && (
+          <SiteActivityCard
+            lat={(report.metadata?.lat ?? wizardState.lat) as number}
+            lon={(report.metadata?.lon ?? wizardState.lon) as number}
+            zoningClass={cityZoning?.zoneClass ?? null}
+            zoningDescription={cityZoning?.zoneType ?? null}
+          />
+        )}
+        {showCrossLinks && (
+          <div ref={inlineCrossLinkRef}>
+            <InlineCrossLinkBanner zip={reportZip} />
+          </div>
+        )}
+        {showStickyCrossLink && (
+          <StickyCrossLinkBanner
+            zip={reportZip}
+            onDismiss={() => setCrossLinkDismissed(true)}
+          />
+        )}
         {showEmailGate && (
           <ReportEmailGate
             report={report}
@@ -1713,6 +1884,7 @@ function ReportWizardPage() {
           lat={report.metadata?.lat}
           lon={report.metadata?.lon}
           localSupportOrganizations={conciergeLocalSupport}
+          capitalSupportId={report.capitalPartnerHandoff?.primary?.partnerId}
           capitalSupportName={report.capitalPartnerHandoff?.primary?.name}
           capitalSupportReason={report.capitalPartnerHandoff?.primary?.reason}
           capitalSupportFitNote={report.capitalPartnerHandoff?.primary?.fitNote}
@@ -2531,12 +2703,14 @@ function ProjectIntakeStep({
 
   return (
     <div className="space-y-8">
-      <IntakeField
-        label="Primary goal"
-        helper="Choose the main outcome you want incentives to support."
-        options={SITE_PROJECT_TYPE_OPTIONS}
-        value={wizardState.projectType}
-        onSelect={(value) => onChange("projectType", value)}
+      <ProjectGoalSelector
+        goals={selectedProjectGoals(wizardState)}
+        customGoal={wizardState.customGoal}
+        onChange={(goals, customGoal) => {
+          onChange("projectGoals", goals);
+          onChange("projectType", goals[0] || "");
+          onChange("customGoal", customGoal);
+        }}
         required
       />
 
@@ -3063,7 +3237,7 @@ function VerdictCard({ verdict }: { verdict: NonNullable<GeneratedReport["verdic
 }
 
 /**
- * Compact "who can help" strip under the verdict — elevates the support
+ * Compact local-support strip under the verdict — elevates the support
  * network (normally buried mid-report) to the top of the page. Clicks run
  * through the same support_resource_clicked tracking as the full section.
  */
@@ -3081,11 +3255,10 @@ function VerdictPartnerStrip({
     <div className="mb-12 border border-[#0C1B33]/10 bg-[#EFF3FB]/70 px-5 py-4 print:hidden">
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <span className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]">
-          Who can help nearby
+          Local support to explore
         </span>
         <span className="text-[12px] text-[#0C1B33]/50">
-          {items.length} local support partner{items.length !== 1 ? "s" : ""}{" "}
-          surfaced for this location
+          {items.length} organization{items.length !== 1 ? "s" : ""} selected for this location
         </span>
         <a
           href="#your-support-network"
@@ -3123,6 +3296,51 @@ function VerdictPartnerStrip({
 }
 
 // ─── Executive Summary Component ─────────────────────────────────────
+
+function MatchExplanationDetails({ explanation }: { explanation?: PublicMatchExplanation }) {
+  if (!explanation) return null;
+  const groups = [
+    ["Why it appears", explanation.whyItAppears],
+    ["Known from public data", explanation.knownFromPublicData],
+    ["Based on your answers", explanation.basedOnUserAnswers],
+    ["Still to confirm", explanation.stillToConfirm],
+    ["Documents to gather", explanation.currentDocumentsToGather],
+  ] as const;
+
+  return (
+    <div className="space-y-3">
+      {groups.map(([label, items]) => items.length > 0 && (
+        <div key={label}>
+          <span className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/35 block mb-1">{label}</span>
+          <ul className="space-y-1">
+            {items.map((text, index) => (
+              <li key={`${label}-${index}`} className="flex items-start gap-2 text-[11px] leading-relaxed text-[#0C1B33]/55">
+                <span className="text-[#0C1B33]/20">&bull;</span><span>{text}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+      {explanation.confirmWith.length > 0 && (
+        <div>
+          <span className="font-mono-bureau text-[8px] tracking-[0.16em] uppercase text-[#0C1B33]/35 block mb-1">Confirm with</span>
+          <ul className="space-y-1">
+            {explanation.confirmWith.map((contact, index) => (
+              <li key={`${contact.agency}-${index}`} className="text-[11px] leading-relaxed text-[#0C1B33]/55">
+                {contact.url ? <a className="text-[#2F5BEA] hover:underline" href={contact.url} target="_blank" rel="noopener noreferrer">{contact.agency}</a> : contact.agency}
+                {contact.phone ? ` · ${contact.phone}` : ""}{contact.email ? ` · ${contact.email}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[#0C1B33]/45">
+        {explanation.officialSource && <a className="text-[#2F5BEA] hover:underline" href={explanation.officialSource.url} target="_blank" rel="noopener noreferrer">{explanation.officialSource.label}</a>}
+        {explanation.lastVerifiedAt && <span>Information reviewed {explanation.lastVerifiedAt}</span>}
+      </div>
+    </div>
+  );
+}
 
 function ExecutiveSummarySection({
   summary,
@@ -3162,13 +3380,13 @@ function ExecutiveSummarySection({
       {summary.topPrograms.length > 0 && (
         <div className="mb-6">
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-3">
-            {summary.projectGoalLabel
-              ? `Programs to Review for ${summary.projectGoalLabel}`
+            {summary.projectGoalLabels?.length || summary.projectGoalLabel
+              ? `Programs to Review for ${(summary.projectGoalLabels || [summary.projectGoalLabel]).filter(Boolean).join(", ")}`
               : "Programs to Review for Your Location"}
           </span>
           <ul className="space-y-2">
             {summary.topPrograms.map((prog) => {
-              const badge = CONFIDENCE_BADGE[prog.confidence] || CONFIDENCE_BADGE.worth_exploring;
+              const why = prog.explanation.whyItAppears[0];
               return (
                 <li
                   key={prog.programId}
@@ -3179,24 +3397,9 @@ function ExecutiveSummarySection({
                     <span className="text-[14px] font-semibold text-[#0C1B33]">
                       {prog.name}
                     </span>
-                    <span className="relative group/badge">
-                      <span className={`font-mono-bureau text-[8px] tracking-[0.1em] uppercase px-2 py-0.5 border cursor-help ${badge.bg} ${badge.text} ${badge.border}`}>
-                        {prog.confidenceLabel}
-                      </span>
-                      {prog.whyOneLine && (
-                        <span className="invisible group-hover/badge:visible absolute left-0 top-full mt-1 z-10 bg-white border border-[#0C1B33]/10 shadow-md px-3 py-2 text-[11px] text-[#0C1B33]/60 leading-relaxed w-64 font-sans normal-case tracking-normal">
-                          {prog.whyOneLine}
-                        </span>
-                      )}
-                    </span>
-                    {prog.projectFitLabel && (
-                      <span className="font-mono-bureau text-[9px] text-[#2563EB]">
-                        {prog.projectFitLabel}
-                      </span>
-                    )}
-                    {prog.benefitRange && (
-                      <span className="font-mono-bureau text-[11px] text-[#0C1B33]/40">
-                        {prog.benefitRange}
+                    {why && (
+                      <span className="basis-full text-[11px] leading-relaxed text-[#0C1B33]/45">
+                        {why}
                       </span>
                     )}
                   </div>
@@ -3285,7 +3488,7 @@ function ActionRoadmapSection({
           Your Next Steps
         </span>
         <p className="text-[#0C1B33]/35 text-[13px] leading-relaxed max-w-prose">
-          Prioritized actions to move forward with your eligible programs.
+          Practical actions to prepare for program review and local support.
         </p>
       </div>
 
@@ -3306,9 +3509,12 @@ function ActionRoadmapSection({
                     {i + 1}.
                   </span>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[14px] font-semibold text-[#0C1B33] block">
-                      {item.label}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[14px] font-semibold text-[#0C1B33]">
+                        {item.label}
+                      </span>
+                      {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
+                    </div>
                     <span className="text-[12px] text-[#0C1B33]/40 block mt-0.5">
                       {item.description}
                     </span>
@@ -3379,9 +3585,12 @@ function ActionRoadmapSection({
                 className="py-4 first:pt-0 flex items-start justify-between gap-3"
               >
                 <div className="min-w-0">
-                  <span className="text-[13px] text-[#0C1B33]/60 font-medium block">
-                    {item.programName || item.label}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[13px] text-[#0C1B33]/60 font-medium">
+                      {item.programName || item.label}
+                    </span>
+                    {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
+                  </div>
                   <span className="text-[11px] text-[#0C1B33]/35 block mt-0.5">
                     {item.description}
                   </span>
@@ -3889,7 +4098,7 @@ function ComparisonDisplay({
 // ─── Report Display ──────────────────────────────────────────────────
 
 function ReportDisplay({
-  report,
+  report: rawReport,
   onStartOver,
   onRefine,
   onQuickRefine,
@@ -3938,6 +4147,7 @@ function ReportDisplay({
   /** Entry-point label used on refine/save/email instrumentation (Tier 0 audit). */
   analyticsSource?: string;
 }) {
+  const report = useMemo(() => normalizePublicReportForDisplay(rawReport), [rawReport]);
   const { status } = useSession();
   const [linkCopied, setLinkCopied] = useState(false);
   const [emailDialogOpen, setEmailDialogOpen] = useState(false);
@@ -3985,25 +4195,27 @@ function ReportDisplay({
 
   // ── TOC ──
   const sectionToAnchor = (title: string) =>
-    title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    isSupportOrganizationSectionTitle(title)
+      ? "your-support-network"
+      : title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
   const tocEntries = useMemo(() => {
     const entries: { label: string; anchor: string }[] = [];
     if (report.verdict) entries.push({ label: "Location Findings", anchor: "verdict" });
     if (report.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
+    if (report.actionRoadmap && report.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
     if (report.sections) {
       for (const s of report.sections) {
         entries.push({ label: s.title, anchor: sectionToAnchor(s.title) });
       }
     }
-    if (report.actionRoadmap && report.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
     if (report.recommendedActions && report.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
     if (report.dataSources && report.dataSources.length > 0) entries.push({ label: "Data Sources", anchor: "data-sources" });
     return entries;
   }, [report]);
 
   const supportSection = useMemo(
-    () => report.sections?.find((section) => section.title === "Your Support Network") ?? null,
+    () => report.sections?.find((section) => isSupportOrganizationSectionTitle(section.title)) ?? null,
     [report.sections]
   );
 
@@ -4011,7 +4223,7 @@ function ReportDisplay({
         Open: the first two sections plus the primary-story sections.
         Content stays in the DOM (CSS-hidden) so print and #anchors work. ── */
   const ALWAYS_OPEN_SECTIONS = useMemo(
-    () => new Set(["Eligible Incentive Programs", "Your Support Network"]),
+    () => new Set(["Programs Mapped at This Address", SUPPORT_ORGANIZATIONS_SECTION_TITLE]),
     []
   );
   const [expandedSections, setExpandedSections] = useState<Record<number, boolean>>({});
@@ -4101,7 +4313,7 @@ function ReportDisplay({
         return;
       }
 
-      if (section.title === "Your Support Network") {
+      if (isSupportOrganizationSectionTitle(section.title)) {
         trackEvent(
           "support_resource_clicked",
           reportAnalyticsPayload(report, "report_support_network", {
@@ -4113,7 +4325,7 @@ function ReportDisplay({
         return;
       }
 
-      if (section.title === "Eligible Incentive Programs" || item.programId) {
+      if (section.title === "Programs Mapped at This Address" || item.programId) {
         trackEvent(
           "program_link_clicked",
           reportAnalyticsPayload(report, "report_program_link", {
@@ -4703,7 +4915,7 @@ function ReportDisplay({
           </div>
 
           {/* Refine value preview (audit RF6/WU5/BM1): explain what
-              refining unlocks — goal-based ranking, action plan, and gap checklist —
+              refining unlocks — goal-based organization, action plan, and gap checklist —
               with an inline goal-first quick refine. Rendered in compact
               (compare) mode too — audit RF4. The full-refine path routes
               through handleRefineClick so PR #49's refine_clicked keeps
@@ -4769,13 +4981,21 @@ function ReportDisplay({
                 </span>
               </div>
             )}
-            {report.metadata?.projectType && (
+            {selectedProjectGoalLabels({
+              projectGoals: report.metadata?.projectGoals,
+              projectType: report.metadata?.projectType,
+              customGoal: report.metadata?.customGoal,
+            }).length > 0 && (
               <div>
                 <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
-                  Primary Goal
+                  Project Goals
                 </span>
                 <span className="text-[#0C1B33] text-[13px]">
-                  {PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType}
+                  {selectedProjectGoalLabels({
+                    projectGoals: report.metadata?.projectGoals,
+                    projectType: report.metadata?.projectType,
+                    customGoal: report.metadata?.customGoal,
+                  }).join(", ")}
                 </span>
               </div>
             )}
@@ -4824,16 +5044,19 @@ function ReportDisplay({
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div className="min-w-0">
                   <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/60 mb-1.5">
-                    Local Support Partners
+                    Local support organizations
                   </div>
                   <h2 className="font-editorial text-[22px] text-[#0C1B33] leading-snug">
-                    {supportItems.length} organization{supportItems.length === 1 ? "" : "s"} surfaced for this location
+                    {SUPPORT_ORGANIZATIONS_SECTION_TITLE}
                   </h2>
                   <p className="text-[#0C1B33]/45 text-[13px] leading-relaxed mt-1.5 max-w-2xl">
-                    Use these as a starting point for interpreting programs, preparing questions, or finding the right local support path.
+                    {SUPPORT_ORGANIZATIONS_DESCRIPTION}
+                  </p>
+                  <p className="text-[#0C1B33]/35 text-[11px] leading-relaxed mt-1.5 max-w-2xl">
+                    {SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}
                   </p>
                   <p className="font-mono-bureau text-[9px] tracking-[0.08em] text-[#0C1B33]/30 mt-2 truncate">
-                    {supportItems.slice(0, 3).map((item) => item.label).join(" · ")}
+                    {supportItems.length} selected · {supportItems.slice(0, 3).map((item) => item.label).join(" · ")}
                     {supportItems.length > 3 ? " · more below" : ""}
                   </p>
                 </div>
@@ -4847,14 +5070,14 @@ function ReportDisplay({
                       className="inline-flex items-center justify-center gap-2 bg-[#0C1B33] text-white font-mono-bureau text-[9px] tracking-[0.14em] uppercase px-4 py-3 hover:bg-[#0C1B33]/80 transition-colors"
                     >
                       <ExternalLink className="w-3.5 h-3.5" />
-                      Start with {supportCtaItem.label}
+                      Visit {supportCtaItem.label}
                     </a>
                   )}
                   <a
                     href="#your-support-network"
                     className="inline-flex items-center justify-center gap-2 border border-[#0C1B33]/12 bg-white text-[#0C1B33]/55 font-mono-bureau text-[9px] tracking-[0.14em] uppercase px-4 py-3 hover:border-[#0C1B33]/25 hover:text-[#0C1B33] transition-colors"
                   >
-                    See All Local Support Organizations
+                    See all organizations
                     <ArrowRight className="w-3.5 h-3.5" />
                   </a>
                 </div>
@@ -4990,6 +5213,13 @@ function ReportDisplay({
                   onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
                   onTextChange={setEditedSummaryText}
                 />
+              </div>
+            )}
+
+            {/* Action-first hierarchy: orient the user before detailed evidence. */}
+            {lensed.actionRoadmap && lensed.actionRoadmap.length > 0 && (
+              <div id="action-roadmap">
+                <ActionRoadmapSection items={lensed.actionRoadmap} report={report} />
               </div>
             )}
 
@@ -5197,7 +5427,7 @@ function ReportDisplay({
                         {visibleSectionItems(section).map((item, itemIdx) => {
                           const reportItem = item as ReportNavigationItem;
                           const itemProgram = reportItem.programId ? programById.get(reportItem.programId) : undefined;
-                          const isSupportNetworkItem = section.title === "Your Support Network";
+                          const isSupportNetworkItem = isSupportOrganizationSectionTitle(section.title);
                           const isDeadlineItem = section.title === "Upcoming Deadlines Near This Address";
                           const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
                           const hasGroupedDetail = Boolean(item.detailGroups?.length);
@@ -5219,7 +5449,7 @@ function ReportDisplay({
                             <div className={`grid grid-cols-1 gap-3 ${hasSideValue ? "sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] sm:gap-x-10" : ""}`}>
                               {/* Left: label */}
                               <div className="flex-1 min-w-0">
-                                <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold block">
+                                <span className="flex flex-wrap items-center gap-2 text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold">
                                   {supportWebsiteUrl ? (
                                     <a
                                       href={supportWebsiteUrl}
@@ -5238,16 +5468,18 @@ function ReportDisplay({
                                       {item.level}
                                     </span>
                                   )}
+                                  {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
                                 </span>
                                 {!hasGroupedDetail && item.detail && section.title === "Required Documents" ? (
                                   <ul className="mt-2 space-y-1.5">
                                     {item.detail.split("\n").map((line, li) => {
-                                      const [docName, programs] = line.split(" — ");
+                                      const { documentName, programs, cost } = parseDocumentCostLine(line);
                                       return (
                                         <li key={li} className="flex items-start gap-2 text-[11px] sm:text-[12px] leading-relaxed">
                                           <span className="text-[#0C1B33]/15 mt-0.5 flex-shrink-0">&bull;</span>
-                                          <span className="text-[#0C1B33]/55">
-                                            {docName}
+                                          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[#0C1B33]/55">
+                                            <span>{documentName}</span>
+                                            {cost && <PreparationCostBadge signal={cost} label="Prep" />}
                                             {programs && (
                                               <span className="text-[#0C1B33]/25 ml-1.5">— {programs}</span>
                                             )}
@@ -5278,55 +5510,20 @@ function ReportDisplay({
                                 caveat={item.detailCaveat}
                               />
                             )}
-                            <ProjectFitNote fit={item.projectFit} />
 
-                            {/* Eligibility & URL — collapsible accordion for program items */}
-                            {!isSupportNetworkItem && (item.whoQualifies || item.eligibilityRules || item.url || item.whyOneLine || hasNavigationLinks) && (
+                            {/* Public program evidence and official navigation */}
+                            {!isSupportNetworkItem && (item.matchExplanation || item.whoQualifies || item.eligibilityRules || item.url || hasNavigationLinks) && (
                               <Accordion type="single" collapsible className="mt-3 sm:mt-4">
-                                <AccordionItem value="eligibility" className="border-none">
+                                <AccordionItem value="program-review" className="border-none">
                                   <AccordionTrigger className="py-2 hover:no-underline font-mono-bureau text-[9px] tracking-[0.1em] text-[#0C1B33]/40 uppercase">
-                                    {item.confidenceLabel || "Eligibility Details"}
+                                    Program review details
                                   </AccordionTrigger>
                                   <AccordionContent className="report-eligibility pl-4 border-l border-[#0C1B33]/8 space-y-2">
-                                    {item.whyOneLine && (
-                                      <p className="text-[#0C1B33]/50 text-[12px] leading-relaxed italic">
-                                        {item.whyOneLine}
-                                      </p>
-                                    )}
-                                    {item.matchedRules && item.matchedRules.length > 0 && (
-                                      <div>
-                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-1">
-                                          Confirmed
-                                        </span>
-                                        <ul className="space-y-0.5">
-                                          {item.matchedRules.map((rule, rIdx) => (
-                                            <li key={rIdx} className="text-[11px] text-[#0C1B33]/50 leading-relaxed flex items-start gap-1.5">
-                                              <span className="text-[#0C1B33]/25 flex-shrink-0">+</span>
-                                              <span>{rule}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
-                                    {item.notVerified && item.notVerified.length > 0 && (
-                                      <div>
-                                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/20 block mb-1">
-                                          Not Yet Verified
-                                        </span>
-                                        <ul className="space-y-0.5">
-                                          {item.notVerified.map((nv, nvIdx) => (
-                                            <li key={nvIdx} className="text-[11px] text-[#0C1B33]/30 leading-relaxed flex items-start gap-1.5">
-                                              <span className="text-[#0C1B33]/15 flex-shrink-0">?</span>
-                                              <span>{nv}</span>
-                                            </li>
-                                          ))}
-                                        </ul>
-                                      </div>
-                                    )}
+                                    <MatchExplanationDetails explanation={item.matchExplanation} />
                                     {item.whoQualifies && (
                                       <div>
                                         <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/25 block mb-0.5">
-                                          Who Qualifies
+                                          Published Applicant Requirements
                                         </span>
                                         <span className="text-[#0C1B33]/45 text-[11px] leading-relaxed block">
                                           {item.whoQualifies}
@@ -5373,16 +5570,17 @@ function ReportDisplay({
                         })}
                       </div>
                     )}
+                    {section.title === "Zoning & Use Starting Point" && report.metadata?.zoneClass && (
+                      <div className="mt-8 print:hidden">
+                        <ZoningReviewQuestions
+                          zoneClass={report.metadata.zoneClass}
+                          siteSpecificOrdinanceUrl={section.items.find((item) => item.label === "City Zoning Classification")?.url}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
-
-            {/* ── Your Next Steps (action roadmap) ── */}
-            {lensed.actionRoadmap && lensed.actionRoadmap.length > 0 && (
-              <div id="action-roadmap">
-                <ActionRoadmapSection items={lensed.actionRoadmap} report={report} />
-              </div>
-            )}
 
             {/* ── Recommended Actions ── */}
             {report.recommendedActions &&
@@ -5424,6 +5622,7 @@ function ReportDisplay({
                               >
                                 {badge.label}
                               </span>
+                              {action.preparationCost && <PreparationCostBadge signal={action.preparationCost} />}
                             </div>
                             {action.description && (
                               <p className="text-[#0C1B33]/45 text-[13px] leading-relaxed">
@@ -5871,7 +6070,7 @@ function DownloadGateModal({
           <div>
             <h3 className="text-sm font-medium text-[#0C1B33]">Download Report</h3>
             <p className="font-mono-bureau text-[10px] text-[#0C1B33]/40 tracking-wide uppercase mt-0.5">
-              Enter your details to download
+              Share your details, or download right away
             </p>
           </div>
           <button onClick={onClose} className="w-7 h-7 flex items-center justify-center hover:bg-[#0C1B33]/5 transition-colors">
@@ -5931,6 +6130,22 @@ function DownloadGateModal({
             ) : (
               <><Printer className="w-4 h-4" /> Download PDF</>
             )}
+          </button>
+          <button
+            type="button"
+            data-testid="download-gate-skip"
+            onClick={() => {
+              trackEvent("report_pdf_downloaded", {
+                source: "report_pdf_gate_skipped",
+                address: reportAddress || null,
+                metadata: { reportTitle: reportTitle || null },
+              });
+              onDownload();
+            }}
+            disabled={status !== "idle"}
+            className="w-full text-center font-mono-bureau text-[10px] tracking-wide uppercase text-[#0C1B33]/70 underline underline-offset-4 hover:text-[#0C1B33] disabled:opacity-40 py-1"
+          >
+            Download without sharing details
           </button>
           <p className="text-[9px] text-[#0C1B33]/30 text-center leading-snug">
             Your info helps us understand who we&apos;re serving. We won&apos;t spam you.

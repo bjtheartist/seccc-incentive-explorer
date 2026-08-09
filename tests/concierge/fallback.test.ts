@@ -6,7 +6,8 @@ const pageContext = { route: "/report" };
 describe("deterministic concierge", () => {
   it("returns sourced program guidance for a common business goal", async () => {
     const response = await buildDeterministicConciergeResponse({
-      userText: "I want to improve my storefront and hire employees.",
+      userText:
+        "Which incentive programs could help me improve my storefront and hire employees?",
       pageContext,
       signedIn: false,
     });
@@ -14,6 +15,24 @@ describe("deterministic concierge", () => {
     expect(response).toContain("may be worth exploring");
     expect(response).toContain("Official details");
     expect(response).toContain("not an eligibility or award decision");
+    expect(response).toContain(
+      "Would you like to run a **Site Incentive Report** for a specific address?"
+    );
+    expect(response).toContain("[Run a Site Incentive Report](/report)");
+  });
+
+  it("offers the address report immediately after a simple goal statement", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText: "I want to buy equipment for my business.",
+      pageContext,
+      signedIn: false,
+    });
+
+    expect(response).toContain("That gives me a clear starting point.");
+    expect(response).toContain(
+      "Would you like to run a **Site Incentive Report** for a specific address?"
+    );
+    expect(response).not.toContain("Official details");
   });
 
   it("refuses internal scores without exposing any value", async () => {
@@ -60,6 +79,30 @@ describe("deterministic concierge", () => {
     expect(response).toContain("not an eligibility, viability, or readiness score");
   });
 
+  it("offers grounded local partners after a report is available", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText: "Help me get connected to local support.",
+      pageContext: {
+        route: "/report",
+        reportSummary: "The address has two location-linked programs.",
+        localSupportOrganizations: [
+          { id: "PRV-FAR-SOUTH-CDC", name: "Far South Community Development Corporation" },
+        ],
+        capitalSupportId: "greenwood-archer-capital",
+        capitalSupportName: "Greenwood Archer Capital",
+      },
+      signedIn: false,
+    });
+
+    expect(response).toContain("location-specific starting point");
+    expect(response).toContain("Far South Community Development Corporation");
+    expect(response).toContain("Greenwood Archer Capital");
+    expect(response).toContain(
+      "Would you like help connecting with a local partner who fits the project?"
+    );
+    expect(response).not.toContain("prepared for a useful first conversation");
+  });
+
   it("routes a signed-in introduction request to approval-gated tools", async () => {
     const response = await buildDeterministicConciergeResponse({
       userText: "Please request an introduction to the local support organization.",
@@ -79,6 +122,57 @@ describe("deterministic concierge", () => {
 
     expect(response).toContain("sign in to your workspace");
     expect(response).toContain("Nothing has been shared");
+  });
+
+  it("routes signed-in 1:1 materials review requests to approval-gated tools", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText: "I want 1:1 support to review my packet materials.",
+      pageContext,
+      signedIn: true,
+    });
+
+    expect(response).toBeNull();
+  });
+
+  it("keeps signed-out 1:1 review requests unscheduled and points to sign-in", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText: "Can I get one-on-one help to review my documents?",
+      pageContext,
+      signedIn: false,
+    });
+
+    expect(response).toContain("1:1 support");
+    expect(response).toContain("completeness and open questions");
+    expect(response).toContain("sign in to your workspace");
+    expect(response).toContain("Nothing has been shared or scheduled");
+    expect(response).not.toMatch(/\bapproved\b|\beligible\b/i);
+  });
+
+  it("offers a local connection after explaining an existing report", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText: "Explain this report in plain language.",
+      pageContext: {
+        route: "/report",
+        reportSummary: "The site is inside one mapped incentive area.",
+        localSupportOrganizations: [{ id: "P023", name: "Greater Southwest Development Corporation" }],
+      },
+      signedIn: false,
+    });
+
+    expect(response).toContain("The site is inside one mapped incentive area.");
+    expect(response).toContain("Greater Southwest Development Corporation");
+    expect(response).toContain("Would you like help connecting");
+  });
+
+  it("answers a natural equipment-grant discovery question before offering a report", async () => {
+    const response = await buildDeterministicConciergeResponse({
+      userText: "Are there grants for buying equipment?",
+      pageContext,
+      signedIn: false,
+    });
+
+    expect(response).toContain("may be worth exploring");
+    expect(response).toContain("Official details");
   });
 
   it("recognizes natural profile-field updates and workspace continuations", async () => {

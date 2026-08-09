@@ -1,18 +1,24 @@
 import { describe, expect, it } from "vitest";
 import {
+  ACTIVITY_BADGE_ATTR,
+  ACTIVITY_SLOT_ATTR,
   CARD_SCROLLER_ATTR,
   STAR_BUTTON_ATTR,
   ZONE_BADGE_ATTR,
   ZONE_SLOT_ATTR,
+  activityBadgeText,
   buildSiteCardHtml,
   cautionLine,
   programsAndZonesRows,
   significanceSentence,
+  siteActivityHtml,
   zoneBadgeText,
   type CardData,
 } from "../vacancy-site-card";
 import { STARRED_RING } from "@/lib/vacancy-starred";
 import type { SiteZoneMatch } from "@/lib/vacancy-site-zones";
+import type { SiteActivityState } from "@/lib/site-activity-client";
+import { SITE_ACTIVITY_SOURCES, type SiteActivityContext } from "@/lib/site-activity";
 import type { VacancyCluster } from "@/lib/vacancy-index";
 
 function cluster(count: number): VacancyCluster {
@@ -103,6 +109,33 @@ describe("buildSiteCardHtml", () => {
     expect(html).toContain("<details");
     expect(html).toContain("Site facts");
     expect(html).toContain("21322110390000");
+  });
+
+  it("keeps all four source-separated space facts in the standard pin dossier", () => {
+    const html = buildSiteCardHtml(
+      card({
+        space: {
+          lotAreaSqft: 12027,
+          assessorBuildingSqft: 5000,
+          assessorBuildingYear: 2024,
+          cityGroundFootprintSqft: 2500,
+          cityGroundFootprintVintage: "Current as of August 2015",
+          availableSpaceSqft: 2000,
+          availableSpaceSource: "Owner confirmation",
+          availableSpaceVerifiedAt: "2026-08-01T00:00:00.000Z",
+          availableSpaceReconfirmAfter: "2026-09-01T00:00:00.000Z",
+        },
+      }),
+      "60617",
+      null,
+    );
+
+    expect(html).toContain("Lot area: 12,027 sq ft");
+    expect(html).toContain("Assessor building area: 5,000 sq ft");
+    expect(html).toContain("Mapped building footprint on parcel: 2,500 sq ft");
+    expect(html).toContain("Reported available space: 2,000 sq ft");
+    expect(html).toContain("Current as of August 2015");
+    expect(html).toContain("confirm current availability");
   });
 
   it("maps unknown ownership to 'Not yet classified' and never shows 'Unknown'", () => {
@@ -275,6 +308,192 @@ describe("buildSiteCardHtml — zones", () => {
   it("omits the report link when the record carries no coordinate", () => {
     const html = buildSiteCardHtml(card({ lat: null, lon: null }), "60617", null);
     expect(html).not.toContain("Full address report");
+  });
+});
+
+// ── Site activity context (compact) ──────────────────────────────────────────
+
+/**
+ * The compact variant of the report's Site Activity card. Same discipline in a
+ * quarter of the space: one figure + one qualifier + its own source line per
+ * measure, absences stated as absences, and no combined figure anywhere.
+ */
+
+const ACTIVITY_CONTEXT: SiteActivityContext = {
+  arterial: {
+    roadName: "S COMMERCIAL AVE",
+    aadt: 18500,
+    aadtYear: "2025",
+    stationId: "s1",
+    distanceMi: 0.04,
+  },
+  rail: [
+    {
+      name: "87th",
+      lines: ["Red"],
+      avgWeekdayEntries: 3210.4,
+      month: "2026-05",
+      priorYearAvgWeekdayEntries: 2980,
+      distanceMi: 0.21,
+    },
+  ],
+  catchment: {
+    population: 4712,
+    jobs: 1180,
+    blockGroups: 9,
+    acsVintage: "ACS 2020-2024 5-year",
+    lodesVintage: "LODES8 2023",
+  },
+  licenses: {
+    total: 27,
+    byCategory: [
+      { category: "restaurant_cafe", count: 9 },
+      { category: "other", count: 2 },
+    ],
+  },
+  radii: { arterialMi: 0.15, railMi: 0.5, catchmentMi: 0.5, licenseMi: 0.25 },
+};
+
+const EMPTY_ACTIVITY_CONTEXT: SiteActivityContext = {
+  arterial: null,
+  rail: [],
+  catchment: null,
+  licenses: null,
+  radii: ACTIVITY_CONTEXT.radii,
+};
+
+const loadedActivity = (context: SiteActivityContext): SiteActivityState => ({
+  status: "loaded",
+  context,
+  sources: SITE_ACTIVITY_SOURCES,
+});
+
+describe("siteActivityHtml", () => {
+  it("renders each measure as a figure, a qualifier, and its own source line", () => {
+    const html = siteActivityHtml(loadedActivity(ACTIVITY_CONTEXT));
+    expect(html).toContain("<strong>18,500 vehicles/day</strong>");
+    expect(html).toContain("on S COMMERCIAL AVE · station s1 · 0.04 mi away");
+    expect(html).toContain("<strong>3,210 avg weekday entries</strong>");
+    expect(html).toContain("<strong>4,712 residents · 1,180 jobs</strong>");
+    expect(html).toContain("<strong>27 active licenses</strong>");
+    // Provenance travels with every value, with its verify link.
+    expect(html).toContain("Illinois DOT traffic counts (AADT) · 2025 count year");
+    expect(html).toContain("CTA 'L' station daily entries · 2026-05");
+    expect(html).toContain("ACS 2020-2024 5-year · LODES8 2023");
+    expect((html.match(/verify /g) ?? []).length).toBe(4);
+  });
+
+  it("states absences as absences with their radii, never as zeros", () => {
+    const html = siteActivityHtml(loadedActivity(EMPTY_ACTIVITY_CONTEXT));
+    expect(html).toContain("No IDOT count station within 0.15 mi of this site.");
+    expect(html).toContain("No 'L' station within 0.5 mi of this site.");
+    expect(html).toContain("No census block-group centroid within 0.5 mi.");
+    expect(html).toContain("No active business license on record within 0.25 mi.");
+    expect(html).not.toContain("<strong>0");
+    // Nothing was measured, so nothing is attributed.
+    expect(html).not.toContain("verify ");
+  });
+
+  it("says the lookup failed rather than inventing quiet surroundings", () => {
+    const html = siteActivityHtml({ status: "error" });
+    expect(html).toMatch(/could not check/i);
+    expect(html).not.toMatch(/No IDOT count station/);
+    expect(html).not.toMatch(/No 'L' station/);
+  });
+
+  it("says it is still checking while the lookup is in flight", () => {
+    expect(siteActivityHtml({ status: "loading" })).toMatch(/checking public measurements/i);
+    expect(siteActivityHtml({ status: "idle" })).toBe("");
+  });
+
+  it("never publishes a modeled or combined figure", () => {
+    const html = siteActivityHtml(loadedActivity(ACTIVITY_CONTEXT)).toLowerCase();
+    for (const banned of [
+      "foot traffic",
+      "foot-traffic",
+      "footfall",
+      "visitors",
+      "estimated",
+      "projected",
+      "activity score",
+    ]) {
+      expect(html).not.toContain(banned);
+    }
+    expect(html).toContain("nothing modeled");
+  });
+
+  it("escapes source and measure text — the slot is written with innerHTML", () => {
+    const html = siteActivityHtml(
+      loadedActivity({
+        ...ACTIVITY_CONTEXT,
+        arterial: {
+          ...ACTIVITY_CONTEXT.arterial!,
+          roadName: "<img src=x onerror=alert(1)>",
+        },
+      }),
+    );
+    expect(html).not.toContain("<img");
+    expect(html).toContain("&lt;img");
+  });
+});
+
+describe("activityBadgeText", () => {
+  it("counts only the measures that returned something inside their radius", () => {
+    expect(activityBadgeText(loadedActivity(ACTIVITY_CONTEXT))).toBe(" · 4 of 4 measured");
+    expect(activityBadgeText(loadedActivity(EMPTY_ACTIVITY_CONTEXT))).toBe(" · 0 of 4 measured");
+    expect(
+      activityBadgeText(loadedActivity({ ...ACTIVITY_CONTEXT, rail: [], licenses: null })),
+    ).toBe(" · 2 of 4 measured");
+  });
+
+  it("stays silent until the lookup completes, so it can never imply a count", () => {
+    expect(activityBadgeText({ status: "loading" })).toBe("");
+    expect(activityBadgeText({ status: "error" })).toBe("");
+    expect(activityBadgeText({ status: "idle" })).toBe("");
+  });
+});
+
+describe("buildSiteCardHtml — site activity", () => {
+  it("carries the patchable slot and badge the map updates when the lookup lands", () => {
+    const html = buildSiteCardHtml(madisonLandDot, "60624", null, {
+      activity: { status: "loading" },
+    });
+    expect(html).toContain("Site activity context");
+    expect(html).toContain(ACTIVITY_SLOT_ATTR);
+    expect(html).toContain(ACTIVITY_BADGE_ATTR);
+    expect(html).toMatch(/Checking public measurements/i);
+  });
+
+  it("renders the compact measures inside the card once loaded", () => {
+    const html = buildSiteCardHtml(madisonLandDot, "60624", null, {
+      activity: loadedActivity(ACTIVITY_CONTEXT),
+    });
+    expect(html).toContain("<strong>18,500 vehicles/day</strong>");
+    expect(html).toContain(" · 4 of 4 measured");
+  });
+
+  it("omits the section entirely for a record with no coordinate to measure from", () => {
+    const html = buildSiteCardHtml(card({ lat: null, lon: null }), "60617", null, {
+      activity: loadedActivity(ACTIVITY_CONTEXT),
+    });
+    expect(html).not.toContain("Site activity context");
+    expect(html).not.toContain(ACTIVITY_SLOT_ATTR);
+  });
+
+  it("adds nothing at all when no lookup was requested (pre-existing callers)", () => {
+    const html = buildSiteCardHtml(madisonLandDot, "60624", null);
+    expect(html).not.toContain("Site activity context");
+    expect(html).not.toContain(ACTIVITY_SLOT_ATTR);
+  });
+
+  it("keeps the section inside the capped scroller, like every other section", () => {
+    const html = buildSiteCardHtml(madisonLandDot, "60624", null, {
+      maxHeightPx: 300,
+      activity: loadedActivity(ACTIVITY_CONTEXT),
+    });
+    expect(html.indexOf("Site activity context")).toBeGreaterThan(
+      html.indexOf(CARD_SCROLLER_ATTR),
+    );
   });
 });
 

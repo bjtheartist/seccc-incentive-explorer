@@ -9,9 +9,16 @@ import {
 
 /** Minimal record factory (mirrors the investment-analysis test fixture). */
 function rec(over: Partial<CommunityInvestmentRecord> & { id: string }): CommunityInvestmentRecord {
+  const funderType = over.funderType ?? "government";
   return {
     source: "sbif",
-    funderType: "government",
+    funderType,
+    governmentFundingPurpose:
+      over.governmentFundingPurpose !== undefined
+        ? over.governmentFundingPurpose
+        : funderType === "government"
+          ? "capital_project"
+          : null,
     funderName: "City of Chicago",
     recipient: "Test Grantee",
     amountAwarded: 100000,
@@ -58,7 +65,9 @@ const RECORDS: CommunityInvestmentRecord[] = [
   rec({ id: "x4", funderName: "F4", recipient: "R4", source: "nof-large", amountAwarded: 0 }),
 ];
 
-const flow = buildFunderFlow(RECORDS, "Zeta");
+// Folding mechanics are exercised at an explicit threshold of 6 so the
+// fixture (8 funders) folds regardless of the production default.
+const flow = buildFunderFlow(RECORDS, "Zeta", { topFunders: 6 });
 
 const funderNodes = flow.nodes.filter((n) => n.kind === "funder");
 const sourceNodes = flow.nodes.filter((n) => n.kind === "source");
@@ -111,7 +120,7 @@ describe("buildFunderFlow — totals & exclusions", () => {
 });
 
 describe("buildFunderFlow — folding", () => {
-  it("keeps the top 6 funders and folds the rest into one bucket", () => {
+  it("keeps the top N funders and folds the rest into one bucket", () => {
     expect(flow.foldedFunders).toBe(2);
     const other = funderNodes.find((n) => n.isOther);
     expect(other?.key).toBe(OTHER_FUNDERS_LABEL);

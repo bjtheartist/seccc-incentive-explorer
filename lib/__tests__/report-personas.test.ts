@@ -14,6 +14,7 @@ import {
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
+import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "@/lib/support-organization-copy";
 import { PERSONA_CHIPS, type PersonaId } from "@/lib/personas";
 
 // Known tags used by the fixtures (mirror of public/data/programs.json):
@@ -40,7 +41,7 @@ function reportFixture(): GeneratedReport {
         ],
       },
       {
-        title: "Your Support Network",
+        title: SUPPORT_ORGANIZATIONS_SECTION_TITLE,
         description: "",
         items: [
           { label: "Local Support in South Chicago", value: "3 organizations" },
@@ -236,14 +237,14 @@ describe("applyPersonaLens", () => {
 
   it("surfaces finance orgs first for developers, advising first for starters", () => {
     const dev = applyPersonaLens(reportFixture(), "developer").report;
-    const devSupport = dev.sections.find((s) => s.title === "Your Support Network")!;
+    const devSupport = dev.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE)!;
     // Head summary stays pinned; capital org leads for developers.
     expect(devSupport.items[0].label).toBe("Local Support in South Chicago");
     expect(devSupport.items[1].label).toBe("Greenwood Archer Capital");
 
     const start = applyPersonaLens(reportFixture(), "starting").report;
     const startSupport = start.sections.find(
-      (s) => s.title === "Your Support Network",
+      (s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE,
     )!;
     expect(startSupport.items[0].label).toBe("Local Support in South Chicago");
     expect(startSupport.items[1].label).toBe("Chicago SBDC");

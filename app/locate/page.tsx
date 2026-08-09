@@ -1,511 +1,546 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, MapPin, CheckCircle2, ArrowRight } from "lucide-react";
-import { INDUSTRIES, type Industry } from "@/lib/industries-data";
-import { PROGRAMS } from "@/lib/survey-engine";
-import { ZONE_LABELS, ZONE_COLORS } from "@/lib/constants";
-import type { Program } from "@/lib/types";
+import { useSearchParams } from "next/navigation";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Copy,
+  MapPinned,
+  RotateCcw,
+  Ruler,
+} from "lucide-react";
+import { PILOT_ZIPS } from "@/lib/pilot-zips";
+import {
+  SITE_AMENITY_OPTIONS,
+  SITE_CONTEXT_OPTIONS,
+  SITE_LOCATION_PRIORITY_OPTIONS,
+  SITE_PROJECT_USE_OPTIONS,
+  SITE_PROPERTY_TYPE_OPTIONS,
+  SITE_TRANSPORTATION_DISTANCE_OPTIONS,
+  SITE_TRANSPORTATION_OPTIONS,
+  buildSiteMatchmakerHref,
+  buildVacancyHandoffHref,
+  createEmptySiteMatchCriteria,
+  decodeSiteMatchCriteria,
+  isSiteMatchCriteriaReady,
+  normalizeSiteMatchCriteria,
+  summarizeSiteMatchCriteria,
+  type SiteAmenityNeed,
+  type SiteContextPreference,
+  type SiteLocationPriority,
+  type SiteMatchCriteria,
+  type SiteMatchOption,
+  type SiteProjectUse,
+  type SitePropertyType,
+  type SiteTransportationDistance,
+  type SiteTransportationNeed,
+} from "@/lib/site-matchmaker";
 
-// Zoning compatibility: which Chicago zoning classes work for each sector
-const ZONING_FIT: Record<string, { best: string[]; also: string[]; avoid: string[] }> = {
-  ev: { best: ["M1", "M2", "PMD"], also: ["C3", "DX"], avoid: ["RS", "RT"] },
-  semiconductor: { best: ["M1", "M2", "PMD"], also: ["C3"], avoid: ["RS", "RT", "RM"] },
-  dataCenter: { best: ["M1", "M2", "PMD", "C3"], also: ["DX"], avoid: ["RS", "RT"] },
-  manufacturing: { best: ["M1", "M2", "PMD"], also: ["C3"], avoid: ["RS", "RT", "RM", "B"] },
-  retail: { best: ["B1", "B2", "B3", "C1", "C2"], also: ["DX", "DC"], avoid: ["M2", "RS"] },
-  professional: { best: ["B1", "B2", "C1", "C2"], also: ["DX", "DC", "DS"], avoid: ["M2", "RS"] },
-  construction: { best: ["M1", "C3"], also: ["B3", "M2"], avoid: ["RS", "RT", "RM"] },
-  healthcare: { best: ["B1", "B2", "C1", "C2"], also: ["B3", "DX"], avoid: ["M2", "PMD"] },
-  tech: { best: ["B1", "B2", "C1", "C2"], also: ["DX", "DC"], avoid: ["M2"] },
-  nonprofit: { best: ["B1", "B2", "C1", "C2"], also: ["DX", "RM"], avoid: ["M2", "PMD"] },
-  realEstate: { best: ["B3", "C1", "C2", "DX"], also: ["RM", "RT"], avoid: ["PMD"] },
-  food: { best: ["M1", "C3", "B3"], also: ["C1", "C2"], avoid: ["RS", "RT"] },
-  logistics: { best: ["M1", "M2", "C3"], also: ["PMD"], avoid: ["RS", "RT", "RM", "B1"] },
-  arts: { best: ["B1", "B2", "C1", "C2"], also: ["DX", "M1"], avoid: ["RS"] },
-  hairBeauty: { best: ["B1", "B2", "B3", "C1"], also: ["C2", "DX"], avoid: ["M1", "M2", "RS"] },
-  clothing: { best: ["B1", "B2", "B3", "C1"], also: ["C2", "DX", "DC"], avoid: ["M1", "M2", "RS"] },
-  autoServices: { best: ["C2", "C3", "M1"], also: ["B3"], avoid: ["RS", "RT", "RM", "B1"] },
-  childcare: { best: ["B1", "B2", "C1"], also: ["RM", "RT", "DX"], avoid: ["M1", "M2", "PMD"] },
-  fitness: { best: ["B1", "B2", "B3", "C1"], also: ["C2", "DX"], avoid: ["M2", "RS"] },
-  homeServices: { best: ["B1", "B2", "C1"], also: ["C2", "M1"], avoid: ["RS"] },
-  petServices: { best: ["B1", "B2", "B3", "C1"], also: ["C2"], avoid: ["RS", "RT"] },
-};
+function SectionHeading({ number, title, detail }: { number: string; title: string; detail: string }) {
+  return (
+    <div className="mb-5 flex items-start gap-4">
+      <span className="mt-1 font-mono-bureau text-[10px] uppercase tracking-[0.16em] text-[#2563EB]">
+        {number}
+      </span>
+      <div>
+        <h2 className="text-[17px] font-semibold text-[#0C1B33]">{title}</h2>
+        <p className="mt-1 max-w-2xl text-[12px] leading-relaxed text-[#0C1B33]/55">{detail}</p>
+      </div>
+    </div>
+  );
+}
 
-// Area recommendations within SSA #50
-const AREA_ZONES: { name: string; desc: string; zonings: string[]; incentives: string[] }[] = [
-  {
-    name: "Stony Island Ave Corridor",
-    desc: "High-traffic commercial corridor with strong TIF and SSA coverage. Ideal for retail, restaurants, and service businesses.",
-    zonings: ["B1", "B2", "B3", "C1"],
-    incentives: ["tif", "ssa", "federalOZ"],
-  },
-  {
-    name: "83rd St Commercial District",
-    desc: "Core commercial strip with SBIF project history. Great for storefront businesses, salons, and professional offices.",
-    zonings: ["B1", "B2", "C1"],
-    incentives: ["tif", "ssa", "enterprise"],
-  },
-  {
-    name: "South Chicago Industrial Corridor",
-    desc: "Manufacturing and industrial zone along the Calumet River. Best for production, logistics, and large-footprint operations.",
-    zonings: ["M1", "M2", "PMD"],
-    incentives: ["enterprise", "edge", "tif", "highUnemployment"],
-  },
-  {
-    name: "Commercial Ave Strip",
-    desc: "Mixed commercial zone with Enterprise Zone and high foot traffic. Good for service businesses and small retail.",
-    zonings: ["B1", "B2", "C1", "C2"],
-    incentives: ["enterprise", "ssa", "tif"],
-  },
-  {
-    name: "Opportunity Zone Census Tracts",
-    desc: "Federal and Illinois Opportunity Zone overlap areas. Best for investors, developers, and capital-intensive projects.",
-    zonings: ["B3", "C1", "C2", "M1"],
-    incentives: ["federalOZ", "tif", "stateIncentiveZones"],
-  },
-];
+function RadioOptions<T extends string>({
+  name,
+  options,
+  value,
+  onChange,
+  columns = "two",
+}: {
+  name: string;
+  options: readonly SiteMatchOption<T>[];
+  value: T | null;
+  onChange: (value: T) => void;
+  columns?: "two" | "three";
+}) {
+  return (
+    <div className={`grid gap-2 ${columns === "three" ? "md:grid-cols-3" : "sm:grid-cols-2"}`}>
+      {options.map((option) => {
+        const selected = value === option.value;
+        return (
+          <label
+            key={option.value}
+            className={`cursor-pointer border p-4 transition-colors ${
+              selected
+                ? "border-[#2563EB] bg-[#EFF3FB]"
+                : "border-[#0C1B33]/12 bg-white hover:border-[#2563EB]/40"
+            }`}
+          >
+            <input
+              type="radio"
+              name={name}
+              value={option.value}
+              checked={selected}
+              onChange={() => onChange(option.value)}
+              className="sr-only"
+            />
+            <span className="flex min-h-[54px] items-start justify-between gap-3">
+              <span>
+                <span className="block text-[13px] font-semibold leading-snug text-[#0C1B33]">
+                  {option.label}
+                </span>
+                <span className="mt-1 block text-[11px] leading-relaxed text-[#0C1B33]/50">
+                  {option.description}
+                </span>
+              </span>
+              <span
+                aria-hidden="true"
+                className={`flex h-5 w-5 flex-none items-center justify-center rounded-full border ${
+                  selected ? "border-[#2563EB] bg-[#2563EB] text-white" : "border-[#0C1B33]/25"
+                }`}
+              >
+                {selected ? <Check size={12} strokeWidth={3} /> : null}
+              </span>
+            </span>
+          </label>
+        );
+      })}
+    </div>
+  );
+}
 
-function getSectorAreas(industry: Industry) {
-  const fit = ZONING_FIT[industry.id] || ZONING_FIT.retail;
-  const bestZonings = new Set([...fit.best, ...fit.also]);
+function CheckboxOptions<T extends string>({
+  options,
+  values,
+  onToggle,
+}: {
+  options: readonly SiteMatchOption<T>[];
+  values: readonly T[];
+  onToggle: (value: T) => void;
+}) {
+  return (
+    <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+      {options.map((option) => (
+        <label
+          key={option.value}
+          className="flex cursor-pointer items-start gap-3 border-b border-[#0C1B33]/8 py-3"
+        >
+          <input
+            type="checkbox"
+            checked={values.includes(option.value)}
+            onChange={() => onToggle(option.value)}
+            className="mt-0.5 h-4 w-4 flex-none accent-[#2563EB]"
+          />
+          <span>
+            <span className="block text-[12px] font-semibold text-[#0C1B33]">{option.label}</span>
+            <span className="mt-0.5 block text-[11px] leading-relaxed text-[#0C1B33]/50">
+              {option.description}
+            </span>
+          </span>
+        </label>
+      ))}
+    </div>
+  );
+}
 
-  return AREA_ZONES
-    .map((area) => {
-      const zoningMatch = area.zonings.filter((z) => bestZonings.has(z)).length;
-      const incentiveMatch = area.incentives.filter((z) => industry.topPrograms.includes(z)).length;
-      const score = zoningMatch * 2 + incentiveMatch;
-      return { ...area, score, zoningMatch, incentiveMatch };
-    })
-    .sort((a, b) => b.score - a.score);
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="border-b border-white/10 py-3 last:border-b-0">
+      <div className="font-mono-bureau text-[9px] uppercase tracking-[0.13em] text-white/40">
+        {label}
+      </div>
+      <div className="mt-1 text-[12px] leading-relaxed text-white/85">{value}</div>
+    </div>
+  );
+}
+
+function numericInput(value: string): number | null {
+  if (value === "") return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.min(2_000_000, Math.round(parsed));
+}
+
+function SiteMatchmakerPage() {
+  const searchParams = useSearchParams();
+  const [criteria, setCriteria] = useState<SiteMatchCriteria>(() =>
+    decodeSiteMatchCriteria(new URLSearchParams(searchParams.toString())),
+  );
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    window.history.replaceState(null, "", buildSiteMatchmakerHref(criteria));
+  }, [criteria]);
+
+  const summary = useMemo(() => summarizeSiteMatchCriteria(criteria), [criteria]);
+  const handoffHref = useMemo(() => buildVacancyHandoffHref(criteria), [criteria]);
+  const ready = isSiteMatchCriteriaReady(criteria);
+  const requestedAreaLabel =
+    criteria.propertyType === "vacant-land"
+      ? "lot area"
+      : criteria.propertyType === "existing-building"
+        ? "reported available interior space"
+        : "lot area or reported available interior space";
+
+  function setField<K extends keyof SiteMatchCriteria>(key: K, value: SiteMatchCriteria[K]) {
+    setCopied(false);
+    setCriteria((current) => ({ ...current, [key]: value }));
+  }
+
+  function toggleTransportation(value: SiteTransportationNeed) {
+    setCopied(false);
+    setCriteria((current) => ({
+      ...current,
+      transportation: current.transportation.includes(value)
+        ? current.transportation.filter((item) => item !== value)
+        : [...current.transportation, value],
+    }));
+  }
+
+  function toggleAmenity(value: SiteAmenityNeed) {
+    setCopied(false);
+    setCriteria((current) => ({
+      ...current,
+      amenities: current.amenities.includes(value)
+        ? current.amenities.filter((item) => item !== value)
+        : [...current.amenities, value],
+    }));
+  }
+
+  function normalizeFootprint() {
+    setCopied(false);
+    setCriteria((current) => normalizeSiteMatchCriteria(current));
+  }
+
+  function resetCriteria() {
+    setCopied(false);
+    setCriteria(createEmptySiteMatchCriteria());
+  }
+
+  async function copyBriefLink() {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  }
+
+  return (
+    <main className="min-h-screen bg-[#FAF9F6] text-[#0C1B33]">
+      <header className="border-b border-white/10 bg-[#0C1B33] px-4 py-8 text-white sm:px-8">
+        <div className="mx-auto max-w-6xl">
+          <Link
+            href="/map"
+            className="inline-flex items-center gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-white/45 transition-colors hover:text-white"
+          >
+            <ArrowLeft size={13} aria-hidden="true" />
+            Incentive map
+          </Link>
+          <div className="mt-7 grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-end">
+            <div>
+              <span className="font-mono-bureau text-[10px] uppercase tracking-[0.22em] text-[#79A3FF]">
+                Site Matchmaker
+              </span>
+              <h1 className="mt-3 font-editorial text-[42px] leading-[0.96] sm:text-[56px]">
+                Describe the site your project needs
+              </h1>
+            </div>
+            <p className="max-w-md text-[13px] leading-relaxed text-white/55">
+              Build a criteria brief and carry it into Chicago&apos;s tracked vacant-property
+              inventory. Public records are starting points, not availability listings.
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <div className="mx-auto grid max-w-6xl gap-8 px-4 py-8 sm:px-8 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start">
+        <div className="min-w-0 bg-white">
+          <section className="border border-[#0C1B33]/10 p-5 sm:p-7">
+            <SectionHeading
+              number="01"
+              title="Project and property"
+              detail="Name the use you are planning and the kind of property record you want to review."
+            />
+            <fieldset>
+              <legend className="mb-3 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
+                What type of project are you bringing? *
+              </legend>
+              <RadioOptions<SiteProjectUse>
+                name="project-use"
+                options={SITE_PROJECT_USE_OPTIONS}
+                value={criteria.projectUse}
+                onChange={(value) => setField("projectUse", value)}
+              />
+            </fieldset>
+
+            <fieldset className="mt-8">
+              <legend className="mb-3 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
+                What kind of property should be included? *
+              </legend>
+              <RadioOptions<SitePropertyType>
+                name="property-type"
+                options={SITE_PROPERTY_TYPE_OPTIONS}
+                value={criteria.propertyType}
+                onChange={(value) => setField("propertyType", value)}
+                columns="three"
+              />
+            </fieldset>
+          </section>
+
+          <section className="border-x border-b border-[#0C1B33]/10 p-5 sm:p-7">
+            <SectionHeading
+              number="02"
+              title="Area and required space"
+              detail={`Choose a published vacancy area and the ${requestedAreaLabel} the project requires.`}
+            />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="block sm:col-span-2">
+                <span className="font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
+                  Vacancy area *
+                </span>
+                <select
+                  value={criteria.zip ?? ""}
+                  onChange={(event) => setField("zip", event.target.value || null)}
+                  className="mt-2 h-11 w-full border border-[#0C1B33]/16 bg-white px-3 text-[13px] text-[#0C1B33] outline-none focus:border-[#2563EB]"
+                >
+                  <option value="">Select an area</option>
+                  {PILOT_ZIPS.map((entry) => (
+                    <option key={entry.zip} value={entry.zip}>
+                      {entry.primaryNeighborhood} - {entry.zip}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="block">
+                <span className="flex items-center gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
+                  <Ruler size={13} aria-hidden="true" /> Minimum {requestedAreaLabel}
+                </span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={100}
+                  max={2_000_000}
+                  step={100}
+                  value={criteria.minSquareFeet ?? ""}
+                  onChange={(event) => setField("minSquareFeet", numericInput(event.target.value))}
+                  onBlur={normalizeFootprint}
+                  placeholder="No minimum"
+                  className="mt-2 h-11 w-full border border-[#0C1B33]/16 bg-white px-3 text-[13px] text-[#0C1B33] outline-none placeholder:text-[#0C1B33]/30 focus:border-[#2563EB]"
+                />
+              </label>
+
+              <label className="block">
+                <span className="flex items-center gap-2 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
+                  <Ruler size={13} aria-hidden="true" /> Maximum {requestedAreaLabel}
+                </span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={100}
+                  max={2_000_000}
+                  step={100}
+                  value={criteria.maxSquareFeet ?? ""}
+                  onChange={(event) => setField("maxSquareFeet", numericInput(event.target.value))}
+                  onBlur={normalizeFootprint}
+                  placeholder="No maximum"
+                  className="mt-2 h-11 w-full border border-[#0C1B33]/16 bg-white px-3 text-[13px] text-[#0C1B33] outline-none placeholder:text-[#0C1B33]/30 focus:border-[#2563EB]"
+                />
+              </label>
+            </div>
+          </section>
+
+          <section className="border-x border-b border-[#0C1B33]/10 p-5 sm:p-7">
+            <SectionHeading
+              number="03"
+              title="Density and district context"
+              detail="Describe the surrounding development pattern you want to examine. This is a preference, not a zoning determination."
+            />
+            <RadioOptions<SiteContextPreference>
+              name="site-context"
+              options={SITE_CONTEXT_OPTIONS}
+              value={criteria.context}
+              onChange={(value) => setField("context", value)}
+            />
+          </section>
+
+          <section className="border-x border-b border-[#0C1B33]/10 p-5 sm:p-7">
+            <SectionHeading
+              number="04"
+              title="Transportation needs"
+              detail="Select the networks that should be checked near a candidate location and the proximity the project prefers."
+            />
+            <CheckboxOptions<SiteTransportationNeed>
+              options={SITE_TRANSPORTATION_OPTIONS}
+              values={criteria.transportation}
+              onToggle={toggleTransportation}
+            />
+            <fieldset className="mt-8">
+              <legend className="mb-3 font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
+                How close should the selected transportation be?
+              </legend>
+              <RadioOptions<SiteTransportationDistance>
+                name="transportation-distance"
+                options={SITE_TRANSPORTATION_DISTANCE_OPTIONS}
+                value={criteria.transportationDistance}
+                onChange={(value) => setField("transportationDistance", value)}
+              />
+            </fieldset>
+          </section>
+
+          <section className="border-x border-b border-[#0C1B33]/10 p-5 sm:p-7">
+            <SectionHeading
+              number="05"
+              title="Walkability and pedestrian activity"
+              detail="Capture how much these factors matter so each candidate can be reviewed against published and on-the-ground evidence."
+            />
+            <div className="grid gap-5 sm:grid-cols-2">
+              <label className="block">
+                <span className="font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
+                  Walkability
+                </span>
+                <select
+                  value={criteria.walkability ?? ""}
+                  onChange={(event) =>
+                    setField(
+                      "walkability",
+                      (event.target.value as SiteLocationPriority) || null,
+                    )
+                  }
+                  className="mt-2 h-11 w-full border border-[#0C1B33]/16 bg-white px-3 text-[13px] text-[#0C1B33] outline-none focus:border-[#2563EB]"
+                >
+                  <option value="">Select importance</option>
+                  {SITE_LOCATION_PRIORITY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-2 block text-[11px] leading-relaxed text-[#0C1B33]/50">
+                  The EPA walkability index can be reviewed for each location; it is not a site-match score.
+                </span>
+              </label>
+
+              <label className="block">
+                <span className="font-mono-bureau text-[10px] uppercase tracking-[0.13em] text-[#0C1B33]/55">
+                  Pedestrian activity / foot traffic
+                </span>
+                <select
+                  value={criteria.pedestrianActivity ?? ""}
+                  onChange={(event) =>
+                    setField(
+                      "pedestrianActivity",
+                      (event.target.value as SiteLocationPriority) || null,
+                    )
+                  }
+                  className="mt-2 h-11 w-full border border-[#0C1B33]/16 bg-white px-3 text-[13px] text-[#0C1B33] outline-none focus:border-[#2563EB]"
+                >
+                  <option value="">Select importance</option>
+                  {SITE_LOCATION_PRIORITY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-2 block text-[11px] leading-relaxed text-[#0C1B33]/50">
+                  This flags a need for direct or partner-supplied evidence; nearby amenities are not treated as foot-traffic counts.
+                </span>
+              </label>
+            </div>
+          </section>
+
+          <section className="border-x border-b border-[#0C1B33]/10 p-5 sm:p-7">
+            <SectionHeading
+              number="06"
+              title="Nearby amenities"
+              detail="Choose the public-data categories that matter to the project. Proximity and operating status must be checked for each site."
+            />
+            <CheckboxOptions<SiteAmenityNeed>
+              options={SITE_AMENITY_OPTIONS}
+              values={criteria.amenities}
+              onToggle={toggleAmenity}
+            />
+          </section>
+        </div>
+
+        <aside className="bg-[#0C1B33] p-5 text-white lg:sticky lg:top-24">
+          <div className="flex items-start justify-between gap-4 border-b border-white/10 pb-4">
+            <div>
+              <span className="font-mono-bureau text-[9px] uppercase tracking-[0.16em] text-[#79A3FF]">
+                Criteria handoff
+              </span>
+              <h2 className="mt-2 font-editorial text-[26px] leading-tight">Site brief</h2>
+            </div>
+            <button
+              type="button"
+              onClick={resetCriteria}
+              className="flex h-8 w-8 items-center justify-center border border-white/15 text-white/55 transition-colors hover:border-white/35 hover:text-white"
+              aria-label="Reset site criteria"
+              title="Reset site criteria"
+            >
+              <RotateCcw size={14} aria-hidden="true" />
+            </button>
+          </div>
+
+          <div className="py-1">
+            <SummaryRow label="Area" value={summary.location} />
+            <SummaryRow label="Project use" value={summary.projectUse} />
+            <SummaryRow label="Property" value={summary.propertyType} />
+            <SummaryRow label="Required size" value={summary.footprint} />
+            <SummaryRow label="Context" value={summary.context} />
+            <SummaryRow label="Transportation" value={summary.transportation} />
+            <SummaryRow label="Transport distance" value={summary.transportationDistance} />
+            <SummaryRow label="Walkability" value={summary.walkability} />
+            <SummaryRow label="Pedestrian activity" value={summary.pedestrianActivity} />
+            <SummaryRow label="Nearby amenities" value={summary.amenities} />
+          </div>
+
+          <div className="mt-4 border-t border-white/10 pt-5">
+            {ready && handoffHref ? (
+              <Link
+                href={handoffHref}
+                className="flex min-h-12 w-full items-center justify-between gap-3 bg-[#2563EB] px-4 py-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#1D4ED8]"
+              >
+                <span className="flex items-center gap-2">
+                  <MapPinned size={17} aria-hidden="true" />
+                  Open tracked-site map
+                </span>
+                <ArrowRight size={16} aria-hidden="true" />
+              </Link>
+            ) : (
+              <div className="border border-white/15 px-4 py-3 text-[11px] leading-relaxed text-white/50">
+                Select an area, project use, and property type to open the tracked-site map.
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={copyBriefLink}
+              className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 border border-white/15 px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.11em] text-white/60 transition-colors hover:border-white/35 hover:text-white"
+            >
+              {copied ? <Check size={14} aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
+              {copied ? "Link copied" : "Copy criteria link"}
+            </button>
+
+            <p className="mt-4 text-[10px] leading-relaxed text-white/38">
+              The next screen shows tracked public-record leads. Lot area, assessor building area,
+              City ground coverage, and verified available space remain separate facts.
+            </p>
+          </div>
+        </aside>
+      </div>
+    </main>
+  );
 }
 
 export default function LocatePage() {
-  const [selected, setSelected] = useState<Industry | null>(null);
-  const [programs, setPrograms] = useState<Program[]>([]);
-
-  useEffect(() => {
-    fetch("/data/programs.json")
-      .then((r) => r.json())
-      .then(setPrograms);
-  }, []);
-
-  const programMap = new Map(programs.map((p) => [p.zoneKey || p.id, p]));
-  const fit = selected ? (ZONING_FIT[selected.id] || ZONING_FIT.retail) : null;
-  const areas = selected ? getSectorAreas(selected) : [];
-
   return (
-    <div className="min-h-screen bg-[#FAF9F6]">
-      {/* Hero */}
-      <section className="bg-[#0C1B33] text-white py-16 px-6">
-        <div className="container mx-auto max-w-5xl">
-          <div className="flex items-center gap-4 mb-8">
-            <Link
-              href="/"
-              className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-white/40 hover:text-white transition-colors flex items-center gap-2"
-            >
-              <ArrowLeft className="w-3 h-3" /> Home
-            </Link>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          >
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-8 h-0.5 bg-[#2563EB]" />
-              <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-white/40">
-                Location Finder
-              </span>
-            </div>
-            <h1 className="font-editorial text-4xl md:text-5xl lg:text-6xl font-normal leading-[0.95] mb-6">
-              Find the Best
-              <br />
-              <span className="text-white/40">Location for</span>
-              <br />
-              Your Business
-            </h1>
-            <p className="text-white/50 text-base max-w-xl leading-relaxed">
-              Select your business sector and we&rsquo;ll show you the best areas
-              in Southeast Chicago based on city zoning ordinances and available incentive programs.
-            </p>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* Sector Selection Grid */}
-      <section className="py-16 px-6">
-        <div className="container mx-auto max-w-5xl">
-          <div className="flex items-center gap-4 mb-8">
-            <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/30">
-              01
-            </span>
-            <div className="w-8 h-0.5 bg-[#2563EB]" />
-            <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/50">
-              Select Your Sector
-            </span>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {INDUSTRIES.map((industry, i) => (
-              <motion.button
-                key={industry.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: i * 0.03 }}
-                onClick={() => setSelected(industry)}
-                className={`group block bg-white border rounded-xl p-5 text-left transition-all ${
-                  selected?.id === industry.id
-                    ? "border-[#2563EB] shadow-md shadow-blue-500/10 ring-1 ring-[#2563EB]/20"
-                    : "border-[#0C1B33]/8 hover:shadow-md hover:border-[#2563EB]/20"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <span className="text-2xl leading-none">{industry.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <h3 className={`text-sm font-medium transition-colors ${
-                      selected?.id === industry.id ? "text-[#2563EB]" : "text-[#0C1B33] group-hover:text-[#2563EB]"
-                    }`}>
-                      {industry.name}
-                    </h3>
-                    <p className="text-[11px] text-[#0C1B33]/40 mt-1 leading-relaxed line-clamp-2">
-                      {industry.description}
-                    </p>
-                    <div className="flex items-center gap-2 mt-3">
-                      <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase text-[#2563EB]/60">
-                        {industry.topPrograms.length} programs
-                      </span>
-                    </div>
-                  </div>
-                  {selected?.id === industry.id && (
-                    <CheckCircle2 className="w-5 h-5 text-[#2563EB] shrink-0" />
-                  )}
-                </div>
-              </motion.button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Results */}
-      {selected && fit && (
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-        >
-          {/* Zoning Compatibility */}
-          <section className="py-16 px-6 bg-[#EFF3FB]">
-            <div className="container mx-auto max-w-5xl">
-              <div className="flex items-center gap-4 mb-8">
-                <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/30">
-                  02
-                </span>
-                <div className="w-8 h-0.5 bg-[#2563EB]" />
-                <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/50">
-                  Zoning Compatibility
-                </span>
-              </div>
-
-              <h2 className="font-editorial text-2xl md:text-3xl text-[#0C1B33] mb-2">
-                City Zoning for{" "}
-                <span className="text-[#0C1B33]/40">{selected.name}</span>
-              </h2>
-              <p className="text-sm text-[#0C1B33]/50 mb-8 max-w-xl">
-                Chicago zoning ordinances determine what types of businesses can operate at each location.
-                Here&rsquo;s how different zoning classifications match your sector.
-              </p>
-
-              <div className="grid md:grid-cols-3 gap-4">
-                {/* Best Fit */}
-                <div className="bg-white border border-green-200 rounded-xl p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-2 h-2 rounded-full bg-green-500" />
-                    <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-green-600">
-                      Best Fit
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {fit.best.map((z) => (
-                      <span
-                        key={z}
-                        className="px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg font-mono-bureau text-sm text-green-700"
-                      >
-                        {z}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-[#0C1B33]/40 mt-3 leading-relaxed">
-                    These zoning classifications are the most compatible with {selected.name.toLowerCase()} operations.
-                  </p>
-                </div>
-
-                {/* Also Works */}
-                <div className="bg-white border border-amber-200 rounded-xl p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-2 h-2 rounded-full bg-amber-500" />
-                    <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-amber-600">
-                      May Work
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {fit.also.map((z) => (
-                      <span
-                        key={z}
-                        className="px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg font-mono-bureau text-sm text-amber-700"
-                      >
-                        {z}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-[#0C1B33]/40 mt-3 leading-relaxed">
-                    These may work depending on specific use and special use permits.
-                  </p>
-                </div>
-
-                {/* Avoid */}
-                <div className="bg-white border border-red-200 rounded-xl p-5">
-                  <div className="flex items-center gap-2 mb-4">
-                    <div className="w-2 h-2 rounded-full bg-red-500" />
-                    <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-red-600">
-                      Not Compatible
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {fit.avoid.map((z) => (
-                      <span
-                        key={z}
-                        className="px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg font-mono-bureau text-sm text-red-700"
-                      >
-                        {z}
-                      </span>
-                    ))}
-                  </div>
-                  <p className="text-[11px] text-[#0C1B33]/40 mt-3 leading-relaxed">
-                    These zoning classifications typically don&rsquo;t permit {selected.name.toLowerCase()} uses.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Recommended Areas */}
-          <section className="py-16 px-6 bg-white">
-            <div className="container mx-auto max-w-5xl">
-              <div className="flex items-center gap-4 mb-8">
-                <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/30">
-                  03
-                </span>
-                <div className="w-8 h-0.5 bg-[#2563EB]" />
-                <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/50">
-                  Recommended Areas
-                </span>
-              </div>
-
-              <h2 className="font-editorial text-2xl md:text-3xl text-[#0C1B33] mb-2">
-                Best Areas for{" "}
-                <span className="text-[#0C1B33]/40">{selected.name}</span>
-              </h2>
-              <p className="text-sm text-[#0C1B33]/50 mb-8 max-w-xl">
-                Areas ranked by zoning compatibility and incentive program overlap.
-              </p>
-
-              <div className="space-y-4">
-                {areas.map((area, i) => (
-                  <motion.div
-                    key={area.name}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.4, delay: i * 0.1 }}
-                    className={`border rounded-xl p-6 transition-all ${
-                      i === 0
-                        ? "border-[#2563EB]/30 bg-[#EFF3FB]/50 shadow-sm"
-                        : "border-[#0C1B33]/8 bg-white"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-4 mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-mono-bureau text-sm font-bold ${
-                          i === 0
-                            ? "bg-[#2563EB] text-white"
-                            : "bg-[#0C1B33]/5 text-[#0C1B33]/40"
-                        }`}>
-                          {i + 1}
-                        </div>
-                        <div>
-                          <h3 className="text-base font-medium text-[#0C1B33]">{area.name}</h3>
-                          {i === 0 && (
-                            <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#2563EB]">
-                              Best Match
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-[#0C1B33]/30" />
-                        <span className="font-mono-bureau text-[9px] text-[#0C1B33]/30">
-                          SSA #50
-                        </span>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-[#0C1B33]/50 mb-4 leading-relaxed">
-                      {area.desc}
-                    </p>
-
-                    <div className="flex flex-wrap gap-4">
-                      {/* Zoning tags */}
-                      <div>
-                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-1.5">
-                          Zoning
-                        </span>
-                        <div className="flex gap-1.5">
-                          {area.zonings.map((z) => {
-                            const bestSet = new Set(fit.best);
-                            const isBest = bestSet.has(z);
-                            return (
-                              <span
-                                key={z}
-                                className={`px-2 py-1 rounded font-mono-bureau text-[10px] ${
-                                  isBest
-                                    ? "bg-green-50 text-green-700 border border-green-200"
-                                    : "bg-[#0C1B33]/5 text-[#0C1B33]/40"
-                                }`}
-                              >
-                                {z}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* Incentive tags */}
-                      <div>
-                        <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-1.5">
-                          Incentives Available
-                        </span>
-                        <div className="flex flex-wrap gap-1.5">
-                          {area.incentives.map((z) => {
-                            const isRelevant = selected.topPrograms.includes(z);
-                            const color = ZONE_COLORS[z] || "#6b7280";
-                            return (
-                              <span
-                                key={z}
-                                className="px-2 py-1 rounded font-mono-bureau text-[10px] border"
-                                style={isRelevant ? {
-                                  backgroundColor: `${color}10`,
-                                  color: color,
-                                  borderColor: `${color}30`,
-                                } : {
-                                  backgroundColor: "transparent",
-                                  color: "#0C1B3340",
-                                  borderColor: "#0C1B3310",
-                                }}
-                              >
-                                {ZONE_LABELS[z] || z}
-                              </span>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Programs for this sector */}
-          <section className="py-16 px-6 bg-[#FAF9F6]">
-            <div className="container mx-auto max-w-5xl">
-              <div className="flex items-center gap-4 mb-8">
-                <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/30">
-                  04
-                </span>
-                <div className="w-8 h-0.5 bg-[#2563EB]" />
-                <span className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#0C1B33]/50">
-                  Available Programs
-                </span>
-              </div>
-
-              <h2 className="font-editorial text-2xl md:text-3xl text-[#0C1B33] mb-8">
-                Programs for{" "}
-                <span className="text-[#0C1B33]/40">{selected.name}</span>
-              </h2>
-
-              <div className="grid sm:grid-cols-2 gap-4">
-                {selected.topPrograms.map((pid) => {
-                  const prog = programMap.get(pid);
-                  const surveyProg = PROGRAMS[pid];
-                  if (!prog && !surveyProg) return null;
-                  const name = prog?.name || surveyProg?.name || pid;
-                  const summary = prog?.summary || "";
-                  const color = ZONE_COLORS[pid] || "#2563EB";
-
-                  return (
-                    <div
-                      key={pid}
-                      className="bg-white border border-[#0C1B33]/8 rounded-xl p-5 hover:shadow-md transition-shadow"
-                      style={{ borderLeftWidth: 3, borderLeftColor: color }}
-                    >
-                      <h3 className="text-sm font-medium text-[#0C1B33] mb-1">{name}</h3>
-                      <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-[#0C1B33]/30">
-                        {prog?.level || ""}
-                      </span>
-                      {summary && (
-                        <p className="text-[11px] text-[#0C1B33]/40 mt-2 leading-relaxed line-clamp-3">
-                          {summary}
-                        </p>
-                      )}
-                      {prog?.benefits && prog.benefits.length > 0 && (
-                        <div className="mt-3 space-y-1">
-                          {prog.benefits.slice(0, 2).map((b, j) => (
-                            <div key={j} className="flex gap-1.5 text-[11px] text-green-600">
-                              <span className="shrink-0">+</span>
-                              <span className="line-clamp-1">{b}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </section>
-
-          {/* CTA */}
-          <section className="py-16 px-6 bg-[#0C1B33] text-white">
-            <div className="container mx-auto max-w-3xl text-center">
-              <h2 className="font-editorial text-2xl md:text-3xl mb-4">
-                Ready to Review Vacant Properties?
-              </h2>
-              <p className="text-white/50 text-sm mb-8 max-w-md mx-auto">
-                Use the vacancy report to pull neighborhood-level vacant property records,
-                incentive context, and a spreadsheet you can review or export.
-              </p>
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <Link
-                  href="/report?wv=2&rt=df&source=locate"
-                  className="inline-flex items-center justify-center gap-3 px-8 py-4 bg-[#2563EB] hover:bg-[#1d4ed8] text-white rounded-full font-mono-bureau text-[11px] tracking-[0.15em] uppercase transition-all hover:shadow-lg hover:shadow-blue-500/25"
-                >
-                  Run Vacancy Report
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
-                <Link
-                  href="/report?source=locate"
-                  className="inline-flex items-center justify-center gap-3 px-8 py-4 border border-white/15 hover:border-white/30 text-white/55 hover:text-white rounded-full font-mono-bureau text-[11px] tracking-[0.15em] uppercase transition-all"
-                >
-                  Check an Address
-                </Link>
-              </div>
-            </div>
-          </section>
-        </motion.div>
-      )}
-    </div>
+    <Suspense fallback={<div className="min-h-screen bg-[#FAF9F6]" />}>
+      <SiteMatchmakerPage />
+    </Suspense>
   );
 }

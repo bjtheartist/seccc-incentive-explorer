@@ -72,6 +72,8 @@ describe("report email client", () => {
       name: "Taylor",
       wantsHelp: true,
       projectType: "hiring",
+      projectGoals: ["hiring", "equipment", "other"],
+      customGoal: "Open a shared commercial kitchen",
       source: "report_email_gate",
     });
 
@@ -81,8 +83,10 @@ describe("report email client", () => {
       email: "owner@example.com",
       name: "Taylor",
       wantsHelp: true,
-      projectGoal: "Hire or retain employees",
+      projectGoal: "Hire or retain employees, Buy equipment, Open a shared commercial kitchen",
       projectType: "hiring",
+      projectGoals: ["hiring", "equipment", "other"],
+      customGoal: "Open a shared commercial kitchen",
       zipCode: "60632",
       incentiveCount: 1,
     });

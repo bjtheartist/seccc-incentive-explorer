@@ -8,6 +8,15 @@ import { opportunityAreaById } from "@/lib/vacancy-opportunity-areas";
 import VacancyMapIsland from "@/components/vacancy/VacancyMapIsland";
 import { VacancySubNav } from "@/components/vacancy/VacancySubNav";
 import { OPPORTUNITY_AREA_DISCLAIMER } from "@/lib/vacancy-public-labels";
+import { buildSiteMatchmakerHref } from "@/lib/site-matchmaker";
+import {
+  applyCurrentAvailableSpaceToLandPoints,
+  applyCurrentAvailableSpaceToSitePoints,
+  decodeSiteMatchmakerVacancyHandoff,
+  prefilterVacancyRecords,
+} from "@/lib/site-matchmaker-vacancy";
+import { siteMatchAreaForProperty, vacancySpaceFacts } from "@/lib/parcel-space";
+import { loadCurrentAvailableSpaceMeasurements } from "@/lib/parcel-space-server";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +29,20 @@ function parseAreaParam(raw: string | string[] | undefined): number | null {
   if (!value || !/^\d+$/.test(value)) return null;
   const n = Number(value);
   return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+type VacancyMapSearchParams = Record<string, string | string[] | undefined>;
+
+function toUrlSearchParams(values: VacancyMapSearchParams): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(values)) {
+    if (Array.isArray(value)) {
+      for (const item of value) params.append(key, item);
+    } else if (value != null) {
+      params.set(key, value);
+    }
+  }
+  return params;
 }
 
 export async function generateMetadata({
@@ -45,15 +68,75 @@ export default async function VacancyMapPage({
   searchParams,
 }: {
   params: Promise<{ zip: string }>;
-  searchParams: Promise<{ area?: string | string[] }>;
+  searchParams: Promise<VacancyMapSearchParams>;
 }) {
   const { zip } = await params;
-  const { area: areaParam } = await searchParams;
+  const rawSearchParams = await searchParams;
+  const areaParam = rawSearchParams.area;
   const pilotEntry = getPilotZipEntry(zip);
   if (!pilotEntry) notFound();
 
   const exportData = loadVacancyIndex();
   const edition = exportData?.editions[zip] ?? null;
+  const availability = edition
+    ? await loadCurrentAvailableSpaceMeasurements({ zip })
+    : { status: "unavailable" as const, measurements: [] };
+  const availabilityIsAuthoritative = availability.status === "available";
+  const currentSitePoints = edition
+    ? applyCurrentAvailableSpaceToSitePoints(
+        edition.sitePoints,
+        availability.measurements,
+        availabilityIsAuthoritative,
+      )
+    : [];
+  const currentLandPoints =
+    edition?.landPoints
+      ? applyCurrentAvailableSpaceToLandPoints(
+          edition.landPoints,
+          availability.measurements,
+          availabilityIsAuthoritative,
+        )
+      : null;
+  const handoff = decodeSiteMatchmakerVacancyHandoff(
+    zip,
+    toUrlSearchParams(rawSearchParams),
+  );
+
+  const trackedPrefilter =
+    edition && handoff
+      ? prefilterVacancyRecords(currentSitePoints, handoff.criteria, {
+          propertyType: (record) => record.propertyType,
+          squareFeet: (record) => {
+            const space = vacancySpaceFacts(record.propertyType, record.space, record.squareFeet);
+            return siteMatchAreaForProperty(record.propertyType, space).sqft;
+          },
+        })
+      : null;
+  const landPrefilter =
+    currentLandPoints && handoff
+      ? prefilterVacancyRecords(currentLandPoints, handoff.criteria, {
+          propertyType: () => "vacant_land",
+          squareFeet: (record) => {
+            const space = vacancySpaceFacts("vacant_land", record.space, record.squareFeet);
+            return siteMatchAreaForProperty("vacant_land", space).sqft;
+          },
+        })
+      : null;
+
+  const plottedSitePoints = trackedPrefilter?.records ?? currentSitePoints;
+  const plottedLandPoints = landPrefilter?.records ?? currentLandPoints;
+  const plottedMarkerNumbers = new Set(
+    plottedSitePoints.flatMap((record) =>
+      record.markerNumber == null ? [] : [record.markerNumber],
+    ),
+  );
+  const plottedSiteIndex =
+    edition && handoff
+      ? edition.siteIndex.filter(
+          (record) =>
+            record.markerNumber == null || plottedMarkerNumbers.has(record.markerNumber),
+        )
+      : edition?.siteIndex ?? [];
 
   const asOf = exportData?.generatedAt
     ? new Date(exportData.generatedAt).toLocaleDateString("en-US", {
@@ -73,7 +156,7 @@ export default async function VacancyMapPage({
 
   return (
     <div className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
-      <div className="mx-auto max-w-5xl">
+      <div className={`mx-auto ${handoff ? "max-w-[1480px]" : "max-w-5xl"}`}>
         <VacancySubNav zip={zip} active="map" />
 
         <span className="font-mono-bureau text-[10px] uppercase tracking-[0.2em] text-[#2563EB]">
@@ -94,6 +177,93 @@ export default async function VacancyMapPage({
           {OPPORTUNITY_AREA_DISCLAIMER}
         </p>
 
+        {handoff && trackedPrefilter ? (
+          <section
+            aria-labelledby="site-matchmaker-handoff-title"
+            className="mt-5 border border-[#0C1B33]/15 bg-white px-4 py-4 sm:px-5"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="font-mono-bureau text-[9px] uppercase tracking-[0.16em] text-[#2563EB]">
+                  Site Matchmaker handoff
+                </p>
+                <h2
+                  id="site-matchmaker-handoff-title"
+                  className="mt-1 text-[16px] font-semibold text-[#0C1B33]"
+                >
+                  Criteria carried into this map
+                </h2>
+              </div>
+              <Link
+                href={buildSiteMatchmakerHref(handoff.criteria)}
+                className="border border-[#0C1B33]/20 px-3 py-2 font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/65 hover:border-[#2563EB] hover:text-[#2563EB]"
+              >
+                Edit criteria
+              </Link>
+            </div>
+
+            <div className="mt-4 grid gap-4 border-t border-[#0C1B33]/10 pt-4 md:grid-cols-2">
+              <div>
+                <p className="font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">
+                  Applied where records support it
+                </p>
+                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px] leading-relaxed">
+                  <dt className="text-[#0C1B33]/45">Property</dt>
+                  <dd className="font-medium text-[#0C1B33]">{handoff.summary.propertyType}</dd>
+                  <dt className="text-[#0C1B33]/45">Required site size</dt>
+                  <dd className="font-medium text-[#0C1B33]">{handoff.summary.footprint}</dd>
+                </dl>
+                <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/55">
+                  Tracked inventory: {trackedPrefilter.keptCount.toLocaleString("en-US")} of{" "}
+                  {trackedPrefilter.loadedCount.toLocaleString("en-US")} loaded records plotted.
+                  {landPrefilter
+                    ? ` Reconciled vacant land: ${landPrefilter.keptCount.toLocaleString("en-US")} of ${landPrefilter.loadedCount.toLocaleString("en-US")} loaded parcels plotted.`
+                    : ""}
+                </p>
+                {handoff.footprintBoundActive ? (
+                  <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/55">
+                    Source-backed size records place{" "}
+                    {trackedPrefilter.confirmedFootprintCount.toLocaleString("en-US")} tracked
+                    records inside the requested range. Another{" "}
+                    {trackedPrefilter.unassessedUnknownSizeCount.toLocaleString("en-US")} tracked
+                    records
+                    {landPrefilter
+                      ? ` and ${landPrefilter.unassessedUnknownSizeCount.toLocaleString("en-US")} reconciled land parcels`
+                      : ""}
+                    {" "}remain plotted as leads needing size verification. Known records outside the requested range are omitted.
+                  </p>
+                ) : null}
+              </div>
+
+              <div>
+                <p className="font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/45">
+                  Visible for local review only
+                </p>
+                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-[12px] leading-relaxed">
+                  <dt className="text-[#0C1B33]/45">Project use</dt>
+                  <dd className="text-[#0C1B33]">{handoff.summary.projectUse}</dd>
+                  <dt className="text-[#0C1B33]/45">Context</dt>
+                  <dd className="text-[#0C1B33]">{handoff.summary.context}</dd>
+                  <dt className="text-[#0C1B33]/45">Transportation</dt>
+                  <dd className="text-[#0C1B33]">{handoff.summary.transportation}</dd>
+                  <dt className="text-[#0C1B33]/45">Transport distance</dt>
+                  <dd className="text-[#0C1B33]">{handoff.summary.transportationDistance}</dd>
+                  <dt className="text-[#0C1B33]/45">Walkability</dt>
+                  <dd className="text-[#0C1B33]">{handoff.summary.walkability}</dd>
+                  <dt className="text-[#0C1B33]/45">Pedestrian activity</dt>
+                  <dd className="text-[#0C1B33]">{handoff.summary.pedestrianActivity}</dd>
+                  <dt className="text-[#0C1B33]/45">Amenities</dt>
+                  <dd className="text-[#0C1B33]">{handoff.summary.amenities}</dd>
+                </dl>
+                <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/55">
+                  These review criteria have not been verified against the plotted sites. This map
+                  does not confirm availability or project suitability.
+                </p>
+              </div>
+            </div>
+          </section>
+        ) : null}
+
         {edition ? (
           <div className="mt-6">
             <VacancyMapIsland
@@ -102,10 +272,10 @@ export default async function VacancyMapPage({
               boundary={edition.boundary}
               bbox={edition.boundary?.bbox ?? null}
               centroid={edition.centroid}
-              sitePoints={edition.sitePoints}
-              siteIndex={edition.siteIndex}
+              sitePoints={plottedSitePoints}
+              siteIndex={plottedSiteIndex}
               totalCount={edition.headline.vacantPropertyCount}
-              landPoints={edition.landPoints ?? null}
+              landPoints={plottedLandPoints}
               landPointsTruncated={edition.landPointsTruncated ?? false}
               landPointsTotal={edition.landPointsTotal ?? null}
               asOf={asOf}
@@ -114,6 +284,8 @@ export default async function VacancyMapPage({
               corridors={loadCorridorRings(edition.corridors ?? null)}
               anchors={edition.anchors ?? null}
               initialAreaId={initialAreaId}
+              siteMatchmakerPrefilter={handoff != null}
+              showSiteMatchmakerResults={handoff != null}
             />
           </div>
         ) : (

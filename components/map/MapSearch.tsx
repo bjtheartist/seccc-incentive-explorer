@@ -129,8 +129,10 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
 
   return (
     <div
-      className="absolute top-16 left-3 right-3 md:top-3 md:left-auto md:right-3 z-10 md:w-72"
+      data-testid="map-search"
+      className="absolute top-16 left-3 right-3 md:top-3 md:left-auto md:right-3 z-[60] isolate pointer-events-auto md:w-72"
       onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
     >
       {/* Search input — hero on mobile (search-first), compact on desktop */}
       <div className="relative">
@@ -141,13 +143,14 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
           onChange={(e) => handleInput(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setOpen(true)}
-          placeholder="Enter an address to check eligibility…"
+          placeholder="Enter an address to explore incentives…"
           className="w-full h-12 md:h-9 bg-white md:bg-white/95 backdrop-blur border border-[#0C1B33]/10 text-[#0C1B33] text-[14px] md:text-[12px] pl-10 md:pl-8 pr-9 md:pr-8 rounded-full md:rounded-none shadow-lg md:shadow-none font-mono-bureau tracking-wide placeholder:text-[#0C1B33]/35 placeholder:normal-case focus:outline-none focus:ring-1 focus:ring-[#2563EB]/40 focus:border-[#2563EB]/40 transition-colors"
         />
         <Search className="absolute left-3.5 md:left-2.5 top-3.5 md:top-2.5 w-4 h-4 md:w-3.5 md:h-3.5 text-[#0C1B33]/35" />
 
         {query && (
           <button
+            type="button"
             onClick={() => {
               setQuery("");
               onQueryChange?.("");
@@ -177,12 +180,16 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
 
       {/* Dropdown results */}
       {open && results.length > 0 && (
-        <div className="mt-1 bg-white/95 backdrop-blur border border-[#0C1B33]/10 shadow-lg overflow-hidden">
+        <div
+          data-testid="map-search-results"
+          className="relative z-[70] mt-1 bg-white/95 backdrop-blur border border-[#0C1B33]/10 shadow-lg overflow-hidden pointer-events-auto"
+        >
           {results.map((r, i) => (
             <button
+              type="button"
               key={i}
               onClick={() => handleSelect(r)}
-              className="w-full flex items-start gap-2 px-3 py-2.5 text-left hover:bg-[#EFF3FB] border-b border-[#0C1B33]/5 last:border-b-0 transition-colors"
+              className="w-full flex items-start gap-2 px-3 py-2.5 text-left hover:bg-[#EFF3FB] border-b border-[#0C1B33]/5 last:border-b-0 transition-colors pointer-events-auto touch-manipulation"
             >
               <MapPin className="w-3 h-3 mt-0.5 flex-shrink-0 text-[#2563EB]/50" />
               <div className="min-w-0">

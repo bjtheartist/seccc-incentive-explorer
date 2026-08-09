@@ -121,6 +121,107 @@
   font-family: 'JetBrains Mono', Menlo, monospace;
 }
 
+/* First-visit spotlight tour. Driver owns placement; these rules align its
+   popover with the Explorer's existing bureau/editorial visual language. */
+.driver-popover.cie-driver-popover {
+  width: min(340px, calc(100vw - 24px));
+  min-width: 0;
+  max-width: 340px;
+  border: 1px solid rgba(12, 27, 51, 0.14);
+  border-radius: 2px;
+  padding: 20px;
+  color: #0C1B33;
+  box-shadow: 0 24px 60px rgba(4, 13, 30, 0.28);
+}
+
+.cie-driver-popover .driver-popover-title {
+  max-width: calc(100% - 34px);
+  font-family: 'Playfair Display', Georgia, serif;
+  font-size: 22px;
+  font-weight: 400;
+  line-height: 1.2;
+}
+
+.cie-driver-popover .driver-popover-description {
+  margin-top: 10px;
+  color: rgba(12, 27, 51, 0.62);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.cie-driver-popover .driver-popover-close-btn {
+  color: rgba(12, 27, 51, 0.42);
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+.cie-driver-popover .driver-popover-close-btn:hover,
+.cie-driver-popover .driver-popover-close-btn:focus-visible {
+  color: #0C1B33;
+}
+
+.cie-driver-popover .driver-popover-footer {
+  gap: 12px;
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(12, 27, 51, 0.1);
+}
+
+.cie-driver-popover .driver-popover-progress-text {
+  color: rgba(12, 27, 51, 0.42);
+  font-family: 'JetBrains Mono', Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.cie-driver-popover .driver-popover-footer-btn {
+  min-height: 36px;
+  border-color: rgba(12, 27, 51, 0.16);
+  border-radius: 0;
+  padding: 8px 12px;
+  color: rgba(12, 27, 51, 0.64);
+  font-family: 'JetBrains Mono', Menlo, monospace;
+  font-size: 9px;
+  letter-spacing: 0;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.cie-driver-popover .driver-popover-next-btn {
+  border-color: #0C1B33;
+  background: #0C1B33;
+  color: #fff;
+}
+
+.cie-driver-popover .driver-popover-footer-btn:hover,
+.cie-driver-popover .driver-popover-footer-btn:focus-visible {
+  border-color: #2563EB;
+  background: #EFF3FB;
+  color: #0C1B33;
+}
+
+.cie-driver-popover .driver-popover-next-btn:hover,
+.cie-driver-popover .driver-popover-next-btn:focus-visible {
+  border-color: #1E3054;
+  background: #1E3054;
+  color: #fff;
+}
+
+@media (max-width: 480px) {
+  .driver-popover.cie-driver-popover {
+    padding: 16px;
+  }
+
+  .cie-driver-popover .driver-popover-title {
+    font-size: 19px;
+  }
+
+  .cie-driver-popover .driver-popover-description {
+    font-size: 12px;
+  }
+}
+
 /* Section backgrounds */
 .bg-warm {
   background-color: var(--warm-white);

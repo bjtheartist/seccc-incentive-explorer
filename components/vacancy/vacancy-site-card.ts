@@ -18,6 +18,27 @@
 
 import { OWNER_TYPE_COLORS, type OwnerType } from "@/lib/owner-classify";
 import { zoningGloss } from "@/lib/vacancy-zoning";
+import {
+  SITE_ACTIVITY_ERROR_TEXT,
+  SITE_ACTIVITY_MEASURE_ORDER,
+  SITE_ACTIVITY_NOTE,
+  siteActivityCheckingText,
+  siteActivityCompactLines,
+} from "@/lib/site-activity-lines";
+import type { SiteActivityState } from "@/lib/site-activity-client";
+import type { PermitMatchState } from "@/lib/permit-match-client";
+import { bestMatchedPermit } from "@/lib/permit-match";
+import {
+  PERMIT_DATA_SOURCE_TEXT,
+  PERMIT_MATCH_CHECKING_TEXT,
+  PERMIT_MATCH_ERROR_TEXT,
+  PERMIT_NO_MATCH_TEXT,
+  PERMIT_PORTAL_LABEL,
+  PERMIT_PORTAL_URL,
+  PERMIT_SECTION_TITLE,
+  PERMIT_VERIFICATION_NOTE,
+  permitDetailLines,
+} from "@/lib/permit-match-lines";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import { STARRED_RING } from "@/lib/vacancy-starred";
 import {
@@ -34,6 +55,14 @@ import {
 } from "@/lib/owner-taxonomy";
 import { PUBLIC_OWNER_TYPE_LABELS } from "@/lib/vacancy-public-labels";
 import { approxSqft } from "@/lib/vacancy-opportunity-areas";
+import {
+  CITY_BUILDING_FOOTPRINTS_VINTAGE,
+  siteMatchAreaForProperty,
+  siteMatchAreaLabel,
+  squareFeetLabel,
+  vacancySpaceFacts,
+  type ParcelSpaceFacts,
+} from "@/lib/parcel-space";
 import type {
   OwnerConfidence,
   VacancyCluster,
@@ -75,7 +104,9 @@ export interface CardData {
   ownerType: OwnerType;
   propertyType: VacancyPropertyType;
   pin: string | null;
+  /** Legacy field retained for callers using an older vacancy export. */
   squareFeet: number | null;
+  space?: ParcelSpaceFacts;
   zoningClass: string | null;
   incentiveCount: number;
   ownerConfidence: OwnerConfidence;
@@ -111,6 +142,19 @@ export interface SiteCardOptions {
    * star anywhere), so this is the single gate for the whole feature on the map.
    */
   star?: { key: string; starred: boolean } | null;
+  /**
+   * Public site-activity measurements for this point. Omitted (or
+   * `{status:"idle"}`) renders NO site-activity section at all — the section
+   * only exists for a card that carries a coordinate and has a lookup underway.
+   */
+  activity?: SiteActivityState;
+  /**
+   * Matched building-permit records for this parcel. Omitted (or
+   * `{status:"idle"}`) renders NO permit section at all — with no lookup
+   * underway there is nothing honest to say, and an empty section would read as
+   * "checked, nothing found".
+   */
+  permits?: PermitMatchState;
 }
 
 /** Marks the element whose innerHTML is swapped when the zone lookup lands. */
@@ -119,6 +163,14 @@ export const ZONE_SLOT_ATTR = "data-vacancy-zones";
 export const ZONE_BADGE_ATTR = "data-vacancy-zone-badge";
 /** Marks the star button; its value is the site's star key. */
 export const STAR_BUTTON_ATTR = "data-vacancy-star";
+/** Marks the element whose innerHTML is swapped when the site-activity lookup lands. */
+export const ACTIVITY_SLOT_ATTR = "data-vacancy-activity";
+/** Marks the "· N of 4 measured" badge in the Site-activity summary. */
+export const ACTIVITY_BADGE_ATTR = "data-vacancy-activity-badge";
+/** Marks the element whose innerHTML is swapped when the permit lookup lands. */
+export const PERMIT_SLOT_ATTR = "data-vacancy-permit";
+/** Marks the "· matched" badge in the Matched-building-permit summary. */
+export const PERMIT_BADGE_ATTR = "data-vacancy-permit-badge";
 /** Marks the scroll container that guarantees the card fits the frame. */
 export const CARD_SCROLLER_ATTR = "data-vacancy-card-scroll";
 
@@ -150,9 +202,11 @@ export function landUseNoun(
 export function significanceSentence(d: CardData): string {
   const noun = landUseNoun(d.zoningClass, d.propertyType);
   const lead = noun.charAt(0).toUpperCase() + noun.slice(1);
+  const facts = vacancySpaceFacts(d.propertyType, d.space, d.squareFeet);
+  const matchArea = siteMatchAreaForProperty(d.propertyType, facts);
   const sqftClause =
-    d.squareFeet != null && Number.isFinite(d.squareFeet)
-      ? `, about ${approxSqft(d.squareFeet).toLocaleString("en-US")} sq ft`
+    matchArea.sqft != null
+      ? `, about ${approxSqft(matchArea.sqft).toLocaleString("en-US")} sq ft ${siteMatchAreaLabel(matchArea.kind).toLowerCase()}`
       : "";
   const clusterClause = d.cluster ? ` among ${d.cluster.count} nearby vacant sites` : "";
   const incentiveClause =
@@ -219,7 +273,8 @@ function flagReasons(d: CardData): string[] {
       `Intersects ${d.incentiveCount} incentive ${d.incentiveCount === 1 ? "geography" : "geographies"}.`,
     );
   }
-  if (d.squareFeet != null && d.squareFeet >= 10000) reasons.push("Larger lot (10,000+ sq ft).");
+  const lotArea = vacancySpaceFacts(d.propertyType, d.space, d.squareFeet)?.lotAreaSqft;
+  if (lotArea != null && lotArea >= 10000) reasons.push("Larger lot (10,000+ sq ft).");
   if (d.saleYear != null) reasons.push(`Tax-sale record on file (latest ${d.saleYear}).`);
   if (d.violation) reasons.push("Building-violation record on file.");
   if (reasons.length === 0) reasons.push("Flagged as a tracked vacant site for follow-up.");
@@ -286,6 +341,134 @@ export function zoneBadgeText(zones: SiteZoneState): string {
     : "";
 }
 
+/**
+ * SITE ACTIVITY CONTEXT — the COMPACT variant of the report card
+ * (components/report/SiteActivityCard.tsx), rendered inside this popup for the
+ * selected parcel. Every sentence comes from lib/site-activity-lines.ts, so the
+ * two surfaces cannot drift apart.
+ *
+ * Compact means SHORTER, never looser:
+ *   • one measure = one bold figure + one qualifier + its own source line;
+ *   • an absence is stated as an absence, with its disclosed radius;
+ *   • nothing is combined — there is no "activity score" here and none may be
+ *     added, for the same reason lib/site-activity.ts forbids it;
+ *   • a lookup that failed says so rather than reading as an empty block.
+ *
+ * Returns the slot's inner HTML (the map patches this same string in once the
+ * fetch lands — see ACTIVITY_SLOT_ATTR), so every interpolated value is escaped.
+ */
+export function siteActivityHtml(state: SiteActivityState): string {
+  const wrap = (body: string) => `<div style="line-height:1.5">${body}</div>`;
+
+  if (state.status === "idle") return "";
+  if (state.status === "loading") return wrap(escapeHtml(siteActivityCheckingText("site")));
+  if (state.status === "error") return wrap(escapeHtml(SITE_ACTIVITY_ERROR_TEXT));
+
+  const lines = siteActivityCompactLines(state.context, state.sources, "site");
+  const blocks = lines.map((line, i) => {
+    const label = `<div style="font-size:9px;letter-spacing:0.12em;text-transform:uppercase;color:${CARD_FAINT};font-weight:600">${escapeHtml(
+      line.label,
+    )}</div>`;
+    const value = line.figure
+      ? `<div style="color:${CARD_INK};line-height:1.45"><strong>${escapeHtml(
+          line.figure,
+        )}</strong> ${escapeHtml(line.detail)}</div>`
+      : `<div style="color:${CARD_MUTED};line-height:1.45">${escapeHtml(line.detail)}</div>`;
+    const source = line.source
+      ? `<div style="font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:${CARD_FAINT};margin-top:2px">${escapeHtml(
+          line.source.text,
+        )} <a href="${escapeHtml(
+          line.source.url,
+        )}" target="_blank" rel="noopener noreferrer" style="color:${CARD_BLUE};text-decoration:none">verify &#8599;</a></div>`
+      : "";
+    return `<div style="margin-top:${i === 0 ? 4 : 8}px">${label}${value}${source}</div>`;
+  });
+
+  return (
+    `<div style="color:${CARD_FAINT};font-size:10px;letter-spacing:0.08em;text-transform:uppercase">${escapeHtml(
+      SITE_ACTIVITY_NOTE,
+    )}</div>` + blocks.join("")
+  );
+}
+
+/** The "· N of 4 measured" badge on the collapsed accordion — how many of the
+ *  four measures returned something inside their disclosed radius. Silent until
+ *  the lookup completes, so a pending or failed check never implies a count. */
+export function activityBadgeText(state: SiteActivityState): string {
+  if (state.status !== "loaded") return "";
+  const present = siteActivityCompactLines(state.context, state.sources, "site").filter(
+    (l) => l.present,
+  ).length;
+  return ` · ${present} of ${SITE_ACTIVITY_MEASURE_ORDER.length} measured`;
+}
+
+/**
+ * MATCHED BUILDING PERMIT RECORD — the block for the selected parcel.
+ *
+ * Every string comes from lib/permit-match-lines.ts so this surface and any
+ * future one (report card, PDF) cannot drift, exactly as siteActivityHtml()
+ * draws from lib/site-activity-lines.ts.
+ *
+ * ── The rails, stated where they are enforced ──
+ *
+ *  • ONE record is shown — the strongest-method, most-recent match
+ *    ({@link bestMatchedPermit}). Multiple matches are never merged, and their
+ *    reported costs are never added: a permit's reported cost is the
+ *    APPLICANT'S OWN ESTIMATE, and a sum of applicant estimates is not an
+ *    investment total, an award, or a spend. The cost is therefore printed once,
+ *    for one permit, carrying "(Applicant Estimate)" every time.
+ *  • The verification note renders with EVERY match, verbatim. A permit is a
+ *    filing; it is not proof that anything was built.
+ *  • The match method and its confidence are shown, because a low-confidence
+ *    proximity match and a PIN match are not the same claim and the reader is
+ *    about to act on the difference.
+ *  • `loaded` with zero matches is the ONLY path to the absence sentence. A
+ *    failed lookup says it failed; an in-flight one says it is checking.
+ *
+ * Returns the slot's inner HTML (the map patches this same string in once the
+ * fetch lands — see PERMIT_SLOT_ATTR), so every interpolated value is escaped.
+ */
+export function permitMatchHtml(state: PermitMatchState): string {
+  const wrap = (body: string) => `<div style="line-height:1.5">${body}</div>`;
+
+  if (state.status === "idle") return "";
+  if (state.status === "loading") return wrap(escapeHtml(PERMIT_MATCH_CHECKING_TEXT));
+  if (state.status === "error") return wrap(escapeHtml(PERMIT_MATCH_ERROR_TEXT));
+
+  const permit = bestMatchedPermit(state.matches);
+  if (!permit) return wrap(escapeHtml(PERMIT_NO_MATCH_TEXT));
+
+  const rows = permitDetailLines(permit)
+    .map(
+      (line) =>
+        `<div style="margin-top:3px"><span style="color:${CARD_FAINT}">${escapeHtml(
+          line.label,
+        )}:</span> <span style="color:${CARD_INK}">${escapeHtml(line.value)}</span></div>`,
+    )
+    .join("");
+
+  const note = `<div style="margin-top:8px;padding-top:6px;border-top:1px solid ${CARD_INK}12;color:${CARD_MUTED};line-height:1.45">${escapeHtml(
+    PERMIT_VERIFICATION_NOTE,
+  )}</div>`;
+
+  const source = `<div style="margin-top:6px;font-size:9px;letter-spacing:0.08em;text-transform:uppercase;color:${CARD_FAINT}">${escapeHtml(
+    PERMIT_DATA_SOURCE_TEXT,
+  )} <a href="${escapeHtml(
+    PERMIT_PORTAL_URL,
+  )}" target="_blank" rel="noopener noreferrer" style="color:${CARD_BLUE};text-decoration:none">${escapeHtml(
+    PERMIT_PORTAL_LABEL,
+  )} &#8599;</a></div>`;
+
+  return `${rows}${note}${source}`;
+}
+
+/** The "· matched" / "· none" badge on the collapsed accordion. Silent until
+ *  the lookup completes, so a pending or failed check never implies an answer. */
+export function permitBadgeText(state: PermitMatchState): string {
+  if (state.status !== "loaded") return "";
+  return state.matches.length > 0 ? " · matched" : " · none";
+}
+
 const SOURCES_NOTE =
   "Records indicate; verify current ownership, eligibility, and condition with the county before relying. " +
   "Ownership type is inferred from public taxpayer-of-record patterns — no owner names appear.";
@@ -302,16 +485,20 @@ export function buildSiteCardHtml(
   options: SiteCardOptions = {},
 ): string {
   const zones: SiteZoneState = options.zones ?? { status: "idle" };
+  const activity: SiteActivityState = options.activity ?? { status: "idle" };
+  const permits: PermitMatchState = options.permits ?? { status: "idle" };
   const propertyLabel = PROPERTY_TYPE_LABELS[d.propertyType] ?? "Vacant site";
   const addressText = d.address && d.address.trim() ? d.address.trim() : "Address not recorded";
+  const space = vacancySpaceFacts(d.propertyType, d.space, d.squareFeet);
+  const matchArea = siteMatchAreaForProperty(d.propertyType, space);
 
   const label = (text: string) =>
     `<div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${CARD_FAINT};font-weight:600;margin-bottom:5px">${escapeHtml(text)}</div>`;
 
   // ── 1 · Glance: address, then property type + approximate size ──
   const sizeClause =
-    d.squareFeet != null && Number.isFinite(d.squareFeet)
-      ? ` · about ${approxSqft(d.squareFeet).toLocaleString("en-US")} sq ft`
+    matchArea.sqft != null
+      ? ` · about ${approxSqft(matchArea.sqft).toLocaleString("en-US")} sq ft ${siteMatchAreaLabel(matchArea.kind).toLowerCase()}`
       : "";
   // Admin-only star. `options.star` is absent for the public, so a non-admin's
   // card carries no star markup at all — not a hidden one.
@@ -390,7 +577,10 @@ export function buildSiteCardHtml(
   const siteFacts = detail(
     "Site facts",
     [
-      `Lot size: ${d.squareFeet != null && Number.isFinite(d.squareFeet) ? `${d.squareFeet.toLocaleString("en-US")} sq ft` : "Not recorded"}`,
+      `Lot area: ${squareFeetLabel(space?.lotAreaSqft)} <span style="color:${CARD_FAINT}">(Cook County parcel record)</span>`,
+      `Assessor building area: ${squareFeetLabel(space?.assessorBuildingSqft)}${space?.assessorBuildingYear ? ` <span style="color:${CARD_FAINT}">(tax year ${space.assessorBuildingYear})</span>` : ""}`,
+      `Mapped building footprint on parcel: ${squareFeetLabel(space?.cityGroundFootprintSqft)} <span style="color:${CARD_FAINT}">(${escapeHtml(space?.cityGroundFootprintVintage ?? CITY_BUILDING_FOOTPRINTS_VINTAGE)})</span>`,
+      `Reported available space: ${space?.availableSpaceSqft ? `${space.availableSpaceSqft.toLocaleString("en-US")} sq ft` : "Not verified"}${space?.availableSpaceSource ? ` <span style="color:${CARD_FAINT}">(${escapeHtml(space.availableSpaceSource)}; confirm current availability)</span>` : ""}`,
       `PIN: ${d.pin ? `<span style="font-family:${MONO_STACK}">${escapeHtml(d.pin)}</span>` : "No PIN on record"}`,
       `Type: ${escapeHtml(propertyLabel)}`,
     ]
@@ -402,6 +592,8 @@ export function buildSiteCardHtml(
   //      Built explicitly (not via `detail`) because two of its parts are
   //      patched in place when the async lookup lands: the summary badge and
   //      the row body. See ZONE_BADGE_ATTR / ZONE_SLOT_ATTR.
+  const hasPoint =
+    d.lat != null && d.lon != null && Number.isFinite(d.lat) && Number.isFinite(d.lon);
   const reportLink =
     d.lat != null && d.lon != null && Number.isFinite(d.lat) && Number.isFinite(d.lon)
       ? `<div style="margin-top:5px"><a href="${escapeHtml(
@@ -419,7 +611,40 @@ export function buildSiteCardHtml(
       .join("")}</div>${reportLink}` +
     `</div></details>`;
 
-  // 6c · Why it was flagged (real-field reasons only — no rank or badge)
+  // 6c · Site activity context — the compact variant of the report card's five
+  //      raw public measurements around this exact point. Present ONLY for a
+  //      card that carries a coordinate AND has a lookup underway: with no
+  //      point there is nothing honest to measure, so the section is absent
+  //      rather than empty. Patched in place like the zones rows once the
+  //      fetch lands. See ACTIVITY_BADGE_ATTR / ACTIVITY_SLOT_ATTR.
+  const activitySection =
+    hasPoint && activity.status !== "idle"
+      ? `<details style="border-top:1px solid ${CARD_INK}12">` +
+        `<summary style="${summaryStyle}">Site activity context<span ${ACTIVITY_BADGE_ATTR}>${escapeHtml(
+          activityBadgeText(activity),
+        )}</span></summary>` +
+        `<div style="${detailBodyStyle}">` +
+        `<div ${ACTIVITY_SLOT_ATTR}>${siteActivityHtml(activity)}</div>` +
+        `</div></details>`
+      : "";
+
+  // 6d · Matched building permit record — the strongest, most recent permit
+  //      tied to THIS parcel by PIN, address, or proximity, with the method and
+  //      confidence stated. Present ONLY when a lookup is underway, for the same
+  //      reason as the activity section: an empty block reads as a checked
+  //      absence. Patched in place once the fetch lands (PERMIT_SLOT_ATTR).
+  const permitSection =
+    permits.status !== "idle"
+      ? `<details style="border-top:1px solid ${CARD_INK}12">` +
+        `<summary style="${summaryStyle}">${escapeHtml(
+          PERMIT_SECTION_TITLE,
+        )}<span ${PERMIT_BADGE_ATTR}>${escapeHtml(permitBadgeText(permits))}</span></summary>` +
+        `<div style="${detailBodyStyle}">` +
+        `<div ${PERMIT_SLOT_ATTR}>${permitMatchHtml(permits)}</div>` +
+        `</div></details>`
+      : "";
+
+  // 6e · Why it was flagged (real-field reasons only — no rank or badge)
   const whyFlagged = detail(
     "Why it was flagged",
     flagReasons(d)
@@ -427,7 +652,7 @@ export function buildSiteCardHtml(
       .join(""),
   );
 
-  // 6d · Data and sources (ownership type lives here — off the headline)
+  // 6f · Data and sources (ownership type lives here — off the headline)
   const ownerLabel = PUBLIC_OWNER_TYPE_LABELS[d.ownerType] ?? PUBLIC_OWNER_TYPE_LABELS.unknown;
   const ownerColor = OWNER_TYPE_COLORS[d.ownerType] ?? OWNER_TYPE_COLORS.unknown;
   const axisLine =
@@ -444,7 +669,7 @@ export function buildSiteCardHtml(
     ].join(""),
   );
 
-  const body = `${glance}${significance}${cautionBlock}${nextStep}${areaLink}<div style="margin-top:10px">${siteFacts}${programs}${whyFlagged}${dataSources}</div>`;
+  const body = `${glance}${significance}${cautionBlock}${nextStep}${areaLink}<div style="margin-top:10px">${siteFacts}${programs}${activitySection}${permitSection}${whyFlagged}${dataSources}</div>`;
 
   // The GUARANTEE half of the viewport fit: cap the card to the map frame and
   // scroll the overflow inside it, so a fully-expanded card can never run its

@@ -1,9 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ArrowRight, MapPin, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronDown, ExternalLink, MapPin } from "lucide-react";
 import Link from "next/link";
-import type { SurveyResult, ProgramMatch } from "@/lib/types";
+import type {
+  MatchTransparencyContact,
+  ProgramMatch,
+  SurveyResult,
+} from "@/lib/types";
 
 interface SurveyResultsProps {
   results: SurveyResult;
@@ -11,169 +15,170 @@ interface SurveyResultsProps {
 }
 
 export function SurveyResults({ results, onRetake }: SurveyResultsProps) {
-  const { matches, total, totalPrograms } = results;
-
-  const highMatches = matches.filter((m) => m.confidence === "high");
-  const mediumMatches = matches.filter((m) => m.confidence === "medium");
-  const lowMatches = matches.filter((m) => m.confidence === "low");
-
-  // Score ring
-  const radius = 54;
-  const circumference = 2 * Math.PI * radius;
-  const progress = total / totalPrograms;
-  const dashOffset = circumference * (1 - progress);
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
     >
-      {/* Header with score ring */}
-      <div className="text-center mb-12">
-        <span className="font-mono-bureau text-[10px] text-[#0C1B33]/25 uppercase tracking-[0.2em] block mb-6">
-          Results
+      <div className="text-center mb-10">
+        <span className="font-mono-bureau text-[10px] text-[#0C1B33]/25 uppercase tracking-[0.2em] block mb-5">
+          Programs to review
         </span>
-
-        <div className="relative w-32 h-32 mx-auto mb-6">
-          <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-            <circle cx="60" cy="60" r={radius} fill="none" stroke="#0C1B33" strokeOpacity="0.06" strokeWidth="4" />
-            <motion.circle
-              cx="60" cy="60" r={radius}
-              fill="none" stroke="#2563EB" strokeWidth="4" strokeLinecap="butt"
-              strokeDasharray={circumference}
-              initial={{ strokeDashoffset: circumference }}
-              animate={{ strokeDashoffset: dashOffset }}
-              transition={{ duration: 1.2, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            />
-          </svg>
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <motion.span
-              className="font-editorial text-3xl text-[#0C1B33]"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-            >
-              {total}
-            </motion.span>
-            <span className="font-mono-bureau text-[9px] text-[#0C1B33]/30 uppercase tracking-[0.15em]">
-              of {totalPrograms}
-            </span>
-          </div>
-        </div>
-
-        <h2 className="font-editorial text-2xl sm:text-3xl text-[#0C1B33] mb-2">
-          You may qualify for {total} program{total !== 1 ? "s" : ""}
+        <h2 className="font-editorial text-2xl sm:text-3xl text-[#0C1B33] mb-3">
+          Starting points for your project
         </h2>
-        <p className="font-mono-bureau text-[11px] text-[#0C1B33]/40 uppercase tracking-[0.1em]">
-          Based on your business profile
+        <p className="text-sm text-[#0C1B33]/55 leading-relaxed max-w-xl mx-auto">
+          Your answers organize programs for further review. Check the open
+          questions and confirm current requirements with the listed contact.
         </p>
       </div>
 
-      {/* Confidence groups */}
-      <div className="space-y-8 mb-12">
-        {highMatches.length > 0 && (
-          <ConfidenceGroup label="High Match" matches={highMatches} color="#16A34A" />
-        )}
-        {mediumMatches.length > 0 && (
-          <ConfidenceGroup label="Medium Match" matches={mediumMatches} color="#2563EB" />
-        )}
-        {lowMatches.length > 0 && (
-          <ConfidenceGroup label="Worth Exploring" matches={lowMatches} color="#0C1B33" colorOpacity={0.3} />
-        )}
+      <div className="space-y-2 mb-12" data-testid="survey-program-review-list">
+        {results.matches.map((match) => (
+          <ProgramCard key={match.programId} match={match} />
+        ))}
       </div>
 
-      {/* Location CTA */}
       <div className="border border-[#0C1B33]/8 bg-[#EFF3FB] p-6 sm:p-8 mb-6">
         <div className="flex items-start gap-4">
           <MapPin className="w-5 h-5 text-[#2563EB] flex-shrink-0 mt-0.5" />
           <div>
             <h3 className="font-mono-bureau text-[12px] text-[#0C1B33] uppercase tracking-[0.1em] mb-2">
-              Location matters too
+              Add location context
             </h3>
-            <p className="text-[#0C1B33]/50 text-sm leading-relaxed mb-4">
-              Many of these programs are tied to specific Chicago zones — TIF districts,
-              Enterprise Zones, Opportunity Zones, and more. Enter your address to see
-              which location-based programs apply.
+            <p className="text-[#0C1B33]/55 text-sm leading-relaxed mb-4">
+              Many programs depend on a specific boundary. Add a Chicago address
+              to check its mapped program geographies.
             </p>
             <Link
               href="/"
               className="inline-flex items-center gap-2 font-mono-bureau text-[11px] text-[#2563EB] uppercase tracking-[0.1em] hover:text-[#0C1B33] transition-colors"
             >
-              Check your address
+              Check mapped location
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
         </div>
       </div>
 
-      {/* Retake */}
       <div className="text-center">
         <button
           onClick={onRetake}
-          className="font-mono-bureau text-[11px] text-[#0C1B33]/30 uppercase tracking-[0.1em] hover:text-[#0C1B33] transition-colors cursor-pointer"
+          className="font-mono-bureau text-[11px] text-[#0C1B33]/35 uppercase tracking-[0.1em] hover:text-[#0C1B33] transition-colors cursor-pointer"
         >
-          Retake survey
+          Change answers
         </button>
       </div>
     </motion.div>
   );
 }
 
-function ConfidenceGroup({ label, matches, color, colorOpacity = 1 }: {
-  label: string;
-  matches: ProgramMatch[];
-  color: string;
-  colorOpacity?: number;
-}) {
-  const dotStyle = colorOpacity < 1
-    ? { backgroundColor: color, opacity: colorOpacity }
-    : { backgroundColor: color };
+function ExplanationList({ title, items }: { title: string; items: string[] }) {
+  if (items.length === 0) return null;
 
   return (
-    <div>
-      <div className="flex items-center gap-3 mb-3">
-        <div className="w-2 h-2" style={dotStyle} />
-        <span className="font-mono-bureau text-[10px] text-[#0C1B33]/35 uppercase tracking-[0.15em]">
-          {label} — {matches.length} program{matches.length !== 1 ? "s" : ""}
-        </span>
-      </div>
-      <div className="space-y-1">
-        {matches.map((match) => (
-          <ProgramCard key={match.programId} match={match} color={color} colorOpacity={colorOpacity} />
+    <section>
+      <h4 className="font-mono-bureau text-[10px] text-[#0C1B33]/40 uppercase tracking-[0.14em] mb-2">
+        {title}
+      </h4>
+      <ul className="space-y-1.5 text-sm text-[#0C1B33]/65 leading-relaxed">
+        {items.map((item) => (
+          <li key={item} className="flex gap-2">
+            <span aria-hidden="true" className="text-[#2563EB]">•</span>
+            <span>{item}</span>
+          </li>
         ))}
-      </div>
-    </div>
+      </ul>
+    </section>
   );
 }
 
-function ProgramCard({ match, color, colorOpacity = 1 }: {
-  match: ProgramMatch;
-  color: string;
-  colorOpacity?: number;
-}) {
-  const dotStyle = colorOpacity < 1
-    ? { backgroundColor: color, opacity: colorOpacity }
-    : { backgroundColor: color };
+function ContactList({ contacts }: { contacts: MatchTransparencyContact[] }) {
+  if (contacts.length === 0) return null;
 
   return (
-    <div className="group border border-[#0C1B33]/5 bg-white hover:bg-[#EFF3FB] transition-colors">
-      <div className="flex items-center justify-between px-5 py-4">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-1">
-            <span className="w-1.5 h-1.5 flex-shrink-0" style={dotStyle} />
-            <span className="font-mono-bureau text-[12px] text-[#0C1B33] uppercase tracking-[0.05em] truncate">
-              {match.program.name}
-            </span>
-          </div>
-          <div className="pl-[18px]">
-            <span className="font-mono-bureau text-[10px] text-[#0C1B33]/30 tracking-[0.05em]">
-              Matched: {match.reasons.join(" + ")}
-            </span>
-          </div>
+    <section>
+      <h4 className="font-mono-bureau text-[10px] text-[#0C1B33]/40 uppercase tracking-[0.14em] mb-2">
+        Confirm with
+      </h4>
+      <ul className="space-y-3 text-sm text-[#0C1B33]/65">
+        {contacts.map((contact) => (
+          <li key={`${contact.agency}-${contact.role ?? "contact"}`}>
+            <p className="text-[#0C1B33]">{contact.agency}</p>
+            {contact.role && <p className="text-xs mt-0.5">{contact.role}</p>}
+            <div className="flex flex-wrap gap-x-4 gap-y-1 mt-1 text-xs">
+              {contact.phone && <a href={`tel:${contact.phone}`}>{contact.phone}</a>}
+              {contact.email && <a href={`mailto:${contact.email}`}>{contact.email}</a>}
+              {contact.url && (
+                <a
+                  href={contact.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-[#2563EB]"
+                >
+                  Contact page <ExternalLink className="w-3 h-3" />
+                </a>
+              )}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+function ProgramCard({ match }: { match: ProgramMatch }) {
+  const explanation = match.explanation;
+
+  return (
+    <details className="group border border-[#0C1B33]/8 bg-white">
+      <summary className="list-none cursor-pointer px-5 py-4 flex items-center justify-between gap-4 hover:bg-[#EFF3FB] transition-colors">
+        <div className="min-w-0">
+          <p className="font-mono-bureau text-[12px] text-[#0C1B33] uppercase tracking-[0.05em]">
+            {match.program.name}
+          </p>
+          <p className="font-mono-bureau text-[9px] text-[#0C1B33]/35 uppercase tracking-[0.12em] mt-1">
+            {match.program.level}
+          </p>
         </div>
-        <ChevronRight className="w-4 h-4 text-[#0C1B33]/15 flex-shrink-0 group-hover:text-[#0C1B33]/30" />
+        <span className="inline-flex items-center gap-2 font-mono-bureau text-[9px] text-[#0C1B33]/40 uppercase tracking-[0.1em] flex-shrink-0">
+          Review details
+          <ChevronDown className="w-4 h-4 transition-transform group-open:rotate-180" />
+        </span>
+      </summary>
+
+      <div className="border-t border-[#0C1B33]/8 px-5 py-5 grid gap-6 sm:grid-cols-2">
+        <ExplanationList title="Why it appears" items={explanation.whyItAppears} />
+        <ExplanationList
+          title="Known from public data"
+          items={explanation.knownFromPublicData}
+        />
+        <ExplanationList
+          title="Based on your answers"
+          items={explanation.basedOnUserAnswers}
+        />
+        <ExplanationList title="Still to confirm" items={explanation.stillToConfirm} />
+        <ExplanationList
+          title="Documents to gather"
+          items={explanation.currentDocumentsToGather}
+        />
+        <ContactList contacts={explanation.confirmWith} />
+
+        {explanation.officialSource && (
+          <section className="sm:col-span-2 pt-4 border-t border-[#0C1B33]/8">
+            <a
+              href={explanation.officialSource.url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 font-mono-bureau text-[10px] text-[#2563EB] uppercase tracking-[0.1em] hover:text-[#0C1B33] transition-colors"
+            >
+              {explanation.officialSource.label}
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </section>
+        )}
       </div>
-    </div>
+    </details>
   );
 }

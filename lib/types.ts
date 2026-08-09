@@ -1,5 +1,6 @@
 import type { PersonaId } from "./personas";
 import type { DocumentSpec } from "./document-spec";
+import type { ParcelSpaceFacts } from "./parcel-space";
 
 export interface Business {
   id: string;
@@ -22,7 +23,7 @@ export interface Business {
 export interface ProgramContact {
   agency: string;
   abbreviation: string;
-  phone: string;
+  phone?: string;
   email?: string;
   url?: string;
   role?: string;
@@ -119,6 +120,8 @@ export interface Program {
   suspensionNote?: string;
   sunsetWarning?: string;
   oz2Note?: string;
+  redesignatedAreaWarning?: string;
+  adjacentCapitalNote?: string;
   // ── Availability gating (2026-07) — see lib/program-gating.ts ──
   /** Dated application windows/deadlines for this card (used by deadlines + gating). */
   deadlines?: ProgramDeadlineEntry[];
@@ -189,6 +192,7 @@ export interface CheckResult {
   programs: ProgramCheckResult[];
   topActions: TopAction[];
   cityZoning?: CityZoning;
+  cityZoningStatus?: ZoningLookupStatus;
   census?: CensusData;
   parcel?: ParcelData;
   timestamp: string;
@@ -217,8 +221,235 @@ export interface Stats {
 
 export interface CityZoning {
   zoneClass: string; // e.g. "C1-2", "M1-2", "RS-3"
-  zoneType: string | null; // e.g. "Commercial", "Manufacturing"
+  zoneType: string | null; // Official label for zoneTypeCode, when published
+  zoneTypeCode?: number | null;
+  pdNumber?: number | null;
+  pmdSubArea?: string | null;
+  pedestrianStreetAreaName?: string | null;
+  ordinanceNumber?: string | null;
+  ordinanceDate?: string | null;
+  clerkDocumentNumber?: string | null;
+  clerkUrl?: string | null;
+  recordUpdatedAt?: string | null;
+  source?: ZoningSourceMetadata;
+  /** Per-mirror freshness, each on its own terms. See ZoningVintage. */
+  vintage?: ZoningVintage;
+  zba?: ChicagoZbaLookupResponse;
 }
+
+export type ZoningLookupStatus = "available" | "not_found" | "unavailable";
+
+export interface ZoningSourceMetadata {
+  id: "chicago-arcgis-zoning" | "chicago-data-portal-zoning";
+  label: string;
+  url: string;
+  retrievedAt: string;
+  recordUpdatedAt: string | null;
+}
+
+/**
+ * What ONE mirror's point query actually did.
+ *
+ * A mirror that was never asked, a mirror that answered "no polygon here", and
+ * a mirror that could not answer at all are three different facts, and
+ * collapsing them lets a source that could not be consulted read as a source
+ * that was consulted and found nothing. This is deliberately separate from
+ * whether that mirror's dataset-level metadata could be retrieved: the two
+ * endpoints fail independently.
+ */
+export type ZoningMirrorQueryOutcome =
+  /** Returned the polygon whose fields this response publishes. */
+  | "answered"
+  /** Queried successfully and authoritatively returned no polygon here. */
+  | "empty"
+  /** Queried and could not answer. Its silence is not evidence of absence. */
+  | "failed"
+  /** Never asked, because another mirror had already answered. */
+  | "not_queried";
+
+/**
+ * Whether this mirror's own dataset-wide freshness could be established. Kept
+ * separate from `ZoningMirrorQueryOutcome` so a healthy metadata endpoint can
+ * never make a failed point query look like a consulted one.
+ */
+export type ZoningMirrorDatasetOutcome =
+  /** The mirror published a dataset-level timestamp and we read it. */
+  | "published"
+  /** The mirror publishes no dataset-level timestamp at all. */
+  | "not_published"
+  /** The metadata endpoint was asked and could not answer. */
+  | "unreachable"
+  /** Not waited on, so the answer would not be delayed by provenance. */
+  | "not_waited";
+
+/** One published timestamp, carrying the field it came from and its scope. */
+export interface ZoningTimestamp {
+  /** Published field the timestamp was read from. */
+  field: string;
+  /** ISO timestamp exactly as the mirror published it, or null when absent. */
+  updatedAt: string | null;
+  /** What the timestamp describes. */
+  scope: "record" | "dataset";
+}
+
+/**
+ * Freshness that ONE published mirror reports about itself.
+ *
+ * The two City mirrors do not measure the same thing and must not be collapsed
+ * into a single "last updated" line. The ArcGIS feature layer publishes a
+ * per-polygon `UPDATE_TIMESTAMP` and exposes no service-level `editingInfo`,
+ * so it has record-scoped freshness only: it describes the one polygon
+ * returned, not the dataset. The Data Portal mirror publishes a per-row
+ * `edit_date` AND a dataset-level `rowsUpdatedAt` plus a curated "Time Period"
+ * statement. `record` and `dataset` are therefore separate slots rather than
+ * one field with a scope label: when the Data Portal answers it has both, and
+ * making it pick one would publish a freshness the source never stated.
+ */
+export interface ZoningMirrorVintage {
+  id: ZoningSourceMetadata["id"];
+  label: string;
+  /** What this mirror's point query did. */
+  queryOutcome: ZoningMirrorQueryOutcome;
+  /** Whether this mirror's dataset-wide freshness could be established. */
+  datasetOutcome: ZoningMirrorDatasetOutcome;
+  /**
+   * Freshness of the polygon THIS mirror returned. Non-null only when this
+   * mirror answered, so a record timestamp can never be attributed to a mirror
+   * that did not produce the record.
+   */
+  record: ZoningTimestamp | null;
+  /** Dataset-wide freshness THIS mirror publishes, when it publishes one. */
+  dataset: ZoningTimestamp | null;
+  /** What this mirror could and could not report for this lookup, and why. */
+  note: string;
+  /** Verbatim curated freshness statement, when the mirror publishes one. */
+  statedTimePeriod?: string | null;
+}
+
+/** What the responding mirror actually established. */
+export type ZoningAnswerKind =
+  /** It returned a zoning polygon. */
+  | "zoning"
+  /** It successfully established that it publishes no polygon here. */
+  | "no_zoning";
+
+/**
+ * Per-response provenance: which mirror produced this answer, when we asked,
+ * and what each mirror says about its own freshness. Retrieval time is never
+ * presented as a source-update date.
+ */
+export interface ZoningVintage {
+  /** When this lookup ran. Not a source-update date. */
+  retrievedAt: string;
+  /**
+   * Which mirror produced this response — the one that returned the polygon,
+   * or, for a not_found, the one that authoritatively returned none. Null when
+   * no mirror could answer. Always agrees with the response's `source`.
+   */
+  answeredBy: ZoningSourceMetadata["id"] | null;
+  /**
+   * What `answeredBy` established, so "answered by ArcGIS" is never ambiguous
+   * between a returned polygon and a confirmed absence. Null when nothing was
+   * established.
+   */
+  answerKind: ZoningAnswerKind | null;
+  mirrors: ZoningMirrorVintage[];
+  /** Why the mirror timestamps are not directly comparable. */
+  comparabilityNote: string;
+}
+
+export interface ZoningAvailableResponse extends CityZoning {
+  status: "available";
+  source: ZoningSourceMetadata;
+}
+
+export interface ZoningNotFoundResponse {
+  status: "not_found";
+  zoneClass: null;
+  zoneType: null;
+  source: ZoningSourceMetadata;
+  vintage?: ZoningVintage;
+  message: string;
+  zba?: ChicagoZbaLookupResponse;
+}
+
+export interface ZoningUnavailableResponse {
+  status: "unavailable";
+  zoneClass: null;
+  zoneType: null;
+  source: null;
+  vintage?: ZoningVintage;
+  message: string;
+  zba?: ChicagoZbaLookupResponse;
+}
+
+export type ZoningLookupResponse =
+  | ZoningAvailableResponse
+  | ZoningNotFoundResponse
+  | ZoningUnavailableResponse;
+
+export type ChicagoZbaCaseType =
+  | "special_use"
+  | "variation"
+  | "administrative_appeal"
+  | "unknown";
+
+export interface ChicagoZbaCase {
+  id: string;
+  globalId: string | null;
+  caseReference: string | null;
+  caseYear: number | null;
+  caseSequence: number | null;
+  caseType: ChicagoZbaCaseType;
+  caseTypeRaw: string | null;
+  address: string | null;
+  judgment: string | null;
+  description: string | null;
+  pin10: string | null;
+  pinAccuracy: string | null;
+  publishedYearField: string | null;
+  publishedCaseField: string | null;
+}
+
+export interface ChicagoZbaSourceMetadata {
+  id: "chicago-zba-arcgis";
+  label: string;
+  url: string;
+  boardUrl: string;
+  retrievedAt: string;
+  sourceUpdatedAt: null;
+  freshnessNote: string;
+}
+
+export interface ChicagoZbaAvailableResponse {
+  status: "available";
+  cases: ChicagoZbaCase[];
+  returnedCount: number;
+  coverage: "complete" | "partial";
+  source: ChicagoZbaSourceMetadata;
+  message: string;
+}
+
+export interface ChicagoZbaNotFoundResponse {
+  status: "not_found";
+  cases: [];
+  returnedCount: 0;
+  coverage: "complete";
+  source: ChicagoZbaSourceMetadata;
+  message: string;
+}
+
+export interface ChicagoZbaUnavailableResponse {
+  status: "unavailable";
+  cases: [];
+  source: ChicagoZbaSourceMetadata;
+  message: string;
+}
+
+export type ChicagoZbaLookupResponse =
+  | ChicagoZbaAvailableResponse
+  | ChicagoZbaNotFoundResponse
+  | ChicagoZbaUnavailableResponse;
 
 export interface CensusData {
   tractId: string;
@@ -239,6 +470,8 @@ export interface ParcelData {
   landSqft: number | null;
   bldgSqft: number | null;
   bldgAge: number | null;
+  /** Source-separated parcel/building dimensions and their limited provenance. */
+  space?: ParcelSpaceFacts;
   landValue: string | null;
   bldgValue: string | null;
   totalValue: string | null;
@@ -334,6 +567,7 @@ export interface LookupResult {
   zoneNames: Record<string, string>; // e.g. { tif: "Stony Island Ave...", ssa: "Calumet Hts/Avalon" }
   incentiveCount: number;
   cityZoning?: CityZoning;
+  cityZoningStatus?: ZoningLookupStatus;
   sector?: string; // user-selected business sector ID
   employment?: {
     censusTract: string;
@@ -360,6 +594,32 @@ export interface CommunityAsset {
 
 /* ── Pre-Qualification Survey ── */
 
+export interface MatchTransparencyContact {
+  agency: string;
+  abbreviation?: string;
+  phone?: string;
+  email?: string;
+  url?: string;
+  role?: string;
+}
+
+export interface MatchTransparencySource {
+  label: string;
+  url: string;
+}
+
+/** Public explanation only. Internal rank and confidence never cross this boundary. */
+export interface PublicMatchExplanation {
+  whyItAppears: string[];
+  knownFromPublicData: string[];
+  basedOnUserAnswers: string[];
+  stillToConfirm: string[];
+  currentDocumentsToGather: string[];
+  confirmWith: MatchTransparencyContact[];
+  officialSource?: MatchTransparencySource;
+  lastVerifiedAt?: string | null;
+}
+
 export interface SurveyQuestion {
   id: string;
   step: number;
@@ -378,15 +638,12 @@ export interface SurveyAnswers {
 
 export interface ProgramMatch {
   programId: string;
-  program: { name: string; short: string };
-  confidence: "high" | "medium" | "low";
-  reasons: string[];
+  program: { name: string; short: string; level: string };
+  explanation: PublicMatchExplanation;
 }
 
 export interface SurveyResult {
   matches: ProgramMatch[];
-  total: number;
-  totalPrograms: number;
 }
 
 /* ── Executive Summary (for reports) ── */
@@ -395,16 +652,11 @@ export interface ExecutiveSummary {
   topPrograms: {
     programId: string;
     name: string;
-    confidence: EligibilityConfidence;
-    confidenceLabel: string;
-    benefitRange: string;
-    whyOneLine?: string;
-    notVerified?: string[];
-    projectFitLabel?: string;
-    projectFitReason?: string;
+    explanation: PublicMatchExplanation;
   }[];
   topActions: TopAction[];
   zoneCount: number;
   whyTheseMatter: string;
   projectGoalLabel?: string;
+  projectGoalLabels?: string[];
 }

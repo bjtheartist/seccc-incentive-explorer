@@ -15,16 +15,17 @@ import { ArrowRight, Loader2 } from "lucide-react";
 import { trackEvent } from "@/lib/analytics-events";
 import {
   BUDGET_RANGE_OPTIONS,
-  SITE_PROJECT_TYPE_OPTIONS,
   TIMELINE_OPTIONS,
 } from "@/lib/report-wizard-config";
+import { ProjectGoalSelector } from "@/components/report/ProjectGoalSelector";
 import {
   confirmedProgramsFromReport,
 } from "@/lib/report-engine";
 import type { GeneratedReport } from "@/lib/report-engine";
 
 export interface QuickRefineFields {
-  projectType: string;
+  projectGoals: string[];
+  customGoal: string;
   budgetRange: string;
   timeline: string;
 }
@@ -49,7 +50,7 @@ export function RefineValuePanel({
   /** Full refine path: opens the optional project-details screens. */
   onRefine?: () => void;
   /**
-   * Inline refine: regenerates the report from a primary goal plus optional
+   * Inline refine: regenerates the report from up to three goals plus optional
    * budget and timeline context without
    * leaving this view. Only available where the report data pipeline lives
    * (the live /report flow).
@@ -58,7 +59,8 @@ export function RefineValuePanel({
   quickRefineBusy?: boolean;
   compact?: boolean;
 }) {
-  const [projectType, setProjectType] = useState("");
+  const [projectGoals, setProjectGoals] = useState<string[]>([]);
+  const [customGoal, setCustomGoal] = useState("");
   const [budgetRange, setBudgetRange] = useState("");
   const [timeline, setTimeline] = useState("");
   const exposureFired = useRef(false);
@@ -82,19 +84,23 @@ export function RefineValuePanel({
   }, []);
 
   const handleQuickRefine = () => {
-    if (!projectType || !onQuickRefine || quickRefineBusy) return;
+    const goalsAreComplete =
+      projectGoals.length > 0 &&
+      (!projectGoals.includes("other") || Boolean(customGoal.trim()));
+    if (!goalsAreComplete || !onQuickRefine || quickRefineBusy) return;
     trackEvent("inline_refine_used", {
       reportType: report.reportType,
       address: report.metadata?.address ?? null,
       metadata: {
         context,
-        projectType,
+        projectType: projectGoals[0],
+        projectGoals,
         budgetRange: budgetRange || null,
         timeline: timeline || null,
         matchedPrograms: confirmedPrograms.length,
       },
     });
-    onQuickRefine({ projectType, budgetRange, timeline });
+    onQuickRefine({ projectGoals, customGoal: customGoal.trim(), budgetRange, timeline });
   };
 
   // ── Compact strip (compare cards) ─────────────────────────────────
@@ -102,7 +108,7 @@ export function RefineValuePanel({
     return (
       <div className="refine-value-panel px-4 py-3 border-b border-[#2563EB]/15 bg-[#2563EB]/[0.035] print:hidden flex items-center justify-between gap-3">
         <p className="text-[11px] leading-snug text-[#0C1B33]/55">
-          Location-only snapshot. Refining adds goal-based ranking and next
+          Location-only snapshot. Refining adds goal-based organization and next
           steps.
         </p>
         {onRefine && (
@@ -127,18 +133,18 @@ export function RefineValuePanel({
       <p className="text-[13px] leading-relaxed text-[#0C1B33]/60 max-w-2xl">
         This shows the zones, parcel context, and programs that may touch this
         address — before your project is factored in. Refining first uses your
-        primary goal, then adds budget and timeline context when available.
+        selected goals, then adds budget and timeline context when available.
       </p>
 
       {/* What refining unlocks. */}
       <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-px bg-[#0C1B33]/10 border border-[#0C1B33]/10 max-w-3xl">
         <div className="bg-white px-4 py-3">
           <div className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/40 mb-1">
-            Goal-Based Ranking
+            Goal-Based Organization
           </div>
           <p className="text-[12px] leading-relaxed text-[#0C1B33]/60">
             Programs tied to the address are reorganized around the outcome
-            you want to pursue.
+            you want to pursue, across as many as three goals.
           </p>
         </div>
         <div className="bg-white px-4 py-3">
@@ -167,26 +173,19 @@ export function RefineValuePanel({
       {onQuickRefine ? (
         <div className="mt-5 border-t border-[#0C1B33]/10 pt-4 max-w-3xl">
           <div className="font-mono-bureau text-[9px] tracking-[0.28em] uppercase text-[#0C1B33]/40 mb-3">
-            Quick Refine — Start With Your Primary Goal
+            Quick Refine — Start With Your Project Goals
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <label>
-              <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/40 block mb-1">
-                Primary Goal
-              </span>
-              <select
-                value={projectType}
-                onChange={(e) => setProjectType(e.target.value)}
-                className="w-full bg-white border border-[#0C1B33]/15 px-3 py-2.5 text-[13px] text-[#0C1B33] focus:outline-none focus:border-[#2563EB]/50 cursor-pointer"
-              >
-                <option value="">Choose one…</option>
-                {SITE_PROJECT_TYPE_OPTIONS.map((option) => (
-                  <option key={option.id} value={option.id}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
+          <ProjectGoalSelector
+            goals={projectGoals}
+            customGoal={customGoal}
+            onChange={(goals, custom) => {
+              setProjectGoals(goals);
+              setCustomGoal(custom);
+            }}
+            required
+            compact
+          />
+          <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label>
               <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-1">
                 Project Budget (Optional)
@@ -225,7 +224,11 @@ export function RefineValuePanel({
           <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
             <button
               onClick={handleQuickRefine}
-              disabled={!projectType || quickRefineBusy}
+              disabled={
+                projectGoals.length === 0 ||
+                (projectGoals.includes("other") && !customGoal.trim()) ||
+                quickRefineBusy
+              }
               className="inline-flex items-center justify-center gap-2 bg-[#2563EB] text-white font-mono-bureau text-[10px] tracking-[0.15em] uppercase px-5 py-3 hover:bg-[#1d4ed8] transition-colors cursor-pointer shadow-sm disabled:opacity-40 disabled:cursor-default"
             >
               {quickRefineBusy ? (
@@ -240,8 +243,8 @@ export function RefineValuePanel({
                 onClick={onRefine}
                 className="font-mono-bureau text-[10px] tracking-[0.12em] uppercase text-[#2563EB] hover:text-[#1d4ed8] transition-colors cursor-pointer text-left"
               >
-                Add full project details instead — 3 short screens, primary
-                goal required →
+                Add full project details instead — 3 short screens, at least
+                one goal required →
               </button>
             )}
           </div>
@@ -257,8 +260,8 @@ export function RefineValuePanel({
               Refine with Project Details
             </button>
             <p className="font-mono-bureau text-[9px] tracking-[0.12em] uppercase text-[#0C1B33]/35">
-              3 short screens — industry, project details, documents. Primary
-              goal required.
+              3 short screens — industry, project details, documents. At least
+              one goal required.
             </p>
           </div>
         )

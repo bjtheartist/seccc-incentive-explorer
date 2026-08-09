@@ -6,7 +6,14 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, MapPin } from "lucide-react";
+import { useCallback, useRef } from "react";
+import {
+  ArrowRight,
+  Building2,
+  ClipboardList,
+  MapPin,
+  Search,
+} from "lucide-react";
 
 /* ── Props (computed server-side from real data) ─────────────── */
 
@@ -80,7 +87,7 @@ function DemoAddressChips() {
   };
 
   return (
-    <div className="flex flex-wrap items-center justify-center gap-2 mt-4">
+    <div data-tour="sample-addresses" className="flex flex-wrap items-center justify-center gap-2 mt-4">
       <span className="font-mono-bureau text-[10px] tracking-[0.2em] uppercase text-white/30 mr-1">
         No address handy? Try
       </span>
@@ -95,6 +102,79 @@ function DemoAddressChips() {
           {demo.label}
         </button>
       ))}
+    </div>
+  );
+}
+
+/* ── Hero intent cards (WP1) ─────────────────────────────────────
+      The three ways in, sitting directly under the address bar: type an
+      address, hunt for space, or answer the survey. Copy is client-approved
+      verbatim. On mobile they stack beneath the search bar, which stays
+      above the fold on its own. ─────────────────────────────────── */
+
+const INTENT_CARD_CLASS =
+  "group flex h-full flex-col items-start gap-1.5 border border-[#0C1B33]/10 bg-white px-4 py-3.5 text-left shadow-[0_10px_30px_-24px_rgba(12,27,51,0.6)] transition-all duration-200 hover:-translate-y-0.5 hover:border-[#2563EB]/40 hover:shadow-[0_20px_40px_-24px_rgba(12,27,51,0.7)] active:translate-y-0";
+
+function IntentCardFace({
+  kicker,
+  icon: Icon,
+  title,
+  subtitle,
+}: {
+  kicker: string;
+  icon: typeof Search;
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <>
+      <span className="flex w-full items-center gap-2">
+        <Icon className="h-3.5 w-3.5 shrink-0 text-[#2563EB]" aria-hidden="true" />
+        <span aria-hidden="true" className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/30">
+          {kicker}
+        </span>
+        <ArrowRight
+          className="ml-auto h-3 w-3 shrink-0 text-[#0C1B33]/20 transition-all group-hover:translate-x-0.5 group-hover:text-[#2563EB]"
+          aria-hidden="true"
+        />
+      </span>
+      <span className="text-[13.5px] font-medium leading-snug text-[#0C1B33]">
+        {title}
+      </span>
+      <span className="text-[11.5px] leading-relaxed text-[#0C1B33]/50">
+        {subtitle}
+      </span>
+    </>
+  );
+}
+
+function HeroIntentCards({ onCheckAddress, programCount }: { onCheckAddress: () => void; programCount: number }) {
+  return (
+    <div data-tour="project-paths" className="mx-auto mt-4 grid w-full max-w-[720px] gap-2.5 sm:mt-5 sm:grid-cols-3">
+      <button type="button" onClick={onCheckAddress} className={INTENT_CARD_CLASS}>
+        <IntentCardFace
+          kicker="01"
+          icon={Search}
+          title="Check an Address"
+          subtitle="Instant zone results for any Chicago address"
+        />
+      </button>
+      <Link href="/vacancy" className={INTENT_CARD_CLASS}>
+        <IntentCardFace
+          kicker="02"
+          icon={Building2}
+          title="Find Commercial Space"
+          subtitle="Vacant sites, zoning fit, and the incentive map"
+        />
+      </Link>
+      <Link href="/qualify" className={INTENT_CARD_CLASS}>
+        <IntentCardFace
+          kicker="03"
+          icon={ClipboardList}
+          title="Answer Program Fit Questions"
+          subtitle={`Four questions to organize ${programCount} programs worth reviewing`}
+        />
+      </Link>
     </div>
   );
 }
@@ -124,6 +204,16 @@ export function HomePageClient({
   featuredAnswers,
   tickerNames,
 }: HomePageClientProps) {
+  const heroSearchRef = useRef<HTMLDivElement>(null);
+
+  /** "Check an Address" doesn't navigate — it hands the visitor the input. */
+  const focusHeroSearch = useCallback(() => {
+    const container = heroSearchRef.current;
+    if (!container) return;
+    container.scrollIntoView({ behavior: "smooth", block: "center" });
+    container.querySelector("input")?.focus({ preventScroll: true });
+  }, []);
+
   return (
     <div>
       {/* ═══ 01 · HERO — the address is the product ═══ */}
@@ -176,15 +266,26 @@ export function HomePageClient({
           >
             Enter a Chicago address to generate a free location snapshot from
             public data — TIF, NOF, and SBIF context, vacancy signals, and
-            nearby local support partners.
+            nearby local support organizations.
           </motion.p>
 
           <motion.div
+            ref={heroSearchRef}
+            id="address-search"
+            data-tour="address-search"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8, delay: 0.7 }}
           >
             <AddressSearch source="homepage" />
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.85 }}
+          >
+            <HeroIntentCards onCheckAddress={focusHeroSearch} programCount={stats.programs} />
           </motion.div>
 
           <motion.div
@@ -317,7 +418,7 @@ export function HomePageClient({
                   ["01", "Start with an address", "or a corridor you're considering"],
                   ["02", "See what may apply", "zones + programs, plain English"],
                   ["03", "Generate the report", "print it, email it, share the link"],
-                  ["04", "Take the next step", "with the right local partner"],
+                  ["04", "Take the next step", "with a local support organization"],
                 ].map(([n, title, sub]) => (
                   <li key={n} className="flex items-baseline gap-4">
                     <span className="font-mono-bureau text-[10px] tracking-[0.2em] text-[#2563EB] shrink-0">
@@ -342,6 +443,7 @@ export function HomePageClient({
               whileInView={{ opacity: 1, y: 0, rotate: 0.8 }}
               viewport={{ once: true }}
               transition={{ duration: 0.8 }}
+              data-tour="report-preview"
               className="relative bg-white border border-[#0C1B33]/15 shadow-[0_24px_60px_-24px_rgba(12,27,51,0.35)] p-6 md:p-8"
             >
               <span className="absolute -top-3 right-6 bg-[#2563EB] text-white font-mono-bureau text-[9px] tracking-[0.3em] uppercase px-3 py-1">

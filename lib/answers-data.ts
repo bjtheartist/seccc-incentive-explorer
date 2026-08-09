@@ -44,7 +44,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     description:
       "Enter any Chicago address to see which public incentive programs and zones may apply — TIF, NOF, SBIF, Opportunity Zones, and more — in one free snapshot.",
     answer:
-      "Enter your Chicago address into the Chicago Incentive Explorer and generate a free location snapshot. It cross-references city, county, state, and federal incentive zones for that address and lists the programs and local support partners that may apply.",
+      "Enter your Chicago address into the Chicago Incentive Explorer and generate a free location snapshot. It cross-references city, county, state, and federal incentive zones for that address and lists programs to review and local support organizations that may be relevant.",
     bullets: [
       "One address returns every overlapping incentive zone in one view.",
       "Covers city (TIF, SBIF, NOF, SSA), county (Cook 7a/7b), state (Enterprise Zone), and federal (Opportunity Zone, NMTC) layers.",
@@ -85,7 +85,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     question: "What is SBIF in Chicago?",
     title: "What Is SBIF (Small Business Improvement Fund) in Chicago?",
     description:
-      "SBIF reimburses Chicago businesses and property owners for building improvements using TIF funds. See if your address may qualify in a free snapshot.",
+      "SBIF reimburses Chicago businesses and property owners for building improvements using TIF funds. Use a free snapshot to check whether your address is inside a participating district, then verify the current rules.",
     answer:
       "The Small Business Improvement Fund (SBIF) reimburses Chicago businesses and commercial property owners for permanent building improvements — like facade, interior build-out, and equipment — using TIF district funds. Grants are need-based and tied to specific funding rounds by area.",
     bullets: [
@@ -281,7 +281,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     question: "Are there grants to hire employees in Chicago?",
     title: "Grants and Credits to Hire Employees in Chicago",
     description:
-      "Chicago hiring support comes through state EDGE credits, the Cook County Catalyst Grant, and the federal WOTC. See what your business may qualify for.",
+      "Chicago hiring support can include state EDGE credits, the Cook County Catalyst Grant, and the federal WOTC. Compare the published requirements for your hiring plan.",
     answer:
       "Hiring support is usually a tax credit, not a grant. Illinois EDGE credits reward job creation against state withholding, the federal Work Opportunity Tax Credit rewards hiring from target groups, and Cook County's Catalyst Grant can fund new-hire salaries.",
     bullets: [
@@ -578,7 +578,7 @@ export const ANSWER_PAGES: AnswerPage[] = [
     question: "What help is available for a vacant commercial property in Chicago?",
     title: "Help for a Vacant Commercial Property in Chicago",
     description:
-      "Vacant Chicago commercial property may qualify for Class 7a/7b reoccupancy incentives, NOF, CCSA, or Land Bank acquisition. See what applies to your address.",
+      "Class 7a/7b reoccupancy incentives, NOF, CCSA, or Land Bank acquisition can be relevant to vacant Chicago commercial property. Review what is mapped at the address, then confirm each program's requirements.",
     answer:
       "Vacant Chicago commercial property can tap several tools: Cook County Class 7a/7b incentives reward reoccupancy of abandoned buildings, the CCSA program funds storefront activation, NOF reimburses renovation, and the Cook County Land Bank can clear title on distressed parcels.",
     bullets: [

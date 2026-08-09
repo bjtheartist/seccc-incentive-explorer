@@ -8,6 +8,72 @@ This file documents what each source MEANS and the integrity contract it must
 satisfy. For how often each one changes and who changes it — six sources refresh
 themselves monthly, the rest are frozen snapshots — see [REFRESH.md](./REFRESH.md).
 
+## Government funding purpose
+
+The product keeps three independent questions separate:
+
+- `funderType` says who supplied the money: government, philanthropic, or
+  private development
+- `capitalClass` says what the source figure represents: grant, TIF
+  authorization, federal allocation, tax credit, or appropriation
+- government funding purpose says what the supported work is for: `capital_project`,
+  `programmatic`, or `arts`
+
+The purpose is assigned once during export by
+`lib/government-funding-purpose.ts` and persisted on every canonical record.
+NOF, SBIF, CDG, TIF, LIHTC, DCEO capital, and physical HUD activities are
+capital projects. Business relief, public services, technical or financial
+assistance, and other non-capital program delivery are programmatic. Illinois
+Arts Council records are arts funding. CDBG/HOME is classified from its own
+published activity and recipient labels because that source spans both physical
+projects and program delivery. NMTC is classified from its dedicated
+`purpose_text`: only all-real-estate rows are capital projects; business-only,
+other-financing, mixed, or missing purposes remain `unclassified`. Anything
+outside the accepted rules stays unclassified, never guessed.
+
+## Illinois Arts Council FY2026 Q1 awards
+
+- Source: [Illinois Arts Council Grant Summaries](https://arts.illinois.gov/about-iac/iac-arts-impact/annual-report/grant-summaries.html), checked 2026-08-08
+- Import: `npm run data:import:iac-arts -- --input data/curated/investment-inputs/illinois_arts_council_fy26_q1_source.json --source-checked-at 2026-08-08`
+- Files: `illinois_arts_council_fy26_q1_source.json` is the exact official
+  table response; `illinois_arts_council_fy26_q1_chicago.csv` is the validated
+  Chicago-city subset used by the private capital-context export
+- Statewide integrity contract: 1,413 source rows, including 1,408 award rows
+  and five published summary rows; award rows reconcile exactly to the source's
+  $16,211,010 grant total and each program subtotal
+- Chicago subset contract: 670 rows totaling $9,162,720 where the source city is
+  literally `Chicago`; no suburb, region inference, organization-name inference,
+  or address lookup is used
+- Source fields: program, applicant name, award amount, city, and region. The
+  source publishes no street address, ZIP, coordinates, or official award id;
+  `record_id` is a snapshot-local key generated from the official table row
+- Product posture: admin-only, filterable citywide historical-award table. It
+  contributes no map pins, parcel matches, community-area totals, current
+  eligibility claim, proof of payment, or estimate of funds a user could receive
+
+## Impact Grants Chicago recipient roster — held, not exported
+
+- Source: [Impact Grants Chicago's official all-recipient roster](https://www.impactgrantschicago.org/all-grant-recipients/), checked 2026-08-08
+- File: `impact_grants_chicago_DO_NOT_EXPORT.csv`
+- Integrity contract: 69 named awards from 2018–2026 totaling exactly
+  $4,425,000; 37 Impact Grants and 32 Merit Grants
+- Grain: one published award to one named recipient, preserving the source's
+  award year, grant type, amount, recipient link, and former-name note where one
+  is published
+- Location precision: the roster publishes no award-site or recipient street
+  address. Every record is therefore held citywide; recipient organization
+  websites are reference links, never location evidence
+- Program state: historical award evidence only. Inclusion does not mean a new
+  application round is open, and the records are not presented as money a
+  current project could receive
+- Hold reason: the foundation files already contain four upstream grants into
+  Impact Grants Chicago totaling $22,100. The recipient roster is a downstream
+  regranting layer. Adding both stages to `amountAwarded` would make the export's
+  gross awarded total count portions of one funding flow more than once
+- Release condition: model intermediary inflows and downstream awards as linked,
+  source-separated stages before exposing the roster. Until then this file is
+  not read by the exporter and must not enter the public incentive directory
+
 ## Cook County 2023 Source Grant
 
 - Source: Cook County Small Business Source awardee list, version 2024-11-20
@@ -141,6 +207,97 @@ themselves monthly, the rest are frozen snapshots — see [REFRESH.md](./REFRESH
   City's Grants Summary reports them at the same stage — an upstream
   characteristic, not a copy in this code; do not present them as two independent
   signals
+
+## Private Foundation Grants — Tier-1 Expansion
+
+`foundation_grants_tier1_expansion.csv` adds 2,990 Chicago-recipient grant rows
+from 20 further private funders — $441,842,713 as shipped (three reversal rows
+totaling -$4,005,000 are carried in the CSV and nulled, not netted, by the
+export; the CSV's net sum is $437,837,713) — in the exact 13-column schema of
+`foundation_grants_geocoded.csv` and read through the same mapper, so the two
+files' funder-name sets must stay disjoint (the export asserts it). Thirty
+funders were parsed from IRS 990-PF e-file XML across 90 filings, and every
+filing was reconciliation-gated before a single row was allowed out — the parsed
+grant-row sum had to tie to the filing's own printed Part I line-3a total —
+yielding 75 reconciled and 15 known attachment gaps, with zero failures. Those
+gaps are concentrated in 5 aggregate-only funders that together disclose
+$384,982,870 in grantmaking with **zero public itemization** — Paul M Angell
+Family Foundation ($114.0M), Pritzker Foundation ($98.2M), Steans Family
+Foundation ($83.5M), Anthony Pritzker Fam Foundation ($56.6M), and The Richard H
+Driehaus Foundation ($32.7M) — whose filings publish only a grant-schedule total
+pointing at an unpublished attachment; their rows are quarantined in
+`foundation_grants_tier1_quarantined_DO_NOT_EXPORT.csv` for provenance, are never
+read by the export, and are flagged as funder-exchange targets (the itemization
+exists, it is simply not public, so it has to be asked for). `funder_census.csv`
+records the completed Gate A census of all 2,623 Chicago private foundations with
+each one's disposition, and `foundation_grants_tier1_reconciliation_report.csv`
+carries the per-filing audit trail (EIN, object id, parsed sum, line-3a, delta,
+status, source URL, SHA-256). Note that the four Pritzker-named entities here are
+four different filers with four different EINs and are never merged.
+
+## Private Foundation Grants — Phase-2 Expansion (the 80% bar)
+
+`foundation_grants_phase2_expansion.csv` adds 8,999 Chicago-recipient grant rows
+from 65 further private funders — **$625,885,115 as shipped** (the CSV also
+carries five reversal rows totaling -$18,250, which the export NULLS rather than
+nets so a correction can never quietly reduce the awarded headline; the CSV's
+net sum is therefore $625,866,865). This is the tranche that takes
+parsed-or-dispositioned capacity coverage of the 2,623-foundation census from
+58.2% to **80.01%** of total SOI grants-paid capacity, counting the dispositions
+already_parsed / parsed_tier1 / parsed_phase2 / parsed_phase2_no_chicago_rows /
+parsed_phase2_review_held / aggregate_only as covered. Ninety-five funders were
+parsed from IRS 990-PF / 990 e-file XML across 372 filings under the same
+reconciliation gate: 335 reconciled to the filing's own printed total within $1,
+36 known attachment gaps, 1 no-control-total (a verified zero-grant year), zero
+failures. Eight new aggregate-only funders disclose $135,303,434 with no public
+itemization — Harris Family ($24.9M), Offield Family ($24.3M), Lefkofsky Family
+($23.9M), McDougal Family ($15.6M), Lev Zahav NFP ($13.2M), Hoehn Family
+($11.7M), William Blair & Company ($10.9M), Bert William Martin ($10.7M) —
+joining the Tier-1 five as funder-exchange targets.
+
+A post-parse review pass (every exclusion adversarially verified; full ledger in
+`scripts/foundation/phase2_review_notes.json`) held a further $29,737,797 back
+from publication into `foundation_grants_phase2_quarantined_DO_NOT_EXPORT.csv`:
+filings whose recipient addresses are all the FILER'S own office (Feinberg, all
+four years, ~$14.3M; Retirement Research FY2023, $6.7M — real recipients,
+fabricated geography), transfers into officers' own donor-advised vehicles
+(Malott, $3.4M), and an unitemized "Matching Gifts - Details Available upon
+request" pool (Coleman, $0.4M) — that last shape is now rejected structurally by
+the export's placeholder guard, recipient-field only, because the SAME phrase in
+the ADDRESS field marks a real named grantee whose street address is withheld
+(Deering McCormick publishes 107 real grants that way; they are honest citywide
+rows). `foundation_grants_phase2_reconciliation_report.csv` carries the
+per-filing audit trail in the Tier-1 schema, and the census now restates every
+funder's disposition from what the reconciliation reports prove rather than the
+planning-era labels.
+
+## Private Foundation Grants — Phase-3 Expansion
+
+`foundation_grants_phase3_expansion.csv` adds 4,691 Chicago-recipient grant rows
+from 79 further private funders — **$250,123,352 as shipped** (no reversal rows
+in this tranche). This tranche resolves the census's entire `needs_review`
+queue: all 129 remaining funders were parsed (501 filings, 477 reconciled to
+their own printed totals within $1, zero failures) and every one of the 2,623
+census foundations now carries a TERMINAL disposition. Capacity coverage:
+**88.45%**, counting already_parsed / parsed_tier1 / parsed_phase2* /
+parsed_phase3* / aggregate_only / review_excluded as covered.
+
+The review pass (all exclusions adversarially verified, every verdict upheld)
+held back: three whole funders (Graham Foundation — the filer-address artifact
+family, individual grantees worldwide filed at the foundation's own office; two
+aggregate-only shells), $12.9M of row-level holds (bookkeeping labels like
+"VARIOUS", "MISC", "FROM PASS THROUGH K-1s", a $5.1M transfer into a national
+DAF sponsor, and three out-of-town addresses filed as Chicago), and $41.7M of
+attachment-gap aggregates — all in
+`foundation_grants_phase3_quarantined_DO_NOT_EXPORT.csv` with per-row reasons,
+never counted. Three more aggregate-only funders join the funder-exchange
+target list. Review provenance: `scripts/foundation/phase3_review_notes.json`.
+
+**Statistical audit (committed: `foundation_audit_2026-08-04.json`):** a seeded
+SRS of n=2,401 published rows across all foundation files, each re-verified
+against its own IRS filing — recipient and amount re-parsed from the source
+XML. Result: **2,401/2,401 verified, zero mismatches of any class** (95%
+confidence upper bound on the row error rate ≈ 0.12%).
 
 ## Location confidence
 

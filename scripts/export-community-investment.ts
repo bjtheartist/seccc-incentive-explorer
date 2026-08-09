@@ -15,6 +15,7 @@
  *   nof_small.json / nof_large.json / sbif.json  — Socrata completion rows
  *   cdg_awards.csv                               — CDG award rounds 2022–2025
  *   foundation_grants_geocoded.csv               — 990 grants w/ lat/lng + locType
+ *   foundation_grants_tier1_expansion.csv        — SAME schema, 20 more funders (Tier 1)
  *   developments.csv                             — major development projects
  *   ellen_nof_awardees.tsv                       — Jim's 38 NOF corridor awards
  *
@@ -33,7 +34,8 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import {
   assertNoBannedFigureKeys,
   buildCommunityInvestmentExport,
@@ -41,9 +43,11 @@ import {
   INVESTMENT_STATUSES,
   SOURCE_FUNDER_TYPE,
   type CommunityInvestmentRecord,
+  type CommunityInvestmentRecordDraft,
   type InvestmentGeometry,
   type InvestmentStatus,
 } from "../lib/community-investment";
+import { governmentFundingPurposeForRecord } from "../lib/government-funding-purpose";
 import { assignCommunityArea, loadCommunityAreaPolygons } from "../lib/community-area-stamp";
 import {
   describesMultipleProjectSites,
@@ -53,6 +57,12 @@ import {
   DCEO_FUNDING_LIFECYCLE_POLICY,
   DCEO_FUNDING_LIFECYCLE_STAGES,
 } from "../lib/dceo-funding-lifecycle";
+import {
+  IAC_SOURCE_DATA_URL,
+  IAC_SOURCE_PAGE,
+  IAC_SOURCE_VERSION,
+  parseCuratedIllinoisArtsCouncilAwards,
+} from "../lib/illinois-arts-council";
 import {
   RECOVERY_INVESTMENT_SOURCE_METADATA,
   type RecoveryInvestmentSourceId,
@@ -76,6 +86,28 @@ const CONTEXT_OUT_PATH = join(process.cwd(), "data", "private", "capital-context
 const CA_GEOJSON_PATH = join(process.cwd(), "public", "data", "community-areas.geojson");
 const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boundaries.geojson");
 
+/**
+ * The two private-foundation grant files. They share ONE schema and ONE mapper
+ * (mapFoundations) — the split is provenance, not semantics:
+ *
+ *   • foundation_grants_geocoded.csv — the original 11-funder 990-PF parse.
+ *   • foundation_grants_tier1_expansion.csv — the Tier-1 expansion: 20 further
+ *     Chicago private funders, every filing reconciliation-gated before a row
+ *     was allowed out (see data/curated/investment-inputs/README.md).
+ *
+ * Their funder-name sets MUST be disjoint — a name in both files would double-
+ * count that funder's dollars — so the export asserts it (assertDisjointFoundationFunders)
+ * rather than trusting the two parses to have stayed apart.
+ *
+ * Deliberately NOT read here: foundation_grants_tier1_quarantined_DO_NOT_EXPORT.csv.
+ * Those rows are grant-SCHEDULE aggregates ("SEE ATTACHED DETAIL") with no public
+ * itemization; they are committed for provenance only and must never reach a record.
+ */
+const FOUNDATION_GRANTS_FILE = "foundation_grants_geocoded.csv";
+const FOUNDATION_TIER1_FILE = "foundation_grants_tier1_expansion.csv";
+const FOUNDATION_PHASE2_FILE = "foundation_grants_phase2_expansion.csv";
+const FOUNDATION_PHASE3_FILE = "foundation_grants_phase3_expansion.csv";
+
 const NOF_PROGRAM = "Neighborhood Opportunity Fund (City of Chicago)";
 const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
 const CDG_PROGRAM = "Community Development Grant (City of Chicago)";
@@ -94,6 +126,9 @@ const PROVENANCE_LABELS = [
   "City of Chicago Small Business Improvement Fund — grant completions (Chicago Data Portal / Socrata)",
   "City of Chicago Community Development Grant — award rounds 2022–2025 (chicago.gov press releases)",
   "Private-foundation grants parsed from IRS 990-PF / 990 filings (ProPublica), geocoded to recipient address",
+  "Private-foundation grants — Tier-1 expansion: 20 additional Chicago private funders parsed from IRS 990-PF e-file XML, every filing reconciled row-sum-to-Part-I-line-3a before release; funders whose filings publish only a grant-schedule aggregate are quarantined, never counted",
+  "Private-foundation grants — Phase-2 expansion to the 80% capacity-coverage bar: 65 further Chicago private funders parsed from IRS 990-PF e-file XML under the same reconciliation gate (row sum ties the filing's own printed total within $1); a post-parse review pass additionally quarantined filings whose recipient addresses are the filer's own office",
+  "Private-foundation grants — Phase-3 expansion: the census's needs_review remainder (79 further publishing funders) parsed and reconciled under the same gate; review pass held bookkeeping-label rows, DAF self-transfers, and filer-address-artifact filings; every published foundation row is additionally covered by the committed n=2,401 statistical audit (zero errors observed)",
   "Major development projects — Ellen's Developments map (Google My Maps)",
   "Major private developments — verified/discovered megaprojects w/ announced capital (press coverage, developer filings)",
   "Chicago Prize — Pritzker Traubert Foundation ($10M community-transformation awards + finalist planning grants)",
@@ -185,7 +220,7 @@ function historicalRecoveryRecord(
 
 /** Parse delimited text into row objects keyed by the header row. Handles
  * double-quoted fields, escaped quotes ("") and newlines inside quotes. */
-function parseDelimited(text: string, delimiter: string): Record<string, string>[] {
+export function parseDelimited(text: string, delimiter: string): Record<string, string>[] {
   const rows: string[][] = [];
   let field = "";
   let row: string[] = [];
@@ -429,8 +464,8 @@ function mapSocrata(
   source: "nof-small" | "nof-large" | "sbif",
   funderName: string,
   minYear: number,
-): { records: CommunityInvestmentRecord[]; drops: SocrataDrops } {
-  const out: CommunityInvestmentRecord[] = [];
+): { records: CommunityInvestmentRecordDraft[]; drops: SocrataDrops } {
+  const out: CommunityInvestmentRecordDraft[] = [];
   const drops: SocrataDrops = { preWindow: 0, noCoords: 0 };
   let idx = 0;
   for (const r of rows) {
@@ -492,35 +527,122 @@ function inChicagoBounds(lat: number, lng: number): boolean {
   );
 }
 
+/**
+ * Filers point at an attachment instead of listing a grantee in several
+ * interchangeable ways. Matching only the first phrase leaves the others live:
+ * the Tier-1 quarantine file carries two Anthony Pritzker Fam Foundation rows
+ * ($19,775,200 and $18,799,294) whose recipient reads "SEE STATEMENT" — the exact
+ * same grant-schedule aggregate as "SEE ATTACHED", which the narrower test let
+ * through. The whole family is rejected, so the shape is caught regardless of
+ * which wording a filer's software emits.
+ *
+ * The unitemized-RECIPIENT family is the same shape without the word "see" —
+ * a pool where the GRANTEE should be: Coleman's "Matching Gifts - Details
+ * Available upon request", Field's "10 INDIVIDUALS - DETAILS UPON REQUEST" and
+ * "OTHER CONTRIBUTIONS", Grand Victoria's "MISCELLANEOUS GRANTS". The
+ * upon-request wording matches with or without "available"; the bare aggregate
+ * nouns must be the ENTIRE recipient, so a real organization whose name merely
+ * contains "other"/"various" can never be swallowed. This family tests the
+ * recipient field ALONE — in the ADDRESS field "available upon request" means
+ * the opposite: a real named grantee whose street address is withheld (Deering
+ * McCormick files 107 real grants that way, $5.9M to the Art Institute et al.),
+ * which is an honest citywide row, not a placeholder.
+ */
+const FOUNDATION_ATTACHMENT_PLACEHOLDER_RE =
+  /\bsee\s+(attach\w*|statement|schedule|exhibit|list|below|note)\b/i;
+const FOUNDATION_UNITEMIZED_RECIPIENT_RE =
+  /\b(details?\s+)?(available\s+)?upon\s+request\b|^\s*(miscellaneous|other|various|sundry)\s+(grants?|contributions?|donations?)\s*$/i;
+
 /** Placeholder rows the 990 parser captured as a whole grant-SCHEDULE aggregate
- * rather than a single grant: recipient/address literally "SEE ATTACHED", or a
- * 99999-style filler zip/address. Rejected so a $120M "grant to SEE ATTACHED"
- * never counts as a real award. */
-function isPlaceholderFoundationRow(r: Record<string, string>): boolean {
+ * rather than a single grant: a recipient/address that points at an attachment
+ * ("SEE ATTACHED", "SEE STATEMENT", "SEE SCHEDULE"…), or a 99999-style filler
+ * zip/address. Rejected so a $120M "grant to SEE ATTACHED" never counts as a real
+ * award. Applied identically to EVERY foundation input file. */
+export function isPlaceholderFoundationRow(r: Record<string, string>): boolean {
   const recipient = (r.recipient || "").trim();
   const addr1 = (r.address_line1 || "").trim();
   const zip = (r.zip || "").trim();
   return (
-    /see attached/i.test(recipient) ||
-    /see attached/i.test(addr1) ||
+    FOUNDATION_ATTACHMENT_PLACEHOLDER_RE.test(recipient) ||
+    FOUNDATION_ATTACHMENT_PLACEHOLDER_RE.test(addr1) ||
+    FOUNDATION_UNITEMIZED_RECIPIENT_RE.test(recipient) ||
     /^9{5}$/.test(zip) ||
     /^9{5}$/.test(addr1)
   );
 }
 
-interface FoundationStats {
+export interface FoundationStats {
   citywideFallback: number;
   droppedPlaceholder: number;
   outOfBoundsGeocodes: number;
   negativeAmountsNulled: number;
 }
 
-/** Map foundation grant rows — geometry from locType (intermediary -> citywide). */
-function mapFoundations(rows: Record<string, string>[]): {
-  records: CommunityInvestmentRecord[];
+/** Sum two foundation-file tallies so the meta counters describe EVERY foundation
+ * input, not just the first file. Splitting the input without summing here would
+ * silently under-report the drops (a placeholder rejected in the second file would
+ * vanish from `meta.droppedPlaceholder` and from the audit trail). */
+export function mergeFoundationStats(a: FoundationStats, b: FoundationStats): FoundationStats {
+  return {
+    citywideFallback: a.citywideFallback + b.citywideFallback,
+    droppedPlaceholder: a.droppedPlaceholder + b.droppedPlaceholder,
+    outOfBoundsGeocodes: a.outOfBoundsGeocodes + b.outOfBoundsGeocodes,
+    negativeAmountsNulled: a.negativeAmountsNulled + b.negativeAmountsNulled,
+  };
+}
+
+/**
+ * Fail LOUDLY if two foundation grant files claim the same funder. The files are
+ * separate PARSES, not separate slices of one funder list, so an overlap means the
+ * same 990-PF grants were counted twice — an invisible inflation of the awarded
+ * headline that no downstream test would attribute to its cause.
+ *
+ * Name equality is exact and case-insensitive on trimmed text, matching the way
+ * funderName is carried through to the export: names stay EXACTLY as the CSV has
+ * them. "Pritzker Traubert Foundation", "Pritzker Family Foundation", "Pritzker
+ * Foundation", and "Anthony Pritzker Fam Foundation" are four DIFFERENT filers with
+ * four different EINs — never normalize a shared surname into a collision.
+ */
+export function assertDisjointFoundationFunders(
+  a: { file: string; rows: Record<string, string>[] },
+  b: { file: string; rows: Record<string, string>[] },
+): void {
+  const namesOf = (rows: Record<string, string>[]) =>
+    new Map(
+      rows
+        .map((r) => (r.foundation || "").trim())
+        .filter(Boolean)
+        .map((name) => [name.toLowerCase(), name] as const),
+    );
+  const aNames = namesOf(a.rows);
+  const shared: string[] = [];
+  for (const [key, name] of namesOf(b.rows)) {
+    if (aNames.has(key)) shared.push(name);
+  }
+  if (shared.length > 0) {
+    throw new Error(
+      `Foundation funder collision between ${a.file} and ${b.file}: ` +
+        `${shared.sort().join(", ")}. The same funder's grants would be counted twice — ` +
+        `resolve the overlap in the input files, never by renaming a funder here.`,
+    );
+  }
+}
+
+/**
+ * Map foundation grant rows — geometry from locType (intermediary -> citywide).
+ *
+ * `idPrefix` keeps each input file's ids in their own namespace, so adding a
+ * second foundation file cannot collide with (or renumber) the first file's
+ * already-published record ids.
+ */
+export function mapFoundations(
+  rows: Record<string, string>[],
+  idPrefix = "foundation",
+): {
+  records: CommunityInvestmentRecordDraft[];
   stats: FoundationStats;
 } {
-  const out: CommunityInvestmentRecord[] = [];
+  const out: CommunityInvestmentRecordDraft[] = [];
   const stats: FoundationStats = {
     citywideFallback: 0,
     droppedPlaceholder: 0,
@@ -561,7 +683,7 @@ function mapFoundations(rows: Record<string, string>[]): {
     }
     const addr = [r.address_line1, r.city, r.state, r.zip].map((s) => (s || "").trim()).filter(Boolean).join(", ");
     out.push({
-      id: `foundation-${idx++}`,
+      id: `${idPrefix}-${idx++}`,
       source: "foundation",
       funderType: SOURCE_FUNDER_TYPE.foundation,
       funderName: nullableStr(r.foundation) || "(unnamed foundation)",
@@ -720,7 +842,7 @@ function enrichedDevelopmentRecord(
   geometry: InvestmentGeometry,
   id: string,
   address: string | null,
-): CommunityInvestmentRecord {
+): CommunityInvestmentRecordDraft {
   const name = (mega.name || "").trim();
   const isSubset = MEGADEV_SUBSET_NAMES.has(name);
   const priceTag = parseAmount(mega.announced_investment_usd);
@@ -747,7 +869,7 @@ function enrichedDevelopmentRecord(
 }
 
 interface DevelopmentBuild {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   stats: {
     enrichedVerified: number;
     discoveredAdded: number;
@@ -774,7 +896,7 @@ function mapDevelopments(
   discoveredGeo: Map<string, InvestmentGeometry>,
   droppedKmlNames: Set<string>,
 ): DevelopmentBuild {
-  const out: CommunityInvestmentRecord[] = [];
+  const out: CommunityInvestmentRecordDraft[] = [];
   const stats: DevelopmentBuild["stats"] = {
     enrichedVerified: 0,
     discoveredAdded: 0,
@@ -871,8 +993,8 @@ function mapDevelopments(
  * (never coerced to 0). recordProvenance "official". These never collide with the
  * government-only dedupe (foundation rows are never dedupe-eligible).
  */
-function mapChicagoPrize(rows: Record<string, string>[]): CommunityInvestmentRecord[] {
-  const out: CommunityInvestmentRecord[] = [];
+function mapChicagoPrize(rows: Record<string, string>[]): CommunityInvestmentRecordDraft[] {
+  const out: CommunityInvestmentRecordDraft[] = [];
   let idx = 0;
   for (const r of rows) {
     let geometry: InvestmentGeometry;
@@ -987,8 +1109,8 @@ interface TifDrops {
  * the coordinate-less annual-report rows are never records (they feed the context
  * file). Deterministic.
  */
-function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentRecord[]; drops: TifDrops } {
-  const out: CommunityInvestmentRecord[] = [];
+function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: TifDrops } {
+  const out: CommunityInvestmentRecordDraft[] = [];
   const drops: TifDrops = { noCoords: 0 };
   let idx = 0;
   for (const r of rows) {
@@ -1045,8 +1167,8 @@ interface HudDrops {
 function mapHud(
   rows: Record<string, string>[],
   asOf: Date,
-): { records: CommunityInvestmentRecord[]; drops: HudDrops } {
-  const out: CommunityInvestmentRecord[] = [];
+): { records: CommunityInvestmentRecordDraft[]; drops: HudDrops } {
+  const out: CommunityInvestmentRecordDraft[] = [];
   const drops: HudDrops = { outOfBbox: 0 };
   let idx = 0;
   for (const r of rows) {
@@ -1097,8 +1219,8 @@ interface LihtcDrops {
  * Status "completed" once placed in service, else "awarded". Only rows with real
  * coordinates become points. Deterministic.
  */
-function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmentRecord[]; drops: LihtcDrops } {
-  const out: CommunityInvestmentRecord[] = [];
+function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: LihtcDrops } {
+  const out: CommunityInvestmentRecordDraft[] = [];
   const drops: LihtcDrops = { noCoords: 0 };
   let idx = 0;
   for (const r of rows) {
@@ -1183,6 +1305,11 @@ function mapNmtc(
       id: `nmtc-${idx++}`,
       source: "nmtc",
       funderType: SOURCE_FUNDER_TYPE.nmtc,
+      governmentFundingPurpose: governmentFundingPurposeForRecord({
+        source: "nmtc",
+        funderType: SOURCE_FUNDER_TYPE.nmtc,
+        sourcePurposeText: purpose,
+      }),
       funderName: NMTC_FUNDER,
       recipient: cde || "(unnamed CDE project)",
       capitalClass: "tax_credit",
@@ -1235,11 +1362,11 @@ function mapCookSourceGrants(
   rows: Record<string, string>[],
   chicagoZipCodes: ReadonlySet<string>,
 ): {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   chicagoRecords: number;
   outsideChicagoRecords: number;
 } {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let outsideChicagoRecords = 0;
   for (const row of rows) {
     const zip = normalizeFiveDigitZip(row.zip);
@@ -1290,11 +1417,11 @@ function mapIllinoisBusinessInterruptionGrants(
   rows: Record<string, string>[],
   chicagoZipCodes: ReadonlySet<string>,
 ): {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   chicagoRecords: number;
   outsideChicagoRecords: number;
 } {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let outsideChicagoRecords = 0;
   for (const row of rows) {
     const zip = normalizeFiveDigitZip(row.zip);
@@ -1357,11 +1484,11 @@ function mapIllinoisBusinessInterruptionGrants(
 function mapIllinoisHospitalityEmergencyGrants(
   rows: Record<string, string>[],
 ): {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   chicagoRecords: number;
   outsideChicagoRecords: number;
 } {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let outsideChicagoRecords = 0;
   for (const row of rows) {
     const isChicago =
@@ -1427,11 +1554,11 @@ function mapIllinoisBackToBusiness(
   rows: Record<string, string>[],
   chicagoZipCodes: ReadonlySet<string>,
 ): {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   chicagoRecords: number;
   outsideChicagoRecords: number;
 } {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let outsideChicagoRecords = 0;
   for (const row of rows) {
     const zip = normalizeFiveDigitZip(row.zip);
@@ -1487,7 +1614,7 @@ function mapIllinoisBackToBusiness(
 }
 
 interface SbaRrfMapResult {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   pointRecords: number;
   citywideRecords: number;
   addressGeocodeMisses: number;
@@ -1506,7 +1633,7 @@ function mapSbaRestaurantRevitalization(
   geocodes: ReadonlyMap<string, { lat: number; lng: number } | null>,
   chicagoPolygons: ReturnType<typeof loadCommunityAreaPolygons>,
 ): SbaRrfMapResult {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let pointRecords = 0;
   let addressGeocodeMisses = 0;
   let addressOutOfBounds = 0;
@@ -1649,14 +1776,14 @@ function mapDceoCapital(
   queryForAddress: (address: string) => string,
   chicagoPolygons: ReturnType<typeof loadCommunityAreaPolygons>,
 ): {
-  records: CommunityInvestmentRecord[];
+  records: CommunityInvestmentRecordDraft[];
   pointRecords: number;
   citywideRecords: number;
   addressGeocodeMisses: number;
   addressOutOfBounds: number;
   multiSiteHeldCitywide: number;
 } {
-  const records: CommunityInvestmentRecord[] = [];
+  const records: CommunityInvestmentRecordDraft[] = [];
   let pointRecords = 0;
   let addressGeocodeMisses = 0;
   let addressOutOfBounds = 0;
@@ -1720,7 +1847,7 @@ function mapDceoCapital(
   };
 }
 
-// ── Capital context (per-district TIF series, CRA, CDFI, state awards) ────────
+// ── Capital context (TIF series, lending, and coordinate-less awards) ─────────
 
 /**
  * Build data/private/capital-context.json — the coordinate-less capital SIGNALS
@@ -1818,7 +1945,43 @@ function buildCapitalContext(generatedAt: string): unknown {
     }))
     .sort((a, b) => a.geographyLevel.localeCompare(b.geographyLevel) || a.geography.localeCompare(b.geography));
 
-  // 4) Illinois state-award (GATA/CSFA) SFY2027 snapshot — AWARD amounts, NOT
+  // 4) Illinois Arts Council FY2026 Q1 awards. The official table publishes
+  //    city and region but no street address, ZIP, coordinates, or official
+  //    award id. These records stay in an admin-only citywide table and never
+  //    enter mapped/community totals or a current-funding claim.
+  const illinoisArtsCouncilRecords = parseCuratedIllinoisArtsCouncilAwards(
+    readCsv("illinois_arts_council_fy26_q1_chicago.csv"),
+  );
+  const sourceCheckedDates = new Set(
+    illinoisArtsCouncilRecords.map((record) => record.sourceCheckedAt),
+  );
+  if (sourceCheckedDates.size !== 1) {
+    throw new Error("Illinois Arts Council rows do not share one source review date.");
+  }
+  const illinoisArtsCouncilAwards = {
+    fundingPurpose: "arts" as const,
+    fiscalYear: 2026,
+    sourceVersion: IAC_SOURCE_VERSION,
+    sourceCheckedAt: [...sourceCheckedDates][0],
+    sourcePageUrl: IAC_SOURCE_PAGE,
+    sourceDataUrl: IAC_SOURCE_DATA_URL,
+    recordCount: illinoisArtsCouncilRecords.length,
+    recordIdMeaning:
+      "Snapshot-local key generated from the official table row number; the source publishes no award id.",
+    amountMeaning:
+      "Historical Illinois Arts Council award amount; not current eligibility, proof of payment, or an estimate of funds a user could receive.",
+    geographyMeaning:
+      "Source-published city and region only. No address, ZIP, coordinate, community area, or map point is inferred.",
+    coverage: {
+      capture: "complete_published",
+      mapDetail: "aggregate_only",
+      refresh: "awaiting_publication",
+      review: "complete_published",
+    },
+    records: illinoisArtsCouncilRecords,
+  };
+
+  // 5) Illinois state-award (GATA/CSFA) SFY2027 snapshot — AWARD amounts, NOT
   //    payments; the chicago_likely flag is name-based (high precision, LOW
   //    recall). Both caveats travel with the summary.
   const stateRows = readCsv("state_awards.csv").filter((r) => (r.chicago_likely || "").trim().toLowerCase() === "true");
@@ -1853,7 +2016,7 @@ function buildCapitalContext(generatedAt: string): unknown {
     topGrantees,
   };
 
-  // 5) City of Chicago ARPA Road to Recovery program ledger. This is program-
+  // 6) City of Chicago ARPA Road to Recovery program ledger. This is program-
   // level, citywide historical context: no recipient names, no map points, no
   // single summed headline, and no claim that a reported allocation is an
   // incentive a current project can access.
@@ -1886,7 +2049,7 @@ function buildCapitalContext(generatedAt: string): unknown {
     programs: chicagoArpaPrograms,
   };
 
-  // 6) Bounded Chicago CARES-era program, administrator, and accounting
+  // 7) Bounded Chicago CARES-era program, administrator, and accounting
   // records. These remain citywide context. Contract revisions are already
   // canonicalized by the importer and no administrator address is retained.
   const chicagoCaresProgramLedger = {
@@ -1944,7 +2107,7 @@ function buildCapitalContext(generatedAt: string): unknown {
     })),
   };
 
-  // 7) Cook County's 2020 CARES recovery ledger. The source's direct relief
+  // 8) Cook County's 2020 CARES recovery ledger. The source's direct relief
   // programs were suburban-only, so these rows are explicit Chicago exclusions,
   // not map records. The $77M umbrella context and three child outcomes are
   // non-additive and retain separate amount fields.
@@ -2000,6 +2163,7 @@ function buildCapitalContext(generatedAt: string): unknown {
         "FFIEC CRA Aggregate Table A1-1 small-business loan ORIGINATIONS, Cook County tracts → community areas (2022–2024)",
         "CDFI transaction aggregates by geography (2021–2022)",
         "Illinois GATA/CSFA active award pipeline SFY2027 (award amounts, not payments)",
+        "Illinois Arts Council FY2026 Q1 Grant Summaries — source-published Chicago applicants and historical award amounts, citywide only because no address or ZIP is published",
         "DCEO Capital Appropriation List + Grant Tracker definitions — appropriation, executed award, and disbursement kept as separate lifecycle stages",
         "City of Chicago ARPA Road to Recovery Program Details (m9g9-cj96) and Grants Summary (9yp3-9pdz)",
         "City of Chicago Contracts (rsxa-ify5) + Mid-Year Grants (iyu8-jkf8) — bounded CARES-era program, administrator, and accounting records with revisions canonicalized",
@@ -2009,6 +2173,7 @@ function buildCapitalContext(generatedAt: string): unknown {
     tifDistricts,
     craByCommunityArea,
     cdfi,
+    illinoisArtsCouncilAwards,
     dceoFundingLifecycle: {
       stages: DCEO_FUNDING_LIFECYCLE_STAGES,
       policy: DCEO_FUNDING_LIFECYCLE_POLICY,
@@ -2032,7 +2197,42 @@ async function main() {
   const nofSmall = nofSmallR.records;
   const nofLarge = nofLargeR.records;
   const sbif = sbifR.records;
-  const { records: foundations, stats: foundationStats } = mapFoundations(readCsv("foundation_grants_geocoded.csv"));
+  // Four foundation files, ONE mapper: same locType/citywide handling, same
+  // placeholder rejection, same negative-amount nulling. Disjointness is asserted
+  // PAIRWISE before any file is mapped, so a collision aborts the export instead
+  // of shipping a double-counted headline.
+  const foundationBaseRows = readCsv(FOUNDATION_GRANTS_FILE);
+  const foundationTier1Rows = readCsv(FOUNDATION_TIER1_FILE);
+  const foundationPhase2Rows = readCsv(FOUNDATION_PHASE2_FILE);
+  const foundationPhase3Rows = readCsv(FOUNDATION_PHASE3_FILE);
+  const foundationInputs = [
+    { file: FOUNDATION_GRANTS_FILE, rows: foundationBaseRows },
+    { file: FOUNDATION_TIER1_FILE, rows: foundationTier1Rows },
+    { file: FOUNDATION_PHASE2_FILE, rows: foundationPhase2Rows },
+    { file: FOUNDATION_PHASE3_FILE, rows: foundationPhase3Rows },
+  ];
+  for (let i = 0; i < foundationInputs.length; i++) {
+    for (let j = i + 1; j < foundationInputs.length; j++) {
+      assertDisjointFoundationFunders(foundationInputs[i], foundationInputs[j]);
+    }
+  }
+  const foundationBase = mapFoundations(foundationBaseRows);
+  const foundationTier1 = mapFoundations(foundationTier1Rows, "foundation-t1");
+  const foundationPhase2 = mapFoundations(foundationPhase2Rows, "foundation-p2");
+  const foundationPhase3 = mapFoundations(foundationPhase3Rows, "foundation-p3");
+  const foundations = [
+    ...foundationBase.records,
+    ...foundationTier1.records,
+    ...foundationPhase2.records,
+    ...foundationPhase3.records,
+  ];
+  const foundationStats = mergeFoundationStats(
+    mergeFoundationStats(
+      mergeFoundationStats(foundationBase.stats, foundationTier1.stats),
+      foundationPhase2.stats,
+    ),
+    foundationPhase3.stats,
+  );
 
   // Major private developments (developments_major.csv) + Chicago Prize inputs.
   const kmlRows = readCsv("developments.csv");
@@ -2065,7 +2265,8 @@ async function main() {
 
   console.log(
     `Mapped (pre-geocode): nof-small=${nofSmall.length} nof-large=${nofLarge.length} sbif=${sbif.length} ` +
-      `foundation=${foundations.length} prize=${prize.length} kml=${kmlRows.length} ` +
+      `foundation=${foundations.length} (base=${foundationBase.records.length} tier1=${foundationTier1.records.length} phase2=${foundationPhase2.records.length} phase3=${foundationPhase3.records.length}) ` +
+      `prize=${prize.length} kml=${kmlRows.length} ` +
       `mega(verified=${verifiedMega.length} discovered=${discoveredMega.length}) ` +
       `(placeholder-dropped=${foundationStats.droppedPlaceholder} out-of-bounds->citywide=${foundationStats.outOfBoundsGeocodes} ` +
       `negative-nulled=${foundationStats.negativeAmountsNulled} preWindow-dropped=${droppedPreWindow})`,
@@ -2136,7 +2337,7 @@ async function main() {
 
   let droppedNoGeocode = 0;
 
-  const cdg: CommunityInvestmentRecord[] = [];
+  const cdg: CommunityInvestmentRecordDraft[] = [];
   let cdgIdx = 0;
   for (const r of cdgRows) {
     const addr = nullableStr(r.address);
@@ -2164,7 +2365,7 @@ async function main() {
     });
   }
 
-  const jim: CommunityInvestmentRecord[] = [];
+  const jim: CommunityInvestmentRecordDraft[] = [];
   let jimIdx = 0;
   for (const r of jimRows) {
     const addr = nullableStr(r.Address);
@@ -2248,16 +2449,29 @@ async function main() {
   //    Chicago Prize rows join the philanthropic (foundation) block; developments
   //    (private) are never dedupe-eligible so their position is immaterial. The
   //    capital-spine sources append last (also never dedupe-eligible).
-  const all = [
+  const all: Array<CommunityInvestmentRecordDraft | CommunityInvestmentRecord> = [
     ...nofSmall, ...nofLarge, ...sbif, ...cdg, ...foundations, ...prize, ...developments, ...jim,
     ...tif, ...hud, ...lihtc, ...nmtc, ...cookSource.records, ...illinoisBig.records,
     ...illinoisHospitality.records, ...illinoisB2B.records,
     ...sbaRrf.records, ...dceo.records,
   ];
 
+  // Assign the primary public purpose once, from source-published importer
+  // fields, and persist it on the canonical record. NMTC is already assigned
+  // above from its dedicated purpose_text column; every other record is
+  // classified here from its source and accepted source fields. Downstream
+  // clients read this field directly and never reclassify display copy.
+  const classified: CommunityInvestmentRecord[] = all.map((record) => ({
+    ...record,
+    governmentFundingPurpose:
+      "governmentFundingPurpose" in record
+        ? record.governmentFundingPurpose
+        : governmentFundingPurposeForRecord(record),
+  }));
+
   // 4) Cross-source dedupe (government point rows sharing address+amount).
-  const { records: deduped, removedCount } = dedupeInvestmentRecords(all);
-  console.log(`Deduped: ${all.length} -> ${deduped.length} (removed ${removedCount})`);
+  const { records: deduped, removedCount } = dedupeInvestmentRecords(classified);
+  console.log(`Deduped: ${classified.length} -> ${deduped.length} (removed ${removedCount})`);
 
   // 5) Point-in-polygon community-area stamping for EVERY point record. Runs on
   //    the final deduped set so the tallies describe the kept records. NMTC
@@ -2334,7 +2548,19 @@ async function main() {
   console.log(`Wrote ${CONTEXT_OUT_PATH}`);
 }
 
-main().catch((err) => {
-  console.error("Export failed:", err);
-  process.exit(1);
-});
+/**
+ * Only run the export when this file is the entry point. The pure helpers above
+ * (isPlaceholderFoundationRow, assertDisjointFoundationFunders, mapFoundations)
+ * are exported so the test suite can exercise them directly — without this guard,
+ * importing one of them would kick off a full 27k-record export mid-test. Same
+ * pattern as scripts/import-chicago-arpa-recovery.ts.
+ */
+const isDirectRun =
+  process.argv[1] != null && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
+  main().catch((err) => {
+    console.error("Export failed:", err);
+    process.exit(1);
+  });
+}

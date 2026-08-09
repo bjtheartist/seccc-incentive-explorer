@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sourceUrl": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning_update/MapServer/16",
+  "comparedFromFeatureCount": null,
+  "comparedThroughFeatureCount": 18509,
+  "counts": {
+    "added": 0,
+    "removed": 0,
+    "attributesChanged": 0,
+    "geometryChanged": 0
+  },
+  "changes": []
+}
