@@ -24324,5 +24324,65 @@
     "lat": 41.885318166121,
     "lng": -87.622377044363
   },
-  "c/o Visceral Dance Center 3121, Chicago, IL": {}
+  "c/o Visceral Dance Center 3121, Chicago, IL": {},
+  "2640-46 W. Madison St., Chicago, IL": {
+    "lat": 41.881161613922,
+    "lng": -87.692584171391
+  },
+  "2314 E. 75th St., Chicago, IL": {
+    "lat": 41.759027513492,
+    "lng": -87.568237980923
+  },
+  "3841-49 W. North Ave., Chicago, IL": {
+    "lat": 41.909865850451,
+    "lng": -87.723262504411
+  },
+  "3934 W. Madison St., Chicago, IL": {
+    "lat": 41.880807779583,
+    "lng": -87.724118628032
+  },
+  "1923-29 W. Lake St., Chicago, IL": {
+    "lat": 41.88495852667,
+    "lng": -87.675893459365
+  },
+  "3856 W. 26th St., Chicago, IL": {
+    "lat": 41.844347486269,
+    "lng": -87.721679191475
+  },
+  "5118 W. North Ave., Chicago, IL": {
+    "lat": 41.909592154989,
+    "lng": -87.753350841762
+  },
+  "4528-38 W. Fullerton Ave., Chicago, IL": {
+    "lat": 41.924383181931,
+    "lng": -87.739715903528
+  },
+  "1819-57 W. 16th St., Chicago, IL": {
+    "lat": 41.859474762412,
+    "lng": -87.67164285206
+  },
+  "1600 S. Lawndale Ave., Chicago, IL": {
+    "lat": 41.858897353298,
+    "lng": -87.71774754552
+  },
+  "2616-18 N. Milwaukee Ave., Chicago, IL": {
+    "lat": 41.929333590893,
+    "lng": -87.707928829243
+  },
+  "2459 W. Division St., Chicago, IL": {
+    "lat": 41.902941299212,
+    "lng": -87.688794962126
+  },
+  "433 W. 119th St., Chicago, IL": {
+    "lat": 41.677845885317,
+    "lng": -87.633583441851
+  },
+  "4510 S. Michigan Ave., Chicago, IL": {
+    "lat": 41.812858802057,
+    "lng": -87.623008057154
+  },
+  "1852 W. 19th St., Chicago, IL": {
+    "lat": 41.855943608882,
+    "lng": -87.672341738983
+  }
 }
