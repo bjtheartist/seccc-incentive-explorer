@@ -13,6 +13,51 @@ import {
   SUPPORT_ORGANIZATIONS_SECTION_TITLE,
 } from "../support-organization-copy";
 
+/**
+ * Words that assert a use permission. Anything that answers "may I do this
+ * here?" belongs on this list; only the City can answer that question.
+ */
+const CLAIM_WORDS =
+  "permitted|allowed|prohibited|banned|barred|permissible|by[-\\s]?right|as[-\\s]of[-\\s]right";
+
+/**
+ * Proximity, not adjacency. The earlier patterns demanded the claim word sit
+ * directly beside "use(s)" ("uses are permitted"), which any normal sentence
+ * slips past — "Business uses are generally permitted" reads identically to a
+ * user and matched nothing. Here the claim word only has to land within the
+ * same sentence-ish window as "use(s)", in either order, so a new permission
+ * claim fails the suite the moment it is written.
+ */
+const PERMISSION_CLAIM_PATTERNS: RegExp[] = [
+  new RegExp(`\\buses?\\b[^.]{0,40}\\b(?:${CLAIM_WORDS})\\b`, "i"),
+  new RegExp(`\\b(?:${CLAIM_WORDS})\\b[^.]{0,40}\\buses?\\b`, "i"),
+  /\bpermits?\b[^.]{0,40}\buses?\b/i,
+  /most business uses/i,
+  /Use Compatibility/i,
+];
+
+/**
+ * The sanctioned DISCLAIMING forms, which say the report does NOT decide the
+ * question. These are exact published phrases, not loose exemptions, so they
+ * cannot launder an affirmative claim.
+ */
+const SANCTIONED_DISCLAIMERS: RegExp[] = [
+  /does not determine whether a proposed use is permitted/gi,
+  /does not establish that a proposed use is permitted/gi,
+  /Verify whether a proposed use is permitted/gi,
+  /does not classify the proposed activity or determine that a use is permitted/gi,
+  /does not classify the proposed activity/gi,
+  /does not establish current authorization, permitted use, or compliance/gi,
+];
+
+/** Remove the sanctioned disclaimers so only affirmative claims remain. */
+function stripSanctionedDisclaimers(copy: string): string {
+  return SANCTIONED_DISCLAIMERS.reduce(
+    (text, pattern) => text.replace(pattern, ""),
+    copy,
+  );
+}
+
 function makeProgram(overrides: Partial<Program> = {}): Program {
   return {
     id: "tif",
@@ -195,6 +240,79 @@ describe("generateReportData", () => {
       expect(zoningCopy).not.toContain("Manufacturing, warehouse, and some commercial uses are permitted");
     },
   );
+
+  /**
+   * The three literal strings above only catch the copy we already removed.
+   * This guard is shape-based, so a NEW permitted-use claim for any district
+   * family fails the suite the moment it is written. Only the disclaiming form
+   * ("does NOT determine whether a proposed use is permitted") is allowed,
+   * so the affirmative patterns are matched and the negated ones exempted.
+   */
+  it.each([
+    "RS-3",
+    "B3-2",
+    "M1-2",
+    "C1-1.5",
+    "DX-10",
+    "PD 1376",
+    "PMD 11",
+  ])(
+    "never asserts what uses are allowed in %s",
+    (zoneClass) => {
+      const report = generateReportData(
+        makeState({ reportType: "dev-feasibility", projectType: "rehab" }),
+        [makeProgram()],
+        { zones, zoneNames, cityZoning: { zoneClass, zoneType: null } },
+      );
+
+      const affirmative = stripSanctionedDisclaimers(JSON.stringify(report));
+
+      for (const pattern of PERMISSION_CLAIM_PATTERNS) {
+        expect(affirmative).not.toMatch(pattern);
+      }
+    },
+  );
+
+  /**
+   * The guard above is only worth as much as its patterns. The originals
+   * required the claim word to sit immediately beside "use(s)", so ordinary
+   * phrasings walked straight through: "Business uses are generally permitted"
+   * and "by-right uses include" both passed clean. These cases pin the
+   * proximity form in place — and pin the sanctioned disclaimers as still
+   * allowed, so the guard cannot be "fixed" by making it reject the honest
+   * copy the reports depend on.
+   */
+  describe("the permitted-use guard's own patterns", () => {
+    it.each([
+      "Business uses are generally permitted",
+      "by-right uses include retail and office",
+      "Residential uses are typically allowed in this district",
+      "Industrial uses may be prohibited here",
+      "Most uses in this district are permitted as of right",
+      "This district permits the following uses by right",
+      "Retail use is allowed",
+      "Use Compatibility",
+      "Most business uses are permitted by right",
+    ])("fails a new permission claim: %s", (claim) => {
+      const affirmative = stripSanctionedDisclaimers(claim);
+      expect(
+        PERMISSION_CLAIM_PATTERNS.some((pattern) => pattern.test(affirmative)),
+      ).toBe(true);
+    });
+
+    it.each([
+      "This report does not determine whether a proposed use is permitted.",
+      "The published district alone does not establish that a proposed use is permitted or that zoning relief is required.",
+      "Verify whether a proposed use is permitted against the current Chicago Zoning Ordinance.",
+      "A past judgment does not establish current authorization, permitted use, or compliance.",
+      "It does not classify the proposed activity or determine that a use is permitted.",
+    ])("still allows the disclaiming form: %s", (disclaimer) => {
+      const affirmative = stripSanctionedDisclaimers(disclaimer);
+      for (const pattern of PERMISSION_CLAIM_PATTERNS) {
+        expect(affirmative).not.toMatch(pattern);
+      }
+    });
+  });
 
   it("puts published zoning and a verification action first in site reports", () => {
     const report = generateReportData(
