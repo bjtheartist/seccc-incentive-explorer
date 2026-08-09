@@ -17,6 +17,7 @@ import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { SiteTrafficTracker } from "@/components/analytics/SiteTrafficTracker";
 import { SiteConciergeProvider } from "@/components/concierge/SiteConciergeProvider";
+import { FirstVisitGuide } from "@/components/onboarding/FirstVisitGuide";
 import { Analytics } from "@vercel/analytics/next";
 import {
   DEFAULT_DESCRIPTION,
@@ -82,6 +83,7 @@ export default function RootLayout({
             <StructuredData />
             <main className="flex-1">{children}</main>
             <Footer />
+            <FirstVisitGuide />
             <ServiceWorkerRegistrar />
             <SiteTrafficTracker />
             <Analytics />
