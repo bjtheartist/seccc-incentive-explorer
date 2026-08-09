@@ -41,8 +41,8 @@ export const FIRST_VISIT_GUIDE_STEPS: FirstVisitGuideStep[] = [
     eyebrow: "Add project context",
     title: "Tell us what you are trying to do",
     description:
-      "Choose the primary goal that best describes the project. This keeps the report focused on the programs, questions, and support that are most relevant.",
-    takeaway: "The goal can be refined later. It does not determine final eligibility.",
+      "Choose up to three goals that describe the project, or write your own when the list does not fit. This keeps the report focused on the programs, questions, and support that are most relevant.",
+    takeaway: "Goals can be refined later. They organize the report but do not determine final eligibility.",
     walkthroughKey: "project-goal",
   },
   {

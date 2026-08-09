@@ -56,7 +56,9 @@ function makeState(overrides: Partial<ReportState> = {}): ReportState {
     neighborhood: "",
     industry: "",
     budgetRange: "",
+    projectGoals: [],
     projectType: "",
+    customGoal: "",
     proposedUse: "",
     fundingCommitted: "",
     remainingGap: "",
@@ -188,6 +190,34 @@ describe("generateReportData", () => {
       expect(zoningCopy).not.toContain("Manufacturing, warehouse, and some commercial uses are permitted");
     },
   );
+
+  it("puts published zoning and a verification action first in site reports", () => {
+    const report = generateReportData(
+      makeState({ projectGoals: ["rehab"], projectType: "rehab" }),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        cityZoning: {
+          status: "available",
+          zoneClass: "B3-2",
+          zoneType: "Business",
+          source: {
+            id: "chicago-arcgis-zoning",
+            label: "City of Chicago ArcGIS zoning boundaries",
+            url: "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
+            retrievedAt: "2026-08-09T12:00:00.000Z",
+            recordUpdatedAt: null,
+          },
+        },
+      },
+    );
+
+    expect(report.sections[0]?.title).toBe("Zoning & Use Starting Point");
+    expect(report.sections[0]?.description).toContain("does not classify the proposed activity");
+    expect(report.actionRoadmap?.[0]?.label).toContain("verify its use category for B3-2");
+    expect(report.actionRoadmap?.[0]?.description).toContain("does not establish");
+  });
 
   it("links an exact City-published Clerk matter without inferring use compatibility", () => {
     const clerkUrl =
@@ -401,7 +431,7 @@ describe("generateReportData", () => {
     expect(report.sections.find((s) => s.title === "Additional Programs to Explore")?.items[0].programId).toBe("global");
   });
 
-  it("adds logistics access and site signals to the Site Overview", () => {
+  it("adds logistics access and site signals to Site Facts", () => {
     const report = generateReportData(
       makeState(),
       [makeProgram()],
@@ -425,15 +455,15 @@ describe("generateReportData", () => {
       },
     );
 
-    const siteOverview = report.sections.find((section) => section.title === "Site Overview");
-    expect(siteOverview?.description).toContain("transportation");
-    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.value).toContain("I-90");
-    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.detail).toContain("Straight-line distance only");
-    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")?.sourceLabel).toBe("Transportation and logistics access layer");
-    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.value).toContain("nearby public-data");
-    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.detail).toContain("NOF grants funded within 1/2 mi: 2");
-    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.detail).toContain("verify with DPD");
-    expect(siteOverview?.items.find((item) => item.label === "Site Signals")?.sourceLabel).toBe("Public site-signal layers");
+    const siteFacts = report.sections.find((section) => section.title === "Site Facts");
+    expect(siteFacts?.description).toContain("transportation");
+    expect(siteFacts?.items.find((item) => item.label === "Logistics Access")?.value).toContain("I-90");
+    expect(siteFacts?.items.find((item) => item.label === "Logistics Access")?.detail).toContain("Straight-line distance only");
+    expect(siteFacts?.items.find((item) => item.label === "Logistics Access")?.sourceLabel).toBe("Transportation and logistics access layer");
+    expect(siteFacts?.items.find((item) => item.label === "Site Signals")?.value).toContain("nearby public-data");
+    expect(siteFacts?.items.find((item) => item.label === "Site Signals")?.detail).toContain("NOF grants funded within 1/2 mi: 2");
+    expect(siteFacts?.items.find((item) => item.label === "Site Signals")?.detail).toContain("verify with DPD");
+    expect(siteFacts?.items.find((item) => item.label === "Site Signals")?.sourceLabel).toBe("Public site-signal layers");
     expect(report.locationContext?.site.siteSignals?.kind).toBe("proximity");
     expect(report.locationContext?.site.transport?.kind).toBe("proximity");
     expect(report.dataSources?.map((source) => source.id)).toEqual(
@@ -526,8 +556,8 @@ describe("generateReportData", () => {
       },
     );
 
-    const siteOverview = report.sections.find((section) => section.title === "Site Overview");
-    const mobilityItem = siteOverview?.items.find((item) => item.label === "Transportation & Site Access");
+    const siteFacts = report.sections.find((section) => section.title === "Site Facts");
+    const mobilityItem = siteFacts?.items.find((item) => item.label === "Transportation & Site Access");
     expect(mobilityItem?.value).toContain("Strong public transit access");
     expect(mobilityItem?.detail).toContain("CTA rail: 79th · 0.2 mi");
     expect(mobilityItem?.detail).toContain(
@@ -550,14 +580,14 @@ describe("generateReportData", () => {
     expect(mobilityItem?.detailCaveat).toBe(
       "Distances are straight-line proximity signals, not routed travel times.",
     );
-    expect(siteOverview?.items.find((item) => item.label === "Logistics Access")).toBeUndefined();
+    expect(siteFacts?.items.find((item) => item.label === "Logistics Access")).toBeUndefined();
     expect(report.locationContext?.site.mobilityAccess?.kind).toBe("proximity");
     expect(report.dataSources?.map((source) => source.id)).toEqual(
       expect.arrayContaining(["mobilityAccess"])
     );
   });
 
-  it("prioritizes confirmed programs by the user's primary goal without exposing scores", () => {
+  it("prioritizes confirmed programs by the user's selected goal without exposing scores", () => {
     const report = generateReportData(
       makeState({ projectType: "hiring" }),
       [
@@ -599,6 +629,38 @@ describe("generateReportData", () => {
     expect(report.executiveSummary?.topPrograms[0].programId).toBe("edge");
     expect(report.summary).toContain("Hire or retain employees");
     expect(report.actionRoadmap?.[0].callScript).toContain("hire or retain employees");
+  });
+
+  it("organizes programs across three goals and preserves custom context without scoring it", () => {
+    const report = generateReportData(
+      makeState({
+        projectGoals: ["hiring", "equipment", "other"],
+        projectType: "hiring",
+        customGoal: "Open a shared commercial kitchen",
+      }),
+      [
+        makeProgram({ id: "edge", name: "EDGE" }),
+        makeProgram({ id: "sbaMicroloan", name: "SBA Microloan" }),
+        makeProgram({ id: "sbif", name: "SBIF" }),
+      ],
+      { zones, zoneNames },
+    );
+
+    const bestMatches = report.sections.find(
+      (section) => section.title === GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+    );
+    expect(bestMatches?.items.map((item) => item.programId)).toEqual([
+      "edge",
+      "sbaMicroloan",
+    ]);
+    expect(report.metadata.projectGoals).toEqual(["hiring", "equipment", "other"]);
+    expect(report.metadata.customGoal).toBe("Open a shared commercial kitchen");
+    expect(report.executiveSummary?.projectGoalLabels).toEqual([
+      "Hire or retain employees",
+      "Buy equipment",
+      "Open a shared commercial kitchen",
+    ]);
+    expect(JSON.stringify(report)).not.toContain('"score"');
   });
 
   it("prioritizes Cook County discovery programs without treating them as address-confirmed", () => {
@@ -823,6 +885,21 @@ describe("generateReportData", () => {
     expect(item?.sourceUrl).toBe(program.sourceUrl);
     expect(item?.applicationPortals).toEqual(applicationPortals);
     expect(item?.verificationSteps).toEqual(verificationSteps);
+  });
+
+  it("adds qualitative preparation cost signals to required documents", () => {
+    const report = generateReportData(
+      makeState({ projectGoals: ["rehab"], projectType: "rehab" }),
+      [makeProgram({ requiredDocs: ["Phase I environmental assessment", "Building permits", "W-9"] })],
+      { zones, zoneNames },
+    );
+
+    const required = report.sections.find((section) => section.title === "Required Documents");
+    const copy = JSON.stringify(required);
+    expect(copy).toContain("Phase I environmental assessment [$$$]");
+    expect(copy).toContain("Building permits [$$]");
+    expect(copy).toContain("W-9 [$]");
+    expect(required?.description).toContain("document preparation, not program value");
   });
 
   it("does not aggregate possible incentive dollars from a project budget", () => {

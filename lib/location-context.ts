@@ -1,5 +1,6 @@
 import { runConfidenceEngine } from "./confidence-engine";
-import { orderProgramCheckResultsByProjectGoal } from "./project-fit";
+import { orderProgramCheckResultsByProjectGoals } from "./project-fit";
+import { selectedProjectGoals } from "./report-wizard-config";
 import type { LocalBusinessSupportContext } from "./local-business-support";
 import type {
   NeighborhoodEconomicContext,
@@ -59,7 +60,9 @@ export interface LocationContextState {
   lon?: number | null;
   neighborhood?: string;
   industry?: string;
+  projectGoals?: string[];
   projectType?: string;
+  customGoal?: string;
   proposedUse?: string;
   siteControl?: string;
   documentsAvailable?: string[];
@@ -94,7 +97,9 @@ export interface LocationContext {
     lon?: number | null;
     project?: {
       industry?: string;
+      projectGoals?: string[];
       projectType?: string;
+      customGoal?: string;
       proposedUse?: string;
       siteControl?: string;
       documentsAvailable?: string[];
@@ -320,8 +325,9 @@ export function buildLocationContext(
   const programResults = input.zones
     ? runConfidenceEngine(programs, input.zones, input.zoneNames || {}, undefined, input.parcel ?? undefined)
     : [];
-  const orderedProgramResults = state.projectType
-    ? orderProgramCheckResultsByProjectGoal(programResults, state.projectType, state.industry)
+  const projectGoals = selectedProjectGoals(state);
+  const orderedProgramResults = projectGoals.length > 0
+    ? orderProgramCheckResultsByProjectGoals(programResults, projectGoals, state.industry)
     : programResults;
   const topMatches = orderedProgramResults
     .filter((result) => result.confidence !== "not_applicable")
@@ -340,7 +346,9 @@ export function buildLocationContext(
       lon: state.lon,
       project: {
         industry: state.industry,
+        projectGoals,
         projectType: state.projectType,
+        customGoal: state.customGoal,
         proposedUse: state.proposedUse,
         siteControl: state.siteControl,
         documentsAvailable: state.documentsAvailable,

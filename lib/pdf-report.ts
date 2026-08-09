@@ -8,7 +8,7 @@ import {
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "./report-engine";
 import type { GeneratedReport } from "./report-engine";
-import { PROJECT_TYPE_LABELS } from "./report-wizard-config";
+import { selectedProjectGoalLabels } from "./report-wizard-config";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "./capital-partner-report";
 
 /**
@@ -38,7 +38,8 @@ export function orderSectionsForPdf(
     if (title === "Additional Programs to Explore") return 50;
     if (title === "Required Documents") return 60;
     if (title === "Document Readiness Checklist") return 61;
-    if (title === "Site Overview") return 80;
+    if (title === "Zoning & Use Starting Point") return 5;
+    if (title === "Site Facts" || title === "Site Overview") return 80;
     if (title === "Project Intake") return 81;
     if (title === "Incentive Zone Coverage & Program Interactions") return 82;
     if (title === "Neighborhood Economic Context") return 90;
@@ -87,6 +88,14 @@ type ReportItemWithProvenance = GeneratedReport["sections"][number]["items"][num
   verificationSteps?: ReportVerificationStep[];
   stale?: boolean;
 };
+
+function reportGoalLabels(report: GeneratedReport): string[] {
+  return selectedProjectGoalLabels({
+    projectGoals: report.metadata?.projectGoals,
+    projectType: report.metadata?.projectType,
+    customGoal: report.metadata?.customGoal,
+  });
+}
 
 function hexToRgb(hex: string): [number, number, number] {
   const r = parseInt(hex.slice(1, 3), 16);
@@ -1002,9 +1011,9 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
     doc.text(`Industry: ${report.metadata.industry}`, MARGIN, coverY);
     coverY += 6;
   }
-  if (report.metadata?.projectType) {
-    const goalLabel = PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType;
-    doc.text(`Primary goal: ${goalLabel}`, MARGIN, coverY);
+  const goalLabels = reportGoalLabels(report);
+  if (goalLabels.length > 0) {
+    doc.text(`Project goals: ${goalLabels.join(", ")}`, MARGIN, coverY);
     coverY += 6;
   }
   if (report.metadata?.zoneClass) doc.text(`Zoning: ${report.metadata.zoneClass}`, MARGIN, coverY);
@@ -1207,11 +1216,12 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
 
       let valueLines: string[] = [];
 
-      if (item.value && !hasGroupedDetail) {
+      const itemValue = [item.value, item.preparationCost?.tier].filter(Boolean).join(" · ");
+      if (itemValue && !hasGroupedDetail) {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
         setColor(doc, MEDIUM_GRAY);
-        valueLines = doc.splitTextToSize(item.value, valueColumnWidth) as string[];
+        valueLines = doc.splitTextToSize(itemValue, valueColumnWidth) as string[];
         valueLines.forEach((line, lineIndex) => {
           const valW = doc.getTextWidth(line);
           doc.text(line, W - MARGIN - valW, y + lineIndex * 3.5);
@@ -1222,12 +1232,12 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
       y += (headingLines - 1) * 3.8;
 
       if (hasGroupedDetail && item.detailGroups) {
-        if (item.value) {
+        if (itemValue) {
           y += 4;
           doc.setFont("helvetica", "normal");
           doc.setFontSize(7);
           setColor(doc, MEDIUM_GRAY);
-          y += wrapText(doc, item.value, MARGIN + 6, y, CONTENT_W - 10, 3.5);
+          y += wrapText(doc, itemValue, MARGIN + 6, y, CONTENT_W - 10, 3.5);
         }
 
         for (const group of item.detailGroups) {
@@ -1388,9 +1398,10 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     month: "long",
     day: "numeric",
   });
-  const primaryGoal = report.metadata?.projectType
-    ? PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType
-    : "Confirm the project goal with an advisor";
+  const projectGoals = reportGoalLabels(report);
+  const projectGoalsText = projectGoals.length > 0
+    ? projectGoals.join(", ")
+    : "Confirm the project goals with an advisor";
   const neighborhoodLabel = report.communityAssets?.communityArea || report.neighborhoodEconomics?.geographyLabel;
   const preparedFor = hasText(report.metadata?.preparedFor) ? report.metadata.preparedFor.trim() : undefined;
 
@@ -1409,6 +1420,8 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
   const requiredItems = section("Required Documents")?.items || [];
   const readinessItems = section("Document Readiness Checklist")?.items || [];
   const siteItems = [
+    ...(section("Zoning & Use Starting Point")?.items || []),
+    ...(section("Site Facts")?.items || []),
     ...(section("Site Overview")?.items || []),
     ...(section("Project Intake")?.items || []),
     ...(section("Incentive Zone Coverage & Program Interactions")?.items || []),
@@ -1710,10 +1723,11 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     const hasBadge = Boolean(options.badge);
     const contentX = hasBadge ? MARGIN + 19 : MARGIN + 7;
     const rightPad = 7;
-    const valueWidth = item.value ? 44 : 0;
-    const labelWidth = CONTENT_W - (contentX - MARGIN) - rightPad - (item.value ? valueWidth + 4 : 0);
+    const displayValue = [item.value, item.preparationCost?.tier].filter(Boolean).join(" · ");
+    const valueWidth = displayValue ? 44 : 0;
+    const labelWidth = CONTENT_W - (contentX - MARGIN) - rightPad - (displayValue ? valueWidth + 4 : 0);
     const labelLines = fit(item.label, labelWidth, 2, 7.8, "bold");
-    const valueLines = item.value ? fit(item.value, valueWidth, 2, 6.5) : [];
+    const valueLines = displayValue ? fit(displayValue, valueWidth, 2, 6.5) : [];
     const headerLines = Math.max(labelLines.length, valueLines.length, 1);
 
     const detail = options.suppressDetail
@@ -1767,7 +1781,7 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     setColor(doc, NAVY);
     labelLines.forEach((line, index) => doc.text(line, contentX, ty + index * 3.3));
 
-    if (item.value) {
+    if (displayValue) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(6.5);
       setColor(doc, MEDIUM_GRAY);
@@ -2127,9 +2141,9 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(6.5);
   setColor(doc, "#8CB4FF");
-  doc.text("PRIMARY GOAL", MARGIN + 10, coverChipY + 8);
+  doc.text("PROJECT GOALS", MARGIN + 10, coverChipY + 8);
   setColor(doc, WHITE);
-  doc.text(fit(primaryGoal, CONTENT_W - 20, 1, 11, "bold")[0], MARGIN + 10, coverChipY + 17);
+  doc.text(fit(projectGoalsText, CONTENT_W - 20, 1, 11, "bold")[0], MARGIN + 10, coverChipY + 17);
 
   /* PAGE 2 - KEY FINDINGS */
   doc.addPage();
@@ -2148,10 +2162,10 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   setColor(doc, "#8CB4FF");
-  doc.text("PRIMARY GOAL", MARGIN + 10, 76);
+  doc.text("PROJECT GOALS", MARGIN + 10, 76);
   doc.setFontSize(15);
   setColor(doc, WHITE);
-  fit(primaryGoal, CONTENT_W - 20, 2, 15, "bold").forEach((line, index) => {
+  fit(projectGoalsText, CONTENT_W - 20, 2, 15, "bold").forEach((line, index) => {
     doc.text(line, MARGIN + 10, 88 + index * 6);
   });
 
@@ -2303,7 +2317,12 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     y4,
     report.recommendedActions.slice(0, 3),
     (action, rowY, index) => {
-      const item: ReportRow = { label: action.label, value: index === 0 ? "FIRST" : "NEXT", detail: action.description };
+      const item: ReportRow = {
+        label: action.label,
+        value: index === 0 ? "FIRST" : "NEXT",
+        detail: action.description,
+        preparationCost: action.preparationCost,
+      };
       return drawOpportunityCard(item, rowY, {
         detailMaxLines: 2,
         accent: index === 0 ? BLUE : index === 1 ? AMBER : "#74869F",
@@ -2342,7 +2361,12 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     doc.text(fit(item.label, checklistWidth - 26, 1, 6.6)[0], x + 6.5, rowY - 0.2);
     doc.setFontSize(5.9);
     setColor(doc, LIGHT_GRAY);
-    const status = fit(item.value || "Confirm", 20, 1, 5.9)[0] ?? "";
+    const status = fit(
+      [item.value || "Confirm", item.preparationCost?.tier].filter(Boolean).join(" · "),
+      20,
+      1,
+      5.9,
+    )[0] ?? "";
     const statusWidth = doc.getTextWidth(status);
     doc.text(status, x + checklistWidth - statusWidth, rowY - 0.2);
   });

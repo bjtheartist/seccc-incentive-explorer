@@ -53,7 +53,9 @@ describe("RefineValuePanel", () => {
       />,
     );
     expect(html).toContain("Quick Refine");
-    expect(html).toContain("Primary Goal");
+    expect(html).toContain("Project Goals");
+    expect(html).toContain("0/3");
+    expect(html).toContain("Something else");
     expect(html).toContain("Remodel or renovate");
     expect(html).toContain("Hire or retain employees");
     expect(html).toContain("Project Budget (Optional)");

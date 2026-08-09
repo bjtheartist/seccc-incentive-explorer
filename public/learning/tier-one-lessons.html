@@ -1,0 +1,1058 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<base target="_blank">
+<title>Twelve Lessons — Tier 1 Complete</title>
+
+<style>
+  :root {
+    --ground:#ECEEF1; --surface:#FFFFFF; --sunken:#F4F5F7;
+    --ink:#15181D; --muted:#5A626E; --line:#D2D7DE; --line-soft:#E3E7EC;
+    --accent:#9A7415; --accent-mark:#F2C230; --on-accent:#15181D;
+    --ok:#2E6B4E; --ok-bg:#E6F1EA; --warn:#A5402F; --warn-bg:#F7E9E6;
+    --font-display: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+    --font-body: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground:#111318; --surface:#191C22; --sunken:#14171C;
+      --ink:#E6E9ED; --muted:#98A1AD; --line:#2B303A; --line-soft:#232830;
+      --accent:#F2C230; --accent-mark:#F2C230; --on-accent:#15181D;
+      --ok:#5FBF8F; --ok-bg:#152A21; --warn:#E08472; --warn-bg:#2C1B18;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:#111318; --surface:#191C22; --sunken:#14171C;
+    --ink:#E6E9ED; --muted:#98A1AD; --line:#2B303A; --line-soft:#232830;
+    --accent:#F2C230; --accent-mark:#F2C230; --on-accent:#15181D;
+    --ok:#5FBF8F; --ok-bg:#152A21; --warn:#E08472; --warn-bg:#2C1B18;
+  }
+  :root[data-theme="light"] {
+    --ground:#ECEEF1; --surface:#FFFFFF; --sunken:#F4F5F7;
+    --ink:#15181D; --muted:#5A626E; --line:#D2D7DE; --line-soft:#E3E7EC;
+    --accent:#9A7415; --accent-mark:#F2C230; --on-accent:#15181D;
+    --ok:#2E6B4E; --ok-bg:#E6F1EA; --warn:#A5402F; --warn-bg:#F7E9E6;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground); color: var(--ink);
+    font-family: var(--font-body); font-size: 18px; line-height: 1.68;
+    margin: 0; padding: 0 20px 100px; -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  .masthead { padding: 56px 0 28px; border-bottom: 2px solid var(--ink); margin-bottom: 8px; }
+  .eyebrow {
+    font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 16px;
+  }
+  h1 {
+    font-family: var(--font-display); font-size: clamp(28px,5vw,42px); line-height:1.1;
+    letter-spacing: -.028em; font-weight: 700; margin: 0 0 16px; text-wrap: balance;
+  }
+  .standfirst { font-size: 19px; color: var(--muted); margin: 0; max-width: 60ch; }
+
+  article { padding: 52px 0; border-bottom: 1px solid var(--line); }
+  article:last-of-type { border-bottom: none; }
+
+  .lesson-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; margin-bottom: 18px; }
+  .lid {
+    font-family: var(--font-mono); font-size: 12px; font-weight: 600;
+    color: var(--on-accent); background: var(--accent-mark);
+    padding: 3px 7px; border-radius: 3px;
+  }
+  .track {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--muted);
+  }
+  .mins { font-family: var(--font-mono); font-size: 11px; color: var(--muted); margin-left: auto; }
+
+  h2 {
+    font-family: var(--font-display); font-size: clamp(24px,4vw,32px); line-height: 1.16;
+    letter-spacing: -.022em; font-weight: 700; margin: 0 0 22px; text-wrap: balance;
+  }
+
+  p { margin: 0 0 18px; }
+  article > p:first-of-type { font-size: 19.5px; }
+  strong { font-weight: 700; }
+  em { font-style: italic; }
+
+  .fig {
+    margin: 32px 0; background: var(--surface); border: 1px solid var(--line);
+    border-radius: 4px; padding: 22px 18px; overflow-x: auto;
+  }
+  svg { display: block; max-width: 100%; height: auto; margin: 0 auto; }
+
+  /* ---- question ---- */
+
+  .q {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 4px; padding: 24px; margin: 34px 0 26px;
+  }
+  .q-label {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 12px;
+  }
+  .q-text { font-family: var(--font-display); font-size: 18px; font-weight: 600; line-height: 1.45; margin: 0 0 18px; }
+
+  .opts { display: flex; flex-direction: column; gap: 8px; }
+  .opt {
+    font-family: var(--font-display); font-size: 16px; line-height: 1.45;
+    text-align: left; color: var(--ink); background: var(--sunken);
+    border: 1px solid var(--line-soft); border-radius: 3px;
+    padding: 12px 14px; cursor: pointer; transition: border-color .12s ease, background .12s ease;
+  }
+  .opt:hover:not(:disabled) { border-color: var(--muted); }
+  .opt:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
+  .opt:disabled { cursor: default; }
+  .opt .mark { font-family: var(--font-mono); font-weight: 700; margin-right: 9px; color: var(--muted); }
+  .opt.right { background: var(--ok-bg); border-color: var(--ok); }
+  .opt.right .mark { color: var(--ok); }
+  .opt.wrong { background: var(--warn-bg); border-color: var(--warn); }
+  .opt.wrong .mark { color: var(--warn); }
+
+  .why {
+    margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line-soft);
+    font-size: 16.5px; color: var(--ink);
+  }
+  .why[hidden] { display: none; }
+  .why b { font-family: var(--font-display); font-weight: 700; }
+
+  /* ---- verify ---- */
+
+  .verify {
+    background: var(--sunken); border: 1px solid var(--line);
+    border-radius: 3px; padding: 18px 20px; font-size: 15.5px;
+  }
+  .verify-label {
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .13em;
+    text-transform: uppercase; color: var(--muted); margin: 0 0 10px;
+  }
+  .verify ul { margin: 0 0 14px; padding-left: 18px; }
+  .verify li { margin-bottom: 5px; }
+  .verify a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .verify a:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
+  .rails-note {
+    font-family: var(--font-mono); font-size: 11.5px; line-height: 1.6;
+    color: var(--muted); margin: 0; padding-top: 12px; border-top: 1px solid var(--line-soft);
+  }
+
+  .closing {
+    margin-top: 48px; padding: 22px; background: var(--sunken);
+    border: 1px solid var(--line); border-radius: 3px; font-size: 16px; color: var(--muted);
+  }
+  .closing strong { color: var(--ink); }
+  .site-return {
+    display: inline-flex; align-items: center; min-height: 40px; margin-top: 20px;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); text-decoration: none;
+  }
+  .site-return:hover, .site-return:focus-visible { color: var(--ink); text-decoration: underline; }
+
+  @media (max-width: 560px) {
+    body { font-size: 17px; padding: 0 16px 72px; }
+    .mins { margin-left: 0; width: 100%; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <a class="site-return" href="/report" target="_top">← Back to the Incentive Explorer</a>
+
+  <header class="masthead">
+    <p class="eyebrow">Chicago Incentive Explorer · /learn · Tier 1</p>
+    <h1>Twelve lessons, as a reader would meet them</h1>
+    <p class="standfirst">All of Tier 1 — roughly thirty minutes end to end. One idea each, one question that tests the system rather than your project, and each diagram wired into the lesson it belongs to. The questions work; try answering one wrong.</p>
+  </header>
+
+  <!-- ================= L1.1 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L1.1</span>
+      <span class="track">Who actually decides</span>
+      <span class="mins">2 min</span>
+    </div>
+    <h2>Zoning isn't a form you file</h2>
+
+    <p>There is no line on any application that reads "zoning approval." That single fact explains a startling number of wasted trips to City Hall.</p>
+
+    <p>Most people picture the process as a row of counters: get your zoning, then your permit, then your license. Three stops, three pieces of paper.</p>
+
+    <p>That isn't how it works. There is no separate zoning certificate to buy. Zoning review is a check that happens <em>inside</em> two other applications — and which one you meet depends on a single question: <strong>is anyone doing construction?</strong></p>
+
+    <p>If the answer is no — you're moving into a space that's ready as it stands — the zoning question gets answered inside the <strong>business license application</strong> at the Department of Business Affairs and Consumer Protection. The city's Zoning division reviews it, and the license application can't be processed until that review clears. You never file anything with the Department of Buildings, because you aren't building anything.</p>
+
+    <p>If the answer is yes, the same question appears again, this time inside the <strong>building permit application</strong> at the Department of Buildings, where zoning is one of the reviews your plans pass through.</p>
+
+    <p>Same gate. Two doors. Which door you walk through is decided by the work, not by what kind of business you are.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 720 452" role="img" aria-label="Flowchart: a project with no construction goes to the BACP business license application; a project with construction goes to the DOB building permit application. Both pass through the same zoning review gate before proceeding.">
+        <defs><marker id="p1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.25">
+          <rect x="290" y="16" width="140" height="38" rx="3"/>
+          <rect x="240" y="88" width="240" height="44" rx="3" stroke-dasharray="4 3"/>
+          <rect x="50" y="186" width="200" height="56" rx="3"/>
+          <rect x="470" y="186" width="200" height="56" rx="3"/>
+          <rect x="50" y="376" width="200" height="56" rx="3"/>
+          <rect x="470" y="376" width="200" height="56" rx="3"/>
+        </g>
+        <rect x="50" y="286" width="200" height="48" rx="3" fill="var(--accent-mark)"/>
+        <rect x="470" y="286" width="200" height="48" rx="3" fill="var(--accent-mark)"/>
+        <g stroke="currentColor" stroke-width="1.25" fill="none" marker-end="url(#p1)">
+          <line x1="360" y1="54" x2="360" y2="84"/>
+          <polyline points="240,110 150,110 150,182"/>
+          <polyline points="480,110 570,110 570,182"/>
+          <line x1="150" y1="242" x2="150" y2="282"/>
+          <line x1="570" y1="242" x2="570" y2="282"/>
+          <line x1="150" y1="334" x2="150" y2="372"/>
+          <line x1="570" y1="334" x2="570" y2="372"/>
+        </g>
+        <g stroke="currentColor" stroke-width="1" stroke-dasharray="3 3" opacity=".5">
+          <line x1="250" y1="310" x2="316" y2="310"/><line x1="404" y1="310" x2="470" y2="310"/>
+        </g>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" fill="currentColor" text-anchor="middle">
+          <text x="360" y="40" font-size="13">Your project</text>
+          <text x="360" y="115" font-size="12.5">Any construction or alteration?</text>
+          <text x="150" y="209" font-size="13">BACP</text><text x="150" y="226" font-size="13">business license application</text>
+          <text x="570" y="209" font-size="13">DOB</text><text x="570" y="226" font-size="13">building permit application</text>
+          <text x="150" y="399" font-size="12.5">Application can</text><text x="150" y="415" font-size="12.5">be processed</text>
+          <text x="570" y="399" font-size="12.5">Permit can</text><text x="570" y="415" font-size="12.5">be issued</text>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="var(--on-accent)" text-anchor="middle" font-size="12.5" font-weight="600" letter-spacing=".08em">
+          <text x="150" y="315">ZONING REVIEW</text><text x="570" y="315">ZONING REVIEW</text>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" fill="currentColor" font-size="11" text-anchor="middle" opacity=".75">
+          <text x="193" y="103">no</text><text x="527" y="103">yes</text><text x="360" y="314">the same gate</text>
+        </g>
+      </svg>
+    </div>
+
+    <p>This matters more than it sounds. People arrive at the Department of Buildings to "get their zoning" with no construction planned, and get sent away. Others clear zoning for a permit and assume licensing is handled. Neither is true, and both cost weeks.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">You're opening a shop in a space that needs no construction work at all. Where does the zoning question get answered?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>At the Department of Buildings, before anything else</button>
+        <button class="opt" type="button" data-correct><span class="mark">B</span>Inside the business license application</button>
+        <button class="opt" type="button"><span class="mark">C</span>It doesn't come up, since there's no construction</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>B.</b> There is no separate zoning certificate to obtain. Every business license application is reviewed by the Zoning division before it can be processed. The Department of Buildings is the construction path — with no construction, you have no business there.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://www.chicago.gov/city/en/sites/chicago-business-licensing/home/license-application-requirements.html">Chicago Business Licensing — application requirements</a></li>
+        <li><a href="https://www.chicago.gov/city/en/depts/bacp/supp_info/zoning.html">BACP — zoning information</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <!-- ================= L1.2 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L1.2</span>
+      <span class="track">Who actually decides</span>
+      <span class="mins">3 min</span>
+    </div>
+    <h2>Three kinds of decision, three sets of manners</h2>
+
+    <p>Calling your alderman about a project is ordinary politics. Calling a Zoning Board member about your pending case is prohibited. That is not a difference in etiquette. It's a difference in what kind of decision each one is making.</p>
+
+    <p>Chicago's land use bodies fall into three families. Once you can sort them, most of the confusing rules stop being confusing.</p>
+
+    <p><strong>Legislative bodies make the rules.</strong> City Council and its zoning committee change the zoning map and adopt ordinances. They are elected, or answerable to the elected, and they are meant to hear from the public — that's the job. Your alderman belongs to this family.</p>
+
+    <p><strong>Administrative staff apply the rules to facts.</strong> The Zoning Administrator reads the ordinance against a specific property. Plan examiners check drawings against code. Licensing staff process applications. None of them are deciding what the rule ought to be; they're determining what it already says.</p>
+
+    <p><strong>Quasi-judicial bodies decide individual cases on a record</strong>, the way a court does. The Zoning Board of Appeals is the one most people meet. It hears exactly three kinds of matter: requests for variations, requests for special use approval, and appeals arguing that the Zoning Administrator got it wrong. That third one is routinely left out of popular explanations, and it's the one that matters when you believe staff misread the ordinance.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 720 424" role="img" aria-label="Three bands: legislative bodies which set rules and may be contacted, administrative staff which apply rules, and the quasi-judicial Zoning Board of Appeals which may not be contacted about a pending case. An arrow shows a Zoning Administrator decision may be appealed to the Board.">
+        <defs><marker id="p3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+        <g fill="none" stroke="currentColor" stroke-width="1" opacity=".28">
+          <rect x="8" y="28" width="704" height="104" rx="4"/>
+          <rect x="8" y="164" width="704" height="104" rx="4"/>
+          <rect x="8" y="300" width="704" height="104" rx="4"/>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" letter-spacing=".11em" fill="currentColor" text-anchor="end" opacity=".72">
+          <text x="712" y="20">LEGISLATIVE · SETS THE RULES</text>
+          <text x="712" y="156">ADMINISTRATIVE · APPLIES THE RULES</text>
+          <text x="712" y="292">QUASI-JUDICIAL · DECIDES CASES</text>
+        </g>
+        <g fill="none" stroke="currentColor" stroke-width="1.25">
+          <rect x="28" y="52" width="300" height="56" rx="3"/>
+          <rect x="360" y="52" width="300" height="56" rx="3"/>
+          <rect x="28" y="188" width="200" height="56" rx="3"/>
+          <rect x="252" y="188" width="200" height="56" rx="3"/>
+          <rect x="476" y="188" width="200" height="56" rx="3"/>
+        </g>
+        <rect x="28" y="324" width="300" height="56" rx="3" fill="none" stroke="var(--accent-mark)" stroke-width="2.5"/>
+        <line x1="128" y1="244" x2="128" y2="320" stroke="currentColor" stroke-width="1.25" marker-end="url(#p3)"/>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" fill="currentColor" text-anchor="middle">
+          <text x="178" y="76" font-size="13.5">City Council /</text><text x="178" y="94" font-size="13.5">Committee on Zoning</text>
+          <text x="510" y="76" font-size="13.5">Your Alderman</text>
+          <text x="128" y="221" font-size="13">Zoning Administrator</text>
+          <text x="352" y="221" font-size="13">Department of Buildings</text>
+          <text x="576" y="221" font-size="13">BACP Licensing</text>
+          <text x="178" y="348" font-size="13.5" font-weight="600">Zoning Board of Appeals</text>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" text-anchor="middle">
+          <text x="510" y="95" fill="var(--ok)">✓ contact is normal</text>
+          <text x="178" y="367" fill="var(--warn)">✗ no ex parte contact</text>
+          <text x="196" y="288" fill="currentColor" opacity=".75" text-anchor="start">you may appeal</text>
+        </g>
+      </svg>
+    </div>
+
+    <p>That classification is where the rules come from. Because the Board decides cases rather than sets policy, it takes testimony, builds a record, and issues written resolutions. And its own Rules of Procedure prohibit <strong>ex parte communication</strong> — contact concerning the merits or procedural posture of a case pending before it. Not because members are unfriendly, but because a decision resting partly on what one side said privately isn't a decision on the record.</p>
+
+    <p>Questions still get answered. They go through the department staff who administer the process, rather than the people who will vote.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">Which of these may be contacted about a matter currently pending?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>A Zoning Board member, as long as you keep it brief</button>
+        <button class="opt" type="button" data-correct><span class="mark">B</span>Your alderman</button>
+        <button class="opt" type="button"><span class="mark">C</span>Neither, once anything has been filed</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>B.</b> Legislative officials are meant to hear from constituents. The Zoning Board is quasi-judicial, and its rules prohibit communication about a pending case's merits or posture. Route those questions through department staff.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://www.chicago.gov/city/en/depts/dcd/supp_info/zoning_board_of_appeals.html">Zoning Board of Appeals</a></li>
+        <li><a href="https://www.chicago.gov/content/dam/city/depts/dol/rulesandregs/ZBA-Rules-of-Procedure-2025.pdf">ZBA Rules of Procedure</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <!-- ================= L1.3 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L1.3</span><span class="track">Who actually decides</span><span class="mins">3 min</span>
+    </div>
+    <h2>What each body hands you</h2>
+
+    <p>"We're approved" means at least four different things depending on who said it. The fastest way to know where a project actually stands is to ask what piece of paper exists, and who signed it.</p>
+
+    <p>Trace the paper.</p>
+
+    <p><strong>A zoning clearance</strong> isn't a certificate you hold. It's a review that happens inside another application, and the way you know it happened is that the application moves forward. Nothing gets handed to you, which is exactly why people think this step was skipped.</p>
+
+    <p><strong>A Zoning Board resolution</strong> is a written decision, signed by the chair, including findings of fact that explain why an application was approved or denied. It resolves a zoning question. It does not authorize anyone to build anything.</p>
+
+    <p><strong>A building permit</strong> authorizes construction. <strong>Inspection sign-offs</strong> confirm that what was built matches what was permitted. <strong>A Certificate of Occupancy</strong>, where one is required, makes occupying the building lawful. <strong>A business license</strong> authorizes operating.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 720 404" role="img" aria-label="Six rows pairing an issuer with the document it produces and what that document unlocks. The zoning review row shows no document is issued at all; the Certificate of Occupancy row is marked as required only for some work.">
+        <defs><marker id="p4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" letter-spacing=".11em" fill="currentColor" opacity=".62">
+          <text x="16" y="30">ISSUER</text><text x="196" y="30">WHAT YOU GET</text><text x="496" y="30">WHAT IT UNLOCKS</text>
+        </g>
+        <g fill="none" stroke="currentColor" stroke-width="1.1">
+          <rect x="16" y="46" width="148" height="44" rx="3"/><rect x="16" y="102" width="148" height="44" rx="3"/>
+          <rect x="16" y="158" width="148" height="44" rx="3"/><rect x="16" y="214" width="148" height="44" rx="3"/>
+          <rect x="16" y="270" width="148" height="44" rx="3"/><rect x="16" y="326" width="148" height="44" rx="3"/>
+          <rect x="196" y="102" width="268" height="44" rx="3"/><rect x="196" y="158" width="268" height="44" rx="3"/>
+          <rect x="196" y="214" width="268" height="44" rx="3"/><rect x="196" y="270" width="268" height="44" rx="3"/>
+          <rect x="196" y="326" width="268" height="44" rx="3"/>
+        </g>
+        <rect x="196" y="46" width="268" height="44" rx="3" fill="none" stroke="var(--accent-mark)" stroke-width="2" stroke-dasharray="5 4"/>
+        <g stroke="currentColor" stroke-width="1.1" fill="none" marker-end="url(#p4)" opacity=".8">
+          <line x1="166" y1="68" x2="190" y2="68"/><line x1="166" y1="124" x2="190" y2="124"/>
+          <line x1="166" y1="180" x2="190" y2="180"/><line x1="166" y1="236" x2="190" y2="236"/>
+          <line x1="166" y1="292" x2="190" y2="292"/><line x1="166" y1="348" x2="190" y2="348"/>
+          <line x1="466" y1="68" x2="490" y2="68"/><line x1="466" y1="124" x2="490" y2="124"/>
+          <line x1="466" y1="180" x2="490" y2="180"/><line x1="466" y1="236" x2="490" y2="236"/>
+          <line x1="466" y1="292" x2="490" y2="292"/><line x1="466" y1="348" x2="490" y2="348"/>
+        </g>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" fill="currentColor">
+          <text x="90" y="72" text-anchor="middle">Zoning division</text><text x="90" y="128" text-anchor="middle">Zoning Board</text>
+          <text x="90" y="184" text-anchor="middle">Dept. of Buildings</text><text x="90" y="240" text-anchor="middle">Inspectors</text>
+          <text x="90" y="296" text-anchor="middle">Dept. of Buildings</text><text x="90" y="352" text-anchor="middle">BACP</text>
+          <text x="330" y="128" text-anchor="middle">Written resolution, with findings of fact</text>
+          <text x="330" y="184" text-anchor="middle">Building permit</text>
+          <text x="330" y="240" text-anchor="middle">Inspection sign-offs</text>
+          <text x="330" y="296" text-anchor="middle">Certificate of Occupancy</text>
+          <text x="330" y="352" text-anchor="middle">Business license</text>
+        </g>
+        <text x="330" y="66" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="var(--accent)" text-anchor="middle">nothing is handed to you</text>
+        <text x="330" y="80" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" fill="currentColor" opacity=".6" text-anchor="middle">the application simply moves</text>
+        <text x="330" y="308" font-family="ui-sans-serif, system-ui, sans-serif" font-size="10" fill="currentColor" opacity=".6" text-anchor="middle">only for some categories of work</text>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5" fill="currentColor" opacity=".85">
+          <text x="496" y="72">the application can proceed</text><text x="496" y="128">the zoning question is settled</text>
+          <text x="496" y="184">construction may begin</text><text x="496" y="240">work matches the permit</text>
+          <text x="496" y="296">lawful occupancy</text><text x="496" y="352">lawful operation</text>
+        </g>
+      </svg>
+    </div>
+
+    <p>Six documents, four issuers, none interchangeable. The most common and most expensive confusion is treating a zoning approval as permission to build, or a completed inspection as permission to open.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">You hold a Zoning Board resolution approving a special use for your site. May construction begin?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>Yes — the Board is the highest authority in the process</button>
+        <button class="opt" type="button" data-correct><span class="mark">B</span>No — construction requires a building permit</button>
+        <button class="opt" type="button"><span class="mark">C</span>Only if the resolution includes findings of fact</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>B.</b> The resolution settles the zoning question. Construction is authorized by a building permit from the Department of Buildings, which is a separate application to a separate department.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://www.chicago.gov/city/en/depts/dcd/supp_info/zoning_board_of_appeals.html">ZBA resolutions, 1982 to present</a></li>
+        <li><a href="https://www.chicago.gov/city/en/depts/bldgs/provdrs/permits.html">Department of Buildings — permits</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <!-- ================= L1.4 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L1.4</span><span class="track">Who actually decides</span><span class="mins">2 min</span>
+    </div>
+    <h2>Why a stranger knows about your permit</h2>
+
+    <p>A week or two after you file, an email arrives. It demands payment of a permit fee to avoid a delay. It cites your address, describes your project, and quotes your application number correctly.</p>
+
+    <p>It is not from the city.</p>
+
+    <p>The FBI has issued a public warning about criminals impersonating city and county officials to collect fraudulent payments for planning and zoning permits. They find their targets in <strong>publicly available permit information</strong> — the same records that make the development process transparent also make everyone with an open application findable, along with what they are building and what stage they're at.</p>
+
+    <p>That's the part worth sitting with. The details in the message are not evidence that the sender is legitimate. They're evidence that the sender can read a public database. Accuracy is the cheapest thing for a scammer to obtain here, which is precisely why it feels so convincing.</p>
+
+    <p>The pattern has three parts: <strong>specific knowledge</strong> of your project, <strong>urgency</strong> — a deadline, a threatened delay, a lapsing approval — and a <strong>payment method supplied in the message itself</strong>. Any legitimate fee you owe will be payable through a channel you can find independently, on a department's own published page.</p>
+
+    <p>So the rule is short. Never pay, click, or reply using contact information that arrived in the message. Look up the department yourself and ask them. A real obligation survives that phone call; a fake one doesn't.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">An email cites your correct application number and demands immediate payment to prevent a delay. What does the correct application number tell you?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>The sender has access to city systems, so it's likely genuine</button>
+        <button class="opt" type="button" data-correct><span class="mark">B</span>Nothing about legitimacy — that information is public</button>
+        <button class="opt" type="button"><span class="mark">C</span>It's genuine only if the amount matches your fee estimate</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>B.</b> Permit application details are public record. Knowing them demonstrates only that the sender can read public data. Verify through the department's own published contact information, never the message's.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://www.ic3.gov/PSA/2026/PSA260309">FBI public service announcement on permit-payment impersonation</a></li>
+        <li><a href="https://www.ic3.gov">Report a scam to the FBI's Internet Crime Complaint Center</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <!-- ================= L2.1 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L2.1</span><span class="track">Zoning and permitted uses</span><span class="mins">3 min</span>
+    </div>
+    <h2>Read the table, not the rumor</h2>
+
+    <p>The listing says "zoned for retail." The broker says the last tenant did something similar. The previous owner says it was never a problem.</p>
+
+    <p>None of those is a source.</p>
+
+    <p>Getting to a real answer takes three moves, in this order.</p>
+
+    <p><strong>Identify the parcel.</strong> A street address is a convenience, not an identifier. Addresses get shared across buildings, split, renumbered, and misreported. The Property Index Number — the PIN — is how the county identifies a specific piece of land, and it's what you want when you're about to spend money based on the answer.</p>
+
+    <p><strong>Find the district.</strong> Every parcel sits in a mapped zoning district, and the official zoning map is what says which. Not the listing, not a screenshot, not a third-party site working from an old copy.</p>
+
+    <p><strong>Translate your business into a use category.</strong> This is where most people go wrong. The ordinance doesn't organize itself by what businesses call themselves. It organizes by <em>use category</em> — its own classification for activities.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 720 396" role="img" aria-label="A use table grid with district columns and use category rows. Callout one marks how a parcel identifier gives you the district column; callout two marks how your activity gives you the use category row; callout three marks the cell where they cross, which holds the answer.">
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" letter-spacing=".1em" fill="currentColor" opacity=".62">
+          <text x="200" y="60">ZONING DISTRICTS →</text><text x="16" y="60">USE CATEGORIES ↓</text>
+        </g>
+        <g fill="none" stroke="currentColor" stroke-width="1" opacity=".55">
+          <line x1="200" y1="110" x2="640" y2="110"/><line x1="200" y1="158" x2="640" y2="158"/>
+          <line x1="200" y1="206" x2="640" y2="206"/><line x1="200" y1="254" x2="640" y2="254"/>
+          <line x1="200" y1="302" x2="640" y2="302"/>
+          <line x1="200" y1="110" x2="200" y2="302"/><line x1="310" y1="110" x2="310" y2="302"/>
+          <line x1="420" y1="110" x2="420" y2="302"/><line x1="530" y1="110" x2="530" y2="302"/>
+          <line x1="640" y1="110" x2="640" y2="302"/>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="12" fill="currentColor" text-anchor="middle" opacity=".8">
+          <text x="255" y="102">District A</text><text x="365" y="102">District B</text>
+          <text x="475" y="102">District C</text><text x="585" y="102">District D</text>
+        </g>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5" fill="currentColor" text-anchor="end" opacity=".8">
+          <text x="160" y="139">Category A</text><text x="160" y="187">Category B</text>
+          <text x="160" y="235">Category C</text><text x="160" y="283">Category D</text>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="14" fill="currentColor" text-anchor="middle" opacity=".38">
+          <text x="255" y="140">P</text><text x="365" y="140">P</text><text x="475" y="140">–</text><text x="585" y="140">–</text>
+          <text x="255" y="188">P</text><text x="365" y="188">P</text><text x="475" y="188">P</text><text x="585" y="188">–</text>
+          <text x="255" y="236">–</text><text x="475" y="236">PD</text><text x="585" y="236">P</text>
+          <text x="255" y="284">–</text><text x="365" y="284">–</text><text x="475" y="284">S</text><text x="585" y="284">P</text>
+        </g>
+        <rect x="310" y="206" width="110" height="48" fill="none" stroke="var(--accent-mark)" stroke-width="2.5"/>
+        <text x="365" y="236" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700" fill="var(--accent)" text-anchor="middle">S</text>
+        <g fill="none" stroke="var(--accent-mark)" stroke-width="1.6">
+          <circle cx="365" cy="76" r="9"/><circle cx="178" cy="230" r="9"/><circle cx="440" cy="196" r="9"/>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" font-weight="700" fill="var(--accent)" text-anchor="middle">
+          <text x="365" y="80">1</text><text x="178" y="234">2</text><text x="440" y="200">3</text>
+        </g>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5" fill="currentColor">
+          <text x="16" y="336">1 · The parcel identifier gives you the district — the column.</text>
+          <text x="16" y="358">2 · The activity gives you the use category — the row.</text>
+          <text x="16" y="380">3 · The cell where they cross is the answer. Nothing else is.</text>
+        </g>
+      </svg>
+    </div>
+
+    <p>One trap worth naming: what the previous tenant did tells you very little. They may have been operating under a special use approval that doesn't travel with the space, or as a nonconforming use tied to circumstances that ended when they left. Inheriting a storefront is not inheriting its permissions.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">Your business calls itself a "juice bar." What do you look up in the ordinance?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>"Juice bar" in the index</button>
+        <button class="opt" type="button" data-correct><span class="mark">B</span>The use category the ordinance assigns to that activity</button>
+        <button class="opt" type="button"><span class="mark">C</span>Whatever the previous tenant was classified as</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>B.</b> The use tables are organized by use categories defined in the ordinance, not by trade names. What the previous tenant did may reflect approvals or conditions that do not transfer with the space.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://www.chicago.gov/city/en/depts/dcd/supp_info/zoning_board_of_appeals.html">Zoning code text and official zoning map</a></li>
+        <li><a href="https://codelibrary.amlegal.com/codes/chicago/latest/chicagozoning_il/0-0-0-48750">Use groups and use categories, § 17-17-0100</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <!-- ================= L2.2 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L2.2</span>
+      <span class="track">Zoning and permitted uses</span>
+      <span class="mins">3 min</span>
+    </div>
+    <h2>Four symbols, four futures</h2>
+
+    <p>One character in one cell decides whether you open in two months or two years. It's worth knowing how to find it.</p>
+
+    <p>The zoning ordinance answers "can I do this here?" with a table. Down the side are <strong>use categories</strong> — the ordinance's own classifications for activities, which is why you look up what your business <em>is</em>, not what it calls itself. Across the top are <strong>zoning districts</strong>. Find your row, find your column, and the cell where they cross holds one of four characters.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 720 352" role="img" aria-label="A use category row and a district column meet at one cell, which returns P for permitted by right, S for special use, PD for planned development, or a dash for prohibited.">
+        <defs><marker id="p2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.25">
+          <rect x="16" y="120" width="150" height="44" rx="3"/>
+          <rect x="16" y="196" width="150" height="44" rx="3"/>
+          <rect x="400" y="20" width="304" height="62" rx="3"/>
+          <rect x="400" y="100" width="304" height="62" rx="3"/>
+          <rect x="400" y="180" width="304" height="62" rx="3"/>
+          <rect x="400" y="260" width="304" height="62" rx="3"/>
+        </g>
+        <rect x="220" y="150" width="100" height="60" rx="3" fill="none" stroke="var(--accent-mark)" stroke-width="2.5"/>
+        <g stroke="currentColor" stroke-width="1.25" fill="none">
+          <polyline points="166,142 193,142 193,176 216,176" marker-end="url(#p2)"/>
+          <polyline points="166,218 193,218 193,184 216,184" marker-end="url(#p2)"/>
+          <line x1="320" y1="180" x2="360" y2="180"/>
+          <line x1="360" y1="51" x2="360" y2="291"/>
+          <line x1="360" y1="51" x2="396" y2="51" marker-end="url(#p2)"/>
+          <line x1="360" y1="131" x2="396" y2="131" marker-end="url(#p2)"/>
+          <line x1="360" y1="211" x2="396" y2="211" marker-end="url(#p2)"/>
+          <line x1="360" y1="291" x2="396" y2="291" marker-end="url(#p2)"/>
+        </g>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" fill="currentColor">
+          <text x="91" y="139" font-size="13" text-anchor="middle">Use category</text>
+          <text x="91" y="155" font-size="11.5" text-anchor="middle" opacity=".7">the row</text>
+          <text x="91" y="215" font-size="13" text-anchor="middle">District</text>
+          <text x="91" y="231" font-size="11.5" text-anchor="middle" opacity=".7">the column</text>
+          <text x="270" y="185" font-size="13.5" text-anchor="middle" font-weight="600">The cell</text>
+          <text x="452" y="46" font-size="13.5" font-weight="600">Permitted by right</text>
+          <text x="452" y="65" font-size="12" opacity=".72">other standards still apply</text>
+          <text x="452" y="126" font-size="13.5" font-weight="600">Special use</text>
+          <text x="452" y="145" font-size="12" opacity=".72">§ 17-13-0900 → Zoning Board</text>
+          <text x="452" y="206" font-size="13.5" font-weight="600">Planned development</text>
+          <text x="452" y="225" font-size="12" opacity=".72">§ 17-13-0600 · any scale</text>
+          <text x="452" y="286" font-size="13.5" font-weight="600">Prohibited</text>
+          <text x="452" y="305" font-size="12" opacity=".72">this site is a no</text>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="17" font-weight="700" fill="var(--accent)" text-anchor="middle">
+          <text x="424" y="57">P</text><text x="424" y="137">S</text><text x="424" y="217">PD</text><text x="424" y="297">–</text>
+        </g>
+      </svg>
+    </div>
+
+    <p><strong>P — permitted by right.</strong> The use is allowed in that district. Note what this does not mean: it doesn't mean no approvals. Every other standard in the ordinance still applies. It means you don't need special use approval.</p>
+
+    <p><strong>S — special use.</strong> Allowed, but only after review and approval under the special use procedures at § 17-13-0900. This routes you to the Zoning Board, which considers whether the use fits this particular location. An S is not a no. It's a longer yes.</p>
+
+    <p><strong>PD — planned development.</strong> Allowed only through the planned development process at § 17-13-0600. This one is commonly misunderstood as a size threshold — something that kicks in only for large projects. It isn't. PD is its own designation in the table, and where the table says PD, it says PD no matter how small the project is.</p>
+
+    <p><strong>– — prohibited.</strong> Expressly not allowed. A dash feels like the worst outcome, and it is frequently the most valuable one you can get. A dash found in week one saves you the months that a dash found in month six costs.</p>
+
+    <p>The discipline is simple: the table is the authority. Not a listing description, not a broker's summary, not whatever the last tenant was doing. Those are all guesses about what the cell says. Go read the cell.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">Your use shows "PD" in your district, and yours is a small project. What does that tell you?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>PD applies only to large projects, so it doesn't affect you</button>
+        <button class="opt" type="button" data-correct><span class="mark">B</span>The use requires planned development approval regardless of size</button>
+        <button class="opt" type="button"><span class="mark">C</span>You may choose between PD and special use</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>B.</b> PD is a use-table designation, not a size threshold. Where the table assigns PD to a use, that process applies at any scale.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://codelibrary.amlegal.com/codes/chicago/latest/chicagozoning_il/0-0-0-49164">Chicago Zoning Ordinance — allowed uses by district</a></li>
+        <li><a href="https://www.chicago.gov/city/en/depts/dcd/supp_info/zoning_board_of_appeals.html">Official zoning map and code text</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <!-- ================= L2.3 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L2.3</span><span class="track">Zoning and permitted uses</span><span class="mins">3 min</span>
+    </div>
+    <h2>Three different asks to one board</h2>
+
+    <p>People say "I'm going to zoning" as though it were one thing. It's three, and walking in with the wrong one is a way to lose months.</p>
+
+    <p><strong>A special use</strong> asks whether a use the ordinance already contemplates for your district belongs at this particular location. The table said S. The use isn't forbidden — it's conditional, and the condition is compatibility with what's around it.</p>
+
+    <p><strong>A variation</strong> asks for relief from a standard. The rule exists, you can't meet it, and you're asking for it to apply differently here. Notice the difference in posture: a special use argues <em>this fits</em>; a variation argues <em>this rule works badly on this parcel</em>.</p>
+
+    <p><strong>An appeal</strong> argues that the Zoning Administrator got it wrong. You are not asking for permission or relief. You are contesting a determination, and the question is what the ordinance actually says.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 720 296" role="img" aria-label="Three request types — special use, variation, and appeal — each asserting something different, all converging on the Zoning Board of Appeals.">
+        <defs><marker id="p6" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.25">
+          <rect x="16" y="20" width="300" height="64" rx="3"/>
+          <rect x="16" y="108" width="300" height="64" rx="3"/>
+          <rect x="16" y="196" width="300" height="64" rx="3"/>
+        </g>
+        <rect x="500" y="98" width="204" height="84" rx="3" fill="none" stroke="var(--accent-mark)" stroke-width="2.5"/>
+        <g stroke="currentColor" stroke-width="1.25" fill="none">
+          <polyline points="316,52 440,52 440,140"/><polyline points="316,140 440,140"/>
+          <polyline points="316,228 440,228 440,140"/>
+          <line x1="440" y1="140" x2="496" y2="140" marker-end="url(#p6)"/>
+        </g>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" fill="currentColor">
+          <text x="34" y="46" font-size="15" font-weight="650">Special use</text>
+          <text x="34" y="68" font-size="12" opacity=".72">the table said S for your district</text>
+          <text x="34" y="134" font-size="15" font-weight="650">Variation</text>
+          <text x="34" y="156" font-size="12" opacity=".72">you cannot meet a standard</text>
+          <text x="34" y="222" font-size="15" font-weight="650">Appeal</text>
+          <text x="34" y="244" font-size="12" opacity=".72">you believe staff read it wrong</text>
+          <text x="602" y="134" font-size="14" font-weight="650" text-anchor="middle">Zoning Board</text>
+          <text x="602" y="152" font-size="14" font-weight="650" text-anchor="middle">of Appeals</text>
+          <text x="602" y="170" font-size="11" opacity=".72" text-anchor="middle">one board, three jurisdictions</text>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" fill="var(--accent)" text-anchor="middle">
+          <text x="378" y="46">"this fits here"</text><text x="378" y="134">"relief from a rule"</text>
+          <text x="378" y="222">"the reading is wrong"</text>
+        </g>
+      </svg>
+    </div>
+
+    <p>Sorting your situation into the right one of these three is most of the work. It determines what you have to prove, what evidence is relevant, and whether you're asking for a favor or asserting a right.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">Staff tells you your use isn't allowed in your district. You believe they read the use table incorrectly. What is that?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>A special use request</button>
+        <button class="opt" type="button"><span class="mark">B</span>A variation request</button>
+        <button class="opt" type="button" data-correct><span class="mark">C</span>An appeal</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>C.</b> You aren't seeking permission or relief — you're contesting a determination. Appeals of the Zoning Administrator's decisions are one of the Board's three jurisdictions.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://www.chicago.gov/city/en/depts/dcd/supp_info/zoning_board_of_appeals.html">Zoning Board of Appeals — application materials</a></li>
+        <li><a href="https://codelibrary.amlegal.com/codes/chicago/latest/chicagozoning_il/0-0-0-51987">Variations, § 17-13-1100</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <!-- ================= L2.4 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L2.4</span><span class="track">Zoning and permitted uses</span><span class="mins">3 min</span>
+    </div>
+    <h2>What a hearing actually is</h2>
+
+    <p>Speakers are sworn in by the chair. Witnesses can be questioned by the other side. Board members ask whatever they want, whenever they want. The decision arrives as a signed written document containing findings of fact.</p>
+
+    <p>That is a courtroom, not a meeting. And once you see it that way, every rule that seemed strange starts making sense.</p>
+
+    <p><strong>Everyone who speaks is identified and sworn.</strong> The chair administers oaths and can compel witnesses to attend. You are giving testimony, not offering an opinion.</p>
+
+    <p><strong>Both sides get to examine witnesses.</strong> A public hearing carries the right to appear and present evidence, and also the right to hear and question the witnesses the other side brings.</p>
+
+    <p><strong>The decision is written and reasoned.</strong> The chair signs a written decision including findings of fact, and the Board keeps minutes recording how each member voted.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 720 280" role="img" aria-label="A hearing timeline: application filed, then a registration step whose deadline runs before the hearing, then the hearing with sworn testimony and cross-examination, then the board vote, then a written decision with findings of fact. A branch shows that missing the registration deadline means you may attend but not participate.">
+        <defs><marker id="p7" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+        <g fill="none" stroke="currentColor" stroke-width="1.25">
+          <rect x="10" y="30" width="124" height="60" rx="3"/><rect x="298" y="30" width="124" height="60" rx="3"/>
+          <rect x="442" y="30" width="124" height="60" rx="3"/><rect x="586" y="30" width="124" height="60" rx="3"/>
+        </g>
+        <rect x="154" y="30" width="124" height="60" rx="3" fill="none" stroke="var(--accent-mark)" stroke-width="2.5"/>
+        <g stroke="currentColor" stroke-width="1.25" fill="none" marker-end="url(#p7)">
+          <line x1="134" y1="60" x2="150" y2="60"/><line x1="278" y1="60" x2="294" y2="60"/>
+          <line x1="422" y1="60" x2="438" y2="60"/><line x1="566" y1="60" x2="582" y2="60"/>
+        </g>
+        <line x1="216" y1="90" x2="216" y2="158" stroke="var(--warn)" stroke-width="1.25" stroke-dasharray="4 3" marker-end="url(#p7)" fill="none"/>
+        <rect x="96" y="162" width="300" height="46" rx="3" fill="none" stroke="var(--warn)" stroke-width="1.25" stroke-dasharray="4 3"/>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" fill="currentColor" text-anchor="middle">
+          <text x="72" y="56" font-size="12.5">Application</text><text x="72" y="72" font-size="12.5">filed</text>
+          <text x="216" y="52" font-size="12.5" font-weight="650">Register to</text><text x="216" y="68" font-size="12.5" font-weight="650">participate</text>
+          <text x="216" y="83" font-size="9.5" opacity=".7">deadline runs first</text>
+          <text x="360" y="52" font-size="12.5">Hearing</text>
+          <text x="360" y="68" font-size="9.5" opacity=".7">sworn testimony</text>
+          <text x="360" y="81" font-size="9.5" opacity=".7">cross-examination</text>
+          <text x="504" y="60" font-size="12.5">Board votes</text>
+          <text x="504" y="76" font-size="9.5" opacity=".7">each vote recorded</text>
+          <text x="648" y="52" font-size="12.5">Written</text><text x="648" y="68" font-size="12.5">decision</text>
+          <text x="648" y="83" font-size="9.5" opacity=".7">findings of fact</text>
+        </g>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" fill="var(--warn)" text-anchor="middle">
+          <text x="246" y="182" font-size="12.5" font-weight="650">Miss the deadline</text>
+          <text x="246" y="199" font-size="12">you may attend, but not participate</text>
+        </g>
+        <text x="10" y="248" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5" fill="currentColor" opacity=".8">Sworn testimony, cross-examination, findings of fact, a signed decision — every rule here follows from</text>
+        <text x="10" y="266" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5" fill="currentColor" opacity=".8">one thing: this is an evidentiary proceeding, not a meeting.</text>
+      </svg>
+    </div>
+
+    <p>Now the trap, which costs people their participation more often than anything else in this lesson: <strong>if you want to present evidence or cross-examine witnesses, you must register with the Board in advance.</strong> There's a deadline that runs before the hearing date. Miss it and you can still attend and watch — but you've given up standing to participate as a party.</p>
+
+    <p>That deadline is the reason neighbors sometimes arrive prepared and articulate on the day and still can't be heard the way they expected. Nobody is being unfair to them. They filed nothing, and this is a proceeding on a record.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">You intend to cross-examine a witness at an upcoming hearing. What must have happened first?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>Nothing — anyone attending may question witnesses</button>
+        <button class="opt" type="button" data-correct><span class="mark">B</span>You must have registered with the Board in advance</button>
+        <button class="opt" type="button"><span class="mark">C</span>You must be represented by an attorney</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>B.</b> Participants who want to present evidence or cross-examine must register with the Board ahead of the hearing date. Check the current deadline in the Rules of Procedure — attending is open, participating as a party is not.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://www.chicago.gov/content/dam/city/depts/dol/rulesandregs/ZBA-Rules-of-Procedure-2025.pdf">ZBA Rules of Procedure — registration deadlines and hearing conduct</a></li>
+        <li><a href="https://www.chicago.gov/city/en/depts/dcd/supp_info/zoning_board_of_appeals.html">ZBA meetings, calendar, and minutes</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <!-- ================= L3.1 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L3.1</span><span class="track">Permits and opening</span><span class="mins">2 min</span>
+    </div>
+    <h2>The cheapest lesson: when you need no permit</h2>
+
+    <p>The fastest permit is the one you don't need. A limited range of nonstructural repairs, minor alterations, some site work, and non-occupied structures require no building permit at all — and finding out that your project is in that range is the single cheapest five minutes available to you.</p>
+
+    <p>There's a principle underneath the list, and it's worth carrying even when the details change: <strong>the line is drawn at structure and escape.</strong></p>
+
+    <p>Work stays outside the permit requirement when it doesn't touch what holds the building up or how people get out of it. Interior finishes are the clearest case — carpet, hardwood, tile, paint, wallpaper. You're changing surfaces, not the building.</p>
+
+    <p>Work crosses into requiring a permit once it cuts away or removes part of an exterior wall, an interior wall or partition, a subfloor, or a roof; removes or cuts a structural beam, column, or load-bearing support; or removes or changes a required means of egress.</p>
+
+    <p>Read that list again and notice it's really two ideas. The first several items are structure — the things that keep the building standing. The last is egress — the path people use to get out in an emergency. Those are the two things the building code exists to protect, so those are the two things that trigger review.</p>
+
+    <p>One caution. A contractor telling you "you don't need a permit for that" is not a source, and the consequences of being wrong land on the owner, not the contractor.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">Which of these crosses the line into requiring a building permit?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>New paint and carpet throughout the space</button>
+        <button class="opt" type="button" data-correct><span class="mark">B</span>Removing an interior partition wall to open up the floor plan</button>
+        <button class="opt" type="button"><span class="mark">C</span>Replacing cabinets and countertops</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>B.</b> The boundary is structure and egress. Removing part of an interior wall or partition is exactly the kind of work that triggers a permit requirement; surface finishes generally do not.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://www.chicago.gov/city/en/depts/bldgs/provdrs/permits/svcs/no-permit-reqd.html">When is a building permit NOT required?</a></li>
+        <li><a href="https://www.chicago.gov/city/en/sites/guide-to-building-permits/home/help/faq/DOB/bldg-permit-not-required/all.html">Guide to Building Permits — work types not requiring a permit</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <!-- ================= L3.2 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L3.2</span><span class="track">Permits and opening</span><span class="mins">3 min</span>
+    </div>
+    <h2>Four tracks, and what sorts you into one</h2>
+
+    <p>Most guides to Chicago permitting name three tracks. One of the three they name was discontinued in November 2023.</p>
+
+    <p>That's worth knowing for its own sake, and worth knowing as a warning: program names look like stable structure and aren't. Here are the four current application programs.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 720 352" role="img" aria-label="Four permit programs paired with the kind of work that sorts a project into each: Express for repairs and small improvements, Self-Certified where the professional certifies compliance, Standard Plan Review where the city reviews plans, and Developer Services for complex projects. The retired Easy Permit Program is shown struck through.">
+        <defs><marker id="p8" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10" letter-spacing=".11em" fill="currentColor" opacity=".62">
+          <text x="16" y="30">WHAT THE WORK IS</text><text x="396" y="30">PROGRAM</text>
+        </g>
+        <g fill="none" stroke="currentColor" stroke-width="1.1">
+          <rect x="16" y="44" width="340" height="50" rx="3"/><rect x="16" y="106" width="340" height="50" rx="3"/>
+          <rect x="16" y="168" width="340" height="50" rx="3"/><rect x="16" y="230" width="340" height="50" rx="3"/>
+          <rect x="396" y="44" width="308" height="50" rx="3"/><rect x="396" y="106" width="308" height="50" rx="3"/>
+          <rect x="396" y="168" width="308" height="50" rx="3"/><rect x="396" y="230" width="308" height="50" rx="3"/>
+        </g>
+        <g stroke="currentColor" stroke-width="1.1" fill="none" marker-end="url(#p8)" opacity=".8">
+          <line x1="358" y1="69" x2="390" y2="69"/><line x1="358" y1="131" x2="390" y2="131"/>
+          <line x1="358" y1="193" x2="390" y2="193"/><line x1="358" y1="255" x2="390" y2="255"/>
+        </g>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5" fill="currentColor">
+          <text x="32" y="66">Repairs, small improvements, and changes</text><text x="32" y="83">to permits already issued</text>
+          <text x="32" y="128">Needs plans — the professional</text><text x="32" y="145">certifies compliance</text>
+          <text x="32" y="190">Needs plans — the city</text><text x="32" y="207">conducts the review</text>
+          <text x="32" y="252">Moderate to complex, where</text><text x="32" y="269">coordination is the difficulty</text>
+          <text x="412" y="74" font-size="13.5" font-weight="650">Express Permit Program</text>
+          <text x="412" y="128" font-size="13.5" font-weight="650">Self-Certified Permit</text>
+          <text x="412" y="145" font-size="13.5" font-weight="650">Application Program</text>
+          <text x="412" y="190" font-size="13.5" font-weight="650">Standard Plan Review</text>
+          <text x="412" y="207" font-size="13.5" font-weight="650">Permit Program</text>
+          <text x="412" y="252" font-size="13.5" font-weight="650">Developer Services</text>
+          <text x="412" y="269" font-size="13.5" font-weight="650">Permit Program</text>
+        </g>
+        <text x="16" y="306" font-family="ui-sans-serif, system-ui, sans-serif" font-size="11.5" fill="currentColor" opacity=".7">Specialty permits — demolition, elevators, sewer, water service, signs, tents, wireless — sit outside these four.</text>
+        <text x="16" y="336" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11.5" fill="var(--warn)">Easy Permit Program — retired November 2023</text>
+        <line x1="16" y1="332" x2="266" y2="332" stroke="var(--warn)" stroke-width="1.1"/>
+      </svg>
+    </div>
+
+    <p>What sorts you into a track is the nature and complexity of the work, not your preference or your hurry. A project needing architectural plans is not going to fit through a repair-oriented track because you'd like it to move faster.</p>
+
+    <p>The useful habit here isn't memorizing the four names. It's recognizing the shape: a light track for repairs, a professional-certification track, a full-review track, and a complex-project track. That shape has been stable across renamings. The names haven't.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">Which program is the main process for a permit application that requires architectural plans?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>Express Permit Program</button>
+        <button class="opt" type="button" data-correct><span class="mark">B</span>Standard Plan Review Permit Program</button>
+        <button class="opt" type="button"><span class="mark">C</span>Developer Services Permit Program</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>B.</b> Standard Plan Review is the main track for applications requiring architectural plans. Express covers repairs and small improvements; Developer Services is aimed at moderate to complex projects.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://www.chicago.gov/city/en/depts/bldgs/provdrs/permits.html">Department of Buildings — permits index and all current programs</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <!-- ================= L3.3 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L3.3</span><span class="track">Permits and opening</span><span class="mins">2 min</span>
+    </div>
+    <h2>Self-certification is a liability transfer</h2>
+
+    <p>Self-certification is usually described as a way to skip plan review. That description is accurate about the mechanics and completely wrong about what's happening.</p>
+
+    <p>Nobody waived anything. Someone signed for it.</p>
+
+    <p>Under the Self-Certified Permit Application Program, the <strong>design professional of record</strong> — an Illinois-licensed architect or structural engineer — takes full responsibility for code compliance. They stamp the drawings and certify that the plans comply with the Chicago building code. On that basis, the department forgoes conducting its own plan review.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 720 312" role="img" aria-label="Side by side comparison. Under standard plan review, the city examiner reviews the plans and carries responsibility for compliance. Under self-certification, the city review step is not conducted and the design professional carries responsibility. The permit is issued either way.">
+        <defs><marker id="p9" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor"/></marker></defs>
+        <line x1="360" y1="20" x2="360" y2="292" stroke="currentColor" stroke-width="1" opacity=".25"/>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" letter-spacing=".1em" fill="currentColor" text-anchor="middle" opacity=".7">
+          <text x="176" y="34">STANDARD PLAN REVIEW</text><text x="544" y="34">SELF-CERTIFICATION</text>
+        </g>
+        <g fill="none" stroke="currentColor" stroke-width="1.25">
+          <rect x="34" y="52" width="284" height="46" rx="3"/><rect x="34" y="130" width="284" height="46" rx="3"/>
+          <rect x="34" y="208" width="284" height="46" rx="3"/>
+          <rect x="402" y="52" width="284" height="46" rx="3"/><rect x="402" y="208" width="284" height="46" rx="3"/>
+        </g>
+        <rect x="402" y="130" width="284" height="46" rx="3" fill="none" stroke="currentColor" stroke-width="1.25" stroke-dasharray="5 4" opacity=".45"/>
+        <g stroke="currentColor" stroke-width="1.25" fill="none" marker-end="url(#p9)">
+          <line x1="176" y1="98" x2="176" y2="126"/><line x1="176" y1="176" x2="176" y2="204"/>
+          <line x1="544" y1="98" x2="544" y2="126"/><line x1="544" y1="176" x2="544" y2="204"/>
+        </g>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5" fill="currentColor" text-anchor="middle">
+          <text x="176" y="72">Professional stamps</text><text x="176" y="88">the plans</text>
+          <text x="176" y="150">City examiner reviews</text><text x="176" y="166">for code compliance</text>
+          <text x="176" y="236">Permit issued</text>
+          <text x="544" y="72">Professional stamps</text><text x="544" y="88">AND certifies compliance</text>
+          <text x="544" y="236">Permit issued</text>
+        </g>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" font-size="12.5" fill="currentColor" text-anchor="middle" opacity=".5">
+          <text x="544" y="150">City plan review</text><text x="544" y="166">not conducted</text>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" letter-spacing=".06em" text-anchor="middle" fill="var(--accent)">
+          <text x="176" y="284">responsibility: the city examiner</text>
+          <text x="544" y="284">responsibility: the professional</text>
+        </g>
+        <line x1="34" y1="266" x2="318" y2="266" stroke="var(--accent-mark)" stroke-width="1.6"/>
+        <line x1="402" y1="266" x2="686" y2="266" stroke="var(--accent-mark)" stroke-width="1.6"/>
+      </svg>
+    </div>
+
+    <p>The code did not get easier. The review did not get skipped. What changed is <em>who is answerable</em> if the plans turn out not to comply, and that shift is where the speed comes from.</p>
+
+    <p>Two consequences follow. Not every project qualifies — eligibility is defined by the program, and wanting to move faster doesn't create it. And not every architect will do it: a professional certifying compliance is accepting exposure they would otherwise share with a plan examiner. If a designer is reluctant, that's a considered professional judgment about risk, not obstruction.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">Under self-certification, who is responsible for code compliance?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>The Department of Buildings, which reviews after the fact</button>
+        <button class="opt" type="button" data-correct><span class="mark">B</span>The design professional of record</button>
+        <button class="opt" type="button"><span class="mark">C</span>The general contractor performing the work</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>B.</b> The design professional of record certifies that the stamped plans comply, and the department forgoes its own plan review on that basis. The requirement didn't change — the responsibility moved.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://www.chicago.gov/city/en/depts/bldgs/provdrs/permits/svcs/self-cert-permits.html">Self-Certified Permit Application Program</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <!-- ================= L3.4 ================= -->
+  <article>
+    <div class="lesson-head">
+      <span class="lid">L3.4</span><span class="track">Permits and opening</span><span class="mins">3 min</span>
+    </div>
+    <h2>Permit, occupancy, license: three finish lines</h2>
+
+    <p>Finishing construction is not the same as being allowed to occupy the space. Being allowed to occupy the space is not the same as being allowed to operate a business in it. Three finish lines, three issuers.</p>
+
+    <div class="fig">
+      <svg viewBox="0 0 720 352" role="img" aria-label="Three authorizations stacked: a building permit from the Department of Buildings authorizes the work; a Certificate of Occupancy, drawn as conditional, makes occupancy lawful but is triggered only by specific categories of work; a business license from BACP authorizes operating.">
+        <g fill="none" stroke="currentColor" stroke-width="1.25">
+          <rect x="16" y="34" width="688" height="72" rx="3"/><rect x="16" y="246" width="688" height="72" rx="3"/>
+        </g>
+        <rect x="16" y="126" width="688" height="100" rx="3" fill="none" stroke="var(--accent-mark)" stroke-width="2.5" stroke-dasharray="6 4"/>
+        <g font-family="ui-sans-serif, system-ui, sans-serif" fill="currentColor">
+          <text x="32" y="62" font-size="16" font-weight="700">Building permit</text>
+          <text x="32" y="86" font-size="13">Authorizes the work.</text>
+          <text x="32" y="154" font-size="16" font-weight="700">Certificate of Occupancy</text>
+          <text x="32" y="178" font-size="13">Makes occupying lawful — but only some work triggers it:</text>
+          <text x="32" y="274" font-size="16" font-weight="700">Business license</text>
+          <text x="32" y="298" font-size="13">Authorizes operating, once zoning clears and any required inspections occur.</text>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="11" fill="var(--accent)">
+          <text x="32" y="200">unit count · non-residential floor area · change of occupancy</text>
+          <text x="32" y="216">assembly, educational, institutional, or hazardous occupancy</text>
+        </g>
+        <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" letter-spacing=".08em" fill="currentColor" text-anchor="end" opacity=".7">
+          <text x="688" y="62">DEPT. OF BUILDINGS</text><text x="688" y="154">DEPT. OF BUILDINGS</text><text x="688" y="274">BACP</text>
+        </g>
+        <text x="688" y="178" font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="10.5" letter-spacing=".08em" fill="var(--accent)" text-anchor="end">CONDITIONAL</text>
+        <text x="16" y="344" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" fill="currentColor" opacity=".7">Where a certificate is required, occupying before obtaining one is unlawful. Many small build-outs never require one.</text>
+      </svg>
+    </div>
+
+    <p>Here is the part almost every popular guide gets wrong: <strong>not every project requires a Certificate of Occupancy.</strong> It is required for permitted work falling into specific categories — a building with enough dwelling or sleeping units, non-residential work above a floor-area threshold, a <strong>change of occupancy</strong>, or work on assembly, educational, institutional, or hazardous occupancies.</p>
+
+    <p>So "get your Certificate of Occupancy and open your doors" is simply not the story for many small tenant build-outs. Plenty never require one at all.</p>
+
+    <p>Getting this wrong hurts in both directions. Assume you need one when you don't and you wait for a document nobody is going to issue. Assume you don't when you do and you have a real problem: where a certificate is required, <strong>it is unlawful to occupy the building, or let anyone else occupy it, before obtaining that certificate</strong> — or a partial or temporary one.</p>
+
+    <p>Watch the change-of-occupancy trigger especially. Converting a space from one kind of use to another can put you in scope even when the space is small and the work looks modest.</p>
+
+    <div class="q" data-q>
+      <p class="q-label">Check yourself</p>
+      <p class="q-text">Does every commercial build-out end with a Certificate of Occupancy?</p>
+      <div class="opts">
+        <button class="opt" type="button"><span class="mark">A</span>Yes — it's the final step for all construction</button>
+        <button class="opt" type="button" data-correct><span class="mark">B</span>No — it's required only for specific categories of work</button>
+        <button class="opt" type="button"><span class="mark">C</span>Only for new buildings, never for renovations</button>
+      </div>
+      <p class="why" hidden aria-live="polite"><b>B.</b> The requirement is triggered by categories — unit counts, floor area, change of occupancy, and certain occupancy types — not by every project. Where it does apply, occupying before obtaining it is unlawful, so confirm which side of the line your project falls on.</p>
+    </div>
+
+    <div class="verify">
+      <p class="verify-label">Verify before you act</p>
+      <ul>
+        <li><a href="https://www.chicago.gov/city/en/depts/bldgs/supp_info/certificate-of-occupancy.html">Certificates of Occupancy</a></li>
+        <li><a href="https://www.chicago.gov/city/en/depts/bldgs/provdrs/inspect/svcs/permit_inspection.html">Permit-related building inspections</a></li>
+        <li><a href="https://www.chicago.gov/city/en/sites/chicago-business-licensing/home/license-application-requirements.html">Chicago Business Licensing — application requirements</a></li>
+      </ul>
+      <p class="rails-note">Reviewed August 2026 · Requirements change. Verify with the administering agency before spending money, purchasing materials, or beginning work. General public education, not legal, tax, or financial advice.</p>
+    </div>
+  </article>
+
+  <p class="closing"><strong>Tier 1, complete.</strong> Twelve lessons, ten diagrams, five corrections to things commonly taught wrong. The curriculum opens on separated authorizations in L1.1 and closes on them in L3.4 — that repetition is deliberate spacing, not redundancy. Every perishable value in here is a link rather than a number, which is why a rule change is an edit and not a rewrite.</p>
+
+</div>
+
+<script>
+  document.querySelectorAll('[data-q]').forEach(function (q) {
+    var opts = q.querySelectorAll('.opt');
+    var why = q.querySelector('.why');
+    opts.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (why.hidden === false) return;
+        opts.forEach(function (o) {
+          o.disabled = true;
+          if (o.hasAttribute('data-correct')) o.classList.add('right');
+        });
+        if (!btn.hasAttribute('data-correct')) btn.classList.add('wrong');
+        why.hidden = false;
+      });
+    });
+  });
+</script>
+</body>
+</html>

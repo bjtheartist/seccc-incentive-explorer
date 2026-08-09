@@ -30,7 +30,6 @@ import {
   setStepValue,
   INITIAL_WIZARD_STATE,
   PROJECT_TYPE_LABELS,
-  SITE_PROJECT_TYPE_OPTIONS,
   PROPOSED_USE_LABELS,
   PROPOSED_USE_OPTIONS,
   VACANCY_PROJECT_TYPE_OPTIONS,
@@ -42,6 +41,8 @@ import {
   SUPPORT_NEEDED_OPTIONS,
   BUDGET_RANGE_OPTIONS,
   optionLabel,
+  selectedProjectGoalLabels,
+  selectedProjectGoals,
 } from "@/lib/report-wizard-config";
 import type {
   ReportType,
@@ -74,6 +75,12 @@ import {
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { ReportEmailGate } from "@/components/report/ReportEmailGate";
+import { ProjectGoalSelector } from "@/components/report/ProjectGoalSelector";
+import { ZoningReviewQuestions } from "@/components/zoning/ZoningReviewQuestions";
+import {
+  PreparationCostBadge,
+  parseDocumentCostLine,
+} from "@/components/report/PreparationCostBadge";
 import { SiteActivityCard } from "@/components/report/SiteActivityCard";
 import {
   InlineCrossLinkBanner,
@@ -386,9 +393,9 @@ async function fetchTifFinance(
  * the goal-less instant-report result.
  */
 function localSupportRequestKey(
-  state: Pick<WizardState, "lat" | "lon" | "reportType" | "projectType" | "proposedUse">,
+  state: Pick<WizardState, "lat" | "lon" | "reportType" | "projectGoals" | "projectType" | "proposedUse">,
 ): string {
-  return [state.lat, state.lon, state.reportType, state.projectType, state.proposedUse]
+  return [state.lat, state.lon, state.reportType, selectedProjectGoals(state).join(","), state.proposedUse]
     .map((value) => value ?? "")
     .join("|");
 }
@@ -396,12 +403,14 @@ function localSupportRequestKey(
 async function fetchLocalBusinessSupport(
   lat: number,
   lon: number,
-  state: Pick<WizardState, "reportType" | "projectType" | "proposedUse">,
+  state: Pick<WizardState, "reportType" | "projectGoals" | "projectType" | "proposedUse">,
   signal?: AbortSignal
 ): Promise<LocalBusinessSupportContext | null> {
   const params = new URLSearchParams({ lat: String(lat), lon: String(lon) });
   if (state.reportType) params.set("reportType", state.reportType);
   if (state.projectType) params.set("projectType", state.projectType);
+  const projectGoals = selectedProjectGoals(state);
+  if (projectGoals.length > 0) params.set("projectTypes", projectGoals.join(","));
   if (state.proposedUse) params.set("proposedUse", state.proposedUse);
   const res = await fetch(`/api/local-business-support?${params.toString()}`, {
     cache: "default",
@@ -468,7 +477,7 @@ function getDisplayValueForStep(
         wizardState.proposedUse && (PROPOSED_USE_LABELS[wizardState.proposedUse] || wizardState.proposedUse),
       ]
       : [
-        wizardState.projectType && (PROJECT_TYPE_LABELS[wizardState.projectType] || wizardState.projectType),
+        selectedProjectGoalLabels(wizardState).join(", "),
         wizardState.budgetRange && optionLabel([...BUDGET_RANGE_OPTIONS, { id: "skip", label: "Still estimating" }], wizardState.budgetRange),
         wizardState.timeline && optionLabel(TIMELINE_OPTIONS, wizardState.timeline),
       ])
@@ -950,11 +959,17 @@ function ReportWizardPage() {
     });
     if (wizardState.reportType) params.set("reportType", wizardState.reportType);
     if (wizardState.projectType) params.set("projectType", wizardState.projectType);
+    const projectGoals = selectedProjectGoals({
+      projectGoals: wizardState.projectGoals,
+      projectType: wizardState.projectType,
+    });
+    if (projectGoals.length > 0) params.set("projectTypes", projectGoals.join(","));
     if (wizardState.proposedUse) params.set("proposedUse", wizardState.proposedUse);
     localSupportKeyRef.current = localSupportRequestKey({
       lat: wizardState.lat,
       lon: wizardState.lon,
       reportType: wizardState.reportType,
+      projectGoals: wizardState.projectGoals,
       projectType: wizardState.projectType,
       proposedUse: wizardState.proposedUse,
     });
@@ -964,6 +979,7 @@ function ReportWizardPage() {
   }, [
     wizardState.lat,
     wizardState.lon,
+    wizardState.projectGoals,
     wizardState.projectType,
     wizardState.proposedUse,
     wizardState.reportType,
@@ -1334,7 +1350,8 @@ function ReportWizardPage() {
         );
       case "project-intake":
         return wizardState.reportType === "site-incentives"
-          ? Boolean(wizardState.projectType)
+          ? selectedProjectGoals(wizardState).length > 0 &&
+              (!selectedProjectGoals(wizardState).includes("other") || Boolean(wizardState.customGoal.trim()))
           : true;
       case "single":
       case "combobox": {
@@ -1602,13 +1619,25 @@ function ReportWizardPage() {
   }, [wizardState, programs, zones, zoneNames, censusData, cityZoning, cityZoningKey, parcelData, districtsData, stackingRules, communityAssets, localBusinessSupport, siteSignals, transportAccess, mobilityAccess, areaStats, corridorMetric, corridorOwnerClusters, neighborhoodEconomics, neighborhoodEconomicsZip, reportZip]);
 
   const handlePrepareGatedReport = useCallback(
-    async (projectType: string): Promise<GeneratedReport | null> => {
-      if (report?.metadata?.projectType === projectType) return report;
+    async (projectGoals: string[], customGoal: string): Promise<GeneratedReport | null> => {
+      const normalizedGoals = selectedProjectGoals({ projectGoals });
+      const reportGoals = selectedProjectGoals({
+        projectGoals: report?.metadata?.projectGoals,
+        projectType: report?.metadata?.projectType,
+      });
+      if (
+        JSON.stringify(reportGoals) === JSON.stringify(normalizedGoals) &&
+        (report?.metadata?.customGoal || "") === customGoal.trim()
+      ) {
+        return report;
+      }
 
       const preparedState: WizardState = {
         ...wizardState,
         reportType: "site-incentives",
-        projectType,
+        projectGoals: normalizedGoals,
+        projectType: normalizedGoals[0] || "",
+        customGoal: normalizedGoals.includes("other") ? customGoal.trim() : "",
       };
       setWizardState(preparedState);
       setHasRefinedInstantReport(true);
@@ -1631,10 +1660,13 @@ function ReportWizardPage() {
   // regenerate the report with two answers, without leaving the view.
   const handleQuickRefine = useCallback(
     async (fields: QuickRefineFields) => {
+      const projectGoals = selectedProjectGoals({ projectGoals: fields.projectGoals });
       const refinedState: WizardState = {
         ...wizardState,
         reportType: "site-incentives",
-        projectType: fields.projectType,
+        projectGoals,
+        projectType: projectGoals[0] || "",
+        customGoal: projectGoals.includes("other") ? fields.customGoal.trim() : "",
         budgetRange: fields.budgetRange,
         timeline: fields.timeline || wizardState.timeline,
       };
@@ -2665,12 +2697,14 @@ function ProjectIntakeStep({
 
   return (
     <div className="space-y-8">
-      <IntakeField
-        label="Primary goal"
-        helper="Choose the main outcome you want incentives to support."
-        options={SITE_PROJECT_TYPE_OPTIONS}
-        value={wizardState.projectType}
-        onSelect={(value) => onChange("projectType", value)}
+      <ProjectGoalSelector
+        goals={selectedProjectGoals(wizardState)}
+        customGoal={wizardState.customGoal}
+        onChange={(goals, customGoal) => {
+          onChange("projectGoals", goals);
+          onChange("projectType", goals[0] || "");
+          onChange("customGoal", customGoal);
+        }}
         required
       />
 
@@ -3341,8 +3375,8 @@ function ExecutiveSummarySection({
       {summary.topPrograms.length > 0 && (
         <div className="mb-6">
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-3">
-            {summary.projectGoalLabel
-              ? `Programs to Review for ${summary.projectGoalLabel}`
+            {summary.projectGoalLabels?.length || summary.projectGoalLabel
+              ? `Programs to Review for ${(summary.projectGoalLabels || [summary.projectGoalLabel]).filter(Boolean).join(", ")}`
               : "Programs to Review for Your Location"}
           </span>
           <ul className="space-y-2">
@@ -3470,9 +3504,12 @@ function ActionRoadmapSection({
                     {i + 1}.
                   </span>
                   <div className="flex-1 min-w-0">
-                    <span className="text-[14px] font-semibold text-[#0C1B33] block">
-                      {item.label}
-                    </span>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[14px] font-semibold text-[#0C1B33]">
+                        {item.label}
+                      </span>
+                      {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
+                    </div>
                     <span className="text-[12px] text-[#0C1B33]/40 block mt-0.5">
                       {item.description}
                     </span>
@@ -3543,9 +3580,12 @@ function ActionRoadmapSection({
                 className="py-4 first:pt-0 flex items-start justify-between gap-3"
               >
                 <div className="min-w-0">
-                  <span className="text-[13px] text-[#0C1B33]/60 font-medium block">
-                    {item.programName || item.label}
-                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[13px] text-[#0C1B33]/60 font-medium">
+                      {item.programName || item.label}
+                    </span>
+                    {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
+                  </div>
                   <span className="text-[11px] text-[#0C1B33]/35 block mt-0.5">
                     {item.description}
                   </span>
@@ -4156,12 +4196,12 @@ function ReportDisplay({
     const entries: { label: string; anchor: string }[] = [];
     if (report.verdict) entries.push({ label: "Location Findings", anchor: "verdict" });
     if (report.executiveSummary) entries.push({ label: "Executive Summary", anchor: "executive-summary" });
+    if (report.actionRoadmap && report.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
     if (report.sections) {
       for (const s of report.sections) {
         entries.push({ label: s.title, anchor: sectionToAnchor(s.title) });
       }
     }
-    if (report.actionRoadmap && report.actionRoadmap.length > 0) entries.push({ label: "Your Next Steps", anchor: "action-roadmap" });
     if (report.recommendedActions && report.recommendedActions.length > 0) entries.push({ label: "Recommended Actions", anchor: "recommended-actions" });
     if (report.dataSources && report.dataSources.length > 0) entries.push({ label: "Data Sources", anchor: "data-sources" });
     return entries;
@@ -4934,13 +4974,21 @@ function ReportDisplay({
                 </span>
               </div>
             )}
-            {report.metadata?.projectType && (
+            {selectedProjectGoalLabels({
+              projectGoals: report.metadata?.projectGoals,
+              projectType: report.metadata?.projectType,
+              customGoal: report.metadata?.customGoal,
+            }).length > 0 && (
               <div>
                 <span className="font-mono-bureau text-[8px] tracking-[0.25em] uppercase text-[#0C1B33]/30 block mb-0.5">
-                  Primary Goal
+                  Project Goals
                 </span>
                 <span className="text-[#0C1B33] text-[13px]">
-                  {PROJECT_TYPE_LABELS[report.metadata.projectType] || report.metadata.projectType}
+                  {selectedProjectGoalLabels({
+                    projectGoals: report.metadata?.projectGoals,
+                    projectType: report.metadata?.projectType,
+                    customGoal: report.metadata?.customGoal,
+                  }).join(", ")}
                 </span>
               </div>
             )}
@@ -5155,6 +5203,13 @@ function ReportDisplay({
                   onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
                   onTextChange={setEditedSummaryText}
                 />
+              </div>
+            )}
+
+            {/* Action-first hierarchy: orient the user before detailed evidence. */}
+            {lensed.actionRoadmap && lensed.actionRoadmap.length > 0 && (
+              <div id="action-roadmap">
+                <ActionRoadmapSection items={lensed.actionRoadmap} report={report} />
               </div>
             )}
 
@@ -5384,7 +5439,7 @@ function ReportDisplay({
                             <div className={`grid grid-cols-1 gap-3 ${hasSideValue ? "sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] sm:gap-x-10" : ""}`}>
                               {/* Left: label */}
                               <div className="flex-1 min-w-0">
-                                <span className="text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold block">
+                                <span className="flex flex-wrap items-center gap-2 text-[#0C1B33] text-[13px] sm:text-[14px] font-semibold">
                                   {supportWebsiteUrl ? (
                                     <a
                                       href={supportWebsiteUrl}
@@ -5403,16 +5458,18 @@ function ReportDisplay({
                                       {item.level}
                                     </span>
                                   )}
+                                  {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
                                 </span>
                                 {!hasGroupedDetail && item.detail && section.title === "Required Documents" ? (
                                   <ul className="mt-2 space-y-1.5">
                                     {item.detail.split("\n").map((line, li) => {
-                                      const [docName, programs] = line.split(" — ");
+                                      const { documentName, programs, cost } = parseDocumentCostLine(line);
                                       return (
                                         <li key={li} className="flex items-start gap-2 text-[11px] sm:text-[12px] leading-relaxed">
                                           <span className="text-[#0C1B33]/15 mt-0.5 flex-shrink-0">&bull;</span>
-                                          <span className="text-[#0C1B33]/55">
-                                            {docName}
+                                          <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[#0C1B33]/55">
+                                            <span>{documentName}</span>
+                                            {cost && <PreparationCostBadge signal={cost} label="Prep" />}
                                             {programs && (
                                               <span className="text-[#0C1B33]/25 ml-1.5">— {programs}</span>
                                             )}
@@ -5503,16 +5560,17 @@ function ReportDisplay({
                         })}
                       </div>
                     )}
+                    {section.title === "Zoning & Use Starting Point" && report.metadata?.zoneClass && (
+                      <div className="mt-8 print:hidden">
+                        <ZoningReviewQuestions
+                          zoneClass={report.metadata.zoneClass}
+                          siteSpecificOrdinanceUrl={section.items.find((item) => item.label === "City Zoning Classification")?.url}
+                        />
+                      </div>
+                    )}
                   </div>
                 );
               })}
-
-            {/* ── Your Next Steps (action roadmap) ── */}
-            {lensed.actionRoadmap && lensed.actionRoadmap.length > 0 && (
-              <div id="action-roadmap">
-                <ActionRoadmapSection items={lensed.actionRoadmap} report={report} />
-              </div>
-            )}
 
             {/* ── Recommended Actions ── */}
             {report.recommendedActions &&
@@ -5554,6 +5612,7 @@ function ReportDisplay({
                               >
                                 {badge.label}
                               </span>
+                              {action.preparationCost && <PreparationCostBadge signal={action.preparationCost} />}
                             </div>
                             {action.description && (
                               <p className="text-[#0C1B33]/45 text-[13px] leading-relaxed">

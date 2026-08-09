@@ -543,4 +543,5 @@ export interface ExecutiveSummary {
   zoneCount: number;
   whyTheseMatter: string;
   projectGoalLabel?: string;
+  projectGoalLabels?: string[];
 }

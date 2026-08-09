@@ -38,7 +38,11 @@ export interface WizardState {
   neighborhood: string;
   industry: string;
   budgetRange: string;
+  /** Up to three selected project goals. `projectType` mirrors the first. */
+  projectGoals: string[];
   projectType: string;
+  /** Plain-language goal supplied when `other` is selected. */
+  customGoal: string;
   proposedUse: string;
   fundingCommitted: string;
   remainingGap: string;
@@ -63,7 +67,9 @@ export const INITIAL_WIZARD_STATE: WizardState = {
   neighborhood: "",
   industry: "",
   budgetRange: "",
+  projectGoals: [],
   projectType: "",
+  customGoal: "",
   proposedUse: "",
   fundingCommitted: "",
   remainingGap: "",
@@ -194,10 +200,44 @@ export const SITE_PROJECT_TYPE_OPTIONS: StepOption[] = [
   },
   {
     id: "other",
-    label: "Not sure yet",
-    description: "Use this if the project is early or does not fit a single category.",
+    label: "Something else",
+    description: "Describe a goal that is not represented above.",
   },
 ];
+
+export const MAX_PROJECT_GOALS = 3;
+
+export function selectedProjectGoals(
+  state: { projectGoals?: readonly string[]; projectType?: string | null },
+): string[] {
+  const candidates = state.projectGoals?.length
+    ? state.projectGoals
+    : state.projectType
+      ? [state.projectType]
+      : [];
+
+  return Array.from(new Set(candidates.filter(Boolean))).slice(0, MAX_PROJECT_GOALS);
+}
+
+export function projectGoalDisplayLabel(
+  goalId: string,
+  customGoal?: string,
+): string {
+  if (goalId === "other" && customGoal?.trim()) return customGoal.trim();
+  return PROJECT_TYPE_LABELS[goalId] || goalId;
+}
+
+export function selectedProjectGoalLabels(
+  state: {
+    projectGoals?: readonly string[];
+    projectType?: string | null;
+    customGoal?: string | null;
+  },
+): string[] {
+  return selectedProjectGoals(state).map((goalId) =>
+    projectGoalDisplayLabel(goalId, state.customGoal ?? undefined),
+  );
+}
 
 export const VACANCY_PROJECT_TYPE_OPTIONS: StepOption[] = [
   {
@@ -402,7 +442,7 @@ export const WIZARD_STEPS: WizardStepConfig[] = [
   {
     id: "si-project-intake",
     title: "Tell us about the project",
-    subtitle: "Choose the primary goal you want incentives to support. The remaining details are optional.",
+    subtitle: "Choose up to three goals you want the report to support. The remaining details are optional.",
     appliesTo: ["site-incentives"],
     inputType: "project-intake",
     stateKey: "projectType",
@@ -643,6 +683,8 @@ export function isSnapshotWizardState(
   return (
     !state.industry &&
     !state.projectType &&
+    !(state.projectGoals && state.projectGoals.length > 0) &&
+    !state.customGoal &&
     !state.proposedUse &&
     !state.budgetRange &&
     !state.timeline &&

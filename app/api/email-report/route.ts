@@ -24,8 +24,10 @@ const EmailReportSchema = z.object({
   address: z.string().trim().max(320).optional(),
   zipCode: z.string().trim().max(10).optional(),
   reportType: z.string().trim().max(80).optional(),
-  projectGoal: z.string().trim().max(120).optional(),
+  projectGoal: z.string().trim().max(360).optional(),
   projectType: z.string().trim().max(80).optional(),
+  projectGoals: z.array(z.string().trim().max(80)).max(3).optional(),
+  customGoal: z.string().trim().max(240).optional(),
   source: z.string().trim().max(100).optional().default("report_email_modal"),
   incentiveCount: z.number().int().min(0).max(500).optional(),
   wantsHelp: z.boolean().optional().default(false),
@@ -79,7 +81,7 @@ function recipientEmailHtml(input: z.infer<typeof EmailReportSchema>): string {
         <p style="font-size: 15px; line-height: 1.6; margin: 0 0 16px;">${greeting}</p>
         <p style="font-size: 14px; line-height: 1.6; margin: 0 0 20px;">Your PDF report is attached.</p>
         ${address ? `<p style="font-size: 14px; color: #4B5563; margin: 0 0 8px;"><strong>Address:</strong> ${address}</p>` : ""}
-        ${goal ? `<p style="font-size: 14px; color: #4B5563; margin: 0 0 8px;"><strong>Primary goal:</strong> ${goal}</p>` : ""}
+        ${goal ? `<p style="font-size: 14px; color: #4B5563; margin: 0 0 8px;"><strong>Project goals:</strong> ${goal}</p>` : ""}
         ${input.incentiveCount != null ? `<p style="font-size: 14px; color: #4B5563; margin: 0 0 20px;"><strong>Programs surfaced:</strong> ${input.incentiveCount}</p>` : ""}
         <div style="background: #F8FAFC; border-left: 3px solid #2563EB; padding: 16px; margin: 22px 0;">
           <p style="font-size: 13px; color: #4B5563; margin: 0; line-height: 1.5;">${helpCopy}</p>
@@ -104,7 +106,7 @@ function helpNotificationHtml(input: z.infer<typeof EmailReportSchema>): string 
       <p><strong>Name:</strong> ${name}</p>
       <p><strong>Email:</strong> ${email}</p>
       <p><strong>Address:</strong> ${address}</p>
-      <p><strong>Primary goal:</strong> ${goal}</p>
+      <p><strong>Project goals:</strong> ${goal}</p>
       <p>The report was delivered successfully and this request was added to the analytics follow-up queue.</p>
     </div>
   `;
@@ -197,7 +199,7 @@ export async function POST(req: NextRequest) {
         input.name ? `Hi ${input.name},` : "Your incentive report is ready.",
         "Your PDF report is attached.",
         input.address ? `Address: ${input.address}` : "",
-        input.projectGoal ? `Primary goal: ${input.projectGoal}` : "",
+        input.projectGoal ? `Project goals: ${input.projectGoal}` : "",
         input.wantsHelp
           ? "You requested follow-up from the Southeast Chicago Chamber of Commerce."
           : "No Chamber follow-up was requested.",
@@ -221,7 +223,7 @@ export async function POST(req: NextRequest) {
           replyTo: input.email,
           subject: `Incentive help requested - ${input.address || input.email}`,
           html: helpNotificationHtml(input),
-          text: `Incentive help requested\n\nName: ${input.name || "Report recipient"}\nEmail: ${input.email}\nAddress: ${input.address || "Not provided"}\nPrimary goal: ${input.projectGoal || input.projectType || "Not provided"}`,
+          text: `Incentive help requested\n\nName: ${input.name || "Report recipient"}\nEmail: ${input.email}\nAddress: ${input.address || "Not provided"}\nProject goals: ${input.projectGoal || input.projectType || "Not provided"}`,
         });
         if (notification.error) {
           console.error("Incentive help notification was not accepted by Resend");

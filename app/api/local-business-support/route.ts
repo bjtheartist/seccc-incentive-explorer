@@ -84,6 +84,11 @@ export async function GET(request: NextRequest) {
   const lonStr = params.get("lon");
   const reportType = params.get("reportType")?.trim().slice(0, 80) || undefined;
   const projectType = params.get("projectType")?.trim().slice(0, 80) || undefined;
+  const projectTypes = (params.get("projectTypes") || "")
+    .split(",")
+    .map((value) => value.trim().slice(0, 80))
+    .filter(Boolean)
+    .slice(0, 3);
   const proposedUse = params.get("proposedUse")?.trim().slice(0, 80) || undefined;
 
   let caNumber: string | null = caParam && /^\d{1,2}$/.test(caParam) ? caParam : null;
@@ -121,7 +126,7 @@ export async function GET(request: NextRequest) {
   // CCSA corridor so the SSA provider can lead the support list.
   const storefrontParam = params.get("storefrontCorridor");
   let storefrontCorridor = storefrontParam === "1" || storefrontParam === "true";
-  if (!storefrontCorridor && projectType === "rehab" && hasPoint) {
+  if (!storefrontCorridor && (projectType === "rehab" || projectTypes.includes("rehab")) && hasPoint) {
     try {
       storefrontCorridor = await pointInAnyZone(lat, lon, ["ssa", "ccsa"]);
     } catch {
@@ -135,6 +140,7 @@ export async function GET(request: NextRequest) {
     region: entry.region,
     reportType,
     projectType,
+    projectTypes,
     proposedUse,
     storefrontCorridor,
   };

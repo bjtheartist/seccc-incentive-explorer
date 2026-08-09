@@ -1,11 +1,16 @@
 import type { GeneratedReport } from "./report-engine";
-import { PROJECT_TYPE_LABELS } from "./report-wizard-config";
+import {
+  projectGoalDisplayLabel,
+  selectedProjectGoals,
+} from "./report-wizard-config";
 
 export interface ReportEmailIdentity {
   email: string;
   name?: string;
   wantsHelp: boolean;
   projectType: string;
+  projectGoals: string[];
+  customGoal?: string;
 }
 
 interface DeliverReportByEmailInput extends ReportEmailIdentity {
@@ -52,12 +57,18 @@ export async function deliverReportByEmail({
   name,
   wantsHelp,
   projectType,
+  projectGoals,
+  customGoal,
   source,
   website = "",
 }: DeliverReportByEmailInput): Promise<ReportEmailResponse> {
   const { generateReportPdfBase64 } = await import("./pdf-report");
   const { base64, filename } = generateReportPdfBase64(report);
   const address = report.metadata?.address;
+  const normalizedGoals = selectedProjectGoals({ projectGoals, projectType });
+  const projectGoal = normalizedGoals
+    .map((goalId) => projectGoalDisplayLabel(goalId, customGoal))
+    .join(", ");
 
   const response = await fetch("/api/email-report", {
     method: "POST",
@@ -66,8 +77,10 @@ export async function deliverReportByEmail({
       email: email.trim().toLowerCase(),
       name: name?.trim() || undefined,
       wantsHelp,
-      projectGoal: PROJECT_TYPE_LABELS[projectType] || projectType,
-      projectType,
+      projectGoal: projectGoal || projectType,
+      projectType: normalizedGoals[0] || projectType,
+      projectGoals: normalizedGoals,
+      customGoal: customGoal?.trim() || undefined,
       source,
       website,
       pdfBase64: base64,

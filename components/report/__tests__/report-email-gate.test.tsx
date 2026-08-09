@@ -40,13 +40,14 @@ function openTagFor(html: string, testId: string): string | null {
 }
 
 describe("ReportEmailGate", () => {
-  it("makes email optional while keeping the primary goal checkpoint", () => {
+  it("makes email optional while keeping the project goals checkpoint", () => {
     const html = renderGate();
 
     expect(html).toContain("<dialog");
     expect(html).toContain('data-testid="report-email-gate"');
     expect(html).toContain("Your report is ready");
-    expect(html).toContain("Primary Goal");
+    expect(html).toContain("Project goals");
+    expect(html).toContain("0/3");
     expect(html).toContain("Hire or retain employees");
     expect(html).toContain("Email Address (Optional)");
     expect(html).toContain("Email and View Report");

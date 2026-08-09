@@ -38,6 +38,22 @@ describe("orderSectionsForPdf", () => {
     ]);
   });
 
+  it("puts the zoning starting point before program and context sections", () => {
+    const input = [
+      section("Site Facts"),
+      section(GOAL_MATCH_PROGRAMS_SECTION_TITLE),
+      section("Zoning & Use Starting Point"),
+      section("Required Documents"),
+    ];
+
+    expect(orderSectionsForPdf(input).map((item) => item.title)).toEqual([
+      "Zoning & Use Starting Point",
+      GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+      "Required Documents",
+      "Site Facts",
+    ]);
+  });
+
   it("puts Your Support Network first when Eligible Incentive Programs is absent", () => {
     const input = [
       section("Market Signal Summary"),
