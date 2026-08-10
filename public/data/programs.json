@@ -1084,7 +1084,6 @@
     "fastestConfirmingStep": "Confirm with Cook County Small Business Source whether any future round has been announced",
     "sourceUrl": "https://cookcountysmallbiz.org/catalystgrant-2/",
     "status": "lapsed",
-    "expirationNote": "Round 2 closed Nov 14, 2025; disbursements spring 2026. Round 3 timing TBD.",
     "personas": [
       "starting",
       "growing"
@@ -1883,9 +1882,15 @@
     ],
     "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Grants fund up to 75% of eligible project costs; applicant must show funding for at least the remaining 25%",
-    "fastestConfirmingStep": "Check your corridor and the next quarterly deadline on the City's storefront-activation site",
+    "fastestConfirmingStep": "Check your corridor on the City's storefront-activation site; the next quarterly deadline is 5 p.m. Friday, August 21, 2026",
     "sourceUrl": "https://www.chicago.gov/city/en/sites/storefront-activation/home.html",
     "status": "active",
+    "deadlines": [
+      {
+        "label": "Quarterly round — 5 p.m. cutoff",
+        "date": "2026-08-21"
+      }
+    ],
     "applicationPortals": [
       {
         "type": "submittable",
@@ -2179,7 +2184,7 @@
       "Designers of tax-exempt-owned buildings can claim allocated deduction"
     ],
     "howToApply": [
-      "Begin construction by 6/30/2026 to qualify",
+      "Confirm construction began before 7/1/2026 — later starts no longer qualify",
       "Engage a qualified energy modeler to certify §179D compliance",
       "File Form 7205 with tax return"
     ],
@@ -2216,7 +2221,7 @@
     ],
     "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Up to $5.94/sf federal deduction",
-    "fastestConfirmingStep": "Engage a §179D energy modeler before 6/30/2026 construction start",
+    "fastestConfirmingStep": "Check whether construction began before 7/1/2026; if so, engage a §179D energy modeler",
     "sunsetWarning": "The IRS states §179D is terminated for property whose construction begins after June 30, 2026. That date has passed, so no new project can start and qualify; only construction starts before July 1, 2026 remain claimable.",
     "personas": [
       "growing",
@@ -2722,7 +2727,7 @@
     ],
     "lastVerifiedAt": "2026-08-09",
     "benefitRange": "$500K – $5M federal grants",
-    "fastestConfirmingStep": "Monitor grants.gov for FY 2026 Build to Scale NOFO",
+    "fastestConfirmingStep": "Check EDA's Build to Scale page for a newly announced NOFO — none was announced as of 2026-08-09",
     "personas": [
       "growing",
       "developer"

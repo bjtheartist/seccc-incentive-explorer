@@ -3,9 +3,20 @@ import {
   CONFIRMED_PROGRAMS_SECTION_TITLE,
   generateReportData,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+  normalizePublicReportForDisplay,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 } from "../report-engine";
+import type { GeneratedReport } from "../report-engine";
 import type { Program } from "../types";
+import citywideSupportData from "@/data/curated/citywide_business_support_resources.json";
+import supportData from "@/data/exports/chicago-neighborhood-economics/local_business_support_by_community_area.json";
+import {
+  mergeCitywideBusinessSupport,
+  rankLocalBusinessSupport,
+  type LocalBusinessSupportContext,
+  type LocalBusinessSupportOrganization,
+  type LocalBusinessSupportRequest,
+} from "../local-business-support";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "../capital-partner-report";
 import {
   SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
@@ -90,6 +101,48 @@ function makeProgram(overrides: Partial<Program> = {}): Program {
     benefitRange: "$10K-$50K",
     fastestConfirmingStep: "Call the program administrator",
     ...overrides,
+  };
+}
+
+/**
+ * The rank limit /api/local-business-support passes to
+ * rankLocalBusinessSupport. It matches the engine's display cap, which is why
+ * a full-length payload is indistinguishable from a truncated one.
+ */
+const SUPPORT_ORGANIZATION_API_LIMIT = 6;
+const AUSTIN_COMMUNITY_AREA = "25";
+
+function austinSupportEntry(): LocalBusinessSupportContext {
+  const file = supportData as unknown as {
+    byCommunityArea: Record<string, LocalBusinessSupportContext>;
+  };
+  return file.byCommunityArea[AUSTIN_COMMUNITY_AREA];
+}
+
+/**
+ * Reproduce the payload the report actually receives in production: the route
+ * merges citywide resources into the community-area entry and returns
+ * rankLocalBusinessSupport(pool, 6) with no pre-cap total attached.
+ */
+function austinSupportContextAsTheApiReturnsIt(): LocalBusinessSupportContext {
+  const entry = austinSupportEntry();
+  const request: LocalBusinessSupportRequest = {
+    communityAreaNumber: AUSTIN_COMMUNITY_AREA,
+    communityArea: entry.communityArea,
+    region: entry.region,
+    reportType: "site-incentives",
+  };
+  const citywide = citywideSupportData as unknown as {
+    organizations: LocalBusinessSupportOrganization[];
+  };
+  const pool = mergeCitywideBusinessSupport(
+    entry.organizations,
+    citywide.organizations,
+    request,
+  );
+  return {
+    ...entry,
+    organizations: rankLocalBusinessSupport(pool, SUPPORT_ORGANIZATION_API_LIMIT, request),
   };
 }
 
@@ -786,6 +839,67 @@ describe("generateReportData", () => {
     expect(JSON.stringify(report)).not.toContain('"score"');
   });
 
+  it("never claims an open-text goal ordered or selected the programs", () => {
+    const report = generateReportData(
+      makeState({
+        projectGoals: ["hiring", "equipment", "other"],
+        projectType: "hiring",
+        customGoal: "Open a shared commercial kitchen",
+      }),
+      [
+        makeProgram({ id: "edge", name: "EDGE" }),
+        makeProgram({ id: "sbaMicroloan", name: "SBA Microloan" }),
+        makeProgram({ id: "sbif", name: "SBIF" }),
+      ],
+      { zones, zoneNames },
+    );
+
+    // projectGoalsFit has no GOAL_RULES entry for "other", so the kitchen goal
+    // contributes nothing to ordering or to the goal-match filter.
+    const whyTheseMatter = report.executiveSummary?.whyTheseMatter ?? "";
+    expect(whyTheseMatter).toContain(
+      "ordered across the selected goals: Hire or retain employees and Buy equipment",
+    );
+    expect(whyTheseMatter).toContain(
+      "Open a shared commercial kitchen is recorded from your answers and does not affect that order",
+    );
+    expect(whyTheseMatter).not.toMatch(
+      /ordered across[^.]*Open a shared commercial kitchen/,
+    );
+
+    const bestMatches = report.sections.find(
+      (section) => section.title === GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+    );
+    expect(bestMatches?.description).toContain(
+      "may relate to the selected goals: Hire or retain employees and Buy equipment",
+    );
+    expect(bestMatches?.description).toContain(
+      "Open a shared commercial kitchen is recorded from your answers but was not used to select these programs",
+    );
+    expect(bestMatches?.description).not.toMatch(
+      /may relate to the selected goals:[^.]*Open a shared commercial kitchen/,
+    );
+  });
+
+  it("says so plainly when the only goal is the unscored open-text one", () => {
+    const report = generateReportData(
+      makeState({
+        projectGoals: ["other"],
+        projectType: "other",
+        customGoal: "Open a shared commercial kitchen",
+      }),
+      [makeProgram({ id: "edge", name: "EDGE" })],
+      { zones, zoneNames },
+    );
+
+    expect(report.executiveSummary?.whyTheseMatter).toContain(
+      "Program ordering does not use the selected goals",
+    );
+    expect(report.executiveSummary?.whyTheseMatter).not.toContain(
+      "ordered across the selected goal",
+    );
+  });
+
   it("prioritizes Cook County discovery programs without treating them as address-confirmed", () => {
     const federalPrograms = Array.from({ length: 9 }, (_, index) => makeProgram({
       id: `federal-${index}`,
@@ -943,6 +1057,164 @@ describe("generateReportData", () => {
     expect(section?.items[1].detail).toContain("Washington Park");
   });
 
+  it("does not present the API's own six-organization cap as the mapped total", () => {
+    // Built exactly the way /api/local-business-support builds its payload:
+    // merge citywide resources into the community-area entry, then
+    // rankLocalBusinessSupport(pool, 6). That route is the only production
+    // source of localBusinessSupport, and it publishes no pre-cap total — so
+    // the engine cannot know how many organizations are mapped for the area,
+    // and must not print the capped list length as if it were that number.
+    const austinEntry = austinSupportEntry();
+    expect(austinEntry.organizations.length).toBeGreaterThan(SUPPORT_ORGANIZATION_API_LIMIT);
+
+    const context = austinSupportContextAsTheApiReturnsIt();
+    expect(context.organizations).toHaveLength(SUPPORT_ORGANIZATION_API_LIMIT);
+
+    const report = generateReportData(
+      makeState(),
+      [makeProgram()],
+      { zones, zoneNames, localBusinessSupport: context },
+    );
+
+    const section = report.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE);
+    const summary = section?.items[0];
+    expect(summary?.detail).not.toMatch(
+      /\d+ local business-support organizations? (?:is|are) mapped for Austin/,
+    );
+    expect(summary?.detail).toContain(
+      "This report lists 6 local business-support organizations for Austin",
+    );
+    expect(summary?.detail).toContain("there may be more");
+    expect(summary?.value).toBe("6 organizations listed");
+    // The mapped total is unknown here; publishing 6 as that total would be a
+    // guess, so the field stays absent rather than echoing the list length.
+    expect(report.communityAssets?.totalOrganizations).toBeUndefined();
+    expect(report.communityAssets?.listingMayBeIncomplete).toBe(true);
+  });
+
+  it("reports the mapped organization total when a caller supplies the full mapped set", () => {
+    // Austin maps 8 organizations; five of the 77 community areas exceed the
+    // display cap. A caller that hands over the whole set (not the capped API
+    // payload) gives the engine a total it can honestly print.
+    const report = generateReportData(
+      makeState(),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        localBusinessSupport: {
+          communityAreaNumber: "25",
+          communityArea: "Austin",
+          confidence: "High",
+          sourceLabel: "Chicago Small Business Resource Map",
+          sourceUrls: ["https://example.com/source"],
+          organizations: Array.from({ length: 8 }, (_, index) => ({
+            name: `Austin Support Org ${index + 1}`,
+            relationships: ["nbdc_2025" as const],
+            sourceUrls: ["https://example.com/source"],
+          })),
+        },
+      },
+    );
+
+    const section = report.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE);
+    expect(section?.items[0].detail).toContain("8 local business-support organizations are mapped for Austin");
+    expect(section?.items[0].detail).toContain("This report lists the first 6.");
+    expect(section?.items[0].value).toBe("6 of 8 organizations");
+    // Six rows plus the summary row — the cap itself is unchanged.
+    expect(section?.items).toHaveLength(7);
+    expect(report.communityAssets?.totalOrganizations).toBe(8);
+  });
+
+  it("agrees in number when a single organization survives the support filters", () => {
+    const report = generateReportData(
+      makeState(),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        localBusinessSupport: {
+          communityAreaNumber: "40",
+          communityArea: "Washington Park",
+          confidence: "Medium",
+          sourceLabel: "Chicago Small Business Resource Map",
+          sourceUrls: ["https://example.com/source"],
+          organizations: [
+            {
+              name: "Only Mapped Partner",
+              relationships: ["nbdc_2025" as const],
+              sourceUrls: ["https://example.com/source"],
+            },
+          ],
+        },
+      },
+    );
+
+    const section = report.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE);
+    expect(section?.items[0].detail).toContain(
+      "1 local business-support organization is mapped for Washington Park",
+    );
+    expect(section?.items[0].detail).not.toContain("organization are mapped");
+  });
+
+  it("leaves the count unqualified when nothing was dropped", () => {
+    const report = generateReportData(
+      makeState(),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        localBusinessSupport: {
+          communityAreaNumber: "46",
+          communityArea: "South Chicago",
+          confidence: "High",
+          sourceLabel: "Chicago Small Business Resource Map",
+          sourceUrls: ["https://example.com/source"],
+          organizations: Array.from({ length: 3 }, (_, index) => ({
+            name: `South Chicago Support Org ${index + 1}`,
+            relationships: ["nbdc_2025" as const],
+            sourceUrls: ["https://example.com/source"],
+          })),
+        },
+      },
+    );
+
+    const section = report.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE);
+    expect(section?.items[0].detail).toContain("3 local business-support organizations are mapped for South Chicago");
+    expect(section?.items[0].detail).not.toContain("This report lists the first");
+    expect(section?.items[0].value).toBe("3 organizations");
+  });
+
+  it("does not promise free advising or funding connections from the asset-directory fallback", () => {
+    // No community area resolved: /api/assets returns every EDO/BSO row with no
+    // address, project, or service-area filter applied anywhere.
+    const report = generateReportData(
+      makeState(),
+      [makeProgram()],
+      {
+        zones,
+        zoneNames,
+        communityAssets: [
+          { id: "edo-1", name: "An EDO", type: "EDO", address: "1 N Test St", lat: 41.8, lon: -87.6 },
+          { id: "edo-2", name: "Another EDO", type: "EDO", address: "2 N Test St", lat: 41.8, lon: -87.6 },
+          { id: "bso-1", name: "A BSO", type: "BSO", address: "3 N Test St", lat: 41.8, lon: -87.6 },
+        ],
+      },
+    );
+
+    const section = report.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE);
+    const narrative = section?.items[0].detail ?? "";
+    expect(narrative).toContain("2 economic development organizations and 1 business support organization");
+    expect(narrative).toContain("were not matched to this address, project type, or published service area");
+    expect(narrative).not.toContain("serve your area");
+    expect(narrative).not.toContain("free advising");
+    expect(narrative).not.toContain("connections to funding");
+    // The matched-selection sentence must not be borrowed by this branch.
+    expect(section?.description).not.toContain(SUPPORT_ORGANIZATIONS_DESCRIPTION);
+    expect(section?.description).toContain("not selected by published service area, project type, or support services");
+    expect(section?.description).toContain(SUPPORT_ORGANIZATIONS_CAPACITY_NOTE);
+  });
+
   it("renders legal support resources with reader-friendly role copy", () => {
     const report = generateReportData(
       makeState(),
@@ -1026,6 +1298,125 @@ describe("generateReportData", () => {
     expect(copy).toContain("Building permits [$$]");
     expect(copy).toContain("W-9 [$]");
     expect(required?.description).toContain("document preparation, not program value");
+  });
+
+  it("does not list or count catalog guidance as a required document", () => {
+    // Verbatim requiredDocs from the shipped catalog: ssa publishes two
+    // statements that deny a document requirement, smallBizSource one.
+    const report = generateReportData(
+      makeState(),
+      [
+        makeProgram({
+          requiredDocs: [
+            "No application needed — benefits are automatic by location",
+            "Contact your SSA delegate agency for any sub-program requirements",
+            "Project budget",
+          ],
+        }),
+      ],
+      { zones, zoneNames },
+    );
+
+    const required = report.sections.find((section) => section.title === "Required Documents");
+    const copy = JSON.stringify(required);
+    expect(copy).not.toContain("No application needed");
+    expect(copy).not.toContain("Contact your SSA delegate agency");
+    expect(copy).toContain("Project budget");
+    expect(required?.description).toContain("1 document");
+  });
+
+  it("omits the required-documents section when every published entry denies a requirement", () => {
+    const report = generateReportData(
+      makeState(),
+      [
+        makeProgram({
+          requiredDocs: [
+            "No application needed — benefits are automatic by location",
+            "Contact your SSA delegate agency for any sub-program requirements",
+          ],
+        }),
+      ],
+      { zones, zoneNames },
+    );
+
+    expect(report.sections.find((section) => section.title === "Required Documents")).toBeUndefined();
+    // Still published statements, so they stay in the program's own explanation
+    // as public facts rather than disappearing from the report entirely.
+    const item = report.sections
+      .find((section) => section.title === CONFIRMED_PROGRAMS_SECTION_TITLE)
+      ?.items.find((i) => i.programId === "tif");
+    expect(item?.matchExplanation?.knownFromPublicData).toContain(
+      "No application needed — benefits are automatic by location",
+    );
+    expect(item?.matchExplanation?.currentDocumentsToGather).toEqual([]);
+  });
+
+  it("strips catalog guidance from documents to gather in already-saved reports", () => {
+    const guidance = "No formal documents required to get started";
+    const generated = generateReportData(makeState(), [makeProgram()], { zones, zoneNames });
+    // A report saved before the guidance/requirement split persisted these
+    // strings under currentDocumentsToGather. Display and PDF both route saved
+    // reports through normalizePublicReportForDisplay, so the split has to be
+    // applied there too or the old copy keeps rendering.
+    const saved = {
+      ...generated,
+      executiveSummary: {
+        ...generated.executiveSummary,
+        topPrograms: [
+          {
+            programId: "smallBizSource",
+            name: "Small Business Source",
+            explanation: {
+              whyItAppears: ["Included in the saved report as a starting point for review."],
+              knownFromPublicData: [],
+              basedOnUserAnswers: [],
+              stillToConfirm: [],
+              currentDocumentsToGather: [guidance, "Business plan"],
+              confirmWith: [],
+            },
+          },
+        ],
+      },
+      sections: [
+        {
+          title: "Programs Mapped at This Address",
+          description: "Saved section.",
+          items: [
+            {
+              label: "Special Service Area (SSA)",
+              programId: "ssa",
+              value: "Review published terms",
+              matchExplanation: {
+                whyItAppears: ["Included in the saved report as a starting point for review."],
+                knownFromPublicData: [],
+                basedOnUserAnswers: [],
+                stillToConfirm: [],
+                currentDocumentsToGather: [
+                  "No application needed — benefits are automatic by location",
+                  "Contact your SSA delegate agency for any sub-program requirements",
+                ],
+                confirmWith: [],
+              },
+            },
+          ],
+        },
+      ],
+    } as unknown as GeneratedReport;
+
+    const normalized = normalizePublicReportForDisplay(saved);
+
+    const summaryExplanation = normalized.executiveSummary?.topPrograms[0].explanation;
+    expect(summaryExplanation?.currentDocumentsToGather).toEqual(["Business plan"]);
+    expect(summaryExplanation?.knownFromPublicData).toContain(guidance);
+
+    const itemExplanation = normalized.sections[0].items[0].matchExplanation;
+    expect(itemExplanation?.currentDocumentsToGather).toEqual([]);
+    expect(itemExplanation?.knownFromPublicData).toEqual(
+      expect.arrayContaining([
+        "No application needed — benefits are automatic by location",
+        "Contact your SSA delegate agency for any sub-program requirements",
+      ]),
+    );
   });
 
   it("does not aggregate possible incentive dollars from a project budget", () => {

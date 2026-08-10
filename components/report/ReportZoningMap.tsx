@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import { ZONING_CATEGORIES, describeZoneClass } from "@/lib/constants";
+import { ZONING_CATEGORIES } from "@/lib/constants";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -313,14 +313,17 @@ export default function ReportZoningMap({
         </div>
       )}
 
-      {/* Hovered zone tooltip */}
+      {/* Hovered zone tooltip — the tile's published zone_class alone. The
+          gloss this used to append was Explorer-authored, and shown next to a
+          City code it read as source content; for codes it had no entry for it
+          printed the contentless "Zoning District" rather than admitting the
+          lookup missed. MapView's zoning surfaces print the bare code for the
+          same reason; this one matches so the same parcel cannot read two
+          different ways. */}
       {hoveredZone && (
         <div className="absolute top-3 left-3 z-10 bg-[#0C1B33] text-white px-3 py-2 pointer-events-none max-w-[280px]">
           <span className="font-mono-bureau text-[11px] tracking-[0.08em] font-bold block">
             {hoveredZone}
-          </span>
-          <span className="text-[10px] text-white/70 leading-tight block mt-0.5">
-            {describeZoneClass(hoveredZone)}
           </span>
         </div>
       )}

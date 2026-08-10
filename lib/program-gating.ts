@@ -17,9 +17,14 @@
  *                      "Applications currently closed; next window <date |
  *                      expected>". Recurring programs never silently vanish.
  *
- *   'lapsed-notice'  — statutory lapse with realistic revival (card
- *                      status === "lapsed", e.g. WOTC). Still shown, with the
- *                      card's existing lapse warning (sunsetWarning).
+ *   'lapsed-notice'  — no longer generally available by statute: a lapse with
+ *                      realistic revival (status === "lapsed", e.g. WOTC) or a
+ *                      statutory sunset already past (status === "sunset", e.g.
+ *                      §179D). Still shown, with the card's existing warning
+ *                      (sunsetWarning). Both statuses share this state because
+ *                      report-engine only attaches a status note for
+ *                      'window-closed' and 'lapsed-notice' — a state it does not
+ *                      recognize is published as an ordinary open incentive.
  *
  *   'expired'        — hidden everywhere. Triggered by an explicit expiresOn
  *                      date in the past, OR oneTime === true with every dated
@@ -126,13 +131,21 @@ export function resolveAvailability(
     };
   }
 
-  // 2) Statutory lapse with realistic revival — shown with the existing lapse warning.
-  if (program.status === "lapsed") {
+  // 2) Statutory lapse or sunset — shown with the existing warning.
+  //    "sunset" must be matched here alongside "lapsed": both are ProgramStatus
+  //    values (lib/schemas.ts) meaning the program is no longer generally
+  //    available, but only "lapsed" was checked, so sunset cards fell through
+  //    to the 'active' default at the bottom and reports presented them as
+  //    ordinary open incentives — deadline copy and all.
+  if (program.status === "lapsed" || program.status === "sunset") {
     return {
       state: "lapsed-notice",
       note:
         program.sunsetWarning ||
-        "This program's statutory authority has lapsed. Reauthorization is possible — verify current status with the administering agency before relying on it.",
+        (program.status === "sunset"
+          ? // A sunset is a termination, not a lapse — do not imply reauthorization.
+            "This program has sunset under its authorizing statute. Verify current status with the administering agency before relying on it."
+          : "This program's statutory authority has lapsed. Reauthorization is possible — verify current status with the administering agency before relying on it."),
     };
   }
 

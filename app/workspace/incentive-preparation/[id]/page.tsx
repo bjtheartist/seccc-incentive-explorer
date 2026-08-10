@@ -57,6 +57,18 @@ function packetPath(id: string) {
   return `/workspace/incentive-preparation/${id}`;
 }
 
+/**
+ * Whether the document behind this task is one the program's published record
+ * asks for. buildPreparationTasks mints those from program.requiredDocs as
+ * `program-document-N` (carrying a documentSpec when the requirement text
+ * matched one); every other needs_document task — the goal overlays' workforce
+ * records, contractor scopes, vendor quotes, due-diligence materials — is a
+ * preparation step this workspace authored, which no administrator published.
+ */
+function isPublishedProgramDocument(task: PreparationTask): boolean {
+  return Boolean(task.documentSpec) || task.id.startsWith("program-document-");
+}
+
 async function responseBody(response: Response): Promise<Record<string, unknown>> {
   const value: unknown = await response.json().catch(() => ({}));
   return value && typeof value === "object" && !Array.isArray(value)
@@ -483,9 +495,13 @@ export default function PreparationPacketDetailPage() {
     const documentCost = isDocumentTask(task)
       ? classifyDocumentPreparationCost(documentLabel)
       : null;
-    const documentRequirementLabel = isConditionalDocumentRequirement(documentLabel)
-      ? "Conditional"
-      : "Required";
+    // "Required" is a claim about the administrator's published record, so it
+    // is withheld on workspace-authored document steps rather than defaulted on.
+    const documentRequirementLabel = !isPublishedProgramDocument(task)
+      ? null
+      : isConditionalDocumentRequirement(documentLabel)
+        ? "Conditional"
+        : "Required";
 
     return (
     <article key={task.id} className="border border-[#0C1B33]/10 px-4 py-4">
@@ -496,9 +512,11 @@ export default function PreparationPacketDetailPage() {
             <span className={`border px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] ${statusClass(task.status)}`}>{statusLabel(task.status)}</span>
             {documentCost && (
               <>
-                <span className="border border-[#0C1B33]/20 bg-[#FAF9F6] px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] text-[#0C1B33]">
-                  {documentRequirementLabel}
-                </span>
+                {documentRequirementLabel && (
+                  <span className="border border-[#0C1B33]/20 bg-[#FAF9F6] px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] text-[#0C1B33]">
+                    {documentRequirementLabel}
+                  </span>
+                )}
                 <span
                   className="border border-[#2563EB]/30 bg-[#2563EB]/[0.05] px-2 py-1 font-mono-bureau text-[8px] uppercase tracking-[0.11em] text-[#1D4ED8]"
                   title={documentCost.basis}

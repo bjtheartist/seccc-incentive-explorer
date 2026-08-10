@@ -68,8 +68,11 @@ export const FIRST_VISIT_SPOTLIGHT_STEPS: FirstVisitSpotlightStep[] = [
     key: "address-search",
     selector: '[data-tour="address-search"]',
     title: "Start with a Chicago address",
+    // The highlighted control is <AddressSearch />, which resolves a street address or a
+    // business name only. It has no PIN branch, so naming one here walked visitors into
+    // the "Address not found" error by following the tour's own instruction.
     description:
-      "Enter a business address, a property you are considering, or a PIN. The location anchors the public records and mapped program context in the report.",
+      "Enter a business address, a property you are considering, or a business name. The location anchors the public records and mapped program context in the report.",
     side: "bottom",
   },
   {

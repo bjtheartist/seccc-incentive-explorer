@@ -55,6 +55,7 @@ import {
   compareProjectGoalFit,
   isProjectGoalMatch,
   orderProgramCheckResultsByProjectGoals,
+  projectGoalFit,
   projectGoalsFit,
   summarizeProjectFit,
 } from "./project-fit";
@@ -63,6 +64,7 @@ import {
   DOCUMENT_PREPARATION_COST_LEGEND,
   classifyDocumentPreparationCost,
   classifyPreparationStepCost,
+  isDocumentRequirementGuidance,
   type DocumentPreparationCostSignal,
 } from "./document-preparation-cost";
 import type { ProjectFit, ProjectFitSummary } from "./project-fit";
@@ -396,6 +398,27 @@ export interface GeneratedReport {
       serviceGeography?: string;
     }[];
     communityArea?: string;
+    /**
+     * Organizations mapped for the community area, before the display cap.
+     * Set only when a caller actually supplied more organizations than the cap
+     * lists — the production API caps at the same six this report shows and
+     * publishes no total, so the mapped total is usually unknown and must never
+     * be inferred from the length of an already-capped list.
+     */
+    totalOrganizations?: number;
+    /**
+     * True when the received list had already reached the display cap, so the
+     * listed count is a floor and more organizations may be mapped for the area.
+     */
+    listingMayBeIncomplete?: boolean;
+    /**
+     * How the listed organizations were picked. The community-area branch
+     * matches published service areas; the asset-directory fallback does no
+     * matching at all, and the section copy must not claim otherwise. Absent
+     * on hand-built fixtures and on reports saved before this field existed —
+     * treated as "basis unknown", never as the matched case.
+     */
+    selectionBasis?: "community-area-match" | "asset-directory";
     narrative: string;
   };
   capitalPartnerHandoff?: CapitalMatchResult;
@@ -418,6 +441,44 @@ const CONFIRMED_PROGRAMS_SECTION_TITLES = new Set([
   LEGACY_CONFIRMED_PROGRAMS_SECTION_TITLE,
   LEGACY_OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
 ]);
+
+/**
+ * Probe program for goal-rule lookups. `projectGoalFit` returns undefined for
+ * exactly one reason — project-fit has no GOAL_RULES entry for the goal — so
+ * asking it about a blank program answers "does this goal rank anything?"
+ * without needing the rule table exported.
+ */
+const GOAL_RULE_PROBE_PROGRAM = { id: "", name: "" };
+
+/**
+ * The goals that actually ordered the programs. Every structured goal has a
+ * rule; "Something else" is open text and has none, so it is scored nowhere.
+ * Copy that lists it alongside the ranked goals claims an ordering the engine
+ * never performed, so split the two before writing the sentence. Probing the
+ * rule table rather than hard-coding "other" keeps this correct if a goal is
+ * ever added to the wizard ahead of its rule.
+ */
+function partitionGoalLabelsByOrderingUse(
+  goalIds: readonly string[],
+  goalLabels: readonly string[],
+): { ordering: string[]; contextOnly: string[] } {
+  const ordering: string[] = [];
+  const contextOnly: string[] = [];
+  goalIds.forEach((goalId, index) => {
+    const label = goalLabels[index];
+    if (!label) return;
+    if (projectGoalFit(GOAL_RULE_PROBE_PROGRAM, goalId)) ordering.push(label);
+    else contextOnly.push(label);
+  });
+  return { ordering, contextOnly };
+}
+
+/** "A", "A and B", "A, B, and C" — used in the goal sentences below. */
+function joinLabels(labels: readonly string[]): string {
+  if (labels.length <= 1) return labels[0] ?? "";
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
+}
 
 function normalizePublicDeterminationText(value: string): string {
   return value
@@ -465,17 +526,31 @@ function normalizePublicMatchExplanation(
   const misplacedUserAnswers = explanation.knownFromPublicData.filter((item) =>
     selfReportedPattern.test(item),
   );
+  // Reports saved before buildPublicMatchExplanation split guidance out of
+  // requiredDocs still carry catalog guidance ("No formal documents required to
+  // get started") inside currentDocumentsToGather, where the "Documents to
+  // gather" heading turns it into a requirement the record explicitly denies.
+  // This sanitizer is the one point every display and PDF path funnels stored
+  // explanations through, so apply the same split here. The strings are still
+  // published statements, so they move to the public-facts list, never dropped.
+  // The ?? guards saved payloads written before the field existed.
+  const storedDocuments = explanation.currentDocumentsToGather ?? [];
+  const documentGuidance = storedDocuments.filter(isDocumentRequirementGuidance);
   return {
     ...explanation,
     whyItAppears: explanation.whyItAppears.map(normalizePublicHeadlineText),
-    knownFromPublicData: explanation.knownFromPublicData
-      .filter((item) => !selfReportedPattern.test(item))
-      .map(normalizePublicHeadlineText),
+    knownFromPublicData: Array.from(new Set([
+      ...explanation.knownFromPublicData.filter((item) => !selfReportedPattern.test(item)),
+      ...documentGuidance,
+    ])).map(normalizePublicHeadlineText),
     basedOnUserAnswers: Array.from(new Set([
       ...explanation.basedOnUserAnswers,
       ...misplacedUserAnswers,
     ])).map(normalizePublicHeadlineText),
     stillToConfirm: explanation.stillToConfirm.map(normalizePublicHeadlineText),
+    currentDocumentsToGather: storedDocuments.filter(
+      (doc) => !isDocumentRequirementGuidance(doc),
+    ),
   };
 }
 
@@ -642,8 +717,17 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
         title: supportOrganizationSection
           ? SUPPORT_ORGANIZATIONS_SECTION_TITLE
           : normalizePublicHeadlineText(section.title),
+        // This stamp exists to get the current selection/capacity copy onto
+        // saved reports that predate it. It used to overwrite unconditionally,
+        // which also flattened the asset-directory fallback — whose
+        // organizations were matched on nothing — into "Selected using
+        // published service areas, project types, and support services".
+        // A description that already carries the capacity note is
+        // current-generation copy the builder chose on purpose; leave it.
         description: supportOrganizationSection
-          ? `${SUPPORT_ORGANIZATIONS_DESCRIPTION} ${SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}`
+          ? section.description?.includes(SUPPORT_ORGANIZATIONS_CAPACITY_NOTE)
+            ? section.description
+            : `${SUPPORT_ORGANIZATIONS_DESCRIPTION} ${SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}`
           : section.description
             ? normalizePublicHeadlineText(section.description)
             : undefined,
@@ -1830,12 +1914,17 @@ function localSupportDetail(
   return details.join("\n");
 }
 
+/** Display cap for the support-organization list. The narrative and the summary
+ *  item both disclose when the list may be incomplete. */
+const MAX_LISTED_SUPPORT_ORGANIZATIONS = 6;
+
 function buildCommunityAssets(
   assets?: CommunityAsset[],
   localSupport?: LocalBusinessSupportContext | null,
 ): GeneratedReport["communityAssets"] {
   if (localSupport?.organizations?.length) {
-    const organizations = localSupport.organizations.slice(0, 6).map((org) => ({
+    const receivedCount = localSupport.organizations.length;
+    const organizations = localSupport.organizations.slice(0, MAX_LISTED_SUPPORT_ORGANIZATIONS).map((org) => ({
       id: org.id,
       name: org.name,
       type: org.primaryType || "Business support organization",
@@ -1856,13 +1945,49 @@ function buildCommunityAssets(
       .filter((org) => !/edo|cdc|chamber|ssa/i.test(`${org.type} ${org.role}`))
       .map((org) => ({ name: org.name, address: org.address || "" }));
 
-    const narrative = `${organizations.length} local business-support organization${organizations.length !== 1 ? "s" : ""} are mapped for ${localSupport.communityArea}. Use this as a discovery list: review the published service fit, then confirm current programs, contact options, language access, and capacity directly with each organization.`;
+    // The pre-cap mapped total, when the caller knows it.
+    //
+    // /api/local-business-support caps its list at 6 and now publishes
+    // `mappedTotal` — the size of the matched pool BEFORE that cap. Without it
+    // a 6-item list is ambiguous: it could mean the area maps exactly six, or
+    // that it maps ten and four were dropped. Guessing "six" would silently
+    // delete real organizations from what the reader believes exists; hedging
+    // on every capped list would fire on 55 of the 77 community areas, most of
+    // which lost nothing. With the real total, both cases are stated plainly
+    // and the truncation notice appears only where something was truncated.
+    //
+    // `receivedCount > listedCount` is retained as a fallback for callers that
+    // pass an over-long array with no total (saved reports, tests). The hedge
+    // survives only for a caller that supplies neither — an unknown stated as
+    // unknown rather than resolved in either direction.
+    const listedCount = organizations.length;
+    const knownMappedTotal = localSupport.mappedTotal;
+    const mappedTotal =
+      knownMappedTotal != null && knownMappedTotal > listedCount
+        ? knownMappedTotal
+        : receivedCount > listedCount
+          ? receivedCount
+          : undefined;
+    const listingMayBeIncomplete =
+      mappedTotal == null &&
+      knownMappedTotal == null &&
+      receivedCount >= MAX_LISTED_SUPPORT_ORGANIZATIONS;
+    const discoveryGuidance = "Use this as a discovery list: review the published service fit, then confirm current programs, contact options, language access, and capacity directly with each organization.";
+    const countSentence = mappedTotal != null
+      ? `${mappedTotal} local business-support organizations are mapped for ${localSupport.communityArea}. This report lists the first ${listedCount}.`
+      : listingMayBeIncomplete
+        ? `This report lists ${listedCount} local business-support organizations for ${localSupport.communityArea}. That is the most it lists, and the total mapped for the area is not available to this report, so there may be more.`
+        : `${listedCount} local business-support organization${listedCount === 1 ? " is" : "s are"} mapped for ${localSupport.communityArea}.`;
+    const narrative = `${countSentence} ${discoveryGuidance}`;
 
     return {
       edos,
       bsos,
       organizations,
       communityArea: localSupport.communityArea,
+      totalOrganizations: mappedTotal,
+      listingMayBeIncomplete,
+      selectionBasis: "community-area-match",
       narrative,
     };
   }
@@ -1877,9 +2002,13 @@ function buildCommunityAssets(
   const parts: string[] = [];
   if (edos.length > 0) parts.push(`${edos.length} economic development organization${edos.length !== 1 ? "s" : ""}`);
   if (bsos.length > 0) parts.push(`${bsos.length} business support organization${bsos.length !== 1 ? "s" : ""}`);
-  const narrative = `${parts.join(" and ")} serve your area and can provide free advising, application assistance, and connections to funding.`;
+  // This branch runs when no community area resolved. Nothing here was matched
+  // to the address, the project, or a published service area, and no source
+  // establishes that these organizations advise for free or connect anyone to
+  // funding — the previous sentence asserted all of that.
+  const narrative = `${parts.join(" and ")} are listed in the community-asset directory this report draws on. They were not matched to this address, project type, or published service area; ask each organization what it offers and whether it serves your location.`;
 
-  return { edos, bsos, narrative };
+  return { edos, bsos, selectionBasis: "asset-directory", narrative };
 }
 
 function capitalPartnerReportItem(match: CapitalPartnerMatch): ReportItem {
@@ -2314,10 +2443,16 @@ function generateLocationIncentives(
   // §03 Address-confirmed programs, with project fit kept separate from location eligibility.
   if (confirmedPrograms.length > 0) {
     if (goalMatchedPrograms.length > 0) {
-      const goalLabel = projectGoalLabels.join(", ");
+      // Only the goals with a project-fit rule put programs in this section.
+      // Naming the rest here told the reader their custom goal had been
+      // matched when it contributed nothing to the filter.
+      const { ordering, contextOnly } = partitionGoalLabelsByOrderingUse(projectGoals, projectGoalLabels);
+      const contextNote = contextOnly.length > 0
+        ? ` ${joinLabels(contextOnly)} ${contextOnly.length === 1 ? "is" : "are"} recorded from your answers but ${contextOnly.length === 1 ? "was" : "were"} not used to select these programs.`
+        : "";
       sections.push({
         title: GOAL_MATCH_PROGRAMS_SECTION_TITLE,
-        description: `Programs tied to this address whose stated uses may relate to the selected goal${projectGoalLabels.length === 1 ? "" : "s"}: ${goalLabel}. Each program still requires individual eligibility confirmation.`,
+        description: `Programs tied to this address whose stated uses may relate to the selected goal${ordering.length === 1 ? "" : "s"}: ${joinLabels(ordering)}.${contextNote} Each program still requires individual eligibility confirmation.`,
         items: goalMatchedPrograms.map((program) =>
           programReportItem(
             program,
@@ -2381,7 +2516,15 @@ function generateLocationIncentives(
     // Build a map: document → { category, programs[] }
     const docMap: Record<string, { category: string; programs: Set<string> }> = {};
     for (const p of confirmedPrograms) {
-      for (const doc of p.requiredDocs) {
+      // requiredDocs is not purely a document list: some catalog records state
+      // the opposite ("No application needed — benefits are automatic by
+      // location", "No formal documents required to get started"). Listed under
+      // a "Required Documents" heading, and counted in this section's own
+      // document total, they become requirements the record explicitly denies.
+      // buildPublicMatchExplanation keeps the same strings as published facts
+      // via this predicate (lib/match-transparency.ts), so nothing is lost from
+      // the report by leaving them out of the document list here.
+      for (const doc of p.requiredDocs.filter((d) => !isDocumentRequirementGuidance(d))) {
         let category = "General";
         const dl = doc.toLowerCase();
         if (dl.includes("tax") || dl.includes("financial") || dl.includes("bank") || dl.includes("revenue") || dl.includes("income") || dl.includes("profit")) category = "Financial & Tax";
@@ -2401,6 +2544,10 @@ function generateLocationIncentives(
       grouped[category].push({ doc, programs: Array.from(programs) });
     }
     const categoryEntries = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b));
+    // The guidance filter above drops non-document entries, so a program that
+    // publishes three requiredDocs routinely leaves one real document here.
+    // The noun agrees with the count rather than being hardcoded plural.
+    const documentCount = Object.keys(docMap).length;
     if (categoryEntries.length > 0) {
       const docItems: ReportItem[] = categoryEntries.map(([cat, docs]) => ({
         label: cat,
@@ -2412,7 +2559,7 @@ function generateLocationIncentives(
       }));
       sections.push({
         title: "Required Documents",
-        description: `${Object.keys(docMap).length} documents across programs mapped at this address, organized by category. Each document lists which program(s) require it. ${DOCUMENT_PREPARATION_COST_LEGEND.map((item) => `${item.tier} = ${item.label.toLowerCase()}`).join("; ")}. ${DOCUMENT_PREPARATION_COST_CAVEAT}`,
+        description: `${documentCount} document${documentCount === 1 ? "" : "s"} across programs mapped at this address, organized by category. Each document lists which program(s) require it. ${DOCUMENT_PREPARATION_COST_LEGEND.map((item) => `${item.tier} = ${item.label.toLowerCase()}`).join("; ")}. ${DOCUMENT_PREPARATION_COST_CAVEAT}`,
         items: docItems,
       });
     }
@@ -2425,9 +2572,24 @@ function generateLocationIncentives(
   // §05 Organizations that may be able to help
   if (communityAssetsData) {
     const assetItems: ReportItem[] = [];
+    const listedCount = communityAssetsData.organizations?.length
+      ?? communityAssetsData.edos.length + communityAssetsData.bsos.length;
+    const mappedTotal = communityAssetsData.totalOrganizations;
+    // A single organization survives the support filters often enough that the
+    // count has to agree in number — the detail sentence already does.
+    const listedLabel = `${listedCount} organization${listedCount === 1 ? "" : "s"}`;
     assetItems.push({
       label: communityAssetsData.communityArea ? `Local Support in ${communityAssetsData.communityArea}` : "Community Support",
-      value: `${(communityAssetsData.organizations?.length ?? communityAssetsData.edos.length + communityAssetsData.bsos.length)} organizations`,
+      // Never present the display cap as the mapped total — the value read
+      // "6 organizations" for community areas that map more than six. When the
+      // mapped total is unknown (the usual case: the API caps before this
+      // engine sees the list) the value says only what is listed, and the
+      // detail below carries the reason more may exist.
+      value: mappedTotal != null && mappedTotal > listedCount
+        ? `${listedCount} of ${mappedTotal} organizations`
+        : communityAssetsData.listingMayBeIncomplete
+          ? `${listedLabel} listed`
+          : listedLabel,
       detail: communityAssetsData.narrative,
     });
     if (communityAssetsData.organizations?.length) {
@@ -2449,9 +2611,15 @@ function generateLocationIncentives(
         assetItems.push({ label: bso.name, value: "BSO", detail: bso.address });
       }
     }
+    // SUPPORT_ORGANIZATIONS_DESCRIPTION describes the community-area match.
+    // The asset-directory fallback applies no service-area, project-type, or
+    // service filter at all, so it must not borrow that sentence — and an
+    // absent basis is unknown, not the matched case.
     sections.push({
       title: SUPPORT_ORGANIZATIONS_SECTION_TITLE,
-      description: `${SUPPORT_ORGANIZATIONS_DESCRIPTION} ${SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}`,
+      description: communityAssetsData.selectionBasis === "community-area-match"
+        ? `${SUPPORT_ORGANIZATIONS_DESCRIPTION} ${SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}`
+        : `Listed from the community-asset directory this report draws on, not selected by published service area, project type, or support services. ${SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}`,
       items: assetItems,
     });
   }
@@ -3323,7 +3491,10 @@ function generateDeveloperAnalysis(
   // Build doc → program mapping for attribution
   const docProgramMap: Record<string, Set<string>> = {};
   for (const p of creditPrograms) {
-    for (const doc of p.requiredDocs) {
+    // Same guidance-vs-requirement split as the site-incentives §04 above: this
+    // section also publishes under a "Required Documents" heading, so a record
+    // that says "No application needed" must not be listed or counted as one.
+    for (const doc of p.requiredDocs.filter((d) => !isDocumentRequirementGuidance(d))) {
       allRequiredDocs.add(doc);
       if (!docProgramMap[doc]) docProgramMap[doc] = new Set();
       docProgramMap[doc].add(p.name);
@@ -4419,7 +4590,19 @@ export function generateReportData(
     if (projectGoalLabels.length > 0 && report.executiveSummary) {
       report.executiveSummary.projectGoalLabel = projectGoalLabels.join(", ");
       report.executiveSummary.projectGoalLabels = projectGoalLabels;
-      report.executiveSummary.whyTheseMatter = `These programs are ordered across the selected goal${projectGoalLabels.length === 1 ? "" : "s"}: ${projectGoalLabels.join(", ")}. ${report.executiveSummary.whyTheseMatter}`;
+      // orderProgramCheckResultsByProjectGoals ranks on project-fit rules, and
+      // the open-text goal has none — it moves nothing. The old sentence
+      // listed every selected goal, custom text included, as an ordering input.
+      const { ordering, contextOnly } = partitionGoalLabelsByOrderingUse(projectGoals, projectGoalLabels);
+      const goalSentences = ordering.length > 0
+        ? [
+            `These programs are ordered across the selected goal${ordering.length === 1 ? "" : "s"}: ${joinLabels(ordering)}.`,
+            contextOnly.length > 0
+              ? `${joinLabels(contextOnly)} ${contextOnly.length === 1 ? "is" : "are"} recorded from your answers and ${contextOnly.length === 1 ? "does" : "do"} not affect that order.`
+              : "",
+          ]
+        : ["Program ordering does not use the selected goals: none of them map to a program-fit rule."];
+      report.executiveSummary.whyTheseMatter = `${goalSentences.filter(Boolean).join(" ")} ${report.executiveSummary.whyTheseMatter}`;
     }
   }
 

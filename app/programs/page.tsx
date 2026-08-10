@@ -341,7 +341,18 @@ function ProgramCard({
               </span>
             )}
             {program.status === "sunset" && (
-              <span className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-red-700 bg-red-100">
+              <span
+                /* The 'Lapsed' pill below is suppressed for sunset cards, so this
+                   pill has to carry the availability note: a sunset record with
+                   no sunsetWarning gets no "Heads up" banner either, and the
+                   note would otherwise be unreachable in the catalog. */
+                title={
+                  availability?.state === "lapsed-notice"
+                    ? availability.note
+                    : undefined
+                }
+                className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-red-700 bg-red-100"
+              >
                 Sunset
               </span>
             )}
@@ -358,14 +369,20 @@ function ProgramCard({
                 <CalendarOff className="w-3 h-3" /> Applications closed
               </span>
             )}
-            {availability?.state === "lapsed-notice" && (
-              <span
-                title={availability.note}
-                className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-red-700 bg-red-100 inline-flex items-center gap-1"
-              >
-                <AlertTriangle className="w-3 h-3" /> Lapsed
-              </span>
-            )}
+            {/* 'lapsed-notice' covers BOTH status "lapsed" and status "sunset"
+                (see lib/program-gating.ts), but a sunset is a termination, not
+                a lapse. The Sunset pill above already labels those cards; a
+                "Lapsed" pill beside it would tell the reader the program both
+                terminated and merely lapsed. */}
+            {availability?.state === "lapsed-notice" &&
+              program.status !== "sunset" && (
+                <span
+                  title={availability.note}
+                  className="font-mono-bureau text-[9px] tracking-[0.15em] uppercase px-2 py-1 rounded-full text-red-700 bg-red-100 inline-flex items-center gap-1"
+                >
+                  <AlertTriangle className="w-3 h-3" /> Lapsed
+                </span>
+              )}
             {availability?.state === "expired" && (
               <span
                 title={availability.note}

@@ -701,6 +701,19 @@ export const DRAWN_AREA_PERMIT_COLUMNS = [
   "Source",
 ] as const;
 
+/**
+ * The two ways an export can carry no permit analysis, each said out loud.
+ * They live beside the CSV that must print them (lib/permit-area.ts holds the
+ * copy for a permit result that EXISTS); the first mirrors both
+ * VACANCY_LOOKUP_UNAVAILABLE_NOTE and the panel's on-screen failure sentence,
+ * so screen and file cannot drift.
+ */
+export const PERMIT_AREA_LOOKUP_UNAVAILABLE_NOTE =
+  "Permit filings could not be checked right now. This is a lookup failure, not evidence that the area has no permits.";
+
+export const PERMIT_AREA_ANALYSIS_ABSENT_NOTE =
+  "No permit-filing analysis was attached to this export. This is not evidence that the area has no permit filings.";
+
 /** Complete aggregate permit-type table; independent from recent record rows. */
 export const DRAWN_AREA_PERMIT_TYPE_COLUMNS = [
   "Source Permit Type",
@@ -735,6 +748,12 @@ export interface DrawnAreaCsvInput {
   /** Source-backed permit analysis for the same polygon, or null when unavailable. */
   permitArea?: PermitAreaResult | null;
   /**
+   * HTTP, timeout or malformed-response failure on the permit lookup. Separates
+   * "we asked and could not get an answer" from "no analysis was attached",
+   * exactly as `vacancyLoadFailed` does for vacancy. Neither is a filing count.
+   */
+  permitLoadFailed?: boolean;
+  /**
    * The admin investment analysis, or null for a non-admin / not-yet-loaded
    * viewer — in which case the CSV carries the vacancy table alone and mentions
    * investment nowhere.
@@ -747,16 +766,26 @@ export interface DrawnAreaCsvInput {
 
 /**
  * Build the drawn-area CSV. Separate tables in one file, each with its own honest
- * header, separated by a blank line — a single wide sparse table would force
- * vacancy and investment columns into the same rows, which they do not share.
+ * header, separated by a blank line — one wide sparse table would force vacancy,
+ * permit and investment columns into rows that do not share them.
  *
- * The AREA NAME appears on the title line and as the FIRST CELL OF EVERY ROW of
- * both tables and both headers, so a row pasted out of context still says which
- * area it came from (the whole point of the label fix).
+ * Row shape is NOT uniform, so do not key a parser on column 0 alone. Each table
+ * is introduced by a two-cell `"Section",<name>` marker row and then a header row
+ * whose first column is the literal `Area Name`; the investment table adds a
+ * single-cell note row before its header. Every DATA row does begin with the area
+ * name, so a data row pasted out of context still says which area it came from
+ * (the whole point of the label fix) — marker, header and note rows do not. The
+ * area name is also on the title line. Which tables appear depends on the
+ * branches below; read them rather than assuming a fixed set.
  *
- * The investment table is emitted ONLY when `investment` is supplied — a
- * non-admin export is byte-identical to the pre-existing vacancy CSV plus its
- * area-name column. Pure / deterministic.
+ * The investment table is emitted ONLY when `investment` is supplied, so a
+ * non-admin export mentions investment nowhere.
+ *
+ * It is NOT otherwise the pre-existing vacancy CSV: EVERY export carries a
+ * permit disclosure — the analysis when one is attached, otherwise a
+ * "Permit coverage" section saying the lookup failed or was never attached —
+ * because a file that silently omits the permit tables reads as an area with no
+ * permit filings. Pure / deterministic.
  */
 export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
   const areaName = input.areaName.trim() || defaultDrawnAreaName();
@@ -884,6 +913,30 @@ export function buildDrawnAreaCsv(input: DrawnAreaCsvInput): string {
         ]),
       );
     }
+  } else {
+    // A file that simply omits the permit tables reads as an area with no
+    // permit filings — the one thing a failed (or never attached) lookup cannot
+    // establish. The panel already says this on screen; the exported artifact
+    // travels further than the panel does, so it has to say it too.
+    lines.push("");
+    lines.push(csvRow(["Section", "Permit coverage"]));
+    lines.push(csvRow(["Area Name", "Metric", "Value"]));
+    lines.push(
+      csvRow([
+        areaName,
+        "Coverage status",
+        input.permitLoadFailed ? "Unavailable" : "Not attached",
+      ]),
+    );
+    lines.push(
+      csvRow([
+        areaName,
+        "Coverage note",
+        input.permitLoadFailed
+          ? PERMIT_AREA_LOOKUP_UNAVAILABLE_NOTE
+          : PERMIT_AREA_ANALYSIS_ABSENT_NOTE,
+      ]),
+    );
   }
 
   if (input.investment) {

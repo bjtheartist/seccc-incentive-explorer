@@ -1,3 +1,4 @@
+import { isDocumentRequirementGuidance } from "./document-preparation-cost";
 import type {
   EligibilityRule,
   MatchTransparencyContact,
@@ -119,12 +120,27 @@ export function buildPublicMatchExplanation(
     uniqueNonEmpty(evidence.rulesEstablishedByPublicData),
   );
 
+  // requiredDocs is not purely a document list: some catalog entries say the
+  // opposite ("No formal documents required to get started", "No application
+  // needed — benefits are automatic by location"). Published under the
+  // "Documents to gather" heading those read as requirements the record
+  // explicitly denies — and smallBizSource/ssa reach nearly every visitor.
+  // They are still published statements, so they move to the public-facts list
+  // rather than being dropped. buildPreparationTasks skips the same entries
+  // (lib/incentive-preparation.ts) via the same predicate.
+  const publishedDocs = uniqueNonEmpty(program.requiredDocs);
+  const documentGuidance = publishedDocs.filter(isDocumentRequirementGuidance);
+  const documentsToGather = publishedDocs.filter(
+    (doc) => !isDocumentRequirementGuidance(doc),
+  );
+
   const knownFromPublicData = uniqueNonEmpty([
     ...(evidence.knownFromPublicData ?? []),
     ...(program.lastVerifiedAt
       ? [`Program information was last reviewed on ${program.lastVerifiedAt}.`]
       : []),
     ...statusContext(program),
+    ...documentGuidance,
   ]);
 
   const stillToConfirm = uniqueNonEmpty(
@@ -145,7 +161,7 @@ export function buildPublicMatchExplanation(
     knownFromPublicData,
     basedOnUserAnswers,
     stillToConfirm,
-    currentDocumentsToGather: uniqueNonEmpty(program.requiredDocs),
+    currentDocumentsToGather: documentsToGather,
     confirmWith: confirmationContacts(program),
     officialSource: sourceUrl
       ? { label: `Official ${program.name} source`, url: sourceUrl }
