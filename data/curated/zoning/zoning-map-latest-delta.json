@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "sourceUrl": "https://gisapps.chicago.gov/arcgis/rest/services/ExternalApps/Zoning/MapServer/1",
-  "comparedFrom": null,
+  "comparedFrom": "2026-07-23T21:36:35.000Z",
   "comparedThrough": "2026-07-23T21:36:35.000Z",
   "counts": {
     "added": 0,
