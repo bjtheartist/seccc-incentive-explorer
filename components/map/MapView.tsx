@@ -157,9 +157,11 @@ import { compactParcelSpaceFacts } from "@/lib/parcel-space";
 import { PERMIT_PORTAL_LABEL, PERMIT_PORTAL_URL } from "@/lib/permit-match-lines";
 import {
   createDrawnAreaVacancyRequestLifecycle,
-  parseDrawnAreaVacancyResponse,
+  fetchDrawnAreaVacancy,
   type VacancyCoverageMetadata,
 } from "@/lib/drawn-area-vacancy";
+
+const OPTIONAL_ZONING_LAYER_TIMEOUT_MS = 12_000;
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1572,8 +1574,15 @@ export default function MapView() {
       });
 
       /* ── Chicago Zoning Districts — per-category layers (on top of incentive zones) ── */
+      const zoningRequestController = new AbortController();
+      const zoningRequestTimeout = window.setTimeout(
+        () => zoningRequestController.abort(),
+        OPTIONAL_ZONING_LAYER_TIMEOUT_MS
+      );
       try {
-        const zoningData = await cachedFetch(CHICAGO_ZONING_URL);
+        const zoningData = await cachedFetch(CHICAGO_ZONING_URL, {
+          signal: zoningRequestController.signal,
+        });
         if (zoningData) {
           map.addSource("chicago-zoning", { type: "geojson", data: zoningData as GeoJSON.FeatureCollection, generateId: true });
 
@@ -1649,6 +1658,8 @@ export default function MapView() {
         }
       } catch {
         // Zoning districts layer is optional
+      } finally {
+        window.clearTimeout(zoningRequestTimeout);
       }
 
       /* ── Parcel boundary layer (Cook County ArcGIS) ── */
@@ -2437,18 +2448,11 @@ export default function MapView() {
           // Hand the shape to the panel too — the admin community-investment
           // analysis runs point-in-polygon client-side against this geometry.
           setPolygonGeometry(geom);
-          const polygonJson = JSON.stringify(geom);
-          fetch(`/api/vacant?polygon=${encodeURIComponent(polygonJson)}`, {
+          fetchDrawnAreaVacancy(geom, {
             signal: vacancyRequest.signal,
           })
-            .then((res) => {
-              if (!res.ok) throw new Error(`HTTP ${res.status}`);
-              return res.json();
-            })
-            .then((data: unknown) => {
+            .then((parsed) => {
               if (!vacancyRequest.isCurrent()) return;
-              const parsed = parseDrawnAreaVacancyResponse(data);
-              if (!parsed) throw new Error("Malformed vacancy response");
               setPolygonResults(parsed);
               setPolygonVacancyCoverage(parsed.meta);
               setPolygonVacancyLoadFailed(false);

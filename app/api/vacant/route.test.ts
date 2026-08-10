@@ -73,7 +73,9 @@ afterEach(() => {
 
 describe("GET /api/vacant", () => {
   it("returns database records with complete source coverage metadata", async () => {
-    sqlMock.mockResolvedValue([vacantRow()]);
+    sqlMock.mockResolvedValue([
+      vacantRow({ source_as_of: "2026-08-05 12:00:00+00" }),
+    ]);
 
     const response = await GET(
       new NextRequest(

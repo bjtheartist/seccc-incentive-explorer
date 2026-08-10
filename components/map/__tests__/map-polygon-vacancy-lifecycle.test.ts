@@ -13,6 +13,19 @@ function sourceBetween(start: string, end: string, fromIndex = 0): string {
 }
 
 describe("MapView drawn-area vacancy lifecycle wiring", () => {
+  it("bounds the optional zoning layer request without blocking map readiness forever", () => {
+    const zoningLoad = sourceBetween(
+      "const zoningRequestController = new AbortController()",
+      "/* ── Parcel boundary layer"
+    );
+
+    expect(source).toContain("const OPTIONAL_ZONING_LAYER_TIMEOUT_MS = 12_000");
+    expect(zoningLoad).toContain("zoningRequestController.abort()");
+    expect(zoningLoad).toContain("OPTIONAL_ZONING_LAYER_TIMEOUT_MS");
+    expect(zoningLoad).toContain("signal: zoningRequestController.signal");
+    expect(zoningLoad).toContain("window.clearTimeout(zoningRequestTimeout)");
+  });
+
   it("binds fetch publication to the request generation", () => {
     const createHandler = sourceBetween(
       'map.on("draw.create"',
@@ -20,8 +33,11 @@ describe("MapView drawn-area vacancy lifecycle wiring", () => {
     );
 
     expect(createHandler).toContain("polygonVacancyRequests.start()");
+    expect(createHandler).toContain("fetchDrawnAreaVacancy(geom");
     expect(createHandler).toContain("signal: vacancyRequest.signal");
     expect(createHandler.match(/vacancyRequest\.isCurrent\(\)/g)).toHaveLength(2);
+    expect(createHandler).toContain("setPolygonVacancyLoadFailed(true)");
+    expect(createHandler).toContain("setPolygonLoading(false)");
     expect(createHandler).toContain(".finally(() => vacancyRequest.release())");
   });
 

@@ -3,6 +3,10 @@ import {
   fetchPermitArea,
   formatPermitAreaDate,
   formatPermitAreaCoverageLabel,
+  PERMIT_AREA_DATA_WINDOW_LABEL,
+  PERMIT_AREA_PORTAL_URL,
+  PERMIT_AREA_SOURCE_LABEL,
+  PERMIT_AREA_SOURCE_URL,
   parsePermitAreaResult,
   permitAreaRequestPath,
   type PermitAreaResult,
@@ -24,8 +28,12 @@ const POLYGON: GeoJSON.Polygon = {
 
 const RESULT: PermitAreaResult = {
   status: "ready",
-  source: { label: "City permits", url: "https://example.com/data", portalUrl: "https://example.com/verify" },
-  dataWindow: "Since 2015",
+  source: {
+    label: PERMIT_AREA_SOURCE_LABEL,
+    url: PERMIT_AREA_SOURCE_URL,
+    portalUrl: PERMIT_AREA_PORTAL_URL,
+  },
+  dataWindow: PERMIT_AREA_DATA_WINDOW_LABEL,
   sourceRefresh: {
     asOf: "2026-08-04T18:22:00.000Z",
     asOfBasis: "latest_queried_row_fetched_at",
@@ -109,6 +117,28 @@ describe("permit area client", () => {
     } satisfies PermitAreaResult;
 
     expect(parsePermitAreaResult(result)).toEqual(result);
+  });
+
+  it.each([
+    ["source label", { ...RESULT, source: { ...RESULT.source, label: "City permits" } }],
+    ["source URL", { ...RESULT, source: { ...RESULT.source, url: "https://example.com" } }],
+    [
+      "verification portal",
+      { ...RESULT, source: { ...RESULT.source, portalUrl: "https://example.com" } },
+    ],
+    ["data window", { ...RESULT, dataWindow: "Since 2016" }],
+    [
+      "noncanonical freshness timestamp",
+      {
+        ...RESULT,
+        sourceRefresh: {
+          asOf: "2026-08-04 18:22:00+00",
+          asOfBasis: "latest_queried_row_fetched_at",
+        },
+      },
+    ],
+  ])("rejects altered permit provenance in %s", (_field, altered) => {
+    expect(parsePermitAreaResult(altered)).toBeNull();
   });
 
   it("treats HTTP and malformed readiness responses as lookup failures", async () => {
@@ -213,6 +243,20 @@ describe("permit area client", () => {
       { ...RESULT, yearBreakdown: [{ year: 2026, count: 2 }] },
     ],
     ["a status-breakdown sum that differs from the total", { ...RESULT, statusBreakdown: [] }],
+    [
+      "duplicate recent permit IDs",
+      {
+        ...RESULT,
+        totalFilings: 2,
+        distinctAddresses: 1,
+        typeBreakdown: [{ ...RESULT.typeBreakdown[0], count: 2 }],
+        yearBreakdown: [{ year: 2026, count: 2 }],
+        statusBreakdown: [{ status: "Issued", count: 2 }],
+        records: [RESULT.records[0], { ...RESULT.records[0], permitId: " 100012345 " }],
+        recordsReturned: 2,
+        recordsTruncated: false,
+      },
+    ],
     ["a truncated flag when all records were returned", { ...RESULT, recordsTruncated: true }],
     [
       "an unreported truncation",

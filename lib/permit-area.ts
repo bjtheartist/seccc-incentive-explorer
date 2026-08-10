@@ -107,8 +107,10 @@ function isoDateMs(value: unknown): number | null {
   return new Date(parsed).toISOString().slice(0, 10) === value ? parsed : null;
 }
 
-function isValidTimestamp(value: string): boolean {
-  return value.trim() !== "" && Number.isFinite(Date.parse(value));
+function isCanonicalIsoTimestamp(value: string): boolean {
+  if (value.trim() === "") return false;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) && new Date(parsed).toISOString() === value;
 }
 
 function isPermitMapTypeKey(value: unknown): value is PermitMapTypeKey | null {
@@ -186,10 +188,10 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
       firstIssueDateMs <= latestIssueDateMs);
 
   if (
-    !isString(source.label) ||
-    !isString(source.url) ||
-    !isString(source.portalUrl) ||
-    !isString(value.dataWindow) ||
+    source.label !== PERMIT_AREA_SOURCE_LABEL ||
+    source.url !== PERMIT_AREA_SOURCE_URL ||
+    source.portalUrl !== PERMIT_AREA_PORTAL_URL ||
+    value.dataWindow !== PERMIT_AREA_DATA_WINDOW_LABEL ||
     !isNullableString(sourceRefresh.asOf) ||
     !(
       sourceRefresh.asOfBasis === null ||
@@ -222,10 +224,11 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
     (result.sourceRefresh.asOf === null && result.sourceRefresh.asOfBasis === null) ||
     (result.sourceRefresh.asOf !== null &&
       result.sourceRefresh.asOfBasis === "latest_queried_row_fetched_at" &&
-      isValidTimestamp(result.sourceRefresh.asOf));
+      isCanonicalIsoTimestamp(result.sourceRefresh.asOf));
   const typeSources = result.typeBreakdown.map((item) => item.sourceValue ?? "");
   const years = result.yearBreakdown.map((item) => item.year);
   const statuses = result.statusBreakdown.map((item) => item.status);
+  const permitIds = result.records.map((record) => record.permitId.trim());
 
   if (
     !refreshIsPaired ||
@@ -241,7 +244,9 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
     result.statusBreakdown.some((item) => item.count === 0) ||
     new Set(typeSources).size !== typeSources.length ||
     new Set(years).size !== years.length ||
-    new Set(statuses).size !== statuses.length
+    new Set(statuses).size !== statuses.length ||
+    permitIds.some((permitId) => permitId === "") ||
+    new Set(permitIds).size !== permitIds.length
   ) {
     return null;
   }
@@ -279,7 +284,6 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
       const issueDate = record.issueDate;
       const recordMs = isoDateMs(issueDate);
       if (
-        record.permitId.trim() === "" ||
         issueDate === null ||
         recordMs === null ||
         recordMs < firstMs ||

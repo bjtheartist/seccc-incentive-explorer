@@ -3,8 +3,9 @@ import * as turf from "@turf/turf";
 import { createHash } from "crypto";
 import { getSQL } from "@/lib/db";
 import { cached, roundCoord } from "@/lib/redis";
-import type {
-  VacancyFeatureCollection,
+import {
+  DRAWN_AREA_VACANCY_LIMIT,
+  type VacancyFeatureCollection,
 } from "@/lib/drawn-area-vacancy";
 
 /**
@@ -61,7 +62,9 @@ function timestampOrNull(value: unknown): string | null {
   }
   if (typeof value !== "string") return null;
   const timestamp = value.trim();
-  return timestamp === "" ? null : timestamp;
+  if (timestamp === "") return null;
+  const parsed = Date.parse(timestamp);
+  return Number.isFinite(parsed) ? new Date(parsed).toISOString() : null;
 }
 
 function latestTimestamp(values: unknown[]): string | null {
@@ -236,7 +239,7 @@ export async function GET(request: NextRequest) {
 
   // Polygon/community mode: higher export cap. Bounds mode: default 500, max 2000.
   const limit = polygonParam || communityAreaParam
-    ? 10000
+    ? DRAWN_AREA_VACANCY_LIMIT
     : Math.min(parseInt(limitParam || "500", 10) || 500, 2000);
 
   let west = 0, south = 0, east = 0, north = 0;
