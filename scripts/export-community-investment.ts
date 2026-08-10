@@ -28,8 +28,9 @@
  *   • A row that cannot be placed (geocode failed AND no coordinates) is never
  *     plotted at 0,0 or guessed. It is HELD CITYWIDE — unplotted, but with its
  *     dollars still in the export and counted in meta.citywideCount. A partner
- *     row is dropped only when project name, amount, and award year independently
- *     confirm that an official NOF/SBIF input already carries the same award.
+ *     row is dropped only when exact normalized project name, exact amount, and
+ *     official approval year confirm that an official NOF/SBIF input already
+ *     carries the same award.
  *
  * Usage:
  *   npx tsx scripts/export-community-investment.ts            # repo inputs (default)
@@ -457,29 +458,28 @@ interface SocrataDrops {
 export interface OfficialAwardDuplicateFact {
   recipient: string;
   amountAwarded: number;
-  awardYears: number[];
+  approvalYear: number;
 }
 
 /** Build from official source facts only. These decide whether a partner row is
- * already represented; neither record needs point geometry to establish that
- * the same named award, amount, and year was published twice. */
-function buildOfficialAwardDuplicateFacts(
+ * already represented; neither record needs point geometry to establish that the
+ * same normalized project name, exact amount, and approval year were published
+ * twice. Completion year is deliberately excluded because it is not an award
+ * year. */
+export function buildOfficialAwardDuplicateFacts(
   rows: readonly SocrataRow[],
   minYear: number,
 ): OfficialAwardDuplicateFact[] {
   const facts: OfficialAwardDuplicateFact[] = [];
   for (const row of rows) {
-    const completionYear = yearOfDate(row.completion_date);
     const approvalYear = yearOfDate(row.approval_date);
-    const effectiveYear = completionYear ?? approvalYear;
-    if (effectiveYear != null && effectiveYear < minYear) {
+    if (approvalYear == null || approvalYear < minYear) {
       continue;
     }
     const amountAwarded = parseAmount(row.incentive_amount);
     const recipient = nullableStr(row.project_name) || nullableStr(row.applicant_name);
-    const awardYears = [...new Set([approvalYear, completionYear].filter((year): year is number => year != null))];
-    if (recipient && amountAwarded != null && awardYears.length > 0) {
-      facts.push({ recipient, amountAwarded, awardYears });
+    if (recipient && amountAwarded != null) {
+      facts.push({ recipient, amountAwarded, approvalYear });
     }
   }
   return facts;
@@ -1962,13 +1962,33 @@ export interface PartnerNofMapResult {
   addressGeocodeMisses: number;
   heldCitywideDollars: number;
   confirmedDuplicateRows: number;
+  reconciliation: PartnerNofReconciliationOutcome[];
 }
+
+export type PartnerNofReconciliationOutcome =
+  | {
+      outcome: "accepted";
+      inputIndex: number;
+      recipient: string;
+      amountAwarded: number | null;
+      awardYear: number | null;
+    }
+  | {
+      outcome: "confirmed-duplicate";
+      inputIndex: number;
+      recipient: string;
+      amountAwarded: number;
+      awardYear: number;
+      officialRecipient: string;
+      officialApprovalYear: number;
+    };
 
 /**
  * Map the partner-maintained South Shore NOF list without using geometry as a
  * dedupe prerequisite. A row is a confirmed duplicate only when normalized
- * project name, exact amount, and the partner-published award year all match an
- * official NOF/SBIF source row. Every other row is accepted: a geocode hit
+ * project name, exact amount, and the partner-published award year all match the
+ * approval year on an official NOF/SBIF source row. Every other row is accepted:
+ * a geocode hit
  * becomes a point; a miss remains citywide with its published address, amount,
  * and partner provenance intact.
  */
@@ -1983,27 +2003,45 @@ export function mapPartnerNofAwards(
   let addressGeocodeMisses = 0;
   let heldCitywideDollars = 0;
   let confirmedDuplicateRows = 0;
+  const reconciliation: PartnerNofReconciliationOutcome[] = [];
 
-  for (const row of rows) {
+  for (const [inputIndex, row] of rows.entries()) {
     const recipient = nullableStr(row.Project) || "(unnamed project)";
     const amountAwarded = parseAmount(row["Award Amount"]);
     const publishedYear = Number(row["Year Awarded"]);
     const year = Number.isInteger(publishedYear) ? publishedYear : null;
     const normalizedRecipient = normalizeRecipientForDedupe(recipient);
-    const duplicated =
+    const officialMatch =
       amountAwarded != null &&
       year != null &&
       normalizedRecipient !== "" &&
-      officialAwards.some(
+      officialAwards.find(
         (official) =>
           official.amountAwarded === amountAwarded &&
-          official.awardYears.includes(year) &&
+          official.approvalYear === year &&
           normalizeRecipientForDedupe(official.recipient) === normalizedRecipient,
       );
-    if (duplicated) {
+    if (officialMatch) {
       confirmedDuplicateRows += 1;
+      reconciliation.push({
+        outcome: "confirmed-duplicate",
+        inputIndex,
+        recipient,
+        amountAwarded,
+        awardYear: year,
+        officialRecipient: officialMatch.recipient,
+        officialApprovalYear: officialMatch.approvalYear,
+      });
       continue;
     }
+
+    reconciliation.push({
+      outcome: "accepted",
+      inputIndex,
+      recipient,
+      amountAwarded,
+      awardYear: year,
+    });
 
     const address = nullableStr(row.Address);
     const hit = address ? geocodes.get(queryForAddress(address)) : null;
@@ -2041,6 +2079,7 @@ export function mapPartnerNofAwards(
     addressGeocodeMisses,
     heldCitywideDollars,
     confirmedDuplicateRows,
+    reconciliation,
   };
 }
 
@@ -2554,6 +2593,9 @@ async function main() {
   ];
   const jimMapped = mapPartnerNofAwards(jimRows, geo, cdgQuery, officialAwardFacts);
   const jim = jimMapped.records;
+  const jimConfirmedDuplicates = jimMapped.reconciliation
+    .filter((outcome) => outcome.outcome === "confirmed-duplicate")
+    .map((outcome) => outcome.recipient);
 
   const caPolygons = loadCommunityAreaPolygons(CA_GEOJSON_PATH);
   console.log(
@@ -2561,7 +2603,7 @@ async function main() {
       `geocode-miss=${cdgMapped.addressGeocodeMisses} held-citywide-dollars=${cdgMapped.heldCitywideDollars}) ` +
       `jim kept=${jim.length} point=${jimMapped.pointRecords} held-citywide=${jimMapped.citywideRecords} ` +
       `geocode-miss=${jimMapped.addressGeocodeMisses} held-citywide-dollars=${jimMapped.heldCitywideDollars} ` +
-      `confirmed-duplicates=${jimMapped.confirmedDuplicateRows}`,
+      `confirmed-duplicates=${jimMapped.confirmedDuplicateRows} [${jimConfirmedDuplicates.join("; ")}]`,
   );
   const dceo = mapDceoCapital(dceoCandidates, geo, cdgQuery, caPolygons);
   const sbaRrf = mapSbaRestaurantRevitalization(sbaRrfRows, geo, caPolygons);
@@ -2612,11 +2654,11 @@ async function main() {
       `nmtc=${nmtc.length} (CA-stamped=${nmtcStamp.stamped} unstamped=${nmtcStamp.unstamped})`,
   );
 
-  // 3) Concatenate in stable order. Socrata completions precede Jim's awards so a
-  //    completed record holds the dedupe slot and the corridor award collapses in.
-  //    Chicago Prize rows join the philanthropic (foundation) block; developments
-  //    (private) are never dedupe-eligible so their position is immaterial. The
-  //    capital-spine sources append last (also never dedupe-eligible).
+  // 3) Concatenate in stable order. Partner awards were already reconciled against
+  //    official approval facts and are never eligible for generic dedupe. Chicago
+  //    Prize rows join the philanthropic (foundation) block; developments (private)
+  //    are never dedupe-eligible so their position is immaterial. The capital-spine
+  //    sources append last (also never dedupe-eligible).
   const all: Array<CommunityInvestmentRecordDraft | CommunityInvestmentRecord> = [
     ...nofSmall, ...nofLarge, ...sbif, ...cdg, ...foundations, ...prize, ...developments, ...jim,
     ...tif, ...hud, ...lihtc, ...nmtc, ...cookSource.records, ...illinoisBig.records,
