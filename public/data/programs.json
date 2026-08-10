@@ -3443,7 +3443,7 @@
     "name": "Cook County Class 6b SER (Sustainable Emergency Relief)",
     "level": "County",
     "zoneKey": "",
-    "summary": "A non-renewable 6b variant for long-tenured industrial owners facing economic hardship. Requires both a municipal Special Circumstances resolution AND a Cook County Board resolution.",
+    "summary": "A non-renewable 6b variant for industrial properties occupied by long-tenured industrial enterprises facing economic hardship. Requires both a municipal Special Circumstances resolution AND a Cook County Board resolution.",
     "whoQualifies": "Industrial owners whose industrial enterprise has occupied the premises at the same location for at least ten consecutive years, and who can demonstrate that without SER designation the business would not be economically viable. The ten-year test runs with the occupying enterprise, not with continuous ownership.",
     "benefits": [
       "10% assessment for 10 years, 15% year 11, 20% year 12",

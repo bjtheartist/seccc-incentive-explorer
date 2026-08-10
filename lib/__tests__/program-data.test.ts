@@ -63,6 +63,8 @@ describe("program data guardrails", () => {
     );
 
     expect(class6bSer).toBeDefined();
+    expect(class6bSer!.summary).toMatch(/occupied by long-tenured industrial enterprises/i);
+    expect(class6bSer!.summary).not.toMatch(/long-tenured industrial owners/i);
     expect(class6bSer!.requiredDocs.join(" ")).toMatch(/occupying industrial enterprise/i);
     expect(class6bSer!.requiredDocs.join(" ")).not.toMatch(/years of ownership/i);
     expect(class6bSer!.eligibilityRules?.find((rule) => rule.criterion === "propertyType")?.description)

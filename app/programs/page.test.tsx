@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
 import { getAllPrograms } from "@/lib/programs-data";
-import { ProgramDocumentRequirements } from "./page";
+import { ProgramDocumentRequirements } from "@/components/programs/ProgramDocumentRequirements";
 
 function requiredDocs(programId: string): string[] {
   const program = getAllPrograms().find((item) => item.id === programId);
