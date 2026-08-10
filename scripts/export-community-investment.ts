@@ -28,16 +28,23 @@
  *   • A row that cannot be placed (geocode failed AND no coordinates) is never
  *     plotted at 0,0 or guessed. It is HELD CITYWIDE — unplotted, but with its
  *     dollars still in the export and counted in meta.citywideCount. A partner
- *     row is dropped only when exact normalized project name, exact amount, and
- *     official approval year confirm that an official NOF/SBIF input already
- *     carries the same award.
+ *     row is dropped only when exact normalized project name and address, exact
+ *     amount, and official approval year confirm that an official NOF/SBIF input
+ *     already carries the same award, or an explicit source-pair reconciliation
+ *     matches both current inputs.
  *
  * Usage:
  *   npx tsx scripts/export-community-investment.ts            # repo inputs (default)
  *   INPUT_DIR=/some/dir npx tsx scripts/export-community-investment.ts
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -45,6 +52,7 @@ import {
   buildCommunityInvestmentExport,
   dedupeInvestmentRecords,
   INVESTMENT_STATUSES,
+  normalizeAddressForDedupe,
   normalizeRecipientForDedupe,
   SOURCE_FUNDER_TYPE,
   type CommunityInvestmentRecord,
@@ -459,13 +467,96 @@ export interface OfficialAwardDuplicateFact {
   recipient: string;
   amountAwarded: number;
   approvalYear: number;
+  address?: string | null;
 }
 
+interface PartnerNofConfirmedAliasRule {
+  partnerRecipient: string;
+  partnerAddress: string;
+  partnerAwardYear: number;
+  officialRecipient: string;
+  officialAddress: string;
+  officialApprovalYear: number;
+  amountAwarded: number;
+}
+
+/**
+ * Explicit cross-source identity reconciliations for partner rows whose public
+ * name, address, or award year differs from the official NOF record.
+ * Each rule is inert unless both the current partner input and the current
+ * official source still contain the stated names, amount, and years. This is a
+ * bounded source-pair table, not fuzzy name, address, or proximity dedupe.
+ */
+export const PARTNER_NOF_CONFIRMED_ALIAS_RULES: readonly PartnerNofConfirmedAliasRule[] = [
+  {
+    partnerRecipient: "South Shore Brew",
+    partnerAddress: "7101 S. Yates Blvd.",
+    partnerAwardYear: 2017,
+    officialRecipient: "South Shore Brew",
+    officialAddress: "1745 E 71st St",
+    officialApprovalYear: 2017,
+    amountAwarded: 98420.24,
+  },
+  {
+    partnerRecipient: "Original Soul Vegetarian",
+    partnerAddress: "203 E. 75th St.",
+    partnerAwardYear: 2017,
+    officialRecipient: "Original Soul Vegetarian (OSV, LLP)",
+    officialAddress: "203 E 75th St",
+    officialApprovalYear: 2017,
+    amountAwarded: 250000,
+  },
+  {
+    partnerRecipient: "The Quarry Event Center",
+    partnerAddress: "2423 E. 75th St.",
+    partnerAwardYear: 2017,
+    officialRecipient: "The Quarry (Real Community Investment Group)",
+    officialAddress: "2423 E 75th St",
+    officialApprovalYear: 2017,
+    amountAwarded: 32850,
+  },
+  {
+    partnerRecipient: "Mikkey's Retro Grill",
+    partnerAddress: "8126 S. Stony Island Ave.",
+    partnerAwardYear: 2017,
+    officialRecipient: "Legacy, etc",
+    officialAddress: "8126 S Stony Island Av",
+    officialApprovalYear: 2017,
+    amountAwarded: 139058.77,
+  },
+  {
+    partnerRecipient: "Essential Elements - Chicago",
+    partnerAddress: "1640 E. 87th St.",
+    partnerAwardYear: 2017,
+    officialRecipient: "Essential Elements",
+    officialAddress: "1640 E 87th St",
+    officialApprovalYear: 2018,
+    amountAwarded: 20868.38,
+  },
+  {
+    partnerRecipient: "Nipsey's Restaurant & Bar",
+    partnerAddress: "9156 S. Stony Island Ave.",
+    partnerAwardYear: 2019,
+    officialRecipient: "Nipsey's Restaurant and Bar",
+    officialAddress: "9156 S Stony Island Av",
+    officialApprovalYear: 2019,
+    amountAwarded: 250000,
+  },
+  {
+    partnerRecipient: "Huddle House Diner",
+    partnerAddress: "9401 S. Stony Island Ave.",
+    partnerAwardYear: 2019,
+    officialRecipient: "Huddle House",
+    officialAddress: "9421 S Stony Island Ave",
+    officialApprovalYear: 2021,
+    amountAwarded: 1100000,
+  },
+];
+
 /** Build from official source facts only. These decide whether a partner row is
- * already represented; neither record needs point geometry to establish that the
- * same normalized project name, exact amount, and approval year were published
- * twice. Completion year is deliberately excluded because it is not an award
- * year. */
+ * already represented when normalized project name and address, exact amount,
+ * and approval year agree. Completion year is deliberately excluded because it
+ * is not an award year. */
 export function buildOfficialAwardDuplicateFacts(
   rows: readonly SocrataRow[],
   minYear: number,
@@ -479,7 +570,12 @@ export function buildOfficialAwardDuplicateFacts(
     const amountAwarded = parseAmount(row.incentive_amount);
     const recipient = nullableStr(row.project_name) || nullableStr(row.applicant_name);
     if (recipient && amountAwarded != null) {
-      facts.push({ recipient, amountAwarded, approvalYear });
+      facts.push({
+        recipient,
+        amountAwarded,
+        approvalYear,
+        address: socrataAddress(row as Record<string, unknown>),
+      });
     }
   }
   return facts;
@@ -1981,14 +2077,16 @@ export type PartnerNofReconciliationOutcome =
       awardYear: number;
       officialRecipient: string;
       officialApprovalYear: number;
+      matchBasis: "exact_name_amount_approval_year_address" | "confirmed_source_pair";
     };
 
 /**
  * Map the partner-maintained South Shore NOF list without using geometry as a
- * dedupe prerequisite. A row is a confirmed duplicate only when normalized
- * project name, exact amount, and the partner-published award year all match the
- * approval year on an official NOF/SBIF source row. Every other row is accepted:
- * a geocode hit
+ * dedupe prerequisite. A row is a confirmed duplicate when normalized project
+ * name and address, exact amount, and partner-published award year match the
+ * approval year on an official NOF/SBIF source row, or when an explicit
+ * source-pair rule above is present and both current inputs still match that
+ * rule. Every other row is accepted: a geocode hit
  * becomes a point; a miss remains citywide with its published address, amount,
  * and partner provenance intact.
  */
@@ -2011,17 +2109,42 @@ export function mapPartnerNofAwards(
     const publishedYear = Number(row["Year Awarded"]);
     const year = Number.isInteger(publishedYear) ? publishedYear : null;
     const normalizedRecipient = normalizeRecipientForDedupe(recipient);
-    const officialMatch =
+    const normalizedAddress = normalizeAddressForDedupe(nullableStr(row.Address));
+    const exactOfficialMatch =
       amountAwarded != null &&
       year != null &&
       normalizedRecipient !== "" &&
+      normalizedAddress !== "" &&
       officialAwards.find(
         (official) =>
           official.amountAwarded === amountAwarded &&
           official.approvalYear === year &&
-          normalizeRecipientForDedupe(official.recipient) === normalizedRecipient,
+          normalizeRecipientForDedupe(official.recipient) === normalizedRecipient &&
+          normalizeAddressForDedupe(official.address) === normalizedAddress,
       );
-    if (officialMatch) {
+    const aliasRule =
+      amountAwarded != null && year != null
+        ? PARTNER_NOF_CONFIRMED_ALIAS_RULES.find(
+            (rule) =>
+              normalizeRecipientForDedupe(rule.partnerRecipient) === normalizedRecipient &&
+              normalizeAddressForDedupe(rule.partnerAddress) === normalizedAddress &&
+              rule.partnerAwardYear === year &&
+              rule.amountAwarded === amountAwarded,
+          )
+        : undefined;
+    const aliasOfficialMatch = aliasRule
+      ? officialAwards.find(
+          (official) =>
+            official.amountAwarded === aliasRule.amountAwarded &&
+            official.approvalYear === aliasRule.officialApprovalYear &&
+            normalizeRecipientForDedupe(official.recipient) ===
+              normalizeRecipientForDedupe(aliasRule.officialRecipient) &&
+            normalizeAddressForDedupe(official.address) ===
+              normalizeAddressForDedupe(aliasRule.officialAddress),
+        )
+      : undefined;
+    const officialMatch = exactOfficialMatch || aliasOfficialMatch;
+    if (officialMatch && amountAwarded != null && year != null) {
       confirmedDuplicateRows += 1;
       reconciliation.push({
         outcome: "confirmed-duplicate",
@@ -2031,6 +2154,9 @@ export function mapPartnerNofAwards(
         awardYear: year,
         officialRecipient: officialMatch.recipient,
         officialApprovalYear: officialMatch.approvalYear,
+        matchBasis: exactOfficialMatch
+          ? "exact_name_amount_approval_year_address"
+          : "confirmed_source_pair",
       });
       continue;
     }
@@ -2737,7 +2863,26 @@ async function main() {
     sources: PROVENANCE_LABELS,
   });
 
-  writeFileSync(OUT_PATH, JSON.stringify(out, null, 2) + "\n");
+  // Build and validate BOTH sibling artifacts before replacing either one. A
+  // failed context build must never leave a fresh record export beside stale
+  // context. Temporary files also keep partially-written JSON off the read path.
+  const context = buildCapitalContext(generatedAt);
+  assertNoBannedFigureKeys(context);
+  const outPayload = JSON.stringify(out, null, 2) + "\n";
+  const contextPayload = JSON.stringify(context, null, 2) + "\n";
+  const outTempPath = `${OUT_PATH}.${process.pid}.tmp`;
+  const contextTempPath = `${CONTEXT_OUT_PATH}.${process.pid}.tmp`;
+
+  try {
+    writeFileSync(outTempPath, outPayload);
+    writeFileSync(contextTempPath, contextPayload);
+    renameSync(outTempPath, OUT_PATH);
+    renameSync(contextTempPath, CONTEXT_OUT_PATH);
+  } finally {
+    if (existsSync(outTempPath)) unlinkSync(outTempPath);
+    if (existsSync(contextTempPath)) unlinkSync(contextTempPath);
+  }
+
   console.log(`\nWrote ${OUT_PATH}`);
   console.log(
     `  totalRecords=${out.meta.totalRecords} point=${out.meta.pointCount} citywide=${out.meta.citywideCount} ` +
@@ -2754,11 +2899,7 @@ async function main() {
   );
   console.log(`  counts=${JSON.stringify(out.meta.counts)}`);
 
-  // 7) Capital CONTEXT file (coordinate-less signals) — per-TIF-district series,
-  //    per-CA CRA lending, CDFI series, and the SFY2027 state-award snapshot.
-  const context = buildCapitalContext(generatedAt);
-  assertNoBannedFigureKeys(context); // same banned-figure rail over the context file
-  writeFileSync(CONTEXT_OUT_PATH, JSON.stringify(context, null, 2) + "\n");
+  // Capital CONTEXT is assembled and replaced in the same two-phase write above.
   console.log(`Wrote ${CONTEXT_OUT_PATH}`);
 }
 

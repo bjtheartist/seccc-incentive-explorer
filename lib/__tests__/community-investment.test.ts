@@ -1199,6 +1199,13 @@ const CONTEXT_PATH = path.join(process.cwd(), "data/private/capital-context.json
 const CONTEXT_EXISTS = existsSync(CONTEXT_PATH);
 
 describe.skipIf(!CONTEXT_EXISTS)("committed capital-context.json", () => {
+  it("comes from the same export run as the committed investment records", () => {
+    const investment = JSON.parse(readFileSync(EXPORT_PATH, "utf8"));
+    const context = JSON.parse(readFileSync(CONTEXT_PATH, "utf8"));
+
+    expect(context.generatedAt).toBe(investment.generatedAt);
+  });
+
   it("IRON RULE: the raw context text carries no banned derived-figure key", () => {
     const parsed = JSON.parse(readFileSync(CONTEXT_PATH, "utf8"));
     expect(findBannedFigureKeys(parsed)).toEqual([]);

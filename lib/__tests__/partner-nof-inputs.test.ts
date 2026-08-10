@@ -58,6 +58,7 @@ describe("partner NOF input mapping", () => {
         recipient: "Completion Year Trap",
         amountAwarded: 50000,
         approvalYear: 2018,
+        address: null,
       },
     ]);
 
@@ -75,6 +76,79 @@ describe("partner NOF input mapping", () => {
       officialAwards,
     );
     expect(result.confirmedDuplicateRows).toBe(0);
+    expect(result.reconciliation[0]?.outcome).toBe("accepted");
+  });
+
+  it("does not apply a curated alias rule when the official source fact is absent", () => {
+    const result = mapPartnerNofAwards(
+      [
+        {
+          Project: "Mikkey's Retro Grill",
+          Address: "8126 S. Stony Island Ave.",
+          "Award Amount": "139058.77",
+          "Year Awarded": "2017",
+        },
+      ],
+      new Map(),
+      (address) => address,
+      [],
+    );
+
+    expect(result.confirmedDuplicateRows).toBe(0);
+    expect(result.records).toHaveLength(1);
+    expect(result.reconciliation[0]?.outcome).toBe("accepted");
+  });
+
+  it("does not apply a curated alias rule to a different partner address", () => {
+    const result = mapPartnerNofAwards(
+      [
+        {
+          Project: "Mikkey's Retro Grill",
+          Address: "9999 S. Test Ave.",
+          "Award Amount": "139058.77",
+          "Year Awarded": "2017",
+        },
+      ],
+      new Map(),
+      (address) => address,
+      [
+        {
+          recipient: "Legacy, etc",
+          amountAwarded: 139058.77,
+          approvalYear: 2017,
+          address: "8126 S Stony Island Av",
+        },
+      ],
+    );
+
+    expect(result.confirmedDuplicateRows).toBe(0);
+    expect(result.records).toHaveLength(1);
+  });
+
+  it("keeps a same-name, same-year, same-amount award at a different address", () => {
+    const result = mapPartnerNofAwards(
+      [
+        {
+          Project: "Two Location Operator",
+          Address: "200 E Second St",
+          "Award Amount": "250000.00",
+          "Year Awarded": "2020",
+        },
+      ],
+      new Map(),
+      (address) => address,
+      [
+        {
+          recipient: "Two Location Operator",
+          amountAwarded: 250000,
+          approvalYear: 2020,
+          address: "100 E First St",
+        },
+      ],
+    );
+
+    expect(result.confirmedDuplicateRows).toBe(0);
+    expect(result.records).toHaveLength(1);
     expect(result.reconciliation[0]?.outcome).toBe("accepted");
   });
 
@@ -104,6 +178,7 @@ describe("partner NOF input mapping", () => {
         recipient: "South Shore Brew",
         amountAwarded: 98420.24,
         approvalYear: 2017,
+        address: "1745 E 71st St",
       },
       {
         recipient: "Rock the Islands Café",
@@ -128,6 +203,7 @@ describe("partner NOF input mapping", () => {
         awardYear: 2017,
         officialRecipient: "South Shore Brew",
         officialApprovalYear: 2017,
+        matchBasis: "confirmed_source_pair",
       },
       {
         outcome: "accepted",
@@ -184,7 +260,7 @@ describe("partner NOF input mapping", () => {
     );
   });
 
-  it("reconciles all 38 current inputs to 36 accepted and two exact confirmed duplicates", () => {
+  it("reconciles all 38 inputs to 30 accepted and eight source-confirmed duplicates", () => {
     const partnerRows = readPartnerRows();
     const result = mapPartnerNofAwards(
       partnerRows,
@@ -201,7 +277,7 @@ describe("partner NOF input mapping", () => {
 
     expect(partnerRows).toHaveLength(38);
     expect(result.reconciliation).toHaveLength(partnerRows.length);
-    expect(accepted).toHaveLength(36);
+    expect(accepted).toHaveLength(30);
     expect(result.records).toHaveLength(accepted.length);
     expect(result.records.map((record) => record.recipient)).toEqual(
       accepted.map((outcome) => outcome.recipient),
@@ -215,6 +291,7 @@ describe("partner NOF input mapping", () => {
         awardYear: 2017,
         officialRecipient: "South Shore Brew",
         officialApprovalYear: 2017,
+        matchBasis: "confirmed_source_pair",
       },
       {
         outcome: "confirmed-duplicate",
@@ -224,6 +301,67 @@ describe("partner NOF input mapping", () => {
         awardYear: 2019,
         officialRecipient: "Urban Core",
         officialApprovalYear: 2019,
+        matchBasis: "exact_name_amount_approval_year_address",
+      },
+      {
+        outcome: "confirmed-duplicate",
+        inputIndex: 17,
+        recipient: "Original Soul Vegetarian",
+        amountAwarded: 250000,
+        awardYear: 2017,
+        officialRecipient: "Original Soul Vegetarian (OSV, LLP)",
+        officialApprovalYear: 2017,
+        matchBasis: "confirmed_source_pair",
+      },
+      {
+        outcome: "confirmed-duplicate",
+        inputIndex: 26,
+        recipient: "The Quarry Event Center",
+        amountAwarded: 32850,
+        awardYear: 2017,
+        officialRecipient: "The Quarry (Real Community Investment Group)",
+        officialApprovalYear: 2017,
+        matchBasis: "confirmed_source_pair",
+      },
+      {
+        outcome: "confirmed-duplicate",
+        inputIndex: 30,
+        recipient: "Mikkey's Retro Grill",
+        amountAwarded: 139058.77,
+        awardYear: 2017,
+        officialRecipient: "Legacy, etc",
+        officialApprovalYear: 2017,
+        matchBasis: "confirmed_source_pair",
+      },
+      {
+        outcome: "confirmed-duplicate",
+        inputIndex: 33,
+        recipient: "Essential Elements - Chicago",
+        amountAwarded: 20868.38,
+        awardYear: 2017,
+        officialRecipient: "Essential Elements",
+        officialApprovalYear: 2018,
+        matchBasis: "confirmed_source_pair",
+      },
+      {
+        outcome: "confirmed-duplicate",
+        inputIndex: 35,
+        recipient: "Nipsey's Restaurant & Bar",
+        amountAwarded: 250000,
+        awardYear: 2019,
+        officialRecipient: "Nipsey's Restaurant and Bar",
+        officialApprovalYear: 2019,
+        matchBasis: "confirmed_source_pair",
+      },
+      {
+        outcome: "confirmed-duplicate",
+        inputIndex: 36,
+        recipient: "Huddle House Diner",
+        amountAwarded: 1100000,
+        awardYear: 2019,
+        officialRecipient: "Huddle House",
+        officialApprovalYear: 2021,
+        matchBasis: "confirmed_source_pair",
       },
     ]);
   });
@@ -278,16 +416,16 @@ describe("partner NOF input mapping", () => {
       (sum, record) => sum + (record.amountAwarded ?? 0),
       0,
     );
-    expect(output.meta.totalRecords).toBe(43971);
+    expect(output.meta.totalRecords).toBe(43965);
     expect(output.meta.totalRecords).toBe(output.records.length);
-    expect(output.meta.pointCount).toBe(30560);
+    expect(output.meta.pointCount).toBe(30554);
     expect(output.meta.citywideCount).toBe(7063);
-    expect(output.meta.totalDollarsAwarded).toBeCloseTo(3163877829.81, 2);
+    expect(output.meta.totalDollarsAwarded).toBeCloseTo(3162085052.66, 2);
     expect(output.meta.totalDollarsAwarded).toBeCloseTo(recomputedAwarded, 2);
-    expect(output.meta.counts["nof-small"]).toBe(162);
+    expect(output.meta.counts["nof-small"]).toBe(156);
     expect(output.meta.sources).toHaveLength(24);
     expect(output.meta.droppedNoGeocode).toBe(0);
-    expect(output.meta.dedupedRows).toBe(7);
+    expect(output.meta.dedupedRows).toBe(13);
     expect(output.meta.sources).toContain(
       "City of Chicago Community Development Grant — award rounds 2022–2026 (curated published award announcements; per-row source links retained)",
     );
