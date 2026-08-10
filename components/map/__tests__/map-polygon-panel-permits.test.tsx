@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { PermitAreaResult } from "@/lib/permit-area";
@@ -210,7 +212,7 @@ describe("MapPolygonPanel permit analysis", () => {
     expect(partialHtml).toContain("Permit filings in this area");
   });
 
-  it("distinguishes a ready zero result from a lookup failure", () => {
+  it("reports a ready zero as a zero, never in the failure's words", () => {
     const html = render({
       ...PERMITS,
       totalFilings: 0,
@@ -226,6 +228,36 @@ describe("MapPolygonPanel permit analysis", () => {
     expect(html).toContain("No geocoded permit filings fall inside this shape");
     expect(html).not.toContain("Save Report");
     expect(html).not.toContain("Export Area Data (CSV)");
+    // A source-backed zero must not borrow the lookup-failure copy or its retry.
+    expect(html).not.toContain("not evidence that the area has no permits");
+    expect(html).not.toContain("Retry permit lookup");
+  });
+
+  /**
+   * The failure branch is only reachable from state the panel's fetch effect
+   * sets, and this suite renders through renderToStaticMarkup, which never runs
+   * effects (the project has no DOM test environment). Pin the branch at the
+   * source instead — the same approach map-search.test.tsx takes for its
+   * pointer layer — so deleting the rail-7 disclosure or its retry control
+   * fails CI rather than silently turning a 503 into a blank permit heading.
+   */
+  it("keeps the permit lookup-failure disclosure and its retry control in the panel", () => {
+    const source = readFileSync(
+      join(process.cwd(), "components/map/MapPolygonPanel.tsx"),
+      "utf8",
+    );
+
+    expect(source).toContain("{permitLoadFailed && !permitAnalysis && (");
+    expect(source).toContain("not evidence that the area has no permits");
+    expect(source).toContain("Retry permit lookup");
+
+    const failureStart = source.indexOf("{permitLoadFailed && !permitAnalysis && (");
+    const failureBranch = source.slice(
+      failureStart,
+      source.indexOf("{permitAnalysis && (", failureStart),
+    );
+    expect(failureBranch.length).toBeGreaterThan(0);
+    expect(failureBranch).not.toContain("No geocoded permit filings");
   });
 
   it("exports complete permit types and recent-record coverage as separate tables", () => {
@@ -251,6 +283,38 @@ describe("MapPolygonPanel permit analysis", () => {
     expect(recentRecordsTable).not.toContain('"Coverage note"');
     expect(csv).not.toMatch(/reported.?cost/i);
     expect(csv).not.toContain("999999999");
+  });
+
+  it("exports a failed permit lookup as unavailable instead of saying nothing", () => {
+    const csv = buildDrawnAreaCsv({
+      areaName: "Permit failure area",
+      vacancyFeatures: [],
+      vacancyCoverage: COMPLETE_VACANCY_COVERAGE,
+      permitArea: null,
+      permitLoadFailed: true,
+      investment: null,
+    });
+    expect(csv).toContain('"Section","Permit coverage"');
+    expect(csv).toContain('"Permit failure area","Coverage status","Unavailable"');
+    expect(csv).toContain("lookup failure, not evidence that the area has no permits");
+    // No aggregate tables, because there are no source figures to aggregate.
+    expect(csv).not.toContain('"Section","Permit filing summary"');
+    expect(csv).not.toContain('"Section","Permit type breakdown"');
+  });
+
+  it("never leaves an export silent about permits when no analysis is attached", () => {
+    const csv = buildDrawnAreaCsv({
+      areaName: "No permit analysis area",
+      vacancyFeatures: [],
+      permitArea: null,
+      investment: null,
+    });
+    expect(csv).toContain('"Section","Permit coverage"');
+    expect(csv).toContain('"No permit analysis area","Coverage status","Not attached"');
+    expect(csv).toContain("not evidence that the area has no permit filings");
+    // "Not attached" and "Unavailable" are different absences; neither is zero.
+    expect(csv).not.toContain("lookup failure");
+    expect(csv).not.toContain('"Section","Permit filing summary"');
   });
 
   it("exports vacancy lookup failure as unavailable without an empty vacancy table", () => {

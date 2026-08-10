@@ -102,8 +102,23 @@ export default async function InvestmentAreaPage({
   const analysis = loadInvestmentAnalysis(name);
   const developments = loadMajorDevelopments({ communityArea: name });
   const flowRows = loadFlowRows(name);
-  const meta = loadCommunityInvestment()?.meta;
+  const investment = loadCommunityInvestment();
+  const meta = investment?.meta;
   const sources = meta?.sources ?? [];
+
+  // The NMTC centroid caveat below is a POSITIVE claim about this community's own
+  // counts ("counted here", "stamped from a 2020 tract centroid"), so it may only
+  // appear where an NMTC row actually lands here. 28 of the 77 communities that
+  // carry records have none; on those pages the sentence would describe records
+  // that do not exist. Mirrors analyzeCommunityArea's `mine` filter (this
+  // community's base-investment records) so it tracks the same purpose counts.
+  const hasStampedNmtcRecord = (investment?.records ?? []).some(
+    (record) =>
+      record.communityArea === name &&
+      record.recovery == null &&
+      record.source === "nmtc" &&
+      record.funderType === "government",
+  );
 
   const rangeLabel = analysis?.span && analysis.span.max > 2020 ? `2020–${analysis.span.max}` : "2020";
 
@@ -197,11 +212,15 @@ export default async function InvestmentAreaPage({
               <SourceBars bySource={analysis.bySource} />
             </Section>
 
-            {/* 4b — Purpose over every sited government record, expressed as
-                counts so unlike capital classes are never blended into dollars. */}
+            {/* 4b — Purpose over every government record STAMPED to this community,
+                expressed as counts so unlike capital classes are never blended into
+                dollars. Not every one of them is sited: NMTC rows carry citywide
+                geometry and are stamped from a tract centroid, so the copy below says
+                "stamped to" rather than "sited" and names the exception on the pages
+                that actually carry an NMTC row. */}
             <Section
               title="Government funding by purpose"
-              description="Sited government records in this community across the published source windows. These are record counts, not a combined dollar total."
+              description="Government records stamped to this community across the published source windows. These are record counts, not a combined dollar total."
             >
               <div className="grid border-y border-[#0C1B33]/10 sm:grid-cols-3 sm:divide-x sm:divide-[#0C1B33]/10">
                 {analysis.governmentFundingPurposes.map((entry, index) => (
@@ -221,7 +240,16 @@ export default async function InvestmentAreaPage({
                   </div>
                 ))}
               </div>
-              <p className="mt-3 text-[11px] leading-relaxed text-[#0C1B33]/45">
+              {hasStampedNmtcRecord ? (
+                <p className="mt-3 text-[11px] leading-relaxed text-[#0C1B33]/45">
+                  New Markets Tax Credit rows publish no street address. They are counted here, but they are
+                  stamped to this community from their 2020 census-tract centroid rather than a published
+                  location, and they are never plotted on the map.
+                </p>
+              ) : null}
+              <p
+                className={`${hasStampedNmtcRecord ? "mt-2" : "mt-3"} text-[11px] leading-relaxed text-[#0C1B33]/45`}
+              >
                 Illinois Arts Council awards publish only city and region, so arts funding stays in the{" "}
                 <Link href="/investment#illinois-arts-awards" className="text-[#2563EB] hover:underline">
                   city-level awards table

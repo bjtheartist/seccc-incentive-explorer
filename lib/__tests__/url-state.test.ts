@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { INITIAL_WIZARD_STATE } from "../report-wizard-config";
+import type { WizardState } from "../report-wizard-config";
 import { decodeWizardState, encodeWizardState } from "../url-state";
 
 describe("wizard URL state", () => {
@@ -25,6 +26,25 @@ describe("wizard URL state", () => {
     expect(decoded?.customGoal).toBe("Open a shared commercial kitchen");
     expect(decoded?.budgetRange).toBe("");
     expect(decoded?.timeline).toBe("");
+  });
+
+  it("shares a report saved before customGoal existed", () => {
+    // Reproduces app/workspace/reports/[id]: persisted JSON cast straight to
+    // WizardState, so `customGoal` is missing rather than "". Spreading
+    // INITIAL_WIZARD_STATE (as every other case here does) would hide this.
+    const { customGoal: _omitted, ...legacyState } = {
+      ...INITIAL_WIZARD_STATE,
+      reportType: "site-incentives" as const,
+      address: "4200 S California Ave",
+      projectGoals: ["hiring"],
+      projectType: "hiring",
+    };
+
+    const query = encodeWizardState(legacyState as WizardState);
+
+    expect(query).toContain("pt=hiring");
+    expect(query).not.toContain("cg=");
+    expect(decodeWizardState(new URLSearchParams(query))?.projectType).toBe("hiring");
   });
 
   it("keeps legacy single-goal links working", () => {

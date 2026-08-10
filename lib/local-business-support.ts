@@ -59,6 +59,17 @@ export interface LocalBusinessSupportRequest {
 export interface LocalBusinessSupportContext {
   communityAreaNumber: string;
   communityArea: string;
+  /**
+   * Size of the matched pool BEFORE the display cap, when the producer knows it.
+   *
+   * /api/local-business-support returns at most 6 organizations. A consumer
+   * holding only that capped array cannot tell "this area maps exactly six"
+   * from "this area maps ten and four were dropped" — the two arrive
+   * structurally identical. Optional because saved reports and fixtures
+   * predate the field; a consumer that does not receive it must state the
+   * total as unknown rather than infer it from the list length.
+   */
+  mappedTotal?: number;
   region?: string;
   confidence?: string;
   biggestGap?: string;

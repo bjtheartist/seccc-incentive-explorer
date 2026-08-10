@@ -4,6 +4,7 @@ import { CheckCircle2, XCircle, ChevronDown, ChevronUp, ExternalLink, Square, Ch
 import { useState } from "react";
 import type { Program } from "@/lib/types";
 import { ZONE_COLORS } from "@/lib/constants";
+import { isDocumentRequirementGuidance } from "@/lib/document-preparation-cost";
 
 interface ZoneResultCardProps {
   zoneKey: string;
@@ -26,7 +27,18 @@ export function ZoneResultCard({ zoneKey, inZone, program }: ZoneResultCardProps
     });
   };
 
-  const totalChecklist = (program?.requiredDocs.length || 0) + 1; // +1 for whoQualifies
+  // requiredDocs is not purely a document list: some catalog records publish the
+  // opposite ("No application needed — benefits are automatic by location").
+  // Rendered as tickable items under "Required Documents" and counted in the
+  // completion meter, those become requirements the record explicitly denies —
+  // the checklist could only reach 100% by confirming a document the program
+  // says it does not want. Split with the same predicate the report engine and
+  // PDF use; the strings stay on screen as notes, never dropped.
+  const requiredDocuments =
+    program?.requiredDocs.filter((doc) => !isDocumentRequirementGuidance(doc)) ?? [];
+  const documentGuidance = program?.requiredDocs.filter(isDocumentRequirementGuidance) ?? [];
+
+  const totalChecklist = requiredDocuments.length + 1; // +1 for whoQualifies
   const completedChecklist = checkedDocs.size + (checkedCriteria ? 1 : 0);
   const allComplete = completedChecklist === totalChecklist && totalChecklist > 0;
 
@@ -123,28 +135,41 @@ export function ZoneResultCard({ zoneKey, inZone, program }: ZoneResultCardProps
                 </span>
               </button>
 
+              {/* Published guidance from requiredDocs — shown, never tickable */}
+              {documentGuidance.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-white/5 space-y-1">
+                  {documentGuidance.map((note, i) => (
+                    <p key={i} className="text-sm text-white/40 leading-relaxed">
+                      {note}
+                    </p>
+                  ))}
+                </div>
+              )}
+
               {/* Required Docs — each checkable */}
-              <div className="mt-2 pt-2 border-t border-white/5 space-y-0.5">
-                <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-white/20 block mb-1">
-                  Required Documents
-                </span>
-                {program.requiredDocs.map((doc, i) => (
-                  <button
-                    key={i}
-                    onClick={(e) => { e.stopPropagation(); toggleDoc(i); }}
-                    className="w-full flex gap-3 text-left py-1.5 group"
-                  >
-                    {checkedDocs.has(i) ? (
-                      <CheckSquare className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
-                    ) : (
-                      <Square className="w-4 h-4 text-white/20 shrink-0 mt-0.5 group-hover:text-white/40" />
-                    )}
-                    <span className={`text-sm ${checkedDocs.has(i) ? "text-white/60 line-through decoration-white/20" : "text-white/45"}`}>
-                      {doc}
-                    </span>
-                  </button>
-                ))}
-              </div>
+              {requiredDocuments.length > 0 && (
+                <div className="mt-2 pt-2 border-t border-white/5 space-y-0.5">
+                  <span className="font-mono-bureau text-[8px] tracking-[0.2em] uppercase text-white/20 block mb-1">
+                    Required Documents
+                  </span>
+                  {requiredDocuments.map((doc, i) => (
+                    <button
+                      key={i}
+                      onClick={(e) => { e.stopPropagation(); toggleDoc(i); }}
+                      className="w-full flex gap-3 text-left py-1.5 group"
+                    >
+                      {checkedDocs.has(i) ? (
+                        <CheckSquare className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
+                      ) : (
+                        <Square className="w-4 h-4 text-white/20 shrink-0 mt-0.5 group-hover:text-white/40" />
+                      )}
+                      <span className={`text-sm ${checkedDocs.has(i) ? "text-white/60 line-through decoration-white/20" : "text-white/45"}`}>
+                        {doc}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Progress bar */}
               <div className="mt-3 pt-3 border-t border-white/5">

@@ -186,7 +186,10 @@ export const ZONING_CATEGORIES = [
   { key: "commercial",    label: "Business/Commercial",  prefixes: ["C", "B"],         color: "#4A90D9" },
   { key: "manufacturing", label: "Manufacturing",        prefixes: ["M"],              color: "#BD10E0" },
   { key: "pd",            label: "Planned Development",  prefixes: ["PD", "PMD"],      color: "#F5A623" },
-  { key: "downtown",      label: "Downtown",             prefixes: ["DX", "DC", "DS"], color: "#D0021B" },
+  // "DR" (Downtown Residential) belongs with the other Title 17-4 downtown
+  // districts. It was missing, so every DR-* parcel fell through to the "Other"
+  // colour and appeared under no heading in the legend's code reference.
+  { key: "downtown",      label: "Downtown",             prefixes: ["DX", "DC", "DS", "DR"], color: "#D0021B" },
   { key: "parks",         label: "Parks & Open Space",   prefixes: ["POS"],            color: "#417505" },
   { key: "transport",     label: "Transportation",       prefixes: ["T"],              color: "#9B9B9B" },
 ] as const;
@@ -247,6 +250,13 @@ export const ZONING_CODE_DESCRIPTIONS: Record<string, string> = {
   "DC-16": "Downtown Core (highest density)",
   "DS-3": "Downtown Service (low density)",
   "DS-5": "Downtown Service (medium density)",
+  // DR-3/5/7/10 are the Downtown Residential classes carried in
+  // data/curated/zoning/zoning-map-snapshot.json; without them the legend's
+  // "What do the codes mean?" reference could not explain a DR parcel at all.
+  "DR-3": "Downtown Residential (low density)",
+  "DR-5": "Downtown Residential (medium density)",
+  "DR-7": "Downtown Residential (high density)",
+  "DR-10": "Downtown Residential (very high density)",
   // Parks & Open Space
   "POS-1": "Parks & Open Space (regional/community park)",
   "POS-2": "Parks & Open Space (neighborhood park/playground)",
@@ -254,18 +264,13 @@ export const ZONING_CODE_DESCRIPTIONS: Record<string, string> = {
   "T": "Transportation (rail, expressway, airports)",
 };
 
-/** Resolve a zone_class like "RS-3" or "PD 70" to a human-readable description. */
-export function describeZoneClass(zoneClass: string): string {
-  if (ZONING_CODE_DESCRIPTIONS[zoneClass]) return ZONING_CODE_DESCRIPTIONS[zoneClass];
-  if (zoneClass.startsWith("PMD")) return `Planned Manufacturing District #${zoneClass.replace(/^PMD\s*/, "")}`;
-  if (zoneClass.startsWith("PD")) return `Planned Development #${zoneClass.replace(/^PD\s*/, "")}`;
-  for (const cat of ZONING_CATEGORIES) {
-    for (const prefix of cat.prefixes) {
-      if (zoneClass.startsWith(prefix)) return cat.label;
-    }
-  }
-  return "Zoning District";
-}
+// describeZoneClass() was removed here. Its last caller (the report zoning-map
+// hover tooltip) now prints the City's published zone_class verbatim, and the
+// helper's final fallthrough returned the contentless label "Zoning District"
+// for any code it did not know — a confident-sounding answer to a lookup that
+// had in fact failed. Leaving it exported invited the next caller to reprint
+// that. Surfaces needing a gloss should read ZONING_CODE_DESCRIPTIONS directly
+// and render nothing when the code is absent.
 
 /* ── Vacant Property Layer Constants ─────── */
 

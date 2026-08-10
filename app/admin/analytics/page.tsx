@@ -15,6 +15,7 @@ import {
   PRACTITIONER_VALIDATION_CASES,
   practitionerValidationStartPath,
 } from "@/lib/practitioner-validation";
+import { PRACTITIONER_VALIDATION_PREVIEW_PARAM } from "@/lib/analytics-events";
 
 export const dynamic = "force-dynamic";
 
@@ -199,6 +200,22 @@ function DeviceBreakdown({
   );
 }
 
+/**
+ * Marks a facilitated case link as operator traffic. Without the flag, checking
+ * that a case link works fires start_page_viewed under that case's campaign and
+ * stores the campaign for the rest of the tab, so the operator's own click, and
+ * anything else they did while testing, landed in the counts shown here.
+ *
+ * This is offered BESIDE the plain case link, never in place of it: the same URL
+ * is also how a facilitator launches a real session, and flagging every link made
+ * a genuine session indistinguishable from a link check and silently dropped it
+ * from this table.
+ */
+function operatorPreviewPath(path: string) {
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}${PRACTITIONER_VALIDATION_PREVIEW_PARAM}=1`;
+}
+
 function ValidationPilotPanel({
   data,
 }: {
@@ -217,7 +234,9 @@ function ValidationPilotPanel({
         </div>
         <p className="max-w-2xl text-[12px] leading-relaxed text-[#0C1B33]/45">
           Campaign-tagged product events only. Requests are recorded requests awaiting review and
-          routing, not acknowledgments, completed connections, approvals, or outcomes.
+          routing, not acknowledgments, completed connections, approvals, or outcomes. &ldquo;Open
+          case&rdquo; starts a real facilitated session and is counted here; use &ldquo;Preview&rdquo;
+          to check a link without it being counted.
         </p>
       </div>
 
@@ -265,7 +284,7 @@ function ValidationPilotPanel({
               <th className="py-2 pr-4">Support viewed</th>
               <th className="py-2 pr-4">Support actions</th>
               <th className="py-2 pr-4">Requests recorded</th>
-              <th className="py-2">Session link</th>
+              <th className="py-2">Case links</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#0C1B33]/5">
@@ -284,12 +303,22 @@ function ValidationPilotPanel({
                   <td className="py-3 pr-4 font-mono-bureau text-[#0C1B33]/45">{row.requestsRecorded}</td>
                   <td className="py-3">
                     {validationCase ? (
-                      <Link
-                        href={practitionerValidationStartPath(validationCase)}
-                        className="font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#2563EB] hover:underline"
-                      >
-                        Open case
-                      </Link>
+                      <span className="flex items-center gap-3 whitespace-nowrap">
+                        <Link
+                          href={practitionerValidationStartPath(validationCase)}
+                          className="font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#2563EB] hover:underline"
+                        >
+                          Open case
+                        </Link>
+                        <Link
+                          href={operatorPreviewPath(
+                            practitionerValidationStartPath(validationCase),
+                          )}
+                          className="font-mono-bureau text-[9px] uppercase tracking-[0.12em] text-[#0C1B33]/40 hover:underline"
+                        >
+                          Preview
+                        </Link>
+                      </span>
                     ) : null}
                   </td>
                 </tr>

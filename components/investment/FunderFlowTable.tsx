@@ -5,6 +5,7 @@ import type { FlowRow } from "@/lib/investment-analysis";
 import { FUNDER_TYPE_COLORS } from "@/lib/community-investment-layer";
 import type { FunderType } from "@/lib/community-investment";
 import {
+  GOVERNMENT_FUNDING_PURPOSES,
   GOVERNMENT_FUNDING_PURPOSE_LABELS,
   type GovernmentFundingPurpose,
 } from "@/lib/government-funding-purpose";
@@ -29,6 +30,20 @@ const RENDER_CAP = 400;
 export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: number }) {
   const [query, setQuery] = useState("");
   const [purpose, setPurpose] = useState<"all" | GovernmentFundingPurpose>("all");
+
+  /** The purposes that actually occur in these rows, in the canonical order.
+   * Derived, never hardcoded: a purpose only reaches this table if some record
+   * carries it AND a positive awarded amount, and buildFlowRows drops null-amount
+   * records. Today every `programmatic` and `unclassified` government record is a
+   * null-amount capital class (NMTC tax credits, CDBG/HOME federal allocations,
+   * state relief programs), so a fixed <option> for those offered a filter that
+   * could never match — an empty table reading as a contradiction of the non-zero
+   * purpose counts one section up. Deriving also means a future export that does
+   * publish such an award gets its filter back with no edit here. */
+  const availablePurposes = useMemo(() => {
+    const present = new Set(rows.map((r) => r.governmentFundingPurpose));
+    return GOVERNMENT_FUNDING_PURPOSES.filter((p) => present.has(p));
+  }, [rows]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -68,23 +83,27 @@ export function FunderFlowTable({ rows, total }: { rows: FlowRow[]; total: numbe
           placeholder="Search funder, program, or recipient…"
           className="w-full max-w-xs rounded-[3px] border border-[#0C1B33]/15 bg-white px-3 py-1.5 text-[13px] text-[#0C1B33] placeholder:text-[#0C1B33]/35 focus:border-[#2563EB] focus:outline-none"
         />
-        <label className="w-full sm:w-52">
-          <span className="block font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
-            Government funding purpose
-          </span>
-          <select
-            value={purpose}
-            onChange={(event) =>
-              setPurpose(event.target.value as "all" | GovernmentFundingPurpose)
-            }
-            className="mt-1 h-8 w-full rounded-[3px] border border-[#0C1B33]/15 bg-white px-2 text-[12px] text-[#0C1B33]/70 outline-none focus:border-[#2563EB]"
-          >
-            <option value="all">All funding purposes</option>
-            <option value="capital_project">Capital projects</option>
-            <option value="programmatic">Programmatic funding</option>
-            <option value="unclassified">Not classified from source</option>
-          </select>
-        </label>
+        {availablePurposes.length > 0 ? (
+          <label className="w-full sm:w-52">
+            <span className="block font-mono-bureau text-[9px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+              Government funding purpose
+            </span>
+            <select
+              value={purpose}
+              onChange={(event) =>
+                setPurpose(event.target.value as "all" | GovernmentFundingPurpose)
+              }
+              className="mt-1 h-8 w-full rounded-[3px] border border-[#0C1B33]/15 bg-white px-2 text-[12px] text-[#0C1B33]/70 outline-none focus:border-[#2563EB]"
+            >
+              <option value="all">All funding purposes</option>
+              {availablePurposes.map((p) => (
+                <option key={p} value={p}>
+                  {GOVERNMENT_FUNDING_PURPOSE_LABELS[p]}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
           {filtered.length} of {rows.length} flow{rows.length === 1 ? "" : "s"}
         </span>

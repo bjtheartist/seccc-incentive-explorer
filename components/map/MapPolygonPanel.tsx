@@ -26,6 +26,7 @@ import {
   polygonInvestmentYearSpanLabel,
   selectInvestmentPointsInArea,
   aggregateInvestmentPoints,
+  PERMIT_AREA_LOOKUP_UNAVAILABLE_NOTE,
   POLYGON_INVESTMENT_EMPTY_NOTE,
   POLYGON_INVESTMENT_HEADING,
   POLYGON_INVESTMENT_NO_TOTAL_NOTE,
@@ -411,6 +412,11 @@ export default function MapPolygonPanel({
     const permitCoverageLabel = permitAnalysis
       ? formatPermitAreaCoverageLabel(permitAnalysis)
       : null;
+    /* Save Report and Email This to Me render under the same gate as the CSV, so
+       a 503 on the permit lookup reaches them too. A report that just drops the
+       permit section reads as an area where permits were checked and none found
+       — and unlike the panel, it is stored and re-read long after the outage. */
+    const permitLookupUnavailable = permitLoadFailed && !permitAnalysis;
     const zoneItems = zoneCounts.map(({ key, count }) => ({
       label: ZONE_LABELS[key] || key,
       value: `${count} propert${count === 1 ? "y" : "ies"}`,
@@ -450,6 +456,8 @@ export default function MapPolygonPanel({
       summaryParts.push(
         `${permitAnalysis.totalFilings} geocoded permit filing${permitAnalysis.totalFilings === 1 ? "" : "s"} fall inside the area. ${permitCoverageLabel}.`,
       );
+    } else if (permitLookupUnavailable) {
+      summaryParts.push(PERMIT_AREA_LOOKUP_UNAVAILABLE_NOTE);
     }
 
     return {
@@ -499,7 +507,15 @@ export default function MapPolygonPanel({
                     detail: PERMIT_AREA_ACTIVITY_NOTE,
                   },
                 ]
-              : []),
+              : permitLookupUnavailable
+                ? [
+                    {
+                      label: "Permit Lookup",
+                      value: "Unavailable",
+                      detail: PERMIT_AREA_LOOKUP_UNAVAILABLE_NOTE,
+                    },
+                  ]
+                : []),
           ],
         },
         ...(zoneItems.length > 0
@@ -571,8 +587,12 @@ export default function MapPolygonPanel({
       recommendedActions: [
         {
           label: "Export and review the area data",
-          description:
-            "Use the CSV to compare vacancy, ownership, incentive-zone, and permit-filing records without blending their meanings.",
+          // Without an attached analysis the CSV carries no permit-filing rows —
+          // only the "Permit coverage" note — so it must not be advertised as if
+          // it did.
+          description: permitAnalysis
+            ? "Use the CSV to compare vacancy, ownership, incentive-zone, and permit-filing records without blending their meanings."
+            : "Use the CSV to compare vacancy, ownership, and incentive-zone records without blending their meanings.",
           priority: "high",
         },
         {
@@ -634,6 +654,7 @@ export default function MapPolygonPanel({
     narrative,
     ownerCounts,
     permitAnalysis,
+    permitLoadFailed,
     topCommunityArea,
     vacantBuildingCount,
     vacantLandCount,
@@ -687,6 +708,11 @@ export default function MapPolygonPanel({
       vacancyCoverage,
       vacancyLoadFailed,
       permitArea: permitAnalysis,
+      // The export button also renders on vacancy findings alone, so a 503 on
+      // the permit lookup can reach this line. Without the flag the file says
+      // "Not attached" — mis-describing a lookup that was attempted and failed
+      // as one that was never run. Ignored when permitAnalysis is present.
+      permitLoadFailed,
       investment:
         investmentSummary && investmentSelection
           ? { summary: investmentSummary, selected: investmentSelection }
@@ -707,6 +733,7 @@ export default function MapPolygonPanel({
     investmentSelection,
     investmentSummary,
     permitAnalysis,
+    permitLoadFailed,
     vacancyCoverage,
     vacancyLoadFailed,
   ]);

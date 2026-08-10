@@ -39,20 +39,41 @@ describe("orderSectionsForPdf", () => {
     ]);
   });
 
-  it("puts the zoning starting point before program and context sections", () => {
-    const input = [
-      section("Site Facts"),
-      section(GOAL_MATCH_PROGRAMS_SECTION_TITLE),
-      section("Zoning & Use Starting Point"),
-      section("Required Documents"),
-    ];
+  it("carries zoning and site facts into the seven-page builder's Supporting Context", async () => {
+    // The report types that emit these two sections are routed away from
+    // orderSectionsForPdf entirely, so ordering them here proves nothing. What
+    // matters is that the seven-page builder — the real production path for
+    // them — still finds both by name and prints them. Rename either section
+    // in report-engine and this goes red; the previous ordering test would not.
+    const report: GeneratedReport = {
+      title: "Site Incentive Analysis",
+      subtitle: "Test report",
+      reportType: "site-incentives",
+      generatedAt: "2026-07-10T12:00:00.000Z",
+      summary: "A focused report.",
+      sections: [
+        {
+          title: "Zoning & Use Starting Point",
+          items: [{ label: "Published Zoning District", value: "B3-2 on file" }],
+        },
+        {
+          title: "Site Facts",
+          items: [{ label: "Property PIN", value: "17-05-123-456-0000" }],
+        },
+        { title: GOAL_MATCH_PROGRAMS_SECTION_TITLE, items: [] },
+      ],
+      recommendedActions: [],
+      metadata: { address: "100 E Test St, Chicago, IL", projectType: "hiring" },
+    };
 
-    expect(orderSectionsForPdf(input).map((item) => item.title)).toEqual([
-      "Zoning & Use Starting Point",
-      GOAL_MATCH_PROGRAMS_SECTION_TITLE,
-      "Required Documents",
-      "Site Facts",
-    ]);
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: false,
+    });
+    const supportingContextPage = extracted.text[5];
+    expect(supportingContextPage).toContain("Supporting Context");
+    expect(supportingContextPage).toContain("Published Zoning District");
+    expect(supportingContextPage).toContain("Property PIN");
   });
 
   it("puts support organizations first when confirmed programs are absent", () => {
@@ -224,6 +245,145 @@ describe("orderSectionsForPdf", () => {
     });
     expect(extracted.text).toContain("Last 2 years business tax returns");
     expect(extracted.text).toContain("Profit and loss statement");
+  });
+
+  it("explains the preparation-cost markers it prints", async () => {
+    // report-engine emits "<doc> [$$$] — <programs>" and a "· $$" status on
+    // readiness rows. This builder renders no section descriptions, so the
+    // legend has to be drawn here or the dollar signs read as program money.
+    const report: GeneratedReport = {
+      title: "Site Incentive Analysis",
+      subtitle: "Test report",
+      reportType: "site-incentives",
+      generatedAt: "2026-07-10T12:00:00.000Z",
+      summary: "A focused report.",
+      sections: [
+        {
+          title: "Required Documents",
+          items: [
+            {
+              label: "Project Plans",
+              value: "2 documents",
+              detail: [
+                "Phase I environmental assessment [$$$] — Test Program",
+                "W-9 [$] — Test Program",
+              ].join("\n"),
+            },
+          ],
+        },
+        {
+          title: "Document Readiness Checklist",
+          items: [
+            {
+              label: "Business plan",
+              value: "May be needed",
+              preparationCost: { tier: "$$", basis: "Test basis." },
+            },
+          ],
+        },
+      ],
+      recommendedActions: [],
+      metadata: { address: "100 E Test St, Chicago, IL", projectType: "hiring" },
+    };
+
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: false,
+    });
+    // Page 5 is "Take the Next Step" — the only page carrying the markers.
+    const nextStepPage = extracted.text[4];
+    expect(nextStepPage).toContain("[$$$]");
+    expect(nextStepPage).toContain("Document preparation cost");
+    expect(nextStepPage).toContain("usually self-provided or low/no fee");
+    expect(nextStepPage).toContain("often requires specialized professional work");
+    expect(nextStepPage).toContain("not program value");
+  });
+
+  it("counts the readiness rows that fit, not the ones it sliced", async () => {
+    // On a dense page the footer guard drops checklist rows. The heading used
+    // to promise "Top 8 items" over six printed ones.
+    const docs = [
+      "Phase I environmental assessment [$$$]",
+      "Architectural plans [$$$]",
+      "W-9 [$]",
+      "Business plan [$]",
+      "Certificate of good standing [$$]",
+    ];
+    const report: GeneratedReport = {
+      title: "Site Incentive Analysis",
+      subtitle: "Dense fixture",
+      reportType: "site-incentives",
+      generatedAt: "2026-07-10T12:00:00.000Z",
+      summary: "Dense.",
+      sections: [
+        {
+          title: "Required Documents",
+          items: ["Project Plans", "Financial & Tax", "Property & Site", "Business Registration"].map(
+            (label) => ({
+              label,
+              value: `${docs.length} documents`,
+              detail: docs.map((doc) => `${doc} — Program A, Program B`).join("\n"),
+            }),
+          ),
+        },
+        {
+          title: "Document Readiness Checklist",
+          items: Array.from({ length: 8 }, (_, index) => ({
+            label: `Readiness item number ${index + 1}`,
+            value: "May be needed",
+            preparationCost: { tier: "$$" as const, basis: "Test basis." },
+          })),
+        },
+      ],
+      recommendedActions: Array.from({ length: 3 }, (_, index) => ({
+        label: `Recommended action ${index + 1} with a fairly long label to wrap`,
+        description:
+          "A two-line description that should occupy the usual amount of vertical space on this card.",
+        priority: "high" as const,
+      })),
+      metadata: { address: "4200 S California Ave, Chicago, IL", projectType: "hiring" },
+    };
+
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: false,
+    });
+    const nextStepPage = extracted.text[4];
+    const claimed = Number(nextStepPage.match(/READINESS CHECKLIST Top (\d+) items/)?.[1]);
+    const printed = (nextStepPage.match(/Readiness item number \d+/g) ?? []).length;
+    expect(claimed).toBeGreaterThan(0);
+    expect(printed).toBe(claimed);
+  });
+
+  it("omits the preparation-cost legend when no tier is printed", async () => {
+    const report: GeneratedReport = {
+      title: "Site Incentive Analysis",
+      subtitle: "Test report",
+      reportType: "site-incentives",
+      generatedAt: "2026-07-10T12:00:00.000Z",
+      summary: "A focused report.",
+      sections: [
+        {
+          title: "Required Documents",
+          items: [
+            {
+              label: "Project Plans",
+              value: "1 document",
+              detail: "Site plan — Test Program",
+            },
+          ],
+        },
+      ],
+      recommendedActions: [],
+      metadata: { address: "100 E Test St, Chicago, IL", projectType: "hiring" },
+    };
+
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: true,
+    });
+    expect(extracted.text).toContain("Site plan");
+    expect(extracted.text).not.toContain("Document preparation cost");
   });
 });
 

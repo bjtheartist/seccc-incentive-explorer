@@ -426,4 +426,90 @@ describe("zoning vintage — guard symmetry and source agreement", () => {
     });
     expect("vintage" in out).toBe(false);
   });
+
+  // The two cases below are the ones a permissive guard lets through. Naming a
+  // DIFFERENT mirror (the test above) is rejected by any form of the check; a
+  // block that names NO mirror, or that names the wrong FINDING, is not. Both
+  // arrive only from a poisoned cache entry or an edge-cached body, which is
+  // exactly why the client re-checks rather than trusting the route.
+
+  it.each([
+    [
+      "publishes a zone class",
+      {
+        status: "available",
+        zoneClass: "B3-2",
+        source,
+      },
+    ],
+    [
+      "determines no zoning applies",
+      {
+        status: "not_found",
+        zoneClass: null,
+        source,
+        message: "No published Chicago zoning district was returned.",
+      },
+    ],
+  ])(
+    "drops a block claiming no mirror answered from a response that %s",
+    (_label, response) => {
+      // answeredBy null is not a benign gap beside a classification: it is
+      // provenance stating the lookup established nothing, printed under a
+      // finding this same payload attributes to a named source.
+      const out = normalizeZoningLookup({
+        ...response,
+        vintage: vintage({ answeredBy: null, answerKind: null }),
+      });
+
+      expect(out.status).toBe(response.status);
+      expect("vintage" in out).toBe(false);
+    },
+  );
+
+  it.each([
+    [
+      "a confirmed absence under a returned zone class",
+      {
+        status: "available",
+        zoneClass: "B3-2",
+        source,
+      },
+      "no_zoning",
+    ],
+    [
+      "a returned polygon under a not_found determination",
+      {
+        status: "not_found",
+        zoneClass: null,
+        source,
+        message: "No published Chicago zoning district was returned.",
+      },
+      "zoning",
+    ],
+  ])("drops a block reporting %s", (_label, response, answerKind) => {
+    const out = normalizeZoningLookup({
+      ...response,
+      vintage: vintage({ answerKind }),
+    });
+
+    expect(out.status).toBe(response.status);
+    expect("vintage" in out).toBe(false);
+  });
+
+  // Positive control: the two "drops" cases above would pass vacuously if the
+  // not_found branch had simply stopped carrying provenance altogether.
+  it("keeps a block that agrees with a not_found determination", () => {
+    const out = normalizeZoningLookup({
+      status: "not_found",
+      zoneClass: null,
+      source,
+      message: "No published Chicago zoning district was returned.",
+      vintage: vintage({ answerKind: "no_zoning" }),
+    });
+
+    expect(out.status).toBe("not_found");
+    expect(out.vintage?.answeredBy).toBe("chicago-arcgis-zoning");
+    expect(out.vintage?.mirrors).toHaveLength(2);
+  });
 });

@@ -118,7 +118,12 @@ export function encodeWizardState(state: WizardState): string {
   const primaryProjectType = projectGoals[0] || state.projectType;
   if (primaryProjectType) params.set("pt", primaryProjectType);
   if (projectGoals.length > 0) params.set("pg", btoa(JSON.stringify(projectGoals)));
-  if (state.customGoal.trim()) params.set("cg", state.customGoal.trim());
+  // `customGoal` post-dates the reports already sitting in `saved_reports`, and
+  // those are re-hydrated with a raw cast over persisted JSON — the field is
+  // genuinely absent at runtime despite the type. An unguarded `.trim()` here
+  // threw inside the Share click handler, so the button silently did nothing.
+  const customGoal = state.customGoal?.trim();
+  if (customGoal) params.set("cg", customGoal);
   if (state.proposedUse) params.set("pu", state.proposedUse);
   if (state.fundingCommitted) params.set("fc", state.fundingCommitted);
   if (state.remainingGap) params.set("gap", state.remainingGap);

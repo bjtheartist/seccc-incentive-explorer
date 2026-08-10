@@ -7,7 +7,7 @@ import { ArcLayer, ScatterplotLayer } from "@deck.gl/layers";
 import { HexagonLayer } from "@deck.gl/aggregation-layers";
 import type { Layer, PickingInfo } from "@deck.gl/core";
 import { Layers } from "lucide-react";
-import { ZONE_COLORS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, describeZoneClass, VACANT_COLORS } from "@/lib/constants";
+import { ZONE_COLORS, ZONE_KEYS, ZONE_TILESET_IDS, ZONING_CATEGORIES, VACANT_COLORS } from "@/lib/constants";
 import { OWNER_TYPE_COLORS, presentOwnerTypesInOrder, type OwnerType } from "@/lib/owner-classify";
 import { runConfidenceEngine } from "@/lib/confidence-engine";
 import { describeClassCode, describeParcelType } from "@/lib/parcel-classes";
@@ -233,8 +233,14 @@ export default function MapView() {
       if (result.status === "available") {
         eyebrow = "Zoning Classification";
         value = result.zoneClass;
-        detail = `${describeZoneClass(result.zoneClass)} Verify the proposed use against the current Chicago Zoning Ordinance and with the City.`;
-        setZoningInfo(`${result.zoneClass} — ${describeZoneClass(result.zoneClass)}`);
+        // Only the published district code goes in this slot. The City layer
+        // ships a numeric ZONE_TYPE with no value-domain label, so the API
+        // deliberately refuses to infer a category (app/api/zoning/route.ts) —
+        // and an Explorer-authored gloss shown here reads as source content.
+        // It also degraded to the literal "Zoning District" for every DR-*
+        // (Downtown Residential) district, which the category table omits.
+        detail = "The published district does not determine whether a proposed use is permitted. Verify the proposed use against the current Chicago Zoning Ordinance and with the City.";
+        setZoningInfo(result.zoneClass);
       } else if (result.status === "not_found") {
         value = "No district returned";
         detail = "The published source returned no district. This is not evidence that zoning requirements do not apply.";
@@ -825,9 +831,8 @@ export default function MapView() {
         if (!zoningController.signal.aborted) {
           setSnapshotCityZoning(zoningLookup);
           if (zoningLookup.status === "available") {
-            setZoningInfo(
-              `${zoningLookup.zoneClass} — ${describeZoneClass(zoningLookup.zoneClass)}`,
-            );
+            // Published district code alone — see inspectPublishedZoning.
+            setZoningInfo(zoningLookup.zoneClass);
           } else if (zoningLookup.status === "not_found") {
             setZoningInfo("No published zoning district returned");
           } else {
@@ -1072,7 +1077,8 @@ export default function MapView() {
         ZONING_CATEGORIES.map((category) => `zoning-${category.key}-fill`),
       );
       const zoneClass = textValue(zoningFeature?.properties?.zone_class);
-      setZoningInfo(zoneClass ? `${zoneClass} — ${describeZoneClass(zoneClass)}` : null);
+      // The tile's published zone_class, unglossed — see inspectPublishedZoning.
+      setZoningInfo(zoneClass);
 
       let selection: MapDossierSelection | null = null;
       const permitFeature = firstFeature(["permit-unclustered"]);
@@ -2451,6 +2457,20 @@ export default function MapView() {
               drawModeRef.current = false;
               setDrawMode(false);
             });
+        }
+      });
+
+      // Escape (or draw's own trash action) abandons an in-progress polygon by
+      // leaving draw_polygon WITHOUT firing draw.create, so the click guard in
+      // openSnapshotAt would stay latched and the map would silently stop
+      // opening the location dossier for the rest of the session. MapboxDraw
+      // fires modechange only for mode changes a mode initiates itself — the
+      // API calls this component makes are silent (suppressAPIEvents defaults
+      // true), so this listener can never fight the Draw Area toggle.
+      map.on("draw.modechange", (e: { mode: string }) => {
+        if (e.mode !== "draw_polygon") {
+          drawModeRef.current = false;
+          setDrawMode(false);
         }
       });
 

@@ -3,6 +3,7 @@ import type {
   ChicagoZbaLookupResponse,
   ChicagoZbaSourceMetadata,
   CityZoning,
+  ZoningAnswerKind,
   ZoningLookupResponse,
   ZoningSourceMetadata,
   ZoningUnavailableResponse,
@@ -262,24 +263,39 @@ function isZoningSourceMetadata(value: unknown): value is ZoningSourceMetadata {
 }
 
 /**
- * Carry a vintage block through only when it passes `isZoningVintage`, and drop
- * the key entirely otherwise. The available and not_found paths are the ones
- * that actually carry zoning data, so an unvalidated block is most dangerous
- * exactly there — a bare spread would publish whatever the server sent.
+ * Carry a vintage block through only when it passes `isZoningVintage` AND it
+ * describes the very response it rides on, and drop the key entirely otherwise.
+ * The available and not_found paths are the ones that actually carry zoning
+ * data, so an unvalidated block is most dangerous exactly there — a bare spread
+ * would publish whatever the server sent. `expectedAnswerKind` is what this
+ * branch's response asserts a mirror established: a polygon for available, a
+ * confirmed absence for not_found.
  */
 function withValidatedVintage(
   candidate: Record<string, unknown>,
   zba: ChicagoZbaLookupResponse | undefined,
+  expectedAnswerKind: ZoningAnswerKind,
 ): ZoningLookupResponse {
   const { vintage, ...rest } = candidate;
   // data/curated/zoning/README.md states as an invariant that answeredBy names
-  // the same mirror as source.id. A block that disagrees with its own response
-  // is attributing the answer to a source that did not give it, so it is
-  // dropped rather than published.
+  // the same mirror as source.id and answerKind says which of the two things
+  // that mirror established. A block that disagrees with its own response is
+  // attributing the answer to a source that did not give it, so it is dropped
+  // rather than published.
+  //
+  // Both callers reach here only past `isZoningSourceMetadata(candidate.source)`,
+  // so sourceId is always one of the two mirror ids and `answeredBy: null` is
+  // not a benign gap here: it is provenance stating that NO mirror answered,
+  // beside a classification this same payload attributes to a named one. The
+  // answerKind must match for the same reason, or a confirmed absence could be
+  // published under a returned zone class. The route emits neither shape, but a
+  // poisoned cache entry or an edge-cached body can, and this is the boundary
+  // where the client decides what to render.
   const sourceId = (rest.source as Record<string, unknown> | undefined)?.id;
   const agreesWithSource =
     isZoningVintage(vintage) &&
-    (vintage.answeredBy === null || sourceId === undefined || vintage.answeredBy === sourceId);
+    vintage.answeredBy === sourceId &&
+    vintage.answerKind === expectedAnswerKind;
   return {
     ...rest,
     ...(agreesWithSource ? { vintage } : {}),
@@ -298,7 +314,9 @@ export function normalizeZoningLookup(value: unknown): ZoningLookupResponse {
     candidate.zoneClass.trim().length > 0 &&
     isZoningSourceMetadata(candidate.source)
   ) {
-    return withValidatedVintage(candidate, zba);
+    // This branch publishes a zone class, so the only vintage consistent with it
+    // is one saying a mirror returned a polygon.
+    return withValidatedVintage(candidate, zba, "zoning");
   }
   if (
     candidate.status === "not_found" &&
@@ -306,7 +324,9 @@ export function normalizeZoningLookup(value: unknown): ZoningLookupResponse {
     isZoningSourceMetadata(candidate.source) &&
     typeof candidate.message === "string"
   ) {
-    return withValidatedVintage(candidate, zba);
+    // A not_found is a determination that a mirror established no polygon here,
+    // which is what its vintage must say it established.
+    return withValidatedVintage(candidate, zba, "no_zoning");
   }
   if (candidate.status === "unavailable") {
     return zoningUnavailable(

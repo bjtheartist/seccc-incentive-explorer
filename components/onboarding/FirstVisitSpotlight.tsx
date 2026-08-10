@@ -133,8 +133,21 @@ export function FirstVisitSpotlight() {
 
       driverRef.current = driverInstance;
       driverInstance.drive();
-    } catch {
-      recordOutcome("skipped", "spotlight_unavailable");
+    } catch (error) {
+      // A driver.js chunk that never loads (hashed chunk invalidated by a redeploy, an
+      // offline visitor, a script blocker) is a load failure, not a user decision.
+      // recordOutcome would persist a "skipped" preference here, which suppresses the
+      // welcome guide on this browser permanently and files the failure as a clean
+      // dismissal. Report it as the failure it is and leave the preference unwritten so
+      // the guide can offer itself again on the next visit.
+      outcomeRecorded = true; // claim the slot so a late destroy cannot file a skip either
+      trackEvent("first_visit_guide_skipped", {
+        source: "spotlight_unavailable",
+        // The event taxonomy has no failure event, so the reason has to carry it: without
+        // it a skip-rate read counts these load failures as deliberate dismissals.
+        metadata: { step: activeStep, reason: "spotlight_load_failed" },
+      });
+      console.error("[spotlight] driver.js failed to load:", error);
       driverRef.current = null;
       startingRef.current = false;
       focusAddressSearch();

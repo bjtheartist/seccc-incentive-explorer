@@ -9,6 +9,11 @@ import {
 } from "./report-engine";
 import type { GeneratedReport } from "./report-engine";
 import { selectedProjectGoalLabels } from "./report-wizard-config";
+import {
+  DOCUMENT_PREPARATION_COST_CAVEAT,
+  DOCUMENT_PREPARATION_COST_LEGEND,
+  isDocumentRequirementGuidance,
+} from "./document-preparation-cost";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "./capital-partner-report";
 import { isSupportOrganizationSectionTitle } from "./support-organization-copy";
 
@@ -18,6 +23,13 @@ import { isSupportOrganizationSectionTitle } from "./support-organization-copy";
  * to do, who to contact, and what to prepare before they read the evidence.
  * Unknown sections keep their relative order between the action and context
  * groups so other report types remain predictable.
+ *
+ * Scope: this orders the LEGACY builder only. site-incentives and
+ * location-incentives — the only report types whose engine emits "Zoning & Use
+ * Starting Point" and "Site Facts" — are routed to the seven-page action
+ * builder, which selects sections by name and never calls this. Rules for
+ * those two titles would be unreachable here, so they are deliberately absent;
+ * see the seven-page builder for where zoning actually lands.
  */
 export function orderSectionsForPdf(
   sections: GeneratedReport["sections"],
@@ -39,8 +51,7 @@ export function orderSectionsForPdf(
     if (title === "Additional Programs to Explore") return 50;
     if (title === "Required Documents") return 60;
     if (title === "Document Readiness Checklist") return 61;
-    if (title === "Zoning & Use Starting Point") return 5;
-    if (title === "Site Facts" || title === "Site Overview") return 80;
+    if (title === "Site Overview") return 80;
     if (title === "Project Intake") return 81;
     if (title === "Incentive Zone Coverage & Program Interactions") return 82;
     if (title === "Neighborhood Economic Context") return 90;
@@ -53,6 +64,10 @@ export function orderSectionsForPdf(
     .sort((a, b) => priority(a.section.title) - priority(b.section.title) || a.index - b.index)
     .map(({ section }) => section);
 }
+
+/** The "[$$]" / "[?]" tier report-engine appends to each required-document
+ *  name, which parseDocumentNames deliberately keeps when it splits on " — ". */
+const PREPARATION_TIER_MARKER = /\[(?:\$+|\?)\]/;
 
 /* ── Brand Colors ── */
 const NAVY = "#0C1B33";
@@ -799,14 +814,35 @@ function _buildReport(
     y += wrapText(doc, prog.whoQualifies, MARGIN + 4, y, CONTENT_W - 8, 4.5);
     y += 5;
 
-    if (prog.requiredDocs.length > 0) {
+    // requiredDocs is not purely a document list: some catalog records state the
+    // opposite ("No application needed — benefits are automatic by location").
+    // Printed with a checkbox under "REQUIRED DOCUMENTS" they become
+    // requirements the record explicitly denies, so they are split out here the
+    // same way lib/report-engine.ts splits them for the §04 section. They are
+    // still published statements, so they print as plain notes rather than
+    // being dropped.
+    const documentGuidance = prog.requiredDocs.filter(isDocumentRequirementGuidance);
+    const requiredDocuments = prog.requiredDocs.filter(
+      (docItem) => !isDocumentRequirementGuidance(docItem),
+    );
+
+    for (const note of documentGuidance) {
+      y = checkPage(doc, y, 8);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      setColor(doc, MEDIUM_GRAY);
+      y += wrapText(doc, note, MARGIN + 4, y, CONTENT_W - 8, 4.5);
+      y += 2;
+    }
+
+    if (requiredDocuments.length > 0) {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(7);
       setColor(doc, LIGHT_GRAY);
       doc.text("REQUIRED DOCUMENTS", MARGIN + 4, y);
       y += 5;
 
-      for (const docItem of prog.requiredDocs) {
+      for (const docItem of requiredDocuments) {
         y = checkPage(doc, y, 6);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
@@ -2314,6 +2350,27 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
   drawPageTitle(5, "Step 3", "Take the Next Step", "Turn the report into a short, practical preparation list for the next conversation.");
   let y4 = 64;
 
+  // Every preparation-cost marker in the document lands on this page: the
+  // "[$$$]" report-engine appends to each document name, and the "· $$" the
+  // recommended actions and the readiness checklist print in their status
+  // column. This builder renders no section descriptions, so the legend and
+  // caveat that carry them on the web report and in the legacy PDF never
+  // arrive — leaving bare dollar signs in a report whose subject is incentive
+  // money, with nothing saying they measure effort rather than program value.
+  const showsPreparationTiers =
+    requiredItems.slice(0, 4).some((item) => PREPARATION_TIER_MARKER.test(item.detail ?? "")) ||
+    readinessItems.slice(0, 8).some((item) => Boolean(item.preparationCost)) ||
+    report.recommendedActions.slice(0, 3).some((action) => Boolean(action.preparationCost));
+  if (showsPreparationTiers) {
+    const legend = `Document preparation cost: ${DOCUMENT_PREPARATION_COST_LEGEND.map(
+      (entry) => `${entry.tier} = ${entry.label.toLowerCase()}`,
+    ).join("; ")}. ${DOCUMENT_PREPARATION_COST_CAVEAT}`;
+    const legendLines = fit(legend, CONTENT_W, 3, 5.9);
+    setColor(doc, MEDIUM_GRAY);
+    legendLines.forEach((line, index) => doc.text(line, MARGIN, y4 + index * 3));
+    y4 += legendLines.length * 3 + 4;
+  }
+
   y4 = layoutList(
     "Recommended Actions",
     undefined,
@@ -2342,11 +2399,18 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     (item, rowY) => drawDocumentCategoryRow(item, rowY),
   );
 
-  drawSectionHeading("Readiness Checklist", y4, `Top ${Math.min(8, readinessItems.length)} items`);
   const checklistFirstY = y4 + HEADING_TO_ROW_GAP;
   const checklistWidth = (CONTENT_W - 5) / 2;
   const checklistRowHeight = 8.5;
-  readinessItems.slice(0, 8).forEach((item, index) => {
+  // Count what the footer guard below will actually let through (two columns
+  // per row) before writing the heading — otherwise a dense page promises
+  // "Top 8 items" and prints four, which is a count the page contradicts.
+  const checklistFitRows = checklistFirstY > GRID_SAFE_BOTTOM
+    ? 0
+    : Math.floor((GRID_SAFE_BOTTOM - checklistFirstY) / checklistRowHeight) + 1;
+  const checklistItems = readinessItems.slice(0, Math.min(8, checklistFitRows * 2));
+  drawSectionHeading("Readiness Checklist", y4, `Top ${checklistItems.length} items`);
+  checklistItems.forEach((item, index) => {
     const col = index % 2;
     const row = Math.floor(index / 2);
     const x = MARGIN + col * (checklistWidth + 5);

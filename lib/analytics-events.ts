@@ -1,4 +1,7 @@
-import { resolvePractitionerValidationCampaign } from "./practitioner-validation";
+import {
+  normalizePractitionerValidationCampaign,
+  resolvePractitionerValidationCampaign,
+} from "./practitioner-validation";
 
 export const ANALYTICS_EVENT_TYPES = [
   "site_page_viewed",
@@ -98,31 +101,102 @@ export interface SanitizedAnalyticsEvent {
 
 const PRACTITIONER_VALIDATION_SESSION_KEY = "cie_practitioner_validation_campaign";
 
+/**
+ * Query flag the admin dashboard appends to its own facilitated-case links, so an
+ * operator checking that a link works is not published as a participant visit.
+ */
+export const PRACTITIONER_VALIDATION_PREVIEW_PARAM = "pilot_preview";
+const PRACTITIONER_VALIDATION_PREVIEW_SESSION_KEY = "cie_practitioner_validation_preview";
+/**
+ * Recorded in place of a pilot campaign during an operator preview. The pilot
+ * aggregation keys on the five exact case campaigns, so this value is ignored
+ * there, while the visit is still recorded as what it actually was (the case id
+ * survives in utm_source).
+ */
+const PRACTITIONER_VALIDATION_PREVIEW_CAMPAIGN = "admin-pilot-preview";
+
+function readSessionValue(key: string): string | null {
+  try {
+    return window.sessionStorage.getItem(key);
+  } catch {
+    // Session attribution is optional and must never interrupt product usage.
+    return null;
+  }
+}
+
+function writeSessionValue(key: string, value: string | null) {
+  try {
+    if (value === null) window.sessionStorage.removeItem(key);
+    else window.sessionStorage.setItem(key, value);
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+}
+
+/**
+ * Latches the preview flag for the rest of the tab: the flag only rides the
+ * first URL, but the operator's later searches and reports would otherwise be
+ * pulled into the case funnel by the stored campaign. Also drops any campaign a
+ * previous visit stored in this tab.
+ *
+ * Arriving on an UNFLAGGED case link releases the latch. The same tab is used to
+ * preview a link and then to run a real facilitated session; without this exit
+ * the real session was rewritten to the preview campaign and dropped from the
+ * pilot counts, with no way to clear it short of closing the tab.
+ */
+function isPractitionerValidationPreviewSession(search: string): boolean {
+  const params = new URLSearchParams(search);
+  if (params.has(PRACTITIONER_VALIDATION_PREVIEW_PARAM)) {
+    writeSessionValue(PRACTITIONER_VALIDATION_PREVIEW_SESSION_KEY, "1");
+    writeSessionValue(PRACTITIONER_VALIDATION_SESSION_KEY, null);
+    return true;
+  }
+  // Only the case-link entry form releases it -- utm_campaign, what
+  // practitionerValidationStartPath builds. Accepting any recognized campaign
+  // param released the latch during the operator's own preview: /start -> /report
+  // forwards the campaign as `campaign=` and does not carry pilot_preview, so
+  // searching an address (the only way to check the link works) put the preview
+  // back into that case's counts.
+  if (normalizePractitionerValidationCampaign(params.get("utm_campaign"))) {
+    writeSessionValue(PRACTITIONER_VALIDATION_PREVIEW_SESSION_KEY, null);
+    return false;
+  }
+  return readSessionValue(PRACTITIONER_VALIDATION_PREVIEW_SESSION_KEY) === "1";
+}
+
 function withPractitionerValidationCampaign(
   metadata: AnalyticsMetadata | null | undefined,
 ): AnalyticsMetadata {
   const current = metadata ?? {};
-  let stored: string | null = null;
+  const search = window.location.search;
+  const explicit = current.campaign;
 
-  try {
-    stored = window.sessionStorage.getItem(PRACTITIONER_VALIDATION_SESSION_KEY);
-  } catch {
-    // Session attribution is optional and must never interrupt product usage.
+  if (isPractitionerValidationPreviewSession(search)) {
+    return normalizePractitionerValidationCampaign(explicit)
+      ? { ...current, campaign: PRACTITIONER_VALIDATION_PREVIEW_CAMPAIGN }
+      : current;
+  }
+
+  // A caller-supplied campaign that is not one of the five pilot campaigns is
+  // still real attribution (a QR/UTM code, or /start's "direct" fallback), so it
+  // has to survive. Letting the stored campaign win here overwrote the QR value
+  // the /start -> /report chain exists to carry, and counted a visit that used no
+  // facilitated case link as a pilot start.
+  const explicitProvided =
+    explicit !== undefined && explicit !== null && String(explicit).trim() !== "";
+  if (explicitProvided && !normalizePractitionerValidationCampaign(explicit)) {
+    return current;
   }
 
   const campaign = resolvePractitionerValidationCampaign({
-    explicit: current.campaign,
-    search: window.location.search,
-    stored,
+    explicit,
+    search,
+    stored: readSessionValue(PRACTITIONER_VALIDATION_SESSION_KEY),
   });
 
   if (!campaign) return current;
 
-  try {
-    window.sessionStorage.setItem(PRACTITIONER_VALIDATION_SESSION_KEY, campaign);
-  } catch {
-    // Storage can be unavailable in private or restricted browser contexts.
-  }
+  writeSessionValue(PRACTITIONER_VALIDATION_SESSION_KEY, campaign);
 
   return { ...current, campaign };
 }

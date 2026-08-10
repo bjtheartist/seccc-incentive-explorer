@@ -25,8 +25,12 @@
  *   • Every amount is a real awarded/reported number or null — never coerced to 0.
  *   • Deterministic: records are emitted in stable input order; the geocode
  *     cache makes re-runs reproducible; generatedAt is the only wall-clock value.
- *   • A row that cannot be placed (geocode failed AND no coordinates) is DROPPED
- *     and counted (meta.droppedNoGeocode) — never plotted at 0,0 or guessed.
+ *   • A row that cannot be placed (geocode failed AND no coordinates) is never
+ *     plotted at 0,0 or guessed. It is HELD CITYWIDE — unplotted, but with its
+ *     dollars still in the export and counted in meta.citywideCount — unless
+ *     keeping it would double-count an award another source already carries
+ *     (Jim's corridor partner list), in which case it is DROPPED and counted in
+ *     meta.droppedNoGeocode. Silent deletion of published dollars is never OK.
  *
  * Usage:
  *   npx tsx scripts/export-community-investment.ts            # repo inputs (default)
@@ -1847,6 +1851,82 @@ function mapDceoCapital(
   };
 }
 
+/**
+ * Map the CDG award rounds. A row whose address geocodes becomes a plotted
+ * point; a row whose address does NOT geocode — or that publishes no street
+ * address at all — is HELD CITYWIDE, exactly like the DCEO and foundation
+ * paths above, never dropped.
+ *
+ * Dropping was the original behaviour and it deleted real, published award
+ * dollars: 11 rows / $16,258,316, including the June-2026 round's largest
+ * single grant ($5,000,000 to "Floreciendo: La Villita / Erie House Community
+ * Center", whose address column carries the city's own "South Lawndale (Little
+ * Village) -- exact street address not published") and a $4,870,000 February
+ * 2023 grocery award at 13016 S. Rhodes Ave. that the Census geocoder simply
+ * could not match. The only trace was one global meta.droppedNoGeocode integer
+ * with no source and no dollar figure, so the published headline read as if
+ * that money had never been awarded. Held citywide, the award keeps its amount,
+ * address text and provenance, is counted in meta.citywideCount and in the
+ * legend's "N citywide records not included (no point location)" note, and is
+ * still never plotted at a guessed location.
+ *
+ * Safe against double counting BECAUSE dedupeInvestmentRecords only merges
+ * POINT rows and CDG is the sole source of these awards — none of the 11 has an
+ * address+amount twin anywhere in the export. That is NOT true of Jim's
+ * corridor partner list, which re-states official NOF awards; see the drop in
+ * main() for why those rows must stay dropped.
+ */
+export function mapCdgAwards(
+  rows: readonly Record<string, string>[],
+  geocodes: ReadonlyMap<string, GeoResult | null>,
+  queryForAddress: (address: string) => string,
+): {
+  records: CommunityInvestmentRecordDraft[];
+  pointRecords: number;
+  citywideRecords: number;
+  /** Published CDG addresses that returned no Census geocoder match. */
+  addressGeocodeMisses: number;
+  /** Awarded dollars on the rows held citywide — the figure the old drop hid. */
+  heldCitywideDollars: number;
+} {
+  const records: CommunityInvestmentRecordDraft[] = [];
+  let pointRecords = 0;
+  let addressGeocodeMisses = 0;
+  let heldCitywideDollars = 0;
+  for (const r of rows) {
+    const addr = nullableStr(r.address);
+    const hit = addr ? geocodes.get(queryForAddress(addr)) : null;
+    if (addr && !hit) addressGeocodeMisses += 1;
+    const geometry: InvestmentGeometry = hit ? point(hit.lat, hit.lng) : { kind: "citywide" };
+    if (geometry.kind === "point") pointRecords += 1;
+    const amountAwarded = parseAmount(r.amount);
+    if (!hit && amountAwarded != null) heldCitywideDollars += amountAwarded;
+    records.push({
+      id: `cdg-${records.length}`,
+      source: "cdg",
+      funderType: SOURCE_FUNDER_TYPE.cdg,
+      funderName: CDG_PROGRAM,
+      recipient: nullableStr(r.recipient) || "(unnamed recipient)",
+      capitalClass: "grant",
+      amountAwarded,
+      logLine: nullableStr(r.log_line),
+      year: yearOfRound(r.round),
+      geometry,
+      address: addr,
+      status: "awarded",
+      recordDate: null, // CDG rounds carry only a round label, no per-record date
+      links: parseLinks(r.source_url),
+    });
+  }
+  return {
+    records,
+    pointRecords,
+    citywideRecords: records.length - pointRecords,
+    addressGeocodeMisses,
+    heldCitywideDollars,
+  };
+}
+
 // ── Capital context (TIF series, lending, and coordinate-less awards) ─────────
 
 /**
@@ -2337,33 +2417,11 @@ async function main() {
 
   let droppedNoGeocode = 0;
 
-  const cdg: CommunityInvestmentRecordDraft[] = [];
-  let cdgIdx = 0;
-  for (const r of cdgRows) {
-    const addr = nullableStr(r.address);
-    const hit = addr ? geo.get(cdgQuery(addr)) : null;
-    if (!hit) {
-      droppedNoGeocode++;
-      continue;
-    }
-    const links = parseLinks(r.source_url);
-    cdg.push({
-      id: `cdg-${cdgIdx++}`,
-      source: "cdg",
-      funderType: SOURCE_FUNDER_TYPE.cdg,
-      funderName: CDG_PROGRAM,
-      recipient: nullableStr(r.recipient) || "(unnamed recipient)",
-      capitalClass: "grant",
-      amountAwarded: parseAmount(r.amount),
-      logLine: nullableStr(r.log_line),
-      year: yearOfRound(r.round),
-      geometry: point(hit.lat, hit.lng),
-      address: addr,
-      status: "awarded",
-      recordDate: null, // CDG rounds carry only a round label, no per-record date
-      links,
-    });
-  }
+  // CDG rows that cannot be geocoded are HELD CITYWIDE, not dropped — their
+  // dollars stay in the export (see mapCdgAwards for the $16.26M this used to
+  // delete). Nothing here feeds droppedNoGeocode any more.
+  const cdgMapped = mapCdgAwards(cdgRows, geo, cdgQuery);
+  const cdg = cdgMapped.records;
 
   const jim: CommunityInvestmentRecordDraft[] = [];
   let jimIdx = 0;
@@ -2371,6 +2429,13 @@ async function main() {
     const addr = nullableStr(r.Address);
     const hit = addr ? geo.get(cdgQuery(addr)) : null;
     if (!hit) {
+      // Jim's corridor list is a PARTNER re-statement of official NOF awards,
+      // and the supersede-dedupe that collapses a re-statement into its official
+      // twin only fires on POINT rows. Holding an ungeocodable corridor row
+      // citywide would therefore double-count dollars already in the export —
+      // "South Shore Brew" ($98,420.24, corridor address 7101 S. Yates Blvd.)
+      // is the same award as the nof-small completion at 1745 E 71st St. So
+      // unlike CDG (a source with no twins) these rows stay dropped and counted.
       droppedNoGeocode++;
       continue;
     }
@@ -2394,7 +2459,11 @@ async function main() {
   }
 
   const caPolygons = loadCommunityAreaPolygons(CA_GEOJSON_PATH);
-  console.log(`Geocoded: cdg kept=${cdg.length} jim kept=${jim.length} droppedNoGeocode=${droppedNoGeocode}`);
+  console.log(
+    `Geocoded: cdg=${cdg.length} (point=${cdgMapped.pointRecords} held-citywide=${cdgMapped.citywideRecords} ` +
+      `geocode-miss=${cdgMapped.addressGeocodeMisses} held-citywide-dollars=${cdgMapped.heldCitywideDollars}) ` +
+      `jim kept=${jim.length} droppedNoGeocode=${droppedNoGeocode}`,
+  );
   const dceo = mapDceoCapital(dceoCandidates, geo, cdgQuery, caPolygons);
   const sbaRrf = mapSbaRestaurantRevitalization(sbaRrfRows, geo, caPolygons);
   console.log(

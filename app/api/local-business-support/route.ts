@@ -184,6 +184,20 @@ export async function GET(request: NextRequest) {
       coverage: entry.coverage,
       organizations,
       organizationCount: organizations.length,
+      // The PRE-CAP size of the matched pool, published alongside the capped
+      // list because the report cannot otherwise tell two very different
+      // situations apart.
+      //
+      // rankLocalBusinessSupport caps at 6. Downstream, report-engine received
+      // only the capped array and had to guess whether a 6-item list meant
+      // "this area maps exactly six" or "this area maps more and the rest were
+      // dropped". It either understated the total — publishing 6 as though it
+      // were the whole mapped set — or hedged on every area that happened to
+      // reach the cap, which is 55 of the 77 community areas. Neither is
+      // honest. With the real pool size the engine states the plain count when
+      // nothing was dropped and discloses the truncation only when something
+      // actually was.
+      mappedTotal: supportPool.length,
       storefrontCorridor,
       selectionDisclosure: {
         basis: SUPPORT_ORGANIZATIONS_DESCRIPTION,
