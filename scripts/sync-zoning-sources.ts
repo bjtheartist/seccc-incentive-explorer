@@ -273,10 +273,18 @@ async function main() {
     );
     if (!dryRun) {
       mapChanged = await writeIfChanged(MAP_SNAPSHOT_PATH, current);
-      const hasDelta = delta.changes.length > 0;
-      if (hasDelta || previous === null) {
-        mapDeltaChanged = await writeIfChanged(MAP_DELTA_PATH, delta);
-      }
+      // ALWAYS write the delta — it describes the MOST RECENT comparison, and
+      // the admin ledger labels it "latest reviewed map delta".
+      //
+      // This was gated on `delta.changes.length > 0 || previous === null`,
+      // which meant that once a real delta landed it was never replaced: every
+      // later clean run left the old file untouched and the ledger went on
+      // presenting a months-old change set as the current state of the City's
+      // map. Writing unconditionally costs nothing — the delta carries no run
+      // timestamp, so two consecutive no-change runs serialize to
+      // byte-identical JSON, writeIfChanged returns false, and the workflow's
+      // `git diff` gate stays quiet rather than opening a spurious review PR.
+      mapDeltaChanged = await writeIfChanged(MAP_DELTA_PATH, delta);
     }
   }
 
@@ -295,10 +303,8 @@ async function main() {
     );
     if (!dryRun) {
       zbaChanged = await writeIfChanged(ZBA_SNAPSHOT_PATH, current);
-      const hasDelta = delta.changes.length > 0;
-      if (hasDelta || previous === null) {
-        zbaDeltaChanged = await writeIfChanged(ZBA_DELTA_PATH, delta);
-      }
+      // Same reasoning as the map delta above — "latest" must mean latest.
+      zbaDeltaChanged = await writeIfChanged(ZBA_DELTA_PATH, delta);
     }
   }
 

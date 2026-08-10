@@ -233,14 +233,38 @@ export default async function ZoningChangesPage({
             published case-type code, and {zbaSnapshot.coverage.withoutPublishedJudgment.toLocaleString()}
             {" "}do not publish judgment text; both remain visible as source limitations.
           </p>
+          {/*
+            A baseline is NOT a zero-change result. Both delta artifacts carry
+            `comparedFrom: null` until a second snapshot exists, meaning no
+            comparison has been performed at all — but this line used to print
+            the counts alone, so "nothing to compare against" and "compared and
+            found nothing" rendered as the identical sentence: "0 added, 0
+            removed". An admin would reasonably read that as confirmation the
+            City's map had not moved. Rail 7: an absence of evidence must never
+            be published as evidence of absence.
+          */}
           <p className="mt-2 font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#0C1B33]/35">
-            eLMS published through {formatDate(legislation.source.sourceUpdatedThrough)} · latest
-            reviewed map delta: {mapDelta.counts.added} added, {mapDelta.counts.removed} removed,
-            {" "}{mapDelta.counts.attributesChanged} attribute and{" "}
-            {mapDelta.counts.geometryChanged} geometry changes · latest reviewed ZBA delta:{" "}
-            {zbaDelta.counts.added} added, {zbaDelta.counts.removed} removed, {" "}
-            {zbaDelta.counts.attributesChanged} attribute and {" "}
-            {zbaDelta.counts.geometryChanged} geometry changes
+            eLMS published through {formatDate(legislation.source.sourceUpdatedThrough)} ·{" "}
+            {mapDelta.comparedFrom === null ? (
+              <>map delta: no comparison performed yet — this is the first captured snapshot,
+                with no earlier one to compare against</>
+            ) : (
+              <>latest reviewed map delta (compared against {formatDate(mapDelta.comparedFrom)}):{" "}
+                {mapDelta.counts.added} added, {mapDelta.counts.removed} removed,{" "}
+                {mapDelta.counts.attributesChanged} attribute and{" "}
+                {mapDelta.counts.geometryChanged} geometry changes</>
+            )}
+            {" · "}
+            {zbaDelta.comparedFromFeatureCount === null ? (
+              <>ZBA delta: no comparison performed yet — first captured snapshot, no earlier one
+                to compare against</>
+            ) : (
+              <>latest reviewed ZBA delta (compared against{" "}
+                {zbaDelta.comparedFromFeatureCount.toLocaleString()} prior records):{" "}
+                {zbaDelta.counts.added} added, {zbaDelta.counts.removed} removed,{" "}
+                {zbaDelta.counts.attributesChanged} attribute and{" "}
+                {zbaDelta.counts.geometryChanged} geometry changes</>
+            )}
           </p>
         </section>
 
