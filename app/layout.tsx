@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "@fontsource/inter/300.css";
 import "@fontsource/inter/400.css";
 import "@fontsource/inter/500.css";
@@ -88,7 +89,9 @@ export default function RootLayout({
             <FirstVisitGuide />
             <FirstVisitSpotlight />
             <ServiceWorkerRegistrar />
-            <SiteTrafficTracker />
+            <Suspense fallback={null}>
+              <SiteTrafficTracker />
+            </Suspense>
             <Analytics />
           </SiteConciergeProvider>
         </AuthProvider>

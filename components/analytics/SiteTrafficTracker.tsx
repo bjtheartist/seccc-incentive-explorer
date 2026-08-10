@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { trackEvent } from "@/lib/analytics-events";
 import { readTrafficAttribution } from "@/lib/traffic-attribution";
 
@@ -51,9 +51,12 @@ function deviceType() {
 
 export function SiteTrafficTracker() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
 
   useEffect(() => {
     if (!pathname || pathname.startsWith("/admin")) return;
+    const searchQuery = search ? `?${search}` : "";
 
     trackEvent("site_page_viewed", {
       source: "site_traffic",
@@ -63,10 +66,10 @@ export function SiteTrafficTracker() {
         sessionId: getSessionId(),
         deviceType: deviceType(),
         viewportWidth: window.innerWidth,
-        ...readTrafficAttribution(window.location.search, document.referrer),
+        ...readTrafficAttribution(searchQuery, document.referrer),
       },
     });
-  }, [pathname]);
+  }, [pathname, search]);
 
   return null;
 }

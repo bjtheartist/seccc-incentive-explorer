@@ -38,7 +38,7 @@ const RESULT: PermitAreaResult = {
     {
       key: null,
       label: "Not recorded",
-      sourceValue: null,
+      sourceValue: "Not recorded",
       color: "#64748B",
       count: 1,
     },
@@ -100,6 +100,15 @@ describe("permit area client", () => {
 
   it("accepts an honest zero result", () => {
     expect(parsePermitAreaResult(ZERO_RESULT)).toEqual(ZERO_RESULT);
+  });
+
+  it("accepts positive filings when nullable source freshness is unavailable", () => {
+    const result = {
+      ...RESULT,
+      sourceRefresh: { asOf: null, asOfBasis: null },
+    } satisfies PermitAreaResult;
+
+    expect(parsePermitAreaResult(result)).toEqual(result);
   });
 
   it("treats HTTP and malformed readiness responses as lookup failures", async () => {
@@ -221,6 +230,113 @@ describe("permit area client", () => {
     [
       "a nonempty issue-date span for zero filings",
       { ...ZERO_RESULT, issueDateSpan: RESULT.issueDateSpan },
+    ],
+    [
+      "non-null freshness for zero filings",
+      { ...ZERO_RESULT, sourceRefresh: RESULT.sourceRefresh },
+    ],
+    [
+      "freshness without its basis",
+      { ...RESULT, sourceRefresh: { asOf: RESULT.sourceRefresh.asOf, asOfBasis: null } },
+    ],
+    [
+      "a freshness basis without a timestamp",
+      {
+        ...RESULT,
+        sourceRefresh: { asOf: null, asOfBasis: "latest_queried_row_fetched_at" },
+      },
+    ],
+    [
+      "an invalid freshness timestamp",
+      {
+        ...RESULT,
+        sourceRefresh: {
+          asOf: "not-a-timestamp",
+          asOfBasis: "latest_queried_row_fetched_at",
+        },
+      },
+    ],
+    [
+      "a reversed issue-date span",
+      { ...RESULT, issueDateSpan: { first: "2026-08-05", latest: "2026-08-04" } },
+    ],
+    [
+      "an invalid issue-date span",
+      { ...RESULT, issueDateSpan: { first: "2026-02-30", latest: "2026-08-04" } },
+    ],
+    [
+      "an issue-date span before the published data window",
+      {
+        ...RESULT,
+        issueDateSpan: { first: "2014-12-31", latest: "2014-12-31" },
+        yearBreakdown: [{ year: 2014, count: 1 }],
+        records: [{ ...RESULT.records[0], issueDate: "2014-12-31" }],
+      },
+    ],
+    [
+      "a year breakdown outside the issue-date span",
+      { ...RESULT, yearBreakdown: [{ year: 2025, count: 1 }] },
+    ],
+    [
+      "a recent record after the latest aggregate date",
+      {
+        ...RESULT,
+        records: [{ ...RESULT.records[0], issueDate: "2026-08-05" }],
+      },
+    ],
+    [
+      "a recent record without its source-backed issue date",
+      {
+        ...RESULT,
+        records: [{ ...RESULT.records[0], issueDate: null }],
+      },
+    ],
+    [
+      "a zero-count aggregate bucket",
+      {
+        ...RESULT,
+        typeBreakdown: [
+          RESULT.typeBreakdown[0],
+          {
+            key: null,
+            label: "Unused",
+            sourceValue: "Unused",
+            color: "#64748B",
+            count: 0,
+          },
+        ],
+      },
+    ],
+    [
+      "duplicate aggregate buckets",
+      {
+        ...RESULT,
+        totalFilings: 2,
+        typeBreakdown: [
+          RESULT.typeBreakdown[0],
+          { ...RESULT.typeBreakdown[0], count: 1 },
+        ],
+        yearBreakdown: [{ year: 2026, count: 2 }],
+        statusBreakdown: [{ status: "Issued", count: 2 }],
+        recordsTruncated: true,
+      },
+    ],
+    [
+      "more recent records than the API limit",
+      {
+        ...RESULT,
+        totalFilings: 251,
+        distinctAddresses: 1,
+        typeBreakdown: [{ ...RESULT.typeBreakdown[0], count: 251 }],
+        yearBreakdown: [{ year: 2026, count: 251 }],
+        statusBreakdown: [{ status: "Issued", count: 251 }],
+        records: Array.from({ length: 251 }, (_, index) => ({
+          ...RESULT.records[0],
+          permitId: `permit-${index}`,
+        })),
+        recordsReturned: 251,
+        recordsTruncated: false,
+      },
     ],
   ])("rejects a ready payload with contradictory %s", (_case, contradictory) => {
     expect(parsePermitAreaResult(contradictory)).toBeNull();

@@ -100,6 +100,17 @@ function isNonnegativeInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value >= 0;
 }
 
+function isoDateMs(value: unknown): number | null {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const parsed = Date.parse(`${value}T00:00:00Z`);
+  if (!Number.isFinite(parsed)) return null;
+  return new Date(parsed).toISOString().slice(0, 10) === value ? parsed : null;
+}
+
+function isValidTimestamp(value: string): boolean {
+  return value.trim() !== "" && Number.isFinite(Date.parse(value));
+}
+
 function isPermitMapTypeKey(value: unknown): value is PermitMapTypeKey | null {
   return value === null || (typeof value === "string" && PERMIT_MAP_TYPE_KEYS.has(value));
 }
@@ -157,11 +168,22 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
   const source = value.source;
   const sourceRefresh = value.sourceRefresh;
   const issueDateSpan = value.issueDateSpan;
+  const firstIssueDateMs =
+    isRecord(issueDateSpan) && isString(issueDateSpan.first)
+      ? isoDateMs(issueDateSpan.first)
+      : null;
+  const latestIssueDateMs =
+    isRecord(issueDateSpan) && isString(issueDateSpan.latest)
+      ? isoDateMs(issueDateSpan.latest)
+      : null;
   const validIssueDateSpan =
     issueDateSpan === null ||
     (isRecord(issueDateSpan) &&
       isString(issueDateSpan.first) &&
-      isString(issueDateSpan.latest));
+      isString(issueDateSpan.latest) &&
+      firstIssueDateMs !== null &&
+      latestIssueDateMs !== null &&
+      firstIssueDateMs <= latestIssueDateMs);
 
   if (
     !isString(source.label) ||
@@ -196,14 +218,30 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
   const typeTotal = result.typeBreakdown.reduce((sum, item) => sum + item.count, 0);
   const yearTotal = result.yearBreakdown.reduce((sum, item) => sum + item.count, 0);
   const statusTotal = result.statusBreakdown.reduce((sum, item) => sum + item.count, 0);
+  const refreshIsPaired =
+    (result.sourceRefresh.asOf === null && result.sourceRefresh.asOfBasis === null) ||
+    (result.sourceRefresh.asOf !== null &&
+      result.sourceRefresh.asOfBasis === "latest_queried_row_fetched_at" &&
+      isValidTimestamp(result.sourceRefresh.asOf));
+  const typeSources = result.typeBreakdown.map((item) => item.sourceValue ?? "");
+  const years = result.yearBreakdown.map((item) => item.year);
+  const statuses = result.statusBreakdown.map((item) => item.status);
 
   if (
+    !refreshIsPaired ||
     result.distinctAddresses > result.totalFilings ||
     result.recordsReturned > result.totalFilings ||
+    result.recordsReturned > PERMIT_AREA_RECORD_LIMIT ||
     result.recordsTruncated !== (result.recordsReturned < result.totalFilings) ||
     typeTotal !== result.totalFilings ||
     yearTotal !== result.totalFilings ||
-    statusTotal !== result.totalFilings
+    statusTotal !== result.totalFilings ||
+    result.typeBreakdown.some((item) => item.count === 0) ||
+    result.yearBreakdown.some((item) => item.count === 0) ||
+    result.statusBreakdown.some((item) => item.count === 0) ||
+    new Set(typeSources).size !== typeSources.length ||
+    new Set(years).size !== years.length ||
+    new Set(statuses).size !== statuses.length
   ) {
     return null;
   }
@@ -211,6 +249,8 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
   if (
     result.totalFilings === 0 &&
     (result.issueDateSpan !== null ||
+      result.sourceRefresh.asOf !== null ||
+      result.sourceRefresh.asOfBasis !== null ||
       result.typeBreakdown.length > 0 ||
       result.yearBreakdown.length > 0 ||
       result.statusBreakdown.length > 0)
@@ -218,7 +258,38 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
     return null;
   }
 
-  if (result.totalFilings > 0 && result.issueDateSpan === null) return null;
+  if (result.totalFilings > 0) {
+    if (result.issueDateSpan === null) return null;
+
+    const firstMs = isoDateMs(result.issueDateSpan.first);
+    const latestMs = isoDateMs(result.issueDateSpan.latest);
+    const sinceMs = isoDateMs(PERMIT_SINCE_DATE);
+    if (firstMs === null || latestMs === null || sinceMs === null || firstMs < sinceMs) {
+      return null;
+    }
+
+    const firstYear = Number(result.issueDateSpan.first.slice(0, 4));
+    const latestYear = Number(result.issueDateSpan.latest.slice(0, 4));
+    if (Math.min(...years) !== firstYear || Math.max(...years) !== latestYear) {
+      return null;
+    }
+
+    const yearSet = new Set(years);
+    for (const record of result.records) {
+      const issueDate = record.issueDate;
+      const recordMs = isoDateMs(issueDate);
+      if (
+        record.permitId.trim() === "" ||
+        issueDate === null ||
+        recordMs === null ||
+        recordMs < firstMs ||
+        recordMs > latestMs ||
+        !yearSet.has(Number(issueDate.slice(0, 4)))
+      ) {
+        return null;
+      }
+    }
+  }
 
   return result;
 }
