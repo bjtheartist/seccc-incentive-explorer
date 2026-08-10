@@ -35,7 +35,7 @@ describe("practitioner validation attribution guards", () => {
   });
 
   it("keeps a non-pilot campaign instead of replacing it with the stored pilot campaign", () => {
-    const { fetchMock, metadataOf } = stubBrowser({
+    const { fetchMock, metadataOf, values } = stubBrowser({
       [CAMPAIGN_SESSION_KEY]: PILOT_CAMPAIGN,
     });
 
@@ -47,6 +47,26 @@ describe("practitioner validation attribution guards", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(metadataOf(0).campaign).toBe("qr-63rd-flyer");
+    expect(values.get(CAMPAIGN_SESSION_KEY)).toBeUndefined();
+  });
+
+  it("does not restore stale pilot attribution after an explicit non-pilot event", () => {
+    const { fetchMock, metadataOf, values } = stubBrowser({
+      [CAMPAIGN_SESSION_KEY]: PILOT_CAMPAIGN,
+    });
+
+    trackEvent("start_page_viewed", {
+      source: "start_page",
+      metadata: { campaign: "direct" },
+    });
+    trackEvent("support_resource_viewed", {
+      metadata: { organizationCount: 3 },
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(metadataOf(0).campaign).toBe("direct");
+    expect(metadataOf(1)).not.toHaveProperty("campaign");
+    expect(values.get(CAMPAIGN_SESSION_KEY)).toBeUndefined();
   });
 
   it("does not count a plain /start visit in a previously pilot-tagged tab as a pilot start", () => {

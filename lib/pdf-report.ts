@@ -1594,9 +1594,12 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
     const explanation = item.matchExplanation;
     if (!explanation) return [];
     const first = (values: string[]) => values[0];
+    const publishedFacts = explanation.knownFromPublicData.filter(
+      (fact) => !isDocumentRequirementGuidance(fact),
+    );
     return [
       first(explanation.whyItAppears) ? `Why it appears: ${first(explanation.whyItAppears)}` : undefined,
-      first(explanation.knownFromPublicData) ? `Public data: ${first(explanation.knownFromPublicData)}` : undefined,
+      first(publishedFacts) ? `Public data: ${first(publishedFacts)}` : undefined,
       first(explanation.basedOnUserAnswers) ? `Your answers: ${first(explanation.basedOnUserAnswers)}` : undefined,
       first(explanation.stillToConfirm) ? `Still to confirm: ${first(explanation.stillToConfirm)}` : undefined,
       first(explanation.currentDocumentsToGather) ? `Document: ${first(explanation.currentDocumentsToGather)}` : undefined,

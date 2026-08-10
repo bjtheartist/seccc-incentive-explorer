@@ -453,6 +453,74 @@ describe("public report safety", () => {
     expect(extracted.text).not.toContain("This program was included in the saved report");
   });
 
+  it("removes guidance from legacy required-document rows and generated PDFs", async () => {
+    const noApplication = "No application needed — benefits are automatic by location";
+    const contactGuidance =
+      "Contact your SSA delegate agency for any sub-program requirements";
+    const legacy = savedReport([
+      {
+        title: CONFIRMED_PROGRAMS_SECTION_TITLE,
+        items: [{
+          label: "Special Service Area (SSA)",
+          value: "Review published terms",
+          programId: "ssa",
+          matchExplanation: {
+            whyItAppears: ["This program was included for review."],
+            knownFromPublicData: [],
+            basedOnUserAnswers: [],
+            stillToConfirm: [],
+            currentDocumentsToGather: [],
+            confirmWith: [],
+          },
+        }],
+      },
+      {
+        title: "Required Documents",
+        description: "3 documents across programs mapped at this address.",
+        items: [{
+          label: "General",
+          value: "3 documents",
+          detail: [
+            `${noApplication} [?] — Special Service Area (SSA)`,
+            `${contactGuidance} [?] — Special Service Area (SSA)`,
+            "Project budget [?] — Example Program",
+          ].join("\n"),
+        }],
+      },
+    ]);
+
+    const normalized = normalizePublicReportForDisplay(legacy);
+    const required = normalized.sections.find(
+      (section) => section.title === "Required Documents",
+    );
+    const programItem = normalized.sections
+      .find((section) => section.title === CONFIRMED_PROGRAMS_SECTION_TITLE)
+      ?.items[0];
+
+    expect(required?.description).toContain("1 document");
+    expect(required?.items).toEqual([
+      expect.objectContaining({
+        value: "1 document",
+        detail: "Project budget [?] — Example Program",
+      }),
+    ]);
+    expect(JSON.stringify(required)).not.toContain(noApplication);
+    expect(JSON.stringify(required)).not.toContain(contactGuidance);
+    expect(programItem?.matchExplanation?.knownFromPublicData).toEqual(
+      expect.arrayContaining([noApplication, contactGuidance]),
+    );
+
+    const output = generateReportPdfBase64(legacy);
+    const extracted = await extractText(
+      new Uint8Array(Buffer.from(output.base64, "base64")),
+      { mergePages: true },
+    );
+
+    expect(extracted.text).toContain("Project budget");
+    expect(extracted.text).not.toContain(noApplication);
+    expect(extracted.text).not.toContain(contactGuidance);
+  });
+
   it("keeps prohibited legacy labels and benefit headlines out of generated PDFs", async () => {
     const legacy = {
       title: "Eligible Incentive Programs",

@@ -14,6 +14,7 @@ import {
   buildTrailJsonLd,
 } from "@/lib/seo";
 import { ZONE_LABELS } from "@/lib/constants";
+import { isDocumentRequirementGuidance } from "@/lib/document-preparation-cost";
 import { getProgramSeoOverride } from "@/lib/program-seo-overrides";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SnapshotCTA } from "@/components/seo/SnapshotCTA";
@@ -83,6 +84,10 @@ export default async function ProgramExplainerPage({
   const related = relatedPrograms(p);
   const zoneLabel = p.zoneKey ? ZONE_LABELS[p.zoneKey] : undefined;
   const officialUrl = p.sourceUrl || p.url;
+  const requiredDocuments = p.requiredDocs.filter(
+    (item) => !isDocumentRequirementGuidance(item),
+  );
+  const documentGuidance = p.requiredDocs.filter(isDocumentRequirementGuidance);
 
   /* ── JSON-LD: FAQ + breadcrumb trail ── */
   const faqItems = [
@@ -290,17 +295,34 @@ export default async function ProgramExplainerPage({
         )}
 
         {/* ── What you'll need ── */}
-        {p.requiredDocs.length > 0 && (
+        {requiredDocuments.length > 0 && (
           <section className="py-12 border-t border-[#0C1B33]/10">
             <SectionLabel>What you&apos;ll need</SectionLabel>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {p.requiredDocs.map((doc, i) => (
+              {requiredDocuments.map((doc, i) => (
                 <li
                   key={i}
                   className="flex gap-3 text-[15px] text-[#0C1B33]/70 leading-relaxed bg-white border border-[#0C1B33]/10 rounded-lg px-4 py-3"
                 >
                   <span className="mt-0.5 w-5 h-5 rounded border border-[#0C1B33]/15 shrink-0" />
                   <span>{doc}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {documentGuidance.length > 0 && (
+          <section className="py-12 border-t border-[#0C1B33]/10">
+            <SectionLabel>Document notes</SectionLabel>
+            <ul className="space-y-3">
+              {documentGuidance.map((note, i) => (
+                <li
+                  key={i}
+                  className="flex gap-3 text-[15px] text-[#0C1B33]/70 leading-relaxed"
+                >
+                  <span className="mt-2 w-1.5 h-1.5 rounded-full bg-[#0C1B33]/20 shrink-0" />
+                  <span>{note}</span>
                 </li>
               ))}
             </ul>

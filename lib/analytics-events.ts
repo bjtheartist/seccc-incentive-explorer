@@ -185,6 +185,7 @@ function withPractitionerValidationCampaign(
   const explicitProvided =
     explicit !== undefined && explicit !== null && String(explicit).trim() !== "";
   if (explicitProvided && !normalizePractitionerValidationCampaign(explicit)) {
+    writeSessionValue(PRACTITIONER_VALIDATION_SESSION_KEY, null);
     return current;
   }
 
