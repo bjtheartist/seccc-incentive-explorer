@@ -50,6 +50,66 @@ describe("program data guardrails", () => {
     expect(ccsap!.name).toBe("Commercial Corridor Storefront Activation Program (CCSAP)");
     expect(ccsap!.zoneKey).toBe("ccsa");
     expect(ccsap!.benefitRange).not.toMatch(/\$\s*\d/);
+    expect(ccsap!.recurring).toBe(true);
+    expect(ccsap!.deadlines).toContainEqual({
+      label: "Quarterly round — 5 p.m. cutoff",
+      date: "2026-08-21",
+      cutoffAt: "2026-08-21T17:00:00-05:00",
+    });
+    expect(ccsap!.applicationPortals).toContainEqual({
+      type: "submittable",
+      label: "CCSAP Grant Application",
+      url: "https://cocdpd.submittable.com/submit/6c22d8c7-4140-4f40-9054-9cb98ebc5104/commercial-corridor-storefront-activation-grant",
+      language: "en",
+    });
+  });
+
+  it("keeps Class 6b SER's ten-year test tied to the occupying enterprise", () => {
+    const class6bSer = (programs as Program[]).find(
+      (program) => program.id === "class6bSer"
+    );
+
+    expect(class6bSer).toBeDefined();
+    expect(class6bSer!.summary).toMatch(/occupied by long-tenured industrial enterprises/i);
+    expect(class6bSer!.summary).not.toMatch(/long-tenured industrial owners/i);
+    expect(class6bSer!.requiredDocs.join(" ")).toMatch(/occupying industrial enterprise/i);
+    expect(class6bSer!.requiredDocs.join(" ")).not.toMatch(/years of ownership/i);
+    expect(class6bSer!.eligibilityRules?.find((rule) => rule.criterion === "propertyType")?.description)
+      .toMatch(/enterprise occupying the same premises/i);
+    expect(JSON.stringify(class6bSer!.eligibilityRules)).not.toMatch(/same ownership/i);
+  });
+
+  it("does not present expired section 30C as an actionable ComEd project step", () => {
+    const comed = (programs as Program[]).find((program) => program.id === "comedEvRebate");
+
+    expect(comed).toBeDefined();
+    expect(JSON.stringify(comed!.verificationSteps ?? [])).not.toMatch(/30C|refueling property/i);
+  });
+
+  it("structures the requested current deadlines and CNRP terminology", () => {
+    const ahsap = (programs as Program[]).find((program) => program.id === "ahsap");
+    const cnrp = (programs as Program[]).find(
+      (program) => program.id === "microMarketRecovery"
+    );
+
+    expect(ahsap?.deadlines).toContainEqual({
+      label: "2026 Part 1 + Part 2 application deadline",
+      date: "2026-09-05",
+    });
+    expect(ahsap?.recurring).toBe(true);
+    expect(cnrp?.requiredDocs.join(" ")).toMatch(/CNRP target area/i);
+    expect(cnrp?.requiredDocs.join(" ")).not.toMatch(/MMRP area/i);
+  });
+
+  it("preserves the Data Center certification distinction while disclosing paused intake", () => {
+    const dataCenter = (programs as Program[]).find(
+      (program) => program.id === "dataCenter"
+    );
+
+    expect(dataCenter?.suspensionNote).toMatch(/new applications are not being processed/i);
+    expect(`${dataCenter?.summary} ${dataCenter?.whoQualifies}`).toMatch(
+      /existing certifications are unaffected|currently certified projects continue/i
+    );
   });
 
   it("separates SBA Microloan and 504 pathways without promising financing", () => {

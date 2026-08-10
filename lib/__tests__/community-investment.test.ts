@@ -446,27 +446,22 @@ describe("dedupeInvestmentRecords", () => {
     expect(records.map((r) => r.id)).toEqual(["h1", "h2"]);
   });
 
-  it("COLLAPSES a partner-list re-statement of an official award (Huddle House), keeping the official row", () => {
-    // Jim's corridor sheet re-states the NOF Large award with an expanded name
-    // and no date; the official record wins even though both rows carry the
-    // same status and a round-cap amount.
+  it("KEEPS a surviving partner-list row even when address, amount, and an alias-like name match an official row", () => {
     const { records, removedCount } = dedupeInvestmentRecords([
       rec({ id: "jim-huddle", source: "nof-small", status: "awarded", recipient: "Huddle House Diner", address: "9401 S. Stony Island Ave.", amountAwarded: 1100000, recordProvenance: "partner-list" }),
       rec({ id: "official-huddle", source: "nof-large", status: "awarded", recipient: "Huddle House", address: "9401 S Stony Island Av", amountAwarded: 1100000, recordDate: "2021-06-01T00:00:00.000", recordProvenance: "official" }),
     ]);
-    expect(removedCount).toBe(1);
-    expect(records.map((r) => r.id)).toEqual(["official-huddle"]);
+    expect(removedCount).toBe(0);
+    expect(records.map((r) => r.id)).toEqual(["jim-huddle", "official-huddle"]);
   });
 
-  it("COLLAPSES a partner-list re-statement whose street NUMBER is off but sits within 150m (real Huddle House case)", () => {
-    // Jim's sheet says 9401, the official award says 9421 — different dedupe
-    // keys, but same $1.1M, prefix names, and points ~40m apart.
+  it("KEEPS a surviving partner-list row when an alias-like official row is nearby", () => {
     const { records, removedCount } = dedupeInvestmentRecords([
       rec({ id: "official-huddle", source: "nof-large", status: "awarded", recipient: "Huddle House", address: "9421 S Stony Island Ave", amountAwarded: 1100000, recordDate: "2021-05-28T00:00:00.000", recordProvenance: "official", geometry: { kind: "point", lat: 41.723734068, lng: -87.584991129 } }),
       rec({ id: "jim-huddle", source: "nof-small", status: "awarded", recipient: "Huddle House Diner", address: "9401 S. Stony Island Ave.", amountAwarded: 1100000, recordProvenance: "partner-list", geometry: { kind: "point", lat: 41.723312670502, lng: -87.585069012587 } }),
     ]);
-    expect(removedCount).toBe(1);
-    expect(records.map((r) => r.id)).toEqual(["official-huddle"]);
+    expect(removedCount).toBe(0);
+    expect(records.map((r) => r.id)).toEqual(["official-huddle", "jim-huddle"]);
   });
 
   it("KEEPS a partner-list row when the nearby official row's name is unrelated (proximity alone is not enough)", () => {
@@ -1204,6 +1199,13 @@ const CONTEXT_PATH = path.join(process.cwd(), "data/private/capital-context.json
 const CONTEXT_EXISTS = existsSync(CONTEXT_PATH);
 
 describe.skipIf(!CONTEXT_EXISTS)("committed capital-context.json", () => {
+  it("comes from the same export run as the committed investment records", () => {
+    const investment = JSON.parse(readFileSync(EXPORT_PATH, "utf8"));
+    const context = JSON.parse(readFileSync(CONTEXT_PATH, "utf8"));
+
+    expect(context.generatedAt).toBe(investment.generatedAt);
+  });
+
   it("IRON RULE: the raw context text carries no banned derived-figure key", () => {
     const parsed = JSON.parse(readFileSync(CONTEXT_PATH, "utf8"));
     expect(findBannedFigureKeys(parsed)).toEqual([]);

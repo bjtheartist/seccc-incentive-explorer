@@ -39,8 +39,18 @@ const verifiedInput = {
 };
 
 describe("VERIFICATION_DISCLAIMER", () => {
-  it("matches the locked verification copy verbatim from app/programs/page.tsx", () => {
-    const source = readFileSync(join(__dirname, "..", "..", "app", "programs", "page.tsx"), "utf8");
+  it("matches the locked verification copy verbatim from ProgramsCatalog", () => {
+    const source = readFileSync(
+      join(
+        __dirname,
+        "..",
+        "..",
+        "components",
+        "programs",
+        "ProgramsCatalog.tsx",
+      ),
+      "utf8",
+    );
     expect(source).toContain(VERIFICATION_DISCLAIMER);
   });
 });

@@ -10,12 +10,10 @@
  *                      via nextWindow). Safe default: absence of gating
  *                      fields never hides a program.
  *
- *   'window-closed'  — the program is real and RECURRING but currently
- *                      between application windows (SBIF between district
- *                      windows per public/data/sbif-rollout.json, NOF between
- *                      quarters, CDG between rounds). Still shown, labeled
- *                      "Applications currently closed; next window <date |
- *                      expected>". Recurring programs never silently vanish.
+ *   'window-closed'  — the program is real but not accepting applications:
+ *                      either RECURRING and between windows (SBIF, NOF, CDG),
+ *                      or explicitly suspended by its administering agency.
+ *                      Still shown with the source-backed status note.
  *
  *   'lapsed-notice'  — no longer generally available by statute: a lapse with
  *                      realistic revival (status === "lapsed", e.g. WOTC) or a
@@ -36,7 +34,7 @@
  * so the rollout-matching logic lives in exactly one place.
  */
 
-import type { Program } from "./types";
+import type { Program, ProgramDeadlineEntry } from "./types";
 import { findSbifWindow, type SbifWindow } from "./deadlines";
 
 // ── Output types ──────────────────────────────────────────────────────────────
@@ -105,6 +103,18 @@ function isPastDay(dateStr: string, today: Date): boolean {
   return days != null && days < 0;
 }
 
+/** Exact cutoffs compare as instants; entries without one retain Chicago-day semantics. */
+function isPastDeadline(
+  deadline: ProgramDeadlineEntry,
+  now: Date,
+  chicagoToday: Date
+): boolean {
+  const cutoff = parseDate(deadline.cutoffAt);
+  return cutoff
+    ? now.getTime() >= cutoff.getTime()
+    : isPastDay(deadline.date, chicagoToday);
+}
+
 // ── Resolver ──────────────────────────────────────────────────────────────────
 
 const WINDOW_OPEN_LABEL = /\bopen(s|ed|ing)?\b/i;
@@ -118,9 +128,14 @@ export function resolveAvailability(
   today: Date,
   opts: ResolveAvailabilityOpts = {}
 ): ProgramAvailability {
-  today = chicagoDayUtc(today);
-  const dated = (program.deadlines ?? []).filter((d) => daysUntil(d.date, today) != null);
-  const expiresOnPast = program.expiresOn ? isPastDay(program.expiresOn, today) : false;
+  const now = today;
+  const chicagoToday = chicagoDayUtc(now);
+  const dated = (program.deadlines ?? []).filter(
+    (d) => daysUntil(d.date, chicagoToday) != null
+  );
+  const expiresOnPast = program.expiresOn
+    ? isPastDay(program.expiresOn, chicagoToday)
+    : false;
   const expiresOnFuture = !!program.expiresOn && !expiresOnPast && parseDate(program.expiresOn) != null;
 
   // 1) Explicit expiry date in the past — hidden everywhere.
@@ -131,7 +146,18 @@ export function resolveAvailability(
     };
   }
 
-  // 2) Statutory lapse or sunset — shown with the existing warning.
+  // 2) Published application suspension — keep the program visible, but never
+  //    present new intake as active. This is distinct from expiration/lapse:
+  //    Data Center certifications already issued remain in force even while
+  //    DCEO is not processing new applications.
+  if (program.suspensionNote) {
+    return {
+      state: "window-closed",
+      note: program.suspensionNote,
+    };
+  }
+
+  // 3) Statutory lapse or sunset — shown with the existing warning.
   //    "sunset" must be matched here alongside "lapsed": both are ProgramStatus
   //    values (lib/schemas.ts) meaning the program is no longer generally
   //    available, but only "lapsed" was checked, so sunset cards fell through
@@ -149,7 +175,7 @@ export function resolveAvailability(
     };
   }
 
-  // 3) One-time program whose every dated deadline has passed — expired.
+  // 4) One-time program whose every dated deadline has passed — expired.
   //    A future expiresOn is an explicit "valid through" and overrides this
   //    inference. Requires at least one dated entry (an empty deadlines[]
   //    never expires a card — safe default).
@@ -157,7 +183,7 @@ export function resolveAvailability(
     program.oneTime === true &&
     !expiresOnFuture &&
     dated.length > 0 &&
-    dated.every((d) => isPastDay(d.date, today))
+    dated.every((d) => isPastDeadline(d, now, chicagoToday))
   ) {
     const last = dated.map((d) => d.date).sort().at(-1);
     return {
@@ -166,14 +192,14 @@ export function resolveAvailability(
     };
   }
 
-  // 4) SBIF district-aware gating: rollout windows are authoritative for the
+  // 5) SBIF district-aware gating: rollout windows are authoritative for the
   //    address's own TIF district (the card-level deadlines describe other
   //    districts' months).
   if (program.id === "sbif" && opts.sbifRollout?.length && opts.tifDistrict) {
     const win = findSbifWindow(opts.sbifRollout, opts.tifDistrict);
     if (win) {
-      const daysToStart = daysUntil(win.windowStart, today);
-      const daysToEnd = daysUntil(win.windowEnd, today);
+      const daysToStart = daysUntil(win.windowStart, chicagoToday);
+      const daysToEnd = daysUntil(win.windowEnd, chicagoToday);
       if (daysToStart != null && daysToEnd != null) {
         const nextWindow: NextWindow = {
           date: win.windowStart,
@@ -206,9 +232,9 @@ export function resolveAvailability(
     // District not in the rollout — fall through to the generic date logic.
   }
 
-  // 5) A future deadline / window exists — active; surface the next one.
+  // 6) A future deadline / window exists — active; surface the next one.
   const futureDates = dated
-    .filter((d) => !isPastDay(d.date, today))
+    .filter((d) => !isPastDeadline(d, now, chicagoToday))
     .sort((a, b) => a.date.localeCompare(b.date));
   if (expiresOnFuture) {
     futureDates.push({ label: "Final availability date", date: program.expiresOn! });
@@ -222,7 +248,7 @@ export function resolveAvailability(
     };
   }
 
-  // 6) Recurring program with only past dates — between windows.
+  // 7) Recurring program with only past dates — between windows.
   if (program.recurring === true && dated.length > 0) {
     const latest = [...dated].sort((a, b) => a.date.localeCompare(b.date)).at(-1)!;
     // If the most recent dated event was a window OPENING (with no dated
@@ -237,7 +263,7 @@ export function resolveAvailability(
     };
   }
 
-  // 7) Default: no gating info (or past dates without oneTime/recurring flags) — active.
+  // 8) Default: no gating info (or past dates without oneTime/recurring flags) — active.
   return { state: "active" };
 }
 

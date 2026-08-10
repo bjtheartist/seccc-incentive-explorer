@@ -71,7 +71,7 @@ describe("GET /api/permit-area", () => {
         distinct_addresses: "2",
         first_issue_date: "2024-01-10",
         latest_issue_date: "2026-08-04",
-        source_as_of: "2026-08-04T18:22:00.000Z",
+        source_as_of: "2026-08-04 18:22:00+00",
         type_breakdown: [
           { permit_type: "PERMIT - NEW CONSTRUCTION", filing_count: 2 },
           { permit_type: "SOURCE-SPECIFIC TYPE", filing_count: 1 },

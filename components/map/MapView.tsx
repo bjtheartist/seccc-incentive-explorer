@@ -156,9 +156,12 @@ import type { MapDossierSelection } from "@/lib/map-dossier";
 import { compactParcelSpaceFacts } from "@/lib/parcel-space";
 import { PERMIT_PORTAL_LABEL, PERMIT_PORTAL_URL } from "@/lib/permit-match-lines";
 import {
-  parseDrawnAreaVacancyResponse,
+  createDrawnAreaVacancyRequestLifecycle,
+  fetchDrawnAreaVacancy,
   type VacancyCoverageMetadata,
 } from "@/lib/drawn-area-vacancy";
+
+const OPTIONAL_ZONING_LAYER_TIMEOUT_MS = 12_000;
 
 export default function MapView() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -515,6 +518,10 @@ export default function MapView() {
   const [polygonGeometry, setPolygonGeometry] = useState<GeoJSON.Polygon | null>(null);
   const [polygonLoading, setPolygonLoading] = useState(false);
   const [polygonPanelOpen, setPolygonPanelOpen] = useState(false);
+  const polygonVacancyRequests = useMemo(
+    () => createDrawnAreaVacancyRequestLifecycle(),
+    [],
+  );
   const countyReliefRecipientsAbortRef = useRef<AbortController | null>(null);
   const [countyReliefRecipientsPanel, setCountyReliefRecipientsPanel] = useState<{
     sourceId: HistoricalRecoveryRecipientSource;
@@ -1567,8 +1574,15 @@ export default function MapView() {
       });
 
       /* ── Chicago Zoning Districts — per-category layers (on top of incentive zones) ── */
+      const zoningRequestController = new AbortController();
+      const zoningRequestTimeout = window.setTimeout(
+        () => zoningRequestController.abort(),
+        OPTIONAL_ZONING_LAYER_TIMEOUT_MS
+      );
       try {
-        const zoningData = await cachedFetch(CHICAGO_ZONING_URL);
+        const zoningData = await cachedFetch(CHICAGO_ZONING_URL, {
+          signal: zoningRequestController.signal,
+        });
         if (zoningData) {
           map.addSource("chicago-zoning", { type: "geojson", data: zoningData as GeoJSON.FeatureCollection, generateId: true });
 
@@ -1644,6 +1658,8 @@ export default function MapView() {
         }
       } catch {
         // Zoning districts layer is optional
+      } finally {
+        window.clearTimeout(zoningRequestTimeout);
       }
 
       /* ── Parcel boundary layer (Cook County ArcGIS) ── */
@@ -2411,6 +2427,7 @@ export default function MapView() {
         const feature = e.features[0];
         if (feature?.geometry?.type === "Polygon") {
           const geom = feature.geometry;
+          const vacancyRequest = polygonVacancyRequests.start();
           // Keep only the latest polygon
           const allFeatures = draw.getAll();
           if (allFeatures.features.length > 1) {
@@ -2431,15 +2448,11 @@ export default function MapView() {
           // Hand the shape to the panel too — the admin community-investment
           // analysis runs point-in-polygon client-side against this geometry.
           setPolygonGeometry(geom);
-          const polygonJson = JSON.stringify(geom);
-          fetch(`/api/vacant?polygon=${encodeURIComponent(polygonJson)}`)
-            .then((res) => {
-              if (!res.ok) throw new Error(`HTTP ${res.status}`);
-              return res.json();
-            })
-            .then((data: unknown) => {
-              const parsed = parseDrawnAreaVacancyResponse(data);
-              if (!parsed) throw new Error("Malformed vacancy response");
+          fetchDrawnAreaVacancy(geom, {
+            signal: vacancyRequest.signal,
+          })
+            .then((parsed) => {
+              if (!vacancyRequest.isCurrent()) return;
               setPolygonResults(parsed);
               setPolygonVacancyCoverage(parsed.meta);
               setPolygonVacancyLoadFailed(false);
@@ -2448,6 +2461,7 @@ export default function MapView() {
               setDrawMode(false);
             })
             .catch(() => {
+              if (!vacancyRequest.isCurrent()) return;
               // Permit analysis is an independent source. Keep the area panel
               // available even when the vacancy lookup fails.
               setPolygonResults(EMPTY_FC);
@@ -2456,7 +2470,8 @@ export default function MapView() {
               setPolygonLoading(false);
               drawModeRef.current = false;
               setDrawMode(false);
-            });
+            })
+            .finally(() => vacancyRequest.release());
         }
       });
 
@@ -2475,10 +2490,12 @@ export default function MapView() {
       });
 
       map.on("draw.delete", () => {
+        polygonVacancyRequests.cancel();
         setPolygonResults(null);
         setPolygonVacancyCoverage(null);
         setPolygonVacancyLoadFailed(false);
         setPolygonGeometry(null);
+        setPolygonLoading(false);
         setPolygonPanelOpen(false);
       });
 
@@ -2486,6 +2503,7 @@ export default function MapView() {
     });
 
     return () => {
+      polygonVacancyRequests.cancel();
       resizeObserver.disconnect();
       window.visualViewport?.removeEventListener("resize", handleResize);
       window.removeEventListener("orientationchange", handleResize);
@@ -2503,7 +2521,7 @@ export default function MapView() {
       map.remove();
       mapRef.current = null;
     };
-  }, [openDossier, openHistoricalRecoveryRecipients]);
+  }, [openDossier, openHistoricalRecoveryRecipients, polygonVacancyRequests]);
 
   /* ── Toggle zone visibility ────────────── */
   const toggleZone = useCallback(
@@ -3893,11 +3911,13 @@ export default function MapView() {
         const draw = drawRef.current;
         if (!draw) return;
         closeDossier();
+        polygonVacancyRequests.cancel();
         draw.deleteAll();
         setPolygonResults(null);
         setPolygonVacancyCoverage(null);
         setPolygonVacancyLoadFailed(false);
         setPolygonGeometry(null);
+        setPolygonLoading(false);
         setPolygonPanelOpen(false);
         setSnapshotOpen(false);
         draw.changeMode("draw_polygon");
@@ -4112,11 +4132,13 @@ export default function MapView() {
           onDrawArea={() => {
             const draw = drawRef.current;
             if (!draw) return;
+            polygonVacancyRequests.cancel();
             draw.deleteAll();
             setPolygonResults(null);
             setPolygonVacancyCoverage(null);
             setPolygonVacancyLoadFailed(false);
             setPolygonGeometry(null);
+            setPolygonLoading(false);
             setPolygonPanelOpen(false);
             setSnapshotOpen(false);
             draw.changeMode("draw_polygon");
@@ -4138,11 +4160,13 @@ export default function MapView() {
           adminSessionActive={adminSessionActive}
           onClose={() => setPolygonPanelOpen(false)}
           onClear={() => {
+            polygonVacancyRequests.cancel();
             drawRef.current?.deleteAll();
             setPolygonResults(null);
             setPolygonVacancyCoverage(null);
             setPolygonVacancyLoadFailed(false);
             setPolygonGeometry(null);
+            setPolygonLoading(false);
             setPolygonPanelOpen(false);
             drawModeRef.current = false;
             setDrawMode(false);
@@ -4195,11 +4219,13 @@ export default function MapView() {
               drawModeRef.current = false;
               setDrawMode(false);
             } else {
+              polygonVacancyRequests.cancel();
               draw.deleteAll();
               setPolygonResults(null);
               setPolygonVacancyCoverage(null);
               setPolygonVacancyLoadFailed(false);
               setPolygonGeometry(null);
+              setPolygonLoading(false);
               setPolygonPanelOpen(false);
               draw.changeMode("draw_polygon");
               drawModeRef.current = true;

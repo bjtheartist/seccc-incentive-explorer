@@ -521,6 +521,7 @@ function normalizePublicHeadlineText(value: string): string {
 
 function normalizePublicMatchExplanation(
   explanation: PublicMatchExplanation,
+  additionalPublicFacts: readonly string[] = [],
 ): PublicMatchExplanation {
   const selfReportedPattern = /^(?:(?:you|your)\b|(?:reported|selected|provided|entered|stated)\b)|\b(?:user answer|self-reported)\b/i;
   const misplacedUserAnswers = explanation.knownFromPublicData.filter((item) =>
@@ -542,6 +543,7 @@ function normalizePublicMatchExplanation(
     knownFromPublicData: Array.from(new Set([
       ...explanation.knownFromPublicData.filter((item) => !selfReportedPattern.test(item)),
       ...documentGuidance,
+      ...additionalPublicFacts,
     ])).map(normalizePublicHeadlineText),
     basedOnUserAnswers: Array.from(new Set([
       ...explanation.basedOnUserAnswers,
@@ -552,6 +554,137 @@ function normalizePublicMatchExplanation(
       (doc) => !isDocumentRequirementGuidance(doc),
     ),
   };
+}
+
+interface LegacyDocumentGuidance {
+  text: string;
+  programAttribution?: string;
+}
+
+function legacyRequiredDocumentGuidance(
+  value: string,
+  programNames: readonly string[],
+): LegacyDocumentGuidance | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const withCostAndAttribution = trimmed.match(
+    /^(.*?)\s+\[(?:\?|\${1,3})\]\s+[—–-]\s+(.+)$/,
+  );
+  if (withCostAndAttribution) {
+    const text = withCostAndAttribution[1].trim();
+    return isDocumentRequirementGuidance(text)
+      ? { text, programAttribution: withCostAndAttribution[2].trim() }
+      : null;
+  }
+
+  const attributionSeparator = trimmed.lastIndexOf(" — ");
+  if (attributionSeparator > 0) {
+    const text = trimmed.slice(0, attributionSeparator).trim();
+    const programAttribution = trimmed.slice(attributionSeparator + 3).trim();
+    if (
+      programNames.some((programName) => programAttribution.includes(programName)) &&
+      isDocumentRequirementGuidance(text)
+    ) {
+      return { text, programAttribution };
+    }
+  }
+
+  const text = trimmed.replace(/\s+\[(?:\?|\${1,3})\]\s*$/, "").trim();
+  return isDocumentRequirementGuidance(text) ? { text } : null;
+}
+
+function guidanceForProgram(
+  guidance: readonly LegacyDocumentGuidance[],
+  programName: string,
+): string[] {
+  return guidance
+    .filter((item) => item.programAttribution?.includes(programName))
+    .map((item) => item.text);
+}
+
+function sanitizeLegacyRequiredDocumentsSections(
+  sections: readonly ReportSection[],
+  programNames: readonly string[],
+): { sections: ReportSection[]; guidance: LegacyDocumentGuidance[] } {
+  const guidance: LegacyDocumentGuidance[] = [];
+  const sanitizedSections: ReportSection[] = [];
+
+  for (const section of sections) {
+    if (section.title !== "Required Documents") {
+      sanitizedSections.push(section);
+      continue;
+    }
+
+    let sawDocumentCategory = false;
+    let documentCount = 0;
+    const items: ReportItem[] = [];
+
+    for (const item of section.items) {
+      const directGuidance = [item.label, item.value]
+        .map((value) => legacyRequiredDocumentGuidance(value, programNames))
+        .find((value): value is LegacyDocumentGuidance => Boolean(value));
+      if (directGuidance) {
+        guidance.push({
+          ...directGuidance,
+          programAttribution: directGuidance.programAttribution ??
+            (item.programId ? item.label : undefined),
+        });
+        continue;
+      }
+
+      const isDocumentCategory = /^\d+\s+documents?$/i.test(item.value.trim());
+      const detailLines = (item.detail ?? "")
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      const retainedDetailLines: string[] = [];
+
+      for (const line of detailLines) {
+        const lineGuidance = legacyRequiredDocumentGuidance(line, programNames);
+        if (lineGuidance) guidance.push(lineGuidance);
+        else retainedDetailLines.push(line);
+      }
+
+      if (isDocumentCategory) {
+        sawDocumentCategory = true;
+        documentCount += retainedDetailLines.length;
+        if (retainedDetailLines.length === 0) continue;
+        items.push({
+          ...item,
+          value: `${retainedDetailLines.length} document${retainedDetailLines.length === 1 ? "" : "s"}`,
+          detail: retainedDetailLines.join("\n"),
+        });
+        continue;
+      }
+
+      if (detailLines.length > 0 && retainedDetailLines.length === 0 && !item.programId) {
+        continue;
+      }
+
+      items.push({
+        ...item,
+        detail: detailLines.length > 0
+          ? retainedDetailLines.join("\n") || undefined
+          : item.detail,
+      });
+    }
+
+    if (items.length === 0) continue;
+
+    sanitizedSections.push({
+      ...section,
+      description: sawDocumentCategory && section.description
+        ? section.description.replace(
+            /\b\d+\s+documents?\b/i,
+            `${documentCount} document${documentCount === 1 ? "" : "s"}`,
+          )
+        : section.description,
+      items,
+    });
+  }
+
+  return { sections: sanitizedSections, guidance };
 }
 
 function isProgramListingSection(title: string): boolean {
@@ -577,7 +710,10 @@ function normalizeSupportOrganizationDetail(detail?: string): string | undefined
   return lines.length > 0 ? lines.join("\n") : undefined;
 }
 
-function legacyMatchExplanation(item: ReportItem): PublicMatchExplanation | undefined {
+function legacyMatchExplanation(
+  item: ReportItem,
+  additionalPublicFacts: readonly string[] = [],
+): PublicMatchExplanation | undefined {
   if (!item.programId) return undefined;
   const requirements = (item.eligibilityRules ?? []).map((rule) => rule.description);
   const matchedRules = (item.matchedRules ?? []).map(normalizePublicHeadlineText);
@@ -594,7 +730,10 @@ function legacyMatchExplanation(item: ReportItem): PublicMatchExplanation | unde
     : undefined;
 
   if (item.matchExplanation) {
-    const normalized = normalizePublicMatchExplanation(item.matchExplanation);
+    const normalized = normalizePublicMatchExplanation(
+      item.matchExplanation,
+      additionalPublicFacts,
+    );
     return {
       ...normalized,
       basedOnUserAnswers: Array.from(new Set([
@@ -612,9 +751,12 @@ function legacyMatchExplanation(item: ReportItem): PublicMatchExplanation | unde
 
   return {
     whyItAppears: ["This program was included in the saved report as a starting point for review."],
-    knownFromPublicData: item.lastVerifiedAt
-      ? [`Program information was last reviewed on ${item.lastVerifiedAt}.`]
-      : [],
+    knownFromPublicData: [
+      ...(item.lastVerifiedAt
+        ? [`Program information was last reviewed on ${item.lastVerifiedAt}.`]
+        : []),
+      ...additionalPublicFacts,
+    ],
     basedOnUserAnswers: Array.from(new Set(matchedRules)),
     stillToConfirm,
     currentDocumentsToGather: [],
@@ -641,6 +783,19 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
     projectGoalLabels?: string[];
   } | undefined;
 
+  const programNames = Array.from(new Set([
+    ...(legacySummary?.topPrograms ?? []).map((program) => program.name),
+    ...report.sections.flatMap((section) =>
+      section.items
+        .filter((item) => Boolean(item.programId))
+        .map((item) => item.label),
+    ),
+  ])).sort((a, b) => b.length - a.length);
+  const legacyDocuments = sanitizeLegacyRequiredDocumentsSections(
+    report.sections,
+    programNames,
+  );
+
   const executiveSummary = legacySummary
     ? {
         topPrograms: (legacySummary.topPrograms ?? []).map((program) => ({
@@ -655,6 +810,7 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
               currentDocumentsToGather: [],
               confirmWith: [],
             },
+            guidanceForProgram(legacyDocuments.guidance, program.name),
           ),
         })),
         topActions: (legacySummary.topActions ?? []).map((action) => ({
@@ -709,7 +865,7 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
       label: normalizePublicHeadlineText(action.label),
       description: normalizePublicHeadlineText(action.description),
     })),
-    sections: report.sections.map((section) => {
+    sections: legacyDocuments.sections.map((section) => {
       const programListingSection = isProgramListingSection(section.title);
       const supportOrganizationSection = isSupportOrganizationSectionTitle(section.title);
       return {
@@ -732,6 +888,10 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
             ? normalizePublicHeadlineText(section.description)
             : undefined,
         items: section.items.map((item) => {
+          const additionalPublicFacts = guidanceForProgram(
+            legacyDocuments.guidance,
+            item.label,
+          );
           const {
             confidenceLevel: _confidenceLevel,
             confidenceLabel: _confidenceLabel,
@@ -763,14 +923,17 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
               ? normalizePublicHeadlineText(publicItem.sourceLabel)
               : undefined,
             matchExplanation: publicItem.matchExplanation
-              ? normalizePublicMatchExplanation(publicItem.matchExplanation)
+              ? normalizePublicMatchExplanation(
+                  publicItem.matchExplanation,
+                  additionalPublicFacts,
+                )
               : undefined,
           };
           if (!programListingSection || !item.programId) return normalizedItem;
           return {
             ...normalizedItem,
             value: "Review published terms",
-            matchExplanation: legacyMatchExplanation(item),
+            matchExplanation: legacyMatchExplanation(item, additionalPublicFacts),
           };
         }),
       };

@@ -71,6 +71,12 @@ function textOrNull(value: unknown): string | null {
   return text === "" ? null : text;
 }
 
+function isoTimestampOrNull(value: unknown): string | null {
+  if (value == null) return null;
+  const parsed = value instanceof Date ? value : new Date(String(value).trim());
+  return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
+}
+
 function integer(value: unknown): number {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? Math.max(0, Math.trunc(parsed)) : 0;
@@ -332,7 +338,7 @@ export async function GET(request: NextRequest) {
     const records = mapRecentFilings(row.recent_filings);
     const firstIssueDate = textOrNull(row.first_issue_date);
     const latestIssueDate = textOrNull(row.latest_issue_date);
-    const sourceAsOf = textOrNull(row.source_as_of);
+    const sourceAsOf = isoTimestampOrNull(row.source_as_of);
 
     const result: PermitAreaResult = {
       status: "ready",

@@ -14,15 +14,24 @@ import {
   buildTrailJsonLd,
 } from "@/lib/seo";
 import { ZONE_LABELS } from "@/lib/constants";
+import { isDocumentRequirementGuidance } from "@/lib/document-preparation-cost";
+import { resolveAvailability } from "@/lib/program-gating";
 import { getProgramSeoOverride } from "@/lib/program-seo-overrides";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SnapshotCTA } from "@/components/seo/SnapshotCTA";
 import LevelBadge from "@/components/LevelBadge";
+import { ProgramApplicationSection } from "@/components/programs/ProgramApplicationSection";
+import { canPublishStaticApplicationGuidance } from "@/components/programs/programAvailability";
 
-/* ── Static generation: one indexable page per program ── */
+/* ── Static generation: indexable pages for currently available programs ── */
+
+export const dynamicParams = false;
 
 export async function generateStaticParams() {
-  return getAllPrograms().map((p) => ({ slug: programSlug(p) }));
+  const now = new Date();
+  return getAllPrograms()
+    .filter((program) => resolveAvailability(program, now).state !== "expired")
+    .map((program) => ({ slug: programSlug(program) }));
 }
 
 /** Trim a summary down to a clean ~150-char meta description. */
@@ -46,6 +55,14 @@ export async function generateMetadata({
     return {
       title: "Program Not Found",
       description: "This incentive program could not be found.",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  if (resolveAvailability(program, new Date()).state === "expired") {
+    return {
+      title: `${program.name} — Program Availability Ended`,
+      description: metaDescription(program.summary),
       robots: { index: false, follow: false },
     };
   }
@@ -79,17 +96,31 @@ export default async function ProgramExplainerPage({
   const program = getProgramBySlug(slug);
   if (!program) notFound();
 
+  const pageReferenceTime = new Date();
+  if (resolveAvailability(program, pageReferenceTime).state === "expired") {
+    notFound();
+  }
+
   const p = program;
-  const related = relatedPrograms(p);
+  const related = relatedPrograms(p).filter(
+    (item) => resolveAvailability(item, pageReferenceTime).state !== "expired",
+  );
   const zoneLabel = p.zoneKey ? ZONE_LABELS[p.zoneKey] : undefined;
   const officialUrl = p.sourceUrl || p.url;
+  const requiredDocuments = p.requiredDocs.filter(
+    (item) => !isDocumentRequirementGuidance(item),
+  );
+  const documentGuidance = p.requiredDocs.filter(isDocumentRequirementGuidance);
 
   /* ── JSON-LD: FAQ + breadcrumb trail ── */
   const faqItems = [
     { question: `What is ${p.name}?`, answer: p.summary },
     { question: `Who qualifies for ${p.name}?`, answer: p.whoQualifies },
   ];
-  if (p.howToApply.length > 0) {
+  if (
+    p.howToApply.length > 0 &&
+    canPublishStaticApplicationGuidance(p)
+  ) {
     faqItems.push({
       question: `How do I apply for ${p.name}?`,
       answer: p.howToApply.join(" "),
@@ -259,48 +290,38 @@ export default async function ProgramExplainerPage({
           </section>
         )}
 
-        {/* ── How to apply ── */}
-        {p.howToApply.length > 0 && (
-          <section className="py-12 border-t border-[#0C1B33]/10">
-            <SectionLabel>How to apply</SectionLabel>
-            <ol className="space-y-4">
-              {p.howToApply.map((step, i) => (
-                <li
-                  key={i}
-                  className="flex gap-4 text-base text-[#0C1B33]/75 leading-relaxed"
-                >
-                  <span className="mt-0.5 w-7 h-7 rounded-full bg-[#2563EB]/10 text-[#2563EB] flex items-center justify-center text-[12px] font-medium shrink-0">
-                    {i + 1}
-                  </span>
-                  <span className="pt-0.5">{step}</span>
-                </li>
-              ))}
-            </ol>
-            {p.fastestConfirmingStep && (
-              <div className="mt-6 border-l-2 border-[#2563EB] bg-[#EFF3FB] rounded-r-lg px-5 py-4">
-                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/60 mb-1.5">
-                  Fastest first move
-                </div>
-                <p className="text-[15px] text-[#0C1B33]/80 leading-relaxed">
-                  {p.fastestConfirmingStep}
-                </p>
-              </div>
-            )}
-          </section>
-        )}
+        {/* ── Live application availability and next step ── */}
+        <ProgramApplicationSection program={p} />
 
         {/* ── What you'll need ── */}
-        {p.requiredDocs.length > 0 && (
+        {requiredDocuments.length > 0 && (
           <section className="py-12 border-t border-[#0C1B33]/10">
             <SectionLabel>What you&apos;ll need</SectionLabel>
             <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {p.requiredDocs.map((doc, i) => (
+              {requiredDocuments.map((doc, i) => (
                 <li
                   key={i}
                   className="flex gap-3 text-[15px] text-[#0C1B33]/70 leading-relaxed bg-white border border-[#0C1B33]/10 rounded-lg px-4 py-3"
                 >
                   <span className="mt-0.5 w-5 h-5 rounded border border-[#0C1B33]/15 shrink-0" />
                   <span>{doc}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {documentGuidance.length > 0 && (
+          <section className="py-12 border-t border-[#0C1B33]/10">
+            <SectionLabel>Document notes</SectionLabel>
+            <ul className="space-y-3">
+              {documentGuidance.map((note, i) => (
+                <li
+                  key={i}
+                  className="flex gap-3 text-[15px] text-[#0C1B33]/70 leading-relaxed"
+                >
+                  <span className="mt-2 w-1.5 h-1.5 rounded-full bg-[#0C1B33]/20 shrink-0" />
+                  <span>{note}</span>
                 </li>
               ))}
             </ul>
