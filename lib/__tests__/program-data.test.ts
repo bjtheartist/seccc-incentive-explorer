@@ -54,6 +54,13 @@ describe("program data guardrails", () => {
     expect(ccsap!.deadlines).toContainEqual({
       label: "Quarterly round — 5 p.m. cutoff",
       date: "2026-08-21",
+      cutoffAt: "2026-08-21T17:00:00-05:00",
+    });
+    expect(ccsap!.applicationPortals).toContainEqual({
+      type: "submittable",
+      label: "CCSAP Grant Application",
+      url: "https://cocdpd.submittable.com/submit/6c22d8c7-4140-4f40-9054-9cb98ebc5104/commercial-corridor-storefront-activation-grant",
+      language: "en",
     });
   });
 

@@ -214,19 +214,31 @@ describe("resolveAvailability", () => {
     expect(result.note).toMatch(/applications currently closed/i);
   });
 
-  it("date-gates the published CCSAP quarterly deadline after the Chicago day passes", () => {
+  it("closes CCSAP at its exact 5 p.m. America/Chicago cutoff", () => {
     const ccsap = (catalogPrograms as Program[]).find((item) => item.id === "ccsa");
     expect(ccsap).toBeDefined();
 
     expect(
-      resolveAvailability(ccsap!, new Date("2026-08-21T23:30:00-05:00")).state
+      resolveAvailability(ccsap!, new Date("2026-08-21T16:59:59.999-05:00")).state
     ).toBe("active");
     const afterDeadline = resolveAvailability(
       ccsap!,
-      new Date("2026-08-22T00:01:00-05:00")
+      new Date("2026-08-21T17:00:00.001-05:00")
     );
     expect(afterDeadline.state).toBe("window-closed");
     expect(afterDeadline.note).toMatch(/applications currently closed/i);
+  });
+
+  it("preserves date-only Chicago-day semantics for AHSAP", () => {
+    const ahsap = (catalogPrograms as Program[]).find((item) => item.id === "ahsap");
+    expect(ahsap).toBeDefined();
+
+    expect(
+      resolveAvailability(ahsap!, new Date("2026-09-05T23:59:59.999-05:00")).state
+    ).toBe("active");
+    expect(
+      resolveAvailability(ahsap!, new Date("2026-09-06T00:00:00.001-05:00")).state
+    ).toBe("window-closed");
   });
 
   it("treats a published intake suspension as closed without expiring certifications", () => {

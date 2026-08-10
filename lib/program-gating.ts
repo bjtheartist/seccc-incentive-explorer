@@ -34,7 +34,7 @@
  * so the rollout-matching logic lives in exactly one place.
  */
 
-import type { Program } from "./types";
+import type { Program, ProgramDeadlineEntry } from "./types";
 import { findSbifWindow, type SbifWindow } from "./deadlines";
 
 // ── Output types ──────────────────────────────────────────────────────────────
@@ -103,6 +103,18 @@ function isPastDay(dateStr: string, today: Date): boolean {
   return days != null && days < 0;
 }
 
+/** Exact cutoffs compare as instants; entries without one retain Chicago-day semantics. */
+function isPastDeadline(
+  deadline: ProgramDeadlineEntry,
+  now: Date,
+  chicagoToday: Date
+): boolean {
+  const cutoff = parseDate(deadline.cutoffAt);
+  return cutoff
+    ? now.getTime() >= cutoff.getTime()
+    : isPastDay(deadline.date, chicagoToday);
+}
+
 // ── Resolver ──────────────────────────────────────────────────────────────────
 
 const WINDOW_OPEN_LABEL = /\bopen(s|ed|ing)?\b/i;
@@ -116,9 +128,14 @@ export function resolveAvailability(
   today: Date,
   opts: ResolveAvailabilityOpts = {}
 ): ProgramAvailability {
-  today = chicagoDayUtc(today);
-  const dated = (program.deadlines ?? []).filter((d) => daysUntil(d.date, today) != null);
-  const expiresOnPast = program.expiresOn ? isPastDay(program.expiresOn, today) : false;
+  const now = today;
+  const chicagoToday = chicagoDayUtc(now);
+  const dated = (program.deadlines ?? []).filter(
+    (d) => daysUntil(d.date, chicagoToday) != null
+  );
+  const expiresOnPast = program.expiresOn
+    ? isPastDay(program.expiresOn, chicagoToday)
+    : false;
   const expiresOnFuture = !!program.expiresOn && !expiresOnPast && parseDate(program.expiresOn) != null;
 
   // 1) Explicit expiry date in the past — hidden everywhere.
@@ -166,7 +183,7 @@ export function resolveAvailability(
     program.oneTime === true &&
     !expiresOnFuture &&
     dated.length > 0 &&
-    dated.every((d) => isPastDay(d.date, today))
+    dated.every((d) => isPastDeadline(d, now, chicagoToday))
   ) {
     const last = dated.map((d) => d.date).sort().at(-1);
     return {
@@ -181,8 +198,8 @@ export function resolveAvailability(
   if (program.id === "sbif" && opts.sbifRollout?.length && opts.tifDistrict) {
     const win = findSbifWindow(opts.sbifRollout, opts.tifDistrict);
     if (win) {
-      const daysToStart = daysUntil(win.windowStart, today);
-      const daysToEnd = daysUntil(win.windowEnd, today);
+      const daysToStart = daysUntil(win.windowStart, chicagoToday);
+      const daysToEnd = daysUntil(win.windowEnd, chicagoToday);
       if (daysToStart != null && daysToEnd != null) {
         const nextWindow: NextWindow = {
           date: win.windowStart,
@@ -217,7 +234,7 @@ export function resolveAvailability(
 
   // 6) A future deadline / window exists — active; surface the next one.
   const futureDates = dated
-    .filter((d) => !isPastDay(d.date, today))
+    .filter((d) => !isPastDeadline(d, now, chicagoToday))
     .sort((a, b) => a.date.localeCompare(b.date));
   if (expiresOnFuture) {
     futureDates.push({ label: "Final availability date", date: program.expiresOn! });

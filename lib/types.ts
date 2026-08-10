@@ -76,6 +76,8 @@ export interface ProgramDeadlineEntry {
   label?: string;
   /** ISO date YYYY-MM-DD. */
   date: string;
+  /** Exact ISO 8601 cutoff with UTC offset when the source publishes a local time. */
+  cutoffAt?: string;
 }
 
 /* ── Stacking rule between two programs ── */

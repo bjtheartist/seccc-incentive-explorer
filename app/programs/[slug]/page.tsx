@@ -19,6 +19,7 @@ import { getProgramSeoOverride } from "@/lib/program-seo-overrides";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SnapshotCTA } from "@/components/seo/SnapshotCTA";
 import LevelBadge from "@/components/LevelBadge";
+import { ProgramApplicationSection } from "@/components/programs/ProgramApplicationSection";
 
 /* ── Static generation: one indexable page per program ── */
 
@@ -264,35 +265,8 @@ export default async function ProgramExplainerPage({
           </section>
         )}
 
-        {/* ── How to apply ── */}
-        {p.howToApply.length > 0 && (
-          <section className="py-12 border-t border-[#0C1B33]/10">
-            <SectionLabel>How to apply</SectionLabel>
-            <ol className="space-y-4">
-              {p.howToApply.map((step, i) => (
-                <li
-                  key={i}
-                  className="flex gap-4 text-base text-[#0C1B33]/75 leading-relaxed"
-                >
-                  <span className="mt-0.5 w-7 h-7 rounded-full bg-[#2563EB]/10 text-[#2563EB] flex items-center justify-center text-[12px] font-medium shrink-0">
-                    {i + 1}
-                  </span>
-                  <span className="pt-0.5">{step}</span>
-                </li>
-              ))}
-            </ol>
-            {p.fastestConfirmingStep && (
-              <div className="mt-6 border-l-2 border-[#2563EB] bg-[#EFF3FB] rounded-r-lg px-5 py-4">
-                <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/60 mb-1.5">
-                  Fastest first move
-                </div>
-                <p className="text-[15px] text-[#0C1B33]/80 leading-relaxed">
-                  {p.fastestConfirmingStep}
-                </p>
-              </div>
-            )}
-          </section>
-        )}
+        {/* ── Live application availability and next step ── */}
+        <ProgramApplicationSection program={p} />
 
         {/* ── What you'll need ── */}
         {requiredDocuments.length > 0 && (

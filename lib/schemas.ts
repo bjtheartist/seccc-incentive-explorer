@@ -44,6 +44,7 @@ export const VerificationStepSchema = z.object({
 const ProgramDeadlineEntrySchema = z.object({
   label: z.string().optional(),
   date: z.string(),
+  cutoffAt: z.string().optional(),
 });
 
 const DocumentSpecSchema = z.object({
