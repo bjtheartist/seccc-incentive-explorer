@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Program } from "../types";
 import type { SbifWindow } from "../deadlines";
 import { resolveAvailability, isExpired, excludeExpiredPrograms } from "../program-gating";
+import catalogPrograms from "../../public/data/programs.json";
 
 /** Fixed reference date for every case: July 2, 2026. */
 const TODAY = new Date("2026-07-02T12:00:00Z");
@@ -211,6 +212,34 @@ describe("resolveAvailability", () => {
     );
     expect(result.state).toBe("window-closed");
     expect(result.note).toMatch(/applications currently closed/i);
+  });
+
+  it("date-gates the published CCSAP quarterly deadline after the Chicago day passes", () => {
+    const ccsap = (catalogPrograms as Program[]).find((item) => item.id === "ccsa");
+    expect(ccsap).toBeDefined();
+
+    expect(
+      resolveAvailability(ccsap!, new Date("2026-08-21T23:30:00-05:00")).state
+    ).toBe("active");
+    const afterDeadline = resolveAvailability(
+      ccsap!,
+      new Date("2026-08-22T00:01:00-05:00")
+    );
+    expect(afterDeadline.state).toBe("window-closed");
+    expect(afterDeadline.note).toMatch(/applications currently closed/i);
+  });
+
+  it("treats a published intake suspension as closed without expiring certifications", () => {
+    const dataCenter = (catalogPrograms as Program[]).find(
+      (item) => item.id === "dataCenter"
+    );
+    expect(dataCenter).toBeDefined();
+
+    const result = resolveAvailability(dataCenter!, TODAY);
+    expect(result.state).toBe("window-closed");
+    expect(result.note).toBe(dataCenter!.suspensionNote);
+    expect(result.note).toMatch(/new applications are not being processed/i);
+    expect(result.state).not.toBe("expired");
   });
 
   it("keeps a recurring program active when its latest past event was a window OPENING", () => {

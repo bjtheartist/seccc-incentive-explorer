@@ -13,11 +13,11 @@
  *
  * Inputs (committed under data/curated/investment-inputs/, read from there by default):
  *   nof_small.json / nof_large.json / sbif.json  — Socrata completion rows
- *   cdg_awards.csv                               — CDG award rounds 2022–2025
+ *   cdg_awards.csv                               — CDG award rounds 2022–2026
  *   foundation_grants_geocoded.csv               — 990 grants w/ lat/lng + locType
  *   foundation_grants_tier1_expansion.csv        — SAME schema, 20 more funders (Tier 1)
  *   developments.csv                             — major development projects
- *   ellen_nof_awardees.tsv                       — Jim's 38 NOF corridor awards
+ *   ellen_nof_awardees.tsv                       — Jim's 38 partner-reported NOF corridor awards
  *
  * Honesty rails (mirror the TIF doctrine):
  *   • IRON RULE — no derived received/available/remaining/unspent figure ever;
@@ -27,10 +27,9 @@
  *     cache makes re-runs reproducible; generatedAt is the only wall-clock value.
  *   • A row that cannot be placed (geocode failed AND no coordinates) is never
  *     plotted at 0,0 or guessed. It is HELD CITYWIDE — unplotted, but with its
- *     dollars still in the export and counted in meta.citywideCount — unless
- *     keeping it would double-count an award another source already carries
- *     (Jim's corridor partner list), in which case it is DROPPED and counted in
- *     meta.droppedNoGeocode. Silent deletion of published dollars is never OK.
+ *     dollars still in the export and counted in meta.citywideCount. A partner
+ *     row is dropped only when project name, amount, and award year independently
+ *     confirm that an official NOF/SBIF input already carries the same award.
  *
  * Usage:
  *   npx tsx scripts/export-community-investment.ts            # repo inputs (default)
@@ -45,6 +44,7 @@ import {
   buildCommunityInvestmentExport,
   dedupeInvestmentRecords,
   INVESTMENT_STATUSES,
+  normalizeRecipientForDedupe,
   SOURCE_FUNDER_TYPE,
   type CommunityInvestmentRecord,
   type CommunityInvestmentRecordDraft,
@@ -128,7 +128,7 @@ const DCEO_CAPITAL_SOURCE_PAGE =
 const PROVENANCE_LABELS = [
   "City of Chicago Neighborhood Opportunity Fund — grant completions (Chicago Data Portal / Socrata)",
   "City of Chicago Small Business Improvement Fund — grant completions (Chicago Data Portal / Socrata)",
-  "City of Chicago Community Development Grant — award rounds 2022–2025 (chicago.gov press releases)",
+  "City of Chicago Community Development Grant — award rounds 2022–2026 (curated published award announcements; per-row source links retained)",
   "Private-foundation grants parsed from IRS 990-PF / 990 filings (ProPublica), geocoded to recipient address",
   "Private-foundation grants — Tier-1 expansion: 20 additional Chicago private funders parsed from IRS 990-PF e-file XML, every filing reconciled row-sum-to-Part-I-line-3a before release; funders whose filings publish only a grant-schedule aggregate are quarantined, never counted",
   "Private-foundation grants — Phase-2 expansion to the 80% capacity-coverage bar: 65 further Chicago private funders parsed from IRS 990-PF e-file XML under the same reconciliation gate (row sum ties the filing's own printed total within $1); a post-parse review pass additionally quarantined filings whose recipient addresses are the filer's own office",
@@ -136,7 +136,7 @@ const PROVENANCE_LABELS = [
   "Major development projects — Ellen's Developments map (Google My Maps)",
   "Major private developments — verified/discovered megaprojects w/ announced capital (press coverage, developer filings)",
   "Chicago Prize — Pritzker Traubert Foundation ($10M community-transformation awards + finalist planning grants)",
-  "Neighborhood Opportunity Fund corridor awards 2017–2020 — Jim's South Shore list (award records)",
+  "Neighborhood Opportunity Fund corridor award list 2017–2020 — Jim's South Shore partner list (partner-reported; confirmed official duplicates removed)",
   "City of Chicago TIF-funded RDA/IGA projects (Socrata mex4-ppfc) — council-authorized TIF assistance ceilings (authorizedAmount, capitalClass tif_subsidy)",
   "HUD CDBG/HOME activities administered by the City of Chicago — committed federal program allocations (authorizedAmount, capitalClass federal_program)",
   "Low-Income Housing Tax Credit allocations (HUD LIHTC database) — tax-credit capital (creditAmount, capitalClass tax_credit)",
@@ -452,6 +452,37 @@ interface SocrataRow {
 interface SocrataDrops {
   preWindow: number;
   noCoords: number;
+}
+
+export interface OfficialAwardDuplicateFact {
+  recipient: string;
+  amountAwarded: number;
+  awardYears: number[];
+}
+
+/** Build from official source facts only. These decide whether a partner row is
+ * already represented; neither record needs point geometry to establish that
+ * the same named award, amount, and year was published twice. */
+function buildOfficialAwardDuplicateFacts(
+  rows: readonly SocrataRow[],
+  minYear: number,
+): OfficialAwardDuplicateFact[] {
+  const facts: OfficialAwardDuplicateFact[] = [];
+  for (const row of rows) {
+    const completionYear = yearOfDate(row.completion_date);
+    const approvalYear = yearOfDate(row.approval_date);
+    const effectiveYear = completionYear ?? approvalYear;
+    if (effectiveYear != null && effectiveYear < minYear) {
+      continue;
+    }
+    const amountAwarded = parseAmount(row.incentive_amount);
+    const recipient = nullableStr(row.project_name) || nullableStr(row.applicant_name);
+    const awardYears = [...new Set([approvalYear, completionYear].filter((year): year is number => year != null))];
+    if (recipient && amountAwarded != null && awardYears.length > 0) {
+      facts.push({ recipient, amountAwarded, awardYears });
+    }
+  }
+  return facts;
 }
 
 /**
@@ -1870,11 +1901,8 @@ function mapDceoCapital(
  * legend's "N citywide records not included (no point location)" note, and is
  * still never plotted at a guessed location.
  *
- * Safe against double counting BECAUSE dedupeInvestmentRecords only merges
- * POINT rows and CDG is the sole source of these awards — none of the 11 has an
- * address+amount twin anywhere in the export. That is NOT true of Jim's
- * corridor partner list, which re-states official NOF awards; see the drop in
- * main() for why those rows must stay dropped.
+ * Safe against double counting because CDG is the sole source of these awards;
+ * none of the held rows has an address+amount twin anywhere in the export.
  */
 export function mapCdgAwards(
   rows: readonly Record<string, string>[],
@@ -1924,6 +1952,95 @@ export function mapCdgAwards(
     citywideRecords: records.length - pointRecords,
     addressGeocodeMisses,
     heldCitywideDollars,
+  };
+}
+
+export interface PartnerNofMapResult {
+  records: CommunityInvestmentRecordDraft[];
+  pointRecords: number;
+  citywideRecords: number;
+  addressGeocodeMisses: number;
+  heldCitywideDollars: number;
+  confirmedDuplicateRows: number;
+}
+
+/**
+ * Map the partner-maintained South Shore NOF list without using geometry as a
+ * dedupe prerequisite. A row is a confirmed duplicate only when normalized
+ * project name, exact amount, and the partner-published award year all match an
+ * official NOF/SBIF source row. Every other row is accepted: a geocode hit
+ * becomes a point; a miss remains citywide with its published address, amount,
+ * and partner provenance intact.
+ */
+export function mapPartnerNofAwards(
+  rows: readonly Record<string, string>[],
+  geocodes: ReadonlyMap<string, GeoResult | null>,
+  queryForAddress: (address: string) => string,
+  officialAwards: readonly OfficialAwardDuplicateFact[],
+): PartnerNofMapResult {
+  const records: CommunityInvestmentRecordDraft[] = [];
+  let pointRecords = 0;
+  let addressGeocodeMisses = 0;
+  let heldCitywideDollars = 0;
+  let confirmedDuplicateRows = 0;
+
+  for (const row of rows) {
+    const recipient = nullableStr(row.Project) || "(unnamed project)";
+    const amountAwarded = parseAmount(row["Award Amount"]);
+    const publishedYear = Number(row["Year Awarded"]);
+    const year = Number.isInteger(publishedYear) ? publishedYear : null;
+    const normalizedRecipient = normalizeRecipientForDedupe(recipient);
+    const duplicated =
+      amountAwarded != null &&
+      year != null &&
+      normalizedRecipient !== "" &&
+      officialAwards.some(
+        (official) =>
+          official.amountAwarded === amountAwarded &&
+          official.awardYears.includes(year) &&
+          normalizeRecipientForDedupe(official.recipient) === normalizedRecipient,
+      );
+    if (duplicated) {
+      confirmedDuplicateRows += 1;
+      continue;
+    }
+
+    const address = nullableStr(row.Address);
+    const hit = address ? geocodes.get(queryForAddress(address)) : null;
+    if (address && !hit) addressGeocodeMisses += 1;
+    const geometry: InvestmentGeometry = hit ? point(hit.lat, hit.lng) : { kind: "citywide" };
+    if (geometry.kind === "point") {
+      pointRecords += 1;
+    } else if (amountAwarded != null) {
+      heldCitywideDollars += amountAwarded;
+    }
+
+    records.push({
+      id: `nof-small-corridor-${records.length}`,
+      source: "nof-small",
+      funderType: SOURCE_FUNDER_TYPE["nof-small"],
+      funderName: NOF_PROGRAM,
+      recipient,
+      capitalClass: "grant",
+      amountAwarded,
+      logLine: null,
+      year,
+      geometry,
+      address,
+      status: "awarded",
+      recordDate: null,
+      recordProvenance: "partner-list",
+      links: [],
+    });
+  }
+
+  return {
+    records,
+    pointRecords,
+    citywideRecords: records.length - pointRecords,
+    addressGeocodeMisses,
+    heldCitywideDollars,
+    confirmedDuplicateRows,
   };
 }
 
@@ -2271,9 +2388,18 @@ async function main() {
   const generatedAt = new Date().toISOString();
 
   // 1) Sources that already carry coordinates (or resolve citywide by locType).
-  const nofSmallR = mapSocrata(JSON.parse(readFileSync(join(INPUT_DIR, "nof_small.json"), "utf8")), "nof-small", NOF_PROGRAM, 2017);
-  const nofLargeR = mapSocrata(JSON.parse(readFileSync(join(INPUT_DIR, "nof_large.json"), "utf8")), "nof-large", NOF_PROGRAM, 2017);
-  const sbifR = mapSocrata(JSON.parse(readFileSync(join(INPUT_DIR, "sbif.json"), "utf8")), "sbif", SBIF_PROGRAM, 2020);
+  const nofSmallRows = JSON.parse(
+    readFileSync(join(INPUT_DIR, "nof_small.json"), "utf8"),
+  ) as SocrataRow[];
+  const nofLargeRows = JSON.parse(
+    readFileSync(join(INPUT_DIR, "nof_large.json"), "utf8"),
+  ) as SocrataRow[];
+  const sbifRows = JSON.parse(
+    readFileSync(join(INPUT_DIR, "sbif.json"), "utf8"),
+  ) as SocrataRow[];
+  const nofSmallR = mapSocrata(nofSmallRows, "nof-small", NOF_PROGRAM, 2017);
+  const nofLargeR = mapSocrata(nofLargeRows, "nof-large", NOF_PROGRAM, 2017);
+  const sbifR = mapSocrata(sbifRows, "sbif", SBIF_PROGRAM, 2020);
   const nofSmall = nofSmallR.records;
   const nofLarge = nofLargeR.records;
   const sbif = sbifR.records;
@@ -2415,54 +2541,27 @@ async function main() {
     if (hit) discoveredGeo.set(name, point(hit.lat, hit.lng));
   }
 
-  let droppedNoGeocode = 0;
-
   // CDG rows that cannot be geocoded are HELD CITYWIDE, not dropped — their
   // dollars stay in the export (see mapCdgAwards for the $16.26M this used to
   // delete). Nothing here feeds droppedNoGeocode any more.
   const cdgMapped = mapCdgAwards(cdgRows, geo, cdgQuery);
   const cdg = cdgMapped.records;
 
-  const jim: CommunityInvestmentRecordDraft[] = [];
-  let jimIdx = 0;
-  for (const r of jimRows) {
-    const addr = nullableStr(r.Address);
-    const hit = addr ? geo.get(cdgQuery(addr)) : null;
-    if (!hit) {
-      // Jim's corridor list is a PARTNER re-statement of official NOF awards,
-      // and the supersede-dedupe that collapses a re-statement into its official
-      // twin only fires on POINT rows. Holding an ungeocodable corridor row
-      // citywide would therefore double-count dollars already in the export —
-      // "South Shore Brew" ($98,420.24, corridor address 7101 S. Yates Blvd.)
-      // is the same award as the nof-small completion at 1745 E 71st St. So
-      // unlike CDG (a source with no twins) these rows stay dropped and counted.
-      droppedNoGeocode++;
-      continue;
-    }
-    jim.push({
-      id: `nof-small-corridor-${jimIdx++}`,
-      source: "nof-small",
-      funderType: SOURCE_FUNDER_TYPE["nof-small"],
-      funderName: NOF_PROGRAM,
-      recipient: nullableStr(r.Project) || "(unnamed project)",
-      capitalClass: "grant",
-      amountAwarded: parseAmount(r["Award Amount"]),
-      logLine: null,
-      year: Number.isInteger(Number(r["Year Awarded"])) ? Number(r["Year Awarded"]) : null,
-      geometry: point(hit.lat, hit.lng),
-      address: addr,
-      status: "awarded",
-      recordDate: null, // Jim's corridor list carries only a year, no per-record date
-      recordProvenance: "partner-list",
-      links: [],
-    });
-  }
+  const officialAwardFacts = [
+    ...buildOfficialAwardDuplicateFacts(nofSmallRows, 2017),
+    ...buildOfficialAwardDuplicateFacts(nofLargeRows, 2017),
+    ...buildOfficialAwardDuplicateFacts(sbifRows, 2020),
+  ];
+  const jimMapped = mapPartnerNofAwards(jimRows, geo, cdgQuery, officialAwardFacts);
+  const jim = jimMapped.records;
 
   const caPolygons = loadCommunityAreaPolygons(CA_GEOJSON_PATH);
   console.log(
     `Geocoded: cdg=${cdg.length} (point=${cdgMapped.pointRecords} held-citywide=${cdgMapped.citywideRecords} ` +
       `geocode-miss=${cdgMapped.addressGeocodeMisses} held-citywide-dollars=${cdgMapped.heldCitywideDollars}) ` +
-      `jim kept=${jim.length} droppedNoGeocode=${droppedNoGeocode}`,
+      `jim kept=${jim.length} point=${jimMapped.pointRecords} held-citywide=${jimMapped.citywideRecords} ` +
+      `geocode-miss=${jimMapped.addressGeocodeMisses} held-citywide-dollars=${jimMapped.heldCitywideDollars} ` +
+      `confirmed-duplicates=${jimMapped.confirmedDuplicateRows}`,
   );
   const dceo = mapDceoCapital(dceoCandidates, geo, cdgQuery, caPolygons);
   const sbaRrf = mapSbaRestaurantRevitalization(sbaRrfRows, geo, caPolygons);
@@ -2540,7 +2639,11 @@ async function main() {
 
   // 4) Cross-source dedupe (government point rows sharing address+amount).
   const { records: deduped, removedCount } = dedupeInvestmentRecords(classified);
-  console.log(`Deduped: ${classified.length} -> ${deduped.length} (removed ${removedCount})`);
+  const totalDedupedRows = removedCount + jimMapped.confirmedDuplicateRows;
+  console.log(
+    `Deduped: ${classified.length + jimMapped.confirmedDuplicateRows} -> ${deduped.length} ` +
+      `(removed ${totalDedupedRows}; ${jimMapped.confirmedDuplicateRows} confirmed before geometry)`,
+  );
 
   // 5) Point-in-polygon community-area stamping for EVERY point record. Runs on
   //    the final deduped set so the tallies describe the kept records. NMTC
@@ -2554,8 +2657,8 @@ async function main() {
 
   // 6) Assemble + structural banned-figure assert + write.
   const out = buildCommunityInvestmentExport(deduped, generatedAt, {
-    droppedNoGeocode,
-    dedupedRows: removedCount,
+    droppedNoGeocode: 0,
+    dedupedRows: totalDedupedRows,
     droppedPlaceholder: foundationStats.droppedPlaceholder,
     droppedPreWindow,
     droppedNoCoords,

@@ -807,6 +807,31 @@ describe("generateReportData", () => {
     expect(report.actionRoadmap?.[0].callScript).toContain("hire or retain employees");
   });
 
+  it("publishes a suspended application intake as window-closed in report items", () => {
+    const suspensionNote =
+      "New applications are not being processed; existing certifications are unaffected.";
+    const report = generateReportData(
+      makeState(),
+      [
+        makeProgram({
+          id: "dataCenter",
+          name: "Data Center Tax Incentive",
+          status: "verify",
+          suspensionNote,
+        }),
+      ],
+      { zones, zoneNames },
+    );
+    const item = report.sections
+      .flatMap((section) => section.items)
+      .find((candidate) => candidate.programId === "dataCenter");
+
+    expect(item).toBeDefined();
+    expect(item?.availability).toBe("window-closed");
+    expect(item?.availabilityNote).toBe(suspensionNote);
+    expect(item?.detail).toContain(suspensionNote);
+  });
+
   it("organizes programs across three goals and preserves custom context without scoring it", () => {
     const report = generateReportData(
       makeState({

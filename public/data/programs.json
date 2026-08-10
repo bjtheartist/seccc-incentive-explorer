@@ -1703,7 +1703,7 @@
     "requiredDocs": [
       "Proof of income and household size",
       "Homebuyer counseling certificate (NHS)",
-      "Purchase contract for property in MMRP area"
+      "Purchase contract for property in a designated CNRP target area"
     ],
     "contact": "Chicago DOH — James.Wheaton@cityofchicago.org (Project Manager, CNRP)",
     "url": "https://www.chicago.gov/city/en/depts/doh/provdrs/developers/svcs/ChicagoNeighborhoodRecoveryProgram.html",
@@ -1891,6 +1891,7 @@
         "date": "2026-08-21"
       }
     ],
+    "recurring": true,
     "applicationPortals": [
       {
         "type": "submittable",
@@ -3458,7 +3459,7 @@
     "requiredDocs": [
       "Municipal Special Circumstances resolution",
       "Cook County Board resolution",
-      "10+ years of ownership records",
+      "Evidence the occupying industrial enterprise has operated at the same premises for 10+ consecutive years",
       "Financial hardship documentation (tax returns, P&Ls)",
       "Employment and operational continuity evidence"
     ],
@@ -3483,7 +3484,7 @@
       },
       {
         "criterion": "propertyType",
-        "description": "Industrial use with 10+ years of same ownership",
+        "description": "Industrial enterprise occupying the same premises for 10+ consecutive years",
         "verifiedBy": "manual",
         "required": true
       },
@@ -4030,6 +4031,13 @@
     "benefitRange": "25% (Tier 15) or 35% (Tier 35) assessed-value reduction",
     "fastestConfirmingStep": "Call (312) 443-7550 or email assessor.ahsap@cookcountyil.gov before the September 5 deadline",
     "expirationNote": "2026 Part 1 + Part 2 application deadline: September 5, 2026.",
+    "deadlines": [
+      {
+        "label": "2026 Part 1 + Part 2 application deadline",
+        "date": "2026-09-05"
+      }
+    ],
+    "recurring": true,
     "personas": [
       "developer"
     ]
@@ -4727,16 +4735,6 @@
     "lastVerifiedAt": "2026-08-09",
     "benefitRange": "Residential up to $750 ($2,500 LI/LIC/EIEC); commercial up to $5,000/port ($7,500 LI/EIEC)",
     "fastestConfirmingStep": "Confirm charger eligibility at comed.com/EV before purchase",
-    "verificationSteps": [
-      {
-        "label": "Federal §30C alternative-fuel-vehicle refueling property credit",
-        "agency": "IRS",
-        "url": "https://www.irs.gov/credits-deductions/alternative-fuel-vehicle-refueling-property-credit",
-        "kind": "filing",
-        "appliesBefore": "annual",
-        "note": "Stackable federal credit; file with annual tax return."
-      }
-    ],
     "personas": [
       "growing"
     ]

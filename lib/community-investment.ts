@@ -11,7 +11,7 @@
  *   • sbif                  — City of Chicago Small Business Improvement Fund
  *     COMPLETIONS (Socrata).
  *   • cdg                   — City of Chicago Community Development Grant AWARDS
- *     (scraped press-release rounds 2022–2025).
+ *     (curated published award announcements covering 2022–2026).
  *   • foundation            — private-foundation grants parsed from 990-PF/990
  *     filings, geocoded to the recipient's address (or held citywide when the
  *     recipient is an intermediary / the address is unmappable).
@@ -377,11 +377,10 @@ export interface CommunityInvestmentRecord {
   recordDate?: string | null;
   /**
    * Where the row's facts come from: "official" (a city dataset / published
-   * record) or "partner-list" (a hand-kept partner sheet re-stating an award,
-   * e.g. Jim's corridor NOF list). Absent means "official". The dedupe treats a
-   * cross-provenance address+amount collision as the SAME award re-stated (the
-   * official row wins), while two official rows with different record dates are
-   * two REAL grant events and both survive.
+   * record) or "partner-list" (a hand-kept partner-reported row, e.g. Jim's
+   * corridor NOF list). Absent means "official". A partner row is not itself
+   * official corroboration; confirmed collisions retain the official row, while
+   * unmatched partner rows keep this provenance explicitly.
    */
   recordProvenance?: "official" | "partner-list";
   /** Source/project links (deduped, http(s) only). */
@@ -530,9 +529,10 @@ export interface CommunityInvestmentMeta {
   /** NMTC records whose 2020 census tract had no gazetteer centroid, so no
    * community area could be assigned (kept citywide, no CA — never guessed). */
   nmtcUnstamped: number;
-  /** City-grant rows dropped because geocoding failed and they carry no coords. */
+  /** Rows dropped solely because geocoding failed. Source-honest exporters hold
+   * accepted rows citywide instead, so this should remain zero. */
   droppedNoGeocode: number;
-  /** Cross-source rows removed by the address+amount dedupe. */
+  /** Confirmed duplicate rows removed across sources. */
   dedupedRows: number;
   /**
    * Foundation rows rejected as placeholders (recipient/address literally
