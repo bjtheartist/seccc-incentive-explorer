@@ -34,12 +34,47 @@ const RESULT: PermitAreaResult = {
   totalFilings: 1,
   distinctAddresses: 1,
   issueDateSpan: { first: "2026-08-04", latest: "2026-08-04" },
+  typeBreakdown: [
+    {
+      key: null,
+      label: "Not recorded",
+      sourceValue: null,
+      color: "#64748B",
+      count: 1,
+    },
+  ],
+  yearBreakdown: [{ year: 2026, count: 1 }],
+  statusBreakdown: [{ status: "Issued", count: 1 }],
+  records: [
+    {
+      permitId: "100012345",
+      permitTypeKey: null,
+      permitTypeLabel: "Not recorded",
+      rawPermitType: null,
+      address: "123 W TEST ST",
+      issueDate: "2026-08-04",
+      permitStatus: "Issued",
+      permitMilestone: null,
+      workType: null,
+      workDescription: null,
+    },
+  ],
+  recordsReturned: 1,
+  recordsTruncated: false,
+};
+
+const ZERO_RESULT: PermitAreaResult = {
+  ...RESULT,
+  sourceRefresh: { asOf: null, asOfBasis: null },
+  totalFilings: 0,
+  distinctAddresses: 0,
+  issueDateSpan: null,
   typeBreakdown: [],
   yearBreakdown: [],
   statusBreakdown: [],
   records: [],
   recordsReturned: 0,
-  recordsTruncated: true,
+  recordsTruncated: false,
 };
 
 describe("permit area client", () => {
@@ -61,6 +96,10 @@ describe("permit area client", () => {
     await expect(fetchPermitArea(POLYGON, { fetchImpl })).resolves.toEqual(RESULT);
     expect(fetchImpl).toHaveBeenCalledOnce();
     expect(fetchImpl.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it("accepts an honest zero result", () => {
+    expect(parsePermitAreaResult(ZERO_RESULT)).toEqual(ZERO_RESULT);
   });
 
   it("treats HTTP and malformed readiness responses as lookup failures", async () => {
@@ -131,7 +170,7 @@ describe("permit area client", () => {
         recordsReturned: 1,
       },
     ],
-    ["returned-record count", { ...RESULT, recordsReturned: 1 }],
+    ["returned-record count", { ...RESULT, recordsReturned: 0 }],
     ["truncation flag", { ...RESULT, recordsTruncated: "yes" }],
   ])("rejects a ready payload with malformed %s", async (_field, malformed) => {
     const fetchImpl = vi.fn().mockResolvedValue(
@@ -143,6 +182,48 @@ describe("permit area client", () => {
 
     expect(parsePermitAreaResult(malformed)).toBeNull();
     await expect(fetchPermitArea(POLYGON, { fetchImpl })).rejects.toThrow("not ready");
+  });
+
+  it.each([
+    ["more addresses than filings", { ...RESULT, distinctAddresses: 2 }],
+    [
+      "a record when the total is zero",
+      {
+        ...ZERO_RESULT,
+        records: RESULT.records,
+        recordsReturned: 1,
+        recordsTruncated: false,
+      },
+    ],
+    [
+      "a type-breakdown sum that differs from the total",
+      { ...RESULT, typeBreakdown: [{ ...RESULT.typeBreakdown[0], count: 0 }] },
+    ],
+    [
+      "a year-breakdown sum that differs from the total",
+      { ...RESULT, yearBreakdown: [{ year: 2026, count: 2 }] },
+    ],
+    ["a status-breakdown sum that differs from the total", { ...RESULT, statusBreakdown: [] }],
+    ["a truncated flag when all records were returned", { ...RESULT, recordsTruncated: true }],
+    [
+      "an unreported truncation",
+      {
+        ...RESULT,
+        totalFilings: 2,
+        distinctAddresses: 1,
+        typeBreakdown: [{ ...RESULT.typeBreakdown[0], count: 2 }],
+        yearBreakdown: [{ year: 2026, count: 2 }],
+        statusBreakdown: [{ status: "Issued", count: 2 }],
+        recordsTruncated: false,
+      },
+    ],
+    ["a missing issue-date span for nonzero filings", { ...RESULT, issueDateSpan: null }],
+    [
+      "a nonempty issue-date span for zero filings",
+      { ...ZERO_RESULT, issueDateSpan: RESULT.issueDateSpan },
+    ],
+  ])("rejects a ready payload with contradictory %s", (_case, contradictory) => {
+    expect(parsePermitAreaResult(contradictory)).toBeNull();
   });
 
   it("keeps a malformed ready payload unavailable to downstream CSV", async () => {

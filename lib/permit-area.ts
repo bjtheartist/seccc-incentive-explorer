@@ -192,7 +192,35 @@ export function parsePermitAreaResult(value: unknown): PermitAreaResult | null {
     return null;
   }
 
-  return value as unknown as PermitAreaResult;
+  const result = value as unknown as PermitAreaResult;
+  const typeTotal = result.typeBreakdown.reduce((sum, item) => sum + item.count, 0);
+  const yearTotal = result.yearBreakdown.reduce((sum, item) => sum + item.count, 0);
+  const statusTotal = result.statusBreakdown.reduce((sum, item) => sum + item.count, 0);
+
+  if (
+    result.distinctAddresses > result.totalFilings ||
+    result.recordsReturned > result.totalFilings ||
+    result.recordsTruncated !== (result.recordsReturned < result.totalFilings) ||
+    typeTotal !== result.totalFilings ||
+    yearTotal !== result.totalFilings ||
+    statusTotal !== result.totalFilings
+  ) {
+    return null;
+  }
+
+  if (
+    result.totalFilings === 0 &&
+    (result.issueDateSpan !== null ||
+      result.typeBreakdown.length > 0 ||
+      result.yearBreakdown.length > 0 ||
+      result.statusBreakdown.length > 0)
+  ) {
+    return null;
+  }
+
+  if (result.totalFilings > 0 && result.issueDateSpan === null) return null;
+
+  return result;
 }
 
 export function permitAreaRequestPath(polygon: GeoJSON.Polygon): string {

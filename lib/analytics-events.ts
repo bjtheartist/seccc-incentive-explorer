@@ -133,6 +133,24 @@ function writeSessionValue(key: string, value: string | null) {
   }
 }
 
+function firstExplicitCampaign(...values: unknown[]): unknown | null {
+  for (const value of values) {
+    if (value === undefined || value === null) continue;
+    if (typeof value === "string" && value.trim() === "") continue;
+    return value;
+  }
+  return null;
+}
+
+function campaignFromSearch(search: string): string | null {
+  const params = new URLSearchParams(search);
+  return firstExplicitCampaign(
+    params.get("campaign"),
+    params.get("utm_campaign"),
+    params.get("c"),
+  ) as string | null;
+}
+
 /**
  * Latches the preview flag for the rest of the tab: the flag only rides the
  * first URL, but the operator's later searches and reports would otherwise be
@@ -169,7 +187,15 @@ function withPractitionerValidationCampaign(
 ): AnalyticsMetadata {
   const current = metadata ?? {};
   const search = window.location.search;
-  const explicit = current.campaign;
+  // SiteTrafficTracker preserves standard UTM naming (`utmCampaign`), while
+  // report/start events use `campaign`. The raw URL check also protects events
+  // that do not carry traffic metadata of their own. Any explicit campaign must
+  // outrank a pilot campaign left in this tab by an earlier visit.
+  const explicit = firstExplicitCampaign(
+    current.campaign,
+    current.utmCampaign,
+    campaignFromSearch(search),
+  );
 
   if (isPractitionerValidationPreviewSession(search)) {
     return normalizePractitionerValidationCampaign(explicit)
@@ -182,8 +208,7 @@ function withPractitionerValidationCampaign(
   // has to survive. Letting the stored campaign win here overwrote the QR value
   // the /start -> /report chain exists to carry, and counted a visit that used no
   // facilitated case link as a pilot start.
-  const explicitProvided =
-    explicit !== undefined && explicit !== null && String(explicit).trim() !== "";
+  const explicitProvided = explicit !== null;
   if (explicitProvided && !normalizePractitionerValidationCampaign(explicit)) {
     writeSessionValue(PRACTITIONER_VALIDATION_SESSION_KEY, null);
     return current;
