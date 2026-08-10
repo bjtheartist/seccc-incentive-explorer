@@ -15,16 +15,23 @@ import {
 } from "@/lib/seo";
 import { ZONE_LABELS } from "@/lib/constants";
 import { isDocumentRequirementGuidance } from "@/lib/document-preparation-cost";
+import { resolveAvailability } from "@/lib/program-gating";
 import { getProgramSeoOverride } from "@/lib/program-seo-overrides";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SnapshotCTA } from "@/components/seo/SnapshotCTA";
 import LevelBadge from "@/components/LevelBadge";
 import { ProgramApplicationSection } from "@/components/programs/ProgramApplicationSection";
+import { canPublishStaticApplicationGuidance } from "@/components/programs/programAvailability";
 
-/* ── Static generation: one indexable page per program ── */
+/* ── Static generation: indexable pages for currently available programs ── */
+
+export const dynamicParams = false;
 
 export async function generateStaticParams() {
-  return getAllPrograms().map((p) => ({ slug: programSlug(p) }));
+  const now = new Date();
+  return getAllPrograms()
+    .filter((program) => resolveAvailability(program, now).state !== "expired")
+    .map((program) => ({ slug: programSlug(program) }));
 }
 
 /** Trim a summary down to a clean ~150-char meta description. */
@@ -48,6 +55,14 @@ export async function generateMetadata({
     return {
       title: "Program Not Found",
       description: "This incentive program could not be found.",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  if (resolveAvailability(program, new Date()).state === "expired") {
+    return {
+      title: `${program.name} — Program Availability Ended`,
+      description: metaDescription(program.summary),
       robots: { index: false, follow: false },
     };
   }
@@ -81,8 +96,15 @@ export default async function ProgramExplainerPage({
   const program = getProgramBySlug(slug);
   if (!program) notFound();
 
+  const pageReferenceTime = new Date();
+  if (resolveAvailability(program, pageReferenceTime).state === "expired") {
+    notFound();
+  }
+
   const p = program;
-  const related = relatedPrograms(p);
+  const related = relatedPrograms(p).filter(
+    (item) => resolveAvailability(item, pageReferenceTime).state !== "expired",
+  );
   const zoneLabel = p.zoneKey ? ZONE_LABELS[p.zoneKey] : undefined;
   const officialUrl = p.sourceUrl || p.url;
   const requiredDocuments = p.requiredDocs.filter(
@@ -95,7 +117,10 @@ export default async function ProgramExplainerPage({
     { question: `What is ${p.name}?`, answer: p.summary },
     { question: `Who qualifies for ${p.name}?`, answer: p.whoQualifies },
   ];
-  if (p.howToApply.length > 0) {
+  if (
+    p.howToApply.length > 0 &&
+    canPublishStaticApplicationGuidance(p)
+  ) {
     faqItems.push({
       question: `How do I apply for ${p.name}?`,
       answer: p.howToApply.join(" "),

@@ -114,22 +114,42 @@ const PRACTITIONER_VALIDATION_PREVIEW_SESSION_KEY = "cie_practitioner_validation
  * survives in utm_source).
  */
 const PRACTITIONER_VALIDATION_PREVIEW_CAMPAIGN = "admin-pilot-preview";
+const sessionMemoryByWindow = new WeakMap<object, Map<string, string>>();
+
+function sessionMemory(): Map<string, string> {
+  const key = window as unknown as object;
+  let memory = sessionMemoryByWindow.get(key);
+  if (!memory) {
+    memory = new Map<string, string>();
+    sessionMemoryByWindow.set(key, memory);
+  }
+  return memory;
+}
 
 function readSessionValue(key: string): string | null {
+  const memory = sessionMemory();
   try {
-    return window.sessionStorage.getItem(key);
+    const stored = window.sessionStorage.getItem(key);
+    if (stored !== null) {
+      memory.set(key, stored);
+      return stored;
+    }
   } catch {
-    // Session attribution is optional and must never interrupt product usage.
-    return null;
+    // Fall through to the tab-local in-memory copy below.
   }
+  return memory.get(key) ?? null;
 }
 
 function writeSessionValue(key: string, value: string | null) {
+  const memory = sessionMemory();
+  if (value === null) memory.delete(key);
+  else memory.set(key, value);
+
   try {
     if (value === null) window.sessionStorage.removeItem(key);
     else window.sessionStorage.setItem(key, value);
   } catch {
-    // Storage can be unavailable in private or restricted browser contexts.
+    // The in-memory copy preserves attribution guards in restricted contexts.
   }
 }
 

@@ -6,10 +6,15 @@ const MINUTE_MS = 60_000;
 
 /**
  * A browser clock aligned to minute boundaries, with focus/visibility refreshes.
- * The null server snapshot keeps time-sensitive actions conservative until hydration.
+ * A server-provided initial timestamp keeps dynamic HTML and hydration identical;
+ * callers without one remain conservative until the browser clock is available.
  */
-export function useLiveNow(): Date | null {
-  const [now, setNow] = useState<Date | null>(null);
+export function useLiveNow(initialNowIso?: string): Date | null {
+  const [now, setNow] = useState<Date | null>(() => {
+    if (!initialNowIso) return null;
+    const initialNow = new Date(initialNowIso);
+    return Number.isNaN(initialNow.getTime()) ? null : initialNow;
+  });
 
   useEffect(() => {
     let timeoutId: number | undefined;
@@ -20,7 +25,7 @@ export function useLiveNow(): Date | null {
       setNow(new Date(current));
       timeoutId = window.setTimeout(
         refresh,
-        MINUTE_MS - (current % MINUTE_MS) + 50,
+        MINUTE_MS - (current % MINUTE_MS),
       );
     };
     const refreshWhenVisible = () => {

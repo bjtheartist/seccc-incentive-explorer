@@ -1,12 +1,34 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { trackEvent } from "@/lib/analytics-events";
 import { readTrafficAttribution } from "@/lib/traffic-attribution";
 
 const SESSION_KEY = "cie_traffic_session_id";
 const SESSION_STARTED_KEY = "cie_traffic_session_started_at";
+
+interface TrafficObservation {
+  pathname: string;
+  campaign: string | null;
+}
+
+export function explicitCampaignAttribution(search: string): string | null {
+  const params = new URLSearchParams(search);
+  for (const key of ["campaign", "utm_campaign", "c"]) {
+    const value = params.get(key)?.trim();
+    if (value) return value;
+  }
+  return null;
+}
+
+export function shouldTrackSitePageView(
+  previous: TrafficObservation | null,
+  next: TrafficObservation,
+): boolean {
+  if (!previous || previous.pathname !== next.pathname) return true;
+  return next.campaign !== null && next.campaign !== previous.campaign;
+}
 
 function getSessionId() {
   try {
@@ -53,10 +75,26 @@ export function SiteTrafficTracker() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
+  const latestSearch = useRef(search);
+  const previousObservation = useRef<TrafficObservation | null>(null);
+  const campaign = explicitCampaignAttribution(search);
+
+  useEffect(() => {
+    latestSearch.current = search;
+  }, [search]);
 
   useEffect(() => {
     if (!pathname || pathname.startsWith("/admin")) return;
-    const searchQuery = search ? `?${search}` : "";
+    const observation = { pathname, campaign };
+    const shouldTrack = shouldTrackSitePageView(
+      previousObservation.current,
+      observation,
+    );
+    previousObservation.current = observation;
+    if (!shouldTrack) return;
+
+    const currentSearch = latestSearch.current;
+    const searchQuery = currentSearch ? `?${currentSearch}` : "";
 
     trackEvent("site_page_viewed", {
       source: "site_traffic",
@@ -69,7 +107,7 @@ export function SiteTrafficTracker() {
         ...readTrafficAttribution(searchQuery, document.referrer),
       },
     });
-  }, [pathname, search]);
+  }, [pathname, campaign]);
 
   return null;
 }

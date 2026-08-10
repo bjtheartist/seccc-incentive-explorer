@@ -8,9 +8,13 @@ vi.mock("@/components/seo/SnapshotCTA", () => ({
 }));
 
 import { getAllPrograms, programSlug } from "@/lib/programs-data";
+import { resolveAvailability } from "@/lib/program-gating";
 import type { Program } from "@/lib/types";
 import { ProgramApplicationSection } from "@/components/programs/ProgramApplicationSection";
-import ProgramExplainerPage from "./page";
+import ProgramExplainerPage, {
+  generateMetadata,
+  generateStaticParams,
+} from "./page";
 
 function program(programId: string): Program {
   const result = getAllPrograms().find((item) => item.id === programId);
@@ -102,7 +106,36 @@ describe("program detail availability rendering", () => {
     const html = await renderProgram("ahsap");
 
     expect(html).not.toContain("Fastest first move");
+    expect(html).not.toContain(`How do I apply for ${program("ahsap").name}?`);
     expect(html).toContain("Check current status");
     expect(html).toContain("Verify current status on the official source");
+  });
+
+  it("omits currently expired programs from static params and marks their metadata noindex", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2035-01-01T12:00:00-06:00"));
+
+    try {
+      const now = new Date();
+      const expired = getAllPrograms().filter(
+        (item) => resolveAvailability(item, now).state === "expired",
+      );
+      expect(expired.length).toBeGreaterThan(0);
+
+      const params = await generateStaticParams();
+      const generatedSlugs = new Set(params.map((item) => item.slug));
+      for (const item of expired) {
+        expect(generatedSlugs.has(programSlug(item))).toBe(false);
+      }
+
+      const metadata = await generateMetadata({
+        params: Promise.resolve({ slug: programSlug(expired[0]) }),
+      });
+      expect(metadata).toMatchObject({
+        robots: { index: false, follow: false },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

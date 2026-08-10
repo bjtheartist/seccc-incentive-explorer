@@ -4,6 +4,7 @@ import { CalendarOff, ExternalLink } from "lucide-react";
 
 import { resolveAvailability, type ProgramAvailability } from "@/lib/program-gating";
 import type { Program } from "@/lib/types";
+import { resolveConservativeProgramAvailability } from "./programAvailability";
 import { useLiveNow } from "./useLiveNow";
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
@@ -11,17 +12,6 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
     <div className="font-mono-bureau text-[10px] tracking-[0.3em] uppercase text-[#2563EB]/60 mb-3">
       {children}
     </div>
-  );
-}
-
-function needsLiveAvailability(program: Program): boolean {
-  return Boolean(
-    program.deadlines?.length ||
-      program.expiresOn ||
-      program.oneTime ||
-      program.suspensionNote ||
-      program.status === "lapsed" ||
-      program.status === "sunset",
   );
 }
 
@@ -42,11 +32,9 @@ export function ProgramApplicationSection({
 }) {
   const liveNow = useLiveNow();
   const referenceTime = now ?? liveNow;
-  const availability = referenceTime
-    ? resolveAvailability(program, referenceTime)
-    : needsLiveAvailability(program)
-      ? null
-      : ({ state: "active" } satisfies ProgramAvailability);
+  const availability = now
+    ? resolveAvailability(program, now)
+    : resolveConservativeProgramAvailability(program, referenceTime);
 
   if (availability?.state === "active") {
     if (program.howToApply.length === 0) return null;

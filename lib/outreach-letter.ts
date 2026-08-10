@@ -29,7 +29,7 @@ const CONTENT_W = W - MARGIN * 2;
 
 /**
  * The repo's locked verification-disclaimer copy, verbatim from the
- * "Official next steps" block (app/programs/page.tsx, ~line 513) — the same
+ * "Official next steps" block (components/programs/ProgramsCatalog.tsx) — the same
  * string every program mention in the product carries (see
  * docs/business-file/03-design-handoff.md's "locked verification copy" and
  * 04-design-timelines.md). Every per-parcel program-mention block below

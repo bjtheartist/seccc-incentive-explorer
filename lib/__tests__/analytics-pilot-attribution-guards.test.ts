@@ -169,4 +169,43 @@ describe("practitioner validation attribution guards", () => {
     expect(metadataOf(0)).not.toHaveProperty("campaign");
     expect(values.get(CAMPAIGN_SESSION_KEY)).toBeUndefined();
   });
+
+  it("keeps operator previews out of pilot counts when sessionStorage is unavailable", () => {
+    const location = {
+      search: `?utm_source=validation-equipment&utm_campaign=${PILOT_CAMPAIGN}&${PRACTITIONER_VALIDATION_PREVIEW_PARAM}=1`,
+    };
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    const unavailable = () => {
+      throw new DOMException("Storage blocked", "SecurityError");
+    };
+
+    vi.stubGlobal("window", {
+      location,
+      sessionStorage: {
+        getItem: unavailable,
+        setItem: unavailable,
+        removeItem: unavailable,
+      },
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    trackEvent("start_page_viewed", {
+      source: "validation-equipment",
+      metadata: { campaign: PILOT_CAMPAIGN },
+    });
+    location.search = "";
+    trackEvent("search_performed", { metadata: { campaign: PILOT_CAMPAIGN } });
+    trackEvent("support_resource_viewed", {
+      metadata: { organizationCount: 3 },
+    });
+
+    const metadata = fetchMock.mock.calls.map((call) =>
+      JSON.parse(String(call[1]?.body)).metadata,
+    );
+    expect(metadata).toHaveLength(3);
+    expect(metadata[0].campaign).toBe("admin-pilot-preview");
+    expect(metadata[1].campaign).toBe("admin-pilot-preview");
+    expect(metadata[2]).not.toHaveProperty("campaign");
+    expect(metadata.every((item) => item.campaign !== PILOT_CAMPAIGN)).toBe(true);
+  });
 });

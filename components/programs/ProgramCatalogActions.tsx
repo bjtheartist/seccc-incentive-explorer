@@ -16,13 +16,13 @@ export function ProgramCatalogActions({
   const submittablePortal = (program.applicationPortals || []).find(
     (portal) =>
       portal.type === "submittable" &&
-      linkHealth.get(`${program.id}:${portal.url}`) !== "broken",
+      linkHealth.get(`${program.id}:${portal.url}`) === "ok",
   );
   const otherLangPortals = (program.applicationPortals || []).filter(
     (portal) =>
       portal.type === "submittable" &&
       portal !== submittablePortal &&
-      linkHealth.get(`${program.id}:${portal.url}`) !== "broken",
+      linkHealth.get(`${program.id}:${portal.url}`) === "ok",
   );
 
   return (
