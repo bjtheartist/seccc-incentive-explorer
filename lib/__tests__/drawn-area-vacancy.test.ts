@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  createDrawnAreaVacancyRequestLifecycle,
   parseDrawnAreaVacancyResponse,
   vacancyCoverageDisclosure,
   type VacancyCoverageMetadata,
@@ -64,5 +65,64 @@ describe("drawn-area vacancy response", () => {
     });
     expect(truncated).toContain("10,000-record response limit");
     expect(vacancyCoverageDisclosure(COMPLETE_META)).toBeNull();
+  });
+});
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise;
+  });
+  return { promise, resolve };
+}
+
+describe("drawn-area vacancy request lifecycle", () => {
+  it("allows only the latest polygon response to publish", async () => {
+    const lifecycle = createDrawnAreaVacancyRequestLifecycle();
+    const polygonA = deferred<string>();
+    const polygonB = deferred<string>();
+    const published: string[] = [];
+
+    const requestA = lifecycle.start();
+    const completionA = polygonA.promise
+      .then((value) => {
+        if (requestA.isCurrent()) published.push(value);
+      })
+      .finally(requestA.release);
+
+    const requestB = lifecycle.start();
+    const completionB = polygonB.promise
+      .then((value) => {
+        if (requestB.isCurrent()) published.push(value);
+      })
+      .finally(requestB.release);
+
+    expect(requestA.signal.aborted).toBe(true);
+    polygonB.resolve("polygon B");
+    await completionB;
+    polygonA.resolve("polygon A");
+    await completionA;
+
+    expect(published).toEqual(["polygon B"]);
+  });
+
+  it("invalidates a deleted polygon even when its request resolves after abort", async () => {
+    const lifecycle = createDrawnAreaVacancyRequestLifecycle();
+    const delayed = deferred<string>();
+    const published: string[] = [];
+    const request = lifecycle.start();
+    const completion = delayed.promise
+      .then((value) => {
+        if (request.isCurrent()) published.push(value);
+      })
+      .finally(request.release);
+
+    lifecycle.cancel();
+    expect(request.signal.aborted).toBe(true);
+    delayed.resolve("deleted polygon");
+    await completion;
+
+    expect(request.isCurrent()).toBe(false);
+    expect(published).toEqual([]);
   });
 });

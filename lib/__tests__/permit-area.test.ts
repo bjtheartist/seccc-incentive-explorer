@@ -3,9 +3,11 @@ import {
   fetchPermitArea,
   formatPermitAreaDate,
   formatPermitAreaCoverageLabel,
+  parsePermitAreaResult,
   permitAreaRequestPath,
   type PermitAreaResult,
 } from "@/lib/permit-area";
+import { buildDrawnAreaCsv } from "@/lib/polygon-investment";
 
 const POLYGON: GeoJSON.Polygon = {
   type: "Polygon",
@@ -82,6 +84,95 @@ describe("permit area client", () => {
     await expect(
       fetchPermitArea(POLYGON, { fetchImpl: missingFreshness }),
     ).rejects.toThrow("not ready");
+  });
+
+  it.each([
+    ["source", { ...RESULT, source: { ...RESULT.source, url: 42 } }],
+    ["source refresh", { ...RESULT, sourceRefresh: { asOf: [], asOfBasis: null } }],
+    ["data window", { ...RESULT, dataWindow: null }],
+    ["located-only flag", { ...RESULT, locatedRecordsOnly: false }],
+    ["numeric summary", { ...RESULT, totalFilings: "1" }],
+    ["issue-date span", { ...RESULT, issueDateSpan: { first: "2026-08-04" } }],
+    [
+      "type breakdown",
+      {
+        ...RESULT,
+        typeBreakdown: [
+          {
+            key: "not-a-map-type",
+            label: "Invalid",
+            sourceValue: null,
+            color: "#000000",
+            count: 1,
+          },
+        ],
+      },
+    ],
+    ["year breakdown", { ...RESULT, yearBreakdown: [{ year: "2026", count: 1 }] }],
+    ["status breakdown", { ...RESULT, statusBreakdown: [{ status: null, count: 1 }] }],
+    [
+      "recent records",
+      {
+        ...RESULT,
+        records: [
+          {
+            permitId: "100012345",
+            permitTypeKey: null,
+            permitTypeLabel: "Not recorded",
+            rawPermitType: null,
+            address: 123,
+            issueDate: null,
+            permitStatus: null,
+            permitMilestone: null,
+            workType: null,
+            workDescription: null,
+          },
+        ],
+        recordsReturned: 1,
+      },
+    ],
+    ["returned-record count", { ...RESULT, recordsReturned: 1 }],
+    ["truncation flag", { ...RESULT, recordsTruncated: "yes" }],
+  ])("rejects a ready payload with malformed %s", async (_field, malformed) => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify(malformed), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    expect(parsePermitAreaResult(malformed)).toBeNull();
+    await expect(fetchPermitArea(POLYGON, { fetchImpl })).rejects.toThrow("not ready");
+  });
+
+  it("keeps a malformed ready payload unavailable to downstream CSV", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ ...RESULT, typeBreakdown: [{}] }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    let permitArea: PermitAreaResult | null = null;
+    let permitLoadFailed = false;
+
+    try {
+      permitArea = await fetchPermitArea(POLYGON, { fetchImpl });
+    } catch {
+      permitLoadFailed = true;
+    }
+
+    const csv = buildDrawnAreaCsv({
+      areaName: "Malformed permit area",
+      vacancyFeatures: [],
+      permitArea,
+      permitLoadFailed,
+      investment: null,
+    });
+    expect(permitArea).toBeNull();
+    expect(permitLoadFailed).toBe(true);
+    expect(csv).toContain('"Coverage status","Unavailable"');
+    expect(csv).toContain("lookup failure, not evidence that the area has no permits");
+    expect(csv).not.toContain('"Section","Permit filing summary"');
   });
 
   it("relays cancellation and applies a bounded request timeout", async () => {
