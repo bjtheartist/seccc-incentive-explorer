@@ -1,5 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync, readdirSync } from "node:fs";
+
+// The committed-artifact suite below parses every site-matchmaker-context
+// file plus vacancy-index.json (~17MB) with thousands of synchronous
+// assertions. Wall time swings 2-3x under vitest worker CPU contention, so
+// the 5s default timeout flakes it in full-suite runs even though every
+// assertion passes. Sync tests cannot be interrupted mid-run — the timeout
+// only retro-fails completed work — so a generous ceiling weakens nothing.
+vi.setConfig({ testTimeout: 60_000 });
 import { join } from "node:path";
 import {
   aggregateEpaWalkabilityToTract,
