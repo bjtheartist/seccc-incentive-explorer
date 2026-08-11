@@ -84,6 +84,10 @@ import {
   SUPPORT_ORGANIZATIONS_SECTION_ID,
   SUPPORT_ORGANIZATIONS_SECTION_TITLE,
 } from "./support-organization-copy";
+import { buildStartHere, selectTopPrograms, type StartHere, type UnresolvedZoningQuestion } from "./start-here";
+
+export type { StartHere, StartHereAction, StartHereActionKind, StartHereEvidence } from "./start-here";
+export { buildStartHere, selectTopPrograms } from "./start-here";
 
 // ─── Local Types ────────────────────────────────────────────────────
 
@@ -450,6 +454,18 @@ export interface GeneratedReport {
   neighborhoodEconomics?: NeighborhoodEconomicContext;
   locationContext?: PublicReportLocationContext;
   dataSources?: DataSourceCitation[];
+  /**
+   * The canonical "start here" action model (see lib/start-here.ts).
+   * Additive and optional: it does not replace `executiveSummary.topActions`,
+   * `actionRoadmap`, or `recommendedActions` — those are refactored to
+   * DERIVE from the same underlying selection so they cannot disagree with
+   * this field, but this field is what a future single "start here" surface
+   * would render from. Absent on report types outside the executive-summary
+   * gate (currently: program-explorer, or any report generated without
+   * zones/zoneNames) and on every report saved before this field existed —
+   * both read as "not built for this report," never as an error.
+   */
+  startHere?: StartHere;
 }
 
 export const CONFIRMED_PROGRAMS_SECTION_TITLE = "Programs Mapped at This Address";
@@ -969,6 +985,26 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
       label: normalizePublicHeadlineText(action.label),
       description: normalizePublicHeadlineText(action.description),
     })),
+    startHere: report.startHere
+      ? {
+          ...report.startHere,
+          primary: {
+            ...report.startHere.primary,
+            label: normalizePublicHeadlineText(report.startHere.primary.label),
+            description: normalizePublicHeadlineText(report.startHere.primary.description),
+          },
+          secondary: report.startHere.secondary.map((action) => ({
+            ...action,
+            label: normalizePublicHeadlineText(action.label),
+            description: normalizePublicHeadlineText(action.description),
+          })),
+          unresolvedQuestions: report.startHere.unresolvedQuestions.map(normalizePublicHeadlineText),
+          evidence: report.startHere.evidence.map((fact) => ({
+            ...fact,
+            fact: normalizePublicHeadlineText(fact.fact),
+          })),
+        }
+      : undefined,
     sections: legacyDocuments.sections.map((section) => {
       const programListingSection = isProgramListingSection(section.title);
       const supportOrganizationSection = isSupportOrganizationSectionTitle(section.title);
@@ -2981,7 +3017,10 @@ function generateLocationIncentives(
 
   // ── Action Roadmap ("Your Next Steps") ──────────────────────────
   const actionRoadmap: ActionRoadmapItem[] = [];
-  const topPrograms = (goalMatchedPrograms.length > 0 ? goalMatchedPrograms : confirmedPrograms).slice(0, 2);
+  const topPrograms = selectTopPrograms(
+    goalMatchedPrograms.length > 0 ? goalMatchedPrograms : confirmedPrograms,
+    2,
+  );
 
   // Tier 1: "Do This Week" — top 2 programs with full contact + call script
   for (const p of topPrograms) {
@@ -3550,7 +3589,7 @@ function generateBestLocation(
 
   // ── Action Roadmap (new for best-location) ──
   const actionRoadmap: ActionRoadmapItem[] = [];
-  const topSitePrograms = sitePrograms.slice(0, 2);
+  const topSitePrograms = selectTopPrograms(sitePrograms, 2);
   for (const p of topSitePrograms) {
     const contact = p.contacts?.[0];
     actionRoadmap.push({
@@ -4900,7 +4939,13 @@ export function generateReportData(
     report.sections.splice(insertionIndex, 0, capitalPartnerSection);
   }
 
-  // Attach executive summary for address-based reports when zone data is available
+  // Attach executive summary for address-based reports when zone data is available.
+  // `startHereResults` is hoisted out of this block so the StartHere model built
+  // below can reuse the exact same goal-ordered results generateExecutiveSummary
+  // (and therefore executiveSummary.topActions, via computeTopActions) used —
+  // one ranked list feeding both, instead of two independent rankings that could
+  // pick a different "top program."
+  let startHereResults: ProgramCheckResult[] | undefined;
   if (zones && zoneNames && reportType !== "program-explorer") {
     // Run confidence engine once for exec summary (lightweight — it's already cached in location-incentives)
     const execResults = runConfidenceEngine(programs, zones, zoneNames, undefined, ctx.parcel);
@@ -4909,6 +4954,7 @@ export function generateReportData(
     const orderedExecResults = projectGoals.length > 0
       ? orderProgramCheckResultsByProjectGoals(execResults, projectGoals, state.industry)
       : execResults;
+    startHereResults = orderedExecResults;
     report.executiveSummary = generateExecutiveSummary(
       programs,
       zones,
@@ -4951,6 +4997,11 @@ export function generateReportData(
     ) ?? undefined,
   }));
 
+  // `unresolvedZoningQuestion` is built from the exact same copy injected into
+  // actionRoadmap[0] below, so StartHere's primary/unresolvedQuestions and the
+  // legacy actionRoadmap's front-loaded zoning action are provably the same
+  // fact, not two independently-worded claims that could drift apart.
+  let unresolvedZoningQuestion: UnresolvedZoningQuestion | undefined;
   if (reportType !== "program-explorer" && cityZoning) {
     const zoningAction: ActionRoadmapItem = cityZoning.zoneClass
       ? {
@@ -4967,6 +5018,41 @@ export function generateReportData(
     if (!existingRoadmap.some((item) => item.label === zoningAction.label)) {
       report.actionRoadmap = [zoningAction, ...existingRoadmap];
     }
+    unresolvedZoningQuestion = {
+      question: cityZoning.zoneClass
+        ? `What is the exact proposed use, and which Title 17 use category does the City place it in for ${cityZoning.zoneClass}?`
+        : "What does the current published zoning district record at this site, and has it been verified with the City?",
+      confirmationLabel: zoningAction.label,
+      confirmationDescription: zoningAction.description,
+    };
+  }
+
+  // Canonical StartHere model — built once, additive, from the same
+  // goal-ordered results and the same zoning-confirmation copy the legacy
+  // structures above already used. See lib/start-here.ts.
+  if (startHereResults) {
+    const zoneCount = countActiveZones(zones);
+    const evidenceFacts: { fact: string; sourceLabel: string }[] = [
+      {
+        fact: `${zoneCount} mapped incentive zone${zoneCount === 1 ? "" : "s"} recorded at this address.`,
+        sourceLabel: report.dataSources?.[0]?.label ?? "Public zone boundary data",
+      },
+    ];
+    const topStartHereResult = startHereResults.find(
+      (r) => r.relevance !== "not_mapped_at_location" && r.relevance !== "context_dependent",
+    );
+    if (topStartHereResult) {
+      evidenceFacts.push({
+        fact: topStartHereResult.whyOneLine,
+        sourceLabel: topStartHereResult.program.name,
+      });
+    }
+    report.startHere = buildStartHere({
+      results: startHereResults,
+      audience: reportType,
+      unresolvedZoning: unresolvedZoningQuestion,
+      evidenceFacts,
+    });
   }
 
   return normalizePublicReportForDisplay(report);
