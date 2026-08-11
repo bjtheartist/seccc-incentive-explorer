@@ -390,10 +390,17 @@ describe("partner NOF input mapping", () => {
 
     const rock = output.records.filter((record) => record.recipient === "Rock the Islands Café");
     expect(rock).toHaveLength(1);
+    // This row was pinned `{kind: "citywide"}` when the Census Current
+    // benchmark could not match 7114 S. Yates Blvd. — the pin froze a
+    // geocoder MISS as intended behaviour, the same test-pins-the-defect
+    // shape the weekend audit kept finding. The Census2020 benchmark
+    // fallback resolves the address, so the honest expectation is now a
+    // point in South Shore; the row's dollars and provenance are unchanged.
     expect(rock[0]).toMatchObject({
       amountAwarded: 59475,
       address: "7114 S. Yates Blvd.",
-      geometry: { kind: "citywide" },
+      geometry: { kind: "point" },
+      communityArea: "South Shore",
       recordProvenance: "partner-list",
     });
 
@@ -418,8 +425,12 @@ describe("partner NOF input mapping", () => {
     );
     expect(output.meta.totalRecords).toBe(43965);
     expect(output.meta.totalRecords).toBe(output.records.length);
-    expect(output.meta.pointCount).toBe(30554);
-    expect(output.meta.citywideCount).toBe(7063);
+    // 30554/7063 -> 30575/7042: 21 records with real published addresses moved
+    // citywide->point when the Census2020 benchmark fallback resolved addresses
+    // the Current benchmark returns empty for (6 cdg, 14 sba-rrf, 1 nof-small).
+    // Dollars and record count are unchanged — geometry only.
+    expect(output.meta.pointCount).toBe(30575);
+    expect(output.meta.citywideCount).toBe(7042);
     expect(output.meta.totalDollarsAwarded).toBeCloseTo(3162085052.66, 2);
     expect(output.meta.totalDollarsAwarded).toBeCloseTo(recomputedAwarded, 2);
     expect(output.meta.counts["nof-small"]).toBe(156);

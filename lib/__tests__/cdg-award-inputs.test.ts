@@ -120,3 +120,83 @@ describe("cdg_awards.csv — the curated file reaches the export whole", () => {
       .toBe(3_900_000);
   });
 });
+
+import { cdgQueryCandidates, sourcePublishedCommunityArea } from "../../scripts/export-community-investment";
+
+describe("cdgQueryCandidates — mechanical rewrites of published text only", () => {
+  const q = (a: string) => `${a.trim()}, Chicago, IL`;
+
+  it("puts the published text first so a variant can never shadow an exact match", () => {
+    const c = cdgQueryCandidates("13016 S. Rhodes Ave.", q);
+    expect(c[0]).toBe("13016 S. Rhodes Ave., Chicago, IL");
+    expect(c).toContain("13016 S Rhodes Ave, Chicago, IL");
+  });
+
+  it("collapses a leading street-number range to its first number", () => {
+    expect(cdgQueryCandidates("2640-46 W. Madison St.", q)).toContain(
+      "2640 W Madison St, Chicago, IL",
+    );
+  });
+
+  it("splits a slash compound into its component published addresses", () => {
+    const c = cdgQueryCandidates("8700 S Ashland/1607 W 87th", q);
+    expect(c).toContain("8700 S Ashland, Chicago, IL");
+    expect(c).toContain("1607 W 87th, Chicago, IL");
+  });
+
+  it("never invents a street name, suffix, or number", () => {
+    for (const v of cdgQueryCandidates("4100 S Packers", q)) {
+      // every variant must be a substring-preserving rewrite: same digits, no new words
+      expect(v.replace(", Chicago, IL", "")).toMatch(/^4100 S Packers$/);
+    }
+  });
+});
+
+describe("sourcePublishedCommunityArea — the source's own claim or nothing", () => {
+  it("parses the exporter's held-row convention", () => {
+    expect(
+      sourcePublishedCommunityArea(
+        "South Lawndale (Little Village) -- exact street address not published",
+      ),
+    ).toBe("South Lawndale");
+    expect(
+      sourcePublishedCommunityArea("New City -- exact street address not published"),
+    ).toBe("New City");
+  });
+
+  it("returns null for a street address — never inferred", () => {
+    expect(sourcePublishedCommunityArea("13016 S. Rhodes Ave.")).toBeNull();
+    expect(sourcePublishedCommunityArea("4100 S Packers")).toBeNull();
+  });
+});
+
+describe("mapCdgAwards — variant hits and source-published areas", () => {
+  const q = (a: string) => `${a.trim()}, Chicago, IL`;
+
+  it("plots a row whose verbatim query misses but whose variant matches", () => {
+    const rows = [{ recipient: "Williams Chicken", address: "8700 S Ashland/1607 W 87th", amount: "250000", round: "January 2026", log_line: "", source_url: "" }];
+    // cache holds ONLY the compound's second component — the real-world shape
+    const geo = new Map([["1607 W 87th, Chicago, IL", { lat: 41.735, lng: -87.663 }]]);
+    const out = mapCdgAwards(rows, geo, q);
+    expect(out.records[0].geometry.kind).toBe("point");
+    expect(out.pointRecords).toBe(1);
+    expect(out.heldCitywideDollars).toBe(0);
+    // published text is untouched
+    expect(out.records[0].address).toBe("8700 S Ashland/1607 W 87th");
+  });
+
+  it("stamps the source-published community area on a truly address-less hold", () => {
+    const rows = [{ recipient: "Black Fire Brigade First Responder Training Academy", address: "New City -- exact street address not published", amount: "3900000", round: "June 2026", log_line: "", source_url: "" }];
+    const out = mapCdgAwards(rows, new Map(), q);
+    expect(out.records[0].geometry.kind).toBe("citywide");
+    expect(out.records[0].communityArea).toBe("New City");
+    expect(out.heldCitywideDollars).toBe(3_900_000);
+  });
+
+  it("never stamps an area from a street address that merely failed to geocode", () => {
+    const rows = [{ recipient: "Yellow Banana - Altgeld", address: "13016 S. Rhodes Ave.", amount: "4870000", round: "February 2023", log_line: "", source_url: "" }];
+    const out = mapCdgAwards(rows, new Map(), q);
+    expect(out.records[0].geometry.kind).toBe("citywide");
+    expect(out.records[0].communityArea).toBeUndefined();
+  });
+});
