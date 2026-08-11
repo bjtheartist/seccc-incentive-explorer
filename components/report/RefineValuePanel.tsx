@@ -171,7 +171,10 @@ export function RefineValuePanel({
       </p>
 
       {onQuickRefine ? (
-        <div className="mt-5 border-t border-[#0C1B33]/10 pt-4 max-w-3xl">
+        <div
+          data-tour="report-refine"
+          className="mt-5 border-t border-[#0C1B33]/10 pt-4 max-w-3xl"
+        >
           <div className="font-mono-bureau text-[9px] tracking-[0.28em] uppercase text-[#0C1B33]/40 mb-3">
             Quick Refine — Start With Your Project Goals
           </div>

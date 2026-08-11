@@ -18,15 +18,13 @@ import {
   FIRST_VISIT_GUIDE_OPEN_EVENT,
   FIRST_VISIT_GUIDE_STEPS,
   FIRST_VISIT_SPOTLIGHT_OPEN_EVENT,
+  SAMPLE_REPORT_URL,
   readFirstVisitGuidePreference,
   shouldAutoOpenFirstVisitGuide,
   writeFirstVisitGuidePreference,
 } from "@/lib/first-visit-guide";
 
 type GuideScreen = "welcome" | "tour";
-
-const SAMPLE_REPORT_URL =
-  "/report?instant=true&lat=41.73683&lon=-87.57776&addr=8701%20S%20Bennett%20Ave%2C%20Chicago%2C%20IL&source=welcome_tour";
 
 const STEP_ICONS = [MapPin, Target, FileCheck2, Handshake];
 
@@ -211,22 +209,26 @@ export function FirstVisitGuideDialog({
               </button>
               <button
                 type="button"
-                onClick={onStart}
-                className="min-h-12 border border-[#0C1B33]/12 px-5 font-mono-bureau text-[10px] uppercase text-[#0C1B33]/55 transition-colors hover:border-[#0C1B33]/30 hover:text-[#0C1B33]"
-              >
-                Preview the workflow
-              </button>
-              <button
-                type="button"
                 onClick={onSkip}
-                className="min-h-12 px-3 font-mono-bureau text-[10px] uppercase text-[#0C1B33]/55 transition-colors hover:text-[#0C1B33]"
+                className="min-h-12 border border-[#0C1B33]/12 px-5 font-mono-bureau text-[10px] uppercase text-[#0C1B33]/55 transition-colors hover:border-[#0C1B33]/30 hover:text-[#0C1B33]"
               >
                 Explore on my own
               </button>
               <span className="font-mono-bureau text-[9px] tracking-[0.12em] uppercase text-[#0C1B33]/30 sm:ml-auto">
-                About 60 seconds
+                About 90 seconds
               </span>
             </div>
+            <p className="mt-5 text-xs text-[#0C1B33]/40">
+              Prefer not to leave this window?{" "}
+              <button
+                type="button"
+                onClick={onStart}
+                className="underline decoration-[#0C1B33]/25 underline-offset-2 transition-colors hover:text-[#0C1B33]"
+              >
+                Preview the four steps here instead
+              </button>
+              .
+            </p>
           </div>
         ) : (
           <>

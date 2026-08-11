@@ -27,10 +27,20 @@ describe("FirstVisitGuideDialog", () => {
     expect(html).toContain('aria-modal="true"');
     expect(html).toContain("Find what may apply to a Chicago address");
     expect(html).toContain("Show me around");
-    expect(html).toContain("Preview the workflow");
     expect(html).toContain("Explore on my own");
     expect(html).toContain("does not ask for an email");
     expect(html).toContain("Close site tour");
+  });
+
+  it("offers exactly one primary path with the static preview demoted", () => {
+    const html = render("welcome");
+
+    // The spotlight is the only filled CTA; the in-modal slideshow survives
+    // as an inline fallback link rather than a competing equal choice.
+    expect(html.match(/bg-\[#0C1B33\]/g)?.length).toBe(1);
+    expect(html).toContain("Preview the four steps here instead");
+    expect(html).not.toContain("Preview the workflow");
+    expect(html).toContain("About 90 seconds");
   });
 
   it("demonstrates the address and project-goal screens", () => {
