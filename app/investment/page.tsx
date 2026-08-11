@@ -7,15 +7,11 @@ import {
   loadMajorDevelopments,
 } from "@/lib/investment-analysis";
 import { buildSourceCoverageRows } from "@/lib/investment-source-coverage";
-import {
-  formatCount,
-  formatFullDollars,
-  formatAsOf,
-  MAGNITUDE_HUE,
-} from "@/components/investment/format";
+import { formatCount, formatAsOf } from "@/components/investment/format";
 import { StatusCards } from "@/components/investment/StatusCards";
 import { MajorDevelopments } from "@/components/investment/MajorDevelopments";
-import { ComparePinBar, PinButton } from "@/components/investment/PinControls";
+import { ComparePinBar } from "@/components/investment/PinControls";
+import { CommunityRankingList } from "@/components/investment/CommunityRankingList";
 import { SourceCoverageMatrix } from "@/components/investment/SourceCoverageMatrix";
 import { IllinoisArtsCouncilAwardsTable } from "@/components/investment/IllinoisArtsCouncilAwardsTable";
 import { getInvestmentAdminState, InvestmentLoginForm, InvestmentNotConfigured } from "./gate";
@@ -101,8 +97,98 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
               />
             </div>
 
-            <section id="government-funding-purposes" className="mt-10 scroll-mt-6">
-              <h2 className="font-editorial text-[26px]">Government funding by purpose</h2>
+            {/* Trust capsule — the load-bearing caveats, ALWAYS visible. The
+                full provenance matrix and the purpose glossary collapse into
+                "About this data" below, but these four facts never collapse:
+                hiding disclosed limitations behind a chevron is the rail-7
+                failure mode the battle-test flagged (Sol #5/#7). The unplotted
+                count sits here so the ranking directly beneath can never read
+                as "everything is on the map". */}
+            <p className="mt-4 border-y border-[#0C1B33]/10 bg-white px-4 py-2.5 font-mono-bureau text-[10px] uppercase tracking-[0.1em] leading-relaxed text-[#0C1B33]/55">
+              Data as of {formatAsOf(index.generatedAt)} · awarded dollars, not confirmed receipts ·{" "}
+              {formatCount(meta?.citywideCount ?? 0)} records carry no map location and are counted, never
+              plotted ·{" "}
+              <a href="#coverage" className="text-[#2563EB] hover:underline">
+                About this data
+              </a>
+            </p>
+
+            {/* Start here — three task paths, each ending in an artifact. The
+                battle-test's core verdict (Sol #6): the page opened with data
+                and left the user to invent a workflow; the compare flow in
+                particular was undiscoverable (pin buttons → floating bar).
+                These three sentences ARE the fix — persistent, not a
+                first-visit coach mark. */}
+            <div className="mt-6 grid border-y border-[#0C1B33]/10 bg-white md:grid-cols-3 md:divide-x md:divide-[#0C1B33]/10">
+              <div className="border-b border-[#0C1B33]/10 px-4 py-3.5 md:border-b-0">
+                <span className="font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB]">
+                  Understand one community
+                </span>
+                <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#0C1B33]/60">
+                  Pick a community below for its full funding profile, top recipients, and funders.
+                </p>
+              </div>
+              <div className="border-b border-[#0C1B33]/10 px-4 py-3.5 md:border-b-0">
+                <span className="font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB]">
+                  Compare communities
+                </span>
+                <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#0C1B33]/60">
+                  Pin 2&ndash;4 with the pin button on any row — a compare bar appears at the bottom of the
+                  page.
+                </p>
+              </div>
+              <div className="px-4 py-3.5">
+                <span className="font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB]">
+                  Prepare a funder brief
+                </span>
+                <p className="mt-1.5 text-[12.5px] leading-relaxed text-[#0C1B33]/60">
+                  Open a community, then use Print brief for a clean, hand-off-ready PDF page.
+                </p>
+              </div>
+            </div>
+
+            {/* Ranked community list — the navigation primitive, promoted to
+                directly under the numbers (battle-test: unanimous). */}
+            <div className="mt-10" id="communities">
+              <div className="mb-3">
+                <h2 className="font-editorial text-[26px]">Communities by awarded dollars</h2>
+              </div>
+              <CommunityRankingList
+                rows={index.rows.map((row) => ({
+                  communityArea: row.communityArea,
+                  totalAwarded: row.totalAwarded,
+                  recordCount: row.recordCount,
+                }))}
+              />
+            </div>
+
+            {/* Major private developments — citywide top 10 by announced capital */}
+            {topDevelopments.count > 0 ? (
+              <div className="mt-12">
+                <div className="mb-3 flex items-baseline justify-between">
+                  <h2 className="font-editorial text-[26px]">Major private developments</h2>
+                  <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+                    Top 10 by announced $
+                  </span>
+                </div>
+                <MajorDevelopments summary={topDevelopments} scope="citywide" />
+              </div>
+            ) : null}
+
+            {/* Reference material, collapsed: the purpose glossary and the full
+                source-coverage matrix are provenance/reference, not navigation.
+                Each summary line states what is inside so the collapse hides
+                DETAIL, never the existence of the material (rail 7). The
+                #coverage id stays on this element so the StatusCards coverage
+                link and the trust capsule both land here. */}
+            <details id="coverage" className="mt-10 scroll-mt-6 border border-[#0C1B33]/10 bg-white">
+              <summary className="cursor-pointer px-4 py-3 font-mono-bureau text-[11px] uppercase tracking-[0.14em] text-[#0C1B33]/70 hover:text-[#0C1B33]">
+                About this data — funding-purpose definitions and per-source coverage, map, and refresh
+                postures
+              </summary>
+              <div className="border-t border-[#0C1B33]/10 px-4 pb-5">
+            <section id="government-funding-purposes" className="mt-5 scroll-mt-6">
+              <h2 className="font-editorial text-[22px]">Government funding by purpose</h2>
               <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/45">
                 Funding purpose describes what the public support is for. Capital class remains separate and
                 tells whether the source figure is an award, authorization, tax credit, or appropriation.
@@ -146,90 +232,35 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
               </div>
             </section>
 
-            {investment && coverageRows.length > 0 ? (
-              <section id="coverage" className="mt-10 scroll-mt-6">
-                <h2 className="font-editorial text-[26px]">Source coverage</h2>
-                <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/45">
-                  Categorical source, map, refresh, and review postures for the committed export,
-                  with the source-specific basis preserved in each state.
-                </p>
-                <div className="mt-4">
-                  <SourceCoverageMatrix rows={coverageRows} generatedAt={investment.generatedAt} />
-                </div>
-              </section>
-            ) : null}
-
-            {illinoisArtsCouncilAwards ? (
-              <IllinoisArtsCouncilAwardsTable data={illinoisArtsCouncilAwards} />
-            ) : null}
-
-            {/* Ranked community list */}
-            <div className="mt-10">
-              <div className="mb-3 flex items-baseline justify-between">
-                <h2 className="font-editorial text-[26px]">Communities by awarded dollars</h2>
-                <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
-                  Ranked high → low
-                </span>
-              </div>
-              <div className="divide-y divide-[#0C1B33]/8 border border-[#0C1B33]/10 bg-white">
-                {index.rows.map((row, i) => {
-                  const pct = index.rows[0].totalAwarded > 0 ? row.totalAwarded / index.rows[0].totalAwarded : 0;
-                  return (
-                    <div key={row.communityArea} className="flex items-center gap-2 pr-3 sm:pr-4">
-                      <Link
-                        href={`/investment/${encodeURIComponent(row.communityArea)}`}
-                        className="group flex min-w-0 flex-1 items-center gap-4 px-4 py-3 transition-colors hover:bg-[#FAF9F6] sm:px-5"
-                      >
-                        <span className="w-7 shrink-0 text-right font-mono-bureau text-[12px] text-[#0C1B33]/35 [font-variant-numeric:tabular-nums]">
-                          {i + 1}
-                        </span>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-baseline justify-between gap-3">
-                            <span className="truncate text-[14px] font-medium text-[#0C1B33] group-hover:text-[#2563EB]">
-                              {row.communityArea}
-                            </span>
-                            <span className="shrink-0 text-[14px] font-semibold text-[#0C1B33] [font-variant-numeric:tabular-nums]">
-                              {formatFullDollars(row.totalAwarded)}
-                            </span>
-                          </div>
-                          <div className="mt-1.5 flex items-center gap-3">
-                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#0C1B33]/[0.06]">
-                              <div
-                                className="h-full rounded-full"
-                                style={{
-                                  // Honest linear width — no shared floor that would render a
-                                  // >100x dollar spread as identical bars; 1px minWidth only keeps
-                                  // a nonzero value from vanishing entirely (the $ text is the read).
-                                  width: `${pct * 100}%`,
-                                  minWidth: row.totalAwarded > 0 ? "1px" : 0,
-                                  backgroundColor: MAGNITUDE_HUE,
-                                }}
-                              />
-                            </div>
-                            <span className="shrink-0 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/40">
-                              {formatCount(row.recordCount)} record{row.recordCount === 1 ? "" : "s"}
-                            </span>
-                          </div>
-                        </div>
-                      </Link>
-                      <PinButton area={row.communityArea} />
+                {investment && coverageRows.length > 0 ? (
+                  <section className="mt-8">
+                    <h2 className="font-editorial text-[22px]">Source coverage</h2>
+                    <p className="mt-1.5 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/45">
+                      Categorical source, map, refresh, and review postures for the committed export,
+                      with the source-specific basis preserved in each state.
+                    </p>
+                    <div className="mt-4">
+                      <SourceCoverageMatrix rows={coverageRows} generatedAt={investment.generatedAt} />
                     </div>
-                  );
-                })}
+                  </section>
+                ) : null}
               </div>
-            </div>
+            </details>
 
-            {/* Major private developments — citywide top 10 by announced capital */}
-            {topDevelopments.count > 0 ? (
-              <div className="mt-12">
-                <div className="mb-3 flex items-baseline justify-between">
-                  <h2 className="font-editorial text-[26px]">Major private developments</h2>
-                  <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
-                    Top 10 by announced $
-                  </span>
+            {/* Illinois Arts Council — reference table, collapsed. The summary
+                keeps the table's existence and scope visible; the id stays
+                reachable from the area pages' "state arts awards" link (the
+                jump lands on the closed summary, one click from the rows). */}
+            {illinoisArtsCouncilAwards ? (
+              <details id="illinois-arts-awards-collapse" className="mt-4 scroll-mt-6 border border-[#0C1B33]/10 bg-white">
+                <summary className="cursor-pointer px-4 py-3 font-mono-bureau text-[11px] uppercase tracking-[0.14em] text-[#0C1B33]/70 hover:text-[#0C1B33]">
+                  Illinois Arts Council awards — city-level state arts funding, never assigned to a
+                  neighborhood
+                </summary>
+                <div className="border-t border-[#0C1B33]/10 px-4 pb-4">
+                  <IllinoisArtsCouncilAwardsTable data={illinoisArtsCouncilAwards} />
                 </div>
-                <MajorDevelopments summary={topDevelopments} scope="citywide" />
-              </div>
+              </details>
             ) : null}
 
             <p className="mt-6 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/35">

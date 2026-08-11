@@ -188,28 +188,38 @@ export default async function InvestmentAreaPage({
               />
             </div>
 
-            {/* 2 — Ranked bars: one comparison view, exact dollars + share */}
+            {/* 2 — Funding profile: funder type + program, BOTH visible.
+                These answer two different questions a partner asks in the same
+                meeting — "who funds this community?" (government / philanthropy /
+                private) and "through which mechanism?" — so neither view hides
+                behind a toggle, and both survive into the print brief. Battle-test
+                verdict (Sol + partner-UX critic, Aug 11): merge the container,
+                never the concepts. */}
             <Section
-              title="Where the money came from"
-              description="Awarded dollars by funder type, ranked high to low with exact dollars and share."
+              title="Funding profile"
+              description="Use this to see who funds this community and through which mechanisms. Awarded dollars, ranked, with exact dollars and share; both views cover awarded dollars only."
             >
+              <p className="mb-2 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/40">
+                By funder type
+              </p>
               <FunderTypeBars byFunderType={analysis.byFunderType} />
+              <p className="mb-2 mt-6 font-mono-bureau text-[10px] uppercase tracking-[0.14em] text-[#0C1B33]/40">
+                By program
+              </p>
+              <SourceBars bySource={analysis.bySource} />
+              <p className="mt-2 text-[11px] leading-relaxed text-[#0C1B33]/40">
+                Development projects are counted, not dollared.
+              </p>
             </Section>
 
-            {/* 3 — Year trend (amount / count toggle) */}
-            <Section title="When it arrived" description="Awarded dollars by year, 2020 to the latest on record.">
+            {/* 3 — Year trend (amount / count toggle — counts stay a visible
+                view, never hover-only: partners review on touch devices and the
+                print brief has no hover) */}
+            <Section title="When it was awarded" description="Awarded dollars by year, 2020 to the latest on record. Award timing, not receipt.">
               <YearModeToggle
                 amount={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} generatedAt={analysis.generatedAt} mode="amount" />}
                 count={<YearBars byYear={analysis.byYear} unYeared={analysis.unYeared} generatedAt={analysis.generatedAt} mode="count" />}
               />
-            </Section>
-
-            {/* 4 — Program mix */}
-            <Section
-              title="Through which programs"
-              description="Awarded dollars by funding program. Development projects are counted, not dollared."
-            >
-              <SourceBars bySource={analysis.bySource} />
             </Section>
 
             {/* 4b — Purpose over every government record STAMPED to this community,
@@ -251,7 +261,7 @@ export default async function InvestmentAreaPage({
                 className={`${hasStampedNmtcRecord ? "mt-2" : "mt-3"} text-[11px] leading-relaxed text-[#0C1B33]/45`}
               >
                 Illinois Arts Council awards publish only city and region, so arts funding stays in the{" "}
-                <Link href="/investment#illinois-arts-awards" className="text-[#2563EB] hover:underline">
+                <Link href="/investment#illinois-arts-awards-collapse" className="text-[#2563EB] hover:underline">
                   city-level awards table
                 </Link>{" "}
                 instead of being assigned to this community.
