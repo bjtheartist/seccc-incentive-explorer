@@ -39,9 +39,37 @@ export function ProgramApplicationSection({
   if (availability?.state === "active") {
     if (program.howToApply.length === 0) return null;
 
+    // The dated deadline renders from availability.nextWindow — the mechanism
+    // resolveAvailability computes from `deadlines[]`, which drops a date the
+    // moment it passes. The audit found the CCSAP quarterly deadline hardcoded
+    // into howToApply prose, where it would keep instructing users to hit a
+    // passed date forever; the durable fix is that copy stays undated and this
+    // callout is the only place a date appears.
+    const nextWindow = availability.nextWindow;
+    const nextWindowDate = nextWindow?.date
+      ? new Date(`${nextWindow.date}T12:00:00-06:00`).toLocaleDateString("en-US", {
+          timeZone: "America/Chicago",
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+        })
+      : null;
+
     return (
       <section className="py-12 border-t border-[#0C1B33]/10">
         <SectionLabel>How to apply</SectionLabel>
+        {nextWindowDate && (
+          <div className="mb-6 border-l-2 border-[#0C1B33] bg-white rounded-r-lg px-5 py-4">
+            <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#0C1B33]/50 mb-1.5">
+              Next deadline
+            </div>
+            <p className="text-[15px] text-[#0C1B33]/85 leading-relaxed">
+              {nextWindow?.label ? `${nextWindow.label} — ` : ""}
+              {nextWindowDate}. Confirm with the administering agency before relying on it.
+            </p>
+          </div>
+        )}
         <ol className="space-y-4">
           {program.howToApply.map((step, i) => (
             <li

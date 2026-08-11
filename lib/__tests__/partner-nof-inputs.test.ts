@@ -423,15 +423,15 @@ describe("partner NOF input mapping", () => {
       (sum, record) => sum + (record.amountAwarded ?? 0),
       0,
     );
-    expect(output.meta.totalRecords).toBe(43965);
+    expect(output.meta.totalRecords).toBe(44028);
     expect(output.meta.totalRecords).toBe(output.records.length);
     // 30554/7063 -> 30575/7042: 21 records with real published addresses moved
     // citywide->point when the Census2020 benchmark fallback resolved addresses
     // the Current benchmark returns empty for (6 cdg, 14 sba-rrf, 1 nof-small).
     // Dollars and record count are unchanged — geometry only.
-    expect(output.meta.pointCount).toBe(30575);
-    expect(output.meta.citywideCount).toBe(7042);
-    expect(output.meta.totalDollarsAwarded).toBeCloseTo(3162085052.66, 2);
+    expect(output.meta.pointCount).toBe(30640);
+    expect(output.meta.citywideCount).toBe(7040);
+    expect(output.meta.totalDollarsAwarded).toBeCloseTo(3179794477.66, 2);
     expect(output.meta.totalDollarsAwarded).toBeCloseTo(recomputedAwarded, 2);
     expect(output.meta.counts["nof-small"]).toBe(156);
     expect(output.meta.sources).toHaveLength(24);

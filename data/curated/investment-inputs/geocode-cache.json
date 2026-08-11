@@ -25132,5 +25132,505 @@
   "11601 S Western Ave, Chicago, IL, 60643": {
     "lat": 41.682785538062,
     "lng": -87.680798981951
+  },
+  "2659 S. Kildare Ave., Chicago, IL": {
+    "lat": 41.842888975176,
+    "lng": -87.731736171855
+  },
+  "2659 S Kildare Ave, Chicago, IL": {
+    "lat": 41.842888975176,
+    "lng": -87.731736171855
+  },
+  "1823 W 47th St, Chicago, IL": {
+    "lat": 41.808490629489,
+    "lng": -87.670736177263
+  },
+  "7225 N. Greenview Ave., Chicago, IL": {
+    "lat": 42.013392215549,
+    "lng": -87.66797010362
+  },
+  "1823 W. 47th St., Chicago, IL": {
+    "lat": 41.808490629489,
+    "lng": -87.670736177263
+  },
+  "7225 N Greenview Ave, Chicago, IL": {
+    "lat": 42.013392215549,
+    "lng": -87.66797010362
+  },
+  "536 E. 47th St., Chicago, IL": {
+    "lat": 41.809498176764,
+    "lng": -87.612599229883
+  },
+  "536 E 47th St, Chicago, IL": {
+    "lat": 41.809498176764,
+    "lng": -87.612599229883
+  },
+  "2800 W. Madison St., Chicago, IL": {
+    "lat": 41.881135445268,
+    "lng": -87.696367730282
+  },
+  "10538 S. Ewing Ave., Chicago, IL": {
+    "lat": 41.703839880242,
+    "lng": -87.535362538496
+  },
+  "10538 S Ewing Ave, Chicago, IL": {
+    "lat": 41.703839880242,
+    "lng": -87.535362538496
+  },
+  "3912 N. Cicero Ave., Chicago, IL": {
+    "lat": 41.95196797317,
+    "lng": -87.747354082915
+  },
+  "2800 W Madison St, Chicago, IL": {
+    "lat": 41.881135445268,
+    "lng": -87.696367730282
+  },
+  "3912 N Cicero Ave, Chicago, IL": {
+    "lat": 41.95196797317,
+    "lng": -87.747354082915
+  },
+  "3825 W. Lake St., Chicago, IL": {
+    "lat": 41.885202965555,
+    "lng": -87.72186201037
+  },
+  "851 W. Belmont Ave., Chicago, IL": {
+    "lat": 41.939896684391,
+    "lng": -87.651266250838
+  },
+  "3825 W Lake St, Chicago, IL": {
+    "lat": 41.885202965555,
+    "lng": -87.72186201037
+  },
+  "851 W Belmont Ave, Chicago, IL": {
+    "lat": 41.939896684391,
+    "lng": -87.651266250838
+  },
+  "3006 N. Pulaski Road, Chicago, IL": {
+    "lat": 41.935627164943,
+    "lng": -87.727162225901
+  },
+  "3006 N Pulaski Road, Chicago, IL": {
+    "lat": 41.935627164943,
+    "lng": -87.727162225901
+  },
+  "3000 W. Belmont Ave., Chicago, IL": {
+    "lat": 41.939419435652,
+    "lng": -87.702803248183
+  },
+  "713 N State St, Chicago, IL": {
+    "lat": 41.894018044572,
+    "lng": -87.628055703575
+  },
+  "713 N. State St., Chicago, IL": {
+    "lat": 41.894018044572,
+    "lng": -87.628055703575
+  },
+  "3000 W Belmont Ave, Chicago, IL": {
+    "lat": 41.939419435652,
+    "lng": -87.702803248183
+  },
+  "2439 N. Pulaski Road, Chicago, IL": {
+    "lat": 41.92551414205,
+    "lng": -87.726725125475
+  },
+  "2439 N Pulaski Road, Chicago, IL": {
+    "lat": 41.92551414205,
+    "lng": -87.726725125475
+  },
+  "6464 W. North Ave., Chicago, IL": {
+    "lat": 41.909170445557,
+    "lng": -87.787566472625
+  },
+  "6464 W North Ave, Chicago, IL": {
+    "lat": 41.909170445557,
+    "lng": -87.787566472625
+  },
+  "4925 N. Lincoln Ave., Chicago, IL": {
+    "lat": 41.971437209348,
+    "lng": -87.690276595757
+  },
+  "6046 W. North Ave., Chicago, IL": {
+    "lat": 41.909295950515,
+    "lng": -87.777082722803
+  },
+  "6046 W North Ave, Chicago, IL": {
+    "lat": 41.909295950515,
+    "lng": -87.777082722803
+  },
+  "4925 N Lincoln Ave, Chicago, IL": {
+    "lat": 41.971437209348,
+    "lng": -87.690276595757
+  },
+  "330 N. Clark St., Chicago, IL": {
+    "lat": 41.888255711169,
+    "lng": -87.631118212754
+  },
+  "330 N Clark St, Chicago, IL": {
+    "lat": 41.888255711169,
+    "lng": -87.631118212754
+  },
+  "601 W. 111th St., Chicago, IL": {
+    "lat": 41.69235388304,
+    "lng": -87.637611495465
+  },
+  "601 W 111th St, Chicago, IL": {
+    "lat": 41.69235388304,
+    "lng": -87.637611495465
+  },
+  "4511 N. Clark St., Chicago, IL": {
+    "lat": 41.963686458693,
+    "lng": -87.666320089426
+  },
+  "1222 W 95th St, Chicago, IL": {
+    "lat": 41.721412470335,
+    "lng": -87.653922130082
+  },
+  "1222 W. 95th St., Chicago, IL": {
+    "lat": 41.721412470335,
+    "lng": -87.653922130082
+  },
+  "4511 N Clark St, Chicago, IL": {
+    "lat": 41.963686458693,
+    "lng": -87.666320089426
+  },
+  "1843 W Chicago Ave, Chicago, IL": {
+    "lat": 41.895914423695,
+    "lng": -87.673225542777
+  },
+  "1843 W. Chicago Ave., Chicago, IL": {
+    "lat": 41.895914423695,
+    "lng": -87.673225542777
+  },
+  "1061 W. Van Buren St., Chicago, IL": {
+    "lat": 41.876511852305,
+    "lng": -87.654014193109
+  },
+  "2901 W. Touhy Ave., Chicago, IL": {
+    "lat": 42.011959889824,
+    "lng": -87.702161623532
+  },
+  "10 W 35th St, Chicago, IL": {
+    "lat": 41.831067772341,
+    "lng": -87.626815853448
+  },
+  "10 W. 35th St., Chicago, IL": {
+    "lat": 41.831067772341,
+    "lng": -87.626815853448
+  },
+  "2901 W Touhy Ave, Chicago, IL": {
+    "lat": 42.011959889824,
+    "lng": -87.702161623532
+  },
+  "1636 E 55th St, Chicago, IL": {
+    "lat": 41.795275453815,
+    "lng": -87.585005785779
+  },
+  "1636 E. 55th St., Chicago, IL": {
+    "lat": 41.795275453815,
+    "lng": -87.585005785779
+  },
+  "1114 S. Homan Ave., Chicago, IL": {
+    "lat": 41.867633228704,
+    "lng": -87.710656599427
+  },
+  "1061 W Van Buren St, Chicago, IL": {
+    "lat": 41.876511852305,
+    "lng": -87.654014193109
+  },
+  "1114 S Homan Ave, Chicago, IL": {
+    "lat": 41.867633228704,
+    "lng": -87.710656599427
+  },
+  "222 E. 95th St., Chicago, IL": {
+    "lat": 41.72187901977,
+    "lng": -87.618131733127
+  },
+  "222 E 95th St, Chicago, IL": {
+    "lat": 41.72187901977,
+    "lng": -87.618131733127
+  },
+  "4837 N. Lipps Ave., Chicago, IL": {
+    "lat": 41.96832301983,
+    "lng": -87.759572345238
+  },
+  "4837 N Lipps Ave, Chicago, IL": {
+    "lat": 41.96832301983,
+    "lng": -87.759572345238
+  },
+  "301 E. 95th St., Chicago, IL": {
+    "lat": 41.721795786837,
+    "lng": -87.616479795071
+  },
+  "301 E 95th St, Chicago, IL": {
+    "lat": 41.721795786837,
+    "lng": -87.616479795071
+  },
+  "2525 E. 83rd St., Chicago, IL": {
+    "lat": 41.744452099746,
+    "lng": -87.562547673022
+  },
+  "2142 W. Cermak Road, Chicago, IL": {
+    "lat": 41.852175450152,
+    "lng": -87.679354548094
+  },
+  "2525 E 83rd St, Chicago, IL": {
+    "lat": 41.744452099746,
+    "lng": -87.562547673022
+  },
+  "2142 W Cermak Road, Chicago, IL": {
+    "lat": 41.852175450152,
+    "lng": -87.679354548094
+  },
+  "3666 W. Irving Park Road, Chicago, IL": {
+    "lat": 41.953826555133,
+    "lng": -87.719587447772
+  },
+  "3834 W Irving Park Road, Chicago, IL": {
+    "lat": 41.953765434387,
+    "lng": -87.724082394109
+  },
+  "3666 W Irving Park Road, Chicago, IL": {
+    "lat": 41.953826555133,
+    "lng": -87.719587447772
+  },
+  "3834 W. Irving Park Road, Chicago, IL": {
+    "lat": 41.953765434387,
+    "lng": -87.724082394109
+  },
+  "5729 W. Belmont Ave., Chicago, IL": {
+    "lat": 41.938473374579,
+    "lng": -87.769989573559
+  },
+  "3619 S Hoyne Ave, Chicago, IL": {
+    "lat": 41.828167039282,
+    "lng": -87.677584333341
+  },
+  "5729 W Belmont Ave, Chicago, IL": {
+    "lat": 41.938473374579,
+    "lng": -87.769989573559
+  },
+  "846 W. 119th St., Chicago, IL": {
+    "lat": 41.677843477274,
+    "lng": -87.643707422669
+  },
+  "3265 S. Halsted St., Chicago, IL": {
+    "lat": 41.834722973084,
+    "lng": -87.646124444075
+  },
+  "846 W 119th St, Chicago, IL": {
+    "lat": 41.677843477274,
+    "lng": -87.643707422669
+  },
+  "3265 S Halsted St, Chicago, IL": {
+    "lat": 41.834722973084,
+    "lng": -87.646124444075
+  },
+  "8734 S Stony Island Ave, Chicago, IL": {
+    "lat": 41.736263931196,
+    "lng": -87.585700215902
+  },
+  "3619 S. Hoyne Ave., Chicago, IL": {
+    "lat": 41.828167039282,
+    "lng": -87.677584333341
+  },
+  "3000-06 N. Elbridge Ave., Chicago, IL": {
+    "lat": 41.935441437136,
+    "lng": -87.717211197901
+  },
+  "3000-06 N Elbridge Ave, Chicago, IL": {
+    "lat": 41.935441437136,
+    "lng": -87.717211197901
+  },
+  "3000 N Elbridge Ave, Chicago, IL": {
+    "lat": 41.935441437136,
+    "lng": -87.717211197901
+  },
+  "533 N. Pine Ave., Chicago, IL": {
+    "lat": 41.889861012747,
+    "lng": -87.763291782167
+  },
+  "533 N Pine Ave, Chicago, IL": {
+    "lat": 41.889861012747,
+    "lng": -87.763291782167
+  },
+  "899 S. Plymouth Court, Chicago, IL": {
+    "lat": 41.87138940448,
+    "lng": -87.628535620646
+  },
+  "899 S Plymouth Court, Chicago, IL": {
+    "lat": 41.87138940448,
+    "lng": -87.628535620646
+  },
+  "2011 W. Grand Ave., Chicago, IL": {
+    "lat": 41.890758851158,
+    "lng": -87.677263377727
+  },
+  "2011 W Grand Ave, Chicago, IL": {
+    "lat": 41.890758851158,
+    "lng": -87.677263377727
+  },
+  "4100 W. Madison St., Chicago, IL": {
+    "lat": 41.880756018124,
+    "lng": -87.728198548382
+  },
+  "4100 W Madison St, Chicago, IL": {
+    "lat": 41.880756018124,
+    "lng": -87.728198548382
+  },
+  "4684 N. Elston Ave., Chicago, IL": {
+    "lat": 41.966056847804,
+    "lng": -87.737263272473
+  },
+  "4684 N Elston Ave, Chicago, IL": {
+    "lat": 41.966056847804,
+    "lng": -87.737263272473
+  },
+  "3504 W. 47th St., Chicago, IL": {
+    "lat": 41.808091458615,
+    "lng": -87.711187610682
+  },
+  "3504 W 47th St, Chicago, IL": {
+    "lat": 41.808091458615,
+    "lng": -87.711187610682
+  },
+  "4623 N. Clark St., Chicago, IL": {
+    "lat": 41.965921575329,
+    "lng": -87.666793581402
+  },
+  "4623 N Clark St, Chicago, IL": {
+    "lat": 41.965921575329,
+    "lng": -87.666793581402
+  },
+  "1060 E. 47th St., Chicago, IL": {
+    "lat": 41.80966057808,
+    "lng": -87.60022920556
+  },
+  "6347 S. Kedzie Ave., Chicago, IL": {
+    "lat": 41.777539588504,
+    "lng": -87.703026458673
+  },
+  "6347 S Kedzie Ave, Chicago, IL": {
+    "lat": 41.777539588504,
+    "lng": -87.703026458673
+  },
+  "1070 W. Berwyn Ave., Chicago, IL": {
+    "lat": 41.978243682975,
+    "lng": -87.657245919075
+  },
+  "1070 W Berwyn Ave, Chicago, IL": {
+    "lat": 41.978243682975,
+    "lng": -87.657245919075
+  },
+  "3417 N. Harlem Ave., Chicago, IL": {
+    "lat": 41.941967146173,
+    "lng": -87.806809770898
+  },
+  "4212 W Madison St, Chicago, IL": {
+    "lat": 41.880721447264,
+    "lng": -87.730930677616
+  },
+  "4212 W. Madison St., Chicago, IL": {
+    "lat": 41.880721447264,
+    "lng": -87.730930677616
+  },
+  "3417 N Harlem Ave, Chicago, IL": {
+    "lat": 41.941967146173,
+    "lng": -87.806809770898
+  },
+  "1447 W. Montrose Ave., Chicago, IL": {
+    "lat": 41.961562926066,
+    "lng": -87.66687274303
+  },
+  "1447 W Montrose Ave, Chicago, IL": {
+    "lat": 41.961562926066,
+    "lng": -87.66687274303
+  },
+  "7045 S. Jeffery Blvd., Chicago, IL": {
+    "lat": 41.767183512463,
+    "lng": -87.576250056901
+  },
+  "7045 S Jeffery Blvd, Chicago, IL": {
+    "lat": 41.767183512463,
+    "lng": -87.576250056901
+  },
+  "501 N. Ogden Ave., Chicago, IL": {
+    "lat": 41.891076803348,
+    "lng": -87.659037507928
+  },
+  "501 N Ogden Ave, Chicago, IL": {
+    "lat": 41.891076803348,
+    "lng": -87.659037507928
+  },
+  "4702 S King Drive, Chicago, IL": {
+    "lat": 41.809290882176,
+    "lng": -87.616922867649
+  },
+  "4702 S. King Drive, Chicago, IL": {
+    "lat": 41.809290882176,
+    "lng": -87.616922867649
+  },
+  "3601 W Diversey Ave, Chicago, IL": {
+    "lat": 41.931852846356,
+    "lng": -87.71727073568
+  },
+  "3341 W. Belmont Ave., Chicago, IL": {
+    "lat": 41.939241844772,
+    "lng": -87.71152659118
+  },
+  "3341 W Belmont Ave, Chicago, IL": {
+    "lat": 41.939241844772,
+    "lng": -87.71152659118
+  },
+  "3601 W. Diversey Ave., Chicago, IL": {
+    "lat": 41.931852846356,
+    "lng": -87.71727073568
+  },
+  "4727 S Wabash Ave, Chicago, IL": {
+    "lat": 41.808749790969,
+    "lng": -87.624364529015
+  },
+  "4823 W. Irving Park Road, Chicago, IL": {
+    "lat": 41.953344844426,
+    "lng": -87.748487250297
+  },
+  "4727 S. Wabash Ave., Chicago, IL": {
+    "lat": 41.808749790969,
+    "lng": -87.624364529015
+  },
+  "4823 W Irving Park Road, Chicago, IL": {
+    "lat": 41.953344844426,
+    "lng": -87.748487250297
+  },
+  "520 N. Marshfield Ave., Chicago, IL": {
+    "lat": 41.891297101817,
+    "lng": -87.668452281893
+  },
+  "520 N Marshfield Ave, Chicago, IL": {
+    "lat": 41.891297101817,
+    "lng": -87.668452281893
+  },
+  "9350 S South Chicago Ave, Chicago, IL": {
+    "lat": 41.725518740086,
+    "lng": -87.54959749551
+  },
+  "9350 S. South Chicago Ave., Chicago, IL": {
+    "lat": 41.725518740086,
+    "lng": -87.54959749551
+  },
+  "821 W. 115th St., Chicago, IL": {
+    "lat": 41.685022442899,
+    "lng": -87.642523770777
+  },
+  "821 W 115th St, Chicago, IL": {
+    "lat": 41.685022442899,
+    "lng": -87.642523770777
+  },
+  "5535 N. Wolcott Ave., Chicago, IL": {
+    "lat": 41.982389322528,
+    "lng": -87.67651385673
+  },
+  "5535 N Wolcott Ave, Chicago, IL": {
+    "lat": 41.982389322528,
+    "lng": -87.67651385673
   }
 }
