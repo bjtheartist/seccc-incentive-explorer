@@ -15,9 +15,7 @@ import {
   RotateCcw,
   Printer,
   AlertCircle,
-  Phone,
   ExternalLink,
-  Calendar,
   Mail,
   Link2,
 } from "lucide-react";
@@ -59,7 +57,6 @@ import type {
   GeneratedReport,
   ReportCensusData,
   ReportZoningData,
-  ActionRoadmapItem,
   CorridorMetric,
   CorridorOwnerCluster,
   NeighborhoodEconomicContext,
@@ -160,23 +157,13 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
 import type {
-  ApplicationPortal,
   Program,
-  ExecutiveSummary,
   ParcelData,
   DistrictData,
   StackingRule,
   CommunityAsset,
   Stats,
-  PublicMatchExplanation,
-  VerificationStep,
 } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { cachedFetch } from "@/lib/fetch-cache";

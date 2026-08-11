@@ -12,10 +12,7 @@ import {
   Loader2,
   RotateCcw,
   Printer,
-  AlertCircle,
-  Phone,
   ExternalLink,
-  Calendar,
   Mail,
   Link2,
 } from "lucide-react";
@@ -27,12 +24,10 @@ import {
   normalizePublicReportForDisplay,
   SECTION_IDS,
   type GeneratedReport,
-  type ActionRoadmapItem,
-  type NeighborhoodEconomicContext,
   type ReportSection,
   type ReportItem,
 } from "@/lib/report-engine";
-import type { ApplicationPortal, ExecutiveSummary, Program, PublicMatchExplanation, VerificationStep } from "@/lib/types";
+import type { Program } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { RefineValuePanel } from "@/components/report/RefineValuePanel";
 import { ActionRoadmapSection } from "@/components/report/ActionRoadmapSection";
@@ -94,12 +89,6 @@ import {
   AccordionTrigger,
   AccordionContent,
 } from "@/components/ui/accordion";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-  TooltipProvider,
-} from "@/components/ui/tooltip";
 
 /**
  * Match a section by its stable id, falling back to the English title only
