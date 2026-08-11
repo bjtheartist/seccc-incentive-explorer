@@ -1,145 +1,85 @@
 /**
- * Zoning district families, for filtering candidate sites.
+ * District-family classification and filtering, built on the existing
+ * ZONING_CATEGORIES table.
+ *
+ * SINGLE SOURCE OF TRUTH
+ * ----------------------
+ * The prefix-to-family table already lives in `lib/constants.ts` as
+ * ZONING_CATEGORIES, where it drives map fill colours
+ * (`buildZoningColorExpression`) and the legend's per-category toggles.
+ * This module does NOT restate those prefixes. It imports them, so a
+ * category added there is immediately filterable here and cannot drift.
  *
  * WHY THIS DERIVES FROM `zoneClass` AND NOT `zoneTypeCode`
  * -------------------------------------------------------
- * The ArcGIS layer publishes a numeric ZONE_TYPE without an attached
+ * The ArcGIS layer publishes a numeric ZONE_TYPE with no attached
  * value-domain label, so `app/api/zoning/route.ts` deliberately returns
  * `zoneType: null` rather than inferring a user-facing category from it.
- * That decision stands. This module does not read `zoneTypeCode`.
+ * That decision stands. This module reads the published designation
+ * string (`zoneClass`, e.g. "C1-2") instead — grouping "C1-2" with
+ * "C3-5" restates the City's own naming rather than decoding an
+ * undocumented code.
  *
- * What it reads instead is the published district designation itself
- * (`zoneClass`, e.g. "C1-2", "RS-3", "M1-2"). The leading letters of a
- * Chicago district designation are part of the designation as published —
- * grouping "C1-2" and "C3-5" as commercial districts restates the City's
- * own naming, it does not decode an undocumented code.
- *
- * WHAT THIS IS NOT
- * ----------------
- * A district family is NOT a statement about what a business may do at a
- * site. Whether a use is permitted is determined by the use tables in the
- * Municipal Code (and ultimately by the Zoning Administrator), which this
- * module does not model. Filtering by family narrows a candidate list; it
- * never concludes eligibility. Any UI built on this must say what the
- * district IS, not what the user MAY DO.
+ * STRICTER MATCHING THAN THE MAP'S COLOUR EXPRESSION
+ * -------------------------------------------------
+ * `buildZoningColorExpression` compares a leading slice of the class
+ * string. That is correct for painting, where an unmatched parcel simply
+ * takes the fallback colour. For filtering, a loose match silently
+ * includes or excludes sites, so this module matches the *whole leading
+ * alphabetic run* instead: "RM4-.5" yields "RM", and a hypothetical
+ * future "CX-1" yields "CX" and stays unclassified rather than being
+ * absorbed into commercial by its first letter.
  *
  * VALIDATION
  * ----------
  * Validated 2026-08-10 against the City of Chicago ArcGIS zoning layer
- * (ExternalApps/Zoning/MapServer/1) using returnDistinctValues on
+ * (ExternalApps/Zoning/MapServer/1) with returnDistinctValues on
  * ZONE_CLASS. The layer publishes 1,528 distinct designations resolving
- * to exactly the 14 prefixes declared below — no prefix here is absent
- * from the layer, and no prefix in the layer is missing here.
+ * to exactly 14 prefixes, and ZONING_CATEGORIES covers all 14 with none
+ * left over. Distribution: PD 1444, B 15, PMD 14, C 13, M 9, RM 8, DX 6,
+ * DR 4, DS 3, POS 3, RS 3, RT 3, DC 2, T 1.
  *
- * Distribution of distinct designations: PD 1444, B 15, PMD 14, C 13,
- * M 9, RM 8, DX 6, DR 4, DS 3, POS 3, RS 3, RT 3, DC 2, T 1.
+ * The fixture in `__tests__/zoning-districts.test.ts` locks that set, so
+ * a newly published prefix fails a test rather than silently landing in
+ * the unclassified bucket.
  *
- * The fixture in `__tests__/zoning-districts.test.ts` locks this list so
- * a newly published prefix fails a test instead of silently landing in
- * the unclassified bucket. Re-run the distinct query at review time.
- *
- * UNMATCHED CLASSES SURFACE, THEY DO NOT GET BUCKETED
- * --------------------------------------------------
- * `classifyZoneClass` returns `null` for anything it does not recognize,
- * and callers are expected to show those sites as "district not
- * classified" rather than dropping them or guessing. A filter that
- * silently discards rows it failed to parse would misreport coverage.
+ * WHAT THIS IS NOT
+ * ----------------
+ * A district family is NOT a statement about what a business may do at a
+ * site. Whether a use is permitted is set by the ordinance's use tables
+ * and confirmed by the City. Filtering narrows a candidate list; it never
+ * concludes eligibility.
  */
 
-export type ZoningDistrictFamilyId =
-  | "residential"
-  | "business"
-  | "commercial"
-  | "downtown"
-  | "manufacturing"
-  | "planned-manufacturing"
-  | "planned-development"
-  | "parks-open-space"
-  | "transportation";
+import { ZONING_CATEGORIES } from "@/lib/constants";
+
+export type ZoningDistrictFamilyId = (typeof ZONING_CATEGORIES)[number]["key"];
 
 export interface ZoningDistrictFamily {
   id: ZoningDistrictFamilyId;
-  /** Short label for filter chips. */
   label: string;
-  /** One line explaining what the family covers, in plain language. */
-  description: string;
-  /**
-   * Designation prefixes, longest-first within the family. Matching is
-   * done against the leading alphabetic run of the class string.
-   */
-  prefixes: string[];
+  prefixes: readonly string[];
+  color: string;
 }
 
-/**
- * Ordered most-specific-first so that multi-letter prefixes (PMD, POS, RS)
- * are tested before single-letter ones (P, R) can shadow them.
- */
-export const ZONING_DISTRICT_FAMILIES: readonly ZoningDistrictFamily[] = [
-  {
-    id: "planned-manufacturing",
-    label: "Planned manufacturing",
-    description: "Planned Manufacturing Districts, which restrict conversion away from industrial use.",
-    prefixes: ["PMD"],
-  },
-  {
-    id: "parks-open-space",
-    label: "Parks and open space",
-    description: "Parks, open space, and conservation designations.",
-    prefixes: ["POS"],
-  },
-  {
-    id: "planned-development",
-    label: "Planned development",
-    description: "Sites governed by an adopted Planned Development ordinance rather than base district rules alone.",
-    prefixes: ["PD"],
-  },
-  {
-    id: "residential",
-    label: "Residential",
-    description: "Single-unit, two-flat and townhouse, and multi-unit residential districts.",
-    prefixes: ["RS", "RT", "RM"],
-  },
-  {
-    id: "downtown",
-    label: "Downtown",
-    description: "Downtown core, mixed-use, residential, and service districts.",
-    prefixes: ["DC", "DX", "DR", "DS"],
-  },
-  {
-    id: "business",
-    label: "Business",
-    description: "Business districts, oriented to storefront retail and services.",
-    prefixes: ["B"],
-  },
-  {
-    id: "commercial",
-    label: "Commercial",
-    description: "Commercial districts, which accommodate a broader range of activity than business districts.",
-    prefixes: ["C"],
-  },
-  {
-    id: "manufacturing",
-    label: "Manufacturing",
-    description: "Manufacturing and industrial districts.",
-    prefixes: ["M"],
-  },
-  {
-    id: "transportation",
-    label: "Transportation",
-    description: "Transportation designations.",
-    prefixes: ["T"],
-  },
-] as const;
+export const ZONING_DISTRICT_FAMILIES: readonly ZoningDistrictFamily[] =
+  ZONING_CATEGORIES.map((cat) => ({
+    id: cat.key,
+    label: cat.label,
+    prefixes: cat.prefixes,
+    color: cat.color,
+  }));
 
-const PREFIX_LOOKUP: ReadonlyArray<{ prefix: string; family: ZoningDistrictFamily }> =
+const PREFIX_TO_FAMILY = new Map<string, ZoningDistrictFamily>(
   ZONING_DISTRICT_FAMILIES.flatMap((family) =>
-    family.prefixes.map((prefix) => ({ prefix, family })),
-  ).sort((a, b) => b.prefix.length - a.prefix.length);
+    family.prefixes.map((prefix) => [prefix.toUpperCase(), family] as const),
+  ),
+);
 
 /**
- * The leading alphabetic run of a district designation, uppercased.
- * "C1-2" -> "C", "RS-3" -> "RS", "PMD 11" -> "PMD". Returns null when the
- * value does not start with letters.
+ * The leading alphabetic run of a designation, uppercased.
+ * "C1-2" -> "C", "RS-3" -> "RS", "PMD 11" -> "PMD", "T" -> "T".
+ * Returns null when the value does not begin with letters.
  */
 export function zoneClassPrefix(zoneClass: string): string | null {
   const match = zoneClass.trim().toUpperCase().match(/^[A-Z]+/);
@@ -147,12 +87,12 @@ export function zoneClassPrefix(zoneClass: string): string | null {
 }
 
 /**
- * Classify a published district designation into a family.
+ * Classify a published designation into a family.
  *
- * Returns null when the designation is empty, malformed, or not a
- * designation this module recognizes. Callers MUST surface null as
- * "not classified" rather than dropping the site or defaulting it into a
- * family — an unrecognized designation is a gap in this table, not a
+ * Returns null when the designation is empty, malformed, or carries a
+ * prefix no category claims. Callers MUST surface null as "district not
+ * classified" rather than dropping the site or defaulting it into a
+ * family — an unrecognized designation is a gap in the table, not a
  * property of the parcel.
  */
 export function classifyZoneClass(
@@ -161,11 +101,7 @@ export function classifyZoneClass(
   if (!zoneClass) return null;
   const prefix = zoneClassPrefix(zoneClass);
   if (!prefix) return null;
-
-  for (const entry of PREFIX_LOOKUP) {
-    if (prefix === entry.prefix) return entry.family;
-  }
-  return null;
+  return PREFIX_TO_FAMILY.get(prefix) ?? null;
 }
 
 export function familyById(
@@ -178,9 +114,9 @@ export function familyById(
  * Does a site's designation fall into any of the selected families?
  *
  * An empty selection means "no filter applied" and matches everything,
- * including sites whose designation could not be classified. A non-empty
- * selection excludes unclassified sites, because including them would
- * assert a family membership that was never established.
+ * including unclassified sites. A non-empty selection excludes
+ * unclassified sites, because including them would assert a family
+ * membership that was never established.
  */
 export function matchesDistrictFilter(
   zoneClass: string | null | undefined,
@@ -190,6 +126,26 @@ export function matchesDistrictFilter(
   const family = classifyZoneClass(zoneClass);
   if (!family) return false;
   return selected.includes(family.id);
+}
+
+/**
+ * Counts for a candidate set, so a filter UI can show what it is hiding
+ * and how many sites carry no classifiable district at all.
+ */
+export function summarizeDistricts(
+  zoneClasses: readonly (string | null | undefined)[],
+): { byFamily: Map<ZoningDistrictFamilyId, number>; unclassified: number } {
+  const byFamily = new Map<ZoningDistrictFamilyId, number>();
+  let unclassified = 0;
+  for (const zoneClass of zoneClasses) {
+    const family = classifyZoneClass(zoneClass);
+    if (!family) {
+      unclassified += 1;
+      continue;
+    }
+    byFamily.set(family.id, (byFamily.get(family.id) ?? 0) + 1);
+  }
+  return { byFamily, unclassified };
 }
 
 /**
