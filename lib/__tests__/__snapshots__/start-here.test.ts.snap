@@ -1,0 +1,387 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`legacy action structures are unchanged by the StartHere refactor > computeTopActions output is unchanged for a bare ProgramCheckResult list 1`] = `
+[
+  {
+    "contact": {
+      "abbreviation": "TA",
+      "agency": "Test Agency",
+      "phone": "312-555-0000",
+    },
+    "label": "Call Test Agency about TIF Program",
+    "programId": "tif",
+    "type": "call",
+  },
+  {
+    "contact": {
+      "abbreviation": "SBIF",
+      "agency": "SBIF Office",
+      "url": "https://example.com/sbif",
+    },
+    "label": "Confirm with the administering agency whether SBIF Facade Program applies to this project",
+    "programId": "sbif",
+    "type": "check",
+  },
+  {
+    "contact": {
+      "abbreviation": "SBS",
+      "agency": "Cook County SBS",
+      "phone": "312-555-1000",
+    },
+    "label": "Book free business advising",
+    "programId": "smallBizSource",
+    "type": "book",
+  },
+]
+`;
+
+exports[`legacy action structures are unchanged by the StartHere refactor > dev-feasibility (best-location) report 1`] = `
+{
+  "actionRoadmap": [
+    {
+      "callScript": undefined,
+      "contact": {
+        "agency": "SBIF Office",
+        "email": undefined,
+        "phone": undefined,
+        "role": undefined,
+      },
+      "description": "A test program that reimburses eligible facade costs.",
+      "label": "Call the program administrator",
+      "preparationCost": undefined,
+      "programId": "sbif",
+      "programName": "SBIF Facade Program",
+      "tier": "do-this-week",
+    },
+    {
+      "callScript": undefined,
+      "contact": {
+        "agency": "Test Agency",
+        "email": undefined,
+        "phone": "312-555-0000",
+        "role": undefined,
+      },
+      "description": "A test program that reimburses eligible facade costs.",
+      "label": "Call the program administrator",
+      "preparationCost": undefined,
+      "programId": "tif",
+      "programName": "TIF Program",
+      "tier": "do-this-week",
+    },
+    {
+      "callScript": undefined,
+      "description": "Look up PIN 25-12-314-001-0000 on the Cook County Assessor website for tax history, exemptions, and appeal status.",
+      "label": "Pull full Assessor record",
+      "preparationCost": undefined,
+      "tier": "start-gathering",
+    },
+  ],
+  "recommendedActions": [
+    {
+      "description": "Look up PIN 25-12-314-001-0000 on the Cook County Assessor website for tax history, exemptions, and appeal status.",
+      "label": "Review full Assessor record",
+      "preparationCost": undefined,
+      "priority": "high",
+    },
+    {
+      "description": "Use the Chicago Incentive Explorer map to visually verify that the parcel falls within the listed incentive zones.",
+      "label": "Confirm zone boundaries on the map",
+      "preparationCost": undefined,
+      "priority": "high",
+    },
+    {
+      "description": "Walk the property and surrounding blocks to assess physical condition, access, visibility, and neighborhood character.",
+      "label": "Schedule a site visit",
+      "preparationCost": undefined,
+      "priority": "medium",
+    },
+    {
+      "description": "Schedule a session with SECCC or Small Business Source to review this site evaluation and discuss next steps.",
+      "label": "Book free business advising",
+      "preparationCost": undefined,
+      "priority": "medium",
+    },
+  ],
+  "topActions": [
+    {
+      "contact": {
+        "abbreviation": "TA",
+        "agency": "Test Agency",
+        "phone": "312-555-0000",
+      },
+      "label": "Call Test Agency about TIF Program",
+      "programId": "tif",
+      "type": "call",
+    },
+    {
+      "contact": {
+        "abbreviation": "SBIF",
+        "agency": "SBIF Office",
+        "url": "https://example.com/sbif",
+      },
+      "label": "Confirm with the administering agency whether SBIF Facade Program applies to this project",
+      "programId": "sbif",
+      "type": "check",
+    },
+  ],
+}
+`;
+
+exports[`legacy action structures are unchanged by the StartHere refactor > developer-analysis report 1`] = `
+{
+  "actionRoadmap": null,
+  "recommendedActions": [
+    {
+      "description": "Call the program administrator",
+      "label": "Verify TIF Program fit first",
+      "preparationCost": undefined,
+      "priority": "high",
+    },
+    {
+      "description": "A qualified tax professional can verify whether selected credits can be combined on the same project and identify exclusions.",
+      "label": "Consult a tax advisor on incentive compatibility",
+      "preparationCost": undefined,
+      "priority": "high",
+    },
+    {
+      "description": "Confirm that your project address is within the required zone boundaries for each selected program before beginning applications.",
+      "label": "Verify zone eligibility for all selected programs",
+      "preparationCost": undefined,
+      "priority": "medium",
+    },
+    {
+      "description": "Organizations like Chicago Neighborhood Initiatives (CNI) or IFF specialize in helping developers navigate multi-program applications.",
+      "label": "Engage a program consultant or CDFI",
+      "preparationCost": undefined,
+      "priority": "medium",
+    },
+  ],
+  "topActions": null,
+}
+`;
+
+exports[`legacy action structures are unchanged by the StartHere refactor > program-explorer report (no address, no executiveSummary/actionRoadmap) 1`] = `
+{
+  "actionRoadmap": null,
+  "recommendedActions": [
+    {
+      "description": "Many programs require your property to be in a specific zone. Use the address checker to verify which programs apply to your location.",
+      "label": "Check your address for zone eligibility",
+      "preparationCost": undefined,
+      "priority": "high",
+    },
+    {
+      "description": "Answer four project questions to narrow the programs and requirements worth reviewing.",
+      "label": "Add your project details",
+      "preparationCost": undefined,
+      "priority": "high",
+    },
+    {
+      "description": "A business advisor can help you navigate the application process for multiple programs simultaneously.",
+      "label": "Book free business advising",
+      "preparationCost": undefined,
+      "priority": "medium",
+    },
+  ],
+  "topActions": null,
+}
+`;
+
+exports[`legacy action structures are unchanged by the StartHere refactor > site-incentives report with a phone-contact program 1`] = `
+{
+  "actionRoadmap": [
+    {
+      "callScript": ""Hi, I'm at 100 E Test St in Test SBIF. I'd like to learn about SBIF Facade Program for my general business with a focus on buy equipment."",
+      "contact": {
+        "agency": "SBIF Office",
+        "email": undefined,
+        "phone": undefined,
+        "role": undefined,
+      },
+      "description": "A test program that reimburses eligible facade costs.",
+      "label": "Call the program administrator",
+      "preparationCost": undefined,
+      "programId": "sbif",
+      "programName": "SBIF Facade Program",
+      "tier": "do-this-week",
+    },
+    {
+      "callScript": ""Hi, I'm at 100 E Test St in Test TIF. I'd like to learn about TIF Program for my general business with a focus on buy equipment."",
+      "contact": {
+        "agency": "Test Agency",
+        "email": undefined,
+        "phone": "312-555-0000",
+        "role": undefined,
+      },
+      "description": "A test program that reimburses eligible facade costs.",
+      "label": "Call the program administrator",
+      "preparationCost": undefined,
+      "programId": "tif",
+      "programName": "TIF Program",
+      "tier": "do-this-week",
+    },
+    {
+      "callScript": undefined,
+      "contact": {
+        "agency": "Cook County SBS",
+        "email": undefined,
+        "phone": "312-555-1000",
+        "role": undefined,
+      },
+      "description": "Free one-on-one advising for Cook County small businesses.",
+      "label": "Explore Small Business Source",
+      "preparationCost": undefined,
+      "programId": "smallBizSource",
+      "programName": "Small Business Source",
+      "tier": "worth-exploring",
+    },
+  ],
+  "recommendedActions": [
+    {
+      "description": "Call the program administrator",
+      "label": "Confirm fit for SBIF Facade Program",
+      "preparationCost": undefined,
+      "priority": "high",
+    },
+    {
+      "description": "Call the program administrator",
+      "label": "Confirm fit for TIF Program",
+      "preparationCost": undefined,
+      "priority": "high",
+    },
+    {
+      "description": "Schedule a free session with Cook County Small Business Source or SECCC to review all options.",
+      "label": "Book free business advising",
+      "preparationCost": undefined,
+      "priority": "medium",
+    },
+  ],
+  "topActions": [
+    {
+      "contact": {
+        "abbreviation": "TA",
+        "agency": "Test Agency",
+        "phone": "312-555-0000",
+      },
+      "label": "Call Test Agency about TIF Program",
+      "programId": "tif",
+      "type": "call",
+    },
+    {
+      "contact": {
+        "abbreviation": "SBIF",
+        "agency": "SBIF Office",
+        "url": "https://example.com/sbif",
+      },
+      "label": "Confirm with the administering agency whether SBIF Facade Program applies to this project",
+      "programId": "sbif",
+      "type": "check",
+    },
+    {
+      "contact": {
+        "abbreviation": "SBS",
+        "agency": "Cook County SBS",
+        "phone": "312-555-1000",
+      },
+      "label": "Book free business advising",
+      "programId": "smallBizSource",
+      "type": "book",
+    },
+  ],
+}
+`;
+
+exports[`legacy action structures are unchanged by the StartHere refactor > site-incentives report with an unresolved zoning question 1`] = `
+{
+  "actionRoadmap": [
+    {
+      "callScript": undefined,
+      "description": "List every primary and accessory activity at the site, then ask the City or a zoning professional to identify the controlling Title 17 use category and current process. The published district alone does not establish that a proposed use is permitted or that zoning relief is required.",
+      "label": "Define the exact activity and verify its use category for B3-2",
+      "tier": "do-this-week",
+    },
+    {
+      "callScript": ""Hi, I'm at 100 E Test St in Test TIF. I'd like to learn about TIF Program for my general business with a focus on remodel or renovate."",
+      "contact": {
+        "agency": "Test Agency",
+        "email": undefined,
+        "phone": "312-555-0000",
+        "role": undefined,
+      },
+      "description": "A test program that reimburses eligible facade costs.",
+      "label": "Call the program administrator",
+      "preparationCost": undefined,
+      "programId": "tif",
+      "programName": "TIF Program",
+      "tier": "do-this-week",
+    },
+    {
+      "callScript": undefined,
+      "contact": {
+        "agency": "Cook County SBS",
+        "email": undefined,
+        "phone": "312-555-1000",
+        "role": undefined,
+      },
+      "description": "Free one-on-one advising for Cook County small businesses.",
+      "label": "Explore Small Business Source",
+      "preparationCost": undefined,
+      "programId": "smallBizSource",
+      "programName": "Small Business Source",
+      "tier": "worth-exploring",
+    },
+  ],
+  "recommendedActions": [
+    {
+      "description": "Call the program administrator",
+      "label": "Confirm fit for TIF Program",
+      "preparationCost": undefined,
+      "priority": "high",
+    },
+    {
+      "description": "Free one-on-one advising for Cook County small businesses.",
+      "label": "Explore Small Business Source",
+      "preparationCost": undefined,
+      "priority": "medium",
+    },
+    {
+      "description": "Schedule a free session with Cook County Small Business Source or SECCC to review all options.",
+      "label": "Book free business advising",
+      "preparationCost": undefined,
+      "priority": "medium",
+    },
+  ],
+  "topActions": [
+    {
+      "contact": {
+        "abbreviation": "TA",
+        "agency": "Test Agency",
+        "phone": "312-555-0000",
+      },
+      "label": "Call Test Agency about TIF Program",
+      "programId": "tif",
+      "type": "call",
+    },
+    {
+      "contact": {
+        "abbreviation": "SBS",
+        "agency": "Cook County SBS",
+        "phone": "312-555-1000",
+      },
+      "label": "Call Cook County SBS about Small Business Source",
+      "programId": "smallBizSource",
+      "type": "call",
+    },
+    {
+      "contact": {
+        "abbreviation": "SBS",
+        "agency": "Cook County SBS",
+        "phone": "312-555-1000",
+      },
+      "label": "Book free business advising",
+      "programId": "smallBizSource",
+      "type": "book",
+    },
+  ],
+}
+`;

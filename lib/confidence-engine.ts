@@ -8,6 +8,7 @@ import type {
   ParcelData,
 } from "./types";
 import { buildPublicMatchExplanation } from "./match-transparency";
+import { buildStartHere, startHereActionsInOrder, type StartHereAction } from "./start-here";
 
 /**
  * Relevance Engine — given zone results + programs + optional survey answers,
@@ -283,53 +284,44 @@ export function runConfidenceEngine(
 }
 
 /**
+ * Map one StartHere action back to the legacy `TopAction` shape. Only
+ * program-linked actions round-trip (a call, an agency-confirmation, or the
+ * advising booking) — StartHere's zoning-confirmation and generic-fallback
+ * actions carry no `programId` and have no legacy `TopAction` analogue, so
+ * they are dropped here rather than invented a new `type` for.
+ */
+function toLegacyTopAction(action: StartHereAction): TopAction | null {
+  if (!action.programId) return null;
+  const type: TopAction["type"] =
+    action.kind === "call-agency"
+      ? "call"
+      : action.kind === "confirm-with-agency"
+        ? "check"
+        : action.kind === "book-advising"
+          ? "book"
+          : "gather";
+  return { label: action.label, type, programId: action.programId, contact: action.contact };
+}
+
+/**
  * Compute top actions — labeled "Best next steps based on your location".
  * Returns up to 3 actions based on the most confident program results.
+ *
+ * Derives from `buildStartHere` (lib/start-here.ts) rather than re-running
+ * its own selection: this call site never has zoning context to pass, so it
+ * always gets StartHere's un-forced ranking (top address-linked programs,
+ * then the advising fallback) — the exact selection this function used to
+ * run inline. See lib/start-here.ts and lib/__tests__/start-here.test.ts's
+ * characterization tests for the behavior-preservation evidence.
  */
 export function computeTopActions(
   results: ProgramCheckResult[]
 ): TopAction[] {
-  const actions: TopAction[] = [];
-
-  // Programs with address-specific evidence recorded against them.
-  const addressLinked = results.filter(
-    (r) => r.relevance !== "not_mapped_at_location" && r.relevance !== "context_dependent"
-  );
-
-  for (const result of addressLinked.slice(0, 2)) {
-    const contact = result.program.contacts?.[0];
-    if (contact?.phone) {
-      actions.push({
-        label: `Call ${contact.agency || contact.abbreviation} about ${result.program.name}`,
-        type: "call",
-        programId: result.programId,
-        contact,
-      });
-    } else if (contact?.url) {
-      // An action, not a verdict: the reader is sent to ask the agency, not
-      // told that they are (or might be) eligible.
-      actions.push({
-        label: `Confirm with the administering agency whether ${result.program.name} applies to this project`,
-        type: "check",
-        programId: result.programId,
-        contact,
-      });
-    }
-  }
-
-  // Always include a low-regret action
-  const sbs = results.find((r) => r.programId === "smallBizSource");
-  if (sbs && actions.length < 3) {
-    const contact = sbs.program.contacts?.[0];
-    actions.push({
-      label: "Book free business advising",
-      type: "book",
-      programId: "smallBizSource",
-      contact,
-    });
-  }
-
-  return actions.slice(0, 3);
+  const startHere = buildStartHere({ results, audience: "top-actions" });
+  return startHereActionsInOrder(startHere)
+    .map(toLegacyTopAction)
+    .filter((action): action is TopAction => action !== null)
+    .slice(0, 3);
 }
 
 // ─── Stacking Narrative ─────────────────────────────────────────────

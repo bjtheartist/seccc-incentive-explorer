@@ -62,6 +62,37 @@ describe("normalizeSavedReport — current reports", () => {
     expect(result.report.verdict?.headline).toBe("Strong fit");
   });
 
+  /**
+   * `startHere` (lib/start-here.ts) is a purely additive optional field —
+   * it was not part of any schema version and does not bump
+   * CURRENT_REPORT_SCHEMA_VERSION. This pins both halves of that claim: a
+   * blob that carries it round-trips it untouched, and a blob saved before
+   * it existed (the common case — every row in prod today) normalizes fine
+   * with it simply absent, not as an error or a fabricated default.
+   */
+  it("passes a present startHere field through untouched", () => {
+    const startHere = {
+      primary: { label: "Call Test Agency about TIF Program", description: "…", kind: "call-agency" as const },
+      secondary: [],
+      evidence: [],
+      unresolvedQuestions: [],
+      audience: "site-incentives",
+    };
+    const result = normalizeSavedReport(currentReport({ startHere }));
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.report.startHere).toEqual(startHere);
+  });
+
+  it("tolerates a report saved before startHere existed (the common case)", () => {
+    const result = normalizeSavedReport(currentReport());
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.report.startHere).toBeUndefined();
+  });
+
   it("always stamps the current version on the returned report", () => {
     const result = normalizeSavedReport(legacyReport());
     expect(result.ok).toBe(true);
