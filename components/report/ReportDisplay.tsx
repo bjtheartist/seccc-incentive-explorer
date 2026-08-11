@@ -2172,6 +2172,8 @@ export function ReportDisplay({
                         <ZoningReviewQuestions
                           zoneClass={report.metadata.zoneClass}
                           siteSpecificOrdinanceUrl={section.items.find((item) => item.label === "City Zoning Classification")?.url}
+                          address={report.metadata.address}
+                          businessType={report.metadata.industry ?? report.metadata.proposedUse}
                         />
                       </div>
                     )}

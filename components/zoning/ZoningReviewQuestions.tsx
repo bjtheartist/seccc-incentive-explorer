@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, ClipboardCheck, ExternalLink, Info, Landmark } from "lucide-react";
 import { PreparationCostBadge } from "@/components/report/PreparationCostBadge";
+import { StageHandoffButton } from "@/components/zoning/StageHandoffButton";
 import {
   buildZoningReviewNotes,
   getDistrictUseTableLink,
@@ -17,6 +18,10 @@ interface ZoningReviewQuestionsProps {
   zoningSourceLabel?: string;
   zoningSourceUrl?: string;
   siteSpecificOrdinanceUrl?: string | null;
+  /** Site address, carried into the stage handoff summary. */
+  address?: string | null;
+  /** Business type / industry as the user described it, for the handoff. */
+  businessType?: string | null;
 }
 
 const DOB_PERMIT_GUIDE_URL =
@@ -40,6 +45,8 @@ export function ZoningReviewQuestions({
   zoningSourceLabel,
   zoningSourceUrl,
   siteSpecificOrdinanceUrl,
+  address,
+  businessType,
 }: ZoningReviewQuestionsProps) {
   const [activityId, setActivityId] = useState<ZoningReviewActivityId | "">("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -314,6 +321,27 @@ export function ZoningReviewQuestions({
             <p className="mt-3 text-[9px] text-[#0C1B33]/35 leading-relaxed">
               This preparation guide is not an official use classification, zoning opinion, approval, or legal advice.
             </p>
+            <div className="mt-4 border-t border-[#0C1B33]/10 pt-4">
+              <StageHandoffButton
+                input={{
+                  address,
+                  businessType,
+                  zoneClass,
+                  activityLabel: activity?.label ?? null,
+                  reviewAnswers: reviewNotes.map((note) => ({
+                    question: note.question,
+                    answer: note.answer,
+                  })),
+                  officialLinks: [
+                    { label: districtUseTable.label, url: districtUseTable.url },
+                    { label: districtSourceLabel, url: districtSourceUrl },
+                    ...(siteSpecificOrdinanceUrl
+                      ? [{ label: "Site-specific ordinance record", url: siteSpecificOrdinanceUrl }]
+                      : []),
+                  ],
+                }}
+              />
+            </div>
             <a
               href="/learn"
               className="mt-3 inline-flex items-center gap-1 text-[10px] text-[#2F5BEA] hover:underline"
