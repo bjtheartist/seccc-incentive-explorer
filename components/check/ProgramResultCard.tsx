@@ -16,7 +16,7 @@ export function ProgramResultCard({
   defaultExpanded = false,
 }: ProgramResultCardProps) {
   const [expanded, setExpanded] = useState(defaultExpanded);
-  const isCollapsed = result.confidence === "not_applicable";
+  const isCollapsed = result.relevance === "not_mapped_at_location";
 
   if (isCollapsed && !expanded) {
     return (
@@ -27,8 +27,8 @@ export function ProgramResultCard({
         <div className="flex items-center gap-3 min-w-0">
           <span className="text-sm text-[#0C1B33]/30">{result.program.name}</span>
           <ConfidenceBadge
-            confidence={result.confidence}
-            label={result.confidenceLabel}
+            relevance={result.relevance}
+            label={result.relevanceLabel}
           />
         </div>
         <ChevronDown className="w-4 h-4 text-[#0C1B33]/20 group-hover:text-[#0C1B33]/40 shrink-0" />
@@ -39,9 +39,9 @@ export function ProgramResultCard({
   return (
     <div
       className={`border rounded-lg overflow-hidden transition-colors ${
-        result.confidence === "appears_eligible" || result.confidence === "location_eligible"
+        result.relevance === "mapped_with_matching_answers" || result.relevance === "mapped_at_location"
           ? "border-emerald-200 bg-white"
-          : result.confidence === "may_qualify"
+          : result.relevance === "review_suggested"
           ? "border-amber-200 bg-white"
           : "border-gray-200 bg-white"
       }`}
@@ -59,8 +59,8 @@ export function ProgramResultCard({
               </span>
             </div>
             <ConfidenceBadge
-              confidence={result.confidence}
-              label={result.confidenceLabel}
+              relevance={result.relevance}
+              label={result.relevanceLabel}
             />
           </div>
           {isCollapsed && (

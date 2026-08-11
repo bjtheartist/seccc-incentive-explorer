@@ -103,7 +103,7 @@ export async function resolveParcelProgramContext(addresses: string[]): Promise<
       }
 
       const matched = runConfidenceEngine(programs, normalized.zones, normalized.zoneNames).filter(
-        (result) => result.confidence !== "not_applicable"
+        (result) => result.relevance !== "not_mapped_at_location"
       );
 
       results.push({

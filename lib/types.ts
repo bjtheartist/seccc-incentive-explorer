@@ -158,7 +158,42 @@ export interface Program {
 
 /* ── Phase 1: Check result types ── */
 
-export type EligibilityConfidence =
+/**
+ * How a program relates to the *data recorded* at an address — never a
+ * statement about whether the visitor qualifies for it.
+ *
+ * This product is discovery-only: it may describe what public datasets and the
+ * visitor's own answers show, and it may point at the requirements a program
+ * publishes, but it must never state or imply an eligibility determination.
+ * The variant names below are therefore descriptions of the evidence, not
+ * verdicts about the user. Renaming them out of eligibility vocabulary is the
+ * primary safety mechanism: text that is never generated cannot leak. The
+ * output scrubbers in lib/report-engine.ts remain as defense in depth.
+ *
+ * Do not reintroduce `appears_eligible` / `location_eligible` / `may_qualify`
+ * or any other determination-shaped variant here. See
+ * `LegacyEligibilityConfidence` for the retired vocabulary, which survives only
+ * to decode saved reports written before this rename.
+ */
+export type ProgramRelevance =
+  /** Address falls inside the program's mapped zone AND survey answers align with a published non-location criterion. */
+  | "mapped_with_matching_answers"
+  /** Address falls inside the program's mapped zone; nothing else has been compared. */
+  | "mapped_at_location"
+  /** Some published criteria were compared, gaps remain — a human should review the rest. */
+  | "review_suggested"
+  /** Nothing address-specific was recorded; whether the program is worth pursuing depends on project context. */
+  | "context_dependent"
+  /** The mapped data does not place this address inside a zone the program requires. */
+  | "not_mapped_at_location";
+
+/**
+ * Retired eligibility vocabulary. Never produced by the engine any more; it
+ * exists so `ReportItem.confidenceLevel` on saved reports persisted before this
+ * rename (saved_reports.report_data_json) still decodes and still gets stripped
+ * by the public serializer instead of failing to type-check.
+ */
+export type LegacyEligibilityConfidence =
   | "appears_eligible"
   | "location_eligible"
   | "may_qualify"
@@ -168,8 +203,8 @@ export type EligibilityConfidence =
 export interface ProgramCheckResult {
   programId: string;
   program: Program;
-  confidence: EligibilityConfidence;
-  confidenceLabel: string;
+  relevance: ProgramRelevance;
+  relevanceLabel: string;
   whyOneLine: string;
   benefitRange: string;
   fastestStep: string;

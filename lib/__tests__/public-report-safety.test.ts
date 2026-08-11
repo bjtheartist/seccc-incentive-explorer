@@ -9,7 +9,14 @@ import {
   normalizePublicReportForDisplay,
   type GeneratedReport,
 } from "../report-engine";
-import type { LookupResult, Program } from "../types";
+import {
+  computeStackingNarrative,
+  computeTopActions,
+  generateExecutiveSummary,
+  runConfidenceEngine,
+} from "../confidence-engine";
+import { getProgramsSync } from "../programs-data";
+import type { LookupResult, ParcelData, Program, SurveyAnswers } from "../types";
 import {
   SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
   SUPPORT_ORGANIZATIONS_DESCRIPTION,
@@ -660,12 +667,138 @@ describe("public report safety", () => {
       const source = readFileSync(join(process.cwd(), path), "utf8");
       expect(source).toContain("normalizePublicReportForDisplay(rawReport)");
       expect(source).toContain("MatchExplanationDetails");
-      expect(source).not.toMatch(/prog\.(?:confidence|confidenceLabel|benefitRange|whyOneLine)/);
+      expect(source).not.toMatch(
+        /prog\.(?:confidence|confidenceLabel|relevance|relevanceLabel|benefitRange|whyOneLine)/,
+      );
       expect(source).not.toContain("prog.projectFitLabel");
-      expect(source).not.toMatch(/item\.(?:confidenceLabel|matchedRules|notVerified|whyOneLine)/);
+      expect(source).not.toMatch(
+        /item\.(?:confidenceLabel|relevanceLabel|matchedRules|notVerified|whyOneLine)/,
+      );
       expect(source).not.toContain("item.projectFit");
     }
     const pdfSource = readFileSync(join(process.cwd(), "lib/pdf-report.ts"), "utf8");
     expect(pdfSource).not.toContain("item.projectFit");
+  });
+});
+
+/**
+ * The scrubbers in report-engine are defense in depth. This block asserts the
+ * primary mechanism: the relevance engine never PRODUCES a determination in the
+ * first place, so there is nothing for the scrubbers to catch. If one of these
+ * fails, fix the generated string — do not add another regex downstream.
+ */
+describe("relevance engine emits no determinations pre-scrub", () => {
+  /**
+   * Stricter than the post-scrub PROHIBITED_DETERMINATIONS: at the point of
+   * generation we also refuse the softer determination shapes ("qualifying
+   * zone", "designed for you", "check ... eligibility") that the scrubbers were
+   * written to rewrite.
+   */
+  const PROHIBITED_ENGINE_PHRASES =
+    /appears eligible|may qualify|you qualify|potentially eligible|(?:you|your \w+)(?:'re| are)? (?:may be )?eligible|eligible incentive programs|high match|medium match|qualifying zone|designed for you|check[^.!?]{0,40}eligibility|eligibility (?:confirmed|score)/i;
+
+  /** Only strings the engine itself authors — catalog text is the catalog's own. */
+  function engineAuthoredStrings(
+    programs: Program[],
+    zones: Record<string, boolean>,
+    zoneNames: Record<string, string>,
+    survey?: SurveyAnswers,
+    parcel?: ParcelData,
+  ): string[] {
+    const results = runConfidenceEngine(programs, zones, zoneNames, survey, parcel);
+    const summary = generateExecutiveSummary(programs, zones, zoneNames, survey, results);
+    return [
+      ...results.flatMap((r) => [r.relevanceLabel, r.whyOneLine]),
+      ...computeTopActions(results).map((a) => a.label),
+      ...summary.topActions.map((a) => a.label),
+      ...summary.topPrograms.flatMap((p) => p.explanation.whyItAppears),
+      summary.whyTheseMatter,
+      computeStackingNarrative(zones, zoneNames).narrative,
+    ];
+  }
+
+  const ALL_PROGRAMS = getProgramsSync();
+  const ZONE_NAMES: Record<string, string> = {
+    tif: "Test TIF District",
+    sbif: "Test SBIF Area",
+    federalOZ: "Test Opportunity Zone",
+    enterprise: "Test Enterprise Zone",
+  };
+  const ZONE_CASES: Record<string, boolean>[] = [
+    {},
+    { tif: true },
+    { tif: true, sbif: true, federalOZ: true, enterprise: true },
+    Object.fromEntries(
+      ALL_PROGRAMS.filter((p) => p.zoneKey).map((p) => [p.zoneKey as string, true]),
+    ),
+  ];
+  const SURVEY_CASES: (SurveyAnswers | undefined)[] = [
+    undefined,
+    {},
+    { industry: "retail" },
+    { industry: "manufacturing", property: "own", activities: ["renovations", "equipment"] },
+    { industry: "semiconductor", property: "buyBuild" },
+  ];
+  const PARCEL_CASES: (ParcelData | undefined)[] = [
+    undefined,
+    {
+      pin: "25-12-314-001-0000",
+      classCode: "5-17",
+      classDescription: "Commercial building",
+      isCommercial: true,
+      isVacant: false,
+      totalValue: "$120,000",
+    } as ParcelData,
+    {
+      pin: "25-12-314-002-0000",
+      classCode: "1-00",
+      classDescription: "Vacant land",
+      isCommercial: false,
+      isVacant: true,
+    } as ParcelData,
+  ];
+
+  it("never generates a prohibited determination across the real program catalog", () => {
+    expect(ALL_PROGRAMS.length).toBeGreaterThan(0);
+    const offenders: string[] = [];
+    for (const zones of ZONE_CASES) {
+      for (const survey of SURVEY_CASES) {
+        for (const parcel of PARCEL_CASES) {
+          for (const text of engineAuthoredStrings(
+            ALL_PROGRAMS,
+            zones,
+            ZONE_NAMES,
+            survey,
+            parcel,
+          )) {
+            if (PROHIBITED_ENGINE_PHRASES.test(text)) offenders.push(text);
+          }
+        }
+      }
+    }
+    expect(Array.from(new Set(offenders))).toEqual([]);
+  });
+
+  it("emits the same clean strings the post-scrub report guard checks for", () => {
+    for (const zones of ZONE_CASES) {
+      for (const text of engineAuthoredStrings(ALL_PROGRAMS, zones, ZONE_NAMES)) {
+        // Pre-scrub output already satisfies the public-report contract, so the
+        // normalizers in report-engine have nothing left to rewrite.
+        expect(text).not.toMatch(PROHIBITED_DETERMINATIONS);
+      }
+    }
+  });
+
+  it("keeps the retired eligibility vocabulary out of the engine source", () => {
+    const source = readFileSync(join(process.cwd(), "lib/confidence-engine.ts"), "utf8");
+    for (const retired of [
+      '"appears_eligible"',
+      '"location_eligible"',
+      '"may_qualify"',
+      '"worth_exploring"',
+      '"not_applicable"',
+    ]) {
+      expect(source).not.toContain(retired);
+    }
   });
 });

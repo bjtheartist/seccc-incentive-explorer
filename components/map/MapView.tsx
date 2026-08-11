@@ -858,7 +858,7 @@ export default function MapView() {
         if (allPrograms.length > 0) {
           const results = runConfidenceEngine(allPrograms, zones, zoneNames, undefined, parcelData ?? undefined);
           setSnapshotPrograms(
-            results.filter((r) => r.confidence !== "not_applicable").slice(0, 3)
+            results.filter((r) => r.relevance !== "not_mapped_at_location").slice(0, 3)
           );
         }
       } catch {

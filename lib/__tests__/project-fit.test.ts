@@ -16,8 +16,8 @@ function result(id: string): ProgramCheckResult {
   return {
     programId: id,
     program: program(id) as Program,
-    confidence: "location_eligible",
-    confidenceLabel: "Location eligible",
+    relevance: "mapped_at_location",
+    relevanceLabel: "Mapped at this address",
     whyOneLine: "Address match",
     benefitRange: "Contact for details",
     fastestStep: "Confirm fit",

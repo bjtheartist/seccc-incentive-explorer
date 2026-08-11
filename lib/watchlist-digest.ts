@@ -177,7 +177,7 @@ export async function assessWatchedArea(
         resolvers.programs,
         normalized.zones,
         normalized.zoneNames
-      ).filter((r) => r.confidence !== "not_applicable");
+      ).filter((r) => r.relevance !== "not_mapped_at_location");
 
       const summary = deadlinesForAddress({
         matchedPrograms: programDeadlineSlims(matched.map((r) => r.program)),

@@ -27,7 +27,7 @@ import { formatMiles } from "./transport-access";
 import { ZONE_LABELS, ZONE_DESCRIPTIONS } from "./constants";
 import { getIndustryById } from "./industries-data";
 import { generateExecutiveSummary, computeStackingNarrative, runConfidenceEngine, isStaleProgramData } from "./confidence-engine";
-import type { EligibilityConfidence, ProgramCheckResult } from "./types";
+import type { LegacyEligibilityConfidence, ProgramRelevance, ProgramCheckResult } from "./types";
 import { ZONE_LEARN_MORE } from "./constants";
 import { censusNarrative, CHICAGO_MEDIANS } from "./census-narrative";
 import {
@@ -164,8 +164,13 @@ export interface ReportItem {
   url?: string;
   level?: string;
   matchExplanation?: PublicMatchExplanation;
-  /** @deprecated Legacy saved-report field. Public renderers ignore it. */
-  confidenceLevel?: EligibilityConfidence;
+  /**
+   * @deprecated Legacy saved-report field. Never written any more; still typed
+   * so reports persisted in saved_reports.report_data_json before the
+   * ProgramRelevance rename decode and get stripped rather than fail. The
+   * retired eligibility vocabulary lives on only here.
+   */
+  confidenceLevel?: LegacyEligibilityConfidence;
   /** @deprecated Legacy saved-report field. Public renderers ignore it. */
   confidenceLabel?: string;
   /** @deprecated Legacy saved-report field. Public renderers ignore it. */
@@ -1194,17 +1199,17 @@ function countyExploratoryRank(program: Program): number | null {
   return COUNTY_EXPLORATORY_PRIORITY[program.id] ?? 50;
 }
 
-function confidenceRank(confidence?: EligibilityConfidence): number {
-  switch (confidence) {
-    case "appears_eligible":
+function relevanceRank(relevance?: ProgramRelevance): number {
+  switch (relevance) {
+    case "mapped_with_matching_answers":
       return 0;
-    case "location_eligible":
+    case "mapped_at_location":
       return 1;
-    case "may_qualify":
+    case "review_suggested":
       return 2;
-    case "worth_exploring":
+    case "context_dependent":
       return 3;
-    case "not_applicable":
+    case "not_mapped_at_location":
       return 5;
     default:
       return 4;
@@ -1307,8 +1312,8 @@ function sortProgramItems(
     if (zoneDiff !== 0) return zoneDiff;
     const fitDiff = compareProjectGoalFit(projectFitMap?.get(a.id), projectFitMap?.get(b.id));
     if (fitDiff !== 0) return fitDiff;
-    const confidenceDiff = confidenceRank(confidenceMap?.get(a.id)?.confidence) - confidenceRank(confidenceMap?.get(b.id)?.confidence);
-    if (confidenceDiff !== 0) return confidenceDiff;
+    const relevanceDiff = relevanceRank(confidenceMap?.get(a.id)?.relevance) - relevanceRank(confidenceMap?.get(b.id)?.relevance);
+    if (relevanceDiff !== 0) return relevanceDiff;
     return a.name.localeCompare(b.name);
   });
 }
