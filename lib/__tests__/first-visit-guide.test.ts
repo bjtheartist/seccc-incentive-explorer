@@ -4,7 +4,9 @@ import {
   FIRST_VISIT_GUIDE_STEPS,
   FIRST_VISIT_GUIDE_STORAGE_KEY,
   FIRST_VISIT_GUIDE_VERSION,
-  FIRST_VISIT_SPOTLIGHT_STEPS,
+  SAMPLE_REPORT_URL,
+  SPOTLIGHT_HOME_STEPS,
+  SPOTLIGHT_REPORT_STEPS,
   readFirstVisitGuidePreference,
   shouldAutoOpenFirstVisitGuide,
   writeFirstVisitGuidePreference,
@@ -80,11 +82,12 @@ describe("first visit guide placement", () => {
   });
 
   it("defines unique, source-honest targets for the live spotlight tour", () => {
-    expect(FIRST_VISIT_SPOTLIGHT_STEPS).toHaveLength(4);
-    expect(new Set(FIRST_VISIT_SPOTLIGHT_STEPS.map((step) => step.key)).size).toBe(4);
-    expect(new Set(FIRST_VISIT_SPOTLIGHT_STEPS.map((step) => step.selector)).size).toBe(4);
+    const allSteps = [...SPOTLIGHT_HOME_STEPS, ...SPOTLIGHT_REPORT_STEPS];
+    expect(allSteps).toHaveLength(6);
+    expect(new Set(allSteps.map((step) => step.key)).size).toBe(6);
+    expect(new Set(allSteps.map((step) => step.selector)).size).toBe(6);
 
-    const copy = FIRST_VISIT_SPOTLIGHT_STEPS.map((step) => step.description).join(" ");
+    const copy = allSteps.map((step) => step.description).join(" ");
     expect(copy).toContain("public records");
     expect(copy).toContain("not eligibility determinations");
     expect(copy).toContain("verification links");
@@ -94,7 +97,7 @@ describe("first visit guide placement", () => {
 /** Every string either tour renders, labelled so a failure names the offending field. */
 function tourCopyFields(): Array<[string, string]> {
   return [
-    ...FIRST_VISIT_SPOTLIGHT_STEPS.flatMap(
+    ...[...SPOTLIGHT_HOME_STEPS, ...SPOTLIGHT_REPORT_STEPS].flatMap(
       (step): Array<[string, string]> => [
         [`spotlight.${step.key}.title`, step.title],
         [`spotlight.${step.key}.description`, step.description],
@@ -133,7 +136,7 @@ describe("first visit tour copy boundaries", () => {
     // The first stop highlights <AddressSearch />, which resolves a street address or a
     // business name. Naming a PIN, parcel, or ward walks the visitor into its
     // "Address not found." error by following the tour's own instruction.
-    const [addressStep] = FIRST_VISIT_SPOTLIGHT_STEPS;
+    const [addressStep] = SPOTLIGHT_HOME_STEPS;
     expect(`${addressStep.title} ${addressStep.description}`).not.toMatch(
       /\bPINs?\b|parcel (number|id)|\bward\b/i,
     );
@@ -201,5 +204,10 @@ describe("spotlight popover legibility", () => {
     expect(popoverInkContrastOnWhite("driver-popover-progress-text")).toBeGreaterThanOrEqual(4.5);
     expect(popoverInkContrastOnWhite("driver-popover-close-btn")).toBeGreaterThanOrEqual(4.5);
     expect(popoverInkContrastOnWhite("driver-popover-description")).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps the sample handoff inside the tour's no-email promise", () => {
+    expect(SAMPLE_REPORT_URL).toContain("source=welcome_tour");
+    expect(SAMPLE_REPORT_URL).toContain("instant=true");
   });
 });

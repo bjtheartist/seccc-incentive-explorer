@@ -254,6 +254,10 @@ const ALLOWED_REPORT_SOURCES = new Set([
   "workspace",
   "map_inline_card",
   "login",
+  // The first-visit tour's sample report: previously collapsed into
+  // instant_report, which hid tour attribution and defeated the tour's
+  // email-gate suppression.
+  "welcome_tour",
 ]);
 
 function cleanReportSource(value: string | null): string | null {
@@ -1814,8 +1818,11 @@ function ReportWizardPage() {
   }
 
   if (report) {
+    // The first-visit tour promises "does not ask for an email", so its
+    // sample report renders ungated; organic reports keep the gate.
     const showEmailGate = reportRequiresEmailGate(report)
-      && revealedReportKey !== reportEmailGateKey(report);
+      && revealedReportKey !== reportEmailGateKey(report)
+      && reportSource !== "welcome_tour";
     // Cross-links only make sense once results for a resolved address are
     // actually on screen: not behind the email gate, and not on a corridor
     // report that has no address to be "near".
@@ -3252,7 +3259,10 @@ function VerdictPartnerStrip({
   const top = items.slice(0, 3);
 
   return (
-    <div className="mb-12 border border-[#0C1B33]/10 bg-[#EFF3FB]/70 px-5 py-4 print:hidden">
+    <div
+      data-tour="report-support"
+      className="mb-12 border border-[#0C1B33]/10 bg-[#EFF3FB]/70 px-5 py-4 print:hidden"
+    >
       <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
         <span className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]">
           Local support to explore

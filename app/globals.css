@@ -154,6 +154,8 @@
    file that still clears WCAG AA for small text (1.4.3) and UI controls (1.4.11).
    Anything lighter reads as decoration and loses low-vision visitors. */
 .cie-driver-popover .driver-popover-close-btn {
+  width: 34px;
+  height: 34px;
   color: rgba(12, 27, 51, 0.62);
   font-family: 'Inter', system-ui, sans-serif;
 }
@@ -168,6 +170,7 @@
   margin-top: 18px;
   padding-top: 14px;
   border-top: 1px solid rgba(12, 27, 51, 0.1);
+  flex-wrap: wrap;
 }
 
 .cie-driver-popover .driver-popover-progress-text {
@@ -176,17 +179,18 @@
   font-size: 9px;
   letter-spacing: 0;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .cie-driver-popover .driver-popover-footer-btn {
-  min-height: 36px;
+  min-height: 40px;
   border-color: rgba(12, 27, 51, 0.16);
   border-radius: 0;
-  padding: 8px 12px;
-  color: rgba(12, 27, 51, 0.64);
+  padding: 8px 14px;
+  color: rgba(12, 27, 51, 0.7);
   font-family: 'JetBrains Mono', Menlo, monospace;
-  font-size: 9px;
-  letter-spacing: 0;
+  font-size: 10px;
+  letter-spacing: 0.04em;
   line-height: 1.2;
   text-transform: uppercase;
 }
