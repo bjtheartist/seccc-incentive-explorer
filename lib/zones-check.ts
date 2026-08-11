@@ -156,6 +156,26 @@ async function checkStaticZone(
 }
 
 /**
+ * Static point-in-polygon over a NAMED SUBSET of layers, returning each hit's
+ * feature name. `checkStaticZones` scans all sixteen checkable layers (7.4 MB
+ * of NMTC tracts among them); the Site Shortlist only needs the four corridor
+ * and financing overlays it renders, run once per candidate, so scanning the
+ * rest would be pure cost. Unknown keys and unreadable layers are skipped
+ * rather than thrown — a missing overlay file must degrade to "none mapped",
+ * never to a failed page.
+ */
+export async function checkStaticZoneKeys(
+  lat: number,
+  lon: number,
+  keys: readonly string[]
+): Promise<ZoneMatch[]> {
+  const matches = await Promise.all(
+    keys.map((key) => checkStaticZone(key, lat, lon).catch(() => null))
+  );
+  return matches.filter((match): match is ZoneMatch => Boolean(match));
+}
+
+/**
  * Resolve which incentive zones cover a point. DB-backed when the SQL client is
  * available, with a static point-in-polygon fallback. Cached per rounded
  * coordinate. This is the exact logic the report engine relies on.

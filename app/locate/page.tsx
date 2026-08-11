@@ -8,6 +8,7 @@ import {
   ArrowRight,
   Check,
   Copy,
+  ListOrdered,
   MapPinned,
   RotateCcw,
   Ruler,
@@ -21,6 +22,7 @@ import {
   SITE_PROPERTY_TYPE_OPTIONS,
   SITE_TRANSPORTATION_DISTANCE_OPTIONS,
   SITE_TRANSPORTATION_OPTIONS,
+  buildShortlistHref,
   buildSiteMatchmakerHref,
   buildVacancyHandoffHref,
   createEmptySiteMatchCriteria,
@@ -177,6 +179,7 @@ function SiteMatchmakerPage() {
 
   const summary = useMemo(() => summarizeSiteMatchCriteria(criteria), [criteria]);
   const handoffHref = useMemo(() => buildVacancyHandoffHref(criteria), [criteria]);
+  const shortlistHref = useMemo(() => buildShortlistHref(criteria), [criteria]);
   const ready = isSiteMatchCriteriaReady(criteria);
   const requestedAreaLabel =
     criteria.propertyType === "vacant-land"
@@ -500,20 +503,31 @@ function SiteMatchmakerPage() {
           </div>
 
           <div className="mt-4 border-t border-white/10 pt-5">
-            {ready && handoffHref ? (
-              <Link
-                href={handoffHref}
-                className="flex min-h-12 w-full items-center justify-between gap-3 bg-[#2563EB] px-4 py-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#1D4ED8]"
-              >
-                <span className="flex items-center gap-2">
-                  <MapPinned size={17} aria-hidden="true" />
-                  Open tracked-site map
-                </span>
-                <ArrowRight size={16} aria-hidden="true" />
-              </Link>
+            {ready && shortlistHref ? (
+              <>
+                <Link
+                  href={shortlistHref}
+                  className="flex min-h-12 w-full items-center justify-between gap-3 bg-[#2563EB] px-4 py-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#1D4ED8]"
+                >
+                  <span className="flex items-center gap-2">
+                    <ListOrdered size={17} aria-hidden="true" />
+                    Generate a ranked shortlist
+                  </span>
+                  <ArrowRight size={16} aria-hidden="true" />
+                </Link>
+                {handoffHref && (
+                  <Link
+                    href={handoffHref}
+                    className="mt-2 flex min-h-10 w-full items-center justify-center gap-2 border border-white/15 px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.11em] text-white/60 transition-colors hover:border-white/35 hover:text-white"
+                  >
+                    <MapPinned size={14} aria-hidden="true" />
+                    Browse the full map instead
+                  </Link>
+                )}
+              </>
             ) : (
               <div className="border border-white/15 px-4 py-3 text-[11px] leading-relaxed text-white/50">
-                Select an area, project use, and property type to open the tracked-site map.
+                Select an area, project use, and property type to generate a ranked shortlist.
               </div>
             )}
 

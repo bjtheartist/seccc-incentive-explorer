@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildShortlistHref,
   buildSiteMatchmakerHref,
   buildVacancyHandoffHref,
   createEmptySiteMatchCriteria,
@@ -86,6 +87,7 @@ describe("site matchmaker criteria URL state", () => {
     expect(encodeSiteMatchCriteria(empty).toString()).toBe("");
     expect(buildSiteMatchmakerHref(empty)).toBe("/locate");
     expect(buildVacancyHandoffHref(empty)).toBeNull();
+    expect(buildShortlistHref(empty)).toBeNull();
     expect(isSiteMatchCriteriaReady(empty)).toBe(false);
   });
 });
@@ -97,6 +99,19 @@ describe("site matchmaker handoff", () => {
       "/vacancy/60617/map?source=site-matchmaker&sm_v=1&sm_use=retail-service&sm_property=existing-building&sm_min_sqft=1500&sm_max_sqft=5000&sm_context=commercial-corridor&sm_transport=cta-rail%2Ccta-bus&sm_transport_distance=half-mile&sm_walkability=important&sm_pedestrian_activity=preferred&sm_amenities=restaurants-retail%2Cgrocery",
     );
     expect(isSiteMatchCriteriaReady(completeCriteria())).toBe(true);
+  });
+
+  it("opens the ranked shortlist on the SAME criteria contract as the map", () => {
+    const shortlist = buildShortlistHref(completeCriteria());
+    const map = buildVacancyHandoffHref(completeCriteria());
+    expect(shortlist).toBe(map!.replace("/map?", "/shortlist?"));
+    expect(shortlist).toContain("/vacancy/60617/shortlist?source=site-matchmaker");
+  });
+
+  it("withholds the shortlist until the brief carries area, use, and property type", () => {
+    for (const missing of [{ zip: null }, { projectUse: null }, { propertyType: null }] as const) {
+      expect(buildShortlistHref(completeCriteria(missing))).toBeNull();
+    }
   });
 
   it("uses qualitative summaries without a rank or availability claim", () => {

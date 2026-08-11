@@ -78,6 +78,9 @@ export const ANALYTICS_EVENT_TYPES = [
   // ── StartHere consolidation Phase B (single "Start here" card) ─────
   "start_here_card_shown",
   "start_here_primary_action_clicked",
+  // ── Site Shortlist (the /locate back half) ────────────────────────
+  "site_shortlist_generated",
+  "site_shortlist_csv_downloaded",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];

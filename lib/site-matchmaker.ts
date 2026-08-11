@@ -450,15 +450,34 @@ export function buildSiteMatchmakerHref(criteria: SiteMatchCriteria): string {
   return query ? `/locate?${query}` : "/locate";
 }
 
+/** The criteria query a /vacancy/[zip]/* handoff carries: everything except the
+ *  ZIP, which the route itself supplies. */
+function vacancyHandoffQuery(criteria: SiteMatchCriteria): URLSearchParams {
+  const handoff = new URLSearchParams({ source: "site-matchmaker" });
+  encodeSiteMatchCriteria(criteria).forEach((value, key) => {
+    if (key !== PARAMS.zip) handoff.set(key, value);
+  });
+  return handoff;
+}
+
 export function buildVacancyHandoffHref(criteria: SiteMatchCriteria): string | null {
   const normalized = normalizeSiteMatchCriteria(criteria);
   if (!isSiteMatchCriteriaReady(normalized) || !normalized.zip) return null;
 
-  const handoff = new URLSearchParams({ source: "site-matchmaker" });
-  encodeSiteMatchCriteria(normalized).forEach((value, key) => {
-    if (key !== PARAMS.zip) handoff.set(key, value);
-  });
-  return `/vacancy/${normalized.zip}/map?${handoff.toString()}`;
+  return `/vacancy/${normalized.zip}/map?${vacancyHandoffQuery(normalized).toString()}`;
+}
+
+/**
+ * The ranked-shortlist handoff — the Site Matchmaker's PRIMARY destination.
+ * Same criteria contract as the map handoff (so the two stay interchangeable
+ * and a reader can move between them without rebuilding a brief), pointed at
+ * the screened, tiered result instead of the raw pin cloud.
+ */
+export function buildShortlistHref(criteria: SiteMatchCriteria): string | null {
+  const normalized = normalizeSiteMatchCriteria(criteria);
+  if (!isSiteMatchCriteriaReady(normalized) || !normalized.zip) return null;
+
+  return `/vacancy/${normalized.zip}/shortlist?${vacancyHandoffQuery(normalized).toString()}`;
 }
 
 function labelFor<T extends string>(
