@@ -14,6 +14,8 @@ import { ComparePinBar } from "@/components/investment/PinControls";
 import { CommunityRankingList } from "@/components/investment/CommunityRankingList";
 import { SourceCoverageMatrix } from "@/components/investment/SourceCoverageMatrix";
 import { IllinoisArtsCouncilAwardsTable } from "@/components/investment/IllinoisArtsCouncilAwardsTable";
+import { InvestmentSpotlight } from "@/components/onboarding/InvestmentSpotlight";
+import { InvestmentTourButton } from "@/components/onboarding/InvestmentTourButton";
 import { getInvestmentAdminState, InvestmentLoginForm, InvestmentNotConfigured } from "./gate";
 
 export const dynamic = "force-dynamic";
@@ -62,6 +64,7 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
             <Link href="/admin/owner-files" className="hover:text-[#2563EB]">
               Owner Files
             </Link>
+            {index && index.rows.length > 0 ? <InvestmentTourButton /> : null}
           </div>
         </nav>
 
@@ -81,8 +84,10 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
           </div>
         ) : (
           <>
+            <InvestmentSpotlight />
+
             {/* Three-status grammar — citywide, community-sited scope */}
-            <div className="mt-8">
+            <div className="mt-8" data-tour="investment-status-cards">
               <StatusCards
                 awarded={index.citywideTotal}
                 announced={meta?.announcedCapitalTotal ?? 0}
@@ -104,7 +109,10 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                 failure mode the battle-test flagged (Sol #5/#7). The unplotted
                 count sits here so the ranking directly beneath can never read
                 as "everything is on the map". */}
-            <p className="mt-4 border-y border-[#0C1B33]/10 bg-white px-4 py-2.5 font-mono-bureau text-[10px] uppercase tracking-[0.1em] leading-relaxed text-[#0C1B33]/55">
+            <p
+              className="mt-4 border-y border-[#0C1B33]/10 bg-white px-4 py-2.5 font-mono-bureau text-[10px] uppercase tracking-[0.1em] leading-relaxed text-[#0C1B33]/55"
+              data-tour="investment-trust-capsule"
+            >
               Data as of {formatAsOf(index.generatedAt)} · awarded dollars, not confirmed receipts ·{" "}
               {formatCount(meta?.citywideCount ?? 0)} records carry no map location and are counted, never
               plotted ·{" "}
@@ -119,7 +127,10 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                 particular was undiscoverable (pin buttons → floating bar).
                 These three sentences ARE the fix — persistent, not a
                 first-visit coach mark. */}
-            <div className="mt-6 grid border-y border-[#0C1B33]/10 bg-white md:grid-cols-3 md:divide-x md:divide-[#0C1B33]/10">
+            <div
+              className="mt-6 grid border-y border-[#0C1B33]/10 bg-white md:grid-cols-3 md:divide-x md:divide-[#0C1B33]/10"
+              data-tour="investment-start-here"
+            >
               <div className="border-b border-[#0C1B33]/10 px-4 py-3.5 md:border-b-0">
                 <span className="font-mono-bureau text-[9px] uppercase tracking-[0.14em] text-[#2563EB]">
                   Understand one community
@@ -149,7 +160,7 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
 
             {/* Ranked community list — the navigation primitive, promoted to
                 directly under the numbers (battle-test: unanimous). */}
-            <div className="mt-10" id="communities">
+            <div className="mt-10" id="communities" data-tour="investment-community-ranking">
               <div className="mb-3">
                 <h2 className="font-editorial text-[26px]">Communities by awarded dollars</h2>
               </div>
@@ -181,7 +192,11 @@ export default async function InvestmentLandingPage({ searchParams }: { searchPa
                 DETAIL, never the existence of the material (rail 7). The
                 #coverage id stays on this element so the StatusCards coverage
                 link and the trust capsule both land here. */}
-            <details id="coverage" className="mt-10 scroll-mt-6 border border-[#0C1B33]/10 bg-white">
+            <details
+              id="coverage"
+              className="mt-10 scroll-mt-6 border border-[#0C1B33]/10 bg-white"
+              data-tour="investment-about-data"
+            >
               <summary className="cursor-pointer px-4 py-3 font-mono-bureau text-[11px] uppercase tracking-[0.14em] text-[#0C1B33]/70 hover:text-[#0C1B33]">
                 About this data — funding-purpose definitions and per-source coverage, map, and refresh
                 postures
