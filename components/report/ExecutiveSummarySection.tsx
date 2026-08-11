@@ -103,12 +103,24 @@ export function ExecutiveSummarySection({
   editedText,
   onToggleEdit,
   onTextChange,
+  collapseTopActions = false,
 }: {
   summary: ExecutiveSummary;
   isEditing: boolean;
   editedText: string;
   onToggleEdit: () => void;
   onTextChange: (text: string) => void;
+  /**
+   * Demote the "Best Next Steps" list behind native disclosure instead of
+   * rendering it open. Set by the report forks when `report.startHere` is
+   * present — StartHereCard is now the one place a visitor sees a dominant
+   * next step; this list stays reachable, not deleted, for the detail it
+   * still carries (per-action type/icon across ALL top actions, where
+   * StartHereCard caps at one primary + two secondary). Defaults to false so
+   * every existing caller (and every report without `startHere`) renders
+   * exactly as before this prop existed.
+   */
+  collapseTopActions?: boolean;
 }) {
   const actionIcons: Record<string, typeof Phone> = {
     call: Phone,
@@ -166,11 +178,8 @@ export function ExecutiveSummarySection({
       )}
 
       {/* Top Actions — only show action-type icons */}
-      {summary.topActions.length > 0 && (
-        <div className="mb-6">
-          <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-3">
-            Best Next Steps
-          </span>
+      {summary.topActions.length > 0 && (() => {
+        const list = (
           <ul className="space-y-1.5">
             {summary.topActions.map((action, i) => {
               const Icon = actionIcons[action.type];
@@ -189,8 +198,23 @@ export function ExecutiveSummarySection({
               );
             })}
           </ul>
-        </div>
-      )}
+        );
+        return collapseTopActions ? (
+          <details className="mb-6">
+            <summary className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 cursor-pointer select-none">
+              Best Next Steps · {summary.topActions.length}
+            </summary>
+            <div className="mt-3">{list}</div>
+          </details>
+        ) : (
+          <div className="mb-6">
+            <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#0C1B33]/30 block mb-3">
+              Best Next Steps
+            </span>
+            {list}
+          </div>
+        );
+      })()}
 
       {/* Why These Matter — editable */}
       {isEditing ? (

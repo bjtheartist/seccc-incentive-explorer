@@ -75,6 +75,9 @@ export const ANALYTICS_EVENT_TYPES = [
   "learn_link_clicked",
   "zoning_review_activity_selected",
   "stage_handoff_shared",
+  // ── StartHere consolidation Phase B (single "Start here" card) ─────
+  "start_here_card_shown",
+  "start_here_primary_action_clicked",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];
