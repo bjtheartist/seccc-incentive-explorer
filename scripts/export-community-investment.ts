@@ -323,26 +323,41 @@ const sleep = (ms: number) => new Promise<void>((res) => setTimeout(res, ms));
 
 /** One-address Census lookup with 3-attempt backoff. Returns null on no match
  * or repeated transient failure (best-effort free gov service, no SLA). */
+/**
+ * Both benchmarks are the same authoritative Census TIGER service; they differ
+ * only in address-range vintage. Public_AR_Current returns an empty match for
+ * verified-real Chicago addresses that Public_AR_Census2020 resolves —
+ * measured 2026-08-10: "7112 S Yates Blvd", "4100 S Packers Ave",
+ * "1400 W 46th St", "3800 W 26th St" and "6701 W Forest Preserve Ave" all
+ * return zero matches on Current and exact matches on Census2020. Pinning
+ * Current alone was why $16.1M of recovered CDG awards shipped with citywide
+ * geometry despite carrying street addresses. Current is still tried first so
+ * newer construction keeps resolving.
+ */
+const CENSUS_BENCHMARKS = ["Public_AR_Current", "Public_AR_Census2020"] as const;
+
 async function censusGeocode(query: string): Promise<GeoResult | null> {
-  const url = new URL("https://geocoding.geo.census.gov/geocoder/locations/onelineaddress");
-  url.searchParams.set("address", query);
-  url.searchParams.set("benchmark", "Public_AR_Current");
-  url.searchParams.set("format", "json");
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const resp = await fetch(url, { signal: AbortSignal.timeout(20000) });
-      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-      const data = (await resp.json()) as {
-        result?: { addressMatches?: Array<{ coordinates?: { x: number; y: number } }> };
-      };
-      const match = data.result?.addressMatches?.[0];
-      const coords = match?.coordinates;
-      if (coords && Number.isFinite(coords.x) && Number.isFinite(coords.y)) {
-        return { lat: coords.y, lng: coords.x };
+  for (const benchmark of CENSUS_BENCHMARKS) {
+    const url = new URL("https://geocoding.geo.census.gov/geocoder/locations/onelineaddress");
+    url.searchParams.set("address", query);
+    url.searchParams.set("benchmark", benchmark);
+    url.searchParams.set("format", "json");
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        const resp = await fetch(url, { signal: AbortSignal.timeout(20000) });
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const data = (await resp.json()) as {
+          result?: { addressMatches?: Array<{ coordinates?: { x: number; y: number } }> };
+        };
+        const match = data.result?.addressMatches?.[0];
+        const coords = match?.coordinates;
+        if (coords && Number.isFinite(coords.x) && Number.isFinite(coords.y)) {
+          return { lat: coords.y, lng: coords.x };
+        }
+        break; // valid response, no match under THIS benchmark — try the next one
+      } catch {
+        if (attempt < 3) await sleep(400 * attempt);
       }
-      return null; // valid response, genuinely no match
-    } catch {
-      if (attempt < 3) await sleep(400 * attempt);
     }
   }
   return null;
@@ -2019,7 +2034,18 @@ export function mapCdgAwards(
   let heldCitywideDollars = 0;
   for (const r of rows) {
     const addr = nullableStr(r.address);
-    const hit = addr ? geocodes.get(queryForAddress(addr)) : null;
+    // First candidate with a cached/live hit wins; candidate order is the
+    // published text first, so a variant can never shadow an exact match.
+    let hit: GeoResult | null = null;
+    if (addr) {
+      for (const q of cdgQueryCandidates(addr, queryForAddress)) {
+        const candidateHit = geocodes.get(q);
+        if (candidateHit) {
+          hit = candidateHit;
+          break;
+        }
+      }
+    }
     if (addr && !hit) addressGeocodeMisses += 1;
     const geometry: InvestmentGeometry = hit ? point(hit.lat, hit.lng) : { kind: "citywide" };
     if (geometry.kind === "point") pointRecords += 1;
@@ -2037,6 +2063,13 @@ export function mapCdgAwards(
       year: yearOfRound(r.round),
       geometry,
       address: addr,
+      // A row the City published WITHOUT a street address can still publish
+      // its community area in the address column ("South Lawndale (Little
+      // Village) -- exact street address not published"). Stamping the CA from
+      // that text is the source's own claim, not an inference — without it the
+      // June-2026 round's two largest grants ($8.9M) appeared on no area page.
+      communityArea:
+        !hit && addr ? sourcePublishedCommunityArea(addr) ?? undefined : undefined,
       status: "awarded",
       recordDate: null, // CDG rounds carry only a round label, no per-record date
       links: parseLinks(r.source_url),
@@ -2049,6 +2082,52 @@ export function mapCdgAwards(
     addressGeocodeMisses,
     heldCitywideDollars,
   };
+}
+
+/**
+ * Ordered geocode queries for one published CDG address — the published text
+ * verbatim first, then deterministic normalizations of it:
+ *   • periods stripped ("13016 S. Rhodes Ave." → "13016 S Rhodes Ave")
+ *   • a leading street-number range collapsed to its first number
+ *     ("2640-46 W Madison St" → "2640 W Madison St")
+ *   • a slash compound split into its component addresses
+ *     ("8700 S Ashland/1607 W 87th" → both halves, each a complete published
+ *     address of the same site)
+ * Every variant is a mechanical rewrite of text the City itself published —
+ * no street name, suffix, or number is ever invented — and the record's
+ * `address` field always keeps the original text. The Census geocoder rejects
+ * all three shapes verbatim, which is how a $250,000 award at a real published
+ * address stayed off the map.
+ */
+export function cdgQueryCandidates(
+  address: string,
+  queryForAddress: (address: string) => string,
+): string[] {
+  const variants: string[] = [address];
+  const noPeriods = address.replace(/\./g, "");
+  variants.push(noPeriods);
+  variants.push(noPeriods.replace(/^(\d+)-\d+\s/, "$1 "));
+  if (noPeriods.includes("/")) {
+    for (const part of noPeriods.split("/")) {
+      if (part.trim()) variants.push(part.trim());
+    }
+  }
+  return [...new Set(variants.map((v) => queryForAddress(v.trim())))];
+}
+
+/**
+ * The community area the source itself published in lieu of a street address.
+ * Matches only the exporter's own held-row convention ("<area name>
+ * (<colloquial name>)? -- exact street address not published") and returns the
+ * official community-area name with any parenthetical stripped. Anything else
+ * returns null — this never infers an area from a street address or recipient
+ * name.
+ */
+export function sourcePublishedCommunityArea(addressText: string): string | null {
+  const m = addressText.match(
+    /^([A-Za-z][A-Za-z .'-]*?)\s*(?:\([^)]*\))?\s*--\s*exact street address not published\s*$/,
+  );
+  return m ? m[1].trim() : null;
 }
 
 export interface PartnerNofMapResult {
@@ -2669,7 +2748,11 @@ async function main() {
   const queries: string[] = [];
   for (const r of cdgRows) {
     const a = nullableStr(r.address);
-    if (a) queries.push(cdgQuery(a));
+    // All candidates go into the batch so mapCdgAwards can take the first hit
+    // in candidate order; pushing only the verbatim query was half of why
+    // address-bearing awards shipped citywide (the other half: the Current
+    // benchmark's gaps — see CENSUS_BENCHMARKS).
+    if (a) queries.push(...cdgQueryCandidates(a, cdgQuery));
   }
   for (const r of jimRows) {
     const a = nullableStr(r.Address);
