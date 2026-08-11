@@ -12,6 +12,13 @@
 
 import { clerkRecordsUrl, cookViewerUrl, normalizePin14 } from "@/lib/cook-viewer";
 import {
+  familyById,
+  subtypeById,
+  subtypeMatchesSelection,
+  zoneSubtype,
+  type ZoningDistrictFamilyId,
+} from "@/lib/zoning-districts";
+import {
   OWNER_SECTOR_LABELS,
   classifyOwnerSector,
   type OwnerSector,
@@ -150,6 +157,11 @@ export interface SiteMatchmakerCandidateFilters {
   footprintPublication: ReadonlySet<FootprintPublication>;
   ownerSectors: ReadonlySet<OwnerSector>;
   ownerStructures: ReadonlySet<OwnerStructure>;
+  /**
+   * District family (Residential, Business/Commercial, …). Coarse
+   * narrowing, sits above `zoning`, which filters by exact class code.
+   */
+  districtFamilies: ReadonlySet<string>;
   zoning: ReadonlySet<string>;
   distress: ReadonlySet<CandidateDistressStatus>;
   minimumPopulationDensity: number | null;
@@ -452,6 +464,53 @@ export function candidateZoningFilterLabel(value: string): string {
   return value.startsWith(ZONING_CODE_PREFIX) ? value.slice(ZONING_CODE_PREFIX.length) : value;
 }
 
+/**
+ * Sentinel for a site whose district IS published but whose designation
+ * carries a prefix no category claims. Distinct from "not published" —
+ * the City told us something, we could not classify it. Bucketing these
+ * into a family would assert a membership never established, and hiding
+ * them would misreport how much of the result set the filter covers.
+ */
+export const DISTRICT_UNCLASSIFIED = "district:unclassified";
+
+/**
+ * Which district-family bucket a candidate falls into.
+ *
+ * Reuses the zoning availability sentinels so the two zoning filters
+ * describe missing data the same way rather than inventing a second
+ * vocabulary for it.
+ */
+export function candidateDistrictFilterValue(row: SiteMatchmakerCandidateRow): string {
+  if (row.zoningAvailability === "not_mapped_in_source") return ZONING_NOT_MAPPED;
+  if (row.zoningAvailability === "not_published" || row.zoningClass === null) {
+    return ZONING_NOT_PUBLISHED;
+  }
+  return zoneSubtype(row.zoningClass) ?? DISTRICT_UNCLASSIFIED;
+}
+
+/**
+ * A selection may be a family roll-up ("commercial") or a specific
+ * sub-type ("B3"), so one dropdown serves both granularities. Sentinels
+ * only ever match themselves.
+ */
+export function candidateMatchesDistrictSelection(
+  row: SiteMatchmakerCandidateRow,
+  selection: string,
+): boolean {
+  const value = candidateDistrictFilterValue(row);
+  if (value === selection) return true;
+  return subtypeMatchesSelection(value, selection);
+}
+
+export function candidateDistrictFilterLabel(value: string): string {
+  if (value === ZONING_NOT_MAPPED) return "Not mapped in this source";
+  if (value === ZONING_NOT_PUBLISHED) return "Not published";
+  if (value === DISTRICT_UNCLASSIFIED) return "District not classified";
+  const subtype = subtypeById(value);
+  if (subtype) return `${subtype.id} · ${subtype.label}`;
+  return familyById(value as ZoningDistrictFamilyId)?.label ?? value;
+}
+
 export function candidateDistressStatuses(
   row: SiteMatchmakerCandidateRow,
 ): CandidateDistressStatus[] {
@@ -478,6 +537,14 @@ export function candidateMatchesFilters(
   if (
     filters.ownerStructures.size > 0 &&
     !filters.ownerStructures.has(row.ownerStructure)
+  ) {
+    return false;
+  }
+  if (
+    filters.districtFamilies.size > 0 &&
+    ![...filters.districtFamilies].some((selection) =>
+      candidateMatchesDistrictSelection(row, selection),
+    )
   ) {
     return false;
   }

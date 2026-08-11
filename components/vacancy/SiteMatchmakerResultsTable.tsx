@@ -44,6 +44,9 @@ import {
   candidateSpaceFactLabel,
   candidateFootprintPublication,
   candidateZoningFilterLabel,
+  candidateDistrictFilterLabel,
+  candidateDistrictFilterValue,
+  DISTRICT_UNCLASSIFIED,
   candidateZoningFilterValue,
   candidateZoningLabel,
   epaWalkabilityCategory,
@@ -62,6 +65,7 @@ import {
   type SiteMatchmakerCandidateRow,
   type SiteMatchmakerSource,
 } from "@/lib/site-matchmaker-results";
+import { ZONING_DISTRICT_FAMILIES, subtypesForFamily } from "@/lib/zoning-districts";
 // Type-only: lib/vacancy-index includes a node:fs-backed loader at runtime.
 import type {
   VacancyLandPoint,
@@ -554,6 +558,7 @@ export default function SiteMatchmakerResultsTable({
   const [footprintFilter, setFootprintFilter] = useState<FootprintPublication | "">("");
   const [ownerSectorFilter, setOwnerSectorFilter] = useState<OwnerSector | "">("");
   const [ownerStructureFilter, setOwnerStructureFilter] = useState<OwnerStructure | "">("");
+  const [districtFilter, setDistrictFilter] = useState("");
   const [zoningFilter, setZoningFilter] = useState("");
   const [distressFilter, setDistressFilter] = useState<CandidateDistressStatus | "">("");
   const [minimumDensityFilter, setMinimumDensityFilter] = useState("");
@@ -571,6 +576,7 @@ export default function SiteMatchmakerResultsTable({
       footprintPublication: selectedSet(footprintFilter),
       ownerSectors: selectedSet(ownerSectorFilter),
       ownerStructures: selectedSet(ownerStructureFilter),
+      districtFamilies: selectedSet(districtFilter),
       zoning: selectedSet(zoningFilter),
       distress: selectedSet(distressFilter),
       minimumPopulationDensity: numericFilter(minimumDensityFilter),
@@ -586,6 +592,7 @@ export default function SiteMatchmakerResultsTable({
       propertyTypeFilter,
       search,
       sourceFilter,
+      districtFilter,
       zoningFilter,
       minimumDensityFilter,
       walkabilityFilter,
@@ -636,6 +643,67 @@ export default function SiteMatchmakerResultsTable({
     [rows],
   );
 
+  const districtCounts = useMemo(
+    () => countRows(rows, candidateDistrictFilterValue),
+    [rows],
+  );
+
+  /**
+   * One control, two granularities: each family appears as a roll-up
+   * ("Business/Commercial — all") followed by its sub-types indented
+   * beneath it ("B3 · Community Shopping").
+   *
+   * The sub-type is the tier worth acting on. A designation carries two
+   * axes — in "B3-2" the "B3" is the use type and the "-2" is bulk — so
+   * family alone is too coarse and the full code is too specific to
+   * browse. Families follow ZONING_DISTRICT_FAMILIES order so this
+   * dropdown and the map legend name districts in the same sequence.
+   *
+   * Sites the source could not classify are offered as options at the
+   * end rather than hidden; a filter that quietly dropped them would
+   * misreport its own coverage.
+   */
+  const districtOptions = useMemo(() => {
+    const options: { value: string; label: string; count: number }[] = [];
+
+    for (const family of ZONING_DISTRICT_FAMILIES) {
+      const subtypeIds = subtypesForFamily(family.id).filter((id) => districtCounts.has(id));
+      if (subtypeIds.length === 0) continue;
+
+      const familyCount = subtypeIds.reduce(
+        (total, id) => total + (districtCounts.get(id) ?? 0),
+        0,
+      );
+      options.push({
+        value: family.id,
+        label: `${family.label} — all`,
+        count: familyCount,
+      });
+
+      // A single sub-type under a family would just restate the roll-up.
+      if (subtypeIds.length === 1) continue;
+      for (const id of subtypeIds) {
+        options.push({
+          value: id,
+          label: `   ${candidateDistrictFilterLabel(id)}`,
+          count: districtCounts.get(id) ?? 0,
+        });
+      }
+    }
+
+    for (const sentinel of [DISTRICT_UNCLASSIFIED, ZONING_NOT_PUBLISHED, ZONING_NOT_MAPPED]) {
+      if (districtCounts.has(sentinel)) {
+        options.push({
+          value: sentinel,
+          label: candidateDistrictFilterLabel(sentinel),
+          count: districtCounts.get(sentinel) ?? 0,
+        });
+      }
+    }
+
+    return options;
+  }, [districtCounts]);
+
   const zoningOptions = useMemo(() => {
     const codes = [...zoningCounts.keys()]
       .filter((value) => value !== ZONING_NOT_PUBLISHED && value !== ZONING_NOT_MAPPED)
@@ -657,6 +725,7 @@ export default function SiteMatchmakerResultsTable({
     footprintFilter !== "" ||
     ownerSectorFilter !== "" ||
     ownerStructureFilter !== "" ||
+    districtFilter !== "" ||
     zoningFilter !== "" ||
     distressFilter !== "" ||
     minimumDensityFilter !== "" ||
@@ -672,6 +741,7 @@ export default function SiteMatchmakerResultsTable({
     setFootprintFilter("");
     setOwnerSectorFilter("");
     setOwnerStructureFilter("");
+    setDistrictFilter("");
     setZoningFilter("");
     setDistressFilter("");
     setMinimumDensityFilter("");
@@ -837,7 +907,16 @@ export default function SiteMatchmakerResultsTable({
             )}
           />
           <SelectFilter
-            label="Zoning"
+            label="Zoning district"
+            value={districtFilter}
+            onChange={(value) => {
+              setDistrictFilter(value);
+              resetPagination();
+            }}
+            options={districtOptions}
+          />
+          <SelectFilter
+            label="Zoning code"
             value={zoningFilter}
             onChange={(value) => {
               setZoningFilter(value);
