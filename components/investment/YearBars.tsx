@@ -5,7 +5,9 @@ import type { YearBreakdown } from "@/lib/investment-analysis";
 import { formatAsOf, formatCompactDollars, formatCount, formatFullDollars, GRID, INK_40, INK_55, MAGNITUDE_HUE } from "./format";
 
 /**
- * "When it arrived" — a single-series column chart per year, 2020 → latest. Built
+ * "When it was awarded" — a single-series column chart per year, 2020 → latest. The
+ * heading says AWARDED, not "arrived": the data records award timing and the
+ * awarded-≠-received rail forbids a label that implies money landed. Built
  * on @visx primitives: a @visx/scale scaleBand places the year columns, a
  * scaleLinear maps the value to pixels, and @visx/shape's BarRounded draws each
  * column (square baseline, 4px-rounded top) inside a @visx/group Group.

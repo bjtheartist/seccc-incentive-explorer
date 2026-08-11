@@ -227,7 +227,7 @@ export default async function InvestmentBriefPrintPage({
                 </ol>
               </Section>
 
-              <Section title="When it arrived" description="Awarded dollars by year, 2020 to the latest on record.">
+              <Section title="When it was awarded" description="Awarded dollars by year, 2020 to the latest on record. Award timing, not receipt.">
                 <YearBars
                   byYear={analysis.byYear}
                   unYeared={analysis.unYeared}
