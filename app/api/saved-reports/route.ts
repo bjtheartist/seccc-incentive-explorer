@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSQL } from "@/lib/db";
 import { getCurrentUserId } from "@/lib/current-user";
 import { buildChecklist, isGoalType, type SavedReportSummary } from "@/lib/workspace";
+import { stampReportSchemaVersion } from "@/lib/report-schema";
 
 function toSummary(row: Record<string, unknown>): SavedReportSummary {
   return {
@@ -50,10 +51,14 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const reportData = body.reportData;
-  if (!reportData || typeof reportData !== "object") {
+  const rawReportData = body.reportData;
+  if (!rawReportData || typeof rawReportData !== "object" || Array.isArray(rawReportData)) {
     return NextResponse.json({ error: "reportData is required" }, { status: 400 });
   }
+
+  // Stamp the persisted-shape version on the way in, so the load path can tell
+  // this row apart from everything saved before versioning existed.
+  const reportData = stampReportSchemaVersion(rawReportData as Record<string, unknown>);
 
   const wizardState = body.wizardState && typeof body.wizardState === "object"
     ? body.wizardState

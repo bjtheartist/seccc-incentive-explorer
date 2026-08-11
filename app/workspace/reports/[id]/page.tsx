@@ -8,6 +8,7 @@ import { ArrowLeft, Loader2, Trash2 } from "lucide-react";
 import { ReportDisplay } from "@/components/report/ReportDisplay";
 import type { GeneratedReport } from "@/lib/report-engine";
 import type { WizardState } from "@/lib/report-wizard-config";
+import { normalizeSavedReport, SAVED_REPORT_LOAD_ERROR } from "@/lib/report-schema";
 import { deriveIsInstantMode, derivePersonaLensVisible } from "@/lib/workspace";
 
 export default function SavedReportPage() {
@@ -18,6 +19,11 @@ export default function SavedReportPage() {
   const [wizardState, setWizardState] = useState<WizardState | undefined>();
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  // Set when the report cannot be shown. The row still exists and still belongs
+  // to the user, so the page has to say so and keep Delete reachable rather
+  // than redirect or crash. Two distinct causes with two distinct messages —
+  // a fetch that failed is retryable, a blob this build cannot read is not.
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const handleDelete = async () => {
     if (deleting) return;
@@ -57,9 +63,20 @@ export default function SavedReportPage() {
       })
       .then((data) => {
         if (!data) return;
-        setReport(data.report.reportData as GeneratedReport);
+        // Stored JSON is a snapshot of an older engine, not a GeneratedReport
+        // by construction — normalize instead of casting.
+        const normalized = normalizeSavedReport(data.report?.reportData);
+        if (!normalized.ok) {
+          console.warn(
+            `Saved report ${params.id} failed to normalize (${normalized.reason}): ${normalized.detail}`
+          );
+          setLoadError(SAVED_REPORT_LOAD_ERROR);
+          return;
+        }
+        setReport(normalized.report);
         setWizardState(data.report.wizardState as WizardState);
       })
+      .catch(() => setLoadError("This report could not be loaded right now. Refresh to try again."))
       .finally(() => setLoading(false));
   }, [params.id, router, status]);
 
@@ -71,31 +88,59 @@ export default function SavedReportPage() {
     );
   }
 
-  if (!report) return null;
+  if (!report && loadError === null) return null;
+
+  const header = (
+    <div className="max-w-[850px] mx-auto px-6 pt-8 print:hidden flex items-center justify-between gap-4">
+      <Link
+        href="/workspace"
+        className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/40 hover:text-[#0C1B33]"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
+        Workspace
+      </Link>
+      <button
+        onClick={handleDelete}
+        disabled={deleting}
+        className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/40 hover:text-red-600 transition-colors disabled:opacity-50"
+      >
+        {deleting ? (
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+        ) : (
+          <Trash2 className="w-3.5 h-3.5" />
+        )}
+        Delete Report
+      </button>
+    </div>
+  );
+
+  if (!report) {
+    return (
+      <div className="min-h-screen bg-[#FAF9F6]">
+        {header}
+        <div className="max-w-[850px] mx-auto px-6 py-16">
+          <div className="border border-[#0C1B33]/10 bg-white px-6 py-8">
+            <p className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/40">
+              Report Unavailable
+            </p>
+            <p className="mt-3 text-[15px] leading-relaxed text-[#0C1B33]/70">
+              {loadError}
+            </p>
+            <Link
+              href="/report"
+              className="mt-6 inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33] underline underline-offset-4"
+            >
+              Run a new report
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF9F6]">
-      <div className="max-w-[850px] mx-auto px-6 pt-8 print:hidden flex items-center justify-between gap-4">
-        <Link
-          href="/workspace"
-          className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/40 hover:text-[#0C1B33]"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          Workspace
-        </Link>
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="inline-flex items-center gap-2 font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#0C1B33]/40 hover:text-red-600 transition-colors disabled:opacity-50"
-        >
-          {deleting ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Trash2 className="w-3.5 h-3.5" />
-          )}
-          Delete Report
-        </button>
-      </div>
+      {header}
       <ReportDisplay
         report={report}
         wizardState={wizardState}

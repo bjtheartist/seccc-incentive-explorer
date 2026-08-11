@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
+import type { WizardState } from "@/lib/report-wizard-config";
+import { normalizeSavedReport } from "@/lib/report-schema";
 import { SaveReportModal, type PendingSavedReport } from "./SaveReportModal";
 
 const PENDING_REPORT_KEY = "csim.pendingReport";
@@ -18,8 +20,21 @@ export function PendingReportSaver() {
     const raw = localStorage.getItem(PENDING_REPORT_KEY);
     if (!raw) return null;
 
+    // localStorage is persisted report JSON too: it can survive a deploy that
+    // changed the report shape, so it gets the same normalization boundary as
+    // a saved row rather than a blind cast.
     try {
-      return JSON.parse(raw) as PendingSavedReport;
+      const parsed: unknown = JSON.parse(raw);
+      const payload = parsed as { reportData?: unknown; wizardState?: unknown } | null;
+      const normalized = normalizeSavedReport(payload?.reportData);
+      if (!normalized.ok) {
+        localStorage.removeItem(PENDING_REPORT_KEY);
+        return null;
+      }
+      return {
+        reportData: normalized.report,
+        wizardState: payload?.wizardState as WizardState | undefined,
+      };
     } catch {
       localStorage.removeItem(PENDING_REPORT_KEY);
       return null;

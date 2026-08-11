@@ -85,7 +85,7 @@ import {
 
 // ─── Local Types ────────────────────────────────────────────────────
 
-type ReportType =
+export type ReportType =
   | "site-incentives"
   | "dev-feasibility"
   | "corridor-intelligence"
@@ -316,6 +316,16 @@ export interface ActionRoadmapItem {
 export type PublicReportLocationContext = Omit<LocationContext, "posture" | "programs">;
 
 export interface GeneratedReport {
+  /**
+   * Version of the *persisted* report shape, stamped when a report is written
+   * to storage (see `lib/report-schema.ts`). Absent on freshly generated
+   * in-memory reports and on everything saved before this field existed —
+   * both of which are version 1 by definition, so `undefined` must always be
+   * read as 1 and never as "unknown" or "invalid". Nothing in the engine or
+   * the UI should branch on it; it exists so `normalizeSavedReport` can tell
+   * an old saved blob from one written by a newer deploy.
+   */
+  schemaVersion?: number;
   title: string;
   subtitle: string;
   reportType: ReportType;
