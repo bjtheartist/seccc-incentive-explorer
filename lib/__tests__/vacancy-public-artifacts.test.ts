@@ -18,9 +18,17 @@
 
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PILOT_ZIPS } from "../pilot-zips";
 import type { VacancyDirectoryFile, VacancyIndexExport } from "../vacancy-index";
+
+// This suite re-parses the large committed data artifacts with thousands of
+// synchronous assertions. Wall time swings 2-3x under vitest worker CPU
+// contention, so the 5s default timeout flakes the heaviest tests in
+// full-suite runs even though every assertion passes. Sync tests cannot be
+// interrupted mid-run — the timeout only retro-fails completed work — so a
+// generous ceiling weakens nothing.
+vi.setConfig({ testTimeout: 60_000 });
 
 const INDEX_PATH = path.join(process.cwd(), "public/data/vacancy-index.json");
 const DIRECTORY_DIR = path.join(process.cwd(), "public/data/vacancy-directory");

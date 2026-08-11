@@ -1,7 +1,15 @@
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { OWNER_TYPE_ORDER } from "../owner-classify";
+
+// This suite scans the large committed data artifacts (public/data/*) with
+// tens of thousands of synchronous assertions. Wall time swings 2-3x under
+// vitest worker CPU contention, so the 5s default timeout flakes the heaviest
+// tests in full-suite runs even though every assertion passes. Sync tests
+// cannot be interrupted mid-run — the timeout only retro-fails completed
+// work — so a generous ceiling weakens nothing.
+vi.setConfig({ testTimeout: 60_000 });
 import {
   addressHasViolation,
   assignQuantileDots,

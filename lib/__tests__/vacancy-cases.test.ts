@@ -1,5 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { PILOT_ZIPS } from "../pilot-zips";
+
+// This suite rebuilds case records from the large committed data artifacts
+// for every pilot ZIP, with tens of thousands of synchronous assertions.
+// Wall time swings 2-3x under vitest worker CPU contention, so a tight
+// timeout flakes the heaviest tests in full-suite runs even though every
+// assertion passes. Sync tests cannot be interrupted mid-run — the timeout
+// only retro-fails completed work — so a generous ceiling weakens nothing.
+vi.setConfig({ testTimeout: 60_000 });
 import {
   CASE_KEYS,
   CASE_POINT_CAP,
@@ -330,7 +338,8 @@ describe("buildCaseRecords (real per-ZIP data)", () => {
         }
       }
     },
-    15_000,
+    // No explicit timeout — an explicit value here would override the
+    // file-level vi.setConfig testTimeout ceiling above.
   );
 
   it("60617 public-land land count equals the reconciled land-universe city fold", () => {
