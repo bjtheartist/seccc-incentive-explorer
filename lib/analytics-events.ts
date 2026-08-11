@@ -70,6 +70,11 @@ export const ANALYTICS_EVENT_TYPES = [
   "first_visit_guide_step_viewed",
   "first_visit_guide_skipped",
   "first_visit_guide_completed",
+  // ── Usage-analytics gaps (2026-08 adversarial-review follow-up) ────
+  "section_expanded",
+  "learn_link_clicked",
+  "zoning_review_activity_selected",
+  "stage_handoff_shared",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];

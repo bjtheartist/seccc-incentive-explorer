@@ -5253,12 +5253,22 @@ function ReportDisplay({
                   >
                     <button
                       type="button"
-                      onClick={() =>
+                      onClick={() => {
                         setExpandedSections((prev) => ({
                           ...prev,
                           [sectionIdx]: !sectionOpen,
-                        }))
-                      }
+                        }));
+                        trackEvent("section_expanded", {
+                          reportType: report.reportType,
+                          source: "report_section_toggle",
+                          metadata: {
+                            sectionId: sectionToAnchor(section.title),
+                            sectionTitle: section.title,
+                            sectionIndex: sectionIdx,
+                            state: sectionOpen ? "collapsed" : "expanded",
+                          },
+                        });
+                      }}
                       aria-expanded={sectionOpen}
                       className="section-head group flex w-full items-baseline gap-4 mb-4 text-left cursor-pointer print:cursor-auto"
                     >

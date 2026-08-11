@@ -1844,9 +1844,34 @@ export function ReportDisplay({
                 // hides) into a native disclosure. Print/PDF is generated from the
                 // canonical report, so this only affects the on-screen view.
                 const Wrapper = section.collapsedByPersona ? "details" : "div";
+                const handleSectionToggle = section.collapsedByPersona
+                  ? (event: React.SyntheticEvent<HTMLDetailsElement>) => {
+                      trackEvent("section_expanded", {
+                        reportType: report.reportType,
+                        source: "report_section_toggle",
+                        metadata: {
+                          sectionId: sectionToAnchor(section.title),
+                          sectionTitle: section.title,
+                          sectionIndex: sectionIdx,
+                          state: event.currentTarget.open ? "expanded" : "collapsed",
+                        },
+                      });
+                    }
+                  : undefined;
 
                 return (
-                  <Wrapper key={sectionIdx} id={sectionToAnchor(section.title)} className={`report-section mb-14 ${section.collapsedByPersona ? "persona-collapsed border border-[#0C1B33]/8 px-5 py-4" : ""}`}>
+                  <Wrapper
+                    key={sectionIdx}
+                    id={sectionToAnchor(section.title)}
+                    className={`report-section mb-14 ${section.collapsedByPersona ? "persona-collapsed border border-[#0C1B33]/8 px-5 py-4" : ""}`}
+                    {...(handleSectionToggle
+                      ? // The dynamic Wrapper type ("details" | "div") makes JSX validate
+                        // onToggle against both element prop types; it only ever renders
+                        // on the "details" branch, where the handler's element type is
+                        // exact.
+                        ({ onToggle: handleSectionToggle } as unknown as Record<string, unknown>)
+                      : {})}
+                  >
                     {section.collapsedByPersona && (
                       <summary className="font-mono-bureau text-[10px] tracking-[0.15em] uppercase text-[#2563EB] cursor-pointer select-none">
                         {section.title} · {section.items.length} more

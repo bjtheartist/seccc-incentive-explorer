@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, Send } from "lucide-react";
 import { buildZoningHandoff, type ZoningHandoffInput } from "@/lib/stage-handoff";
+import { trackEvent } from "@/lib/analytics-events";
 
 type ShareState = "idle" | "copied" | "shared" | "failed";
 
@@ -23,8 +24,17 @@ export function StageHandoffButton({ input }: { input: ZoningHandoffInput }) {
     if (resetTimer.current) clearTimeout(resetTimer.current);
   }, []);
 
+  // settle() is only ever called with a real outcome ("shared" | "copied" |
+  // "failed") -- the idle reset below calls setState directly -- so this is
+  // the single choke point for the handoff-shared event. No address, no
+  // review answers: just the outcome, so a cut/keep decision on this
+  // feature can be made from real usage without carrying PII.
   const settle = useCallback((next: ShareState) => {
     setState(next);
+    trackEvent("stage_handoff_shared", {
+      source: "zoning_stage_handoff",
+      metadata: { outcome: next },
+    });
     if (resetTimer.current) clearTimeout(resetTimer.current);
     resetTimer.current = setTimeout(() => setState("idle"), 2500);
   }, []);
