@@ -235,6 +235,57 @@ describe("applyPersonaLens", () => {
     ]);
   });
 
+  it("leaves startHere untouched (undefined) when the report has none (legacy report shape)", () => {
+    const { report: lensed } = applyPersonaLens(reportFixture(), "developer");
+    expect(lensed.startHere).toBeUndefined();
+  });
+
+  it("reorders startHere.primary/secondary the same way as actionRoadmap when a report carries one", () => {
+    const withStartHere: GeneratedReport = {
+      ...reportFixture(),
+      startHere: {
+        primary: { label: "SBIF", description: "", kind: "call-agency", programId: "sbif" },
+        secondary: [
+          { label: "OZ", description: "", kind: "call-agency", programId: "federalOZ" },
+          { label: "TIF", description: "", kind: "confirm-with-agency", programId: "tif" },
+        ],
+        evidence: [],
+        unresolvedQuestions: [],
+        audience: "site-incentives",
+      },
+    };
+
+    const { report: lensed } = applyPersonaLens(withStartHere, "developer");
+
+    // Same persona weighting as the actionRoadmap reorder above: federalOZ and
+    // tif match "developer", sbif does not — the developer-matched action
+    // that was originally last (federalOZ, in secondary) becomes primary.
+    expect(lensed.startHere?.primary.programId).toBe("federalOZ");
+    expect(lensed.startHere?.secondary.map((a) => a.programId)).toEqual(["tif", "sbif"]);
+  });
+
+  it("never displaces an unresolved zoning/use question from startHere.primary for any persona", () => {
+    const withZoningGate: GeneratedReport = {
+      ...reportFixture(),
+      startHere: {
+        primary: {
+          label: "Confirm the exact proposed use with the City",
+          description: "",
+          kind: "confirm-zoning-use",
+        },
+        secondary: [
+          { label: "OZ", description: "", kind: "call-agency", programId: "federalOZ" },
+        ],
+        evidence: [],
+        unresolvedQuestions: ["What is the exact proposed use?"],
+        audience: "site-incentives",
+      },
+    };
+
+    const { report: lensed } = applyPersonaLens(withZoningGate, "developer");
+    expect(lensed.startHere).toEqual(withZoningGate.startHere);
+  });
+
   it("surfaces finance orgs first for developers, advising first for starters", () => {
     const dev = applyPersonaLens(reportFixture(), "developer").report;
     const devSupport = dev.sections.find((s) => s.title === SUPPORT_ORGANIZATIONS_SECTION_TITLE)!;
