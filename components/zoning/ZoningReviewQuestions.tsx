@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ArrowRight, ClipboardCheck, ExternalLink, Info, Landmark } from "lucide-react";
 import { PreparationCostBadge } from "@/components/report/PreparationCostBadge";
 import { StageHandoffButton } from "@/components/zoning/StageHandoffButton";
+import { trackEvent } from "@/lib/analytics-events";
 import {
   buildZoningReviewNotes,
   getDistrictUseTableLink,
@@ -62,6 +63,12 @@ export function ZoningReviewQuestions({
   const selectActivity = (value: string) => {
     setActivityId(value as ZoningReviewActivityId | "");
     setAnswers({});
+    if (value) {
+      trackEvent("zoning_review_activity_selected", {
+        source: "zoning_review_questions",
+        metadata: { activityId: value },
+      });
+    }
   };
 
   const setAnswer = (questionId: string, value: string) => {
@@ -344,6 +351,11 @@ export function ZoningReviewQuestions({
             </div>
             <a
               href="/learn"
+              onClick={() =>
+                trackEvent("learn_link_clicked", {
+                  source: "zoning_review_questions",
+                })
+              }
               className="mt-3 inline-flex items-center gap-1 text-[10px] text-[#2F5BEA] hover:underline"
             >
               Learn how zoning, approvals, and permits fit together

@@ -199,4 +199,92 @@ describe("analytics events", () => {
       metadata: { zip: "60624", siteCount: 15, truncated: false },
     });
   });
+
+  // ── Usage-analytics gaps (2026-08 adversarial-review follow-up) ────
+  // Coverage for the events that were missing: report section
+  // expand/collapse, /learn link clicks, zoning-review activity
+  // selection, and the stage-handoff share button. Each payload carries
+  // ids/outcomes only -- no address, no answer content.
+  it("accepts the report section expand/collapse event and keeps its metadata", () => {
+    expect(isAnalyticsEventType("section_expanded")).toBe(true);
+
+    const event = sanitizeAnalyticsEventPayload("section_expanded", {
+      reportType: "site-incentives",
+      source: "report_section_toggle",
+      metadata: {
+        sectionId: "programs-mapped-at-this-address",
+        sectionTitle: "Programs Mapped at This Address",
+        sectionIndex: 0,
+        state: "expanded",
+      },
+    });
+    expect(event).toMatchObject({
+      eventType: "section_expanded",
+      reportType: "site-incentives",
+      source: "report_section_toggle",
+      address: null,
+      metadata: {
+        sectionId: "programs-mapped-at-this-address",
+        sectionTitle: "Programs Mapped at This Address",
+        sectionIndex: 0,
+        state: "expanded",
+      },
+    });
+  });
+
+  it("accepts the /learn link click event", () => {
+    expect(isAnalyticsEventType("learn_link_clicked")).toBe(true);
+
+    const event = sanitizeAnalyticsEventPayload("learn_link_clicked", {
+      source: "zoning_review_questions",
+    });
+    expect(event).toMatchObject({
+      eventType: "learn_link_clicked",
+      source: "zoning_review_questions",
+      address: null,
+    });
+  });
+
+  it("accepts the zoning-review activity selection event", () => {
+    expect(isAnalyticsEventType("zoning_review_activity_selected")).toBe(true);
+
+    const event = sanitizeAnalyticsEventPayload("zoning_review_activity_selected", {
+      source: "zoning_review_questions",
+      metadata: { activityId: "restaurant" },
+    });
+    expect(event).toMatchObject({
+      eventType: "zoning_review_activity_selected",
+      source: "zoning_review_questions",
+      address: null,
+      metadata: { activityId: "restaurant" },
+    });
+  });
+
+  it("accepts the stage-handoff share event with an outcome only, no address or answers", () => {
+    expect(isAnalyticsEventType("stage_handoff_shared")).toBe(true);
+
+    const event = sanitizeAnalyticsEventPayload("stage_handoff_shared", {
+      source: "zoning_stage_handoff",
+      // A caller should never send address/answer content, but even if it
+      // did, sanitizeAnalyticsEventPayload only recognizes the fields
+      // below -- there is no "answers" field in AnalyticsEventPayload, so
+      // review content can't leak through this path.
+      metadata: { outcome: "copied" },
+    });
+    expect(event).toMatchObject({
+      eventType: "stage_handoff_shared",
+      source: "zoning_stage_handoff",
+      address: null,
+      metadata: { outcome: "copied" },
+    });
+
+    for (const outcome of ["shared", "copied", "failed"] as const) {
+      expect(
+        sanitizeAnalyticsEventPayload("stage_handoff_shared", {
+          source: "zoning_stage_handoff",
+          metadata: { outcome },
+        })?.metadata,
+      ).toMatchObject({ outcome });
+    }
+  });
 });
