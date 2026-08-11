@@ -1,5 +1,6 @@
 import type { GeneratedReport } from "@/lib/report-engine";
 import type { WizardState } from "@/lib/report-wizard-config";
+import { startHereActionsInOrder } from "@/lib/start-here";
 
 export const PREPARATION_CONTEXT_STORAGE_KEY =
   "seccc.incentive-preparation.context.v1";
@@ -53,6 +54,23 @@ function collectProgramCandidates(
         return candidates;
       }
     }
+  }
+
+  // Prefer the canonical startHere model (lib/start-here.ts) for program-id
+  // sourcing: it is the single place "what is the top program" is decided,
+  // so its primary+secondary actions win whenever a report was generated
+  // with one attached. `actionRoadmap` remains the fallback source for
+  // reports saved before startHere existed (report.startHere is undefined
+  // there, never "empty") — this keeps preparation packets identical for
+  // every legacy report.
+  if (report.startHere) {
+    for (const action of startHereActionsInOrder(report.startHere)) {
+      addCandidate(action.programId, action.label);
+      if (candidates.length >= MAX_PREPARATION_PROGRAM_CANDIDATES) {
+        return candidates;
+      }
+    }
+    return candidates;
   }
 
   for (const item of report.actionRoadmap ?? []) {

@@ -27,6 +27,7 @@ import {
   type PersonaId,
 } from "@/lib/personas";
 import { isSupportOrganizationSectionTitle } from "@/lib/support-organization-copy";
+import { startHereActionsInOrder, type StartHere } from "@/lib/start-here";
 
 /** Section title for the collapsed "everything else" disclosure. */
 export const ALSO_AT_ADDRESS_TITLE = "Also at this address";
@@ -305,17 +306,22 @@ export function applyPersonaLens(
   }
 
   const nextRoadmap = reorderActionRoadmap(report.actionRoadmap, persona, lookup);
+  const nextStartHere = reorderStartHere(report.startHere, persona, lookup);
 
   const nextReport: GeneratedReport = {
     ...report,
     sections: nextSections,
     ...(nextRoadmap ? { actionRoadmap: nextRoadmap } : {}),
+    ...(nextStartHere ? { startHere: nextStartHere } : {}),
   };
 
   return { report: nextReport, matchedBefore, matchedAfter: matchedIds.size };
 }
 
-/** Stable reorder so persona-relevant program actions lead (all kept, expanded). */
+/** Stable reorder so persona-relevant program actions lead (all kept, expanded).
+ *  This is the legacy path: it runs unconditionally (independent of
+ *  `startHere`) because report-rendering surfaces still read `actionRoadmap`
+ *  directly and must keep seeing it persona-ordered. */
 function reorderActionRoadmap(
   roadmap: ActionRoadmapItem[] | undefined,
   persona: PersonaId,
@@ -330,6 +336,41 @@ function reorderActionRoadmap(
     }))
     .sort((a, b) => a.match - b.match || a.index - b.index)
     .map((entry) => entry.item);
+}
+
+/**
+ * Persona-consistent counterpart to `reorderActionRoadmap`, applied to the
+ * canonical `startHere` model when a report carries one. Additive: reports
+ * without `startHere` are untouched (the legacy `actionRoadmap` reorder above
+ * remains their only persona-ordering signal).
+ *
+ * The discovery-only boundary from `buildStartHere` (lib/start-here.ts) is
+ * absolute and persona-independent: when `primary.kind === "confirm-zoning-use"`,
+ * an unresolved zoning/use question is leading the report and must never be
+ * displaced by a persona-matched financing action, so this is a no-op in
+ * that case.
+ */
+function reorderStartHere(
+  startHere: StartHere | undefined,
+  persona: PersonaId,
+  lookup: PersonaTagLookup,
+): StartHere | undefined {
+  if (!startHere) return startHere;
+  if (startHere.primary.kind === "confirm-zoning-use") return startHere;
+
+  const actions = startHereActionsInOrder(startHere);
+  if (actions.length <= 1) return startHere;
+
+  const [primary, ...secondary] = actions
+    .map((action, index) => ({
+      action,
+      index,
+      match: programMatchesPersona(action.programId, persona, lookup) ? 0 : 1,
+    }))
+    .sort((a, b) => a.match - b.match || a.index - b.index)
+    .map((entry) => entry.action);
+
+  return { ...startHere, primary, secondary };
 }
 
 // ─── Analytics: exactly-once emission per selection ──────────────────
