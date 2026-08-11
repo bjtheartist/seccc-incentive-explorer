@@ -44,6 +44,9 @@ import {
   candidateSpaceFactLabel,
   candidateFootprintPublication,
   candidateZoningFilterLabel,
+  candidateDistrictFilterLabel,
+  candidateDistrictFilterValue,
+  DISTRICT_UNCLASSIFIED,
   candidateZoningFilterValue,
   candidateZoningLabel,
   epaWalkabilityCategory,
@@ -62,6 +65,7 @@ import {
   type SiteMatchmakerCandidateRow,
   type SiteMatchmakerSource,
 } from "@/lib/site-matchmaker-results";
+import { ZONING_DISTRICT_FAMILIES } from "@/lib/zoning-districts";
 // Type-only: lib/vacancy-index includes a node:fs-backed loader at runtime.
 import type {
   VacancyLandPoint,
@@ -554,6 +558,7 @@ export default function SiteMatchmakerResultsTable({
   const [footprintFilter, setFootprintFilter] = useState<FootprintPublication | "">("");
   const [ownerSectorFilter, setOwnerSectorFilter] = useState<OwnerSector | "">("");
   const [ownerStructureFilter, setOwnerStructureFilter] = useState<OwnerStructure | "">("");
+  const [districtFilter, setDistrictFilter] = useState("");
   const [zoningFilter, setZoningFilter] = useState("");
   const [distressFilter, setDistressFilter] = useState<CandidateDistressStatus | "">("");
   const [minimumDensityFilter, setMinimumDensityFilter] = useState("");
@@ -571,6 +576,7 @@ export default function SiteMatchmakerResultsTable({
       footprintPublication: selectedSet(footprintFilter),
       ownerSectors: selectedSet(ownerSectorFilter),
       ownerStructures: selectedSet(ownerStructureFilter),
+      districtFamilies: selectedSet(districtFilter),
       zoning: selectedSet(zoningFilter),
       distress: selectedSet(distressFilter),
       minimumPopulationDensity: numericFilter(minimumDensityFilter),
@@ -586,6 +592,7 @@ export default function SiteMatchmakerResultsTable({
       propertyTypeFilter,
       search,
       sourceFilter,
+      districtFilter,
       zoningFilter,
       minimumDensityFilter,
       walkabilityFilter,
@@ -636,6 +643,32 @@ export default function SiteMatchmakerResultsTable({
     [rows],
   );
 
+  const districtCounts = useMemo(
+    () => countRows(rows, candidateDistrictFilterValue),
+    [rows],
+  );
+
+  /**
+   * Families are listed in ZONING_DISTRICT_FAMILIES order rather than
+   * alphabetically, so this dropdown and the map legend name the
+   * districts in the same sequence. Sites the source could not classify
+   * are offered as their own options at the end instead of being hidden —
+   * a filter that quietly drops them would misreport its own coverage.
+   */
+  const districtOptions = useMemo(() => {
+    const values: string[] = ZONING_DISTRICT_FAMILIES.map((family) => family.id).filter(
+      (id) => districtCounts.has(id),
+    );
+    for (const sentinel of [DISTRICT_UNCLASSIFIED, ZONING_NOT_PUBLISHED, ZONING_NOT_MAPPED]) {
+      if (districtCounts.has(sentinel)) values.push(sentinel);
+    }
+    return values.map((value) => ({
+      value,
+      label: candidateDistrictFilterLabel(value),
+      count: districtCounts.get(value) ?? 0,
+    }));
+  }, [districtCounts]);
+
   const zoningOptions = useMemo(() => {
     const codes = [...zoningCounts.keys()]
       .filter((value) => value !== ZONING_NOT_PUBLISHED && value !== ZONING_NOT_MAPPED)
@@ -657,6 +690,7 @@ export default function SiteMatchmakerResultsTable({
     footprintFilter !== "" ||
     ownerSectorFilter !== "" ||
     ownerStructureFilter !== "" ||
+    districtFilter !== "" ||
     zoningFilter !== "" ||
     distressFilter !== "" ||
     minimumDensityFilter !== "" ||
@@ -672,6 +706,7 @@ export default function SiteMatchmakerResultsTable({
     setFootprintFilter("");
     setOwnerSectorFilter("");
     setOwnerStructureFilter("");
+    setDistrictFilter("");
     setZoningFilter("");
     setDistressFilter("");
     setMinimumDensityFilter("");
@@ -837,7 +872,16 @@ export default function SiteMatchmakerResultsTable({
             )}
           />
           <SelectFilter
-            label="Zoning"
+            label="Zoning district"
+            value={districtFilter}
+            onChange={(value) => {
+              setDistrictFilter(value);
+              resetPagination();
+            }}
+            options={districtOptions}
+          />
+          <SelectFilter
+            label="Zoning code"
             value={zoningFilter}
             onChange={(value) => {
               setZoningFilter(value);

@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   ZONING_NOT_MAPPED,
   ZONING_NOT_PUBLISHED,
+  DISTRICT_UNCLASSIFIED,
+  candidateDistrictFilterLabel,
+  candidateDistrictFilterValue,
   candidateFootprintLabel,
   candidateMatchesFilters,
   candidateRowsToCsv,
@@ -81,6 +84,7 @@ function filters(
     footprintPublication: new Set(),
     ownerSectors: new Set(),
     ownerStructures: new Set(),
+    districtFamilies: new Set(),
     zoning: new Set(),
     distress: new Set(),
     minimumPopulationDensity: null,
@@ -408,6 +412,42 @@ describe("candidate filtering", () => {
         candidateMatchesFilters(row, filters({ distress: new Set(["none"]) })),
       ),
     ).toEqual([rows[2]]);
+  });
+
+  it("filters by district family, above the exact zoning code", () => {
+    // B3-2 rolls up into the Business/Commercial family, so the family
+    // filter finds the row without the caller knowing the exact code.
+    expect(candidateDistrictFilterValue(rows[0])).toBe("commercial");
+    expect(
+      rows.filter((row) =>
+        candidateMatchesFilters(row, filters({ districtFamilies: new Set(["commercial"]) })),
+      ),
+    ).toEqual([rows[0]]);
+
+    // A family the result set does not contain matches nothing.
+    expect(
+      rows.filter((row) =>
+        candidateMatchesFilters(row, filters({ districtFamilies: new Set(["manufacturing"]) })),
+      ),
+    ).toEqual([]);
+  });
+
+  it("reuses the zoning availability sentinels for missing districts", () => {
+    // Same vocabulary as the code filter rather than a second one.
+    expect(candidateDistrictFilterValue(rows[2])).toBe(ZONING_NOT_MAPPED);
+    expect(
+      rows.filter((row) =>
+        candidateMatchesFilters(row, filters({ districtFamilies: new Set([ZONING_NOT_MAPPED]) })),
+      ),
+    ).toEqual([rows[2]]);
+  });
+
+  it("labels each district bucket for the dropdown", () => {
+    expect(candidateDistrictFilterLabel("commercial")).toBe("Business/Commercial");
+    expect(candidateDistrictFilterLabel("residential")).toBe("Residential");
+    expect(candidateDistrictFilterLabel(DISTRICT_UNCLASSIFIED)).toBe("District not classified");
+    expect(candidateDistrictFilterLabel(ZONING_NOT_PUBLISHED)).toBe("Not published");
+    expect(candidateDistrictFilterLabel(ZONING_NOT_MAPPED)).toBe("Not mapped in this source");
   });
 });
 
