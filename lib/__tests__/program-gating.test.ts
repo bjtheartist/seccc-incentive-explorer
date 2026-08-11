@@ -200,6 +200,32 @@ describe("resolveAvailability", () => {
     expect(result.note).toMatch(/lapsed/i);
   });
 
+  // status "sunset" — a statutory TERMINATION, not a lapse. This branch shipped
+  // untested and the audit flagged it: before it existed, sec179d (the only
+  // sunset card in the catalog) fell through to "active" and reports published
+  // a terminated credit as an ordinary open incentive.
+  it("returns lapsed-notice for a sunset program, carrying its sunsetWarning", () => {
+    const result = resolveAvailability(
+      program({
+        id: "sec179dLike",
+        status: "sunset",
+        sunsetWarning:
+          "Terminated for property whose construction begins after June 30, 2026.",
+      }),
+      TODAY
+    );
+    expect(result.state).toBe("lapsed-notice");
+    expect(result.note).toContain("construction begins after June 30, 2026");
+  });
+
+  it("sunset without a sunsetWarning still leaves active — and never claims reauthorization", () => {
+    const result = resolveAvailability(program({ id: "sunsetPlain", status: "sunset" }), TODAY);
+    expect(result.state).toBe("lapsed-notice");
+    // A sunset is a termination: the generic-lapsed "reauthorization is
+    // possible" framing must not leak onto it.
+    expect(result.note ?? "").not.toMatch(/reauthoriz/i);
+  });
+
   it("returns window-closed for a recurring program whose rounds have all passed", () => {
     // Mirrors cdgSmall after its August 14 deadline.
     const result = resolveAvailability(

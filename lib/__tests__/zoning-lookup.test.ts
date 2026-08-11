@@ -427,6 +427,46 @@ describe("zoning vintage — guard symmetry and source agreement", () => {
     expect("vintage" in out).toBe(false);
   });
 
+  // answeredBy/answerKind nullity must agree in BOTH directions: an answer
+  // with no answerer claims a finding nobody established, and an answerer with
+  // no answer claims a consultation that produced nothing nameable.
+  //
+  // These target the UNAVAILABLE branch deliberately. On available/not_found,
+  // withValidatedVintage's strict equality (answeredBy === source.id,
+  // answerKind === expected) already rejects any nullity mismatch — a first
+  // draft of these tests aimed there and stayed green with the clause deleted,
+  // which is exactly the vacuous-test defect this backlog item exists to
+  // close. The unavailable branch renders vintage through isZoningVintage
+  // ALONE (a null answeredBy is the branch's honest state), so the nullity
+  // clause is the only thing standing between a half-poisoned block and the
+  // page.
+  it("unavailable: drops a block claiming a finding (answerKind) that nobody gave (answeredBy null)", () => {
+    const out = normalizeZoningLookup({
+      status: "unavailable",
+      message: "total source failure",
+      vintage: vintage({ answeredBy: null, answerKind: "zoning" }),
+    });
+    expect(out.vintage).toBeUndefined();
+  });
+
+  it("unavailable: drops a block naming an answerer (answeredBy) with no finding (answerKind null)", () => {
+    const out = normalizeZoningLookup({
+      status: "unavailable",
+      message: "total source failure",
+      vintage: vintage({ answeredBy: "chicago-arcgis-zoning", answerKind: null }),
+    });
+    expect(out.vintage).toBeUndefined();
+  });
+
+  it("unavailable: keeps the honest both-null vintage", () => {
+    const out = normalizeZoningLookup({
+      status: "unavailable",
+      message: "total source failure",
+      vintage: vintage({ answeredBy: null, answerKind: null }),
+    });
+    expect(out.vintage).toBeDefined();
+  });
+
   // The two cases below are the ones a permissive guard lets through. Naming a
   // DIFFERENT mirror (the test above) is rejected by any form of the check; a
   // block that names NO mirror, or that names the wrong FINDING, is not. Both
