@@ -54,16 +54,15 @@ const ZONE_NAMES: Record<string, string> = {
 /* ── runConfidenceEngine tests ────────────── */
 
 describe("runConfidenceEngine", () => {
-  it("returns location_eligible when location matches and no survey", () => {
+  it("returns mapped_at_location when location matches and no survey", () => {
     const programs = [makeProgram()];
     const results = runConfidenceEngine(programs, ZONES_MATCH, ZONE_NAMES);
-    // Staleness may downgrade if lastVerifiedAt is current → should be location_eligible or may_qualify
-    // Since we set lastVerifiedAt to now(), no staleness
+    // Staleness would downgrade to review_suggested; lastVerifiedAt is now(), so no staleness
     expect(results).toHaveLength(1);
-    expect(results[0].confidence).toBe("location_eligible");
+    expect(results[0].relevance).toBe("mapped_at_location");
   });
 
-  it("returns appears_eligible with location match + confirming survey", () => {
+  it("returns mapped_with_matching_answers with location match + aligning survey", () => {
     const programs = [
       makeProgram({
         eligibilityRules: [
@@ -74,16 +73,16 @@ describe("runConfidenceEngine", () => {
     ];
     const survey: SurveyAnswers = { industry: "retail" };
     const results = runConfidenceEngine(programs, ZONES_MATCH, ZONE_NAMES, survey);
-    expect(results[0].confidence).toBe("appears_eligible");
+    expect(results[0].relevance).toBe("mapped_with_matching_answers");
   });
 
-  it("returns not_applicable when location required but no match", () => {
+  it("returns not_mapped_at_location when location required but no match", () => {
     const programs = [makeProgram()];
     const results = runConfidenceEngine(programs, ZONES_NO_MATCH, ZONE_NAMES);
-    expect(results[0].confidence).toBe("not_applicable");
+    expect(results[0].relevance).toBe("not_mapped_at_location");
   });
 
-  it("returns worth_exploring for no zone requirement and no survey", () => {
+  it("returns context_dependent for no zone requirement and no survey", () => {
     const programs = [
       makeProgram({
         id: "county-prog",
@@ -92,12 +91,13 @@ describe("runConfidenceEngine", () => {
       }),
     ];
     const results = runConfidenceEngine(programs, {}, ZONE_NAMES);
-    expect(results[0].confidence).toBe("worth_exploring");
-    expect(results[0].whyOneLine).toContain("Available to businesses in Cook County");
+    expect(results[0].relevance).toBe("context_dependent");
+    expect(results[0].whyOneLine).toContain("open to businesses across Cook County");
     expect(results[0].whyOneLine).not.toContain("qualifying zone");
+    expect(results[0].whyOneLine).not.toMatch(/eligib/i);
   });
 
-  it("returns may_qualify for partial survey with location match", () => {
+  it("returns review_suggested for partial survey with location match", () => {
     const programs = [
       makeProgram({
         eligibilityRules: [
@@ -109,18 +109,18 @@ describe("runConfidenceEngine", () => {
     // Survey has industry but not property — the property rule won't match
     const survey: SurveyAnswers = { industry: "retail" };
     const results = runConfidenceEngine(programs, ZONES_MATCH, ZONE_NAMES, survey);
-    expect(results[0].confidence).toBe("may_qualify");
+    expect(results[0].relevance).toBe("review_suggested");
   });
 
-  it("downgrades confidence for stale program (>6mo)", () => {
+  it("downgrades relevance for stale program (>6mo)", () => {
     const staleDate = new Date();
     staleDate.setMonth(staleDate.getMonth() - 8);
     const programs = [
       makeProgram({ lastVerifiedAt: staleDate.toISOString() }),
     ];
     const results = runConfidenceEngine(programs, ZONES_MATCH, ZONE_NAMES);
-    // Would be location_eligible, but staleness downgrades to may_qualify
-    expect(results[0].confidence).toBe("may_qualify");
+    // Would be mapped_at_location, but staleness downgrades to review_suggested
+    expect(results[0].relevance).toBe("review_suggested");
     expect(results[0].whyOneLine).toContain("data not recently verified");
   });
 
@@ -129,15 +129,15 @@ describe("runConfidenceEngine", () => {
     expect(results).toEqual([]);
   });
 
-  it("sorts results by confidence (most confident first)", () => {
+  it("sorts results by relevance (most address-specific evidence first)", () => {
     const programs = [
-      makeProgram({ id: "a", zoneKey: "ssa" }),  // not_applicable (ssa not in zones for this test)
-      makeProgram({ id: "b", zoneKey: "tif" }),  // location_eligible (tif matches)
+      makeProgram({ id: "a", zoneKey: "ssa" }),  // not_mapped_at_location (ssa not in zones for this test)
+      makeProgram({ id: "b", zoneKey: "tif" }),  // mapped_at_location (tif matches)
     ];
-    // Only tif matches — a should be not_applicable, b should be location_eligible
+    // Only tif matches — a should be not_mapped_at_location, b should be mapped_at_location
     const results = runConfidenceEngine(programs, { tif: true }, ZONE_NAMES);
     const ids = results.map((r) => r.programId);
-    // b (location_eligible) should come before a (not_applicable)
+    // b (mapped_at_location) should come before a (not_mapped_at_location)
     expect(ids.indexOf("b")).toBeLessThan(ids.indexOf("a"));
   });
 });
@@ -171,15 +171,15 @@ describe("computeTopActions", () => {
     expect(hasBook).toBe(true);
   });
 
-  it("prioritizes highest-confidence programs", () => {
+  it("prioritizes the most address-specific programs", () => {
     const programs = [
-      makeProgram({ id: "eligible-prog", zoneKey: "tif" }),
-      makeProgram({ id: "exploring-prog", zoneKey: "", eligibilityRules: [] }),
+      makeProgram({ id: "mapped-prog", zoneKey: "tif" }),
+      makeProgram({ id: "context-prog", zoneKey: "", eligibilityRules: [] }),
     ];
     const results = runConfidenceEngine(programs, ZONES_MATCH, ZONE_NAMES);
     const actions = computeTopActions(results);
     if (actions.length > 0 && actions[0].type === "call") {
-      expect(actions[0].programId).toBe("eligible-prog");
+      expect(actions[0].programId).toBe("mapped-prog");
     }
   });
 });

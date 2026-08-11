@@ -32,8 +32,10 @@ const INTERNAL_PROGRAM_RESULT: ProgramCheckResult & { score: number } = {
     url: "https://www.chicago.gov/sbif",
     sourceUrl: "https://www.chicago.gov/sbif/source",
   },
-  confidence: "appears_eligible",
-  confidenceLabel: "High Match — Appears eligible",
+  // Deliberately adversarial payload: the retired eligibility vocabulary in
+  // the label/why strings must never reach the rendered panel.
+  relevance: "mapped_with_matching_answers",
+  relevanceLabel: "High Match — Appears eligible",
   whyOneLine: "You qualify for this program.",
   benefitRange: "$75,000–$250,000 possible incentive dollars",
   fastestStep: "Contact the administrator",

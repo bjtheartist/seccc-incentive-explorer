@@ -330,7 +330,7 @@ export function buildLocationContext(
     ? orderProgramCheckResultsByProjectGoals(programResults, projectGoals, state.industry)
     : programResults;
   const topMatches = orderedProgramResults
-    .filter((result) => result.confidence !== "not_applicable")
+    .filter((result) => result.relevance !== "not_mapped_at_location")
     .slice(0, 8);
   const zoneKeys = activeZoneKeys(input.zones);
   const tifFinance = input.tifFinance ?? input.neighborhoodEconomics?.tifFinance ?? null;

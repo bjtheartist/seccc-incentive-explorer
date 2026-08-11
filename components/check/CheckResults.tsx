@@ -156,10 +156,10 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
   }
 
   const applicablePrograms = programs.filter(
-    (p) => p.confidence !== "not_applicable"
+    (p) => p.relevance !== "not_mapped_at_location"
   );
   const notApplicablePrograms = programs.filter(
-    (p) => p.confidence === "not_applicable"
+    (p) => p.relevance === "not_mapped_at_location"
   );
 
   return (

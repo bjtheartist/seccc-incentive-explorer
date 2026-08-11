@@ -1,7 +1,7 @@
 import type {
   Program,
   SurveyAnswers,
-  EligibilityConfidence,
+  ProgramRelevance,
   ProgramCheckResult,
   TopAction,
   ExecutiveSummary,
@@ -10,15 +10,26 @@ import type {
 import { buildPublicMatchExplanation } from "./match-transparency";
 
 /**
- * Confidence Engine — given zone results + programs + optional survey answers,
+ * Relevance Engine — given zone results + programs + optional survey answers,
  * compute ProgramCheckResult[] for each program.
  *
+ * This is a DISCOVERY engine, not an eligibility engine. Every value and every
+ * string it produces describes what the public data (and the visitor's own
+ * answers) record; none of them assert that the visitor qualifies for anything.
+ * Generated copy poses verification questions for the administering agency
+ * rather than making a determination the product is not entitled to make.
+ * See `ProgramRelevance` in ./types for the rule against reintroducing
+ * eligibility vocabulary here.
+ *
  * Rules:
- * - appears_eligible (green): location match + at least one non-location criterion confirmed via survey
- * - location_eligible (green + qualifier): zone match only, no survey
- * - may_qualify (amber): some criteria match, gaps remain
- * - worth_exploring (gray): possible but low evidence
- * - not_applicable (collapsed): location doesn't match and location is required
+ * - mapped_with_matching_answers: zone match + at least one non-location criterion aligned via survey
+ * - mapped_at_location: zone match only, no survey
+ * - review_suggested: some criteria compared, gaps remain
+ * - context_dependent: nothing address-specific recorded
+ * - not_mapped_at_location (collapsed): location doesn't match and the program requires it
+ *
+ * (The file is still named confidence-engine for import stability; the model it
+ * computes is program relevance.)
  */
 
 /* ── Staleness policy ──────────────────────── */
@@ -31,22 +42,27 @@ export function isStaleProgramData(program: Program): boolean {
   return verifiedDate < sixMonthsAgo;
 }
 
-const DOWNGRADE_MAP: Partial<Record<EligibilityConfidence, EligibilityConfidence>> = {
-  appears_eligible: "may_qualify",
-  location_eligible: "may_qualify",
-  may_qualify: "worth_exploring",
+const DOWNGRADE_MAP: Partial<Record<ProgramRelevance, ProgramRelevance>> = {
+  mapped_with_matching_answers: "review_suggested",
+  mapped_at_location: "review_suggested",
+  review_suggested: "context_dependent",
 };
 
-function downgradeConfidence(confidence: EligibilityConfidence): EligibilityConfidence {
-  return DOWNGRADE_MAP[confidence] ?? confidence;
+function downgradeRelevance(relevance: ProgramRelevance): ProgramRelevance {
+  return DOWNGRADE_MAP[relevance] ?? relevance;
 }
 
-const CONFIDENCE_LABELS: Record<EligibilityConfidence, string> = {
-  appears_eligible: "Appears eligible",
-  location_eligible: "Appears eligible (based on location)",
-  may_qualify: "May qualify",
-  worth_exploring: "Worth exploring",
-  not_applicable: "Not applicable at this location",
+/**
+ * Badge copy. Each label states what the record shows, not what the reader is
+ * entitled to. Anything of the form "appears eligible" / "may qualify" /
+ * "high match" is prohibited here — see lib/__tests__/public-report-safety.test.ts.
+ */
+const RELEVANCE_LABELS: Record<ProgramRelevance, string> = {
+  mapped_with_matching_answers: "Mapped at this address, answers align",
+  mapped_at_location: "Mapped at this address",
+  review_suggested: "Review suggested",
+  context_dependent: "Depends on project context",
+  not_mapped_at_location: "Not mapped at this address",
 };
 
 /** Check if a program's zone requirement is met. */
@@ -110,41 +126,47 @@ function checkSurveyConfirmation(
   };
 }
 
-/** Generate a one-line "why" explanation. */
+/**
+ * Generate a one-line "why this is on the list" explanation.
+ *
+ * Every branch states a recorded fact and, where a gap exists, poses the
+ * question to put to the administering agency. No branch tells the reader what
+ * they qualify for, and none uses "qualifying"/"eligible" about the reader.
+ */
 function generateWhyOneLine(
   program: Program,
-  confidence: EligibilityConfidence,
+  relevance: ProgramRelevance,
   zones: Record<string, boolean>,
   zoneNames: Record<string, string>
 ): string {
   const zoneName = program.zoneKey ? zoneNames[program.zoneKey] : null;
 
-  switch (confidence) {
-    case "appears_eligible":
+  switch (relevance) {
+    case "mapped_with_matching_answers":
       return zoneName
-        ? `Your location is in ${zoneName} — this program is designed for you.`
-        : `Your profile matches this program's criteria.`;
-    case "location_eligible":
+        ? `The mapped data records this address within ${zoneName}, and your answers align with criteria this program publishes.`
+        : `Your answers align with criteria this program publishes.`;
+    case "mapped_at_location":
       return zoneName
-        ? `Your location is in ${zoneName}.`
-        : `Your location is in a qualifying zone.`;
-    case "may_qualify":
+        ? `The mapped data records this address within ${zoneName}.`
+        : `The mapped data records this address within a boundary this program uses.`;
+    case "review_suggested":
       if (program.zoneKey && zones[program.zoneKey]) {
-        return `You're in a qualifying zone — some details still need verification.`;
+        return `The mapped data records this address within a boundary this program uses — ask the administering agency which of the remaining published requirements apply here.`;
       }
-      return `Some criteria match — worth confirming with the program administrator.`;
-    case "worth_exploring":
+      return `Some published criteria were compared — ask the administering agency whether the remaining requirements are met.`;
+    case "context_dependent":
       if (!program.zoneKey) {
-        return `Available to businesses in Cook County — check eligibility requirements.`;
+        return `Published as open to businesses across Cook County — ask the administering agency which published requirements apply to this project.`;
       }
-      return `This program may be available — check with the administrator.`;
-    case "not_applicable":
-      return `Your location is not in a qualifying zone for this program.`;
+      return `No mapped boundary was recorded at this address — ask the administering agency whether the published boundaries still apply here.`;
+    case "not_mapped_at_location":
+      return `The mapped data does not record this address within a boundary this program requires.`;
   }
 }
 
-/** Compute confidence for a single program. */
-function computeConfidence(
+/** Compute program relevance for a single program. */
+function computeRelevance(
   program: Program,
   zones: Record<string, boolean>,
   zoneNames: Record<string, string>,
@@ -156,12 +178,12 @@ function computeConfidence(
     (r) => r.criterion === "location" && r.required && r.verifiedBy === "location"
   );
 
-  let confidence: EligibilityConfidence;
+  let relevance: ProgramRelevance;
   let notVerified: string[] = [];
   let matchedRules: string[] = [];
 
   if (locationRequired && !locationMatch) {
-    confidence = "not_applicable";
+    relevance = "not_mapped_at_location";
     notVerified = (program.eligibilityRules || [])
       .filter((r) => r.verifiedBy !== "location")
       .map((r) => r.description);
@@ -171,23 +193,23 @@ function computeConfidence(
     matchedRules = surveyResult.matchedRules;
 
     if (locationMatch && surveyResult.confirmed) {
-      confidence = "appears_eligible";
+      relevance = "mapped_with_matching_answers";
     } else if (locationMatch) {
-      confidence = "may_qualify";
+      relevance = "review_suggested";
     } else if (surveyResult.confirmed) {
-      confidence = "may_qualify";
+      relevance = "review_suggested";
     } else {
-      confidence = "worth_exploring";
+      relevance = "context_dependent";
     }
   } else {
     // No survey — location-only assessment
     if (!locationRequired && !program.zoneKey) {
       // No-zone programs may be good next steps, but are not address-confirmed.
-      confidence = "worth_exploring";
+      relevance = "context_dependent";
     } else if (locationMatch) {
-      confidence = "location_eligible";
+      relevance = "mapped_at_location";
     } else {
-      confidence = "not_applicable";
+      relevance = "not_mapped_at_location";
     }
 
     // All non-location rules are unverified without survey
@@ -196,24 +218,26 @@ function computeConfidence(
       .map((r) => r.description);
   }
 
-  // Staleness downgrade: if data not verified within 6 months, reduce confidence
+  // Staleness downgrade: if data not verified within 6 months, reduce relevance
   let staleNote = "";
-  if (isStaleProgramData(program) && confidence !== "not_applicable") {
-    confidence = downgradeConfidence(confidence);
+  if (isStaleProgramData(program) && relevance !== "not_mapped_at_location") {
+    relevance = downgradeRelevance(relevance);
     staleNote = " (data not recently verified)";
   }
 
-  let whyOneLine = generateWhyOneLine(program, confidence, zones, zoneNames) + staleNote;
+  let whyOneLine = generateWhyOneLine(program, relevance, zones, zoneNames) + staleNote;
 
-  // Parcel-based scoring boosts (additive)
+  // Parcel-based ordering signals (additive). These report the recorded parcel
+  // classification and name the question it raises — they do not assert that
+  // the parcel qualifies for the program.
   if (parcel) {
-    if (program.id === "class7a" && parcel.isCommercial && confidence === "worth_exploring") {
-      confidence = "may_qualify";
-      whyOneLine = `Property class ${parcel.classCode} (${parcel.classDescription}) may be eligible for Class 7a assessment reduction.`;
+    if (program.id === "class7a" && parcel.isCommercial && relevance === "context_dependent") {
+      relevance = "review_suggested";
+      whyOneLine = `The assessor records property class ${parcel.classCode} (${parcel.classDescription}) — confirm with the administering agency how Class 7a treats this classification.`;
     }
-    if (program.id === "landBank" && parcel.isVacant && confidence === "worth_exploring") {
-      confidence = "may_qualify";
-      whyOneLine = "Parcel classified as vacant land — potential Land Bank acquisition candidate.";
+    if (program.id === "landBank" && parcel.isVacant && relevance === "context_dependent") {
+      relevance = "review_suggested";
+      whyOneLine = "The assessor records this parcel as vacant land — confirm with the Land Bank how it treats vacant parcels.";
     }
     if ((program.id === "tif" || program.id === "sbif") && parcel.totalValue) {
       whyOneLine += ` Assessed value: ${parcel.totalValue}.`;
@@ -223,8 +247,8 @@ function computeConfidence(
   return {
     programId: program.id,
     program,
-    confidence,
-    confidenceLabel: CONFIDENCE_LABELS[confidence],
+    relevance,
+    relevanceLabel: RELEVANCE_LABELS[relevance],
     whyOneLine,
     benefitRange: program.benefitRange || "Contact for details",
     fastestStep: program.fastestConfirmingStep || "Contact program administrator",
@@ -233,18 +257,18 @@ function computeConfidence(
   };
 }
 
-/** Confidence order for sorting (most confident first). */
-const CONFIDENCE_ORDER: Record<EligibilityConfidence, number> = {
-  appears_eligible: 0,
-  location_eligible: 1,
-  may_qualify: 2,
-  worth_exploring: 3,
-  not_applicable: 4,
+/** Display order: most address-specific evidence first. Not a ranking of merit. */
+const RELEVANCE_ORDER: Record<ProgramRelevance, number> = {
+  mapped_with_matching_answers: 0,
+  mapped_at_location: 1,
+  review_suggested: 2,
+  context_dependent: 3,
+  not_mapped_at_location: 4,
 };
 
 /**
- * Run the confidence engine across all programs.
- * Returns sorted ProgramCheckResult[] (most confident first).
+ * Run the relevance engine across all programs.
+ * Returns sorted ProgramCheckResult[] (most address-specific evidence first).
  */
 export function runConfidenceEngine(
   programs: Program[],
@@ -254,8 +278,8 @@ export function runConfidenceEngine(
   parcel?: ParcelData
 ): ProgramCheckResult[] {
   return programs
-    .map((p) => computeConfidence(p, zones, zoneNames, survey, parcel))
-    .sort((a, b) => CONFIDENCE_ORDER[a.confidence] - CONFIDENCE_ORDER[b.confidence]);
+    .map((p) => computeRelevance(p, zones, zoneNames, survey, parcel))
+    .sort((a, b) => RELEVANCE_ORDER[a.relevance] - RELEVANCE_ORDER[b.relevance]);
 }
 
 /**
@@ -267,12 +291,12 @@ export function computeTopActions(
 ): TopAction[] {
   const actions: TopAction[] = [];
 
-  // Get top eligible programs
-  const eligible = results.filter(
-    (r) => r.confidence !== "not_applicable" && r.confidence !== "worth_exploring"
+  // Programs with address-specific evidence recorded against them.
+  const addressLinked = results.filter(
+    (r) => r.relevance !== "not_mapped_at_location" && r.relevance !== "context_dependent"
   );
 
-  for (const result of eligible.slice(0, 2)) {
+  for (const result of addressLinked.slice(0, 2)) {
     const contact = result.program.contacts?.[0];
     if (contact?.phone) {
       actions.push({
@@ -282,8 +306,10 @@ export function computeTopActions(
         contact,
       });
     } else if (contact?.url) {
+      // An action, not a verdict: the reader is sent to ask the agency, not
+      // told that they are (or might be) eligible.
       actions.push({
-        label: `Check ${result.program.name} eligibility`,
+        label: `Confirm with the administering agency whether ${result.program.name} applies to this project`,
         type: "check",
         programId: result.programId,
         contact,
@@ -443,8 +469,10 @@ export function generateExecutiveSummary(
 
   // Top 3 address/profile-supported programs. Discovery-only programs stay
   // visible elsewhere but should not drive the executive-summary claim.
-  const eligible = results.filter((r) => r.confidence !== "not_applicable" && r.confidence !== "worth_exploring");
-  const topResults = eligible.slice(0, 3);
+  const addressLinked = results.filter(
+    (r) => r.relevance !== "not_mapped_at_location" && r.relevance !== "context_dependent",
+  );
+  const topResults = addressLinked.slice(0, 3);
 
   const topPrograms = topResults.map((r) => ({
     programId: r.programId,
