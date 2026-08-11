@@ -414,15 +414,33 @@ describe("candidate filtering", () => {
     ).toEqual([rows[2]]);
   });
 
-  it("filters by district family, above the exact zoning code", () => {
-    // B3-2 rolls up into the Business/Commercial family, so the family
-    // filter finds the row without the caller knowing the exact code.
-    expect(candidateDistrictFilterValue(rows[0])).toBe("commercial");
+  it("buckets a row by its sub-type, not its full code", () => {
+    // "B3-2" -> "B3". The "-2" is bulk, not use type, so it must not
+    // split Community Shopping into separate buckets per density.
+    expect(candidateDistrictFilterValue(rows[0])).toBe("B3");
+  });
+
+  it("filters by sub-type and by family roll-up from one selection", () => {
+    // Specific: the exact use type.
+    expect(
+      rows.filter((row) =>
+        candidateMatchesFilters(row, filters({ districtFamilies: new Set(["B3"]) })),
+      ),
+    ).toEqual([rows[0]]);
+
+    // Roll-up: the same row, selected by its family.
     expect(
       rows.filter((row) =>
         candidateMatchesFilters(row, filters({ districtFamilies: new Set(["commercial"]) })),
       ),
     ).toEqual([rows[0]]);
+
+    // A sibling sub-type in the same family does not match it.
+    expect(
+      rows.filter((row) =>
+        candidateMatchesFilters(row, filters({ districtFamilies: new Set(["B1"]) })),
+      ),
+    ).toEqual([]);
 
     // A family the result set does not contain matches nothing.
     expect(
@@ -443,6 +461,8 @@ describe("candidate filtering", () => {
   });
 
   it("labels each district bucket for the dropdown", () => {
+    // Sub-types carry the code and its meaning; families stay plain.
+    expect(candidateDistrictFilterLabel("B3")).toBe("B3 · Community Shopping");
     expect(candidateDistrictFilterLabel("commercial")).toBe("Business/Commercial");
     expect(candidateDistrictFilterLabel("residential")).toBe("Residential");
     expect(candidateDistrictFilterLabel(DISTRICT_UNCLASSIFIED)).toBe("District not classified");

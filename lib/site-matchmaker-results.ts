@@ -12,8 +12,10 @@
 
 import { clerkRecordsUrl, cookViewerUrl, normalizePin14 } from "@/lib/cook-viewer";
 import {
-  classifyZoneClass,
   familyById,
+  subtypeById,
+  subtypeMatchesSelection,
+  zoneSubtype,
   type ZoningDistrictFamilyId,
 } from "@/lib/zoning-districts";
 import {
@@ -483,14 +485,29 @@ export function candidateDistrictFilterValue(row: SiteMatchmakerCandidateRow): s
   if (row.zoningAvailability === "not_published" || row.zoningClass === null) {
     return ZONING_NOT_PUBLISHED;
   }
-  const family = classifyZoneClass(row.zoningClass);
-  return family ? family.id : DISTRICT_UNCLASSIFIED;
+  return zoneSubtype(row.zoningClass) ?? DISTRICT_UNCLASSIFIED;
+}
+
+/**
+ * A selection may be a family roll-up ("commercial") or a specific
+ * sub-type ("B3"), so one dropdown serves both granularities. Sentinels
+ * only ever match themselves.
+ */
+export function candidateMatchesDistrictSelection(
+  row: SiteMatchmakerCandidateRow,
+  selection: string,
+): boolean {
+  const value = candidateDistrictFilterValue(row);
+  if (value === selection) return true;
+  return subtypeMatchesSelection(value, selection);
 }
 
 export function candidateDistrictFilterLabel(value: string): string {
   if (value === ZONING_NOT_MAPPED) return "Not mapped in this source";
   if (value === ZONING_NOT_PUBLISHED) return "Not published";
   if (value === DISTRICT_UNCLASSIFIED) return "District not classified";
+  const subtype = subtypeById(value);
+  if (subtype) return `${subtype.id} · ${subtype.label}`;
   return familyById(value as ZoningDistrictFamilyId)?.label ?? value;
 }
 
@@ -525,7 +542,9 @@ export function candidateMatchesFilters(
   }
   if (
     filters.districtFamilies.size > 0 &&
-    !filters.districtFamilies.has(candidateDistrictFilterValue(row))
+    ![...filters.districtFamilies].some((selection) =>
+      candidateMatchesDistrictSelection(row, selection),
+    )
   ) {
     return false;
   }
