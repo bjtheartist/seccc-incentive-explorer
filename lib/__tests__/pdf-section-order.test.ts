@@ -1,17 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { generateReportPdfBase64, orderSectionsForPdf, sanitizeForPdf } from "../pdf-report";
 import {
+  CONFIRMED_PROGRAMS_SECTION_ID,
   CONFIRMED_PROGRAMS_SECTION_TITLE,
+  GOAL_MATCH_PROGRAMS_SECTION_ID,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+  SECTION_IDS,
 } from "../report-engine";
 import type { GeneratedReport } from "../report-engine";
 import { CAPITAL_PARTNER_SECTION_TITLE } from "../capital-partner-report";
 import { SUPPORT_ORGANIZATIONS_SECTION_TITLE } from "../support-organization-copy";
 import { extractText } from "unpdf";
 
-function section(title: string): GeneratedReport["sections"][number] {
-  return { title, items: [] };
+function section(title: string, id?: string): GeneratedReport["sections"][number] {
+  return { id, title, items: [] };
 }
 
 describe("orderSectionsForPdf", () => {
@@ -39,12 +42,50 @@ describe("orderSectionsForPdf", () => {
     ]);
   });
 
-  it("carries zoning and site facts into the seven-page builder's Supporting Context", async () => {
+  it("carries zoning and site facts into the seven-page builder's Supporting Context, by id", async () => {
     // The report types that emit these two sections are routed away from
     // orderSectionsForPdf entirely, so ordering them here proves nothing. What
     // matters is that the seven-page builder — the real production path for
-    // them — still finds both by name and prints them. Rename either section
-    // in report-engine and this goes red; the previous ordering test would not.
+    // them — still finds both and prints them. This fixture carries the same
+    // `id`s report-engine.ts stamps on these sections; selection keys off id,
+    // not title.
+    const report: GeneratedReport = {
+      title: "Site Incentive Analysis",
+      subtitle: "Test report",
+      reportType: "site-incentives",
+      generatedAt: "2026-07-10T12:00:00.000Z",
+      summary: "A focused report.",
+      sections: [
+        {
+          id: SECTION_IDS.zoningUseStartingPoint,
+          title: "Zoning & Use Starting Point",
+          items: [{ label: "Published Zoning District", value: "B3-2 on file" }],
+        },
+        {
+          id: SECTION_IDS.siteFacts,
+          title: "Site Facts",
+          items: [{ label: "Property PIN", value: "17-05-123-456-0000" }],
+        },
+        { id: GOAL_MATCH_PROGRAMS_SECTION_ID, title: GOAL_MATCH_PROGRAMS_SECTION_TITLE, items: [] },
+      ],
+      recommendedActions: [],
+      metadata: { address: "100 E Test St, Chicago, IL", projectType: "hiring" },
+    };
+
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: false,
+    });
+    const supportingContextPage = extracted.text[5];
+    expect(supportingContextPage).toContain("Supporting Context");
+    expect(supportingContextPage).toContain("Published Zoning District");
+    expect(supportingContextPage).toContain("Property PIN");
+  });
+
+  it("still finds zoning and site facts by title when a saved report predates the id field", async () => {
+    // Reports saved before this change have no `id` in their stored JSON —
+    // selection must fall back to title for those, or every saved report
+    // predating this change would silently lose sections from its PDF.
     const report: GeneratedReport = {
       title: "Site Incentive Analysis",
       subtitle: "Test report",
@@ -74,6 +115,56 @@ describe("orderSectionsForPdf", () => {
     expect(supportingContextPage).toContain("Supporting Context");
     expect(supportingContextPage).toContain("Published Zoning District");
     expect(supportingContextPage).toContain("Property PIN");
+  });
+
+  it("renaming a section's title does NOT change PDF selection when id is present", async () => {
+    // This is the regression the id field exists to prevent: previously the
+    // seven-page builder matched sections by exact title string, so a copy
+    // edit to a section's title in report-engine.ts would silently drop that
+    // section's content from the production PDF with no type error and no
+    // failing test elsewhere. Here the titles are renamed (imagine a future
+    // copy edit) but the ids are untouched, and the content must still land
+    // on the page.
+    const report: GeneratedReport = {
+      title: "Site Incentive Analysis",
+      subtitle: "Test report",
+      reportType: "site-incentives",
+      generatedAt: "2026-07-10T12:00:00.000Z",
+      summary: "A focused report.",
+      sections: [
+        {
+          id: SECTION_IDS.zoningUseStartingPoint,
+          title: "Zoning Snapshot (renamed for this test)",
+          items: [{ label: "Published Zoning District", value: "B3-2 on file" }],
+        },
+        {
+          id: SECTION_IDS.siteFacts,
+          title: "Property & Site Facts (renamed for this test)",
+          items: [{ label: "Property PIN", value: "17-05-123-456-0000" }],
+        },
+        {
+          id: CONFIRMED_PROGRAMS_SECTION_ID,
+          title: "Programs We Found (renamed for this test)",
+          items: [{ label: "Test Program", value: "Benefit" }],
+        },
+      ],
+      recommendedActions: [],
+      metadata: { address: "100 E Test St, Chicago, IL", projectType: "hiring" },
+    };
+
+    const output = generateReportPdfBase64(report);
+    const extracted = await extractText(new Uint8Array(Buffer.from(output.base64, "base64")), {
+      mergePages: false,
+    });
+    const supportingContextPage = extracted.text[5];
+    expect(supportingContextPage).toContain("Supporting Context");
+    expect(supportingContextPage).toContain("Published Zoning District");
+    expect(supportingContextPage).toContain("Property PIN");
+    // The renamed title itself must not appear anywhere: the seven-page
+    // builder never prints a Supporting Context section's own English title,
+    // but the confirmed-programs section (rendered on an earlier page) is a
+    // more direct check that its renamed title didn't block selection.
+    expect(extracted.text.join("\n")).toContain("Test Program");
   });
 
   it("puts support organizations first when confirmed programs are absent", () => {

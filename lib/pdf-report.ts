@@ -2,10 +2,14 @@ import { jsPDF } from "jspdf";
 import { ZONE_KEYS, ZONE_COLORS } from "./constants";
 import type { LookupResult, Program, ZoningLookupStatus } from "./types";
 import {
+  CONFIRMED_PROGRAMS_SECTION_ID,
   CONFIRMED_PROGRAMS_SECTION_TITLE,
+  GOAL_MATCH_PROGRAMS_SECTION_ID,
   GOAL_MATCH_PROGRAMS_SECTION_TITLE,
   normalizePublicReportForDisplay,
+  OTHER_CONFIRMED_PROGRAMS_SECTION_ID,
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+  SECTION_IDS,
 } from "./report-engine";
 import type { GeneratedReport } from "./report-engine";
 import { selectedProjectGoalLabels } from "./report-wizard-config";
@@ -14,8 +18,41 @@ import {
   DOCUMENT_PREPARATION_COST_LEGEND,
   isDocumentRequirementGuidance,
 } from "./document-preparation-cost";
-import { CAPITAL_PARTNER_SECTION_TITLE } from "./capital-partner-report";
+import { CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE } from "./capital-partner-report";
 import { isSupportOrganizationSectionTitle } from "./support-organization-copy";
+
+/**
+ * Match a section by its stable id, falling back to the English title only
+ * when the section predates the `id` field (reports saved before this
+ * change). Renaming a section's display title must never change which
+ * section this finds — that was the bug: the seven-page PDF builder used to
+ * select every section by exact title string, so a copy edit anywhere in
+ * report-engine.ts could silently drop that section from the PDF.
+ */
+function findSectionByIdOrTitle(
+  sections: GeneratedReport["sections"],
+  id: string,
+  title: string,
+): GeneratedReport["sections"][number] | undefined {
+  return sections.find((candidate) => (candidate.id ? candidate.id === id : candidate.title === title));
+}
+
+function filterSectionsByIdOrTitle(
+  sections: GeneratedReport["sections"],
+  ids: Set<string>,
+  titles: Set<string>,
+): GeneratedReport["sections"] {
+  return sections.filter((candidate) => (candidate.id ? ids.has(candidate.id) : titles.has(candidate.title)));
+}
+
+/** Single-section version of {@link findSectionByIdOrTitle}'s matching rule. */
+function sectionMatchesIdOrTitle(
+  candidate: GeneratedReport["sections"][number],
+  id: string,
+  title: string,
+): boolean {
+  return candidate.id ? candidate.id === id : candidate.title === title;
+}
 
 /**
  * PDF print order is intentionally action-first. The web report can support
@@ -1080,20 +1117,24 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
   doc.text("Key Findings", MARGIN, y);
   y += 10;
 
+  const confirmedIds = new Set([
+    CONFIRMED_PROGRAMS_SECTION_ID,
+    GOAL_MATCH_PROGRAMS_SECTION_ID,
+    OTHER_CONFIRMED_PROGRAMS_SECTION_ID,
+  ]);
   const confirmedTitles = new Set([
     CONFIRMED_PROGRAMS_SECTION_TITLE,
     GOAL_MATCH_PROGRAMS_SECTION_TITLE,
     OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
   ]);
-  const confirmedCount = report.sections
-    .filter((section) => confirmedTitles.has(section.title))
+  const confirmedCount = filterSectionsByIdOrTitle(report.sections, confirmedIds, confirmedTitles)
     .reduce((count, section) => count + section.items.length, 0);
-  const discoveryCount = report.sections.find(
-    (section) => section.title === "Additional Programs to Explore",
-  )?.items.length || 0;
-  const deadlineCount = report.sections.find(
-    (section) => section.title === "Upcoming Deadlines Near This Address",
-  )?.items.length || 0;
+  const discoveryCount =
+    findSectionByIdOrTitle(report.sections, SECTION_IDS.additionalProgramsToExplore, "Additional Programs to Explore")
+      ?.items.length || 0;
+  const deadlineCount =
+    findSectionByIdOrTitle(report.sections, SECTION_IDS.upcomingDeadlines, "Upcoming Deadlines Near This Address")
+      ?.items.length || 0;
   const metricGap = 4;
   const metricWidth = (CONTENT_W - metricGap * 2) / 3;
   const metrics = [
@@ -1217,7 +1258,7 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7);
       setColor(doc, LIGHT_GRAY);
-      const description = section.title === "Additional Programs to Explore"
+      const description = sectionMatchesIdOrTitle(section, SECTION_IDS.additionalProgramsToExplore, "Additional Programs to Explore")
         ? "Useful leads that are not confirmed by the address alone. Verify project, property, timing, and administrator requirements before relying on them."
         : isCompactContextSection(section.title)
           ? conciseText(section.description, 180)
@@ -1315,11 +1356,11 @@ function _buildLegacyReportPdf(report: GeneratedReport): { doc: jsPDF; slug: str
         doc.setFont("helvetica", "normal");
         doc.setFontSize(7);
         setColor(doc, LIGHT_GRAY);
-        const compactDetail = section.title === "Additional Programs to Explore"
+        const compactDetail = sectionMatchesIdOrTitle(section, SECTION_IDS.additionalProgramsToExplore, "Additional Programs to Explore")
           ? conciseText(item.detail, 210)
           : isCompactContextSection(section.title)
             ? conciseText(item.detail, 175)
-            : section.title === "Document Readiness Checklist"
+            : sectionMatchesIdOrTitle(section, SECTION_IDS.documentReadinessChecklist, "Document Readiness Checklist")
               ? "Prepare if available; confirm exact requirements with the program administrator."
               : item.detail;
         y += wrapText(doc, compactDetail, MARGIN + 6, y, CONTENT_W - 10, 3.5);
@@ -1442,30 +1483,36 @@ function _buildSevenPageActionReportPdf(report: GeneratedReport): { doc: jsPDF; 
   const neighborhoodLabel = report.communityAssets?.communityArea || report.neighborhoodEconomics?.geographyLabel;
   const preparedFor = hasText(report.metadata?.preparedFor) ? report.metadata.preparedFor.trim() : undefined;
 
-  const section = (title: string) => report.sections.find((candidate) => candidate.title === title);
-  const sections = (titles: Set<string>) => report.sections.filter((candidate) => titles.has(candidate.title));
+  const section = (id: string, title: string) => findSectionByIdOrTitle(report.sections, id, title);
+  const confirmedIds = new Set([
+    CONFIRMED_PROGRAMS_SECTION_ID,
+    GOAL_MATCH_PROGRAMS_SECTION_ID,
+    OTHER_CONFIRMED_PROGRAMS_SECTION_ID,
+  ]);
   const confirmedTitles = new Set([
     CONFIRMED_PROGRAMS_SECTION_TITLE,
     GOAL_MATCH_PROGRAMS_SECTION_TITLE,
     OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
   ]);
-  const confirmedItems = sections(confirmedTitles).flatMap((candidate) => candidate.items);
-  const discoveryItems = section("Additional Programs to Explore")?.items || [];
-  const deadlineItems = section("Upcoming Deadlines Near This Address")?.items || [];
-  const financingItems = section(CAPITAL_PARTNER_SECTION_TITLE)?.items || [];
+  const confirmedItems = filterSectionsByIdOrTitle(report.sections, confirmedIds, confirmedTitles).flatMap(
+    (candidate) => candidate.items,
+  );
+  const discoveryItems = section(SECTION_IDS.additionalProgramsToExplore, "Additional Programs to Explore")?.items || [];
+  const deadlineItems = section(SECTION_IDS.upcomingDeadlines, "Upcoming Deadlines Near This Address")?.items || [];
+  const financingItems = section(CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE)?.items || [];
   const supportItems = (
     report.sections.find((candidate) => isSupportOrganizationSectionTitle(candidate.title))?.items || []
   ).filter((item) => Boolean(item.url));
-  const requiredItems = section("Required Documents")?.items || [];
-  const readinessItems = section("Document Readiness Checklist")?.items || [];
+  const requiredItems = section(SECTION_IDS.requiredDocuments, "Required Documents")?.items || [];
+  const readinessItems = section(SECTION_IDS.documentReadinessChecklist, "Document Readiness Checklist")?.items || [];
   const siteItems = [
-    ...(section("Zoning & Use Starting Point")?.items || []),
-    ...(section("Site Facts")?.items || []),
-    ...(section("Site Overview")?.items || []),
-    ...(section("Project Intake")?.items || []),
-    ...(section("Incentive Zone Coverage & Program Interactions")?.items || []),
+    ...(section(SECTION_IDS.zoningUseStartingPoint, "Zoning & Use Starting Point")?.items || []),
+    ...(section(SECTION_IDS.siteFacts, "Site Facts")?.items || []),
+    ...(section("site-overview", "Site Overview")?.items || []),
+    ...(section(SECTION_IDS.projectIntake, "Project Intake")?.items || []),
+    ...(section(SECTION_IDS.incentiveZoneCoverage, "Incentive Zone Coverage & Program Interactions")?.items || []),
   ];
-  const neighborhoodItems = section("Neighborhood Economic Context")?.items || [];
+  const neighborhoodItems = section(SECTION_IDS.neighborhoodEconomicContext, "Neighborhood Economic Context")?.items || [];
 
   /* ── Layout constants ── */
   const SECTION_GAP = 10; // gap between the end of one section and the next heading (spec: ~10-12mm)

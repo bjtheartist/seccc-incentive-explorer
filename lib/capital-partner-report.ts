@@ -7,6 +7,7 @@ import {
 } from "@/lib/capital-partners";
 
 export const CAPITAL_PARTNER_SECTION_TITLE = "Financing Resources to Explore";
+export const CAPITAL_PARTNER_SECTION_ID = "financing-resources-to-explore";
 
 const CAPITAL_PROJECT_TYPES = new Set([
   "rehab",

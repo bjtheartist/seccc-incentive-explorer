@@ -1,6 +1,8 @@
 export const SUPPORT_ORGANIZATIONS_SECTION_TITLE =
   "Organizations that may be able to help";
 
+export const SUPPORT_ORGANIZATIONS_SECTION_ID = "support-organizations";
+
 export const LEGACY_SUPPORT_NETWORK_SECTION_TITLE = "Your Support Network";
 
 export const SUPPORT_ORGANIZATIONS_DESCRIPTION =
