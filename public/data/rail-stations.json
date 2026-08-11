@@ -1,0 +1,2494 @@
+{
+ "generatedAt": "2026-08-11",
+ "sources": [
+  "data.cityofchicago.org/8pix-ypme",
+  "City of Chicago Metra station shapefile (EPSG:3435->WGS84)"
+ ],
+ "stations": [
+  {
+   "name": "Oak Park",
+   "system": "CTA",
+   "lat": 41.886988,
+   "lon": -87.793783,
+   "ada": false
+  },
+  {
+   "name": "Central Park",
+   "system": "CTA",
+   "lat": 41.853839,
+   "lon": -87.714842,
+   "ada": true
+  },
+  {
+   "name": "Granville",
+   "system": "CTA",
+   "lat": 41.993664,
+   "lon": -87.659202,
+   "ada": true
+  },
+  {
+   "name": "Cumberland",
+   "system": "CTA",
+   "lat": 41.984246,
+   "lon": -87.838028,
+   "ada": true
+  },
+  {
+   "name": "Quincy/Wells",
+   "system": "CTA",
+   "lat": 41.878723,
+   "lon": -87.63374,
+   "ada": true
+  },
+  {
+   "name": "O'Hare",
+   "system": "CTA",
+   "lat": 41.977665,
+   "lon": -87.904223,
+   "ada": true
+  },
+  {
+   "name": "18th",
+   "system": "CTA",
+   "lat": 41.857908,
+   "lon": -87.669147,
+   "ada": true
+  },
+  {
+   "name": "Clark/Lake",
+   "system": "CTA",
+   "lat": 41.885737,
+   "lon": -87.630886,
+   "ada": true
+  },
+  {
+   "name": "Jarvis",
+   "system": "CTA",
+   "lat": 42.015876,
+   "lon": -87.669092,
+   "ada": false
+  },
+  {
+   "name": "Dempster-Skokie",
+   "system": "CTA",
+   "lat": 42.038951,
+   "lon": -87.751919,
+   "ada": true
+  },
+  {
+   "name": "Montrose",
+   "system": "CTA",
+   "lat": 41.961539,
+   "lon": -87.743574,
+   "ada": false
+  },
+  {
+   "name": "Thorndale",
+   "system": "CTA",
+   "lat": 41.990259,
+   "lon": -87.659076,
+   "ada": false
+  },
+  {
+   "name": "35th-Bronzeville-IIT",
+   "system": "CTA",
+   "lat": 41.831677,
+   "lon": -87.625826,
+   "ada": true
+  },
+  {
+   "name": "Forest Park",
+   "system": "CTA",
+   "lat": 41.874257,
+   "lon": -87.817318,
+   "ada": true
+  },
+  {
+   "name": "Pulaski",
+   "system": "CTA",
+   "lat": 41.885412,
+   "lon": -87.725404,
+   "ada": true
+  },
+  {
+   "name": "South Boulevard",
+   "system": "CTA",
+   "lat": 42.027612,
+   "lon": -87.678329,
+   "ada": false
+  },
+  {
+   "name": "Logan Square",
+   "system": "CTA",
+   "lat": 41.929728,
+   "lon": -87.708541,
+   "ada": true
+  },
+  {
+   "name": "47th",
+   "system": "CTA",
+   "lat": 41.809209,
+   "lon": -87.618826,
+   "ada": true
+  },
+  {
+   "name": "Bryn Mawr",
+   "system": "CTA",
+   "lat": 41.983504,
+   "lon": -87.65884,
+   "ada": true
+  },
+  {
+   "name": "Halsted",
+   "system": "CTA",
+   "lat": 41.778943,
+   "lon": -87.644244,
+   "ada": true
+  },
+  {
+   "name": "Harrison",
+   "system": "CTA",
+   "lat": 41.874039,
+   "lon": -87.627479,
+   "ada": false
+  },
+  {
+   "name": "Kedzie",
+   "system": "CTA",
+   "lat": 41.804236,
+   "lon": -87.704406,
+   "ada": true
+  },
+  {
+   "name": "Kimball",
+   "system": "CTA",
+   "lat": 41.967901,
+   "lon": -87.713065,
+   "ada": true
+  },
+  {
+   "name": "Ashland/63rd",
+   "system": "CTA",
+   "lat": 41.77886,
+   "lon": -87.663766,
+   "ada": true
+  },
+  {
+   "name": "95th/Dan Ryan",
+   "system": "CTA",
+   "lat": 41.722377,
+   "lon": -87.624342,
+   "ada": true
+  },
+  {
+   "name": "Western",
+   "system": "CTA",
+   "lat": 41.966163,
+   "lon": -87.688502,
+   "ada": true
+  },
+  {
+   "name": "Wilson",
+   "system": "CTA",
+   "lat": 41.964273,
+   "lon": -87.657588,
+   "ada": true
+  },
+  {
+   "name": "Armitage",
+   "system": "CTA",
+   "lat": 41.918217,
+   "lon": -87.652644,
+   "ada": true
+  },
+  {
+   "name": "Roosevelt",
+   "system": "CTA",
+   "lat": 41.867368,
+   "lon": -87.627402,
+   "ada": true
+  },
+  {
+   "name": "Belmont",
+   "system": "CTA",
+   "lat": 41.938132,
+   "lon": -87.712359,
+   "ada": false
+  },
+  {
+   "name": "54th/Cermak",
+   "system": "CTA",
+   "lat": 41.851773,
+   "lon": -87.756692,
+   "ada": true
+  },
+  {
+   "name": "Davis",
+   "system": "CTA",
+   "lat": 42.04771,
+   "lon": -87.683543,
+   "ada": true
+  },
+  {
+   "name": "Francisco",
+   "system": "CTA",
+   "lat": 41.966046,
+   "lon": -87.701644,
+   "ada": true
+  },
+  {
+   "name": "LaSalle/Van Buren",
+   "system": "CTA",
+   "lat": 41.8768,
+   "lon": -87.631739,
+   "ada": false
+  },
+  {
+   "name": "Howard",
+   "system": "CTA",
+   "lat": 42.019063,
+   "lon": -87.672892,
+   "ada": true
+  },
+  {
+   "name": "Kostner",
+   "system": "CTA",
+   "lat": 41.853751,
+   "lon": -87.733258,
+   "ada": true
+  },
+  {
+   "name": "79th",
+   "system": "CTA",
+   "lat": 41.750419,
+   "lon": -87.625112,
+   "ada": true
+  },
+  {
+   "name": "Austin",
+   "system": "CTA",
+   "lat": 41.870851,
+   "lon": -87.776812,
+   "ada": false
+  },
+  {
+   "name": "Clinton",
+   "system": "CTA",
+   "lat": 41.885678,
+   "lon": -87.641782,
+   "ada": true
+  },
+  {
+   "name": "Washington/Wells",
+   "system": "CTA",
+   "lat": 41.882695,
+   "lon": -87.63378,
+   "ada": true
+  },
+  {
+   "name": "Chicago",
+   "system": "CTA",
+   "lat": 41.896671,
+   "lon": -87.628176,
+   "ada": true
+  },
+  {
+   "name": "Rosemont",
+   "system": "CTA",
+   "lat": 41.983507,
+   "lon": -87.859388,
+   "ada": true
+  },
+  {
+   "name": "Addison",
+   "system": "CTA",
+   "lat": 41.947428,
+   "lon": -87.653626,
+   "ada": true
+  },
+  {
+   "name": "Irving Park",
+   "system": "CTA",
+   "lat": 41.952925,
+   "lon": -87.729229,
+   "ada": false
+  },
+  {
+   "name": "Midway",
+   "system": "CTA",
+   "lat": 41.78661,
+   "lon": -87.737875,
+   "ada": true
+  },
+  {
+   "name": "Ridgeland",
+   "system": "CTA",
+   "lat": 41.887159,
+   "lon": -87.783661,
+   "ada": false
+  },
+  {
+   "name": "Damen",
+   "system": "CTA",
+   "lat": 41.909744,
+   "lon": -87.677437,
+   "ada": false
+  },
+  {
+   "name": "Polk",
+   "system": "CTA",
+   "lat": 41.871551,
+   "lon": -87.66953,
+   "ada": true
+  },
+  {
+   "name": "Cicero",
+   "system": "CTA",
+   "lat": 41.871574,
+   "lon": -87.745154,
+   "ada": false
+  },
+  {
+   "name": "Harlem",
+   "system": "CTA",
+   "lat": 41.87349,
+   "lon": -87.806961,
+   "ada": false
+  },
+  {
+   "name": "Washington",
+   "system": "CTA",
+   "lat": 41.883164,
+   "lon": -87.62944,
+   "ada": false
+  },
+  {
+   "name": "California",
+   "system": "CTA",
+   "lat": 41.88422,
+   "lon": -87.696234,
+   "ada": true
+  },
+  {
+   "name": "Morgan",
+   "system": "CTA",
+   "lat": 41.885586,
+   "lon": -87.652193,
+   "ada": true
+  },
+  {
+   "name": "Garfield",
+   "system": "CTA",
+   "lat": 41.79542,
+   "lon": -87.631157,
+   "ada": true
+  },
+  {
+   "name": "Diversey",
+   "system": "CTA",
+   "lat": 41.932732,
+   "lon": -87.653131,
+   "ada": true
+  },
+  {
+   "name": "Sheridan",
+   "system": "CTA",
+   "lat": 41.953775,
+   "lon": -87.654929,
+   "ada": false
+  },
+  {
+   "name": "Main",
+   "system": "CTA",
+   "lat": 42.033456,
+   "lon": -87.679538,
+   "ada": false
+  },
+  {
+   "name": "Oakton-Skokie",
+   "system": "CTA",
+   "lat": 42.026243,
+   "lon": -87.747221,
+   "ada": true
+  },
+  {
+   "name": "43rd",
+   "system": "CTA",
+   "lat": 41.816462,
+   "lon": -87.619021,
+   "ada": true
+  },
+  {
+   "name": "Southport",
+   "system": "CTA",
+   "lat": 41.943744,
+   "lon": -87.663619,
+   "ada": true
+  },
+  {
+   "name": "Linden",
+   "system": "CTA",
+   "lat": 42.073153,
+   "lon": -87.69073,
+   "ada": true
+  },
+  {
+   "name": "Ashland",
+   "system": "CTA",
+   "lat": 41.885269,
+   "lon": -87.666969,
+   "ada": true
+  },
+  {
+   "name": "Indiana",
+   "system": "CTA",
+   "lat": 41.821732,
+   "lon": -87.621371,
+   "ada": true
+  },
+  {
+   "name": "Cermak-Chinatown",
+   "system": "CTA",
+   "lat": 41.853206,
+   "lon": -87.630968,
+   "ada": true
+  },
+  {
+   "name": "Laramie",
+   "system": "CTA",
+   "lat": 41.887163,
+   "lon": -87.754986,
+   "ada": true
+  },
+  {
+   "name": "State/Lake",
+   "system": "CTA",
+   "lat": 41.88574,
+   "lon": -87.627835,
+   "ada": false
+  },
+  {
+   "name": "Grand",
+   "system": "CTA",
+   "lat": 41.891665,
+   "lon": -87.628021,
+   "ada": true
+  },
+  {
+   "name": "Central",
+   "system": "CTA",
+   "lat": 41.887389,
+   "lon": -87.76565,
+   "ada": true
+  },
+  {
+   "name": "Conservatory",
+   "system": "CTA",
+   "lat": 41.884904,
+   "lon": -87.716523,
+   "ada": true
+  },
+  {
+   "name": "North/Clybourn",
+   "system": "CTA",
+   "lat": 41.910655,
+   "lon": -87.649177,
+   "ada": false
+  },
+  {
+   "name": "Jackson",
+   "system": "CTA",
+   "lat": 41.878183,
+   "lon": -87.629296,
+   "ada": true
+  },
+  {
+   "name": "Monroe",
+   "system": "CTA",
+   "lat": 41.880745,
+   "lon": -87.627696,
+   "ada": false
+  },
+  {
+   "name": "Jefferson Park",
+   "system": "CTA",
+   "lat": 41.970634,
+   "lon": -87.760892,
+   "ada": true
+  },
+  {
+   "name": "51st",
+   "system": "CTA",
+   "lat": 41.80209,
+   "lon": -87.618487,
+   "ada": true
+  },
+  {
+   "name": "Fullerton",
+   "system": "CTA",
+   "lat": 41.925051,
+   "lon": -87.652866,
+   "ada": true
+  },
+  {
+   "name": "Cermak-McCormick Place",
+   "system": "CTA",
+   "lat": 41.853115,
+   "lon": -87.626402,
+   "ada": true
+  },
+  {
+   "name": "Paulina",
+   "system": "CTA",
+   "lat": 41.943623,
+   "lon": -87.670907,
+   "ada": true
+  },
+  {
+   "name": "35th/Archer",
+   "system": "CTA",
+   "lat": 41.829353,
+   "lon": -87.680622,
+   "ada": true
+  },
+  {
+   "name": "Loyola",
+   "system": "CTA",
+   "lat": 42.001073,
+   "lon": -87.661061,
+   "ada": true
+  },
+  {
+   "name": "Argyle",
+   "system": "CTA",
+   "lat": 41.973453,
+   "lon": -87.65853,
+   "ada": true
+  },
+  {
+   "name": "Harlem/Lake",
+   "system": "CTA",
+   "lat": 41.886848,
+   "lon": -87.803176,
+   "ada": true
+  },
+  {
+   "name": "UIC-Halsted",
+   "system": "CTA",
+   "lat": 41.875474,
+   "lon": -87.649707,
+   "ada": true
+  },
+  {
+   "name": "63rd",
+   "system": "CTA",
+   "lat": 41.780536,
+   "lon": -87.630952,
+   "ada": true
+  },
+  {
+   "name": "Lake",
+   "system": "CTA",
+   "lat": 41.884809,
+   "lon": -87.627813,
+   "ada": true
+  },
+  {
+   "name": "87th",
+   "system": "CTA",
+   "lat": 41.735372,
+   "lon": -87.624717,
+   "ada": true
+  },
+  {
+   "name": "Wellington",
+   "system": "CTA",
+   "lat": 41.936033,
+   "lon": -87.653266,
+   "ada": true
+  },
+  {
+   "name": "Division",
+   "system": "CTA",
+   "lat": 41.903355,
+   "lon": -87.666496,
+   "ada": false
+  },
+  {
+   "name": "Adams/Wabash",
+   "system": "CTA",
+   "lat": 41.879507,
+   "lon": -87.626037,
+   "ada": false
+  },
+  {
+   "name": "Berwyn",
+   "system": "CTA",
+   "lat": 41.977984,
+   "lon": -87.658668,
+   "ada": true
+  },
+  {
+   "name": "Clark/Division",
+   "system": "CTA",
+   "lat": 41.90392,
+   "lon": -87.631412,
+   "ada": true
+  },
+  {
+   "name": "Illinois Medical District",
+   "system": "CTA",
+   "lat": 41.875706,
+   "lon": -87.673932,
+   "ada": true
+  },
+  {
+   "name": "King Drive",
+   "system": "CTA",
+   "lat": 41.78013,
+   "lon": -87.615546,
+   "ada": true
+  },
+  {
+   "name": "Dempster",
+   "system": "CTA",
+   "lat": 42.041655,
+   "lon": -87.681602,
+   "ada": false
+  },
+  {
+   "name": "Cottage Grove",
+   "system": "CTA",
+   "lat": 41.780309,
+   "lon": -87.605857,
+   "ada": true
+  },
+  {
+   "name": "Merchandise Mart",
+   "system": "CTA",
+   "lat": 41.888969,
+   "lon": -87.633924,
+   "ada": true
+  },
+  {
+   "name": "Racine",
+   "system": "CTA",
+   "lat": 41.87592,
+   "lon": -87.659458,
+   "ada": false
+  },
+  {
+   "name": "Lawrence",
+   "system": "CTA",
+   "lat": 41.969139,
+   "lon": -87.658493,
+   "ada": true
+  },
+  {
+   "name": "Morse",
+   "system": "CTA",
+   "lat": 42.008362,
+   "lon": -87.665909,
+   "ada": false
+  },
+  {
+   "name": "Noyes",
+   "system": "CTA",
+   "lat": 42.058282,
+   "lon": -87.683337,
+   "ada": false
+  },
+  {
+   "name": "Rockwell",
+   "system": "CTA",
+   "lat": 41.966115,
+   "lon": -87.6941,
+   "ada": true
+  },
+  {
+   "name": "Foster",
+   "system": "CTA",
+   "lat": 42.05416,
+   "lon": -87.68356,
+   "ada": false
+  },
+  {
+   "name": "LaSalle",
+   "system": "CTA",
+   "lat": 41.875568,
+   "lon": -87.631722,
+   "ada": false
+  },
+  {
+   "name": "69th",
+   "system": "CTA",
+   "lat": 41.768367,
+   "lon": -87.625724,
+   "ada": true
+  },
+  {
+   "name": "Washington/Wabash",
+   "system": "CTA",
+   "lat": 41.88322,
+   "lon": -87.626189,
+   "ada": true
+  },
+  {
+   "name": "Harold Washington Library-State/Van Buren",
+   "system": "CTA",
+   "lat": 41.876862,
+   "lon": -87.628196,
+   "ada": true
+  },
+  {
+   "name": "Sedgwick",
+   "system": "CTA",
+   "lat": 41.910409,
+   "lon": -87.639302,
+   "ada": true
+  },
+  {
+   "name": "Kedzie-Homan",
+   "system": "CTA",
+   "lat": 41.874341,
+   "lon": -87.70604,
+   "ada": true
+  },
+  {
+   "name": "Sox-35th",
+   "system": "CTA",
+   "lat": 41.831191,
+   "lon": -87.630636,
+   "ada": true
+  },
+  {
+   "name": "Stony Island",
+   "system": "Metra Electric",
+   "lat": 41.76601,
+   "lon": -87.58685,
+   "ada": null
+  },
+  {
+   "name": "Bryn Mawr",
+   "system": "Metra Electric",
+   "lat": 41.766115,
+   "lon": -87.576997,
+   "ada": null
+  },
+  {
+   "name": "South Shore",
+   "system": "Metra Electric",
+   "lat": 41.765243,
+   "lon": -87.565714,
+   "ada": null
+  },
+  {
+   "name": "Windsor Park",
+   "system": "Metra Electric",
+   "lat": 41.758508,
+   "lon": -87.559629,
+   "ada": null
+  },
+  {
+   "name": "Cheltenham",
+   "system": "Metra Electric",
+   "lat": 41.752321,
+   "lon": -87.552852,
+   "ada": null
+  },
+  {
+   "name": "83rd St.",
+   "system": "Metra Electric",
+   "lat": 41.745013,
+   "lon": -87.551556,
+   "ada": null
+  },
+  {
+   "name": "87th St.",
+   "system": "Metra Electric",
+   "lat": 41.737748,
+   "lon": -87.548168,
+   "ada": null
+  },
+  {
+   "name": "91st St.",
+   "system": "Metra Electric",
+   "lat": 41.727437,
+   "lon": -87.547785,
+   "ada": null
+  },
+  {
+   "name": "Hegewisch",
+   "system": "Metra S. Shore",
+   "lat": 41.648272,
+   "lon": -87.546236,
+   "ada": null
+  },
+  {
+   "name": "State St.",
+   "system": "Metra Electric",
+   "lat": 41.674434,
+   "lon": -87.621606,
+   "ada": null
+  },
+  {
+   "name": "Stewart Ridge",
+   "system": "Metra Electric",
+   "lat": 41.674323,
+   "lon": -87.631611,
+   "ada": null
+  },
+  {
+   "name": "West Pullman",
+   "system": "Metra Electric",
+   "lat": 41.674215,
+   "lon": -87.642247,
+   "ada": null
+  },
+  {
+   "name": "Racine Ave.",
+   "system": "Metra Electric",
+   "lat": 41.674114,
+   "lon": -87.652157,
+   "ada": null
+  },
+  {
+   "name": "Ashland Ave.",
+   "system": "Metra Electric",
+   "lat": 41.669434,
+   "lon": -87.660623,
+   "ada": null
+  },
+  {
+   "name": "Burr Oak",
+   "system": "Metra Electric",
+   "lat": 41.662326,
+   "lon": -87.668787,
+   "ada": null
+  },
+  {
+   "name": "Blue Island",
+   "system": "Metra Electric",
+   "lat": 41.655696,
+   "lon": -87.676126,
+   "ada": null
+  },
+  {
+   "name": "Millenium Station",
+   "system": "Metra Electric, S. Shore",
+   "lat": 41.884366,
+   "lon": -87.623087,
+   "ada": null
+  },
+  {
+   "name": "Van Buren St.",
+   "system": "Metra Electric, S. Shore",
+   "lat": 41.876998,
+   "lon": -87.622812,
+   "ada": null
+  },
+  {
+   "name": "Museum Campus",
+   "system": "Metra Electric, S. Shore",
+   "lat": 41.868392,
+   "lon": -87.62142,
+   "ada": null
+  },
+  {
+   "name": "18th St.",
+   "system": "Metra Electric",
+   "lat": 41.857731,
+   "lon": -87.618034,
+   "ada": null
+  },
+  {
+   "name": "McCormick Place",
+   "system": "Metra Electric, S. Shore",
+   "lat": 41.850942,
+   "lon": -87.616142,
+   "ada": null
+  },
+  {
+   "name": "27th St.",
+   "system": "Metra Electric",
+   "lat": 41.844263,
+   "lon": -87.613436,
+   "ada": null
+  },
+  {
+   "name": "47th St.",
+   "system": "Metra Electric",
+   "lat": 41.809525,
+   "lon": -87.59085,
+   "ada": null
+  },
+  {
+   "name": "53rd St.",
+   "system": "Metra Electric",
+   "lat": 41.799917,
+   "lon": -87.586787,
+   "ada": null
+  },
+  {
+   "name": "55th-56th-57th St.",
+   "system": "Metra Electric",
+   "lat": 41.792842,
+   "lon": -87.587498,
+   "ada": null
+  },
+  {
+   "name": "59th St.",
+   "system": "Metra Electric, S. Shore",
+   "lat": 41.787003,
+   "lon": -87.588766,
+   "ada": null
+  },
+  {
+   "name": "63rd St.",
+   "system": "Metra Electric, S. Shore",
+   "lat": 41.779883,
+   "lon": -87.590404,
+   "ada": null
+  },
+  {
+   "name": "75th St.",
+   "system": "Metra Electric",
+   "lat": 41.758912,
+   "lon": -87.595159,
+   "ada": null
+  },
+  {
+   "name": "79th St.",
+   "system": "Metra Electric",
+   "lat": 41.750827,
+   "lon": -87.596987,
+   "ada": null
+  },
+  {
+   "name": "83rd St.",
+   "system": "Metra Electric",
+   "lat": 41.744317,
+   "lon": -87.598333,
+   "ada": null
+  },
+  {
+   "name": "87th St.",
+   "system": "Metra Electric",
+   "lat": 41.737415,
+   "lon": -87.599952,
+   "ada": null
+  },
+  {
+   "name": "91st St.",
+   "system": "Metra Electric",
+   "lat": 41.729752,
+   "lon": -87.601754,
+   "ada": null
+  },
+  {
+   "name": "95th St.",
+   "system": "Metra Electric",
+   "lat": 41.721417,
+   "lon": -87.603675,
+   "ada": null
+  },
+  {
+   "name": "103rd St.",
+   "system": "Metra Electric",
+   "lat": 41.706967,
+   "lon": -87.607007,
+   "ada": null
+  },
+  {
+   "name": "107th St.",
+   "system": "Metra Electric",
+   "lat": 41.69984,
+   "lon": -87.608658,
+   "ada": null
+  },
+  {
+   "name": "111th St.",
+   "system": "Metra Electric",
+   "lat": 41.693097,
+   "lon": -87.610215,
+   "ada": null
+  },
+  {
+   "name": "Kensington",
+   "system": "Metra Electric, S. Shore",
+   "lat": 41.68603,
+   "lon": -87.611834,
+   "ada": null
+  },
+  {
+   "name": "Riverdale",
+   "system": "Metra Electric",
+   "lat": 41.646329,
+   "lon": -87.623295,
+   "ada": null
+  },
+  {
+   "name": "Ivanhoe",
+   "system": "Metra Electric",
+   "lat": 41.633745,
+   "lon": -87.630069,
+   "ada": null
+  },
+  {
+   "name": "147th St.",
+   "system": "Metra Electric",
+   "lat": 41.623006,
+   "lon": -87.63594,
+   "ada": null
+  },
+  {
+   "name": "Harvey",
+   "system": "Metra Electric",
+   "lat": 41.608927,
+   "lon": -87.643535,
+   "ada": null
+  },
+  {
+   "name": "Hazel Crest",
+   "system": "Metra Electric",
+   "lat": 41.580838,
+   "lon": -87.658505,
+   "ada": null
+  },
+  {
+   "name": "Calumet",
+   "system": "Metra Electric",
+   "lat": 41.572739,
+   "lon": -87.66283,
+   "ada": null
+  },
+  {
+   "name": "Homewood",
+   "system": "Metra Electric",
+   "lat": 41.562373,
+   "lon": -87.668355,
+   "ada": null
+  },
+  {
+   "name": "Flossmoor",
+   "system": "Metra Electric",
+   "lat": 41.543301,
+   "lon": -87.67852,
+   "ada": null
+  },
+  {
+   "name": "Olympia Fields",
+   "system": "Metra Electric",
+   "lat": 41.521043,
+   "lon": -87.690411,
+   "ada": null
+  },
+  {
+   "name": "211th St.",
+   "system": "Metra Electric",
+   "lat": 41.506438,
+   "lon": -87.698116,
+   "ada": null
+  },
+  {
+   "name": "Matteson",
+   "system": "Metra Electric",
+   "lat": 41.498677,
+   "lon": -87.701911,
+   "ada": null
+  },
+  {
+   "name": "Richton Park",
+   "system": "Metra Electric",
+   "lat": 41.485592,
+   "lon": -87.708984,
+   "ada": null
+  },
+  {
+   "name": "University Park",
+   "system": "Metra Electric",
+   "lat": 41.458961,
+   "lon": -87.723319,
+   "ada": null
+  },
+  {
+   "name": "LaSalle St.",
+   "system": "Metra Rock Is.",
+   "lat": 41.875048,
+   "lon": -87.632137,
+   "ada": null
+  },
+  {
+   "name": "Gresham",
+   "system": "Metra Rock Is.",
+   "lat": 41.736643,
+   "lon": -87.644613,
+   "ada": null
+  },
+  {
+   "name": "Longwood",
+   "system": "Metra Rock Is.",
+   "lat": 41.720709,
+   "lon": -87.650555,
+   "ada": null
+  },
+  {
+   "name": "Washington Heights",
+   "system": "Metra Rock Is.",
+   "lat": 41.705583,
+   "lon": -87.656107,
+   "ada": null
+  },
+  {
+   "name": "Blue Island",
+   "system": "Metra Rock Is.",
+   "lat": 41.654859,
+   "lon": -87.677847,
+   "ada": null
+  },
+  {
+   "name": "Robbins",
+   "system": "Metra Rock Is.",
+   "lat": 41.640772,
+   "lon": -87.694556,
+   "ada": null
+  },
+  {
+   "name": "Midlothian",
+   "system": "Metra Rock Is.",
+   "lat": 41.625981,
+   "lon": -87.712407,
+   "ada": null
+  },
+  {
+   "name": "Oak Forest",
+   "system": "Metra Rock Is.",
+   "lat": 41.604636,
+   "lon": -87.738189,
+   "ada": null
+  },
+  {
+   "name": "Tinley Park",
+   "system": "Metra Rock Is.",
+   "lat": 41.575611,
+   "lon": -87.783577,
+   "ada": null
+  },
+  {
+   "name": "80th Ave.",
+   "system": "Metra Rock Is.",
+   "lat": 41.564381,
+   "lon": -87.80954,
+   "ada": null
+  },
+  {
+   "name": "Hickory Creek",
+   "system": "Metra Rock Is.",
+   "lat": 41.547971,
+   "lon": -87.847623,
+   "ada": null
+  },
+  {
+   "name": "Mokena",
+   "system": "Metra Rock Is.",
+   "lat": 41.530962,
+   "lon": -87.886917,
+   "ada": null
+  },
+  {
+   "name": "New Lenox",
+   "system": "Metra Rock Is.",
+   "lat": 41.514561,
+   "lon": -87.96523,
+   "ada": null
+  },
+  {
+   "name": "Brainerd",
+   "system": "Metra Rock Is.",
+   "lat": 41.73224,
+   "lon": -87.657558,
+   "ada": null
+  },
+  {
+   "name": "91st St.",
+   "system": "Metra Rock Is.",
+   "lat": 41.727979,
+   "lon": -87.667211,
+   "ada": null
+  },
+  {
+   "name": "95th St.",
+   "system": "Metra Rock Is.",
+   "lat": 41.721536,
+   "lon": -87.667548,
+   "ada": null
+  },
+  {
+   "name": "99th St.",
+   "system": "Metra Rock Is.",
+   "lat": 41.713635,
+   "lon": -87.667287,
+   "ada": null
+  },
+  {
+   "name": "103rd St.",
+   "system": "Metra Rock Is.",
+   "lat": 41.706216,
+   "lon": -87.668905,
+   "ada": null
+  },
+  {
+   "name": "107th St.",
+   "system": "Metra Rock Is.",
+   "lat": 41.698918,
+   "lon": -87.669755,
+   "ada": null
+  },
+  {
+   "name": "111th St.",
+   "system": "Metra Rock Is.",
+   "lat": 41.692762,
+   "lon": -87.670495,
+   "ada": null
+  },
+  {
+   "name": "115th St.",
+   "system": "Metra Rock Is.",
+   "lat": 41.684993,
+   "lon": -87.671457,
+   "ada": null
+  },
+  {
+   "name": "119th St.",
+   "system": "Metra Rock Is.",
+   "lat": 41.676372,
+   "lon": -87.67258,
+   "ada": null
+  },
+  {
+   "name": "123rd St.",
+   "system": "Metra Rock Is.",
+   "lat": 41.670288,
+   "lon": -87.673624,
+   "ada": null
+  },
+  {
+   "name": "Prairie St.",
+   "system": "Metra Rock Is.",
+   "lat": 41.662263,
+   "lon": -87.675103,
+   "ada": null
+  },
+  {
+   "name": "Union Station",
+   "system": "Metra Milw-N, Milw-W, NCS, BNSF, Heritage, SWS",
+   "lat": 41.877949,
+   "lon": -87.638831,
+   "ada": null
+  },
+  {
+   "name": "Wrightwood",
+   "system": "Metra SWS",
+   "lat": 41.75008,
+   "lon": -87.701461,
+   "ada": null
+  },
+  {
+   "name": "Ashburn",
+   "system": "Metra SWS",
+   "lat": 41.741815,
+   "lon": -87.712519,
+   "ada": null
+  },
+  {
+   "name": "Oak Lawn",
+   "system": "Metra SWS",
+   "lat": 41.719397,
+   "lon": -87.74915,
+   "ada": null
+  },
+  {
+   "name": "Chicago Ridge",
+   "system": "Metra SWS",
+   "lat": 41.703949,
+   "lon": -87.779779,
+   "ada": null
+  },
+  {
+   "name": "Worth",
+   "system": "Metra SWS",
+   "lat": 41.691654,
+   "lon": -87.795689,
+   "ada": null
+  },
+  {
+   "name": "Palos Park",
+   "system": "Metra SWS",
+   "lat": 41.668479,
+   "lon": -87.820906,
+   "ada": null
+  },
+  {
+   "name": "143rd St.",
+   "system": "Metra SWS",
+   "lat": 41.630653,
+   "lon": -87.859574,
+   "ada": null
+  },
+  {
+   "name": "153rd St.",
+   "system": "Metra SWS",
+   "lat": 41.609572,
+   "lon": -87.873675,
+   "ada": null
+  },
+  {
+   "name": "179th St.",
+   "system": "Metra SWS",
+   "lat": 41.563663,
+   "lon": -87.90282,
+   "ada": null
+  },
+  {
+   "name": "Summit",
+   "system": "Metra Heritage",
+   "lat": 41.794969,
+   "lon": -87.809921,
+   "ada": null
+  },
+  {
+   "name": "Willow Springs",
+   "system": "Metra Heritage",
+   "lat": 41.733257,
+   "lon": -87.878483,
+   "ada": null
+  },
+  {
+   "name": "Lemont",
+   "system": "Metra Heritage",
+   "lat": 41.673685,
+   "lon": -88.003663,
+   "ada": null
+  },
+  {
+   "name": "Lockport",
+   "system": "Metra Heritage",
+   "lat": 41.585384,
+   "lon": -88.06031,
+   "ada": null
+  },
+  {
+   "name": "Halsted St.",
+   "system": "Metra BNSF",
+   "lat": 41.860255,
+   "lon": -87.647248,
+   "ada": null
+  },
+  {
+   "name": "Western Ave.",
+   "system": "Metra BNSF",
+   "lat": 41.857569,
+   "lon": -87.684969,
+   "ada": null
+  },
+  {
+   "name": "Cicero",
+   "system": "Metra BNSF",
+   "lat": 41.844162,
+   "lon": -87.745173,
+   "ada": null
+  },
+  {
+   "name": "LaVergne",
+   "system": "Metra BNSF",
+   "lat": 41.835499,
+   "lon": -87.783463,
+   "ada": null
+  },
+  {
+   "name": "Berwyn",
+   "system": "Metra BNSF",
+   "lat": 41.833288,
+   "lon": -87.793286,
+   "ada": null
+  },
+  {
+   "name": "Harlem Ave.",
+   "system": "Metra BNSF",
+   "lat": 41.83134,
+   "lon": -87.8019,
+   "ada": null
+  },
+  {
+   "name": "Riverside",
+   "system": "Metra BNSF",
+   "lat": 41.827206,
+   "lon": -87.820235,
+   "ada": null
+  },
+  {
+   "name": "Zoo Stop",
+   "system": "Metra BNSF",
+   "lat": 41.824241,
+   "lon": -87.833729,
+   "ada": null
+  },
+  {
+   "name": "Brookfield",
+   "system": "Metra BNSF",
+   "lat": 41.822155,
+   "lon": -87.843107,
+   "ada": null
+  },
+  {
+   "name": "Congress Park",
+   "system": "Metra BNSF",
+   "lat": 41.818911,
+   "lon": -87.857577,
+   "ada": null
+  },
+  {
+   "name": "LaGrange Rd.",
+   "system": "Metra BNSF",
+   "lat": 41.81588,
+   "lon": -87.871112,
+   "ada": null
+  },
+  {
+   "name": "Stone Ave.",
+   "system": "Metra BNSF",
+   "lat": 41.814211,
+   "lon": -87.878573,
+   "ada": null
+  },
+  {
+   "name": "Western Springs",
+   "system": "Metra BNSF",
+   "lat": 41.809079,
+   "lon": -87.90141,
+   "ada": null
+  },
+  {
+   "name": "Highlands",
+   "system": "Metra BNSF",
+   "lat": 41.805196,
+   "lon": -87.918573,
+   "ada": null
+  },
+  {
+   "name": "Hinsdale",
+   "system": "Metra BNSF",
+   "lat": 41.802987,
+   "lon": -87.928237,
+   "ada": null
+  },
+  {
+   "name": "West Hinsdale",
+   "system": "Metra BNSF",
+   "lat": 41.799035,
+   "lon": -87.945673,
+   "ada": null
+  },
+  {
+   "name": "Clarendon Hills",
+   "system": "Metra BNSF",
+   "lat": 41.797065,
+   "lon": -87.954405,
+   "ada": null
+  },
+  {
+   "name": "Westmont",
+   "system": "Metra BNSF",
+   "lat": 41.795613,
+   "lon": -87.976784,
+   "ada": null
+  },
+  {
+   "name": "Fairview Ave.",
+   "system": "Metra BNSF",
+   "lat": 41.795586,
+   "lon": -87.99397,
+   "ada": null
+  },
+  {
+   "name": "Main St.",
+   "system": "Metra BNSF",
+   "lat": 41.795542,
+   "lon": -88.009833,
+   "ada": null
+  },
+  {
+   "name": "Belmont",
+   "system": "Metra BNSF",
+   "lat": 41.795488,
+   "lon": -88.038082,
+   "ada": null
+  },
+  {
+   "name": "Lisle",
+   "system": "Metra BNSF",
+   "lat": 41.797808,
+   "lon": -88.072564,
+   "ada": null
+  },
+  {
+   "name": "Naperville",
+   "system": "Metra BNSF",
+   "lat": 41.779809,
+   "lon": -88.145194,
+   "ada": null
+  },
+  {
+   "name": "Route 59",
+   "system": "Metra BNSF",
+   "lat": 41.77813,
+   "lon": -88.208522,
+   "ada": null
+  },
+  {
+   "name": "Aurora",
+   "system": "Metra BNSF",
+   "lat": 41.76121,
+   "lon": -88.307677,
+   "ada": null
+  },
+  {
+   "name": "Kedzie",
+   "system": "Metra UP-W",
+   "lat": 41.888257,
+   "lon": -87.706579,
+   "ada": null
+  },
+  {
+   "name": "Oak Park",
+   "system": "Metra UP-W",
+   "lat": 41.886967,
+   "lon": -87.801455,
+   "ada": null
+  },
+  {
+   "name": "River Forest",
+   "system": "Metra UP-W",
+   "lat": 41.886807,
+   "lon": -87.824906,
+   "ada": null
+  },
+  {
+   "name": "Maywood",
+   "system": "Metra UP-W",
+   "lat": 41.888333,
+   "lon": -87.838778,
+   "ada": null
+  },
+  {
+   "name": "Melrose Park",
+   "system": "Metra UP-W",
+   "lat": 41.890272,
+   "lon": -87.855872,
+   "ada": null
+  },
+  {
+   "name": "Bellwood",
+   "system": "Metra UP-W",
+   "lat": 41.891408,
+   "lon": -87.88274,
+   "ada": null
+  },
+  {
+   "name": "Berkeley",
+   "system": "Metra UP-W",
+   "lat": 41.896266,
+   "lon": -87.916018,
+   "ada": null
+  },
+  {
+   "name": "Elmhurst",
+   "system": "Metra UP-W",
+   "lat": 41.899703,
+   "lon": -87.940936,
+   "ada": null
+  },
+  {
+   "name": "Villa Park",
+   "system": "Metra UP-W",
+   "lat": 41.896304,
+   "lon": -87.977828,
+   "ada": null
+  },
+  {
+   "name": "Lombard",
+   "system": "Metra UP-W",
+   "lat": 41.886494,
+   "lon": -88.01855,
+   "ada": null
+  },
+  {
+   "name": "Glen Ellyn",
+   "system": "Metra UP-W",
+   "lat": 41.876459,
+   "lon": -88.064607,
+   "ada": null
+  },
+  {
+   "name": "College Ave.",
+   "system": "Metra UP-W",
+   "lat": 41.869038,
+   "lon": -88.088812,
+   "ada": null
+  },
+  {
+   "name": "Wheaton",
+   "system": "Metra UP-W",
+   "lat": 41.864453,
+   "lon": -88.108727,
+   "ada": null
+  },
+  {
+   "name": "Winfield",
+   "system": "Metra UP-W",
+   "lat": 41.870015,
+   "lon": -88.157486,
+   "ada": null
+  },
+  {
+   "name": "West Chicago",
+   "system": "Metra UP-W",
+   "lat": 41.881069,
+   "lon": -88.198916,
+   "ada": null
+  },
+  {
+   "name": "Geneva",
+   "system": "Metra UP-W",
+   "lat": 41.881501,
+   "lon": -88.310208,
+   "ada": null
+  },
+  {
+   "name": "Western Ave.",
+   "system": "Metra Milw-N, Milw-W, NCS",
+   "lat": 41.889105,
+   "lon": -87.688315,
+   "ada": null
+  },
+  {
+   "name": "Hanson Park",
+   "system": "Metra Milw-W",
+   "lat": 41.916562,
+   "lon": -87.767628,
+   "ada": null
+  },
+  {
+   "name": "Galewood",
+   "system": "Metra Milw-W",
+   "lat": 41.916398,
+   "lon": -87.784734,
+   "ada": null
+  },
+  {
+   "name": "Mars",
+   "system": "Metra Milw-W",
+   "lat": 41.919253,
+   "lon": -87.794533,
+   "ada": null
+  },
+  {
+   "name": "Pingree Rd.",
+   "system": "Metra UP-NW",
+   "lat": 42.234145,
+   "lon": -88.298024,
+   "ada": null
+  },
+  {
+   "name": "Palos Heights",
+   "system": "Metra SWS",
+   "lat": 41.681962,
+   "lon": -87.807177,
+   "ada": null
+  },
+  {
+   "name": "35th St",
+   "system": "Metra Rock Is.",
+   "lat": 41.831483,
+   "lon": -87.62942,
+   "ada": null
+  },
+  {
+   "name": "La Fox",
+   "system": "Metra UP-W",
+   "lat": 41.886701,
+   "lon": -88.411799,
+   "ada": null
+  },
+  {
+   "name": "Elburn",
+   "system": "Metra UP-W",
+   "lat": 41.890731,
+   "lon": -88.464123,
+   "ada": null
+  },
+  {
+   "name": "Manhattan",
+   "system": "Metra SWS",
+   "lat": 41.418936,
+   "lon": -87.988709,
+   "ada": null
+  },
+  {
+   "name": "Mont Clare",
+   "system": "Metra Milw-W",
+   "lat": 41.921636,
+   "lon": -87.801155,
+   "ada": null
+  },
+  {
+   "name": "Elmwood Park",
+   "system": "Metra Milw-W",
+   "lat": 41.924945,
+   "lon": -87.814784,
+   "ada": null
+  },
+  {
+   "name": "River Grove",
+   "system": "Metra Milw-W, NCS",
+   "lat": 41.931004,
+   "lon": -87.836325,
+   "ada": null
+  },
+  {
+   "name": "Franklin Park",
+   "system": "Metra Milw-W",
+   "lat": 41.936532,
+   "lon": -87.866586,
+   "ada": null
+  },
+  {
+   "name": "Mannheim",
+   "system": "Metra Milw-W",
+   "lat": 41.941506,
+   "lon": -87.88334,
+   "ada": null
+  },
+  {
+   "name": "Bensenville",
+   "system": "Metra Milw-W",
+   "lat": 41.957001,
+   "lon": -87.941819,
+   "ada": null
+  },
+  {
+   "name": "Wood Dale",
+   "system": "Metra Milw-W",
+   "lat": 41.962368,
+   "lon": -87.974872,
+   "ada": null
+  },
+  {
+   "name": "Itasca",
+   "system": "Metra Milw-W",
+   "lat": 41.971632,
+   "lon": -88.013916,
+   "ada": null
+  },
+  {
+   "name": "Medinah",
+   "system": "Metra Milw-W",
+   "lat": 41.978316,
+   "lon": -88.050929,
+   "ada": null
+  },
+  {
+   "name": "Roselle",
+   "system": "Metra Milw-W",
+   "lat": 41.981578,
+   "lon": -88.067067,
+   "ada": null
+  },
+  {
+   "name": "Schaumburg",
+   "system": "Metra Milw-W",
+   "lat": 41.989235,
+   "lon": -88.118353,
+   "ada": null
+  },
+  {
+   "name": "Hanover Park",
+   "system": "Metra Milw-W",
+   "lat": 41.988128,
+   "lon": -88.149282,
+   "ada": null
+  },
+  {
+   "name": "Bartlett",
+   "system": "Metra Milw-W",
+   "lat": 41.992575,
+   "lon": -88.186283,
+   "ada": null
+  },
+  {
+   "name": "National St.",
+   "system": "Metra Milw-W",
+   "lat": 42.029133,
+   "lon": -88.279968,
+   "ada": null
+  },
+  {
+   "name": "Elgin",
+   "system": "Metra Milw-W",
+   "lat": 42.036256,
+   "lon": -88.286168,
+   "ada": null
+  },
+  {
+   "name": "Big Timber",
+   "system": "Metra Milw-W",
+   "lat": 42.058674,
+   "lon": -88.328429,
+   "ada": null
+  },
+  {
+   "name": "Ogilvie",
+   "system": "Metra UP-N, UP-NW, UP-W",
+   "lat": 41.883049,
+   "lon": -87.640769,
+   "ada": null
+  },
+  {
+   "name": "Clybourn",
+   "system": "Metra UP-N, UP-NW",
+   "lat": 41.917215,
+   "lon": -87.668054,
+   "ada": null
+  },
+  {
+   "name": "Irving Park",
+   "system": "Metra UP-NW",
+   "lat": 41.95317,
+   "lon": -87.731164,
+   "ada": null
+  },
+  {
+   "name": "Jefferson Park",
+   "system": "Metra UP-NW",
+   "lat": 41.971506,
+   "lon": -87.763344,
+   "ada": null
+  },
+  {
+   "name": "Gladstone Park",
+   "system": "Metra UP-NW",
+   "lat": 41.979752,
+   "lon": -87.777888,
+   "ada": null
+  },
+  {
+   "name": "Norwood Park",
+   "system": "Metra UP-NW",
+   "lat": 41.99175,
+   "lon": -87.799059,
+   "ada": null
+  },
+  {
+   "name": "Edison Park",
+   "system": "Metra UP-NW",
+   "lat": 42.002231,
+   "lon": -87.817707,
+   "ada": null
+  },
+  {
+   "name": "Park Ridge",
+   "system": "Metra UP-NW",
+   "lat": 42.010209,
+   "lon": -87.831749,
+   "ada": null
+  },
+  {
+   "name": "Dee Road",
+   "system": "Metra UP-NW",
+   "lat": 42.02327,
+   "lon": -87.85489,
+   "ada": null
+  },
+  {
+   "name": "Des Plaines",
+   "system": "Metra UP-NW",
+   "lat": 42.040793,
+   "lon": -87.886757,
+   "ada": null
+  },
+  {
+   "name": "Cumberland",
+   "system": "Metra UP-NW",
+   "lat": 42.05219,
+   "lon": -87.912305,
+   "ada": null
+  },
+  {
+   "name": "Mount Prospect",
+   "system": "Metra UP-NW",
+   "lat": 42.062936,
+   "lon": -87.93618,
+   "ada": null
+  },
+  {
+   "name": "Arlington Heights",
+   "system": "Metra UP-NW",
+   "lat": 42.083375,
+   "lon": -87.982182,
+   "ada": null
+  },
+  {
+   "name": "Arlington Park",
+   "system": "Metra UP-NW",
+   "lat": 42.095668,
+   "lon": -88.00956,
+   "ada": null
+  },
+  {
+   "name": "Palatine",
+   "system": "Metra UP-NW",
+   "lat": 42.113609,
+   "lon": -88.049929,
+   "ada": null
+  },
+  {
+   "name": "Barrington",
+   "system": "Metra UP-NW",
+   "lat": 42.152897,
+   "lon": -88.132106,
+   "ada": null
+  },
+  {
+   "name": "Fox River Grove",
+   "system": "Metra UP-NW",
+   "lat": 42.197519,
+   "lon": -88.218863,
+   "ada": null
+  },
+  {
+   "name": "Cary",
+   "system": "Metra UP-NW",
+   "lat": 42.209164,
+   "lon": -88.241412,
+   "ada": null
+  },
+  {
+   "name": "Crystal Lake",
+   "system": "Metra UP-NW",
+   "lat": 42.24415,
+   "lon": -88.317061,
+   "ada": null
+  },
+  {
+   "name": "McHenry",
+   "system": "Metra UP-NW",
+   "lat": 42.343296,
+   "lon": -88.276147,
+   "ada": null
+  },
+  {
+   "name": "Woodstock",
+   "system": "Metra UP-NW",
+   "lat": 42.316837,
+   "lon": -88.447281,
+   "ada": null
+  },
+  {
+   "name": "Harvard",
+   "system": "Metra UP-NW",
+   "lat": 42.419351,
+   "lon": -88.61712,
+   "ada": null
+  },
+  {
+   "name": "Healy",
+   "system": "Metra Milw-N",
+   "lat": 41.924855,
+   "lon": -87.727912,
+   "ada": null
+  },
+  {
+   "name": "Grayland",
+   "system": "Metra Milw-N",
+   "lat": 41.948521,
+   "lon": -87.740123,
+   "ada": null
+  },
+  {
+   "name": "Mayfair",
+   "system": "Metra Milw-N",
+   "lat": 41.960138,
+   "lon": -87.746172,
+   "ada": null
+  },
+  {
+   "name": "Forest Glen",
+   "system": "Metra Milw-N",
+   "lat": 41.979537,
+   "lon": -87.756163,
+   "ada": null
+  },
+  {
+   "name": "Edgebrook",
+   "system": "Metra Milw-N",
+   "lat": 41.997628,
+   "lon": -87.765621,
+   "ada": null
+  },
+  {
+   "name": "Morton Grove",
+   "system": "Metra Milw-N",
+   "lat": 42.03505,
+   "lon": -87.784966,
+   "ada": null
+  },
+  {
+   "name": "Golf",
+   "system": "Metra Milw-N",
+   "lat": 42.058326,
+   "lon": -87.797154,
+   "ada": null
+  },
+  {
+   "name": "Glenview",
+   "system": "Metra Milw-N",
+   "lat": 42.074618,
+   "lon": -87.80557,
+   "ada": null
+  },
+  {
+   "name": "North Glenview",
+   "system": "Metra Milw-N",
+   "lat": 42.09884,
+   "lon": -87.816272,
+   "ada": null
+  },
+  {
+   "name": "Northbrook",
+   "system": "Metra Milw-N",
+   "lat": 42.12763,
+   "lon": -87.828137,
+   "ada": null
+  },
+  {
+   "name": "Lake Cook",
+   "system": "Metra Milw-N",
+   "lat": 42.151649,
+   "lon": -87.840991,
+   "ada": null
+  },
+  {
+   "name": "Deerfield",
+   "system": "Metra Milw-N",
+   "lat": 42.168128,
+   "lon": -87.849896,
+   "ada": null
+  },
+  {
+   "name": "Lake Forest",
+   "system": "Metra Milw-N",
+   "lat": 42.223529,
+   "lon": -87.874624,
+   "ada": null
+  },
+  {
+   "name": "Libertyville",
+   "system": "Metra Milw-N",
+   "lat": 42.291083,
+   "lon": -87.956445,
+   "ada": null
+  },
+  {
+   "name": "Grayslake",
+   "system": "Metra Milw-N",
+   "lat": 42.333541,
+   "lon": -88.043324,
+   "ada": null
+  },
+  {
+   "name": "Round Lake",
+   "system": "Metra Milw-N",
+   "lat": 42.354564,
+   "lon": -88.093929,
+   "ada": null
+  },
+  {
+   "name": "Long Lake",
+   "system": "Metra Milw-N",
+   "lat": 42.367897,
+   "lon": -88.128051,
+   "ada": null
+  },
+  {
+   "name": "Ingleside",
+   "system": "Metra Milw-N",
+   "lat": 42.384144,
+   "lon": -88.154981,
+   "ada": null
+  },
+  {
+   "name": "Fox Lake",
+   "system": "Metra Milw-N",
+   "lat": 42.398302,
+   "lon": -88.182072,
+   "ada": null
+  },
+  {
+   "name": "O'Hare",
+   "system": "Metra NCS",
+   "lat": 41.995212,
+   "lon": -87.880317,
+   "ada": null
+  },
+  {
+   "name": "Prospect Heights",
+   "system": "Metra NCS",
+   "lat": 42.092911,
+   "lon": -87.908064,
+   "ada": null
+  },
+  {
+   "name": "Wheeling",
+   "system": "Metra NCS",
+   "lat": 42.136447,
+   "lon": -87.927159,
+   "ada": null
+  },
+  {
+   "name": "Buffalo Grove",
+   "system": "Metra NCS",
+   "lat": 42.168477,
+   "lon": -87.941128,
+   "ada": null
+  },
+  {
+   "name": "Prairie View",
+   "system": "Metra NCS",
+   "lat": 42.197976,
+   "lon": -87.955579,
+   "ada": null
+  },
+  {
+   "name": "Vernon Hills",
+   "system": "Metra NCS",
+   "lat": 42.215571,
+   "lon": -87.964823,
+   "ada": null
+  },
+  {
+   "name": "Mundelein",
+   "system": "Metra NCS",
+   "lat": 42.266707,
+   "lon": -87.997696,
+   "ada": null
+  },
+  {
+   "name": "Prairie Crossing",
+   "system": "Metra NCS",
+   "lat": 42.318547,
+   "lon": -88.017733,
+   "ada": null
+  },
+  {
+   "name": "Round Lake Beach",
+   "system": "Metra NCS",
+   "lat": 42.384753,
+   "lon": -88.065167,
+   "ada": null
+  },
+  {
+   "name": "Lake Villa",
+   "system": "Metra NCS",
+   "lat": 42.417587,
+   "lon": -88.079292,
+   "ada": null
+  },
+  {
+   "name": "Antioch",
+   "system": "Metra NCS",
+   "lat": 42.480721,
+   "lon": -88.092173,
+   "ada": null
+  },
+  {
+   "name": "Ravenswood",
+   "system": "Metra UP-N",
+   "lat": 41.968153,
+   "lon": -87.674444,
+   "ada": null
+  },
+  {
+   "name": "Rogers Park",
+   "system": "Metra UP-N",
+   "lat": 42.009649,
+   "lon": -87.675526,
+   "ada": null
+  },
+  {
+   "name": "Main St.",
+   "system": "Metra UP-N",
+   "lat": 42.033323,
+   "lon": -87.680048,
+   "ada": null
+  },
+  {
+   "name": "Davis St.",
+   "system": "Metra UP-N",
+   "lat": 42.048064,
+   "lon": -87.684822,
+   "ada": null
+  },
+  {
+   "name": "Central St.",
+   "system": "Metra UP-N",
+   "lat": 42.063987,
+   "lon": -87.698101,
+   "ada": null
+  },
+  {
+   "name": "Wilmette",
+   "system": "Metra UP-N",
+   "lat": 42.077338,
+   "lon": -87.709277,
+   "ada": null
+  },
+  {
+   "name": "Kenilworth",
+   "system": "Metra UP-N",
+   "lat": 42.086222,
+   "lon": -87.716738,
+   "ada": null
+  },
+  {
+   "name": "Indian Hill",
+   "system": "Metra UP-N",
+   "lat": 42.094622,
+   "lon": -87.723729,
+   "ada": null
+  },
+  {
+   "name": "Winnetka",
+   "system": "Metra UP-N",
+   "lat": 42.105289,
+   "lon": -87.73259,
+   "ada": null
+  },
+  {
+   "name": "Hubbard Woods",
+   "system": "Metra UP-N",
+   "lat": 42.118184,
+   "lon": -87.743441,
+   "ada": null
+  },
+  {
+   "name": "Glencoe",
+   "system": "Metra UP-N",
+   "lat": 42.135525,
+   "lon": -87.758154,
+   "ada": null
+  },
+  {
+   "name": "Braeside",
+   "system": "Metra UP-N",
+   "lat": 42.152986,
+   "lon": -87.772829,
+   "ada": null
+  },
+  {
+   "name": "Ravinia Park",
+   "system": "Metra UP-N",
+   "lat": 42.15761,
+   "lon": -87.776694,
+   "ada": null
+  },
+  {
+   "name": "Ravinia",
+   "system": "Metra UP-N",
+   "lat": 42.16538,
+   "lon": -87.783228,
+   "ada": null
+  },
+  {
+   "name": "Highland Park",
+   "system": "Metra UP-N",
+   "lat": 42.183513,
+   "lon": -87.797713,
+   "ada": null
+  },
+  {
+   "name": "Highwood",
+   "system": "Metra UP-N",
+   "lat": 42.20242,
+   "lon": -87.809998,
+   "ada": null
+  },
+  {
+   "name": "Fort Sheridan",
+   "system": "Metra UP-N",
+   "lat": 42.21742,
+   "lon": -87.821148,
+   "ada": null
+  },
+  {
+   "name": "Lake Forest",
+   "system": "Metra UP-N",
+   "lat": 42.252359,
+   "lon": -87.839715,
+   "ada": null
+  },
+  {
+   "name": "Lake Bluff",
+   "system": "Metra UP-N",
+   "lat": 42.279589,
+   "lon": -87.846763,
+   "ada": null
+  },
+  {
+   "name": "Great Lakes",
+   "system": "Metra UP-N",
+   "lat": 42.308343,
+   "lon": -87.846635,
+   "ada": null
+  },
+  {
+   "name": "North Chicago",
+   "system": "Metra UP-N",
+   "lat": 42.328924,
+   "lon": -87.837043,
+   "ada": null
+  },
+  {
+   "name": "Waukegan",
+   "system": "Metra UP-N",
+   "lat": 42.360636,
+   "lon": -87.827952,
+   "ada": null
+  },
+  {
+   "name": "Zion",
+   "system": "Metra UP-N",
+   "lat": 42.449513,
+   "lon": -87.818129,
+   "ada": null
+  },
+  {
+   "name": "Winthrop Harbor",
+   "system": "Metra UP-N",
+   "lat": 42.482619,
+   "lon": -87.816256,
+   "ada": null
+  },
+  {
+   "name": "Kenosha",
+   "system": "Metra UP-N",
+   "lat": 42.587319,
+   "lon": -87.820907,
+   "ada": null
+  },
+  {
+   "name": "Hammond",
+   "system": "Metra S. Shore",
+   "lat": 41.632059,
+   "lon": -87.522373,
+   "ada": null
+  },
+  {
+   "name": "East Chicago",
+   "system": "Metra S. Shore",
+   "lat": 41.61288,
+   "lon": -87.481454,
+   "ada": null
+  },
+  {
+   "name": "Gary Metro",
+   "system": "Metra S. Shore",
+   "lat": 41.605238,
+   "lon": -87.338814,
+   "ada": null
+  },
+  {
+   "name": "Miller",
+   "system": "Metra S. Shore",
+   "lat": 41.597983,
+   "lon": -87.263497,
+   "ada": null
+  },
+  {
+   "name": "Ogden Dunes",
+   "system": "Metra S. Shore",
+   "lat": 41.616492,
+   "lon": -87.191491,
+   "ada": null
+  },
+  {
+   "name": "Dune Park",
+   "system": "Metra S. Shore",
+   "lat": 41.6459,
+   "lon": -87.057834,
+   "ada": null
+  },
+  {
+   "name": "Gary Airport",
+   "system": "Metra S. Shore",
+   "lat": 41.605217,
+   "lon": -87.3948,
+   "ada": null
+  },
+  {
+   "name": "Washington St",
+   "system": "Metra NCS",
+   "lat": 42.359631,
+   "lon": -88.050457,
+   "ada": null
+  },
+  {
+   "name": "Prairie Crossing",
+   "system": "Metra Milw-N",
+   "lat": 42.320902,
+   "lon": -88.015117,
+   "ada": null
+  },
+  {
+   "name": "Rosemont",
+   "system": "Metra NCS",
+   "lat": 41.975721,
+   "lon": -87.873445,
+   "ada": null
+  },
+  {
+   "name": "Schiller Park",
+   "system": "Metra NCS",
+   "lat": 41.963065,
+   "lon": -87.868996,
+   "ada": null
+  },
+  {
+   "name": "Belmont Ave",
+   "system": "Metra NCS",
+   "lat": 41.938561,
+   "lon": -87.860289,
+   "ada": null
+  },
+  {
+   "name": "Grand-Cicero",
+   "system": "Metra Milw-W",
+   "lat": 41.914435,
+   "lon": -87.746534,
+   "ada": null
+  },
+  {
+   "name": "Laraway Road",
+   "system": "Metra SWS",
+   "lat": 41.483165,
+   "lon": -87.959905,
+   "ada": null
+  },
+  {
+   "name": "Joliet",
+   "system": "Metra Rock Is., Heritage",
+   "lat": 41.52418,
+   "lon": -88.079301,
+   "ada": null
+  }
+ ]
+}
