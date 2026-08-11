@@ -1569,7 +1569,10 @@ function buildMarketContext(
   if (walkScore != null) {
     if (walkScore >= 15) walkabilityNarrative = `EPA Walkability Index ${walkScore}/20 — highly walkable area with strong pedestrian infrastructure and transit access.${epaAttribution}`;
     else if (walkScore >= 10) walkabilityNarrative = `EPA Walkability Index ${walkScore}/20 — above average walkability with moderate transit access.${epaAttribution}`;
-    else walkabilityNarrative = `EPA Walkability Index ${walkScore}/20 — car-dependent area; consider drive-in or destination-based business models.${epaAttribution}`;
+    // A walkability score measures the built environment. It does not support a
+    // recommendation about what business model to run at this address, so this
+    // band states the measurement and its place on the published scale only.
+    else walkabilityNarrative = `EPA Walkability Index ${walkScore}/20 — below-average walkability on the index's 1-20 scale.${epaAttribution}`;
   }
 
   const zoneCount = zones ? Object.values(zones).filter(Boolean).length : 0;
@@ -2578,14 +2581,21 @@ function generateLocationIncentives(
   const communityAssetsData = buildCommunityAssets(ctx.communityAssets, ctx.localBusinessSupport);
   const dataSources = collectDataSources(ctx);
 
-  // ── Sections: Overview → Market → Stacking → Programs → Documents → Support → Next Steps ──
+  // ── Sections: Overview → Stacking → Programs → Documents → Support → Next Steps → Market ──
   const sections: ReportSection[] = [];
   const projectIntakeSection = buildProjectIntakeSection(state);
   if (projectIntakeSection) sections.push(projectIntakeSection);
 
-  // §01 Neighborhood Economic Context
+  // Neighborhood Economic Context is built here (the TIF enrichment below
+  // appends to it) but is NOT pushed here. On the site-incentive report the
+  // reader is a business owner who came for programs and next steps; opening
+  // the report on tract-level economics spends the two sections the UI renders
+  // expanded by default on background reading. It is appended after the
+  // program, document, support, and deadline sections instead — see the push
+  // at the end of this section block. The vacancy/development report
+  // (generateBestLocation) keeps its earlier placement, because corridor and
+  // lender readers come for exactly this material.
   const neighborhoodEconomicSection = buildNeighborhoodEconomicContextSection(ctx, zones, marketContext);
-  if (neighborhoodEconomicSection) sections.push(neighborhoodEconomicSection);
   const localImpactAnchorsSection = buildLocalImpactAnchorsSection(ctx);
   if (localImpactAnchorsSection) sections.push(localImpactAnchorsSection);
 
@@ -2807,7 +2817,6 @@ function generateLocationIncentives(
       const expiresNote = fin.expiresWithin24Months && fin.expirationDate
         ? ` Act soon: this TIF is scheduled to expire ${fin.expirationDate}.`
         : "";
-      const econSectionIdx = sections.findIndex((s) => s.title === "Neighborhood Economic Context");
       const tifItem: ReportItem = {
         label: "TIF District Funding Overview",
         value: `TIF district ${fin.tifName ?? fin.tifNumber}${fin.expirationDate ? ` — expires ${fin.expirationDate}` : ""}`,
@@ -2820,8 +2829,10 @@ function generateLocationIncentives(
         sourceLabel: "City of Chicago TIF Annual Reports",
         sourceUrl: "https://data.cityofchicago.org/Community-Economic-Development/Tax-Increment-Financing-TIF-Annual-Report-Analysis/qm7s-3ctt",
       };
-      if (econSectionIdx >= 0) {
-        sections[econSectionIdx].items.push(tifItem);
+      // The economic-context section is appended at the end of this block, so
+      // it is enriched through the object reference rather than by index.
+      if (neighborhoodEconomicSection) {
+        neighborhoodEconomicSection.items.push(tifItem);
       } else {
         sections.push({
           title: "TIF Financial Context",
@@ -2842,6 +2853,12 @@ function generateLocationIncentives(
 
     // Corridor Context section (omitted entirely when no data)
   }
+
+  // Supporting context, last: the demoted Neighborhood Economic Context (see
+  // the note where it is built). Nothing is removed — every measurement,
+  // comparison, source label, and unavailable-data state it carries is intact;
+  // only its position in the section order changed.
+  if (neighborhoodEconomicSection) sections.push(neighborhoodEconomicSection);
 
   // ── Action Roadmap ("Your Next Steps") ──────────────────────────
   const actionRoadmap: ActionRoadmapItem[] = [];

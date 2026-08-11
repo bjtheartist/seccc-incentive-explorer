@@ -1645,3 +1645,175 @@ describe("generateReportData", () => {
     expect(report.summary).toContain("links 2 programs to this address");
   });
 });
+
+describe("walkability narrative", () => {
+  const carDependentCensus = {
+    medianIncome: 41000,
+    medianHomeValue: 150000,
+    population: 3800,
+    // Below 10 on the EPA 1-20 index — the band that used to recommend a
+    // business model to the reader.
+    walkScore: 6,
+    tractId: "17031000100",
+  };
+
+  function carDependentReport() {
+    return generateReportData(makeState(), [makeProgram()], {
+      zones,
+      zoneNames,
+      census: carDependentCensus,
+    });
+  }
+
+  it("does not advise a business model from a low walkability score", () => {
+    const report = carDependentReport();
+    const serialized = JSON.stringify(report);
+
+    expect(serialized).not.toMatch(/drive-in/i);
+    expect(serialized).not.toMatch(/destination-based/i);
+    expect(serialized).not.toMatch(/business model/i);
+    expect(report.marketContext?.walkabilityNarrative).not.toMatch(/consider/i);
+  });
+
+  it("still reports the score, the scale, and the EPA source for the same location", () => {
+    const report = carDependentReport();
+    const narrative = report.marketContext?.walkabilityNarrative ?? "";
+
+    expect(narrative).toContain("EPA Walkability Index 6/20");
+    expect(narrative).toContain("below-average walkability");
+    expect(narrative).toContain("EPA Smart Location Database");
+
+    // The measurement, the city comparison, and the source label all survive
+    // on the report item as well.
+    const econSection = report.sections.find(
+      (section) => section.title === "Neighborhood Economic Context",
+    );
+    const walkItem = econSection?.items.find((item) => item.label === "Access & Walkability");
+    expect(walkItem?.value).toBe("Measured: 6/20");
+    expect(walkItem?.detail).toContain("city avg: 11/20");
+    expect(walkItem?.sourceLabel).toBe("EPA Smart Location Database");
+    expect(report.marketContext?.comparisons?.walkScore).toMatchObject({
+      location: 6,
+      city: 11,
+    });
+  });
+
+  it("keeps the unavailable-data state when no walk score is present", () => {
+    const report = generateReportData(makeState(), [makeProgram()], {
+      zones,
+      zoneNames,
+      census: { ...carDependentCensus, walkScore: null },
+    });
+
+    expect(report.marketContext?.walkabilityNarrative).toBe(
+      "Walkability data not available for this location.",
+    );
+    const econSection = report.sections.find(
+      (section) => section.title === "Neighborhood Economic Context",
+    );
+    const walkItem = econSection?.items.find((item) => item.label === "Access & Walkability");
+    expect(walkItem?.value).toBe("Measured: not available");
+  });
+});
+
+describe("Neighborhood Economic Context placement by report type", () => {
+  const census = {
+    medianIncome: 58000,
+    medianHomeValue: 210000,
+    population: 4200,
+    walkScore: 13,
+    tractId: "17031000100",
+  };
+
+  function titlesFor(reportType: string) {
+    const report = generateReportData(
+      makeState({ reportType } as Parameters<typeof makeState>[0]),
+      [makeProgram()],
+      { zones, zoneNames, census },
+    );
+    return report.sections.map((section) => section.title);
+  }
+
+  const ECON = "Neighborhood Economic Context";
+
+  it("demotes it below the programs on the site-incentive (business owner) report", () => {
+    const titles = titlesFor("site-incentives");
+    const econIndex = titles.indexOf(ECON);
+    const programsIndex = titles.indexOf(CONFIRMED_PROGRAMS_SECTION_TITLE);
+    const supportIndex = titles.indexOf(SUPPORT_ORGANIZATIONS_SECTION_TITLE);
+
+    expect(econIndex).toBeGreaterThan(-1);
+    expect(programsIndex).toBeGreaterThan(-1);
+    expect(econIndex).toBeGreaterThan(programsIndex);
+    if (supportIndex > -1) expect(econIndex).toBeGreaterThan(supportIndex);
+
+    // The two sections the report UI renders expanded by default must not be
+    // spent on background economics.
+    expect(titles.slice(0, 2)).not.toContain(ECON);
+  });
+
+  it("applies the same demotion to the legacy location-incentives alias", () => {
+    const titles = titlesFor("location-incentives");
+    expect(titles.indexOf(ECON)).toBeGreaterThan(
+      titles.indexOf(CONFIRMED_PROGRAMS_SECTION_TITLE),
+    );
+  });
+
+  it("keeps it above the programs on the vacancy / development report", () => {
+    const titles = titlesFor("dev-feasibility");
+    const econIndex = titles.indexOf(ECON);
+
+    expect(econIndex).toBeGreaterThan(-1);
+    const programIndex = titles.findIndex((title) =>
+      [
+        CONFIRMED_PROGRAMS_SECTION_TITLE,
+        GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+        "Additional Programs to Explore",
+      ].includes(title),
+    );
+    if (programIndex > -1) expect(econIndex).toBeLessThan(programIndex);
+  });
+
+  it("keeps it above the programs on the legacy best-location alias", () => {
+    const titles = titlesFor("best-location");
+    expect(titles).toContain(ECON);
+    const programIndex = titles.findIndex((title) =>
+      [
+        CONFIRMED_PROGRAMS_SECTION_TITLE,
+        GOAL_MATCH_PROGRAMS_SECTION_TITLE,
+        "Additional Programs to Explore",
+      ].includes(title),
+    );
+    if (programIndex > -1) expect(titles.indexOf(ECON)).toBeLessThan(programIndex);
+  });
+
+  it("keeps every economic item on the site-incentive report — this is a move, not a cut", () => {
+    const owner = generateReportData(makeState(), [makeProgram()], {
+      zones,
+      zoneNames,
+      census,
+    });
+    const corridor = generateReportData(
+      makeState({ reportType: "dev-feasibility" } as Parameters<typeof makeState>[0]),
+      [makeProgram()],
+      { zones, zoneNames, census },
+    );
+
+    const labels = (report: GeneratedReport) =>
+      report.sections
+        .find((section) => section.title === ECON)
+        ?.items.map((item) => item.label) ?? [];
+
+    expect(labels(owner).length).toBeGreaterThan(0);
+    expect(labels(owner)).toEqual(labels(corridor));
+    expect(labels(owner)).toEqual(
+      expect.arrayContaining([
+        "Median Household Income",
+        "Home Value Context",
+        "Population Base",
+        "Access & Walkability",
+        "Incentive Coverage",
+      ]),
+    );
+  });
+});
