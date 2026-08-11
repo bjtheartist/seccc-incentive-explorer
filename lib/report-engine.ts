@@ -70,6 +70,7 @@ import {
 import type { ProjectFit, ProjectFitSummary } from "./project-fit";
 import type { CapitalMatchResult, CapitalPartnerMatch } from "./capital-partners";
 import {
+  CAPITAL_PARTNER_SECTION_ID,
   CAPITAL_PARTNER_SECTION_TITLE,
   capitalPartnerHandoffForReport,
 } from "./capital-partner-report";
@@ -80,6 +81,7 @@ import {
   SUPPORT_ORGANIZATION_AVAILABILITY_LINE,
   SUPPORT_ORGANIZATIONS_CAPACITY_NOTE,
   SUPPORT_ORGANIZATIONS_DESCRIPTION,
+  SUPPORT_ORGANIZATIONS_SECTION_ID,
   SUPPORT_ORGANIZATIONS_SECTION_TITLE,
 } from "./support-organization-copy";
 
@@ -126,6 +128,14 @@ interface WizardState {
 // ─── Output Types ───────────────────────────────────────────────────
 
 export interface ReportSection {
+  /**
+   * Stable kebab-case identifier for this section, set at every construction
+   * site below. Renderers and the PDF builder should match sections on `id`,
+   * falling back to `title` only for saved reports persisted before this
+   * field existed (those have no `id` in their stored JSON). `title` remains
+   * purely a display string — do not match logic against it going forward.
+   */
+  id?: string;
   title: string;
   description?: string;
   table?: {
@@ -446,6 +456,10 @@ export const CONFIRMED_PROGRAMS_SECTION_TITLE = "Programs Mapped at This Address
 export const GOAL_MATCH_PROGRAMS_SECTION_TITLE = "Programs to Review for Your Goal";
 export const OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE = "Other Programs Mapped at This Address";
 
+export const CONFIRMED_PROGRAMS_SECTION_ID = "programs-mapped-at-this-address";
+export const GOAL_MATCH_PROGRAMS_SECTION_ID = "programs-to-review-for-your-goal";
+export const OTHER_CONFIRMED_PROGRAMS_SECTION_ID = "other-programs-mapped-at-this-address";
+
 const LEGACY_CONFIRMED_PROGRAMS_SECTION_TITLE = "Eligible Incentive Programs";
 const LEGACY_OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE = "Other Programs Tied to This Address";
 
@@ -455,6 +469,81 @@ const CONFIRMED_PROGRAMS_SECTION_TITLES = new Set([
   OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
   LEGACY_CONFIRMED_PROGRAMS_SECTION_TITLE,
   LEGACY_OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
+]);
+
+/**
+ * Stable kebab-case ids for the report sections that are constructed as
+ * literal `title:` strings below (i.e. not already backed by an exported
+ * *_SECTION_TITLE constant). Renderers/PDF code should key off these ids,
+ * not the English title, so a copy edit never silently breaks selection.
+ * Keys are grouped by the semantic slot they identify — several construction
+ * sites intentionally share an id (e.g. "Additional Programs to Explore" is
+ * built by more than one report generator for the same semantic section).
+ */
+export const SECTION_IDS = {
+  vacancyProjectIntake: "vacancy-project-intake",
+  projectIntake: "project-intake",
+  documentReadinessChecklist: "document-readiness-checklist",
+  neighborhoodEconomicContext: "neighborhood-economic-context",
+  localImpactAnchors: "local-impact-anchors",
+  incentiveZoneCoverage: "incentive-zone-coverage-program-interactions",
+  additionalProgramsToExplore: "additional-programs-to-explore",
+  requiredDocuments: "required-documents",
+  tifFinancialContext: "tif-financial-context",
+  upcomingDeadlines: "upcoming-deadlines-near-this-address",
+  siteDescriptionPropertyProfile: "site-description-property-profile",
+  zoningRegulatoryReview: "zoning-regulatory-review",
+  locationContext: "location-context",
+  programsMappedAtThisSite: "programs-mapped-at-this-site",
+  decisionFactors: "decision-factors",
+  incentivePathwayReview: "incentive-pathway-review",
+  applicationRoadmap: "application-roadmap",
+  noProgramsMatchCurrentFilters: "no-programs-match-current-filters",
+  marketSignalSummary: "market-signal-summary",
+  whatTheSignalsSay: "what-the-signals-say",
+  ownerOperatorMap: "owner-operator-map",
+  howToReadThis: "how-to-read-this",
+  whatAFundedVersionUnlocks: "what-a-funded-version-unlocks",
+  siteFacts: "site-facts",
+  zoningUseStartingPoint: "zoning-use-starting-point",
+  propertyAnalysis: "property-analysis",
+} as const;
+
+/** Kebab-case id for a `${level}-Level Programs` section, e.g. "city-level-programs". */
+function levelProgramsSectionId(level: string): string {
+  return `${level.toLowerCase()}-level-programs`;
+}
+
+/**
+ * Marker sets used to find "the property/zoning context section, whichever
+ * one this report type built" without matching literal English titles.
+ * "Site Profile" and "Site Overview" are kept in the title sets only as a
+ * historical fallback — no current builder emits either title — so an old
+ * saved report using those titles still matches.
+ */
+const LOCATION_CONTEXT_MARKER_IDS = new Set<string>([
+  SECTION_IDS.locationContext,
+  SECTION_IDS.siteFacts,
+  SECTION_IDS.zoningUseStartingPoint,
+]);
+const LOCATION_CONTEXT_MARKER_TITLES = new Set([
+  "Location Context",
+  "Site Profile",
+  "Site Facts",
+  "Zoning & Use Starting Point",
+]);
+const CONTEXT_SECTION_MARKER_IDS = new Set<string>([
+  SECTION_IDS.zoningUseStartingPoint,
+  SECTION_IDS.siteFacts,
+  SECTION_IDS.locationContext,
+  SECTION_IDS.propertyAnalysis,
+]);
+const CONTEXT_SECTION_MARKER_TITLES = new Set([
+  "Zoning & Use Starting Point",
+  "Site Facts",
+  "Site Overview",
+  "Location Context",
+  "Property Analysis",
 ]);
 
 /**
@@ -885,6 +974,11 @@ export function normalizePublicReportForDisplay(report: GeneratedReport): Genera
       const supportOrganizationSection = isSupportOrganizationSectionTitle(section.title);
       return {
         ...section,
+        // Backfill the id even for reports saved before this field existed,
+        // so downstream matching (PDF builder, ReportDisplay) can key off id
+        // for the normalized support-organizations section regardless of the
+        // report's save vintage.
+        id: supportOrganizationSection ? SUPPORT_ORGANIZATIONS_SECTION_ID : section.id,
         title: supportOrganizationSection
           ? SUPPORT_ORGANIZATIONS_SECTION_TITLE
           : normalizePublicHeadlineText(section.title),
@@ -1069,6 +1163,7 @@ function buildProjectIntakeSection(state: WizardState): ReportSection | null {
 
     if (items.length === 0) return null;
     return {
+      id: SECTION_IDS.vacancyProjectIntake,
       title: "Vacancy Project Intake",
       description: "Optional scoping answers used to tailor vacancy analysis and next-step language.",
       items,
@@ -1110,6 +1205,7 @@ function buildProjectIntakeSection(state: WizardState): ReportSection | null {
 
   if (items.length === 0) return null;
   return {
+    id: SECTION_IDS.projectIntake,
     title: "Project Intake",
     description: "Project-scoping answers used to tailor the screening, readiness checklist, and next steps.",
     items,
@@ -1135,6 +1231,7 @@ function buildDocumentReadinessSection(programs: Program[], state: WizardState):
     });
 
   return {
+    id: SECTION_IDS.documentReadinessChecklist,
     title: "Document Readiness Checklist",
     description:
       `Practical document checklist based on your answers and the programs matched to this project. ${DOCUMENT_PREPARATION_COST_LEGEND.map((item) => `${item.tier} = ${item.label.toLowerCase()}`).join("; ")}. ${DOCUMENT_PREPARATION_COST_CAVEAT} Marked items are not a guarantee of eligibility; they help prepare the next conversation.`,
@@ -1982,6 +2079,7 @@ function buildNeighborhoodEconomicContextSection(
   });
 
   return {
+    id: SECTION_IDS.neighborhoodEconomicContext,
     title: "Neighborhood Economic Context",
     description: "Market, workforce, property, and spending-power signals for this location — labeled measured, modeled, or benchmark.",
     items,
@@ -2005,6 +2103,7 @@ function buildLocalImpactAnchorsSection(ctx: ReportContext): ReportSection | und
   }));
 
   return {
+    id: SECTION_IDS.localImpactAnchors,
     title: "Local Impact Anchors",
     description: "Local Impact Anchors are institutions, employers, and destination clusters that can shape neighborhood activity. They help point to where jobs, visitors, training pathways, purchasing, partnerships, and local business demand may already be concentrated.",
     items,
@@ -2217,6 +2316,7 @@ function capitalPartnerReportItem(match: CapitalPartnerMatch): ReportItem {
 function buildCapitalPartnerSection(handoff: CapitalMatchResult): ReportSection | null {
   if (!handoff.primary) return null;
   return {
+    id: CAPITAL_PARTNER_SECTION_ID,
     title: CAPITAL_PARTNER_SECTION_TITLE,
     description:
       "These organizations describe financing services for certain projects. Contact them directly to ask whether their services may be relevant. These listings are informational, not endorsements, approvals, or eligibility decisions. Other public, community, financing, and program reviews may apply, and no contact information has been shared on your behalf.",
@@ -2517,6 +2617,7 @@ function buildDeadlinesSection(
   });
 
   return {
+    id: SECTION_IDS.upcomingDeadlines,
     title: "Upcoming Deadlines Near This Address",
     description: "Upcoming dates that may affect this report. Use each row's notes and official links to confirm timing before applying or starting work.",
     items,
@@ -2621,6 +2722,7 @@ function generateLocationIncentives(
     }
     if (stackingItems.length > 0) {
       sections.push({
+        id: SECTION_IDS.incentiveZoneCoverage,
         title: "Incentive Zone Coverage & Program Interactions",
         description: "Mapped incentive zones at this address and program interactions to confirm with the relevant administrators.",
         items: stackingItems,
@@ -2639,6 +2741,7 @@ function generateLocationIncentives(
         ? ` ${joinLabels(contextOnly)} ${contextOnly.length === 1 ? "is" : "are"} recorded from your answers but ${contextOnly.length === 1 ? "was" : "were"} not used to select these programs.`
         : "";
       sections.push({
+        id: GOAL_MATCH_PROGRAMS_SECTION_ID,
         title: GOAL_MATCH_PROGRAMS_SECTION_TITLE,
         description: `Programs tied to this address whose stated uses may relate to the selected goal${ordering.length === 1 ? "" : "s"}: ${joinLabels(ordering)}.${contextNote} Each program still requires individual eligibility confirmation.`,
         items: goalMatchedPrograms.map((program) =>
@@ -2653,6 +2756,7 @@ function generateLocationIncentives(
       });
       if (otherConfirmedPrograms.length > 0) {
         sections.push({
+          id: OTHER_CONFIRMED_PROGRAMS_SECTION_ID,
           title: OTHER_CONFIRMED_PROGRAMS_SECTION_TITLE,
           description: `Other programs connected to this address that do not directly target the selected goals or still need industry confirmation.`,
           items: otherConfirmedPrograms.map((program) =>
@@ -2668,6 +2772,7 @@ function generateLocationIncentives(
       }
     } else {
       sections.push({
+        id: CONFIRMED_PROGRAMS_SECTION_ID,
         title: CONFIRMED_PROGRAMS_SECTION_TITLE,
         description: "Programs connected to this address through mapped incentive-zone boundaries. Confirm the applicable requirements for each program.",
         items: confirmedPrograms.map((program) =>
@@ -2685,6 +2790,7 @@ function generateLocationIncentives(
 
   if (exploratoryPrograms.length > 0) {
     sections.push({
+      id: SECTION_IDS.additionalProgramsToExplore,
       title: "Additional Programs to Explore",
       description: "Programs not confirmed by this address alone, including Cook County tools that may apply countywide but still need project, property, and administrator review.",
       items: exploratoryPrograms.slice(0, 8).map((program) =>
@@ -2746,6 +2852,7 @@ function generateLocationIncentives(
         }).join("\n"),
       }));
       sections.push({
+        id: SECTION_IDS.requiredDocuments,
         title: "Required Documents",
         description: `${documentCount} document${documentCount === 1 ? "" : "s"} across programs mapped at this address, organized by category. Each document lists which program(s) require it. ${DOCUMENT_PREPARATION_COST_LEGEND.map((item) => `${item.tier} = ${item.label.toLowerCase()}`).join("; ")}. ${DOCUMENT_PREPARATION_COST_CAVEAT}`,
         items: docItems,
@@ -2804,6 +2911,7 @@ function generateLocationIncentives(
     // service filter at all, so it must not borrow that sentence — and an
     // absent basis is unknown, not the matched case.
     sections.push({
+      id: SUPPORT_ORGANIZATIONS_SECTION_ID,
       title: SUPPORT_ORGANIZATIONS_SECTION_TITLE,
       description: communityAssetsData.selectionBasis === "community-area-match"
         ? `${SUPPORT_ORGANIZATIONS_DESCRIPTION} ${SUPPORT_ORGANIZATIONS_CAPACITY_NOTE}`
@@ -2845,6 +2953,7 @@ function generateLocationIncentives(
         neighborhoodEconomicSection.items.push(tifItem);
       } else {
         sections.push({
+          id: SECTION_IDS.tifFinancialContext,
           title: "TIF Financial Context",
           description: "Annual report financial context for the TIF district covering this address.",
           items: [tifItem],
@@ -3199,6 +3308,7 @@ function generateBestLocation(
       });
     }
     sections.push({
+      id: SECTION_IDS.siteDescriptionPropertyProfile,
       title: "Site Description & Property Profile",
       description: "Property data from Cook County Assessor records for due diligence and application reference.",
       items: propertyItems,
@@ -3209,6 +3319,7 @@ function generateBestLocation(
   const zoningItems = buildZoningReportItems(cityZoning);
   if (zoningItems.length > 0) {
     sections.push({
+      id: SECTION_IDS.zoningRegulatoryReview,
       title: "Zoning & Regulatory Review",
       description: "Published City zoning classification and cited City ZBA records for the selected location. The cited datasets are official City sources. The Explorer's point matches and presentation are informational and are not a City zoning determination. Consult the cited records and verify the intended use, case history, and project requirements with the City before relying on them.",
       items: zoningItems,
@@ -3242,6 +3353,7 @@ function generateBestLocation(
       }
     }
     sections.push({
+      id: SECTION_IDS.incentiveZoneCoverage,
       title: `Incentive Zone Coverage & Program Interactions (${zoneCount} zones)`,
       description: "Mapped incentive zones at this location and program interactions to confirm with the relevant administrators.",
       items: zoneItems,
@@ -3321,6 +3433,7 @@ function generateBestLocation(
   }
 
   sections.push({
+    id: SECTION_IDS.locationContext,
     title: `${projectLabel} Location Context`,
     description: "Vacancy-focused property and program context to verify before relying on an incentive or financing path.",
     items: feasibilityItems,
@@ -3329,6 +3442,7 @@ function generateBestLocation(
   // §06 Available Programs
   if (sitePrograms.length > 0) {
     sections.push({
+      id: SECTION_IDS.programsMappedAtThisSite,
       title: `Programs Mapped at This Site (${sitePrograms.length})`,
       description: "Programs linked to this site through mapped incentive-zone boundaries. Each program requires separate review.",
       items: sitePrograms.slice(0, 8).map((program) =>
@@ -3345,6 +3459,7 @@ function generateBestLocation(
 
   if (exploratoryPrograms.length > 0) {
     sections.push({
+      id: SECTION_IDS.additionalProgramsToExplore,
       title: "Additional Programs to Explore",
       description: "Broader programs, including Cook County tools, that require project, property, and administrator review.",
       items: exploratoryPrograms.slice(0, 8).map((program) =>
@@ -3418,6 +3533,7 @@ function generateBestLocation(
     };
 
     sections.push({
+      id: SECTION_IDS.decisionFactors,
       title: "Decision Factors",
       description: "Your selected evaluation criteria assessed against site data.",
       items: priorities.map((p) => {
@@ -3585,6 +3701,7 @@ function generateProgramExplorer(
     const levelPrograms = grouped[level];
     if (!levelPrograms || levelPrograms.length === 0) continue;
     sections.push({
+      id: levelProgramsSectionId(level),
       title: `${level}-Level Programs`,
       items: levelPrograms.map((p) => programReportItem(p)),
     });
@@ -3593,6 +3710,7 @@ function generateProgramExplorer(
   // If no programs matched the filters, show a fallback section
   if (sections.length === 0) {
     sections.push({
+      id: SECTION_IDS.noProgramsMatchCurrentFilters,
       title: "No Programs Match Current Filters",
       items: [
         {
@@ -3666,6 +3784,7 @@ function generateDeveloperAnalysis(
   }));
 
   sections.push({
+    id: SECTION_IDS.incentivePathwayReview,
     title: "Incentive Pathway Review",
     description: "Program fit and verification notes. This report does not estimate award amounts or guarantee funding.",
     items: stackingItems.length > 0
@@ -3730,6 +3849,7 @@ function generateDeveloperAnalysis(
   }
 
   sections.push({
+    id: SECTION_IDS.requiredDocuments,
     title: "Required Documents",
     description: `${allRequiredDocs.size} documents across the selected programs, organized by category. Each document lists which program(s) require it.`,
     items: requirementItems,
@@ -3771,6 +3891,7 @@ function generateDeveloperAnalysis(
     }));
 
   sections.push({
+    id: SECTION_IDS.applicationRoadmap,
     title: "Application Roadmap",
     items: roadmapItems.length > 0
       ? roadmapItems
@@ -4167,6 +4288,7 @@ function generateCorridorIntelligence(
       : `${label} does not have a computed corridor metric snapshot yet. This report still shows the intended data structure, but the metrics should be backfilled before using it for decisions.`,
     sections: [
       {
+        id: SECTION_IDS.marketSignalSummary,
         title: "Market Signal Summary",
         description: "The numbers in one place. Each row pairs a signal with the plain-language read it supports.",
         table: {
@@ -4176,6 +4298,7 @@ function generateCorridorIntelligence(
         items: [],
       },
       {
+        id: SECTION_IDS.whatTheSignalsSay,
         title: "What The Signals Say",
         description: "A short read of what the current data supports, without turning the report into a recommendation engine.",
         items: signalItems,
@@ -4183,6 +4306,7 @@ function generateCorridorIntelligence(
       ...(ownerOperatorRows.length > 0
         ? [
             {
+              id: SECTION_IDS.ownerOperatorMap,
               title: "Owner & Operator Map",
               description:
                 "A first-pass relationship map connecting recorded property-control records to parcels, vacancy signals, business-license site matches, and transfer hints. Treat these as leads with confidence labels, not final ownership claims.",
@@ -4209,6 +4333,7 @@ function generateCorridorIntelligence(
           ]
         : []),
       {
+        id: SECTION_IDS.howToReadThis,
         title: "How To Read This",
         description: "Source notes, confidence limits, and units of measure for interpreting the corridor snapshot.",
         table: {
@@ -4218,6 +4343,7 @@ function generateCorridorIntelligence(
         items: confidenceItems,
       },
       {
+        id: SECTION_IDS.whatAFundedVersionUnlocks,
         title: "What A Funded Version Unlocks",
         description: "This hidden demo shows what is possible with one geography. A funded version would make it reliable across more places and partner workflows.",
         items: [
@@ -4602,7 +4728,7 @@ export function generateReportData(
     // (census/market data lives in Neighborhood Economic Context to avoid duplication)
     const contextItems: ReportItem[] = [];
     const hasDedicatedZoningSection = report.sections.some(
-      (section) => section.title === "Zoning & Regulatory Review",
+      (section) => section.id === SECTION_IDS.zoningRegulatoryReview || section.title === "Zoning & Regulatory Review",
     );
     const zoningContextItems = hasDedicatedZoningSection
       ? []
@@ -4668,6 +4794,7 @@ export function generateReportData(
     if (reportType === "site-incentives" || reportType === "location-incentives") {
       if (contextItems.length > 0) {
         report.sections.unshift({
+          id: SECTION_IDS.siteFacts,
           title: "Site Facts",
           description: "Property, district, transportation, and nearby public-data signals that help scope the project after the zoning starting point is understood.",
           items: contextItems,
@@ -4675,6 +4802,7 @@ export function generateReportData(
       }
       if (zoningContextItems.length > 0) {
         report.sections.unshift({
+          id: SECTION_IDS.zoningUseStartingPoint,
           title: "Zoning & Use Starting Point",
           description: "Start here before committing to a lease, design, or construction scope. The report shows the published district and cited City case records; it does not classify the proposed activity or determine that a use is permitted. Define the exact activity, then verify the controlling ordinance and current process with the City or a zoning professional.",
           items: zoningContextItems,
@@ -4682,6 +4810,7 @@ export function generateReportData(
       }
     } else if (contextItems.length > 0 || zoningContextItems.length > 0) {
       report.sections.unshift({
+        id: SECTION_IDS.locationContext,
         title: "Location Context",
         items: [...zoningContextItems, ...contextItems],
       });
@@ -4728,9 +4857,12 @@ export function generateReportData(
 
       // Insert after Location Context / Site Profile
       const locCtxIdx = report.sections.findIndex((s) =>
-        ["Location Context", "Site Profile", "Site Facts", "Zoning & Use Starting Point"].includes(s.title),
+        s.id
+          ? LOCATION_CONTEXT_MARKER_IDS.has(s.id)
+          : LOCATION_CONTEXT_MARKER_TITLES.has(s.title),
       );
       report.sections.splice(locCtxIdx + 1, 0, {
+        id: SECTION_IDS.propertyAnalysis,
         title: "Property Analysis",
         items: propertyItems,
       });
@@ -4753,7 +4885,9 @@ export function generateReportData(
     );
     const contextIndex = report.sections.reduce(
       (lastIndex, section, index) =>
-        ["Zoning & Use Starting Point", "Site Facts", "Site Overview", "Location Context", "Property Analysis"].includes(section.title)
+        (section.id
+          ? CONTEXT_SECTION_MARKER_IDS.has(section.id)
+          : CONTEXT_SECTION_MARKER_TITLES.has(section.title))
           ? index
           : lastIndex,
       -1,

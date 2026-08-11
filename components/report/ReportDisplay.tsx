@@ -25,6 +25,7 @@ import { selectedProjectGoalLabels } from "@/lib/report-wizard-config";
 import type { WizardState } from "@/lib/report-wizard-config";
 import {
   normalizePublicReportForDisplay,
+  SECTION_IDS,
   type GeneratedReport,
   type ActionRoadmapItem,
   type NeighborhoodEconomicContext,
@@ -50,7 +51,7 @@ import {
 } from "@/lib/personas";
 import { GroupedReportDetail } from "@/components/report/GroupedReportDetail";
 import { CapitalPartnerHandoff } from "@/components/report/CapitalPartnerHandoff";
-import { CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
+import { CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE } from "@/lib/capital-partner-report";
 import { isSupportOrganizationSectionTitle } from "@/lib/support-organization-copy";
 import { StartPreparationPacketButton } from "@/components/incentive-preparation/StartPreparationPacketButton";
 import { SaveReportModal } from "@/components/workspace/SaveReportModal";
@@ -737,10 +738,19 @@ const ECON_CARD_LABELS = new Set([
   "Resident Spending-Power Proxy",
 ]);
 
+/**
+ * Match a section by its stable id, falling back to the English title only
+ * for sections saved before the `id` field existed. Renaming a section's
+ * title in report-engine.ts must never change what this finds.
+ */
+function sectionMatchesIdOrTitle(section: ReportSection, id: string, title: string): boolean {
+  return section.id ? section.id === id : section.title === title;
+}
+
 function visibleSectionItems(section: ReportSection): ReportItem[] {
   const items = section.items ?? [];
-  if (section.title === "Local Impact Anchors") return []; // rendered as cards
-  if (section.title === "Neighborhood Economic Context") {
+  if (sectionMatchesIdOrTitle(section, SECTION_IDS.localImpactAnchors, "Local Impact Anchors")) return []; // rendered as cards
+  if (sectionMatchesIdOrTitle(section, SECTION_IDS.neighborhoodEconomicContext, "Neighborhood Economic Context")) {
     return items.filter((i) => !ECON_CARD_LABELS.has(i.label));
   }
   return items;
@@ -1247,7 +1257,10 @@ export function ReportDisplay({
     };
   }, [vacancySpreadsheetFeatures]);
   const ownerOperatorSection = useMemo(
-    () => report.sections.find((section) => section.title === "Owner & Operator Map" && section.table),
+    () =>
+      report.sections.find(
+        (section) => sectionMatchesIdOrTitle(section, SECTION_IDS.ownerOperatorMap, "Owner & Operator Map") && section.table,
+      ),
     [report.sections],
   );
   const handleOwnerOperatorExport = useCallback(() => {
@@ -1892,7 +1905,7 @@ export function ReportDisplay({
 	                      </p>
 	                    )}
 
-                    {section.title === "Owner & Operator Map" && section.table && (
+                    {sectionMatchesIdOrTitle(section, SECTION_IDS.ownerOperatorMap, "Owner & Operator Map") && section.table && (
                       <div className="mb-5">
                         <button
                           type="button"
@@ -1943,7 +1956,7 @@ export function ReportDisplay({
 	                    )}
 
 	                    {/* Neighborhood Economic Context comparison bars */}
-                    {section.title === "Neighborhood Economic Context" && report.marketContext?.comparisons && (
+                    {sectionMatchesIdOrTitle(section, SECTION_IDS.neighborhoodEconomicContext, "Neighborhood Economic Context") && report.marketContext?.comparisons && (
                       <div className="space-y-0 divide-y divide-[#0C1B33]/5 mb-6">
                         {report.marketContext.comparisons.income && (
                           <ComparisonBar
@@ -1981,17 +1994,17 @@ export function ReportDisplay({
                     )}
 
                     {/* Neighborhood economic signal cards */}
-                    {section.title === "Neighborhood Economic Context" && report.neighborhoodEconomics && (
+                    {sectionMatchesIdOrTitle(section, SECTION_IDS.neighborhoodEconomicContext, "Neighborhood Economic Context") && report.neighborhoodEconomics && (
                       <EconomicSignalCards economics={report.neighborhoodEconomics} />
                     )}
 
                     {/* Local Impact Anchors — dedicated section, card layout */}
-                    {section.title === "Local Impact Anchors" && report.neighborhoodEconomics?.anchors && (
+                    {sectionMatchesIdOrTitle(section, SECTION_IDS.localImpactAnchors, "Local Impact Anchors") && report.neighborhoodEconomics?.anchors && (
                       <AnchorCards anchors={report.neighborhoodEconomics.anchors} />
                     )}
 
                     {/* Factual zone coverage and program interactions */}
-                    {section.title === "Incentive Zone Coverage & Program Interactions" && report.stackingAnalysis && (
+                    {sectionMatchesIdOrTitle(section, SECTION_IDS.incentiveZoneCoverage, "Incentive Zone Coverage & Program Interactions") && report.stackingAnalysis && (
                       <div className="mb-8">
                         <div className="mb-6 border-l-2 border-[#2563EB]/25 pl-4">
                           <span className="font-mono-bureau text-[9px] uppercase tracking-[0.15em] text-[#0C1B33]/35">
@@ -2049,7 +2062,7 @@ export function ReportDisplay({
                           const reportItem = item as ReportNavigationItem;
                           const itemProgram = reportItem.programId ? programById.get(reportItem.programId) : undefined;
                           const isSupportNetworkItem = isSupportOrganizationSectionTitle(section.title);
-                          const isDeadlineItem = section.title === "Upcoming Deadlines Near This Address";
+                          const isDeadlineItem = sectionMatchesIdOrTitle(section, SECTION_IDS.upcomingDeadlines, "Upcoming Deadlines Near This Address");
                           const supportWebsiteUrl = isSupportNetworkItem ? (reportItem.sourceUrl || reportItem.url) : undefined;
                           const hasGroupedDetail = Boolean(item.detailGroups?.length);
                           const hasSideValue = Boolean(item.value && !hasGroupedDetail);
@@ -2092,7 +2105,7 @@ export function ReportDisplay({
                                   )}
                                   {item.preparationCost && <PreparationCostBadge signal={item.preparationCost} />}
                                 </span>
-                                {!hasGroupedDetail && item.detail && section.title === "Required Documents" ? (
+                                {!hasGroupedDetail && item.detail && sectionMatchesIdOrTitle(section, SECTION_IDS.requiredDocuments, "Required Documents") ? (
                                   <ul className="mt-2 space-y-1.5">
                                     {item.detail.split("\n").map((line, li) => {
                                       const { documentName, programs, cost } = parseDocumentCostLine(line);
@@ -2111,7 +2124,7 @@ export function ReportDisplay({
                                     })}
                                   </ul>
                                 ) : !hasGroupedDetail && item.detail ? (
-                                  <span className={`mt-1.5 block text-[12px] leading-[1.65] text-[#0C1B33]/50 sm:text-[13px] ${isSupportNetworkItem || isDeadlineItem || section.title === CAPITAL_PARTNER_SECTION_TITLE ? "whitespace-pre-line" : ""}`}>
+                                  <span className={`mt-1.5 block text-[12px] leading-[1.65] text-[#0C1B33]/50 sm:text-[13px] ${isSupportNetworkItem || isDeadlineItem || sectionMatchesIdOrTitle(section, CAPITAL_PARTNER_SECTION_ID, CAPITAL_PARTNER_SECTION_TITLE) ? "whitespace-pre-line" : ""}`}>
                                     {item.detail}
                                   </span>
                                 ) : null}
@@ -2192,7 +2205,7 @@ export function ReportDisplay({
                         })}
                       </div>
                     )}
-                    {section.title === "Zoning & Use Starting Point" && report.metadata?.zoneClass && (
+                    {sectionMatchesIdOrTitle(section, SECTION_IDS.zoningUseStartingPoint, "Zoning & Use Starting Point") && report.metadata?.zoneClass && (
                       <div className="mt-8 print:hidden">
                         <ZoningReviewQuestions
                           zoneClass={report.metadata.zoneClass}
