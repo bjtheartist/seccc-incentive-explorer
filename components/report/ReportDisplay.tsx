@@ -30,6 +30,7 @@ import {
 import type { Program } from "@/lib/types";
 import ReportZoningMap from "@/components/report/ReportZoningMap";
 import { RefineValuePanel } from "@/components/report/RefineValuePanel";
+import { StartHereCard } from "@/components/report/StartHereCard";
 import { ActionRoadmapSection } from "@/components/report/ActionRoadmapSection";
 import {
   DownloadGateModal,
@@ -1004,6 +1005,13 @@ export function ReportDisplay({
 
           {/* ── Report Body ── */}
           <div className={`report-body ${compact ? "px-4 py-8" : "px-5 sm:px-12 md:px-16 py-14"}`}>
+            {/* ── Start Here (Phase B of the startHere consolidation): the
+                canonical one-action card, first content block in the body.
+                Absent on reports without report.startHere (older saved
+                reports, or report types outside the executive-summary
+                gate) — the rest of the body renders unchanged either way. ── */}
+            <StartHereCard report={report} source={analyticsSource} />
+
             {/* ── Overview text ── */}
             {report.summary && (
               <div className="mb-12">
@@ -1083,6 +1091,7 @@ export function ReportDisplay({
                   editedText={editedSummaryText}
                   onToggleEdit={() => setIsEditingSummary(!isEditingSummary)}
                   onTextChange={setEditedSummaryText}
+                  collapseTopActions={Boolean(report.startHere)}
                 />
               </div>
             )}
@@ -1464,22 +1473,19 @@ export function ReportDisplay({
                 );
               })}
 
-            {/* ── Recommended Actions ── */}
+            {/* ── Recommended Actions ──
+                Demoted behind native disclosure when report.startHere is
+                present — StartHereCard already surfaced the one dominant
+                action at the top of the body, so this list (still every
+                action, unchanged content) collapses instead of competing
+                with it. Absent report.startHere, this renders exactly as
+                before. */}
             {report.recommendedActions &&
-              report.recommendedActions.length > 0 && (
-                <div id="recommended-actions" className="mb-12">
-                  <div className="flex items-baseline gap-4 mb-4">
-                    <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
-                      {String(
-                        (report.sections?.length || 0) + sectionOffset + 1
-                      ).padStart(2, "0")}
-                    </span>
-                    <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]">
-                      Recommended Actions
-                    </h2>
-                  </div>
-                  <hr className="border-[#0C1B33]/8 mb-5" />
-
+              report.recommendedActions.length > 0 && (() => {
+                const sectionNumber = String(
+                  (report.sections?.length || 0) + sectionOffset + 1
+                ).padStart(2, "0");
+                const actionsList = (
                   <div className="space-y-5">
                     {report.recommendedActions.map((action, actionIdx) => {
                       const priority = action.priority || "medium";
@@ -1516,8 +1522,36 @@ export function ReportDisplay({
                       );
                     })}
                   </div>
-                </div>
-              )}
+                );
+
+                return report.startHere ? (
+                  <details id="recommended-actions" className="mb-12 group">
+                    <summary className="flex items-baseline gap-4 mb-4 cursor-pointer select-none list-none">
+                      <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
+                        {sectionNumber}
+                      </span>
+                      <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]">
+                        Recommended Actions · {report.recommendedActions.length}
+                      </h2>
+                    </summary>
+                    <hr className="border-[#0C1B33]/8 mb-5" />
+                    {actionsList}
+                  </details>
+                ) : (
+                  <div id="recommended-actions" className="mb-12">
+                    <div className="flex items-baseline gap-4 mb-4">
+                      <span className="font-editorial text-[28px] sm:text-[40px] leading-none text-[#0C1B33]/8">
+                        {sectionNumber}
+                      </span>
+                      <h2 className="font-mono-bureau text-[11px] tracking-[0.2em] uppercase text-[#0C1B33]">
+                        Recommended Actions
+                      </h2>
+                    </div>
+                    <hr className="border-[#0C1B33]/8 mb-5" />
+                    {actionsList}
+                  </div>
+                );
+              })()}
 
             {/* ── Data Sources ── */}
             {report.dataSources && report.dataSources.length > 0 && (

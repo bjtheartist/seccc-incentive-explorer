@@ -480,7 +480,9 @@ function baseSections(zoneClass: string | undefined): GeneratedReport["sections"
   ];
 }
 
-function buildReport(options: { zoneClass?: string } = {}): GeneratedReport {
+function buildReport(
+  options: { zoneClass?: string; withStartHere?: boolean } = {},
+): GeneratedReport {
   const zoneClass = options.zoneClass;
   return {
     title: "Eligible Incentive Programs",
@@ -515,6 +517,23 @@ function buildReport(options: { zoneClass?: string } = {}): GeneratedReport {
       industry: "retail",
       ...(zoneClass ? { zoneClass, zoneType: "Business" } : {}),
     },
+    ...(options.withStartHere
+      ? {
+          startHere: {
+            primary: {
+              label: "Call Test Agency about the TIF Program",
+              description: "A test program that reimburses a share of facade costs.",
+              kind: "call-agency",
+              programId: "tif",
+              contact: { agency: "Test Agency", abbreviation: "TA", phone: "312-555-0000" },
+            },
+            secondary: [],
+            evidence: [],
+            unresolvedQuestions: [],
+            audience: "site-incentives",
+          },
+        }
+      : {}),
   } as unknown as GeneratedReport;
 }
 
@@ -618,5 +637,39 @@ describe("live report route renderer (app/report/page.tsx ReportDisplay)", () =>
       sectionWrapperClasses(html, "upcoming-deadlines-near-this-address"),
     ).toContain("report-section-collapsed");
     expect(html).toContain("December 15, 2026");
+  });
+
+  it("does not render the Start Here card, and renders recommendedActions in its original (non-<details>) form, when report.startHere is absent", async () => {
+    const report = buildReport({ zoneClass: "B3-2" });
+    const html = await renderReportRoute(report, BASE_WIZARD_STATE);
+
+    expect(html).not.toContain('id="start-here"');
+    expect(html).not.toContain("start-here-card");
+    expect(html).not.toMatch(/<details[^>]*id="recommended-actions"/);
+    expect(html).toMatch(/<div id="recommended-actions"/);
+  });
+
+  it("renders the Start Here card as the first content block, primary action dominant, and demotes recommendedActions behind disclosure when report.startHere is present", async () => {
+    const report = buildReport({ zoneClass: "B3-2", withStartHere: true });
+    const html = await renderReportRoute(report, BASE_WIZARD_STATE);
+
+    expect(html).toContain('id="start-here"');
+    expect(html).toContain("Call Test Agency about the TIF Program");
+    expect(html).toContain('href="tel:312-555-0000"');
+
+    const startHereIdx = html.indexOf('id="start-here"');
+    const verdictIdx = html.indexOf('id="verdict"');
+    expect(startHereIdx).toBeGreaterThanOrEqual(0);
+    expect(verdictIdx).toBeGreaterThan(startHereIdx);
+
+    // recommendedActions still reachable, just demoted behind disclosure —
+    // content stays in the DOM (progressive disclosure, not hidden).
+    expect(html).toMatch(/<details[^>]*id="recommended-actions"/);
+    expect(html).toContain("Recommended Actions · 1");
+    // The recommended-action label itself is normalized by the public-safety
+    // layer (dollar claim stripped) — this asserts the demoted block's
+    // content survives that normalization and stays present in the DOM.
+    expect(html).toContain("Claim published program terms");
+    expect(html).toContain("High Priority");
   });
 });

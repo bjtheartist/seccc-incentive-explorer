@@ -102,5 +102,85 @@ describe("ReportDisplay public safety", () => {
     expect(html).not.toContain("$20,000");
     expect(html).not.toContain("Strong fit");
     expect(html).not.toContain("High categorical fit");
+
+    // report.startHere is absent on this legacy fixture (saved before the
+    // field existed) — the card must not render, and the demoted blocks must
+    // stay in their ORIGINAL (non-<details>) form, i.e. current layout
+    // unchanged.
+    expect(html).not.toContain('id="start-here"');
+    expect(html).not.toContain("start-here-card");
+    expect(html).not.toMatch(/<details[^>]*id="recommended-actions"/);
+  });
+
+  it("renders the Start Here card as the first content block, with the primary action dominant, and demotes topActions/recommendedActions behind disclosure when report.startHere is present", () => {
+    const report = {
+      title: "Location Snapshot",
+      subtitle: "",
+      reportType: "site-incentives",
+      generatedAt: "2026-08-01T00:00:00.000Z",
+      summary: "A short overview paragraph.",
+      verdict: {
+        signal: "strong",
+        headline: "Several programs are mapped at this address",
+        subheadline: "This address sits inside multiple zones.",
+        topReasons: ["Inside a TIF district"],
+      },
+      executiveSummary: {
+        topPrograms: [],
+        topActions: [
+          { type: "call", label: "Call the TIF program office", programId: "tif" },
+        ],
+        zoneCount: 1,
+        whyTheseMatter: "Programs to review.",
+      },
+      sections: [],
+      recommendedActions: [
+        { label: "Gather facade renovation estimates", description: "Prepare a budget.", priority: "medium" },
+      ],
+      startHere: {
+        primary: {
+          label: "Call Test Agency about the TIF Program",
+          description: "A test program that reimburses a share of facade costs.",
+          kind: "call-agency",
+          programId: "tif",
+          contact: { agency: "Test Agency", abbreviation: "TA", phone: "312-555-0000" },
+        },
+        secondary: [],
+        evidence: [],
+        unresolvedQuestions: [],
+        audience: "site-incentives",
+      },
+      metadata: { address: "100 E Test St" },
+    } as unknown as GeneratedReport;
+
+    const html = renderToStaticMarkup(
+      <ReportDisplay report={report} onStartOver={() => {}} />,
+    );
+
+    // Card renders, primary action is the dominant tel: control.
+    expect(html).toContain('id="start-here"');
+    expect(html).toContain("Call Test Agency about the TIF Program");
+    expect(html).toContain('href="tel:312-555-0000"');
+
+    // First content block: the card's position precedes the verdict card's.
+    const startHereIdx = html.indexOf('id="start-here"');
+    const verdictIdx = html.indexOf('id="verdict"');
+    expect(startHereIdx).toBeGreaterThanOrEqual(0);
+    expect(verdictIdx).toBeGreaterThan(startHereIdx);
+
+    // The verdict block stays visible (not demoted) — no <details> wrapper.
+    expect(html).not.toMatch(/<details[^>]*id="verdict"/);
+    expect(html).toContain("Several programs are mapped at this address");
+
+    // executiveSummary.topActions demotes behind native disclosure, but the
+    // content is still reachable (present in the DOM either way).
+    expect(html).toContain("<details");
+    expect(html).toContain("Best Next Steps");
+    expect(html).toContain("Call the TIF program office");
+
+    // recommendedActions demotes behind native disclosure, content intact.
+    expect(html).toMatch(/<details[^>]*id="recommended-actions"/);
+    expect(html).toContain("Recommended Actions · 1");
+    expect(html).toContain("Gather facade renovation estimates");
   });
 });
