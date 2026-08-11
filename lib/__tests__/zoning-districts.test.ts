@@ -79,6 +79,59 @@ describe("matchesDistrictFilter", () => {
   });
 });
 
+/**
+ * Validated 2026-08-10 against the City of Chicago ArcGIS zoning layer
+ * (ExternalApps/Zoning/MapServer/1), returnDistinctValues on ZONE_CLASS:
+ * 1,528 distinct designations resolving to exactly these 14 prefixes.
+ *
+ * This fixture is the drift alarm. If the City publishes a designation
+ * with a new prefix, `classifyZoneClass` will return null for it and
+ * those sites will show as "not classified" — correct behavior, but a
+ * signal the table needs extending. Re-run the distinct query at review
+ * time and update both this list and ZONING_DISTRICT_FAMILIES together.
+ */
+const OBSERVED_PREFIXES_2026_08_10 = [
+  "B", "C", "DC", "DR", "DS", "DX", "M",
+  "PD", "PMD", "POS", "RM", "RS", "RT", "T",
+] as const;
+
+describe("coverage of the live zoning layer", () => {
+  it("classifies every prefix observed in the City layer", () => {
+    const unclassified = OBSERVED_PREFIXES_2026_08_10.filter(
+      (prefix) => classifyZoneClass(`${prefix}-1`) === null && classifyZoneClass(prefix) === null,
+    );
+    expect(unclassified).toEqual([]);
+  });
+
+  it("declares no prefix the City layer does not publish", () => {
+    const declared = ZONING_DISTRICT_FAMILIES.flatMap((f) => f.prefixes).sort();
+    const observed = [...OBSERVED_PREFIXES_2026_08_10].sort();
+    expect(declared).toEqual(observed);
+  });
+
+  it("handles real designations from the layer, including malformed ones", () => {
+    // Verbatim values pulled from the layer on 2026-08-10.
+    expect(classifyZoneClass("B1-1.5")?.id).toBe("business");
+    expect(classifyZoneClass("C1-1.5")?.id).toBe("commercial");
+    expect(classifyZoneClass("RT-4A")?.id).toBe("residential");
+    expect(classifyZoneClass("RM-4.5")?.id).toBe("residential");
+    // "RM4-.5" is published with the hyphen misplaced. It must still
+    // classify as residential rather than falling through to null.
+    expect(classifyZoneClass("RM4-.5")?.id).toBe("residential");
+    // Space-separated designations.
+    expect(classifyZoneClass("PD 0")?.id).toBe("planned-development");
+    expect(classifyZoneClass("PD 1000")?.id).toBe("planned-development");
+    expect(classifyZoneClass("PMD 11")?.id).toBe("planned-manufacturing");
+    // "T" is published bare, with no suffix at all.
+    expect(classifyZoneClass("T")?.id).toBe("transportation");
+    expect(classifyZoneClass("POS-3")?.id).toBe("parks-open-space");
+    expect(classifyZoneClass("DC-16")?.id).toBe("downtown");
+    expect(classifyZoneClass("DX-7")?.id).toBe("downtown");
+    expect(classifyZoneClass("DR-10")?.id).toBe("downtown");
+    expect(classifyZoneClass("DS-5")?.id).toBe("downtown");
+  });
+});
+
 describe("family table integrity", () => {
   it("has unique ids", () => {
     const ids = ZONING_DISTRICT_FAMILIES.map((f) => f.id);

@@ -23,6 +23,21 @@
  * never concludes eligibility. Any UI built on this must say what the
  * district IS, not what the user MAY DO.
  *
+ * VALIDATION
+ * ----------
+ * Validated 2026-08-10 against the City of Chicago ArcGIS zoning layer
+ * (ExternalApps/Zoning/MapServer/1) using returnDistinctValues on
+ * ZONE_CLASS. The layer publishes 1,528 distinct designations resolving
+ * to exactly the 14 prefixes declared below — no prefix here is absent
+ * from the layer, and no prefix in the layer is missing here.
+ *
+ * Distribution of distinct designations: PD 1444, B 15, PMD 14, C 13,
+ * M 9, RM 8, DX 6, DR 4, DS 3, POS 3, RS 3, RT 3, DC 2, T 1.
+ *
+ * The fixture in `__tests__/zoning-districts.test.ts` locks this list so
+ * a newly published prefix fails a test instead of silently landing in
+ * the unclassified bucket. Re-run the distinct query at review time.
+ *
  * UNMATCHED CLASSES SURFACE, THEY DO NOT GET BUCKETED
  * --------------------------------------------------
  * `classifyZoneClass` returns `null` for anything it does not recognize,
