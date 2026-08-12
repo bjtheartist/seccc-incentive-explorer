@@ -27,6 +27,8 @@ import CountyReliefRecipientsPanel, {
 import type { MobileMapPresetId } from "./map-layer-presets";
 import { cachedFetch } from "@/lib/fetch-cache";
 import { fetchZoningLookup } from "@/lib/zoning-lookup";
+import { webgl2Available, type MapFailureReason } from "@/lib/map-support";
+import { MapRenderFallback } from "@/components/map/MapRenderFallback";
 import { getSiteSignals } from "@/lib/site-signals";
 import { getTransportAccess } from "@/lib/transport-access";
 import type { TifFinanceContext } from "@/lib/tif-finance";
@@ -168,6 +170,7 @@ export default function MapView() {
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const searchMarkerRef = useRef<mapboxgl.Marker | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [mapFailure, setMapFailure] = useState<MapFailureReason | null>(null);
   const [zoneVisible, setZoneVisible] = useState<Record<string, boolean>>(
     () => Object.fromEntries(ZONE_KEYS.map((k) => [k, false]))
   );
@@ -918,24 +921,64 @@ export default function MapView() {
   useEffect(() => {
     if (!containerRef.current) return;
 
+    // Every way the map can fail to exist lands in the same honest state
+    // (MapRenderFallback) instead of a silent grey rectangle — the actual
+    // "map doesn't render on mobile" experience this replaces.
+    const failMap = (reason: MapFailureReason) => {
+      setMapFailure((current) => {
+        if (current) return current; // first reason wins
+        trackEvent("map_render_failed", {
+          source: "map_view",
+          metadata: { reason },
+        });
+        return reason;
+      });
+      setLoaded(true);
+    };
+
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     if (!token) {
       console.error("[MapView] NEXT_PUBLIC_MAPBOX_TOKEN is not set");
-      setLoaded(true);
+      failMap("no-token");
+      return;
+    }
+    if (!webgl2Available()) {
+      // Mapbox GL JS v3 requires WebGL2; older iOS and most in-app
+      // browsers (Instagram, LinkedIn, Facebook) don't provide it.
+      failMap("no-webgl2");
       return;
     }
     mapboxgl.accessToken = token;
 
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/mapbox/light-v11",
-      center: [-87.6298, 41.8481],
-      zoom: 10.5,
-      maxBounds: [
-        [-88.0, 41.60],
-        [-87.2, 42.10],
-      ],
+    let map: mapboxgl.Map;
+    try {
+      map = new mapboxgl.Map({
+        container: containerRef.current,
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [-87.6298, 41.8481],
+        zoom: 10.5,
+        maxBounds: [
+          [-88.0, 41.60],
+          [-87.2, 42.10],
+        ],
+      });
+    } catch (error) {
+      console.error("[MapView] mapbox constructor failed", error);
+      failMap("init-error");
+      return;
+    }
+
+    // A fatal error before the style ever loads (bad token, style 401,
+    // network refusal) leaves a permanently blank canvas — surface it.
+    // Errors after the style is up are transient (a missed tile) and are
+    // not worth tearing the map down for.
+    map.once("error", (event) => {
+      if (!map.isStyleLoaded()) {
+        console.error("[MapView] fatal map error before style load", event?.error);
+        failMap("style-error");
+      }
     });
+    map.getCanvas().addEventListener("webglcontextlost", () => failMap("context-lost"));
 
     map.addControl(new mapboxgl.NavigationControl(), "bottom-right");
     mapRef.current = map;
@@ -3928,7 +3971,8 @@ export default function MapView() {
   ) : null;
 
   return (
-    <div className="relative w-full h-[calc(100dvh-56px)] md:h-[calc(100vh-220px)] min-h-[520px]">
+    <div className="relative w-full h-[calc(100vh-56px)] supports-[height:100dvh]:h-[calc(100dvh-56px)] md:h-[calc(100vh-220px)] min-h-[520px]">
+      {mapFailure && <MapRenderFallback reason={mapFailure} />}
       {/* Map container */}
       <div ref={containerRef} className="absolute inset-0 w-full h-full" />
 
