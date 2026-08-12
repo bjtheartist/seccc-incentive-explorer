@@ -52,17 +52,43 @@ export interface ZoningHandoffInput {
   reportUrl?: string | null;
 }
 
+/**
+ * One block of the handoff. `kind` tells a renderer how to treat the
+ * lines (field rows vs. bullets vs. running text); the plain-text body
+ * ignores it and joins everything, which keeps the share text and the
+ * one-pager PDF composed from the SAME structure — neither can drift
+ * without the other moving with it.
+ */
+export interface StageHandoffSection {
+  kind: "title" | "fields" | "paragraph" | "list" | "footer";
+  heading?: string;
+  lines: string[];
+}
+
 export interface StageHandoff {
   /** One-line subject, usable as an email subject or message opener. */
   subject: string;
   /** Plain-text body, ready for share sheet, clipboard, or email. */
   body: string;
+  /** The same content, structured, for renderers such as the PDF one-pager. */
+  sections: StageHandoffSection[];
 }
 
 const NOT_PROVIDED = "Not provided";
 
 function line(label: string, value: string): string {
   return `${label}: ${value}`;
+}
+
+/** Flatten sections into the plain-text body — the single composition path. */
+function sectionsToBody(sections: StageHandoffSection[]): string {
+  const parts: string[] = [];
+  for (const section of sections) {
+    if (parts.length > 0) parts.push("");
+    if (section.heading) parts.push(section.heading);
+    parts.push(...section.lines);
+  }
+  return parts.join("\n");
 }
 
 /**
@@ -79,49 +105,65 @@ export function buildZoningHandoff(input: ZoningHandoffInput): StageHandoff {
 
   const subject = `Zoning question — ${businessType === NOT_PROVIDED ? address : businessType + " at " + address}`;
 
-  const parts: string[] = [];
+  const sections: StageHandoffSection[] = [];
 
-  parts.push("ZONING-STAGE HANDOFF (Chicago Incentive Explorer)");
-  parts.push("");
-  parts.push(line("Address", address));
-  parts.push(line("Business", businessType));
-  parts.push(line("Published zoning designation", zoneClass));
-  parts.push(line("Stage", "Zoning — confirming whether this use can operate here"));
-  parts.push("");
+  sections.push({
+    kind: "title",
+    lines: ["ZONING-STAGE HANDOFF (Chicago Incentive Explorer)"],
+  });
 
-  if (input.activityLabel?.trim()) {
-    parts.push(`Open question: whether "${input.activityLabel.trim()}" can operate at this address under the designation above. The Explorer does not determine this — it needs confirmation against the ordinance's use tables.`);
-  } else {
-    parts.push("Open question: whether the intended use can operate at this address under the designation above. The Explorer does not determine this — it needs confirmation against the ordinance's use tables.");
-  }
+  sections.push({
+    kind: "fields",
+    lines: [
+      line("Address", address),
+      line("Business", businessType),
+      line("Published zoning designation", zoneClass),
+      line("Stage", "Zoning — confirming whether this use can operate here"),
+    ],
+  });
+
+  sections.push({
+    kind: "paragraph",
+    lines: [
+      input.activityLabel?.trim()
+        ? `Open question: whether "${input.activityLabel.trim()}" can operate at this address under the designation above. The Explorer does not determine this — it needs confirmation against the ordinance's use tables.`
+        : "Open question: whether the intended use can operate at this address under the designation above. The Explorer does not determine this — it needs confirmation against the ordinance's use tables.",
+    ],
+  });
 
   const answers = (input.reviewAnswers ?? []).filter(
     (entry) => entry.question.trim() && entry.answer.trim(),
   );
   if (answers.length > 0) {
-    parts.push("");
-    parts.push("Details the user provided (these can decide the use category):");
-    for (const entry of answers) {
-      parts.push(`- ${entry.question.trim()} ${entry.answer.trim()}`);
-    }
+    sections.push({
+      kind: "list",
+      heading: "Details the user provided (these can decide the use category):",
+      lines: answers.map((entry) => `- ${entry.question.trim()} ${entry.answer.trim()}`),
+    });
   }
 
   const links = (input.officialLinks ?? []).filter((l) => l.label.trim() && l.url.trim());
   if (links.length > 0) {
-    parts.push("");
-    parts.push("Official sources:");
-    for (const l of links) {
-      parts.push(`- ${l.label.trim()}: ${l.url.trim()}`);
-    }
+    sections.push({
+      kind: "list",
+      heading: "Official sources:",
+      lines: links.map((l) => `- ${l.label.trim()}: ${l.url.trim()}`),
+    });
   }
 
   if (input.reportUrl?.trim()) {
-    parts.push("");
-    parts.push(`Full site report (optional context): ${input.reportUrl.trim()}`);
+    sections.push({
+      kind: "paragraph",
+      lines: [`Full site report (optional context): ${input.reportUrl.trim()}`],
+    });
   }
 
-  parts.push("");
-  parts.push("This summary is from a discovery tool. It does not determine eligibility or use permissions — verify with the administering agency.");
+  sections.push({
+    kind: "footer",
+    lines: [
+      "This summary is from a discovery tool. It does not determine eligibility or use permissions — verify with the administering agency.",
+    ],
+  });
 
-  return { subject, body: parts.join("\n") };
+  return { subject, body: sectionsToBody(sections), sections };
 }
