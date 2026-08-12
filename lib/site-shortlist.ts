@@ -800,3 +800,39 @@ export function shortlistCsv(
 export function shortlistCsvFilename(zip: string): string {
   return `Site-Shortlist-${zip}.csv`;
 }
+
+/**
+ * The `src` value the shortlist stamps on every incentive-snapshot link.
+ *
+ * /report validates `src` against an ALLOWLIST (`ALLOWED_REPORT_SOURCES` in
+ * app/report/page.tsx) and silently collapses anything unrecognized into the
+ * generic `instant_report` bucket. So this constant is not decoration: the
+ * string here MUST stay registered there, or every snapshot the shortlist sends
+ * loses its attribution with no error to notice. A test pins both halves.
+ */
+export const SHORTLIST_SNAPSHOT_SOURCE = "site_shortlist";
+
+/**
+ * The "Incentive snapshot" destination for one candidate — /report's instant
+ * mode, pre-seeded with the record's coordinates and address.
+ *
+ * The address parameter is `addr`, NOT `address`: that is the name /report
+ * actually reads (app/report/page.tsx, `searchParams.get("addr")`), and it is
+ * what every other instant link in this repo already emits (lib/vacancy-
+ * spreadsheet.ts, components/map/MapPolygonPanel.tsx). Coordinates are fixed to
+ * 5 decimals for the same reason those do: it keeps the URL cache-bucketable.
+ */
+export function shortlistSnapshotHref(candidate: {
+  lat: number;
+  lon: number;
+  address: string;
+}): string {
+  const params = new URLSearchParams({
+    instant: "true",
+    lat: candidate.lat.toFixed(5),
+    lon: candidate.lon.toFixed(5),
+    addr: candidate.address,
+    src: SHORTLIST_SNAPSHOT_SOURCE,
+  });
+  return `/report?${params.toString()}`;
+}

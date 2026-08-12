@@ -256,6 +256,12 @@ const ALLOWED_REPORT_SOURCES = new Set([
   // instant_report, which hid tour attribution and defeated the tour's
   // email-gate suppression.
   "welcome_tour",
+  // The Site Shortlist's per-card "Incentive snapshot" action. Unregistered,
+  // every snapshot launched from a shortlist card would collapse into the
+  // generic instant_report bucket and the shortlist would look like it drove
+  // no reports at all. Keep in sync with SHORTLIST_SNAPSHOT_SOURCE in
+  // lib/site-shortlist.ts.
+  "site_shortlist",
 ]);
 
 function cleanReportSource(value: string | null): string | null {

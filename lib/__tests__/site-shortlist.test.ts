@@ -1,9 +1,12 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   ARTERIAL_TOKENS,
   CONDITION_VERIFICATION_NOTE,
   DEFAULT_SWEET_SPOT_SQFT,
   OVERLAY_ENRICH_LIMIT,
+  SHORTLIST_SNAPSHOT_SOURCE,
   TIER_1_CAP,
   TIER_2_CAP,
   VIOLATION_FLAG,
@@ -24,6 +27,7 @@ import {
   screeningAreaSqft,
   shortlistCsv,
   shortlistCsvFilename,
+  shortlistSnapshotHref,
   sweetSpotFor,
   taxSaleFlag,
   zoningStatusFor,
@@ -792,5 +796,65 @@ describe("shortlistCsv", () => {
 
   it("names the file per ZIP", () => {
     expect(shortlistCsvFilename("60619")).toBe("Site-Shortlist-60619.csv");
+  });
+});
+
+// ── Incentive-snapshot link ─────────────────────────────────────────────────
+
+describe("shortlistSnapshotHref", () => {
+  it("builds an instant-mode /report link with the record's coordinates", () => {
+    expect(
+      shortlistSnapshotHref({ lat: 41.75, lon: -87.605, address: "8000 S COTTAGE GROVE AVE" }),
+    ).toBe(
+      "/report?instant=true&lat=41.75000&lon=-87.60500&addr=8000+S+COTTAGE+GROVE+AVE&src=site_shortlist",
+    );
+  });
+
+  it("uses `addr`, the parameter /report actually reads — never `address`", () => {
+    // app/report/page.tsx reads searchParams.get("addr"). An `address` param
+    // would leave the wizard with an empty address and no error to notice.
+    const href = shortlistSnapshotHref({ lat: 41.7, lon: -87.6, address: "1 N State St" });
+    const params = new URLSearchParams(href.split("?")[1]);
+    expect(params.get("addr")).toBe("1 N State St");
+    expect(params.has("address")).toBe(false);
+  });
+
+  it("encodes addresses containing separators", () => {
+    const href = shortlistSnapshotHref({
+      lat: 41.7,
+      lon: -87.6,
+      address: "100 W 63rd St, Chicago, IL & Co",
+    });
+    expect(href).not.toMatch(/\s/);
+    expect(new URLSearchParams(href.split("?")[1]).get("addr")).toBe(
+      "100 W 63rd St, Chicago, IL & Co",
+    );
+  });
+
+  it("fixes coordinates to five decimals so the URL stays cache-bucketable", () => {
+    const params = new URLSearchParams(
+      shortlistSnapshotHref({ lat: 41.7368312345, lon: -87.5777612345, address: "x" }).split("?")[1],
+    );
+    expect(params.get("lat")).toBe("41.73683");
+    expect(params.get("lon")).toBe("-87.57776");
+  });
+
+  it("stamps the registered attribution source", () => {
+    expect(SHORTLIST_SNAPSHOT_SOURCE).toBe("site_shortlist");
+    expect(shortlistSnapshotHref({ lat: 41.7, lon: -87.6, address: "x" })).toContain(
+      "src=site_shortlist",
+    );
+  });
+
+  it("is registered in /report's source allowlist, so attribution is not silently dropped", () => {
+    // cleanReportSource() collapses any unlisted src into the generic
+    // instant_report bucket. This guard is the only thing that would catch the
+    // allowlist and the constant drifting apart.
+    const source = readFileSync(path.join(process.cwd(), "app/report/page.tsx"), "utf8");
+    const allowlist = source.slice(
+      source.indexOf("const ALLOWED_REPORT_SOURCES"),
+      source.indexOf("function cleanReportSource"),
+    );
+    expect(allowlist).toContain(`"${SHORTLIST_SNAPSHOT_SOURCE}"`);
   });
 });
