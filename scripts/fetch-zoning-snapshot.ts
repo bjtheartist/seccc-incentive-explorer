@@ -61,7 +61,13 @@ type Bbox = [number, number, number, number];
 interface ArcGisPage {
   error?: { message?: string };
   features?: unknown[];
+  exceededTransferLimit?: boolean;
 }
+
+/** Hard ceiling on pages per ZIP — a real safety net against a runaway loop,
+ * not a plausible page count (2,000/page x 50 = 100k polygons, an order of
+ * magnitude past any single ZIP envelope). */
+const MAX_PAGES_PER_ZIP = 50;
 
 async function fetchJson(url: string): Promise<unknown> {
   let lastError: unknown;
@@ -139,30 +145,36 @@ const OUT_FIELDS = [
   "CLERK_DOCNO",
 ].join(",");
 
-/** Fetch every zoning polygon intersecting one ZIP's envelope, paged at the
- * layer's 2,000-record limit. Throws (fail-closed) on any page error, count
- * mismatch, or geometry that fails validation+repair. */
+/**
+ * Fetch every zoning polygon intersecting one ZIP's envelope, paged at the
+ * layer's 2,000-record limit. Throws (fail-closed) on any page error or
+ * geometry that fails validation+repair.
+ *
+ * Completeness is judged by PAGINATION STATE (a short/empty final page with
+ * no `exceededTransferLimit` flag), not by cross-checking against a
+ * separate `returnCountOnly` query. Verified directly against this layer:
+ * `returnCountOnly=true` on a spatially-filtered (envelope) query is
+ * unreliable — two consecutive manual calls for the 60617 envelope
+ * returned 393 and then 394, while the actual paged feature pull
+ * consistently returned 395 features with 395 unique GLOBALIDs (no
+ * duplicates, `exceededTransferLimit` never set). The count endpoint
+ * appears to use an approximate/cached path for this query shape; the
+ * paginated feature query is the reliable source of truth, and
+ * `exceededTransferLimit` is the documented ArcGIS REST signal for "there
+ * is more data than this page returned" — a real incompleteness signal,
+ * unlike a mismatched advisory count.
+ */
 async function fetchZipZoningFeatures(zip: string, bbox: Bbox): Promise<ZoningSnapshotFeature[]> {
   const envelope = { xmin: bbox[0], ymin: bbox[1], xmax: bbox[2], ymax: bbox[3], spatialReference: { wkid: 4326 } };
 
-  const countUrl = new URL(`${CHICAGO_ZONING_LAYER_URL}/query`);
-  countUrl.searchParams.set("geometry", JSON.stringify(envelope));
-  countUrl.searchParams.set("geometryType", "esriGeometryEnvelope");
-  countUrl.searchParams.set("spatialRel", "esriSpatialRelIntersects");
-  countUrl.searchParams.set("inSR", "4326");
-  countUrl.searchParams.set("returnCountOnly", "true");
-  countUrl.searchParams.set("f", "json");
-  const countPayload = (await fetchJson(countUrl.toString())) as { count?: unknown; error?: { message?: string } };
-  if (countPayload.error) {
-    throw new Error(`ArcGIS zoning count query failed for ${zip}: ${countPayload.error.message ?? "unknown"}`);
-  }
-  const expectedCount = Number(countPayload?.count);
-  if (!Number.isInteger(expectedCount) || expectedCount < 0) {
-    throw new Error(`ArcGIS zoning layer did not publish a valid count for ${zip}`);
-  }
-
   const out: ZoningSnapshotFeature[] = [];
-  for (let offset = 0; offset < expectedCount; offset += PAGE_SIZE) {
+  let page = 0;
+  for (let offset = 0; ; offset += PAGE_SIZE) {
+    page += 1;
+    if (page > MAX_PAGES_PER_ZIP) {
+      throw new Error(`ArcGIS zoning query for ${zip} exceeded ${MAX_PAGES_PER_ZIP} pages (${MAX_PAGES_PER_ZIP * PAGE_SIZE} records) — aborting as a runaway-pagination safety net`);
+    }
+
     const url = new URL(`${CHICAGO_ZONING_LAYER_URL}/query`);
     url.searchParams.set("geometry", JSON.stringify(envelope));
     url.searchParams.set("geometryType", "esriGeometryEnvelope");
@@ -177,11 +189,11 @@ async function fetchZipZoningFeatures(zip: string, bbox: Bbox): Promise<ZoningSn
     url.searchParams.set("resultRecordCount", String(PAGE_SIZE));
     url.searchParams.set("f", "json");
 
-    const page = (await fetchJson(url.toString())) as ArcGisPage;
-    if (page.error) throw new Error(`ArcGIS zoning query failed for ${zip}: ${page.error.message ?? "unknown"}`);
-    if (!Array.isArray(page.features)) throw new Error(`ArcGIS zoning layer returned an invalid page for ${zip}`);
+    const response = (await fetchJson(url.toString())) as ArcGisPage;
+    if (response.error) throw new Error(`ArcGIS zoning query failed for ${zip}: ${response.error.message ?? "unknown"}`);
+    if (!Array.isArray(response.features)) throw new Error(`ArcGIS zoning layer returned an invalid page for ${zip}`);
 
-    for (const raw of page.features) {
+    for (const raw of response.features) {
       const feature = normalizeArcGisZoningFeature(raw);
       if (!feature) {
         throw new Error(
@@ -190,12 +202,17 @@ async function fetchZipZoningFeatures(zip: string, bbox: Bbox): Promise<ZoningSn
       }
       out.push(feature);
     }
-    console.log(`  ${zip}: ${Math.min(out.length, expectedCount)}/${expectedCount}`);
+    console.log(`  ${zip}: ${out.length} so far (page ${page}, ${response.features.length} this page${response.exceededTransferLimit ? ", more pages pending" : ""})`);
+
+    const gotFullPage = response.features.length >= PAGE_SIZE;
+    if (!gotFullPage && !response.exceededTransferLimit) break; // last page
   }
 
-  if (out.length !== expectedCount) {
-    throw new Error(`ArcGIS zoning layer published ${expectedCount} features for ${zip} but returned ${out.length}`);
+  const uniqueIds = new Set(out.map((f) => f.globalId));
+  if (uniqueIds.size !== out.length) {
+    throw new Error(`ArcGIS zoning query for ${zip} returned duplicate GLOBALIDs within the same envelope pull (${out.length} rows, ${uniqueIds.size} unique) — pagination is not stable for this query`);
   }
+
   return out;
 }
 
