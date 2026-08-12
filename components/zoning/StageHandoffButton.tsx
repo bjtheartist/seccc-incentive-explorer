@@ -10,11 +10,11 @@
 // program is eligible — see lib/stage-handoff.ts.
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, Send } from "lucide-react";
+import { Check, FileDown, Send } from "lucide-react";
 import { buildZoningHandoff, type ZoningHandoffInput } from "@/lib/stage-handoff";
 import { trackEvent } from "@/lib/analytics-events";
 
-type ShareState = "idle" | "copied" | "shared" | "failed";
+type ShareState = "idle" | "copied" | "shared" | "pdf_downloaded" | "failed";
 
 export function StageHandoffButton({ input }: { input: ZoningHandoffInput }) {
   const [state, setState] = useState<ShareState>("idle");
@@ -67,29 +67,59 @@ export function StageHandoffButton({ input }: { input: ZoningHandoffInput }) {
     }
   }, [input, settle]);
 
+  const handleDownloadPdf = useCallback(async () => {
+    try {
+      // Dynamic import keeps jsPDF out of the report bundle until asked for.
+      const { downloadZoningHandoffPdf } = await import("@/lib/handoff-pdf");
+      downloadZoningHandoffPdf({
+        ...input,
+        reportUrl:
+          input.reportUrl ?? (typeof window !== "undefined" ? window.location.href : null),
+      });
+      settle("pdf_downloaded");
+    } catch {
+      settle("failed");
+    }
+  }, [input, settle]);
+
   return (
     <div>
-      <button
-        type="button"
-        onClick={handleShare}
-        className="inline-flex items-center gap-2 border border-[#0C1B33]/20 bg-white px-3.5 py-2 text-[12px] text-[#0C1B33] transition-colors hover:border-[#2563EB] hover:text-[#2563EB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2563EB]"
-      >
-        {state === "copied" || state === "shared" ? (
-          <Check aria-hidden="true" className="h-3.5 w-3.5" />
-        ) : (
-          <Send aria-hidden="true" className="h-3.5 w-3.5" />
-        )}
-        {state === "copied"
-          ? "Copied — paste it to your navigator"
-          : state === "shared"
-            ? "Shared"
-            : state === "failed"
-              ? "Couldn't copy — try again"
-              : "Share this question with a navigator"}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={handleShare}
+          className="inline-flex items-center gap-2 border border-[#0C1B33]/20 bg-white px-3.5 py-2 text-[12px] text-[#0C1B33] transition-colors hover:border-[#2563EB] hover:text-[#2563EB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2563EB]"
+        >
+          {state === "copied" || state === "shared" ? (
+            <Check aria-hidden="true" className="h-3.5 w-3.5" />
+          ) : (
+            <Send aria-hidden="true" className="h-3.5 w-3.5" />
+          )}
+          {state === "copied"
+            ? "Copied — paste it to your navigator"
+            : state === "shared"
+              ? "Shared"
+              : state === "failed"
+                ? "Couldn't copy — try again"
+                : "Share this question with a navigator"}
+        </button>
+        <button
+          type="button"
+          onClick={handleDownloadPdf}
+          className="inline-flex items-center gap-2 border border-[#0C1B33]/20 bg-white px-3.5 py-2 text-[12px] text-[#0C1B33] transition-colors hover:border-[#2563EB] hover:text-[#2563EB] focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#2563EB]"
+        >
+          {state === "pdf_downloaded" ? (
+            <Check aria-hidden="true" className="h-3.5 w-3.5" />
+          ) : (
+            <FileDown aria-hidden="true" className="h-3.5 w-3.5" />
+          )}
+          {state === "pdf_downloaded" ? "One-pager saved" : "Download one-pager (PDF)"}
+        </button>
+      </div>
       <p className="mt-1.5 text-[11px] leading-relaxed text-[#0C1B33]/50" aria-live="polite">
         Creates a short summary of this address, your intended use, and the
-        open zoning question — instead of forwarding the whole report.
+        open zoning question — as a message or a printable one-pager, instead
+        of forwarding the whole report.
       </p>
     </div>
   );
