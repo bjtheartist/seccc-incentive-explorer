@@ -3974,7 +3974,7 @@ export default function MapView() {
     <div className="relative w-full h-[calc(100vh-56px)] supports-[height:100dvh]:h-[calc(100dvh-56px)] md:h-[calc(100vh-220px)] min-h-[520px]">
       {mapFailure && <MapRenderFallback reason={mapFailure} />}
       {/* Map container */}
-      <div ref={containerRef} className="absolute inset-0 w-full h-full" />
+      <div ref={containerRef} data-tour="map-canvas" className="absolute inset-0 w-full h-full" />
 
       {/* Map tile loading overlay */}
       {!loaded && (

@@ -286,7 +286,7 @@ export default function MapLegendPanel({
       </div>
 
       {/* Presets */}
-      <div className="px-4 pt-2 md:pt-4 pb-3">
+      <div data-tour="map-presets" className="px-4 pt-2 md:pt-4 pb-3">
         <div className="font-mono-bureau text-[9px] tracking-[0.25em] uppercase text-[#2563EB]/50 mb-2">
           Quick Presets
         </div>

@@ -130,6 +130,7 @@ export default function MapSearch({ onResult, onQueryChange }: MapSearchProps) {
   return (
     <div
       data-testid="map-search"
+      data-tour="map-search"
       className="absolute top-16 left-3 right-3 md:top-3 md:left-auto md:right-3 z-[60] isolate pointer-events-auto md:w-72"
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
