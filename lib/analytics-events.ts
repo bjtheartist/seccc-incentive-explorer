@@ -35,6 +35,7 @@ export const ANALYTICS_EVENT_TYPES = [
   "refine_cta_shown",
   "refine_clicked",
   "report_generation_failed",
+  "map_render_failed",
   "save_report_clicked",
   "email_report_clicked",
   "preparation_packet_started",
