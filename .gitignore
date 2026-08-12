@@ -64,6 +64,32 @@ yarn-error.log*
 /data/exports/southeast-resilience/*
 !/data/exports/southeast-resilience/neighborhood_growth_signal.json
 
+# Site Shortlist canonical universe (scripts/export-shortlist-universe.ts,
+# lib/shortlist-universe.ts) — server-only, all nine committed pilot-ZIP
+# files + the shared manifest that binds them (and vacancy-index.json) under
+# one buildId. NOT under public/ (see next.config.ts outputFileTracingIncludes).
+!/data/exports/shortlist-universe/
+/data/exports/shortlist-universe/*
+!/data/exports/shortlist-universe/manifest.json
+!/data/exports/shortlist-universe/60617.json
+!/data/exports/shortlist-universe/60619.json
+!/data/exports/shortlist-universe/60621.json
+!/data/exports/shortlist-universe/60623.json
+!/data/exports/shortlist-universe/60624.json
+!/data/exports/shortlist-universe/60636.json
+!/data/exports/shortlist-universe/60644.json
+!/data/exports/shortlist-universe/60649.json
+!/data/exports/shortlist-universe/60651.json
+
+# Zoning boundary snapshot (scripts/fetch-zoning-snapshot.ts) — the raw
+# clipped polygon pull is disposable/regenerable and can run large; only its
+# manifest (checksum, vintage, per-ZIP feature counts) is committed so the
+# universe export's `sources.zoning` provenance is reviewable without
+# committing the geometry itself.
+!/data/exports/zoning-snapshot/
+/data/exports/zoning-snapshot/*
+!/data/exports/zoning-snapshot/manifest.json
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
