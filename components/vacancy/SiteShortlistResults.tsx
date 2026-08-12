@@ -28,12 +28,15 @@ import {
   activeLicenseFlag,
   shortlistCsv,
   shortlistCsvFilename,
+  shortlistSnapshotHref,
   taxSaleFlag,
   type ShortlistCandidate,
   type ShortlistEnrichmentFacts,
   type ShortlistResult,
 } from "@/lib/site-shortlist";
+import { shortlistCardDomId } from "@/lib/shortlist-map-layers";
 import type { SiteProjectUse } from "@/lib/site-matchmaker";
+import SiteShortlistMap from "./SiteShortlistMap";
 
 interface EnrichItem extends ShortlistEnrichmentFacts {
   key: string;
@@ -107,12 +110,14 @@ function ShortlistCard({
   zip,
   enrichment,
   enrichState,
+  onSnapshotClick,
 }: {
   candidate: ShortlistCandidate;
   number: number;
   zip: string;
   enrichment: EnrichItem | null;
   enrichState: EnrichState["status"];
+  onSnapshotClick: (candidate: ShortlistCandidate) => void;
 }) {
   const viewerUrl = cookViewerUrl(candidate.pin);
   const clerkUrl = clerkRecordsUrl(candidate.pin);
@@ -128,7 +133,13 @@ function ShortlistCard({
   }
 
   return (
-    <li className="border border-[#0C1B33]/12 bg-white p-5">
+    <li
+      // Stable scroll target for the map panel's "Jump to details" link. The id
+      // is derived from the same candidate key the pin carries, so the two can
+      // never drift apart.
+      id={shortlistCardDomId(candidate.key)}
+      className="scroll-mt-6 border border-[#0C1B33]/12 bg-white p-5 data-[shortlist-focused]:border-[#2563EB] data-[shortlist-focused]:ring-2 data-[shortlist-focused]:ring-[#2563EB]/30"
+    >
       <div className="flex items-start gap-3">
         <span className="mt-1 font-mono-bureau text-[12px] text-[#2563EB]">
           {String(number).padStart(2, "0")}
@@ -225,7 +236,19 @@ function ShortlistCard({
         </div>
       )}
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {/* PRIMARY action, first in the row: everything else on this card sends
+            the reader to a county or City record, while this one is the product
+            answering the question the shortlist raised — what does this specific
+            point qualify for? Same tab, because it is a continuation, not a
+            reference lookup. */}
+        <Link
+          href={shortlistSnapshotHref(candidate)}
+          onClick={() => onSnapshotClick(candidate)}
+          className="border border-[#2563EB] bg-[#2563EB] px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#1D4ED8]"
+        >
+          Incentive snapshot
+        </Link>
         {viewerUrl && (
           <a
             href={viewerUrl}
@@ -277,6 +300,7 @@ function TierSection({
   zip,
   byKey,
   enrichState,
+  onSnapshotClick,
 }: {
   heading: string;
   description: string;
@@ -287,6 +311,7 @@ function TierSection({
   zip: string;
   byKey: Record<string, EnrichItem>;
   enrichState: EnrichState["status"];
+  onSnapshotClick: (candidate: ShortlistCandidate) => void;
 }) {
   return (
     <section className="mt-10">
@@ -314,6 +339,7 @@ function TierSection({
               zip={zip}
               enrichment={byKey[candidate.key] ?? null}
               enrichState={enrichState}
+              onSnapshotClick={onSnapshotClick}
             />
           ))}
         </ul>
@@ -327,11 +353,17 @@ export default function SiteShortlistResults({
   projectUse,
   source,
   result,
+  boundary,
+  centroid,
 }: {
   zip: string;
   projectUse: SiteProjectUse | null;
   source: string | null;
   result: ShortlistResult;
+  /** Simplified ZIP ring + bbox from the vacancy edition, for the map panel's
+   *  boundary line. `null` renders the panel without an outline. */
+  boundary: { rings: [number, number][][]; bbox: [number, number, number, number] } | null;
+  centroid: { lat: number; lon: number };
 }) {
   const [enrich, setEnrich] = useState<EnrichState>({ status: "idle" });
   const rendered = useMemo(() => [...result.tier1, ...result.tier2], [result]);
@@ -423,6 +455,16 @@ export default function SiteShortlistResults({
     });
   }
 
+  /** One event per snapshot launch, carrying the PIN so a downstream report can
+   *  be tied back to the exact record that sent it. Fires alongside navigation;
+   *  the link is never blocked on it. */
+  function handleSnapshotClick(candidate: ShortlistCandidate) {
+    trackEvent("site_shortlist_snapshot_clicked", {
+      source: source ?? "site-shortlist",
+      metadata: { zip, pin: candidate.pin ?? "" },
+    });
+  }
+
   return (
     <div>
       <div className="mt-6 flex flex-wrap items-center gap-3">
@@ -442,6 +484,8 @@ export default function SiteShortlistResults({
         )}
       </div>
 
+      <SiteShortlistMap zip={zip} result={result} boundary={boundary} centroid={centroid} />
+
       <TierSection
         heading={TIER_1_HEADING}
         description={`Districts whose family reads as permitting this use by right — the fastest paths to occupancy. A screening signal only; confirm with the Zoning Board of Appeals.`}
@@ -452,6 +496,7 @@ export default function SiteShortlistResults({
         zip={zip}
         byKey={byKey}
         enrichState={enrich.status}
+        onSnapshotClick={handleSnapshotClick}
       />
 
       <TierSection
@@ -464,6 +509,7 @@ export default function SiteShortlistResults({
         zip={zip}
         byKey={byKey}
         enrichState={enrich.status}
+        onSnapshotClick={handleSnapshotClick}
       />
 
       <p className="mt-8 border border-[#0C1B33]/12 bg-white px-4 py-4 text-[12px] leading-relaxed text-[#0C1B33]/70">

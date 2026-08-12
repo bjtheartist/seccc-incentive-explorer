@@ -81,6 +81,9 @@ export const ANALYTICS_EVENT_TYPES = [
   // ── Site Shortlist (the /locate back half) ────────────────────────
   "site_shortlist_generated",
   "site_shortlist_csv_downloaded",
+  // Map panel + infrastructure lens (the shortlist's neighborhood-context half).
+  "site_shortlist_snapshot_clicked",
+  "site_shortlist_map_layer_toggled",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];

@@ -306,6 +306,11 @@ export default async function SiteShortlistPage({
           projectUse={criteria.projectUse}
           source={source}
           result={result}
+          // The map panel draws the same simplified ZIP ring the vacancy web
+          // report uses; both read it from the committed edition, so the two
+          // maps can never outline different geographies for the same ZIP.
+          boundary={edition.boundary}
+          centroid={edition.centroid}
         />
       )}
 
