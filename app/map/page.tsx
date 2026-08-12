@@ -1,5 +1,7 @@
 import MapShell from "@/components/map/MapShell";
 import IncentiveGlance from "@/components/map/IncentiveGlance";
+import { MapSpotlight } from "@/components/onboarding/MapSpotlight";
+import { MapTourButton } from "@/components/onboarding/MapTourButton";
 
 export default function MapPage() {
   return (
@@ -45,6 +47,9 @@ export default function MapPage() {
         </div>
 
         <div className="max-w-6xl mx-auto px-3 md:px-0 pt-6 md:pt-0 pb-6 md:pb-0">
+        <div className="flex justify-end pt-3 md:pt-4">
+          <MapTourButton />
+        </div>
         <IncentiveGlance />
 
         <div className="mt-6 grid md:grid-cols-3 gap-0 border border-[#0C1B33]/10 bg-white">
@@ -79,6 +84,8 @@ export default function MapPage() {
         </div>
         </div>
       </div>
+
+      <MapSpotlight />
     </div>
   );
 }

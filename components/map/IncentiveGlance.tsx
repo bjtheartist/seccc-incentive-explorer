@@ -58,7 +58,7 @@ export default function IncentiveGlance() {
   };
 
   return (
-    <div className="mt-6 border border-[#0C1B33]/10 bg-white">
+    <div data-tour="map-glance" className="mt-6 border border-[#0C1B33]/10 bg-white">
       {/* Header bar — always visible */}
       <button
         onClick={loadStats}
