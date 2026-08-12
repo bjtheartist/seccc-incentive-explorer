@@ -72,7 +72,7 @@ import {
   validateEnvelopeCounts,
   type ShortlistUniverseFile,
   type ShortlistUniverseRow,
-} from "../lib/shortlist-universe";
+} from "../lib/shortlist-universe-schema";
 
 // ── CLI ─────────────────────────────────────────────────────────────────────
 
