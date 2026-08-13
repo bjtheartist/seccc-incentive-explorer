@@ -423,14 +423,19 @@ describe("partner NOF input mapping", () => {
       (sum, record) => sum + (record.amountAwarded ?? 0),
       0,
     );
-    expect(output.meta.totalRecords).toBe(44028);
+    // PR1 (consult Q5): 33 previously-DROPPED tif/cdbg-home/lihtc rows (9 TIF +
+    // 19 HUD + 5 LIHTC, no usable coordinate) are now RETAINED as unplotted
+    // citywide records with an explicit locationReason instead of being erased
+    // — totalRecords and citywideCount both move by exactly 33; awarded dollars
+    // are untouched (none of the 33 carry amountAwarded).
+    expect(output.meta.totalRecords).toBe(44061);
     expect(output.meta.totalRecords).toBe(output.records.length);
     // 30554/7063 -> 30575/7042: 21 records with real published addresses moved
     // citywide->point when the Census2020 benchmark fallback resolved addresses
     // the Current benchmark returns empty for (6 cdg, 14 sba-rrf, 1 nof-small).
     // Dollars and record count are unchanged — geometry only.
     expect(output.meta.pointCount).toBe(30640);
-    expect(output.meta.citywideCount).toBe(7040);
+    expect(output.meta.citywideCount).toBe(7073);
     expect(output.meta.totalDollarsAwarded).toBeCloseTo(3179794477.66, 2);
     expect(output.meta.totalDollarsAwarded).toBeCloseTo(recomputedAwarded, 2);
     expect(output.meta.counts["nof-small"]).toBe(156);

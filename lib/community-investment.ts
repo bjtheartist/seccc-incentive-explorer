@@ -41,6 +41,7 @@
  * why this file is admin-gated and never moved into public/).
  */
 
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import {
@@ -198,6 +199,39 @@ export const INVESTMENT_STATUSES = [
   "cancelled",
 ] as const;
 export type InvestmentStatus = (typeof INVESTMENT_STATUSES)[number];
+
+/**
+ * WHY a non-point record has no plottable point, or why an excluded record was
+ * dropped entirely (PR1 / consult Q5 — "a bare `held-citywide` classification
+ * can mislead"). Four values, never merged into one bucket:
+ *   • geocode_failed — the source publishes a street address, but the geocoder
+ *     returned no match or an out-of-Chicago hit for THAT specific attempt.
+ *   • administrative_address_outside_city — the source published a REAL
+ *     coordinate/address, but it is the funder/grantee's suburban or
+ *     out-of-state administrative office, not a Chicago site (HUD's 19 CDBG/HOME
+ *     activities with explicit non-Chicago administrative addresses — retained,
+ *     Chicago-administered, EXCLUDED from sited + community-area totals).
+ *   • source_unlocated — the source itself publishes no usable location for this
+ *     row (a TIF/LIHTC row whose annual-report/allocation entry carries no
+ *     coordinates) — the record's CHICAGO SCOPE is still established by the
+ *     source's own selection criterion, so it is retained as an unplotted
+ *     Chicago-program record with provenance, never deleted for a geocoding gap.
+ *   • out_of_scope — the row fails the product's own jurisdiction/subject test
+ *     (proven outside Chicago, not an award/project record, invalid/superseded/
+ *     confirmed-duplicate) and is EXCLUDED entirely — never retained even
+ *     unplotted. Recorded in the exclusion ledger, never silently vanished.
+ * Only ever set on a citywide-geometry record (or absent entirely on a genuine
+ * excluded/dropped row, which lives in the exclusion ledger instead of the
+ * export). Absent/null means "no location-reason claim" — most citywide records
+ * predate this taxonomy and are not retroactively reclassified in PR1.
+ */
+export const LOCATION_REASONS = [
+  "geocode_failed",
+  "administrative_address_outside_city",
+  "source_unlocated",
+  "out_of_scope",
+] as const;
+export type LocationReason = (typeof LOCATION_REASONS)[number];
 
 /** Canonical source -> funderType mapping. Exhaustive over INVESTMENT_SOURCES
  * (guarded by the `Record<InvestmentSource, …>` type and a unit test). */
@@ -392,6 +426,34 @@ export interface CommunityInvestmentRecord {
    * awarded-grant total or read as money a current project could receive.
    */
   recovery?: CommunityInvestmentRecovery;
+  /** WHY this record has no plottable point — see LocationReason. Null/absent on
+   * every point/zip_area record and on citywide records this taxonomy has not
+   * (yet) been backfilled onto. */
+  locationReason?: LocationReason | null;
+  /**
+   * Foundation-only stable identity (deliverable 2): filing object id, tax
+   * period, schedule/part, and source-row position, so a record id never has to
+   * carry the whole identity claim. `stableId` is the content-derived id
+   * (sha256-derived, never renumbers on append) — `id` (foundation-N) stays the
+   * legacy positional id for backward compatibility; the two are joined by
+   * data/curated/investment-inputs/foundation-id-map.json. Null/absent on every
+   * non-foundation record.
+   */
+  filingObjectId?: string | null;
+  taxPeriodBegin?: string | null;
+  taxPeriodEnd?: string | null;
+  amendedReturn?: boolean | null;
+  schedulePart?: string | null;
+  sourceRowOrdinal?: number | null;
+  stableId?: string | null;
+  /**
+   * Deliverable 3 — set ONLY on a foundation row kept from a 236-group
+   * indistinguishable-duplicate candidate that the filing itself supports (the
+   * consult Q1 default): "Two source line items; award-level distinctness not
+   * independently verified." Null on every other record, including foundation
+   * rows never flagged as a dedupe candidate.
+   */
+  dedupeFlag?: string | null;
 }
 
 /** Importer-only shape before the source-backed purpose assignment is applied.
@@ -564,6 +626,85 @@ export interface CommunityInvestmentMeta {
   outsideCommunityAreas: number;
   /** Human-readable source/provenance labels for the section footer. */
   sources: string[];
+
+  // ── PR1 additions: bridge totals, exclusion ledger, dedupe ledger, identity ──
+
+  /**
+   * Sum of every publishedBalance on a `state_appropriation`-class record — the
+   * fifth capital class (audit finding 7 / consult F8: the public model exposed
+   * only three non-grant classes). A SEPARATE MEASURE, computed from
+   * publishedBalance ALONE and never combined with awarded/announced/authorized/
+   * credit dollars.
+   */
+  totalPublishedStateAppropriation: number;
+  /**
+   * Sum of every recovery.historicalAmount.value across every record carrying a
+   * `recovery` block — the closed-program recovery total (audit finding 6: the
+   * disbursement card said "no source reports receipts" while $923.4M of
+   * recovery records are explicitly disbursed). A SEPARATE MEASURE from every
+   * other total; never added to totalDollarsAwarded.
+   */
+  totalRecoveryHistorical: number;
+  /**
+   * HUD CDBG/HOME activities RETAINED (not dropped) because their coordinate is
+   * a real but non-Chicago administrative address (consult Q5) — locationReason
+   * "administrative_address_outside_city". Chicago-administered, EXCLUDED from
+   * sited + community-area totals (citywide geometry, never point-stamped).
+   */
+  heldAdministrativeOutsideCityRecords: number;
+  heldAdministrativeOutsideCityDollars: number;
+  /** TIF RDA/IGA rows RETAINED as unplotted Chicago-program records (consult Q5)
+   * because the source publishes no coordinates for them — locationReason
+   * "source_unlocated". `droppedTifNoCoords` above is now the TRUE-excluded
+   * remainder (0 once every no-coords row has an established Chicago source
+   * identity). */
+  heldTifUnlocatedRecords: number;
+  heldTifUnlocatedDollars: number;
+  /** LIHTC rows RETAINED as unplotted Chicago-program records (consult Q5) —
+   * locationReason "source_unlocated". */
+  heldLihtcUnlocatedRecords: number;
+  heldLihtcUnlocatedDollars: number;
+  /**
+   * The full-awarded → displayed-hero bridge (consult Q4), DISJOINT buckets in
+   * this exact order — full awarded MINUS no-community-area rows MINUS
+   * pre-2020 community-sited rows EQUALS the displayed community-sited-since-2020
+   * hero. Regenerated from the committed export every run; nothing downstream
+   * may hand-type any of these six numbers (enforced by the repo-scan test).
+   */
+  bridgeFullAwardedDollars: number;
+  bridgeFullAwardedRows: number;
+  bridgeNoCommunityAreaRows: number;
+  bridgeNoCommunityAreaDollars: number;
+  bridgePre2020SitedRows: number;
+  bridgePre2020SitedDollars: number;
+  bridgeDisplayedHeroDollars: number;
+  bridgeDisplayedHeroRows: number;
+  /**
+   * Deliverable 3 — the 236-group foundation dedupe ledger, summarized (full
+   * per-group detail lives in data/curated/investment-inputs/
+   * foundation_dedupe_ledger.json). Collapsed rows never reach `records`;
+   * kept-flagged rows are in `records` with `dedupeFlag` set.
+   */
+  dedupeCandidateGroups: number;
+  dedupeCollapsedRows: number;
+  dedupeCollapsedDollars: number;
+  dedupeKeptFlaggedGroups: number;
+  dedupeKeptFlaggedRows: number;
+  dedupeKeptFlaggedDollars: number;
+  /** Foundation rows whose stable identity resolved to a verified filing
+   * (deliverable 2), vs. rows where identity resolution fell back to a
+   * fingerprint-only id (network/filing-availability gap, never silently
+   * dropped). */
+  foundationIdentityResolved: number;
+  foundationIdentityUnresolved: number;
+  /** sha256 of data/curated/investment-inputs/manifest.json at export time —
+   * binds this export to the manifest version that produced it (deliverable 1 /
+   * consult Q6: "audit report stores input hashes and exported-universe hash"). */
+  sourceManifestHash: string;
+  /** sha256 of the exported `records` array (canonical JSON) — the fresh SRS
+   * audit (deliverable 6) is bound to THIS hash so a mismatch between the audit
+   * report and a later export is detectable, never silently trusted. */
+  exportContentHash: string;
 }
 
 export interface CommunityInvestmentExport {
@@ -891,6 +1032,103 @@ export function sumCreditCapital(records: readonly CommunityInvestmentRecord[]):
   return total;
 }
 
+/** Sum every non-null publishedBalance (state_appropriation capital, the fifth
+ * class — audit finding 7). A SEPARATE total, never combined with any other
+ * money field. Pure. */
+export function sumPublishedStateAppropriation(records: readonly CommunityInvestmentRecord[]): number {
+  let total = 0;
+  for (const r of records) if (r.publishedBalance != null) total += r.publishedBalance;
+  return total;
+}
+
+/** Sum every recovery.historicalAmount.value across every record carrying a
+ * `recovery` block (audit finding 6 — the disbursement total the copy layer
+ * denied existed). A SEPARATE total, never combined with amountAwarded. Pure. */
+export function sumRecoveryHistorical(records: readonly CommunityInvestmentRecord[]): number {
+  let total = 0;
+  for (const r of records) if (r.recovery?.historicalAmount != null) total += r.recovery.historicalAmount.value;
+  return total;
+}
+
+/**
+ * Held-citywide counts/dollars for one (source, locationReason) pair — the
+ * consult Q5 reclassification (HUD administrative-outside-city, TIF/LIHTC
+ * source-unlocated). Money is read from whichever field that source's
+ * capitalClass actually populates (authorizedAmount for tif/cdbg-home,
+ * creditAmount for lihtc) — never amountAwarded, which those classes never
+ * carry. Pure.
+ */
+export function sumHeldByLocationReason(
+  records: readonly CommunityInvestmentRecord[],
+  source: InvestmentSource,
+  reason: LocationReason,
+): { records: number; dollars: number } {
+  let count = 0;
+  let dollars = 0;
+  for (const r of records) {
+    if (r.source !== source || r.locationReason !== reason) continue;
+    count++;
+    dollars += r.authorizedAmount ?? r.creditAmount ?? r.publishedBalance ?? r.amountAwarded ?? 0;
+  }
+  return { records: count, dollars };
+}
+
+/**
+ * The full-awarded -> displayed-hero bridge (consult Q4), disjoint buckets in
+ * this exact order over every `amountAwarded != null` (capitalClass "grant")
+ * record:
+ *   1. no community area (communityArea == null) — subtracted first
+ *   2. has a community area but year is a real year before 2020 — subtracted
+ *      second (a null year is NOT treated as pre-2020 — never guessed)
+ *   3. remainder (has a community area, year null or >= 2020) — the hero
+ * Pure — the single source of every bridge number so nothing downstream can
+ * hand-type one.
+ */
+export function computeAwardedBridge(records: readonly CommunityInvestmentRecord[]): {
+  fullAwardedRows: number;
+  fullAwardedDollars: number;
+  noCommunityAreaRows: number;
+  noCommunityAreaDollars: number;
+  pre2020SitedRows: number;
+  pre2020SitedDollars: number;
+  heroRows: number;
+  heroDollars: number;
+} {
+  let fullAwardedRows = 0;
+  let fullAwardedDollars = 0;
+  let noCommunityAreaRows = 0;
+  let noCommunityAreaDollars = 0;
+  let pre2020SitedRows = 0;
+  let pre2020SitedDollars = 0;
+  let heroRows = 0;
+  let heroDollars = 0;
+  for (const r of records) {
+    if (r.amountAwarded == null) continue;
+    fullAwardedRows++;
+    fullAwardedDollars += r.amountAwarded;
+    if (r.communityArea == null) {
+      noCommunityAreaRows++;
+      noCommunityAreaDollars += r.amountAwarded;
+    } else if (r.year != null && r.year < 2020) {
+      pre2020SitedRows++;
+      pre2020SitedDollars += r.amountAwarded;
+    } else {
+      heroRows++;
+      heroDollars += r.amountAwarded;
+    }
+  }
+  return {
+    fullAwardedRows,
+    fullAwardedDollars,
+    noCommunityAreaRows,
+    noCommunityAreaDollars,
+    pre2020SitedRows,
+    pre2020SitedDollars,
+    heroRows,
+    heroDollars,
+  };
+}
+
 /** Per-source kept-record counts, exhaustive over INVESTMENT_SOURCES. */
 export function countBySource(records: readonly CommunityInvestmentRecord[]): Record<InvestmentSource, number> {
   const counts = Object.fromEntries(INVESTMENT_SOURCES.map((s) => [s, 0])) as Record<InvestmentSource, number>;
@@ -943,6 +1181,12 @@ export function buildCommunityInvestmentExport(
     dceoAddressGeocodeMisses?: number;
     dceoAddressOutOfBounds?: number;
     dceoMultiSiteHeldCitywide?: number;
+    dedupeCandidateGroups?: number;
+    dedupeCollapsedRows?: number;
+    dedupeCollapsedDollars?: number;
+    foundationIdentityResolved?: number;
+    foundationIdentityUnresolved?: number;
+    sourceManifestHash?: string;
   },
 ): CommunityInvestmentExport {
   const pointCount = records.filter((r) => r.geometry.kind === "point").length;
@@ -1056,6 +1300,13 @@ export function buildCommunityInvestmentExport(
     }
   }
 
+  const bridge = computeAwardedBridge(records);
+  const keptFlagged = records.filter((r) => r.dedupeFlag != null);
+  const keptFlaggedGroupCount = new Set(
+    keptFlagged.map((r) => `${r.funderName}|${r.recipient}|${r.address ?? ""}|${r.amountAwarded}|${r.year}`),
+  ).size;
+  const keptFlaggedDollars = keptFlagged.reduce((sum, r) => sum + (r.amountAwarded ?? 0), 0);
+
   const out: CommunityInvestmentExport = {
     generatedAt,
     recoverySources: Object.fromEntries(
@@ -1121,6 +1372,32 @@ export function buildCommunityInvestmentExport(
       negativeAmountsNulled: stats.negativeAmountsNulled ?? 0,
       outsideCommunityAreas: stats.outsideCommunityAreas ?? 0,
       sources: stats.sources,
+      totalPublishedStateAppropriation: sumPublishedStateAppropriation(records),
+      totalRecoveryHistorical: sumRecoveryHistorical(records),
+      heldAdministrativeOutsideCityRecords: sumHeldByLocationReason(records, "cdbg-home", "administrative_address_outside_city").records,
+      heldAdministrativeOutsideCityDollars: sumHeldByLocationReason(records, "cdbg-home", "administrative_address_outside_city").dollars,
+      heldTifUnlocatedRecords: sumHeldByLocationReason(records, "tif", "source_unlocated").records,
+      heldTifUnlocatedDollars: sumHeldByLocationReason(records, "tif", "source_unlocated").dollars,
+      heldLihtcUnlocatedRecords: sumHeldByLocationReason(records, "lihtc", "source_unlocated").records,
+      heldLihtcUnlocatedDollars: sumHeldByLocationReason(records, "lihtc", "source_unlocated").dollars,
+      bridgeFullAwardedDollars: bridge.fullAwardedDollars,
+      bridgeFullAwardedRows: bridge.fullAwardedRows,
+      bridgeNoCommunityAreaRows: bridge.noCommunityAreaRows,
+      bridgeNoCommunityAreaDollars: bridge.noCommunityAreaDollars,
+      bridgePre2020SitedRows: bridge.pre2020SitedRows,
+      bridgePre2020SitedDollars: bridge.pre2020SitedDollars,
+      bridgeDisplayedHeroDollars: bridge.heroDollars,
+      bridgeDisplayedHeroRows: bridge.heroRows,
+      dedupeCandidateGroups: stats.dedupeCandidateGroups ?? 0,
+      dedupeCollapsedRows: stats.dedupeCollapsedRows ?? 0,
+      dedupeCollapsedDollars: stats.dedupeCollapsedDollars ?? 0,
+      dedupeKeptFlaggedGroups: keptFlaggedGroupCount,
+      dedupeKeptFlaggedRows: keptFlagged.length,
+      dedupeKeptFlaggedDollars: keptFlaggedDollars,
+      foundationIdentityResolved: stats.foundationIdentityResolved ?? 0,
+      foundationIdentityUnresolved: stats.foundationIdentityUnresolved ?? 0,
+      sourceManifestHash: stats.sourceManifestHash ?? "",
+      exportContentHash: createHash("sha256").update(JSON.stringify(records)).digest("hex"),
     },
     records,
   };

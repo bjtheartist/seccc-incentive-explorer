@@ -282,13 +282,32 @@ describe("foundation grant inputs — three files, one mapper", () => {
   });
 
   it("mergeFoundationStats sums BOTH files' tallies, so meta never under-reports drops", () => {
-    const a = { citywideFallback: 1, droppedPlaceholder: 3, outOfBoundsGeocodes: 3, negativeAmountsNulled: 1 };
-    const b = { citywideFallback: 0, droppedPlaceholder: 0, outOfBoundsGeocodes: 0, negativeAmountsNulled: 3 };
+    const a = {
+      citywideFallback: 1,
+      droppedPlaceholder: 3,
+      outOfBoundsGeocodes: 3,
+      negativeAmountsNulled: 1,
+      dedupeCollapsed: 2,
+      identityResolved: 5,
+      identityUnresolved: 1,
+    };
+    const b = {
+      citywideFallback: 0,
+      droppedPlaceholder: 0,
+      outOfBoundsGeocodes: 0,
+      negativeAmountsNulled: 3,
+      dedupeCollapsed: 0,
+      identityResolved: 2,
+      identityUnresolved: 0,
+    };
     expect(mergeFoundationStats(a, b)).toEqual({
       citywideFallback: 1,
       droppedPlaceholder: 3,
       outOfBoundsGeocodes: 3,
       negativeAmountsNulled: 4,
+      dedupeCollapsed: 2,
+      identityResolved: 7,
+      identityUnresolved: 1,
     });
   });
 });

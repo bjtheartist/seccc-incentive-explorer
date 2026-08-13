@@ -38,6 +38,7 @@
  *   INPUT_DIR=/some/dir npx tsx scripts/export-community-investment.ts
  */
 
+import { createHash } from "node:crypto";
 import {
   existsSync,
   readFileSync,
@@ -120,6 +121,61 @@ const FOUNDATION_GRANTS_FILE = "foundation_grants_geocoded.csv";
 const FOUNDATION_TIER1_FILE = "foundation_grants_tier1_expansion.csv";
 const FOUNDATION_PHASE2_FILE = "foundation_grants_phase2_expansion.csv";
 const FOUNDATION_PHASE3_FILE = "foundation_grants_phase3_expansion.csv";
+
+/**
+ * Deliverable 2/3 sidecars — built by scripts/foundation/build_grant_identity.py
+ * and scripts/foundation/adjudicate_dedupe.py, joined here by (file, raw CSV row
+ * index, 0-based, INCLUDING placeholder rows). Identity/dedupe resolution needs
+ * live IRS-filing XML fetches, so it runs as a separate Python pass rather than
+ * inline in this exporter — see data/curated/investment-inputs/README.md.
+ */
+const FOUNDATION_IDENTITY_FILE = "foundation_grant_identity.csv";
+const FOUNDATION_DEDUPE_ACTIONS_FILE = "foundation_dedupe_actions.csv";
+
+interface FoundationIdentity {
+  filingObjectId: string | null;
+  taxPeriodBegin: string | null;
+  taxPeriodEnd: string | null;
+  amendedReturn: boolean | null;
+  schedulePart: string | null;
+  sourceRowOrdinal: number | null;
+  stableId: string | null;
+  resolved: boolean;
+}
+
+type FoundationDedupeAction = "keep" | "keep-flagged" | "collapse";
+
+function loadFoundationIdentity(): Map<string, FoundationIdentity> {
+  const path = join(INPUT_DIR, FOUNDATION_IDENTITY_FILE);
+  const map = new Map<string, FoundationIdentity>();
+  if (!existsSync(path)) return map;
+  for (const r of readCsv(FOUNDATION_IDENTITY_FILE)) {
+    const key = `${r.file}#${r.raw_idx}`;
+    const resolved = r.identity_status === "resolved_verified";
+    map.set(key, {
+      filingObjectId: nullableStr(r.filing_object_id),
+      taxPeriodBegin: nullableStr(r.tax_period_begin),
+      taxPeriodEnd: nullableStr(r.tax_period_end),
+      amendedReturn: r.amended ? r.amended === "Y" : null,
+      schedulePart: nullableStr(r.schedule_part),
+      sourceRowOrdinal: r.source_row_ordinal !== "" ? Number(r.source_row_ordinal) : null,
+      stableId: nullableStr(r.stable_id),
+      resolved,
+    });
+  }
+  return map;
+}
+
+function loadFoundationDedupeActions(): Map<string, { action: FoundationDedupeAction; flag: string | null }> {
+  const path = join(INPUT_DIR, FOUNDATION_DEDUPE_ACTIONS_FILE);
+  const map = new Map<string, { action: FoundationDedupeAction; flag: string | null }>();
+  if (!existsSync(path)) return map;
+  for (const r of readCsv(FOUNDATION_DEDUPE_ACTIONS_FILE)) {
+    const key = `${r.file}#${r.raw_idx}`;
+    map.set(key, { action: r.action as FoundationDedupeAction, flag: nullableStr(r.flag) });
+  }
+  return map;
+}
 
 const NOF_PROGRAM = "Neighborhood Opportunity Fund (City of Chicago)";
 const SBIF_PROGRAM = "Small Business Improvement Fund (City of Chicago)";
@@ -722,6 +778,13 @@ export interface FoundationStats {
   droppedPlaceholder: number;
   outOfBoundsGeocodes: number;
   negativeAmountsNulled: number;
+  /** Deliverable 3 — rows dropped by the 236-group dedupe adjudication (proven
+   * extractor duplication; see foundation_dedupe_ledger.json). */
+  dedupeCollapsed: number;
+  /** Deliverable 2 — rows whose identity resolved to a verified filing vs. a
+   * fingerprint-only fallback id (see foundation_grant_identity.csv). */
+  identityResolved: number;
+  identityUnresolved: number;
 }
 
 /** Sum two foundation-file tallies so the meta counters describe EVERY foundation
@@ -734,6 +797,9 @@ export function mergeFoundationStats(a: FoundationStats, b: FoundationStats): Fo
     droppedPlaceholder: a.droppedPlaceholder + b.droppedPlaceholder,
     outOfBoundsGeocodes: a.outOfBoundsGeocodes + b.outOfBoundsGeocodes,
     negativeAmountsNulled: a.negativeAmountsNulled + b.negativeAmountsNulled,
+    dedupeCollapsed: a.dedupeCollapsed + b.dedupeCollapsed,
+    identityResolved: a.identityResolved + b.identityResolved,
+    identityUnresolved: a.identityUnresolved + b.identityUnresolved,
   };
 }
 
@@ -784,6 +850,9 @@ export function assertDisjointFoundationFunders(
 export function mapFoundations(
   rows: Record<string, string>[],
   idPrefix = "foundation",
+  rawFileName?: string,
+  identity?: Map<string, FoundationIdentity>,
+  dedupeActions?: Map<string, { action: FoundationDedupeAction; flag: string | null }>,
 ): {
   records: CommunityInvestmentRecordDraft[];
   stats: FoundationStats;
@@ -794,9 +863,24 @@ export function mapFoundations(
     droppedPlaceholder: 0,
     outOfBoundsGeocodes: 0,
     negativeAmountsNulled: 0,
+    dedupeCollapsed: 0,
+    identityResolved: 0,
+    identityUnresolved: 0,
   };
   let idx = 0;
+  let rawIdx = -1;
   for (const r of rows) {
+    rawIdx++;
+    const joinKey = rawFileName ? `${rawFileName}#${rawIdx}` : "";
+    const action = dedupeActions?.get(joinKey);
+    if (action?.action === "collapse") {
+      // Deliverable 3 — the 236-group dedupe adjudication proved (by direct
+      // filing inspection) that this specific row is an extractor duplicate:
+      // the filing itself does not carry as many matching grant nodes as the
+      // CSV does. Dropped here, never reaching a record, and counted.
+      stats.dedupeCollapsed++;
+      continue;
+    }
     if (isPlaceholderFoundationRow(r)) {
       stats.droppedPlaceholder++;
       continue;
@@ -828,6 +912,9 @@ export function mapFoundations(
       stats.negativeAmountsNulled++;
     }
     const addr = [r.address_line1, r.city, r.state, r.zip].map((s) => (s || "").trim()).filter(Boolean).join(", ");
+    const ident = identity?.get(joinKey);
+    if (ident?.resolved) stats.identityResolved++;
+    else stats.identityUnresolved++;
     out.push({
       id: `${idPrefix}-${idx++}`,
       source: "foundation",
@@ -843,6 +930,14 @@ export function mapFoundations(
       status: "awarded",
       recordDate: null,
       links: [],
+      filingObjectId: ident?.filingObjectId ?? null,
+      taxPeriodBegin: ident?.taxPeriodBegin ?? null,
+      taxPeriodEnd: ident?.taxPeriodEnd ?? null,
+      amendedReturn: ident?.amendedReturn ?? null,
+      schedulePart: ident?.schedulePart ?? null,
+      sourceRowOrdinal: ident?.sourceRowOrdinal ?? null,
+      stableId: ident?.stableId ?? null,
+      dedupeFlag: action?.action === "keep-flagged" ? action.flag : null,
     });
   }
   return { records: out, stats };
@@ -1242,7 +1337,13 @@ function dateIsPast(raw: string | null | undefined, asOf: Date): boolean {
 }
 
 interface TifDrops {
+  /** No longer a drop path (consult Q5) — kept at 0 for interface stability;
+   * a future TRUE exclusion (e.g. proven non-Chicago TIF district) would
+   * increment this. */
   noCoords: number;
+  /** Rows retained as unplotted Chicago-program records because the source
+   * publishes no coordinates for them (locationReason "source_unlocated"). */
+  heldUnlocated: number;
 }
 
 /**
@@ -1251,22 +1352,22 @@ interface TifDrops {
  * authorizedAmount (amountAwarded stays null — a TIF ceiling is not a grant to a
  * business). total_project_cost is context in the logLine only, NEVER a summed
  * money field. Status: "completed" once a Certificate of Completion (COC) issued,
- * else "awarded" (CDC-approved). Only rows with real coordinates become points;
- * the coordinate-less annual-report rows are never records (they feed the context
- * file). Deterministic.
+ * else "awarded" (CDC-approved). A row with real coordinates becomes a point; a
+ * row with none is RETAINED (never dropped, consult Q5) as an unplotted citywide
+ * record — its Chicago scope is already established by the source's own
+ * rda-iga selection criterion, so a coordinate gap is not grounds to erase real
+ * authorized dollars. Deterministic.
  */
 function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: TifDrops } {
   const out: CommunityInvestmentRecordDraft[] = [];
-  const drops: TifDrops = { noCoords: 0 };
+  const drops: TifDrops = { noCoords: 0, heldUnlocated: 0 };
   let idx = 0;
   for (const r of rows) {
     if ((r.dataset || "").trim() !== "rda-iga") continue; // annual-report rows are context, not records
     const lat = Number(r.lat);
     const lng = Number(r.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
-      drops.noCoords++;
-      continue;
-    }
+    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+    if (!hasCoords) drops.heldUnlocated++;
     const district = nullableStr(r.tif_district);
     const totalCost = parseAmount(r.total_project_cost);
     const statusText = nullableStr(r.status_text);
@@ -1286,19 +1387,30 @@ function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentR
       authorizedAmount: parseAmount(r.authorized_tif_assistance),
       logLine: logParts.length ? logParts.join(" · ") : null,
       year: cleanYear(r.approval_or_report_year),
-      geometry: point(lat, lng),
+      geometry: hasCoords ? point(lat, lng) : { kind: "citywide" },
       address: nullableStr(r.address),
       status: /COC issued/i.test(statusText || "") ? "completed" : "awarded",
       recordDate: null,
       recordProvenance: "official",
       links: [],
+      locationReason: hasCoords ? null : "source_unlocated",
     });
   }
   return { records: out, drops };
 }
 
 interface HudDrops {
+  /** TRUE exclusions only: a row with NO usable coordinate at all (nothing to
+   * classify as an administrative address vs. a Chicago site). Rare/zero in the
+   * current input; kept as a real drop because there is no location claim of
+   * ANY kind to retain. */
   outOfBbox: number;
+  /** Rows RETAINED (consult Q5) because they carry a REAL coordinate that
+   * resolves to a non-Chicago administrative/suburban/out-of-state address —
+   * Chicago-administered (GRANTEE_ID=17408), location-unresolved. EXCLUDED from
+   * sited + community-area totals (citywide geometry is never point-stamped)
+   * but never deleted — the federal allocation is still real. */
+  heldAdministrativeOutsideCity: number;
 }
 
 /**
@@ -1306,28 +1418,31 @@ interface HudDrops {
  * capitalClass "federal_program"; funding_amount is a COMMITTED FEDERAL PROGRAM
  * ALLOCATION, not a discretionary grant award to a named business — it lands in
  * authorizedAmount, NOT amountAwarded (which stays null). Status is "completed"
- * once the activity's completion_date is in the past, else "awarded". A row whose
- * geocode falls OUTSIDE the Chicago bounding box is DROPPED and counted (never
- * plotted at a misleading suburban/foreign point). Deterministic.
+ * once the activity's completion_date is in the past, else "awarded". A row with
+ * NO coordinate at all is a true drop (nothing to plot OR retain with a location
+ * claim). A row whose real coordinate falls OUTSIDE the Chicago bounding box is
+ * RETAINED as an unplotted citywide record — Chicago-administered (the source is
+ * already filtered to GRANTEE_ID=17408, the City of Chicago), location-unresolved
+ * (consult Q5) — never silently deleted, never plotted at the misleading
+ * suburban/foreign point either. Deterministic.
  */
 function mapHud(
   rows: Record<string, string>[],
   asOf: Date,
 ): { records: CommunityInvestmentRecordDraft[]; drops: HudDrops } {
   const out: CommunityInvestmentRecordDraft[] = [];
-  const drops: HudDrops = { outOfBbox: 0 };
+  const drops: HudDrops = { outOfBbox: 0, heldAdministrativeOutsideCity: 0 };
   let idx = 0;
   for (const r of rows) {
     const lat = Number(r.lat);
     const lng = Number(r.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
-      drops.outOfBbox++; // no usable coord → treated as out-of-bounds drop (counted)
+    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+    if (!hasCoords) {
+      drops.outOfBbox++; // no usable coord at all → nothing to retain, true exclusion
       continue;
     }
-    if (!inChicagoBounds(lat, lng)) {
-      drops.outOfBbox++;
-      continue;
-    }
+    const inBounds = inChicagoBounds(lat, lng);
+    if (!inBounds) drops.heldAdministrativeOutsideCity++;
     const program = (r.program || "").trim().toUpperCase();
     const objective = nullableStr(r.national_objective);
     const group = nullableStr(r.activity_group);
@@ -1343,39 +1458,45 @@ function mapHud(
       authorizedAmount: parseAmount(r.funding_amount),
       logLine: logParts.length ? logParts.join(" · ") : null,
       year: yearOfDate(r.completion_date),
-      geometry: point(lat, lng),
+      geometry: inBounds ? point(lat, lng) : { kind: "citywide" },
       address: nullableStr(r.address),
       status: dateIsPast(r.completion_date, asOf) ? "completed" : "awarded",
       recordDate: nullableStr(r.completion_date),
       recordProvenance: "official",
       links: [],
+      locationReason: inBounds ? null : "administrative_address_outside_city",
     });
   }
   return { records: out, drops };
 }
 
 interface LihtcDrops {
+  /** No longer a drop path (consult Q5) — kept at 0 for interface stability. */
   noCoords: number;
+  /** Rows retained as unplotted Chicago-program records because the source
+   * publishes no coordinates for them (locationReason "source_unlocated"). */
+  heldUnlocated: number;
 }
 
 /**
  * Map the LIHTC rows to `lihtc`-source records. capitalClass "tax_credit"; the
  * annual_allocated_amount (often blank → null, never coerced) lands in
  * creditAmount. Year from allocation_year (HUD 8888/9999 sentinels → null).
- * Status "completed" once placed in service, else "awarded". Only rows with real
- * coordinates become points. Deterministic.
+ * Status "completed" once placed in service, else "awarded". A row with real
+ * coordinates becomes a point; a row with none is RETAINED (never dropped,
+ * consult Q5) as an unplotted citywide record with provenance — the Chicago
+ * selection criterion that put it in this curated file is retained even when
+ * the coordinate is not. Deterministic.
  */
 function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: LihtcDrops } {
   const out: CommunityInvestmentRecordDraft[] = [];
-  const drops: LihtcDrops = { noCoords: 0 };
+  const drops: LihtcDrops = { noCoords: 0, heldUnlocated: 0 };
   let idx = 0;
   for (const r of rows) {
     const lat = Number(r.lat);
     const lng = Number(r.lng);
-    if (!Number.isFinite(lat) || !Number.isFinite(lng) || (lat === 0 && lng === 0)) {
-      drops.noCoords++;
-      continue;
-    }
+    const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+    if (!hasCoords) drops.heldUnlocated++;
     const placed = cleanYear(r.placed_in_service_year);
     const units = nullableStr(r.units_total);
     const lowInc = nullableStr(r.units_low_income);
@@ -1395,12 +1516,13 @@ function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmen
       creditAmount: parseAmount(r.annual_allocated_amount),
       logLine: logParts.length ? logParts.join(" · ") : null,
       year: cleanYear(r.allocation_year),
-      geometry: point(lat, lng),
+      geometry: hasCoords ? point(lat, lng) : { kind: "citywide" },
       address: nullableStr(r.address),
       status: placed != null ? "completed" : "awarded",
       recordDate: null,
       recordProvenance: "official",
       links: [],
+      locationReason: hasCoords ? null : "source_unlocated",
     });
   }
   return { records: out, drops };
@@ -2631,6 +2753,22 @@ function buildCapitalContext(generatedAt: string): unknown {
 async function main() {
   const generatedAt = new Date().toISOString();
 
+  // Deliverable 1 — bind this export to the manifest version that produced it.
+  const manifestPath = join(process.cwd(), "data", "curated", "investment-inputs", "manifest.json");
+  const sourceManifestHash = existsSync(manifestPath)
+    ? createHash("sha256").update(readFileSync(manifestPath)).digest("hex")
+    : "";
+
+  // Deliverable 3 — the dedupe ledger summary (per-group detail already lives
+  // in the committed foundation_dedupe_ledger.json; only the totals travel
+  // into meta).
+  const dedupeLedgerPath = join(INPUT_DIR, "foundation_dedupe_ledger.json");
+  const dedupeLedgerSummary = existsSync(dedupeLedgerPath)
+    ? (JSON.parse(readFileSync(dedupeLedgerPath, "utf8")) as {
+        summary: { candidate_groups: number; collapsed_rows: number; collapsed_dollars: number };
+      }).summary
+    : { candidate_groups: 0, collapsed_rows: 0, collapsed_dollars: 0 };
+
   // 1) Sources that already carry coordinates (or resolve citywide by locType).
   const nofSmallRows = JSON.parse(
     readFileSync(join(INPUT_DIR, "nof_small.json"), "utf8"),
@@ -2666,10 +2804,41 @@ async function main() {
       assertDisjointFoundationFunders(foundationInputs[i], foundationInputs[j]);
     }
   }
-  const foundationBase = mapFoundations(foundationBaseRows);
-  const foundationTier1 = mapFoundations(foundationTier1Rows, "foundation-t1");
-  const foundationPhase2 = mapFoundations(foundationPhase2Rows, "foundation-p2");
-  const foundationPhase3 = mapFoundations(foundationPhase3Rows, "foundation-p3");
+  // Deliverable 2/3 sidecars — see scripts/foundation/build_grant_identity.py and
+  // scripts/foundation/adjudicate_dedupe.py. Both key by (raw csv file name, raw
+  // 0-based row index) so the join below is exact regardless of which rows the
+  // placeholder filter later drops.
+  const foundationIdentity = loadFoundationIdentity();
+  const foundationDedupeActions = loadFoundationDedupeActions();
+
+  const foundationBase = mapFoundations(
+    foundationBaseRows,
+    "foundation",
+    FOUNDATION_GRANTS_FILE,
+    foundationIdentity,
+    foundationDedupeActions,
+  );
+  const foundationTier1 = mapFoundations(
+    foundationTier1Rows,
+    "foundation-t1",
+    FOUNDATION_TIER1_FILE,
+    foundationIdentity,
+    foundationDedupeActions,
+  );
+  const foundationPhase2 = mapFoundations(
+    foundationPhase2Rows,
+    "foundation-p2",
+    FOUNDATION_PHASE2_FILE,
+    foundationIdentity,
+    foundationDedupeActions,
+  );
+  const foundationPhase3 = mapFoundations(
+    foundationPhase3Rows,
+    "foundation-p3",
+    FOUNDATION_PHASE3_FILE,
+    foundationIdentity,
+    foundationDedupeActions,
+  );
   const foundations = [
     ...foundationBase.records,
     ...foundationTier1.records,
@@ -2719,7 +2888,8 @@ async function main() {
       `prize=${prize.length} kml=${kmlRows.length} ` +
       `mega(verified=${verifiedMega.length} discovered=${discoveredMega.length}) ` +
       `(placeholder-dropped=${foundationStats.droppedPlaceholder} out-of-bounds->citywide=${foundationStats.outOfBoundsGeocodes} ` +
-      `negative-nulled=${foundationStats.negativeAmountsNulled} preWindow-dropped=${droppedPreWindow})`,
+      `negative-nulled=${foundationStats.negativeAmountsNulled} preWindow-dropped=${droppedPreWindow} ` +
+      `dedupe-collapsed=${foundationStats.dedupeCollapsed} identity-resolved=${foundationStats.identityResolved} identity-unresolved=${foundationStats.identityUnresolved})`,
   );
 
   // 2) City-grant sources that need geocoding (CDG + Jim's corridor list).
@@ -2857,9 +3027,9 @@ async function main() {
   const { records: lihtc, drops: lihtcDrops } = mapLihtc(readCsv("lihtc_chicago.csv"));
   const { records: nmtc, stamp: nmtcStamp } = mapNmtc(readCsv("nmtc_chicago.csv"), caPolygons);
   console.log(
-    `Capital spine: tif=${tif.length} (noCoords-dropped=${tifDrops.noCoords}) ` +
-      `cdbg-home=${hud.length} (out-of-bbox-dropped=${hudDrops.outOfBbox}) ` +
-      `lihtc=${lihtc.length} (noCoords-dropped=${lihtcDrops.noCoords}) ` +
+    `Capital spine: tif=${tif.length} (true-excluded=${tifDrops.noCoords} held-unlocated=${tifDrops.heldUnlocated}) ` +
+      `cdbg-home=${hud.length} (true-excluded=${hudDrops.outOfBbox} held-admin-outside-city=${hudDrops.heldAdministrativeOutsideCity}) ` +
+      `lihtc=${lihtc.length} (true-excluded=${lihtcDrops.noCoords} held-unlocated=${lihtcDrops.heldUnlocated}) ` +
       `nmtc=${nmtc.length} (CA-stamped=${nmtcStamp.stamped} unstamped=${nmtcStamp.unstamped})`,
   );
 
@@ -2944,6 +3114,12 @@ async function main() {
     dceoAddressOutOfBounds: dceo.addressOutOfBounds,
     dceoMultiSiteHeldCitywide: dceo.multiSiteHeldCitywide,
     sources: PROVENANCE_LABELS,
+    dedupeCandidateGroups: dedupeLedgerSummary.candidate_groups,
+    dedupeCollapsedRows: dedupeLedgerSummary.collapsed_rows,
+    dedupeCollapsedDollars: dedupeLedgerSummary.collapsed_dollars,
+    foundationIdentityResolved: foundationStats.identityResolved,
+    foundationIdentityUnresolved: foundationStats.identityUnresolved,
+    sourceManifestHash,
   });
 
   // Build and validate BOTH sibling artifacts before replacing either one. A

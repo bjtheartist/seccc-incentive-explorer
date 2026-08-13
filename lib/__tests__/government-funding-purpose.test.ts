@@ -121,14 +121,19 @@ describe("government funding purpose", () => {
       (record) => record.source === "cdbg-home",
     );
 
-    expect(cdbgHome).toHaveLength(6_082);
+    // PR1 (consult Q5): +19 rows — the HUD activities with a real but
+    // non-Chicago administrative-address coordinate, RETAINED as unplotted
+    // citywide records (locationReason "administrative_address_outside_city")
+    // instead of being dropped. Every one still carries a real, source-backed
+    // funding purpose like every other CDBG/HOME row.
+    expect(cdbgHome).toHaveLength(6_101);
     expect(cdbgHome.filter((record) => record.governmentFundingPurpose === "unclassified")).toEqual([]);
     expect(
       cdbgHome.filter((record) => record.governmentFundingPurpose === "capital_project"),
-    ).toHaveLength(675);
+    ).toHaveLength(681);
     expect(
       cdbgHome.filter((record) => record.governmentFundingPurpose === "programmatic"),
-    ).toHaveLength(5_407);
+    ).toHaveLength(5_420);
     expect(
       new Set(cdbgHome.map((record) => record.governmentFundingPurpose)),
     ).toEqual(new Set(["capital_project", "programmatic"]));
