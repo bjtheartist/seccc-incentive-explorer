@@ -64,7 +64,12 @@ describe("foundation-id-map.json (stable identity, PR1 deliverable 2)", () => {
    * regenerate-then-commit that moved both together).
    */
   it("PINNED sample stableIds never change across a regeneration", () => {
-    expect(idMap["foundation-0"]?.stableId).toBe("86010b8966c25c17");
+    // Sol gate finding 2 (round 2) — stable_id is now derived from a
+    // node-content fingerprint within the (filing object, schedule)
+    // namespace, not a CSV-position ordinal (see
+    // scripts/foundation/build_grant_identity.py's module docstring), so
+    // this pinned value changed from round 1's positional-ordinal scheme.
+    expect(idMap["foundation-0"]?.stableId).toBe("6c04e43d02275f7f");
     expect(idMap["foundation-0"]?.filingObjectId).toBe("202303179349103040");
   });
 });

@@ -3,20 +3,57 @@
 
 For each row in the four published foundation files, resolves and writes:
   filing_object_id, tax_period_begin, tax_period_end, amended, schedule_part,
-  source_row_ordinal (0-based position of this row within its (foundation,
-  tax_year) block, in COMMITTED CSV order -- verified below to equal the row's
-  position in the filing's own grant schedule for every row this run can reach
-  a filing for), node_fingerprint (content hash for collision disambiguation).
+  source_row_ordinal (see IDENTITY MODEL below), node_fingerprint (content
+  hash for collision disambiguation), stable_id.
+
+IDENTITY MODEL (Sol gate finding 2, round 2 -- "IDs must survive a middle
+insert of a DISTINCT row with zero downstream renumbering"):
+
+  stable_id is derived from the row's OWN CONTENT (recipient, amount,
+  purpose, address_line1 -- see content_key()) within the (filing object id,
+  schedule/part) namespace for a resolved filing, or the
+  (tag, foundation, tax_year) namespace as a fallback when the filing did not
+  resolve. It NEVER depends on the row's raw position in the committed CSV.
+
+  The `source_row_ordinal` column is NOT a CSV position. It is an
+  OCCURRENCE INDEX: how many EARLIER rows in the same (foundation, tax_year)
+  block share this row's EXACT content_key. It is 0 for every row whose
+  content is unique within its block -- the overwhelming majority -- which is
+  why inserting, at ANY position, a row whose content differs from every
+  other row in its block changes NO other row's stable_id: the occurrence
+  counter for a given content_key only advances when ANOTHER row with that
+  SAME content_key is encountered, and counting is keyed by content, not by
+  position.
+
+  DOCUMENTED BOUNDARY: when a filing genuinely contains two or more
+  IDENTICAL rows (the audit's 236 duplicate-candidate groups -- e.g. the Arie
+  and Ida Crown Memorial / START EARLY $1,000,000 pair, where the FILING
+  ITSELF lists the same recipient/amount/purpose/address twice), those rows
+  are, by definition, indistinguishable by content alone. The ONLY way to
+  give them distinct ids is an OCCURRENCE SUFFIX (0, 1, 2, ...) counted
+  strictly WITHIN that identical set. This suffix IS positionally sensitive
+  in one narrow case: inserting a THIRD row with the SAME content as an
+  existing identical pair, between them, reassigns which of the (still only
+  content-indistinguishable) rows gets suffix 0 vs 1 vs 2. This is accepted
+  as an inherent limit of content-based identity applied to genuinely
+  identical source rows -- there is no content left to key on -- and is
+  DELIBERATELY OUT OF SCOPE for the "survives a middle insert" guarantee,
+  which applies to inserting a DISTINCT row (the common, real case: a fresh
+  parse of a NEW or re-filed return). It never affects a row whose content is
+  unique in its block, which is the overwhelming majority of the ~26,501-row
+  universe (only 504 of 26,501 rows -- 1.9% -- fall into a duplicate-content
+  group at all).
 
 Output: data/curated/investment-inputs/foundation_grant_identity.csv, joined
 by (file, raw_idx) -- raw_idx is the row's 0-based position in the CSV
-INCLUDING placeholder rows the exporter later drops, so the join key is stable
-regardless of the exporter's own filtering.
+INCLUDING placeholder rows the exporter later drops, so the JOIN key is
+stable regardless of the exporter's own filtering. raw_idx is used ONLY to
+join this file back to the source CSV row for lookup -- never as an input to
+stable_id.
 
-scripts/export-community-investment.ts reads this file in mapFoundations() and
-computes each record's stableId = sha256(object_id|tax_period_end|schedule_part|
-source_row_ordinal-or-fingerprint)[:16], persisted alongside (never replacing)
-the existing positional `foundation-N` id.
+scripts/export-community-investment.ts reads this file in mapFoundations()
+and persists each record's stableId alongside (never replacing) the existing
+positional `foundation-N` id.
 """
 import csv
 import hashlib
@@ -44,54 +81,82 @@ HEADER = [
 ]
 
 
+def content_key(row):
+    """The row's OWN content signature -- recipient + amount + purpose +
+    address, normalized. THIS, not CSV position, is what stable_id derives
+    from (Sol gate finding 2). Two rows with the same content_key in the same
+    (foundation, tax_year) block are the "genuinely identical duplicate"
+    case documented in the module docstring above."""
+    return "|".join([
+        fi.norm_text(row.get("recipient")),
+        str(row.get("amount") or "").strip(),
+        fi.norm_text(row.get("purpose")),
+        fi.norm_text(row.get("address_line1")),
+    ])
+
+
 def node_fingerprint(tag, row):
-    # Sol gate finding 2 -- foundation + tax_year MUST be in the fingerprint.
-    # Without them, two DIFFERENT filings (e.g. the same funder's 2022 and 2023
-    # returns) that happen to report the same recipient/amount/purpose collide:
-    # this exact bug produced a duplicate stable_id for Robert R McCormick
-    # Foundation's 2022 and 2023 grants to Northwestern Memorial Healthcare.
+    # Sol gate finding 2 (round 1) -- foundation + tax_year MUST be in the
+    # fingerprint. Without them, two DIFFERENT filings (e.g. the same
+    # funder's 2022 and 2023 returns) that happen to report the same
+    # recipient/amount/purpose collide: this exact bug produced a duplicate
+    # stable_id for Robert R McCormick Foundation's 2022 and 2023 grants to
+    # Northwestern Memorial Healthcare.
     key = "|".join([
         tag,
         fi.norm_text(row.get("foundation")),
         (row.get("tax_year") or "").strip(),
-        fi.norm_text(row.get("recipient")),
-        str(row.get("amount") or "").strip(),
-        fi.norm_text(row.get("purpose")),
+        content_key(row),
     ])
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
-def stable_id(tag, row, filing, ordinal, fingerprint):
+def stable_id(tag, row, filing, occurrence, fingerprint):
     if filing is None:
         # No resolvable filing -- fall back to a fingerprint-only id so the row
         # STILL gets a content-derived, non-positional identifier; identity_status
         # records the degradation so it's never silently mistaken for a verified
-        # filing-bound id. Namespaced explicitly by file/foundation/tax_year (not
-        # merely the fingerprint, which already carries them, and not merely
-        # ordinal, which repeats across DIFFERENT (foundation, tax_year) blocks)
-        # so a collision requires an actual content match on every one of those
-        # fields plus position -- the same discipline as the resolved branch.
+        # filing-bound id. `occurrence` here disambiguates only genuinely
+        # identical rows (see module docstring) -- it is 0 for every row whose
+        # content is unique in its block.
         key = "|".join([
             "unresolved", tag, fi.norm_text(row.get("foundation")),
-            (row.get("tax_year") or "").strip(), fingerprint, str(ordinal),
+            (row.get("tax_year") or "").strip(), fingerprint, str(occurrence),
         ])
         return hashlib.sha256(key.encode()).hexdigest()[:16]
-    key = f"{filing['object_id']}|{filing['tax_period_end']}|{filing['schedule_part']}|{ordinal}"
+    # Resolved branch: node-content fingerprint WITHIN the (filing object,
+    # schedule/part) namespace -- exactly Sol gate finding 2's required shape.
+    key = f"{filing['object_id']}|{filing['tax_period_end']}|{filing['schedule_part']}|{fingerprint}|{occurrence}"
     return hashlib.sha256(key.encode()).hexdigest()[:16]
 
 
-def assign_ordinals(rows):
-    """[(row, ordinal)] -- ordinal = 0-based position within THIS row's
-    (foundation, tax_year) block, in the given list's order. Pure -- exercised
-    directly (no disk I/O, no network) by test_identity_stability.py's
-    append/insert fixtures (Sol gate finding 2)."""
-    block_counter = defaultdict(int)
+def assign_occurrence_indices(rows):
+    """[(row, occurrence_index)] -- occurrence_index = how many EARLIER rows
+    (in the given list's order) within the SAME (foundation, tax_year) block
+    share this row's EXACT content_key. 0 for a row whose content is unique
+    in its block (the overwhelming majority); 0, 1, 2, ... only within a
+    group of genuinely IDENTICAL rows.
+
+    Because the counter is keyed by (foundation, tax_year, content_key)
+    rather than raw position, inserting a DISTINCT row anywhere in the block
+    -- start, middle, or end -- changes NO other row's occurrence_index or
+    stable_id: the count for a given content_key only advances when ANOTHER
+    row with that SAME content_key is seen. Pure -- no disk I/O, no network --
+    exercised directly by test_identity_stability.py's middle-insert/append
+    fixtures against a FROZEN COMMITTED baseline (never regenerated by the
+    test itself).
+    """
+    seen_counts = defaultdict(int)
     out = []
     for row in rows:
-        block_key = ((row.get("foundation") or "").strip(), (row.get("tax_year") or "").strip())
-        ordinal = block_counter[block_key]
-        block_counter[block_key] += 1
-        out.append((row, ordinal))
+        block_key = (
+            (row.get("foundation") or "").strip(),
+            (row.get("tax_year") or "").strip(),
+            content_key(row),
+        )
+        occurrence = seen_counts[block_key]
+        seen_counts[block_key] += 1
+        out.append((row, occurrence))
     return out
 
 
@@ -102,26 +167,17 @@ def main():
 
     out_rows = []
     status_counts = defaultdict(int)
-    ordinal_position_mismatches = []
 
     for tag, rows in rows_by_tag.items():
-        # source_row_ordinal = position within this row's (foundation, tax_year)
-        # block, in COMMITTED CSV order.
-        for row, ordinal in assign_ordinals(rows):
+        for row, occurrence in assign_occurrence_indices(rows):
             filing = fi.resolve_filing_for_row(tag, row, recon_indexes, base_eins)
             fp = node_fingerprint(tag, row)
 
             status = "unresolved_filing"
-            verified_position = None
             if filing is not None:
                 status = "resolved"
                 grants = fi.filing_grants(filing["object_id"])
                 if grants is not None:
-                    # Verify: does the filing's own grant-node ORDER put a row
-                    # matching this CSV row's fingerprint at (or near) `ordinal`
-                    # within the SAME (funder,tax_year) filing? This is the
-                    # closest a positional CSV ordinal can get to a genuine XML
-                    # node position without re-deriving the full parse pipeline.
                     want_amt = None
                     try:
                         want_amt = float(row.get("amount")) if row.get("amount") not in ("", None) else None
@@ -134,7 +190,6 @@ def main():
                         and fi.norm_text(g["recipient"]) == fi.norm_text(row.get("recipient"))
                     ]
                     if matches:
-                        verified_position = matches[0]
                         status = "resolved_verified"
                     else:
                         status = "resolved_unverified_row"
@@ -152,9 +207,9 @@ def main():
                 "tax_period_end": filing["tax_period_end"] if filing else "",
                 "amended": filing["amended"] if filing else "",
                 "schedule_part": filing["schedule_part"] if filing else "",
-                "source_row_ordinal": ordinal,
+                "source_row_ordinal": occurrence,
                 "node_fingerprint": fp,
-                "stable_id": stable_id(tag, row, filing, ordinal, fp),
+                "stable_id": stable_id(tag, row, filing, occurrence, fp),
                 "identity_status": status,
             })
         print(f"[{tag}] {len(rows)} rows processed", flush=True)

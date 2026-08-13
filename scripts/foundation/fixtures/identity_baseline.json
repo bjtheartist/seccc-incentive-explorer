@@ -1,0 +1,163 @@
+{
+  "tag": "tier1",
+  "baseline_rows": [
+    {
+      "foundation": "Alpha Foundation",
+      "tax_year": "2022",
+      "recipient": "Org A",
+      "address_line1": "1 Test St",
+      "city": "CHICAGO",
+      "state": "IL",
+      "zip": "60601",
+      "amount": "10000",
+      "purpose": "General support",
+      "source_form": "990-PF",
+      "lat": "41.88",
+      "lng": "-87.63",
+      "locType": "sited"
+    },
+    {
+      "foundation": "Alpha Foundation",
+      "tax_year": "2022",
+      "recipient": "Org B (identical pair member 1)",
+      "address_line1": "1 Test St",
+      "city": "CHICAGO",
+      "state": "IL",
+      "zip": "60601",
+      "amount": "20000",
+      "purpose": "Capital",
+      "source_form": "990-PF",
+      "lat": "41.88",
+      "lng": "-87.63",
+      "locType": "sited"
+    },
+    {
+      "foundation": "Alpha Foundation",
+      "tax_year": "2022",
+      "recipient": "Org B (identical pair member 1)",
+      "address_line1": "1 Test St",
+      "city": "CHICAGO",
+      "state": "IL",
+      "zip": "60601",
+      "amount": "20000",
+      "purpose": "Capital",
+      "source_form": "990-PF",
+      "lat": "41.88",
+      "lng": "-87.63",
+      "locType": "sited"
+    },
+    {
+      "foundation": "Alpha Foundation",
+      "tax_year": "2022",
+      "recipient": "Org C",
+      "address_line1": "1 Test St",
+      "city": "CHICAGO",
+      "state": "IL",
+      "zip": "60601",
+      "amount": "30000",
+      "purpose": "General support",
+      "source_form": "990-PF",
+      "lat": "41.88",
+      "lng": "-87.63",
+      "locType": "sited"
+    },
+    {
+      "foundation": "Beta Foundation",
+      "tax_year": "2023",
+      "recipient": "Org D",
+      "address_line1": "1 Test St",
+      "city": "CHICAGO",
+      "state": "IL",
+      "zip": "60601",
+      "amount": "40000",
+      "purpose": "General support",
+      "source_form": "990-PF",
+      "lat": "41.88",
+      "lng": "-87.63",
+      "locType": "sited"
+    },
+    {
+      "foundation": "Beta Foundation",
+      "tax_year": "2023",
+      "recipient": "Org E",
+      "address_line1": "1 Test St",
+      "city": "CHICAGO",
+      "state": "IL",
+      "zip": "60601",
+      "amount": "50000",
+      "purpose": "General support",
+      "source_form": "990-PF",
+      "lat": "41.88",
+      "lng": "-87.63",
+      "locType": "sited"
+    }
+  ],
+  "baseline_identities": [
+    {
+      "foundation": "Alpha Foundation",
+      "tax_year": "2022",
+      "recipient": "Org A",
+      "amount": "10000",
+      "purpose": "General support",
+      "address_line1": "1 Test St",
+      "occurrence": 0,
+      "fingerprint": "f38e11f09278cad9",
+      "stable_id": "0405062f66a8e691"
+    },
+    {
+      "foundation": "Alpha Foundation",
+      "tax_year": "2022",
+      "recipient": "Org B (identical pair member 1)",
+      "amount": "20000",
+      "purpose": "Capital",
+      "address_line1": "1 Test St",
+      "occurrence": 0,
+      "fingerprint": "e05a0d20a574972e",
+      "stable_id": "794189701f505183"
+    },
+    {
+      "foundation": "Alpha Foundation",
+      "tax_year": "2022",
+      "recipient": "Org B (identical pair member 1)",
+      "amount": "20000",
+      "purpose": "Capital",
+      "address_line1": "1 Test St",
+      "occurrence": 1,
+      "fingerprint": "e05a0d20a574972e",
+      "stable_id": "9b7264ecd720c243"
+    },
+    {
+      "foundation": "Alpha Foundation",
+      "tax_year": "2022",
+      "recipient": "Org C",
+      "amount": "30000",
+      "purpose": "General support",
+      "address_line1": "1 Test St",
+      "occurrence": 0,
+      "fingerprint": "f3eb6791a7a27f3f",
+      "stable_id": "c879e0d11d435983"
+    },
+    {
+      "foundation": "Beta Foundation",
+      "tax_year": "2023",
+      "recipient": "Org D",
+      "amount": "40000",
+      "purpose": "General support",
+      "address_line1": "1 Test St",
+      "occurrence": 0,
+      "fingerprint": "06577b8ec1fa32e1",
+      "stable_id": "8d885815a6e213ef"
+    },
+    {
+      "foundation": "Beta Foundation",
+      "tax_year": "2023",
+      "recipient": "Org E",
+      "amount": "50000",
+      "purpose": "General support",
+      "address_line1": "1 Test St",
+      "occurrence": 0,
+      "fingerprint": "8214042ac09f2dbb",
+      "stable_id": "6862982459a0d7f1"
+    }
+  ]
+}
