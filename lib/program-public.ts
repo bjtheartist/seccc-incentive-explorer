@@ -177,3 +177,34 @@ export function buildPublicProgramsEnvelope(
     programs: records.map((record) => toPublicProgramView(record, generatedAt)),
   };
 }
+
+/**
+ * ISO 8601 UTC timestamp exactly matching `Date.prototype.toISOString()`'s
+ * output shape (`YYYY-MM-DDTHH:mm:ss.sssZ`) — every `generatedAt`/
+ * `checkedAt` in this codebase is produced that way.
+ */
+const ISO_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
+
+export function isIsoTimestamp(value: unknown): value is string {
+  return typeof value === "string" && ISO_TIMESTAMP_RE.test(value) && !Number.isNaN(Date.parse(value));
+}
+
+/**
+ * Full envelope-shape validation (review1 R7) — used by BOTH
+ * scripts/export-public-programs.ts's `--check` and
+ * lib/__tests__/program-public.test.ts's regen-diff test, so the two
+ * checks can never silently drift apart. Validates `schemaVersion`,
+ * `catalogRevision`, `generatedAt` (presence + ISO shape), and that
+ * `programs` is an array — deliberately excludes ONLY exact `generatedAt`
+ * *equality* between two envelopes (that field legitimately changes on
+ * every run) from whatever comparison the caller layers on top.
+ */
+export function isValidPublicProgramsEnvelopeShape(value: unknown): value is PublicProgramsEnvelope {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  if (v.schemaVersion !== PROGRAMS_PUBLIC_SCHEMA_VERSION) return false;
+  if (typeof v.catalogRevision !== "string" || v.catalogRevision.length === 0) return false;
+  if (!isIsoTimestamp(v.generatedAt)) return false;
+  if (!Array.isArray(v.programs)) return false;
+  return true;
+}

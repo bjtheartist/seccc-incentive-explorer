@@ -8,6 +8,7 @@ import {
   benefitQualifier,
   buildPublicProgramsEnvelope,
   catalogRevisionFromRaw,
+  isValidPublicProgramsEnvelopeShape,
   toPublicProgramView,
 } from "../program-public";
 
@@ -72,6 +73,20 @@ describe("toPublicProgramView", () => {
     expect(view.benefit.qualifier).not.toContain("Current published terms");
   });
 
+  it("review1 R1: r3Grants (closed, corrected from unknown) produces the complete closed-round qualifier with as-of 2026-08-09", () => {
+    const r3Grants = byId.get("r3Grants")!;
+    expect(r3Grants.intakeStatus).toBe("closed");
+    expect(r3Grants.statusAsOf).toBe("2026-08-09");
+    const view = toPublicProgramView(r3Grants, "2026-08-13");
+    expect(view.benefit.qualifier).toBe(
+      "Most recently published round offered Grants (size varies by NOFO). (No round currently open as of 2026-08-09.)"
+    );
+    expect(view.benefit.termsStatus).toBe("historical");
+    expect(view.statusBadge.state).toBe("closed");
+    expect(view.statusBadge.asOfDate).toBe("2026-08-09");
+    expect(view.benefit.qualifier).not.toContain("Current published terms");
+  });
+
   it("falls back to record.statusAsOf even when a different asOf is passed", () => {
     const tif = byId.get("tif")!;
     const view = toPublicProgramView(tif, "1999-01-01");
@@ -131,11 +146,42 @@ describe("public artifact regen + diff (CI check, in-process)", () => {
       "utf8"
     );
     const catalogRevision = catalogRevisionFromRaw(rawInternal);
-    const regenerated = buildPublicProgramsEnvelope(programs, catalogRevision, "irrelevant-for-diff");
+    // generatedAt's exact VALUE is irrelevant to this diff (it legitimately
+    // differs between runs), but review1 R7 now validates it must still be
+    // a real ISO timestamp shape, so a placeholder string like
+    // "irrelevant" is no longer valid here — use a real one.
+    const regenerated = buildPublicProgramsEnvelope(programs, catalogRevision, new Date().toISOString());
+
+    // review1 R7: validate the full envelope shape, not just
+    // catalogRevision/programs equality — schemaVersion and generatedAt
+    // (presence + ISO shape) are asserted independently below, then the
+    // committed-vs-regenerated comparison excludes ONLY generatedAt's
+    // exact value (it legitimately differs between any two runs).
+    expect(isValidPublicProgramsEnvelopeShape(publicArtifact)).toBe(true);
+    expect(isValidPublicProgramsEnvelopeShape(regenerated)).toBe(true);
 
     expect(publicArtifact.catalogRevision).toBe(regenerated.catalogRevision);
     expect(publicArtifact.schemaVersion).toBe(regenerated.schemaVersion);
     expect(publicArtifact.programs).toEqual(regenerated.programs);
+  });
+
+  it("review1 R7: a mutated schemaVersion fails envelope-shape validation", () => {
+    const mutated = { ...publicArtifact, schemaVersion: 99 };
+    expect(isValidPublicProgramsEnvelopeShape(mutated)).toBe(false);
+  });
+
+  it("review1 R7: a removed generatedAt fails envelope-shape validation", () => {
+    const { generatedAt: _drop, ...mutated } = publicArtifact;
+    expect(isValidPublicProgramsEnvelopeShape(mutated)).toBe(false);
+  });
+
+  it("review1 R7: a non-ISO generatedAt fails envelope-shape validation", () => {
+    const mutated = { ...publicArtifact, generatedAt: "August 13, 2026" };
+    expect(isValidPublicProgramsEnvelopeShape(mutated)).toBe(false);
+  });
+
+  it("review1 R7: the committed artifact's own generatedAt is a valid ISO timestamp", () => {
+    expect(isValidPublicProgramsEnvelopeShape(publicArtifact)).toBe(true);
   });
 
   it("MUTATION TEST: a mutated catalog fact fails the regen-diff check", () => {

@@ -24,7 +24,11 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Program } from "../lib/types";
-import { buildPublicProgramsEnvelope, catalogRevisionFromRaw } from "../lib/program-public";
+import {
+  buildPublicProgramsEnvelope,
+  catalogRevisionFromRaw,
+  isValidPublicProgramsEnvelopeShape,
+} from "../lib/program-public";
 
 const INTERNAL_CATALOG_PATH = join(process.cwd(), "data", "programs-internal.json");
 const PUBLIC_ARTIFACT_PATH = join(process.cwd(), "public", "data", "programs-public.json");
@@ -48,8 +52,27 @@ function main() {
   const envelope = buildPublicProgramsEnvelope(records, catalogRevision, generatedAt);
 
   if (checkOnly) {
+    // review1 R7: validate the FULL envelope shape (schemaVersion,
+    // catalogRevision, generatedAt presence + ISO shape, programs array) —
+    // not just catalogRevision/programs equality. Only generatedAt's exact
+    // *value* is excluded from comparison, since that field legitimately
+    // changes on every run.
+    if (!isValidPublicProgramsEnvelopeShape(envelope)) {
+      console.error("Freshly-regenerated envelope failed shape validation — this should never happen.");
+      process.exit(1);
+    }
+
     const committedRaw = readFileSync(PUBLIC_ARTIFACT_PATH, "utf8");
-    const committed = JSON.parse(committedRaw) as typeof envelope;
+    const committed: unknown = JSON.parse(committedRaw);
+    if (!isValidPublicProgramsEnvelopeShape(committed)) {
+      console.error(
+        "public/data/programs-public.json failed envelope-shape validation " +
+          "(missing/invalid schemaVersion, catalogRevision, generatedAt, or programs).\n" +
+          "Regenerate with `npx tsx scripts/export-public-programs.ts` and commit the result."
+      );
+      process.exit(1);
+    }
+
     const catalogRevisionMatches = committed.catalogRevision === envelope.catalogRevision;
     const programsMatch =
       JSON.stringify(committed.programs) === JSON.stringify(envelope.programs);
