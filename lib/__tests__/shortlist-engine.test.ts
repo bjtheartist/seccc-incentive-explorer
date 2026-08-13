@@ -19,7 +19,7 @@ import {
   zoningBadgeNote,
   type RankedShortlistCandidate,
 } from "../shortlist-engine";
-import { shortlistCriteriaByBehavior } from "../shortlist-criteria";
+import { RECORD_COMPLETENESS_WEIGHTS, shortlistCriteriaByBehavior } from "../shortlist-criteria";
 import { RANKING_INPUTS_VERSION } from "../shortlist-universe-schema";
 import type { ShortlistUniverseRow } from "../shortlist-universe-schema";
 import { createEmptySiteMatchCriteria, type SiteMatchCriteria, type SiteProjectUse } from "../site-matchmaker";
@@ -919,6 +919,50 @@ describe("runShortlistEngine", () => {
     );
     const withEverythingFlipped = engine(rows, everythingFlipped);
     expect(withEverythingFlipped.ranked.map((c) => [c.key, c.recordCompletenessScore])).toEqual(baselineOrder);
+  });
+
+  it("UNSCORED order (round 4, finding 13): conflicted rows with building-only vs land-only measurements keep IDENTICAL order and completeness scores across building, land, and either briefs", () => {
+    // Both rows carry BOTH evidence types (conflicted), so they survive any
+    // property-type screen. One measures only its building, the other only
+    // its lot. Before the round-4 fix, completeness read the measurement
+    // through the REQUESTED property type, so flipping the brief reversed
+    // their order. Now ANY measured area counts, request-independently.
+    const conflicted = (overrides: Partial<ShortlistUniverseRow>) =>
+      row({
+        evidenceTypes: ["city_land", "311_building"],
+        hasVacantLandEvidence: true,
+        hasVacantBuildingEvidence: true,
+        conflictingPropertyTypes: true,
+        pin: null,
+        zoning: { status: "unresolved", district: null, zoneType: null, pdNum: null, pmdSubArea: null },
+        ...overrides,
+      });
+    const buildingMeasured = conflicted({
+      canonicalKey: "addr:building-measured",
+      buildingSqft: 4000,
+      lotSqft: null,
+      lotSqftSource: null,
+    });
+    const landMeasured = conflicted({
+      canonicalKey: "addr:land-measured",
+      buildingSqft: null,
+      buildingSqftSource: null,
+      lotSqft: 6000,
+    });
+    const rows = [landMeasured, buildingMeasured];
+
+    const briefs = ["existing-building", "vacant-land", "either"] as const;
+    const results = briefs.map((propertyType) =>
+      engine(rows, criteria({ propertyType })).ranked.map((c) => [c.key, c.recordCompletenessScore]),
+    );
+    // Same measuredArea weight for both rows under every brief -> tie ->
+    // canonicalKey ascending decides, identically, everywhere.
+    for (const order of results) {
+      expect(order).toEqual([
+        ["addr:building-measured", RECORD_COMPLETENESS_WEIGHTS.measuredArea],
+        ["addr:land-measured", RECORD_COMPLETENESS_WEIGHTS.measuredArea],
+      ]);
+    }
   });
 
   it("SCORED path (iii) is untouched by record completeness: with a transit network active, order follows score ONLY, even when completeness would reverse it", () => {
