@@ -78,27 +78,59 @@ def build_recon_index(tag):
     if not os.path.exists(path):
         return idx
     with open(path, newline="") as f:
-        for r in csv.DictReader(f):
-            key = (r["funder"], r["tax_yr"])
-            # A funder can have MULTIPLE filings across different tax years, but a
-            # given (funder, tax_yr) should resolve to exactly one filing in the
-            # committed recon report. If two rows share the key (should not happen
-            # post-integration), the later (higher object_id = more recently filed)
-            # wins -- that IS the amended/superseding rule (Q1/F4).
-            prev = idx.get(key)
-            if prev is None or r["object_id"] > prev["object_id"]:
-                idx[key] = {
-                    "object_id": r["object_id"],
-                    "tax_period_begin": r["tax_period_begin"],
-                    "tax_period_end": r["tax_period_end"],
-                    "amended": r["amended"],
-                    "schedule_part": schedule_part_for(r["return_type"]),
-                    "return_type": r["return_type"],
-                }
+        recon_rows = list(csv.DictReader(f))
+    return select_amended_resolved_filings(recon_rows)
+
+
+def select_amended_resolved_filings(recon_rows):
+    """(funder, tax_yr) -> resolved filing dict, applying the amended/superseding
+    rule: when two recon rows share a (funder, tax_yr) key (an original and its
+    amended return), the row with the HIGHER object_id -- IRS object ids are
+    monotonically assigned at processing time, so a higher id is always the
+    LATER-FILED return -- wins. Pure (no disk I/O) so it is directly exercised
+    by test_identity_stability.py's synthetic original-vs-amended fixture (Sol
+    gate finding 2)."""
+    idx = {}
+    for r in recon_rows:
+        key = (r["funder"], r["tax_yr"])
+        # A funder can have MULTIPLE filings across different tax years, but a
+        # given (funder, tax_yr) should resolve to exactly one filing in the
+        # committed recon report. If two rows share the key (an original vs an
+        # amended return), the later (higher object_id = more recently filed)
+        # wins -- that IS the amended/superseding rule (Q1/F4).
+        prev = idx.get(key)
+        if prev is None or r["object_id"] > prev["object_id"]:
+            idx[key] = {
+                "object_id": r["object_id"],
+                "tax_period_begin": r["tax_period_begin"],
+                "tax_period_end": r["tax_period_end"],
+                "amended": r["amended"],
+                "schedule_part": schedule_part_for(r["return_type"]),
+                "return_type": r["return_type"],
+            }
     return idx
 
 
 _base_ein_cache = None
+
+# Sol gate finding 6 -- direct EIN overrides for base-file funders that are NOT
+# in foundation_funder_census.csv at all (the census covers the Tier-1/Phase-2/
+# Phase-3 universe; these two predate it and were never entered). They are
+# PUBLIC-CHARITY 990/Schedule-I filers, not 990-PF filers, which is exactly why
+# the census-note regex (built for the 990-PF-era base parse) never matched
+# them -- a structurally different lookup gap, not a missing record. EINs
+# resolved directly against the ProPublica Nonprofit Explorer API
+# (projects.propublica.org/nonprofits/api/v2/search.json?q=...), highest-score
+# match, 2026-08-13:
+#   Chicago Community Trust      -> 36-2167000 (single unambiguous match)
+#   Robert R McCormick Foundation -> 36-3689171 (two near-duplicate EINs
+#     returned; 363689171's e-file object ids cover 2022-2025 processing years,
+#     matching this dataset's 2022-2024 tax-year rows; 363689172's filings are
+#     concentrated 2014-2020 and do not cover the years this export needs)
+BASE_FUNDER_EIN_OVERRIDES = {
+    "Chicago Community Trust": "362167000",
+    "Robert R McCormick Foundation": "363689171",
+}
 
 
 def base_funder_eins():
@@ -114,6 +146,7 @@ def base_funder_eins():
             m = re.search(r"parsed as '([^']+)'", r["notes"] or "")
             if m:
                 out[m.group(1)] = r["ein"].zfill(9)
+    out.update(BASE_FUNDER_EIN_OVERRIDES)
     _base_ein_cache = out
     return out
 

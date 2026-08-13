@@ -98,11 +98,22 @@ def main():
             else:
                 want_r = fi.norm_text(row0.get("recipient"))
                 want_addr = fi.norm_text(row0.get("address_line1"))
+                want_purpose = fi.norm_text(row0.get("purpose"))
+                # Sol gate finding 9 -- include purpose in the filing comparison
+                # (in addition to recipient/amount/address) going forward, so a
+                # future group with the SAME recipient/amount/address but a
+                # DIFFERENT stated purpose is not silently treated as identical.
+                # Purpose text is the least standardized of the four fields
+                # (free text, prone to filer-side truncation/paraphrase), so it
+                # only NARROWS a match when both sides have a non-empty purpose
+                # that actually differs -- an empty purpose on either side never
+                # blocks a match on the other three fields.
                 filing_match_count = sum(
                     1 for g in grants
                     if g["amount"] is not None and abs(g["amount"] - amount) <= 0.5
                     and fi.norm_text(g["recipient"]) == want_r
                     and fi.norm_text(g["address_line1"]) == want_addr
+                    and (not want_purpose or not fi.norm_text(g.get("purpose")) or fi.norm_text(g.get("purpose")) == want_purpose)
                 )
                 if filing_match_count >= csv_group_count:
                     verdict = "kept-flagged"
@@ -152,7 +163,11 @@ def main():
             for tag, row in members:
                 actions.append({"file": fi.FOUNDATION_FILES[tag], "raw_idx": row["raw_idx"], "action": "keep-flagged", "flag": FLAG_TEXT})
 
-        if "ARIE CROWN" in fi.norm_text(row0.get("foundation")) and "START EARLY" in fi.norm_text(row0.get("recipient")):
+        # Sol gate finding 9 (LOW) -- the funder is "Arie and Ida Crown Memorial",
+        # not "Arie Crown"; the exact-substring check above never matched. Fixed
+        # to test for the normalized tokens that are actually present.
+        funder_norm = fi.norm_text(row0.get("foundation"))
+        if "ARIE" in funder_norm and "CROWN" in funder_norm and "START EARLY" in fi.norm_text(row0.get("recipient")):
             arie_crown_note = ledger[-1]
 
         if n % 25 == 0:

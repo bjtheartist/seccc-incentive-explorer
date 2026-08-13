@@ -7,7 +7,31 @@
   "kept_flagged_groups": 236,
   "kept_flagged_rows": 504,
   "kept_flagged_dollars": 23204034.0,
-  "arie_crown_start_early": null
+  "arie_crown_start_early": {
+   "group_id": 32,
+   "funder": "Arie and Ida Crown Memorial",
+   "recipient": "START EARLY",
+   "address_line1": "33 WEST MONROE STREET",
+   "amount": 1000000.0,
+   "tax_year": "2022",
+   "purpose": "CAPITAL",
+   "csv_group_count": 2,
+   "filing_object_id": "202303179349103040",
+   "filing_match_count": 2,
+   "verdict": "kept-flagged",
+   "evidence": "Filing 202303179349103040 itself contains 2 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
+   "dollars_at_stake": 1000000.0,
+   "members": [
+    {
+     "file": "foundation_grants_geocoded.csv",
+     "raw_idx": 6
+    },
+    {
+     "file": "foundation_grants_geocoded.csv",
+     "raw_idx": 7
+    }
+   ]
+  }
  },
  "groups": [
   {
@@ -145,9 +169,9 @@
    "purpose": "GENERAL OPERATING",
    "csv_group_count": 2,
    "filing_object_id": "202303179349103040",
-   "filing_match_count": 3,
+   "filing_match_count": 2,
    "verdict": "kept-flagged",
-   "evidence": "Filing 202303179349103040 itself contains 3 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
+   "evidence": "Filing 202303179349103040 itself contains 2 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
    "dollars_at_stake": 100000.0,
    "members": [
     {
@@ -495,9 +519,9 @@
    "purpose": "PROGRAM",
    "csv_group_count": 2,
    "filing_object_id": "202303179349103040",
-   "filing_match_count": 3,
+   "filing_match_count": 2,
    "verdict": "kept-flagged",
-   "evidence": "Filing 202303179349103040 itself contains 3 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
+   "evidence": "Filing 202303179349103040 itself contains 2 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
    "dollars_at_stake": 100000.0,
    "members": [
     {
@@ -1057,9 +1081,9 @@
    "purpose": "GENERAL OPERATING",
    "csv_group_count": 2,
    "filing_object_id": "202533159349101983",
-   "filing_match_count": 3,
+   "filing_match_count": 2,
    "verdict": "kept-flagged",
-   "evidence": "Filing 202533159349101983 itself contains 3 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
+   "evidence": "Filing 202533159349101983 itself contains 2 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
    "dollars_at_stake": 25000.0,
    "members": [
     {
@@ -2273,9 +2297,9 @@
    "purpose": "Board of Directors, Matching and Discretionary Grant",
    "csv_group_count": 3,
    "filing_object_id": "202301539349100600",
-   "filing_match_count": 4,
+   "filing_match_count": 3,
    "verdict": "kept-flagged",
-   "evidence": "Filing 202301539349100600 itself contains 4 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
+   "evidence": "Filing 202301539349100600 itself contains 3 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
    "dollars_at_stake": 10000.0,
    "members": [
     {
@@ -3592,9 +3616,9 @@
    "purpose": "Gun Violence Prevention & Justice Reform",
    "csv_group_count": 2,
    "filing_object_id": "202303139349103010",
-   "filing_match_count": 3,
+   "filing_match_count": 2,
    "verdict": "kept-flagged",
-   "evidence": "Filing 202303139349103010 itself contains 3 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
+   "evidence": "Filing 202303139349103010 itself contains 2 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
    "dollars_at_stake": 150000.0,
    "members": [
     {
@@ -3742,9 +3766,9 @@
    "purpose": "in support of the Grassroots Alliance for Police Accountability",
    "csv_group_count": 2,
    "filing_object_id": "202313179349104401",
-   "filing_match_count": 4,
+   "filing_match_count": 2,
    "verdict": "kept-flagged",
-   "evidence": "Filing 202313179349104401 itself contains 4 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
+   "evidence": "Filing 202313179349104401 itself contains 2 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
    "dollars_at_stake": 200000.0,
    "members": [
     {
@@ -4117,9 +4141,9 @@
    "purpose": "Strong Communities",
    "csv_group_count": 2,
    "filing_object_id": "202541209349102554",
-   "filing_match_count": 4,
+   "filing_match_count": 2,
    "verdict": "kept-flagged",
-   "evidence": "Filing 202541209349102554 itself contains 4 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
+   "evidence": "Filing 202541209349102554 itself contains 2 matching grant row(s) for this recipient/amount/address -- Two source line items; award-level distinctness not independently verified.",
    "dollars_at_stake": 100000.0,
    "members": [
     {
