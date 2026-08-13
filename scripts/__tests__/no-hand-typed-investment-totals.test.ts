@@ -59,12 +59,16 @@ describe("no hand-typed Community Investment totals (PR1 designated files)", () 
    */
   it("the known-stale audit-flagged figures do not appear anywhere in source", () => {
     const STALE_LITERALS = ["43,939", "3,103,926,547.66", "3103926547.66"];
+    // This test file itself necessarily contains the STALE_LITERALS strings (as
+    // search targets) — exclude it from its own scan via a negated pathspec
+    // rather than asking the reader to know that.
+    const SELF = "scripts/__tests__/no-hand-typed-investment-totals.test.ts";
     for (const literal of STALE_LITERALS) {
       let out = "";
       try {
         out = execFileSync(
           "git",
-          ["grep", "-l", "-F", literal, "--", "*.ts", "*.tsx", "*.md"],
+          ["grep", "-l", "-F", literal, "--", "*.ts", "*.tsx", "*.md", `:^${SELF}`],
           { cwd: process.cwd(), encoding: "utf8" },
         );
       } catch {
