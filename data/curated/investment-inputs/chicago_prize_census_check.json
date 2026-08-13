@@ -1,0 +1,173 @@
+{
+ "design": "18/18 census check (every published Chicago Prize row, not a sample)",
+ "scope_note": "Structural completeness census: confirms every committed chicago_prize.csv row reaches the export with a tying amount and carries its own https announcement source_url. Does NOT re-fetch each press release live in this run -- that is a documented scope boundary.",
+ "csv_rows": 18,
+ "export_prize_records": 18,
+ "ok": 18,
+ "total": 18,
+ "all_ok": true,
+ "rows": [
+  {
+   "csv_row": 0,
+   "initiative": "Always Growing, Auburn Gresham (Chicago Prize winner)",
+   "amount": 10000000.0,
+   "matched_export_record_id": "prize-0",
+   "has_announcement_url": true,
+   "source_url": "https://blockclubchicago.org/2020/08/06/auburn-gresham-project-wins-10-million-prize-from-charitable-foundation/",
+   "ok": true
+  },
+  {
+   "csv_row": 1,
+   "initiative": "Always Growing, Auburn Gresham (finalist planning grant)",
+   "amount": 100000.0,
+   "matched_export_record_id": "prize-1",
+   "has_announcement_url": true,
+   "source_url": "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities",
+   "ok": true
+  },
+  {
+   "csv_row": 2,
+   "initiative": "The Aspire Initiative: Building a Stronger Cradle-to-Career Pipeline in Austin (finalist planning grant)",
+   "amount": 100000.0,
+   "matched_export_record_id": "prize-1",
+   "has_announcement_url": true,
+   "source_url": "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities",
+   "ok": true
+  },
+  {
+   "csv_row": 3,
+   "initiative": "Go Green on Racine: An Englewood Rising Project (finalist planning grant)",
+   "amount": 100000.0,
+   "matched_export_record_id": "prize-1",
+   "has_announcement_url": true,
+   "source_url": "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities",
+   "ok": true
+  },
+  {
+   "csv_row": 4,
+   "initiative": "Creating a Solidarity Economy: Centro de Solidaridad Mi Villita (finalist planning grant)",
+   "amount": 100000.0,
+   "matched_export_record_id": "prize-1",
+   "has_announcement_url": true,
+   "source_url": "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities",
+   "ok": true
+  },
+  {
+   "csv_row": 5,
+   "initiative": "Now Is the Time: Advancing North Lawndale Together (finalist planning grant)",
+   "amount": 100000.0,
+   "matched_export_record_id": "prize-1",
+   "has_announcement_url": true,
+   "source_url": "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities",
+   "ok": true
+  },
+  {
+   "csv_row": 6,
+   "initiative": "We're Steel Here: Working Together to Reinvigorate South Chicago (finalist planning grant)",
+   "amount": 100000.0,
+   "matched_export_record_id": "prize-1",
+   "has_announcement_url": true,
+   "source_url": "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities",
+   "ok": true
+  },
+  {
+   "csv_row": 7,
+   "initiative": "Sankofa Wellness Village (Chicago Prize winner)",
+   "amount": 10000000.0,
+   "matched_export_record_id": "prize-0",
+   "has_announcement_url": true,
+   "source_url": "https://www.chicagobusiness.com/nonprofits-philanthropy/pritzker-traubert-foundation-names-winner-2023-chicago-prize",
+   "ok": true
+  },
+  {
+   "csv_row": 8,
+   "initiative": "Sankofa Wellness Village (finalist planning funds)",
+   "amount": 135000.0,
+   "matched_export_record_id": "prize-8",
+   "has_announcement_url": true,
+   "source_url": "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/",
+   "ok": true
+  },
+  {
+   "csv_row": 9,
+   "initiative": "Rooted & Rising (finalist planning funds)",
+   "amount": 135000.0,
+   "matched_export_record_id": "prize-8",
+   "has_announcement_url": true,
+   "source_url": "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/",
+   "ok": true
+  },
+  {
+   "csv_row": 10,
+   "initiative": "Thrive Exchange (finalist planning funds)",
+   "amount": 135000.0,
+   "matched_export_record_id": "prize-8",
+   "has_announcement_url": true,
+   "source_url": "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/",
+   "ok": true
+  },
+  {
+   "csv_row": 11,
+   "initiative": "Bringing Communities Back Initiative (finalist planning funds)",
+   "amount": 135000.0,
+   "matched_export_record_id": "prize-8",
+   "has_announcement_url": true,
+   "source_url": "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/",
+   "ok": true
+  },
+  {
+   "csv_row": 12,
+   "initiative": "The Xchange (finalist planning funds)",
+   "amount": 135000.0,
+   "matched_export_record_id": "prize-8",
+   "has_announcement_url": true,
+   "source_url": "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/",
+   "ok": true
+  },
+  {
+   "csv_row": 13,
+   "initiative": "Cultivate Collective (finalist planning funds)",
+   "amount": 135000.0,
+   "matched_export_record_id": "prize-8",
+   "has_announcement_url": true,
+   "source_url": "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/",
+   "ok": true
+  },
+  {
+   "csv_row": 14,
+   "initiative": "Reclaiming Chicago (Chicago Prize winner)",
+   "amount": 10000000.0,
+   "matched_export_record_id": "prize-0",
+   "has_announcement_url": true,
+   "source_url": "https://www.chicagobusiness.com/nonprofits-philanthropy/pritzker-traubert-foundation-names-winner-2025-chicago-prize",
+   "ok": true
+  },
+  {
+   "csv_row": 15,
+   "initiative": "Cottage Grove Corridor Collective (finalist)",
+   "amount": null,
+   "matched_export_record_id": "prize-15",
+   "has_announcement_url": true,
+   "source_url": "https://www.ptfound.org/chicago-prize/chicago-prize-2025",
+   "ok": true
+  },
+  {
+   "csv_row": 16,
+   "initiative": "Energizing an Economic Ecosystem in North Lawndale (finalist)",
+   "amount": null,
+   "matched_export_record_id": "prize-16",
+   "has_announcement_url": true,
+   "source_url": "https://www.ptfound.org/chicago-prize/chicago-prize-2025",
+   "ok": true
+  },
+  {
+   "csv_row": 17,
+   "initiative": "Renaissance 95th (finalist)",
+   "amount": null,
+   "matched_export_record_id": "prize-17",
+   "has_announcement_url": true,
+   "source_url": "https://www.ptfound.org/chicago-prize/chicago-prize-2025",
+   "ok": true
+  }
+ ]
+}

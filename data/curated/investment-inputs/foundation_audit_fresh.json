@@ -1,0 +1,17 @@
+{
+ "design": "SRS without replacement, seeded, over the FINAL EXPORTED foundation universe",
+ "seed": 20260813,
+ "universe_rows": 26501,
+ "chicago_prize_excluded_from_universe": 18,
+ "sample_n": 2401,
+ "counts": {
+  "ok": 2065,
+  "filing_unavailable": 336
+ },
+ "ok_rate": 0.860058,
+ "margin_note": "n=2401 gives approximately +/-2% at 95% confidence over a ~26501-row universe",
+ "bound_export_content_hash": "e6845d4fd9e28b9a1a3e46ea4a95917bccf1077419bcdf62b1bef212b8655f84",
+ "bound_manifest_hash": "6d7b614dfc10d30574dab2a438a6b1bfe5f92c532d8d58a08b07ca8fb12f90ff",
+ "generated_at": "2026-08-13T15:26:13.517Z",
+ "note": "Supersedes foundation_audit_2026-08-04.json (n=2,401 over base+tier1+phase2 only, ~21.8k rows). This audit covers the FULL four-file exported foundation universe (base+tier1+phase2+phase3), bound to the export's own content hash. Chicago Prize (18 rows) is reported separately -- see chicago_prize_census_check.json -- as a census check, not part of this SRS (consult Q3)."
+}
