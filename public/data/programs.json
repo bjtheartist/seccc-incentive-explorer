@@ -107,7 +107,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-10",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": null,
+      "note": "Accepted on a rolling basis via the Universal Financial Incentives Submittable portal for RDAs > $250K."
+    }
   },
   {
     "id": "federalOZ",
@@ -197,7 +205,15 @@
     ],
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": "2027-01-01",
+      "note": "OZ 2.0 governor nominations underway July 2026; new map effective 2027-01-01. OZ 1.0 tracts remain valid through 2028-12-31."
+    }
   },
   {
     "id": "illinoisOZ",
@@ -255,7 +271,15 @@
     "oz2Note": "Illinois must nominate ~238 new OZ tracts in H2 2026, effective 1/1/2027. Existing IL OZ boundaries valid through 12/31/2026.",
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": "2027-01-01",
+      "note": "New IL-nominated OZ 2.0 zones take effect 2027-01-01; existing zones remain active for investment."
+    }
   },
   {
     "id": "enterprise",
@@ -349,7 +373,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": "2028-01-01",
+      "note": "All six Chicago Enterprise Zones expire 2030; recertification window opens 2028."
+    }
   },
   {
     "id": "sbif",
@@ -533,7 +565,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-07-10",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": "2026-08-30",
+      "note": "August 2026 window open for eligible TIF districts through 2026-08-30 (July 2026 window already closed). Monthly TIF-by-TIF rollout schedule."
+    }
   },
   {
     "id": "edge",
@@ -617,7 +657,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "proxy",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "rev",
@@ -698,7 +746,15 @@
     ],
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "proxy",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "micro",
@@ -772,7 +828,15 @@
     ],
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "proxy",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "dataCenter",
@@ -839,7 +903,15 @@
     ],
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "closed",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "conditional",
+    "locationRelation": "proxy",
+    "nextWindow": {
+      "expected": null,
+      "note": "New applications not processed since Governor's directive 2026-06-05; no resumption date published. Existing certifications continue receiving benefits."
+    }
   },
   {
     "id": "ssa",
@@ -890,7 +962,15 @@
     "status": "active",
     "personas": [
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "highUnemployment",
@@ -939,7 +1019,15 @@
     "benefitRange": "WOTC: $2,400–$9,600/hire (authority lapsed 1/1/2026; retroactive reauthorization historically occurs)",
     "fastestConfirmingStep": "Call IDES at (800) 247-4984; continue Form 8850 pre-screening to preserve retroactive eligibility",
     "sunsetWarning": "WOTC authority lapsed 12/31/2025. No credits for 2026 hires as of today. Continue IRS Form 8850 pre-screening — if Congress reauthorizes WOTC retroactively (historical pattern), pre-screened hires will be eligible. File Form 8850 within 28 days of hire start date regardless of current lapse.",
-    "deadlines": []
+    "deadlines": [],
+    "intakeStatus": "lapsed",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "historical",
+    "locationRelation": "contextual",
+    "nextWindow": {
+      "expected": null,
+      "note": "WOTC authority lapsed 2025-12-31; historically reauthorized retroactively. Continue IRS Form 8850 pre-screening within 28 days of hire."
+    }
   },
   {
     "id": "class7a",
@@ -1030,7 +1118,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "catalystGrant",
@@ -1088,7 +1184,15 @@
       "starting",
       "growing"
     ],
-    "sunsetWarning": "The one application window opened September 25, 2025 and closed November 14, 2025; awards were notified May 22, 2026. Cook County states it does not anticipate grant programs in 2026 or 2027."
+    "sunsetWarning": "The one application window opened September 25, 2025 and closed November 14, 2025; awards were notified May 22, 2026. Cook County states it does not anticipate grant programs in 2026 or 2027.",
+    "intakeStatus": "lapsed",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "historical",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Cook County does not anticipate a grant round in 2026 or 2027; the sole window closed 2025-11-14, awards notified 2026-05-22."
+    }
   },
   {
     "id": "cpace",
@@ -1153,7 +1257,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "smallBizSource",
@@ -1205,7 +1317,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "landBank",
@@ -1264,7 +1384,15 @@
     "fastestConfirmingStep": "Call CCLBA at (312) 603-8015 or email Info@CookCountyLandBank.org",
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "nof",
@@ -1404,7 +1532,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-10",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": null,
+      "note": "Most recent awards announced May 2026 ($5.5M to 11 businesses); no specific next-round date published in this record."
+    }
   },
   {
     "id": "nmtcEligible",
@@ -1480,7 +1616,15 @@
     "deadlines": [],
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "pending",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": null,
+      "note": "CY 2026 application round not yet open as of last verification (2026-07-02); NMTC flows through CDEs, not directly to businesses."
+    }
   },
   {
     "id": "qct",
@@ -1552,7 +1696,15 @@
     "boundaryDisclaimer": "HUD publishes new QCT designations annually each January 1 (latest: 2026 designations effective 1/1/2026, using 2020 census tract boundaries). The current qct.geojson should be refreshed against HUD's 2026 dataset.",
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "landmarkDistricts",
@@ -1612,7 +1764,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "nrhpDistricts",
@@ -1682,7 +1842,15 @@
     "status": "active",
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "microMarketRecovery",
@@ -1747,7 +1915,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "closed",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "conditional",
+    "locationRelation": "proxy",
+    "nextWindow": {
+      "expected": null,
+      "note": "NHS Chicago's purchase-assistance intake is currently closed. Program migrated to Dept of Housing (CNRP): $15,000 down-payment assistance across 11 target areas, subject to fund availability."
+    }
   },
   {
     "id": "industrialCorridors",
@@ -1802,7 +1978,15 @@
     "benefitRange": "Zoning protections + infrastructure priority",
     "fastestConfirmingStep": "Call DPD at (312) 744-4190 to verify Industrial Corridor status",
     "sourceUrl": "https://www.chicago.gov/city/en/depts/dcd/supp_info/repositioning-chicago-s-industrial-corridors-for-today-s-economy.html",
-    "status": "active"
+    "status": "active",
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "ccsa",
@@ -1904,7 +2088,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": "2026-08-21",
+      "note": "Quarterly round cutoff 2026-08-21 5:00 PM CT. Awards, eligible costs, and current corridor availability must be confirmed with the program administrator."
+    }
   },
   {
     "id": "hubzone",
@@ -1978,7 +2170,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "conditional",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": null,
+      "note": "3-year grace period for Redesignated Areas expired 2026-07-01; businesses whose principal office is ONLY in a Redesignated Area (not an active QCT, Indian Reservation, or Governor-Designated Community) lost eligibility as of that date. Verify current status at certify.sba.gov."
+    }
   },
   {
     "id": "energyCommunityBonus",
@@ -2041,7 +2241,15 @@
     "fastestConfirmingStep": "Check the site on the official energy communities map, then confirm project fit with a tax advisor",
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "iraCleanElectricity",
@@ -2111,7 +2319,15 @@
     "sunsetWarning": "Wind and solar facilities must begin physical construction by July 4, 2026 to remain eligible for §48E / §45Y credits. Non-wind/solar zero-emission technologies are unaffected. Consult a tax advisor to confirm construction-start documentation requirements.",
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "unknown",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "conditional",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Wind/solar construction-start deadline (2026-07-04) and the Section 48E(h) Low-Income Communities Bonus Credit window (closed 2026-08-07) have both passed as of today. Non-wind/solar zero-emission technologies are unaffected and continue to earn the full credit. Consult a tax advisor on construction-start documentation."
+    }
   },
   {
     "id": "electivePay",
@@ -2171,7 +2387,15 @@
     ],
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "sec179d",
@@ -2228,7 +2452,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "lapsed",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "historical",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Terminated for construction beginning after 2026-06-30 (that date has passed); only construction starts before 2026-07-01 remain claimable."
+    }
   },
   {
     "id": "hudSection108",
@@ -2284,7 +2516,15 @@
     "fastestConfirmingStep": "Discuss the project with Chicago DPD before approaching HUD",
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "cdfiBond",
@@ -2341,7 +2581,15 @@
     "benefitRange": "Long-term fixed-rate capital deployed through certified CDFIs",
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "sba7a504",
@@ -2416,7 +2664,15 @@
       "starting",
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-27",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": "2026-09-30",
+      "note": "FY2026 manufacturer fee waiver expires 2026-09-30; a 2026-07-04 policy change revised how 7(a) and 504 exposure is coordinated when both are used. No approval or financing amount is implied."
+    }
   },
   {
     "id": "sbaMicroloan",
@@ -2495,7 +2751,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-27",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "sbaDisasterEidl",
@@ -2572,7 +2836,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "conditional",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": "2027-01-25",
+      "note": "Physical damage loan applications closed ~2026-06-22; only Economic Injury Disaster Loan applications remain open, through 2027-01-25."
+    }
   },
   {
     "id": "chips48d",
@@ -2627,7 +2899,15 @@
     "fastestConfirmingStep": "Consult a tax advisor before initiating qualified investment",
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "ssbciAdvantageIL",
@@ -2682,7 +2962,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "edaBuildToScale",
@@ -2733,7 +3021,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "pending",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "historical",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "No upcoming NOFO announced; EDA's program page publishes no expected date. Most recent competition (FY2024) closed 2024-10-28."
+    }
   },
   {
     "id": "bmec",
@@ -2801,7 +3097,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "contextual",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "aim",
@@ -2876,7 +3180,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "quantumEZ",
@@ -2941,7 +3253,15 @@
     ],
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "contextual",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "hib",
@@ -3009,7 +3329,15 @@
     ],
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "contextual",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "innovationVoucher",
@@ -3065,7 +3393,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Round 3 announced February 2026 (~$2.6M available)."
+    }
   },
   {
     "id": "economicEmpowermentCenters",
@@ -3145,7 +3481,15 @@
     ],
     "personas": [
       "starting"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-06-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Round 2 accepted on a rolling basis until funding is exhausted, per DCEO."
+    }
   },
   {
     "id": "filmCredit",
@@ -3194,7 +3538,15 @@
     "fastestConfirmingStep": "Pre-apply with the Illinois Film Office before production begins",
     "personas": [
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": "2038-12-31",
+      "note": "Credit authority extended through 2038-12-31 (P.A. 104-0453)."
+    }
   },
   {
     "id": "liveTheaterCredit",
@@ -3243,7 +3595,15 @@
     "fastestConfirmingStep": "Pre-apply with DCEO before production begins",
     "personas": [
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "cannabisR3",
@@ -3292,7 +3652,15 @@
     "personas": [
       "starting"
     ],
-    "sunsetWarning": "Round III applications closed September 25, 2025 and awards are complete — $31.8 million to 95 qualified businesses. No Round IV has been announced."
+    "sunsetWarning": "Round III applications closed September 25, 2025 and awards are complete — $31.8 million to 95 qualified businesses. No Round IV has been announced.",
+    "intakeStatus": "lapsed",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "historical",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Round III closed 2025-09-25; $31.8M awarded to 95 businesses. No Round IV has been announced."
+    }
   },
   {
     "id": "r3Grants",
@@ -3346,7 +3714,15 @@
     "fastestConfirmingStep": "Monitor r3.illinois.gov for next NOFO",
     "personas": [
       "starting"
-    ]
+    ],
+    "intakeStatus": "unknown",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "contextual",
+    "nextWindow": {
+      "expected": null,
+      "note": "No specific application-round status is stated in this record; ICJIA administers periodic R3 NOFOs on behalf of the R3 Board."
+    }
   },
   {
     "id": "class6b",
@@ -3437,7 +3813,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-10",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "class6bSer",
@@ -3518,7 +3902,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "class7b",
@@ -3599,7 +3991,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "class7c",
@@ -3667,7 +4067,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "class8",
@@ -3743,7 +4151,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "contextual",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "class8aMicro",
@@ -3798,7 +4214,15 @@
     "fastestConfirmingStep": "Call Assessor Incentives at (312) 603-7529 to scope 8a MICRO",
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "classC",
@@ -3879,7 +4303,15 @@
     ],
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "classL",
@@ -3967,7 +4399,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "required",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "ahsap",
@@ -4041,7 +4481,15 @@
     "recurring": true,
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": "2026-09-05",
+      "note": "2026 Part 1 + Part 2 application deadline: 2026-09-05."
+    }
   },
   {
     "id": "cookCannabisGrant",
@@ -4097,7 +4545,15 @@
     "fastestConfirmingStep": "Call CCBED at (312) 603-1000 about upcoming rounds",
     "personas": [
       "starting"
-    ]
+    ],
+    "intakeStatus": "lapsed",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "historical",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Published window ran 2024-05-23 to 2024-06-21; no current or upcoming round is announced."
+    }
   },
   {
     "id": "investInCook",
@@ -4156,7 +4612,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "closed",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "10th round closed March 2026; next annual round not yet announced (annual $8.5M program)."
+    }
   },
   {
     "id": "cookBrownfield",
@@ -4219,7 +4683,15 @@
     "fastestConfirmingStep": "Call Cook County DES at (312) 603-8200 for site eligibility",
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "contextual",
+    "nextWindow": {
+      "expected": "2026-12-31",
+      "note": "No-cost service window runs 2022 through 2026; this ARPA funding sunsets at the end of calendar year 2026. Suburban Cook County only (outside City of Chicago)."
+    }
   },
   {
     "id": "cdgSmall",
@@ -4321,7 +4793,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": "2026-08-14",
+      "note": "Current cycle deadline: 2026-08-14 11:59 PM. Citywide -- no corridor or zone gate."
+    }
   },
   {
     "id": "cdgMedium",
@@ -4418,7 +4898,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "preference",
+    "nextWindow": {
+      "expected": "2026-08-14",
+      "note": "Current cycle deadline: 2026-08-14 11:59 PM. Monthly webinars held 2026-07-08 and 2026-08-12."
+    }
   },
   {
     "id": "cdgLarge",
@@ -4509,7 +4997,15 @@
     "deadlines": [],
     "personas": [
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Rolling application, no deadline, per the record's own summary. Citywide, no corridor/zone gate."
+    }
   },
   {
     "id": "workforceSolutions",
@@ -4634,7 +5130,15 @@
     ],
     "personas": [
       "growing"
-    ]
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-07-10",
+    "benefitTermsStatus": "current",
+    "locationRelation": "contextual",
+    "nextWindow": {
+      "expected": null,
+      "note": "Q3 2026 window opened 2026-07-01 for non-TIF businesses (no listed close date); businesses inside funded TIF districts may apply year-round."
+    }
   },
   {
     "id": "climateInfrastructureFund",
@@ -4689,7 +5193,15 @@
     "personas": [
       "developer"
     ],
-    "sunsetWarning": "The Climate Infrastructure Fund grant application is closed and no successor round is announced. The ETOD half of this record is also closed — its Round 1 deadline was August 18, 2023."
+    "sunsetWarning": "The Climate Infrastructure Fund grant application is closed and no successor round is announced. The ETOD half of this record is also closed — its Round 1 deadline was August 18, 2023.",
+    "intakeStatus": "lapsed",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "historical",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Grant application closed; no successor round announced. The ETOD half of this record is also closed (Round 1 deadline was 2023-08-18)."
+    }
   },
   {
     "id": "comedEvRebate",
@@ -4738,7 +5250,15 @@
     "fastestConfirmingStep": "Confirm charger eligibility at comed.com/EV before purchase",
     "personas": [
       "growing"
-    ]
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-08-09",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": "2026-12-31",
+      "note": "Program term capped at 2026-12-31 or until funds are exhausted, whichever comes first."
+    }
   },
   {
     "id": "comedSmallBizEfficiency",
@@ -4800,7 +5320,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Specific adder amounts require direct verification with ComEd (their pages block automated fetches, per catalog note)."
+    }
   },
   {
     "id": "comedDgSolar",
@@ -4868,7 +5396,15 @@
     "personas": [
       "growing",
       "developer"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": "Standalone battery-storage rebate terms require direct verification with ComEd."
+    }
   },
   {
     "id": "peoplesGasEfficiency",
@@ -4935,7 +5471,15 @@
     ],
     "personas": [
       "growing"
-    ]
+    ],
+    "intakeStatus": "open",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": "2026-12-31",
+      "note": "2026 annual cycle (2026-01-01 to 2026-12-31) under the ICC-approved 2026-2029 Energy Efficiency Plan; specific dollar amounts should be verified directly with Peoples Gas."
+    }
   },
   {
     "id": "kivaChicago",
@@ -4996,7 +5540,15 @@
     "deadlines": [],
     "personas": [
       "starting"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "none",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "greenwoodArcher",
@@ -5056,7 +5608,15 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "contextual",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   },
   {
     "id": "alliesCommunityBusiness",
@@ -5118,6 +5678,14 @@
     "personas": [
       "starting",
       "growing"
-    ]
+    ],
+    "intakeStatus": "rolling",
+    "statusAsOf": "2026-07-02",
+    "benefitTermsStatus": "current",
+    "locationRelation": "contextual",
+    "nextWindow": {
+      "expected": null,
+      "note": null
+    }
   }
 ]

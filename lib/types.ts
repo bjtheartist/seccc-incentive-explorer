@@ -29,6 +29,46 @@ export interface ProgramContact {
   role?: string;
 }
 
+/* ── Eligibility-claims foundation (2026-08) ─────────────────────────
+ * Structured status fields added to the internal catalog so public
+ * surfaces can render a status-aware public contract instead of raw
+ * prose strings. See lib/program-public.ts (toPublicProgramView) and
+ * docs/eligibility-claims-acceptance.md for the full derivation and
+ * copy contract. DERIVATION RULE (binding): when a record's existing
+ * prose does not clearly establish one of these values, the value is
+ * "unknown" / "conditional" — never "open" / "current" by default.
+ */
+
+/** Whether the program is currently accepting applications. */
+export type IntakeStatus =
+  | "open"
+  | "rolling"
+  | "closed"
+  | "lapsed"
+  | "pending"
+  | "unknown";
+
+/** Whether the published benefit terms (amounts, rates) are currently in force. */
+export type BenefitTermsStatus =
+  | "current"
+  | "historical"
+  | "conditional"
+  | "unknown";
+
+/** How a mapped location boundary relates to this program's actual eligibility. */
+export type LocationRelation =
+  | "required"
+  | "preference"
+  | "proxy"
+  | "contextual"
+  | "none";
+
+/** Structured, nullable next-application-window info. */
+export interface ProgramNextWindow {
+  expected: string | null;
+  note: string | null;
+}
+
 /* ── Machine-readable eligibility rule ── */
 
 export interface EligibilityRule {
@@ -154,6 +194,16 @@ export interface Program {
    * accepted type, single file). Flows into generated packet document tasks.
    */
   documentSpecs?: DocumentSpec[];
+  // ── Eligibility-claims foundation (2026-08) — see lib/program-public.ts ──
+  /** Present on every internal-catalog record; optional on the wider Program
+   * type since DB-backed rows (app/api/programs/route.ts) do not yet carry
+   * it. lib/__tests__/program-schema.test.ts asserts catalog completeness. */
+  intakeStatus?: IntakeStatus;
+  /** ISO date (YYYY-MM-DD) the status fields above were last confirmed accurate. */
+  statusAsOf?: string;
+  benefitTermsStatus?: BenefitTermsStatus;
+  locationRelation?: LocationRelation;
+  nextWindow?: ProgramNextWindow;
 }
 
 /* ── Phase 1: Check result types ── */

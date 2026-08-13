@@ -16,6 +16,11 @@ const PRESERVED_FIELDS = [
   "lastVerifiedAt",
   "redesignatedAreaWarning",
   "adjacentCapitalNote",
+  "intakeStatus",
+  "statusAsOf",
+  "benefitTermsStatus",
+  "locationRelation",
+  "nextWindow",
 ] as const;
 
 describe("production program schema", () => {

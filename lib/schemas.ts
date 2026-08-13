@@ -54,6 +54,32 @@ const DocumentSpecSchema = z.object({
   multi: z.boolean(),
 });
 
+/* ── Eligibility-claims foundation (2026-08) ─────────────────────────
+ * See lib/types.ts (IntakeStatus / BenefitTermsStatus / LocationRelation /
+ * ProgramNextWindow) and docs/eligibility-claims-acceptance.md. Optional
+ * here (not every Program-shaped object in the codebase is a catalog
+ * record — see lib/types.ts's Program.intakeStatus comment); catalog
+ * completeness is enforced by lib/__tests__/program-schema.test.ts, not
+ * by this schema being required.
+ */
+
+export const IntakeStatusSchema = z.enum([
+  "open", "rolling", "closed", "lapsed", "pending", "unknown",
+]);
+
+export const BenefitTermsStatusSchema = z.enum([
+  "current", "historical", "conditional", "unknown",
+]);
+
+export const LocationRelationSchema = z.enum([
+  "required", "preference", "proxy", "contextual", "none",
+]);
+
+export const ProgramNextWindowSchema = z.object({
+  expected: z.string().nullable(),
+  note: z.string().nullable(),
+});
+
 /* ── Program ──────────────────────────────── */
 
 export const ProgramSchema = z.object({
@@ -96,6 +122,12 @@ export const ProgramSchema = z.object({
   recurring: z.boolean().optional(),
   personas: z.array(z.enum(["all", "starting", "growing", "developer"])).optional(),
   documentSpecs: z.array(DocumentSpecSchema).optional(),
+  // ── Eligibility-claims foundation (2026-08) ──
+  intakeStatus: IntakeStatusSchema.optional(),
+  statusAsOf: z.string().optional(),
+  benefitTermsStatus: BenefitTermsStatusSchema.optional(),
+  locationRelation: LocationRelationSchema.optional(),
+  nextWindow: ProgramNextWindowSchema.optional(),
 });
 
 /* ── Stacking Rule ────────────────────────── */
