@@ -64,18 +64,29 @@
  *     (`dispatchCoverageBroken: true`, routed to the fail-closed state),
  *     never crashes the whole process on import.
  *
+ * ROUND 3 (finding 13 follow-up): a bare canonicalKey order for the
+ * unscored path was rejected as unhelpful — a reader deserves a reason the
+ * list is ordered one way, as long as that reason can never look like a
+ * fit/quality judgment. `recordCompletenessScore` (see its own doc comment)
+ * is a FIXED-weight, criteria-independent function of which facts a record
+ * publishes (measured area, resolved PIN, resolved zoning — see
+ * `lib/shortlist-criteria.ts`'s `RECORD_COMPLETENESS_WEIGHTS`), used ONLY
+ * to order the unscored path; the scored path is untouched and still orders
+ * on `score` alone.
+ *
  * PURE. No fs, no Next runtime, no network — every input (the canonical
  * universe rows, the wizard criteria, rail stations, amenity points, and the
  * committed per-ZIP context snapshot) is plain data the server page reads
  * and hands in.
  *
- * DETERMINISM: score descending, canonicalKey ascending as the final
- * tiebreak — never address, which is not unique.
+ * DETERMINISM: on the scored path, score descending then canonicalKey
+ * ascending; on the unscored path, recordCompletenessScore descending then
+ * canonicalKey ascending — never address, which is not unique.
  */
 
 import type { EvidenceType, ShortlistUniverseRow } from "./shortlist-universe-schema";
 import type { SiteMatchCriteria, SiteProjectUse } from "./site-matchmaker";
-import { shortlistCriteriaByBehavior } from "./shortlist-criteria";
+import { RECORD_COMPLETENESS_WEIGHTS, shortlistCriteriaByBehavior } from "./shortlist-criteria";
 import {
   approxDistanceMeters,
   isCtaStation,
@@ -326,6 +337,36 @@ export function screenedPropertyTypeFor(
   if (requestedPropertyType === "existing-building") return "vacant_building";
   if (requestedPropertyType === "vacant-land") return "vacant_land";
   return row.hasVacantBuildingEvidence ? "vacant_building" : "vacant_land";
+}
+
+/**
+ * RECORD-COMPLETENESS score (Finding 13, round 3) — the UNSCORED path's
+ * ordering key. See `lib/shortlist-criteria.ts`'s `RECORD_COMPLETENESS_
+ * WEIGHTS` for the fixed weights and the reasoning for why this is safe
+ * where Finding 1's "baseline" was not: it reads ONLY the three facts named
+ * there (a published measurement for the SCREENED property type, a resolved
+ * PIN, resolved zoning), with FIXED weights that never change, and it never
+ * reads project use, size band, transportation, walkability, amenities, or
+ * any other wizard-collected criterion — flipping any of those leaves this
+ * score, and therefore the unscored order, byte-identical (see the
+ * "criteria-independence" test in lib/__tests__/shortlist-engine.test.ts).
+ *
+ * Deliberately excluded, because each would reintroduce a fit/quality
+ * judgment rather than a completeness fact: size "sweet spot" distance,
+ * distress signals, incentive count, owner-confidence tier, and zoning
+ * ALIGNMENT (badge) — badge is a project-use-relative judgment, exactly the
+ * kind of criteria-sensitive input this score must never contain. Only
+ * zoning STATUS (resolved vs. not) counts, never which badge it earned.
+ */
+export function recordCompletenessScore(
+  row: ShortlistUniverseRow,
+  requestedPropertyType: SiteMatchCriteria["propertyType"],
+): number {
+  let total = 0;
+  if (screeningAreaSqft(row, requestedPropertyType) != null) total += RECORD_COMPLETENESS_WEIGHTS.measuredArea;
+  if (row.pin != null) total += RECORD_COMPLETENESS_WEIGHTS.resolvedPin;
+  if (row.zoning.status === "resolved") total += RECORD_COMPLETENESS_WEIGHTS.resolvedZoning;
+  return total;
 }
 
 /** Evidence-field property-type match — the ONLY property-type screen in
@@ -619,6 +660,13 @@ export interface RankedShortlistCandidate {
    *  coordinate) — see this file's header: there is no criteria-independent
    *  baseline component (Finding 1). */
   score: number;
+  /** RECORD-COMPLETENESS score (Finding 13, round 3) — see
+   *  `recordCompletenessScore` below. Computed for EVERY candidate, but only
+   *  used as an ORDERING key on the UNSCORED path (no transit network
+   *  selected); the scored path orders on `score` alone and never reads
+   *  this field. Never a fit/quality judgment — purely how much this
+   *  record's own data happens to publish. */
+  recordCompletenessScore: number;
 }
 
 export interface ShortlistDisplayFacts {
@@ -819,10 +867,26 @@ export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngi
       overlays: { ...row.overlays },
       transitScore,
       score: transitScore?.points ?? 0,
+      recordCompletenessScore: recordCompletenessScore(row, propertyType),
     };
   });
 
-  ranked.sort((a, b) => b.score - a.score || (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+  // Finding 13 (round 3): the SCORED path (a real transit network active)
+  // orders on `score` alone, exactly as before — recordCompletenessScore is
+  // computed on every candidate above but never consulted here. The
+  // UNSCORED path orders on recordCompletenessScore instead of a bare
+  // canonicalKey shuffle, so a reader gets a documented reason for the
+  // order rather than an arbitrary one — never a fit/quality claim (see
+  // recordCompletenessScore's own doc comment for what it deliberately
+  // excludes). Both paths tiebreak on canonicalKey ascending for final
+  // stability.
+  const canonicalKeyTiebreak = (a: RankedShortlistCandidate, b: RankedShortlistCandidate) =>
+    a.key < b.key ? -1 : a.key > b.key ? 1 : 0;
+  ranked.sort((a, b) =>
+    network !== null
+      ? b.score - a.score || canonicalKeyTiebreak(a, b)
+      : b.recordCompletenessScore - a.recordCompletenessScore || canonicalKeyTiebreak(a, b),
+  );
 
   return {
     ranked,

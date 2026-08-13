@@ -356,3 +356,46 @@ export function shortlistCriteriaAnalyticsMetadata(
   });
   return { criteriaIds, criteriaBehaviors };
 }
+
+// ── Record-completeness ordering (Finding 13, round 3) ──────────────────────
+//
+// When no SCORING criterion is selected (no transit network active),
+// `lib/shortlist-engine.ts` still needs SOME deterministic order for the
+// screened list. Finding 1's original sin was inventing an always-on
+// "baseline" score (sweet-spot area, distress, incentive count, owner
+// confidence, zoning ALIGNMENT) that silently re-introduced criteria-
+// independent ranking and could move top-20 membership on its own. Finding
+// 13 (round 1) tried to dodge the problem by refusing to rank at all
+// (canonicalKey-only order, relabeled "not ranked") — round 3 rejected that
+// as unhelpful: a reader still deserves a REASON the list is ordered one way
+// rather than another, as long as that reason can never be confused with a
+// fit/quality judgment.
+//
+// The fix: a RECORD-COMPLETENESS score — a fixed-weight, DOCUMENTED, pure
+// function of which FACTS a record happens to publish, never of which
+// criteria the reader selected and never of anything resembling "better
+// site" (no size sweet-spot, no distress signal, no incentive count, no
+// owner-confidence tier, no zoning ALIGNMENT). It answers exactly one
+// question — "how much can we actually show about this record?" — which is
+// why it is safe to compute for every candidate unconditionally and use
+// ONLY as the ordering key for the UNSCORED path; the SCORED path (a real
+// transit criterion selected) never reads it at all.
+//
+// Weights are constants, not a formula that could quietly drift per call
+// site — every consumer reads THESE THREE numbers, not a recomputed
+// judgment call:
+export const RECORD_COMPLETENESS_WEIGHTS = {
+  /** A published, positive measurement for the property type this row was
+   *  actually screened as (see lib/shortlist-engine.ts's
+   *  `screenedPropertyTypeFor`) — the single largest signal, since an
+   *  unmeasured record is the thinnest kind of listing. */
+  measuredArea: 2,
+  /** A resolved parcel PIN — the anchor for every other lookup (CookViewer,
+   *  Clerk records, county assessor data) a reader would want to verify a
+   *  record with. */
+  resolvedPin: 1,
+  /** Resolved zoning district/status — the fact the zoning badge itself
+   *  depends on; an unresolved-zoning record shows "unresolved" everywhere
+   *  a badge would otherwise appear. */
+  resolvedZoning: 1,
+} as const;

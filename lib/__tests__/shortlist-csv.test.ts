@@ -38,6 +38,7 @@ function candidate(overrides: Partial<DecoratedShortlistCandidate> = {}): Decora
     nearestSchool: { name: "Barnard", meters: 500 },
     nearestLibrary: { name: "Chatham-Avalon", meters: 700 },
     score: 25,
+    recordCompletenessScore: 4,
     ...overrides,
   };
 }
@@ -123,19 +124,22 @@ describe("shortlistCsv", () => {
     expect(shortlistCsv([]).split("\n")).toHaveLength(1);
   });
 
-  // ── Finding 10 (re-review): ADVERSARIAL enrichment invariance ────────────
-  //
-  // The pre-fix "invariance" test only proved row COUNT/order stayed put
-  // between two runs with NO enrichment injected at all — tautological,
-  // since nothing was ever different between the two calls. This test
-  // injects enrichment values deliberately CRAFTED to tempt a
-  // value-sorted reordering if enrichment and ranking were ever coupled:
-  // the LAST-ranked candidate gets the highest assessed value / implied
-  // market value / license count, and the FIRST-ranked candidate gets
-  // nothing. If shortlistCsv (or anything downstream) ever started
-  // re-sorting by a "richer" enrichment fact, this is exactly the input
-  // that would flip the order — and it must not.
-  it("ADVERSARIAL: enrichment crafted to tempt a value-based reorder changes NEITHER membership NOR order", () => {
+  // ── DEMOTED (round 3): this test proves shortlistCsv's OWN serialization
+  //    is order-preserving under adversarial enrichment — a real, narrow
+  //    property of the CSV formatter, still worth keeping. It does NOT
+  //    prove Finding 10's actual claim (that request-time enrichment cannot
+  //    change SELECTION — which finalist rows are chosen and in what order
+  //    BEFORE anything is ever serialized). This test runs entirely
+  //    downstream of a finalist list `shortlistCsv` is simply handed —
+  //    finalist selection has already happened by the time this file's code
+  //    runs at all. Finding 10's actual proof now lives in
+  //    lib/__tests__/shortlist-enrichment-blindness.test.ts (server-side,
+  //    both a structural import-graph proof and, where applicable, a
+  //    mocked-adversarial-module byte-identical-order proof) and in
+  //    components/vacancy/__tests__/SiteShortlistResults.test.tsx (a
+  //    component test proving adversarial enrichment delivered AFTER MOUNT
+  //    changes only card FACTS, never DOM order/membership).
+  it("shortlistCsv's OWN row order is unaffected by adversarial enrichment values (narrower than Finding 10 — serialization purity only)", () => {
     const ranked = [
       candidate({ key: "first", address: "1 FIRST ST", score: 40 }),
       candidate({ key: "second", address: "2 SECOND ST", score: 20 }),

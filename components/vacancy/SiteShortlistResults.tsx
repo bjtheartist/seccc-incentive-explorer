@@ -386,8 +386,9 @@ export default function SiteShortlistResults({
   criteria: SiteMatchCriteria;
   /** True when a real transit score is active for this run
    *  (`ShortlistEngineResult.scored`, Finding 13) — when false, `ranked`'s
-   *  order is a stable canonical order, NOT a ranking, and the copy below
-   *  must say so rather than calling it "highest-ranked." */
+   *  order is the fixed-weight record-completeness order (round 3), NOT a
+   *  fit/quality ranking, and the copy below must say so rather than
+   *  calling it "highest-ranked." */
   scored: boolean;
   source: string | null;
   /** The loaded universe file's own buildId (PR1) — sent with every
@@ -578,7 +579,7 @@ export default function SiteShortlistResults({
         <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/60">
           {scored
             ? "One ranked list, screened against your brief."
-            : "One list, screened against your brief. Shown in a stable order, not ranked — add a transit criterion to rank."}{" "}
+            : "One list, screened against your brief, ordered by record completeness — add a transit criterion to rank by fit."}{" "}
           The badge on every card is a broad district-family screen only — filter by it below, but
           it never removes a record from the list above.
         </p>

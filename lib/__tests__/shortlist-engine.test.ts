@@ -823,6 +823,140 @@ describe("runShortlistEngine", () => {
     },
   );
 
+  // ── Finding 13 (round 3): RECORD-COMPLETENESS ordering, UNSCORED path ────
+
+  it("UNSCORED order (i), expected-order oracle: matches a HAND-COMPUTED record-completeness score for every row, exactly — full(4) > tied-at-3(alpha) > area-only(2) > bare(0)", () => {
+    const rows = [
+      // full: measured area (2) + resolved pin (1) + resolved zoning (1) = 4
+      row({
+        canonicalKey: "full",
+        pin: "1",
+        buildingSqft: 4000,
+        zoning: { status: "resolved", district: "B3-2", zoneType: 1, pdNum: null, pmdSubArea: null },
+      }),
+      // no-pin: measured area (2) + resolved zoning (1), no pin = 3
+      row({
+        canonicalKey: "no-pin",
+        pin: null,
+        buildingSqft: 4000,
+        zoning: { status: "resolved", district: "B3-2", zoneType: 1, pdNum: null, pmdSubArea: null },
+      }),
+      // no-zoning: measured area (2) + resolved pin (1), unresolved zoning = 3
+      // — ties with no-pin; canonicalKey "no-pin" < "no-zoning" alphabetically.
+      row({
+        canonicalKey: "no-zoning",
+        pin: "3",
+        buildingSqft: 4000,
+        zoning: { status: "unresolved", district: null, zoneType: null, pdNum: null, pmdSubArea: null },
+      }),
+      // no-area: resolved pin (1) + resolved zoning (1), no measured area = 2
+      row({
+        canonicalKey: "no-area",
+        pin: "4",
+        buildingSqft: null,
+        lotSqft: null,
+        zoning: { status: "resolved", district: "B3-2", zoneType: 1, pdNum: null, pmdSubArea: null },
+      }),
+      // bare: nothing published = 0
+      row({
+        canonicalKey: "bare",
+        pin: null,
+        buildingSqft: null,
+        lotSqft: null,
+        zoning: { status: "unresolved", district: null, zoneType: null, pdNum: null, pmdSubArea: null },
+      }),
+    ];
+    const { ranked, scored } = engine(rows, criteria());
+    expect(scored).toBe(false);
+    expect(ranked.map((c) => [c.key, c.recordCompletenessScore])).toEqual([
+      ["full", 4],
+      ["no-pin", 3],
+      ["no-zoning", 3],
+      ["no-area", 2],
+      ["bare", 0],
+    ]);
+  });
+
+  it("UNSCORED order (ii), ADVERSARIAL criteria-independence: flipping ANY non-scoring criterion — or all of them at once — leaves the unscored order byte-identical", () => {
+    const rows = [
+      row({
+        canonicalKey: "full",
+        pin: "1",
+        buildingSqft: 4000,
+        zoning: { status: "resolved", district: "B3-2", zoneType: 1, pdNum: null, pmdSubArea: null },
+      }),
+      row({
+        canonicalKey: "partial",
+        pin: "2",
+        buildingSqft: null,
+        lotSqft: null,
+        zoning: { status: "resolved", district: "RS-3", zoneType: 4, pdNum: null, pmdSubArea: null },
+      }),
+      row({
+        canonicalKey: "bare",
+        pin: null,
+        buildingSqft: null,
+        lotSqft: null,
+        zoning: { status: "unresolved", district: null, zoneType: null, pdNum: null, pmdSubArea: null },
+      }),
+    ];
+    const baseline = engine(rows, criteria());
+    const baselineOrder = baseline.ranked.map((c) => [c.key, c.recordCompletenessScore]);
+    expect(baselineOrder.map(([key]) => key)).toEqual(["full", "partial", "bare"]); // sanity: genuinely distinct scores
+
+    // Every individual non-scoring (unsupported/display-only) criterion,
+    // flipped ONE AT A TIME.
+    for (const id of nonScoringEntries.map((e) => e.id)) {
+      const withOneCriterion = engine(rows, NON_SCORING_MUTATORS[id](criteria()));
+      expect(withOneCriterion.ranked.map((c) => [c.key, c.recordCompletenessScore])).toEqual(baselineOrder);
+    }
+
+    // The strongest adversarial flip: EVERY unsupported/display-only
+    // criterion selected simultaneously.
+    const everythingFlipped = nonScoringEntries.reduce(
+      (acc, entry) => NON_SCORING_MUTATORS[entry.id](acc),
+      criteria(),
+    );
+    const withEverythingFlipped = engine(rows, everythingFlipped);
+    expect(withEverythingFlipped.ranked.map((c) => [c.key, c.recordCompletenessScore])).toEqual(baselineOrder);
+  });
+
+  it("SCORED path (iii) is untouched by record completeness: with a transit network active, order follows score ONLY, even when completeness would reverse it", () => {
+    // "sparse": zero record completeness (no pin, no measured area,
+    // unresolved zoning) but placed RIGHT AT a CTA station — high transit
+    // score.
+    const sparse = row({
+      canonicalKey: "sparse",
+      pin: null,
+      buildingSqft: null,
+      lotSqft: null,
+      zoning: { status: "unresolved", district: null, zoneType: null, pdNum: null, pmdSubArea: null },
+      lat: CTA_NEAR.lat,
+      lon: CTA_NEAR.lon,
+    });
+    // "dense": maximum record completeness (pin, measured area, resolved
+    // zoning) but placed far outside the transit-score horizon — zero
+    // transit score.
+    const dense = row({
+      canonicalKey: "dense",
+      pin: "9",
+      buildingSqft: 4000,
+      zoning: { status: "resolved", district: "B3-2", zoneType: 1, pdNum: null, pmdSubArea: null },
+      lat: BASE_LAT + 0.5,
+      lon: BASE_LON,
+    });
+    const { ranked, scored } = engine([sparse, dense], criteria({ transportation: ["cta-rail"] }), [CTA_NEAR]);
+    expect(scored).toBe(true);
+    expect(ranked.map((c) => c.recordCompletenessScore)).toEqual([0, 4]); // sparse first, dense second
+    // If completeness had ANY influence on the scored comparator, "dense"
+    // (completeness 4) would outrank "sparse" (completeness 0) despite
+    // scoring zero on transit — it does not.
+    expect(ranked[0].key).toBe("sparse");
+    expect(ranked[0].score).toBeGreaterThan(0);
+    expect(ranked[1].key).toBe("dense");
+    expect(ranked[1].score).toBe(0);
+  });
+
   // ── Funnel ──────────────────────────────────────────────────────────────
 
   it("funnel: trackedEvidence (raw) is genuinely distinct from canonicalSites (deduped) — Finding 6", () => {
@@ -892,6 +1026,7 @@ describe("decorateShortlistDisplayFacts", () => {
       overlays: noOverlays(),
       transitScore: null,
       score: 0,
+      recordCompletenessScore: 4,
       ...overrides,
     };
   }
@@ -1150,13 +1285,34 @@ describe("exhaustive oracle — brute-force winner-set parity + independent scor
     }
   });
 
-  it("order contract: scores are non-increasing and ties break by canonicalKey ascending", () => {
-    const { ranked } = engine(fixtureRows, criteria({ propertyType: "either" }), STATIONS);
+  it("order contract, SCORED path: scores are non-increasing and ties break by canonicalKey ascending", () => {
+    const { ranked, scored } = engine(
+      fixtureRows,
+      criteria({ propertyType: "either", transportation: ["cta-rail"] }),
+      STATIONS,
+    );
+    expect(scored).toBe(true);
     for (let i = 1; i < ranked.length; i++) {
       const prev = ranked[i - 1];
       const curr = ranked[i];
       expect(prev.score).toBeGreaterThanOrEqual(curr.score);
       if (prev.score === curr.score) {
+        expect(prev.key < curr.key).toBe(true);
+      }
+    }
+  });
+
+  // Finding 13 (round 3): the UNSCORED path no longer orders on a bare
+  // canonicalKey shuffle — it orders on recordCompletenessScore, tiebreaking
+  // on canonicalKey only when completeness itself ties.
+  it("order contract, UNSCORED path: recordCompletenessScore is non-increasing and ties break by canonicalKey ascending", () => {
+    const { ranked, scored } = engine(fixtureRows, criteria({ propertyType: "either" }), STATIONS);
+    expect(scored).toBe(false);
+    for (let i = 1; i < ranked.length; i++) {
+      const prev = ranked[i - 1];
+      const curr = ranked[i];
+      expect(prev.recordCompletenessScore).toBeGreaterThanOrEqual(curr.recordCompletenessScore);
+      if (prev.recordCompletenessScore === curr.recordCompletenessScore) {
         expect(prev.key < curr.key).toBe(true);
       }
     }
@@ -1218,19 +1374,101 @@ describe("false-zero guard — 60621 building search (the canonical regression c
     expect(ranked.length).toBe(645);
   });
 
+  // ── Finding 6, round 3: the BUILDING search's own exact successive stage
+  //    counts — Sol's round-2 re-review specifically flagged that switching
+  //    to a land search for the "exact successive counts" test dodged the
+  //    actual regression case: 60621's BUILDING search, not its land
+  //    search, is the canonical false-zero scenario this entire PR exists
+  //    for. This test pins that scenario's real numbers directly.
+  //
+  //  A HONEST NOTE ON WHAT "NARROWING" MEANS HERE, because the real data
+  //  makes a naive "every single stage strictly smaller than the last"
+  //  claim FALSE, and asserting it anyway would be exactly the kind of
+  //  invented precision this PR was built to eliminate:
+  //   - trackedEvidence(685) -> canonicalSites(645): a REAL, strict
+  //     narrowing (dedup).
+  //   - canonicalSites(645) -> withResolvedPin(0): a REAL, strict
+  //     narrowing — and the steepest one in this chain.
+  //   - withResolvedPin(0) -> withMeasuredArea(0): NOT a narrowing, an
+  //     EXACT TIE at zero. This is not a test weakness — it is the precise,
+  //     accurately-reported fact that makes 60621's building search THE
+  //     false-zero regression case: every single 311_building complaint
+  //     record in this ZIP carries neither a resolved PIN nor a published
+  //     measurement. Asserting anything other than 0/0 here would misstate
+  //     the real data this test exists to pin.
+  //   - withMeasuredArea(0) -> insideBand(645): an INCREASE, by contract —
+  //     see the funnel's own documented rule (and its dedicated test above)
+  //     that insideBand equals canonicalSites, unconstrained, whenever NO
+  //     size band is selected; a band CANNOT be selected in this scenario
+  //     without instantly zeroing every single row (since zero rows carry
+  //     any measurement at all) — which would make the funnel's FINAL,
+  //     real screening stage a degenerate, uninformative 0/0, defeating the
+  //     entire point of pinning a genuine narrowing chain. Leaving the band
+  //     unset — the same choice the false-zero fix itself depends on — is
+  //     what keeps the building search meaningful at all.
+  //   - insideBand(645) -> survivingTransitScreen(468): a REAL, strict
+  //     narrowing, via a transit screen (the one screen that CAN apply
+  //     here, since every row still carries real coordinates even without
+  //     PIN/measurement).
+  it("EXACT successive 60621 funnel stage counts for the BUILDING search (the canonical false-zero regression case) — every REAL screening stage narrows strictly; the two diagnostic-only stages tie at the exact, honestly-reported zero this ZIP's data actually has (Finding 6, round 3)", () => {
+    const centroidStation: ShortlistStation = {
+      name: "Test Centroid Stop",
+      system: "CTA",
+      lat: 41.7779,
+      lon: -87.6421,
+    };
+    const { funnel, ranked, scored } = runShortlistEngine({
+      rows: universe.rows,
+      criteria: criteria({
+        zip: "60621",
+        propertyType: "existing-building",
+        // Deliberately NO size band — see the comment above for why one
+        // would collapse this specific scenario to a degenerate 0/0.
+        transportation: ["cta-rail"],
+        transportationDistance: "one-mile",
+      }),
+      stations: [centroidStation],
+      sourceRecordsByEvidenceType: universe.counts.sourceRecordsByEvidenceType as never,
+    });
+
+    // Exact values from the committed 60621 export (regenerated in this PR).
+    expect(funnel.trackedEvidence).toBe(685);
+    expect(funnel.canonicalSites).toBe(645);
+    expect(funnel.withResolvedPin).toBe(0);
+    expect(funnel.withMeasuredArea).toBe(0);
+    expect(funnel.insideBand).toBe(645);
+    expect(funnel.survivingTransitScreen).toBe(468);
+
+    // The REAL screening stages narrow strictly, pairwise.
+    expect(funnel.trackedEvidence).toBeGreaterThan(funnel.canonicalSites);
+    expect(funnel.canonicalSites).toBeGreaterThan(funnel.withResolvedPin);
+    expect(funnel.insideBand).toBeGreaterThan(funnel.survivingTransitScreen);
+    // The two diagnostic-only stages are an EXACT, documented tie — not a
+    // silent gap in this test's coverage.
+    expect(funnel.withResolvedPin).toBe(funnel.withMeasuredArea);
+    // withMeasuredArea -> insideBand is a documented INCREASE (no band set,
+    // per the funnel's own contract), never mistaken for a narrowing step.
+    expect(funnel.insideBand).toBeGreaterThan(funnel.withMeasuredArea);
+    expect(funnel.insideBand).toBe(funnel.canonicalSites); // unconstrained: no band selected
+
+    expect(ranked.length).toBe(468);
+    expect(funnel.survivingTransitScreen).toBe(ranked.length);
+    expect(scored).toBe(true);
+  });
+
   // ── Finding 6 (re-review): EXACT successive stage counts, a genuine ───────
   //    narrowing CHAIN — not four independent diagnostics that happen to
   //    share one funnel object. The pre-fix test only proved
   //    trackedEvidence != canonicalSites; it said nothing about whether
   //    withResolvedPin / withMeasuredArea / insideBand /
   //    survivingTransitScreen actually narrow each other in sequence on
-  //    real data. This scenario runs a LAND search (60621's building
-  //    evidence genuinely carries zero PINs/measurements — the false-zero
-  //    condition this whole PR exists for — so a land search is the
-  //    scenario that can show every stage narrowing without collapsing to
-  //    zero) with BOTH a size band AND a transit screen active, against the
-  //    real committed 60621 universe.
-  it("EXACT successive 60621 funnel stage counts for a land search with a band AND a transit screen — PIN -> measurement -> band -> transit as a genuine narrowing chain (Finding 6)", () => {
+  //    real data. This second scenario runs a LAND search — 60621's LAND
+  //    evidence, unlike its building evidence, genuinely DOES carry PINs
+  //    and some measurements, so it is the scenario that can show every
+  //    single stage narrowing strictly, with no ties anywhere — kept here
+  //    as the complementary case to the building search above, per Sol's
+  //    round-3 direction to keep both.
+  it("EXACT successive 60621 funnel stage counts for a land search with a band AND a transit screen — PIN -> measurement -> band -> transit as a genuine narrowing chain, no ties anywhere (Finding 6)", () => {
     // A synthetic CTA station placed at the ZIP's real geographic centroid
     // (computed from the committed export's own lat/lon range) — not the
     // real committed rail-stations.ts file, so this scenario's exact

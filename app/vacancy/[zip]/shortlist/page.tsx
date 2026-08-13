@@ -462,8 +462,9 @@ export default async function SiteShortlistPage({
         </h1>
         <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/60">
           Screened from this area&rsquo;s complete tracked vacant-property universe against your
-          brief{scored ? ", then ranked." : "."} These are early possibilities from public records,
-          not availability listings — no record here is offered for sale or lease.
+          brief{scored ? ", then ranked." : ", then ordered by record completeness."} These are
+          early possibilities from public records, not availability listings — no record here is
+          offered for sale or lease.
           {allRanked.length > ranked.length && (
             <>
               {" "}
@@ -471,7 +472,7 @@ export default async function SiteShortlistPage({
               are shown
               {scored
                 ? ", highest-ranked first."
-                : ", in a stable order, not ranked — add a transit criterion to rank."}
+                : ", ordered by record completeness — add a transit criterion to rank by fit."}
             </>
           )}
         </p>
