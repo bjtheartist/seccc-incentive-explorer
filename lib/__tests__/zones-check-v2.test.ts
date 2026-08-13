@@ -224,6 +224,130 @@ describe("resolveZoneLayerEvidence — HUBZone redesignated tracts (review1 R2)"
     const evidence = await resolveZoneLayerEvidence("hubzone", found!.lat, found!.lon, { sql: null });
     expect(evidence.state).toBe("matched");
   });
+
+  it("review1 R8: a shared-boundary point matching BOTH a qualified and a redesignated tract stays unknown, not plain matched", async () => {
+    // Verified against the real shipped hubzone.geojson: at (lat 42.0047,
+    // lon -87.6901), turf.booleanPointInPolygon matches qualified tract
+    // 17031020500 BEFORE it matches expired redesignated tract
+    // 17031020602, in file order. A first-match-wins scan would return
+    // plain "matched" here; a full scan must find the redesignated match
+    // too and downgrade the whole result.
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const turf = await import("@turf/turf");
+    const raw = JSON.parse(
+      readFileSync(join(process.cwd(), "public", "data", "zones", "hubzone.geojson"), "utf8")
+    ) as { features: GeoJSON.Feature[] };
+    const point = turf.point([-87.6901, 42.0047]);
+    const matchedAtPoint = raw.features.filter((f) => {
+      try {
+        return turf.booleanPointInPolygon(point, f as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>);
+      } catch {
+        return false;
+      }
+    });
+    // Sanity check on the fixture itself: this point really does hit both
+    // categories, and the qualified one really does come first.
+    expect(matchedAtPoint.map((f) => (f.properties as Record<string, unknown>).category)).toEqual([
+      "qualified",
+      "redesignated",
+    ]);
+
+    const evidence = await resolveZoneLayerEvidence("hubzone", 42.0047, -87.6901, { sql: null });
+    expect(evidence.state).not.toBe("matched");
+    expect(evidence).toEqual({
+      state: "unknown",
+      reason: "redesignated_area_expired",
+      name: expect.stringContaining("17031020602"),
+    });
+  });
+
+  it("review1 R8: the shared-boundary result is stable regardless of which match the scan would hit first", async () => {
+    // Confirms the fix isn't order-dependent by checking resolveZoneEvidenceV2
+    // (the batch entry point) too, not just the single-layer resolver.
+    const { resolveZoneEvidenceV2 } = await import("../zones-check");
+    const layers = await resolveZoneEvidenceV2(42.0047, -87.6901, ["hubzone"], { sql: null });
+    expect(layers.hubzone.state).toBe("unknown");
+    expect(layers.hubzone.reason).toBe("redesignated_area_expired");
+  });
+});
+
+describe("checkStaticZoneV2 — review1 R10: malformed feature ENTRIES (not just malformed geometry) never throw", () => {
+  it("features: [null] resolves to unknown/malformed_geometry, never source_unavailable and never a thrown/rejected promise", async () => {
+    const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+      sql: null,
+      loadZoneFile: async () => ({
+        type: "FeatureCollection",
+        features: [null],
+      }),
+    });
+    expect(evidence.state).toBe("unknown");
+    expect(evidence.reason).toBe("malformed_geometry");
+  });
+
+  it("a scalar (string) feature entry resolves to unknown/malformed_geometry", async () => {
+    const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+      sql: null,
+      loadZoneFile: async () => ({
+        type: "FeatureCollection",
+        features: ["not a feature object"],
+      }),
+    });
+    expect(evidence.state).toBe("unknown");
+    expect(evidence.reason).toBe("malformed_geometry");
+  });
+
+  it("a number feature entry resolves to unknown/malformed_geometry", async () => {
+    const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+      sql: null,
+      loadZoneFile: async () => ({
+        type: "FeatureCollection",
+        features: [42],
+      }),
+    });
+    expect(evidence.state).toBe("unknown");
+    expect(evidence.reason).toBe("malformed_geometry");
+  });
+
+  it("a null/scalar sibling never prevents a real match on a well-formed feature later in the array", async () => {
+    const wellFormedTifFeature = {
+      type: "Feature",
+      properties: { name: "Synthetic TIF" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [-87.61, 41.87],
+            [-87.61, 41.89],
+            [-87.59, 41.89],
+            [-87.59, 41.87],
+            [-87.61, 41.87],
+          ],
+        ],
+      },
+    };
+    const evidence = await resolveZoneLayerEvidence("tif", 41.88, -87.6, {
+      sql: null,
+      loadZoneFile: async () => ({
+        type: "FeatureCollection",
+        features: [null, "garbage", wellFormedTifFeature],
+      }),
+    });
+    expect(evidence).toEqual({ state: "matched", name: "Synthetic TIF" });
+  });
+
+  it("null/scalar siblings with no real match anywhere still resolve to malformed_geometry, never not_matched", async () => {
+    const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+      sql: null,
+      loadZoneFile: async () => ({
+        type: "FeatureCollection",
+        features: [null, "garbage", { type: "Feature", properties: {}, geometry: null }],
+      }),
+    });
+    expect(evidence.state).toBe("unknown");
+    expect(evidence.reason).toBe("malformed_geometry");
+    expect(evidence.state).not.toBe("not_matched");
+  });
 });
 
 describe("resolveZoneLayerEvidence — DB path (mocked at the getSQL boundary, per Hard Rule)", () => {

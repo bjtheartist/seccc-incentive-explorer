@@ -357,8 +357,19 @@ function isValidFeatureCollection(value: unknown): value is FeatureCollection {
 function evaluateFeatureGeometry(
   point: ReturnType<typeof turf.point>,
   key: string,
-  feature: Feature
+  feature: unknown
 ): { matched: boolean; malformed: boolean } {
+  // review1 R10: validate the FEATURE ITSELF before dereferencing
+  // `.geometry` — R5's collection-shape check only validated that
+  // `features` is an array, not that every element in it is a real
+  // object. `features: [null]` (or a scalar entry) previously threw here
+  // uncaught, which the aggregate resolver's per-key try/catch (review1
+  // R5) masked as `source_unavailable` instead of the more accurate
+  // `malformed_geometry`.
+  if (!isRecordLike(feature)) {
+    console.warn(`[zones/check/v2] null/non-object feature entry in zone "${key}"`);
+    return { matched: false, malformed: true };
+  }
   const geometry = feature.geometry as { type?: string } | null | undefined;
   if (!geometry || typeof geometry.type !== "string") {
     console.warn(`[zones/check/v2] null/missing geometry on a feature in zone "${key}"`);
@@ -372,7 +383,7 @@ function evaluateFeatureGeometry(
   }
   try {
     return {
-      matched: turf.booleanPointInPolygon(point, feature as Feature<Polygon | MultiPolygon>),
+      matched: turf.booleanPointInPolygon(point, feature as unknown as Feature<Polygon | MultiPolygon>),
       malformed: false,
     };
   } catch (err) {
@@ -385,23 +396,48 @@ function evaluateFeatureGeometry(
 }
 
 /**
- * Classify a static match, applying any layer-specific downgrade rules.
- * HUBZone: 66 of its shipped tracts are `category: "redesignated"`, and
- * the program catalog's own record says these lost eligibility as of
- * 2026-07-01 (the shipped geometry carries no expiry date itself, so this
- * cross-cutting fact can only be applied here, at the layer-key level).
- * A point inside a redesignated tract must never come back as a plain
- * `matched` — review1 R2.
+ * Layers whose downgrade rule depends on seeing EVERY match at a point,
+ * not just the first one a scan happens to hit — first-match
+ * short-circuiting is unsafe for these. Currently only "hubzone": at a
+ * shared tract boundary a point can fall inside both a currently-valid
+ * qualified tract AND an expired redesignated tract (review1 R8 —
+ * verified against the real shipped hubzone.geojson: (42.0047, -87.6901)
+ * matches qualified tract 17031020500 before expired redesignated tract
+ * 17031020602 in file order). Returning on the first match alone would
+ * silently prefer whichever tract happens to be scanned first.
  */
-function classifyStaticMatch(key: string, feature: Feature<Polygon | MultiPolygon>): ZoneLayerEvidence {
-  const name = featureDisplayName(key, feature);
+const FULL_SCAN_REQUIRED_KEYS: ReadonlySet<string> = new Set(["hubzone"]);
+
+/**
+ * Classify a layer's match(es) together, applying any layer-specific
+ * downgrade rules. HUBZone: 66 of its shipped tracts are `category:
+ * "redesignated"`, and the program catalog's own record says these lost
+ * eligibility as of 2026-07-01 (the shipped geometry carries no expiry
+ * date itself, so this cross-cutting fact can only be applied here, at
+ * the layer-key level). If ANY match at this point is `category:
+ * "redesignated"`, the WHOLE result downgrades to
+ * `unknown/redesignated_area_expired` — even when another match at the
+ * exact same point is a currently-valid qualified tract (review1 R2 +
+ * R8). A point inside a redesignated tract must never come back as a
+ * plain `matched`.
+ */
+function classifyStaticMatches(
+  key: string,
+  matches: Feature<Polygon | MultiPolygon>[]
+): ZoneLayerEvidence {
   if (key === "hubzone") {
-    const category = (feature.properties as Record<string, unknown> | null)?.category;
-    if (category === "redesignated") {
-      return { state: "unknown", reason: "redesignated_area_expired", name };
+    const redesignated = matches.find(
+      (feature) => (feature.properties as Record<string, unknown> | null)?.category === "redesignated"
+    );
+    if (redesignated) {
+      return {
+        state: "unknown",
+        reason: "redesignated_area_expired",
+        name: featureDisplayName(key, redesignated),
+      };
     }
   }
-  return { state: "matched", name };
+  return { state: "matched", name: featureDisplayName(key, matches[0]) };
 }
 
 /**
@@ -446,6 +482,8 @@ async function checkStaticZoneV2(
 
   const point = turf.point([lon, lat]);
   let sawMalformed = false;
+  const matches: Feature<Polygon | MultiPolygon>[] = [];
+  const fullScan = FULL_SCAN_REQUIRED_KEYS.has(key);
 
   for (const feature of collection.features) {
     const evaluation = evaluateFeatureGeometry(point, key, feature);
@@ -454,8 +492,18 @@ async function checkStaticZoneV2(
       continue;
     }
     if (evaluation.matched) {
-      return classifyStaticMatch(key, feature as Feature<Polygon | MultiPolygon>);
+      matches.push(feature as Feature<Polygon | MultiPolygon>);
+      // review1 R8: layers with no multi-match downgrade rule keep the
+      // original first-match-wins short circuit; FULL_SCAN_REQUIRED_KEYS
+      // (hubzone) must see every match at this point before classifying,
+      // since a later redesignated match can downgrade an earlier
+      // qualified one.
+      if (!fullScan) break;
     }
+  }
+
+  if (matches.length > 0) {
+    return classifyStaticMatches(key, matches);
   }
 
   if (sawMalformed) {

@@ -133,3 +133,33 @@ describe("normalizeZoneEvidenceV2 — review1 R4: absent/invalid dataRevision or
     expect(normalizeZoneEvidenceV2({ ...VALID_ENVELOPE, checkedAt: null })).toBeNull();
   });
 });
+
+describe("normalizeZoneEvidenceV2 — review2 R8: the redesignated_area_expired reason survives normalization unchanged", () => {
+  it("preserves state:unknown and reason:redesignated_area_expired for the shared-boundary HUBZone case", () => {
+    const payload = {
+      schemaVersion: 2,
+      dataRevision: "zones-v2-2026-08-13",
+      checkedAt: "2026-08-13T00:00:00.000Z",
+      requestedLayers: ["hubzone"],
+      layers: {
+        hubzone: {
+          state: "unknown",
+          reason: "redesignated_area_expired",
+          name: "HUBZone Redesignated Tract 17031020602",
+        },
+      },
+    };
+    const result = normalizeZoneEvidenceV2(payload);
+    expect(result).not.toBeNull();
+    expect(result!.layers.hubzone).toEqual({
+      state: "unknown",
+      reason: "redesignated_area_expired",
+      name: "HUBZone Redesignated Tract 17031020602",
+    });
+    expect(result!.unknownKeys).toContain("hubzone");
+    expect(result!.hasUnknown).toBe(true);
+    // never silently reclassified as matched or not_matched
+    expect(result!.layers.hubzone.state).not.toBe("matched");
+    expect(result!.layers.hubzone.state).not.toBe("not_matched");
+  });
+});
