@@ -50,6 +50,8 @@
     "corridor:owners:geo:export": "npx tsx scripts/export-owner-clusters-geo.ts",
     "corridor:resilience:export": "npx tsx scripts/export-southeast-resilience.ts",
     "neighborhood:economics:export": "npx tsx scripts/export-chicago-neighborhood-economics.ts",
+    "programs:public:export": "npx tsx scripts/export-public-programs.ts",
+    "programs:public:check": "npx tsx scripts/export-public-programs.ts --check",
     "db:reset": "npm run db:migrate && npm run db:seed",
     "anchors:import": "npx tsx scripts/import-anchor-workbook.ts",
     "support:import": "npx tsx scripts/import-business-support-workbook.ts",

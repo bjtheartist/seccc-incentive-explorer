@@ -206,7 +206,70 @@ caught).
 
 ## PR1 — section 1.2: catalog relocation + public projection
 
-_To be filled in as 1.2 is implemented._
+### What changed
+
+- **Relocated** the internal catalog: `git mv public/data/programs.json
+  data/programs-internal.json`, then recreated `public/data/programs.json`
+  with byte-identical content. `data/programs-internal.json` is now the
+  source of truth; `public/data/programs.json` is a frozen duplicate kept
+  only because current consumers still fetch it — deleted in PR2 (spec:
+  "PR1 keeps public/data/programs.json in place ... deletion happens in PR2
+  cutover"). A test
+  (`lib/__tests__/program-public.test.ts` → "data/programs-internal.json vs
+  public/data/programs.json") asserts the two files stay byte-identical for
+  the rest of PR1, so nobody edits one copy and forgets the other.
+- **`next.config.ts`**: added `outputFileTracingIncludes["/**"] =
+  ["./data/programs-internal.json"]` — no PR1 route reads the file at
+  request time yet (PR2 wires the actual consumer routes), so `"/**"` was
+  used rather than guessing PR2's route list, mirroring the shortlist-
+  universe precedent's own comment ("Declared now, even though PR2 wires
+  the actual consumer route"). Guarded by
+  `lib/__tests__/programs-internal-bundling.test.ts`.
+- **`lib/program-public.ts`**: `PublicProgramView` DTO, `toPublicProgramView()`,
+  `benefitQualifier()` (the one place the binding qualifier copy is
+  generated), `catalogRevisionFromRaw()` (SHA-256 of the raw catalog bytes,
+  mirrors `shortlistUniverseChecksum`), and `buildPublicProgramsEnvelope()`.
+- **`scripts/export-public-programs.ts`** + npm scripts
+  `programs:public:export` / `programs:public:check`. Pure file-to-file
+  transform, no DB/network. `--check` regenerates in memory and diffs
+  against the committed artifact (ignoring `generatedAt`, the only field
+  that legitimately changes between runs), exiting non-zero on drift.
+- **`public/data/programs-public.json`** generated and committed:
+  `{schemaVersion: 1, generatedAt, catalogRevision, programs: [...71 PublicProgramView]}`.
+- **`public/data/programs.json` stays in place, untouched** — no PR1
+  consumer reads `programs-public.json` yet; it "ships alongside" per spec.
+
+### Design decisions
+
+- **`whoQualifies` never reaches the DTO.** `screening.publishedCriteria`
+  is sourced from each record's structured `eligibilityRules[].description`
+  (all 71 records have this populated), not from the free-text
+  `whoQualifies` field. `links.administeringAgency` (the first `contacts[]`
+  entry's `agency`) is exposed separately so a PR2 consumer can render
+  "Published criteria — confirm with `<administeringAgency>`" — the DTO
+  provides the structured pieces; the framing sentence itself is a
+  rendering-surface concern for PR2, deliberately not baked into the DTO
+  as prose (per the spec: "a structured DTO (NOT prose strings)"). A test
+  asserts no DTO ever carries the literal `whoQualifies` string anywhere in
+  its serialized form.
+- **`benefitQualifier()` for `intakeStatus: "unknown"`** (not covered by
+  either of the spec's two named buckets) — added a third branch: "Intake
+  status not established from published sources as of `<statusAsOf>`."
+  Applies to `iraCleanElectricity` and `r3Grants` (see section 1.1's
+  table). Never defaults toward open/current language, consistent with the
+  binding derivation rule.
+- **`catalogRevision`** is a SHA-256 hex digest of the *raw bytes* read
+  from `data/programs-internal.json` at export time (not a re-serialization
+  of the parsed records), so it changes if and only if the committed file's
+  bytes change — deterministic and dependency-free (no git plumbing, no
+  DB), consistent with the Hard Rules.
+- **Regen-diff CI check has two forms**: the npm-script/shell form
+  (`scripts/export-public-programs.ts --check`, for a real CI step or local
+  use) and an in-process vitest form
+  (`lib/__tests__/program-public.test.ts`) that imports
+  `buildPublicProgramsEnvelope` directly rather than spawning the script —
+  the one that actually runs under `npx vitest run`. A mutation test proves
+  the diff check is not vacuous.
 
 ## PR1 — section 1.3: Zone Evidence v2
 
