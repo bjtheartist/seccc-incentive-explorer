@@ -80,12 +80,14 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   DEFAULT_CHICAGO_CARES_PROGRAM_LEDGER_OUTPUT,
   importChicagoCaresProgramLedger,
 } from "../import-chicago-cares-program-ledger";
+import { loadManifest, type DecreasePolicy } from "../lib/investment-manifest";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -764,7 +766,7 @@ const SOURCES: RefreshSource[] = [
 
 // ── Runner ───────────────────────────────────────────────────────────────────
 
-interface Outcome {
+export interface Outcome {
   id: string;
   label: string;
   file: string;
@@ -820,6 +822,86 @@ function safeMeasure(source: RefreshSource, content: string | null): Metrics | n
   }
 }
 
+// Sol gate finding 7 (BLOCKER) — "the manifest's decrease policies are never
+// imported or enforced. Refresh still writes after measuring... does not
+// compare declared dollar value fields." MONOTONIC_FLOOR_PCT mirrors the
+// pre-existing REFRESHED_SOURCE_FLOORS 2% convention in
+// lib/__tests__/community-investment.test.ts — this REPLACES that hard-coded
+// floor with a manifest-driven, per-source, per-field check.
+const MONOTONIC_FLOOR_PCT = 0.02;
+
+interface DecreasePolicyCheck {
+  allowed: boolean;
+  reason?: string;
+}
+
+/**
+ * Enforces the manifest's decreasePolicy for a source BEFORE the caller
+ * writes the refreshed file — rows AND the manifest's declared value field,
+ * never rows alone. "not_refreshed" sources (e.g. chicago-cares, whose ledger
+ * legitimately shows a diff most months from an upstream publish timestamp,
+ * not real churn) are exempt by design, not by omission. Pure — no I/O beyond
+ * the manifest read the caller already paid for once per process.
+ */
+export function checkDecreasePolicy(sourceId: string, before: Metrics | null, after: Metrics | null): DecreasePolicyCheck {
+  if (!before || !after) return { allowed: true };
+  const manifest = loadManifest();
+  const entry = manifest.sources.find((s) => s.id === sourceId);
+  const policy: DecreasePolicy = entry?.decreasePolicy ?? "monotonic_floor";
+  if (policy === "not_refreshed") return { allowed: true };
+
+  const fields: Array<{ label: string; beforeVal: number | null; afterVal: number | null }> = [
+    { label: "rows", beforeVal: before.rows, afterVal: after.rows },
+  ];
+  if (before.dollars != null || after.dollars != null) {
+    const label = entry?.valueField ? `dollars (declared value field: ${entry.valueField})` : "dollars";
+    fields.push({ label, beforeVal: before.dollars, afterVal: after.dollars });
+  }
+
+  for (const f of fields) {
+    if (f.beforeVal == null || f.afterVal == null) continue;
+    if (f.afterVal >= f.beforeVal) continue; // growth/unchanged always allowed, both policies
+    const dropPct = f.beforeVal === 0 ? 1 : (f.beforeVal - f.afterVal) / f.beforeVal;
+    if (policy === "exact_pin") {
+      return {
+        allowed: false,
+        reason:
+          `${sourceId}: ${f.label} decreased (${f.beforeVal} -> ${f.afterVal}) under decreasePolicy ` +
+          `"exact_pin" — a closed/pinned source must never shrink. Refusing to write.`,
+      };
+    }
+    if (policy === "monotonic_floor" && dropPct > MONOTONIC_FLOOR_PCT) {
+      return {
+        allowed: false,
+        reason:
+          `${sourceId}: ${f.label} dropped ${(dropPct * 100).toFixed(1)}% (${f.beforeVal} -> ${f.afterVal}), ` +
+          `exceeding the ${(MONOTONIC_FLOOR_PCT * 100).toFixed(0)}% monotonic_floor decreasePolicy. Refusing to write.`,
+      };
+    }
+  }
+  return { allowed: true };
+}
+
+/**
+ * Deliverable 7 — pure builder for the refresh-attempt.json failure artifact:
+ * `null` when nothing failed (main() then REMOVES any stale artifact from a
+ * previously-failing run), otherwise the exact JSON object to commit.
+ * Extracted as a pure function (no I/O) specifically so a unit test can
+ * exercise "does a failure produce an artifact" and "does an all-healthy run
+ * produce none" without invoking a live refresh.
+ */
+export function buildRefreshAttemptArtifact(
+  outcomes: readonly Outcome[],
+): { attemptedAt: string; failedSources: Array<{ id: string; file: string; error?: string }>; okSources: string[] } | null {
+  const failed = outcomes.filter((o) => !o.ok);
+  if (failed.length === 0) return null;
+  return {
+    attemptedAt: new Date().toISOString(),
+    failedSources: failed.map((f) => ({ id: f.id, file: f.file, error: f.error })),
+    okSources: outcomes.filter((o) => o.ok).map((o) => o.id),
+  };
+}
+
 async function refreshOne(source: RefreshSource, options: CliOptions): Promise<Outcome> {
   const path = join(INPUT_DIR, source.file);
   const beforeContent = readIfExists(path);
@@ -853,8 +935,21 @@ async function refreshOne(source: RefreshSource, options: CliOptions): Promise<O
     const nextContent = await source.build();
     base.after = source.measure(nextContent);
     base.changed = nextContent !== beforeContent;
-    if (base.changed && !options.dryRun) {
-      writeFileSync(path, nextContent, "utf8");
+    if (base.changed) {
+      // Sol gate finding 7 — enforce the manifest's decreasePolicy BEFORE
+      // writing, for rows AND the declared value field, on every run
+      // (including --dry-run, so a dry run's report already shows the
+      // refusal rather than only discovering it on the real attempt).
+      const decreaseCheck = checkDecreasePolicy(source.id, base.before, base.after);
+      if (!decreaseCheck.allowed) {
+        base.ok = false;
+        base.error = decreaseCheck.reason;
+        base.changed = false; // refused — the committed file is untouched
+        return base;
+      }
+      if (!options.dryRun) {
+        writeFileSync(path, nextContent, "utf8");
+      }
     }
     return base;
   } catch (error) {
@@ -951,12 +1046,8 @@ async function main(): Promise<void> {
   // must stay silent) and removed once every source is healthy again, so it
   // never lingers as permanent no-op diff noise.
   if (!options.dryRun) {
-    if (failed.length > 0) {
-      const attempt = {
-        attemptedAt: new Date().toISOString(),
-        failedSources: failed.map((f) => ({ id: f.id, file: f.file, error: f.error })),
-        okSources: outcomes.filter((o) => o.ok).map((o) => o.id),
-      };
+    const attempt = buildRefreshAttemptArtifact(outcomes);
+    if (attempt) {
       writeFileSync(REFRESH_ATTEMPT_PATH, JSON.stringify(attempt, null, 2) + "\n", "utf8");
       process.stdout.write(`\n(wrote ${REFRESH_ATTEMPT_PATH} — failure artifact for the delta PR)\n`);
     } else if (existsSync(REFRESH_ATTEMPT_PATH)) {
@@ -973,7 +1064,19 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
-  console.error(error instanceof Error ? (error.stack ?? error.message) : String(error));
-  process.exitCode = 1;
-});
+/**
+ * Only run the refresh when this file is the entry point. checkDecreasePolicy
+ * (and other pure helpers) are exported so the test suite can exercise them
+ * directly — without this guard, importing checkDecreasePolicy for a unit
+ * test would kick off a LIVE refresh (real Socrata/HUD network calls,
+ * potential file writes) as a module-load side effect. Same pattern as
+ * scripts/export-community-investment.ts.
+ */
+const isDirectRun = process.argv[1] != null && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (isDirectRun) {
+  main().catch((error: unknown) => {
+    console.error(error instanceof Error ? (error.stack ?? error.message) : String(error));
+    process.exitCode = 1;
+  });
+}

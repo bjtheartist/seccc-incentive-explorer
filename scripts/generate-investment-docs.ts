@@ -29,9 +29,14 @@ interface FreshAuditReport {
   chicago_prize_excluded_from_universe: number;
   sample_n: number;
   counts: Record<string, number>;
-  ok_rate: number;
+  evaluable_rows: number;
+  ok_rate_of_evaluable: number | null;
+  unresolved_rows: number;
+  unresolved_pct_of_sample: number;
+  unresolved_by_funder: Record<string, number>;
+  citable_statement: string;
+  nonresponse_note: string;
   bound_export_content_hash: string;
-  generated_at: string;
 }
 
 interface PrizeCensus {
@@ -48,13 +53,14 @@ function buildAuditClaimBlock(): string {
   const prize = existsSync(PRIZE_CENSUS_PATH)
     ? (JSON.parse(readFileSync(PRIZE_CENSUS_PATH, "utf8")) as PrizeCensus)
     : null;
-  const ok = audit.counts.ok ?? 0;
-  const unresolved = audit.counts.filing_unavailable ?? 0;
-  const mismatched = Object.entries(audit.counts)
-    .filter(([k]) => k !== "ok" && k !== "filing_unavailable")
-    .reduce((sum, [, v]) => sum + v, 0);
-  const okPct = (audit.ok_rate * 100).toFixed(1);
-  const unresolvedPct = ((unresolved / audit.sample_n) * 100).toFixed(1);
+
+  // Sol gate finding 6 — publish the CITABLE STATEMENT verbatim from the audit
+  // report (never a hand-typed universe-level accuracy percentage), plus the
+  // nonresponse-by-funder breakdown, so a reader can judge concentration for
+  // themselves instead of trusting an implied population-wide margin.
+  const byFunderLines = Object.entries(audit.unresolved_by_funder)
+    .sort(([, a], [, b]) => b - a)
+    .map(([funder, count]) => `  - ${funder}: ${count}`);
 
   const lines = [
     README_BEGIN,
@@ -66,17 +72,14 @@ function buildAuditClaimBlock(): string {
     `(${audit.chicago_prize_excluded_from_universe} rows, award announcements rather than IRS filings) is excluded from`,
     "this SRS and reported separately below as a census check.",
     "",
-    `Result: **${ok.toLocaleString("en-US")}/${audit.sample_n.toLocaleString("en-US")} rows (${okPct}%) independently`,
-    "re-verified against their own IRS filing — recipient and amount re-parsed from",
-    `the source XML — with ZERO recipient/amount mismatches.** ${unresolved.toLocaleString("en-US")} rows`,
-    `(${unresolvedPct}%) could not be resolved to a specific filing in this run (an`,
-    "identity-resolution gap — a ProPublica lookup or filing fetch that did not",
-    "resolve — never a proven data error) and are counted here, not silently",
-    `dropped from the denominator.${mismatched > 0 ? ` **${mismatched} row(s) showed an actual recipient/amount mismatch against their filing — see foundation_audit_fresh.json for the row-level detail; NOT auto-corrected.**` : ""}`,
+    `**${audit.citable_statement}**`,
+    "",
+    audit.nonresponse_note,
+    ...(byFunderLines.length ? ["", "Unresolved rows by funder:", ...byFunderLines] : []),
     "",
     prize
       ? `**Chicago Prize census (separate, not part of the SRS):** ${prize.ok}/${prize.total} rows` +
-        `${prize.all_ok ? " — every published Chicago Prize row reconciles to the export with a tying amount and a live announcement citation." : " — see chicago_prize_census_check.json for the unreconciled row(s)."}`
+        `${prize.all_ok ? " — every published Chicago Prize row reconciles to the export with a tying recipient/amount and a citation URL is PRESENT (structural completeness — this run does not live-validate each announcement page's content)." : " — see chicago_prize_census_check.json for the unreconciled row(s)."}`
       : "_Chicago Prize census check not yet generated._",
     README_END,
   ];

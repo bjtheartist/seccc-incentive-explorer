@@ -66,6 +66,10 @@ again):
 <!-- GENERATED:FOUNDATION_CADENCE:BEGIN -->
 | File | What it is | How it refreshes |
 | --- | --- | --- |
+| `foundation_dedupe_actions.csv` | Per-row dedupe action (keep / keep-flagged / collapse) the exporter joins against | python3 scripts/foundation/adjudicate_dedupe.py |
+| `foundation_dedupe_ledger.json` | 236-group foundation dedupe adjudication ledger — deliverable 3 | python3 scripts/foundation/adjudicate_dedupe.py |
+| `foundation_grant_identity.csv` | Foundation stable identity (filing object id, tax period, schedule/part, ordinal) — deliverable 2 | python3 scripts/foundation/build_grant_identity.py |
+| `foundation-id-map.json` | Frozen positional-id -> stableId mapping (never renumbers on append) | regenerated from the committed export after any foundation identity change |
 | `foundation_grants_geocoded.csv` | Foundation grants — base parse (12 funders, pre-recon-discipline) | scripts/foundation/ base parse (predates the reconciliation gate) |
 | `foundation_grants_tier1_expansion.csv` | Foundation grants — Tier-1 expansion (20 funders) | scripts/foundation/phase2_pipeline.py + phase2_integrate.py (PHASE_TARGETS=phase2_targets.json) |
 | `foundation_grants_phase2_expansion.csv` | Foundation grants — Phase-2 expansion (65 funders, 80% coverage bar) | scripts/foundation/phase2_pipeline.py + phase2_integrate.py |

@@ -127,7 +127,10 @@ const AUTHORED_SOURCES: Array<Omit<ManifestSource, "contentHash">> = [
     vintage: "2026-08-11",
   },
   {
-    id: "chicago-cares-ledger",
+    // id matches scripts/refresh/refresh-live-sources.ts's caresSource.id
+    // EXACTLY — refreshOne() looks up the decrease policy by this id
+    // (Sol gate finding 7).
+    id: "chicago-cares",
     file: "chicago_cares_program_ledger.csv",
     label: "Chicago CARES-era program ledger (Socrata rsxa-ify5 + iyu8-jkf8)",
     cadence: "monthly",
@@ -137,7 +140,8 @@ const AUTHORED_SOURCES: Array<Omit<ManifestSource, "contentHash">> = [
     vintage: "2026-08-11",
   },
   {
-    id: "hud-cpd",
+    // id matches hudSource.id EXACTLY (see chicago-cares note above).
+    id: "hud",
     file: "hud_cpd_activities.csv",
     label: "HUD CDBG/HOME activities (ArcGIS, GRANTEE_ID=17408)",
     cadence: "monthly",
@@ -391,6 +395,88 @@ const AUTHORED_SOURCES: Array<Omit<ManifestSource, "contentHash">> = [
     decreasePolicy: "not_refreshed",
     vintage: "2026-08-08",
   },
+  // ── Derived: identity, dedupe, ledger, geocode (Sol gate finding 1 —
+  //    "Identity, dedupe, ledger, and geocode inputs are absent from the
+  //    manifest.") These are EXPORTER OUTPUTS that the exporter itself reads
+  //    back in on the next run (identity/dedupe) or writes and never re-reads
+  //    as an input (audit/census reports) — cadence "manual" means "regenerate
+  //    by re-running the producing script", not hand-edited. ────────────────
+  {
+    id: "foundation-grant-identity",
+    file: "foundation_grant_identity.csv",
+    label: "Foundation stable identity (filing object id, tax period, schedule/part, ordinal) — deliverable 2",
+    cadence: "manual",
+    refreshMethod: "python3 scripts/foundation/build_grant_identity.py",
+    valueField: null,
+    decreasePolicy: "not_refreshed",
+    vintage: "2026-08-13",
+  },
+  {
+    id: "foundation-dedupe-ledger",
+    file: "foundation_dedupe_ledger.json",
+    label: "236-group foundation dedupe adjudication ledger — deliverable 3",
+    cadence: "manual",
+    refreshMethod: "python3 scripts/foundation/adjudicate_dedupe.py",
+    valueField: null,
+    decreasePolicy: "not_refreshed",
+    vintage: "2026-08-13",
+  },
+  {
+    id: "foundation-dedupe-actions",
+    file: "foundation_dedupe_actions.csv",
+    label: "Per-row dedupe action (keep / keep-flagged / collapse) the exporter joins against",
+    cadence: "manual",
+    refreshMethod: "python3 scripts/foundation/adjudicate_dedupe.py",
+    valueField: null,
+    decreasePolicy: "not_refreshed",
+    vintage: "2026-08-13",
+  },
+  {
+    id: "foundation-id-map",
+    file: "foundation-id-map.json",
+    label: "Frozen positional-id -> stableId mapping (never renumbers on append)",
+    cadence: "manual",
+    refreshMethod: "regenerated from the committed export after any foundation identity change",
+    valueField: null,
+    decreasePolicy: "not_refreshed",
+    vintage: "2026-08-13",
+  },
+  // NOTE: foundation_audit_fresh.json is deliberately NOT a manifest entry.
+  // It embeds `bound_manifest_hash` (a hash OF this manifest) — tracking its
+  // own contentHash IN the manifest would make the two hash each other in an
+  // unconvergeable cycle. Its provenance is verified the other direction
+  // instead: lib/__tests__/investment-manifest-hash-equality.test.ts asserts
+  // bound_manifest_hash equals a LIVE recomputation of manifestContentHash().
+  {
+    id: "chicago-prize-census",
+    file: "chicago_prize_census_check.json",
+    label: "Chicago Prize 18/18 one-to-one census check (separate from the foundation SRS)",
+    cadence: "manual",
+    refreshMethod: "python3 scripts/foundation/chicago_prize_census_check.py",
+    valueField: null,
+    decreasePolicy: "not_refreshed",
+    vintage: "2026-08-13",
+  },
+  {
+    id: "geocode-cache",
+    file: "geocode-cache.json",
+    label: "Derived Census-geocoder cache — read AND written by the exporter itself, not a source",
+    cadence: "manual",
+    refreshMethod: "written automatically by npm run data:export:investment; never hand-edited",
+    valueField: null,
+    decreasePolicy: "not_refreshed",
+    vintage: "2026-08-11",
+  },
+  {
+    id: "refresh-attempt",
+    file: "refresh-attempt.json",
+    label: "Failure-only artifact committed by refresh-live-sources.ts (deliverable 7) — absent when healthy",
+    cadence: "manual",
+    refreshMethod: "written automatically on a failed npm run data:refresh:live; removed once healthy",
+    valueField: null,
+    decreasePolicy: "not_refreshed",
+    vintage: "2026-08-13",
+  },
 ];
 
 function sha256File(absPath: string): string {
@@ -423,6 +509,26 @@ export function stringifyManifest(m: InvestmentManifest): string {
 
 export function loadManifest(): InvestmentManifest {
   return JSON.parse(readFileSync(MANIFEST_PATH, "utf8")) as InvestmentManifest;
+}
+
+/**
+ * A CONTENT hash of the manifest's source list only — id, file, and
+ * contentHash per source, sorted, joined by "|" and "\n" — deliberately NOT a
+ * hash of the raw manifest.json bytes. The raw file carries a `generatedAt`
+ * wall-clock stamp that changes on every regeneration regardless of content,
+ * which would make export.meta.sourceManifestHash / the audit's
+ * bound_manifest_hash unconvergeable against a freshly-regenerated manifest.
+ * This is deliberately a PLAIN STRING JOIN (not JSON.stringify) and
+ * REPLICATED IDENTICALLY in scripts/foundation/fresh_srs_audit.py's
+ * `manifest_content_hash()` so a Python process and this Node process compute
+ * the exact same hash from the exact same manifest.json — never rely on
+ * JSON.stringify/json.dumps producing byte-identical output across languages.
+ */
+export function manifestContentHash(manifest: InvestmentManifest): string {
+  const lines = manifest.sources
+    .map((s) => `${s.id}|${s.file}|${s.contentHash}`)
+    .sort();
+  return createHash("sha256").update(lines.join("\n")).digest("hex");
 }
 
 /** Every foundation-file manifest entry, in the four-file publication order —

@@ -302,19 +302,19 @@ below, which covers the full four-file universe._
 SRS of n=2,401, seed 20260813, drawn from the FULL exported IRS-derived
 foundation universe — 26,501 rows across all four published foundation files
 (base + Tier-1 + Phase-2 + Phase-3), bound to the export's own content hash
-(`e6845d4fd9e28b9a…`). Chicago Prize
+(`46981af64b3eb677…`). Chicago Prize
 (18 rows, award announcements rather than IRS filings) is excluded from
 this SRS and reported separately below as a census check.
 
-Result: **2,065/2,401 rows (86.0%) independently
-re-verified against their own IRS filing — recipient and amount re-parsed from
-the source XML — with ZERO recipient/amount mismatches.** 336 rows
-(14.0%) could not be resolved to a specific filing in this run (an
-identity-resolution gap — a ProPublica lookup or filing fetch that did not
-resolve — never a proven data error) and are counted here, not silently
-dropped from the denominator.
+**Zero mismatches among 2,399 evaluable rows (2,399 verified, 0 actual recipient/amount mismatch(es)) out of a 2,401-row seeded SRS over the full 26,501-row exported foundation universe; 2 row(s) (0.1%) could not be resolved to a filing in this run and are excluded from the evaluable denominator, not silently dropped from the sample.**
 
-**Chicago Prize census (separate, not part of the SRS):** 18/18 rows — every published Chicago Prize row reconciles to the export with a tying amount and a live announcement citation.
+Unresolved rows are NOT randomly distributed across funders — concentrated in 2 funder(s): Polk Bros Foundation (1), Sidley Austin Foundation (1); the largest single funder accounts for 50.0% of all unresolved rows. A population-wide margin-of-error claim (e.g. "+/-2% at 95% confidence") is NOT valid here because that framing assumes random sampling error, not funder-concentrated nonresponse — use the citable_statement field instead, never a bare universe-level accuracy percentage.
+
+Unresolved rows by funder:
+  - Polk Bros Foundation: 1
+  - Sidley Austin Foundation: 1
+
+**Chicago Prize census (separate, not part of the SRS):** 18/18 rows — every published Chicago Prize row reconciles to the export with a tying recipient/amount and a citation URL is PRESENT (structural completeness — this run does not live-validate each announcement page's content).
 <!-- GENERATED:AUDIT_CLAIM:END -->
 
 Regenerate with `npm run data:docs:generate` after any export or audit rerun —
