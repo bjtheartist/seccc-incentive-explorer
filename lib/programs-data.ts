@@ -1,14 +1,19 @@
 import type { Program } from "./types";
 
+// build-spec.md 2.2 (hard cutover): public/data/programs.json is deleted.
+// Client callers fetch the server route (which itself now reads from
+// data/programs-internal.json — see app/api/programs/route.ts).
 export async function getPrograms(): Promise<Program[]> {
-  const res = await fetch("/data/programs.json");
+  const res = await fetch("/api/programs");
   return res.json();
 }
 
-// For server components
+// For server components — reads data/programs-internal.json directly
+// (server-only per PR1 section 1.2's next.config.ts outputFileTracingIncludes;
+// every caller of this function is a server component or route handler).
 export function getProgramsSync(): Program[] {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
-  return require("../public/data/programs.json") as Program[];
+  return require("../data/programs-internal.json") as Program[];
 }
 
 /**

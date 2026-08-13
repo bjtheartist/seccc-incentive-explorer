@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Program } from "../types";
 import type { SbifWindow } from "../deadlines";
 import { resolveAvailability, isExpired, excludeExpiredPrograms } from "../program-gating";
-import catalogPrograms from "../../public/data/programs.json";
+import catalogPrograms from "../../data/programs-internal.json";
 
 /** Fixed reference date for every case: July 2, 2026. */
 const TODAY = new Date("2026-07-02T12:00:00Z");

@@ -777,10 +777,12 @@ function ReportWizardPage() {
     [compareAddressInput, compareGeoResult?.display_name, compareParcel?.address, compareParcel?.zip]
   );
 
-  // Load programs on mount
+  // Load programs on mount. build-spec.md 2.2 (hard cutover):
+  // public/data/programs.json is deleted; /api/programs already falls back
+  // to the internal catalog server-side (data/programs-internal.json) if
+  // the DB is unreachable, so no client-side fallback fetch is needed.
   useEffect(() => {
     cachedFetch<Program[]>("/api/programs")
-      .catch(() => cachedFetch<Program[]>("/data/programs.json"))
       .then(setPrograms)
       .catch(() => {});
   }, []);

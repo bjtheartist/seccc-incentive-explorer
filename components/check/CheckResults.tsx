@@ -65,8 +65,10 @@ export function CheckResults({ address, lat, lon, survey }: CheckResultsProps) {
         const [zoneRes, programsRes, censusRes, zoningRes, parcelRes] = await Promise.all([
           cachedFetch<ZoneCheckResult[]>(`/api/zones/check?lat=${lat}&lon=${lon}`)
             .catch(() => [] as ZoneCheckResult[]),
-          cachedFetch<Program[]>("/api/programs")
-            .catch(() => cachedFetch<Program[]>("/data/programs.json")),
+          // build-spec.md 2.2 (hard cutover): public/data/programs.json is
+          // deleted. This component is dead code (F16, no imports anywhere
+          // in the app) slated for deletion in 2.7.
+          cachedFetch<Program[]>("/api/programs"),
           cachedFetch<CensusData>(`/api/census?lat=${lat}&lon=${lon}`)
             .catch(() => null),
           fetchZoningLookup(lat, lon, { signal: zoningController.signal }),

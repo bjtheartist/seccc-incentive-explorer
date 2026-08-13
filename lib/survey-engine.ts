@@ -1,4 +1,12 @@
-import programsData from "@/public/data/programs.json";
+// build-spec.md 2.2 (hard cutover): public/data/programs.json is deleted;
+// data/programs-internal.json is the source of truth. scoreSurvey() is a
+// synchronous, client-called function (components/survey/PreQualSurvey.tsx
+// calls it directly on submit), so this stays a build-time static import
+// rather than a runtime fetch — same bundling characteristic as today, no
+// regression. See docs/eligibility-claims-acceptance.md's "Decisions" for
+// why a full async-data-loading rearchitecture of this engine was judged
+// out of scope for this task's time budget.
+import programsData from "@/data/programs-internal.json";
 import { buildPublicMatchExplanation } from "./match-transparency";
 import type {
   Program,

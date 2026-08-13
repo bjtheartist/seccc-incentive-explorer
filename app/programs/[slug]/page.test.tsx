@@ -139,3 +139,53 @@ describe("program detail availability rendering", () => {
     }
   });
 });
+
+/**
+ * build-spec.md 2.2/2.4 (audit F3/F4/F5): the program detail page must not
+ * (a) frame a mapped boundary as an "unlock"/eligibility gate, (b) render a
+ * closed/lapsed program's dollar amount as a current pill without status
+ * context, or (c) render raw catalog `whoQualifies` prose unframed.
+ */
+describe("program detail page — status-aware public rendering (audit F3/F4/F5)", () => {
+  it("never uses unlock/gate/access framing for a location-boundary program (F3)", async () => {
+    const html = await renderProgram("nof");
+    const lower = html.toLowerCase();
+    expect(lower).not.toContain("unlocks");
+    expect(lower).not.toContain("eligibility gate");
+    expect(html).toContain("location signal");
+  });
+
+  it("does not render a closed program's dollar figure as an unqualified current pill (F4/F5)", async () => {
+    const html = await renderProgram("catalystGrant");
+    expect(html).toContain("No round currently open");
+    // The qualifier sentence (from lib/program-public.ts's benefitQualifier)
+    // must actually be present, not just the bare dollar figure.
+    expect(html).toMatch(/most recently published round offered/i);
+    expect(html).toMatch(/no round currently open as of/i);
+  });
+
+  it("shows the current-terms qualifier for an open/rolling program, not a bare 'as of' void", async () => {
+    const html = await renderProgram("nof");
+    expect(html).toMatch(/current published terms as of/i);
+  });
+
+  it("frames published criteria with the administering-agency confirm line rather than raw whoQualifies (F8-adjacent DTO rule)", async () => {
+    const html = await renderProgram("nof");
+    expect(html).toMatch(/published criteria — confirm with/i);
+  });
+
+  it("omits a lapsed program's benefits from the FAQ JSON-LD (F4 minimal fix)", async () => {
+    const item = program("catalystGrant");
+    const page = await ProgramExplainerPage({
+      params: Promise.resolve({ slug: programSlug(item) }),
+    });
+    const html = renderToStaticMarkup(page);
+    const jsonLdMatch = html.match(/"program-faq-jsonld"[\s\S]*?<script[^>]*>([\s\S]*?)<\/script>/);
+    // Fall back to scanning all JSON-LD script tags if the id-first regex misses the DOM order.
+    const scripts = [...html.matchAll(/<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/g)].map(
+      (m) => m[1],
+    );
+    const combined = jsonLdMatch ? jsonLdMatch[1] : scripts.join("\n");
+    expect(combined).not.toMatch(/what can .* support/i);
+  });
+});

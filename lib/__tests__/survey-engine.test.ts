@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import programs from "../../public/data/programs.json";
+import programs from "../../data/programs-internal.json";
 import { scoreSurvey, SURVEY_QUESTIONS } from "../survey-engine";
 
 describe("survey public results", () => {

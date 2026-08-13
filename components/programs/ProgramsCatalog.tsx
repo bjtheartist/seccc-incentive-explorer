@@ -25,7 +25,15 @@ import { ProgramCatalogGuidance } from "@/components/programs/ProgramCatalogGuid
 import { ProgramDocumentRequirements } from "@/components/programs/ProgramDocumentRequirements";
 import { resolveConservativeProgramAvailability } from "@/components/programs/programAvailability";
 import { useLiveNow } from "@/components/programs/useLiveNow";
-import programsData from "@/public/data/programs.json";
+// build-spec.md 2.2 (hard cutover): public/data/programs.json is deleted;
+// data/programs-internal.json is the source of truth. This stays a
+// build-time static import (not a runtime fetch) deliberately — the
+// catalog must render in the initial HTML with no client data fetch (SEO,
+// no-JS, and no empty-then-populated flash on this indexable page). The
+// bundled content is unchanged from today (the full catalog already ships
+// to the client via the old public-file import); only the source path
+// changes.
+import programsData from "@/data/programs-internal.json";
 
 const LEVELS = ["All", "Federal", "State", "County", "City", "Utility"] as const;
 const INITIAL_PROGRAMS = programsData as unknown as Program[];
@@ -89,6 +97,18 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
     [programs, availabilityById, showExpired],
   );
 
+  // build-spec.md 2.2 (audit F4): "available" must mean an open/rolling
+  // intake window, not merely "not yet marked expired". `intakeStatus`
+  // missing/unknown is never counted as open — see program-eligibility-
+  // fields.test.ts's binding derivation rule (never default to open).
+  const openIntakeCount = useMemo(
+    () =>
+      visiblePrograms.filter(
+        (p) => p.intakeStatus === "open" || p.intakeStatus === "rolling",
+      ).length,
+    [visiblePrograms],
+  );
+
   useEffect(() => {
     fetch("/data/link-health.json")
       .then((r) => (r.ok ? r.json() : null))
@@ -134,7 +154,7 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
           <p className="text-white/50 text-base max-w-xl">
             {selectedIndustry
               ? `${filtered.length} programs relevant to ${selectedIndustry.name} businesses.`
-              : `Multiple programs available to Chicago businesses across federal, state, county, and city levels.`}
+              : `${visiblePrograms.length} sourced federal, state, county, and city incentive programs — ${openIntakeCount} with an intake window currently open or rolling.`}
           </p>
         </div>
       </div>
@@ -176,9 +196,11 @@ function ProgramsContent({ initialNowIso }: { initialNowIso: string }) {
             <p className="text-[12px] text-[#0C1B33]/55 leading-relaxed">
               Incentive zones are <strong>geographic designations</strong> drawn
               by federal, state, or city agencies on census tracts or
-              neighborhood boundaries. Being <em>inside</em> a zone is the
-              first eligibility gate — it determines which programs you can
-              access. A single address can fall within multiple overlapping
+              neighborhood boundaries. A geocoded point that falls{" "}
+              <em>inside</em> a zone is a location signal for the programs
+              that reference that boundary — review the current program
+              source for the boundary&apos;s role and any remaining
+              criteria. A single address can fall within multiple overlapping
               zones (e.g., TIF + Opportunity Zone + Enterprise Zone).
             </p>
           </div>
@@ -559,6 +581,31 @@ function IndustryQuerySync({
 
 const CHEAT_LEVELS: ProgramLevel[] = ["Federal", "State", "County", "City", "Utility"];
 
+/**
+ * build-spec.md 2.2 (audit F4): the printable matrix must carry a status
+ * column, not just name + amount — a printed sheet with "Up to $100,000"
+ * next to a lapsed program's name is exactly the defect named. Silent
+ * (null) for open/rolling intake so the common case stays uncluttered.
+ */
+function matrixStatusLabel(p: Program): string | null {
+  switch (p.intakeStatus) {
+    case "open":
+    case "rolling":
+    case undefined:
+      return null;
+    case "closed":
+      return "Closed";
+    case "lapsed":
+      return "Lapsed";
+    case "pending":
+      return "Pending";
+    case "unknown":
+      return "Status not established";
+    default:
+      return null;
+  }
+}
+
 /** All programs at a given gov level, sorted with 'active' first then by recency. */
 function programsByLevel(all: Program[], level: ProgramLevel): Program[] {
   return all
@@ -631,13 +678,13 @@ function CheatSheetSection({
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#2563EB]/60 mr-1.5">
             Zones
           </span>
-          Geographic designations (TIF, OZ, Enterprise Zone, etc.). The eligibility gate — a single address can sit in multiple overlapping zones.
+          Geographic designations (TIF, OZ, Enterprise Zone, etc.). A location signal for the programs that reference them — a single address can sit in multiple overlapping zones.
         </div>
         <div>
           <span className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#059669]/70 mr-1.5">
             Programs
           </span>
-          The actual benefits (grants, tax credits, financing) administered by an agency. Apply once your address sits inside the right zone.
+          The actual benefits (grants, tax credits, financing) administered by an agency. Review the current program source for the boundary&apos;s role and any remaining criteria before applying.
         </div>
       </div>
 
@@ -698,6 +745,11 @@ function CheatSheetSection({
                   <li key={p.id} className="text-[11px]">
                     <div className="text-[#0C1B33] font-medium leading-snug mb-0.5">
                       {p.name}
+                      {matrixStatusLabel(p) && (
+                        <span className="ml-1.5 font-mono-bureau text-[8.5px] tracking-[0.1em] uppercase text-amber-700/80">
+                          · {matrixStatusLabel(p)}
+                        </span>
+                      )}
                     </div>
                     {p.benefitRange && (
                       <div className="text-[#0C1B33]/55 text-[10.5px] leading-snug mb-0.5">

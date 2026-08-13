@@ -54,16 +54,15 @@ export async function getBusinesses(search?: string): Promise<Business[]> {
 /* ── Programs ───────────────────────────────── */
 
 export async function getPrograms(): Promise<Program[]> {
+  // build-spec.md 2.2 (hard cutover): public/data/programs.json is deleted.
+  // /api/programs already falls back to data/programs-internal.json
+  // server-side if the DB is unreachable, so no second client-side fallback
+  // to a static public file is needed.
   try {
     const data = await fetchJSON<Program[]>(`${API_BASE}/api/programs`);
     return safeParseArray(ProgramSchema, data, "programs") as Program[];
   } catch {
-    try {
-      const data = await fetchJSON<Program[]>("/data/programs.json");
-      return safeParseArray(ProgramSchema, data, "programs-static") as Program[];
-    } catch {
-      return [];
-    }
+    return [];
   }
 }
 

@@ -17,6 +17,7 @@ import { ZONE_LABELS } from "@/lib/constants";
 import { isDocumentRequirementGuidance } from "@/lib/document-preparation-cost";
 import { resolveAvailability } from "@/lib/program-gating";
 import { getProgramSeoOverride } from "@/lib/program-seo-overrides";
+import { toPublicProgramView } from "@/lib/program-public";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { SnapshotCTA } from "@/components/seo/SnapshotCTA";
 import LevelBadge from "@/components/LevelBadge";
@@ -112,10 +113,25 @@ export default async function ProgramExplainerPage({
   );
   const documentGuidance = p.requiredDocs.filter(isDocumentRequirementGuidance);
 
+  // build-spec.md 2.2 (audit F4/F5): every public-facing status/benefit claim
+  // on this page renders from the structured public DTO, never raw catalog
+  // prose (`whoQualifies`) or an un-qualified `benefitRange`.
+  const publicView = toPublicProgramView(p, pageReferenceTime.toISOString());
+  const intakeIsOpen = publicView.intake.status === "open" || publicView.intake.status === "rolling";
+  const criteriaFrame = publicView.links.administeringAgency
+    ? `Published criteria — confirm with ${publicView.links.administeringAgency}`
+    : "Published criteria — confirm with the administering agency";
+
   /* ── JSON-LD: FAQ + breadcrumb trail ── */
   const faqItems = [
     { question: `What is ${p.name}?`, answer: p.summary },
-    { question: `Who qualifies for ${p.name}?`, answer: p.whoQualifies },
+    {
+      question: `Who qualifies for ${p.name}?`,
+      answer:
+        publicView.screening.publishedCriteria.length > 0
+          ? `${criteriaFrame}: ${publicView.screening.publishedCriteria.join(" ")}`
+          : criteriaFrame,
+    },
   ];
   if (
     p.howToApply.length > 0 &&
@@ -126,7 +142,10 @@ export default async function ProgramExplainerPage({
       answer: p.howToApply.join(" "),
     });
   }
-  if (p.benefits.length > 0) {
+  // audit F4 minimal fix: omit lapsed/pending/closed benefit terms from
+  // standalone JSON-LD — a search result showing "$100,000" for a closed
+  // round is exactly the defect named.
+  if (p.benefits.length > 0 && intakeIsOpen) {
     faqItems.push({
       question: `What can ${p.name} support?`,
       answer: p.benefits.join(" "),
@@ -186,9 +205,14 @@ export default async function ProgramExplainerPage({
                 {zoneLabel}
               </span>
             )}
-            {p.benefitRange && (
+            {p.benefitRange && intakeIsOpen && (
               <span className="font-mono-bureau text-[10px] tracking-[0.18em] uppercase px-3 py-1.5 rounded-full text-white/60 bg-white/10">
                 {p.benefitRange}
+              </span>
+            )}
+            {!intakeIsOpen && (
+              <span className="font-mono-bureau text-[10px] tracking-[0.18em] uppercase px-3 py-1.5 rounded-full text-amber-200/80 bg-amber-500/10">
+                No round currently open
               </span>
             )}
           </div>
@@ -208,7 +232,7 @@ export default async function ProgramExplainerPage({
         <section className="py-10">
           <SnapshotCTA
             heading="Check an Address — Free Snapshot"
-            sub={`See whether a specific Chicago address sits inside the area that unlocks ${p.name}, alongside every other incentive that touches that parcel.`}
+            sub={`Compare the geocoded point for a Chicago address with the boundary used to screen ${p.name}. A match is a location signal; review the current program source for the boundary's role and remaining criteria.`}
           />
         </section>
 
@@ -216,9 +240,25 @@ export default async function ProgramExplainerPage({
         <section className="py-12 border-t border-[#0C1B33]/10">
           <SectionLabel>Who it&apos;s for</SectionLabel>
           <div className="bg-[#EFF3FB] border border-[#2563EB]/10 rounded-xl p-6 md:p-7">
-            <p className="text-base text-[#0C1B33]/75 leading-relaxed">
-              {p.whoQualifies}
+            <p className="font-mono-bureau text-[9px] tracking-[0.2em] uppercase text-[#2563EB]/50 mb-3">
+              {criteriaFrame}
             </p>
+            {publicView.screening.publishedCriteria.length > 0 ? (
+              <ul className="space-y-2">
+                {publicView.screening.publishedCriteria.map((criterion, i) => (
+                  <li
+                    key={i}
+                    className="text-base text-[#0C1B33]/75 leading-relaxed"
+                  >
+                    {criterion}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-base text-[#0C1B33]/75 leading-relaxed">
+                {p.whoQualifies}
+              </p>
+            )}
           </div>
         </section>
 
@@ -229,11 +269,13 @@ export default async function ProgramExplainerPage({
             <p>
               {zoneLabel ? (
                 <>
-                  {p.name} is tied to the{" "}
+                  {p.name} is screened against the{" "}
                   <span className="font-medium text-[#0C1B33]">{zoneLabel}</span>{" "}
-                  geography — being inside that boundary is the first eligibility
-                  gate. A single address can fall inside several overlapping
-                  incentive areas at once.
+                  boundary. A geocoded point that intersects that boundary is a
+                  location signal, not a determination — review the current
+                  program source for the boundary&apos;s role and any remaining
+                  criteria. A single address can fall inside several overlapping
+                  incentive boundaries at once.
                 </>
               ) : (
                 <>
@@ -270,8 +312,13 @@ export default async function ProgramExplainerPage({
           <section className="py-12 border-t border-[#0C1B33]/10">
             <SectionLabel>What it can support</SectionLabel>
             {p.benefitRange && (
-              <p className="text-sm text-[#0C1B33]/50 mb-5 font-mono-bureau tracking-[0.05em] uppercase">
-                Typical range · {p.benefitRange}
+              <p className="text-sm text-[#0C1B33]/50 mb-1.5 font-mono-bureau tracking-[0.05em] uppercase">
+                Range on file · {p.benefitRange}
+              </p>
+            )}
+            {publicView.benefit.qualifier && (
+              <p className="text-[13px] text-[#0C1B33]/55 mb-5 leading-relaxed">
+                {publicView.benefit.qualifier}
               </p>
             )}
             <ul className="space-y-3">

@@ -642,10 +642,11 @@ export default function MapView() {
     [],
   );
 
-  // Load programs for snapshot
+  // Load programs for snapshot. build-spec.md 2.2 (hard cutover):
+  // public/data/programs.json is deleted; /api/programs already falls back
+  // server-side, so no second client fallback fetch is needed.
   useEffect(() => {
     cachedFetch<Program[]>("/api/programs")
-      .catch(() => cachedFetch<Program[]>("/data/programs.json"))
       .then(setAllPrograms)
       .catch(() => {});
   }, []);

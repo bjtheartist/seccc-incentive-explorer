@@ -16,7 +16,11 @@ const PROGRAMS_CACHE_CONTROL = "public, max-age=0, s-maxage=300, stale-while-rev
  * DB-first with static JSON fallback.
  */
 async function getStaticPrograms(): Promise<Program[]> {
-  const file = join(process.cwd(), "public", "data", "programs.json");
+  // build-spec.md 2.2 (hard cutover): public/data/programs.json is deleted;
+  // data/programs-internal.json (server-only, PR1 section 1.2) is the
+  // source of truth. This route is the one server boundary every client
+  // surface now fetches from instead of reading the deleted public file.
+  const file = join(process.cwd(), "data", "programs-internal.json");
   const data = JSON.parse(await readFile(file, "utf8")) as Program[];
   return safeParseArray(ProgramSchema, data, "programs-static") as Program[];
 }

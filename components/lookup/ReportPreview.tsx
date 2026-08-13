@@ -64,8 +64,13 @@ export function ReportPreview({ result, programs, onExpand }: ReportPreviewProps
 
   const handleDownloadPDF = async () => {
     try {
+      // build-spec.md 2.2 (hard cutover): public/data/programs.json is
+      // deleted. This component is part of the legacy lookup fork (unused
+      // outside its own test — see docs/eligibility-claims-acceptance.md's
+      // 2.7 notes) slated for deletion once the AddressSearch geocode-then-
+      // route fix lands; /api/programs is the interim fix.
       const { generateReport } = await import("@/lib/pdf-report");
-      const programsRes = await fetch("/data/programs.json");
+      const programsRes = await fetch("/api/programs");
       const allPrograms = await programsRes.json();
       generateReport(result, allPrograms);
     } catch {

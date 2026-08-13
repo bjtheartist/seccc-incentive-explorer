@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import internalCatalog from "../../data/programs-internal.json";
@@ -226,16 +226,8 @@ describe("public artifact regen + diff (CI check, in-process)", () => {
   });
 });
 
-describe("data/programs-internal.json vs public/data/programs.json (PR1 duplication window)", () => {
-  it("are byte-identical — PR1 keeps the legacy public copy in place unmodified; PR2 deletes it", () => {
-    const internalRaw = readFileSync(
-      join(process.cwd(), "data", "programs-internal.json"),
-      "utf8"
-    );
-    const legacyPublicRaw = readFileSync(
-      join(process.cwd(), "public", "data", "programs.json"),
-      "utf8"
-    );
-    expect(legacyPublicRaw).toBe(internalRaw);
+describe("public/data/programs.json — hard cutover (build-spec.md 2.2)", () => {
+  it("no longer exists — data/programs-internal.json is the sole source of truth post-cutover", () => {
+    expect(existsSync(join(process.cwd(), "public", "data", "programs.json"))).toBe(false);
   });
 });

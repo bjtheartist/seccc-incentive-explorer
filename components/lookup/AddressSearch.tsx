@@ -75,8 +75,13 @@ export function AddressSearch({
       .catch(() => cachedFetch<Business[]>("/data/businesses.json"))
       .then(setBusinesses)
       .catch(() => {});
-    cachedFetch<Program[]>("/data/programs.json")
-      .then(setPrograms);
+    // build-spec.md 2.2 (hard cutover): public/data/programs.json is
+    // deleted. This `programs` state feeds only the legacy IncentiveReport
+    // fork (2.7 cuts the coordinate-less-business path over to /report and
+    // deletes IncentiveReport) — /api/programs is the interim fix.
+    cachedFetch<Program[]>("/api/programs")
+      .then(setPrograms)
+      .catch(() => {});
   }, []);
 
   // Cycle loading messages

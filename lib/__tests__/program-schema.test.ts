@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import programs from "../../public/data/programs.json";
+import programs from "../../data/programs-internal.json";
 import { ProgramSchema, safeParseArray } from "../schemas";
 
 const PRESERVED_FIELDS = [

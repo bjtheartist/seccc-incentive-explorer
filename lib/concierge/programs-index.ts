@@ -1,10 +1,16 @@
 /**
- * Server-side, read-only access to the public program dataset for the
- * concierge tools. Reads public/data/programs.json directly from disk (the
- * same file the client fetches) — no DB, no network, no writes.
+ * Server-side, read-only access to the internal program catalog for the
+ * concierge tools. Reads data/programs-internal.json directly from disk
+ * (build-spec.md 2.2 — public/data/programs.json is deleted; this module
+ * runs server-only, never bundled to the client) — no DB, no network, no
+ * writes.
  *
  * Every fact the concierge states about a program must come from here, and
  * every program claim must cite the program's official URL (design note §2).
+ * `intakeStatus`/`benefitTermsStatus`/`statusAsOf` (PR1 section 1.1) are
+ * carried through so the model has an explicit status signal to reason from
+ * — final output enforcement (build-spec.md 2.5) validates what actually
+ * gets said, this just gives the model better material to say it with.
  */
 import { readFile } from "fs/promises";
 import path from "path";
@@ -15,7 +21,7 @@ let _cache: Program[] | null = null;
 
 async function loadPrograms(): Promise<Program[]> {
   if (_cache) return _cache;
-  const filePath = path.join(process.cwd(), "public", "data", "programs.json");
+  const filePath = path.join(process.cwd(), "data", "programs-internal.json");
   const raw = await readFile(filePath, "utf8");
   _cache = JSON.parse(raw) as Program[];
   return _cache;
@@ -27,6 +33,12 @@ export interface ConciergeProgramSummary {
   name: string;
   level: Program["level"];
   status?: Program["status"];
+  /** PR1 structured status fields — an explicit signal the model should
+   *  never contradict (e.g. never say "you can apply now" when this is
+   *  "lapsed"/"closed"/"pending"). */
+  intakeStatus?: Program["intakeStatus"];
+  benefitTermsStatus?: Program["benefitTermsStatus"];
+  statusAsOf?: Program["statusAsOf"];
   summary: string;
   /** The official/source URL the concierge MUST cite for this program. */
   officialUrl: string;
@@ -61,6 +73,9 @@ export function toSummary(p: Program): ConciergeProgramSummary {
     name: p.name,
     level: p.level,
     status: p.status,
+    intakeStatus: p.intakeStatus,
+    benefitTermsStatus: p.benefitTermsStatus,
+    statusAsOf: p.statusAsOf,
     summary: p.summary,
     officialUrl: officialUrlOf(p),
     detailRoute: `/programs/${programSlug(p)}`,
