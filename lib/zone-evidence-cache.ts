@@ -14,6 +14,11 @@
  * entry as a fallback; a miss always re-resolves from
  * `resolveZoneEvidenceV2`.
  *
+ * review1 R9: a cached hit must carry an evidence entry for EVERY key the
+ * current lookup requested — a payload cached for a different (e.g.
+ * narrower) key set is never valid for this one, even if its own shape is
+ * otherwise fine. See `isValidStoredPayload`'s `requestedKeys` parameter.
+ *
  * Two review1 R3 fixes over the original design:
  *   1. The resolution timestamp (`checkedAt`) is generated once, at
  *      resolution time, and cached alongside `layers`. A cache HIT returns
@@ -60,19 +65,41 @@ const VALID_ZONE_LAYER_STATES: ReadonlySet<ZoneLayerState> = new Set([
   "unknown",
 ]);
 
-function isValidStoredPayload(value: unknown): value is StoredZoneEvidenceV2Payload {
+/**
+ * `requestedKeys` is required (review1 R9): a cache entry that doesn't
+ * carry an evidence entry for EVERY key this specific lookup asked about
+ * is not valid for this lookup, even if it's a perfectly well-formed
+ * payload for some OTHER (differently-keyed) request. Without this, a hit
+ * for `["tif","ssa"]` that only actually contains `tif` (e.g. written by
+ * an older code path, or a cache key collision) would pass shape
+ * validation, recompute `hadUnknown: false` over the one layer it has,
+ * and the route would publicly cache the resulting incomplete envelope
+ * for 7 days.
+ */
+function isValidStoredPayload(
+  value: unknown,
+  requestedKeys: readonly string[]
+): value is StoredZoneEvidenceV2Payload {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
   if (typeof v.checkedAt !== "string" || v.checkedAt.length === 0) return false;
   if (!v.layers || typeof v.layers !== "object" || Array.isArray(v.layers)) return false;
 
-  for (const entry of Object.values(v.layers as Record<string, unknown>)) {
+  const layers = v.layers as Record<string, unknown>;
+  for (const entry of Object.values(layers)) {
     if (!entry || typeof entry !== "object") return false;
     const state = (entry as Record<string, unknown>).state;
     if (typeof state !== "string" || !VALID_ZONE_LAYER_STATES.has(state as ZoneLayerState)) {
       return false;
     }
   }
+
+  // review1 R9: every requested key must have an entry — a partial hit is
+  // not a valid hit for THIS request.
+  for (const key of requestedKeys) {
+    if (!Object.hasOwn(layers, key)) return false;
+  }
+
   return true;
 }
 
@@ -114,7 +141,7 @@ export async function resolveZoneEvidenceV2Cached(
     try {
       const hit = await redis.get<unknown>(cacheKey);
       if (hit != null) {
-        if (isValidStoredPayload(hit)) {
+        if (isValidStoredPayload(hit, keys)) {
           return {
             layers: hit.layers,
             checkedAt: hit.checkedAt, // the ORIGINAL resolution timestamp, not now()

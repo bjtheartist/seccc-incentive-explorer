@@ -161,3 +161,122 @@ describe("resolveZoneEvidenceV2Cached", () => {
     expect(result.layers.tif).toEqual({ state: "matched", name: "still works" });
   });
 });
+
+describe("review1 R9: a partial cache hit is never trusted as a full-coverage hit", () => {
+  it("a stored payload missing a requested key is rejected and the point is re-resolved for ALL requested keys", async () => {
+    // Simulates exactly the review's scenario: a stale/foreign cache entry
+    // for ["tif","ssa"] that only actually has a "tif" evidence entry.
+    redisGet.mockResolvedValueOnce({
+      layers: { tif: { state: "matched", name: "stale partial hit" } },
+      checkedAt: "2020-01-01T00:00:00.000Z",
+    });
+    const dbLayerQuery = vi.fn(async (key: string) => ({ name: `${key} freshly resolved` }));
+    const { resolveZoneEvidenceV2Cached } = await import("../zone-evidence-cache");
+    const result = await resolveZoneEvidenceV2Cached("rev-1", 41.8, -87.6, ["tif", "ssa"], {
+      sql: {} as never,
+      dbLayerQuery,
+    });
+
+    // Both keys were actually re-resolved — the partial hit was discarded,
+    // not "completed" or trusted for the layer it did have.
+    expect(dbLayerQuery).toHaveBeenCalledWith("tif", 41.8, -87.6);
+    expect(dbLayerQuery).toHaveBeenCalledWith("ssa", 41.8, -87.6);
+    expect(result.layers.tif).toEqual({ state: "matched", name: "tif freshly resolved" });
+    expect(result.layers.ssa).toEqual({ state: "matched", name: "ssa freshly resolved" });
+    expect(result.checkedAt).not.toBe("2020-01-01T00:00:00.000Z"); // proves it was re-resolved, not reused
+  });
+
+  it("a partial hit never short-circuits as full coverage: hadUnknown is computed over the FRESH result, not the stale partial one", async () => {
+    redisGet.mockResolvedValueOnce({
+      layers: { tif: { state: "matched", name: "stale" } }, // missing "ssa" entirely
+      checkedAt: "2020-01-01T00:00:00.000Z",
+    });
+    const { resolveZoneEvidenceV2Cached } = await import("../zone-evidence-cache");
+    const result = await resolveZoneEvidenceV2Cached("rev-1", 41.8, -87.6, ["tif", "ssa"], {
+      sql: {} as never,
+      dbLayerQuery: async (key) => {
+        if (key === "ssa") throw new Error("ssa genuinely unavailable");
+        return { name: "tif match" };
+      },
+    });
+    expect(result.hadUnknown).toBe(true); // ssa really did fail on re-resolution
+    expect(result.layers.ssa.state).toBe("unknown");
+  });
+
+  it("a stored payload containing every requested key (plus no extras missing) IS still accepted as a valid hit", async () => {
+    const validHit = {
+      layers: {
+        tif: { state: "matched", name: "cached" },
+        ssa: { state: "not_matched" },
+      },
+      checkedAt: "2026-08-01T00:00:00.000Z",
+    };
+    redisGet.mockResolvedValueOnce(validHit);
+    const dbLayerQuery = vi.fn();
+    const { resolveZoneEvidenceV2Cached } = await import("../zone-evidence-cache");
+    const result = await resolveZoneEvidenceV2Cached("rev-1", 41.8, -87.6, ["tif", "ssa"], {
+      sql: {} as never,
+      dbLayerQuery,
+    });
+    expect(dbLayerQuery).not.toHaveBeenCalled(); // genuinely a hit, not silently re-resolved
+    expect(result.checkedAt).toBe("2026-08-01T00:00:00.000Z");
+    expect(result.layers).toEqual(validHit.layers);
+  });
+
+  it("requesting a SUBSET of a previously-cached larger key set still requires all of the subset's keys, not the original superset's", async () => {
+    // A hit cached for ["tif","ssa","enterprise"] is a valid hit for a
+    // later request asking only for ["tif"] -- the subset check passes.
+    redisGet.mockResolvedValueOnce({
+      layers: {
+        tif: { state: "matched", name: "cached" },
+        ssa: { state: "not_matched" },
+        enterprise: { state: "not_matched" },
+      },
+      checkedAt: "2026-08-01T00:00:00.000Z",
+    });
+    const dbLayerQuery = vi.fn();
+    const { resolveZoneEvidenceV2Cached } = await import("../zone-evidence-cache");
+    const result = await resolveZoneEvidenceV2Cached("rev-1", 41.8, -87.6, ["tif"], {
+      sql: {} as never,
+      dbLayerQuery,
+    });
+    expect(dbLayerQuery).not.toHaveBeenCalled();
+    expect(result.layers.tif).toEqual({ state: "matched", name: "cached" });
+  });
+});
+
+describe("review1 R8 propagation: the HUBZone shared-boundary downgrade survives the cache layer, miss and hit", () => {
+  const R8_LAT = 42.0047;
+  const R8_LON = -87.6901;
+
+  it("cache MISS: resolving the real coordinate through the cache layer (real hubzone.geojson, no mocked loader) produces unknown/redesignated_area_expired", async () => {
+    const { resolveZoneEvidenceV2Cached } = await import("../zone-evidence-cache");
+    const result = await resolveZoneEvidenceV2Cached("rev-1", R8_LAT, R8_LON, ["hubzone"], {
+      sql: null, // hubzone is static-only regardless; matches the real no-DB test environment
+    });
+    expect(result.layers.hubzone).toEqual({
+      state: "unknown",
+      reason: "redesignated_area_expired",
+      name: expect.stringContaining("17031020602"),
+    });
+    expect(result.hadUnknown).toBe(true);
+    // an unknown-bearing result gets the short TTL, never the 7-day one
+    expect(redisSet).toHaveBeenCalledTimes(1);
+    const [, storedRaw, setOpts] = redisSet.mock.calls[0];
+    const { UNKNOWN_BEARING_TTL_SECONDS } = await import("../zone-evidence-cache");
+    expect(setOpts).toEqual({ ex: UNKNOWN_BEARING_TTL_SECONDS });
+
+    // cache HIT: feed the exact bytes just written back in as the next read.
+    redisGet.mockResolvedValueOnce(JSON.parse(storedRaw));
+    const hitResult = await resolveZoneEvidenceV2Cached("rev-1", R8_LAT, R8_LON, ["hubzone"], {
+      sql: null,
+    });
+    expect(hitResult.layers.hubzone).toEqual({
+      state: "unknown",
+      reason: "redesignated_area_expired",
+      name: expect.stringContaining("17031020602"),
+    });
+    expect(hitResult.hadUnknown).toBe(true); // recomputed on the hit path too, not just carried over
+    expect(hitResult.checkedAt).toBe(result.checkedAt); // hit preserves the original resolution timestamp
+  });
+});
