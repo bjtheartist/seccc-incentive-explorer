@@ -135,10 +135,10 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
     id: 22,
     topic: "Federal",
     question: "What is the credit rate of the CHIPS Investment Tax Credit (§48D)?",
-    choices: ["10%", "20%", "25%", "30%"],
-    correctIndex: 2,
+    choices: ["20%", "25%", "30%", "35%"],
+    correctIndex: 3,
     explanation:
-      "§48D provides a 25% credit for qualifying investments in semiconductor manufacturing facilities or specialized equipment, with direct-pay eligibility. The investment must be initiated by the end of 2026 to qualify.",
+      "§48D provides a 35% credit for qualifying semiconductor manufacturing facilities or specialized equipment placed in service after 2025, with direct-pay eligibility.",
   },
   {
     id: 23,
@@ -198,7 +198,7 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
     ],
     correctIndex: 1,
     explanation:
-      "EDA Build to Scale awards $500K to $5M to nonprofits, EDOs, and universities for regional tech-ecosystem capacity. The FY 2026 cycle closed; the next NOFO is expected late summer 2026.",
+      "EDA Build to Scale awards $500K to $5M to nonprofits, EDOs, and universities for regional tech-ecosystem capacity. The most recent competition (FY 2024) closed October 28, 2024; EDA's program page announces no upcoming NOFO and no expected date.",
   },
   {
     id: 28,
@@ -721,7 +721,7 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
     ],
     correctIndex: 1,
     explanation:
-      "MMRP migrated to the Department of Housing and now functions primarily as a homeownership program: $30K down-payment grants via Neighborhood Housing Services. The original 'commercial-storefront activation' framing is outdated.",
+      "MMRP migrated to the Department of Housing and now functions primarily as a homeownership program: $15,000 down-payment grants via Neighborhood Housing Services (formerly branded MMRP; the program is now the Chicago Neighborhood Recovery Program, CNRP). The original 'commercial-storefront activation' framing is outdated.",
   },
   {
     id: 71,
@@ -1105,6 +1105,6 @@ export const QUIZ_QUESTIONS_EXTENSION: QuizQuestion[] = [
     ],
     correctIndex: 2,
     explanation:
-      "Chicago had about 124 active TIF districts in 2026 (Civic Federation). TIF RDAs are negotiated and have no per-project cap; NOF's '$1.5M catalytic' tier was discontinued (large catalytic projects now route through CDG); and MMRP moved to the Department of Housing and now focuses on $30K down-payment grants, not storefronts.",
+      "Chicago had about 124 active TIF districts in 2026 (Civic Federation). TIF RDAs are negotiated and have no per-project cap; NOF's '$1.5M catalytic' tier was discontinued (large catalytic projects now route through CDG); and MMRP moved to the Department of Housing, was renamed the Chicago Neighborhood Recovery Program (CNRP), and now focuses on $15,000 down-payment grants, not storefronts.",
   },
 ];
