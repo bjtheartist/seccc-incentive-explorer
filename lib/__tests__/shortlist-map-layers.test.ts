@@ -22,14 +22,15 @@ import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   AIRPORTS,
+  BADGE_PIN_COLORS,
   INFRASTRUCTURE_LAYERS,
   INFRASTRUCTURE_LAYERS_BY_ID,
   INFRASTRUCTURE_LAYERS_STORAGE_KEY,
   INFRASTRUCTURE_LAYER_IDS,
-  TIER_1_PIN_COLOR,
-  TIER_2_PIN_COLOR,
   airportFeatures,
   amenityPointFeatures,
+  badgePinAccent,
+  badgePinColor,
   defaultInfrastructureLayerVisibility,
   expresswayLineFeatures,
   infrastructureFeatures,
@@ -45,48 +46,41 @@ import {
   shortlistPinBounds,
   shortlistPinFeatures,
   storeInfrastructureLayerVisibility,
-  tierPinAccent,
-  tierPinColor,
   withInfrastructureLayerVisibility,
   type InfrastructureLayerVisibility,
 } from "../shortlist-map-layers";
-import type { ShortlistCandidate, ShortlistResult } from "../site-shortlist";
+import type { RankedShortlistCandidate } from "../shortlist-engine";
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
-function candidate(overrides: Partial<ShortlistCandidate> = {}): ShortlistCandidate {
+function candidate(overrides: Partial<RankedShortlistCandidate> = {}): RankedShortlistCandidate {
   return {
-    key: "20-33-100-001-0000",
+    key: "pin:20331000010000",
     address: "8000 S COTTAGE GROVE AVE",
-    pin: "20-33-100-001-0000",
+    pin: "20331000010000",
     lat: 41.75,
     lon: -87.605,
     propertyType: "vacant_building",
     buildingSqft: 4200,
     lotSqft: 6000,
-    zoning: "B3-2",
-    ownerLabel: "Corporate / LLC",
+    zoningDistrict: "B3-2",
+    zoningStatus: "resolved",
+    badge: "aligned",
+    badgeNote: "The mapped district family is broadly aligned with this project category.",
+    ownerLabel: "Corporate / LLC · out-of-state mailing address (unverified)",
     incentiveCount: 2,
     saleYear: null,
     violation: false,
-    nearestRail: null,
-    onArterial: true,
-    baseScore: 50,
-    overlays: [],
+    overlays: { ssa: false, ccsa: false, tif: false, nof: false },
+    transitScore: null,
+    nearestRailDisplay: null,
+    expresswayDisplay: null,
+    nearestSchool: null,
+    nearestLibrary: null,
     score: 60,
-    tier: 1,
-    zoningStatus: "by-right",
-    zoningNote: "Zoned B3-2 — screening signal only.",
-    showAccessibility: false,
+    baseline: { areaFitPoints: 10, completenessPoints: 10, total: 20 },
     ...overrides,
-  } as ShortlistCandidate;
-}
-
-function result(
-  tier1: ShortlistCandidate[],
-  tier2: ShortlistCandidate[] = [],
-): ShortlistResult {
-  return { tier1, tier2, tier1Total: tier1.length, tier2Total: tier2.length };
+  } as RankedShortlistCandidate;
 }
 
 /** Map-backed sessionStorage stub, matching lib/__tests__/owner-clusters-toggle. */
@@ -273,14 +267,15 @@ describe("infrastructure layer visibility", () => {
 
 // ── Pins ────────────────────────────────────────────────────────────────────
 
-describe("tier colors", () => {
+describe("badge colors", () => {
   it("matches the card's zoning-badge palette", () => {
-    expect(tierPinColor(1)).toBe(TIER_1_PIN_COLOR);
-    expect(tierPinColor(1)).toBe("#166534");
-    expect(tierPinColor(2)).toBe(TIER_2_PIN_COLOR);
-    expect(tierPinColor(2)).toBe("#A45B00");
-    expect(tierPinAccent(1)).toBe("#22C55E");
-    expect(tierPinAccent(2)).toBe("#F59E0B");
+    expect(badgePinColor("aligned")).toBe(BADGE_PIN_COLORS.aligned.color);
+    expect(badgePinColor("aligned")).toBe("#166534");
+    expect(badgePinColor("not-aligned")).toBe("#A45B00");
+    expect(badgePinColor("planned-development")).toBe("#7C3AED");
+    expect(badgePinColor("unresolved")).toBe("#475569");
+    expect(badgePinAccent("aligned")).toBe("#22C55E");
+    expect(badgePinAccent("not-aligned")).toBe("#F59E0B");
   });
 });
 
@@ -302,76 +297,68 @@ describe("shortlistCardDomId", () => {
 });
 
 describe("pinZoningBadgeText", () => {
-  it("repeats the card's badge verbatim, including the unverified fallback", () => {
-    expect(pinZoningBadgeText(candidate({ zoning: "B3-2" }))).toBe("B3-2");
-    expect(pinZoningBadgeText(candidate({ zoning: null }))).toBe("Zoning unverified");
+  it("repeats the card's badge label verbatim, including the unresolved fallback", () => {
+    expect(pinZoningBadgeText(candidate({ badge: "aligned" }))).toBe("Broad family alignment");
+    expect(pinZoningBadgeText(candidate({ badge: "unresolved" }))).toBe("District unresolved");
   });
 });
 
 describe("shortlistPinFeatures", () => {
-  it("numbers pins exactly as the cards are numbered, tier 1 then tier 2", () => {
-    const features = shortlistPinFeatures(
-      result(
-        [candidate({ key: "a", lat: 41.75, lon: -87.6 }), candidate({ key: "b", lat: 41.76, lon: -87.61 })],
-        [candidate({ key: "c", tier: 2, lat: 41.77, lon: -87.62 })],
-      ),
-    );
+  it("numbers pins exactly in rank order", () => {
+    const features = shortlistPinFeatures([
+      candidate({ key: "a", lat: 41.75, lon: -87.6 }),
+      candidate({ key: "b", lat: 41.76, lon: -87.61 }),
+      candidate({ key: "c", badge: "not-aligned", lat: 41.77, lon: -87.62 }),
+    ]);
     expect(features.map((f) => f.properties?.markerNumber)).toEqual([1, 2, 3]);
     expect(features.map((f) => f.properties?.key)).toEqual(["a", "b", "c"]);
   });
 
-  it("colors by tier and carries the card's zoning badge and jump target", () => {
-    const [tier1, tier2] = shortlistPinFeatures(
-      result(
-        [candidate({ key: "a", lat: 41.75, lon: -87.6 })],
-        [candidate({ key: "b", tier: 2, zoning: null, lat: 41.76, lon: -87.61 })],
-      ),
-    );
-    expect(tier1.properties?.color).toBe(TIER_1_PIN_COLOR);
-    expect(tier1.properties?.zoningBadge).toBe("B3-2");
-    expect(tier1.properties?.domId).toBe(shortlistCardDomId("a"));
-    expect(tier2.properties?.color).toBe(TIER_2_PIN_COLOR);
-    expect(tier2.properties?.zoningBadge).toBe("Zoning unverified");
+  it("colors by badge and carries the card's zoning badge and jump target", () => {
+    const [aligned, unresolved] = shortlistPinFeatures([
+      candidate({ key: "a", lat: 41.75, lon: -87.6 }),
+      candidate({ key: "b", badge: "unresolved", lat: 41.76, lon: -87.61 }),
+    ]);
+    expect(aligned.properties?.color).toBe(BADGE_PIN_COLORS.aligned.color);
+    expect(aligned.properties?.zoningBadge).toBe("Broad family alignment");
+    expect(aligned.properties?.domId).toBe(shortlistCardDomId("a"));
+    expect(unresolved.properties?.color).toBe(BADGE_PIN_COLORS.unresolved.color);
+    expect(unresolved.properties?.zoningBadge).toBe("District unresolved");
   });
 
   it("writes GeoJSON lon/lat order", () => {
-    const [feature] = shortlistPinFeatures(result([candidate({ lat: 41.75, lon: -87.605 })]));
+    const [feature] = shortlistPinFeatures([candidate({ lat: 41.75, lon: -87.605 })]);
     expect(feature.geometry).toEqual({ type: "Point", coordinates: [-87.605, 41.75] });
   });
 
   it("drops coordinate-less records WITHOUT renumbering the ones that remain", () => {
     // The card list still shows the dropped record at its own number, so the
     // plotted pins must keep the numbers they would have had.
-    const features = shortlistPinFeatures(
-      result([
-        candidate({ key: "a", lat: 41.75, lon: -87.6 }),
-        candidate({ key: "null-island", lat: 0, lon: 0 }),
-        candidate({ key: "c", lat: 41.77, lon: -87.62 }),
-      ]),
-    );
+    const features = shortlistPinFeatures([
+      candidate({ key: "a", lat: 41.75, lon: -87.6 }),
+      candidate({ key: "null-island", lat: 0, lon: 0 }),
+      candidate({ key: "c", lat: 41.77, lon: -87.62 }),
+    ]);
     expect(features.map((f) => f.properties?.key)).toEqual(["a", "c"]);
     expect(features.map((f) => f.properties?.markerNumber)).toEqual([1, 3]);
   });
 
-  it("drops non-finite coordinates", () => {
-    expect(
-      shortlistPinFeatures(result([candidate({ lat: Number.NaN, lon: -87.6 })])),
-    ).toHaveLength(0);
+  it("drops non-finite or null coordinates", () => {
+    expect(shortlistPinFeatures([candidate({ lat: Number.NaN, lon: -87.6 })])).toHaveLength(0);
+    expect(shortlistPinFeatures([candidate({ lat: null, lon: -87.6 })])).toHaveLength(0);
   });
 
-  it("returns nothing for an empty result", () => {
-    expect(shortlistPinFeatures(result([], []))).toEqual([]);
+  it("returns nothing for an empty list", () => {
+    expect(shortlistPinFeatures([])).toEqual([]);
   });
 });
 
 describe("shortlistPinBounds", () => {
   it("spans every plotted pin as [west, south, east, north]", () => {
-    const features = shortlistPinFeatures(
-      result([
-        candidate({ key: "a", lat: 41.75, lon: -87.62 }),
-        candidate({ key: "b", lat: 41.78, lon: -87.6 }),
-      ]),
-    );
+    const features = shortlistPinFeatures([
+      candidate({ key: "a", lat: 41.75, lon: -87.62 }),
+      candidate({ key: "b", lat: 41.78, lon: -87.6 }),
+    ]);
     expect(shortlistPinBounds(features)).toEqual([-87.62, 41.75, -87.6, 41.78]);
   });
 
@@ -575,11 +562,11 @@ describe("SiteShortlistResults wiring", () => {
     "utf8",
   );
 
-  it("renders the map panel above the tier sections", () => {
+  it("renders the map panel above the ranked-list section", () => {
     const mapIndex = source.indexOf("<SiteShortlistMap");
-    const tierIndex = source.indexOf("heading={TIER_1_HEADING}");
+    const listIndex = source.indexOf('role="group" aria-label="Filter by zoning badge"');
     expect(mapIndex).toBeGreaterThan(-1);
-    expect(mapIndex).toBeLessThan(tierIndex);
+    expect(mapIndex).toBeLessThan(listIndex);
   });
 
   it("gives every card the id the pin popup jumps to", () => {
@@ -594,7 +581,15 @@ describe("SiteShortlistResults wiring", () => {
   });
 
   it("builds the snapshot link through the shared href builder", () => {
-    expect(source).toContain("href={shortlistSnapshotHref(candidate)}");
+    expect(source).toContain("shortlistSnapshotHref({");
     expect(source).toContain('trackEvent("site_shortlist_snapshot_clicked"');
+  });
+
+  it("offers a badge filter control that never re-fetches enrichment", () => {
+    // The filter narrows what is SHOWN; the enrichment effect must key off
+    // the FULL ranked list, not the filtered `visible` list, or switching
+    // the filter would re-fire the request.
+    expect(source).toContain("[ranked]);");
+    expect(source).not.toContain("[visible]);");
   });
 });

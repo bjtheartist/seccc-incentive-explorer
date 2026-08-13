@@ -34,9 +34,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import mapboxgl from "mapbox-gl";
 import { trackEvent } from "@/lib/analytics-events";
 import {
+  BADGE_PIN_COLORS,
   INFRASTRUCTURE_LAYERS,
-  TIER_1_PIN_COLOR,
-  TIER_2_PIN_COLOR,
   infrastructureFeatures,
   infrastructureLayerId,
   infrastructureSourceId,
@@ -49,8 +48,16 @@ import {
   type InfrastructureLayerId,
   type InfrastructureLayerVisibility,
 } from "@/lib/shortlist-map-layers";
-import type { ShortlistResult } from "@/lib/site-shortlist";
+import { ZONING_BADGE_LABELS, type RankedShortlistCandidate, type ZoningBadge } from "@/lib/shortlist-engine";
 import { escapeHtml } from "./vacancy-site-card";
+
+/** Badge display order for the legend — most-actionable first. */
+const BADGE_ORDER: readonly ZoningBadge[] = [
+  "aligned",
+  "planned-development",
+  "not-aligned",
+  "unresolved",
+];
 
 const INK = "#111111";
 
@@ -84,26 +91,28 @@ function narrowServerSnapshot(): boolean {
 
 export interface SiteShortlistMapProps {
   zip: string;
-  result: ShortlistResult;
+  ranked: RankedShortlistCandidate[];
   /** Simplified ZIP ring + bbox from the vacancy edition; null renders no outline. */
   boundary: { rings: [number, number][][]; bbox: [number, number, number, number] } | null;
   centroid: { lat: number; lon: number };
 }
 
-/** The pin popup: address, tier, the card's own zoning badge, and the jump. */
+function isZoningBadge(value: unknown): value is ZoningBadge {
+  return value === "aligned" || value === "not-aligned" || value === "planned-development" || value === "unresolved";
+}
+
+/** The pin popup: address, badge, and the jump. */
 function pinPopupHtml(props: Record<string, unknown>): string {
   const number = Number(props.markerNumber);
-  const tier = Number(props.tier) === 1 ? 1 : 2;
+  const badge: ZoningBadge = isZoningBadge(props.badge) ? props.badge : "unresolved";
   const address = typeof props.address === "string" ? props.address : "This record";
-  const zoningBadge = typeof props.zoningBadge === "string" ? props.zoningBadge : "Zoning unverified";
+  const zoningBadge = typeof props.zoningBadge === "string" ? props.zoningBadge : ZONING_BADGE_LABELS.unresolved;
   const domId = typeof props.domId === "string" ? props.domId : "";
-  const color = tier === 1 ? TIER_1_PIN_COLOR : TIER_2_PIN_COLOR;
-  const tierLabel =
-    tier === 1 ? "Tier 1 — reads as permitted by right" : "Tier 2 — zoning relief likely";
+  const color = BADGE_PIN_COLORS[badge].color;
 
   return `<div style="font-family:Inter,sans-serif;min-width:210px;max-width:280px">
     <div style="font-size:9px;letter-spacing:0.15em;text-transform:uppercase;color:${color};font-weight:600;margin-bottom:4px">
-      ${String(number).padStart(2, "0")} · ${escapeHtml(tierLabel)}
+      ${String(number).padStart(2, "0")}
     </div>
     <div style="font-size:13px;font-weight:600;color:#0C1B33;line-height:1.3">${escapeHtml(address)}</div>
     <div style="margin-top:8px">
@@ -123,7 +132,7 @@ function overlayPopupHtml(label: string, layerLabel: string, color: string): str
   </div>`;
 }
 
-export default function SiteShortlistMap({ zip, result, boundary, centroid }: SiteShortlistMapProps) {
+export default function SiteShortlistMap({ zip, ranked, boundary, centroid }: SiteShortlistMapProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<mapboxgl.Map | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -142,7 +151,7 @@ export default function SiteShortlistMap({ zip, result, boundary, centroid }: Si
   const token =
     typeof process !== "undefined" ? process.env.NEXT_PUBLIC_MAPBOX_TOKEN : undefined;
 
-  const pinFeatures = useMemo(() => shortlistPinFeatures(result), [result]);
+  const pinFeatures = useMemo(() => shortlistPinFeatures(ranked), [ranked]);
   const pinBounds = useMemo(() => shortlistPinBounds(pinFeatures), [pinFeatures]);
 
   /** Fetched overlay payloads, keyed by layer id. One fetch per layer per
@@ -470,9 +479,11 @@ export default function SiteShortlistMap({ zip, result, boundary, centroid }: Si
     [zip],
   );
 
-  const tier1Plotted = pinFeatures.filter((f) => f.properties?.tier === 1).length;
-  const tier2Plotted = pinFeatures.length - tier1Plotted;
-  const unplottable = result.tier1.length + result.tier2.length - pinFeatures.length;
+  const plottedByBadge = BADGE_ORDER.map((badge) => ({
+    badge,
+    count: pinFeatures.filter((f) => f.properties?.badge === badge).length,
+  }));
+  const unplottable = ranked.length - pinFeatures.length;
 
   return (
     <section className="mt-8 border border-[#0C1B33]/12 bg-white">
@@ -515,30 +526,20 @@ export default function SiteShortlistMap({ zip, result, boundary, centroid }: Si
                     Shortlist
                   </p>
                   <ul className="mt-1.5 space-y-1.5">
-                    <li className="flex items-center gap-2">
-                      <span
-                        className="inline-block h-3 w-3 flex-shrink-0 rounded-full"
-                        style={{ backgroundColor: TIER_1_PIN_COLOR }}
-                      />
-                      <span className="flex-1 text-[11px] text-[#0C1B33]/75">
-                        Tier 1 — by right
-                      </span>
-                      <span className="font-mono-bureau text-[10px] text-[#0C1B33]/45">
-                        {tier1Plotted}
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span
-                        className="inline-block h-3 w-3 flex-shrink-0 rounded-full"
-                        style={{ backgroundColor: TIER_2_PIN_COLOR }}
-                      />
-                      <span className="flex-1 text-[11px] text-[#0C1B33]/75">
-                        Tier 2 — relief likely
-                      </span>
-                      <span className="font-mono-bureau text-[10px] text-[#0C1B33]/45">
-                        {tier2Plotted}
-                      </span>
-                    </li>
+                    {plottedByBadge.map(({ badge, count }) => (
+                      <li key={badge} className="flex items-center gap-2">
+                        <span
+                          className="inline-block h-3 w-3 flex-shrink-0 rounded-full"
+                          style={{ backgroundColor: BADGE_PIN_COLORS[badge].color }}
+                        />
+                        <span className="flex-1 text-[11px] text-[#0C1B33]/75">
+                          {ZONING_BADGE_LABELS[badge]}
+                        </span>
+                        <span className="font-mono-bureau text-[10px] text-[#0C1B33]/45">
+                          {count}
+                        </span>
+                      </li>
+                    ))}
                   </ul>
 
                   <div className="mt-3 border-t border-[#0C1B33]/10 pt-2">

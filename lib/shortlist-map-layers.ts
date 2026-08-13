@@ -27,23 +27,27 @@
  * drawn beside the candidates, and a dot near a park has earned nothing.
  */
 
-import type { ShortlistCandidate, ShortlistResult } from "./site-shortlist";
+import { ZONING_BADGE_LABELS, type RankedShortlistCandidate, type ZoningBadge } from "./shortlist-engine";
 
-// ── Tier colors, matching the deliverable and the card's zoning badge ────────
+// ── Badge colors, matching the deliverable and the card's zoning badge ───────
+//
+// PR2 replaced the old Tier 1 / Tier 2 split with one ranked list and four
+// zoning-screen badges (see lib/shortlist-engine.ts). Pin color now keys on
+// badge, not tier, so the map and the card badge can never disagree.
 
-/** Tier 1 (permitted by right): the card badge's green, and its bright pin. */
-export const TIER_1_PIN_COLOR = "#166534";
-export const TIER_1_PIN_ACCENT = "#22C55E";
-/** Tier 2 (special use / unverified): the card badge's amber, and its pin. */
-export const TIER_2_PIN_COLOR = "#A45B00";
-export const TIER_2_PIN_ACCENT = "#F59E0B";
+export const BADGE_PIN_COLORS: Readonly<Record<ZoningBadge, { color: string; accent: string }>> = {
+  aligned: { color: "#166534", accent: "#22C55E" },
+  "not-aligned": { color: "#A45B00", accent: "#F59E0B" },
+  "planned-development": { color: "#7C3AED", accent: "#A78BFA" },
+  unresolved: { color: "#475569", accent: "#94A3B8" },
+};
 
-export function tierPinColor(tier: 1 | 2): string {
-  return tier === 1 ? TIER_1_PIN_COLOR : TIER_2_PIN_COLOR;
+export function badgePinColor(badge: ZoningBadge): string {
+  return BADGE_PIN_COLORS[badge].color;
 }
 
-export function tierPinAccent(tier: 1 | 2): string {
-  return tier === 1 ? TIER_1_PIN_ACCENT : TIER_2_PIN_ACCENT;
+export function badgePinAccent(badge: ZoningBadge): string {
+  return BADGE_PIN_COLORS[badge].accent;
 }
 
 // ── Layer catalog ───────────────────────────────────────────────────────────
@@ -275,14 +279,14 @@ export function shortlistCardDomId(key: string): string {
 
 /** The zoning text a pin popup shows — identical to the card's badge, so the
  *  map and the list can never disagree about a record's zoning status. */
-export function pinZoningBadgeText(candidate: ShortlistCandidate): string {
-  return candidate.zoning ?? "Zoning unverified";
+export function pinZoningBadgeText(candidate: RankedShortlistCandidate): string {
+  return ZONING_BADGE_LABELS[candidate.badge];
 }
 
 export interface ShortlistPinProps extends Record<string, unknown> {
   key: string;
   markerNumber: number;
-  tier: 1 | 2;
+  badge: ZoningBadge;
   address: string;
   zoningBadge: string;
   domId: string;
@@ -291,38 +295,40 @@ export interface ShortlistPinProps extends Record<string, unknown> {
 }
 
 /**
- * One numbered pin per RENDERED candidate, numbered exactly as the cards are:
- * Tier 1 from 1, Tier 2 continuing the same run. The map and the list share one
- * numbering because a reader treats "07" on the map and "07" in the list as the
- * same record — and they must be.
+ * One numbered pin per RENDERED candidate, numbered exactly in rank order.
+ * The map and the list share one numbering because a reader treats "07" on
+ * the map and "07" in the list as the same record — and they must be.
  */
-export function shortlistPinFeatures(result: ShortlistResult): GeoJSON.Feature[] {
-  const ordered = [...result.tier1, ...result.tier2];
-  return ordered
+export function shortlistPinFeatures(
+  ranked: readonly RankedShortlistCandidate[],
+): GeoJSON.Feature[] {
+  return ranked
     .filter(
       (candidate) =>
+        typeof candidate.lat === "number" &&
+        typeof candidate.lon === "number" &&
         Number.isFinite(candidate.lat) &&
         Number.isFinite(candidate.lon) &&
         candidate.lat !== 0 &&
         candidate.lon !== 0,
     )
     .map((candidate) => {
-      // Number against the FULL ordered run, so filtering out a coordinate-less
+      // Number against the FULL ranked run, so filtering out a coordinate-less
       // record never renumbers the ones that remain.
-      const markerNumber = ordered.indexOf(candidate) + 1;
+      const markerNumber = ranked.indexOf(candidate) + 1;
       const props: ShortlistPinProps = {
         key: candidate.key,
         markerNumber,
-        tier: candidate.tier,
+        badge: candidate.badge,
         address: candidate.address,
         zoningBadge: pinZoningBadgeText(candidate),
         domId: shortlistCardDomId(candidate.key),
-        color: tierPinColor(candidate.tier),
-        accent: tierPinAccent(candidate.tier),
+        color: badgePinColor(candidate.badge),
+        accent: badgePinAccent(candidate.badge),
       };
       return {
         type: "Feature",
-        geometry: { type: "Point", coordinates: [candidate.lon, candidate.lat] },
+        geometry: { type: "Point", coordinates: [candidate.lon as number, candidate.lat as number] },
         properties: props as unknown as GeoJSON.GeoJsonProperties,
       } satisfies GeoJSON.Feature;
     });

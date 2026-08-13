@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SITE_MATCH_CRITERIA_VERSION,
   buildShortlistHref,
   buildSiteMatchmakerHref,
   buildVacancyHandoffHref,
@@ -8,6 +9,7 @@ import {
   encodeSiteMatchCriteria,
   isSiteMatchCriteriaReady,
   normalizeSiteMatchCriteria,
+  siteMatchCriteriaVersionSupported,
   summarizeSiteMatchCriteria,
   type SiteMatchCriteria,
 } from "@/lib/site-matchmaker";
@@ -131,5 +133,30 @@ describe("site matchmaker handoff", () => {
     expect(JSON.stringify(summary).toLowerCase()).not.toMatch(
       /score|eligible|ideal|best|available|foot traffic/,
     );
+  });
+});
+
+// ── Criteria versioning (PR2: "criteriaVersion is cosmetic" fix) ────────────
+
+describe("siteMatchCriteriaVersionSupported", () => {
+  it("supports the current version", () => {
+    const params = new URLSearchParams({ sm_v: SITE_MATCH_CRITERIA_VERSION });
+    expect(siteMatchCriteriaVersionSupported(params)).toBe(true);
+  });
+
+  it("treats an ABSENT sm_v as supported — back-compat for pre-versioning links", () => {
+    expect(siteMatchCriteriaVersionSupported(new URLSearchParams({ zip: "60617" }))).toBe(true);
+  });
+
+  it("rejects an explicit, unrecognized version", () => {
+    expect(siteMatchCriteriaVersionSupported(new URLSearchParams({ sm_v: "99" }))).toBe(false);
+    expect(siteMatchCriteriaVersionSupported(new URLSearchParams({ sm_v: "0" }))).toBe(false);
+    expect(siteMatchCriteriaVersionSupported(new URLSearchParams({ sm_v: "" }))).toBe(false);
+  });
+
+  it("stays in step with what encodeSiteMatchCriteria actually emits", () => {
+    const encoded = encodeSiteMatchCriteria(completeCriteria());
+    expect(siteMatchCriteriaVersionSupported(encoded)).toBe(true);
+    expect(encoded.get("sm_v")).toBe(SITE_MATCH_CRITERIA_VERSION);
   });
 });

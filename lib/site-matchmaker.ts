@@ -375,6 +375,31 @@ export function normalizeSiteMatchCriteria(criteria: SiteMatchCriteria): SiteMat
   };
 }
 
+/**
+ * The `sm_v` version this build's encode/decode contract speaks. Bumped
+ * whenever the criteria shape changes in a way an old link could no longer
+ * decode correctly.
+ */
+export const SITE_MATCH_CRITERIA_VERSION = "1";
+
+/**
+ * Whether the `sm_v` carried on a URL (if any) is one this build knows how
+ * to decode. PR2 fixes the pre-PR2 gap the gpt5.6 matchmaker consult
+ * flagged directly: `encodeSiteMatchCriteria` already stamps `sm_v=1` on
+ * every link, but nothing ever branched on or rejected it — a link minted
+ * by a future, incompatible version of this schema would silently decode as
+ * if it were current instead of failing closed.
+ *
+ * An ABSENT `sm_v` is treated as supported (version 1 implicitly) for
+ * back-compatibility with links minted before versioning existed or by
+ * callers that never touch the wizard (e.g. a bare ZIP link) — only an
+ * EXPLICIT, unrecognized value is rejected.
+ */
+export function siteMatchCriteriaVersionSupported(params: URLSearchParams): boolean {
+  const raw = params.get(PARAMS.version);
+  return raw == null || raw === SITE_MATCH_CRITERIA_VERSION;
+}
+
 export function decodeSiteMatchCriteria(params: URLSearchParams): SiteMatchCriteria {
   return normalizeSiteMatchCriteria({
     zip: params.get(PARAMS.zip),

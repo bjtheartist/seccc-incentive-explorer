@@ -36,7 +36,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
-/** Hard cap on one request. The page renders at most 20 cards (12 + 8). */
+/** Hard cap on one request. The page renders at most SHORTLIST_TOP_N (20)
+ *  cards as one ranked list (see lib/shortlist-engine.ts) — no tier split. */
 const MAX_ITEMS = 25;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
