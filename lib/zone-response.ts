@@ -104,10 +104,26 @@ export function normalizeZoneCheckResponse(
 }
 
 /* ════════════════════════════════════════════════════════════════════════
- * Zone Evidence v2 normalizer (build-spec.md 1.3) — parses the NEW
- * schemaVersion: 2 response shape from /api/zones/check/v2. Independent of
- * normalizeZoneCheckResponse above; does not share its "default to false"
- * behavior because v2 has a real third state (`unknown`) to represent.
+ * Zone Evidence v2 normalizer (build-spec.md 1.3; review1 R4) — parses the
+ * NEW schemaVersion: 2 response shape from /api/zones/check/v2.
+ * Independent of normalizeZoneCheckResponse above; does not share its
+ * "default to false" behavior because v2 has a real third state
+ * (`unknown`) to represent.
+ *
+ * Two review1 R4 hardening rules over the original design:
+ *   1. `dataRevision` and `checkedAt` are REQUIRED, non-empty strings.
+ *      Absent or malformed, normalization fails outright (returns null) —
+ *      never a silent "" substitution, which would make a downstream
+ *      "checked <dataRevision/checkedAt>" claim silently blank instead of
+ *      absent.
+ *   2. No silent drops: every layer named in `requestedLayers` gets an
+ *      entry in the output, even when it's missing or malformed in the
+ *      raw `layers` payload — synthesized as `unknown/layer_missing`. A
+ *      payload requesting `["tif","ssa"]` but only actually containing a
+ *      valid `tif` entry must normalize with `hasUnknown: true`, not
+ *      `false` — the whole point of "unknown, never false" is defeated if
+ *      an omitted requested layer just vanishes from the normalized
+ *      output instead of showing up as unknown.
  * ════════════════════════════════════════════════════════════════════════ */
 
 export interface NormalizedZoneLayerEvidence {
@@ -135,38 +151,63 @@ const VALID_ZONE_LAYER_STATES: ReadonlySet<string> = new Set([
   "unknown",
 ]);
 
+/** A missing or malformed layer entry synthesizes to this — never silently dropped (review1 R4). */
+const SYNTHESIZED_MISSING_LAYER: NormalizedZoneLayerEvidence = {
+  state: "unknown",
+  reason: "layer_missing",
+};
+
+function normalizeOneLayerEntry(value: unknown): NormalizedZoneLayerEvidence {
+  if (!isRecord(value) || typeof value.state !== "string" || !VALID_ZONE_LAYER_STATES.has(value.state)) {
+    return SYNTHESIZED_MISSING_LAYER;
+  }
+  const state = value.state as ZoneLayerState;
+  const entry: NormalizedZoneLayerEvidence = { state };
+  if (typeof value.name === "string" && value.name) entry.name = value.name;
+  if (typeof value.reason === "string" && value.reason) {
+    entry.reason = value.reason as ZoneUnknownReason;
+  }
+  return entry;
+}
+
 export function normalizeZoneEvidenceV2(data: unknown): NormalizedZoneEvidenceV2 | null {
   if (!isRecord(data)) return null;
   if (data.schemaVersion !== 2) return null;
   if (!isRecord(data.layers)) return null;
 
+  // Required, non-empty — never silently substituted (review1 R4).
+  if (typeof data.dataRevision !== "string" || data.dataRevision.length === 0) return null;
+  if (typeof data.checkedAt !== "string" || data.checkedAt.length === 0) return null;
+
+  const rawLayers = data.layers as Record<string, unknown>;
+  const declaredRequestedLayers = Array.isArray(data.requestedLayers)
+    ? data.requestedLayers.filter((k): k is string => typeof k === "string" && k.length > 0)
+    : null;
+
+  // Guarantee an entry for every layer the envelope claims it checked
+  // (requestedLayers) UNION every key actually present in the raw
+  // payload — an unexpected extra layer key is preserved too, not dropped.
+  const keysToNormalize = new Set<string>([
+    ...(declaredRequestedLayers ?? []),
+    ...Object.keys(rawLayers),
+  ]);
+
   const layers: Record<string, NormalizedZoneLayerEvidence> = {};
   const matchedKeys: string[] = [];
   const unknownKeys: string[] = [];
 
-  for (const [key, value] of Object.entries(data.layers)) {
-    if (!isRecord(value) || typeof value.state !== "string") continue;
-    if (!VALID_ZONE_LAYER_STATES.has(value.state)) continue;
-
-    const state = value.state as ZoneLayerState;
-    const entry: NormalizedZoneLayerEvidence = { state };
-    if (typeof value.name === "string" && value.name) entry.name = value.name;
-    if (typeof value.reason === "string" && value.reason) {
-      entry.reason = value.reason as ZoneUnknownReason;
-    }
+  for (const key of keysToNormalize) {
+    const entry = normalizeOneLayerEntry(rawLayers[key]);
     layers[key] = entry;
-
-    if (state === "matched") matchedKeys.push(key);
-    if (state === "unknown") unknownKeys.push(key);
+    if (entry.state === "matched") matchedKeys.push(key);
+    if (entry.state === "unknown") unknownKeys.push(key);
   }
 
   return {
     schemaVersion: 2,
-    dataRevision: typeof data.dataRevision === "string" ? data.dataRevision : "",
-    checkedAt: typeof data.checkedAt === "string" ? data.checkedAt : "",
-    requestedLayers: Array.isArray(data.requestedLayers)
-      ? data.requestedLayers.filter((k): k is string => typeof k === "string")
-      : [],
+    dataRevision: data.dataRevision,
+    checkedAt: data.checkedAt,
+    requestedLayers: declaredRequestedLayers ?? Object.keys(rawLayers),
     layers,
     matchedKeys,
     unknownKeys,
