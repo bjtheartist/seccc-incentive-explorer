@@ -93,7 +93,14 @@ import { loadManifest, type DecreasePolicy } from "../lib/investment-manifest";
 // ── Paths ────────────────────────────────────────────────────────────────────
 
 const REPO_ROOT = process.cwd();
-const INPUT_DIR = join(REPO_ROOT, "data", "curated", "investment-inputs");
+// Sol gate finding 7 (round 4) — overridable exactly like
+// scripts/export-community-investment.ts's INPUT_DIR, so a test can point
+// refreshOne at an isolated temp directory (a fixture "before" file plus
+// nothing else) and exercise the REAL measure -> checkDecreasePolicy ->
+// write path without ever touching the real committed investment-inputs
+// directory. Unset (the normal case, including every real refresh run) falls
+// through to the real repo path exactly as before.
+const INPUT_DIR = process.env.INPUT_DIR || join(REPO_ROOT, "data", "curated", "investment-inputs");
 /** Deliverable 7 — committed ONLY on a failed refresh attempt (see main()), so
  * a failure-only run (nothing else changed) still produces a diff for the
  * workflow's PR-open step to see. */
@@ -320,14 +327,14 @@ function pctDelta(before: number | null, after: number | null): number | null {
 
 // ── Source definitions ───────────────────────────────────────────────────────
 
-interface Metrics {
+export interface Metrics {
   rows: number;
   dollars: number | null;
   /** Optional per-partition counts, surfaced in the summary notes. */
   parts?: Record<string, number>;
 }
 
-interface RefreshSource {
+export interface RefreshSource {
   id: string;
   label: string;
   file: string;
@@ -361,7 +368,7 @@ function socrataSortKey(row: Row): string {
     trimmed(row.street_direction),
     trimmed(row.street_name),
     trimmed(row.street_type),
-  ].join(" ");
+  ].join(" ");
 }
 
 function measureSocrataJson(content: string): Metrics {
@@ -687,7 +694,7 @@ const hudSource: RefreshSource = {
         trimmed(r.IDIS_ACTV_ID).padStart(12, "0"),
         trimmed(r.NAME),
         hudAddress(r),
-      ].join(" ");
+      ].join(" ");
     const byKey = (a: Row, b: Row) => sortKey(a).localeCompare(sortKey(b));
 
     for (const r of [...cdbg].sort(byKey)) {
@@ -775,7 +782,7 @@ export interface Outcome {
   error?: string;
 }
 
-interface CliOptions {
+export interface CliOptions {
   dryRun: boolean;
   skipExport: boolean;
   only: string[] | null;
@@ -899,7 +906,14 @@ export function buildRefreshAttemptArtifact(
   };
 }
 
-async function refreshOne(source: RefreshSource, options: CliOptions): Promise<Outcome> {
+/**
+ * Sol gate finding 7 (round 4) — exported (not just isDirectRun-gated) so a
+ * test can drive the REAL measure -> checkDecreasePolicy -> write path
+ * end-to-end against a fixture source, the same way main() calls it, rather
+ * than only exercising checkDecreasePolicy/buildRefreshAttemptArtifact in
+ * isolation. No behavior change: still the sole place any source is written.
+ */
+export async function refreshOne(source: RefreshSource, options: CliOptions): Promise<Outcome> {
   const path = join(INPUT_DIR, source.file);
   const beforeContent = readIfExists(path);
   const base: Outcome = {
