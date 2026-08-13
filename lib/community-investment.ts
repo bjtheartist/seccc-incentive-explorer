@@ -398,6 +398,21 @@ export interface CommunityInvestmentRecord {
   postalCode?: string;
   /** Chicago community area when the source supplies it (Socrata NOF/SBIF). */
   communityArea?: string;
+  /**
+   * The source's OWN published identifier for this row, when it has one (e.g.
+   * LIHTC's HUD project id) — a durable cross-reference INTO the upstream
+   * dataset, independent of this export's own `id`/`stableId`. Null when the
+   * source publishes no such identifier.
+   */
+  sourceRecordId?: string | null;
+  /**
+   * Free-text provenance for WHY a row is considered in-scope/Chicago-sited
+   * even without a plottable point (e.g. LIHTC's `coord_source` column:
+   * "missing_no_usable_address"). A DIFFERENT thing from `locationReason` (the
+   * canonical enum) — this is the source's own explanatory text, kept verbatim
+   * for audit trail. Null when the source has no such column.
+   */
+  sourceLocationProvenance?: string | null;
   status: InvestmentStatus;
   /**
    * Raw completion/approval date the record attaches to (Socrata completion_date,
@@ -1297,6 +1312,28 @@ export function buildCommunityInvestmentExport(
           `Record ${r.id} is historical recovery context; its source-reported amount must live only in recovery.historicalAmount.`,
         );
       }
+    }
+  }
+
+  // STRUCTURAL GUARD (Sol gate finding 2 — "assert uniqueness"): every
+  // non-null foundation stableId must be globally unique. Defense in depth —
+  // scripts/foundation/build_grant_identity.py already refuses to write a
+  // colliding identity CSV, but this catches the failure mode where the CSV
+  // and the export drift (a stale committed CSV joined against a re-run of
+  // mapFoundations, a hand-edit, or a future code path that stops joining
+  // correctly) at build time, not silently in the committed JSON.
+  {
+    const seenStableIds = new Map<string, string>();
+    for (const r of records) {
+      if (!r.stableId) continue;
+      const prior = seenStableIds.get(r.stableId);
+      if (prior) {
+        throw new Error(
+          `Duplicate foundation stableId ${r.stableId}: records ${prior} and ${r.id} collide. ` +
+            `Identity must be unique — see scripts/foundation/build_grant_identity.py.`,
+        );
+      }
+      seenStableIds.set(r.stableId, r.id);
     }
   }
 

@@ -38,7 +38,6 @@
  *   INPUT_DIR=/some/dir npx tsx scripts/export-community-investment.ts
  */
 
-import { createHash } from "node:crypto";
 import {
   existsSync,
   readFileSync,
@@ -60,6 +59,7 @@ import {
   type CommunityInvestmentRecordDraft,
   type InvestmentGeometry,
   type InvestmentStatus,
+  type LocationReason,
 } from "../lib/community-investment";
 import { governmentFundingPurposeForRecord } from "../lib/government-funding-purpose";
 import { assignCommunityArea, loadCommunityAreaPolygons } from "../lib/community-area-stamp";
@@ -81,6 +81,7 @@ import {
   RECOVERY_INVESTMENT_SOURCE_METADATA,
   type RecoveryInvestmentSourceId,
 } from "../lib/recovery-investment";
+import { foundationManifestEntries, loadManifest, manifestContentHash } from "./lib/investment-manifest";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,8 @@ const GEOCODE_CACHE_PATH = join(INPUT_DIR, "geocode-cache.json");
 const OUT_PATH = join(process.cwd(), "data", "private", "community-investment.json");
 /** Coordinate-less capital CONTEXT (per-district TIF series, CRA/CDFI, state awards). */
 const CONTEXT_OUT_PATH = join(process.cwd(), "data", "private", "capital-context.json");
+/** Sol gate finding 3 — record-level, source-keyed exclusion ledger sibling. */
+const EXCLUSION_LEDGER_OUT_PATH = join(process.cwd(), "data", "private", "investment-exclusion-ledger.json");
 /** Committed City of Chicago Community Area boundaries (dataset igwz-8jzy). */
 const CA_GEOJSON_PATH = join(process.cwd(), "public", "data", "community-areas.geojson");
 const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boundaries.geojson");
@@ -117,10 +120,31 @@ const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boun
  * Those rows are grant-SCHEDULE aggregates ("SEE ATTACHED DETAIL") with no public
  * itemization; they are committed for provenance only and must never reach a record.
  */
-const FOUNDATION_GRANTS_FILE = "foundation_grants_geocoded.csv";
-const FOUNDATION_TIER1_FILE = "foundation_grants_tier1_expansion.csv";
-const FOUNDATION_PHASE2_FILE = "foundation_grants_phase2_expansion.csv";
-const FOUNDATION_PHASE3_FILE = "foundation_grants_phase3_expansion.csv";
+// Sol gate finding 1 (BLOCKER) — "The manifest does not drive exporter or
+// audit scope." The four foundation file names are no longer hard-coded here:
+// they come from data/curated/investment-inputs/manifest.json (via
+// foundationManifestEntries, the SAME function scripts/generate-investment-docs.ts
+// and the fresh audit both key off), by manifest id in the fixed publication
+// order base -> tier1 -> phase2 -> phase3. Adding a Phase-4 file with NO
+// manifest entry throws here instead of silently never being read; removing
+// one from the manifest throws instead of silently leaving a stale filename.
+const investmentManifest = loadManifest();
+const foundationManifestFiles = foundationManifestEntries(investmentManifest);
+function foundationFile(id: string): string {
+  const entry = foundationManifestFiles.find((e: { id: string }) => e.id === id);
+  if (!entry) {
+    throw new Error(
+      `Manifest is missing a foundation source entry with id "${id}" — every foundation input ` +
+        `file the exporter reads MUST be authored in scripts/lib/investment-manifest.ts's ` +
+        `AUTHORED_SOURCES (deliverable 1 — the manifest is the ONLY input list).`,
+    );
+  }
+  return entry.file;
+}
+const FOUNDATION_GRANTS_FILE = foundationFile("foundation-base");
+const FOUNDATION_TIER1_FILE = foundationFile("foundation-tier1");
+const FOUNDATION_PHASE2_FILE = foundationFile("foundation-phase2");
+const FOUNDATION_PHASE3_FILE = foundationFile("foundation-phase3");
 
 /**
  * Deliverable 2/3 sidecars — built by scripts/foundation/build_grant_identity.py
@@ -776,11 +800,15 @@ export function isPlaceholderFoundationRow(r: Record<string, string>): boolean {
 export interface FoundationStats {
   citywideFallback: number;
   droppedPlaceholder: number;
+  /** Sol gate finding 3 — the exclusion ledger needs dollars, not just a
+   * count, for every true-excluded category, including placeholder rows. */
+  droppedPlaceholderDollars: number;
   outOfBoundsGeocodes: number;
   negativeAmountsNulled: number;
   /** Deliverable 3 — rows dropped by the 236-group dedupe adjudication (proven
    * extractor duplication; see foundation_dedupe_ledger.json). */
   dedupeCollapsed: number;
+  dedupeCollapsedDollars: number;
   /** Deliverable 2 — rows whose identity resolved to a verified filing vs. a
    * fingerprint-only fallback id (see foundation_grant_identity.csv). */
   identityResolved: number;
@@ -795,9 +823,11 @@ export function mergeFoundationStats(a: FoundationStats, b: FoundationStats): Fo
   return {
     citywideFallback: a.citywideFallback + b.citywideFallback,
     droppedPlaceholder: a.droppedPlaceholder + b.droppedPlaceholder,
+    droppedPlaceholderDollars: a.droppedPlaceholderDollars + b.droppedPlaceholderDollars,
     outOfBoundsGeocodes: a.outOfBoundsGeocodes + b.outOfBoundsGeocodes,
     negativeAmountsNulled: a.negativeAmountsNulled + b.negativeAmountsNulled,
     dedupeCollapsed: a.dedupeCollapsed + b.dedupeCollapsed,
+    dedupeCollapsedDollars: a.dedupeCollapsedDollars + b.dedupeCollapsedDollars,
     identityResolved: a.identityResolved + b.identityResolved,
     identityUnresolved: a.identityUnresolved + b.identityUnresolved,
   };
@@ -861,9 +891,11 @@ export function mapFoundations(
   const stats: FoundationStats = {
     citywideFallback: 0,
     droppedPlaceholder: 0,
+    droppedPlaceholderDollars: 0,
     outOfBoundsGeocodes: 0,
     negativeAmountsNulled: 0,
     dedupeCollapsed: 0,
+    dedupeCollapsedDollars: 0,
     identityResolved: 0,
     identityUnresolved: 0,
   };
@@ -879,27 +911,45 @@ export function mapFoundations(
       // the filing itself does not carry as many matching grant nodes as the
       // CSV does. Dropped here, never reaching a record, and counted.
       stats.dedupeCollapsed++;
+      stats.dedupeCollapsedDollars += parseAmount(r.amount) ?? 0;
       continue;
     }
     if (isPlaceholderFoundationRow(r)) {
       stats.droppedPlaceholder++;
+      stats.droppedPlaceholderDollars += parseAmount(r.amount) ?? 0;
       continue;
     }
     let geometry: InvestmentGeometry;
+    // Deliverable 3 (Sol gate finding 3) — every citywide record carries an
+    // explicit locationReason, never a bare unexplained hold. Foundation has
+    // three distinct citywide paths, each a DIFFERENT claim:
+    //   • locType intermediary_or_citywide: the row is legitimately citywide by
+    //     the SOURCE's own design (the recipient is an intermediary, not a
+    //     site) — "source_unlocated", not a failure of any kind.
+    //   • a real geocode attempt returned coordinates outside Chicago —
+    //     "geocode_failed" (an out-of-Chicago hit for that attempt, per the
+    //     taxonomy's own definition).
+    //   • no usable coordinate at all (blank/zero lat-lng) — also
+    //     "geocode_failed" (nothing resolved for that attempt).
+    let locationReason: LocationReason | null;
     if (r.locType === "intermediary_or_citywide") {
       geometry = { kind: "citywide" };
+      locationReason = "source_unlocated";
     } else {
       const lat = Number(r.lat);
       const lng = Number(r.lng);
       if (Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)) {
         if (inChicagoBounds(lat, lng)) {
           geometry = point(lat, lng);
+          locationReason = null;
         } else {
           geometry = { kind: "citywide" }; // out-of-Chicago geocode -> honest citywide, never a misplaced dot
+          locationReason = "geocode_failed";
           stats.outOfBoundsGeocodes++;
         }
       } else {
         geometry = { kind: "citywide" }; // sited row with unusable coords -> honest citywide, not 0,0
+        locationReason = "geocode_failed";
         stats.citywideFallback++;
       }
     }
@@ -930,6 +980,7 @@ export function mapFoundations(
       status: "awarded",
       recordDate: null,
       links: [],
+      locationReason,
       filingObjectId: ident?.filingObjectId ?? null,
       taxPeriodBegin: ident?.taxPeriodBegin ?? null,
       taxPeriodEnd: ident?.taxPeriodEnd ?? null,
@@ -1083,6 +1134,7 @@ function enrichedDevelopmentRecord(
   geometry: InvestmentGeometry,
   id: string,
   address: string | null,
+  locationReason: LocationReason | null = null,
 ): CommunityInvestmentRecordDraft {
   const name = (mega.name || "").trim();
   const isSubset = MEGADEV_SUBSET_NAMES.has(name);
@@ -1106,6 +1158,7 @@ function enrichedDevelopmentRecord(
     status: mapStatus2026(mega.status_2026),
     recordDate: null,
     links: parseLinks(mega.source_urls),
+    locationReason,
   };
 }
 
@@ -1202,6 +1255,7 @@ function mapDevelopments(
     const geoSpec = MEGADEV_DISCOVERED_GEO[name];
     let geometry: InvestmentGeometry;
     let address: string | null = null;
+    let locationReason: LocationReason | null = null;
     if (geoSpec?.kind === "point") {
       geometry = point(geoSpec.lat, geoSpec.lng);
     } else if (geoSpec?.kind === "geocode") {
@@ -1211,13 +1265,15 @@ function mapDevelopments(
         address = geoSpec.address;
       } else {
         geometry = { kind: "citywide" }; // ungeocodable → honest citywide, never a misplaced dot
+        locationReason = "geocode_failed";
         stats.discoveredCitywide++;
       }
     } else {
       geometry = { kind: "citywide" }; // explicit citywide (multi-site)
+      locationReason = "source_unlocated";
       stats.discoveredCitywide++;
     }
-    const record = enrichedDevelopmentRecord(mega, geometry, `development-disc-${idx++}`, address);
+    const record = enrichedDevelopmentRecord(mega, geometry, `development-disc-${idx++}`, address, locationReason);
     out.push(record);
     stats.discoveredAdded++;
     if (record.announcedInvestment === null && MEGADEV_SUBSET_NAMES.has(name)) stats.subsetExcluded++;
@@ -1239,15 +1295,19 @@ function mapChicagoPrize(rows: Record<string, string>[]): CommunityInvestmentRec
   let idx = 0;
   for (const r of rows) {
     let geometry: InvestmentGeometry;
+    let locationReason: LocationReason | null = null;
     if ((r.locType || "").trim() === "sited") {
       const lat = Number(r.lat);
       const lng = Number(r.lng);
-      geometry =
-        Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)
-          ? point(lat, lng)
-          : { kind: "citywide" };
+      const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+      geometry = hasCoords ? point(lat, lng) : { kind: "citywide" };
+      if (!hasCoords) locationReason = "geocode_failed";
     } else {
+      // A finalist round with no confirmed site (planning-stage, per-organization
+      // grants rather than one funded project) — legitimately citywide by the
+      // source's own design, not a geocoding failure.
       geometry = { kind: "citywide" };
+      locationReason = "source_unlocated";
     }
     const purpose = nullableStr(r.purpose);
     const orgs = nullableStr(r.recipient_orgs);
@@ -1269,6 +1329,7 @@ function mapChicagoPrize(rows: Record<string, string>[]): CommunityInvestmentRec
       recordDate: null,
       recordProvenance: "official",
       links: parseLinks(r.source_url),
+      locationReason,
     });
   }
   return out;
@@ -1359,9 +1420,18 @@ interface TifDrops {
  * authorized dollars. Deterministic.
  */
 function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: TifDrops } {
+  // Sol gate finding 8 — the id NUMBERING must be IDENTICAL to the pre-held-rows
+  // baseline for every record that already existed. `idx` therefore increments
+  // ONLY on the exact condition that used to gate `push` at all (hasCoords) — a
+  // held (no-coords) row NEVER consumes a `tif-N` slot and NEVER shifts a later
+  // row's id. Held rows are collected separately and get their own
+  // never-renumbering `tif-held-N` namespace, APPENDED after every point record
+  // — never interleaved into the original sequence.
   const out: CommunityInvestmentRecordDraft[] = [];
+  const held: CommunityInvestmentRecordDraft[] = [];
   const drops: TifDrops = { noCoords: 0, heldUnlocated: 0 };
   let idx = 0;
+  let heldIdx = 0;
   for (const r of rows) {
     if ((r.dataset || "").trim() !== "rda-iga") continue; // annual-report rows are context, not records
     const lat = Number(r.lat);
@@ -1376,8 +1446,8 @@ function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentR
       totalCost != null ? `Total project cost $${Math.round(totalCost).toLocaleString("en-US")}` : null,
       statusText,
     ].filter(Boolean);
-    out.push({
-      id: `tif-${idx++}`,
+    const record: CommunityInvestmentRecordDraft = {
+      id: hasCoords ? `tif-${idx++}` : `tif-held-${heldIdx++}`,
       source: "tif",
       funderType: SOURCE_FUNDER_TYPE.tif,
       funderName: TIF_FUNDER,
@@ -1394,9 +1464,11 @@ function mapTif(rows: Record<string, string>[]): { records: CommunityInvestmentR
       recordProvenance: "official",
       links: [],
       locationReason: hasCoords ? null : "source_unlocated",
-    });
+    };
+    if (hasCoords) out.push(record);
+    else held.push(record);
   }
-  return { records: out, drops };
+  return { records: [...out, ...held], drops };
 }
 
 interface HudDrops {
@@ -1430,9 +1502,16 @@ function mapHud(
   rows: Record<string, string>[],
   asOf: Date,
 ): { records: CommunityInvestmentRecordDraft[]; drops: HudDrops } {
+  // Sol gate finding 8 — same append-only discipline as mapTif: `idx` increments
+  // ONLY on the exact old gating condition (inBounds), so every previously
+  // existing `cdbg-home-N` id is reproduced exactly. Held (administrative
+  // outside-city) rows get their own `cdbg-home-held-N` namespace, appended
+  // after every point record.
   const out: CommunityInvestmentRecordDraft[] = [];
+  const held: CommunityInvestmentRecordDraft[] = [];
   const drops: HudDrops = { outOfBbox: 0, heldAdministrativeOutsideCity: 0 };
   let idx = 0;
+  let heldIdx = 0;
   for (const r of rows) {
     const lat = Number(r.lat);
     const lng = Number(r.lng);
@@ -1447,8 +1526,8 @@ function mapHud(
     const objective = nullableStr(r.national_objective);
     const group = nullableStr(r.activity_group);
     const logParts = [program ? `${program} activity` : null, group, objective].filter(Boolean);
-    out.push({
-      id: `cdbg-home-${idx++}`,
+    const record: CommunityInvestmentRecordDraft = {
+      id: inBounds ? `cdbg-home-${idx++}` : `cdbg-home-held-${heldIdx++}`,
       source: "cdbg-home",
       funderType: SOURCE_FUNDER_TYPE["cdbg-home"],
       funderName: HUD_FUNDER,
@@ -1465,9 +1544,11 @@ function mapHud(
       recordProvenance: "official",
       links: [],
       locationReason: inBounds ? null : "administrative_address_outside_city",
-    });
+    };
+    if (inBounds) out.push(record);
+    else held.push(record);
   }
-  return { records: out, drops };
+  return { records: [...out, ...held], drops };
 }
 
 interface LihtcDrops {
@@ -1489,9 +1570,12 @@ interface LihtcDrops {
  * the coordinate is not. Deterministic.
  */
 function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmentRecordDraft[]; drops: LihtcDrops } {
+  // Sol gate finding 8 — same append-only discipline as mapTif/mapHud.
   const out: CommunityInvestmentRecordDraft[] = [];
+  const held: CommunityInvestmentRecordDraft[] = [];
   const drops: LihtcDrops = { noCoords: 0, heldUnlocated: 0 };
   let idx = 0;
+  let heldIdx = 0;
   for (const r of rows) {
     const lat = Number(r.lat);
     const lng = Number(r.lng);
@@ -1500,13 +1584,19 @@ function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmen
     const placed = cleanYear(r.placed_in_service_year);
     const units = nullableStr(r.units_total);
     const lowInc = nullableStr(r.units_low_income);
+    // Sol gate finding 3 — retain the source's OWN identifier (hud_id) and its
+    // own explanatory text for a held row's Chicago-selection provenance
+    // (coord_source, e.g. "missing_no_usable_address") verbatim.
+    const hudId = nullableStr(r.hud_id);
+    const coordSource = nullableStr(r.coord_source);
     const logParts = [
       units ? `${units} units` : null,
       lowInc ? `${lowInc} low-income` : null,
       placed != null ? `placed in service ${placed}` : null,
+      !hasCoords && coordSource ? `source coordinate status: ${coordSource}` : null,
     ].filter(Boolean);
-    out.push({
-      id: `lihtc-${idx++}`,
+    const record: CommunityInvestmentRecordDraft = {
+      id: hasCoords ? `lihtc-${idx++}` : `lihtc-held-${heldIdx++}`,
       source: "lihtc",
       funderType: SOURCE_FUNDER_TYPE.lihtc,
       funderName: LIHTC_FUNDER,
@@ -1523,9 +1613,13 @@ function mapLihtc(rows: Record<string, string>[]): { records: CommunityInvestmen
       recordProvenance: "official",
       links: [],
       locationReason: hasCoords ? null : "source_unlocated",
-    });
+      sourceRecordId: hudId,
+      sourceLocationProvenance: coordSource,
+    };
+    if (hasCoords) out.push(record);
+    else held.push(record);
   }
-  return { records: out, drops };
+  return { records: [...out, ...held], drops };
 }
 
 interface NmtcStamp {
@@ -1594,6 +1688,9 @@ function mapNmtc(
       recordDate: null,
       recordProvenance: "official",
       links: [],
+      // Structurally citywide (the source never publishes a street address for
+      // any NMTC QLICI) — never a geocode failure, always "source_unlocated".
+      locationReason: "source_unlocated",
     });
   }
   return { records: out, stamp };
@@ -1800,6 +1897,9 @@ function mapIllinoisHospitalityEmergencyGrants(
       status: "disbursed",
       recordDate: null,
       recordProvenance: "official",
+      // The source never publishes a street address or ZIP for this program —
+      // structurally unlocated, never a geocode failure.
+      locationReason: "source_unlocated",
       links: [
         nullableStr(row.source_url) ??
           RECOVERY_INVESTMENT_SOURCE_METADATA["illinois-hospitality-emergency"]
@@ -1927,6 +2027,9 @@ function mapSbaRestaurantRevitalization(
       ? point(inside.lat, inside.lng)
       : { kind: "citywide" };
     if (geometry.kind === "point") pointRecords += 1;
+    // No published address to even attempt a geocode -> source_unlocated; a
+    // published address that missed or resolved outside Chicago -> geocode_failed.
+    const locationReason: LocationReason | null = inside ? null : address ? "geocode_failed" : "source_unlocated";
 
     const legalName = nullableStr(row.legal_business_name);
     const dba = nullableStr(row.dba_trade_name);
@@ -1975,6 +2078,7 @@ function mapSbaRestaurantRevitalization(
       recordProvenance: "official",
       links: [...new Set(sourceLinks)],
       recovery: historicalRecoveryRecord("sba-rrf", amount),
+      locationReason,
     });
   }
 
@@ -2078,6 +2182,17 @@ function mapDceoCapital(
     if (multiSite) multiSiteHeldCitywide += 1;
     const geometry: InvestmentGeometry = hit ? point(hit.lat, hit.lng) : { kind: "citywide" };
     if (geometry.kind === "point") pointRecords += 1;
+    // Multi-site describes more than one location -> source_unlocated (no
+    // single point the source itself resolves to); a published address that
+    // missed or resolved outside Chicago -> geocode_failed; no address at all
+    // (should not occur post-selection, but never left unlabeled) -> source_unlocated.
+    const locationReason: LocationReason | null = hit
+      ? null
+      : multiSite
+        ? "source_unlocated"
+        : safeAddress
+          ? "geocode_failed"
+          : "source_unlocated";
     const lineType = row.line_type === "line_item" ? "Line-item appropriation" : "Lump-sum appropriation record";
     const description = conciseDceoDescription(row.original_description);
     const sourceLinks = [nullableStr(row.source_url) || DCEO_CAPITAL_PDF_URL, DCEO_CAPITAL_SOURCE_PAGE];
@@ -2103,6 +2218,7 @@ function mapDceoCapital(
       recordDate: null,
       recordProvenance: "official",
       links: [...new Set(sourceLinks)],
+      locationReason,
     });
   }
   return {
@@ -2173,6 +2289,10 @@ export function mapCdgAwards(
     if (geometry.kind === "point") pointRecords += 1;
     const amountAwarded = parseAmount(r.amount);
     if (!hit && amountAwarded != null) heldCitywideDollars += amountAwarded;
+    // A published address that failed to geocode is "geocode_failed"; a row
+    // with NO address column at all (only a community-area label) is
+    // "source_unlocated" — the City never published a site to attempt.
+    const locationReason: LocationReason | null = hit ? null : addr ? "geocode_failed" : "source_unlocated";
     records.push({
       id: `cdg-${records.length}`,
       source: "cdg",
@@ -2185,6 +2305,7 @@ export function mapCdgAwards(
       year: yearOfRound(r.round),
       geometry,
       address: addr,
+      locationReason,
       // A row the City published WITHOUT a street address can still publish
       // its community area in the address column ("South Lawndale (Little
       // Village) -- exact street address not published"). Stamping the CA from
@@ -2379,6 +2500,7 @@ export function mapPartnerNofAwards(
     } else if (amountAwarded != null) {
       heldCitywideDollars += amountAwarded;
     }
+    const locationReason: LocationReason | null = hit ? null : address ? "geocode_failed" : "source_unlocated";
 
     records.push({
       id: `nof-small-corridor-${records.length}`,
@@ -2391,6 +2513,7 @@ export function mapPartnerNofAwards(
       logLine: null,
       year,
       geometry,
+      locationReason,
       address,
       status: "awarded",
       recordDate: null,
@@ -2748,16 +2871,97 @@ function buildCapitalContext(generatedAt: string): unknown {
   };
 }
 
+// ── Exclusion ledger (Sol gate finding 3) ────────────────────────────────────
+
+interface ExclusionLedgerRetainedGroup {
+  source: string;
+  locationReason: string;
+  count: number;
+  dollars: number;
+  evidence: string;
+  recordIds: string[];
+}
+
+interface ExclusionLedgerTrueExclusion {
+  source: string;
+  reason: string;
+  count: number;
+  dollars: number | null;
+  evidence: string;
+}
+
+/**
+ * Deliverable 4 / Sol gate finding 3 — "commit a record-level, source-keyed
+ * exclusion ledger (reason, evidence, count, dollars)." Two tiers:
+ *   - `retained`: every record that IS in the export but carries a
+ *     locationReason (unplotted/held) — grouped by (source, reason), each
+ *     group listing every member record id so the ledger is auditable down
+ *     to the actual row, not just an aggregate count.
+ *   - `trueExclusions`: rows that never became a record at all (a true drop),
+ *     grouped by (source, reason) from the run's own drop counters — no
+ *     record ids exist for these by definition, but the count/dollars/
+ *     evidence are never silently absent.
+ */
+function buildExclusionLedger(
+  records: readonly CommunityInvestmentRecord[],
+  trueExclusions: ExclusionLedgerTrueExclusion[],
+  generatedAt: string,
+  exportContentHash: string,
+): {
+  generatedAt: string;
+  boundExportContentHash: string;
+  retained: ExclusionLedgerRetainedGroup[];
+  trueExclusions: ExclusionLedgerTrueExclusion[];
+} {
+  const groups = new Map<string, ExclusionLedgerRetainedGroup>();
+  for (const r of records) {
+    if (!r.locationReason) continue;
+    const key = `${r.source}|${r.locationReason}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        source: r.source,
+        locationReason: r.locationReason,
+        count: 0,
+        dollars: 0,
+        evidence: LOCATION_REASON_EVIDENCE[r.locationReason] ?? "",
+        recordIds: [],
+      };
+      groups.set(key, group);
+    }
+    group.count += 1;
+    group.dollars += r.amountAwarded ?? r.authorizedAmount ?? r.creditAmount ?? r.publishedBalance ?? 0;
+    group.recordIds.push(r.id);
+  }
+  return {
+    generatedAt,
+    boundExportContentHash: exportContentHash,
+    retained: [...groups.values()].sort((a, b) => (a.source + a.locationReason).localeCompare(b.source + b.locationReason)),
+    trueExclusions,
+  };
+}
+
+const LOCATION_REASON_EVIDENCE: Record<string, string> = {
+  geocode_failed:
+    "The source published a street address, but the Census geocoder returned no match or an out-of-Chicago hit for that specific attempt.",
+  administrative_address_outside_city:
+    "The source published a real coordinate/address, but it is the funder/grantee's suburban or out-of-state administrative office, not a Chicago site.",
+  source_unlocated:
+    "The source itself publishes no usable single-site location for this row (an intermediary/regranting recipient, a multi-site description, or a program that never publishes street addresses).",
+  out_of_scope:
+    "The row fails the product's own jurisdiction/subject test and is excluded entirely (not retained even unplotted).",
+};
+
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 async function main() {
   const generatedAt = new Date().toISOString();
 
   // Deliverable 1 — bind this export to the manifest version that produced it.
-  const manifestPath = join(process.cwd(), "data", "curated", "investment-inputs", "manifest.json");
-  const sourceManifestHash = existsSync(manifestPath)
-    ? createHash("sha256").update(readFileSync(manifestPath)).digest("hex")
-    : "";
+  // manifestContentHash (NOT a raw-file hash) so this stays stable across a
+  // manifest regeneration that only touches the volatile top-level
+  // `generatedAt` stamp — see its doc comment in scripts/lib/investment-manifest.ts.
+  const sourceManifestHash = manifestContentHash(investmentManifest);
 
   // Deliverable 3 — the dedupe ledger summary (per-group detail already lives
   // in the committed foundation_dedupe_ledger.json; only the totals travel
@@ -3122,24 +3326,93 @@ async function main() {
     sourceManifestHash,
   });
 
-  // Build and validate BOTH sibling artifacts before replacing either one. A
-  // failed context build must never leave a fresh record export beside stale
-  // context. Temporary files also keep partially-written JSON off the read path.
+  // Sol gate finding 3 — record-level, source-keyed exclusion ledger. TRUE
+  // exclusions (never became a record) are listed from this run's own drop
+  // counters; RETAINED-with-reason records are grouped straight from `out.records`
+  // inside buildExclusionLedger.
+  const trueExclusions: ExclusionLedgerTrueExclusion[] = [
+    {
+      source: "foundation",
+      reason: "out_of_scope",
+      count: foundationStats.droppedPlaceholder,
+      dollars: foundationStats.droppedPlaceholderDollars || null,
+      evidence:
+        "Recipient/address is a grant-SCHEDULE aggregate placeholder (\"SEE ATTACHED\", a 99999-style " +
+        "filler zip/address) — not a real single itemized grant row.",
+    },
+    {
+      source: "foundation",
+      reason: "out_of_scope",
+      count: dedupeLedgerSummary.collapsed_rows,
+      dollars: dedupeLedgerSummary.collapsed_dollars || null,
+      evidence:
+        "236-group dedupe adjudication (deliverable 3): the row's own filing does not carry as many " +
+        "matching grant nodes as the CSV does — proven extractor duplication, not a real second award. " +
+        "See foundation_dedupe_ledger.json.",
+    },
+    {
+      source: "nof-small/nof-large/sbif",
+      reason: "out_of_scope",
+      count: droppedPreWindow,
+      dollars: null,
+      evidence:
+        "Socrata completion row dated before the source's inclusion window (nof 2017 / sbif 2020) — " +
+        "per-row dollar figures not retained for this aggregate count in this run.",
+    },
+    {
+      source: "nof-small/nof-large/sbif",
+      reason: "geocode_failed",
+      count: droppedNoCoords,
+      dollars: null,
+      evidence:
+        "Socrata completion row published no usable coordinate — per-row dollar figures not retained " +
+        "for this aggregate count in this run.",
+    },
+    {
+      source: "cdbg-home",
+      reason: "geocode_failed",
+      count: hudDrops.outOfBbox,
+      dollars: null,
+      evidence:
+        "HUD CDBG/HOME activity with no usable coordinate at all (nothing to classify as an administrative " +
+        "address vs. a Chicago site) — the only cdbg-home category still a true drop after consult Q5.",
+    },
+    {
+      source: "development",
+      reason: "out_of_scope",
+      count: devStats.privateLedExcluded,
+      dollars: null,
+      evidence:
+        "Major-development row is NOT private-led (public infrastructure) — this layer models private " +
+        "development only.",
+    },
+  ].filter((e) => e.count > 0);
+  const exclusionLedger = buildExclusionLedger(out.records, trueExclusions, generatedAt, out.meta.exportContentHash);
+
+  // Build and validate ALL THREE sibling artifacts before replacing any one of
+  // them. A failed context/ledger build must never leave a fresh record
+  // export beside stale siblings. Temporary files also keep partially-written
+  // JSON off the read path.
   const context = buildCapitalContext(generatedAt);
   assertNoBannedFigureKeys(context);
   const outPayload = JSON.stringify(out, null, 2) + "\n";
   const contextPayload = JSON.stringify(context, null, 2) + "\n";
+  const ledgerPayload = JSON.stringify(exclusionLedger, null, 2) + "\n";
   const outTempPath = `${OUT_PATH}.${process.pid}.tmp`;
   const contextTempPath = `${CONTEXT_OUT_PATH}.${process.pid}.tmp`;
+  const ledgerTempPath = `${EXCLUSION_LEDGER_OUT_PATH}.${process.pid}.tmp`;
 
   try {
     writeFileSync(outTempPath, outPayload);
     writeFileSync(contextTempPath, contextPayload);
+    writeFileSync(ledgerTempPath, ledgerPayload);
+    renameSync(ledgerTempPath, EXCLUSION_LEDGER_OUT_PATH);
     renameSync(outTempPath, OUT_PATH);
     renameSync(contextTempPath, CONTEXT_OUT_PATH);
   } finally {
     if (existsSync(outTempPath)) unlinkSync(outTempPath);
     if (existsSync(contextTempPath)) unlinkSync(contextTempPath);
+    if (existsSync(ledgerTempPath)) unlinkSync(ledgerTempPath);
   }
 
   console.log(`\nWrote ${OUT_PATH}`);
@@ -3158,8 +3431,12 @@ async function main() {
   );
   console.log(`  counts=${JSON.stringify(out.meta.counts)}`);
 
-  // Capital CONTEXT is assembled and replaced in the same two-phase write above.
+  // Capital CONTEXT and the exclusion ledger are assembled and replaced in the
+  // same three-phase write above.
   console.log(`Wrote ${CONTEXT_OUT_PATH}`);
+  console.log(
+    `Wrote ${EXCLUSION_LEDGER_OUT_PATH} (retained groups=${exclusionLedger.retained.length} trueExclusions=${exclusionLedger.trueExclusions.length})`,
+  );
 }
 
 /**
