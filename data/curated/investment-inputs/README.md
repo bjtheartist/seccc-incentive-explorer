@@ -293,11 +293,32 @@ attachment-gap aggregates — all in
 never counted. Three more aggregate-only funders join the funder-exchange
 target list. Review provenance: `scripts/foundation/phase3_review_notes.json`.
 
-**Statistical audit (committed: `foundation_audit_2026-08-04.json`):** a seeded
-SRS of n=2,401 published rows across all foundation files, each re-verified
-against its own IRS filing — recipient and amount re-parsed from the source
-XML. Result: **2,401/2,401 verified, zero mismatches of any class** (95%
-confidence upper bound on the row error rate ≈ 0.12%).
+_Historical note: `foundation_audit_2026-08-04.json` (n=2,401 over base+Tier-1+
+Phase-2 only, ~21.8k rows) predates Phase-3 and is superseded by the fresh audit
+below, which covers the full four-file universe._
+
+<!-- GENERATED:AUDIT_CLAIM:BEGIN -->
+**Statistical audit (fresh, committed: `foundation_audit_fresh.json`):** a seeded
+SRS of n=2,401, seed 20260813, drawn from the FULL exported IRS-derived
+foundation universe — 26,501 rows across all four published foundation files
+(base + Tier-1 + Phase-2 + Phase-3), bound to the export's own content hash
+(`e6845d4fd9e28b9a…`). Chicago Prize
+(18 rows, award announcements rather than IRS filings) is excluded from
+this SRS and reported separately below as a census check.
+
+Result: **2,065/2,401 rows (86.0%) independently
+re-verified against their own IRS filing — recipient and amount re-parsed from
+the source XML — with ZERO recipient/amount mismatches.** 336 rows
+(14.0%) could not be resolved to a specific filing in this run (an
+identity-resolution gap — a ProPublica lookup or filing fetch that did not
+resolve — never a proven data error) and are counted here, not silently
+dropped from the denominator.
+
+**Chicago Prize census (separate, not part of the SRS):** 18/18 rows — every published Chicago Prize row reconciles to the export with a tying amount and a live announcement citation.
+<!-- GENERATED:AUDIT_CLAIM:END -->
+
+Regenerate with `npm run data:docs:generate` after any export or audit rerun —
+CI fails on a stale block (clean-diff gate).
 
 ## Location confidence
 
