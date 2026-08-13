@@ -172,6 +172,10 @@ jobs:
             echo "  no record changed. Trust the delta table, not the diff size."
             echo "- Sources **not** refreshed here are frozen snapshots by design; see"
             echo "  \`data/curated/investment-inputs/REFRESH.md\` for the cadence per source."
+            echo "- If \`data/curated/investment-inputs/refresh-attempt.json\` is in this diff, a"
+            echo "  source failed with NO other file change — this PR exists ONLY to surface that"
+            echo "  failure (see \"Needs attention\" above). It is removed automatically once every"
+            echo "  source refreshes cleanly again; do not hand-edit it."
             echo
             echo "<details><summary>Full refresh log</summary>"
             echo

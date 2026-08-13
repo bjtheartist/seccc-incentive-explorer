@@ -79,7 +79,7 @@
  */
 
 import { spawnSync } from "node:child_process";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
@@ -91,6 +91,10 @@ import {
 
 const REPO_ROOT = process.cwd();
 const INPUT_DIR = join(REPO_ROOT, "data", "curated", "investment-inputs");
+/** Deliverable 7 — committed ONLY on a failed refresh attempt (see main()), so
+ * a failure-only run (nothing else changed) still produces a diff for the
+ * workflow's PR-open step to see. */
+const REFRESH_ATTEMPT_PATH = join(INPUT_DIR, "refresh-attempt.json");
 
 // ── Small shared utilities ───────────────────────────────────────────────────
 
@@ -935,6 +939,30 @@ async function main(): Promise<void> {
     }
   } else if (!changed) {
     process.stdout.write("\nNo input changed — export skipped.\n");
+  }
+
+  // Deliverable 7 (consult F9) — "always commit a refresh-attempt artifact on
+  // failure so a failure-only run has a diff and can open a PR." Without this,
+  // a run where EVERY source fails before writing any bytes leaves `git status`
+  // clean, data-refresh.yml's "changed" check reports false, the PR-open step
+  // never runs, and the failure is visible only in a workflow log nobody reads
+  // until the run goes red for other reasons — exactly the gap audit finding 13
+  // flagged. Written ONLY on failure (never on an ordinary no-op success, which
+  // must stay silent) and removed once every source is healthy again, so it
+  // never lingers as permanent no-op diff noise.
+  if (!options.dryRun) {
+    if (failed.length > 0) {
+      const attempt = {
+        attemptedAt: new Date().toISOString(),
+        failedSources: failed.map((f) => ({ id: f.id, file: f.file, error: f.error })),
+        okSources: outcomes.filter((o) => o.ok).map((o) => o.id),
+      };
+      writeFileSync(REFRESH_ATTEMPT_PATH, JSON.stringify(attempt, null, 2) + "\n", "utf8");
+      process.stdout.write(`\n(wrote ${REFRESH_ATTEMPT_PATH} — failure artifact for the delta PR)\n`);
+    } else if (existsSync(REFRESH_ATTEMPT_PATH)) {
+      unlinkSync(REFRESH_ATTEMPT_PATH);
+      process.stdout.write(`\n(removed ${REFRESH_ATTEMPT_PATH} — every source is healthy again)\n`);
+    }
   }
 
   if (failed.length > 0) {
