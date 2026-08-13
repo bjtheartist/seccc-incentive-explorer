@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { programFact, programQualifier } from "@/lib/program-fact";
 
-const FAQ_ITEMS = [
+export const FAQ_ITEMS = [
   {
     q: "What is a TIF District?",
     a: "A Tax Increment Financing (TIF) district captures growth in property tax revenue within a designated area and reinvests it into local improvements. When property values increase within the TIF district, the extra tax revenue can support projects like infrastructure, building rehabilitation, and streetscaping.",
@@ -22,7 +23,8 @@ const FAQ_ITEMS = [
   },
   {
     q: "Can I qualify for multiple incentive programs at the same time?",
-    a: "Yes. This is often called incentive stacking. Many locations sit inside more than one zone or program area, but each program has its own application, eligible costs, and rules about whether benefits can be combined.",
+    // F11 binding replacement copy (build-spec.md 2.4; do not weaken, do not strengthen).
+    a: "Overlap shortens the comparison list; it does not show that benefits can be combined. Compare eligible-cost, timing, tax-basis, funding-source, and approval rules for the specific project.",
   },
   {
     q: "What is an Enterprise Zone?",
@@ -54,7 +56,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "Are incentives only for new businesses?",
-    a: "No! Many incentive programs benefit existing businesses too. SBIF grants can fund improvements to existing buildings. TIF funding supports rehabilitation of existing properties. Enterprise Zone tax exemptions apply to any qualifying purchases. And hiring incentives in High Unemployment Zones apply whenever you hire.",
+    // F6 (audit): the closing clause previously asserted hiring incentives
+    // in High Unemployment Zones apply "whenever you hire" — WOTC's
+    // authorizing statute has lapsed. Derived from the catalog, not
+    // hand-authored, so it can't drift again.
+    a: `No! Many incentive programs benefit existing businesses too. SBIF grants can fund improvements to existing buildings. TIF funding supports rehabilitation of existing properties. Enterprise Zone tax exemptions apply to any qualifying purchases. ${programQualifier("highUnemployment")}`,
   },
   {
     q: "How accurate is this tool?",
@@ -66,7 +72,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "What is the difference between an incentive zone and a program?",
-    a: "An incentive zone is a geographic designation — a boundary on the map drawn by a government agency. Being inside a zone is the first eligibility gate. A program is the actual benefit (grant, tax credit, financing) that you apply for. Some programs require you to be in a specific zone (e.g., SBIF requires a TIF district). Others, like Cook County's Catalyst Grant, are available county-wide regardless of zone status.",
+    // F3 (audit): "the first eligibility gate" and the prior Catalyst Grant
+    // example (now lapsed — F6) removed. Example program name is derived
+    // via programFact so it can't silently drift out of sync with the
+    // catalog's own status fields the way the hard-coded name did.
+    a: `An incentive zone is a geographic designation — a boundary on the map drawn by a government agency. A geocoded point that falls inside a zone is a location signal for the programs that reference that boundary; review the current program source for the boundary's role and any remaining criteria. A program is the actual benefit (grant, tax credit, financing) that you apply for. Some programs require you to be in a specific zone (e.g., SBIF requires a TIF district). Others, like ${programFact("cpace", (p) => p.name)}, are available county-wide regardless of zone status.`,
   },
   {
     q: "What is the Neighborhood Opportunity Fund (NOF)?",
@@ -90,7 +100,11 @@ const FAQ_ITEMS = [
   },
   {
     q: "What is the Micro Market Recovery Program?",
-    a: "The Micro Market Recovery Program targets high-vacancy commercial corridors with storefront improvement grants, technical assistance, and marketing support. It's designed to activate empty storefronts and revitalize neighborhood commercial streets across Chicago.",
+    // F6 (audit): MMRP was migrated to the Department of Housing and
+    // renamed CNRP — a homeownership down-payment program, not the
+    // storefront-improvement grant this answer previously described.
+    // Derived from the catalog so this can't drift again.
+    a: `The program formerly known as the Micro Market Recovery Program is now the ${programFact("microMarketRecovery", (p) => p.name)}. ${programFact("microMarketRecovery", (p) => p.summary)} ${programQualifier("microMarketRecovery")}`,
   },
   {
     q: "What is the Cook County Class 7a incentive?",
