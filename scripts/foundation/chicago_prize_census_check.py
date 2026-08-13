@@ -24,27 +24,28 @@ OUT_PATH = os.path.join(REPO, "data", "curated", "investment-inputs", "chicago_p
 PRIZE_FUNDER = "Pritzker Traubert Foundation — Chicago Prize"
 
 
-def main():
-    source_rows = list(csv.DictReader(open(CSV_PATH)))
-    export = json.load(open(EXPORT_PATH))
-    prize_records = [r for r in export["records"] if r["source"] == "foundation" and r.get("funderName") == PRIZE_FUNDER]
+def match_prize_rows(source_rows, prize_records):
+    """PURE one-to-one matcher (Sol gate finding 4) -- no file I/O, so it is
+    directly exercised by test_prize_matching.py's adversarial fixtures:
+    a same-amount/WRONG-recipient row must come back unmatched, and two rows
+    competing for one record must leave exactly one matched (consumed-tracking
+    blocking reuse), never both.
 
-    # Sol gate finding 4 (BLOCKER) -- "The checker can reuse one export record
-    # for multiple announcement rows and, when an amount exists, does not
-    # require the recipient to match." Fixed with (a) a CONSUMED set so a
-    # record matched once is removed from the candidate pool for every
-    # subsequent row, and (b) recipient match REQUIRED unconditionally,
-    # amount match required IN ADDITION whenever the CSV publishes one --
-    # never amount-only.
+    `source_rows`: [{"initiative": str, "amount": str|None, "source_url": str}, ...]
+    `prize_records`: [{"id": str, "recipient": str, "amountAwarded": float|None}, ...]
+
+    Recipient match is REQUIRED unconditionally (substring of the export
+    record's recipient); amount match is required IN ADDITION whenever the
+    row publishes one -- never amount-only. A record matched once is removed
+    from the candidate pool (`consumed_ids`) for every subsequent row.
+    """
     consumed_ids = set()
     results = []
     ok = 0
     for i, row in enumerate(source_rows):
         want_amt = float(row["amount"]) if row.get("amount") else None
-        # mapChicagoPrize maps `initiative` (not `recipient_orgs`) to the export
-        # record's `recipient` field -- see scripts/export-community-investment.ts.
         want_recipient = (row.get("initiative") or "").strip()
-        has_url = bool(row.get("source_url", "").strip().startswith("https://"))
+        has_url = bool((row.get("source_url") or "").strip().startswith("https://"))
         match = None
         for rec in prize_records:
             if rec["id"] in consumed_ids:
@@ -54,9 +55,6 @@ def main():
             if not recipient_match:
                 continue
             if want_amt is None:
-                # A finalist/planning-stage row with no dollar figure yet
-                # published -- the export must ALSO carry no amount (never a
-                # stale/invented figure).
                 if rec_amt is None:
                     match = rec
                     break
@@ -75,6 +73,15 @@ def main():
             "source_url": row.get("source_url"),
             "ok": row_ok,
         })
+    return results, ok
+
+
+def main():
+    source_rows = list(csv.DictReader(open(CSV_PATH)))
+    export = json.load(open(EXPORT_PATH))
+    prize_records = [r for r in export["records"] if r["source"] == "foundation" and r.get("funderName") == PRIZE_FUNDER]
+
+    results, ok = match_prize_rows(source_rows, prize_records)
 
     # One-to-one: every consumed id must be unique by construction, but assert
     # it explicitly so a future refactor that reintroduces reuse fails loudly.
