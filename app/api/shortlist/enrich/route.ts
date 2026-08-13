@@ -155,15 +155,21 @@ async function fetchActiveLicenses(
   return licenses;
 }
 
-async function enrichOne(item: {
-  key: string;
-  pin: string | null;
-  address: string | null;
-}): Promise<ShortlistEnrichItem> {
+async function enrichOne(
+  item: {
+    key: string;
+    pin: string | null;
+    address: string | null;
+  },
+  buildId: string,
+): Promise<ShortlistEnrichItem> {
   const pin = normalizePin14(item.pin);
   const address = item.address?.trim() ?? "";
-  const cacheKey = `${pin ?? ""}|${address.toUpperCase()}`;
-  const cached = cacheKey === "|" ? null : cacheGet(cacheKey);
+  // buildId is part of the key (Finding 4, Q6.2): a universe regeneration
+  // (new export, new PIN/address facts) must never serve a value cached
+  // under a PRIOR build — there is otherwise no signal anything changed.
+  const cacheKey = `${buildId}|${pin ?? ""}|${address.toUpperCase()}`;
+  const cached = pin == null && address === "" ? null : cacheGet(cacheKey);
   if (cached) return { ...cached, key: item.key };
 
   const [classResult, valueResult, licenseResult] = await Promise.all([
@@ -194,14 +200,34 @@ async function enrichOne(item: {
       classResult === undefined || valueResult === undefined || licenseResult === undefined,
   };
 
-  if (cacheKey !== "|" && !result.enrichmentUnavailable) cacheSet(cacheKey, result);
+  // Cache only AFFIRMATIVE results — a genuine, populated fact was found
+  // (Finding 4, Q6.2: "do not treat an empty HTTP 200 as a trustworthy 'no
+  // data'"). A result where every upstream succeeded but returned nothing
+  // (no class, no assessed value, no licenses) is NOT cached: it is
+  // indistinguishable at this layer from "not yet indexed" or "about to
+  // change", and the cost of re-querying it next time is one Socrata round
+  // trip, not a correctness risk. Only a genuinely negative result earning
+  // its own confident cache entry would need a TTL long enough to matter;
+  // this repo does not have one, so simply not caching "found nothing" is
+  // the conservative, correct default.
+  const hasAffirmativeData =
+    countyClass != null || assessedValue != null || activeLicenses.length > 0;
+  if ((pin != null || address !== "") && !result.enrichmentUnavailable && hasAffirmativeData) {
+    cacheSet(cacheKey, result);
+  }
   return result;
 }
 
 export async function POST(request: Request) {
   let items: { key: string; pin: string | null; address: string | null }[] = [];
+  let buildId = "";
   try {
-    const body = (await request.json()) as { items?: unknown };
+    const body = (await request.json()) as { buildId?: unknown; items?: unknown };
+    // An empty/missing buildId is still a valid (if less useful) cache
+    // partition — every request from a client that hasn't been updated to
+    // send one collapses into the same "" partition rather than failing;
+    // it just cannot benefit from cross-build cache invalidation.
+    buildId = typeof body?.buildId === "string" ? body.buildId.slice(0, 200) : "";
     if (Array.isArray(body?.items)) {
       items = body.items
         .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
@@ -223,7 +249,7 @@ export async function POST(request: Request) {
 
   // Never 500: a rejection anywhere still answers with a shaped, honest body.
   try {
-    const enriched = await Promise.all(items.map((item) => enrichOne(item)));
+    const enriched = await Promise.all(items.map((item) => enrichOne(item, buildId)));
     return NextResponse.json(
       { items: enriched },
       { headers: { "Cache-Control": "private, no-store" } },

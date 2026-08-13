@@ -12,7 +12,8 @@
 
 import {
   ZONING_BADGE_LABELS,
-  type RankedShortlistCandidate,
+  type CandidateOverlays,
+  type DecoratedShortlistCandidate,
   type ZoningBadge,
 } from "./shortlist-engine";
 import type { ShortlistEnrichmentFacts } from "./site-shortlist";
@@ -52,24 +53,31 @@ function csvCell(value: string | number | null | undefined): string {
   return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
-const OVERLAY_LABELS: { key: keyof RankedShortlistCandidate["overlays"]; label: string }[] = [
+const OVERLAY_LABELS: { key: keyof CandidateOverlays; label: string }[] = [
   { key: "ssa", label: "SSA" },
   { key: "ccsa", label: "CCSA" },
   { key: "tif", label: "TIF" },
   { key: "nof", label: "NOF" },
 ];
 
-function overlaysCell(overlays: RankedShortlistCandidate["overlays"]): string {
-  const active = OVERLAY_LABELS.filter((overlay) => overlays[overlay.key]).map((overlay) => overlay.label);
+/** Each active overlay's own name where the source published one (Finding
+ *  12) — "SSA: Greater Chatham", not just "SSA". */
+function overlaysCell(overlays: CandidateOverlays): string {
+  const active = OVERLAY_LABELS.filter((overlay) => overlays[overlay.key].present).map((overlay) => {
+    const name = overlays[overlay.key].name;
+    return name ? `${overlay.label}: ${name}` : overlay.label;
+  });
   return active.length > 0 ? active.join("; ") : "None mapped";
 }
 
 export const ZONING_BADGE_CSV_LABEL: Readonly<Record<ZoningBadge, string>> = ZONING_BADGE_LABELS;
 
-/** Build the downloadable CSV from exactly the ranked candidates rendered on
- *  the page, in the SAME order. */
+/** Build the downloadable CSV from exactly the DECORATED ranked candidates
+ *  rendered on the page, in the SAME order. Candidates must already carry
+ *  display-only facts (lib/shortlist-engine.ts's
+ *  `decorateShortlistDisplayFacts`) — this module never computes them. */
 export function shortlistCsv(
-  candidates: readonly RankedShortlistCandidate[],
+  candidates: readonly DecoratedShortlistCandidate[],
   enrichment: Readonly<Record<string, ShortlistEnrichmentFacts>> = {},
 ): string {
   const lines = [SHORTLIST_CSV_HEADERS.map(csvCell).join(",")];

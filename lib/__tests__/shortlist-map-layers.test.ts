@@ -71,14 +71,15 @@ function candidate(overrides: Partial<RankedShortlistCandidate> = {}): RankedSho
     incentiveCount: 2,
     saleYear: null,
     violation: false,
-    overlays: { ssa: false, ccsa: false, tif: false, nof: false },
+    conflictingPropertyTypes: false,
+    overlays: {
+      ssa: { present: false, name: null },
+      ccsa: { present: false, name: null },
+      tif: { present: false, name: null },
+      nof: { present: false, name: null },
+    },
     transitScore: null,
-    nearestRailDisplay: null,
-    expresswayDisplay: null,
-    nearestSchool: null,
-    nearestLibrary: null,
     score: 60,
-    baseline: { areaFitPoints: 10, completenessPoints: 10, total: 20 },
     ...overrides,
   } as RankedShortlistCandidate;
 }

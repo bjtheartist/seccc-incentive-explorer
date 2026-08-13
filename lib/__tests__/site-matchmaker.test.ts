@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  SHORTLIST_RANKING_MODEL_VERSION,
   SITE_MATCH_CRITERIA_VERSION,
   buildShortlistHref,
   buildSiteMatchmakerHref,
@@ -9,6 +10,7 @@ import {
   encodeSiteMatchCriteria,
   isSiteMatchCriteriaReady,
   normalizeSiteMatchCriteria,
+  shortlistRankingModelVersionSupported,
   siteMatchCriteriaVersionSupported,
   summarizeSiteMatchCriteria,
   type SiteMatchCriteria,
@@ -103,10 +105,19 @@ describe("site matchmaker handoff", () => {
     expect(isSiteMatchCriteriaReady(completeCriteria())).toBe(true);
   });
 
-  it("opens the ranked shortlist on the SAME criteria contract as the map", () => {
+  it("opens the ranked shortlist on the SAME criteria contract as the map, PLUS its own sm_rv (Finding 5)", () => {
     const shortlist = buildShortlistHref(completeCriteria());
     const map = buildVacancyHandoffHref(completeCriteria());
-    expect(shortlist).toBe(map!.replace("/map?", "/shortlist?"));
+    // Every criteria param the map carries, the shortlist carries too — the
+    // shortlist URL is a strict superset (it adds `sm_rv`, which is
+    // shortlist-specific and must NOT appear on the map handoff).
+    const mapParams = new URLSearchParams(map!.split("?")[1]);
+    const shortlistParams = new URLSearchParams(shortlist!.split("?")[1]);
+    for (const [key, value] of mapParams) {
+      expect(shortlistParams.get(key)).toBe(value);
+    }
+    expect(mapParams.has("sm_rv")).toBe(false);
+    expect(shortlistParams.get("sm_rv")).toBe(SHORTLIST_RANKING_MODEL_VERSION);
     expect(shortlist).toContain("/vacancy/60617/shortlist?source=site-matchmaker");
   });
 
@@ -158,5 +169,40 @@ describe("siteMatchCriteriaVersionSupported", () => {
     const encoded = encodeSiteMatchCriteria(completeCriteria());
     expect(siteMatchCriteriaVersionSupported(encoded)).toBe(true);
     expect(encoded.get("sm_v")).toBe(SITE_MATCH_CRITERIA_VERSION);
+  });
+});
+
+// ── Finding 5: ranking-model request versioning (separate from sm_v) ───────
+
+describe("shortlistRankingModelVersionSupported", () => {
+  it("supports the current version", () => {
+    const params = new URLSearchParams({ sm_rv: SHORTLIST_RANKING_MODEL_VERSION });
+    expect(shortlistRankingModelVersionSupported(params)).toBe(true);
+  });
+
+  it("treats an ABSENT sm_rv as supported — back-compat for links minted before this versioning existed", () => {
+    expect(shortlistRankingModelVersionSupported(new URLSearchParams({ zip: "60617" }))).toBe(true);
+  });
+
+  it("rejects an explicit, unrecognized version", () => {
+    expect(shortlistRankingModelVersionSupported(new URLSearchParams({ sm_rv: "99" }))).toBe(false);
+    expect(shortlistRankingModelVersionSupported(new URLSearchParams({ sm_rv: "0" }))).toBe(false);
+  });
+
+  it("is checked independently of sm_v — an unrecognized sm_rv fails even with a supported sm_v, and vice versa", () => {
+    const badRv = new URLSearchParams({ sm_v: SITE_MATCH_CRITERIA_VERSION, sm_rv: "99" });
+    expect(siteMatchCriteriaVersionSupported(badRv)).toBe(true);
+    expect(shortlistRankingModelVersionSupported(badRv)).toBe(false);
+
+    const badV = new URLSearchParams({ sm_v: "99", sm_rv: SHORTLIST_RANKING_MODEL_VERSION });
+    expect(siteMatchCriteriaVersionSupported(badV)).toBe(false);
+    expect(shortlistRankingModelVersionSupported(badV)).toBe(true);
+  });
+
+  it("stays in step with what buildShortlistHref actually emits", () => {
+    const href = buildShortlistHref(completeCriteria())!;
+    const params = new URLSearchParams(href.split("?")[1]);
+    expect(shortlistRankingModelVersionSupported(params)).toBe(true);
+    expect(params.get("sm_rv")).toBe(SHORTLIST_RANKING_MODEL_VERSION);
   });
 });

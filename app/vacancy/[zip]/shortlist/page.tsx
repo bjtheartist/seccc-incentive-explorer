@@ -40,13 +40,16 @@ import {
   RANKING_MODEL_VERSION,
   SHORTLIST_TOP_N,
   ZONING_SCREENING_NOTE,
+  decorateShortlistDisplayFacts,
   runShortlistEngine,
+  selectedTransitNetwork,
   type ShortlistFunnelStats,
 } from "@/lib/shortlist-engine";
 import {
   buildSiteMatchmakerHref,
   decodeSiteMatchCriteria,
   isSiteMatchCriteriaReady,
+  shortlistRankingModelVersionSupported,
   siteMatchCriteriaVersionSupported,
   summarizeSiteMatchCriteria,
 } from "@/lib/site-matchmaker";
@@ -59,6 +62,7 @@ export const dynamic = "force-dynamic";
 /** The canonical `sm_*` criteria parameters, plus the ZIP from the route. */
 const CRITERIA_PARAMS = [
   "sm_v",
+  "sm_rv",
   "sm_use",
   "sm_property",
   "sm_min_sqft",
@@ -231,8 +235,11 @@ export default async function SiteShortlistPage({
   const source = firstParam(raw.source);
   const neighborhood = pilotEntry.primaryNeighborhood;
 
-  // ── Unknown criteriaVersion: fail closed, never a silent decode ───────────
-  if (!siteMatchCriteriaVersionSupported(rawParams)) {
+  // ── Unknown criteriaVersion or ranking-model version: fail closed, never a
+  //    silent decode (Finding 5: `sm_rv` is a SEPARATE, request-level check
+  //    from `sm_v` — an old bookmarked shortlist URL that predates a ranking
+  //    semantics change must not silently receive the new ranking). ────────
+  if (!siteMatchCriteriaVersionSupported(rawParams) || !shortlistRankingModelVersionSupported(rawParams)) {
     return <UnavailableState zip={zip} />;
   }
 
@@ -303,16 +310,33 @@ export default async function SiteShortlistPage({
     );
   }
 
-  // ── Run the full-universe, criteria-relative engine ────────────────────────
-  const { ranked: allRanked, funnel } = runShortlistEngine({
+  // ── Run the full-universe, criteria-relative engine (core pass only — no
+  //    display-only geometry here, see Finding 11) ───────────────────────────
+  const stations = railStations();
+  const { ranked: allRanked, funnel, railDataUnavailable } = runShortlistEngine({
     rows: universe.data.rows,
     criteria,
-    stations: railStations(),
+    stations,
+    sourceRecordsByEvidenceType: universe.data.counts.sourceRecordsByEvidenceType,
+  });
+
+  // ── Fail-closed: a selected CTA/Metra criterion whose station SOURCE is
+  //    unavailable (Finding 8) — never silently rank as if it were unselected.
+  if (railDataUnavailable) {
+    return <UnavailableState zip={zip} />;
+  }
+
+  // ── Slice to the rendered top N, THEN decorate with display-only geometry
+  //    (Finding 11) — nearest school/library/expressway/rail-when-unscored
+  //    are computed for these ≤20 candidates only, never the full screened
+  //    universe (up to 6,000+ rows for the largest committed ZIP). ──────────
+  const ranked = decorateShortlistDisplayFacts(allRanked.slice(0, SHORTLIST_TOP_N), {
+    stations,
+    network: selectedTransitNetwork(criteria, stations),
     expresswayContextByKey: loadShortlistExpresswayContext(zip),
     schoolPoints: loadShortlistAmenityPoints("school-points.json"),
     libraryPoints: loadShortlistAmenityPoints("library-points.json"),
   });
-  const ranked = allRanked.slice(0, SHORTLIST_TOP_N);
 
   const generatedAt = universe.data.generatedAt ?? loadVacancyIndex()?.generatedAt ?? null;
   const chips = [
@@ -413,6 +437,7 @@ export default async function SiteShortlistPage({
           zip={zip}
           projectUse={criteria.projectUse}
           source={source}
+          buildId={universe.data.buildId}
           ranked={ranked}
           // The map panel draws the same simplified ZIP ring the vacancy web
           // report uses; both read it from the committed edition, so the two

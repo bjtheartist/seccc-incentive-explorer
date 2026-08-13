@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
 import { SHORTLIST_CSV_HEADERS, shortlistCsv, shortlistCsvFilename } from "../shortlist-csv";
-import type { RankedShortlistCandidate } from "../shortlist-engine";
+import type { CandidateOverlays, DecoratedShortlistCandidate } from "../shortlist-engine";
 
-function candidate(overrides: Partial<RankedShortlistCandidate> = {}): RankedShortlistCandidate {
+function noOverlays(): CandidateOverlays {
+  return {
+    ssa: { present: false, name: null },
+    ccsa: { present: false, name: null },
+    tif: { present: false, name: null },
+    nof: { present: false, name: null },
+  };
+}
+
+function candidate(overrides: Partial<DecoratedShortlistCandidate> = {}): DecoratedShortlistCandidate {
   return {
     key: "pin:20363230080000",
     address: "8000 S COTTAGE GROVE AVE",
@@ -20,14 +29,14 @@ function candidate(overrides: Partial<RankedShortlistCandidate> = {}): RankedSho
     incentiveCount: 2,
     saleYear: null,
     violation: false,
-    overlays: { ssa: true, ccsa: false, tif: true, nof: false },
+    conflictingPropertyTypes: false,
+    overlays: { ...noOverlays(), ssa: { present: true, name: "Greater Chatham" }, tif: { present: true, name: null } },
     transitScore: { networks: ["cta-rail"], stationName: "79th", stationSystem: "CTA", meters: 300, walkMinutes: 4, points: 25 },
     nearestRailDisplay: null,
     expresswayDisplay: { name: "Dan Ryan Expy (I-90/94)", miles: 0.4 },
     nearestSchool: { name: "Barnard", meters: 500 },
     nearestLibrary: { name: "Chatham-Avalon", meters: 700 },
-    score: 55,
-    baseline: { areaFitPoints: 15, completenessPoints: 10, total: 25 },
+    score: 25,
     ...overrides,
   };
 }
@@ -43,10 +52,18 @@ describe("shortlistCsv", () => {
     expect(lines[2].split(",")[0]).toBe("2");
   });
 
-  it("lists only the active overlays, and 'None mapped' when none are set", () => {
-    const withOverlays = shortlistCsv([candidate({ overlays: { ssa: true, ccsa: false, tif: true, nof: false } })]);
-    expect(withOverlays).toContain("SSA; TIF");
-    const withoutOverlays = shortlistCsv([candidate({ overlays: { ssa: false, ccsa: false, tif: false, nof: false } })]);
+  it("lists only the active overlays with their names (Finding 12), and 'None mapped' when none are set", () => {
+    const withOverlays = shortlistCsv([
+      candidate({
+        overlays: {
+          ...noOverlays(),
+          ssa: { present: true, name: "Greater Chatham" },
+          tif: { present: true, name: null },
+        },
+      }),
+    ]);
+    expect(withOverlays).toContain("SSA: Greater Chatham; TIF");
+    const withoutOverlays = shortlistCsv([candidate({ overlays: noOverlays() })]);
     expect(withoutOverlays).toContain("None mapped");
   });
 

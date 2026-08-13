@@ -28,7 +28,8 @@ import { trackEvent } from "@/lib/analytics-events";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import {
   ZONING_BADGE_LABELS,
-  type RankedShortlistCandidate,
+  type CandidateOverlays,
+  type DecoratedShortlistCandidate,
   type ZoningBadge,
 } from "@/lib/shortlist-engine";
 import { shortlistCsv, shortlistCsvFilename } from "@/lib/shortlist-csv";
@@ -129,15 +130,20 @@ function Flag({ children }: { children: React.ReactNode }) {
   );
 }
 
-const OVERLAY_LABELS: { key: keyof RankedShortlistCandidate["overlays"]; label: string }[] = [
+const OVERLAY_LABELS: { key: keyof CandidateOverlays; label: string }[] = [
   { key: "ssa", label: "SSA" },
   { key: "ccsa", label: "CCSA" },
   { key: "tif", label: "TIF" },
   { key: "nof", label: "NOF" },
 ];
 
-function overlaysText(overlays: RankedShortlistCandidate["overlays"]): string {
-  const active = OVERLAY_LABELS.filter((overlay) => overlays[overlay.key]).map((overlay) => overlay.label);
+/** Each active overlay's own feature name where the source published one
+ *  (Finding 12) — "SSA: Greater Chatham", not just "SSA". */
+function overlaysText(overlays: CandidateOverlays): string {
+  const active = OVERLAY_LABELS.filter((overlay) => overlays[overlay.key].present).map((overlay) => {
+    const name = overlays[overlay.key].name;
+    return name ? `${overlay.label}: ${name}` : overlay.label;
+  });
   return active.length > 0 ? active.join(" · ") : "None mapped";
 }
 
@@ -149,12 +155,12 @@ function ShortlistCard({
   enrichState,
   onSnapshotClick,
 }: {
-  candidate: RankedShortlistCandidate;
+  candidate: DecoratedShortlistCandidate;
   number: number;
   zip: string;
   enrichment: EnrichItem | null;
   enrichState: EnrichState["status"];
-  onSnapshotClick: (candidate: RankedShortlistCandidate) => void;
+  onSnapshotClick: (candidate: DecoratedShortlistCandidate) => void;
 }) {
   const viewerUrl = cookViewerUrl(candidate.pin);
   const clerkUrl = clerkRecordsUrl(candidate.pin);
@@ -164,6 +170,13 @@ function ShortlistCard({
   const flags: string[] = [];
   if (candidate.saleYear) flags.push(taxSaleFlag(candidate.saleYear));
   if (candidate.violation) flags.push(VIOLATION_FLAG);
+  if (candidate.conflictingPropertyTypes) {
+    flags.push(
+      `This record carries both vacant-land and vacant-building evidence — screened as a ${
+        candidate.propertyType === "vacant_building" ? "building" : "land"
+      } record for this search`,
+    );
+  }
   for (const license of enrichment?.activeLicenses ?? []) {
     flags.push(activeLicenseFlag(license.name));
   }
@@ -186,6 +199,8 @@ function ShortlistCard({
           </h3>
           <p className="mt-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">
             {candidate.pin ? `PIN ${candidate.pin}` : "No PIN on this record"}
+            {" · "}
+            {candidate.zoningDistrict ? `Zoned ${candidate.zoningDistrict}` : "Zoning unresolved"}
             {enrichment?.classGloss ? ` · ${enrichment.classGloss}` : ""}
           </p>
         </div>
@@ -349,6 +364,7 @@ export default function SiteShortlistResults({
   zip,
   projectUse,
   source,
+  buildId,
   ranked,
   boundary,
   centroid,
@@ -356,10 +372,17 @@ export default function SiteShortlistResults({
   zip: string;
   projectUse: SiteProjectUse | null;
   source: string | null;
+  /** The loaded universe file's own buildId (PR1) — sent with every
+   *  enrichment request so the server-side cache can key on it (Finding 4:
+   *  an enrichment cache keyed only on PIN/address can serve a stale value
+   *  across a universe regeneration with no signal anything changed). */
+  buildId: string;
   /** The full ranked, screened list — ALREADY sliced to the rendered top N
-   *  by the server page. Badges replace the old tier split; this component
-   *  never re-ranks, it only filters what is shown. */
-  ranked: RankedShortlistCandidate[];
+   *  AND already decorated with display-only facts
+   *  (`decorateShortlistDisplayFacts`) by the server page. Badges replace
+   *  the old tier split; this component never re-ranks, it only filters
+   *  what is shown. */
+  ranked: DecoratedShortlistCandidate[];
   /** Simplified ZIP ring + bbox from the vacancy edition, for the map panel's
    *  boundary line. `null` renders the panel without an outline. */
   boundary: { rings: [number, number][][]; bbox: [number, number, number, number] } | null;
@@ -421,6 +444,7 @@ export default function SiteShortlistResults({
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
+            buildId,
             items: ranked.map((candidate) => ({
               key: candidate.key,
               pin: candidate.pin,
@@ -444,7 +468,7 @@ export default function SiteShortlistResults({
     })();
 
     return () => controller.abort();
-  }, [ranked]);
+  }, [ranked, buildId]);
 
   const byKey = enrich.status === "loaded" ? enrich.byKey : {};
   const allUnavailable =
@@ -479,7 +503,7 @@ export default function SiteShortlistResults({
   /** One event per snapshot launch, carrying the PIN so a downstream report can
    *  be tied back to the exact record that sent it. Fires alongside navigation;
    *  the link is never blocked on it. */
-  function handleSnapshotClick(candidate: RankedShortlistCandidate) {
+  function handleSnapshotClick(candidate: DecoratedShortlistCandidate) {
     trackEvent("site_shortlist_snapshot_clicked", {
       source: source ?? "site-shortlist",
       metadata: { zip, pin: candidate.pin ?? "" },
