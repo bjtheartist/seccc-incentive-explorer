@@ -29,6 +29,14 @@ def main():
     export = json.load(open(EXPORT_PATH))
     prize_records = [r for r in export["records"] if r["source"] == "foundation" and r.get("funderName") == PRIZE_FUNDER]
 
+    # Sol gate finding 4 (BLOCKER) -- "The checker can reuse one export record
+    # for multiple announcement rows and, when an amount exists, does not
+    # require the recipient to match." Fixed with (a) a CONSUMED set so a
+    # record matched once is removed from the candidate pool for every
+    # subsequent row, and (b) recipient match REQUIRED unconditionally,
+    # amount match required IN ADDITION whenever the CSV publishes one --
+    # never amount-only.
+    consumed_ids = set()
     results = []
     ok = 0
     for i, row in enumerate(source_rows):
@@ -39,17 +47,24 @@ def main():
         has_url = bool(row.get("source_url", "").strip().startswith("https://"))
         match = None
         for rec in prize_records:
+            if rec["id"] in consumed_ids:
+                continue
             rec_amt = rec.get("amountAwarded")
+            recipient_match = bool(want_recipient) and want_recipient in (rec.get("recipient") or "")
+            if not recipient_match:
+                continue
             if want_amt is None:
-                # A finalist/planning-stage row with no dollar figure yet published
-                # -- match on recipient text and require the export ALSO carries
-                # no amount (never invented), not a stale/wrong figure.
-                if rec_amt is None and want_recipient and want_recipient in (rec.get("recipient") or ""):
+                # A finalist/planning-stage row with no dollar figure yet
+                # published -- the export must ALSO carry no amount (never a
+                # stale/invented figure).
+                if rec_amt is None:
                     match = rec
                     break
             elif rec_amt is not None and abs(rec_amt - want_amt) <= 0.5:
                 match = rec
                 break
+        if match is not None:
+            consumed_ids.add(match["id"])
         row_ok = match is not None and has_url
         if row_ok:
             ok += 1
@@ -61,19 +76,30 @@ def main():
             "ok": row_ok,
         })
 
+    # One-to-one: every consumed id must be unique by construction, but assert
+    # it explicitly so a future refactor that reintroduces reuse fails loudly.
+    matched_ids = [r["matched_export_record_id"] for r in results if r["matched_export_record_id"]]
+    if len(matched_ids) != len(set(matched_ids)):
+        raise SystemExit("Chicago Prize census: a record was matched to more than one row -- one-to-one violated.")
+
     report = {
         "design": "18/18 census check (every published Chicago Prize row, not a sample)",
         "scope_note": (
-            "Structural completeness census: confirms every committed chicago_prize.csv row "
-            "reaches the export with a tying amount and carries its own https announcement "
-            "source_url. Does NOT re-fetch each press release live in this run -- that is a "
-            "documented scope boundary."
+            "Structural completeness census, ONE-TO-ONE (a matched export record is consumed "
+            "and never reused for a later row): confirms every committed chicago_prize.csv row "
+            "reaches the export with a tying RECIPIENT and, when the source publishes one, a "
+            "tying amount, and that the row carries its own https announcement source_url. This "
+            "is citation PRESENCE ONLY -- it does NOT re-fetch or verify the content of each "
+            "press release in this run; that is a documented scope boundary, and public copy "
+            "describing this check must say citation presence, not that each announcement's "
+            "content was independently confirmed."
         ),
         "csv_rows": len(source_rows),
         "export_prize_records": len(prize_records),
         "ok": ok,
         "total": len(source_rows),
         "all_ok": ok == len(source_rows),
+        "one_to_one_verified": len(matched_ids) == len(set(matched_ids)),
         "rows": results,
     }
     json.dump(report, open(OUT_PATH, "w"), indent=1)

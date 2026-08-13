@@ -1,11 +1,12 @@
 {
  "design": "18/18 census check (every published Chicago Prize row, not a sample)",
- "scope_note": "Structural completeness census: confirms every committed chicago_prize.csv row reaches the export with a tying amount and carries its own https announcement source_url. Does NOT re-fetch each press release live in this run -- that is a documented scope boundary.",
+ "scope_note": "Structural completeness census, ONE-TO-ONE (a matched export record is consumed and never reused for a later row): confirms every committed chicago_prize.csv row reaches the export with a tying RECIPIENT and, when the source publishes one, a tying amount, and that the row carries its own https announcement source_url. This is citation PRESENCE ONLY -- it does NOT re-fetch or verify the content of each press release in this run; that is a documented scope boundary, and public copy describing this check must say citation presence, not that each announcement's content was independently confirmed.",
  "csv_rows": 18,
  "export_prize_records": 18,
  "ok": 18,
  "total": 18,
  "all_ok": true,
+ "one_to_one_verified": true,
  "rows": [
   {
    "csv_row": 0,
@@ -29,7 +30,7 @@
    "csv_row": 2,
    "initiative": "The Aspire Initiative: Building a Stronger Cradle-to-Career Pipeline in Austin (finalist planning grant)",
    "amount": 100000.0,
-   "matched_export_record_id": "prize-1",
+   "matched_export_record_id": "prize-2",
    "has_announcement_url": true,
    "source_url": "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities",
    "ok": true
@@ -38,7 +39,7 @@
    "csv_row": 3,
    "initiative": "Go Green on Racine: An Englewood Rising Project (finalist planning grant)",
    "amount": 100000.0,
-   "matched_export_record_id": "prize-1",
+   "matched_export_record_id": "prize-3",
    "has_announcement_url": true,
    "source_url": "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities",
    "ok": true
@@ -47,7 +48,7 @@
    "csv_row": 4,
    "initiative": "Creating a Solidarity Economy: Centro de Solidaridad Mi Villita (finalist planning grant)",
    "amount": 100000.0,
-   "matched_export_record_id": "prize-1",
+   "matched_export_record_id": "prize-4",
    "has_announcement_url": true,
    "source_url": "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities",
    "ok": true
@@ -56,7 +57,7 @@
    "csv_row": 5,
    "initiative": "Now Is the Time: Advancing North Lawndale Together (finalist planning grant)",
    "amount": 100000.0,
-   "matched_export_record_id": "prize-1",
+   "matched_export_record_id": "prize-5",
    "has_announcement_url": true,
    "source_url": "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities",
    "ok": true
@@ -65,7 +66,7 @@
    "csv_row": 6,
    "initiative": "We're Steel Here: Working Together to Reinvigorate South Chicago (finalist planning grant)",
    "amount": 100000.0,
-   "matched_export_record_id": "prize-1",
+   "matched_export_record_id": "prize-6",
    "has_announcement_url": true,
    "source_url": "https://www.wbez.org/race-class-communities/2019/12/12/finalists-named-for-10-million-prize-to-aid-chicago-communities",
    "ok": true
@@ -74,7 +75,7 @@
    "csv_row": 7,
    "initiative": "Sankofa Wellness Village (Chicago Prize winner)",
    "amount": 10000000.0,
-   "matched_export_record_id": "prize-0",
+   "matched_export_record_id": "prize-7",
    "has_announcement_url": true,
    "source_url": "https://www.chicagobusiness.com/nonprofits-philanthropy/pritzker-traubert-foundation-names-winner-2023-chicago-prize",
    "ok": true
@@ -92,7 +93,7 @@
    "csv_row": 9,
    "initiative": "Rooted & Rising (finalist planning funds)",
    "amount": 135000.0,
-   "matched_export_record_id": "prize-8",
+   "matched_export_record_id": "prize-9",
    "has_announcement_url": true,
    "source_url": "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/",
    "ok": true
@@ -101,7 +102,7 @@
    "csv_row": 10,
    "initiative": "Thrive Exchange (finalist planning funds)",
    "amount": 135000.0,
-   "matched_export_record_id": "prize-8",
+   "matched_export_record_id": "prize-10",
    "has_announcement_url": true,
    "source_url": "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/",
    "ok": true
@@ -110,7 +111,7 @@
    "csv_row": 11,
    "initiative": "Bringing Communities Back Initiative (finalist planning funds)",
    "amount": 135000.0,
-   "matched_export_record_id": "prize-8",
+   "matched_export_record_id": "prize-11",
    "has_announcement_url": true,
    "source_url": "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/",
    "ok": true
@@ -119,7 +120,7 @@
    "csv_row": 12,
    "initiative": "The Xchange (finalist planning funds)",
    "amount": 135000.0,
-   "matched_export_record_id": "prize-8",
+   "matched_export_record_id": "prize-12",
    "has_announcement_url": true,
    "source_url": "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/",
    "ok": true
@@ -128,7 +129,7 @@
    "csv_row": 13,
    "initiative": "Cultivate Collective (finalist planning funds)",
    "amount": 135000.0,
-   "matched_export_record_id": "prize-8",
+   "matched_export_record_id": "prize-13",
    "has_announcement_url": true,
    "source_url": "https://blockclubchicago.org/2022/11/02/6-south-and-west-side-projects-named-finalists-for-10-million-chicago-prize/",
    "ok": true
@@ -137,7 +138,7 @@
    "csv_row": 14,
    "initiative": "Reclaiming Chicago (Chicago Prize winner)",
    "amount": 10000000.0,
-   "matched_export_record_id": "prize-0",
+   "matched_export_record_id": "prize-14",
    "has_announcement_url": true,
    "source_url": "https://www.chicagobusiness.com/nonprofits-philanthropy/pritzker-traubert-foundation-names-winner-2025-chicago-prize",
    "ok": true
