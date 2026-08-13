@@ -351,7 +351,26 @@ caught).
 
 ## PR1 — section 1.4: PR1 adversarial tests
 
-_To be filled in as 1.4 is implemented._
+The build spec's section 1.4 bullet list, and where each is proven:
+
+| Spec bullet | Proven in |
+|---|---|
+| Feign one failed relevant layer → that layer is `unknown`, others unaffected; response no-store; not cached under normal TTL | `lib/__tests__/zones-check-v2.test.ts`, `app/api/zones/check/v2/route.test.ts`, `lib/__tests__/zone-evidence-cache.test.ts`; indexed together in `lib/__tests__/zone-evidence-v2-adversarial.test.ts` |
+| Failed irrelevant layer does not flip a known match | `lib/__tests__/zones-check-v2.test.ts`, re-asserted in `zone-evidence-v2-adversarial.test.ts` |
+| Malformed geometry → unknown, not not_matched | `lib/__tests__/zones-check-v2.test.ts` (against the real shipped `tif-districts.geojson`'s known malformed rings — see `app/api/zones/check/route.test.ts`'s own regression comment), re-asserted in `zone-evidence-v2-adversarial.test.ts` |
+| Missing DB layer without registry verification → unknown | `lib/__tests__/zones-check-v2.test.ts`, re-asserted in `zone-evidence-v2-adversarial.test.ts` |
+| Legacy v1 payload (positives-only array) normalizes omitted layers to unknown, never false | `lib/__tests__/zone-evidence-v2-adversarial.test.ts` (new — asserts every layer omitted from the array lands in `unknownLayers[]`; see 1.3's "Decisions" for why `zones[key]` itself stays a `false` default rather than a literal value flip) |
+| Catalog: every record has the new fields with valid values | `lib/__tests__/program-eligibility-fields.test.ts` (1.1) |
+| No record with status lapsed/sunset/pending has benefitTermsStatus current | `lib/__tests__/program-eligibility-fields.test.ts` (1.1) + `lib/__tests__/program-public.test.ts` (1.2, DTO-level) |
+| `toPublicProgramView` on catalystGrant/edaBuildToScale produces the closed-round qualifier | `lib/__tests__/program-public.test.ts` (1.2) |
+| Regen-diff clean | `lib/__tests__/program-public.test.ts` (1.2) |
+| Mutation test: change a catalog fact (in-memory), assert the public artifact check fails | `lib/__tests__/program-public.test.ts` (1.2) and `lib/__tests__/program-eligibility-fields.test.ts` (1.1, catalog invariant) |
+
+All of these were written incrementally alongside 1.1–1.3 rather than
+batched at the end, since each producer function's test is most legible
+sitting next to the function it tests. `lib/__tests__/zone-evidence-v2-
+adversarial.test.ts` exists specifically so the spec's own checklist has
+one file that maps directly onto it, for review.
 
 ## F1–F16 acceptance matrix
 
