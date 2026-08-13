@@ -45,11 +45,28 @@ describe("refresh decrease-policy enforcement (Sol gate finding 7)", () => {
     expect(checkDecreasePolicy("hud", { rows: 100, dollars: 100, parts: {} }, { rows: 100, dollars: 100, parts: {} }).allowed).toBe(true);
   });
 
-  it("not_refreshed (chicago-cares): the guard is EXEMPT by design, even on a large decrease", () => {
-    // chicago-cares' ledger legitimately churns on the upstream publish
-    // timestamp (see REFRESH.md) -- a raw row-count/dollar drop is not itself
-    // meaningful for this source.
-    const result = checkDecreasePolicy("chicago-cares", { rows: 100, dollars: 1_000_000, parts: {} }, { rows: 10, dollars: 100, parts: {} });
+  it("Sol gate finding 7 (round 2): chicago-cares is monotonic_floor, NOT exempt — a decrease beyond 2% IS BLOCKED PRE-WRITE", () => {
+    // chicago-cares used to be manifest-flagged "not_refreshed", wrongly
+    // exempting ANY decrease. It is now monotonic_floor like the other live
+    // sources — refreshOne() routes it through build()/measure() (the
+    // writeSelf() bypass that wrote before this check could run is gone
+    // entirely, see refresh-live-sources.ts's caresSource), so this is the
+    // SAME function call that actually gates the real write.
+    const result = checkDecreasePolicy(
+      "chicago-cares",
+      { rows: 100, dollars: 1_000_000, parts: {} },
+      { rows: 10, dollars: 100, parts: {} },
+    );
+    expect(result.allowed).toBe(false);
+    expect(result.reason).toMatch(/monotonic_floor/);
+  });
+
+  it("chicago-cares: a small decrease (<=2%) is still allowed churn, same as any monotonic_floor source", () => {
+    const result = checkDecreasePolicy(
+      "chicago-cares",
+      { rows: 1000, dollars: 1_000_000, parts: {} },
+      { rows: 990, dollars: 1_000_000, parts: {} },
+    );
     expect(result.allowed).toBe(true);
   });
 

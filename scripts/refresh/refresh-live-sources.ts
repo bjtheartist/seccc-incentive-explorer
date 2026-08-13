@@ -84,9 +84,10 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
-  DEFAULT_CHICAGO_CARES_PROGRAM_LEDGER_OUTPUT,
-  importChicagoCaresProgramLedger,
+  fetchChicagoCaresProgramLedgerSources,
+  serializeChicagoCaresProgramLedgerCsv,
 } from "../import-chicago-cares-program-ledger";
+import { buildChicagoCaresProgramLedger } from "../../lib/chicago-cares-program-ledger";
 import { loadManifest, type DecreasePolicy } from "../lib/investment-manifest";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
@@ -336,11 +337,6 @@ interface RefreshSource {
   build(): Promise<string>;
   /** Measure a serialized file (used for BOTH the before and after snapshot). */
   measure(content: string): Metrics;
-  /**
-   * Sources that own their own writer (the CARES importer writes atomically and
-   * only-if-changed itself). When set, `build` is not used.
-   */
-  writeSelf?: () => Promise<void>;
 }
 
 // ── Socrata: NOF Small / NOF Large / SBIF ────────────────────────────────────
@@ -717,24 +713,25 @@ const hudSource: RefreshSource = {
   },
 };
 
-// ── Chicago CARES ledger (delegated to the existing importer) ────────────────
+// ── Chicago CARES ledger (fetch + pure build, same path as every source) ────
 
 const caresSource: RefreshSource = {
   id: "chicago-cares",
   label: "Chicago CARES-era program ledger",
   file: "chicago_cares_program_ledger.csv",
   dollarLabel: "historical_authorized_usd",
-  build() {
-    throw new Error("chicago-cares uses writeSelf()");
-  },
-  async writeSelf() {
-    // The importer owns its own bounded Socrata queries, its integrity checks
-    // and its atomic write-if-changed. Re-implementing any of that here would
-    // fork the contract, so the refresh just drives it.
-    await importChicagoCaresProgramLedger({
-      input: null, // null = pull live, not from a fixture
-      output: DEFAULT_CHICAGO_CARES_PROGRAM_LEDGER_OUTPUT,
-    });
+  async build() {
+    // Sol gate finding 7 (BLOCKER) — previously delegated to
+    // importChicagoCaresProgramLedger(), which fetched AND wrote atomically
+    // in one call, bypassing refreshOne's measure -> checkDecreasePolicy ->
+    // write path entirely (a real decrease here would have been written
+    // before anything could refuse it). Now uses the SAME fetch -> pure build
+    // -> serialize pipeline the importer itself uses internally, but returns
+    // the content string instead of writing it — refreshOne owns the write,
+    // exactly like every other source.
+    const input = await fetchChicagoCaresProgramLedgerSources();
+    const result = buildChicagoCaresProgramLedger(input);
+    return serializeChicagoCaresProgramLedgerCsv(result.records);
   },
   measure(content) {
     const rows = parseCsv(content);
@@ -917,21 +914,12 @@ async function refreshOne(source: RefreshSource, options: CliOptions): Promise<O
   };
 
   try {
-    if (source.writeSelf) {
-      if (options.dryRun) {
-        // The delegated importer owns its writer, so a dry run cannot preview it
-        // without duplicating that logic. Report the current state instead of
-        // pretending we measured a fetch.
-        base.after = base.before;
-        return base;
-      }
-      await source.writeSelf();
-      const afterContent = readIfExists(path);
-      base.after = safeMeasure(source, afterContent);
-      base.changed = afterContent !== beforeContent;
-      return base;
-    }
-
+    // Sol gate finding 7 (BLOCKER) — EVERY source, including Chicago CARES,
+    // goes through this ONE measure -> checkDecreasePolicy -> write path. A
+    // `writeSelf()` escape hatch used to exist for CARES (the delegated
+    // importer wrote atomically, before refreshOne could measure or enforce
+    // anything) — eliminated entirely, not just guarded, so a future source
+    // cannot reintroduce the same bypass.
     const nextContent = await source.build();
     base.after = source.measure(nextContent);
     base.changed = nextContent !== beforeContent;

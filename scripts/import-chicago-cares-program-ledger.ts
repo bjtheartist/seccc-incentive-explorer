@@ -348,7 +348,12 @@ function validateSocrataMetadata(
   return requireMetadataTimestamp(metadata.rowsUpdatedAt, datasetId);
 }
 
-async function fetchChicagoCaresProgramLedgerSources(): Promise<ChicagoCaresProgramLedgerSourceInput> {
+// Sol gate finding 7 (BLOCKER) — exported so scripts/refresh/refresh-live-sources.ts
+// can build the CARES CSV content the SAME way every other refresh source
+// does (fetch -> pure build -> serialize -> return a string), instead of the
+// removed writeSelf() bypass that wrote before refreshOne() could measure and
+// enforce the manifest's decreasePolicy.
+export async function fetchChicagoCaresProgramLedgerSources(): Promise<ChicagoCaresProgramLedgerSourceInput> {
   const contractQueryRequests = CONTRACT_QUERY_KEYS.map(async (key) => {
     const rows = await fetchBoundedRows(
       getChicagoCaresContractQueryUrl(key),
