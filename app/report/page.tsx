@@ -138,7 +138,7 @@ import { ConciergePageContextBridge } from "@/components/concierge/SiteConcierge
 import { reportEmailGateKey, reportRequiresEmailGate } from "@/lib/report-email";
 import { encodeWizardState, decodeWizardState } from "@/lib/url-state";
 import { generateReportPdf } from "@/lib/pdf-report";
-import { normalizeZoneCheckResponse } from "@/lib/zone-response";
+import { normalizeZoneEvidenceV2 } from "@/lib/zone-response";
 import {
   extractChicagoZipCode,
   mergeCommunityAnchorsIntoNeighborhoodEconomics,
@@ -646,6 +646,7 @@ function ReportWizardPage() {
   const [compareGeoResult, setCompareGeoResult] = useState<{ lat: number; lon: number; display_name: string } | null>(null);
   const [compareZones, setCompareZones] = useState<Record<string, boolean> | null>(null);
   const [compareZoneNames, setCompareZoneNames] = useState<Record<string, string> | null>(null);
+  const [compareZoneUnknowns, setCompareZoneUnknowns] = useState<string[]>([]);
   const [compareCensus, setCompareCensus] = useState<ReportCensusData | null>(null);
   const [compareZoning, setCompareZoning] = useState<ReportZoningData | null>(null);
   const [compareZoningKey, setCompareZoningKey] = useState<string | null>(null);
@@ -657,6 +658,8 @@ function ReportWizardPage() {
   const [programs, setPrograms] = useState<Program[]>([]);
   const [zones, setZones] = useState<Record<string, boolean> | null>(null);
   const [zoneNames, setZoneNames] = useState<Record<string, string> | null>(null);
+  const [zoneUnknowns, setZoneUnknowns] = useState<string[]>([]);
+  const [zoneCheckedAt, setZoneCheckedAt] = useState<string | null>(null);
   const [censusData, setCensusData] = useState<ReportCensusData | null>(null);
   const [cityZoning, setCityZoning] = useState<ReportZoningData | null>(null);
   const [cityZoningKey, setCityZoningKey] = useState<string | null>(null);
@@ -788,6 +791,8 @@ function ReportWizardPage() {
     if (!wizardState.lat || !wizardState.lon) {
       setZones(null);
       setZoneNames(null);
+      setZoneUnknowns([]);
+      setZoneCheckedAt(null);
       return;
     }
     const lat = wizardState.lat;
@@ -795,15 +800,35 @@ function ReportWizardPage() {
     let cancelled = false;
     setZones(null);
     setZoneNames(null);
+    setZoneUnknowns([]);
+    setZoneCheckedAt(null);
 
     (async () => {
       try {
-        const data = await cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`);
-        const normalized = normalizeZoneCheckResponse(data);
-        if (!normalized) throw new Error("API unavailable");
+        // build-spec.md 2.3 / audit F2: v2's tri-state layers let a genuine
+        // "not matched" be told apart from "could not be checked" — v1's
+        // positives-only array cannot make that distinction. Raw fetch, not
+        // cachedFetch: the shared client cache ignores the route's own
+        // Cache-Control and has stale-on-error fallback (consult item 5) —
+        // exactly the "serve stale evidence for a negative claim" risk this
+        // cutover exists to close. The v2 route and its Redis layer already
+        // cap TTL correctly server-side.
+        const zoneRes = await fetch(`/api/zones/check/v2?lat=${lat}&lon=${lon}`);
+        if (!zoneRes.ok) throw new Error("API unavailable");
+        const data = await zoneRes.json();
+        const evidence = normalizeZoneEvidenceV2(data);
+        if (!evidence) throw new Error("API unavailable");
         if (cancelled) return;
-        setZones(normalized.zones);
-        setZoneNames(normalized.zoneNames);
+        const mapped: Record<string, boolean> = {};
+        const names: Record<string, string> = {};
+        for (const [key, entry] of Object.entries(evidence.layers)) {
+          mapped[key] = entry.state === "matched";
+          if (entry.name) names[key] = entry.name;
+        }
+        setZones(mapped);
+        setZoneNames(names);
+        setZoneUnknowns(evidence.unknownKeys);
+        setZoneCheckedAt(evidence.checkedAt.slice(0, 10));
       } catch {
         // Fallback: use client-side Turf.js zone check
         const { checkZones } = await import("@/lib/zone-check");
@@ -811,6 +836,8 @@ function ReportWizardPage() {
         if (cancelled) return;
         setZones(result.zones);
         setZoneNames(result.zoneNames);
+        setZoneUnknowns(result.unknownZones ?? []);
+        setZoneCheckedAt(new Date().toISOString().slice(0, 10));
       }
     })();
     return () => {
@@ -1015,22 +1042,36 @@ function ReportWizardPage() {
     const zoningController = new AbortController();
     setCompareZones(null);
     setCompareZoneNames(null);
+    setCompareZoneUnknowns([]);
     setCompareCensus(null);
     setCompareZoning(null);
     setCompareZoningKey(null);
     setCompareParcel(null);
     (async () => {
       try {
-        const data = await cachedFetch(`/api/zones/check?lat=${lat}&lon=${lon}`);
-        const normalized = normalizeZoneCheckResponse(data);
-        if (!normalized) throw new Error("API unavailable");
-        setCompareZones(normalized.zones);
-        setCompareZoneNames(normalized.zoneNames);
+        // Raw fetch, not cachedFetch — see the primary zone-fetch effect's
+        // comment above for why (consult item 5: stale-on-error must never
+        // serve as evidence for a negative claim).
+        const compareZoneRes = await fetch(`/api/zones/check/v2?lat=${lat}&lon=${lon}`);
+        if (!compareZoneRes.ok) throw new Error("API unavailable");
+        const data = await compareZoneRes.json();
+        const evidence = normalizeZoneEvidenceV2(data);
+        if (!evidence) throw new Error("API unavailable");
+        const mapped: Record<string, boolean> = {};
+        const names: Record<string, string> = {};
+        for (const [key, entry] of Object.entries(evidence.layers)) {
+          mapped[key] = entry.state === "matched";
+          if (entry.name) names[key] = entry.name;
+        }
+        setCompareZones(mapped);
+        setCompareZoneNames(names);
+        setCompareZoneUnknowns(evidence.unknownKeys);
       } catch {
         const { checkZones } = await import("@/lib/zone-check");
         const result = await checkZones(lat, lon);
         setCompareZones(result.zones);
         setCompareZoneNames(result.zoneNames);
+        setCompareZoneUnknowns(result.unknownZones ?? []);
       }
     })();
     cachedFetch(`/api/census?lat=${lat}&lon=${lon}`).then((d) => { if (d) setCompareCensus(d as ReportCensusData); }).catch(() => {});
@@ -1088,6 +1129,7 @@ function ReportWizardPage() {
       const generated = generateReportData(compareState, programs, {
         zones: compareZones ?? undefined,
         zoneNames: compareZoneNames ?? undefined,
+        unknownZones: compareZoneUnknowns,
         census: compareCensus ?? undefined,
         cityZoning: compareZoning ?? undefined,
         parcel: compareParcel ?? undefined,
@@ -1121,6 +1163,8 @@ function ReportWizardPage() {
         const generated = generateReportData(wizardState, programs, {
           zones: zones ?? undefined,
           zoneNames: zoneNames ?? undefined,
+          unknownZones: zoneUnknowns,
+          zoneCheckedAt: zoneCheckedAt ?? undefined,
           census: censusData ?? undefined,
           cityZoning: cityZoning ?? undefined,
           parcel: parcelData ?? undefined,
@@ -1221,6 +1265,8 @@ function ReportWizardPage() {
         const generated = generateReportData(wizardState, programs, {
           zones: zones ?? undefined,
           zoneNames: zoneNames ?? undefined,
+          unknownZones: zoneUnknowns,
+          zoneCheckedAt: zoneCheckedAt ?? undefined,
           census: censusData ?? undefined,
           cityZoning: cityZoning ?? undefined,
           parcel: parcelData ?? undefined,
@@ -1536,6 +1582,8 @@ function ReportWizardPage() {
       const generated = generateReportData(stateForReport, programs, {
         zones: zones ?? undefined,
         zoneNames: zoneNames ?? undefined,
+        unknownZones: zoneUnknowns,
+        zoneCheckedAt: zoneCheckedAt ?? undefined,
         census: censusData ?? undefined,
         cityZoning: zoningForReport ?? undefined,
         parcel: parcelData ?? undefined,

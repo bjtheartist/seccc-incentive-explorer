@@ -119,18 +119,32 @@ describe("fetchSiteZones", () => {
     resetSiteZoneCache();
   }
 
-  it("resolves through /api/zones/check — the endpoint the address report calls", async () => {
+  /** A minimal, well-formed Zone Evidence v2 envelope (build-spec.md 1.3/2.3). */
+  function v2Envelope(layers: Record<string, { state: string; name?: string; reason?: string }>) {
+    return {
+      schemaVersion: 2,
+      dataRevision: "test-revision",
+      checkedAt: "2026-08-13T00:00:00.000Z",
+      requestedLayers: Object.keys(layers),
+      layers,
+    };
+  }
+
+  it("resolves through /api/zones/check/v2 — the tri-state endpoint the address report calls", async () => {
     resetSiteZoneCache();
     let requested = "";
     stubFetch((url) => {
       requested = url;
-      return new Response(JSON.stringify([{ key: "tif", name: "Madison/Austin Corridor TIF (T-75)" }]), {
-        status: 200,
-      });
+      return new Response(
+        JSON.stringify(
+          v2Envelope({ tif: { state: "matched", name: "Madison/Austin Corridor TIF (T-75)" } }),
+        ),
+        { status: 200 },
+      );
     });
 
     const state = await fetchSiteZones(41.8811054031, -87.7279171939);
-    expect(requested).toContain("/api/zones/check?lat=41.881105&lon=-87.727917");
+    expect(requested).toContain("/api/zones/check/v2?lat=41.881105&lon=-87.727917");
     expect(state.status).toBe("loaded");
     restore();
   });
@@ -145,7 +159,7 @@ describe("fetchSiteZones", () => {
     restore();
   });
 
-  it("memoizes a successful lookup but not a failed one, so a later click retries", async () => {
+  it("memoizes a fully-covered lookup but not a failed one, so a later click retries", async () => {
     resetSiteZoneCache();
     let calls = 0;
     stubFetch(() => {
@@ -157,10 +171,33 @@ describe("fetchSiteZones", () => {
     expect(calls).toBe(2);
     expect(cachedSiteZones(41.88, -87.72)).toBeNull();
 
-    stubFetch(() => new Response(JSON.stringify([]), { status: 200 }));
+    stubFetch(() => new Response(JSON.stringify(v2Envelope({ tif: { state: "not_matched" } })), { status: 200 }));
     await fetchSiteZones(41.88, -87.72);
     const cached = cachedSiteZones(41.88, -87.72);
-    expect(cached).toEqual({ status: "loaded", matches: [] });
+    expect(cached).toEqual({
+      status: "loaded",
+      matches: [],
+      unknownKeys: [],
+      checkedAt: "2026-08-13T00:00:00.000Z",
+    });
+    restore();
+  });
+
+  it("does NOT memoize a response carrying any unknown layer — a later click re-resolves it (audit F2)", async () => {
+    resetSiteZoneCache();
+    let calls = 0;
+    stubFetch(() => {
+      calls += 1;
+      return new Response(
+        JSON.stringify(v2Envelope({ tif: { state: "unknown", reason: "source_unavailable" } })),
+        { status: 200 },
+      );
+    });
+    const first = await fetchSiteZones(41.79, -87.6);
+    expect(first).toMatchObject({ status: "loaded", matches: [], unknownKeys: ["tif"] });
+    expect(cachedSiteZones(41.79, -87.6)).toBeNull();
+    await fetchSiteZones(41.79, -87.6);
+    expect(calls).toBe(2);
     restore();
   });
 

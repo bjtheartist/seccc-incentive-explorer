@@ -1,8 +1,8 @@
 import * as turf from "@turf/turf";
 import { CHECKABLE_ZONE_KEYS } from "./constants";
-import { normalizeZoneCheckResponse } from "./zone-response";
+import { normalizeZoneEvidenceV2 } from "./zone-response";
 import { featureDisplayName } from "./zone-names";
-import type { LookupResult, CensusData, ZoneCheckResult } from "./types";
+import type { LookupResult, CensusData } from "./types";
 import { cityZoningFromLookup, fetchZoningLookup } from "./zoning-lookup";
 import type { FeatureCollection, Feature, Polygon, MultiPolygon } from "geojson";
 
@@ -37,21 +37,44 @@ async function loadZone(key: string): Promise<FeatureCollection> {
 }
 
 /**
- * Try DB-first zone check via /api/zones/check endpoint.
- * Returns null if the API is unavailable (falls through to Turf.js).
+ * Try DB-first zone check via /api/zones/check/v2 (build-spec.md 2.3; audit
+ * F2). Zone Evidence v2's tri-state layers let this client fallback tell
+ * "confirmed not matched" apart from "could not be checked" — a v1 caller
+ * could not, because v1's positives-only array silently omits failed
+ * layers, which is exactly the false-negative bug F2 named. Returns null if
+ * the API is unavailable (falls through to Turf.js, below).
  */
 async function checkZonesDB(
   lat: number,
   lon: number
-): Promise<{ zones: Record<string, boolean>; zoneNames: Record<string, string>; incentiveCount: number } | null> {
+): Promise<{
+  zones: Record<string, boolean>;
+  zoneNames: Record<string, string>;
+  incentiveCount: number;
+  unknownZones: string[];
+} | null> {
   try {
-    const res = await fetch(`/api/zones/check?lat=${lat}&lon=${lon}`, {
+    const res = await fetch(`/api/zones/check/v2?lat=${lat}&lon=${lon}`, {
       signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
 
-    const results: ZoneCheckResult[] = await res.json();
-    return normalizeZoneCheckResponse(results);
+    const evidence = normalizeZoneEvidenceV2(await res.json());
+    if (!evidence) return null;
+
+    const zones: Record<string, boolean> = {};
+    const zoneNames: Record<string, string> = {};
+    for (const [key, entry] of Object.entries(evidence.layers)) {
+      zones[key] = entry.state === "matched";
+      if (entry.name) zoneNames[key] = entry.name;
+    }
+
+    return {
+      zones,
+      zoneNames,
+      incentiveCount: evidence.matchedKeys.length,
+      unknownZones: evidence.unknownKeys,
+    };
   } catch {
     return null;
   }
@@ -79,10 +102,17 @@ async function getCensusDB(lat: number, lon: number): Promise<CensusData | null>
 async function checkZonesTurf(
   lat: number,
   lon: number
-): Promise<{ zones: Record<string, boolean>; zoneNames: Record<string, string>; incentiveCount: number; employment?: LookupResult["employment"] }> {
+): Promise<{
+  zones: Record<string, boolean>;
+  zoneNames: Record<string, string>;
+  incentiveCount: number;
+  unknownZones: string[];
+  employment?: LookupResult["employment"];
+}> {
   const pt = turf.point([lon, lat]);
   const zones: Record<string, boolean> = {};
   const zoneNames: Record<string, string> = {};
+  const unknownZones: string[] = [];
   let incentiveCount = 0;
   let employment: LookupResult["employment"] = undefined;
 
@@ -117,12 +147,18 @@ async function checkZonesTurf(
         zones[key] = inZone;
         if (inZone) incentiveCount++;
       } catch {
+        // build-spec.md 2.3 / audit F2: a layer this client-side fallback
+        // could not load or evaluate (network failure, malformed source
+        // file) is NOT confirmed absent. `zones[key]` still defaults false
+        // for existing truthy-check consumers, but the key is recorded as
+        // unknown so a caller can suppress a "not mapped" claim built on it.
         zones[key] = false;
+        unknownZones.push(key);
       }
     })
   );
 
-  return { zones, zoneNames, incentiveCount, employment };
+  return { zones, zoneNames, incentiveCount, unknownZones, employment };
 }
 
 /**
@@ -139,6 +175,7 @@ export async function checkZones(
   let zones: Record<string, boolean>;
   let zoneNames: Record<string, string>;
   let incentiveCount: number;
+  let unknownZones: string[];
   let employment: LookupResult["employment"] = undefined;
 
   const dbResult = await checkZonesDB(lat, lon);
@@ -146,11 +183,13 @@ export async function checkZones(
     zones = dbResult.zones;
     zoneNames = dbResult.zoneNames;
     incentiveCount = dbResult.incentiveCount;
+    unknownZones = dbResult.unknownZones;
   } else {
     const turfResult = await checkZonesTurf(lat, lon);
     zones = turfResult.zones;
     zoneNames = turfResult.zoneNames;
     incentiveCount = turfResult.incentiveCount;
+    unknownZones = turfResult.unknownZones;
     employment = turfResult.employment;
   }
 
@@ -168,6 +207,7 @@ export async function checkZones(
     zones,
     zoneNames,
     incentiveCount,
+    unknownZones,
     cityZoning: cityZoningFromLookup(zoningLookup),
     cityZoningStatus: zoningLookup.status,
     employment,

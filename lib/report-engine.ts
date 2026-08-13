@@ -1671,13 +1671,24 @@ function computeVerdict(
   else if (zoneCount >= 2 && programCount >= 3) signal = "moderate";
   else signal = "limited";
 
-  const headline = zoneCount > 0
-    ? "Mapped incentive zones were found at this address"
-    : "No mapped zone-based programs were found at this address";
+  // build-spec.md 2.3 / audit F2: a genuinely empty zoneCount is only an
+  // honest "no mapped zones" claim when every relevant layer was actually
+  // checked. When layers are unknown (source unavailable, malformed
+  // geometry, etc.), the correct claim is that the check was incomplete —
+  // never that the address was confirmed clear.
+  const hasUnknownZones = (ctx.unknownZones?.length ?? 0) > 0;
+  const headline =
+    zoneCount > 0
+      ? "Mapped incentive zones were found at this address"
+      : hasUnknownZones
+        ? `${ctx.unknownZones!.length} zone layer${ctx.unknownZones!.length !== 1 ? "s" : ""} could not be checked right now (checked ${ctx.zoneCheckedAt ?? new Date().toISOString().slice(0, 10)})`
+        : "No mapped zone-based programs were found at this address";
 
   const subheadline = programCount > 0
     ? "The programs linked to those zones have separate eligibility, timing, and approval requirements to confirm."
-    : "Broader programs may still be worth exploring with a local business-support organization.";
+    : zoneCount === 0 && hasUnknownZones
+      ? "Some incentive-zone layers could not be checked; this is not confirmation the address is outside them. Try again shortly or confirm directly with the administering agency."
+      : "Broader programs may still be worth exploring with a local business-support organization.";
 
   const topReasons: string[] = [];
   topReasons.push(`${zoneCount} mapped incentive zone${zoneCount !== 1 ? "s" : ""} intersect this location`);
@@ -4666,6 +4677,16 @@ export type ReportZoningData = ZoningLookupResponse | LegacyReportZoningData;
 export interface ReportContext {
   zones?: Record<string, boolean>;
   zoneNames?: Record<string, string>;
+  /**
+   * Zone Evidence v2 cutover (build-spec.md 2.3; audit F2): layer keys whose
+   * check could not be completed. A negative zone summary MUST NOT be
+   * rendered as a confirmed "no mapped zones" claim when this is non-empty
+   * — see computeVerdict's headline logic, which switches to an honest
+   * "N layers could not be checked" line instead.
+   */
+  unknownZones?: string[];
+  /** ISO date the zone evidence was actually checked (from the v2 envelope's checkedAt), used in the unknown-layers headline. */
+  zoneCheckedAt?: string;
   census?: ReportCensusData;
   cityZoning?: ReportZoningData;
   parcel?: ParcelData;

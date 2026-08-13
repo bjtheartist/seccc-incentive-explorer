@@ -1817,3 +1817,48 @@ describe("Neighborhood Economic Context placement by report type", () => {
     );
   });
 });
+
+/**
+ * Zone Evidence v2 cutover (build-spec.md 2.3; audit F2): a zero-zone-match
+ * report must NOT claim "no mapped zone-based programs" when the zero came
+ * from layers that could not be checked, rather than from a completed check
+ * that genuinely found nothing. Adversarial per the spec's test matrix
+ * ("known-positive+unknown", "unknown never feeds the boolean engine as
+ * false").
+ */
+describe("generateReportData — unknown zone layers never render as a confirmed negative", () => {
+  it("renders an honest 'could not be checked' headline instead of 'no mapped zone-based programs' when relevant layers are unknown", () => {
+    const report = generateReportData(makeState(), [makeProgram()], {
+      zones: { tif: false, sbif: false },
+      zoneNames: {},
+      unknownZones: ["tif", "nof"],
+      zoneCheckedAt: "2026-08-13",
+    });
+
+    expect(report.verdict!.headline).not.toBe("No mapped zone-based programs were found at this address");
+    expect(report.verdict!.headline).toMatch(/could not be checked/i);
+    expect(report.verdict!.headline).toContain("2026-08-13");
+    expect(report.verdict!.subheadline.toLowerCase()).not.toContain("no mapped");
+    expect(report.verdict!.subheadline).toMatch(/not confirmation/i);
+  });
+
+  it("still renders the plain negative headline when zero zones matched AND nothing is unknown (a genuinely completed check)", () => {
+    const report = generateReportData(makeState(), [makeProgram()], {
+      zones: { tif: false, sbif: false },
+      zoneNames: {},
+      unknownZones: [],
+    });
+
+    expect(report.verdict!.headline).toBe("No mapped zone-based programs were found at this address");
+  });
+
+  it("a known positive match is unaffected by an unrelated unknown layer (failed irrelevant layer does not flip a known match)", () => {
+    const report = generateReportData(makeState(), [makeProgram()], {
+      zones: { tif: true, sbif: false },
+      zoneNames: { tif: "Test TIF" },
+      unknownZones: ["nof"],
+    });
+
+    expect(report.verdict!.headline).toBe("Mapped incentive zones were found at this address");
+  });
+});

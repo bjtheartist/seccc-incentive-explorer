@@ -206,6 +206,8 @@ describe("programsAndZonesRows", () => {
     const rows = programsAndZonesRows(madisonLandDot, {
       status: "loaded",
       matches: MADISON_ZONES,
+      unknownKeys: [],
+      checkedAt: "2026-08-13T00:00:00.000Z",
     }).join("\n");
 
     expect(rows).toContain("Inside 8 mapped incentive geographies:");
@@ -217,7 +219,7 @@ describe("programsAndZonesRows", () => {
   });
 
   it("keeps the zoning line unchanged (still honest when zoning is absent)", () => {
-    expect(programsAndZonesRows(madisonLandDot, { status: "loaded", matches: [] })[0]).toBe(
+    expect(programsAndZonesRows(madisonLandDot, { status: "loaded", matches: [], unknownKeys: [], checkedAt: "2026-08-13T00:00:00.000Z" })[0]).toBe(
       "Zoning not recorded.",
     );
     expect(programsAndZonesRows(card({ zoningClass: "C1-1" }))[0]).not.toBe(
@@ -227,7 +229,7 @@ describe("programsAndZonesRows", () => {
 
   it("claims 'not inside a mapped incentive geography' ONLY from a completed empty lookup", () => {
     const claim = "Not inside a mapped incentive geography.";
-    expect(programsAndZonesRows(madisonLandDot, { status: "loaded", matches: [] })).toContain(
+    expect(programsAndZonesRows(madisonLandDot, { status: "loaded", matches: [], unknownKeys: [], checkedAt: "2026-08-13T00:00:00.000Z" })).toContain(
       claim,
     );
     expect(programsAndZonesRows(madisonLandDot, { status: "loading" })).not.toContain(claim);
@@ -253,6 +255,8 @@ describe("programsAndZonesRows", () => {
     const rows = programsAndZonesRows(madisonLandDot, {
       status: "loaded",
       matches: [{ key: "nmtcEligible", label: "NMTC Eligible Census Tract", name: "" }],
+    unknownKeys: [],
+    checkedAt: "2026-08-13T00:00:00.000Z",
     }).join("\n");
     expect(rows).toContain("NMTC Eligible Census Tract");
     expect(rows).not.toContain("NMTC Eligible Census Tract —");
@@ -262,6 +266,8 @@ describe("programsAndZonesRows", () => {
     const rows = programsAndZonesRows(madisonLandDot, {
       status: "loaded",
       matches: [{ key: "tif", label: "TIF District", name: "<img src=x onerror=alert(1)>" }],
+    unknownKeys: [],
+    checkedAt: "2026-08-13T00:00:00.000Z",
     }).join("\n");
     expect(rows).not.toContain("<img");
     expect(rows).toContain("&lt;img");
@@ -271,6 +277,8 @@ describe("programsAndZonesRows", () => {
     const rows = programsAndZonesRows(madisonLandDot, {
       status: "loaded",
       matches: MADISON_ZONES,
+      unknownKeys: [],
+      checkedAt: "2026-08-13T00:00:00.000Z",
     })
       .join("\n")
       .toLowerCase();
@@ -282,8 +290,8 @@ describe("programsAndZonesRows", () => {
 
 describe("zoneBadgeText", () => {
   it("summarizes coverage on the collapsed accordion, and stays silent otherwise", () => {
-    expect(zoneBadgeText({ status: "loaded", matches: MADISON_ZONES })).toBe(" · 8 mapped");
-    expect(zoneBadgeText({ status: "loaded", matches: [] })).toBe("");
+    expect(zoneBadgeText({ status: "loaded", matches: MADISON_ZONES, unknownKeys: [], checkedAt: "2026-08-13T00:00:00.000Z" })).toBe(" · 8 mapped");
+    expect(zoneBadgeText({ status: "loaded", matches: [], unknownKeys: [], checkedAt: "2026-08-13T00:00:00.000Z" })).toBe("");
     expect(zoneBadgeText({ status: "loading" })).toBe("");
     expect(zoneBadgeText({ status: "error" })).toBe("");
   });
@@ -299,7 +307,7 @@ describe("buildSiteCardHtml — zones", () => {
 
   it("links out to the full address report for the exact point", () => {
     const html = buildSiteCardHtml(madisonLandDot, "60624", null, {
-      zones: { status: "loaded", matches: MADISON_ZONES },
+      zones: { status: "loaded", matches: MADISON_ZONES, unknownKeys: [], checkedAt: "2026-08-13T00:00:00.000Z" },
     });
     expect(html).toContain("/report?instant=true&amp;lat=41.88111&amp;lon=-87.72792");
     expect(html).toContain("Full address report");

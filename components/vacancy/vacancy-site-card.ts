@@ -316,7 +316,7 @@ export function programsAndZonesRows(
   }
 
   if (zones.status === "loaded") {
-    rows.push(escapeHtml(siteZonesSummary(zones.matches)));
+    rows.push(escapeHtml(siteZonesSummary(zones.matches, zones.unknownKeys, zones.checkedAt)));
     for (const match of zones.matches) {
       rows.push(
         `<span style="color:${CARD_INK}">&bull; ${escapeHtml(siteZoneLine(match))}</span>`,
@@ -325,11 +325,17 @@ export function programsAndZonesRows(
     return rows;
   }
 
-  // idle — no coordinate to check; fall back to the stamped export count.
+  // idle — no live coordinate check has run yet. The exported
+  // `incentiveCount` stamp is trustworthy only when POSITIVE (build-spec.md
+  // 2.3 / audit F2): a positive count came from a real intersection at
+  // export time. A stamped ZERO is not evidence of "not inside" — the
+  // reconciled vacant-land series ships incentiveCount: 0 for every land
+  // dot regardless of actual coverage (see this module's header comment) —
+  // so it renders as "not yet checked", never as a negative claim.
   rows.push(
     d.incentiveCount > 0
       ? `Intersects ${d.incentiveCount} incentive ${d.incentiveCount === 1 ? "geography" : "geographies"}.`
-      : "Not inside a mapped incentive geography.",
+      : "Mapped incentive geographies not yet checked for this point.",
   );
   return rows;
 }

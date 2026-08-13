@@ -1,5 +1,6 @@
 import { searchPrograms } from "./programs-index";
-import { resolveZonesAtPoint } from "@/lib/zones-check";
+import { resolveZoneEvidenceV2 } from "@/lib/zones-check";
+import { CHECKABLE_ZONE_KEYS } from "@/lib/constants";
 import type { ConciergePageContext } from "./types";
 
 const ACTION_REQUEST_RE =
@@ -220,7 +221,22 @@ export async function buildDeterministicConciergeResponse({
 
   if (/\b(zone|district|opportunity zone|enterprise zone|cover(?:s|ed)?)\b/i.test(text)) {
     if (typeof pageContext.lat === "number" && typeof pageContext.lon === "number") {
-      const zones = await resolveZonesAtPoint(pageContext.lat, pageContext.lon);
+      // Zone Evidence v2 (build-spec.md 2.3; audit F2): an empty match list
+      // is only an honest "no overlay" claim when every layer actually
+      // resolved. A layer this deterministic fallback could not check must
+      // never be reported as confirmed absent.
+      const evidence = await resolveZoneEvidenceV2(
+        pageContext.lat,
+        pageContext.lon,
+        CHECKABLE_ZONE_KEYS,
+      );
+      const zones = Object.entries(evidence)
+        .filter(([, entry]) => entry.state === "matched")
+        .map(([key, entry]) => ({ key, name: entry.name }));
+      const unknownCount = Object.values(evidence).filter((entry) => entry.state === "unknown").length;
+      if (zones.length === 0 && unknownCount > 0) {
+        return `${unknownCount} mapped-zone layer(s) could not be checked right now. That is an incomplete check, not confirmation the address is outside any incentive-zone overlay. Try again shortly or verify directly with the relevant administrators.`;
+      }
       if (zones.length === 0) {
         return "The current report coordinates did not return a mapped incentive-zone overlay. That is a location result only, not an eligibility finding. Verify current boundaries with the relevant administrators.";
       }

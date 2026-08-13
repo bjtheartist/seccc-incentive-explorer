@@ -653,6 +653,17 @@ export interface LookupResult {
   zones: Record<string, boolean>;
   zoneNames: Record<string, string>; // e.g. { tif: "Stony Island Ave...", ssa: "Calumet Hts/Avalon" }
   incentiveCount: number;
+  /**
+   * Zone Evidence v2 cutover (build-spec.md 2.3; audit F2): layer keys whose
+   * check could not be completed (source unavailable, malformed geometry, DB
+   * layer missing) — NOT confirmed absent. `zones[key]` stays `false` for
+   * these keys for backward compatibility with existing truthy-check
+   * consumers (mirrors lib/zone-response.ts's NormalizedZoneCheck.unknownLayers
+   * precedent from PR1). A negative summary MUST check this list before
+   * asserting "not mapped"/"no zones found" — see report-engine's
+   * buildKeyFindings and vacancy-site-zones's siteZonesSummary.
+   */
+  unknownZones?: string[];
   cityZoning?: CityZoning;
   cityZoningStatus?: ZoningLookupStatus;
   sector?: string; // user-selected business sector ID
