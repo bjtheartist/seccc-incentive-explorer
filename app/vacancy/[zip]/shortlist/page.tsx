@@ -1,19 +1,31 @@
 /**
  * SITE SHORTLIST — the back half of the /locate Site Matchmaker.
  *
- * The wizard used to dead-end at the raw property map: a reader described a
- * project and got a pin cloud. This route turns the same criteria into a
- * ranked, tiered, enriched list of specific candidate records.
+ * The wizard collects criteria; this page turns those criteria plus PR1's
+ * canonical, complete, zoning-resolved universe (data/exports/shortlist-
+ * universe/<zip>.json — see lib/shortlist-universe.ts) into ONE globally
+ * ranked list of candidate properties with zoning-screen badges.
  *
- * Server component, static-first: the edition, the rail stations, and the zone
- * overlays are all read from committed files here, the scoring runs in the pure
- * lib, and the only request-time work is the finalist enrichment the client
- * island fires for the cards that actually render.
+ * HARD CUTOVER (PR2): the capped `edition.sitePoints` path this page used to
+ * screen against is REMOVED, not kept as a fallback — it produced a known
+ * false-zero (60621: 1,541 tracked buildings, zero building sitePoints).
+ * Every candidate now comes from the canonical universe loader, which is
+ * fail-closed by contract: any missing/invalid/mismatched universe file
+ * renders the honest "temporarily unavailable" state below, never a false
+ * "zero sites match".
  *
- * The overlay point-in-polygon pass is the expensive step, so it runs on the
- * top OVERLAY_ENRICH_LIMIT screened candidates only — comfortably more than the
- * twenty that can be rendered, so the overlay weight can still reorder the
- * shown set.
+ * NO REQUEST-TIME ZONING OR OVERLAY RESOLUTION runs in this file. PR1's
+ * export-time zoning + overlay fields on every universe row are the ONLY
+ * source for badge/membership — the old finalist-only `resolveZoneClasses` /
+ * `checkStaticZoneKeys` calls this page used to make are gone entirely (see
+ * the PR2 build spec's "no request-time zoning in the selection path" rule
+ * and the consult's Q6.1).
+ *
+ * Server component, static-first: the universe, rail stations, and the
+ * display-only amenity/expressway context are all read from committed files
+ * here; the pure ranking runs in lib/shortlist-engine.ts; the only
+ * request-time work anywhere in this feature is the finalist county/license
+ * enrichment the client island fires for the ≤20 cards actually rendered.
  */
 
 import Link from "next/link";
@@ -22,37 +34,37 @@ import { notFound } from "next/navigation";
 import { getPilotZipEntry } from "@/lib/pilot-zips";
 import { getVacancyIndexEdition, loadVacancyIndex } from "@/lib/vacancy-index";
 import { railStations } from "@/lib/rail-stations";
-import { checkStaticZoneKeys } from "@/lib/zones-check";
-import { resolveZoneClasses } from "@/lib/zoning-point-lookup";
+import { loadShortlistUniverse } from "@/lib/shortlist-universe";
+import { loadShortlistAmenityPoints, loadShortlistExpresswayContext } from "@/lib/shortlist-display-context";
 import {
-  OVERLAY_ENRICH_LIMIT,
+  RANKING_MODEL_VERSION,
+  SHORTLIST_TOP_N,
   ZONING_SCREENING_NOTE,
-  assembleShortlist,
-  screenShortlistSites,
-  type ShortlistOverlay,
-} from "@/lib/site-shortlist";
+  decorateShortlistDisplayFacts,
+  runShortlistEngine,
+  selectedTransitNetwork,
+  type ShortlistFunnelStats,
+} from "@/lib/shortlist-engine";
 import {
+  buildShortlistHref,
   buildSiteMatchmakerHref,
   decodeSiteMatchCriteria,
   isSiteMatchCriteriaReady,
+  shortlistRankingModelVersionSupported,
+  siteMatchCriteriaVersionSupported,
   summarizeSiteMatchCriteria,
+  type SiteMatchCriteria,
 } from "@/lib/site-matchmaker";
+import { selectedNonScoringCriteria } from "@/lib/shortlist-criteria";
+import ShortlistFunnelEvent from "@/components/vacancy/ShortlistFunnelEvent";
 import SiteShortlistResults from "@/components/vacancy/SiteShortlistResults";
 
 export const dynamic = "force-dynamic";
 
-/** The four overlays a shortlist card reports, with their rendered labels. The
- *  TIF layer is listed but never scored (a financing geography is not a demand
- *  signal — see scoredOverlayCount). */
-const OVERLAY_LAYERS: { key: string; label: string }[] = [
-  { key: "ssa", label: "SSA" },
-  { key: "ccsa", label: "CCSA" },
-  { key: "tif", label: "TIF" },
-  { key: "nof", label: "NOF" },
-];
-
 /** The canonical `sm_*` criteria parameters, plus the ZIP from the route. */
 const CRITERIA_PARAMS = [
+  "sm_v",
+  "sm_rv",
   "sm_use",
   "sm_property",
   "sm_min_sqft",
@@ -92,12 +104,12 @@ export async function generateMetadata({
   if (!entry) return { title: "Site Shortlist" };
   return {
     title: `Site shortlist — ${entry.primaryNeighborhood} (ZIP ${zip})`,
-    description: `A ranked, tiered shortlist of candidate vacant records in ${entry.primaryNeighborhood} (ZIP ${zip}), screened against your project criteria. Early possibilities from public records, not availability listings.`,
+    description: `A ranked shortlist of candidate vacant records in ${entry.primaryNeighborhood} (ZIP ${zip}), screened against your project criteria. Early possibilities from public records, not availability listings.`,
   };
 }
 
-/** The shared page chrome, so every state (empty, uncovered, results) reads as
- *  the same document rather than three different pages. */
+/** The shared page chrome, so every state (unavailable, empty, uncovered,
+ *  results) reads as the same document rather than four different pages. */
 function Shell({ zip, children }: { zip: string; children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#FAF9F6] px-4 py-8 text-[#0C1B33] sm:px-8">
@@ -119,6 +131,160 @@ function Shell({ zip, children }: { zip: string; children: React.ReactNode }) {
   );
 }
 
+/** The fail-closed state: missing/invalid universe file, buildId mismatch,
+ *  unknown criteriaVersion, a rail source unavailable for a selected
+ *  network, or a registry/engine dispatch drift. NEVER a false "zero sites
+ *  match" — a reader who hits this always gets a working link to the raw
+ *  map instead. */
+function UnavailableState({ zip }: { zip: string }) {
+  return (
+    <Shell zip={zip}>
+      <h1 className="font-editorial text-[42px] leading-[0.96] sm:text-[52px]">Site shortlist</h1>
+      <p className="mt-4 max-w-xl text-[14px] leading-relaxed text-[#0C1B33]/60">
+        Ranked shortlist temporarily unavailable. The screened, ranked shortlist for this area could
+        not be built right now.
+      </p>
+      <Link
+        href={`/vacancy/${zip}/map`}
+        className="mt-6 inline-flex min-h-11 items-center gap-2 bg-[#2563EB] px-4 py-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#1D4ED8]"
+      >
+        Open the full vacancy map instead →
+      </Link>
+    </Shell>
+  );
+}
+
+/**
+ * Finding 15 (re-review major): an unknown `sm_rv` is NOT the generic
+ * outage state — the link itself is fine, it was just minted before a
+ * ranking-semantics change. Unlike `sm_v` (which governs whether the
+ * CRITERIA can even be decoded safely), `sm_rv` staleness is independent of
+ * decodability — the brief is decoded normally and shown back to the
+ * reader, with a one-click "re-run" link that re-encodes the SAME brief
+ * with the CURRENT `sm_rv` (via `buildShortlistHref`), alongside the usual
+ * raw-map escape hatch.
+ */
+function StaleRankingVersionState({
+  zip,
+  neighborhood,
+  criteria,
+}: {
+  zip: string;
+  neighborhood: string;
+  criteria: SiteMatchCriteria;
+}) {
+  const summary = summarizeSiteMatchCriteria(criteria);
+  const freshHref = buildShortlistHref(criteria);
+  const chips = [summary.projectUse, summary.propertyType, summary.footprint].filter(
+    (chip) => chip && !/not selected$/.test(chip),
+  );
+  return (
+    <Shell zip={zip}>
+      <h1 className="font-editorial text-[42px] leading-[0.96] sm:text-[52px]">Site shortlist</h1>
+      <p className="mt-4 max-w-xl text-[14px] leading-relaxed text-[#0C1B33]/60">
+        This link was generated with an older version of the ranking. Your brief for {neighborhood}{" "}
+        has been preserved below — re-run it to see current results.
+      </p>
+      {chips.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {chips.map((chip) => (
+            <span
+              key={chip}
+              className="border border-[#0C1B33]/15 bg-white px-2.5 py-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/60"
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        {freshHref && (
+          <Link
+            href={freshHref}
+            className="inline-flex min-h-11 items-center gap-2 bg-[#2563EB] px-4 py-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#1D4ED8]"
+          >
+            Re-run with the current ranking →
+          </Link>
+        )}
+        <Link
+          href={`/vacancy/${zip}/map`}
+          className="inline-flex min-h-11 items-center gap-2 border border-[#0C1B33]/25 px-4 py-3 text-[12px] font-semibold text-[#0C1B33]/70 transition-colors hover:border-[#0C1B33]/50"
+        >
+          Open the full vacancy map instead →
+        </Link>
+      </div>
+    </Shell>
+  );
+}
+
+const FUNNEL_STAGES: { key: keyof ShortlistFunnelStats; label: string; note?: string }[] = [
+  { key: "trackedEvidence", label: "Tracked evidence in this ZIP matching your property type" },
+  { key: "canonicalSites", label: "Canonical sites (deduped)" },
+  {
+    key: "withResolvedPin",
+    label: "With a resolved PIN",
+    note: "reference only — a missing PIN does not remove a record",
+  },
+  {
+    key: "withMeasuredArea",
+    label: "With a published measurement",
+    note: "reference only unless you set a size band",
+  },
+  { key: "insideBand", label: "Inside your size band (or no band set)" },
+  { key: "survivingTransitScreen", label: "Surviving the transit screen (or none configured)" },
+];
+
+/** The zero-result funnel (PR2 spec, consult Q6.5). Renders the REAL
+ *  successive counts from the loaded universe — never "zero buildings
+ *  matched" when buildings exist but lack PIN/measurement coverage; the
+ *  funnel names exactly which stage filtered them. 60621's building search
+ *  is the canonical case this exists for (1,541 tracked buildings; most
+ *  lack a resolved PIN or a published measurement, not zero coverage). */
+function FunnelSection({
+  zip,
+  funnel,
+  adjustHref,
+}: {
+  zip: string;
+  funnel: ShortlistFunnelStats;
+  adjustHref: string;
+}) {
+  return (
+    <section className="mt-8 border border-[#0C1B33]/12 bg-white p-6">
+      <ShortlistFunnelEvent zip={zip} funnel={funnel} />
+      <h2 className="font-editorial text-[22px] leading-tight">
+        {funnel.trackedEvidence === 0 ? "No tracked evidence for this property type" : "Nothing cleared the screens"}
+      </h2>
+      <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-[#0C1B33]/65">
+        {funnel.trackedEvidence > 0
+          ? "Records exist for this area and property type — here is exactly which screen narrowed the field, so this is never reported as a bare zero."
+          : "This area's canonical universe carries no tracked evidence for the property type you selected."}
+      </p>
+      {funnel.trackedEvidence > 0 && (
+        <ol className="mt-4 grid gap-1.5 font-mono-bureau text-[11px] text-[#0C1B33]/70">
+          {FUNNEL_STAGES.map((stage) => (
+            <li key={stage.key} className="flex items-baseline justify-between gap-3 border-b border-dashed border-[#0C1B33]/10 py-1">
+              <span>
+                {stage.label}
+                {stage.note ? <span className="text-[#0C1B33]/40"> ({stage.note})</span> : null}
+              </span>
+              <span className="tabular-nums text-[#0C1B33]">
+                {funnel[stage.key].toLocaleString("en-US")}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+      <Link
+        href={adjustHref}
+        className="mt-5 inline-flex min-h-11 items-center bg-[#2563EB] px-4 py-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#1D4ED8]"
+      >
+        Adjust the criteria →
+      </Link>
+    </section>
+  );
+}
+
 export default async function SiteShortlistPage({
   params,
   searchParams,
@@ -131,9 +297,20 @@ export default async function SiteShortlistPage({
   if (!pilotEntry) notFound();
 
   const raw = await searchParams;
-  const criteria = decodeSiteMatchCriteria(criteriaParams(zip, raw));
+  const rawParams = criteriaParams(zip, raw);
   const source = firstParam(raw.source);
   const neighborhood = pilotEntry.primaryNeighborhood;
+
+  // ── Unknown criteriaVersion: fail closed, never a silent decode. `sm_v`
+  //    governs whether the CRITERIA SHAPE itself can be trusted to decode
+  //    correctly, so an unrecognized value must stop before decoding at
+  //    all. `sm_rv` (ranking semantics) is checked SEPARATELY, below, AFTER
+  //    decoding — see Finding 15. ─────────────────────────────────────────
+  if (!siteMatchCriteriaVersionSupported(rawParams)) {
+    return <UnavailableState zip={zip} />;
+  }
+
+  const criteria = decodeSiteMatchCriteria(rawParams);
 
   // ── No usable criteria: send the reader back to build a brief ─────────────
   if (!isSiteMatchCriteriaReady(criteria)) {
@@ -157,11 +334,34 @@ export default async function SiteShortlistPage({
     );
   }
 
+  // ── Finding 15: an unknown sm_rv gets its OWN state, not the generic
+  //    outage copy — the brief is fully decoded and safe to show back; only
+  //    the RANKING SEMANTICS behind this specific link are stale. ─────────
+  if (!shortlistRankingModelVersionSupported(rawParams)) {
+    return <StaleRankingVersionState zip={zip} neighborhood={neighborhood} criteria={criteria} />;
+  }
+
   const summary = summarizeSiteMatchCriteria(criteria);
   const adjustHref = buildSiteMatchmakerHref(criteria);
+
+  // ── Fail-closed: missing/invalid universe, buildId mismatch ───────────────
+  const universe = loadShortlistUniverse(zip);
+  if (!universe.ok) {
+    return <UnavailableState zip={zip} />;
+  }
+  // ── Fail-closed: a ranking-inputs version this build's engine does not
+  //    speak. The schema already rejects any file whose literal
+  //    rankingInputsVersion !== RANKING_INPUTS_VERSION at load time; this is
+  //    a second, explicit, testable check tying the loaded data to the
+  //    ENGINE's own version constant rather than relying only on the schema.
+  if (universe.data.rankingInputsVersion !== RANKING_MODEL_VERSION) {
+    return <UnavailableState zip={zip} />;
+  }
+
   const edition = getVacancyIndexEdition(zip);
 
-  // ── ZIP without a published edition: the same honest state as its siblings ──
+  // ── ZIP without a published vacancy edition: the same honest state as its
+  //    siblings (needed for the map panel's boundary/centroid). ──────────────
   if (!edition) {
     return (
       <Shell zip={zip}>
@@ -184,46 +384,45 @@ export default async function SiteShortlistPage({
     );
   }
 
-  // ── Screen, overlay-enrich the top slice, assemble ────────────────────────
-  const { candidates, stats } = screenShortlistSites(
-    edition.sitePoints,
+  // ── Run the full-universe, criteria-relative engine (core pass only — no
+  //    display-only geometry here, see Finding 11) ───────────────────────────
+  const stations = railStations();
+  const {
+    ranked: allRanked,
+    funnel,
+    railDataUnavailable,
+    scored,
+    dispatchCoverageBroken,
+  } = runShortlistEngine({
+    rows: universe.data.rows,
     criteria,
-    railStations(),
-  );
-  const finalists = candidates.slice(0, OVERLAY_ENRICH_LIMIT);
+    stations,
+    sourceRecordsByEvidenceType: universe.data.counts.sourceRecordsByEvidenceType,
+  });
 
-  // The vacancy export leaves `zoningClass` null on every vacant-BUILDING
-  // point, so the by-right tier split would never split without this. Finalists
-  // only, and an unresolved point simply stays "zoning unverified" (Tier 2) —
-  // the exact behavior a City outage would produce anyway. See
-  // lib/zoning-point-lookup.ts for why this cannot be served statically.
-  const resolvedZoning = await resolveZoneClasses(
-    finalists
-      .filter((site) => !site.zoning)
-      .map((site) => ({ key: site.key, lat: site.lat, lon: site.lon })),
-  );
+  // ── Fail-closed: a selected CTA/Metra criterion whose station SOURCE is
+  //    unavailable (Finding 8) — never silently rank as if it were unselected.
+  // ── Fail-closed: the registry and engine dispatch tables have drifted
+  //    (Finding 14) — checked and handled at REQUEST time inside the engine,
+  //    never a process crash at import; this route just treats it the same
+  //    as any other unavailable condition. ─────────────────────────────────
+  if (railDataUnavailable || dispatchCoverageBroken) {
+    return <UnavailableState zip={zip} />;
+  }
 
-  const withOverlays = await Promise.all(
-    finalists.map(async (base) => {
-      const site = base.zoning
-        ? base
-        : { ...base, zoning: resolvedZoning.get(base.key) ?? null };
-      const matches = await checkStaticZoneKeys(
-        site.lat,
-        site.lon,
-        OVERLAY_LAYERS.map((layer) => layer.key),
-      ).catch(() => []);
-      const overlays: ShortlistOverlay[] = matches.map((match) => ({
-        layer: OVERLAY_LAYERS.find((layer) => layer.key === match.key)?.label ?? match.key,
-        name: match.name ?? "",
-      }));
-      return { site, overlays };
-    }),
-  );
-  const result = assembleShortlist(withOverlays, criteria);
-  const total = result.tier1.length + result.tier2.length;
+  // ── Slice to the rendered top N, THEN decorate with display-only geometry
+  //    (Finding 11) — nearest school/library/expressway/rail-when-unscored
+  //    are computed for these ≤20 candidates only, never the full screened
+  //    universe (up to 6,000+ rows for the largest committed ZIP). ──────────
+  const ranked = decorateShortlistDisplayFacts(allRanked.slice(0, SHORTLIST_TOP_N), {
+    stations,
+    network: selectedTransitNetwork(criteria, stations),
+    expresswayContextByKey: loadShortlistExpresswayContext(zip),
+    schoolPoints: loadShortlistAmenityPoints("school-points.json"),
+    libraryPoints: loadShortlistAmenityPoints("library-points.json"),
+  });
 
-  const generatedAt = loadVacancyIndex()?.generatedAt ?? null;
+  const generatedAt = universe.data.generatedAt ?? loadVacancyIndex()?.generatedAt ?? null;
   const chips = [
     summary.projectUse,
     summary.propertyType,
@@ -232,6 +431,24 @@ export default async function SiteShortlistPage({
     summary.transportationDistance,
   ].filter((chip) => chip && !/not selected$|^Flexible /.test(chip));
 
+  // REGISTRY-UI BINDING: every selected criterion the engine cannot screen
+  // or score on gets its own honest label here, in the registry's own words
+  // (lib/shortlist-criteria.ts) — never silence, never a generic "no
+  // effect". Screen/score criteria are already visible in the results
+  // themselves (badges, the transit fact on scored cards) and are not
+  // repeated here.
+  const nonScoringCriteria = selectedNonScoringCriteria({
+    projectUse: criteria.projectUse,
+    propertyType: criteria.propertyType != null,
+    squareFootage: criteria.minSquareFeet != null || criteria.maxSquareFeet != null,
+    transportation: criteria.transportation,
+    transportationDistance: criteria.transportationDistance != null,
+    context: criteria.context != null,
+    walkability: criteria.walkability != null,
+    pedestrianActivity: criteria.pedestrianActivity != null,
+    amenities: criteria.amenities,
+  });
+
   return (
     <Shell zip={zip}>
       <header>
@@ -239,14 +456,25 @@ export default async function SiteShortlistPage({
           Site shortlist · {summary.location}
         </span>
         <h1 className="mt-3 font-editorial text-[42px] leading-[0.96] sm:text-[54px]">
-          {total > 0
-            ? `${total} candidate ${total === 1 ? "record" : "records"} in ${neighborhood}`
+          {ranked.length > 0
+            ? `${ranked.length} candidate ${ranked.length === 1 ? "record" : "records"} in ${neighborhood}`
             : `No records match this brief in ${neighborhood}`}
         </h1>
         <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/60">
-          Screened from this area&rsquo;s tracked vacant-property inventory against your brief, then
-          ranked. These are early possibilities from public records, not availability listings — no
-          record here is offered for sale or lease.
+          Screened from this area&rsquo;s complete tracked vacant-property universe against your
+          brief{scored ? ", then ranked." : ", then ordered by record completeness."} These are
+          early possibilities from public records, not availability listings — no record here is
+          offered for sale or lease.
+          {allRanked.length > ranked.length && (
+            <>
+              {" "}
+              {allRanked.length.toLocaleString("en-US")} records cleared the screens; {ranked.length}{" "}
+              are shown
+              {scored
+                ? ", highest-ranked first."
+                : ", ordered by record completeness — add a transit criterion to rank by fit."}
+            </>
+          )}
         </p>
 
         <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -269,43 +497,37 @@ export default async function SiteShortlistPage({
         <p className="mt-4 max-w-2xl border-l-2 border-[#A45B00]/40 pl-3 text-[12px] leading-relaxed text-[#A45B00]">
           {ZONING_SCREENING_NOTE}
         </p>
+
+        {nonScoringCriteria.length > 0 && (
+          <div className="mt-3 max-w-2xl border-l-2 border-[#0C1B33]/15 pl-3">
+            <p className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+              Selected criteria with no ranking effect
+            </p>
+            <ul className="mt-1.5 space-y-1.5">
+              {nonScoringCriteria.map((entry) => (
+                <li key={entry.id} className="text-[12px] leading-relaxed text-[#0C1B33]/55">
+                  <span className="font-semibold text-[#0C1B33]/70">
+                    {entry.label}
+                    {entry.behavior === "display-only" ? " (shown, not scored)" : " (not supported)"}:
+                  </span>{" "}
+                  {entry.explanation}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </header>
 
-      {total === 0 ? (
-        <section className="mt-8 border border-[#0C1B33]/12 bg-white p-6">
-          <h2 className="font-editorial text-[22px] leading-tight">Nothing cleared the screens</h2>
-          <p className="mt-3 max-w-xl text-[13px] leading-relaxed text-[#0C1B33]/65">
-            {stats.propertyTypeKeptCount.toLocaleString("en-US")} of{" "}
-            {stats.loadedCount.toLocaleString("en-US")} tracked records matched the property type
-            you chose
-            {stats.propertyTypeKeptCount > 0 && (
-              <>
-                , and {stats.footprintKeptCount.toLocaleString("en-US")} of those carried a
-                published measurement inside your size band
-              </>
-            )}
-            {stats.railScreenMeters != null && (
-              <>
-                {" "}
-                before the {stats.railScreenMeters}-metre rail screen was applied
-              </>
-            )}
-            . Widening the size band, or setting the transportation distance to flexible, is usually
-            the fastest way to open the field.
-          </p>
-          <Link
-            href={adjustHref}
-            className="mt-5 inline-flex min-h-11 items-center bg-[#2563EB] px-4 py-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#1D4ED8]"
-          >
-            Adjust the criteria →
-          </Link>
-        </section>
+      {ranked.length === 0 ? (
+        <FunnelSection zip={zip} funnel={funnel} adjustHref={adjustHref} />
       ) : (
         <SiteShortlistResults
           zip={zip}
-          projectUse={criteria.projectUse}
+          criteria={criteria}
+          scored={scored}
           source={source}
-          result={result}
+          buildId={universe.data.buildId}
+          ranked={ranked}
           // The map panel draws the same simplified ZIP ring the vacancy web
           // report uses; both read it from the committed edition, so the two
           // maps can never outline different geographies for the same ZIP.
@@ -316,15 +538,15 @@ export default async function SiteShortlistPage({
 
       <footer className="mt-12 border-t border-[#0C1B33]/10 pt-6">
         <p className="max-w-3xl text-[11px] leading-relaxed text-[#0C1B33]/45">
-          Screened from the tracked vacant-property inventory published in this area&rsquo;s vacancy
-          edition
+          Screened from the complete canonical vacant-property universe published for this area
           {generatedAt ? ` (snapshot ${String(generatedAt).slice(0, 10)})` : ""}. Sources: City of
           Chicago vacant-building and City-owned land records, Cook County Assessor parcel,
-          valuation, and tax-sale data, City of Chicago zoning districts and BACP business licenses,
-          CTA and Metra station locations, and the Special Service Area, CCSA corridor, TIF, and
+          valuation, and tax-sale data, the City of Chicago zoning boundary layer resolved locally
+          against this snapshot, CTA and Metra station locations, Chicago Public Schools and Chicago
+          Public Library locations, and the Special Service Area, CCSA corridor, TIF, and
           Neighborhood Opportunity Fund geographies mapped in this repository. Ownership is a
           taxpayer-record classification and is unverified — owner TYPE only, never owner names.
-          Zoning is screened from the district code and is not a determination. Records indicate;
+          The zoning badge on every card is a broad district-family screen only. Records indicate;
           verify current ownership, zoning, condition, and status with the county and the
           responsible City department before relying on any of it.
         </p>

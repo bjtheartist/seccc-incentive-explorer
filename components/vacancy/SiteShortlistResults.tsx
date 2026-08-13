@@ -1,18 +1,25 @@
 "use client";
 
 /**
- * The rendered half of the Site Shortlist: two tiers of numbered cards, one
+ * The rendered half of the Site Shortlist: ONE ranked list of numbered
+ * cards with zoning-screen badges, a client-side badge filter, one
  * request-time enrichment pass, and the CSV download.
  *
- * CLIENT ISLAND. It value-imports lib/site-shortlist.ts only — that module is
- * pure by contract. It must NEVER import lib/vacancy-index.ts or
- * lib/rail-stations.ts (both read `node:fs`, which breaks the client build);
- * the server page does that work and hands the finished candidates down.
+ * PR2 replaced the old 12/8 tier-quota split with a single globally ranked
+ * top-20 list — see lib/shortlist-engine.ts. The filter below narrows what
+ * is SHOWN; it never re-ranks or re-fetches, so the numbering a reader sees
+ * always matches the numbering on the map and in the CSV for the full set.
  *
- * The enrichment fetch is fired ONCE per mount for every rendered card, and its
- * failure is a display state, not an error: the static half of each card (size,
- * ownership axes, overlays, rail, zoning screen) is already on screen and stays
- * there.
+ * CLIENT ISLAND. It value-imports lib/shortlist-engine.ts, lib/shortlist-csv.ts,
+ * and lib/site-shortlist.ts only — all three are pure by contract. It must
+ * NEVER import lib/shortlist-universe.ts, lib/vacancy-index.ts, or
+ * lib/rail-stations.ts (all read `node:fs`, which breaks the client build);
+ * the server page does that work and hands the finished ranked list down.
+ *
+ * The enrichment fetch is fired ONCE per mount for every rendered card, and
+ * its failure is a display state, not an error: the static half of each
+ * card (size, ownership axes, overlays, rail, zoning badge) is already on
+ * screen and stays there.
  */
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -20,22 +27,24 @@ import Link from "next/link";
 import { trackEvent } from "@/lib/analytics-events";
 import { clerkRecordsUrl, cookViewerUrl } from "@/lib/cook-viewer";
 import {
+  ZONING_BADGE_LABELS,
+  type CandidateOverlays,
+  type DecoratedShortlistCandidate,
+  type ZoningBadge,
+} from "@/lib/shortlist-engine";
+import { shortlistCsv, shortlistCsvFilename } from "@/lib/shortlist-csv";
+import {
   IMPLIED_VALUE_CAPTION,
-  TIER_1_HEADING,
-  TIER_2_HEADING,
   VIOLATION_FLAG,
   accessibilityNoteFor,
   activeLicenseFlag,
-  shortlistCsv,
-  shortlistCsvFilename,
   shortlistSnapshotHref,
   taxSaleFlag,
-  type ShortlistCandidate,
   type ShortlistEnrichmentFacts,
-  type ShortlistResult,
 } from "@/lib/site-shortlist";
 import { shortlistCardDomId } from "@/lib/shortlist-map-layers";
-import type { SiteProjectUse } from "@/lib/site-matchmaker";
+import { shortlistCriteriaAnalyticsMetadata } from "@/lib/shortlist-criteria";
+import type { SiteMatchCriteria } from "@/lib/site-matchmaker";
 import SiteShortlistMap from "./SiteShortlistMap";
 
 interface EnrichItem extends ShortlistEnrichmentFacts {
@@ -48,6 +57,20 @@ type EnrichState =
   | { status: "loading" }
   | { status: "error" }
   | { status: "loaded"; byKey: Record<string, EnrichItem> };
+
+const BADGE_FILTER_ORDER: readonly ZoningBadge[] = [
+  "aligned",
+  "planned-development",
+  "not-aligned",
+  "unresolved",
+];
+
+const BADGE_TONE: Record<ZoningBadge, string> = {
+  aligned: "border-[#166534] bg-[#F0FDF4] text-[#166534]",
+  "not-aligned": "border-[#A45B00] bg-[#FFFBEB] text-[#A45B00]",
+  "planned-development": "border-[#7C3AED] bg-[#F5F3FF] text-[#7C3AED]",
+  unresolved: "border-[#0C1B33]/30 bg-[#0C1B33]/[0.04] text-[#0C1B33]/60",
+};
 
 /** "8000 S COTTAGE GROVE AVE" -> "8000 S Cottage Grove Ave". */
 function titleCase(value: string): string {
@@ -69,18 +92,22 @@ function usd(value: number | null): string {
   return value == null ? "—" : `$${value.toLocaleString("en-US")}`;
 }
 
-function ZoneBadge({ candidate }: { candidate: ShortlistCandidate }) {
-  const tone =
-    candidate.zoningStatus === "by-right"
-      ? "border-[#166534] bg-[#F0FDF4] text-[#166534]"
-      : candidate.zoningStatus === "unverified"
-        ? "border-[#0C1B33]/30 bg-[#0C1B33]/[0.04] text-[#0C1B33]/60"
-        : "border-[#A45B00] bg-[#FFFBEB] text-[#A45B00]";
+function miles(value: number | null): string {
+  return value == null ? "" : `${value.toFixed(2)} mi`;
+}
+
+function metersAndWalk(meters: number, walkMinutes?: number): string {
+  return walkMinutes != null
+    ? `${meters.toLocaleString("en-US")} m, ~${walkMinutes} min walk`
+    : `${meters.toLocaleString("en-US")} m`;
+}
+
+function ZoneBadge({ badge }: { badge: ZoningBadge }) {
   return (
     <span
-      className={`flex-shrink-0 border px-2 py-1 font-mono-bureau text-[10px] uppercase tracking-[0.08em] ${tone}`}
+      className={`flex-shrink-0 border px-2 py-1 font-mono-bureau text-[10px] uppercase tracking-[0.08em] ${BADGE_TONE[badge]}`}
     >
-      {candidate.zoning ?? "Zoning unverified"}
+      {ZONING_BADGE_LABELS[badge]}
     </span>
   );
 }
@@ -104,6 +131,23 @@ function Flag({ children }: { children: React.ReactNode }) {
   );
 }
 
+const OVERLAY_LABELS: { key: keyof CandidateOverlays; label: string }[] = [
+  { key: "ssa", label: "SSA" },
+  { key: "ccsa", label: "CCSA" },
+  { key: "tif", label: "TIF" },
+  { key: "nof", label: "NOF" },
+];
+
+/** Each active overlay's own feature name where the source published one
+ *  (Finding 12) — "SSA: Greater Chatham", not just "SSA". */
+function overlaysText(overlays: CandidateOverlays): string {
+  const active = OVERLAY_LABELS.filter((overlay) => overlays[overlay.key].present).map((overlay) => {
+    const name = overlays[overlay.key].name;
+    return name ? `${overlay.label}: ${name}` : overlay.label;
+  });
+  return active.length > 0 ? active.join(" · ") : "None mapped";
+}
+
 function ShortlistCard({
   candidate,
   number,
@@ -112,22 +156,36 @@ function ShortlistCard({
   enrichState,
   onSnapshotClick,
 }: {
-  candidate: ShortlistCandidate;
+  candidate: DecoratedShortlistCandidate;
   number: number;
   zip: string;
   enrichment: EnrichItem | null;
   enrichState: EnrichState["status"];
-  onSnapshotClick: (candidate: ShortlistCandidate) => void;
+  onSnapshotClick: (candidate: DecoratedShortlistCandidate) => void;
 }) {
   const viewerUrl = cookViewerUrl(candidate.pin);
   const clerkUrl = clerkRecordsUrl(candidate.pin);
-  const accessibility = candidate.showAccessibility
-    ? accessibilityNoteFor(enrichment?.countyClass ?? null)
-    : null;
+  const showAccessibility = candidate.propertyType === "vacant_building";
+  const accessibility = showAccessibility ? accessibilityNoteFor(enrichment?.countyClass ?? null) : null;
 
   const flags: string[] = [];
   if (candidate.saleYear) flags.push(taxSaleFlag(candidate.saleYear));
   if (candidate.violation) flags.push(VIOLATION_FLAG);
+  if (candidate.conflictingPropertyTypes) {
+    // Re-review Finding 3: report the REQUESTED screening type
+    // (`screenedPropertyType`, resolved by the engine from the search's own
+    // property-type request), never the row's single resolved
+    // `propertyType` — building evidence always wins that resolution when a
+    // site carries both, so a card describing a LAND search's own screening
+    // logic must not read the building-wins field or it will claim the
+    // wrong type for a land search that admitted this row via land
+    // evidence.
+    flags.push(
+      `This record carries both vacant-land and vacant-building evidence — screened as a ${
+        candidate.screenedPropertyType === "vacant_building" ? "building" : "land"
+      } record for this search`,
+    );
+  }
   for (const license of enrichment?.activeLicenses ?? []) {
     flags.push(activeLicenseFlag(license.name));
   }
@@ -150,10 +208,12 @@ function ShortlistCard({
           </h3>
           <p className="mt-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/45">
             {candidate.pin ? `PIN ${candidate.pin}` : "No PIN on this record"}
+            {" · "}
+            {candidate.zoningDistrict ? `Zoned ${candidate.zoningDistrict}` : "Zoning unresolved"}
             {enrichment?.classGloss ? ` · ${enrichment.classGloss}` : ""}
           </p>
         </div>
-        <ZoneBadge candidate={candidate} />
+        <ZoneBadge badge={candidate.badge} />
       </div>
 
       <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -164,11 +224,13 @@ function ShortlistCard({
         <Fact label="Lot" value={sqft(candidate.lotSqft)} />
         <Fact label="Owner type" value={candidate.ownerLabel} />
         <Fact
-          label="Nearest rail"
+          label={candidate.transitScore ? "Scored transit" : "Nearest rail (display only)"}
           value={
-            candidate.nearestRail
-              ? `${candidate.nearestRail.name} (${candidate.nearestRail.system}) · ${candidate.nearestRail.meters.toLocaleString("en-US")} m, ~${candidate.nearestRail.walkMinutes} min walk`
-              : "No station data"
+            candidate.transitScore
+              ? `${candidate.transitScore.stationName} (${candidate.transitScore.stationSystem}) · ${metersAndWalk(candidate.transitScore.meters, candidate.transitScore.walkMinutes)}`
+              : candidate.nearestRailDisplay
+                ? `${candidate.nearestRailDisplay.name} (${candidate.nearestRailDisplay.system}) · ${metersAndWalk(candidate.nearestRailDisplay.meters, candidate.nearestRailDisplay.walkMinutes)}`
+                : "No station data"
           }
         />
         <Fact
@@ -195,8 +257,29 @@ function ShortlistCard({
         />
       </div>
 
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[11px] leading-relaxed text-[#0C1B33]/55">
+        {candidate.expresswayDisplay?.miles != null && (
+          <span>
+            Expressway proximity (display only): {candidate.expresswayDisplay.name ?? "Nearest expressway"} ·{" "}
+            {miles(candidate.expresswayDisplay.miles)}
+          </span>
+        )}
+        {candidate.nearestSchool && (
+          <span>
+            Nearest school (display only): {candidate.nearestSchool.name} ·{" "}
+            {candidate.nearestSchool.meters.toLocaleString("en-US")} m
+          </span>
+        )}
+        {candidate.nearestLibrary && (
+          <span>
+            Nearest library (display only): {candidate.nearestLibrary.name} ·{" "}
+            {candidate.nearestLibrary.meters.toLocaleString("en-US")} m
+          </span>
+        )}
+      </div>
+
       <p className="mt-4 border-l-2 border-[#2563EB] bg-[#EFF3FB] px-3 py-2 text-[12px] leading-relaxed text-[#0C1B33]/80">
-        {candidate.zoningNote}
+        {candidate.badgeNote}
       </p>
 
       {accessibility && (
@@ -218,11 +301,7 @@ function ShortlistCard({
         <span className="font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/45">
           Mapped overlays:{" "}
         </span>
-        {candidate.overlays.length > 0
-          ? candidate.overlays
-              .map((overlay) => (overlay.name ? `${overlay.layer}: ${overlay.name}` : overlay.layer))
-              .join(" · ")
-          : "None mapped"}
+        {overlaysText(candidate.overlays)}
         {" · "}
         {candidate.incentiveCount} incentive{" "}
         {candidate.incentiveCount === 1 ? "geography" : "geographies"} mapped at this point
@@ -243,7 +322,7 @@ function ShortlistCard({
             point qualify for? Same tab, because it is a continuation, not a
             reference lookup. */}
         <Link
-          href={shortlistSnapshotHref(candidate)}
+          href={candidate.lat != null && candidate.lon != null ? shortlistSnapshotHref({ lat: candidate.lat, lon: candidate.lon, address: candidate.address }) : "/report"}
           onClick={() => onSnapshotClick(candidate)}
           className="border border-[#2563EB] bg-[#2563EB] px-3 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#1D4ED8]"
         >
@@ -290,105 +369,108 @@ function ShortlistCard({
   );
 }
 
-function TierSection({
-  heading,
-  description,
-  candidates,
-  startNumber,
-  total,
-  cap,
-  zip,
-  byKey,
-  enrichState,
-  onSnapshotClick,
-}: {
-  heading: string;
-  description: string;
-  candidates: ShortlistCandidate[];
-  startNumber: number;
-  total: number;
-  cap: number;
-  zip: string;
-  byKey: Record<string, EnrichItem>;
-  enrichState: EnrichState["status"];
-  onSnapshotClick: (candidate: ShortlistCandidate) => void;
-}) {
-  return (
-    <section className="mt-10">
-      <h2 className="font-editorial text-[26px] leading-tight text-[#0C1B33]">
-        {heading} ({candidates.length})
-      </h2>
-      <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/60">{description}</p>
-      {total > cap && (
-        <p className="mt-2 font-mono-bureau text-[10px] uppercase tracking-[0.08em] text-[#0C1B33]/45">
-          {total.toLocaleString("en-US")} records passed the screens here; the {cap} highest-scoring
-          are shown.
-        </p>
-      )}
-      {candidates.length === 0 ? (
-        <p className="mt-4 border border-dashed border-[#0C1B33]/20 bg-white px-4 py-6 text-center font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
-          No records in this tier for these criteria
-        </p>
-      ) : (
-        <ul className="mt-4 grid gap-3">
-          {candidates.map((candidate, index) => (
-            <ShortlistCard
-              key={candidate.key}
-              candidate={candidate}
-              number={startNumber + index}
-              zip={zip}
-              enrichment={byKey[candidate.key] ?? null}
-              enrichState={enrichState}
-              onSnapshotClick={onSnapshotClick}
-            />
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
 export default function SiteShortlistResults({
   zip,
-  projectUse,
+  criteria,
+  scored,
   source,
-  result,
+  buildId,
+  ranked,
   boundary,
   centroid,
 }: {
   zip: string;
-  projectUse: SiteProjectUse | null;
+  /** The full decoded brief — used to derive the analytics event's
+   *  registry-backed criteria metadata (Finding 2), not just `projectUse`
+   *  as before. */
+  criteria: SiteMatchCriteria;
+  /** True when a real transit score is active for this run
+   *  (`ShortlistEngineResult.scored`, Finding 13) — when false, `ranked`'s
+   *  order is the fixed-weight record-completeness order (round 3), NOT a
+   *  fit/quality ranking, and the copy below must say so rather than
+   *  calling it "highest-ranked." */
+  scored: boolean;
   source: string | null;
-  result: ShortlistResult;
+  /** The loaded universe file's own buildId (PR1) — sent with every
+   *  enrichment request so the server-side cache can key on it (Finding 4:
+   *  an enrichment cache keyed only on PIN/address can serve a stale value
+   *  across a universe regeneration with no signal anything changed). */
+  buildId: string;
+  /** The full ranked, screened list — ALREADY sliced to the rendered top N
+   *  AND already decorated with display-only facts
+   *  (`decorateShortlistDisplayFacts`) by the server page. Badges replace
+   *  the old tier split; this component never re-ranks, it only filters
+   *  what is shown. */
+  ranked: DecoratedShortlistCandidate[];
   /** Simplified ZIP ring + bbox from the vacancy edition, for the map panel's
    *  boundary line. `null` renders the panel without an outline. */
   boundary: { rings: [number, number][][]; bbox: [number, number, number, number] } | null;
   centroid: { lat: number; lon: number };
 }) {
   const [enrich, setEnrich] = useState<EnrichState>({ status: "idle" });
-  const rendered = useMemo(() => [...result.tier1, ...result.tier2], [result]);
+  const [badgeFilter, setBadgeFilter] = useState<ZoningBadge | "all">("all");
+
+  const badgeCounts = useMemo(() => {
+    const counts: Record<ZoningBadge, number> = {
+      aligned: 0,
+      "not-aligned": 0,
+      "planned-development": 0,
+      unresolved: 0,
+    };
+    for (const candidate of ranked) counts[candidate.badge] += 1;
+    return counts;
+  }, [ranked]);
+
+  const visible = useMemo(
+    () => (badgeFilter === "all" ? ranked : ranked.filter((candidate) => candidate.badge === badgeFilter)),
+    [ranked, badgeFilter],
+  );
 
   // Fire the generation event once per mount, mirroring the exactly-once
-  // discipline of vacancy_web_report_viewed (VacancyReportMap).
+  // discipline of vacancy_web_report_viewed (VacancyReportMap). Metadata is
+  // DERIVED FROM THE REGISTRY (re-review Finding 2) — criteriaIds/
+  // criteriaBehaviors come straight from
+  // shortlistCriteriaAnalyticsMetadata(...), which reads
+  // lib/shortlist-criteria.ts's SHORTLIST_CRITERION_REGISTRY, not a
+  // hand-rolled per-badge count invented in this component.
   useEffect(() => {
+    const registryMetadata = shortlistCriteriaAnalyticsMetadata({
+      projectUse: criteria.projectUse,
+      propertyType: criteria.propertyType != null,
+      squareFootage: criteria.minSquareFeet != null || criteria.maxSquareFeet != null,
+      transportation: criteria.transportation,
+      transportationDistance: criteria.transportationDistance != null,
+      context: criteria.context != null,
+      walkability: criteria.walkability != null,
+      pedestrianActivity: criteria.pedestrianActivity != null,
+      amenities: criteria.amenities,
+    });
     trackEvent("site_shortlist_generated", {
       source: source ?? "site-shortlist",
       metadata: {
         zip,
-        tier1Count: result.tier1.length,
-        tier2Count: result.tier2.length,
-        projectUse: projectUse ?? "",
+        resultCount: ranked.length,
+        scored,
+        alignedCount: badgeCounts.aligned,
+        notAlignedCount: badgeCounts["not-aligned"],
+        plannedDevelopmentCount: badgeCounts["planned-development"],
+        unresolvedCount: badgeCounts.unresolved,
+        projectUse: criteria.projectUse ?? "",
+        criteriaIds: registryMetadata.criteriaIds,
+        criteriaBehaviors: registryMetadata.criteriaBehaviors,
       },
     });
     // Once per mount only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // One enrichment pass for every rendered card. Never throws: a failure is a
-  // display state, and the static half of each card is already on screen.
+  // One enrichment pass for every rendered card (the full ranked set, not
+  // just the currently-filtered view — so switching the badge filter never
+  // triggers a re-fetch). Never throws: a failure is a display state, and
+  // the static half of each card is already on screen.
   const requestedRef = useRef(false);
   useEffect(() => {
-    if (requestedRef.current || rendered.length === 0) return;
+    if (requestedRef.current || ranked.length === 0) return;
     requestedRef.current = true;
     const controller = new AbortController();
     setEnrich({ status: "loading" });
@@ -400,7 +482,8 @@ export default function SiteShortlistResults({
           headers: { "Content-Type": "application/json" },
           signal: controller.signal,
           body: JSON.stringify({
-            items: rendered.map((candidate) => ({
+            buildId,
+            items: ranked.map((candidate) => ({
               key: candidate.key,
               pin: candidate.pin,
               address: candidate.address,
@@ -423,14 +506,14 @@ export default function SiteShortlistResults({
     })();
 
     return () => controller.abort();
-  }, [rendered]);
+  }, [ranked, buildId]);
 
   const byKey = enrich.status === "loaded" ? enrich.byKey : {};
   const allUnavailable =
     enrich.status === "error" ||
     (enrich.status === "loaded" &&
-      rendered.length > 0 &&
-      rendered.every((candidate) => byKey[candidate.key]?.enrichmentUnavailable !== false));
+      ranked.length > 0 &&
+      ranked.every((candidate) => byKey[candidate.key]?.enrichmentUnavailable !== false));
 
   function downloadCsv() {
     const facts: Record<string, ShortlistEnrichmentFacts> = {};
@@ -438,7 +521,7 @@ export default function SiteShortlistResults({
       const { key: _key, enrichmentUnavailable: _flag, ...rest } = item;
       facts[key] = rest;
     }
-    const blob = new Blob([shortlistCsv(result, facts)], {
+    const blob = new Blob([shortlistCsv(ranked, facts)], {
       type: "text/csv;charset=utf-8;",
     });
     const url = URL.createObjectURL(blob);
@@ -458,7 +541,7 @@ export default function SiteShortlistResults({
   /** One event per snapshot launch, carrying the PIN so a downstream report can
    *  be tied back to the exact record that sent it. Fires alongside navigation;
    *  the link is never blocked on it. */
-  function handleSnapshotClick(candidate: ShortlistCandidate) {
+  function handleSnapshotClick(candidate: DecoratedShortlistCandidate) {
     trackEvent("site_shortlist_snapshot_clicked", {
       source: source ?? "site-shortlist",
       metadata: { zip, pin: candidate.pin ?? "" },
@@ -471,7 +554,7 @@ export default function SiteShortlistResults({
         <button
           type="button"
           onClick={downloadCsv}
-          disabled={rendered.length === 0}
+          disabled={ranked.length === 0}
           className="min-h-10 border border-[#2563EB] px-4 py-2 font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#2563EB] transition-colors hover:bg-[#2563EB] hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           Download the shortlist (CSV)
@@ -484,33 +567,72 @@ export default function SiteShortlistResults({
         )}
       </div>
 
-      <SiteShortlistMap zip={zip} result={result} boundary={boundary} centroid={centroid} />
+      <SiteShortlistMap zip={zip} ranked={ranked} boundary={boundary} centroid={centroid} />
 
-      <TierSection
-        heading={TIER_1_HEADING}
-        description={`Districts whose family reads as permitting this use by right — the fastest paths to occupancy. A screening signal only; confirm with the Zoning Board of Appeals.`}
-        candidates={result.tier1}
-        startNumber={1}
-        total={result.tier1Total}
-        cap={12}
-        zip={zip}
-        byKey={byKey}
-        enrichState={enrich.status}
-        onSnapshotClick={handleSnapshotClick}
-      />
+      <section className="mt-10">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h2 className="font-editorial text-[26px] leading-tight text-[#0C1B33]">
+            {visible.length} candidate {visible.length === 1 ? "record" : "records"}
+            {badgeFilter !== "all" ? ` · ${ZONING_BADGE_LABELS[badgeFilter]}` : ""}
+          </h2>
+        </div>
+        <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/60">
+          {scored
+            ? "One ranked list, screened against your brief."
+            : "One list, screened against your brief, ordered by record completeness — add a transit criterion to rank by fit."}{" "}
+          The badge on every card is a broad district-family screen only — filter by it below, but
+          it never removes a record from the list above.
+        </p>
 
-      <TierSection
-        heading={TIER_2_HEADING}
-        description={`Records worth keeping in view whose district family does not read as permitting this use by right. Expect a Special Use approval from the Zoning Board of Appeals, roughly 3 to 5 extra months. Records with no district code sit here too, as unverified.`}
-        candidates={result.tier2}
-        startNumber={result.tier1.length + 1}
-        total={result.tier2Total}
-        cap={8}
-        zip={zip}
-        byKey={byKey}
-        enrichState={enrich.status}
-        onSnapshotClick={handleSnapshotClick}
-      />
+        <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filter by zoning badge">
+          <button
+            type="button"
+            onClick={() => setBadgeFilter("all")}
+            className={`border px-2.5 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] transition-colors ${
+              badgeFilter === "all"
+                ? "border-[#0C1B33] bg-[#0C1B33] text-white"
+                : "border-[#0C1B33]/25 text-[#0C1B33]/60 hover:border-[#0C1B33]/50"
+            }`}
+          >
+            All ({ranked.length})
+          </button>
+          {BADGE_FILTER_ORDER.map((badge) => (
+            <button
+              key={badge}
+              type="button"
+              onClick={() => setBadgeFilter(badge)}
+              disabled={badgeCounts[badge] === 0}
+              className={`border px-2.5 py-1.5 font-mono-bureau text-[10px] uppercase tracking-[0.08em] transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                badgeFilter === badge
+                  ? "border-[#0C1B33] bg-[#0C1B33] text-white"
+                  : "border-[#0C1B33]/25 text-[#0C1B33]/60 hover:border-[#0C1B33]/50"
+              }`}
+            >
+              {ZONING_BADGE_LABELS[badge]} ({badgeCounts[badge]})
+            </button>
+          ))}
+        </div>
+
+        {visible.length === 0 ? (
+          <p className="mt-4 border border-dashed border-[#0C1B33]/20 bg-white px-4 py-6 text-center font-mono-bureau text-[10px] uppercase tracking-[0.1em] text-[#0C1B33]/40">
+            No records match this filter
+          </p>
+        ) : (
+          <ul className="mt-4 grid gap-3">
+            {visible.map((candidate) => (
+              <ShortlistCard
+                key={candidate.key}
+                candidate={candidate}
+                number={ranked.indexOf(candidate) + 1}
+                zip={zip}
+                enrichment={byKey[candidate.key] ?? null}
+                enrichState={enrich.status}
+                onSnapshotClick={handleSnapshotClick}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
 
       <p className="mt-8 border border-[#0C1B33]/12 bg-white px-4 py-4 text-[12px] leading-relaxed text-[#0C1B33]/70">
         <span className="font-semibold">How to read the value figures. </span>

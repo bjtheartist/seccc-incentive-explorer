@@ -36,7 +36,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
-/** Hard cap on one request. The page renders at most 20 cards (12 + 8). */
+/** Hard cap on one request. The page renders at most SHORTLIST_TOP_N (20)
+ *  cards as one ranked list (see lib/shortlist-engine.ts) — no tier split. */
 const MAX_ITEMS = 25;
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
@@ -154,15 +155,25 @@ async function fetchActiveLicenses(
   return licenses;
 }
 
-async function enrichOne(item: {
-  key: string;
-  pin: string | null;
-  address: string | null;
-}): Promise<ShortlistEnrichItem> {
+async function enrichOne(
+  item: {
+    key: string;
+    pin: string | null;
+    address: string | null;
+  },
+  buildId: string,
+): Promise<ShortlistEnrichItem> {
   const pin = normalizePin14(item.pin);
   const address = item.address?.trim() ?? "";
-  const cacheKey = `${pin ?? ""}|${address.toUpperCase()}`;
-  const cached = cacheKey === "|" ? null : cacheGet(cacheKey);
+  // buildId is part of the key (Finding 4, Q6.2): a universe regeneration
+  // (new export, new PIN/address facts) must never serve a value cached
+  // under a PRIOR build — there is otherwise no signal anything changed.
+  // `buildId` is guaranteed non-empty here: the route rejects a missing or
+  // empty buildId with 400 before this function is ever called (re-review
+  // Finding 4 — a request-level partition is only meaningful if every
+  // caller is actually required to supply one, not merely invited to).
+  const cacheKey = `${buildId}|${pin ?? ""}|${address.toUpperCase()}`;
+  const cached = pin == null && address === "" ? null : cacheGet(cacheKey);
   if (cached) return { ...cached, key: item.key };
 
   const [classResult, valueResult, licenseResult] = await Promise.all([
@@ -193,14 +204,31 @@ async function enrichOne(item: {
       classResult === undefined || valueResult === undefined || licenseResult === undefined,
   };
 
-  if (cacheKey !== "|" && !result.enrichmentUnavailable) cacheSet(cacheKey, result);
+  // Cache only AFFIRMATIVE results — a genuine, populated fact was found
+  // (Finding 4, Q6.2: "do not treat an empty HTTP 200 as a trustworthy 'no
+  // data'"). A result where every upstream succeeded but returned nothing
+  // (no class, no assessed value, no licenses) is NOT cached: it is
+  // indistinguishable at this layer from "not yet indexed" or "about to
+  // change", and the cost of re-querying it next time is one Socrata round
+  // trip, not a correctness risk. Only a genuinely negative result earning
+  // its own confident cache entry would need a TTL long enough to matter;
+  // this repo does not have one, so simply not caching "found nothing" is
+  // the conservative, correct default.
+  const hasAffirmativeData =
+    countyClass != null || assessedValue != null || activeLicenses.length > 0;
+  if ((pin != null || address !== "") && !result.enrichmentUnavailable && hasAffirmativeData) {
+    cacheSet(cacheKey, result);
+  }
   return result;
 }
 
 export async function POST(request: Request) {
   let items: { key: string; pin: string | null; address: string | null }[] = [];
+  let buildId = "";
+  let parsedOk = true;
   try {
-    const body = (await request.json()) as { items?: unknown };
+    const body = (await request.json()) as { buildId?: unknown; items?: unknown };
+    buildId = typeof body?.buildId === "string" ? body.buildId.trim().slice(0, 200) : "";
     if (Array.isArray(body?.items)) {
       items = body.items
         .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
@@ -213,7 +241,20 @@ export async function POST(request: Request) {
         .slice(0, MAX_ITEMS);
     }
   } catch {
+    parsedOk = false;
     items = [];
+  }
+
+  // REJECT a missing/empty buildId (re-review Finding 4). The pre-fix
+  // version accepted "" as a valid (if degraded) cache partition — but an
+  // optional field a caller can simply omit defeats cross-build cache
+  // isolation for exactly the callers most likely to omit it (an
+  // unmaintained integration, a stale client bundle). The ONE client this
+  // route has (components/vacancy/SiteShortlistResults.tsx) already always
+  // sends the loaded universe's own buildId, so this is not a breaking
+  // change for it — only for a caller that was never sending one honestly.
+  if (parsedOk && buildId === "") {
+    return NextResponse.json({ error: "buildId is required" }, { status: 400 });
   }
 
   if (items.length === 0) {
@@ -222,7 +263,7 @@ export async function POST(request: Request) {
 
   // Never 500: a rejection anywhere still answers with a shaped, honest body.
   try {
-    const enriched = await Promise.all(items.map((item) => enrichOne(item)));
+    const enriched = await Promise.all(items.map((item) => enrichOne(item, buildId)));
     return NextResponse.json(
       { items: enriched },
       { headers: { "Cache-Control": "private, no-store" } },

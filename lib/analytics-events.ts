@@ -85,6 +85,8 @@ export const ANALYTICS_EVENT_TYPES = [
   // Map panel + infrastructure lens (the shortlist's neighborhood-context half).
   "site_shortlist_snapshot_clicked",
   "site_shortlist_map_layer_toggled",
+  // PR2: full-universe criteria-relative engine — the zero/few-result funnel.
+  "site_shortlist_funnel_shown",
 ] as const;
 
 export type AnalyticsEventType = (typeof ANALYTICS_EVENT_TYPES)[number];

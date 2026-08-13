@@ -253,6 +253,14 @@ const MAX_SQUARE_FEET = 2_000_000;
 
 const PARAMS = {
   version: "sm_v",
+  /** Finding 5 (PR2 adversarial review): a SEPARATE version, stamped only on
+   *  shortlist handoff links, for whether the RANKING SEMANTICS a bookmarked
+   *  URL implies are still current — distinct from `sm_v`, which only covers
+   *  whether the CRITERIA shape can be decoded. See
+   *  `shortlistRankingModelVersionSupported` below and
+   *  lib/shortlist-engine.ts's `RANKING_MODEL_VERSION` (a different,
+   *  DATA-compatibility check against the loaded universe file). */
+  rankingModelVersion: "sm_rv",
   zip: "zip",
   projectUse: "sm_use",
   propertyType: "sm_property",
@@ -375,6 +383,63 @@ export function normalizeSiteMatchCriteria(criteria: SiteMatchCriteria): SiteMat
   };
 }
 
+/**
+ * The `sm_v` version this build's encode/decode contract speaks. Bumped
+ * whenever the criteria shape changes in a way an old link could no longer
+ * decode correctly.
+ */
+export const SITE_MATCH_CRITERIA_VERSION = "1";
+
+/**
+ * Whether the `sm_v` carried on a URL (if any) is one this build knows how
+ * to decode. PR2 fixes the pre-PR2 gap the gpt5.6 matchmaker consult
+ * flagged directly: `encodeSiteMatchCriteria` already stamps `sm_v=1` on
+ * every link, but nothing ever branched on or rejected it — a link minted
+ * by a future, incompatible version of this schema would silently decode as
+ * if it were current instead of failing closed.
+ *
+ * An ABSENT `sm_v` is treated as supported (version 1 implicitly) for
+ * back-compatibility with links minted before versioning existed or by
+ * callers that never touch the wizard (e.g. a bare ZIP link) — only an
+ * EXPLICIT, unrecognized value is rejected.
+ */
+export function siteMatchCriteriaVersionSupported(params: URLSearchParams): boolean {
+  const raw = params.get(PARAMS.version);
+  return raw == null || raw === SITE_MATCH_CRITERIA_VERSION;
+}
+
+/**
+ * The ranking-semantics version stamped on every shortlist handoff link
+ * (`sm_rv`) — Finding 5. Bumped whenever lib/shortlist-engine.ts's
+ * screen/score/badge rules change in a way that would make an OLD,
+ * bookmarked/shared shortlist URL produce meaningfully different results
+ * than the reader remembers, without any signal that anything changed.
+ *
+ * This is intentionally a STRING kept in lockstep with
+ * `RANKING_MODEL_VERSION` (lib/shortlist-engine.ts) by convention (both
+ * bumped together in the same PR when ranking semantics change) rather than
+ * imported from there — lib/site-matchmaker.ts is a foundational module
+ * lib/shortlist-engine.ts itself depends on for criteria types, and a
+ * reverse value import would form a real circular dependency.
+ */
+export const SHORTLIST_RANKING_MODEL_VERSION = "2";
+
+/**
+ * Whether the `sm_rv` carried on a shortlist URL (if any) is one this build
+ * still speaks. An ABSENT `sm_rv` is treated as supported — for
+ * back-compatibility with links minted before this versioning existed, the
+ * same convention `siteMatchCriteriaVersionSupported` uses for `sm_v` — only
+ * an EXPLICIT, unrecognized value fails closed. This is a REQUEST-level
+ * check (does this URL's own ranking-semantics claim match); it is
+ * independent of whether the loaded universe FILE's `rankingInputsVersion`
+ * happens to match the engine (that is lib/shortlist-engine.ts's own,
+ * separate data-compatibility check).
+ */
+export function shortlistRankingModelVersionSupported(params: URLSearchParams): boolean {
+  const raw = params.get(PARAMS.rankingModelVersion);
+  return raw == null || raw === SHORTLIST_RANKING_MODEL_VERSION;
+}
+
 export function decodeSiteMatchCriteria(params: URLSearchParams): SiteMatchCriteria {
   return normalizeSiteMatchCriteria({
     zip: params.get(PARAMS.zip),
@@ -471,13 +536,20 @@ export function buildVacancyHandoffHref(criteria: SiteMatchCriteria): string | n
  * The ranked-shortlist handoff — the Site Matchmaker's PRIMARY destination.
  * Same criteria contract as the map handoff (so the two stay interchangeable
  * and a reader can move between them without rebuilding a brief), pointed at
- * the screened, tiered result instead of the raw pin cloud.
+ * the screened, ranked result instead of the raw pin cloud.
+ *
+ * Stamps `sm_rv` (Finding 5) — ONLY here, not on the map handoff or the bare
+ * wizard URL, since ranking semantics are a shortlist-specific concern. The
+ * page rejects an explicit, unrecognized `sm_rv` the same way it rejects an
+ * unrecognized `sm_v`.
  */
 export function buildShortlistHref(criteria: SiteMatchCriteria): string | null {
   const normalized = normalizeSiteMatchCriteria(criteria);
   if (!isSiteMatchCriteriaReady(normalized) || !normalized.zip) return null;
 
-  return `/vacancy/${normalized.zip}/shortlist?${vacancyHandoffQuery(normalized).toString()}`;
+  const query = vacancyHandoffQuery(normalized);
+  query.set(PARAMS.rankingModelVersion, SHORTLIST_RANKING_MODEL_VERSION);
+  return `/vacancy/${normalized.zip}/shortlist?${query.toString()}`;
 }
 
 function labelFor<T extends string>(

@@ -38,6 +38,8 @@ import path from "node:path";
 import {
   ShortlistUniverseFileSchema,
   ShortlistUniverseManifestSchema,
+  shortlistUniverseChecksum,
+  validateEnvelopeCounts,
   type ShortlistUniverseFile,
   type ShortlistUniverseManifest,
 } from "./shortlist-universe-schema";
@@ -48,6 +50,7 @@ export {
   ShortlistUniverseFileSchema,
   ShortlistUniverseManifestSchema,
   ShortlistUniverseRowSchema,
+  shortlistUniverseChecksum,
   validateEnvelopeCounts,
   type ShortlistUniverseFile,
   type ShortlistUniverseManifest,
@@ -70,10 +73,14 @@ function resolvedDataDir(): string {
 export type ShortlistUniverseLoadFailureReason =
   | "manifest_missing"
   | "manifest_invalid_schema"
+  | "manifest_vacancy_index_build_id_mismatch"
   | "manifest_zip_missing"
   | "file_missing"
   | "file_invalid_json"
   | "file_invalid_schema"
+  | "file_checksum_mismatch"
+  | "file_row_count_mismatch"
+  | "file_counts_inconsistent"
   | "zip_mismatch"
   | "build_id_mismatch";
 
@@ -126,7 +133,21 @@ export function loadShortlistUniverse(zip: string): ShortlistUniverseLoadResult 
 function loadShortlistUniverseUncached(zip: string): ShortlistUniverseLoadResult {
   const manifest = loadShortlistUniverseManifest();
   if (!manifest) return { ok: false, reason: "manifest_missing" };
-  if (!manifest.files[zip]) return { ok: false, reason: "manifest_zip_missing", detail: zip };
+  // Cross-artifact binding (Finding 7): the manifest's own two buildId
+  // fields must agree. This is not a self-evident tautology — a future
+  // export run that regenerates the shortlist universe WITHOUT also
+  // regenerating public/data/vacancy-index.json in the same pass (see the
+  // export script's runbook step 6) would otherwise silently decouple the
+  // two artifacts' vintages with no error anywhere.
+  if (manifest.vacancyIndexBuildId !== manifest.buildId) {
+    return {
+      ok: false,
+      reason: "manifest_vacancy_index_build_id_mismatch",
+      detail: `manifest.vacancyIndexBuildId "${manifest.vacancyIndexBuildId}" !== manifest.buildId "${manifest.buildId}"`,
+    };
+  }
+  const manifestEntry = manifest.files[zip];
+  if (!manifestEntry) return { ok: false, reason: "manifest_zip_missing", detail: zip };
 
   const filePath = path.join(resolvedDataDir(), `${zip}.json`);
   if (!existsSync(filePath)) return { ok: false, reason: "file_missing", detail: filePath };
@@ -136,6 +157,19 @@ function loadShortlistUniverseUncached(zip: string): ShortlistUniverseLoadResult
     raw = readFileSync(filePath, "utf8");
   } catch (err) {
     return { ok: false, reason: "file_missing", detail: err instanceof Error ? err.message : String(err) };
+  }
+
+  // Checksum FIRST, against the raw bytes just read — before any parsing —
+  // so a truncated or tampered file fails on the exact guard the manifest
+  // promises, not on a downstream JSON/schema symptom of the same defect
+  // (Finding 7: "a schema-valid truncated file is accepted").
+  const actualChecksum = shortlistUniverseChecksum(raw);
+  if (actualChecksum !== manifestEntry.checksum) {
+    return {
+      ok: false,
+      reason: "file_checksum_mismatch",
+      detail: `computed checksum "${actualChecksum.slice(0, 12)}..." !== manifest checksum "${manifestEntry.checksum.slice(0, 12)}..." for ${zip}`,
+    };
   }
 
   let parsed: unknown;
@@ -159,6 +193,25 @@ function loadShortlistUniverseUncached(zip: string): ShortlistUniverseLoadResult
       ok: false,
       reason: "build_id_mismatch",
       detail: `file buildId "${data.buildId}" !== manifest buildId "${manifest.buildId}"`,
+    };
+  }
+  if (data.rows.length !== manifestEntry.rowCount) {
+    return {
+      ok: false,
+      reason: "file_row_count_mismatch",
+      detail: `file has ${data.rows.length} rows !== manifest rowCount ${manifestEntry.rowCount} for ${zip}`,
+    };
+  }
+  // Semantic self-consistency (Finding 7): a schema-valid file whose
+  // summary counts have drifted from what `rows` actually contains — the
+  // same "None mapped" false-zero class this whole overhaul exists to
+  // prevent, now checked at RUNTIME too, not only by the export script.
+  const consistencyIssues = validateEnvelopeCounts(data);
+  if (consistencyIssues.length > 0) {
+    return {
+      ok: false,
+      reason: "file_counts_inconsistent",
+      detail: consistencyIssues.join("; "),
     };
   }
 
