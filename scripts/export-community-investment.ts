@@ -81,7 +81,13 @@ import {
   RECOVERY_INVESTMENT_SOURCE_METADATA,
   type RecoveryInvestmentSourceId,
 } from "../lib/recovery-investment";
-import { foundationManifestEntries, loadManifest, manifestContentHash } from "./lib/investment-manifest";
+import {
+  assertNoOrphanedManifestSources,
+  foundationManifestEntries,
+  loadManifest,
+  manifestContentHash,
+  verifyManifestInputBytes,
+} from "./lib/investment-manifest";
 
 // ── Paths ────────────────────────────────────────────────────────────────────
 
@@ -130,6 +136,25 @@ const ZIP_GEOJSON_PATH = join(process.cwd(), "public", "data", "chicago-zip-boun
 // one from the manifest throws instead of silently leaving a stale filename.
 const investmentManifest = loadManifest();
 const foundationManifestFiles = foundationManifestEntries(investmentManifest);
+
+/**
+ * Sol gate finding 1 (round 2) — "the manifest is still not the sole input
+ * list: foundation IDs and sidecars remain hard-coded." ONE lookup, used for
+ * every manifest-declared filename this exporter reads by id (not just the
+ * four foundation files) — a missing manifest entry throws here, at import
+ * time, rather than a stale filename silently surviving.
+ */
+function manifestFile(id: string): string {
+  const entry = investmentManifest.sources.find((e) => e.id === id);
+  if (!entry) {
+    throw new Error(
+      `Manifest is missing a source entry with id "${id}" — every input file the exporter reads ` +
+        `MUST be authored in scripts/lib/investment-manifest.ts's AUTHORED_SOURCES (deliverable 1 — ` +
+        `the manifest is the ONLY input list).`,
+    );
+  }
+  return entry.file;
+}
 function foundationFile(id: string): string {
   const entry = foundationManifestFiles.find((e: { id: string }) => e.id === id);
   if (!entry) {
@@ -147,14 +172,42 @@ const FOUNDATION_PHASE2_FILE = foundationFile("foundation-phase2");
 const FOUNDATION_PHASE3_FILE = foundationFile("foundation-phase3");
 
 /**
+ * Sol gate finding 1 (round 2) — the ONLY manifest source ids this exporter is
+ * documented to NOT read as an input, each with a reason. Checked at the end
+ * of main() by assertNoOrphanedManifestSources: any manifest entry that is
+ * neither touched by a verified read NOR listed here throws.
+ */
+const DELIBERATELY_NOT_READ_MANIFEST_IDS = new Set<string>([
+  // Held pending the intermediary-linkage design (README.md) — never read by
+  // the exporter by design, not an oversight.
+  "impact-grants-held",
+  // Generated FROM the committed export AFTER it is written (a downstream
+  // id-map snapshot), never read back in as an input.
+  "foundation-id-map",
+  // A report ABOUT the export (Chicago Prize 18/18 census), generated after
+  // the export exists, never read back in as an input.
+  "chicago-prize-census",
+  // Written by scripts/refresh/refresh-live-sources.ts on a failed refresh
+  // attempt only; the exporter never reads it.
+  "refresh-attempt",
+  // Read AND written by the exporter itself via loadGeocodeCache/saveGeocodeCache
+  // (not through readCsv/verifiedRead) — self-referential: its bytes legitimately
+  // change DURING this very run as new addresses are geocoded, so a pre-run
+  // byte-hash comparison would be inherently circular. See loadGeocodeCache().
+  "geocode-cache",
+]);
+
+/**
  * Deliverable 2/3 sidecars — built by scripts/foundation/build_grant_identity.py
  * and scripts/foundation/adjudicate_dedupe.py, joined here by (file, raw CSV row
  * index, 0-based, INCLUDING placeholder rows). Identity/dedupe resolution needs
  * live IRS-filing XML fetches, so it runs as a separate Python pass rather than
  * inline in this exporter — see data/curated/investment-inputs/README.md.
+ * Filenames come from the manifest (ids "foundation-grant-identity" /
+ * "foundation-dedupe-actions"), not a hard-coded literal.
  */
-const FOUNDATION_IDENTITY_FILE = "foundation_grant_identity.csv";
-const FOUNDATION_DEDUPE_ACTIONS_FILE = "foundation_dedupe_actions.csv";
+const FOUNDATION_IDENTITY_FILE = manifestFile("foundation-grant-identity");
+const FOUNDATION_DEDUPE_ACTIONS_FILE = manifestFile("foundation-dedupe-actions");
 
 interface FoundationIdentity {
   filingObjectId: string | null;
@@ -367,11 +420,25 @@ export function parseDelimited(text: string, delimiter: string): Record<string, 
   return out;
 }
 
+// Sol gate finding 1 (round 2) — every file read through readCsv/readTsv is
+// verified against the manifest's declared contentHash for THOSE ACTUAL
+// BYTES, right here at read time (not a generation-time echo), and recorded
+// as "touched" so assertNoOrphanedManifestSources (called at the end of
+// main()) can catch a manifest source the exporter never actually reads.
+const touchedManifestFiles = new Set<string>();
+
+function verifiedRead(file: string): string {
+  const raw = readFileSync(join(INPUT_DIR, file), "utf8");
+  verifyManifestInputBytes(investmentManifest, file, raw);
+  touchedManifestFiles.add(file);
+  return raw;
+}
+
 function readCsv(file: string): Record<string, string>[] {
-  return parseDelimited(readFileSync(join(INPUT_DIR, file), "utf8"), ",");
+  return parseDelimited(verifiedRead(file), ",");
 }
 function readTsv(file: string): Record<string, string>[] {
-  return parseDelimited(readFileSync(join(INPUT_DIR, file), "utf8"), "\t");
+  return parseDelimited(verifiedRead(file), "\t");
 }
 
 // ── Census geocoder (cached) ─────────────────────────────────────────────────
@@ -2965,24 +3032,20 @@ async function main() {
 
   // Deliverable 3 — the dedupe ledger summary (per-group detail already lives
   // in the committed foundation_dedupe_ledger.json; only the totals travel
-  // into meta).
-  const dedupeLedgerPath = join(INPUT_DIR, "foundation_dedupe_ledger.json");
+  // into meta). Filename from the manifest (id "foundation-dedupe-ledger").
+  const dedupeLedgerFile = manifestFile("foundation-dedupe-ledger");
+  const dedupeLedgerPath = join(INPUT_DIR, dedupeLedgerFile);
   const dedupeLedgerSummary = existsSync(dedupeLedgerPath)
-    ? (JSON.parse(readFileSync(dedupeLedgerPath, "utf8")) as {
+    ? (JSON.parse(verifiedRead(dedupeLedgerFile)) as {
         summary: { candidate_groups: number; collapsed_rows: number; collapsed_dollars: number };
       }).summary
     : { candidate_groups: 0, collapsed_rows: 0, collapsed_dollars: 0 };
 
   // 1) Sources that already carry coordinates (or resolve citywide by locType).
-  const nofSmallRows = JSON.parse(
-    readFileSync(join(INPUT_DIR, "nof_small.json"), "utf8"),
-  ) as SocrataRow[];
-  const nofLargeRows = JSON.parse(
-    readFileSync(join(INPUT_DIR, "nof_large.json"), "utf8"),
-  ) as SocrataRow[];
-  const sbifRows = JSON.parse(
-    readFileSync(join(INPUT_DIR, "sbif.json"), "utf8"),
-  ) as SocrataRow[];
+  // Filenames from the manifest, not hard-coded literals.
+  const nofSmallRows = JSON.parse(verifiedRead(manifestFile("nof-small"))) as SocrataRow[];
+  const nofLargeRows = JSON.parse(verifiedRead(manifestFile("nof-large"))) as SocrataRow[];
+  const sbifRows = JSON.parse(verifiedRead(manifestFile("sbif"))) as SocrataRow[];
   const nofSmallR = mapSocrata(nofSmallRows, "nof-small", NOF_PROGRAM, 2017);
   const nofLargeR = mapSocrata(nofLargeRows, "nof-large", NOF_PROGRAM, 2017);
   const sbifR = mapSocrata(sbifRows, "sbif", SBIF_PROGRAM, 2020);
@@ -3395,6 +3458,15 @@ async function main() {
   // JSON off the read path.
   const context = buildCapitalContext(generatedAt);
   assertNoBannedFigureKeys(context);
+
+  // Sol gate finding 1 (round 2) — "an entry present in the manifest but
+  // unknown to the exporter must fail loudly." Every readCsv/readTsv/verifiedRead
+  // call above (including inside buildCapitalContext) has now run and recorded
+  // its filename in touchedManifestFiles. Any manifest source NOT touched and
+  // NOT in this explicit, commented list is either a file the exporter's code
+  // was never wired to read, or one it silently stopped reading.
+  assertNoOrphanedManifestSources(investmentManifest, touchedManifestFiles, DELIBERATELY_NOT_READ_MANIFEST_IDS);
+
   const outPayload = JSON.stringify(out, null, 2) + "\n";
   const contextPayload = JSON.stringify(context, null, 2) + "\n";
   const ledgerPayload = JSON.stringify(exclusionLedger, null, 2) + "\n";

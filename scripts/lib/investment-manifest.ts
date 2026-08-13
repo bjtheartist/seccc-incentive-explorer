@@ -134,9 +134,14 @@ const AUTHORED_SOURCES: Array<Omit<ManifestSource, "contentHash">> = [
     file: "chicago_cares_program_ledger.csv",
     label: "Chicago CARES-era program ledger (Socrata rsxa-ify5 + iyu8-jkf8)",
     cadence: "monthly",
-    refreshMethod: "scripts/refresh/refresh-live-sources.ts -> Socrata pull",
-    valueField: null,
-    decreasePolicy: "not_refreshed",
+    refreshMethod: "scripts/refresh/refresh-live-sources.ts -> Socrata pull (build()/measure(), same path as every source)",
+    valueField: "historical_authorized_usd",
+    // Sol gate finding 7 (round 2) — was "not_refreshed", wrongly exempting
+    // ANY decrease from enforcement. The source's row COUNT/DOLLAR figures
+    // are real monthly-refreshed data (only `source_dataset_updated_at`
+    // churns as pure upstream-timestamp noise, which measure() does not
+    // count as rows or dollars) — monotonic_floor is the correct, real policy.
+    decreasePolicy: "monotonic_floor",
     vintage: "2026-08-11",
   },
   {
@@ -529,6 +534,70 @@ export function manifestContentHash(manifest: InvestmentManifest): string {
     .map((s) => `${s.id}|${s.file}|${s.contentHash}`)
     .sort();
   return createHash("sha256").update(lines.join("\n")).digest("hex");
+}
+
+export function manifestEntryForFile(manifest: InvestmentManifest, file: string): ManifestSource | undefined {
+  return manifest.sources.find((s) => s.file === file);
+}
+
+/**
+ * Sol gate finding 1 (round 2) — "export-time verification compares each
+ * manifest content-hash against the ACTUAL input file bytes at read time,
+ * not a generation-time echo." Called by the exporter's readCsv/readTsv/JSON
+ * read wrappers on EVERY file read, not just once at startup — so an input
+ * edited (or corrupted) mid-run, or a stale committed manifest, is caught
+ * exactly where the bytes are actually consumed. Throws in BOTH directions:
+ *   - the file has no manifest entry at all (an exporter read of an
+ *     undeclared file — deliverable 1's "vice versa"),
+ *   - the file's live sha256 does not match the manifest's declared
+ *     contentHash (an input edited without regenerating the manifest).
+ */
+export function verifyManifestInputBytes(manifest: InvestmentManifest, file: string, bytes: Buffer | string): void {
+  const entry = manifestEntryForFile(manifest, file);
+  if (!entry) {
+    throw new Error(
+      `Exporter read "${file}", which has NO entry in data/curated/investment-inputs/manifest.json. ` +
+        `Every file the exporter reads MUST be declared in scripts/lib/investment-manifest.ts's ` +
+        `AUTHORED_SOURCES (deliverable 1 — the manifest is the ONLY input list; an exporter read of an ` +
+        `undeclared file is refused, not silently allowed).`,
+    );
+  }
+  const actualHash = createHash("sha256").update(bytes).digest("hex");
+  if (actualHash !== entry.contentHash) {
+    throw new Error(
+      `manifest.json's committed contentHash for "${file}" (${entry.contentHash}) does not match the ` +
+        `file's ACTUAL bytes at read time (${actualHash}). Run \`npm run data:manifest:generate\` after ` +
+        `editing this input, and commit the regenerated manifest.json alongside it.`,
+    );
+  }
+}
+
+/**
+ * Sol gate finding 1 (round 2) — "an entry present in the manifest but
+ * unknown to the exporter must fail loudly." After a full export run,
+ * `touchedFiles` is every filename the exporter actually read (verified via
+ * verifyManifestInputBytes above). Any OTHER manifest source — one not
+ * explicitly documented as a deliberate non-input (an exporter OUTPUT, or a
+ * genuinely held/unread file) — means either the manifest describes a file
+ * the exporter's code was never updated to read, or the exporter silently
+ * stopped reading a file the manifest still claims governs it. Both are bugs;
+ * both throw.
+ */
+export function assertNoOrphanedManifestSources(
+  manifest: InvestmentManifest,
+  touchedFiles: ReadonlySet<string>,
+  deliberatelyNotReadIds: ReadonlySet<string>,
+): void {
+  const orphans = manifest.sources.filter(
+    (s) => !touchedFiles.has(s.file) && !deliberatelyNotReadIds.has(s.id),
+  );
+  if (orphans.length > 0) {
+    throw new Error(
+      `${orphans.length} manifest source(s) were never read by the exporter and are not in the ` +
+        `documented deliberately-not-read list: ${orphans.map((o) => `${o.id} (${o.file})`).join(", ")}. ` +
+        `Either wire the exporter to read it, or add its id to DELIBERATELY_NOT_READ_MANIFEST_IDS with a reason.`,
+    );
+  }
 }
 
 /** Every foundation-file manifest entry, in the four-file publication order —
