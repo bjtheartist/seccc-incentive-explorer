@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "buildId": "shortlist-universe-2026-08-12T23:59:09.909Z",
+  "generatedAt": "2026-08-12T23:59:09.909Z",
+  "zips": [
+    "60617",
+    "60619",
+    "60621",
+    "60623",
+    "60624",
+    "60636",
+    "60644",
+    "60649",
+    "60651"
+  ],
+  "vacancyIndexBuildId": "shortlist-universe-2026-08-12T23:59:09.909Z",
+  "files": {
+    "60617": {
+      "path": "60617.json",
+      "checksum": "67e29d32732d95c8d0520db0f8045148afe4c5b856e73557c0192fae004d3b6c",
+      "rowCount": 3726
+    },
+    "60619": {
+      "path": "60619.json",
+      "checksum": "93024260667d75cd2bbbe8d2a3156897428d2c3f6f0bd88318bf1d8a33afa780",
+      "rowCount": 2879
+    },
+    "60621": {
+      "path": "60621.json",
+      "checksum": "147ee34806a78aaf12c7863ec82ababf2778f96d83d783de880de9d69f159b57",
+      "rowCount": 6363
+    },
+    "60623": {
+      "path": "60623.json",
+      "checksum": "644f9dc3617f0e4929fea19a8871a4a3acc6eb53f48ecc68d1016be4a63a3cdc",
+      "rowCount": 3736
+    },
+    "60624": {
+      "path": "60624.json",
+      "checksum": "db0bf977716bfdb5d8ab119b654d98f34f20c69efc9d420532a166f41ddad54f",
+      "rowCount": 4160
+    },
+    "60636": {
+      "path": "60636.json",
+      "checksum": "8bb4773ea1e6de1ae7aac96b17a011dcac3e7af1519c8eb7793b253a1a86aa93",
+      "rowCount": 5689
+    },
+    "60644": {
+      "path": "60644.json",
+      "checksum": "c30bb9af5d6a0621063314062c18d9ddb718de012f378185dc6630b3daf8249a",
+      "rowCount": 2247
+    },
+    "60649": {
+      "path": "60649.json",
+      "checksum": "4e557a24e6dd71bb1fb79f630453a00ee018206580ece52e35312b0cc76d92c3",
+      "rowCount": 1033
+    },
+    "60651": {
+      "path": "60651.json",
+      "checksum": "4257b8149c93e30e5d23d4586e3bfff6dbe0674aed433ebe8f3d7a49a28a99c1",
+      "rowCount": 1463
+    }
+  }
+}
