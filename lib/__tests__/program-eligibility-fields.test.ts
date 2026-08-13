@@ -169,4 +169,70 @@ describe("catalog eligibility-claims fields (every one of 71 records)", () => {
       expect(p.benefitRange).toMatch(/35%/);
     });
   });
+
+  describe("review1 R1: r3Grants — closed, not unknown (its own howToApply text says no round is open and both opportunities expired)", () => {
+    const byId = new Map(
+      (programs as Array<Record<string, unknown>>).map((p) => [p.id as string, p])
+    );
+
+    it("has the exact corrected field values", () => {
+      const p = byId.get("r3Grants")!;
+      expect(p.intakeStatus).toBe("closed");
+      expect(p.benefitTermsStatus).toBe("historical");
+      expect(p.statusAsOf).toBe("2026-08-09");
+      const nextWindow = p.nextWindow as { expected: string | null; note: string | null };
+      expect(nextWindow.expected).toBeNull();
+      expect(nextWindow.note).toMatch(/March 6, 2026/);
+      expect(nextWindow.note).toMatch(/expired/i);
+      expect(nextWindow.note).toMatch(/next NOFO/i);
+    });
+
+    it("its own howToApply text is the source of truth this was derived from", () => {
+      const p = byId.get("r3Grants")!;
+      const howToApply = p.howToApply as string[];
+      expect(howToApply[0]).toMatch(/No round is currently open/i);
+      expect(howToApply[0]).toMatch(/both the \$35M and \$15M opportunities are listed as expired/i);
+    });
+  });
+
+  describe("review1 R6: iraCleanElectricity — temporal wording consistent with statusAsOf (no 'passed' claim dated before the deadlines)", () => {
+    const byId = new Map(
+      (programs as Array<Record<string, unknown>>).map((p) => [p.id as string, p])
+    );
+
+    it("statusAsOf stays 2026-07-02 (no invented fresher verification)", () => {
+      const p = byId.get("iraCleanElectricity")!;
+      expect(p.statusAsOf).toBe("2026-07-02");
+      expect(p.lastVerifiedAt).toBe("2026-07-02");
+    });
+
+    it("the note never claims the 2026-07-04 / 2026-08-07 deadlines had already passed", () => {
+      const p = byId.get("iraCleanElectricity")!;
+      const nextWindow = p.nextWindow as { note: string | null };
+      expect(nextWindow.note).not.toMatch(/have (both )?passed as of today/i);
+      expect(nextWindow.note).not.toMatch(/\bclosed\b/i); // "window closed" language would misstate an upcoming date
+    });
+
+    it("the note frames both dates as upcoming as of the exact statusAsOf date", () => {
+      const p = byId.get("iraCleanElectricity")!;
+      const nextWindow = p.nextWindow as { note: string | null };
+      expect(nextWindow.note).toMatch(/2026-07-02/); // the note pins itself to statusAsOf
+      expect(nextWindow.note).toMatch(/2026-07-04/);
+      expect(nextWindow.note).toMatch(/2026-08-07/);
+      expect(nextWindow.note).toMatch(/upcoming|scheduled to close|still upcoming/i);
+    });
+
+    it("as of 2026-07-02, both deadlines were genuinely still in the future (sanity check on the underlying dates)", () => {
+      const statusAsOf = new Date("2026-07-02T00:00:00Z");
+      const constructionStart = new Date("2026-07-04T00:00:00Z");
+      const bonusWindowClose = new Date("2026-08-07T00:00:00Z");
+      expect(constructionStart.getTime()).toBeGreaterThan(statusAsOf.getTime());
+      expect(bonusWindowClose.getTime()).toBeGreaterThan(statusAsOf.getTime());
+    });
+
+    it("intakeStatus is no longer 'unknown' now that the premise (both deadlines already closed) no longer holds", () => {
+      const p = byId.get("iraCleanElectricity")!;
+      expect(p.intakeStatus).toBe("rolling");
+    });
+  });
 });

@@ -2320,13 +2320,13 @@
     "personas": [
       "developer"
     ],
-    "intakeStatus": "unknown",
+    "intakeStatus": "rolling",
     "statusAsOf": "2026-07-02",
     "benefitTermsStatus": "conditional",
     "locationRelation": "none",
     "nextWindow": {
       "expected": null,
-      "note": "Wind/solar construction-start deadline (2026-07-04) and the Section 48E(h) Low-Income Communities Bonus Credit window (closed 2026-08-07) have both passed as of today. Non-wind/solar zero-emission technologies are unaffected and continue to earn the full credit. Consult a tax advisor on construction-start documentation."
+      "note": "As of this record's last verification (2026-07-02), wind/solar facilities must begin physical construction by 2026-07-04 to remain eligible for Section 48E/45Y credits, and the Section 48E(h) Low-Income Communities Bonus Credit's 2026 window was scheduled to close 2026-08-07 -- both dates were still upcoming as of the verification date. Non-wind/solar zero-emission technologies are unaffected and continue to earn the full credit. Consult a tax advisor on construction-start documentation and to confirm current status of these dates."
     }
   },
   {
@@ -3715,13 +3715,13 @@
     "personas": [
       "starting"
     ],
-    "intakeStatus": "unknown",
+    "intakeStatus": "closed",
     "statusAsOf": "2026-08-09",
-    "benefitTermsStatus": "current",
+    "benefitTermsStatus": "historical",
     "locationRelation": "contextual",
     "nextWindow": {
       "expected": null,
-      "note": "No specific application-round status is stated in this record; ICJIA administers periodic R3 NOFOs on behalf of the R3 Board."
+      "note": "No round is currently open -- the March 6, 2026 deadline has passed and both the $35M and $15M opportunities are listed as expired. Watch r3.illinois.gov for the next NOFO."
     }
   },
   {
