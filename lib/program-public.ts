@@ -185,8 +185,22 @@ export function buildPublicProgramsEnvelope(
  */
 const ISO_TIMESTAMP_RE = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 
+/**
+ * review1 R11: the shape regex alone accepts calendar-impossible
+ * timestamps like `2026-02-30T00:00:00.000Z` or an out-of-range hour like
+ * `2026-08-13T24:00:00.000Z`, because `Date.parse`/`new Date(...)` silently
+ * NORMALIZES them (Feb 30 -> Mar 2; hour 24 -> next day, hour 0) instead of
+ * rejecting them — `Date.parse` succeeding is not evidence the input was
+ * ever a real, valid instant. The authoritative check is a round trip:
+ * feed the string back through `toISOString()` and require it comes back
+ * byte-for-byte identical. A real `toISOString()` output round-trips by
+ * construction; any value the Date constructor had to normalize does not.
+ */
 export function isIsoTimestamp(value: unknown): value is string {
-  return typeof value === "string" && ISO_TIMESTAMP_RE.test(value) && !Number.isNaN(Date.parse(value));
+  if (typeof value !== "string" || !ISO_TIMESTAMP_RE.test(value)) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  return date.toISOString() === value;
 }
 
 /**

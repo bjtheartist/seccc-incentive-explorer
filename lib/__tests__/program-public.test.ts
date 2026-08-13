@@ -8,6 +8,7 @@ import {
   benefitQualifier,
   buildPublicProgramsEnvelope,
   catalogRevisionFromRaw,
+  isIsoTimestamp,
   isValidPublicProgramsEnvelopeShape,
   toPublicProgramView,
 } from "../program-public";
@@ -182,6 +183,27 @@ describe("public artifact regen + diff (CI check, in-process)", () => {
 
   it("review1 R7: the committed artifact's own generatedAt is a valid ISO timestamp", () => {
     expect(isValidPublicProgramsEnvelopeShape(publicArtifact)).toBe(true);
+  });
+
+  it("review2 R11: an impossible calendar date (Feb 30) that Date.parse silently normalizes is rejected", () => {
+    // Date.parse("2026-02-30...") normalizes to March 2 without erroring —
+    // Date.parse succeeding is not evidence the string was ever a real date.
+    expect(isIsoTimestamp("2026-02-30T00:00:00.000Z")).toBe(false);
+    const mutated = { ...publicArtifact, generatedAt: "2026-02-30T00:00:00.000Z" };
+    expect(isValidPublicProgramsEnvelopeShape(mutated)).toBe(false);
+  });
+
+  it("review2 R11: an impossible hour (24:00) that Date.parse silently rolls to the next day is rejected", () => {
+    expect(isIsoTimestamp("2026-08-13T24:00:00.000Z")).toBe(false);
+    const mutated = { ...publicArtifact, generatedAt: "2026-08-13T24:00:00.000Z" };
+    expect(isValidPublicProgramsEnvelopeShape(mutated)).toBe(false);
+  });
+
+  it("review2 R11: a real toISOString() output always round-trips and is accepted", () => {
+    const real = new Date().toISOString();
+    expect(isIsoTimestamp(real)).toBe(true);
+    const valid = { ...publicArtifact, generatedAt: real };
+    expect(isValidPublicProgramsEnvelopeShape(valid)).toBe(true);
   });
 
   it("MUTATION TEST: a mutated catalog fact fails the regen-diff check", () => {
