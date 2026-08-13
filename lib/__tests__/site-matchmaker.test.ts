@@ -15,6 +15,19 @@ import {
   summarizeSiteMatchCriteria,
   type SiteMatchCriteria,
 } from "@/lib/site-matchmaker";
+// Re-review Finding 5: RANKING_MODEL_VERSION (lib/shortlist-engine.ts, the
+// DATA-compatibility check against a loaded universe file) and
+// SHORTLIST_RANKING_MODEL_VERSION (this module, the REQUEST-level sm_rv
+// check) are deliberately two independent constants, kept in lockstep by
+// convention rather than a shared import (see this module's own comment on
+// SHORTLIST_RANKING_MODEL_VERSION for why: importing shortlist-engine.ts
+// here would form a real circular dependency, since that file itself
+// imports criteria types FROM this one). A convention with no test is not a
+// contract — this file imports BOTH constants directly and asserts they
+// agree, so a PR that bumps one without the other fails CI instead of
+// silently shipping a version-checked URL that no longer matches the data
+// version it claims to speak.
+import { RANKING_MODEL_VERSION } from "@/lib/shortlist-engine";
 
 function completeCriteria(overrides: Partial<SiteMatchCriteria> = {}): SiteMatchCriteria {
   return {
@@ -204,5 +217,23 @@ describe("shortlistRankingModelVersionSupported", () => {
     const params = new URLSearchParams(href.split("?")[1]);
     expect(shortlistRankingModelVersionSupported(params)).toBe(true);
     expect(params.get("sm_rv")).toBe(SHORTLIST_RANKING_MODEL_VERSION);
+  });
+
+  // ── Finding 5 (re-review): the two version constants cannot silently drift ──
+  //
+  // The pre-fix state had each side's OWN tests passing independently —
+  // shortlistRankingModelVersionSupported tested against
+  // SHORTLIST_RANKING_MODEL_VERSION, RANKING_MODEL_VERSION tested against
+  // RANKING_INPUTS_VERSION — with nothing anywhere asserting the two
+  // version families actually AGREE. A PR that bumped
+  // lib/shortlist-engine.ts's RANKING_MODEL_VERSION without also bumping
+  // this module's SHORTLIST_RANKING_MODEL_VERSION string would leave every
+  // OLD sm_rv link "supported" against a DATA version it no longer matches
+  // — the exact silent-drift failure mode Finding 5 named — and every test
+  // suite in the repo would still pass. This test imports both constants
+  // directly and compares them, so that specific drift fails CI.
+  it("SHORTLIST_RANKING_MODEL_VERSION (request-level sm_rv) and RANKING_MODEL_VERSION (lib/shortlist-engine.ts's data-compatibility check) encode the SAME version number — drift between them must fail CI, not ship silently", () => {
+    expect(SHORTLIST_RANKING_MODEL_VERSION).toBe(String(RANKING_MODEL_VERSION));
+    expect(Number(SHORTLIST_RANKING_MODEL_VERSION)).toBe(RANKING_MODEL_VERSION);
   });
 });

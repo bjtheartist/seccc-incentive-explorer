@@ -168,6 +168,10 @@ async function enrichOne(
   // buildId is part of the key (Finding 4, Q6.2): a universe regeneration
   // (new export, new PIN/address facts) must never serve a value cached
   // under a PRIOR build — there is otherwise no signal anything changed.
+  // `buildId` is guaranteed non-empty here: the route rejects a missing or
+  // empty buildId with 400 before this function is ever called (re-review
+  // Finding 4 — a request-level partition is only meaningful if every
+  // caller is actually required to supply one, not merely invited to).
   const cacheKey = `${buildId}|${pin ?? ""}|${address.toUpperCase()}`;
   const cached = pin == null && address === "" ? null : cacheGet(cacheKey);
   if (cached) return { ...cached, key: item.key };
@@ -221,13 +225,10 @@ async function enrichOne(
 export async function POST(request: Request) {
   let items: { key: string; pin: string | null; address: string | null }[] = [];
   let buildId = "";
+  let parsedOk = true;
   try {
     const body = (await request.json()) as { buildId?: unknown; items?: unknown };
-    // An empty/missing buildId is still a valid (if less useful) cache
-    // partition — every request from a client that hasn't been updated to
-    // send one collapses into the same "" partition rather than failing;
-    // it just cannot benefit from cross-build cache invalidation.
-    buildId = typeof body?.buildId === "string" ? body.buildId.slice(0, 200) : "";
+    buildId = typeof body?.buildId === "string" ? body.buildId.trim().slice(0, 200) : "";
     if (Array.isArray(body?.items)) {
       items = body.items
         .filter((entry): entry is Record<string, unknown> => Boolean(entry) && typeof entry === "object")
@@ -240,7 +241,20 @@ export async function POST(request: Request) {
         .slice(0, MAX_ITEMS);
     }
   } catch {
+    parsedOk = false;
     items = [];
+  }
+
+  // REJECT a missing/empty buildId (re-review Finding 4). The pre-fix
+  // version accepted "" as a valid (if degraded) cache partition — but an
+  // optional field a caller can simply omit defeats cross-build cache
+  // isolation for exactly the callers most likely to omit it (an
+  // unmaintained integration, a stale client bundle). The ONE client this
+  // route has (components/vacancy/SiteShortlistResults.tsx) already always
+  // sends the loaded universe's own buildId, so this is not a breaking
+  // change for it — only for a caller that was never sending one honestly.
+  if (parsedOk && buildId === "") {
+    return NextResponse.json({ error: "buildId is required" }, { status: 400 });
   }
 
   if (items.length === 0) {

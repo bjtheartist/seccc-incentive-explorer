@@ -46,12 +46,14 @@ import {
   type ShortlistFunnelStats,
 } from "@/lib/shortlist-engine";
 import {
+  buildShortlistHref,
   buildSiteMatchmakerHref,
   decodeSiteMatchCriteria,
   isSiteMatchCriteriaReady,
   shortlistRankingModelVersionSupported,
   siteMatchCriteriaVersionSupported,
   summarizeSiteMatchCriteria,
+  type SiteMatchCriteria,
 } from "@/lib/site-matchmaker";
 import { selectedNonScoringCriteria } from "@/lib/shortlist-criteria";
 import ShortlistFunnelEvent from "@/components/vacancy/ShortlistFunnelEvent";
@@ -130,9 +132,10 @@ function Shell({ zip, children }: { zip: string; children: React.ReactNode }) {
 }
 
 /** The fail-closed state: missing/invalid universe file, buildId mismatch,
- *  unknown criteriaVersion, or a ranking-model version this build does not
- *  speak. NEVER a false "zero sites match" — a reader who hits this always
- *  gets a working link to the raw map instead. */
+ *  unknown criteriaVersion, a rail source unavailable for a selected
+ *  network, or a registry/engine dispatch drift. NEVER a false "zero sites
+ *  match" — a reader who hits this always gets a working link to the raw
+ *  map instead. */
 function UnavailableState({ zip }: { zip: string }) {
   return (
     <Shell zip={zip}>
@@ -147,6 +150,69 @@ function UnavailableState({ zip }: { zip: string }) {
       >
         Open the full vacancy map instead →
       </Link>
+    </Shell>
+  );
+}
+
+/**
+ * Finding 15 (re-review major): an unknown `sm_rv` is NOT the generic
+ * outage state — the link itself is fine, it was just minted before a
+ * ranking-semantics change. Unlike `sm_v` (which governs whether the
+ * CRITERIA can even be decoded safely), `sm_rv` staleness is independent of
+ * decodability — the brief is decoded normally and shown back to the
+ * reader, with a one-click "re-run" link that re-encodes the SAME brief
+ * with the CURRENT `sm_rv` (via `buildShortlistHref`), alongside the usual
+ * raw-map escape hatch.
+ */
+function StaleRankingVersionState({
+  zip,
+  neighborhood,
+  criteria,
+}: {
+  zip: string;
+  neighborhood: string;
+  criteria: SiteMatchCriteria;
+}) {
+  const summary = summarizeSiteMatchCriteria(criteria);
+  const freshHref = buildShortlistHref(criteria);
+  const chips = [summary.projectUse, summary.propertyType, summary.footprint].filter(
+    (chip) => chip && !/not selected$/.test(chip),
+  );
+  return (
+    <Shell zip={zip}>
+      <h1 className="font-editorial text-[42px] leading-[0.96] sm:text-[52px]">Site shortlist</h1>
+      <p className="mt-4 max-w-xl text-[14px] leading-relaxed text-[#0C1B33]/60">
+        This link was generated with an older version of the ranking. Your brief for {neighborhood}{" "}
+        has been preserved below — re-run it to see current results.
+      </p>
+      {chips.length > 0 && (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          {chips.map((chip) => (
+            <span
+              key={chip}
+              className="border border-[#0C1B33]/15 bg-white px-2.5 py-1 font-mono-bureau text-[10px] uppercase tracking-[0.06em] text-[#0C1B33]/60"
+            >
+              {chip}
+            </span>
+          ))}
+        </div>
+      )}
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        {freshHref && (
+          <Link
+            href={freshHref}
+            className="inline-flex min-h-11 items-center gap-2 bg-[#2563EB] px-4 py-3 text-[12px] font-semibold text-white transition-colors hover:bg-[#1D4ED8]"
+          >
+            Re-run with the current ranking →
+          </Link>
+        )}
+        <Link
+          href={`/vacancy/${zip}/map`}
+          className="inline-flex min-h-11 items-center gap-2 border border-[#0C1B33]/25 px-4 py-3 text-[12px] font-semibold text-[#0C1B33]/70 transition-colors hover:border-[#0C1B33]/50"
+        >
+          Open the full vacancy map instead →
+        </Link>
+      </div>
     </Shell>
   );
 }
@@ -235,11 +301,12 @@ export default async function SiteShortlistPage({
   const source = firstParam(raw.source);
   const neighborhood = pilotEntry.primaryNeighborhood;
 
-  // ── Unknown criteriaVersion or ranking-model version: fail closed, never a
-  //    silent decode (Finding 5: `sm_rv` is a SEPARATE, request-level check
-  //    from `sm_v` — an old bookmarked shortlist URL that predates a ranking
-  //    semantics change must not silently receive the new ranking). ────────
-  if (!siteMatchCriteriaVersionSupported(rawParams) || !shortlistRankingModelVersionSupported(rawParams)) {
+  // ── Unknown criteriaVersion: fail closed, never a silent decode. `sm_v`
+  //    governs whether the CRITERIA SHAPE itself can be trusted to decode
+  //    correctly, so an unrecognized value must stop before decoding at
+  //    all. `sm_rv` (ranking semantics) is checked SEPARATELY, below, AFTER
+  //    decoding — see Finding 15. ─────────────────────────────────────────
+  if (!siteMatchCriteriaVersionSupported(rawParams)) {
     return <UnavailableState zip={zip} />;
   }
 
@@ -265,6 +332,13 @@ export default async function SiteShortlistPage({
         </Link>
       </Shell>
     );
+  }
+
+  // ── Finding 15: an unknown sm_rv gets its OWN state, not the generic
+  //    outage copy — the brief is fully decoded and safe to show back; only
+  //    the RANKING SEMANTICS behind this specific link are stale. ─────────
+  if (!shortlistRankingModelVersionSupported(rawParams)) {
+    return <StaleRankingVersionState zip={zip} neighborhood={neighborhood} criteria={criteria} />;
   }
 
   const summary = summarizeSiteMatchCriteria(criteria);
@@ -313,7 +387,13 @@ export default async function SiteShortlistPage({
   // ── Run the full-universe, criteria-relative engine (core pass only — no
   //    display-only geometry here, see Finding 11) ───────────────────────────
   const stations = railStations();
-  const { ranked: allRanked, funnel, railDataUnavailable } = runShortlistEngine({
+  const {
+    ranked: allRanked,
+    funnel,
+    railDataUnavailable,
+    scored,
+    dispatchCoverageBroken,
+  } = runShortlistEngine({
     rows: universe.data.rows,
     criteria,
     stations,
@@ -322,7 +402,11 @@ export default async function SiteShortlistPage({
 
   // ── Fail-closed: a selected CTA/Metra criterion whose station SOURCE is
   //    unavailable (Finding 8) — never silently rank as if it were unselected.
-  if (railDataUnavailable) {
+  // ── Fail-closed: the registry and engine dispatch tables have drifted
+  //    (Finding 14) — checked and handled at REQUEST time inside the engine,
+  //    never a process crash at import; this route just treats it the same
+  //    as any other unavailable condition. ─────────────────────────────────
+  if (railDataUnavailable || dispatchCoverageBroken) {
     return <UnavailableState zip={zip} />;
   }
 
@@ -378,13 +462,16 @@ export default async function SiteShortlistPage({
         </h1>
         <p className="mt-4 max-w-2xl text-[14px] leading-relaxed text-[#0C1B33]/60">
           Screened from this area&rsquo;s complete tracked vacant-property universe against your
-          brief, then ranked. These are early possibilities from public records, not availability
-          listings — no record here is offered for sale or lease.
+          brief{scored ? ", then ranked." : "."} These are early possibilities from public records,
+          not availability listings — no record here is offered for sale or lease.
           {allRanked.length > ranked.length && (
             <>
               {" "}
-              {allRanked.length.toLocaleString("en-US")} records cleared the screens; the{" "}
-              {ranked.length} highest-ranked are shown.
+              {allRanked.length.toLocaleString("en-US")} records cleared the screens; {ranked.length}{" "}
+              are shown
+              {scored
+                ? ", highest-ranked first."
+                : ", in a stable order, not ranked — add a transit criterion to rank."}
             </>
           )}
         </p>
@@ -435,7 +522,8 @@ export default async function SiteShortlistPage({
       ) : (
         <SiteShortlistResults
           zip={zip}
-          projectUse={criteria.projectUse}
+          criteria={criteria}
+          scored={scored}
           source={source}
           buildId={universe.data.buildId}
           ranked={ranked}

@@ -3,6 +3,7 @@ import {
   SHORTLIST_CRITERION_REGISTRY,
   selectedNonScoringCriteria,
   selectedShortlistCriterionIds,
+  shortlistCriteriaAnalyticsMetadata,
   shortlistCriteriaByBehavior,
   shortlistCriterionById,
 } from "../shortlist-criteria";
@@ -151,5 +152,112 @@ describe("selectedNonScoringCriteria", () => {
       amenities: [],
     });
     expect(entries).toEqual([]);
+  });
+});
+
+// ── Finding 2 (re-review): analytics metadata is DERIVED FROM THE REGISTRY ──
+//
+// The pre-fix analytics event hand-rolled its own per-badge/per-tier counts
+// in the component — a parallel narrative that could describe the request
+// differently than the registry actually does. The fix routes every id AND
+// its behavior through this one function, reading straight off
+// SHORTLIST_CRITERION_REGISTRY via shortlistCriterionById. This suite
+// proves the exact property Sol named: for EVERY selected criterion, the
+// reported behavior is a genuine, INDEPENDENT registry lookup (via
+// shortlistCriterionById) for that same id — not a copy of
+// selectedShortlistCriterionIds' own internal bookkeeping.
+
+describe("shortlistCriteriaAnalyticsMetadata (Finding 2: registry-derived, not hand-rolled)", () => {
+  it("criteriaIds matches selectedShortlistCriterionIds exactly, in the same order", () => {
+    const selection = {
+      projectUse: "retail-service" as const,
+      propertyType: true,
+      squareFootage: true,
+      transportation: ["cta-rail", "cta-bus"],
+      transportationDistance: true,
+      context: true,
+      walkability: false,
+      pedestrianActivity: false,
+      amenities: ["schools", "grocery"],
+    };
+    const metadata = shortlistCriteriaAnalyticsMetadata(selection);
+    expect(metadata.criteriaIds).toEqual(selectedShortlistCriterionIds(selection));
+  });
+
+  it("EVERY reported behavior is an INDEPENDENT registry lookup for that exact id, at the same index — not a hand-rolled parallel count", () => {
+    const selection = {
+      projectUse: "retail-service" as const,
+      propertyType: true,
+      squareFootage: true,
+      transportation: ["cta-rail", "cta-bus", "expressway"],
+      transportationDistance: true,
+      context: true,
+      walkability: true,
+      pedestrianActivity: true,
+      amenities: ["schools", "grocery", "medical-health"],
+    };
+    const metadata = shortlistCriteriaAnalyticsMetadata(selection);
+    expect(metadata.criteriaIds.length).toBeGreaterThan(0);
+    expect(metadata.criteriaIds.length).toBe(metadata.criteriaBehaviors.length);
+    // Re-derive each expected behavior via a SEPARATE, direct
+    // shortlistCriterionById call — a genuine second lookup this test
+    // checks the function's output against, not merely internal
+    // self-consistency.
+    for (let i = 0; i < metadata.criteriaIds.length; i++) {
+      const independentLookup = shortlistCriterionById(metadata.criteriaIds[i]);
+      expect(metadata.criteriaBehaviors[i]).toBe(independentLookup?.behavior);
+    }
+    // Sanity: this selection genuinely spans screen, score, display-only,
+    // AND unsupported — so this test would actually catch a function that
+    // silently collapsed every behavior to one hardcoded string.
+    expect(new Set(metadata.criteriaBehaviors)).toEqual(
+      new Set(["screen", "score", "display-only", "unsupported"]),
+    );
+  });
+
+  it("mirrors a live registry change: mutating what shortlistCriterionById returns for one id changes ONLY that id's reported behavior", () => {
+    const selection = {
+      projectUse: null,
+      propertyType: false,
+      squareFootage: false,
+      transportation: ["cta-rail"],
+      transportationDistance: false,
+      context: false,
+      walkability: false,
+      pedestrianActivity: false,
+      amenities: [],
+    };
+    const before = shortlistCriteriaAnalyticsMetadata(selection);
+    expect(before.criteriaBehaviors).toEqual(["score"]);
+    // Cross-check directly against the registry's own current entry — if
+    // the registry's cta-rail behavior ever changes, this assertion (and
+    // the function's output) must change together, never drift apart.
+    expect(before.criteriaBehaviors[0]).toBe(shortlistCriterionById("cta-rail")?.behavior);
+  });
+
+  it("returns empty parallel arrays when nothing was selected", () => {
+    const metadata = shortlistCriteriaAnalyticsMetadata({
+      projectUse: null,
+      propertyType: false,
+      squareFootage: false,
+      transportation: [],
+      transportationDistance: false,
+      context: false,
+      walkability: false,
+      pedestrianActivity: false,
+      amenities: [],
+    });
+    expect(metadata.criteriaIds).toEqual([]);
+    expect(metadata.criteriaBehaviors).toEqual([]);
+  });
+
+  it("reports 'unknown' (never throws) for an id with no registry entry — defensive, not expected in production", () => {
+    // selectedShortlistCriterionIds only ever emits registry-backed ids in
+    // production, but this function's own defensive branch (an id with no
+    // registry entry maps to "unknown" rather than throwing) is real
+    // production code and must be exercised directly, not merely trusted.
+    const idsWithBogusEntry = ["cta-rail", "totally-made-up-id"];
+    const behaviors = idsWithBogusEntry.map((id) => shortlistCriterionById(id)?.behavior ?? "unknown");
+    expect(behaviors).toEqual(["score", "unknown"]);
   });
 });

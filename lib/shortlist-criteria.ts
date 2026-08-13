@@ -320,3 +320,39 @@ export function selectedNonScoringCriteria(
       ids.has(entry.id) && (entry.behavior === "unsupported" || entry.behavior === "display-only"),
   );
 }
+
+/**
+ * Analytics metadata DERIVED FROM THE REGISTRY (re-review Finding 2): every
+ * selected criterion's id, PAIRED with its registry-declared behavior, both
+ * read directly off `SHORTLIST_CRITERION_REGISTRY` via
+ * `shortlistCriterionById` — not a hand-rolled per-badge/per-tier count that
+ * could silently drift from what the registry actually says a criterion
+ * does. `criteriaIds[i]` and `criteriaBehaviors[i]` are the same criterion
+ * at the same index, so an analytics consumer can always answer "how many
+ * SCREEN criteria were selected on this run" (or SCORE, DISPLAY-ONLY,
+ * UNSUPPORTED) without a second lookup table anywhere.
+ *
+ * The result shape only uses primitives/arrays-of-primitives because
+ * `AnalyticsMetadata` (lib/analytics-events.ts) does not accept nested
+ * objects.
+ */
+export interface ShortlistCriteriaAnalyticsMetadata {
+  criteriaIds: string[];
+  criteriaBehaviors: string[];
+}
+
+export function shortlistCriteriaAnalyticsMetadata(
+  selection: SelectedShortlistCriteria,
+): ShortlistCriteriaAnalyticsMetadata {
+  const criteriaIds = selectedShortlistCriterionIds(selection);
+  const criteriaBehaviors = criteriaIds.map((id) => {
+    const entry = shortlistCriterionById(id);
+    // Every id in criteriaIds came FROM the registry (selectedShortlistCriterionIds
+    // only ever emits ids the SelectedShortlistCriteria shape maps 1:1 onto
+    // registry entries for), so this is defensive, not expected to fire —
+    // "unknown" would itself be a loud, greppable analytics signal of drift
+    // rather than a thrown error in a client-side event handler.
+    return entry?.behavior ?? "unknown";
+  });
+  return { criteriaIds, criteriaBehaviors };
+}

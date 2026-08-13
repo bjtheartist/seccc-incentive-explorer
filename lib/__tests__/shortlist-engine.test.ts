@@ -399,7 +399,16 @@ describe("registry-driven dispatch coverage", () => {
     expect(registryScoreIds.sort()).toEqual(["cta-rail", "metra"]);
   });
 
-  it("throws at import time if a registry SCREEN entry has no matching handler in the engine", async () => {
+});
+
+// ── Finding 14 (re-review): drift is caught at REQUEST time, never at ──────
+//    module import — see lib/shortlist-engine.ts's header for why throwing
+//    at import time turns a registry/engine drift into a process-wide crash
+//    (every request 500s the instant anything imports the module) rather
+//    than degrading the one request that hit it.
+
+describe("dispatch-coverage drift degrades one request, never crashes the module (Finding 14)", () => {
+  it("importing the engine module SUCCEEDS even when the registry carries a SCREEN entry with no matching handler", async () => {
     vi.resetModules();
     vi.doMock("../shortlist-criteria", async (importOriginal) => {
       const actual = await importOriginal<typeof import("../shortlist-criteria")>();
@@ -415,12 +424,39 @@ describe("registry-driven dispatch coverage", () => {
         },
       };
     });
-    await expect(import("../shortlist-engine")).rejects.toThrow(/made-up-screen/);
+
+    // The import itself must resolve — no throw at module load.
+    const mod = await import("../shortlist-engine");
+    expect(mod.runShortlistEngine).toBeTypeOf("function");
+
+    // The drift is real (the underlying assertion still throws when called
+    // directly) — but a REQUEST through runShortlistEngine degrades to the
+    // fail-closed flag instead of propagating the throw.
+    expect(() => mod.assertShortlistDispatchCoverage()).toThrow(/made-up-screen/);
+    const result = mod.runShortlistEngine({
+      rows: [row()],
+      criteria: criteria(),
+      stations: [],
+      sourceRecordsByEvidenceType: ZERO_EVIDENCE_COUNTS,
+    });
+    expect(result.dispatchCoverageBroken).toBe(true);
+    expect(result.ranked).toEqual([]);
+    expect(result.scored).toBe(false);
+    expect(result.railDataUnavailable).toBe(false);
+    expect(result.funnel).toEqual({
+      trackedEvidence: 0,
+      canonicalSites: 0,
+      withResolvedPin: 0,
+      withMeasuredArea: 0,
+      insideBand: 0,
+      survivingTransitScreen: 0,
+    });
+
     vi.doUnmock("../shortlist-criteria");
     vi.resetModules();
   });
 
-  it("throws at import time if a registry SCORE entry has no scoring implementation", async () => {
+  it("same for a registry SCORE entry with no scoring implementation — import succeeds, the request degrades", async () => {
     vi.resetModules();
     vi.doMock("../shortlist-criteria", async (importOriginal) => {
       const actual = await importOriginal<typeof import("../shortlist-criteria")>();
@@ -436,7 +472,23 @@ describe("registry-driven dispatch coverage", () => {
         },
       };
     });
-    await expect(import("../shortlist-engine")).rejects.toThrow(/expressway/);
+
+    const mod = await import("../shortlist-engine");
+    expect(mod.runShortlistEngine).toBeTypeOf("function");
+    expect(() => mod.assertShortlistDispatchCoverage()).toThrow(/expressway/);
+
+    const result = mod.runShortlistEngine({
+      rows: [row()],
+      criteria: criteria({ transportation: ["cta-rail"] }),
+      stations: STATIONS,
+      sourceRecordsByEvidenceType: ZERO_EVIDENCE_COUNTS,
+    });
+    expect(result.dispatchCoverageBroken).toBe(true);
+    // Even with a transit criterion selected and stations available, a
+    // broken dispatch table must never report scored: true — an empty,
+    // clearly-flagged result, not a half-computed one.
+    expect(result.scored).toBe(false);
+
     vi.doUnmock("../shortlist-criteria");
     vi.resetModules();
   });
@@ -559,6 +611,122 @@ describe("runShortlistEngine", () => {
       [CTA_FAR],
     );
     expect(railDataUnavailable).toBe(false);
+  });
+
+  // ── Finding 8 (re-review): checked PER SELECTED NETWORK, not by whether
+  //    the whole stations array is empty — a Metra-only file is non-empty,
+  //    but a CTA selection against it still has zero CTA stations to screen
+  //    or score against, and the reverse. Both directions are asserted here
+  //    explicitly, against single-network station files (never STATIONS,
+  //    which carries both).
+
+  it("Finding 8, direction 1: selecting CTA against a Metra-ONLY station file fails closed, even though the file itself is non-empty", () => {
+    const metraOnlyFile: ShortlistStation[] = [METRA_NEAR];
+    const { railDataUnavailable } = engine(
+      [row()],
+      criteria({ transportation: ["cta-rail"], transportationDistance: "half-mile" }),
+      metraOnlyFile,
+    );
+    expect(railDataUnavailable).toBe(true);
+  });
+
+  it("Finding 8, direction 2: selecting Metra against a CTA-ONLY station file fails closed — the reverse direction", () => {
+    const ctaOnlyFile: ShortlistStation[] = [CTA_NEAR, CTA_FAR];
+    const { railDataUnavailable } = engine(
+      [row()],
+      criteria({ transportation: ["metra"], transportationDistance: "half-mile" }),
+      ctaOnlyFile,
+    );
+    expect(railDataUnavailable).toBe(true);
+  });
+
+  it("Finding 8: selecting a network the file DOES carry does not fail closed merely because the OTHER network is missing", () => {
+    const ctaOnlyFile: ShortlistStation[] = [CTA_NEAR, CTA_FAR];
+    const { railDataUnavailable: ctaAgainstCtaOnly } = engine(
+      [row()],
+      criteria({ transportation: ["cta-rail"], transportationDistance: "half-mile" }),
+      ctaOnlyFile,
+    );
+    expect(ctaAgainstCtaOnly).toBe(false);
+
+    const metraOnlyFile: ShortlistStation[] = [METRA_NEAR];
+    const { railDataUnavailable: metraAgainstMetraOnly } = engine(
+      [row()],
+      criteria({ transportation: ["metra"], transportationDistance: "half-mile" }),
+      metraOnlyFile,
+    );
+    expect(metraAgainstMetraOnly).toBe(false);
+  });
+
+  it("Finding 8: selecting BOTH CTA and Metra against a CTA-only file fails closed — the Metra half is still unavailable even though CTA is fine", () => {
+    const ctaOnlyFile: ShortlistStation[] = [CTA_NEAR, CTA_FAR];
+    const { railDataUnavailable } = engine(
+      [row()],
+      criteria({ transportation: ["cta-rail", "metra"], transportationDistance: "half-mile" }),
+      ctaOnlyFile,
+    );
+    expect(railDataUnavailable).toBe(true);
+  });
+
+  // ── Finding 13: `scored` is true only when a real transit score is active ──
+
+  it("Finding 13: scored is false when no transportation criterion was selected — ranked's order is stable, never a ranking claim", () => {
+    const { scored } = engine([row()], criteria());
+    expect(scored).toBe(false);
+  });
+
+  it("Finding 13: scored is false when a transit criterion was selected but matched zero stations (mirrors railDataUnavailable)", () => {
+    const { scored, railDataUnavailable } = engine(
+      [row()],
+      criteria({ transportation: ["cta-rail"] }),
+      [], // no stations at all -> selectedTransitNetwork returns null
+    );
+    expect(railDataUnavailable).toBe(true);
+    expect(scored).toBe(false);
+  });
+
+  it("Finding 13: scored is true when a transit network was selected AND matched at least one station", () => {
+    const { scored } = engine([row()], criteria({ transportation: ["cta-rail"] }), STATIONS);
+    expect(scored).toBe(true);
+  });
+
+  it("Finding 13: scored is true for Metra alone, independent of whether CTA was also selected", () => {
+    const { scored: metraOnly } = engine([row()], criteria({ transportation: ["metra"] }), STATIONS);
+    expect(metraOnly).toBe(true);
+    const { scored: both } = engine([row()], criteria({ transportation: ["cta-rail", "metra"] }), STATIONS);
+    expect(both).toBe(true);
+  });
+
+  // ── Finding 3 (re-review): the CANDIDATE reports the type it was ────────
+  //    actually SCREENED as, distinct from its resolved `propertyType`, on
+  //    a conflicted row admitted via the "other" evidence.
+
+  it("Finding 3: a conflicted row admitted into a LAND search reports screenedPropertyType 'vacant_land' even though its resolved propertyType is 'vacant_building'", () => {
+    const conflicted = row({
+      canonicalKey: "conflicted-land-search",
+      propertyType: "vacant_building", // building evidence won resolution
+      hasVacantBuildingEvidence: true,
+      hasVacantLandEvidence: true,
+      conflictingPropertyTypes: true,
+      lotSqft: 8000,
+    });
+    const { ranked } = engine([conflicted], criteria({ propertyType: "vacant-land" }));
+    expect(ranked).toHaveLength(1);
+    expect(ranked[0].propertyType).toBe("vacant_building"); // resolved type, unchanged
+    expect(ranked[0].screenedPropertyType).toBe("vacant_land"); // what THIS search actually screened it as
+  });
+
+  it("Finding 3: the SAME conflicted row reports screenedPropertyType 'vacant_building' in a building search — the field tracks the REQUEST, not a fixed row property", () => {
+    const conflicted = row({
+      canonicalKey: "conflicted-building-search",
+      propertyType: "vacant_building",
+      hasVacantBuildingEvidence: true,
+      hasVacantLandEvidence: true,
+      conflictingPropertyTypes: true,
+      buildingSqft: 3000,
+    });
+    const { ranked } = engine([conflicted], criteria({ propertyType: "existing-building" }));
+    expect(ranked[0].screenedPropertyType).toBe("vacant_building");
   });
 
   // ── Criteria-relative negatives (the whole point of PR2) ──────────────────
@@ -709,6 +877,7 @@ describe("decorateShortlistDisplayFacts", () => {
       lat: BASE_LAT,
       lon: BASE_LON,
       propertyType: "vacant_building",
+      screenedPropertyType: "vacant_building",
       buildingSqft: 4000,
       lotSqft: null,
       zoningDistrict: "B3-2",
@@ -1047,6 +1216,69 @@ describe("false-zero guard — 60621 building search (the canonical regression c
     });
     expect(ranked.length).toBeGreaterThan(0);
     expect(ranked.length).toBe(645);
+  });
+
+  // ── Finding 6 (re-review): EXACT successive stage counts, a genuine ───────
+  //    narrowing CHAIN — not four independent diagnostics that happen to
+  //    share one funnel object. The pre-fix test only proved
+  //    trackedEvidence != canonicalSites; it said nothing about whether
+  //    withResolvedPin / withMeasuredArea / insideBand /
+  //    survivingTransitScreen actually narrow each other in sequence on
+  //    real data. This scenario runs a LAND search (60621's building
+  //    evidence genuinely carries zero PINs/measurements — the false-zero
+  //    condition this whole PR exists for — so a land search is the
+  //    scenario that can show every stage narrowing without collapsing to
+  //    zero) with BOTH a size band AND a transit screen active, against the
+  //    real committed 60621 universe.
+  it("EXACT successive 60621 funnel stage counts for a land search with a band AND a transit screen — PIN -> measurement -> band -> transit as a genuine narrowing chain (Finding 6)", () => {
+    // A synthetic CTA station placed at the ZIP's real geographic centroid
+    // (computed from the committed export's own lat/lon range) — not the
+    // real committed rail-stations.ts file, so this scenario's exact
+    // numbers depend only on the committed universe data and this test's
+    // own station placement, never on an unrelated future edit to the rail
+    // roster shifting a station's coordinates.
+    const centroidStation: ShortlistStation = {
+      name: "Test Centroid Stop",
+      system: "CTA",
+      lat: 41.7779,
+      lon: -87.6421,
+    };
+    const { funnel, ranked, scored } = runShortlistEngine({
+      rows: universe.rows,
+      criteria: criteria({
+        zip: "60621",
+        propertyType: "vacant-land",
+        minSquareFeet: 1000,
+        transportation: ["cta-rail"],
+        transportationDistance: "one-mile",
+      }),
+      stations: [centroidStation],
+      sourceRecordsByEvidenceType: universe.counts.sourceRecordsByEvidenceType as never,
+    });
+
+    // Exact values from the committed 60621 export (regenerated in this
+    // PR) for this exact scenario. Each assertion below is a DIFFERENT
+    // number from the one before it — a real chain, not a repeated total
+    // under five labels.
+    expect(funnel.trackedEvidence).toBe(6116);
+    expect(funnel.canonicalSites).toBe(5722); // land evidence, deduped
+    expect(funnel.withResolvedPin).toBe(4864); // PIN stage (diagnostic)
+    expect(funnel.withMeasuredArea).toBe(287); // measurement stage (diagnostic)
+    expect(funnel.insideBand).toBe(285); // band stage — REAL screen
+    expect(funnel.survivingTransitScreen).toBe(227); // transit stage — REAL screen, the final stage
+
+    // The chain narrows at every single step — never flat, never reversed.
+    expect(funnel.trackedEvidence).toBeGreaterThan(funnel.canonicalSites);
+    expect(funnel.canonicalSites).toBeGreaterThan(funnel.withResolvedPin);
+    expect(funnel.withResolvedPin).toBeGreaterThan(funnel.withMeasuredArea);
+    expect(funnel.withMeasuredArea).toBeGreaterThan(funnel.insideBand);
+    expect(funnel.insideBand).toBeGreaterThan(funnel.survivingTransitScreen);
+
+    // The funnel's final stage is exactly the ranked list length, and a
+    // real transit network was active (scored, not merely stable order).
+    expect(ranked.length).toBe(227);
+    expect(funnel.survivingTransitScreen).toBe(ranked.length);
+    expect(scored).toBe(true);
   });
 });
 

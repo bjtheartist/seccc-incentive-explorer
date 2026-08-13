@@ -30,6 +30,7 @@ function candidate(overrides: Partial<DecoratedShortlistCandidate> = {}): Decora
     saleYear: null,
     violation: false,
     conflictingPropertyTypes: false,
+    screenedPropertyType: "vacant_building",
     overlays: { ...noOverlays(), ssa: { present: true, name: "Greater Chatham" }, tif: { present: true, name: null } },
     transitScore: { networks: ["cta-rail"], stationName: "79th", stationSystem: "CTA", meters: 300, walkMinutes: 4, points: 25 },
     nearestRailDisplay: null,
@@ -120,5 +121,68 @@ describe("shortlistCsv", () => {
 
   it("returns just the header for an empty candidate list", () => {
     expect(shortlistCsv([]).split("\n")).toHaveLength(1);
+  });
+
+  // ── Finding 10 (re-review): ADVERSARIAL enrichment invariance ────────────
+  //
+  // The pre-fix "invariance" test only proved row COUNT/order stayed put
+  // between two runs with NO enrichment injected at all — tautological,
+  // since nothing was ever different between the two calls. This test
+  // injects enrichment values deliberately CRAFTED to tempt a
+  // value-sorted reordering if enrichment and ranking were ever coupled:
+  // the LAST-ranked candidate gets the highest assessed value / implied
+  // market value / license count, and the FIRST-ranked candidate gets
+  // nothing. If shortlistCsv (or anything downstream) ever started
+  // re-sorting by a "richer" enrichment fact, this is exactly the input
+  // that would flip the order — and it must not.
+  it("ADVERSARIAL: enrichment crafted to tempt a value-based reorder changes NEITHER membership NOR order", () => {
+    const ranked = [
+      candidate({ key: "first", address: "1 FIRST ST", score: 40 }),
+      candidate({ key: "second", address: "2 SECOND ST", score: 20 }),
+      candidate({ key: "last", address: "3 LAST ST", score: 0 }),
+    ];
+
+    const unenriched = shortlistCsv(ranked);
+
+    // Adversarial: the LAST-ranked candidate looks like the most valuable,
+    // most "interesting" record by every enrichment fact — the temptation
+    // a coupled implementation would have to move it to the top.
+    const adversarial = shortlistCsv(ranked, {
+      last: {
+        countyClass: "517",
+        classGloss: "One-story commercial building",
+        assessedValue: 50_000_000,
+        assessedYear: "2024",
+        impliedMarketValue: 200_000_000,
+        activeLicenses: [
+          { name: "A", description: "" },
+          { name: "B", description: "" },
+          { name: "C", description: "" },
+        ],
+      },
+      first: {
+        countyClass: null,
+        classGloss: null,
+        assessedValue: null,
+        assessedYear: null,
+        impliedMarketValue: null,
+        activeLicenses: [],
+      },
+    });
+
+    const rowsOf = (csv: string) =>
+      csv
+        .split("\n")
+        .slice(1)
+        .map((line) => line.split(",").slice(0, 2).join(",")); // [rank, address]
+
+    // Row 1..3 addresses are in the SAME order regardless of the
+    // adversarial enrichment — membership AND order both unchanged.
+    expect(rowsOf(adversarial)).toEqual(rowsOf(unenriched));
+    expect(rowsOf(adversarial).map((r) => r.split(",")[0])).toEqual(["1", "2", "3"]);
+    // Sanity: the adversarial values really did make it into the CSV (so
+    // this test would actually catch a reorder if one occurred — it isn't
+    // passing merely because the enrichment was silently dropped).
+    expect(adversarial).toContain("200000000");
   });
 });

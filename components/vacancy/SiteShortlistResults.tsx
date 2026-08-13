@@ -43,7 +43,8 @@ import {
   type ShortlistEnrichmentFacts,
 } from "@/lib/site-shortlist";
 import { shortlistCardDomId } from "@/lib/shortlist-map-layers";
-import type { SiteProjectUse } from "@/lib/site-matchmaker";
+import { shortlistCriteriaAnalyticsMetadata } from "@/lib/shortlist-criteria";
+import type { SiteMatchCriteria } from "@/lib/site-matchmaker";
 import SiteShortlistMap from "./SiteShortlistMap";
 
 interface EnrichItem extends ShortlistEnrichmentFacts {
@@ -171,9 +172,17 @@ function ShortlistCard({
   if (candidate.saleYear) flags.push(taxSaleFlag(candidate.saleYear));
   if (candidate.violation) flags.push(VIOLATION_FLAG);
   if (candidate.conflictingPropertyTypes) {
+    // Re-review Finding 3: report the REQUESTED screening type
+    // (`screenedPropertyType`, resolved by the engine from the search's own
+    // property-type request), never the row's single resolved
+    // `propertyType` — building evidence always wins that resolution when a
+    // site carries both, so a card describing a LAND search's own screening
+    // logic must not read the building-wins field or it will claim the
+    // wrong type for a land search that admitted this row via land
+    // evidence.
     flags.push(
       `This record carries both vacant-land and vacant-building evidence — screened as a ${
-        candidate.propertyType === "vacant_building" ? "building" : "land"
+        candidate.screenedPropertyType === "vacant_building" ? "building" : "land"
       } record for this search`,
     );
   }
@@ -362,7 +371,8 @@ function ShortlistCard({
 
 export default function SiteShortlistResults({
   zip,
-  projectUse,
+  criteria,
+  scored,
   source,
   buildId,
   ranked,
@@ -370,7 +380,15 @@ export default function SiteShortlistResults({
   centroid,
 }: {
   zip: string;
-  projectUse: SiteProjectUse | null;
+  /** The full decoded brief — used to derive the analytics event's
+   *  registry-backed criteria metadata (Finding 2), not just `projectUse`
+   *  as before. */
+  criteria: SiteMatchCriteria;
+  /** True when a real transit score is active for this run
+   *  (`ShortlistEngineResult.scored`, Finding 13) — when false, `ranked`'s
+   *  order is a stable canonical order, NOT a ranking, and the copy below
+   *  must say so rather than calling it "highest-ranked." */
+  scored: boolean;
   source: string | null;
   /** The loaded universe file's own buildId (PR1) — sent with every
    *  enrichment request so the server-side cache can key on it (Finding 4:
@@ -408,18 +426,37 @@ export default function SiteShortlistResults({
   );
 
   // Fire the generation event once per mount, mirroring the exactly-once
-  // discipline of vacancy_web_report_viewed (VacancyReportMap).
+  // discipline of vacancy_web_report_viewed (VacancyReportMap). Metadata is
+  // DERIVED FROM THE REGISTRY (re-review Finding 2) — criteriaIds/
+  // criteriaBehaviors come straight from
+  // shortlistCriteriaAnalyticsMetadata(...), which reads
+  // lib/shortlist-criteria.ts's SHORTLIST_CRITERION_REGISTRY, not a
+  // hand-rolled per-badge count invented in this component.
   useEffect(() => {
+    const registryMetadata = shortlistCriteriaAnalyticsMetadata({
+      projectUse: criteria.projectUse,
+      propertyType: criteria.propertyType != null,
+      squareFootage: criteria.minSquareFeet != null || criteria.maxSquareFeet != null,
+      transportation: criteria.transportation,
+      transportationDistance: criteria.transportationDistance != null,
+      context: criteria.context != null,
+      walkability: criteria.walkability != null,
+      pedestrianActivity: criteria.pedestrianActivity != null,
+      amenities: criteria.amenities,
+    });
     trackEvent("site_shortlist_generated", {
       source: source ?? "site-shortlist",
       metadata: {
         zip,
         resultCount: ranked.length,
+        scored,
         alignedCount: badgeCounts.aligned,
         notAlignedCount: badgeCounts["not-aligned"],
         plannedDevelopmentCount: badgeCounts["planned-development"],
         unresolvedCount: badgeCounts.unresolved,
-        projectUse: projectUse ?? "",
+        projectUse: criteria.projectUse ?? "",
+        criteriaIds: registryMetadata.criteriaIds,
+        criteriaBehaviors: registryMetadata.criteriaBehaviors,
       },
     });
     // Once per mount only.
@@ -539,9 +576,11 @@ export default function SiteShortlistResults({
           </h2>
         </div>
         <p className="mt-2 max-w-2xl text-[13px] leading-relaxed text-[#0C1B33]/60">
-          One ranked list, screened against your brief. The badge on every card is a broad
-          district-family screen only — filter by it below, but it never removes a record from the
-          list above.
+          {scored
+            ? "One ranked list, screened against your brief."
+            : "One list, screened against your brief. Shown in a stable order, not ranked — add a transit criterion to rank."}{" "}
+          The badge on every card is a broad district-family screen only — filter by it below, but
+          it never removes a record from the list above.
         </p>
 
         <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filter by zoning badge">

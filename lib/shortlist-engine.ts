@@ -43,6 +43,27 @@
  *     pass, `decorateShortlistDisplayFacts`, that the page calls only AFTER
  *     slicing to the rendered top 20 — not for the full screened universe.
  *
+ * RE-REVIEW ROUND (findings 3/8/13/14 follow-ups on the first fix pass):
+ *   - Finding 3: `screenedPropertyTypeFor` is now the SINGLE source of
+ *     truth for "which type was this row actually evaluated as" — both
+ *     `screeningAreaSqft` and the new `RankedShortlistCandidate.
+ *     screenedPropertyType` field read it, so a UI surface describing
+ *     "screened as a ___ record" can never recompute its own, possibly
+ *     wrong, answer from the row's resolved `propertyType`.
+ *   - Finding 8: `railDataUnavailable` is now checked PER SELECTED
+ *     NETWORK (does CTA have any stations in the source; does Metra) —
+ *     not by whether the whole `stations` array is empty. A Metra-only
+ *     file is non-empty but still has zero CTA stations, and a CTA
+ *     selection against it must still fail closed.
+ *   - Finding 13: `scored` on the result is true only when a real transit
+ *     score is active. When false, `ranked`'s canonicalKey-only order is
+ *     NOT a ranking — the page must say so, never "highest-ranked."
+ *   - Finding 14: `assertShortlistDispatchCoverage` no longer runs at
+ *     module load. It runs inside `runShortlistEngine`, at request time,
+ *     wrapped in try/catch — a drift now degrades one request
+ *     (`dispatchCoverageBroken: true`, routed to the fail-closed state),
+ *     never crashes the whole process on import.
+ *
  * PURE. No fs, no Next runtime, no network — every input (the canonical
  * universe rows, the wizard criteria, rail stations, amenity points, and the
  * committed per-ZIP context snapshot) is plain data the server page reads
@@ -233,6 +254,12 @@ export function zoningBadgeNote(badge: ZoningBadge, districtCode?: string | null
 
 // ── Property type / footprint (screens) ─────────────────────────────────────
 
+/** A published, finite, strictly-positive measurement — the only kind
+ *  either area field is ever screened on. */
+function positiveArea(value: number | null): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+}
+
 /**
  * The measured area a candidate is screened on — resolved from the
  * REQUESTED property type, never the row's single resolved `propertyType`
@@ -242,24 +269,63 @@ export function zoningBadgeNote(badge: ZoningBadge, districtCode?: string | null
  * carries both — see lib/canonical-sites.ts) — screening that row on
  * `buildingSqft` in a LAND search would silently apply the wrong area.
  *
- * For `"either"`, a row is screened on whichever area corresponds to the
- * evidence that made it eligible: building area if it carries building
- * evidence (falling back to lot area if building area itself is
- * unpublished), else lot area.
+ * For `"existing-building"`/`"vacant-land"` requests this is exactly the
+ * area `screenedPropertyTypeFor` names, with no fallback: an unmeasured
+ * building has no substitute measurement in a building search.
+ *
+ * For `"either"`, this function applies its OWN graceful-degradation rule,
+ * independent of `screenedPropertyTypeFor`: building area if the row
+ * carries building evidence, falling back to lot area if building area
+ * itself is unpublished, else lot area. This is a deliberate, narrow
+ * divergence from `screenedPropertyTypeFor` — an "either" row can be
+ * screened on its lot area (because its building area is simply missing)
+ * while still being reported as a building-evidence record for card copy;
+ * the two functions answer different questions (what measurement is usable
+ * vs. which evidence made the row eligible) and are not required to name
+ * the same field for this one edge case.
  */
 export function screeningAreaSqft(
   row: ShortlistUniverseRow,
   requestedPropertyType: SiteMatchCriteria["propertyType"],
 ): number | null {
-  let value: number | null;
-  if (requestedPropertyType === "existing-building") {
-    value = row.buildingSqft;
-  } else if (requestedPropertyType === "vacant-land") {
-    value = row.lotSqft;
-  } else {
-    value = row.hasVacantBuildingEvidence ? (row.buildingSqft ?? row.lotSqft) : row.lotSqft;
+  if (requestedPropertyType === "either") {
+    if (row.hasVacantBuildingEvidence) {
+      return positiveArea(row.buildingSqft) ?? positiveArea(row.lotSqft);
+    }
+    return positiveArea(row.lotSqft);
   }
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+  const value =
+    screenedPropertyTypeFor(row, requestedPropertyType) === "vacant_building" ? row.buildingSqft : row.lotSqft;
+  return positiveArea(value);
+}
+
+/**
+ * Which property type a row was ACTUALLY evaluated as for the current
+ * request — building or land — resolved from the REQUESTED property type,
+ * never the row's own single resolved `propertyType` (Finding 3, and its
+ * re-review follow-up). For `"existing-building"`/`"vacant-land"` requests
+ * this is trivially the request itself, and is the single source of truth
+ * both `screeningAreaSqft` and every UI surface that describes "screened as
+ * a ___ record" must read for those two request types — a card that
+ * recomputed this itself (e.g. from the row's resolved `propertyType`)
+ * could disagree with what the engine actually did, which is exactly the
+ * bug the re-review caught: a land-search card showing "screened as a
+ * building record" because it read the row's building-wins RESOLVED type
+ * instead of the type the search actually used.
+ *
+ * For `"either"`, this names which EVIDENCE made the row eligible (building
+ * evidence takes precedence when both are present) — `screeningAreaSqft`
+ * applies its own additional fallback for this one request type when that
+ * evidence's own area happens to be unpublished; see that function's doc
+ * comment.
+ */
+export function screenedPropertyTypeFor(
+  row: ShortlistUniverseRow,
+  requestedPropertyType: SiteMatchCriteria["propertyType"],
+): "vacant_building" | "vacant_land" {
+  if (requestedPropertyType === "existing-building") return "vacant_building";
+  if (requestedPropertyType === "vacant-land") return "vacant_land";
+  return row.hasVacantBuildingEvidence ? "vacant_building" : "vacant_land";
 }
 
 /** Evidence-field property-type match — the ONLY property-type screen in
@@ -367,10 +433,19 @@ const SCORE_CRITERION_IDS: readonly string[] = shortlistCriteriaByBehavior("scor
 
 /**
  * Fails loud (throws) if the registry's declared SCREEN/SCORE criteria and
- * this file's actual dispatch tables disagree in either direction. Called
- * once at module load (so any drift breaks the build/first import
- * immediately, never silently) and directly by a dedicated test for a
- * readable failure message.
+ * this file's actual dispatch tables disagree in either direction.
+ *
+ * Called at REQUEST time, from inside `runShortlistEngine` — NOT at module
+ * load (re-review Finding 14: throwing at import time turns a registry/
+ * engine drift into a process-wide crash the moment anything imports this
+ * module, which in a Next.js server means every request 500s, not just the
+ * shortlist route's own fail-closed state). `runShortlistEngine` catches
+ * this and returns `dispatchCoverageBroken: true`, which the page routes to
+ * the SAME "temporarily unavailable" state as any other fail-closed
+ * condition — one broken request, never a crashed process. Exported so a
+ * dedicated test can still call it directly and assert it throws (the
+ * underlying mechanism), and so a SEPARATE test can prove the engine
+ * degrades gracefully around it (the actual production behavior).
  */
 export function assertShortlistDispatchCoverage(): void {
   for (const id of SCREEN_ORDER) {
@@ -394,7 +469,6 @@ export function assertShortlistDispatchCoverage(): void {
     }
   }
 }
-assertShortlistDispatchCoverage();
 
 /** The selected-network station subset — used by BOTH the distance screen
  *  and the proximity score, so the two can never silently disagree about
@@ -529,6 +603,12 @@ export interface RankedShortlistCandidate {
    *  3) — screened using whichever evidence made it eligible for THIS
    *  search, reported explicitly rather than silently resolved. */
   conflictingPropertyTypes: boolean;
+  /** Which property type this row was ACTUALLY evaluated as for the
+   *  current request — see `screenedPropertyTypeFor`. NOT the same as
+   *  `propertyType` above (the row's own resolved type, building-wins on
+   *  conflict) — a card describing "screened as a ___ record" must read
+   *  THIS field, never `propertyType` (re-review Finding 3). */
+  screenedPropertyType: "vacant_building" | "vacant_land";
   overlays: CandidateOverlays;
   /** Populated only when a transit need was selected AND this row could be
    *  measured against it — the one v1 score component, also shown on the
@@ -593,15 +673,39 @@ export interface ShortlistEngineResult {
    *  `decorateShortlistDisplayFacts` on THAT slice only (Finding 11). */
   ranked: RankedShortlistCandidate[];
   funnel: ShortlistFunnelStats;
-  /** True when the reader selected a CTA/Metra transit criterion but the
-   *  underlying rail-station SOURCE is empty (a load failure — see
-   *  lib/rail-stations.ts, which degrades to `[]` rather than throwing),
-   *  not merely "no stations happen to be nearby." The page must treat this
-   *  as fail-closed, the same as a missing/invalid universe file — never
-   *  silently rank as though the criterion had not been selected
-   *  (Finding 8). */
+  /** True when the reader selected a CTA and/or Metra criterion but the
+   *  station SOURCE carries ZERO stations of a SELECTED network — checked
+   *  PER NETWORK, not by whether the overall `stations` array is empty
+   *  (re-review Finding 8: a Metra-only file is still non-empty, so a CTA
+   *  selection against it must still fail closed, and vice versa; a load
+   *  failure that empties the whole array is simply the case where every
+   *  selected network has zero matches). The page must treat this as
+   *  fail-closed, the same as a missing/invalid universe file — never
+   *  silently rank as though the criterion had not been selected. */
   railDataUnavailable: boolean;
+  /** True exactly when a transit criterion was selected AND matched at
+   *  least one station (i.e. `selectedTransitNetwork(...) !== null`) — so
+   *  `ranked`'s order reflects a REAL score. Finding 13: when this is
+   *  false, every candidate scores 0 and `ranked`'s order is merely
+   *  canonicalKey ascending for stability, NOT a ranking — callers must
+   *  not describe it as "ranked" or "highest-ranked" in that case. */
+  scored: boolean;
+  /** True when the criterion registry and this engine's own dispatch
+   *  tables have drifted (`assertShortlistDispatchCoverage` would throw) —
+   *  checked at REQUEST time (Finding 14), never at module import. `ranked`
+   *  and `funnel` are both empty/zeroed when this is true; the page must
+   *  treat it as fail-closed, the same as any other unavailable state. */
+  dispatchCoverageBroken: boolean;
 }
+
+const EMPTY_FUNNEL: ShortlistFunnelStats = {
+  trackedEvidence: 0,
+  canonicalSites: 0,
+  withResolvedPin: 0,
+  withMeasuredArea: 0,
+  insideBand: 0,
+  survivingTransitScreen: 0,
+};
 
 function trackedEvidenceCount(
   propertyType: SiteMatchCriteria["propertyType"],
@@ -627,6 +731,21 @@ function trackedEvidenceCount(
  * the sort, independent of how many display-only points exist.
  */
 export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngineResult {
+  // Finding 14: the coverage check runs HERE, at request time, wrapped —
+  // never at module load. A drift degrades this ONE request to an empty,
+  // clearly-flagged result; it can never crash the process.
+  try {
+    assertShortlistDispatchCoverage();
+  } catch {
+    return {
+      ranked: [],
+      funnel: EMPTY_FUNNEL,
+      railDataUnavailable: false,
+      scored: false,
+      dispatchCoverageBroken: true,
+    };
+  }
+
   const { rows, criteria, stations, sourceRecordsByEvidenceType } = inputs;
 
   const propertyType = criteria.propertyType;
@@ -641,12 +760,16 @@ export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngi
 
   const network = selectedTransitNetwork(criteria, stations);
   const screenMeters = transitScreenMeters(criteria);
-  const wantsRail = criteria.transportation.includes("cta-rail") || criteria.transportation.includes("metra");
-  // A selected network with zero stations of ANY system in the source is a
-  // load failure (lib/rail-stations.ts collapses any read/parse failure to
-  // `[]`), not "there are legitimately no CTA/Metra stations nearby" — that
-  // would still leave `stations` non-empty. Fail closed (Finding 8).
-  const railDataUnavailable = wantsRail && stations.length === 0;
+  // Finding 8 (re-review): checked PER SELECTED NETWORK, not by whether the
+  // whole `stations` array is empty. A Metra-only file is non-empty, but a
+  // CTA selection against it still has zero CTA stations to screen/score
+  // against — and the reverse. Only the networks the reader actually
+  // selected are checked; an unselected network's absence is irrelevant.
+  const wantsCta = criteria.transportation.includes("cta-rail");
+  const wantsMetra = criteria.transportation.includes("metra");
+  const ctaUnavailable = wantsCta && !stations.some(isCtaStation);
+  const metraUnavailable = wantsMetra && !stations.some(isMetraStation);
+  const railDataUnavailable = ctaUnavailable || metraUnavailable;
 
   const screenContext: ScreenDispatchContext = { criteria, network, screenMeters };
 
@@ -692,6 +815,7 @@ export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngi
       saleYear: row.saleYear,
       violation: row.violation,
       conflictingPropertyTypes: row.conflictingPropertyTypes,
+      screenedPropertyType: screenedPropertyTypeFor(row, propertyType),
       overlays: { ...row.overlays },
       transitScore,
       score: transitScore?.points ?? 0,
@@ -711,6 +835,8 @@ export function runShortlistEngine(inputs: ShortlistEngineInputs): ShortlistEngi
       survivingTransitScreen: survivingRows.length,
     },
     railDataUnavailable,
+    scored: network !== null,
+    dispatchCoverageBroken: false,
   };
 }
 

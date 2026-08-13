@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { ShortlistUniverseLoadResult } from "@/lib/shortlist-universe";
 import type { ShortlistUniverseFile, ShortlistUniverseRow } from "@/lib/shortlist-universe-schema";
@@ -187,9 +187,15 @@ describe("Site Shortlist — fail-closed states", () => {
     expect(loadShortlistUniverseMock).not.toHaveBeenCalled();
   });
 
-  it("renders the unavailable state for an unknown ranking-model version (sm_rv) — Finding 5, and NEVER calls the universe loader for it", async () => {
-    const html = await render({ ...READY_SEARCH_PARAMS, sm_rv: "99" });
-    expect(html).toContain("Ranked shortlist temporarily unavailable");
+  // ── Finding 15 (re-review): an unknown sm_rv is NOT the generic outage
+  //    state — see the dedicated describe block below for its own copy,
+  //    brief-preservation, and re-run-link assertions. This block only
+  //    keeps the negative half of the OLD combined check: an unknown sm_rv
+  //    must still never reach the universe loader (the fail-closed data
+  //    layer is skipped either way — only the RENDERED state differs from
+  //    sm_v's).
+  it("an unknown ranking-model version (sm_rv) never calls the universe loader — Finding 5/15", async () => {
+    await render({ ...READY_SEARCH_PARAMS, sm_rv: "99" });
     expect(loadShortlistUniverseMock).not.toHaveBeenCalled();
   });
 
@@ -256,5 +262,104 @@ describe("Site Shortlist — fail-closed states", () => {
     railStationsMock.mockReturnValue([]);
     const html = await render(READY_SEARCH_PARAMS);
     expect(html).not.toContain("Ranked shortlist temporarily unavailable");
+  });
+});
+
+// ── Finding 15 (re-review): an unknown sm_rv gets its OWN state ────────────
+//
+// Pre-fix, BOTH sm_v and sm_rv rejections rendered the identical generic
+// "temporarily unavailable" outage copy — indistinguishable from a real
+// data-loading failure. An unknown sm_rv is a DIFFERENT situation: the link
+// decodes just fine, only the RANKING SEMANTICS behind it are stale. The
+// fixed page must (a) NOT show the generic outage sentence, (b) show the
+// reader's own decoded brief back to them, and (c) offer a one-click
+// "re-run with current ranking" link that re-encodes the SAME brief with
+// the CURRENT sm_rv — never leave them stuck on a stale link with no path
+// forward besides starting over.
+
+describe("Site Shortlist — unknown sm_rv gets its own state, not the generic outage copy (Finding 15)", () => {
+  it("does NOT render the generic 'temporarily unavailable' outage copy for an unknown sm_rv", async () => {
+    const html = await render({ ...READY_SEARCH_PARAMS, sm_rv: "99" });
+    expect(html).not.toContain("Ranked shortlist temporarily unavailable");
+  });
+
+  it("explains the link uses an OLDER ranking version — its own distinct copy", async () => {
+    const html = await render({ ...READY_SEARCH_PARAMS, sm_rv: "99" });
+    expect(html).toMatch(/older version of the ranking/i);
+  });
+
+  it("preserves and displays the decoded brief (project use, property type) rather than discarding it", async () => {
+    const html = await render({ ...READY_SEARCH_PARAMS, sm_rv: "99" });
+    expect(html).toContain("Community facility");
+    expect(html).toContain("Existing building");
+  });
+
+  it("offers a re-run link that re-encodes the SAME brief with the CURRENT sm_rv, alongside the usual map escape hatch", async () => {
+    const html = await render({ ...READY_SEARCH_PARAMS, sm_rv: "99" });
+    expect(html).toContain("Re-run with the current ranking");
+    // The re-run href carries the CURRENT sm_rv, never the stale "99" the
+    // reader arrived with, and the same sm_use/sm_property the brief above
+    // is displaying.
+    const hrefMatch = /href="([^"]*\/vacancy\/60619\/shortlist\?[^"]*)"/.exec(html);
+    expect(hrefMatch).not.toBeNull();
+    const reRunHref = hrefMatch![1].replace(/&amp;/g, "&");
+    const reRunParams = new URLSearchParams(reRunHref.split("?")[1]);
+    expect(reRunParams.get("sm_rv")).not.toBe("99");
+    expect(reRunParams.get("sm_use")).toBe("community-facility");
+    expect(reRunParams.get("sm_property")).toBe("existing-building");
+    // The usual raw-map escape hatch is still offered alongside it.
+    expect(html).toContain("Open the full vacancy map instead");
+  });
+
+  it("still never calls the universe loader for an unknown sm_rv — the data layer is skipped just like every other fail-closed state", async () => {
+    await render({ ...READY_SEARCH_PARAMS, sm_rv: "99" });
+    expect(loadShortlistUniverseMock).not.toHaveBeenCalled();
+  });
+});
+
+// ── Finding 14 (re-review): dispatch-coverage drift routes to the SAME ─────
+//    fail-closed state as any other unavailable condition — never a thrown
+//    error reaching the page, and never rendered as a false empty result.
+
+describe("Site Shortlist — dispatch-coverage drift routes to the unavailable state, never a crash (Finding 14)", () => {
+  afterEach(() => {
+    vi.doUnmock("@/lib/shortlist-engine");
+    vi.resetModules();
+  });
+
+  it("renders the SAME unavailable state (not a thrown error, not a false empty result) when runShortlistEngine reports dispatchCoverageBroken", async () => {
+    vi.doMock("@/lib/shortlist-engine", async (importOriginal) => {
+      const actual = await importOriginal<typeof import("@/lib/shortlist-engine")>();
+      return {
+        ...actual,
+        runShortlistEngine: () => ({
+          ranked: [],
+          funnel: {
+            trackedEvidence: 0,
+            canonicalSites: 0,
+            withResolvedPin: 0,
+            withMeasuredArea: 0,
+            insideBand: 0,
+            survivingTransitScreen: 0,
+          },
+          railDataUnavailable: false,
+          scored: false,
+          dispatchCoverageBroken: true,
+        }),
+      };
+    });
+    vi.resetModules();
+
+    const { default: PageWithBrokenDispatch } = await import("../page");
+    loadShortlistUniverseMock.mockReturnValue({ ok: true, data: fixtureUniverseFile({ rows: [fixtureRow()] }) });
+
+    const html = renderToStaticMarkup(
+      await PageWithBrokenDispatch({
+        params: Promise.resolve({ zip: "60619" }),
+        searchParams: Promise.resolve(READY_SEARCH_PARAMS),
+      }),
+    );
+    expect(html).toContain("Ranked shortlist temporarily unavailable");
+    expect(html).not.toMatch(/0 candidate records|no records match this brief/i);
   });
 });
