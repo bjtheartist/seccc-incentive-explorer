@@ -69,6 +69,7 @@ import {
   RANKING_INPUTS_VERSION,
   SHORTLIST_UNIVERSE_SCHEMA_VERSION,
   ShortlistUniverseFileSchema,
+  shortlistUniverseChecksum,
   validateEnvelopeCounts,
   type ShortlistUniverseFile,
   type ShortlistUniverseRow,
@@ -429,6 +430,19 @@ async function main() {
       process.exit(1);
     }
 
+    // RAW, pre-dedup tally by evidence type (Finding 6) — computed off
+    // `records` BEFORE aggregateCanonicalSites collapses them, so the
+    // zero-result funnel can show actual deduplication (e.g. 60621 carrying
+    // far more raw 311_building reports than canonical building sites)
+    // instead of the post-dedup count twice under two different labels.
+    const sourceRecordsByEvidenceType = {
+      city_land: 0,
+      "311_building": 0,
+      "311_land": 0,
+      assessor_vacant_land: 0,
+    };
+    for (const record of records) sourceRecordsByEvidenceType[record.evidenceType] += 1;
+
     const { sites, stats } = aggregateCanonicalSites(records);
     const dupKeys = findDuplicateCanonicalKeys(sites);
     if (dupKeys.length > 0) {
@@ -444,7 +458,12 @@ async function main() {
       if (site.lotSqft != null || site.buildingSqft != null) withMeasuredArea += 1;
 
       let zoningRow: ShortlistUniverseRow["zoning"] = { status: "unresolved", district: null, zoneType: null, pdNum: null, pmdSubArea: null };
-      let overlays: ShortlistUniverseRow["overlays"] = { ssa: false, ccsa: false, tif: false, nof: false };
+      let overlays: ShortlistUniverseRow["overlays"] = {
+        ssa: { present: false, name: null },
+        ccsa: { present: false, name: null },
+        tif: { present: false, name: null },
+        nof: { present: false, name: null },
+      };
 
       if (site.lat != null && site.lon != null) {
         const resolution = resolveDistrictAtPoint(site.lat, site.lon, zoningSnapshot.features, zoningIndex);
@@ -461,13 +480,17 @@ async function main() {
         }
         if (zoningRow.status === "resolved") withZoning += 1;
 
+        // checkStaticZoneKeys already returns each match's feature name
+        // (ZoneMatch { key, name }) — Finding 12 restores that name onto
+        // the exported row instead of discarding it down to a bare boolean.
+        // An unnamed source feature keeps `name: null`, never a placeholder.
         const zoneMatches = await checkStaticZoneKeys(site.lat, site.lon, OVERLAY_KEYS);
-        const matchedKeys = new Set(zoneMatches.map((m) => m.key));
+        const nameByKey = new Map(zoneMatches.map((m) => [m.key, m.name?.trim() || null]));
         overlays = {
-          ssa: matchedKeys.has("ssa"),
-          ccsa: matchedKeys.has("ccsa"),
-          tif: matchedKeys.has("tif"),
-          nof: matchedKeys.has("nof"),
+          ssa: { present: nameByKey.has("ssa"), name: nameByKey.get("ssa") ?? null },
+          ccsa: { present: nameByKey.has("ccsa"), name: nameByKey.get("ccsa") ?? null },
+          tif: { present: nameByKey.has("tif"), name: nameByKey.get("tif") ?? null },
+          nof: { present: nameByKey.has("nof"), name: nameByKey.get("nof") ?? null },
         };
       }
 
@@ -527,6 +550,7 @@ async function main() {
       },
       counts: {
         sourceRecords: stats.sourceRecords,
+        sourceRecordsByEvidenceType,
         canonicalSites: stats.canonicalSites,
         buildings,
         land,
@@ -556,10 +580,13 @@ async function main() {
     const outPath = join(OUT_DIR, `${zip}.json`);
     const serialized = JSON.stringify(file);
     writeFileSync(outPath, serialized);
-    const checksum = sha256(file);
+    // Checksum the EXACT bytes written to disk (Finding 7) — never a
+    // re-serialization of the object — so the runtime loader can recompute
+    // the identical checksum from the raw bytes it reads back.
+    const checksum = shortlistUniverseChecksum(serialized);
     manifestFiles[zip] = { path: `${zip}.json`, checksum, rowCount: rows.length };
 
-    console.log(`  sourceRecords=${stats.sourceRecords} canonicalSites=${stats.canonicalSites} buildings=${buildings} land=${land} withPin=${withPin} withZoning=${withZoning} collapsed=${stats.collapsedRecords} conflicts=${stats.unresolvedConflicts}`);
+    console.log(`  sourceRecords=${stats.sourceRecords} (${JSON.stringify(sourceRecordsByEvidenceType)}) canonicalSites=${stats.canonicalSites} buildings=${buildings} land=${land} withPin=${withPin} withZoning=${withZoning} collapsed=${stats.collapsedRecords} conflicts=${stats.unresolvedConflicts}`);
     perZipSummary.push({ zip, sourceRecords: stats.sourceRecords, canonicalSites: stats.canonicalSites, buildings, land });
   }
 

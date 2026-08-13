@@ -18,22 +18,60 @@
  * exact same schema, with each importing what its own runtime can support.
  */
 
+import { createHash } from "node:crypto";
 import { z } from "zod";
 
-export const SHORTLIST_UNIVERSE_SCHEMA_VERSION = 1 as const;
-export const RANKING_INPUTS_VERSION = 1 as const;
+/**
+ * v2 (PR2 adversarial-review fix round): adds `counts.sourceRecordsByEvidenceType`
+ * (the RAW, pre-dedup record tally the zero-result funnel needs to show
+ * actual deduplication — see Finding 6) and gives every overlay membership
+ * an optional name (Finding 12) instead of a bare boolean. Both are additive
+ * to the row/file shape but the schema version still bumps because the
+ * envelope's `counts` and `overlays` shapes changed — an old v1 file must
+ * fail closed (zod literal mismatch) rather than parse with `undefined`
+ * holes the loader/engine would otherwise have to guess about.
+ */
+export const SHORTLIST_UNIVERSE_SCHEMA_VERSION = 2 as const;
+/**
+ * Bumped alongside the schema version because the ranking ALGORITHM itself
+ * changed in this same round (Finding 1: baseline scoring removed; Finding
+ * 3: footprint screening now resolves area from the REQUESTED property type;
+ * Finding 9: PMD gets its own neutral badge). lib/shortlist-engine.ts's
+ * `RANKING_MODEL_VERSION` is cross-checked against this at load time — see
+ * that file and Finding 5's separate `sm_rv` request-level version, which is
+ * a distinct concern (is this URL's ranking semantics current) from this one
+ * (is this DATA FILE's ranking inputs the shape the engine expects).
+ */
+export const RANKING_INPUTS_VERSION = 2 as const;
 
 // ── Envelope schema ─────────────────────────────────────────────────────────
 
 const EvidenceTypeSchema = z.enum(["city_land", "311_building", "311_land", "assessor_vacant_land"]);
+export type EvidenceType = z.infer<typeof EvidenceTypeSchema>;
 
 const SourceVintageSchema = z.object({
   vintage: z.string(),
   checksum: z.string(),
 });
 
+/** Raw, PRE-DEDUP source-record tally by evidence type — distinct from
+ * `canonicalSites`/`buildings`/`land`, which count post-dedup canonical
+ * rows. This is what lets the zero-result funnel show actual deduplication
+ * (Finding 6): e.g. 60621 carrying far more raw `311_building` reports than
+ * canonical building sites, because many reports collapse onto the same
+ * physical site. Keys mirror EvidenceTypeSchema exactly (enforced by the
+ * `.strict()` shape below via an explicit test, since zod's z.record does
+ * not itself constrain string keys to an enum). */
+const SourceRecordsByEvidenceTypeSchema = z.object({
+  city_land: z.number().int().nonnegative(),
+  "311_building": z.number().int().nonnegative(),
+  "311_land": z.number().int().nonnegative(),
+  assessor_vacant_land: z.number().int().nonnegative(),
+});
+
 const CountsSchema = z.object({
   sourceRecords: z.number().int().nonnegative(),
+  sourceRecordsByEvidenceType: SourceRecordsByEvidenceTypeSchema,
   canonicalSites: z.number().int().nonnegative(),
   buildings: z.number().int().nonnegative(),
   land: z.number().int().nonnegative(),
@@ -58,11 +96,21 @@ const RowZoningSchema = z.object({
   pmdSubArea: z.string().nullable(),
 });
 
+/** One overlay layer's membership for a site: whether it's mapped at all,
+ * and — when it is — the feature's own name (Finding 12). `name` is
+ * `null` both when `present` is false AND when the source geometry
+ * carries no name for a present match (an unnamed feature is a real,
+ * honest state, never coerced to a placeholder string). */
+const OverlayMembershipSchema = z.object({
+  present: z.boolean(),
+  name: z.string().nullable(),
+});
+
 const RowOverlaysSchema = z.object({
-  ssa: z.boolean(),
-  ccsa: z.boolean(),
-  tif: z.boolean(),
-  nof: z.boolean(),
+  ssa: OverlayMembershipSchema,
+  ccsa: OverlayMembershipSchema,
+  tif: OverlayMembershipSchema,
+  nof: OverlayMembershipSchema,
 });
 
 const OwnerConfidenceSchema = z.enum(["pin_matched", "inferred", "needs_verification"]);
@@ -180,6 +228,19 @@ export function validateEnvelopeCounts(file: ShortlistUniverseFile): string[] {
   if (file.dedupe.conflictingPropertyTypes !== conflictingPropertyTypes) {
     issues.push(`dedupe.conflictingPropertyTypes (${file.dedupe.conflictingPropertyTypes}) !== rows with conflictingPropertyTypes (${conflictingPropertyTypes})`);
   }
+  // sourceRecordsByEvidenceType must sum to sourceRecords — the raw tally
+  // (Finding 6) is only trustworthy for the funnel if it is itself internally
+  // consistent, not just present.
+  const evidenceTypeSum =
+    file.counts.sourceRecordsByEvidenceType.city_land +
+    file.counts.sourceRecordsByEvidenceType["311_building"] +
+    file.counts.sourceRecordsByEvidenceType["311_land"] +
+    file.counts.sourceRecordsByEvidenceType.assessor_vacant_land;
+  if (evidenceTypeSum !== file.counts.sourceRecords) {
+    issues.push(
+      `counts.sourceRecordsByEvidenceType sums to ${evidenceTypeSum} !== counts.sourceRecords (${file.counts.sourceRecords})`,
+    );
+  }
   const dupKeys = new Map<string, number>();
   for (const row of rows) dupKeys.set(row.canonicalKey, (dupKeys.get(row.canonicalKey) ?? 0) + 1);
   const duplicates = [...dupKeys.entries()].filter(([, n]) => n > 1);
@@ -188,4 +249,16 @@ export function validateEnvelopeCounts(file: ShortlistUniverseFile): string[] {
   }
 
   return issues;
+}
+
+/**
+ * The checksum both the export script and the runtime loader compute, over
+ * the EXACT raw bytes written to / read from disk — never a re-serialization
+ * of the parsed object, which could silently diverge on key order or
+ * whitespace. This is what makes the manifest's per-file checksum a real
+ * tamper/truncation guard (Finding 7) rather than decoration: the loader
+ * hashes the same string it just read and fails closed on any mismatch.
+ */
+export function shortlistUniverseChecksum(raw: string): string {
+  return createHash("sha256").update(raw).digest("hex");
 }
