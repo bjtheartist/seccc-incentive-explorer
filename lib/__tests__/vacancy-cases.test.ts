@@ -351,7 +351,10 @@ describe("buildCaseRecords (real per-ZIP data)", () => {
     expect(publicLand.landCount).toBe(867);
     expect(publicLand.buildingCount).toBe(0);
     const buildingReview = deriveCase("building-review", records);
-    expect(buildingReview.buildingCount).toBe(1252);
+    // Updated against the 2026-08-12 vacancy-index.json refresh (was 1252
+    // against the 2026-07-22 vintage) — a live-source count, expected to
+    // drift with each real refresh.
+    expect(buildingReview.buildingCount).toBe(1260);
   });
 });
 
