@@ -1,18 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 import { resolveZoneLayerEvidence, resolveZoneEvidenceV2 } from "../zones-check";
-import { STATIC_ONLY_ZONE_KEYS, ZONE_LAYER_REGISTRY } from "../zone-layer-registry";
+import { STATIC_ONLY_ZONE_KEYS, ZONE_LAYER_REGISTRY, ZONE_DATA_REVISION } from "../zone-layer-registry";
 
 /**
- * Producer tests for Zone Evidence v2 (build-spec.md 1.3). DATABASE_URL is
- * unset in this test environment, so getSQL() returns null by default and
- * `opts.sql: null` below is the explicit, always-true version of the same
- * thing — every "static path" assertion here exercises the real, unmodified
- * shipped tif-districts.geojson, which (per app/api/zones/check/route.test.ts's
- * own regression comment) already contains 4 malformed features (unclosed
- * rings — T-55, T-64, T-180, T-117) that make turf.booleanPointInPolygon
- * throw regardless of query point. That existing defect is exactly the
- * fixture this suite needs to prove "malformed geometry -> unknown, not
- * not_matched" against real data instead of a synthetic fixture.
+ * Producer tests for Zone Evidence v2 (build-spec.md 1.3; review1 R2 + R5).
+ * DATABASE_URL is unset in this test environment, so getSQL() returns null
+ * by default and `opts.sql: null` below is the explicit, always-true
+ * version of the same thing — every "static path" assertion here exercises
+ * the real, unmodified shipped tif-districts.geojson, which (per
+ * app/api/zones/check/route.test.ts's own regression comment) already
+ * contains 4 malformed features (unclosed rings — T-55, T-64, T-180,
+ * T-117) that make turf.booleanPointInPolygon throw regardless of query
+ * point. That existing defect is exactly the fixture this suite needs to
+ * prove "malformed geometry -> unknown, not not_matched" against real data
+ * instead of a synthetic fixture.
  */
 
 describe("resolveZoneLayerEvidence — static path (real shipped TIF geometry)", () => {
@@ -50,23 +51,178 @@ describe("resolveZoneLayerEvidence — static path (real shipped TIF geometry)",
     }
   });
 
-  it("a clean not-matched point (no match, no malformed feature hit) resolves to not_matched", async () => {
-    // A static-only layer with no malformed geometry, at a point nowhere
-    // near any NOF corridor.
+  it("a clean not-matched point (no match, no malformed feature, current revision) resolves to not_matched", async () => {
+    // A static-only, current-revision layer with no malformed geometry, at
+    // a point nowhere near any NOF corridor.
+    expect(ZONE_LAYER_REGISTRY.nof.dataRevision).toBe(ZONE_DATA_REVISION); // sanity: current, not stale
     const evidence = await resolveZoneLayerEvidence("nof", 41.6, -88.0, { sql: null });
     expect(evidence.state).toBe("not_matched");
   });
 
-  it("an unreadable/missing static source file is unknown/source_unavailable, not a thrown error", async () => {
-    // "microMarketRecovery" registry entry exists but the underlying
-    // static-file loader path is exercised for real; point at an
-    // intentionally bogus key not present in the registry at all to prove
-    // resolveZoneLayerEvidence never throws outward.
+  it("an unregistered key is unknown/layer_missing, never a thrown error", async () => {
     const evidence = await resolveZoneLayerEvidence("not-a-real-layer", 41.8, -87.6, {
       sql: null,
     });
     expect(evidence.state).toBe("unknown");
     expect(evidence.reason).toBe("layer_missing");
+  });
+});
+
+describe("resolveZoneLayerEvidence — static-file failure modes (registered key, injected loader — review1 R5)", () => {
+  // All four scenarios use "tif" — a real registered key — with an
+  // injected loadZoneFile, per review1 R5's critique that the prior test
+  // suite only exercised failure paths against an UNREGISTERED key and so
+  // never actually proved source_unavailable/layer_missing/malformed
+  // behavior for a real layer's file-loading path.
+
+  it("a loader that throws (missing file / invalid JSON) -> unknown/source_unavailable", async () => {
+    const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+      sql: null,
+      loadZoneFile: async () => {
+        throw new Error("ENOENT: no such file");
+      },
+    });
+    expect(evidence).toEqual({ state: "unknown", reason: "source_unavailable" });
+  });
+
+  it("a loader that resolves to malformed-shape JSON (not a FeatureCollection) -> unknown/source_unavailable", async () => {
+    const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+      sql: null,
+      loadZoneFile: async () => ({ not: "a feature collection" }),
+    });
+    expect(evidence).toEqual({ state: "unknown", reason: "source_unavailable" });
+  });
+
+  it("a well-formed but EMPTY collection -> unknown/layer_missing, never a confident not_matched", async () => {
+    const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+      sql: null,
+      loadZoneFile: async () => ({ type: "FeatureCollection", features: [] }),
+    });
+    expect(evidence).toEqual({ state: "unknown", reason: "layer_missing" });
+  });
+
+  it("null geometry on every feature -> unknown/malformed_geometry, never not_matched", async () => {
+    const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+      sql: null,
+      loadZoneFile: async () => ({
+        type: "FeatureCollection",
+        features: [{ type: "Feature", properties: {}, geometry: null }],
+      }),
+    });
+    expect(evidence.state).toBe("unknown");
+    expect(evidence.reason).toBe("malformed_geometry");
+  });
+
+  it("wrong geometry type (Point instead of Polygon) -> unknown/malformed_geometry", async () => {
+    const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+      sql: null,
+      loadZoneFile: async () => ({
+        type: "FeatureCollection",
+        features: [
+          { type: "Feature", properties: {}, geometry: { type: "Point", coordinates: [0, 0] } },
+        ],
+      }),
+    });
+    expect(evidence.state).toBe("unknown");
+    expect(evidence.reason).toBe("malformed_geometry");
+  });
+
+  it("none of the above ever produce not_matched or a thrown error", async () => {
+    const scenarios: Array<() => Promise<unknown>> = [
+      () => Promise.reject(new Error("boom")),
+      () => Promise.resolve(null),
+      () => Promise.resolve({ type: "FeatureCollection", features: [] }),
+      () =>
+        Promise.resolve({
+          type: "FeatureCollection",
+          features: [{ type: "Feature", properties: {}, geometry: null }],
+        }),
+    ];
+    for (const loadZoneFile of scenarios) {
+      const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+        sql: null,
+        loadZoneFile,
+      });
+      expect(evidence.state).toBe("unknown");
+      expect(evidence.state).not.toBe("not_matched");
+    }
+  });
+});
+
+describe("resolveZoneLayerEvidence — stale-revision static layers never assert a negative (review1 R2)", () => {
+  it("microMarketRecovery is registered with a revision older than the current known-good snapshot", () => {
+    expect(ZONE_LAYER_REGISTRY.microMarketRecovery.dataRevision).not.toBe(ZONE_DATA_REVISION);
+  });
+
+  it("a clean scan with zero matches on the stale microMarketRecovery boundary is unknown/stale_source, never not_matched", async () => {
+    // A point nowhere near any of the 13 legacy MMRP polygons.
+    const evidence = await resolveZoneLayerEvidence("microMarketRecovery", 41.6, -88.0, {
+      sql: null,
+    });
+    expect(evidence.state).toBe("unknown");
+    expect(evidence.reason).toBe("stale_source");
+    expect(evidence.state).not.toBe("not_matched");
+  });
+
+  it("a layer whose revision IS current can still assert not_matched (control case)", async () => {
+    const evidence = await resolveZoneLayerEvidence("nof", 41.6, -88.0, { sql: null });
+    expect(evidence).toEqual({ state: "not_matched" });
+  });
+});
+
+describe("resolveZoneLayerEvidence — HUBZone redesignated tracts (review1 R2)", () => {
+  it("a point inside a real, currently-shipped redesignated tract is never plain matched", async () => {
+    // Tract 17031020602 — a real "category: redesignated" feature in the
+    // shipped public/data/zones/hubzone.geojson (66 such features, matching
+    // the catalog record's "66 redesignated tracts" claim). Centroid
+    // computed with turf and self-verified to fall inside the polygon.
+    const evidence = await resolveZoneLayerEvidence(
+      "hubzone",
+      42.00145844155844,
+      -87.69358961038957,
+      { sql: null }
+    );
+    expect(evidence.state).not.toBe("matched");
+    expect(evidence.state).toBe("unknown");
+    expect(evidence.reason).toBe("redesignated_area_expired");
+  });
+
+  it("a point inside a real, currently-shipped QUALIFIED tract is still a plain matched (control case)", async () => {
+    // A "qualified" category HUBZone tract, not redesignated.
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const data = JSON.parse(
+      readFileSync(join(process.cwd(), "public", "data", "zones", "hubzone.geojson"), "utf8")
+    ) as { features: Array<{ properties: { category: string } }> };
+    const qualifiedCount = data.features.filter((f) => f.properties.category === "qualified").length;
+    expect(qualifiedCount).toBeGreaterThan(0);
+
+    // Compute a self-verified centroid the same way the redesignated test does.
+    const turf = await import("@turf/turf");
+    const raw = JSON.parse(
+      readFileSync(join(process.cwd(), "public", "data", "zones", "hubzone.geojson"), "utf8")
+    ) as { features: GeoJSON.Feature[] };
+    const qualified = raw.features.filter(
+      (f) => (f.properties as Record<string, unknown>).category === "qualified"
+    );
+    let found: { lat: number; lon: number } | null = null;
+    for (const feature of qualified) {
+      const centroid = turf.centroid(feature as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>);
+      const point = turf.point(centroid.geometry.coordinates);
+      if (
+        turf.booleanPointInPolygon(
+          point,
+          feature as GeoJSON.Feature<GeoJSON.Polygon | GeoJSON.MultiPolygon>
+        )
+      ) {
+        found = { lat: centroid.geometry.coordinates[1], lon: centroid.geometry.coordinates[0] };
+        break;
+      }
+    }
+    expect(found).not.toBeNull();
+
+    const evidence = await resolveZoneLayerEvidence("hubzone", found!.lat, found!.lon, { sql: null });
+    expect(evidence.state).toBe("matched");
   });
 });
 
@@ -89,31 +245,32 @@ describe("resolveZoneLayerEvidence — DB path (mocked at the getSQL boundary, p
     expect(evidence).toEqual({ state: "unknown", reason: "source_unavailable" });
   });
 
-  it("zero DB rows for a layer NOT marked verifiedLoaded is unknown/layer_missing, never a confident not_matched", async () => {
-    const registryEntry = ZONE_LAYER_REGISTRY.tif;
-    expect(registryEntry.source).toBe("db");
-    const unverifiedSpy = vi
-      .spyOn(await import("../zone-layer-registry"), "getZoneLayerRegistryEntry")
-      .mockReturnValue({ ...registryEntry, verifiedLoaded: false });
-    try {
-      const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
-        sql: {} as never,
-        dbLayerQuery: async () => null, // zero rows
-      });
-      expect(evidence).toEqual({ state: "unknown", reason: "layer_missing" });
-    } finally {
-      unverifiedSpy.mockRestore();
-    }
+  it("zero DB rows AND the layer is not verified to exist -> unknown/layer_missing, never a confident not_matched", async () => {
+    const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+      sql: {} as never,
+      dbLayerQuery: async () => null, // zero rows at this point
+      dbLayerExists: async () => false, // ... and the layer has no rows anywhere
+    });
+    expect(evidence).toEqual({ state: "unknown", reason: "layer_missing" });
   });
 
-  it("zero DB rows for a layer marked verifiedLoaded is a genuine not_matched", async () => {
-    const registryEntry = ZONE_LAYER_REGISTRY.tif;
-    expect(registryEntry.verifiedLoaded).toBe(true); // sanity: the real registry default
+  it("zero DB rows but the layer IS verified to exist (has rows elsewhere) -> genuine not_matched", async () => {
     const evidence = await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
       sql: {} as never,
       dbLayerQuery: async () => null,
+      dbLayerExists: async () => true,
     });
     expect(evidence).toEqual({ state: "not_matched" });
+  });
+
+  it("the existence check is only consulted after a zero-row point query, never before", async () => {
+    const existsCheck = vi.fn(async () => true);
+    await resolveZoneLayerEvidence("tif", 41.8, -87.6, {
+      sql: {} as never,
+      dbLayerQuery: async () => ({ name: "matched before existence check needed" }),
+      dbLayerExists: existsCheck,
+    });
+    expect(existsCheck).not.toHaveBeenCalled();
   });
 });
 
@@ -151,6 +308,19 @@ describe("resolveZoneEvidenceV2 — layer independence", () => {
       expect(layers[key]).toBeDefined();
       expect(["matched", "not_matched", "unknown"]).toContain(layers[key].state);
     }
+  });
+
+  it("one layer's loader throwing synchronously never rejects the whole resolver", async () => {
+    const layers = await resolveZoneEvidenceV2(41.8, -87.6, ["tif", "nof"], {
+      sql: null,
+      loadZoneFile: async (key) => {
+        if (key === "tif") throw new Error("simulated catastrophic failure");
+        return { type: "FeatureCollection", features: [] };
+      },
+    });
+    expect(layers.tif.state).toBe("unknown");
+    expect(layers.nof.state).toBe("unknown"); // empty collection -> layer_missing
+    expect(layers.nof.reason).toBe("layer_missing");
   });
 });
 

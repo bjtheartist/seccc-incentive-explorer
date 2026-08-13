@@ -1,15 +1,28 @@
 /**
  * lib/zone-layer-registry.ts — the layer registry / health manifest for
- * Zone Evidence v2 (build-spec.md 1.3; audit F2; consult item 6).
+ * Zone Evidence v2 (build-spec.md 1.3; audit F2; consult item 6; review1
+ * R2).
  *
  * A DB query returning zero rows for a layer does NOT by itself prove "not
  * matched" — it is equally consistent with the layer never having been
- * loaded into the `zones` table at all. This registry is the source of
- * truth for which layers are expected and whether each one has been
- * verified-loaded (by ingestion/build tooling — not asserted at request
- * time). `resolveZoneLayerEvidence` (lib/zones-check.ts) treats a zero-row
- * DB result for a layer NOT marked `verifiedLoaded` as `unknown` (reason
- * `layer_missing`), never as a confirmed `not_matched`.
+ * loaded into the `zones` table at all. A static file loading successfully
+ * does NOT by itself prove its geometry is current — a boundary can be
+ * shipped, parseable, and stale at the same time (microMarketRecovery's own
+ * `boundaryDisclaimer` says exactly this: 13 legacy MMRP areas vs. the
+ * City's 11 current CNRP target areas).
+ *
+ * Negative-assertion rights (the right for a layer to return `not_matched`
+ * rather than `unknown`) are therefore tied to EVIDENCE gathered at
+ * resolution time, not to a blanket static flag:
+ *   - DB layers: `not_matched` only after confirming, via a real existence
+ *     check at resolution time (see `resolveZoneLayerEvidence` in
+ *     lib/zones-check.ts), that the layer has ANY rows loaded at all.
+ *   - Static layers: `not_matched` only when the source file loaded, is a
+ *     well-formed non-empty FeatureCollection, AND its registry
+ *     `dataRevision` matches the current known-good snapshot
+ *     (`isLayerRevisionCurrent`). A layer whose revision is pinned to a
+ *     known-stale snapshot (see `STALE_LAYER_REVISIONS`) can still report a
+ *     real `matched` hit, but never a confident negative.
  */
 import { CHECKABLE_ZONE_KEYS } from "./constants";
 
@@ -20,23 +33,43 @@ export interface ZoneLayerRegistryEntry {
   source: ZoneLayerSource;
   /** File name under public/data/zones/, when source === "static-file" (or as the static fallback for a "db" layer). */
   sourceFile: string;
-  /** Revision tag for this layer's underlying data. */
-  dataRevision: string;
   /**
-   * True once ingestion/build has confirmed this layer is actually loaded
-   * with valid geometry. Only when true does a zero-row DB result count as
-   * a genuine "not_matched" rather than "unknown / layer_missing".
+   * Revision tag for this specific layer's underlying data. Compared
+   * against a "current known-good" revision (normally `ZONE_DATA_REVISION`)
+   * to decide whether this layer may assert a confident `not_matched` — see
+   * `isLayerRevisionCurrent`. Layers pinned to an older tag in
+   * `STALE_LAYER_REVISIONS` never satisfy that check.
    */
-  verifiedLoaded: boolean;
+  dataRevision: string;
 }
 
 /**
- * A single revision tag for this snapshot of the zone-layer dataset,
+ * The current known-good revision tag for the zone-layer dataset,
  * surfaced at the top level of every Zone Evidence v2 response
  * (`dataRevision`). Bump when any layer's underlying source file/table
  * changes in a way that could change results.
  */
 export const ZONE_DATA_REVISION = "zones-v2-2026-08-13";
+
+/**
+ * Layers whose registry revision is deliberately pinned OLDER than
+ * `ZONE_DATA_REVISION`, because the underlying boundary is known-stale.
+ * `isLayerRevisionCurrent()` returns false for these, so
+ * `checkStaticZoneV2` (lib/zones-check.ts) can still report a real
+ * geometry match on them but can never assert a confident `not_matched` —
+ * a stale boundary proves nothing about points it doesn't cover.
+ *
+ *   microMarketRecovery: the shipped micro-market-recovery.geojson holds
+ *   13 legacy MMRP areas; the City now publishes 11 CNRP target areas that
+ *   have not been re-mapped here (see the program record's own
+ *   `boundaryDisclaimer` in data/programs-internal.json). A point outside
+ *   the 13 legacy polygons could easily be inside one of the un-mapped
+ *   current 11 — asserting `not_matched` there would be an unsupported
+ *   negative claim (review1 R2).
+ */
+const STALE_LAYER_REVISIONS: Partial<Record<string, string>> = {
+  microMarketRecovery: "zones-v1-legacy-mmrp-13-areas-2022",
+};
 
 /**
  * The four layers `lib/zones-check.ts`'s v1 `resolveZonesAtPoint` already
@@ -76,11 +109,7 @@ const zoneFileMap: Record<string, string> = {
  * Registry for every layer Zone Evidence v2 can be asked about: the 16
  * point-in-polygon "checkable" zone keys (lib/constants.ts
  * CHECKABLE_ZONE_KEYS — excludes the 4 point-data-only keys, which are not
- * a polygon test). Every entry currently ships `verifiedLoaded: true`
- * because these are the same source files v1's `checkStaticZones` has
- * relied on in production; a future ingestion step that re-verifies
- * geometry at build time can flip individual entries to `false` without
- * any code change here.
+ * a polygon test).
  */
 export const ZONE_LAYER_REGISTRY: Record<string, ZoneLayerRegistryEntry> = Object.fromEntries(
   CHECKABLE_ZONE_KEYS.map((key) => [
@@ -89,8 +118,7 @@ export const ZONE_LAYER_REGISTRY: Record<string, ZoneLayerRegistryEntry> = Objec
       key,
       source: STATIC_ONLY_ZONE_KEYS.has(key) ? "static-file" : "db",
       sourceFile: zoneFileMap[key] ?? "",
-      dataRevision: ZONE_DATA_REVISION,
-      verifiedLoaded: true,
+      dataRevision: STALE_LAYER_REVISIONS[key] ?? ZONE_DATA_REVISION,
     } satisfies ZoneLayerRegistryEntry,
   ])
 );
@@ -99,6 +127,18 @@ export function getZoneLayerRegistryEntry(key: string): ZoneLayerRegistryEntry |
   return ZONE_LAYER_REGISTRY[key];
 }
 
-export function isLayerVerifiedLoaded(key: string): boolean {
-  return ZONE_LAYER_REGISTRY[key]?.verifiedLoaded === true;
+/**
+ * True when `key`'s registered data revision matches the current
+ * known-good snapshot — i.e. the layer is allowed to assert a confident
+ * `not_matched`. False for an unregistered key or a layer pinned to a
+ * known-stale revision (`STALE_LAYER_REVISIONS`); such a layer may still
+ * report a real `matched` hit, but a "no match found" result there
+ * degrades to `unknown` instead.
+ */
+export function isLayerRevisionCurrent(
+  key: string,
+  currentRevision: string = ZONE_DATA_REVISION
+): boolean {
+  const entry = ZONE_LAYER_REGISTRY[key];
+  return entry !== undefined && entry.dataRevision === currentRevision;
 }

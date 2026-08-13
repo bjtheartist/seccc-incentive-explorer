@@ -41,6 +41,7 @@ describe("1.4 bullet: feign one failed relevant layer -> that layer is unknown, 
     resolveCachedMock.mockResolvedValue({
       layers: { tif: { state: "matched" }, ssa: { state: "unknown", reason: "source_unavailable" } },
       hadUnknown: true,
+      checkedAt: "2026-08-01T00:00:00.000Z",
     });
     const { GET } = await import("../../app/api/zones/check/v2/route");
     const res = await GET(new NextRequest("http://localhost/api/zones/check/v2?lat=41.8&lon=-87.6&layers=tif,ssa"));
@@ -74,23 +75,52 @@ describe("1.4 bullet: malformed geometry -> unknown, not not_matched", () => {
   });
 });
 
-describe("1.4 bullet: missing DB layer without registry verification -> unknown", () => {
-  it("full test: zones-check-v2.test.ts 'zero DB rows for a layer NOT marked verifiedLoaded is unknown/layer_missing'", async () => {
-    const { getZoneLayerRegistryEntry, ZONE_LAYER_REGISTRY } = await import("../zone-layer-registry");
-    const registryModule = await import("../zone-layer-registry");
-    const spy = vi
-      .spyOn(registryModule, "getZoneLayerRegistryEntry")
-      .mockReturnValue({ ...ZONE_LAYER_REGISTRY.tif, verifiedLoaded: false });
-    try {
-      const layers = await resolveZoneEvidenceV2(41.8, -87.6, ["tif"], {
-        sql: {} as never,
-        dbLayerQuery: async () => null,
-      });
-      expect(layers.tif).toEqual({ state: "unknown", reason: "layer_missing" });
-    } finally {
-      spy.mockRestore();
-    }
-    expect(getZoneLayerRegistryEntry("tif")?.verifiedLoaded).toBe(true); // restored
+describe("1.4 bullet: missing DB layer without registry verification -> unknown (review1 R2: verification is now a runtime existence check, not a static flag)", () => {
+  it("full test: zones-check-v2.test.ts 'zero DB rows AND the layer is not verified to exist -> unknown/layer_missing'", async () => {
+    const layers = await resolveZoneEvidenceV2(41.8, -87.6, ["tif"], {
+      sql: {} as never,
+      dbLayerQuery: async () => null, // zero rows at this point
+      dbLayerExists: async () => false, // ... and the layer has no rows loaded anywhere
+    });
+    expect(layers.tif).toEqual({ state: "unknown", reason: "layer_missing" });
+  });
+
+  it("control: zero rows but the layer IS verified to exist elsewhere -> genuine not_matched", async () => {
+    const layers = await resolveZoneEvidenceV2(41.8, -87.6, ["tif"], {
+      sql: {} as never,
+      dbLayerQuery: async () => null,
+      dbLayerExists: async () => true,
+    });
+    expect(layers.tif).toEqual({ state: "not_matched" });
+  });
+});
+
+describe("1.4 bullet (review1 R2 addendum): HUBZone redesignated-tract match never returns plain matched", () => {
+  it("full test: zones-check-v2.test.ts 'a point inside a real, currently-shipped redesignated tract is never plain matched'", async () => {
+    const { resolveZoneLayerEvidence } = await import("../zones-check");
+    const evidence = await resolveZoneLayerEvidence(
+      "hubzone",
+      42.00145844155844,
+      -87.69358961038957,
+      { sql: null }
+    );
+    expect(evidence.state).not.toBe("matched");
+    expect(evidence).toEqual({
+      state: "unknown",
+      reason: "redesignated_area_expired",
+      name: expect.any(String),
+    });
+  });
+});
+
+describe("1.4 bullet (review1 R2 addendum): a static layer with a stale registry revision never asserts a negative", () => {
+  it("full test: zones-check-v2.test.ts 'a clean scan with zero matches on the stale microMarketRecovery boundary is unknown/stale_source'", async () => {
+    const { resolveZoneLayerEvidence } = await import("../zones-check");
+    const evidence = await resolveZoneLayerEvidence("microMarketRecovery", 41.6, -88.0, {
+      sql: null,
+    });
+    expect(evidence.state).toBe("unknown");
+    expect(evidence.reason).toBe("stale_source");
   });
 });
 
