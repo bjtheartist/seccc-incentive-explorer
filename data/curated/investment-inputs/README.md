@@ -302,7 +302,7 @@ below, which covers the full four-file universe._
 SRS of n=2,401, seed 20260813, drawn from the FULL exported IRS-derived
 foundation universe — 26,501 rows across all four published foundation files
 (base + Tier-1 + Phase-2 + Phase-3), bound to the export's own content hash
-(`46981af64b3eb677…`). Chicago Prize
+(`b79c1653c7c3bd09…`). Chicago Prize
 (18 rows, award announcements rather than IRS filings) is excluded from
 this SRS and reported separately below as a census check.
 
