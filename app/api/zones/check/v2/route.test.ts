@@ -44,6 +44,7 @@ describe("GET /api/zones/check/v2", () => {
         nof: { state: "not_matched" },
       },
       hadUnknown: false,
+      checkedAt: "2026-08-01T00:00:00.000Z",
     });
 
     const { GET } = await import("./route");
@@ -63,10 +64,24 @@ describe("GET /api/zones/check/v2", () => {
     expect(Object.hasOwn(body, "unknown")).toBe(false);
   });
 
+  it("echoes the cache's own checkedAt verbatim rather than stamping a fresh now() (review1 R3)", async () => {
+    const originalCheckedAt = "2020-01-01T00:00:00.000Z"; // deliberately ancient / not "now"
+    resolveMock.mockResolvedValue({
+      layers: { tif: { state: "matched", name: "Some TIF" } },
+      hadUnknown: false,
+      checkedAt: originalCheckedAt,
+    });
+    const { GET } = await import("./route");
+    const res = await GET(checkRequest("lat=41.8&lon=-87.6&layers=tif"));
+    const body = await res.json();
+    expect(body.checkedAt).toBe(originalCheckedAt);
+  });
+
   it("fully-covered response is publicly cacheable (no no-store)", async () => {
     resolveMock.mockResolvedValue({
       layers: { tif: { state: "matched", name: "Some TIF" } },
       hadUnknown: false,
+      checkedAt: "2026-08-01T00:00:00.000Z",
     });
     const { GET } = await import("./route");
     const res = await GET(checkRequest("lat=41.8&lon=-87.6&layers=tif"));
@@ -82,6 +97,7 @@ describe("GET /api/zones/check/v2", () => {
         ssa: { state: "unknown", reason: "source_unavailable" },
       },
       hadUnknown: true,
+      checkedAt: "2026-08-01T00:00:00.000Z",
     });
     const { GET } = await import("./route");
     const res = await GET(checkRequest("lat=41.8&lon=-87.6&layers=tif,ssa"));
@@ -89,7 +105,11 @@ describe("GET /api/zones/check/v2", () => {
   });
 
   it("defaults to every checkable layer when `layers` is omitted", async () => {
-    resolveMock.mockResolvedValue({ layers: {}, hadUnknown: false });
+    resolveMock.mockResolvedValue({
+      layers: {},
+      hadUnknown: false,
+      checkedAt: "2026-08-01T00:00:00.000Z",
+    });
     const { GET } = await import("./route");
     await GET(checkRequest("lat=41.8&lon=-87.6"));
     const [, , , requestedLayers] = resolveMock.mock.calls[0];

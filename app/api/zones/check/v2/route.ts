@@ -29,6 +29,11 @@ export const runtime = "nodejs";
  * that same response's own TTL at 5 minutes — see that module's doc
  * comment for why "stale-on-error must never serve as evidence for a
  * negative claim" needs both.
+ *
+ * `checkedAt` is the ORIGINAL resolution timestamp returned by
+ * resolveZoneEvidenceV2Cached — never a fresh `now()` stamped here. A
+ * cache hit can be up to 7 days old; re-stamping it as checked "now" would
+ * misrepresent how current the evidence actually is (review1 R3).
  */
 export async function GET(request: NextRequest) {
   const lat = request.nextUrl.searchParams.get("lat");
@@ -53,7 +58,7 @@ export async function GET(request: NextRequest) {
     : [...CHECKABLE_ZONE_KEYS];
 
   try {
-    const { layers, hadUnknown } = await resolveZoneEvidenceV2Cached(
+    const { layers, hadUnknown, checkedAt } = await resolveZoneEvidenceV2Cached(
       ZONE_DATA_REVISION,
       latNum,
       lonNum,
@@ -63,7 +68,7 @@ export async function GET(request: NextRequest) {
     const body = {
       schemaVersion: 2 as const,
       dataRevision: ZONE_DATA_REVISION,
-      checkedAt: new Date().toISOString(),
+      checkedAt,
       requestedLayers,
       layers,
     };
