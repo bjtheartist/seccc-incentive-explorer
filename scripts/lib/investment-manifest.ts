@@ -64,6 +64,28 @@ export interface ManifestSource {
   /** sha256 of the file's bytes at manifest-regeneration time. Absent (empty
    * string) for files that do not exist in this checkout (none expected). */
   contentHash: string;
+  /**
+   * Sol gate finding 1 (round 3) — an explicit ROLE, not id-string matching
+   * ("id.startsWith('foundation-')"). scripts/export-community-investment.ts's
+   * foundation-file loop consumes every source with role "foundation-grant"
+   * GENERICALLY (order + idPrefix, both below, required) — adding a new
+   * foundation-grant manifest source is consumed automatically, or the
+   * exporter throws loudly if foundationGrantIdPrefix is missing, instead of
+   * a hard-coded four-id enumeration silently ignoring it.
+   */
+  role?: "foundation-grant";
+  /** REQUIRED when role is "foundation-grant" — 0-based publication order
+   * (base, tier1, phase2, phase3, ...). Manifest-driven, not a hard-coded
+   * order array in code. */
+  foundationGrantOrder?: number;
+  /**
+   * REQUIRED when role is "foundation-grant" — the record-id namespace
+   * prefix (foundation-N / foundation-t1-N / foundation-p2-N / ...).
+   * EXISTING entries' prefix must NEVER change (ids already shipped — see
+   * deliverable 2 / finding 8's id-stability guarantee); a NEW entry picks
+   * its own unused prefix.
+   */
+  foundationGrantIdPrefix?: string;
 }
 
 export interface InvestmentManifest {
@@ -196,6 +218,9 @@ const AUTHORED_SOURCES: Array<Omit<ManifestSource, "contentHash">> = [
     valueField: "amount",
     decreasePolicy: "exact_pin",
     vintage: "2026-01-01",
+    role: "foundation-grant",
+    foundationGrantOrder: 0,
+    foundationGrantIdPrefix: "foundation",
   },
   {
     id: "foundation-tier1",
@@ -206,6 +231,9 @@ const AUTHORED_SOURCES: Array<Omit<ManifestSource, "contentHash">> = [
     valueField: "amount",
     decreasePolicy: "exact_pin",
     vintage: "2026-07-30",
+    role: "foundation-grant",
+    foundationGrantOrder: 1,
+    foundationGrantIdPrefix: "foundation-t1",
   },
   {
     id: "foundation-phase2",
@@ -216,6 +244,9 @@ const AUTHORED_SOURCES: Array<Omit<ManifestSource, "contentHash">> = [
     valueField: "amount",
     decreasePolicy: "exact_pin",
     vintage: "2026-08-03",
+    role: "foundation-grant",
+    foundationGrantOrder: 2,
+    foundationGrantIdPrefix: "foundation-p2",
   },
   {
     id: "foundation-phase3",
@@ -226,6 +257,9 @@ const AUTHORED_SOURCES: Array<Omit<ManifestSource, "contentHash">> = [
     valueField: "amount",
     decreasePolicy: "exact_pin",
     vintage: "2026-08-04",
+    role: "foundation-grant",
+    foundationGrantOrder: 3,
+    foundationGrantIdPrefix: "foundation-p3",
   },
   {
     id: "lihtc",
@@ -600,17 +634,20 @@ export function assertNoOrphanedManifestSources(
   }
 }
 
-/** Every foundation-file manifest entry, in the four-file publication order —
- * the single place that knows "every published foundation input" (consult F1 /
- * audit finding 2: the audit must cover ALL FOUR files, not a hand-typed
- * three-file dict). */
+/**
+ * Every foundation-grant manifest entry, in publication order — the single
+ * place that knows "every published foundation input" (consult F1 / audit
+ * finding 2: the audit must cover ALL FOUR files, not a hand-typed
+ * three-file dict). Sol gate finding 1 (round 3) — filtered by the explicit
+ * `role` field, ordered by `foundationGrantOrder`, NOT an id-string prefix
+ * match or a hard-coded id order array: a NEW foundation-grant manifest
+ * source (role + order + idPrefix all present) is picked up automatically by
+ * every caller of this function, exporter included.
+ */
 export function foundationManifestEntries(manifest: InvestmentManifest): ManifestSource[] {
   return manifest.sources
-    .filter((s) => s.id.startsWith("foundation-"))
-    .sort((a, b) => {
-      const order = ["foundation-base", "foundation-tier1", "foundation-phase2", "foundation-phase3"];
-      return order.indexOf(a.id) - order.indexOf(b.id);
-    });
+    .filter((s) => s.role === "foundation-grant")
+    .sort((a, b) => (a.foundationGrantOrder ?? 0) - (b.foundationGrantOrder ?? 0));
 }
 
 export function fileMtimeIso(absPath: string): string | null {
