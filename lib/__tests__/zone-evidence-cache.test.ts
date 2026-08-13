@@ -223,25 +223,91 @@ describe("review1 R9: a partial cache hit is never trusted as a full-coverage hi
     expect(result.layers).toEqual(validHit.layers);
   });
 
-  it("requesting a SUBSET of a previously-cached larger key set still requires all of the subset's keys, not the original superset's", async () => {
-    // A hit cached for ["tif","ssa","enterprise"] is a valid hit for a
-    // later request asking only for ["tif"] -- the subset check passes.
+});
+
+describe("review2 R12: cache-hit validation requires an EXACT key-set match, not just coverage", () => {
+  it("(a) a stored payload with the SAME keys in a DIFFERENT order is still accepted as a hit", async () => {
     redisGet.mockResolvedValueOnce({
       layers: {
-        tif: { state: "matched", name: "cached" },
         ssa: { state: "not_matched" },
-        enterprise: { state: "not_matched" },
+        tif: { state: "matched", name: "cached" },
       },
       checkedAt: "2026-08-01T00:00:00.000Z",
     });
     const dbLayerQuery = vi.fn();
     const { resolveZoneEvidenceV2Cached } = await import("../zone-evidence-cache");
+    // Request order is [tif, ssa]; stored object key order is [ssa, tif] --
+    // order must not matter, only set membership.
+    const result = await resolveZoneEvidenceV2Cached("rev-1", 41.8, -87.6, ["tif", "ssa"], {
+      sql: {} as never,
+      dbLayerQuery,
+    });
+    expect(dbLayerQuery).not.toHaveBeenCalled(); // genuinely a hit
+    expect(result.layers.tif).toEqual({ state: "matched", name: "cached" });
+    expect(result.layers.ssa).toEqual({ state: "not_matched" });
+  });
+
+  it("(b) a stored payload MISSING a requested key (subset of what was requested) is rejected — R9 behavior preserved", async () => {
+    redisGet.mockResolvedValueOnce({
+      layers: { tif: { state: "matched", name: "cached" } }, // missing "ssa"
+      checkedAt: "2026-08-01T00:00:00.000Z",
+    });
+    const dbLayerQuery = vi.fn(async (key: string) => ({ name: `${key} fresh` }));
+    const { resolveZoneEvidenceV2Cached } = await import("../zone-evidence-cache");
+    const result = await resolveZoneEvidenceV2Cached("rev-1", 41.8, -87.6, ["tif", "ssa"], {
+      sql: {} as never,
+      dbLayerQuery,
+    });
+    expect(dbLayerQuery).toHaveBeenCalledWith("tif", 41.8, -87.6);
+    expect(dbLayerQuery).toHaveBeenCalledWith("ssa", 41.8, -87.6);
+    expect(result.checkedAt).not.toBe("2026-08-01T00:00:00.000Z"); // genuinely re-resolved
+  });
+
+  it("(c) a stored payload with EXTRA keys beyond what was requested (superset) is rejected, not silently accepted with the extras attached", async () => {
+    // Cached under a broader key set ["tif","ssa"]; this lookup only wants
+    // ["tif"]. Before review2 R12 this passed validation and returned BOTH
+    // layers, so the route would declare requestedLayers:["tif"] while
+    // actually serving "ssa" evidence too.
+    redisGet.mockResolvedValueOnce({
+      layers: {
+        tif: { state: "matched", name: "cached" },
+        ssa: { state: "not_matched" }, // the unrequested extra
+      },
+      checkedAt: "2026-08-01T00:00:00.000Z",
+    });
+    const dbLayerQuery = vi.fn(async () => ({ name: "freshly resolved tif" }));
+    const { resolveZoneEvidenceV2Cached } = await import("../zone-evidence-cache");
     const result = await resolveZoneEvidenceV2Cached("rev-1", 41.8, -87.6, ["tif"], {
       sql: {} as never,
       dbLayerQuery,
     });
-    expect(dbLayerQuery).not.toHaveBeenCalled();
-    expect(result.layers.tif).toEqual({ state: "matched", name: "cached" });
+    // The superset was rejected -- proven by re-resolution happening at all.
+    expect(dbLayerQuery).toHaveBeenCalledWith("tif", 41.8, -87.6);
+    expect(result.checkedAt).not.toBe("2026-08-01T00:00:00.000Z");
+    // Only the requested key is present -- the stale "ssa" entry from the
+    // rejected superset never leaks into the result.
+    expect(Object.keys(result.layers)).toEqual(["tif"]);
+    expect(result.layers.tif).toEqual({ state: "matched", name: "freshly resolved tif" });
+  });
+
+  it("a stored payload with EXTRA keys is also rejected when the requested set is otherwise fully covered (no missing keys, still a superset)", async () => {
+    redisGet.mockResolvedValueOnce({
+      layers: {
+        tif: { state: "matched", name: "cached" },
+        ssa: { state: "not_matched" },
+        enterprise: { state: "not_matched" }, // extra beyond the 2 requested
+      },
+      checkedAt: "2026-08-01T00:00:00.000Z",
+    });
+    const dbLayerQuery = vi.fn(async (key: string) => ({ name: `${key} fresh` }));
+    const { resolveZoneEvidenceV2Cached } = await import("../zone-evidence-cache");
+    const result = await resolveZoneEvidenceV2Cached("rev-1", 41.8, -87.6, ["tif", "ssa"], {
+      sql: {} as never,
+      dbLayerQuery,
+    });
+    expect(dbLayerQuery).toHaveBeenCalledWith("tif", 41.8, -87.6);
+    expect(dbLayerQuery).toHaveBeenCalledWith("ssa", 41.8, -87.6);
+    expect(Object.keys(result.layers).sort()).toEqual(["ssa", "tif"]);
   });
 });
 

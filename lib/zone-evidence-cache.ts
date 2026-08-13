@@ -66,15 +66,22 @@ const VALID_ZONE_LAYER_STATES: ReadonlySet<ZoneLayerState> = new Set([
 ]);
 
 /**
- * `requestedKeys` is required (review1 R9): a cache entry that doesn't
- * carry an evidence entry for EVERY key this specific lookup asked about
- * is not valid for this lookup, even if it's a perfectly well-formed
- * payload for some OTHER (differently-keyed) request. Without this, a hit
- * for `["tif","ssa"]` that only actually contains `tif` (e.g. written by
- * an older code path, or a cache key collision) would pass shape
- * validation, recompute `hadUnknown: false` over the one layer it has,
- * and the route would publicly cache the resulting incomplete envelope
- * for 7 days.
+ * `requestedKeys` is required (review1 R9, tightened by review2 R12): a
+ * cache entry is only valid for THIS lookup if its `layers` cover EXACTLY
+ * the requested key set — no missing keys (R9's original fix) AND no
+ * extra ones (R12). R9 alone only checked that every requested key was
+ * present, which let a stored SUPERSET pass: a payload cached under
+ * `["tif","ssa"]` would validate as a "hit" for a narrower request of
+ * just `["tif"]`, and `resolveZoneEvidenceV2Cached` would return the
+ * WHOLE stored `layers` object — so the route would declare
+ * `requestedLayers: ["tif"]` while actually serving `ssa` too, and
+ * `normalizeZoneEvidenceV2` would preserve/expose that extra layer as
+ * real evidence for a layer nobody asked about. Since the Redis cache KEY
+ * itself already encodes the exact sorted layer set
+ * (`zoneEvidenceV2CacheKey`), any stored payload whose OWN layers don't
+ * exactly match what was requested is stale/foreign data for this key,
+ * not a legitimate hit — order-insensitive set equality, not subset/
+ * superset tolerance in either direction.
  */
 function isValidStoredPayload(
   value: unknown,
@@ -86,18 +93,22 @@ function isValidStoredPayload(
   if (!v.layers || typeof v.layers !== "object" || Array.isArray(v.layers)) return false;
 
   const layers = v.layers as Record<string, unknown>;
+
+  // review2 R12: exact key-set match, order-insensitive — neither missing
+  // (R9) nor extra (R12) keys are tolerated.
+  const requestedKeySet = new Set(requestedKeys);
+  const storedKeySet = new Set(Object.keys(layers));
+  if (requestedKeySet.size !== storedKeySet.size) return false;
+  for (const key of requestedKeySet) {
+    if (!storedKeySet.has(key)) return false;
+  }
+
   for (const entry of Object.values(layers)) {
     if (!entry || typeof entry !== "object") return false;
     const state = (entry as Record<string, unknown>).state;
     if (typeof state !== "string" || !VALID_ZONE_LAYER_STATES.has(state as ZoneLayerState)) {
       return false;
     }
-  }
-
-  // review1 R9: every requested key must have an entry — a partial hit is
-  // not a valid hit for THIS request.
-  for (const key of requestedKeys) {
-    if (!Object.hasOwn(layers, key)) return false;
   }
 
   return true;
