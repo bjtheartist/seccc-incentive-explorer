@@ -94,7 +94,7 @@ export const SHORTLIST_CRITERION_REGISTRY: readonly ShortlistCriterionEntry[] = 
     source: "canonical universe evidence fields (hasVacantBuildingEvidence / hasVacantLandEvidence)",
     vintage: null,
     explanation:
-      "A building search keeps only canonical sites carrying building evidence with a resolved PIN and a published measured area; a land search keeps sites carrying land evidence. Records that do not clear this screen never reach the ranked list, but they are counted in the funnel.",
+      "A building search keeps only canonical sites carrying building evidence; a land search keeps sites carrying land evidence; 'either' keeps sites carrying either. This is the ONLY test — a resolved PIN and a published measurement are NOT required to clear it (they are separate, non-gating funnel diagnostics in v1, shown so a reader can see how much of the field lacks them without that absence silently emptying the results). Records that do not carry the requested evidence never reach the ranked list, but they are counted in the funnel.",
   },
   {
     id: "square-footage",
