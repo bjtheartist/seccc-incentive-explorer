@@ -21,6 +21,7 @@ import {
   formatZoneFeatureName,
   parseZoneProperties,
 } from "@/lib/zone-names";
+import { getZoneLayerRegistryEntry } from "@/lib/zone-layer-registry";
 
 export interface ZoneMatch {
   key: string;
@@ -229,4 +230,194 @@ export async function resolveZonesAtPoint(
 
     return [...dbMatches, ...staticMatches];
   });
+}
+
+/* ════════════════════════════════════════════════════════════════════════
+ * Zone Evidence v2 (build-spec.md 1.3; audit F2; consult item 6)
+ *
+ * Everything below is NEW code for the new /api/zones/check/v2 route. It
+ * does not modify or call into any of the v1 functions above — v1's route
+ * and behavior are untouched in PR1. The core difference from v1: a layer
+ * that cannot be confidently resolved (unreadable file, malformed
+ * geometry, or a DB layer with no verified-loaded confirmation) produces
+ * an explicit `unknown` result with a reason, never a silent `false`/
+ * omission. A known match on one layer is never affected by another
+ * layer's failure — each layer is resolved independently.
+ * ════════════════════════════════════════════════════════════════════════ */
+
+export type ZoneLayerState = "matched" | "not_matched" | "unknown";
+export type ZoneUnknownReason = "source_unavailable" | "malformed_geometry" | "layer_missing";
+
+export interface ZoneLayerEvidence {
+  state: ZoneLayerState;
+  name?: string;
+  reason?: ZoneUnknownReason;
+}
+
+/** Injectable per-key DB lookup so tests never need a live database (Hard Rule: mock at the getSQL boundary). */
+export type ZoneDbLayerQuery = (
+  key: string,
+  lat: number,
+  lon: number
+) => Promise<{ name: string } | null>;
+
+async function defaultDbLayerQuery(
+  key: string,
+  lat: number,
+  lon: number
+): Promise<{ name: string } | null> {
+  const sql = getSQL();
+  if (!sql) return null;
+
+  const rows = await sql`
+    WITH point AS (
+      SELECT ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4326) AS geom
+    )
+    SELECT z.feature_name, z.feature_properties
+    FROM zones z, point p
+    WHERE z.zone_key = ${key}
+      AND z.geom::geometry && p.geom
+      AND ST_Covers(ST_Buffer(z.geom::geometry, 0), p.geom)
+    LIMIT 1
+  `;
+
+  if (rows.length === 0) return null;
+  const row = rows[0] as Record<string, unknown>;
+  return {
+    name: formatZoneFeatureName(key, {
+      ...parseZoneProperties(row.feature_properties),
+      name: row.feature_name,
+    }),
+  };
+}
+
+/**
+ * Per-feature point-in-polygon test that distinguishes "no match" from
+ * "this feature's geometry could not be evaluated" — the v1
+ * `pointInPolygonSafe` above collapses both to `false`, which is exactly
+ * the false-negative defect this v2 path exists to fix. `checkStaticZoneV2`
+ * uses `malformed` to decide between `not_matched` and `unknown`.
+ */
+function pointInPolygonSafeV2(
+  point: ReturnType<typeof turf.point>,
+  key: string,
+  feature: Feature<Polygon | MultiPolygon>
+): { matched: boolean; malformed: boolean } {
+  try {
+    return { matched: turf.booleanPointInPolygon(point, feature), malformed: false };
+  } catch (err) {
+    console.warn(
+      `[zones/check/v2] skipping malformed feature in zone "${key}":`,
+      err instanceof Error ? err.message : err
+    );
+    return { matched: false, malformed: true };
+  }
+}
+
+/**
+ * Static-file evidence for one layer. A match always wins outright. If no
+ * match was found AND at least one feature in the layer was malformed, the
+ * layer's true coverage of this point could not be fully verified, so the
+ * result is `unknown` (reason `malformed_geometry`) rather than a
+ * confident `not_matched`. An unreadable/missing source file is
+ * `unknown` (reason `source_unavailable`).
+ */
+async function checkStaticZoneV2(key: string, lat: number, lon: number): Promise<ZoneLayerEvidence> {
+  let collection: FeatureCollection;
+  try {
+    collection = await loadStaticZone(key);
+  } catch (err) {
+    console.warn(
+      `[zones/check/v2] static layer "${key}" unavailable:`,
+      err instanceof Error ? err.message : err
+    );
+    return { state: "unknown", reason: "source_unavailable" };
+  }
+
+  const point = turf.point([lon, lat]);
+  let sawMalformed = false;
+
+  for (const feature of collection.features) {
+    if (!feature.geometry) continue;
+    const result = pointInPolygonSafeV2(point, key, feature as Feature<Polygon | MultiPolygon>);
+    if (result.malformed) {
+      sawMalformed = true;
+      continue;
+    }
+    if (result.matched) {
+      return {
+        state: "matched",
+        name: featureDisplayName(key, feature as Feature<Polygon | MultiPolygon>),
+      };
+    }
+  }
+
+  if (sawMalformed) {
+    return { state: "unknown", reason: "malformed_geometry" };
+  }
+  return { state: "not_matched" };
+}
+
+/**
+ * Resolve one layer's evidence for a point. `opts.sql`/`opts.dbLayerQuery`
+ * are injectable so tests can simulate DB failure, a zero-row unverified
+ * layer, and a zero-row verified layer without any live database
+ * connection (Hard Rule: no DB in this task; mock at the boundary).
+ */
+export async function resolveZoneLayerEvidence(
+  key: string,
+  lat: number,
+  lon: number,
+  opts: { sql?: ReturnType<typeof getSQL> | null; dbLayerQuery?: ZoneDbLayerQuery } = {}
+): Promise<ZoneLayerEvidence> {
+  const registryEntry = getZoneLayerRegistryEntry(key);
+  if (!registryEntry) {
+    return { state: "unknown", reason: "layer_missing" };
+  }
+
+  const sql = opts.sql !== undefined ? opts.sql : getSQL();
+  const useDb = registryEntry.source === "db" && Boolean(sql);
+
+  if (useDb) {
+    try {
+      const dbQuery = opts.dbLayerQuery ?? defaultDbLayerQuery;
+      const match = await dbQuery(key, lat, lon);
+      if (match) {
+        return { state: "matched", name: match.name };
+      }
+      // Zero rows. Only trust this as a genuine "not matched" when the
+      // registry confirms the layer is actually loaded — otherwise a
+      // never-populated table would silently read as "no incentive here"
+      // for every address, forever.
+      if (!registryEntry.verifiedLoaded) {
+        return { state: "unknown", reason: "layer_missing" };
+      }
+      return { state: "not_matched" };
+    } catch (err) {
+      console.warn(
+        `[zones/check/v2] DB query failed for layer "${key}":`,
+        err instanceof Error ? err.message : err
+      );
+      return { state: "unknown", reason: "source_unavailable" };
+    }
+  }
+
+  return checkStaticZoneV2(key, lat, lon);
+}
+
+/**
+ * Resolve evidence for every requested layer independently — one layer's
+ * failure never affects another's result, and a known match is never
+ * downgraded by an unrelated layer's `unknown`.
+ */
+export async function resolveZoneEvidenceV2(
+  lat: number,
+  lon: number,
+  keys: readonly string[],
+  opts: { sql?: ReturnType<typeof getSQL> | null; dbLayerQuery?: ZoneDbLayerQuery } = {}
+): Promise<Record<string, ZoneLayerEvidence>> {
+  const entries = await Promise.all(
+    keys.map(async (key) => [key, await resolveZoneLayerEvidence(key, lat, lon, opts)] as const)
+  );
+  return Object.fromEntries(entries);
 }

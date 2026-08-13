@@ -273,7 +273,81 @@ caught).
 
 ## PR1 — section 1.3: Zone Evidence v2
 
-_To be filled in as 1.3 is implemented._
+### What changed
+
+- **`lib/zone-layer-registry.ts`** (new): `ZONE_LAYER_REGISTRY` — one entry
+  per checkable zone key (the same 16 keys as `CHECKABLE_ZONE_KEYS`), each
+  with `source` (`"static-file" | "db"`), `sourceFile`, `dataRevision`, and
+  `verifiedLoaded`. `STATIC_ONLY_ZONE_KEYS` (`nof`, `ccsa`,
+  `energyCommunities`, `hubzone`) is a fresh, independently-defined constant
+  matching v1's inline `staticOnlyKeys` set in `resolveZonesAtPoint` — not
+  imported from it, so v1 stays byte-for-byte untouched.
+- **`lib/zones-check.ts`** (additive only — no existing export changed):
+  `resolveZoneLayerEvidence()` and `resolveZoneEvidenceV2()`, plus the
+  private `checkStaticZoneV2()` / `pointInPolygonSafeV2()` helpers. Every
+  layer resolves independently: a malformed feature marks that layer
+  `unknown`/`malformed_geometry` (not `not_matched`) only if no real match
+  is found first; an unreadable static file is `unknown`/
+  `source_unavailable`; a DB query throwing is `unknown`/
+  `source_unavailable`; a DB layer returning zero rows is `unknown`/
+  `layer_missing` unless the registry marks it `verifiedLoaded`, in which
+  case it's a genuine `not_matched`. `opts.sql` / `opts.dbLayerQuery` are
+  injectable so every DB-path scenario is testable without a live database
+  (Hard Rule: mock at the `getSQL` boundary).
+- **`app/api/zones/check/v2/route.ts`** (new route): the exact envelope
+  from the spec — `{schemaVersion: 2, dataRevision, checkedAt,
+  requestedLayers, layers}`, no redundant `checked[]`/`unknown[]` arrays.
+  `/api/zones/check` (v1) is completely untouched.
+- **`lib/zone-evidence-cache.ts`** (new): `zones:check:v3:` Redis
+  namespace, keyed by `(schemaVersion, dataRevision, roundedCoord,
+  sortedRequestedLayers)`. Fully-covered results get the normal 7-day TTL;
+  any result containing an `unknown` layer gets a 5-minute TTL. The route
+  independently sets `Cache-Control: no-store` on the HTTP response
+  whenever any layer is `unknown`.
+- **`lib/zone-response.ts`**: added `normalizeZoneEvidenceV2()` (parses the
+  new v2 shape) and an **additive** `unknownLayers: string[]` field on
+  `normalizeZoneCheckResponse()`'s (v1) return value — see "Decisions"
+  below for why this is additive rather than a literal value flip.
+
+### Decisions not fully specified by the build spec
+
+- **The v1 normalizer's `zones[key]` values still default to `false` for
+  omitted layers; a new `unknownLayers: string[]` field lists which keys
+  were actually omitted, additively.** The spec's literal text says
+  "map every omitted layer to unknown (never false)". Implementing that
+  literally means widening `NormalizedZoneCheck.zones` to
+  `Record<string, boolean | "unknown">`. Six files consume this type/
+  function (`app/report/page.tsx`, `components/map/MapView.tsx`,
+  `lib/zone-check.ts`, `lib/owner-file-letter-context.ts`,
+  `lib/watchlist-digest.ts`, plus its own test) and none of them are
+  allowed to change in PR1 (Hard Rule: "Do NOT change any consumer").
+  Widening the value type is not safe to do silently: any current
+  consumer doing a *truthy* check on `zones[key]` (e.g. `if (zones.tif)`)
+  would start treating an *omitted* layer as truthy — i.e. it would flip a
+  currently-suppressed claim into a **false positive**, which is a worse
+  defect than the false-negative F2 describes, not a fix for it. The
+  audit's own minimal fix for F2 is "suppress negative summaries when any
+  required layer is unknown" — that requires a consumer to actively check
+  for unknown-ness before rendering, which is exactly what
+  `unknownLayers` gives PR2 to wire up, without silently changing any PR1
+  consumer's current behavior. This is flagged here explicitly because it
+  is a deliberate, reasoned deviation from one literal sentence in the
+  spec, made to honor a stronger, more specific constraint elsewhere in
+  the same spec (and the standing Hard Rule) — not an oversight.
+- **`STATIC_ONLY_ZONE_KEYS` is a second, independently-defined copy** of
+  v1's inline `staticOnlyKeys` set in `resolveZonesAtPoint`, rather than a
+  shared import, specifically so that touching v1's function to extract a
+  shared constant (a behavior-neutral refactor, but still a v1 edit) is
+  never necessary. Both sets are asserted to be `{nof, ccsa,
+  energyCommunities, hubzone}` by inspection; a future PR2 change to
+  either one only needs to keep them in sync deliberately, not because of
+  a hidden coupling.
+- **Zone Evidence v2 caching is Redis-only** (no process-level L4 memory
+  cache like `memCached`'s). `memCached()`'s single fixed TTL, chosen
+  before the wrapped function runs, cannot express "TTL depends on
+  whether the result turned out to contain an unknown layer" — so
+  `lib/zone-evidence-cache.ts` implements its own read-then-conditional-
+  write against Redis directly instead of reusing `memCached`.
 
 ## PR1 — section 1.4: PR1 adversarial tests
 
