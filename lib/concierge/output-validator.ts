@@ -103,6 +103,20 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string }[] = [
   { pattern: /\byou\s+cannot\s+qualify\b/i, reason: "you-cannot-qualify" },
   { pattern: /\byou\s+can'?t\s+qualify\b/i, reason: "you-cannot-qualify" },
   { pattern: /\byour\s+business\s+(?:does\s+not|doesn'?t|cannot|can'?t)\s+qualify\b/i, reason: "business-does-not-qualify" },
+  // review7 S19(a) (HIGH): review6 S14 removed "qualify" from the
+  // "will not/never receive/be approved/be accepted" pattern below (its
+  // doc comment there explicitly said so), on the stated assumption that
+  // "cannot/does not qualify" — added immediately above — would cover
+  // the modal ground it gave up. That assumption was wrong: the FUTURE-
+  // TENSE and contraction forms of "qualify" — "you will not qualify",
+  // "you will never qualify", "you won't qualify" — were never covered
+  // by EITHER family (the "cannot"/"can't" family above is modal, not
+  // future-tense; the S4-era "do not"/"don't" family is present-tense).
+  // A phrase this validator caught before S14 stopped being caught
+  // after it — restored here as its own explicit family so it can never
+  // again be assumed-covered-elsewhere without a test proving it.
+  { pattern: /\byou\s+will\s+(?:not|never)\s+qualify\b/i, reason: "you-will-not-qualify" },
+  { pattern: /\byou\s+won'?t\s+qualify\b/i, reason: "you-will-not-qualify" },
   // "appears ineligible" — the negative mirror of the existing
   // POSITIVE-only "appears eligible" entry above (review5 S4 hard-reject).
   { pattern: /\bappears?\s+(?:to\s+be\s+)?(?:not\s+eligible|ineligible)\b/i, reason: "appears-ineligible" },
@@ -117,15 +131,9 @@ const PROHIBITED_PATTERNS: { pattern: RegExp; reason: string }[] = [
   // "application/project denied" — a determination about the READER'S
   // SUBMISSION specifically, distinct from "you've been denied" (about
   // the reader personally) above. Passive, across the four tenses a
-  // model might reasonably produce. Requires "your" OR "the" (a definite
-  // reference — in a 1:1 concierge chat, "the application" with no other
-  // application in play unambiguously means the reader's own) directly
-  // before the noun — NOT optional, unlike an earlier draft of this
-  // pattern: making the article optional would also match a genuinely
-  // third-party/generic sentence like "Another applicant's request was
-  // denied last cycle" or "Other applications were denied for missing
-  // paperwork," neither of which is a claim about THIS reader.
-  { pattern: /\b(?:your|the)\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i, reason: "application-denied" },
+  // model might reasonably produce. "your X" has no article ambiguity —
+  // always a reader claim, safe as a plain regex here.
+  { pattern: /\byour\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i, reason: "application-denied" },
 ];
 
 /** Naive sentence splitter — good enough for a prose model response, not a
@@ -171,6 +179,48 @@ function findAuthorityRoutingViolation(text: string): string | null {
 }
 
 /**
+ * review7 S19(b) (HIGH) — "the application/project/request was denied"
+ * (a DEFINITE article, not "your") is genuinely ambiguous: it can mean
+ * the reader's own submission (a real determination this validator must
+ * catch) OR someone else's, relayed in reported speech — "Jane said the
+ * application was denied last cycle" is a third-party, informational
+ * sentence, not a claim about THIS reader. An earlier fix
+ * (review6 S16) required "your" OR "the" before the noun, closing the
+ * fully-optional-article false positive it was reviewed for ("Another
+ * applicant's request was denied") — but "the application ... denied"
+ * on its own is still ambiguous in exactly the shape this finding names.
+ *
+ * "your X ... denied" has no such ambiguity (kept as a plain
+ * PROHIBITED_PATTERNS regex above — it always means the reader). This
+ * function handles ONLY the "the X ... denied" case, SENTENCE BY
+ * SENTENCE (same technique as the authority-routing check above): a
+ * match is a real violation UNLESS the SAME sentence carries a
+ * reported-speech marker (said/told/mentioned/reported/noted/stated/
+ * wrote/explained) BEFORE the match — a reliable proxy for "this is
+ * being relayed about someone else," not asserted about the reader.
+ * Not exhaustive (no marker-list is), but restores the same "restrict
+ * to reader context" discipline every other family in this file
+ * already follows, rather than leaving "the application" either fully
+ * unmatched (missing real violations) or fully unrestricted (the S16
+ * regression this finding is about).
+ */
+const DEFINITE_ARTICLE_APPLICATION_DENIED_PATTERN =
+  /\bthe\s+(?:application|project|request)\s+(?:was|is|has\s+been|will\s+be)\s+(?:denied|rejected)\b/i;
+const REPORTED_SPEECH_MARKER_PATTERN =
+  /\b(?:said|told|mentioned|reported|noted|stated|wrote|explained|heard|claims?|claimed|according\s+to)\b/i;
+
+function findApplicationDeniedViolation(text: string): string | null {
+  for (const sentence of splitIntoSentences(text)) {
+    const match = DEFINITE_ARTICLE_APPLICATION_DENIED_PATTERN.exec(sentence);
+    if (!match) continue;
+    const before = sentence.slice(0, match.index);
+    if (REPORTED_SPEECH_MARKER_PATTERN.test(before)) continue;
+    return "application-denied";
+  }
+  return null;
+}
+
+/**
  * Validate one buffered assistant turn. Deterministic, synchronous, no
  * model calls — the enforcement layer is not itself an AI judgment.
  */
@@ -186,6 +236,15 @@ export function validateConciergeOutput(rawText: string): ConciergeValidationRes
     if (pattern.test(rawText)) {
       return { text: rawText, hit: true, reason };
     }
+  }
+
+  // review7 S19(b): same "raw text, before normalization" reasoning as
+  // PROHIBITED_PATTERNS above — this is the same category of check (a
+  // negative-determination phrase), just with sentence-level
+  // third-party context awareness a single regex can't express.
+  const applicationDeniedViolation = findApplicationDeniedViolation(rawText);
+  if (applicationDeniedViolation) {
+    return { text: rawText, hit: true, reason: applicationDeniedViolation };
   }
 
   const normalized = normalizePublicDeterminationText(rawText);

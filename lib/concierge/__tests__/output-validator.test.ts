@@ -247,6 +247,96 @@ describe("validateConciergeOutput — S14 expanded negative-determination gramma
 });
 
 /**
+ * review7 S19(a) (HIGH): review6 S14 removed "qualify" from the "will
+ * not/never receive/be approved/be accepted" pattern, on the stated
+ * assumption the new "cannot/does not qualify" family would cover the
+ * ground it gave up — it didn't. The FUTURE-TENSE/contraction forms
+ * ("will not qualify", "will never qualify", "won't qualify") were
+ * caught before S14 and silently stopped being caught after. Table-
+ * driven per the coordinator's TEST requirement: all three missed forms.
+ */
+describe("validateConciergeOutput — S19(a) restored future/contraction 'qualify' forms", () => {
+  const MISSED_QUALIFY_FORMS: { text: string; reason: string }[] = [
+    { text: "You will not qualify for the Enterprise Zone exemption.", reason: "you-will-not-qualify" },
+    { text: "You will never qualify for NOF funding.", reason: "you-will-not-qualify" },
+    { text: "You won't qualify for TIF financing.", reason: "you-will-not-qualify" },
+  ];
+
+  for (const { text, reason } of MISSED_QUALIFY_FORMS) {
+    it(`rejects the previously-missed form: "${text}"`, () => {
+      const result = validateConciergeOutput(text);
+      expect(result.hit, text).toBe(true);
+      expect(result.reason, text).toBe(reason);
+    });
+  }
+
+  // Sanity: the S14 "cannot qualify" family and the S4 "will not
+  // receive" family (with "qualify" removed) both still work correctly
+  // alongside this new one — the fix didn't reintroduce the overlap S14
+  // deliberately removed.
+  it("'you cannot qualify' still hits the S14 modal family, not this one", () => {
+    const result = validateConciergeOutput("You cannot qualify for the SBIF grant.");
+    expect(result.hit).toBe(true);
+    expect(result.reason).toBe("you-cannot-qualify");
+  });
+
+  it("'you will not receive' (no 'qualify') still hits the S4/S14 receive family", () => {
+    const result = validateConciergeOutput("You will not receive any funding from this program.");
+    expect(result.hit).toBe(true);
+    expect(result.reason).toBe("you-will-not-receive");
+  });
+});
+
+/**
+ * review7 S19(b) (HIGH): review6 S16's "application/project denied" fix
+ * required "your" OR "the" before the noun — closing the fully-optional-
+ * article false positive it was reviewed for, but "the application ...
+ * denied" is STILL ambiguous on its own: it can mean the reader's own
+ * submission, or someone else's relayed in reported speech ("Jane said
+ * the application was denied last cycle" — the coordinator's own named
+ * example). `findApplicationDeniedViolation` restricts the definite-
+ * article form to reader context via a reported-speech-marker exclusion,
+ * sentence by sentence; "your X" (no article ambiguity) is unaffected.
+ */
+describe("validateConciergeOutput — S19(b) definite-article application-denied restricted to reader context", () => {
+  it("still rejects 'your application was denied' — no article ambiguity", () => {
+    const result = validateConciergeOutput("Your application was denied.");
+    expect(result.hit).toBe(true);
+    expect(result.reason).toBe("application-denied");
+  });
+
+  it("still rejects a bare 'the application was denied' with no third-party framing", () => {
+    const result = validateConciergeOutput("The application was denied last cycle.");
+    expect(result.hit).toBe(true);
+    expect(result.reason).toBe("application-denied");
+  });
+
+  const THIRD_PARTY_DEFINITE_ARTICLE_CONTROLS: string[] = [
+    "Jane said the application was denied last cycle.",
+    "My accountant told me the application was denied.",
+    "According to the newsletter, the project was rejected last quarter.",
+    "A neighboring business owner mentioned the request was denied.",
+    "The city clerk reported the application was denied for missing paperwork.",
+    "I heard the project was rejected, but I haven't confirmed it.",
+  ];
+
+  for (const text of THIRD_PARTY_DEFINITE_ARTICLE_CONTROLS) {
+    it(`does NOT reject the coordinator's third-party control shape: "${text}"`, () => {
+      const result = validateConciergeOutput(text);
+      expect(result.hit, text).toBe(false);
+    });
+  }
+
+  it("a reported-speech marker in an EARLIER, separate sentence does not excuse a LATER sentence's genuine reader-facing denial claim", () => {
+    const result = validateConciergeOutput(
+      "Jane said she had a similar situation last year. The application was denied for your case specifically.",
+    );
+    expect(result.hit).toBe(true);
+    expect(result.reason).toBe("application-denied");
+  });
+});
+
+/**
  * review5 S4: "authority check sentence-by-sentence (one ZBA mention must
  * not bypass a generic-City sentence elsewhere)" — the exact regression
  * the original whole-text `mentionsZba` check was vulnerable to.

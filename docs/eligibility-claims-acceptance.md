@@ -2332,3 +2332,80 @@ files, 4001 passed, 2 skipped** (up from S17's 325/3997); no regression
 in the existing `instant-refine-coordinate-live-composition.test.tsx`
 (S13) or `report-page-live-renderer.test.tsx` suites; `npm run
 programs:public:check` clean.
+
+---
+
+### S19 (HIGH) — S14 regressed 3 "qualify" forms while fixing S4; S16's application-denied fix still had a third-party false positive
+
+**Finding, direction (a):** review6 S14 removed `qualify` from the
+"will not/never receive/be approved/be accepted" pattern's outcome
+list, explicitly reasoning that the new "cannot/does not qualify"
+family (added in the SAME change) would cover the modal ground it gave
+up. That reasoning was wrong: the "cannot"/"can't qualify" family is
+MODAL, not FUTURE-TENSE — "you will not qualify", "you will never
+qualify", and "you won't qualify" were caught before S14 and silently
+stopped being caught after, because neither family actually covers
+future tense.
+
+**Finding, direction (b):** review6 S16 fixed a real false positive
+(the fully-optional `(?:your\s+)?` article let "Another applicant's
+request was denied" trip the check) by requiring "your" OR "the"
+before the noun. That fix was incomplete: "the application ... denied"
+is STILL genuinely ambiguous on its own — it can mean the reader's own
+submission, or someone else's relayed in reported speech. The
+coordinator's own example, "Jane said the application was denied last
+cycle," is a third-party, informational sentence, not a claim about
+the reader — and it still tripped the check.
+
+**Fix (a):** added a dedicated family for the missed forms —
+`/\byou\s+will\s+(?:not|never)\s+qualify\b/i` and `/\byou\s+won'?t\s+qualify\b/i`,
+reason `you-will-not-qualify` — restoring exactly the coverage S14
+silently dropped, as its OWN explicit family this time (not
+assumed-covered by a neighboring pattern that doesn't actually reach
+future tense), so this specific coverage can't be silently lost again
+without a test catching it.
+
+**Fix (b):** split the single "application/project denied" regex into
+two mechanisms. `your (application|project|request) ... (denied|rejected)`
+stays a plain `PROHIBITED_PATTERNS` regex — "your X" has no article
+ambiguity, always a reader claim. The definite-article form ("the X ...
+denied") moved to a NEW sentence-scoped function,
+`findApplicationDeniedViolation` (same architecture as the existing
+`findAuthorityRoutingViolation` sentence-by-sentence check, wired into
+`validateConciergeOutput` at the same "raw text, before normalization"
+stage as `PROHIBITED_PATTERNS`, for the same evasion-prevention reason)
+— a match counts as a violation UNLESS the text preceding it, WITHIN
+THE SAME SENTENCE, contains a reported-speech marker (`said`, `told`,
+`mentioned`, `reported`, `noted`, `stated`, `wrote`, `explained`,
+`heard`, `claim(ed)`, `according to`) — a reliable proxy for "this is
+being relayed about someone else," not a determination about THIS
+reader. Not exhaustive (no marker list is — flagged, not silently
+assumed complete), but restores the same "restrict to reader context"
+discipline every other family in this file already follows, instead of
+the S16 regression's fully-unrestricted "the" match.
+
+**Tests added:** `lib/concierge/__tests__/output-validator.test.ts`
+extended from 85 to 99 tests:
+- A new "S19(a)" block: table-driven hits for all three previously-
+  missed forms; a sanity check that "you cannot qualify" still hits the
+  S14 modal family (not this new one) and "you will not receive"
+  (without "qualify") still hits the S4/S14 receive family — proving
+  the fix didn't reintroduce the overlap S14 deliberately removed.
+- A new "S19(b)" block: "your application was denied" and a bare "the
+  application was denied" (no third-party framing) both still reject;
+  6 third-party definite-article controls including the coordinator's
+  own named example (`"Jane said the application was denied last
+  cycle."`) all correctly pass through unrejected — caught one real gap
+  during this: "According to the newsletter, the project was rejected
+  last quarter" initially still failed (`according to` wasn't in the
+  original marker list), fixed by adding it before the test suite went
+  green; a cross-sentence control confirms a reported-speech marker in
+  an EARLIER, separate sentence does not excuse a LATER sentence's
+  genuine reader-facing denial claim (the same sentence-scoping
+  discipline S4's authority-routing fix already established).
+
+**Verification:** `npx tsc --noEmit` clean; `npx eslint .` — 0 errors on
+every changed file; full `npx vitest run` — **326 test files, 4015
+passed, 2 skipped** (up from S18's 326/4001); `npm run
+programs:public:check` clean (unaffected — concierge output validation
+only).
